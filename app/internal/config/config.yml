@@ -1,0 +1,89 @@
+app:
+  name: Limpo Multi-Tenant Service
+  version: "1.0.0"
+  is-debug: false
+  is-development: false
+
+server:
+  http:
+    ip: 0.0.0.0
+    port: 8080
+    read-timeout: 5
+    write-timeout: 5
+    ssl: false
+    cors:
+      debug: true
+      allowed-methods: [ "GET", "POST", "PATCH", "PUT", "OPTIONS", "DELETE" ]
+      allowed-origins:
+        - "http://localhost:3000"
+      allow-credentials: true
+      allowed-headers:
+        - "Authorization"
+        - "Location"
+        - "Charset"
+        - "Access-Control-Allow-Origin"
+        - "Content-Type"
+        - "Origin"
+        - "Accept"
+        - "Content-Length"
+        - "Accept-Encoding"
+        - "X-CSRF-Token"
+      options-pass-through: true
+      exposed-headers:
+        - "Location"
+        - "Authorization"
+        - "Content-Disposition"
+  ctx-default-timeout: 12
+  max-connection-idle: 5
+  timeout: 15
+  max-connection-age: 5
+
+postgres:
+  port: 5432
+  ssl: false
+  max-pool-size: 10
+  driver: pgx
+
+redis:
+  username: default
+  port: 6379
+  min-idle-connections: 200
+  pool-size: 12000
+  pool-timeout: 240
+
+minio:
+  endpoint: localhost:9000
+  use-ssl: false
+
+cookie:
+  name: jwt-token
+  max-age: 86400
+  secure: false
+  http-only: true
+
+session:
+  name: session-id
+  prefix: sessions
+  expire: 3600
+
+metrics:
+  host: 0.0.0.0
+  port: 7070
+  service-name: "auth_service"
+
+logger:
+  level: info
+
+jaeger:
+  host: localhost
+  port: 6831
+  service-name: go_auth_service
+  log-spans: false
+
+jwt:
+  access-token:
+    expires-in: 86400
+    max-age: 86400
+  refresh-token:
+    expires-in: 2592000
+    max-age: 2592000

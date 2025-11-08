@@ -1,0 +1,91 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: blitz-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: blitzpgusr
+      POSTGRES_PASSWORD: passvv00rd
+      POSTGRES_DB: blitzpgdb
+    ports:
+      - "5432:5432"
+    volumes:
+      - /Users/oybek/Work/yurtal/artifacts/pg-data/blitz:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U blitzpgusr -d blitzpgdb"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis Cache
+  redis:
+    image: redis:7-bullseye
+    container_name: blitz-redis
+    restart: unless-stopped
+    command: >
+      redis-server
+      --requirepass myRed!sP@ssvv0rd
+    ports:
+      - "6379:6379"
+    volumes:
+      - /Users/oybek/Work/yurtal/artifacts/redis-data/blitz:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # MinIO Object Storage
+  minio:
+    image: minio/minio:latest
+    container_name: blitz-minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: yurtalminiousr
+      MINIO_ROOT_PASSWORD: urta1m1ni0Passvv0rd
+      MINIO_ACCESS_KEY: hKZCMMx4k76MhtoHx5dS
+      MINIO_SECRET_KEY: jn2HYRwHRLyrIgZPyxAvM1bZBLE5RTpFtkIPlLY9
+    ports:
+      - "9000:9000"  # API
+      - "9001:9001"  # Console
+    volumes:
+      - /Users/oybek/Work/yurtal/artifacts/minio-data/blitz:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Prometheus Metrics
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: blitz-prometheus
+    restart: unless-stopped
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - /Users/oybek/Work/yurtal/artifacts/prometheus-data/blitz:/prometheus
+
+  # Grafana Dashboards
+  grafana:
+    image: grafana/grafana:latest
+    container_name: blitz-grafana
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_INSTALL_PLUGINS: grafana-clock-panel
+    ports:
+      - "3001:3000"
+    volumes:
+      - /Users/oybek/Work/yurtal/artifacts/grafana-data/blitz:/var/lib/grafana
