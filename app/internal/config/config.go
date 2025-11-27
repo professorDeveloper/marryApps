@@ -20,7 +20,6 @@ type (
 		Session  SessionConfig  `yaml:"session"`
 		Metrics  MetricsConfig  `yaml:"metrics"`
 		Logger   LoggerConfig   `yaml:"logger"`
-		Jaeger   JaegerConfig   `yaml:"jaeger"`
 		Jwt      JwtConfig      `yaml:"jwt"`
 	}
 
@@ -132,19 +131,11 @@ type (
 		Port        int    `yaml:"port" env:"METRICS_PORT"`
 		ServiceName string `yaml:"service-name" env:"METRICS_SERVICE_NAME"`
 	}
-
-	JaegerConfig struct {
-		Host        string `yaml:"host" env:"JAEGER_HOST"`
-		Port        string `yaml:"port" env:"JAEGER_PORT"`
-		ServiceName string `yaml:"service-name" env:"JAEGER_SERVICE_NAME"`
-		LogSpans    bool   `yaml:"log-spans" env:"JAEGER_LOG_SPANS"`
-	}
 )
 
 func New() (*Config, error) {
 	cfg := &Config{}
 
-	// Get the absolute path of the current file (config.go)
 	moduleDir, err := filepath.Abs(".")
 	if err != nil {
 		return nil, fmt.Errorf("failed to resolve config directory: %w", err)
@@ -154,7 +145,6 @@ func New() (*Config, error) {
 	configPath := filepath.Join(configDir, "config.yml")
 	envPath := filepath.Join(moduleDir, ".env")
 
-	// Read config.yml
 	if fileExists(configPath) {
 		err = cleanenv.ReadConfig(configPath, cfg)
 		if err != nil {
@@ -164,7 +154,6 @@ func New() (*Config, error) {
 		fmt.Println("Warning: config.yml not found, skipping...")
 	}
 
-	// Read .env
 	if fileExists(envPath) {
 		err = cleanenv.ReadConfig(envPath, cfg)
 		if err != nil {
@@ -174,16 +163,15 @@ func New() (*Config, error) {
 		fmt.Println("Warning: .env file not found, skipping...")
 	}
 
-	// Read environment variables
 	err = cleanenv.ReadEnv(cfg)
 	if err != nil {
 		return nil, err
 	}
+	fmt.Printf("App Config Loaded: %s (Debug: %v)\n", cfg.App.Name, cfg.App.IsDebug)
 
 	return cfg, nil
 }
 
-// Helper function to check if file exists
 func fileExists(filename string) bool {
 	_, err := os.Stat(filename)
 	return err == nil

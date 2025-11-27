@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/labstack/echo/v4"
+	echoSwagger "github.com/swaggo/echo-swagger"
 	"gitlab.yurtal.tech/company/blitz/back/internal/config"
 	"gitlab.yurtal.tech/company/blitz/back/internal/handler"
 	"gitlab.yurtal.tech/company/blitz/back/internal/migrate"
@@ -18,9 +19,16 @@ import (
 	"gitlab.yurtal.tech/company/blitz/back/pkg/logger"
 	"gitlab.yurtal.tech/company/blitz/back/pkg/minio"
 	pg "gitlab.yurtal.tech/company/blitz/back/pkg/postgres"
+
+	_ "gitlab.yurtal.tech/company/blitz/back/internal/api/docs"
 )
 
-// Run - runs a new app instance.
+// @title Swagger Blitz API
+// @version 1.0
+// @description Blitz API server.
+
+// @host localhost:8080
+// @BasePath /
 func Run(cfg *config.Config) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -28,7 +36,6 @@ func Run(cfg *config.Config) {
 	l := logger.New(cfg.Logger.Level)
 	e := echo.New()
 
-	// Postgres Client
 	pgClient, err := pg.New(pg.Username(cfg.Postgres.User), pg.Password(cfg.Postgres.Password),
 		pg.Host(cfg.Postgres.Host), pg.Port(cfg.Postgres.Port),
 		pg.Database(cfg.Postgres.Db), pg.MaxPoolSize(cfg.Postgres.MaxPoolSize))
@@ -37,7 +44,6 @@ func Run(cfg *config.Config) {
 	}
 	defer pgClient.Close()
 
-	// Run migrations
 	err = migrate.RunMigrations(ctx, pgClient.Pool)
 	if err != nil {
 		l.Fatalf("app - Run - RunMigrations: %v", err)
@@ -48,15 +54,14 @@ func Run(cfg *config.Config) {
 		l.Fatalf("app - Run - minio.New: %v", err)
 	}
 
-	// Repositories compiled by sqlc
 	repos := repository.New(pgClient, minioClient)
 
-	// Services
 	service := service.New(cfg, repos)
 
-	// Handlers
 	handler := handler.New(l, cfg, service)
 	handler.Register(e)
+
+	e.GET("/swagger/*", echoSwagger.WrapHandler)
 
 	errc := make(chan error)
 
@@ -66,7 +71,6 @@ func Run(cfg *config.Config) {
 		errc <- fmt.Errorf("%s", <-c)
 	}()
 
-	// Start server
 	go func() {
 		l.Info("starting server on %s", fmt.Sprintf(":%d", cfg.Server.Http.Port))
 		if err := e.Start(fmt.Sprintf(":%d", cfg.Server.Http.Port)); err != nil && err != http.ErrServerClosed {
@@ -74,11 +78,10 @@ func Run(cfg *config.Config) {
 		}
 	}()
 
-	// Wait for stop signal
 	err = <-errc
 	l.Infof("shutdown initiated: %v", err)
 
-	cancel() // notify all routines
+	cancel()
 
 	ctxShutdown, cancelShutdown := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancelShutdown()

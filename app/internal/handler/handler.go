@@ -19,8 +19,9 @@ func (h *Handler) Register(router *echo.Echo) {
 	p := prometheus.NewPrometheus("echo", nil)
 	p.Use(router)
 
-	_ = router.Group("/api/v1")
+	api := router.Group("/api/v1")
 	{
+		api.POST("/auth/login", h.Login)
 	}
 
 }
