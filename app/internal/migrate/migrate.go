@@ -16,7 +16,6 @@ import (
 	_ "github.com/lib/pq"
 )
 
-// RunMigrations applies migrations for the database
 func RunMigrations(ctx context.Context, pool *pgxpool.Pool) error {
 	fmt.Println("Running migrations for main database...")
 

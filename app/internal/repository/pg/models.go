@@ -5,113 +5,29 @@
 package pg
 
 import (
-	"database/sql/driver"
-	"fmt"
-
-	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-type RolesEnum string
-
-const (
-	RolesEnumSuperadmin RolesEnum = "superadmin"
-	RolesEnumAdmin      RolesEnum = "admin"
-)
-
-func (e *RolesEnum) Scan(src interface{}) error {
-	switch s := src.(type) {
-	case []byte:
-		*e = RolesEnum(s)
-	case string:
-		*e = RolesEnum(s)
-	default:
-		return fmt.Errorf("unsupported scan type for RolesEnum: %T", src)
-	}
-	return nil
-}
-
-type NullRolesEnum struct {
-	RolesEnum RolesEnum `json:"roles_enum"`
-	Valid     bool      `json:"valid"` // Valid is true if RolesEnum is not NULL
-}
-
-// Scan implements the Scanner interface.
-func (ns *NullRolesEnum) Scan(value interface{}) error {
-	if value == nil {
-		ns.RolesEnum, ns.Valid = "", false
-		return nil
-	}
-	ns.Valid = true
-	return ns.RolesEnum.Scan(value)
-}
-
-// Value implements the driver Valuer interface.
-func (ns NullRolesEnum) Value() (driver.Value, error) {
-	if !ns.Valid {
-		return nil, nil
-	}
-	return string(ns.RolesEnum), nil
-}
-
-type TypesEnum string
-
-const (
-	TypesEnumManager TypesEnum = "manager"
-	TypesEnumUser    TypesEnum = "user"
-)
-
-func (e *TypesEnum) Scan(src interface{}) error {
-	switch s := src.(type) {
-	case []byte:
-		*e = TypesEnum(s)
-	case string:
-		*e = TypesEnum(s)
-	default:
-		return fmt.Errorf("unsupported scan type for TypesEnum: %T", src)
-	}
-	return nil
-}
-
-type NullTypesEnum struct {
-	TypesEnum TypesEnum `json:"types_enum"`
-	Valid     bool      `json:"valid"` // Valid is true if TypesEnum is not NULL
-}
-
-// Scan implements the Scanner interface.
-func (ns *NullTypesEnum) Scan(value interface{}) error {
-	if value == nil {
-		ns.TypesEnum, ns.Valid = "", false
-		return nil
-	}
-	ns.Valid = true
-	return ns.TypesEnum.Scan(value)
-}
-
-// Value implements the driver Valuer interface.
-func (ns NullTypesEnum) Value() (driver.Value, error) {
-	if !ns.Valid {
-		return nil, nil
-	}
-	return string(ns.TypesEnum), nil
-}
-
-type Company struct {
-	ID        int32            `json:"id"`
-	Guid      uuid.UUID        `json:"guid"`
-	Name      string           `json:"name"`
-	CreatedAt pgtype.Timestamp `json:"created_at"`
-	UpdatedAt pgtype.Timestamp `json:"updated_at"`
-}
-
 type User struct {
-	ID           int32            `json:"id"`
-	Guid         uuid.UUID        `json:"guid"`
-	Username     string           `json:"username"`
-	PasswordHash string           `json:"password_hash"`
-	CompanyID    *int32           `json:"company_id"`
-	Role         RolesEnum        `json:"role"`
-	Type         TypesEnum        `json:"type"`
-	CreatedAt    pgtype.Timestamp `json:"created_at"`
-	UpdatedAt    pgtype.Timestamp `json:"updated_at"`
+	ID                      string           `json:"id"`
+	FullName                *string          `json:"fullName"`
+	DateOfBirth             pgtype.Timestamp `json:"dateOfBirth"`
+	OverAll                 *int32           `json:"overAll"`
+	Level                   *string          `json:"level"`
+	Email                   *string          `json:"email"`
+	PhoneNumber             *int64           `json:"phoneNumber"`
+	PasswordHash            string           `json:"passwordHash"`
+	Role                    *string          `json:"role"`
+	CreatedAt               pgtype.Timestamp `json:"createdAt"`
+	UpdatedAt               pgtype.Timestamp `json:"updatedAt"`
+	DeletedAt               *int64           `json:"deletedAt"`
+	Gender                  *string          `json:"gender"`
+	IsAgreedForUserContract *bool            `json:"isAgreedForUserContract"`
+	IsVerified              *bool            `json:"isVerified"`
+	Status                  *string          `json:"status"`
+	Group                   *string          `json:"group"`
+	Photo                   *string          `json:"photo"`
+	XP                      *int32           `json:"XP"`
+	Balance                 *int64           `json:"balance"`
+	FirebaseToken           *string          `json:"firebaseToken"`
 }

@@ -8,51 +8,110 @@ package pg
 import (
 	"context"
 
-	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const createUser = `-- name: CreateUser :one
-INSERT INTO
-    users
-    (username, password_hash, company_id, role, type)
-VALUES
-    ($1, $2, $3, $4, $5)
-RETURNING id, guid, username, password_hash, company_id, role, type, created_at, updated_at
+INSERT INTO users (
+    id,
+    "fullName",
+    "dateOfBirth",
+    "overAll",
+    level,
+    email,
+    "phoneNumber",
+    "passwordHash",
+    role,
+    gender,
+    "isAgreedForUserContract",
+    "isVerified",
+    status,
+    "group",
+    photo,
+    "XP",
+    balance,
+    "firebaseToken"
+)
+VALUES (
+    $1, $2, $3, $4, $5,
+    $6, $7, $8, $9, $10,
+    $11, $12, $13, $14,
+    $15, $16, $17, $18
+)
+RETURNING id, "fullName", "dateOfBirth", "overAll", level, email, "phoneNumber", "passwordHash", role, "createdAt", "updatedAt", "deletedAt", gender, "isAgreedForUserContract", "isVerified", status, "group", photo, "XP", balance, "firebaseToken"
 `
 
 type CreateUserParams struct {
-	Username     string    `json:"username"`
-	PasswordHash string    `json:"password_hash"`
-	CompanyID    *int32    `json:"company_id"`
-	Role         RolesEnum `json:"role"`
-	Type         TypesEnum `json:"type"`
+	ID                      string           `json:"id"`
+	FullName                *string          `json:"fullName"`
+	DateOfBirth             pgtype.Timestamp `json:"dateOfBirth"`
+	OverAll                 *int32           `json:"overAll"`
+	Level                   *string          `json:"level"`
+	Email                   *string          `json:"email"`
+	PhoneNumber             *int64           `json:"phoneNumber"`
+	PasswordHash            string           `json:"passwordHash"`
+	Role                    *string          `json:"role"`
+	Gender                  *string          `json:"gender"`
+	IsAgreedForUserContract *bool            `json:"isAgreedForUserContract"`
+	IsVerified              *bool            `json:"isVerified"`
+	Status                  *string          `json:"status"`
+	Group                   *string          `json:"group"`
+	Photo                   *string          `json:"photo"`
+	XP                      *int32           `json:"XP"`
+	Balance                 *int64           `json:"balance"`
+	FirebaseToken           *string          `json:"firebaseToken"`
 }
 
 func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, error) {
 	row := q.db.QueryRow(ctx, createUser,
-		arg.Username,
+		arg.ID,
+		arg.FullName,
+		arg.DateOfBirth,
+		arg.OverAll,
+		arg.Level,
+		arg.Email,
+		arg.PhoneNumber,
 		arg.PasswordHash,
-		arg.CompanyID,
 		arg.Role,
-		arg.Type,
+		arg.Gender,
+		arg.IsAgreedForUserContract,
+		arg.IsVerified,
+		arg.Status,
+		arg.Group,
+		arg.Photo,
+		arg.XP,
+		arg.Balance,
+		arg.FirebaseToken,
 	)
 	var i User
 	err := row.Scan(
 		&i.ID,
-		&i.Guid,
-		&i.Username,
+		&i.FullName,
+		&i.DateOfBirth,
+		&i.OverAll,
+		&i.Level,
+		&i.Email,
+		&i.PhoneNumber,
 		&i.PasswordHash,
-		&i.CompanyID,
 		&i.Role,
-		&i.Type,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.DeletedAt,
+		&i.Gender,
+		&i.IsAgreedForUserContract,
+		&i.IsVerified,
+		&i.Status,
+		&i.Group,
+		&i.Photo,
+		&i.XP,
+		&i.Balance,
+		&i.FirebaseToken,
 	)
 	return i, err
 }
 
 const getAllUsers = `-- name: GetAllUsers :many
-SELECT id, guid, username, password_hash, company_id, role, type, created_at, updated_at FROM users
+SELECT id, "fullName", "dateOfBirth", "overAll", level, email, "phoneNumber", "passwordHash", role, "createdAt", "updatedAt", "deletedAt", gender, "isAgreedForUserContract", "isVerified", status, "group", photo, "XP", balance, "firebaseToken" FROM users
 `
 
 func (q *Queries) GetAllUsers(ctx context.Context) ([]User, error) {
@@ -66,14 +125,26 @@ func (q *Queries) GetAllUsers(ctx context.Context) ([]User, error) {
 		var i User
 		if err := rows.Scan(
 			&i.ID,
-			&i.Guid,
-			&i.Username,
+			&i.FullName,
+			&i.DateOfBirth,
+			&i.OverAll,
+			&i.Level,
+			&i.Email,
+			&i.PhoneNumber,
 			&i.PasswordHash,
-			&i.CompanyID,
 			&i.Role,
-			&i.Type,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.DeletedAt,
+			&i.Gender,
+			&i.IsAgreedForUserContract,
+			&i.IsVerified,
+			&i.Status,
+			&i.Group,
+			&i.Photo,
+			&i.XP,
+			&i.Balance,
+			&i.FirebaseToken,
 		); err != nil {
 			return nil, err
 		}
@@ -85,44 +156,68 @@ func (q *Queries) GetAllUsers(ctx context.Context) ([]User, error) {
 	return items, nil
 }
 
-const getUserByGUID = `-- name: GetUserByGUID :one
-SELECT id, guid, username, password_hash, company_id, role, type, created_at, updated_at FROM users WHERE guid = $1
+const getUserByEmail = `-- name: GetUserByEmail :one
+SELECT id, "fullName", "dateOfBirth", "overAll", level, email, "phoneNumber", "passwordHash", role, "createdAt", "updatedAt", "deletedAt", gender, "isAgreedForUserContract", "isVerified", status, "group", photo, "XP", balance, "firebaseToken" FROM users WHERE email = $1
 `
 
-func (q *Queries) GetUserByGUID(ctx context.Context, guid uuid.UUID) (User, error) {
-	row := q.db.QueryRow(ctx, getUserByGUID, guid)
+func (q *Queries) GetUserByEmail(ctx context.Context, email *string) (User, error) {
+	row := q.db.QueryRow(ctx, getUserByEmail, email)
 	var i User
 	err := row.Scan(
 		&i.ID,
-		&i.Guid,
-		&i.Username,
+		&i.FullName,
+		&i.DateOfBirth,
+		&i.OverAll,
+		&i.Level,
+		&i.Email,
+		&i.PhoneNumber,
 		&i.PasswordHash,
-		&i.CompanyID,
 		&i.Role,
-		&i.Type,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.DeletedAt,
+		&i.Gender,
+		&i.IsAgreedForUserContract,
+		&i.IsVerified,
+		&i.Status,
+		&i.Group,
+		&i.Photo,
+		&i.XP,
+		&i.Balance,
+		&i.FirebaseToken,
 	)
 	return i, err
 }
 
-const getUserByUsername = `-- name: GetUserByUsername :one
-SELECT id, guid, username, password_hash, company_id, role, type, created_at, updated_at FROM users WHERE username = $1
+const getUserByID = `-- name: GetUserByID :one
+SELECT id, "fullName", "dateOfBirth", "overAll", level, email, "phoneNumber", "passwordHash", role, "createdAt", "updatedAt", "deletedAt", gender, "isAgreedForUserContract", "isVerified", status, "group", photo, "XP", balance, "firebaseToken" FROM users WHERE id = $1
 `
 
-func (q *Queries) GetUserByUsername(ctx context.Context, username string) (User, error) {
-	row := q.db.QueryRow(ctx, getUserByUsername, username)
+func (q *Queries) GetUserByID(ctx context.Context, id string) (User, error) {
+	row := q.db.QueryRow(ctx, getUserByID, id)
 	var i User
 	err := row.Scan(
 		&i.ID,
-		&i.Guid,
-		&i.Username,
+		&i.FullName,
+		&i.DateOfBirth,
+		&i.OverAll,
+		&i.Level,
+		&i.Email,
+		&i.PhoneNumber,
 		&i.PasswordHash,
-		&i.CompanyID,
 		&i.Role,
-		&i.Type,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.DeletedAt,
+		&i.Gender,
+		&i.IsAgreedForUserContract,
+		&i.IsVerified,
+		&i.Status,
+		&i.Group,
+		&i.Photo,
+		&i.XP,
+		&i.Balance,
+		&i.FirebaseToken,
 	)
 	return i, err
 }

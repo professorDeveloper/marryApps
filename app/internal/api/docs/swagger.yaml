@@ -8,17 +8,60 @@ definitions:
     type: object
   model.LoginRequest:
     properties:
+      email:
+        example: user@example.com
+        type: string
       password:
         example: password123
-        type: string
-      username:
-        example: user@example.com
         type: string
     type: object
   model.LoginResponse:
     properties:
-      token:
+      accessToken:
         example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        type: string
+      refreshToken:
+        example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        type: string
+      user:
+        $ref: '#/definitions/model.UserResponse'
+    type: object
+  model.LogoutResponse:
+    properties:
+      message:
+        type: string
+    type: object
+  model.RefreshResponse:
+    properties:
+      accessToken:
+        type: string
+      refreshToken:
+        type: string
+    type: object
+  model.RegisterRequest:
+    properties:
+      email:
+        type: string
+      fullName:
+        type: string
+      password:
+        type: string
+    type: object
+  model.UserResponse:
+    properties:
+      email:
+        type: string
+      fullName:
+        type: string
+      gender:
+        type: string
+      id:
+        type: string
+      photo:
+        type: string
+      role:
+        type: string
+      status:
         type: string
     type: object
 host: localhost:8080
@@ -56,6 +99,68 @@ paths:
           schema:
             $ref: '#/definitions/model.ErrorResponse'
       summary: User login
+      tags:
+      - Auth
+  /api/v1/auth/logout:
+    get:
+      consumes:
+      - application/json
+      description: Logout user and invalidate access and refresh tokens
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.LogoutResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      summary: User logout
+      tags:
+      - Auth
+  /api/v1/auth/refresh:
+    get:
+      consumes:
+      - application/json
+      description: Refresh access token using refresh token
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.RefreshResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      summary: Token refresh
+      tags:
+      - Auth
+  /api/v1/auth/register:
+    post:
+      consumes:
+      - application/json
+      description: Register a new user and return token with user data
+      parameters:
+      - description: Registration data
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/model.RegisterRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      summary: User registration
       tags:
       - Auth
 swagger: "2.0"
