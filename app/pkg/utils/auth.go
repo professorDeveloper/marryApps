@@ -73,61 +73,43 @@ func GenerateRandomChars(length int) (string, error) {
 	return base64.URLEncoding.EncodeToString(bytes)[:length], nil
 }
 
-func CreateJWT(ttl time.Duration, payload interface{}, privateKey string) (string, error) {
-	decodedPrivateKey, err := base64.StdEncoding.DecodeString(privateKey)
-	if err != nil {
-		return "", fmt.Errorf("could not decode key: %w", err)
-	}
-	key, err := jwt.ParseRSAPrivateKeyFromPEM(decodedPrivateKey)
+func CreateJWT(ttl time.Duration, payload interface{}, secretKey string) (string, error) {
+    
+    now := time.Now().UTC()
 
-	if err != nil {
-		return "", fmt.Errorf("create: parse key: %w", err)
-	}
+    claims := make(jwt.MapClaims)
+    claims["sub"] = payload
+    claims["exp"] = now.Add(ttl).Unix()
+    claims["iat"] = now.Unix()
+    claims["nbf"] = now.Unix()
 
-	now := time.Now().UTC()
+    token, err := jwt.NewWithClaims(jwt.SigningMethodHS256, claims).SignedString([]byte(secretKey))
 
-	claims := make(jwt.MapClaims)
-	claims["sub"] = payload
-	claims["exp"] = now.Add(ttl).Unix()
-	claims["iat"] = now.Unix()
-	claims["nbf"] = now.Unix()
+    if err != nil {
+        return "", fmt.Errorf("create: sign token: %w", err)
+    }
 
-	token, err := jwt.NewWithClaims(jwt.SigningMethodRS256, claims).SignedString(key)
-
-	if err != nil {
-		return "", fmt.Errorf("create: sign token: %w", err)
-	}
-
-	return token, nil
+    return token, nil
 }
 
-func ValidateJWT(token string, publicKey string) (interface{}, error) {
-	decodedPublicKey, err := base64.StdEncoding.DecodeString(publicKey)
-	if err != nil {
-		return nil, fmt.Errorf("could not decode: %w", err)
-	}
+func ValidateJWT(token string, secretKey string) (interface{}, error) {
+    signingKey := []byte(secretKey)
 
-	key, err := jwt.ParseRSAPublicKeyFromPEM(decodedPublicKey)
+    parsedToken, err := jwt.Parse(token, func(t *jwt.Token) (interface{}, error) {
+        if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
+            return nil, fmt.Errorf("unexpected method: %s", t.Header["alg"])
+        }
+        return signingKey, nil
+    })
 
-	if err != nil {
-		return "", fmt.Errorf("validate: parse key: %w", err)
-	}
+    if err != nil {
+        return nil, fmt.Errorf("validate: %w", err)
+    }
 
-	parsedToken, err := jwt.Parse(token, func(t *jwt.Token) (interface{}, error) {
-		if _, ok := t.Method.(*jwt.SigningMethodRSA); !ok {
-			return nil, fmt.Errorf("unexpected method: %s", t.Header["alg"])
-		}
-		return key, nil
-	})
+    claims, ok := parsedToken.Claims.(jwt.MapClaims)
+    if !ok || !parsedToken.Valid {
+        return nil, fmt.Errorf("validate: invalid token")
+    }
 
-	if err != nil {
-		return nil, fmt.Errorf("validate: %w", err)
-	}
-
-	claims, ok := parsedToken.Claims.(jwt.MapClaims)
-	if !ok || !parsedToken.Valid {
-		return nil, fmt.Errorf("validate: invalid token")
-	}
-
-	return claims["sub"], nil
+    return claims["sub"], nil
 }

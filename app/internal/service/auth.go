@@ -82,13 +82,13 @@ func (s *AuthS) Login(ctx context.Context, req model.LoginRequest, jwtCfg *confi
 
 	accessToken, err := utils.CreateJWT(time.Duration(jwtCfg.AccessToken.ExpiresIn)*time.Second,
 		user.ID,
-		jwtCfg.AccessToken.PrivateKey)
+		jwtCfg.SecretKey)
 	if err != nil {
 		return model.LoginResponse{}, err
 	}
 	refreshToken, err := utils.CreateJWT(time.Duration(jwtCfg.RefreshToken.ExpiresIn)*time.Second,
 		user.ID,
-		jwtCfg.RefreshToken.PrivateKey)
+		jwtCfg.SecretKey)
 	if err != nil {
 		return model.LoginResponse{}, err
 	}
@@ -118,13 +118,13 @@ func (s *AuthS) Refresh(ctx context.Context, req model.RefreshRequest, jwtCfg *c
 
 	accessToken, err := utils.CreateJWT(time.Duration(jwtCfg.AccessToken.ExpiresIn)*time.Second,
 		user.ID,
-		jwtCfg.AccessToken.PrivateKey)
+		jwtCfg.SecretKey)
 	if err != nil {
 		return model.RefreshResponse{}, err
 	}
 	refreshToken, err = utils.CreateJWT(time.Duration(jwtCfg.RefreshToken.ExpiresIn)*time.Second,
 		user.ID,
-		jwtCfg.RefreshToken.PrivateKey)
+		jwtCfg.SecretKey)
 	if err != nil {
 		return model.RefreshResponse{}, err
 	}

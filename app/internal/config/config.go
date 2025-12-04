@@ -60,6 +60,7 @@ type (
 	JwtConfig struct {
 		AccessToken  AccessTokenConfig  `yaml:"access-token"`
 		RefreshToken RefreshTokenConfig `yaml:"refresh-token"`
+		SecretKey    string             `yaml:"secret-key" env:"JWT_SECRET_KEY"`
 	}
 
 	AccessTokenConfig struct {
