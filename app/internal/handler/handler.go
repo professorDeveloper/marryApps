@@ -25,8 +25,7 @@ func (h *Handler) Register(router *echo.Echo) {
 		{
 			auth.POST("/login", h.Login, mw.LoginRateLimiter(), mw.ValidateLoginInput)
 			auth.POST("/register", h.RegisterUser, mw.ValidateRegisterInput)
-			auth.GET("/refresh", h.Refresh)
-			auth.GET("/logout", h.Logout)
+			auth.POST("/refresh", h.Refresh)
 		}
 	}
 

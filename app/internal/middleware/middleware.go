@@ -77,7 +77,7 @@ func CheckAuth(cfg *config.Config) echo.MiddlewareFunc {
 				return c.JSON(http.StatusUnauthorized, model.ErrorResponse{Message: "you are not logged in"})
 			}
 
-			sub, err := utils.ValidateJWT(accessToken, cfg.Jwt.AccessToken.PublicKey)
+			sub, err := utils.ValidateJWT(accessToken, cfg.Jwt.SecretKey)
 			if err != nil {
 				return c.JSON(http.StatusUnauthorized, model.ErrorResponse{Message: err.Error()})
 			}

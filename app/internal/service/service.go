@@ -12,7 +12,6 @@ type AuthI interface {
 	Register(ctx context.Context, req model.RegisterRequest) error
 	Login(ctx context.Context, req model.LoginRequest, jwtCfg *config.JwtConfig) (model.LoginResponse, error)
 	Refresh(ctx context.Context, req model.RefreshRequest, jwtCfg *config.JwtConfig) (model.RefreshResponse, error)
-	Logout(ctx context.Context) error
 }
 
 type I interface {

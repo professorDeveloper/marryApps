@@ -102,19 +102,3 @@ func (h *Handler) Refresh(c echo.Context) error {
 	return c.JSON(http.StatusOK, resp)
 }
 
-// Logout handles user logout
-// @Summary User logout
-// @Description Logout user and invalidate access and refresh tokens
-// @Tags Auth
-// @Accept json
-// @Produce json
-// @Success 200 {object} model.LogoutResponse
-// @Failure 401 {object} model.ErrorResponse
-// @Router /api/v1/auth/logout [get]
-func (h *Handler) Logout(c echo.Context) error {
-	err := h.service.Auth().Logout(c.Request().Context())
-	if err != nil {
-		return c.JSON(http.StatusUnauthorized, model.ErrorResponse{Message: err.Error()})
-	}
-	return c.JSON(http.StatusOK, model.LogoutResponse{Message: "logout successful"})
-}

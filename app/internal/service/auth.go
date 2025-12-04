@@ -101,12 +101,13 @@ func (s *AuthS) Login(ctx context.Context, req model.LoginRequest, jwtCfg *confi
 }
 
 func (s *AuthS) Refresh(ctx context.Context, req model.RefreshRequest, jwtCfg *config.JwtConfig) (model.RefreshResponse, error) {
+	fmt.Println(req.RefreshToken)
 	if req.RefreshToken == "" {
 		return model.RefreshResponse{}, errors.New(http.StatusText(http.StatusUnauthorized))
 	}
 	refreshToken := req.RefreshToken
 
-	sub, err := utils.ValidateJWT(refreshToken, jwtCfg.RefreshToken.PrivateKey)
+	sub, err := utils.ValidateJWT(refreshToken, jwtCfg.SecretKey)
 	if err != nil {
 		return model.RefreshResponse{}, errors.New(http.StatusText(http.StatusUnauthorized))
 	}
@@ -128,15 +129,13 @@ func (s *AuthS) Refresh(ctx context.Context, req model.RefreshRequest, jwtCfg *c
 	if err != nil {
 		return model.RefreshResponse{}, err
 	}
+	fmt.Println("accessToken", accessToken)
 	return model.RefreshResponse{
 		AccessToken:  accessToken,
 		RefreshToken: refreshToken,
 	}, nil
 }
 
-func (s *AuthS) Logout(ctx context.Context) error {
-	return nil
-}
 
 func toUserResponse(u pg.User) model.UserResponse {
 	return model.UserResponse{
