@@ -10,9 +10,18 @@ type User struct {
 	Photo    *string `json:"photo,omitempty"`
 }
 // LoginRequest represents login request body
-type LoginRequest struct {
-	Email    string `json:"email" example:"user@example.com"`
-	Password string `json:"password" example:"password123"`
+	type LoginRequest struct {
+		PhoneNumber string `json:"phoneNumber" example:"1234567890"`
+		Password string `json:"password" example:"password123"`
+	}
+type GoogleAuthRequest struct {
+	IDToken string `json:"id_token"`
+	AppType string `json:"app_type"`
+}
+type LoginEmailRequest struct {
+	Email string `json:"email" example:"user@example.com"`
+	IdToken string `json:"id_token"`
+	FullName string `json:"full_name"`
 }
 
 // LoginResponse represents successful login response
@@ -30,7 +39,7 @@ type ErrorResponse struct {
 // RegisterRequest represents registration request body
 type RegisterRequest struct {
 	FullName string `json:"fullName"`
-	Email    string `json:"email"`
+	PhoneNumber   string `json:"phoneNumber"`
 	Password string `json:"password"`
 }
 

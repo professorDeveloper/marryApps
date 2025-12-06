@@ -21,6 +21,7 @@ type (
 		Metrics  MetricsConfig  `yaml:"metrics"`
 		Logger   LoggerConfig   `yaml:"logger"`
 		Jwt      JwtConfig      `yaml:"jwt"`
+		Google   GoogleConfig   `yaml:"google"`
 	}
 
 	AppConfig struct {
@@ -29,7 +30,12 @@ type (
 		IsDebug       bool   `yaml:"is-debug" env:"APP_IS_DEBUG"`
 		IsDevelopment bool   `yaml:"is-development" env:"APP_IS_DEVELOPMENT"`
 	}
-
+	GoogleConfig struct {
+		AndroidClientId string `yaml:"android-client-id" env:"GOOGLE_ANDROID_CLIENT_ID"`
+		IOSClientId string `yaml:"ios-client-id" env:"GOOGLE_IOS_CLIENT_ID"`
+		WebClientId string `yaml:"web-client-id" env:"GOOGLE_WEB_CLIENT_ID"`
+		WebClientSecret string `yaml:"web-client-secret" env:"GOOGLE_WEB_CLIENT_SECRET"`
+	}
 	ServerConfig struct {
 		Http              HttpConfig `yaml:"http"`
 		CtxDefaultTimeout int        `yaml:"ctx-default-timeout" env:"SERVER_CTX_DEFAULT_TIMEOUT"`

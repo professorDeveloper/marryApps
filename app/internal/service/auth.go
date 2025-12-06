@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -30,11 +29,11 @@ func NewAuthS(cfg *config.Config, repo *repository.Repository) *AuthS {
 }
 
 func (s *AuthS) Register(ctx context.Context, req model.RegisterRequest) error {
-	if req.Email == "" || req.Password == "" {
+	if req.PhoneNumber == "" || req.Password == "" {
 		return errors.New(http.StatusText(http.StatusBadRequest))
 	}
 
-	_, err := s.repo.PgRepo.Repo.GetUserByEmail(ctx, &req.Email)
+	_, err := s.repo.PgRepo.Repo.GetUserByPhoneNumber(ctx, &req.PhoneNumber)
 	if err == nil {
 		return errors.New("user already exists")
 	}
@@ -48,12 +47,12 @@ func (s *AuthS) Register(ctx context.Context, req model.RegisterRequest) error {
 	}
 
 	fullName := req.FullName
-	email := strings.ToLower(req.Email)
+	phoneNumber := req.PhoneNumber
 	status := "active"
 	userParams := pg.CreateUserParams{
 		ID:           uuid.NewString(),
+		PhoneNumber:  &phoneNumber,
 		FullName:     &fullName,
-		Email:        &email,
 		PasswordHash: hash,
 		Status:       &status,
 	}
@@ -67,16 +66,86 @@ func (s *AuthS) Register(ctx context.Context, req model.RegisterRequest) error {
 }
 
 func (s *AuthS) Login(ctx context.Context, req model.LoginRequest, jwtCfg *config.JwtConfig) (model.LoginResponse, error) {
-	if req.Email == "" || req.Password == "" {
+	if req.PhoneNumber == "" || req.Password == "" {
 		return model.LoginResponse{}, errors.New(http.StatusText(http.StatusBadRequest))
 	}
 
-	user, err := s.repo.PgRepo.Repo.GetUserByEmail(ctx, &req.Email)
+	user, err := s.repo.PgRepo.Repo.GetUserByPhoneNumber(ctx, &req.PhoneNumber)
 	if err != nil {
 		return model.LoginResponse{}, errors.New(http.StatusText(http.StatusUnauthorized))
 	}
 
 	if err := utils.VerifyPassword(user.PasswordHash, req.Password); err != nil {
+		return model.LoginResponse{}, errors.New(http.StatusText(http.StatusUnauthorized))
+	}
+
+	accessToken, err := utils.CreateJWT(time.Duration(jwtCfg.AccessToken.ExpiresIn)*time.Second,
+		user.ID,
+		jwtCfg.SecretKey)
+	if err != nil {
+		return model.LoginResponse{}, err
+	}
+	refreshToken, err := utils.CreateJWT(time.Duration(jwtCfg.RefreshToken.ExpiresIn)*time.Second,
+		user.ID,
+		jwtCfg.SecretKey)
+	if err != nil {
+		return model.LoginResponse{}, err
+	}
+
+	return model.LoginResponse{
+		AccessToken:  accessToken,
+		RefreshToken: refreshToken,
+		User:         toUserResponse(user),
+	}, nil
+}
+func (s *AuthS) LoginWithEmail(ctx context.Context, req model.LoginEmailRequest, jwtCfg *config.JwtConfig) (model.LoginResponse, error) {
+	if req.Email == "" || req.IdToken == "" {
+		return model.LoginResponse{}, errors.New(http.StatusText(http.StatusBadRequest))
+	}
+
+	user, err := s.repo.PgRepo.Repo.GetUserByEmail(ctx, &req.Email)
+
+	if err == pgx.ErrNoRows {
+		status := "active"
+		userParams := pg.CreateUserParams{
+			ID:       uuid.NewString(),
+			Email:    &req.Email,
+			FullName: &req.FullName,
+			GoogleId: &req.IdToken,
+			Status:   &status,
+		}
+		_, err = s.repo.PgRepo.Repo.CreateUser(ctx, userParams)
+		if err != nil {
+			return model.LoginResponse{}, errors.New(http.StatusText(http.StatusUnauthorized))
+		}
+		accessToken, err := utils.CreateJWT(time.Duration(jwtCfg.AccessToken.ExpiresIn)*time.Second,
+			user.ID,
+			jwtCfg.SecretKey)
+		if err != nil {
+			return model.LoginResponse{}, err
+		}
+		refreshToken, err := utils.CreateJWT(time.Duration(jwtCfg.RefreshToken.ExpiresIn)*time.Second,
+			user.ID,
+			jwtCfg.SecretKey)
+		if err != nil {
+			return model.LoginResponse{}, err
+		}
+		return model.LoginResponse{
+			AccessToken:  accessToken,
+			RefreshToken: refreshToken,
+			User:         toUserResponse(user),
+		}, nil
+	}
+	if err != nil {
+		return model.LoginResponse{}, err
+	}
+
+	_, err = s.repo.PgRepo.Repo.UpdateUser(ctx, pg.UpdateUserParams{
+		ID:       user.ID,
+		GoogleId: &req.IdToken,
+		FullName: &req.FullName,
+	})
+	if err != nil {
 		return model.LoginResponse{}, errors.New(http.StatusText(http.StatusUnauthorized))
 	}
 
@@ -135,7 +204,6 @@ func (s *AuthS) Refresh(ctx context.Context, req model.RefreshRequest, jwtCfg *c
 		RefreshToken: refreshToken,
 	}, nil
 }
-
 
 func toUserResponse(u pg.User) model.UserResponse {
 	return model.UserResponse{

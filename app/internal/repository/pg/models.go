@@ -10,12 +10,13 @@ import (
 
 type User struct {
 	ID                      string           `json:"id"`
+	GoogleId                *string          `json:"googleId"`
 	FullName                *string          `json:"fullName"`
 	DateOfBirth             pgtype.Timestamp `json:"dateOfBirth"`
 	OverAll                 *int32           `json:"overAll"`
 	Level                   *string          `json:"level"`
 	Email                   *string          `json:"email"`
-	PhoneNumber             *int64           `json:"phoneNumber"`
+	PhoneNumber             *string          `json:"phoneNumber"`
 	PasswordHash            string           `json:"passwordHash"`
 	Role                    *string          `json:"role"`
 	CreatedAt               pgtype.Timestamp `json:"createdAt"`

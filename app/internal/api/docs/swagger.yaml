@@ -6,13 +6,20 @@ definitions:
         example: error message
         type: string
     type: object
+  model.GoogleAuthRequest:
+    properties:
+      app_type:
+        type: string
+      id_token:
+        type: string
+    type: object
   model.LoginRequest:
     properties:
-      email:
-        example: user@example.com
-        type: string
       password:
         example: password123
+        type: string
+      phoneNumber:
+        example: "1234567890"
         type: string
     type: object
   model.LoginResponse:
@@ -26,11 +33,6 @@ definitions:
       user:
         $ref: '#/definitions/model.UserResponse'
     type: object
-  model.LogoutResponse:
-    properties:
-      message:
-        type: string
-    type: object
   model.RefreshResponse:
     properties:
       accessToken:
@@ -40,11 +42,11 @@ definitions:
     type: object
   model.RegisterRequest:
     properties:
-      email:
-        type: string
       fullName:
         type: string
       password:
+        type: string
+      phoneNumber:
         type: string
     type: object
   model.UserResponse:
@@ -101,23 +103,34 @@ paths:
       summary: User login
       tags:
       - Auth
-  /api/v1/auth/logout:
-    get:
+  /api/v1/auth/login/with-google:
+    post:
       consumes:
       - application/json
-      description: Logout user and invalidate access and refresh tokens
+      description: Register a new user using Google and return token with user data
+      parameters:
+      - description: Google auth request
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/model.GoogleAuthRequest'
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/model.LogoutResponse'
+            $ref: '#/definitions/model.LoginResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
         "401":
           description: Unauthorized
           schema:
             $ref: '#/definitions/model.ErrorResponse'
-      summary: User logout
+      summary: User registration with Google
       tags:
       - Auth
   /api/v1/auth/refresh:

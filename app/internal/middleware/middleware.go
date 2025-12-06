@@ -95,8 +95,8 @@ func ValidateLoginInput(next echo.HandlerFunc) echo.HandlerFunc {
 		if err := c.Bind(&req); err != nil {
 			return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "invalid request body"})
 		}
-		if req.Email == "" || req.Password == "" {
-			return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "email and password are required"})
+		if req.PhoneNumber == "" || req.Password == "" {
+			return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "phone number and password are required"})
 		}
 
 		c.Set("loginBody", req)
@@ -111,8 +111,8 @@ func ValidateRegisterInput(next echo.HandlerFunc) echo.HandlerFunc {
 		if err := c.Bind(&req); err != nil {
 			return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "invalid request body"})
 		}
-		if req.Email == "" || req.Password == "" {
-			return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "email and password are required"})
+		if req.PhoneNumber == "" || req.Password == "" {
+			return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "phone number and password are required"})
 		}
 
 		c.Set("registerBody", req)

@@ -26,6 +26,7 @@ func (h *Handler) Register(router *echo.Echo) {
 			auth.POST("/login", h.Login, mw.LoginRateLimiter(), mw.ValidateLoginInput)
 			auth.POST("/register", h.RegisterUser, mw.ValidateRegisterInput)
 			auth.POST("/refresh", h.Refresh)
+			auth.POST("/login/with-google", h.RegisterWithGoogle)
 		}
 	}
 

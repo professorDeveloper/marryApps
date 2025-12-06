@@ -61,9 +61,9 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/v1/auth/logout": {
-            "get": {
-                "description": "Logout user and invalidate access and refresh tokens",
+        "/api/v1/auth/login/with-google": {
+            "post": {
+                "description": "Register a new user using Google and return token with user data",
                 "consumes": [
                     "application/json"
                 ],
@@ -73,12 +73,29 @@ const docTemplate = `{
                 "tags": [
                     "Auth"
                 ],
-                "summary": "User logout",
+                "summary": "User registration with Google",
+                "parameters": [
+                    {
+                        "description": "Google auth request",
+                        "name": "input",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.GoogleAuthRequest"
+                        }
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/model.LogoutResponse"
+                            "$ref": "#/definitions/model.LoginResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
                         }
                     },
                     "401": {
@@ -167,16 +184,27 @@ const docTemplate = `{
                 }
             }
         },
+        "model.GoogleAuthRequest": {
+            "type": "object",
+            "properties": {
+                "app_type": {
+                    "type": "string"
+                },
+                "id_token": {
+                    "type": "string"
+                }
+            }
+        },
         "model.LoginRequest": {
             "type": "object",
             "properties": {
-                "email": {
-                    "type": "string",
-                    "example": "user@example.com"
-                },
                 "password": {
                     "type": "string",
                     "example": "password123"
+                },
+                "phoneNumber": {
+                    "type": "string",
+                    "example": "1234567890"
                 }
             }
         },
@@ -196,14 +224,6 @@ const docTemplate = `{
                 }
             }
         },
-        "model.LogoutResponse": {
-            "type": "object",
-            "properties": {
-                "message": {
-                    "type": "string"
-                }
-            }
-        },
         "model.RefreshResponse": {
             "type": "object",
             "properties": {
@@ -218,13 +238,13 @@ const docTemplate = `{
         "model.RegisterRequest": {
             "type": "object",
             "properties": {
-                "email": {
-                    "type": "string"
-                },
                 "fullName": {
                     "type": "string"
                 },
                 "password": {
+                    "type": "string"
+                },
+                "phoneNumber": {
                     "type": "string"
                 }
             }
