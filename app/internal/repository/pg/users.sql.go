@@ -7,6 +7,7 @@ package pg
 
 import (
 	"context"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgtype"
 )
@@ -40,7 +41,7 @@ VALUES (
     $15, $16, $17, $18,
     $19
 )
-RETURNING id, "googleId", "fullName", "dateOfBirth", "overAll", level, email, "phoneNumber", "passwordHash", role, "createdAt", "updatedAt", "deletedAt", gender, "isAgreedForUserContract", "isVerified", status, "group", photo, "XP", balance, "firebaseToken"
+RETURNING id, "googleId", "fullName", "dateOfBirth", "overAll", level, email, "phoneNumber", "passwordHash", role, gender, "isAgreedForUserContract", "isVerified", status, "group", photo, "XP", balance, "firebaseToken", "createdAt", "updatedAt", "deletedAt"
 `
 
 type CreateUserParams struct {
@@ -51,7 +52,7 @@ type CreateUserParams struct {
 	Level                   *string          `json:"level"`
 	Email                   *string          `json:"email"`
 	PhoneNumber             *string          `json:"phoneNumber"`
-	PasswordHash            string           `json:"passwordHash"`
+	PasswordHash            *string          `json:"passwordHash"`
 	Role                    *string          `json:"role"`
 	Gender                  *string          `json:"gender"`
 	IsAgreedForUserContract *bool            `json:"isAgreedForUserContract"`
@@ -99,9 +100,6 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 		&i.PhoneNumber,
 		&i.PasswordHash,
 		&i.Role,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-		&i.DeletedAt,
 		&i.Gender,
 		&i.IsAgreedForUserContract,
 		&i.IsVerified,
@@ -111,12 +109,15 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 		&i.XP,
 		&i.Balance,
 		&i.FirebaseToken,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
 	)
 	return i, err
 }
 
 const getAllUsers = `-- name: GetAllUsers :many
-SELECT id, "googleId", "fullName", "dateOfBirth", "overAll", level, email, "phoneNumber", "passwordHash", role, "createdAt", "updatedAt", "deletedAt", gender, "isAgreedForUserContract", "isVerified", status, "group", photo, "XP", balance, "firebaseToken" FROM users
+SELECT id, "googleId", "fullName", "dateOfBirth", "overAll", level, email, "phoneNumber", "passwordHash", role, gender, "isAgreedForUserContract", "isVerified", status, "group", photo, "XP", balance, "firebaseToken", "createdAt", "updatedAt", "deletedAt" FROM users
 `
 
 func (q *Queries) GetAllUsers(ctx context.Context) ([]User, error) {
@@ -139,9 +140,6 @@ func (q *Queries) GetAllUsers(ctx context.Context) ([]User, error) {
 			&i.PhoneNumber,
 			&i.PasswordHash,
 			&i.Role,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-			&i.DeletedAt,
 			&i.Gender,
 			&i.IsAgreedForUserContract,
 			&i.IsVerified,
@@ -151,6 +149,9 @@ func (q *Queries) GetAllUsers(ctx context.Context) ([]User, error) {
 			&i.XP,
 			&i.Balance,
 			&i.FirebaseToken,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.DeletedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -163,7 +164,7 @@ func (q *Queries) GetAllUsers(ctx context.Context) ([]User, error) {
 }
 
 const getUserByEmail = `-- name: GetUserByEmail :one
-SELECT id, "googleId", "fullName", "dateOfBirth", "overAll", level, email, "phoneNumber", "passwordHash", role, "createdAt", "updatedAt", "deletedAt", gender, "isAgreedForUserContract", "isVerified", status, "group", photo, "XP", balance, "firebaseToken" FROM users WHERE email = $1
+SELECT id, "googleId", "fullName", "dateOfBirth", "overAll", level, email, "phoneNumber", "passwordHash", role, gender, "isAgreedForUserContract", "isVerified", status, "group", photo, "XP", balance, "firebaseToken", "createdAt", "updatedAt", "deletedAt" FROM users WHERE email = $1
 `
 
 func (q *Queries) GetUserByEmail(ctx context.Context, email *string) (User, error) {
@@ -180,9 +181,6 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email *string) (User, erro
 		&i.PhoneNumber,
 		&i.PasswordHash,
 		&i.Role,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-		&i.DeletedAt,
 		&i.Gender,
 		&i.IsAgreedForUserContract,
 		&i.IsVerified,
@@ -192,12 +190,15 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email *string) (User, erro
 		&i.XP,
 		&i.Balance,
 		&i.FirebaseToken,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
 	)
 	return i, err
 }
 
 const getUserByID = `-- name: GetUserByID :one
-SELECT id, "googleId", "fullName", "dateOfBirth", "overAll", level, email, "phoneNumber", "passwordHash", role, "createdAt", "updatedAt", "deletedAt", gender, "isAgreedForUserContract", "isVerified", status, "group", photo, "XP", balance, "firebaseToken" FROM users WHERE id = $1
+SELECT id, "googleId", "fullName", "dateOfBirth", "overAll", level, email, "phoneNumber", "passwordHash", role, gender, "isAgreedForUserContract", "isVerified", status, "group", photo, "XP", balance, "firebaseToken", "createdAt", "updatedAt", "deletedAt" FROM users WHERE id = $1
 `
 
 func (q *Queries) GetUserByID(ctx context.Context, id string) (User, error) {
@@ -214,9 +215,6 @@ func (q *Queries) GetUserByID(ctx context.Context, id string) (User, error) {
 		&i.PhoneNumber,
 		&i.PasswordHash,
 		&i.Role,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-		&i.DeletedAt,
 		&i.Gender,
 		&i.IsAgreedForUserContract,
 		&i.IsVerified,
@@ -226,12 +224,15 @@ func (q *Queries) GetUserByID(ctx context.Context, id string) (User, error) {
 		&i.XP,
 		&i.Balance,
 		&i.FirebaseToken,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
 	)
 	return i, err
 }
 
 const getUserByPhoneNumber = `-- name: GetUserByPhoneNumber :one
-SELECT id, "googleId", "fullName", "dateOfBirth", "overAll", level, email, "phoneNumber", "passwordHash", role, "createdAt", "updatedAt", "deletedAt", gender, "isAgreedForUserContract", "isVerified", status, "group", photo, "XP", balance, "firebaseToken" FROM users WHERE "phoneNumber" = $1
+SELECT id, "googleId", "fullName", "dateOfBirth", "overAll", level, email, "phoneNumber", "passwordHash", role, gender, "isAgreedForUserContract", "isVerified", status, "group", photo, "XP", balance, "firebaseToken", "createdAt", "updatedAt", "deletedAt" FROM users WHERE "phoneNumber" = $1
 `
 
 func (q *Queries) GetUserByPhoneNumber(ctx context.Context, phonenumber *string) (User, error) {
@@ -248,9 +249,6 @@ func (q *Queries) GetUserByPhoneNumber(ctx context.Context, phonenumber *string)
 		&i.PhoneNumber,
 		&i.PasswordHash,
 		&i.Role,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-		&i.DeletedAt,
 		&i.Gender,
 		&i.IsAgreedForUserContract,
 		&i.IsVerified,
@@ -260,6 +258,9 @@ func (q *Queries) GetUserByPhoneNumber(ctx context.Context, phonenumber *string)
 		&i.XP,
 		&i.Balance,
 		&i.FirebaseToken,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
 	)
 	return i, err
 }
@@ -285,7 +286,7 @@ UPDATE users SET
     "firebaseToken" = $18,
     "googleId" = $19
 WHERE id = $1
-RETURNING id, "googleId", "fullName", "dateOfBirth", "overAll", level, email, "phoneNumber", "passwordHash", role, "createdAt", "updatedAt", "deletedAt", gender, "isAgreedForUserContract", "isVerified", status, "group", photo, "XP", balance, "firebaseToken"
+RETURNING id, "googleId", "fullName", "dateOfBirth", "overAll", level, email, "phoneNumber", "passwordHash", role, gender, "isAgreedForUserContract", "isVerified", status, "group", photo, "XP", balance, "firebaseToken", "createdAt", "updatedAt", "deletedAt"
 `
 
 type UpdateUserParams struct {
@@ -296,7 +297,7 @@ type UpdateUserParams struct {
 	Level                   *string          `json:"level"`
 	Email                   *string          `json:"email"`
 	PhoneNumber             *string          `json:"phoneNumber"`
-	PasswordHash            string           `json:"passwordHash"`
+	PasswordHash            *string          `json:"passwordHash"`
 	Role                    *string          `json:"role"`
 	Gender                  *string          `json:"gender"`
 	IsAgreedForUserContract *bool            `json:"isAgreedForUserContract"`
@@ -308,6 +309,7 @@ type UpdateUserParams struct {
 	Balance                 *int64           `json:"balance"`
 	FirebaseToken           *string          `json:"firebaseToken"`
 	GoogleId                *string          `json:"googleId"`
+	UpdatedAt               time.Time        `json:"updatedAt"`
 }
 
 func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (User, error) {
@@ -344,9 +346,6 @@ func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (User, e
 		&i.PhoneNumber,
 		&i.PasswordHash,
 		&i.Role,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-		&i.DeletedAt,
 		&i.Gender,
 		&i.IsAgreedForUserContract,
 		&i.IsVerified,
@@ -356,6 +355,9 @@ func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (User, e
 		&i.XP,
 		&i.Balance,
 		&i.FirebaseToken,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
 	)
 	return i, err
 }

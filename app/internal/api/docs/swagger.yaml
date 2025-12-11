@@ -1,5 +1,35 @@
 basePath: /
 definitions:
+  model.CreateInvoiceResponse:
+    properties:
+      data:
+        properties:
+          id:
+            type: string
+          payment_url:
+            type: string
+        type: object
+      error:
+        type: integer
+      error_note:
+        type: string
+    type: object
+  model.CreatePriceForLevelRequest:
+    properties:
+      amount:
+        type: integer
+      level:
+        type: string
+    type: object
+  model.CreatePriceForLevelResponse:
+    properties:
+      data:
+        $ref: '#/definitions/model.PriceForLevelResponse'
+      error:
+        type: integer
+      error_note:
+        type: string
+    type: object
   model.ErrorResponse:
     properties:
       message:
@@ -11,6 +41,11 @@ definitions:
       app_type:
         type: string
       id_token:
+        type: string
+    type: object
+  model.IndexCreation:
+    properties:
+      provider:
         type: string
     type: object
   model.LoginRequest:
@@ -33,11 +68,22 @@ definitions:
       user:
         $ref: '#/definitions/model.UserResponse'
     type: object
+  model.PriceForLevelResponse:
+    properties:
+      amount:
+        type: integer
+      id:
+        type: string
+      level:
+        type: string
+    type: object
   model.RefreshResponse:
     properties:
       accessToken:
+        example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
         type: string
       refreshToken:
+        example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
         type: string
     type: object
   model.RegisterRequest:
@@ -49,22 +95,122 @@ definitions:
       phoneNumber:
         type: string
     type: object
-  model.UserResponse:
+  model.SuccessResponse:
     properties:
+      message:
+        example: Password updated successfully
+        type: string
+    type: object
+  model.UpdatePasswordRequest:
+    properties:
+      currentPassword:
+        example: password123
+        type: string
+      newPassword:
+        example: newPassword123
+        type: string
+    type: object
+  model.UpdateUserRequest:
+    properties:
+      balance:
+        example: 1000
+        type: integer
+      createdAt:
+        example: "2022-01-01T00:00:00Z"
+        type: string
+      dateOfBirth:
+        example: "2022-01-01T00:00:00Z"
+        type: string
+      deletedAt:
+        example: "2022-01-01T00:00:00Z"
+        type: string
       email:
+        example: user@example.com
+        type: string
+      firebaseToken:
+        example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
         type: string
       fullName:
+        example: John Doe
         type: string
       gender:
+        example: male
         type: string
-      id:
+      googleId:
+        example: "1234567890"
+        type: string
+      group:
+        example: group_1
+        type: string
+      isAgreedForUserContract:
+        example: true
+        type: boolean
+      isVerified:
+        example: true
+        type: boolean
+      level:
+        example: level_1
+        type: string
+      passwordHash:
+        example: $2a$10$exampleHash
+        type: string
+      phoneNumber:
+        example: "+998901234567"
         type: string
       photo:
+        example: https://example.com/photo.jpg
         type: string
       role:
+        example: user
         type: string
       status:
+        example: active
         type: string
+      updatedAt:
+        example: "2022-01-01T00:00:00Z"
+        type: string
+      xp:
+        example: 100
+        type: integer
+    type: object
+  model.UserResponse:
+    properties:
+      balance:
+        example: 1000
+        type: integer
+      email:
+        example: user@example.com
+        type: string
+      fullName:
+        example: John Doe
+        type: string
+      gender:
+        example: male
+        type: string
+      group:
+        example: group_1
+        type: string
+      id:
+        example: "1234567890"
+        type: string
+      level:
+        example: level_1
+        type: string
+      phoneNumber:
+        example: "+998901234567"
+        type: string
+      photo:
+        example: https://example.com/photo.jpg
+        type: string
+      role:
+        example: user
+        type: string
+      status:
+        example: active
+        type: string
+      xp:
+        example: 100
+        type: integer
     type: object
 host: localhost:8080
 info:
@@ -176,4 +322,179 @@ paths:
       summary: User registration
       tags:
       - Auth
+  /level-price/create:
+    post:
+      consumes:
+      - application/json
+      description: Creates a new price for a specific level in the system
+      parameters:
+      - default: Bearer <your_token>
+        description: Bearer token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: Price level creation details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.CreatePriceForLevelRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successfully created price level
+          schema:
+            $ref: '#/definitions/model.CreatePriceForLevelResponse'
+        "400":
+          description: Invalid request or price level already exists
+          schema:
+            $ref: '#/definitions/model.CreatePriceForLevelResponse'
+        "401":
+          description: Unauthorized - Invalid or missing token
+          schema:
+            $ref: '#/definitions/model.CreatePriceForLevelResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.CreatePriceForLevelResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Create a new price level
+      tags:
+      - level-prices
+  /payments/create:
+    post:
+      consumes:
+      - application/json
+      description: Creates a new payment invoice for the authenticated user
+      parameters:
+      - default: Bearer <your_token>
+        description: Bearer token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: Invoice creation request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.IndexCreation'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successfully created invoice
+          schema:
+            $ref: '#/definitions/model.CreateInvoiceResponse'
+        "400":
+          description: Invalid request or missing required fields
+          schema:
+            $ref: '#/definitions/model.CreateInvoiceResponse'
+        "401":
+          description: Unauthorized - User not authenticated
+          schema:
+            $ref: '#/definitions/model.CreateInvoiceResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.CreateInvoiceResponse'
+      summary: Create a new payment invoice
+      tags:
+      - payments
+  /user/me:
+    get:
+      consumes:
+      - application/json
+      description: Get the profile of the currently authenticated user
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.UserResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Get current user profile
+      tags:
+      - users
+  /user/password:
+    put:
+      consumes:
+      - application/json
+      description: Update the password of the currently authenticated user
+      parameters:
+      - description: Password update data
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.UpdatePasswordRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.SuccessResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Update user password
+      tags:
+      - users
+  /user/update:
+    put:
+      consumes:
+      - application/json
+      description: Update the profile of the currently authenticated user
+      parameters:
+      - description: User update data
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.UpdateUserRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.UserResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Update user profile
+      tags:
+      - users
 swagger: "2.0"

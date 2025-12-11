@@ -28,6 +28,20 @@ func (h *Handler) Register(router *echo.Echo) {
 			auth.POST("/refresh", h.Refresh)
 			auth.POST("/login/with-google", h.RegisterWithGoogle)
 		}
+		payments := api.Group("/payments")
+		{
+			payments.POST("/create", h.CreateInvoice,mw.CheckAuthPayme(h.cfg))
+		}
+		levelPrice := api.Group("/level-price")
+		{
+			levelPrice.POST("/create", h.createLevelPrice,mw.CheckAuth(h.cfg))
+		}
+		user := api.Group("/user")
+		{
+			user.GET("/me", h.getUser,mw.CheckAuth(h.cfg))
+			user.PUT("/update", h.updateUser,mw.CheckAuth(h.cfg))
+			user.PUT("/password", h.updatePassword,mw.CheckAuth(h.cfg))
+		}
 	}
 
 }

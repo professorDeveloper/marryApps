@@ -8,6 +8,37 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+type PriceForLevel struct {
+	ID      string             `json:"id"`
+	Level   *string            `json:"level"`
+	Amount  *int32             `json:"amount"`
+	Created pgtype.Timestamptz `json:"created"`
+	Updated pgtype.Timestamptz `json:"updated"`
+}
+
+type StudentPayment struct {
+	ID                    string             `json:"id"`
+	Student               string             `json:"student"`
+	PriceForLevel         string             `json:"priceForLevel"`
+	IsPaid                *bool              `json:"isPaid"`
+	ClickTransId          *int32             `json:"clickTransId"`
+	ClickPayDocId         *int32             `json:"clickPayDocId"`
+	Error                 *int32             `json:"error"`
+	ErrorNote             *string            `json:"errorNote"`
+	Status                *string            `json:"status"`
+	MerchantPrepareId     *int32             `json:"merchantPrepareId"`
+	PaymeId               *string            `json:"paymeId"`
+	Provider              *string            `json:"provider"`
+	OrderNumber           *int32             `json:"orderNumber"`
+	PaidAt                *int64             `json:"paidAt"`
+	TimePaymeTransCreated *int64             `json:"timePaymeTransCreated"`
+	Reason                *int64             `json:"reason"`
+	Amount                *int32             `json:"amount"`
+	CancelTime            *int64             `json:"cancelTime"`
+	Created               pgtype.Timestamptz `json:"created"`
+	Updated               pgtype.Timestamptz `json:"updated"`
+}
+
 type User struct {
 	ID                      string           `json:"id"`
 	GoogleId                *string          `json:"googleId"`
@@ -17,11 +48,8 @@ type User struct {
 	Level                   *string          `json:"level"`
 	Email                   *string          `json:"email"`
 	PhoneNumber             *string          `json:"phoneNumber"`
-	PasswordHash            string           `json:"passwordHash"`
+	PasswordHash            *string          `json:"passwordHash"`
 	Role                    *string          `json:"role"`
-	CreatedAt               pgtype.Timestamp `json:"createdAt"`
-	UpdatedAt               pgtype.Timestamp `json:"updatedAt"`
-	DeletedAt               *int64           `json:"deletedAt"`
 	Gender                  *string          `json:"gender"`
 	IsAgreedForUserContract *bool            `json:"isAgreedForUserContract"`
 	IsVerified              *bool            `json:"isVerified"`
@@ -31,4 +59,7 @@ type User struct {
 	XP                      *int32           `json:"XP"`
 	Balance                 *int64           `json:"balance"`
 	FirebaseToken           *string          `json:"firebaseToken"`
+	CreatedAt               pgtype.Timestamp `json:"createdAt"`
+	UpdatedAt               pgtype.Timestamp `json:"updatedAt"`
+	DeletedAt               pgtype.Timestamp `json:"deletedAt"`
 }

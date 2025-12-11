@@ -22,18 +22,39 @@ type (
 		Logger   LoggerConfig   `yaml:"logger"`
 		Jwt      JwtConfig      `yaml:"jwt"`
 		Google   GoogleConfig   `yaml:"google"`
+		Payme    PaymeConfig    `yaml:"payme"`
+		Click    ClickConfig    `yaml:"click"`
 	}
-
+	
+	ClickConfig struct {
+		Url            string `env:"CLICK_API_URL" env-default:""`
+		ServiceID      string `env:"CLICK_SERVICE_ID" env-default:""`
+		SecretKey      string `env:"CLICK_SECRET_KEY" env-default:""`
+		MerchantID     string `env:"CLICK_MERCHANT_ID" env-default:""`
+		MerchantUserID string `env:"CLICK_MERCHANT_USER_ID" env-default:""`
+		ReturnUrl    string `env:"CLICK_RETURN_URL" env-default:""`
+	}
+	
+	PaymeConfig struct {
+		Url          string `env:"PAYME_API_URL" env-default:""`
+		ClientKey string `env:"PAYME_MERCHANT_KEY" env-default:""`
+		MerchantID   string `env:"PAYME_MERCHANT_ID" env-default:""`
+		Login string `env:"PAYME_API_LOGIN" env-default:""`
+		Password string `env:"PAYME_API_PASSWORD" env-default:""`
+		ReturnUrl string `env:"PAYME_RETURN_URL" env-default:""`
+	}
+	
 	AppConfig struct {
 		Name          string `yaml:"name"    env:"APP_NAME"`
 		Version       string `yaml:"version" env:"APP_VERSION"`
 		IsDebug       bool   `yaml:"is-debug" env:"APP_IS_DEBUG"`
 		IsDevelopment bool   `yaml:"is-development" env:"APP_IS_DEVELOPMENT"`
 	}
+
 	GoogleConfig struct {
 		AndroidClientId string `yaml:"android-client-id" env:"GOOGLE_ANDROID_CLIENT_ID"`
-		IOSClientId string `yaml:"ios-client-id" env:"GOOGLE_IOS_CLIENT_ID"`
-		WebClientId string `yaml:"web-client-id" env:"GOOGLE_WEB_CLIENT_ID"`
+		IOSClientId     string `yaml:"ios-client-id" env:"GOOGLE_IOS_CLIENT_ID"`
+		WebClientId     string `yaml:"web-client-id" env:"GOOGLE_WEB_CLIENT_ID"`
 		WebClientSecret string `yaml:"web-client-secret" env:"GOOGLE_WEB_CLIENT_SECRET"`
 	}
 	ServerConfig struct {

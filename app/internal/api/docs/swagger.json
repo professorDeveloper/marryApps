@@ -166,9 +166,329 @@
                     }
                 }
             }
+        },
+        "/level-price/create": {
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Creates a new price for a specific level in the system",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "level-prices"
+                ],
+                "summary": "Create a new price level",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "default": "Bearer \u003cyour_token\u003e",
+                        "description": "Bearer token",
+                        "name": "Authorization",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "description": "Price level creation details",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.CreatePriceForLevelRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successfully created price level",
+                        "schema": {
+                            "$ref": "#/definitions/model.CreatePriceForLevelResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request or price level already exists",
+                        "schema": {
+                            "$ref": "#/definitions/model.CreatePriceForLevelResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized - Invalid or missing token",
+                        "schema": {
+                            "$ref": "#/definitions/model.CreatePriceForLevelResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/model.CreatePriceForLevelResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/payments/create": {
+            "post": {
+                "description": "Creates a new payment invoice for the authenticated user",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "payments"
+                ],
+                "summary": "Create a new payment invoice",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "default": "Bearer \u003cyour_token\u003e",
+                        "description": "Bearer token",
+                        "name": "Authorization",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "description": "Invoice creation request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.IndexCreation"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successfully created invoice",
+                        "schema": {
+                            "$ref": "#/definitions/model.CreateInvoiceResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request or missing required fields",
+                        "schema": {
+                            "$ref": "#/definitions/model.CreateInvoiceResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized - User not authenticated",
+                        "schema": {
+                            "$ref": "#/definitions/model.CreateInvoiceResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/model.CreateInvoiceResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/user/me": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Get the profile of the currently authenticated user",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "users"
+                ],
+                "summary": "Get current user profile",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.UserResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/user/password": {
+            "put": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Update the password of the currently authenticated user",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "users"
+                ],
+                "summary": "Update user password",
+                "parameters": [
+                    {
+                        "description": "Password update data",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.UpdatePasswordRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.SuccessResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/user/update": {
+            "put": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Update the profile of the currently authenticated user",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "users"
+                ],
+                "summary": "Update user profile",
+                "parameters": [
+                    {
+                        "description": "User update data",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.UpdateUserRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.UserResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    }
+                }
+            }
         }
     },
     "definitions": {
+        "model.CreateInvoiceResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "object",
+                    "properties": {
+                        "id": {
+                            "type": "string"
+                        },
+                        "payment_url": {
+                            "type": "string"
+                        }
+                    }
+                },
+                "error": {
+                    "type": "integer"
+                },
+                "error_note": {
+                    "type": "string"
+                }
+            }
+        },
+        "model.CreatePriceForLevelRequest": {
+            "type": "object",
+            "properties": {
+                "amount": {
+                    "type": "integer"
+                },
+                "level": {
+                    "type": "string"
+                }
+            }
+        },
+        "model.CreatePriceForLevelResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/model.PriceForLevelResponse"
+                },
+                "error": {
+                    "type": "integer"
+                },
+                "error_note": {
+                    "type": "string"
+                }
+            }
+        },
         "model.ErrorResponse": {
             "type": "object",
             "properties": {
@@ -185,6 +505,14 @@
                     "type": "string"
                 },
                 "id_token": {
+                    "type": "string"
+                }
+            }
+        },
+        "model.IndexCreation": {
+            "type": "object",
+            "properties": {
+                "provider": {
                     "type": "string"
                 }
             }
@@ -218,14 +546,30 @@
                 }
             }
         },
+        "model.PriceForLevelResponse": {
+            "type": "object",
+            "properties": {
+                "amount": {
+                    "type": "integer"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "level": {
+                    "type": "string"
+                }
+            }
+        },
         "model.RefreshResponse": {
             "type": "object",
             "properties": {
                 "accessToken": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
                 },
                 "refreshToken": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
                 }
             }
         },
@@ -243,29 +587,163 @@
                 }
             }
         },
+        "model.SuccessResponse": {
+            "type": "object",
+            "properties": {
+                "message": {
+                    "type": "string",
+                    "example": "Password updated successfully"
+                }
+            }
+        },
+        "model.UpdatePasswordRequest": {
+            "type": "object",
+            "properties": {
+                "currentPassword": {
+                    "type": "string",
+                    "example": "password123"
+                },
+                "newPassword": {
+                    "type": "string",
+                    "example": "newPassword123"
+                }
+            }
+        },
+        "model.UpdateUserRequest": {
+            "type": "object",
+            "properties": {
+                "balance": {
+                    "type": "integer",
+                    "example": 1000
+                },
+                "createdAt": {
+                    "type": "string",
+                    "example": "2022-01-01T00:00:00Z"
+                },
+                "dateOfBirth": {
+                    "type": "string",
+                    "example": "2022-01-01T00:00:00Z"
+                },
+                "deletedAt": {
+                    "type": "string",
+                    "example": "2022-01-01T00:00:00Z"
+                },
+                "email": {
+                    "type": "string",
+                    "example": "user@example.com"
+                },
+                "firebaseToken": {
+                    "type": "string",
+                    "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                },
+                "fullName": {
+                    "type": "string",
+                    "example": "John Doe"
+                },
+                "gender": {
+                    "type": "string",
+                    "example": "male"
+                },
+                "googleId": {
+                    "type": "string",
+                    "example": "1234567890"
+                },
+                "group": {
+                    "type": "string",
+                    "example": "group_1"
+                },
+                "isAgreedForUserContract": {
+                    "type": "boolean",
+                    "example": true
+                },
+                "isVerified": {
+                    "type": "boolean",
+                    "example": true
+                },
+                "level": {
+                    "type": "string",
+                    "example": "level_1"
+                },
+                "passwordHash": {
+                    "type": "string",
+                    "example": "$2a$10$exampleHash"
+                },
+                "phoneNumber": {
+                    "type": "string",
+                    "example": "+998901234567"
+                },
+                "photo": {
+                    "type": "string",
+                    "example": "https://example.com/photo.jpg"
+                },
+                "role": {
+                    "type": "string",
+                    "example": "user"
+                },
+                "status": {
+                    "type": "string",
+                    "example": "active"
+                },
+                "updatedAt": {
+                    "type": "string",
+                    "example": "2022-01-01T00:00:00Z"
+                },
+                "xp": {
+                    "type": "integer",
+                    "example": 100
+                }
+            }
+        },
         "model.UserResponse": {
             "type": "object",
             "properties": {
+                "balance": {
+                    "type": "integer",
+                    "example": 1000
+                },
                 "email": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "user@example.com"
                 },
                 "fullName": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "John Doe"
                 },
                 "gender": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "male"
+                },
+                "group": {
+                    "type": "string",
+                    "example": "group_1"
                 },
                 "id": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "1234567890"
+                },
+                "level": {
+                    "type": "string",
+                    "example": "level_1"
+                },
+                "phoneNumber": {
+                    "type": "string",
+                    "example": "+998901234567"
                 },
                 "photo": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "https://example.com/photo.jpg"
                 },
                 "role": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "user"
                 },
                 "status": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "active"
+                },
+                "xp": {
+                    "type": "integer",
+                    "example": 100
                 }
             }
         }

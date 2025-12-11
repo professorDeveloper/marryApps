@@ -53,7 +53,7 @@ func (s *AuthS) Register(ctx context.Context, req model.RegisterRequest) error {
 		ID:           uuid.NewString(),
 		PhoneNumber:  &phoneNumber,
 		FullName:     &fullName,
-		PasswordHash: hash,
+		PasswordHash: &hash,
 		Status:       &status,
 	}
 
@@ -75,7 +75,7 @@ func (s *AuthS) Login(ctx context.Context, req model.LoginRequest, jwtCfg *confi
 		return model.LoginResponse{}, errors.New(http.StatusText(http.StatusUnauthorized))
 	}
 
-	if err := utils.VerifyPassword(user.PasswordHash, req.Password); err != nil {
+	if err := utils.VerifyPassword(*user.PasswordHash, req.Password); err != nil {
 		return model.LoginResponse{}, errors.New(http.StatusText(http.StatusUnauthorized))
 	}
 
@@ -203,6 +203,37 @@ func (s *AuthS) Refresh(ctx context.Context, req model.RefreshRequest, jwtCfg *c
 		AccessToken:  accessToken,
 		RefreshToken: refreshToken,
 	}, nil
+}
+
+func (s *AuthS) UpdateUserPassword(ctx context.Context, userID uuid.UUID, currentPassword, newPassword string) error {
+	user, err := s.repo.PgRepo.Repo.GetUserByID(ctx, fmt.Sprint(userID))
+	if err != nil {
+		return fmt.Errorf("failed to get user: %w", err)
+	}
+
+	if user.PasswordHash == nil {
+		return fmt.Errorf("user has no password set")
+	}
+	if err := utils.VerifyPassword(*user.PasswordHash, currentPassword); err != nil {
+		return fmt.Errorf("invalid current password")
+	}
+
+	hashedPassword, err := utils.HashPassword(newPassword)
+	if err != nil {
+		return fmt.Errorf("failed to hash password: %w", err)
+	}
+
+	updateParams := pg.UpdateUserParams{
+		ID:           fmt.Sprint(userID),
+		PasswordHash: &hashedPassword,
+		UpdatedAt:    time.Now(),
+	}
+
+	if _, err := s.repo.PgRepo.Repo.UpdateUser(ctx, updateParams); err != nil {
+		return fmt.Errorf("failed to update password: %w", err)
+	}
+	return nil
+
 }
 
 func toUserResponse(u pg.User) model.UserResponse {

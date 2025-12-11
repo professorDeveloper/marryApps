@@ -3,6 +3,7 @@ package app
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
@@ -18,6 +19,8 @@ import (
 	"gitlab.yurtal.tech/company/blitz/back/internal/service"
 	"gitlab.yurtal.tech/company/blitz/back/pkg/logger"
 	"gitlab.yurtal.tech/company/blitz/back/pkg/minio"
+	"gitlab.yurtal.tech/company/blitz/back/pkg/paymentClick"
+	"gitlab.yurtal.tech/company/blitz/back/pkg/paymentPayme"
 	pg "gitlab.yurtal.tech/company/blitz/back/pkg/postgres"
 
 	_ "gitlab.yurtal.tech/company/blitz/back/internal/api/docs"
@@ -32,8 +35,11 @@ import (
 func Run(cfg *config.Config) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-
 	l := logger.New(cfg.Logger.Level)
+
+	clickClient := paymentClick.NewClient(slog.Default(), http.DefaultClient, paymentClick.BaseUrl(cfg.Click.Url), paymentClick.MerchantUserId(cfg.Click.MerchantUserID), paymentClick.SecretKey(cfg.Click.SecretKey), paymentClick.ServiceId(cfg.Click.ServiceID), paymentClick.MerchantId(cfg.Click.MerchantID), paymentClick.ReturnUrl(cfg.Click.ReturnUrl))
+	paymeClient := paymentPayme.NewClient(slog.Default(), http.DefaultClient, paymentPayme.BaseUrl(cfg.Payme.Url), paymentPayme.ClientKey(cfg.Payme.ClientKey), paymentPayme.MerchantId(cfg.Payme.MerchantID), paymentPayme.Login(cfg.Payme.Login), paymentPayme.Password(cfg.Payme.Password), paymentPayme.ReturnUrl(cfg.Payme.ReturnUrl))
+
 	e := echo.New()
 
 	pgClient, err := pg.New(pg.Username(cfg.Postgres.User), pg.Password(cfg.Postgres.Password),
@@ -56,7 +62,7 @@ func Run(cfg *config.Config) {
 
 	repos := repository.New(pgClient, minioClient)
 
-	service := service.New(cfg, repos)
+	service := service.New(cfg, repos, clickClient, paymeClient)
 
 	handler := handler.New(l, cfg, service)
 	handler.Register(e)

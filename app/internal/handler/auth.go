@@ -137,12 +137,12 @@ func (h *Handler) RegisterWithGoogle(c echo.Context) error {
 	if err != nil {
 		return c.JSON(http.StatusUnauthorized, map[string]string{"error": "Invalid Google ID Token"})
 	}
-	email, _ := payload.Claims["email"].(string) 
+	email, _ := payload.Claims["email"].(string)
 	name, _ := payload.Claims["name"].(string)
 
 	resp, err := h.service.Auth().LoginWithEmail(c.Request().Context(), model.LoginEmailRequest{
 		Email:    email,
-		IdToken: req.IDToken,
+		IdToken:  req.IDToken,
 		FullName: name,
 	}, &h.cfg.Jwt)
 	if err != nil {

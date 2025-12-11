@@ -63,7 +63,6 @@ func VerifyPassword(hashedPassword string, candidatePassword string) error {
 	return bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(candidatePassword))
 }
 
-// GenerateRandomChars generates a cryptographically secure random string.
 func GenerateRandomChars(length int) (string, error) {
 	bytes := make([]byte, length)
 	_, err := rand.Read(bytes)
@@ -74,42 +73,42 @@ func GenerateRandomChars(length int) (string, error) {
 }
 
 func CreateJWT(ttl time.Duration, payload interface{}, secretKey string) (string, error) {
-    
-    now := time.Now().UTC()
 
-    claims := make(jwt.MapClaims)
-    claims["sub"] = payload
-    claims["exp"] = now.Add(ttl).Unix()
-    claims["iat"] = now.Unix()
-    claims["nbf"] = now.Unix()
+	now := time.Now().UTC()
 
-    token, err := jwt.NewWithClaims(jwt.SigningMethodHS256, claims).SignedString([]byte(secretKey))
+	claims := make(jwt.MapClaims)
+	claims["sub"] = payload
+	claims["exp"] = now.Add(ttl).Unix()
+	claims["iat"] = now.Unix()
+	claims["nbf"] = now.Unix()
 
-    if err != nil {
-        return "", fmt.Errorf("create: sign token: %w", err)
-    }
+	token, err := jwt.NewWithClaims(jwt.SigningMethodHS256, claims).SignedString([]byte(secretKey))
 
-    return token, nil
+	if err != nil {
+		return "", fmt.Errorf("create: sign token: %w", err)
+	}
+
+	return token, nil
 }
 
 func ValidateJWT(token string, secretKey string) (interface{}, error) {
-    signingKey := []byte(secretKey)
+	signingKey := []byte(secretKey)
 
-    parsedToken, err := jwt.Parse(token, func(t *jwt.Token) (interface{}, error) {
-        if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
-            return nil, fmt.Errorf("unexpected method: %s", t.Header["alg"])
-        }
-        return signingKey, nil
-    })
+	parsedToken, err := jwt.Parse(token, func(t *jwt.Token) (interface{}, error) {
+		if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("unexpected method: %s", t.Header["alg"])
+		}
+		return signingKey, nil
+	})
 
-    if err != nil {
-        return nil, fmt.Errorf("validate: %w", err)
-    }
+	if err != nil {
+		return nil, fmt.Errorf("validate: %w", err)
+	}
 
-    claims, ok := parsedToken.Claims.(jwt.MapClaims)
-    if !ok || !parsedToken.Valid {
-        return nil, fmt.Errorf("validate: invalid token")
-    }
+	claims, ok := parsedToken.Claims.(jwt.MapClaims)
+	if !ok || !parsedToken.Valid {
+		return nil, fmt.Errorf("validate: invalid token")
+	}
 
-    return claims["sub"], nil
+	return claims["sub"], nil
 }

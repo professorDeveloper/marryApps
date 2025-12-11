@@ -71,7 +71,7 @@ func CheckAuth(cfg *config.Config) echo.MiddlewareFunc {
 			fields := strings.Fields(authHeader)
 			if len(fields) == 2 && strings.EqualFold(fields[0], "Bearer") {
 				accessToken = fields[1]
-			} 
+			}
 
 			if accessToken == "" {
 				return c.JSON(http.StatusUnauthorized, model.ErrorResponse{Message: "you are not logged in"})
@@ -83,6 +83,7 @@ func CheckAuth(cfg *config.Config) echo.MiddlewareFunc {
 			}
 
 			c.Set("user_id", fmt.Sprint(sub))
+			fmt.Println("User ID:", sub)
 			return next(c)
 		}
 	}
@@ -120,3 +121,31 @@ func ValidateRegisterInput(next echo.HandlerFunc) echo.HandlerFunc {
 	}
 
 }
+
+func CheckAuthPayme(cfg *config.Config) echo.MiddlewareFunc {
+	return func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(c echo.Context) error {
+			var accessToken string
+
+			authHeader := c.Request().Header.Get("Authorization")
+			fields := strings.Fields(authHeader)
+			if len(fields) == 2 && strings.EqualFold(fields[0], "Bearer") {
+				accessToken = fields[1]
+			}
+
+			if accessToken == "" {
+				return c.JSON(http.StatusUnauthorized, model.ErrorResponseForPayme{})
+			}
+
+			sub, err := utils.ValidateJWT(accessToken, cfg.Jwt.SecretKey)
+			if err != nil {
+				return c.JSON(http.StatusUnauthorized, model.ErrorResponse{Message: err.Error()})
+			}
+
+			c.Set("user_id", fmt.Sprint(sub))
+			return next(c)
+		}
+	}
+}
+
+
