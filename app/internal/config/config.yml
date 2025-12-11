@@ -1,5 +1,5 @@
 app:
-  name: Limpo Multi-Tenant Service
+  name: Blitz Back Service
   version: "1.0.0"
   is-debug: false
   is-development: false
@@ -52,7 +52,6 @@ redis:
   pool-timeout: 240
 
 minio:
-  endpoint: localhost:9000
   use-ssl: false
 
 cookie:
