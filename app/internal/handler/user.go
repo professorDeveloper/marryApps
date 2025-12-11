@@ -4,11 +4,10 @@ import (
 	"net/http"
 
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/labstack/echo/v4"
 	"gitlab.yurtal.tech/company/blitz/back/internal/model"
-	"gitlab.yurtal.tech/company/blitz/back/internal/repository/pg"
 )
+
 // GetUser godoc
 // @Summary Get current user profile
 // @Description Get the profile of the currently authenticated user
@@ -28,25 +27,14 @@ func (h *Handler) getUser(c echo.Context) error {
 		})
 	}
 
-	user, err := h.service.Repository().PgRepo.Repo.GetUserByID(c.Request().Context(), userID)
+	user, err := h.service.Auth().GetUserByID(c.Request().Context(), userID)
 	if err != nil {
 		return c.JSON(http.StatusNotFound, model.ErrorResponse{
 			Message: "User not found",
 		})
 	}
 
-	return c.JSON(http.StatusOK, model.UserResponse{
-		ID:          user.ID,
-		FullName:    user.FullName,
-		Email:       user.Email,
-		PhoneNumber: user.PhoneNumber,
-		Level:       user.Level,
-		XP:          user.XP,
-		Balance:     user.Balance,
-		Group:       user.Group,
-		Photo:       user.Photo,
-		Status:      user.Status,
-	})
+	return c.JSON(http.StatusOK, user)
 }
 
 // UpdateUser godoc
@@ -77,47 +65,16 @@ func (h *Handler) updateUser(c echo.Context) error {
 		})
 	}
 
-	updateParams := pg.UpdateUserParams{
-		ID:                      userID,
-		FullName:                req.FullName,
-		Email:                   req.Email,
-		PhoneNumber:             req.PhoneNumber,
-		Group:                   req.Group,
-		Photo:                   req.Photo,
-		XP:                      req.XP,
-		Balance:                 req.Balance,
-		Level:                   req.Level,
-		Status:                  req.Status,
-		Gender:                  req.Gender,
-		FirebaseToken:           req.FirebaseToken,
-		GoogleId:                req.GoogleId,
-		IsVerified:              req.IsVerified,
-		IsAgreedForUserContract: req.IsAgreedForUserContract,
-		PasswordHash:            req.PasswordHash,
-		Role:                    req.Role,
-		DateOfBirth:             pgtype.Timestamp{Time: req.DateOfBirth},
-	}
-
-	user, err := h.service.Repository().PgRepo.Repo.UpdateUser(c.Request().Context(), updateParams)
+	user, err := h.service.Auth().UpdateUser(c.Request().Context(), req, userID)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, model.ErrorResponse{
 			Message: "Failed to update user",
 		})
 	}
 
-	return c.JSON(http.StatusOK, model.UserResponse{
-		ID:          user.ID,
-		FullName:    user.FullName,
-		Email:       user.Email,
-		PhoneNumber: user.PhoneNumber,
-		Level:       user.Level,
-		XP:          user.XP,
-		Balance:     user.Balance,
-		Group:       user.Group,
-		Photo:       user.Photo,
-		Status:      user.Status,
-	})
+	return c.JSON(http.StatusOK, user)
 }
+
 // UpdatePassword godoc
 // @Summary Update user password
 // @Description Update the password of the currently authenticated user

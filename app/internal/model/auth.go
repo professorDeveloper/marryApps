@@ -48,6 +48,7 @@ type RegisterRequest struct {
 // UserResponse represents a safe subset of user data returned to clients
 type UserResponse struct {
 	ID          string  `json:"id" example:"1234567890"`
+	OverAll     *int32  `json:"overAll,omitempty" example:"overAll_1"`
 	FullName    *string `json:"fullName,omitempty" example:"John Doe"`
 	Email       *string `json:"email,omitempty" example:"user@example.com"`
 	Role        *string `json:"role,omitempty" example:"user"`
@@ -59,29 +60,29 @@ type UserResponse struct {
 	XP          *int32  `json:"xp,omitempty" example:"100"`
 	Balance     *int64  `json:"balance,omitempty" example:"1000"`
 	Group       *string `json:"group,omitempty" example:"group_1"`
+	IsVerified  *bool   `json:"isVerified,omitempty" example:"true"`
+	IsAgreedForUserContract *bool   `json:"isAgreedForUserContract,omitempty" example:"true"`
+	DateOfBirth time.Time `json:"dateOfBirth,omitempty" example:"2022-01-01T00:00:00Z"`
 }
+
 type UpdateUserRequest struct {
-    FullName                *string    `json:"fullName,omitempty" example:"John Doe"`
-    Email                   *string    `json:"email,omitempty" example:"user@example.com"`
-    PhoneNumber             *string    `json:"phoneNumber,omitempty" example:"+998901234567"`
-    Group                   *string    `json:"group,omitempty" example:"group_1"`
-    Photo                   *string    `json:"photo,omitempty" example:"https://example.com/photo.jpg"`
-    XP                      *int32     `json:"xp,omitempty" example:"100"`
-    Balance                 *int64     `json:"balance,omitempty" example:"1000"`
-    Level                   *string    `json:"level,omitempty" example:"level_1"`
-    Status                  *string    `json:"status,omitempty" example:"active"`
-    Gender                  *string    `json:"gender,omitempty" example:"male"`
-    FirebaseToken           *string    `json:"firebaseToken,omitempty" example:"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."`
-    GoogleId                *string    `json:"googleId,omitempty" example:"1234567890"`
-    IsVerified              *bool      `json:"isVerified,omitempty" example:"true"`
-    IsAgreedForUserContract *bool      `json:"isAgreedForUserContract,omitempty" example:"true"`
-    PasswordHash            *string    `json:"passwordHash,omitempty" example:"$2a$10$exampleHash"`
-    Role                    *string    `json:"role,omitempty" example:"user"`
-    DateOfBirth             time.Time  `json:"dateOfBirth,omitempty" example:"2022-01-01T00:00:00Z"`
-    CreatedAt               time.Time  `json:"createdAt" example:"2022-01-01T00:00:00Z"`
-    UpdatedAt               time.Time  `json:"updatedAt" example:"2022-01-01T00:00:00Z"`
-    DeletedAt               *time.Time `json:"deletedAt,omitempty" example:"2022-01-01T00:00:00Z"`
+    FullName    *string     `json:"fullName"`
+    Email       *string     `json:"email"`
+    PhoneNumber *string     `json:"phoneNumber"`
+    Gender      *string     `json:"gender"`
+    Photo       *string     `json:"photo"`
+    Group       *string     `json:"group"`
+    Role        *string     `json:"role"`
+    Status      *string     `json:"status"`
+    Level       *string     `json:"level"`
+    XP          *int32      `json:"XP"`      
+    Balance     *int64      `json:"balance"`
+    OverAll     *int32      `json:"overAll"`
+    IsVerified  *bool       `json:"isVerified"`
+    IsAgreedForUserContract *bool `json:"isAgreedForUserContract"`
+    DateOfBirth time.Time `json:"dateOfBirth"` 
 }
+
 type UpdatePasswordRequest struct {
 	CurrentPassword string `json:"currentPassword" example:"password123"`
 	NewPassword     string `json:"newPassword" example:"newPassword123"`

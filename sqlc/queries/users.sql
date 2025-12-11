@@ -60,6 +60,7 @@ UPDATE users SET
     "XP" = $16,
     balance = $17,
     "firebaseToken" = $18,
-    "googleId" = $19
+    "googleId" = $19,
+    "updatedAt" = NOW()
 WHERE id = $1
 RETURNING *;

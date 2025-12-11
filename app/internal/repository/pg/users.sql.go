@@ -7,7 +7,6 @@ package pg
 
 import (
 	"context"
-	"time"
 
 	"github.com/jackc/pgx/v5/pgtype"
 )
@@ -284,7 +283,8 @@ UPDATE users SET
     "XP" = $16,
     balance = $17,
     "firebaseToken" = $18,
-    "googleId" = $19
+    "googleId" = $19,
+    "updatedAt" = NOW()
 WHERE id = $1
 RETURNING id, "googleId", "fullName", "dateOfBirth", "overAll", level, email, "phoneNumber", "passwordHash", role, gender, "isAgreedForUserContract", "isVerified", status, "group", photo, "XP", balance, "firebaseToken", "createdAt", "updatedAt", "deletedAt"
 `
@@ -293,7 +293,7 @@ type UpdateUserParams struct {
 	ID                      string           `json:"id"`
 	FullName                *string          `json:"fullName"`
 	DateOfBirth             pgtype.Timestamp `json:"dateOfBirth"`
-	OverAll                 *int32           `json:"overAll"`
+	OverAll                 int32           `json:"overAll"`
 	Level                   *string          `json:"level"`
 	Email                   *string          `json:"email"`
 	PhoneNumber             *string          `json:"phoneNumber"`
@@ -309,7 +309,6 @@ type UpdateUserParams struct {
 	Balance                 *int64           `json:"balance"`
 	FirebaseToken           *string          `json:"firebaseToken"`
 	GoogleId                *string          `json:"googleId"`
-	UpdatedAt               time.Time        `json:"updatedAt"`
 }
 
 func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (User, error) {
