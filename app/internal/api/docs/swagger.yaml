@@ -95,6 +95,11 @@ definitions:
       phoneNumber:
         type: string
     type: object
+  model.RegisterResponse:
+    properties:
+      message:
+        type: string
+    type: object
   model.SuccessResponse:
     properties:
       message:
@@ -297,6 +302,8 @@ paths:
       responses:
         "201":
           description: Created
+          schema:
+            $ref: '#/definitions/model.RegisterResponse'
         "400":
           description: Bad Request
           schema:
