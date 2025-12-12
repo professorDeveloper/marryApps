@@ -29,12 +29,17 @@ func (h *Handler) createLevelPrice(c echo.Context) error {
 			ErrorNote: "Invalid request format",
 		})
 	}
+	lang := c.Get("language").(string)
 
 	resp, err := h.service.Mixed().CreateLevelPrice(c.Request().Context(), req)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, model.CreatePriceForLevelResponse{
-			Error:     -9,
-			ErrorNote: "Failed to create price for level",
+		if lang=="de"{
+		return c.JSON(http.StatusInternalServerError, model.ErrorResponse{
+			Message: "Fehler beim Erstellen des Preises",
+		})
+		}
+		return c.JSON(http.StatusInternalServerError, model.ErrorResponse{
+			Message: "Failed to create price for level",
 		})
 	}
 

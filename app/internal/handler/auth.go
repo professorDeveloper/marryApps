@@ -2,6 +2,7 @@ package handler
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 
 	"github.com/labstack/echo/v4"
@@ -33,10 +34,16 @@ func (h *Handler) Login(c echo.Context) error {
 			return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "invalid request body"})
 		}
 	}
+	lang := c.Get("language").(string)
 
 	resp, err := h.service.Auth().Login(c.Request().Context(), req, &h.cfg.Jwt)
 	if err != nil {
-		return c.JSON(http.StatusUnauthorized, model.ErrorResponse{Message: err.Error()})
+		fmt.Println(model.ErrorResponse{Message: err.Error()})
+
+		if lang == "de" {
+			return c.JSON(http.StatusUnauthorized, model.ErrorResponse{Message: "Ungültige Anmeldeinformationen"})
+		}
+		return c.JSON(http.StatusUnauthorized, model.ErrorResponse{Message: "Fehler beim Anmelden"})
 	}
 
 	return c.JSON(http.StatusOK, resp)
@@ -49,7 +56,7 @@ func (h *Handler) Login(c echo.Context) error {
 // @Accept json
 // @Produce json
 // @Param   input  body      model.RegisterRequest  true  "Registration data"
-// @Success 201 {object} model.RegisterResponse
+// @Success 201
 // @Failure 400 {object} model.ErrorResponse
 // @Router /api/v1/auth/register [post]
 func (h *Handler) RegisterUser(c echo.Context) error {
@@ -65,13 +72,17 @@ func (h *Handler) RegisterUser(c echo.Context) error {
 			return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "invalid request body"})
 		}
 	}
+	lang := c.Get("language").(string)
 
 	err := h.service.Auth().Register(c.Request().Context(), req)
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: err.Error()})
+		if lang == "de" {
+			return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "Fehler beim Registrieren"})
+		}
+		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "Register qilishda xatolik"})
 	}
 
-	return c.JSON(http.StatusCreated, model.RegisterResponse{Message: "User registered successfully"})
+	return c.JSON(http.StatusCreated, model.RegisterResponse{Message: "User successfully registered"})
 }
 
 // Refresh handles token refresh
@@ -96,9 +107,14 @@ func (h *Handler) Refresh(c echo.Context) error {
 			return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "invalid request body"})
 		}
 	}
+	lang := c.Get("language").(string)
 	resp, err := h.service.Auth().Refresh(c.Request().Context(), req, &h.cfg.Jwt)
 	if err != nil {
-		return c.JSON(http.StatusUnauthorized, model.ErrorResponse{Message: err.Error()})
+		fmt.Println(err)
+		if lang == "de" {
+			return c.JSON(http.StatusUnauthorized, model.ErrorResponse{Message: "Fehler beim Anmelden"})
+		}
+		return c.JSON(http.StatusUnauthorized, model.ErrorResponse{Message: "Login qilishda xatolik"})
 	}
 
 	return c.JSON(http.StatusOK, resp)
@@ -139,6 +155,7 @@ func (h *Handler) RegisterWithGoogle(c echo.Context) error {
 	}
 	email, _ := payload.Claims["email"].(string)
 	name, _ := payload.Claims["name"].(string)
+	lang := c.Get("language").(string)
 
 	resp, err := h.service.Auth().LoginWithEmail(c.Request().Context(), model.LoginEmailRequest{
 		Email:    email,
@@ -146,7 +163,11 @@ func (h *Handler) RegisterWithGoogle(c echo.Context) error {
 		FullName: name,
 	}, &h.cfg.Jwt)
 	if err != nil {
-		return c.JSON(http.StatusUnauthorized, model.ErrorResponse{Message: err.Error()})
+		fmt.Println(err)
+		if lang == "de" {
+			return c.JSON(http.StatusUnauthorized, model.ErrorResponse{Message: "Fehler beim Google Anmelden"})
+		}
+		return c.JSON(http.StatusUnauthorized, model.ErrorResponse{Message: "Google bilan login qilishda xatolik"})
 	}
 
 	return c.JSON(http.StatusOK, resp)

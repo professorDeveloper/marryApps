@@ -26,14 +26,15 @@ func (h *Handler) getUser(c echo.Context) error {
 			Message: "User not authenticated",
 		})
 	}
+	lang := c.Get("language").(string)
 
 	user, err := h.service.Auth().GetUserByID(c.Request().Context(), userID)
 	if err != nil {
-		return c.JSON(http.StatusNotFound, model.ErrorResponse{
-			Message: "User not found",
-		})
+		if lang == "de" {
+			return c.JSON(http.StatusNotFound, model.ErrorResponse{Message: "Benutzer nicht gefunden"})
+		}
+		return c.JSON(http.StatusNotFound, model.ErrorResponse{Message: "Foydalanuvchini topib bo'lmadi"})
 	}
-
 	return c.JSON(http.StatusOK, user)
 }
 
@@ -57,19 +58,22 @@ func (h *Handler) updateUser(c echo.Context) error {
 			Message: "User not authenticated",
 		})
 	}
+	lang := c.Get("language").(string)
 
 	var req model.UpdateUserRequest
 	if err := c.Bind(&req); err != nil {
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{
-			Message: "Invalid request format",
-		})
+		if lang == "de" {
+			return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "Ungültige Anfrageformat"})
+		}
+		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "Noto'ri formatda so'rov yuborilgan"})
 	}
 
 	user, err := h.service.Auth().UpdateUser(c.Request().Context(), req, userID)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, model.ErrorResponse{
-			Message: "Failed to update user",
-		})
+		if lang == "de" {
+			return c.JSON(http.StatusInternalServerError, model.ErrorResponse{Message: "Fehler beim Aktualisieren des Benutzers"})
+		}
+		return c.JSON(http.StatusInternalServerError, model.ErrorResponse{Message: "Foydalanuvchini ma'lumotlarini  yangilab bo'lmadi"})
 	}
 
 	return c.JSON(http.StatusOK, user)
@@ -108,15 +112,19 @@ func (h *Handler) updatePassword(c echo.Context) error {
 			Message: "Invalid request format",
 		})
 	}
+	lang := c.Get("language").(string)
 
 	err = h.service.Auth().UpdateUserPassword(c.Request().Context(), userUUID, req.CurrentPassword, req.NewPassword)
 	if err != nil {
+		if lang == "de" {
+			return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "Fehler beim Aktualisieren des Passworts"})
+		}
 		return c.JSON(http.StatusBadRequest, model.ErrorResponse{
-			Message: "Failed to update password: " + err.Error(),
+			Message: "Parolni yangilab bo'lmadi",
 		})
 	}
 
 	return c.JSON(http.StatusOK, model.SuccessResponse{
-		Message: "Password updated successfully",
+		Message: "Parol yangilandi",
 	})
 }

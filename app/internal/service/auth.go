@@ -100,6 +100,7 @@ func (s *AuthS) Login(ctx context.Context, req model.LoginRequest, jwtCfg *confi
 		User:         toUserResponse(user),
 	}, nil
 }
+
 func (s *AuthS) LoginWithEmail(ctx context.Context, req model.LoginEmailRequest, jwtCfg *config.JwtConfig) (model.LoginResponse, error) {
 	if req.Email == "" || req.IdToken == "" {
 		return model.LoginResponse{}, errors.New(http.StatusText(http.StatusBadRequest))
@@ -258,6 +259,7 @@ func (s *AuthS) UpdateUser(ctx context.Context, req model.UpdateUserRequest, use
 	}
 
 	
+
 	params := pg.UpdateUserParams{
 		ID:                      userID,
 		FullName:                existingUser.FullName,
