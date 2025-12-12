@@ -4,11 +4,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
 	"net/http"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgtype"
 	"gitlab.yurtal.tech/company/blitz/back/internal/config"
 	"gitlab.yurtal.tech/company/blitz/back/internal/model"
 	"gitlab.yurtal.tech/company/blitz/back/internal/repository"
@@ -226,7 +228,6 @@ func (s *AuthS) UpdateUserPassword(ctx context.Context, userID uuid.UUID, curren
 	updateParams := pg.UpdateUserParams{
 		ID:           fmt.Sprint(userID),
 		PasswordHash: &hashedPassword,
-		UpdatedAt:    time.Now(),
 	}
 
 	if _, err := s.repo.PgRepo.Repo.UpdateUser(ctx, updateParams); err != nil {
@@ -236,14 +237,108 @@ func (s *AuthS) UpdateUserPassword(ctx context.Context, userID uuid.UUID, curren
 
 }
 
+func (s *AuthS) GetUserByID(ctx context.Context, userID string) (model.UserResponse, error) {
+	user, err := s.repo.PgRepo.Repo.GetUserByID(ctx, userID)
+	if err != nil {
+		return model.UserResponse{}, err
+	}
+	return toUserResponse(user), nil
+}
+
+func (s *AuthS) UpdateUser(ctx context.Context, req model.UpdateUserRequest, userID string) (model.UserResponse, error) {
+	existingUser, err := s.repo.PgRepo.Repo.GetUserByID(ctx, userID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return model.UserResponse{}, fmt.Errorf("user not found")
+		}
+		return model.UserResponse{}, fmt.Errorf("failed to fetch user: %w", err)
+	}
+
+	var overAll int32
+	if existingUser.OverAll != nil {
+		overAll = *existingUser.OverAll
+	}
+
+	params := pg.UpdateUserParams{
+		ID:                      userID,
+		FullName:                existingUser.FullName,
+		Role:                    existingUser.Role,
+		Email:                   existingUser.Email,
+		PhoneNumber:             existingUser.PhoneNumber,
+		Group:                   existingUser.Group,
+		Photo:                   existingUser.Photo,
+		Gender:                  existingUser.Gender,
+		OverAll:                 overAll, 
+		Level:                   existingUser.Level,
+		XP:                      existingUser.XP,
+		Balance:                 existingUser.Balance,
+		IsAgreedForUserContract: existingUser.IsAgreedForUserContract,
+		IsVerified:              existingUser.IsVerified,
+		Status:                  existingUser.Status,
+		DateOfBirth:             existingUser.DateOfBirth,
+	}
+
+	if req.FullName != nil {
+		params.FullName = req.FullName
+	}
+	if req.Email != nil {
+		params.Email = req.Email
+	}
+	if req.PhoneNumber != nil {
+		params.PhoneNumber = req.PhoneNumber
+	}
+	if req.Gender != nil {
+		params.Gender = req.Gender
+	}
+	if req.OverAll != nil {
+		params.OverAll = *req.OverAll
+	}
+	if req.XP != nil {
+		params.XP = req.XP
+	}
+	if req.Balance != nil {
+		params.Balance = req.Balance
+	}
+	if req.Level != nil {
+		params.Level = req.Level
+	}
+
+	if !req.DateOfBirth.IsZero() {
+		params.DateOfBirth = pgtype.Timestamp{
+			Time:  req.DateOfBirth.UTC(),
+			Valid: true,
+		}
+	}
+	user, err := s.repo.PgRepo.Repo.UpdateUser(ctx, params)
+	if err != nil {
+		log.Printf("Failed to update user: %v", err)
+		return model.UserResponse{}, fmt.Errorf("failed to update user: %w", err)
+	}
+
+	return toUserResponse(user), nil
+}
 func toUserResponse(u pg.User) model.UserResponse {
+	var dateOfBirth time.Time
+	if u.DateOfBirth.Valid {
+		dateOfBirth = u.DateOfBirth.Time
+	}
+
 	return model.UserResponse{
-		ID:       u.ID,
-		FullName: u.FullName,
-		Email:    u.Email,
-		Role:     u.Role,
-		Gender:   u.Gender,
-		Status:   u.Status,
-		Photo:    u.Photo,
+		ID:                      u.ID,
+		FullName:                u.FullName,
+		Email:                   u.Email,
+		Role:                    u.Role,
+		Gender:                  u.Gender,
+		Status:                  u.Status,
+		Photo:                   u.Photo,
+		PhoneNumber:             u.PhoneNumber,
+		XP:                      u.XP,
+		Balance:                 u.Balance,
+		Group:                   u.Group,
+		Level:                   u.Level,
+		OverAll:                 u.OverAll,
+		IsVerified:              u.IsVerified,
+		IsAgreedForUserContract: u.IsAgreedForUserContract,
+		DateOfBirth:             dateOfBirth,
 	}
 }

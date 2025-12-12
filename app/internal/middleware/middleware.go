@@ -2,7 +2,9 @@
 package middleware
 
 import (
+	"bytes"
 	"fmt"
+	"io"
 	"net/http"
 	"strings"
 	"time"
@@ -106,20 +108,37 @@ func ValidateLoginInput(next echo.HandlerFunc) echo.HandlerFunc {
 }
 
 // ValidateRegisterInput binds and validates registration request body before reaching handler
+// ValidateRegisterInput binds and validates registration request body before reaching handler
 func ValidateRegisterInput(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		var req model.RegisterRequest
-		if err := c.Bind(&req); err != nil {
+
+		body, err := io.ReadAll(c.Request().Body)
+		if err != nil {
+			errMsg := fmt.Sprintf("Failed to read request body: %v", err)
+			fmt.Println(errMsg)
 			return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "invalid request body"})
 		}
+		fmt.Println("Raw request body:", string(body))
+
+		c.Request().Body = io.NopCloser(bytes.NewBuffer(body))
+
+		if err := c.Bind(&req); err != nil {
+			errMsg := fmt.Sprintf("Failed to bind request: %v", err)
+			fmt.Println(errMsg)
+			return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "invalid request body format"})
+		}
+
 		if req.PhoneNumber == "" || req.Password == "" {
+			errMsg := fmt.Sprintf("Missing required fields - PhoneNumber: %v, Password: %v",
+				req.PhoneNumber != "", req.Password != "")
+			fmt.Println(errMsg)
 			return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "phone number and password are required"})
 		}
 
 		c.Set("registerBody", req)
 		return next(c)
 	}
-
 }
 
 func CheckAuthPayme(cfg *config.Config) echo.MiddlewareFunc {
@@ -147,5 +166,3 @@ func CheckAuthPayme(cfg *config.Config) echo.MiddlewareFunc {
 		}
 	}
 }
-
-

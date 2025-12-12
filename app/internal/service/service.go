@@ -18,6 +18,8 @@ type AuthI interface {
 	LoginWithEmail(ctx context.Context, req model.LoginEmailRequest, jwtCfg *config.JwtConfig) (model.LoginResponse, error)
 	Refresh(ctx context.Context, req model.RefreshRequest, jwtCfg *config.JwtConfig) (model.RefreshResponse, error)
 	UpdateUserPassword(ctx context.Context, userID uuid.UUID, currentPassword, newPassword string) error
+	GetUserByID(ctx context.Context, userID string) (model.UserResponse, error)
+	UpdateUser(ctx context.Context, req model.UpdateUserRequest, userID string) (model.UserResponse, error)
 }
 type PaymentI interface {
 	CreateInvoice(c echo.Context, ctx context.Context) (*model.CheckoutURL, error)
