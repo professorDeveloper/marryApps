@@ -293,7 +293,7 @@ type UpdateUserParams struct {
 	ID                      string           `json:"id"`
 	FullName                *string          `json:"fullName"`
 	DateOfBirth             pgtype.Timestamp `json:"dateOfBirth"`
-	OverAll                 int32           `json:"overAll"`
+	OverAll                 *int32           `json:"overAll"`
 	Level                   *string          `json:"level"`
 	Email                   *string          `json:"email"`
 	PhoneNumber             *string          `json:"phoneNumber"`

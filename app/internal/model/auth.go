@@ -12,6 +12,9 @@ type User struct {
 	Photo    *string `json:"photo,omitempty"`
 }
 
+type RegisterResponse struct {
+	Message string `json:"message"`
+}
 type LoginRequest struct {
 	PhoneNumber string `json:"phoneNumber" example:"1234567890"`
 	Password    string `json:"password" example:"password123"`

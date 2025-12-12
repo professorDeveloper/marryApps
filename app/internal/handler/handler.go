@@ -40,7 +40,7 @@ func (h *Handler) Register(router *echo.Echo) {
 		{
 			user.GET("/me", h.getUser,mw.CheckAuth(h.cfg))
 			user.PUT("/update", h.updateUser,mw.CheckAuth(h.cfg))
-			user.PUT("/password", h.updatePassword,mw.CheckAuth(h.cfg))
+			user.PUT("/password-update", h.updatePassword,mw.CheckAuth(h.cfg))
 		}
 	}
 

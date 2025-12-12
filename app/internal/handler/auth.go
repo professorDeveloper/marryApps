@@ -49,7 +49,7 @@ func (h *Handler) Login(c echo.Context) error {
 // @Accept json
 // @Produce json
 // @Param   input  body      model.RegisterRequest  true  "Registration data"
-// @Success 201
+// @Success 201 {object} model.RegisterResponse
 // @Failure 400 {object} model.ErrorResponse
 // @Router /api/v1/auth/register [post]
 func (h *Handler) RegisterUser(c echo.Context) error {
@@ -71,7 +71,7 @@ func (h *Handler) RegisterUser(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: err.Error()})
 	}
 
-	return c.NoContent(http.StatusCreated)
+	return c.JSON(http.StatusCreated, model.RegisterResponse{Message: "User registered successfully"})
 }
 
 // Refresh handles token refresh

@@ -208,33 +208,36 @@ func (s *AuthS) Refresh(ctx context.Context, req model.RefreshRequest, jwtCfg *c
 }
 
 func (s *AuthS) UpdateUserPassword(ctx context.Context, userID uuid.UUID, currentPassword, newPassword string) error {
-	user, err := s.repo.PgRepo.Repo.GetUserByID(ctx, fmt.Sprint(userID))
-	if err != nil {
-		return fmt.Errorf("failed to get user: %w", err)
-	}
+    existingUser, err := s.repo.PgRepo.Repo.GetUserByID(ctx, fmt.Sprint(userID))
+    if err != nil {
+        return fmt.Errorf("failed to get user: %w", err) 
+    }
 
-	if user.PasswordHash == nil {
-		return fmt.Errorf("user has no password set")
-	}
-	if err := utils.VerifyPassword(*user.PasswordHash, currentPassword); err != nil {
-		return fmt.Errorf("invalid current password")
-	}
+    if existingUser.GoogleId != nil { 
+        return fmt.Errorf("password cannot be updated for users who logged in by Auth2")
+    }
 
-	hashedPassword, err := utils.HashPassword(newPassword)
-	if err != nil {
-		return fmt.Errorf("failed to hash password: %w", err)
-	}
+    if existingUser.PasswordHash == nil { 
+        return fmt.Errorf("user has no password set or password hash is invalid")
+    }
 
-	updateParams := pg.UpdateUserParams{
-		ID:           fmt.Sprint(userID),
-		PasswordHash: &hashedPassword,
-	}
+    if err := utils.VerifyPassword(*existingUser.PasswordHash, currentPassword); err != nil {
+     return fmt.Errorf("invalid current password")
+    }
 
-	if _, err := s.repo.PgRepo.Repo.UpdateUser(ctx, updateParams); err != nil {
-		return fmt.Errorf("failed to update password: %w", err)
-	}
-	return nil
+    hashedPassword, err := utils.HashPassword(newPassword)
+    if err != nil {
+        return fmt.Errorf("failed to hash password: %w", err)
+    }
 
+    params := toUpdateParams(existingUser) 
+    params.PasswordHash = &hashedPassword
+    
+    if _, err := s.repo.PgRepo.Repo.UpdateUser(ctx, params); err != nil {
+        return fmt.Errorf("failed to update password: %w", err)
+    }
+    
+    return nil
 }
 
 func (s *AuthS) GetUserByID(ctx context.Context, userID string) (model.UserResponse, error) {
@@ -254,11 +257,7 @@ func (s *AuthS) UpdateUser(ctx context.Context, req model.UpdateUserRequest, use
 		return model.UserResponse{}, fmt.Errorf("failed to fetch user: %w", err)
 	}
 
-	var overAll int32
-	if existingUser.OverAll != nil {
-		overAll = *existingUser.OverAll
-	}
-
+	
 	params := pg.UpdateUserParams{
 		ID:                      userID,
 		FullName:                existingUser.FullName,
@@ -268,7 +267,7 @@ func (s *AuthS) UpdateUser(ctx context.Context, req model.UpdateUserRequest, use
 		Group:                   existingUser.Group,
 		Photo:                   existingUser.Photo,
 		Gender:                  existingUser.Gender,
-		OverAll:                 overAll, 
+		OverAll:                 existingUser.OverAll, 
 		Level:                   existingUser.Level,
 		XP:                      existingUser.XP,
 		Balance:                 existingUser.Balance,
@@ -276,6 +275,9 @@ func (s *AuthS) UpdateUser(ctx context.Context, req model.UpdateUserRequest, use
 		IsVerified:              existingUser.IsVerified,
 		Status:                  existingUser.Status,
 		DateOfBirth:             existingUser.DateOfBirth,
+		FirebaseToken:           existingUser.FirebaseToken,
+		GoogleId:                existingUser.GoogleId,
+		PasswordHash:            existingUser.PasswordHash,
 	}
 
 	if req.FullName != nil {
@@ -291,7 +293,7 @@ func (s *AuthS) UpdateUser(ctx context.Context, req model.UpdateUserRequest, use
 		params.Gender = req.Gender
 	}
 	if req.OverAll != nil {
-		params.OverAll = *req.OverAll
+		params.OverAll = req.OverAll
 	}
 	if req.XP != nil {
 		params.XP = req.XP
@@ -341,4 +343,27 @@ func toUserResponse(u pg.User) model.UserResponse {
 		IsAgreedForUserContract: u.IsAgreedForUserContract,
 		DateOfBirth:             dateOfBirth,
 	}
+}
+func toUpdateParams(u pg.User) pg.UpdateUserParams {
+    return pg.UpdateUserParams{
+        ID: u.ID,
+        FullName: u.FullName,
+        Role: u.Role,
+        Email: u.Email,
+        PhoneNumber: u.PhoneNumber,
+        Group: u.Group,
+        Photo: u.Photo,
+        Gender: u.Gender,
+        DateOfBirth: u.DateOfBirth,
+        OverAll: u.OverAll,
+        Level: u.Level,
+        XP: u.XP,
+        Balance: u.Balance,
+        IsAgreedForUserContract: u.IsAgreedForUserContract,
+        IsVerified: u.IsVerified,
+        Status: u.Status,
+        PasswordHash: u.PasswordHash,
+		GoogleId: u.GoogleId,
+		FirebaseToken: u.FirebaseToken,
+    }
 }
