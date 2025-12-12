@@ -23,24 +23,24 @@ func (h *Handler) Register(router *echo.Echo) {
 	{
 		auth := api.Group("/auth")
 		{
-			auth.POST("/login", h.Login, mw.LoginRateLimiter(), mw.ValidateLoginInput)
-			auth.POST("/register", h.RegisterUser, mw.ValidateRegisterInput)
-			auth.POST("/refresh", h.Refresh)
-			auth.POST("/login/with-google", h.RegisterWithGoogle)
+			auth.POST("/login", h.Login, mw.LoginRateLimiter(),mw.CheckLanguage(), mw.ValidateLoginInput)
+			auth.POST("/register", h.RegisterUser,mw.CheckLanguage(), mw.ValidateRegisterInput)
+			auth.POST("/refresh",h.Refresh,mw.CheckLanguage())
+			auth.POST("/login/with-google", h.RegisterWithGoogle,mw.CheckLanguage())
 		}
 		payments := api.Group("/payments")
 		{
-			payments.POST("/create", h.CreateInvoice,mw.CheckAuthPayme(h.cfg))
+			payments.POST("/create", h.CreateInvoice,mw.CheckLanguage(),mw.CheckAuthPayme(h.cfg))
 		}
 		levelPrice := api.Group("/level-price")
 		{
-			levelPrice.POST("/create", h.createLevelPrice,mw.CheckAuth(h.cfg))
+			levelPrice.POST("/create", h.createLevelPrice,mw.CheckLanguage(),mw.CheckAuth(h.cfg))
 		}
 		user := api.Group("/user")
 		{
-			user.GET("/me", h.getUser,mw.CheckAuth(h.cfg))
-			user.PUT("/update", h.updateUser,mw.CheckAuth(h.cfg))
-			user.PUT("/password-update", h.updatePassword,mw.CheckAuth(h.cfg))
+			user.GET("/me", h.getUser,mw.CheckLanguage(),mw.CheckAuth(h.cfg))
+			user.PUT("/update", h.updateUser,mw.CheckLanguage(),mw.CheckAuth(h.cfg))
+			user.PUT("/password-update", h.updatePassword,mw.CheckLanguage(),mw.CheckAuth(h.cfg))
 		}
 	}
 

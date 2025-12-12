@@ -17,6 +17,8 @@ import (
 )
 
 func SetupMiddleware(e *echo.Echo, cfg *config.Config) {
+	e.Use(CheckLanguage())
+
 	// Request ID
 	e.Use(middleware.RequestID())
 
@@ -41,7 +43,6 @@ func SetupMiddleware(e *echo.Echo, cfg *config.Config) {
 
 	// Rate limiter
 	e.Use(middleware.RateLimiter(middleware.NewRateLimiterMemoryStore(20)))
-	e.Use(CheckLanguage())
 }
 
 // LoginRateLimiter limits login attempts per IP to mitigate brute-force attacks
@@ -171,7 +172,7 @@ func CheckAuthPayme(cfg *config.Config) echo.MiddlewareFunc {
 func CheckLanguage() echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
-			lang := ""
+			lang := "uz"
 			acceptLang := c.Request().Header.Get("Accept-Language")
 			if acceptLang != "" {
 				langs := strings.Split(acceptLang, ",")
