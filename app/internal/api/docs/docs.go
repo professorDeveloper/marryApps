@@ -742,7 +742,7 @@ var SwaggerInfo = &swag.Spec{
 	Version:          "1.0",
 	Host:             "https://back.blitz.yurtal.tech",
 	BasePath:         "/",
-	Schemes:          []string{},
+	Schemes:          []string{"http", "https"},
 	Title:            "Swagger Blitz API",
 	Description:      "Blitz API server.",
 	InfoInstanceName: "swagger",

@@ -479,4 +479,7 @@ paths:
       summary: Update user profile
       tags:
       - users
+schemes:
+- http
+- https
 swagger: "2.0"
