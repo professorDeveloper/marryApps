@@ -30,7 +30,7 @@ func RunMigrations(ctx context.Context, pool *pgxpool.Pool) error {
 
 	driver, err := postgres.WithInstance(db, &postgres.Config{})
 	if err != nil {
-		return fmt.Errorf("error creating main DB driver: %w", err)
+		return fmt.Errorf("error creating postgres driver: %w", err)
 	}
 
 	migrationsPath := getMigrationsFolderPath()
@@ -46,7 +46,7 @@ func RunMigrations(ctx context.Context, pool *pgxpool.Pool) error {
 		return fmt.Errorf("error running migrations: %w", err)
 	}
 
-	fmt.Println("Main DB migrations applied successfully.")
+	fmt.Println("postgres migrations applied successfully.")
 	return nil
 }
 
