@@ -6,7 +6,7 @@
         "contact": {},
         "version": "1.0"
     },
-    "host": "localhost:8080",
+    "host": "https://back.blitz.yurtal.tech",
     "basePath": "/",
     "paths": {
         "/api/v1/auth/login": {
@@ -612,85 +612,50 @@
         "model.UpdateUserRequest": {
             "type": "object",
             "properties": {
-                "balance": {
-                    "type": "integer",
-                    "example": 1000
+                "XP": {
+                    "type": "integer"
                 },
-                "createdAt": {
-                    "type": "string",
-                    "example": "2022-01-01T00:00:00Z"
+                "balance": {
+                    "type": "integer"
                 },
                 "dateOfBirth": {
-                    "type": "string",
-                    "example": "2022-01-01T00:00:00Z"
-                },
-                "deletedAt": {
-                    "type": "string",
-                    "example": "2022-01-01T00:00:00Z"
+                    "type": "string"
                 },
                 "email": {
-                    "type": "string",
-                    "example": "user@example.com"
-                },
-                "firebaseToken": {
-                    "type": "string",
-                    "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                    "type": "string"
                 },
                 "fullName": {
-                    "type": "string",
-                    "example": "John Doe"
+                    "type": "string"
                 },
                 "gender": {
-                    "type": "string",
-                    "example": "male"
-                },
-                "googleId": {
-                    "type": "string",
-                    "example": "1234567890"
+                    "type": "string"
                 },
                 "group": {
-                    "type": "string",
-                    "example": "group_1"
+                    "type": "string"
                 },
                 "isAgreedForUserContract": {
-                    "type": "boolean",
-                    "example": true
+                    "type": "boolean"
                 },
                 "isVerified": {
-                    "type": "boolean",
-                    "example": true
+                    "type": "boolean"
                 },
                 "level": {
-                    "type": "string",
-                    "example": "level_1"
+                    "type": "string"
                 },
-                "passwordHash": {
-                    "type": "string",
-                    "example": "$2a$10$exampleHash"
+                "overAll": {
+                    "type": "integer"
                 },
                 "phoneNumber": {
-                    "type": "string",
-                    "example": "+998901234567"
+                    "type": "string"
                 },
                 "photo": {
-                    "type": "string",
-                    "example": "https://example.com/photo.jpg"
+                    "type": "string"
                 },
                 "role": {
-                    "type": "string",
-                    "example": "user"
+                    "type": "string"
                 },
                 "status": {
-                    "type": "string",
-                    "example": "active"
-                },
-                "updatedAt": {
-                    "type": "string",
-                    "example": "2022-01-01T00:00:00Z"
-                },
-                "xp": {
-                    "type": "integer",
-                    "example": 100
+                    "type": "string"
                 }
             }
         },
@@ -700,6 +665,10 @@
                 "balance": {
                     "type": "integer",
                     "example": 1000
+                },
+                "dateOfBirth": {
+                    "type": "string",
+                    "example": "2022-01-01T00:00:00Z"
                 },
                 "email": {
                     "type": "string",
@@ -721,9 +690,21 @@
                     "type": "string",
                     "example": "1234567890"
                 },
+                "isAgreedForUserContract": {
+                    "type": "boolean",
+                    "example": true
+                },
+                "isVerified": {
+                    "type": "boolean",
+                    "example": true
+                },
                 "level": {
                     "type": "string",
                     "example": "level_1"
+                },
+                "overAll": {
+                    "type": "integer",
+                    "example": 1
                 },
                 "phoneNumber": {
                     "type": "string",

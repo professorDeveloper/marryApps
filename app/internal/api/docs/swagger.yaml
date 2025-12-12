@@ -112,72 +112,45 @@ definitions:
     type: object
   model.UpdateUserRequest:
     properties:
-      balance:
-        example: 1000
+      XP:
         type: integer
-      createdAt:
-        example: "2022-01-01T00:00:00Z"
-        type: string
+      balance:
+        type: integer
       dateOfBirth:
-        example: "2022-01-01T00:00:00Z"
-        type: string
-      deletedAt:
-        example: "2022-01-01T00:00:00Z"
         type: string
       email:
-        example: user@example.com
-        type: string
-      firebaseToken:
-        example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
         type: string
       fullName:
-        example: John Doe
         type: string
       gender:
-        example: male
-        type: string
-      googleId:
-        example: "1234567890"
         type: string
       group:
-        example: group_1
         type: string
       isAgreedForUserContract:
-        example: true
         type: boolean
       isVerified:
-        example: true
         type: boolean
       level:
-        example: level_1
         type: string
-      passwordHash:
-        example: $2a$10$exampleHash
-        type: string
+      overAll:
+        type: integer
       phoneNumber:
-        example: "+998901234567"
         type: string
       photo:
-        example: https://example.com/photo.jpg
         type: string
       role:
-        example: user
         type: string
       status:
-        example: active
         type: string
-      updatedAt:
-        example: "2022-01-01T00:00:00Z"
-        type: string
-      xp:
-        example: 100
-        type: integer
     type: object
   model.UserResponse:
     properties:
       balance:
         example: 1000
         type: integer
+      dateOfBirth:
+        example: "2022-01-01T00:00:00Z"
+        type: string
       email:
         example: user@example.com
         type: string
@@ -193,9 +166,18 @@ definitions:
       id:
         example: "1234567890"
         type: string
+      isAgreedForUserContract:
+        example: true
+        type: boolean
+      isVerified:
+        example: true
+        type: boolean
       level:
         example: level_1
         type: string
+      overAll:
+        example: 1
+        type: integer
       phoneNumber:
         example: "+998901234567"
         type: string
@@ -212,7 +194,7 @@ definitions:
         example: 100
         type: integer
     type: object
-host: localhost:8080
+host: https://back.blitz.yurtal.tech
 info:
   contact: {}
   description: Blitz API server.

@@ -30,8 +30,11 @@ import (
 // @version 1.0
 // @description Blitz API server.
 
-// @host localhost:8080
+// @host https://back.blitz.yurtal.tech
 // @BasePath /
+
+// @server url=http://localhost:8080 description=Local server
+// @server url=https://back.blitz.yurtal.tech description=Production server
 func Run(cfg *config.Config) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
