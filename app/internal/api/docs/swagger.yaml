@@ -1,4 +1,3 @@
-basePath: /
 definitions:
   model.CreateInvoiceResponse:
     properties:
@@ -194,7 +193,6 @@ definitions:
         example: 100
         type: integer
     type: object
-host: back.blitz.yurtal.tech
 info:
   contact: {}
   description: Blitz API server.
@@ -479,6 +477,10 @@ paths:
       summary: Update user profile
       tags:
       - users
-schemes:
-- https
+securityDefinitions:
+  BearerAuth:
+    description: Type "Bearer" followed by a space and JWT token.
+    in: header
+    name: Authorization
+    type: apiKey
 swagger: "2.0"

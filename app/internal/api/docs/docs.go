@@ -734,15 +734,23 @@ const docTemplate = `{
                 }
             }
         }
+    },
+    "securityDefinitions": {
+        "BearerAuth": {
+            "description": "Type \"Bearer\" followed by a space and JWT token.",
+            "type": "apiKey",
+            "name": "Authorization",
+            "in": "header"
+        }
     }
 }`
 
 // SwaggerInfo holds exported Swagger Info so clients can modify it
 var SwaggerInfo = &swag.Spec{
 	Version:          "1.0",
-	Host:             "back.blitz.yurtal.tech",
-	BasePath:         "/",
-	Schemes:          []string{"https"},
+	Host:             "",
+	BasePath:         "",
+	Schemes:          []string{},
 	Title:            "Swagger Blitz API",
 	Description:      "Blitz API server.",
 	InfoInstanceName: "swagger",

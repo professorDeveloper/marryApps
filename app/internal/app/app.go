@@ -29,7 +29,11 @@ import (
 // @title Swagger Blitz API
 // @version 1.0
 // @description Blitz API server.
-
+// Security definitions
+// @securityDefinitions.apikey BearerAuth
+// @in header
+// @name Authorization
+// @description Type "Bearer" followed by a space and JWT token.
 // @host back.blitz.yurtal.tech
 // @BasePath /
 // @schemes https
