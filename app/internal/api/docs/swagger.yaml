@@ -1,3 +1,4 @@
+basePath: /
 definitions:
   model.CreateInvoiceResponse:
     properties:
@@ -74,24 +75,6 @@ definitions:
       id:
         type: string
       level:
-        type: string
-    type: object
-  model.RefreshResponse:
-    properties:
-      accessToken:
-        example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
-        type: string
-      refreshToken:
-        example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
-        type: string
-    type: object
-  model.RegisterRequest:
-    properties:
-      fullName:
-        type: string
-      password:
-        type: string
-      phoneNumber:
         type: string
     type: object
   model.SuccessResponse:
@@ -193,6 +176,7 @@ definitions:
         example: 100
         type: integer
     type: object
+host: back.blitz.yurtal.tech
 info:
   contact: {}
   description: Blitz API server.
@@ -226,6 +210,8 @@ paths:
           description: Unauthorized
           schema:
             $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - 'Bearer {"type": "apiKey", "in": "header", "name": "Authorization"}': []
       summary: User login
       tags:
       - Auth
@@ -257,49 +243,6 @@ paths:
           schema:
             $ref: '#/definitions/model.ErrorResponse'
       summary: User registration with Google
-      tags:
-      - Auth
-  /api/v1/auth/refresh:
-    get:
-      consumes:
-      - application/json
-      description: Refresh access token using refresh token
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/model.RefreshResponse'
-        "401":
-          description: Unauthorized
-          schema:
-            $ref: '#/definitions/model.ErrorResponse'
-      summary: Token refresh
-      tags:
-      - Auth
-  /api/v1/auth/register:
-    post:
-      consumes:
-      - application/json
-      description: Register a new user and return token with user data
-      parameters:
-      - description: Registration data
-        in: body
-        name: input
-        required: true
-        schema:
-          $ref: '#/definitions/model.RegisterRequest'
-      produces:
-      - application/json
-      responses:
-        "201":
-          description: Created
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/model.ErrorResponse'
-      summary: User registration
       tags:
       - Auth
   /level-price/create:
@@ -384,31 +327,6 @@ paths:
       summary: Create a new payment invoice
       tags:
       - payments
-  /user/me:
-    get:
-      consumes:
-      - application/json
-      description: Get the profile of the currently authenticated user
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/model.UserResponse'
-        "401":
-          description: Unauthorized
-          schema:
-            $ref: '#/definitions/model.ErrorResponse'
-        "404":
-          description: Not Found
-          schema:
-            $ref: '#/definitions/model.ErrorResponse'
-      security:
-      - ApiKeyAuth: []
-      summary: Get current user profile
-      tags:
-      - users
   /user/password:
     put:
       consumes:
@@ -438,6 +356,7 @@ paths:
             $ref: '#/definitions/model.ErrorResponse'
       security:
       - ApiKeyAuth: []
+      - 'Bearer {"type": "apiKey", "in": "header", "name": "Authorization"}': []
       summary: Update user password
       tags:
       - users
@@ -474,12 +393,14 @@ paths:
             $ref: '#/definitions/model.ErrorResponse'
       security:
       - ApiKeyAuth: []
+      - 'Bearer {"type": "apiKey", "in": "header", "name": "Authorization"}': []
       summary: Update user profile
       tags:
       - users
+schemes:
+- https
 securityDefinitions:
-  BearerAuth:
-    description: Type "Bearer" followed by a space and JWT token.
+  ApiKeyAuth:
     in: header
     name: Authorization
     type: apiKey

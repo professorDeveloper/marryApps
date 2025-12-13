@@ -29,18 +29,14 @@ import (
 // @title Swagger Blitz API
 // @version 1.0
 // @description Blitz API server.
-// Security definitions
-// @securityDefinitions.apikey BearerAuth
-// @in header
-// @name Authorization
-// @description Type "Bearer" followed by a space and JWT token.
 // @host back.blitz.yurtal.tech
 // @BasePath /
 // @schemes https
-// @servers.url http://localhost:8080
-// @servers.description Local development server
-// @servers.url https://back.blitz.yurtal.tech
-// @servers.description Production server
+
+// @securityDefinitions.apikey ApiKeyAuth
+// @in header
+// @name Authorization
+
 func Run(cfg *config.Config) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()

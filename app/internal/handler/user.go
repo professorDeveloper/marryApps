@@ -19,6 +19,8 @@ import (
 // @Failure 401 {object} model.ErrorResponse
 // @Failure 404 {object} model.ErrorResponse
 // @Router /user/me [get]
+// @Security Bearer {"type": "apiKey", "in": "header", "name": "Authorization"}
+
 func (h *Handler) getUser(c echo.Context) error {
 	userID := c.Get("user_id").(string)
 	if userID == "" {
@@ -51,6 +53,7 @@ func (h *Handler) getUser(c echo.Context) error {
 // @Failure 401 {object} model.ErrorResponse
 // @Failure 500 {object} model.ErrorResponse
 // @Router /user/update [put]
+// @Security Bearer {"type": "apiKey", "in": "header", "name": "Authorization"}
 func (h *Handler) updateUser(c echo.Context) error {
 	userID := c.Get("user_id").(string)
 	if userID == "" {
@@ -91,6 +94,7 @@ func (h *Handler) updateUser(c echo.Context) error {
 // @Failure 400 {object} model.ErrorResponse
 // @Failure 401 {object} model.ErrorResponse
 // @Router /user/password [put]
+// @Security Bearer {"type": "apiKey", "in": "header", "name": "Authorization"}
 func (h *Handler) updatePassword(c echo.Context) error {
 	userID, ok := c.Get("user_id").(string)
 	if !ok || userID == "" {
