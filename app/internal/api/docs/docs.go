@@ -230,7 +230,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/v1/user/password": {
+        "/api/v1/user/password-update": {
             "put": {
                 "security": [
                     {

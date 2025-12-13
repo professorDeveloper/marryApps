@@ -293,7 +293,7 @@ paths:
       summary: Create a new payment invoice
       tags:
       - payments
-  /api/v1/user/password:
+  /api/v1/user/password-update:
     put:
       consumes:
       - application/json

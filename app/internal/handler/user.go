@@ -94,7 +94,7 @@ func (h *Handler) updateUser(c echo.Context) error {
 // @Success 200 {object} model.SuccessResponse
 // @Failure 400 {object} model.ErrorResponse
 // @Failure 401 {object} model.ErrorResponse
-// @Router /api/v1/user/password [put]
+// @Router /api/v1/user/password-update [put]
 // @Param Accept-Language header string false "Tilni belgilash uchun (masalan: uz,de)" default(uz) 
 func (h *Handler) updatePassword(c echo.Context) error {
 	userID, ok := c.Get("user_id").(string)
