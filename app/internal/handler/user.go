@@ -18,7 +18,7 @@ import (
 // @Success 200 {object} model.UserResponse
 // @Failure 401 {object} model.ErrorResponse
 // @Failure 404 {object} model.ErrorResponse
-// @Router /user/me [get]
+// @Router /api/v1/user/me [get]
 func (h *Handler) getUser(c echo.Context) error {
 	userID := c.Get("user_id").(string)
 	if userID == "" {
@@ -50,7 +50,7 @@ func (h *Handler) getUser(c echo.Context) error {
 // @Failure 400 {object} model.ErrorResponse
 // @Failure 401 {object} model.ErrorResponse
 // @Failure 500 {object} model.ErrorResponse
-// @Router /user/update [put]
+// @Router /api/v1/user/update [put]
 func (h *Handler) updateUser(c echo.Context) error {
 	userID := c.Get("user_id").(string)
 	if userID == "" {
@@ -90,7 +90,7 @@ func (h *Handler) updateUser(c echo.Context) error {
 // @Success 200 {object} model.SuccessResponse
 // @Failure 400 {object} model.ErrorResponse
 // @Failure 401 {object} model.ErrorResponse
-// @Router /user/password [put]
+// @Router /api/v1/user/password [put]
 func (h *Handler) updatePassword(c echo.Context) error {
 	userID, ok := c.Get("user_id").(string)
 	if !ok || userID == "" {
