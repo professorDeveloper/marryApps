@@ -19,6 +19,8 @@ import (
 // @Failure 401 {object} model.ErrorResponse
 // @Failure 404 {object} model.ErrorResponse
 // @Router /api/v1/user/me [get]
+// @Param Accept-Language header string false "Tilni belgilash uchun (masalan: uz,de)" default(uz) 
+
 func (h *Handler) getUser(c echo.Context) error {
 	userID := c.Get("user_id").(string)
 	if userID == "" {
@@ -51,6 +53,8 @@ func (h *Handler) getUser(c echo.Context) error {
 // @Failure 401 {object} model.ErrorResponse
 // @Failure 500 {object} model.ErrorResponse
 // @Router /api/v1/user/update [put]
+// @Param Accept-Language header string false "Tilni belgilash uchun (masalan: uz,de)" default(uz) 
+
 func (h *Handler) updateUser(c echo.Context) error {
 	userID := c.Get("user_id").(string)
 	if userID == "" {
@@ -91,6 +95,7 @@ func (h *Handler) updateUser(c echo.Context) error {
 // @Failure 400 {object} model.ErrorResponse
 // @Failure 401 {object} model.ErrorResponse
 // @Router /api/v1/user/password [put]
+// @Param Accept-Language header string false "Tilni belgilash uchun (masalan: uz,de)" default(uz) 
 func (h *Handler) updatePassword(c echo.Context) error {
 	userID, ok := c.Get("user_id").(string)
 	if !ok || userID == "" {

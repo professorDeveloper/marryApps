@@ -36,13 +36,6 @@ definitions:
         example: error message
         type: string
     type: object
-  model.GoogleAuthRequest:
-    properties:
-      app_type:
-        type: string
-      id_token:
-        type: string
-    type: object
   model.IndexCreation:
     properties:
       provider:
@@ -77,21 +70,6 @@ definitions:
       level:
         type: string
     type: object
-  model.RefreshRequest:
-    properties:
-      refreshToken:
-        example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
-        type: string
-    type: object
-  model.RefreshResponse:
-    properties:
-      accessToken:
-        example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
-        type: string
-      refreshToken:
-        example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
-        type: string
-    type: object
   model.RegisterRequest:
     properties:
       fullName:
@@ -114,39 +92,6 @@ definitions:
         type: string
       newPassword:
         example: newPassword123
-        type: string
-    type: object
-  model.UpdateUserRequest:
-    properties:
-      XP:
-        type: integer
-      balance:
-        type: integer
-      dateOfBirth:
-        type: string
-      email:
-        type: string
-      fullName:
-        type: string
-      gender:
-        type: string
-      group:
-        type: string
-      isAgreedForUserContract:
-        type: boolean
-      isVerified:
-        type: boolean
-      level:
-        type: string
-      overAll:
-        type: integer
-      phoneNumber:
-        type: string
-      photo:
-        type: string
-      role:
-        type: string
-      status:
         type: string
     type: object
   model.UserResponse:
@@ -219,6 +164,11 @@ paths:
         required: true
         schema:
           $ref: '#/definitions/model.LoginRequest'
+      - default: uz
+        description: 'Tilni belgilash uchun (masalan: uz,de)'
+        in: header
+        name: Accept-Language
+        type: string
       produces:
       - application/json
       responses:
@@ -235,62 +185,6 @@ paths:
           schema:
             $ref: '#/definitions/model.ErrorResponse'
       summary: User login
-      tags:
-      - Auth
-  /api/v1/auth/login/with-google:
-    post:
-      consumes:
-      - application/json
-      description: Register a new user using Google and return token with user data
-      parameters:
-      - description: Google auth request
-        in: body
-        name: input
-        required: true
-        schema:
-          $ref: '#/definitions/model.GoogleAuthRequest'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/model.LoginResponse'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/model.ErrorResponse'
-        "401":
-          description: Unauthorized
-          schema:
-            $ref: '#/definitions/model.ErrorResponse'
-      summary: User registration with Google
-      tags:
-      - Auth
-  /api/v1/auth/refresh:
-    post:
-      consumes:
-      - application/json
-      description: Refresh access token using refresh token
-      parameters:
-      - description: Refresh token
-        in: body
-        name: input
-        required: true
-        schema:
-          $ref: '#/definitions/model.RefreshRequest'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/model.RefreshResponse'
-        "401":
-          description: Unauthorized
-          schema:
-            $ref: '#/definitions/model.ErrorResponse'
-      summary: Token refresh
       tags:
       - Auth
   /api/v1/auth/register:
@@ -399,31 +293,6 @@ paths:
       summary: Create a new payment invoice
       tags:
       - payments
-  /api/v1/user/me:
-    get:
-      consumes:
-      - application/json
-      description: Get the profile of the currently authenticated user
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/model.UserResponse'
-        "401":
-          description: Unauthorized
-          schema:
-            $ref: '#/definitions/model.ErrorResponse'
-        "404":
-          description: Not Found
-          schema:
-            $ref: '#/definitions/model.ErrorResponse'
-      security:
-      - ApiKeyAuth: []
-      summary: Get current user profile
-      tags:
-      - users
   /api/v1/user/password:
     put:
       consumes:
@@ -436,6 +305,11 @@ paths:
         required: true
         schema:
           $ref: '#/definitions/model.UpdatePasswordRequest'
+      - default: uz
+        description: 'Tilni belgilash uchun (masalan: uz,de)'
+        in: header
+        name: Accept-Language
+        type: string
       produces:
       - application/json
       responses:
@@ -454,42 +328,6 @@ paths:
       security:
       - ApiKeyAuth: []
       summary: Update user password
-      tags:
-      - users
-  /api/v1/user/update:
-    put:
-      consumes:
-      - application/json
-      description: Update the profile of the currently authenticated user
-      parameters:
-      - description: User update data
-        in: body
-        name: request
-        required: true
-        schema:
-          $ref: '#/definitions/model.UpdateUserRequest'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/model.UserResponse'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/model.ErrorResponse'
-        "401":
-          description: Unauthorized
-          schema:
-            $ref: '#/definitions/model.ErrorResponse'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/model.ErrorResponse'
-      security:
-      - ApiKeyAuth: []
-      summary: Update user profile
       tags:
       - users
 schemes:
