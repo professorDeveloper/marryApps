@@ -162,10 +162,7 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "201": {
-                        "description": "Created",
-                        "schema": {
-                            "$ref": "#/definitions/model.RegisterResponse"
-                        }
+                        "description": "Created"
                     },
                     "400": {
                         "description": "Bad Request",
@@ -596,14 +593,6 @@ const docTemplate = `{
                 }
             }
         },
-        "model.RegisterResponse": {
-            "type": "object",
-            "properties": {
-                "message": {
-                    "type": "string"
-                }
-            }
-        },
         "model.SuccessResponse": {
             "type": "object",
             "properties": {
@@ -751,9 +740,9 @@ const docTemplate = `{
 // SwaggerInfo holds exported Swagger Info so clients can modify it
 var SwaggerInfo = &swag.Spec{
 	Version:          "1.0",
-	Host:             "https://back.blitz.yurtal.tech",
+	Host:             "back.blitz.yurtal.tech",
 	BasePath:         "/",
-	Schemes:          []string{"http", "https"},
+	Schemes:          []string{"https"},
 	Title:            "Swagger Blitz API",
 	Description:      "Blitz API server.",
 	InfoInstanceName: "swagger",

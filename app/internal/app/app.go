@@ -30,9 +30,9 @@ import (
 // @version 1.0
 // @description Blitz API server.
 
-// @host https://back.blitz.yurtal.tech
+// @host back.blitz.yurtal.tech
 // @BasePath /
-// @schemes http https
+// @schemes https
 // @servers.url http://localhost:8080
 // @servers.description Local development server
 // @servers.url https://back.blitz.yurtal.tech

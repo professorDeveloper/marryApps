@@ -231,10 +231,13 @@ func (s *AuthS) UpdateUserPassword(ctx context.Context, userID uuid.UUID, curren
         return fmt.Errorf("failed to hash password: %w", err)
     }
 
-    params := toUpdateParams(existingUser) 
-    params.PasswordHash = &hashedPassword
+    params := pg.UpdateUserPasswordParams{
+        ID:       existingUser.ID,
+        PasswordHash: &hashedPassword,
+    }
     
-    if _, err := s.repo.PgRepo.Repo.UpdateUser(ctx, params); err != nil {
+    
+    if _, err := s.repo.PgRepo.Repo.UpdateUserPassword(ctx, params); err != nil {
         return fmt.Errorf("failed to update password: %w", err)
     }
     
@@ -345,27 +348,4 @@ func toUserResponse(u pg.User) model.UserResponse {
 		IsAgreedForUserContract: u.IsAgreedForUserContract,
 		DateOfBirth:             dateOfBirth,
 	}
-}
-func toUpdateParams(u pg.User) pg.UpdateUserParams {
-    return pg.UpdateUserParams{
-        ID: u.ID,
-        FullName: u.FullName,
-        Role: u.Role,
-        Email: u.Email,
-        PhoneNumber: u.PhoneNumber,
-        Group: u.Group,
-        Photo: u.Photo,
-        Gender: u.Gender,
-        DateOfBirth: u.DateOfBirth,
-        OverAll: u.OverAll,
-        Level: u.Level,
-        XP: u.XP,
-        Balance: u.Balance,
-        IsAgreedForUserContract: u.IsAgreedForUserContract,
-        IsVerified: u.IsVerified,
-        Status: u.Status,
-        PasswordHash: u.PasswordHash,
-		GoogleId: u.GoogleId,
-		FirebaseToken: u.FirebaseToken,
-    }
 }

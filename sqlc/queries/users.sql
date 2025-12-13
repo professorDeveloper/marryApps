@@ -64,3 +64,9 @@ UPDATE users SET
     "updatedAt" = NOW()
 WHERE id = $1
 RETURNING *;
+
+-- name: UpdateUserPassword :one
+UPDATE users SET
+    "passwordHash" = $2
+WHERE id = $1
+RETURNING *;

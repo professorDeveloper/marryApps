@@ -360,3 +360,45 @@ func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (User, e
 	)
 	return i, err
 }
+
+const updateUserPassword = `-- name: UpdateUserPassword :one
+UPDATE users SET
+    "passwordHash" = $2
+WHERE id = $1
+RETURNING id, "googleId", "fullName", "dateOfBirth", "overAll", level, email, "phoneNumber", "passwordHash", role, gender, "isAgreedForUserContract", "isVerified", status, "group", photo, "XP", balance, "firebaseToken", "createdAt", "updatedAt", "deletedAt"
+`
+
+type UpdateUserPasswordParams struct {
+	ID           string  `json:"id"`
+	PasswordHash *string `json:"passwordHash"`
+}
+
+func (q *Queries) UpdateUserPassword(ctx context.Context, arg UpdateUserPasswordParams) (User, error) {
+	row := q.db.QueryRow(ctx, updateUserPassword, arg.ID, arg.PasswordHash)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.GoogleId,
+		&i.FullName,
+		&i.DateOfBirth,
+		&i.OverAll,
+		&i.Level,
+		&i.Email,
+		&i.PhoneNumber,
+		&i.PasswordHash,
+		&i.Role,
+		&i.Gender,
+		&i.IsAgreedForUserContract,
+		&i.IsVerified,
+		&i.Status,
+		&i.Group,
+		&i.Photo,
+		&i.XP,
+		&i.Balance,
+		&i.FirebaseToken,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
+	)
+	return i, err
+}

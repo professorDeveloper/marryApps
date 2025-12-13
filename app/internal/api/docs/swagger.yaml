@@ -95,11 +95,6 @@ definitions:
       phoneNumber:
         type: string
     type: object
-  model.RegisterResponse:
-    properties:
-      message:
-        type: string
-    type: object
   model.SuccessResponse:
     properties:
       message:
@@ -199,7 +194,7 @@ definitions:
         example: 100
         type: integer
     type: object
-host: https://back.blitz.yurtal.tech
+host: back.blitz.yurtal.tech
 info:
   contact: {}
   description: Blitz API server.
@@ -302,8 +297,6 @@ paths:
       responses:
         "201":
           description: Created
-          schema:
-            $ref: '#/definitions/model.RegisterResponse'
         "400":
           description: Bad Request
           schema:
@@ -487,6 +480,5 @@ paths:
       tags:
       - users
 schemes:
-- http
 - https
 swagger: "2.0"

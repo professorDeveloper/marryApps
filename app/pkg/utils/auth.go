@@ -51,6 +51,7 @@ func GenerateUniqueUsername() string {
 }
 
 func HashPassword(password string) (string, error) {
+	fmt.Println("password", password)
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 
 	if err != nil {
@@ -60,6 +61,8 @@ func HashPassword(password string) (string, error) {
 }
 
 func VerifyPassword(hashedPassword string, candidatePassword string) error {
+	fmt.Println("hashedPassword", hashedPassword)
+	fmt.Println("candidatePassword", candidatePassword)
 	return bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(candidatePassword))
 }
 
