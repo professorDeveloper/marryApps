@@ -20,7 +20,7 @@ import (
 // @Failure 400 {object} model.CreatePriceForLevelResponse "Invalid request or price level already exists"
 // @Failure 401 {object} model.CreatePriceForLevelResponse "Unauthorized - Invalid or missing token"
 // @Failure 500 {object} model.CreatePriceForLevelResponse "Internal server error"
-// @Router /level-price/create [post]
+// @Router /api/v1/level-price/create [post]
 func (h *Handler) createLevelPrice(c echo.Context) error {
 	var req model.CreatePriceForLevelRequest
 	if err := c.Bind(&req); err != nil {

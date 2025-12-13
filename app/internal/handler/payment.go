@@ -85,7 +85,7 @@ func GenerateClickSignForComplete(clickTransID, serviceID, secretKey, merchantTr
 // @Failure 400 {object} model.CreateInvoiceResponse "Invalid request or missing required fields"
 // @Failure 401 {object} model.CreateInvoiceResponse "Unauthorized - User not authenticated"
 // @Failure 500 {object} model.CreateInvoiceResponse "Internal server error"
-// @Router /payments/create [post]
+// @Router /api/v1/payments/create [post]
 func (h *Handler) CreateInvoice(c echo.Context) error {
 	userID := c.Get("user_id").(string)
 	if userID == "" {
