@@ -317,6 +317,88 @@ paths:
       summary: User registration
       tags:
       - Auth
+  /api/v1/level-price/create:
+    post:
+      consumes:
+      - application/json
+      description: Creates a new price for a specific level in the system
+      parameters:
+      - default: Bearer <your_token>
+        description: Bearer token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: Price level creation details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.CreatePriceForLevelRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successfully created price level
+          schema:
+            $ref: '#/definitions/model.CreatePriceForLevelResponse'
+        "400":
+          description: Invalid request or price level already exists
+          schema:
+            $ref: '#/definitions/model.CreatePriceForLevelResponse'
+        "401":
+          description: Unauthorized - Invalid or missing token
+          schema:
+            $ref: '#/definitions/model.CreatePriceForLevelResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.CreatePriceForLevelResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Create a new price level
+      tags:
+      - level-prices
+  /api/v1/payments/create:
+    post:
+      consumes:
+      - application/json
+      description: Creates a new payment invoice for the authenticated user
+      parameters:
+      - default: Bearer <your_token>
+        description: Bearer token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: Invoice creation request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.IndexCreation'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successfully created invoice
+          schema:
+            $ref: '#/definitions/model.CreateInvoiceResponse'
+        "400":
+          description: Invalid request or missing required fields
+          schema:
+            $ref: '#/definitions/model.CreateInvoiceResponse'
+        "401":
+          description: Unauthorized - User not authenticated
+          schema:
+            $ref: '#/definitions/model.CreateInvoiceResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.CreateInvoiceResponse'
+      summary: Create a new payment invoice
+      tags:
+      - payments
   /api/v1/user/me:
     get:
       consumes:
@@ -410,88 +492,6 @@ paths:
       summary: Update user profile
       tags:
       - users
-  /level-price/create:
-    post:
-      consumes:
-      - application/json
-      description: Creates a new price for a specific level in the system
-      parameters:
-      - default: Bearer <your_token>
-        description: Bearer token
-        in: header
-        name: Authorization
-        required: true
-        type: string
-      - description: Price level creation details
-        in: body
-        name: request
-        required: true
-        schema:
-          $ref: '#/definitions/model.CreatePriceForLevelRequest'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Successfully created price level
-          schema:
-            $ref: '#/definitions/model.CreatePriceForLevelResponse'
-        "400":
-          description: Invalid request or price level already exists
-          schema:
-            $ref: '#/definitions/model.CreatePriceForLevelResponse'
-        "401":
-          description: Unauthorized - Invalid or missing token
-          schema:
-            $ref: '#/definitions/model.CreatePriceForLevelResponse'
-        "500":
-          description: Internal server error
-          schema:
-            $ref: '#/definitions/model.CreatePriceForLevelResponse'
-      security:
-      - ApiKeyAuth: []
-      summary: Create a new price level
-      tags:
-      - level-prices
-  /payments/create:
-    post:
-      consumes:
-      - application/json
-      description: Creates a new payment invoice for the authenticated user
-      parameters:
-      - default: Bearer <your_token>
-        description: Bearer token
-        in: header
-        name: Authorization
-        required: true
-        type: string
-      - description: Invoice creation request
-        in: body
-        name: request
-        required: true
-        schema:
-          $ref: '#/definitions/model.IndexCreation'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Successfully created invoice
-          schema:
-            $ref: '#/definitions/model.CreateInvoiceResponse'
-        "400":
-          description: Invalid request or missing required fields
-          schema:
-            $ref: '#/definitions/model.CreateInvoiceResponse'
-        "401":
-          description: Unauthorized - User not authenticated
-          schema:
-            $ref: '#/definitions/model.CreateInvoiceResponse'
-        "500":
-          description: Internal server error
-          schema:
-            $ref: '#/definitions/model.CreateInvoiceResponse'
-      summary: Create a new payment invoice
-      tags:
-      - payments
 schemes:
 - https
 securityDefinitions:

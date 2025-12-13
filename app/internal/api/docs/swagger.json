@@ -181,6 +181,131 @@
                 }
             }
         },
+        "/api/v1/level-price/create": {
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Creates a new price for a specific level in the system",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "level-prices"
+                ],
+                "summary": "Create a new price level",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "default": "Bearer \u003cyour_token\u003e",
+                        "description": "Bearer token",
+                        "name": "Authorization",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "description": "Price level creation details",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.CreatePriceForLevelRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successfully created price level",
+                        "schema": {
+                            "$ref": "#/definitions/model.CreatePriceForLevelResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request or price level already exists",
+                        "schema": {
+                            "$ref": "#/definitions/model.CreatePriceForLevelResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized - Invalid or missing token",
+                        "schema": {
+                            "$ref": "#/definitions/model.CreatePriceForLevelResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/model.CreatePriceForLevelResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/payments/create": {
+            "post": {
+                "description": "Creates a new payment invoice for the authenticated user",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "payments"
+                ],
+                "summary": "Create a new payment invoice",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "default": "Bearer \u003cyour_token\u003e",
+                        "description": "Bearer token",
+                        "name": "Authorization",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "description": "Invoice creation request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.IndexCreation"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successfully created invoice",
+                        "schema": {
+                            "$ref": "#/definitions/model.CreateInvoiceResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request or missing required fields",
+                        "schema": {
+                            "$ref": "#/definitions/model.CreateInvoiceResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized - User not authenticated",
+                        "schema": {
+                            "$ref": "#/definitions/model.CreateInvoiceResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/model.CreateInvoiceResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/user/me": {
             "get": {
                 "security": [
@@ -324,131 +449,6 @@
                         "description": "Internal Server Error",
                         "schema": {
                             "$ref": "#/definitions/model.ErrorResponse"
-                        }
-                    }
-                }
-            }
-        },
-        "/level-price/create": {
-            "post": {
-                "security": [
-                    {
-                        "ApiKeyAuth": []
-                    }
-                ],
-                "description": "Creates a new price for a specific level in the system",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "level-prices"
-                ],
-                "summary": "Create a new price level",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "default": "Bearer \u003cyour_token\u003e",
-                        "description": "Bearer token",
-                        "name": "Authorization",
-                        "in": "header",
-                        "required": true
-                    },
-                    {
-                        "description": "Price level creation details",
-                        "name": "request",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/model.CreatePriceForLevelRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Successfully created price level",
-                        "schema": {
-                            "$ref": "#/definitions/model.CreatePriceForLevelResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "Invalid request or price level already exists",
-                        "schema": {
-                            "$ref": "#/definitions/model.CreatePriceForLevelResponse"
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized - Invalid or missing token",
-                        "schema": {
-                            "$ref": "#/definitions/model.CreatePriceForLevelResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal server error",
-                        "schema": {
-                            "$ref": "#/definitions/model.CreatePriceForLevelResponse"
-                        }
-                    }
-                }
-            }
-        },
-        "/payments/create": {
-            "post": {
-                "description": "Creates a new payment invoice for the authenticated user",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "payments"
-                ],
-                "summary": "Create a new payment invoice",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "default": "Bearer \u003cyour_token\u003e",
-                        "description": "Bearer token",
-                        "name": "Authorization",
-                        "in": "header",
-                        "required": true
-                    },
-                    {
-                        "description": "Invoice creation request",
-                        "name": "request",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/model.IndexCreation"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Successfully created invoice",
-                        "schema": {
-                            "$ref": "#/definitions/model.CreateInvoiceResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "Invalid request or missing required fields",
-                        "schema": {
-                            "$ref": "#/definitions/model.CreateInvoiceResponse"
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized - User not authenticated",
-                        "schema": {
-                            "$ref": "#/definitions/model.CreateInvoiceResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal server error",
-                        "schema": {
-                            "$ref": "#/definitions/model.CreateInvoiceResponse"
                         }
                     }
                 }
