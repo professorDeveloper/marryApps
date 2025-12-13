@@ -21,7 +21,6 @@ import (
 // @Failure 400 {object} model.ErrorResponse
 // @Failure 401 {object} model.ErrorResponse
 // @Router /api/v1/auth/login [post]
-// @Security Bearer {"type": "apiKey", "in": "header", "name": "Authorization"}
 func (h *Handler) Login(c echo.Context) error {
 	var req model.LoginRequest
 	if v := c.Get("loginBody"); v != nil {
@@ -60,7 +59,6 @@ func (h *Handler) Login(c echo.Context) error {
 // @Success 201
 // @Failure 400 {object} model.ErrorResponse
 // @Router /api/v1/auth/register [post]
-
 func (h *Handler) RegisterUser(c echo.Context) error {
 	var req model.RegisterRequest
 	if v := c.Get("registerBody"); v != nil {
@@ -93,11 +91,10 @@ func (h *Handler) RegisterUser(c echo.Context) error {
 // @Tags Auth
 // @Accept json
 // @Produce json
+// @Param   input  body      model.RefreshRequest  true  "Refresh token"
 // @Success 200 {object} model.RefreshResponse
 // @Failure 401 {object} model.ErrorResponse
-// @Router /api/v1/auth/refresh [get]
-// @Security Bearer {"type": "apiKey", "in": "header", "name": "Authorization"}
-
+// @Router /api/v1/auth/refresh [post]
 func (h *Handler) Refresh(c echo.Context) error {
 	var req model.RefreshRequest
 	if v := c.Get("refreshBody"); v != nil {
