@@ -4,6 +4,7 @@ import (
 	"context"
 	"io"
 	"log"
+	"strings"
 
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
@@ -55,40 +56,54 @@ func (m *Minio) RemoveBucket(ctx context.Context, bucketName string) error {
 	return m.Client.RemoveBucket(ctx, bucketName)
 }
 
-func (m *Minio) PutObject(ctx context.Context,bucketName, objectName string, reader io.Reader, size int64, contentType string) (int64, error) {
-    info, err := m.Client.PutObject(
-        ctx,
-        bucketName,
-        objectName,
-        reader,
-        size,
-        minio.PutObjectOptions{ContentType: contentType},
-    )
-    if err != nil {
-        return 0, err
-    }
-    return info.Size, nil
+func (m *Minio) PutObject(ctx context.Context, bucketName, folderName, objectName string, reader io.Reader, size int64, contentType string) (int64, error) {
+	objectPath := objectName
+	if folderName != "" {
+		folderName = strings.TrimSuffix(folderName, "/")
+		objectPath = folderName + "/" + objectName
+	}
+	info, err := m.Client.PutObject(
+		ctx,
+		bucketName,
+		objectPath,
+		reader,
+		size,
+		minio.PutObjectOptions{ContentType: contentType},
+	)
+	if err != nil {
+		return 0, err
+	}
+	return info.Size, nil
 }
-func (m *Minio) GetObject(ctx context.Context,bucketName, objectName string) (*minio.Object, error) {
-    obj, err := m.Client.GetObject(
-        ctx,
-        bucketName,
-        objectName,
-        minio.GetObjectOptions{},
-    )
-    if err != nil {
-        return nil, err
-    }
-    return obj, nil
+func (m *Minio) GetObject(ctx context.Context, bucketName, folderName,objectName string) (*minio.Object, error) {
+	objectPath := objectName
+	if folderName != "" {
+		folderName = strings.TrimSuffix(folderName, "/")
+		objectPath = folderName + "/" + objectName
+	}
+	obj, err := m.Client.GetObject(
+		ctx,
+		bucketName,
+		objectPath,
+		minio.GetObjectOptions{},
+	)
+	if err != nil {
+		return nil, err
+	}
+	return obj, nil
 }
 
-func (m *Minio) RemoveObject(ctx context.Context,bucketName, objectName string) error {
-    opts := minio.RemoveObjectOptions{}
-    
-	err := m.Client.RemoveObject(ctx, bucketName, objectName, opts)
-    if err != nil {
-        return err
-    }
-    return nil
-}
+func (m *Minio) RemoveObject(ctx context.Context, bucketName, folderName,objectName string) error {
+	opts := minio.RemoveObjectOptions{}
+	objectPath := objectName
+	if folderName != "" {
+		folderName = strings.TrimSuffix(folderName, "/")
+		objectPath = folderName + "/" + objectName
+	}
 
+	err := m.Client.RemoveObject(ctx, bucketName, objectPath, opts)
+	if err != nil {
+		return err
+	}
+	return nil
+}

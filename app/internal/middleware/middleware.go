@@ -224,7 +224,6 @@ func CheckLanguage() echo.MiddlewareFunc {
 			if acceptLang != "" {
 				langs := strings.Split(acceptLang, ",")
 				if len(langs) > 0 {
-					// Parse "en-US" -> "en"
 					langParts := strings.Split(strings.TrimSpace(langs[0]), "-")
 					if len(langParts) > 0 {
 						lang = strings.ToLower(langParts[0])

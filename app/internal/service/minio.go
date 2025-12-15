@@ -29,10 +29,9 @@ func NewMinioS(cfg *config.Config, minioClient *minioClient.Minio) *MinioS {
 func (s *MinioS) PutAvatar(ctx context.Context, file io.Reader, size int64, userID string) (string, error) {
 
 	bucketName := model.AvatarBucketName
-	err := s.minioClient.CreateBucket(ctx, bucketName, "")
-	if err != nil {
-		return "", fmt.Errorf("minio create bucket failed: %w", err)
-	}
+	folderName := model.AvatarFolderName
+	s.minioClient.CreateBucket(ctx, bucketName, "")
+	
 	
 
 	fileBuffer := make([]byte, 512)
@@ -54,7 +53,7 @@ func (s *MinioS) PutAvatar(ctx context.Context, file io.Reader, size int64, user
 	objectName := fmt.Sprintf("%s/avatar%s", userID, extension)
 
 	fullReader := io.MultiReader(bytes.NewReader(fileBuffer[:n]), file)
-	_, err = s.minioClient.PutObject(ctx, bucketName, objectName, fullReader, size,objectName)
+	_, err = s.minioClient.PutObject(ctx, bucketName, folderName,objectName, fullReader, size,objectName)
 	if err != nil {
 		return "", fmt.Errorf("minio put object failed: %w", err)
 	}
@@ -64,7 +63,8 @@ func (s *MinioS) PutAvatar(ctx context.Context, file io.Reader, size int64, user
 
 func (s *MinioS) GetAvatar(ctx context.Context, objectName string) (*RealMinio.Object, error) {
 	bucketName := model.AvatarBucketName
-	obj, err := s.minioClient.GetObject(ctx, bucketName, objectName)
+	folderName := model.AvatarFolderName
+	obj, err := s.minioClient.GetObject(ctx, bucketName, folderName,objectName)
 	if err != nil {
 		return nil, fmt.Errorf("minio get object failed: %w", err)
 	}
