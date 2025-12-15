@@ -27,7 +27,13 @@ func NewMinioS(cfg *config.Config, minioClient *minioClient.Minio) *MinioS {
 }
 
 func (s *MinioS) PutAvatar(ctx context.Context, file io.Reader, size int64, userID string) (string, error) {
+
 	bucketName := model.AvatarBucketName
+	err := s.minioClient.CreateBucket(ctx, bucketName, "")
+	if err != nil {
+		return "", fmt.Errorf("minio create bucket failed: %w", err)
+	}
+	
 
 	fileBuffer := make([]byte, 512)
 	n, err := file.Read(fileBuffer)

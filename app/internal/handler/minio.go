@@ -25,7 +25,6 @@ import (
 func (h *Handler) UploadAvatar(c echo.Context) error {
 	ctx := c.Request().Context()
 	
-	// Safely get user_id from context
 	userIDInterface := c.Get("user_id")
 	if userIDInterface == nil {
 		return c.JSON(http.StatusUnauthorized, model.ErrorResponse{
@@ -39,8 +38,7 @@ func (h *Handler) UploadAvatar(c echo.Context) error {
 		})
 	}
 
-	// Safely get lang from context with default fallback
-	lang := "uz" // Default language
+	lang := "uz" 
 	if langInterface := c.Get("lang"); langInterface != nil {
 		if langStr, ok := langInterface.(string); ok {
 			lang = langStr
@@ -55,7 +53,6 @@ func (h *Handler) UploadAvatar(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "File topilmadi"})
 	}
 	
-	// File size in bytes (50MB = 50 * 1024 * 1024)
 	maxSize := int64(50 * 1024 * 1024)
 	if fileHeader.Size > maxSize {
 		if lang == "de" {
@@ -103,8 +100,7 @@ func (h *Handler) UploadAvatar(c echo.Context) error {
 // @Failure 500 {object} model.ErrorResponse "Failed to download file"
 // @Router /api/v1/user/avatar [get]
 func (h *Handler) DownloadAvatar(c echo.Context) error {
-	// Safely get lang from context with default fallback
-	lang := "uz" // Default language
+	lang := "uz"
 	if langInterface := c.Get("lang"); langInterface != nil {
 		if langStr, ok := langInterface.(string); ok {
 			lang = langStr

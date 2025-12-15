@@ -211,7 +211,7 @@ definitions:
         example: 100
         type: integer
     type: object
-host: back.blitz.yurtal.tech
+host: localhost:8080
 info:
   contact: {}
   description: Blitz API server with multi-language support (de, uz, en)
@@ -577,7 +577,7 @@ paths:
       tags:
       - users
 schemes:
-- https
+- http
 securityDefinitions:
   BearerAuth:
     description: Type "Bearer" followed by a space and your JWT token

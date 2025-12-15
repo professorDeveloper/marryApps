@@ -29,9 +29,9 @@ import (
 // @title Blitz API
 // @version 1.0
 // @description Blitz API server with multi-language support (de, uz, en)
-// @host back.blitz.yurtal.tech
+// @host localhost:8080
 // @BasePath /
-// @schemes https
+// @schemes http
 
 // @securityDefinitions.apikey BearerAuth
 // @in header

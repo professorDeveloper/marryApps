@@ -81,16 +81,13 @@ func LoginRateLimiter() echo.MiddlewareFunc {
 func CheckAuth(cfg *config.Config) echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
-			// Extract token from Authorization header
 			authHeader := c.Request().Header.Get("Authorization")
 			var accessToken string
 
-			// Try standard "Bearer TOKEN" format first
 			fields := strings.Fields(authHeader)
 			if len(fields) == 2 && strings.EqualFold(fields[0], "Bearer") {
 				accessToken = fields[1]
 			} else if authHeader != "" && !strings.Contains(authHeader, " ") {
-				// Fallback: accept just the token without "Bearer" prefix
 				accessToken = authHeader
 			}
 
@@ -124,7 +121,6 @@ func ValidateLoginInput(next echo.HandlerFunc) echo.HandlerFunc {
 			return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: message})
 		}
 
-		// Trim whitespace
 		req.PhoneNumber = strings.TrimSpace(req.PhoneNumber)
 		req.Password = strings.TrimSpace(req.Password)
 

@@ -1,6 +1,6 @@
 package model
 
-const AvatarBucketName = "blitz-avatars"
+const AvatarBucketName = "blitz"
 
 type DownloadAvatarRequest struct {
 	ObjectName string `json:"object_name" example:"avatar.jpg"`
