@@ -36,6 +36,7 @@ import (
 // @securityDefinitions.apikey ApiKeyAuth
 // @in header
 // @name Authorization
+// @Param Accept-Language header string false "Tilni belgilash uchun (masalan: uz,de)" default(uz)
 
 func Run(cfg *config.Config) {
 	ctx, cancel := context.WithCancel(context.Background())
@@ -60,14 +61,14 @@ func Run(cfg *config.Config) {
 		l.Fatalf("app - Run - RunMigrations: %v", err)
 	}
 
-	minioClient, err := minio.New(minio.Endpoint(cfg.Minio.Endpoint), minio.AccessKeyID(cfg.Minio.AccessKey), minio.SecretAccessKey(cfg.Minio.SecretKey))
+	minioClient, err := minio.New(minio.Endpoint(cfg.Minio.Endpoint), minio.AccessKeyID(cfg.Minio.AccessKey), minio.SecretAccessKey(cfg.Minio.SecretKey),minio.UseSSL(cfg.Minio.UseSSL))
 	if err != nil {
 		l.Fatalf("app - Run - minio.New: %v", err)
 	}
 
 	repos := repository.New(pgClient, minioClient)
 
-	service := service.New(cfg, repos, clickClient, paymeClient)
+	service := service.New(cfg, repos, clickClient, paymeClient, minioClient)
 
 	handler := handler.New(l, cfg, service)
 	handler.Register(e)

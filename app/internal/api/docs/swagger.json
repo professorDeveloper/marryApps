@@ -12,9 +12,9 @@
     "host": "back.blitz.yurtal.tech",
     "basePath": "/",
     "paths": {
-        "/api/v1/auth/login": {
+        "/api/v1/auth/login/with-google": {
             "post": {
-                "description": "Authenticate user and return access token",
+                "description": "Register a new user using Google and return token with user data",
                 "consumes": [
                     "application/json"
                 ],
@@ -24,23 +24,16 @@
                 "tags": [
                     "Auth"
                 ],
-                "summary": "User login",
+                "summary": "User registration with Google",
                 "parameters": [
                     {
-                        "description": "Login credentials",
+                        "description": "Google auth request",
                         "name": "input",
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/model.LoginRequest"
+                            "$ref": "#/definitions/model.GoogleAuthRequest"
                         }
-                    },
-                    {
-                        "type": "string",
-                        "default": "uz",
-                        "description": "Tilni belgilash uchun (masalan: uz,de)",
-                        "name": "Accept-Language",
-                        "in": "header"
                     }
                 ],
                 "responses": {
@@ -54,6 +47,46 @@
                         "description": "Bad Request",
                         "schema": {
                             "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/auth/refresh": {
+            "post": {
+                "description": "Refresh access token using refresh token",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Token refresh",
+                "parameters": [
+                    {
+                        "description": "Refresh token",
+                        "name": "input",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.RefreshRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.RefreshResponse"
                         }
                     },
                     "401": {
@@ -227,6 +260,168 @@
                 }
             }
         },
+        "/api/v1/user/avatar": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Uploads a user avatar image file (supports multiple languages)",
+                "consumes": [
+                    "multipart/form-data"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "users"
+                ],
+                "summary": "Upload user avatar",
+                "parameters": [
+                    {
+                        "type": "file",
+                        "description": "Image file to upload",
+                        "name": "file",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Language preference (e.g., 'de' for German, default: 'en')",
+                        "name": "Accept-Language",
+                        "in": "header"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Avatar muvaffaqiyatli yuklandi",
+                        "schema": {
+                            "$ref": "#/definitions/model.SuccessResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Noto'g'ri so'rov",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Avtorizatsiyadan o'tilmagan",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Yuklashda xatolik yuz berdi",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/user/avatar/{user_id}": {
+            "get": {
+                "description": "Downloads a user's avatar by user ID (supports multiple languages)",
+                "produces": [
+                    "application/octet-stream"
+                ],
+                "tags": [
+                    "users"
+                ],
+                "summary": "Download user avatar",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Language preference (e.g., 'de' for German, default: 'en')",
+                        "name": "Accept-Language",
+                        "in": "header"
+                    },
+                    {
+                        "type": "string",
+                        "description": "User ID to download avatar for",
+                        "name": "user_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Avatar image file",
+                        "schema": {
+                            "type": "file"
+                        }
+                    },
+                    "400": {
+                        "description": "Noto'g'ri so'rov",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Avatar topilmadi",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Faylni yuklashda xatolik yuz berdi",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/user/me": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get the profile of the currently authenticated user with all user details",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "users"
+                ],
+                "summary": "Get current user profile",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Language preference (e.g., 'de' for German, default: 'en')",
+                        "name": "Accept-Language",
+                        "in": "header"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Foydalanuvchi profili muvaffaqiyatli yuklandi\" \"uz",
+                        "schema": {
+                            "$ref": "#/definitions/model.UserResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Avtorizatsiyadan o'tilmagan\" \"uz",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Foydalanuvchi topilmadi\" \"uz",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/user/password-update": {
             "put": {
                 "security": [
@@ -254,13 +449,6 @@
                         "schema": {
                             "$ref": "#/definitions/model.UpdatePasswordRequest"
                         }
-                    },
-                    {
-                        "type": "string",
-                        "default": "uz",
-                        "description": "Tilni belgilash uchun (masalan: uz,de)",
-                        "name": "Accept-Language",
-                        "in": "header"
                     }
                 ],
                 "responses": {
@@ -343,24 +531,22 @@
                 }
             }
         },
+        "model.GoogleAuthRequest": {
+            "type": "object",
+            "properties": {
+                "app_type": {
+                    "type": "string"
+                },
+                "id_token": {
+                    "type": "string"
+                }
+            }
+        },
         "model.IndexCreation": {
             "type": "object",
             "properties": {
                 "provider": {
                     "type": "string"
-                }
-            }
-        },
-        "model.LoginRequest": {
-            "type": "object",
-            "properties": {
-                "password": {
-                    "type": "string",
-                    "example": "password123"
-                },
-                "phoneNumber": {
-                    "type": "string",
-                    "example": "1234567890"
                 }
             }
         },
@@ -391,6 +577,28 @@
                 },
                 "level": {
                     "type": "string"
+                }
+            }
+        },
+        "model.RefreshRequest": {
+            "type": "object",
+            "properties": {
+                "refreshToken": {
+                    "type": "string",
+                    "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                }
+            }
+        },
+        "model.RefreshResponse": {
+            "type": "object",
+            "properties": {
+                "accessToken": {
+                    "type": "string",
+                    "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                },
+                "refreshToken": {
+                    "type": "string",
+                    "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
                 }
             }
         },

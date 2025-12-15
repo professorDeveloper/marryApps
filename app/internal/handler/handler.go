@@ -41,6 +41,8 @@ func (h *Handler) Register(router *echo.Echo) {
 			user.GET("/me", h.getUser,mw.CheckLanguage(),mw.CheckAuth(h.cfg))
 			user.PUT("/update", h.updateUser,mw.CheckLanguage(),mw.CheckAuth(h.cfg))
 			user.PUT("/password-update", h.updatePassword,mw.CheckLanguage(),mw.CheckAuth(h.cfg))
+			user.POST("/avatar", h.UploadAvatar,mw.CheckLanguage(),mw.CheckAuth(h.cfg)) // Agar avtorizatsiya kerak bo'lsa
+			user.GET("/avatar/:user_id", h.DownloadAvatar,mw.CheckLanguage(),mw.CheckAuth(h.cfg))
 		}
 	}
 

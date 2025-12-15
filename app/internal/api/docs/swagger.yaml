@@ -36,18 +36,16 @@ definitions:
         example: error message
         type: string
     type: object
+  model.GoogleAuthRequest:
+    properties:
+      app_type:
+        type: string
+      id_token:
+        type: string
+    type: object
   model.IndexCreation:
     properties:
       provider:
-        type: string
-    type: object
-  model.LoginRequest:
-    properties:
-      password:
-        example: password123
-        type: string
-      phoneNumber:
-        example: "1234567890"
         type: string
     type: object
   model.LoginResponse:
@@ -68,6 +66,21 @@ definitions:
       id:
         type: string
       level:
+        type: string
+    type: object
+  model.RefreshRequest:
+    properties:
+      refreshToken:
+        example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        type: string
+    type: object
+  model.RefreshResponse:
+    properties:
+      accessToken:
+        example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        type: string
+      refreshToken:
+        example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
         type: string
     type: object
   model.RegisterRequest:
@@ -152,23 +165,18 @@ info:
   title: Swagger Blitz API
   version: "1.0"
 paths:
-  /api/v1/auth/login:
+  /api/v1/auth/login/with-google:
     post:
       consumes:
       - application/json
-      description: Authenticate user and return access token
+      description: Register a new user using Google and return token with user data
       parameters:
-      - description: Login credentials
+      - description: Google auth request
         in: body
         name: input
         required: true
         schema:
-          $ref: '#/definitions/model.LoginRequest'
-      - default: uz
-        description: 'Tilni belgilash uchun (masalan: uz,de)'
-        in: header
-        name: Accept-Language
-        type: string
+          $ref: '#/definitions/model.GoogleAuthRequest'
       produces:
       - application/json
       responses:
@@ -184,7 +192,33 @@ paths:
           description: Unauthorized
           schema:
             $ref: '#/definitions/model.ErrorResponse'
-      summary: User login
+      summary: User registration with Google
+      tags:
+      - Auth
+  /api/v1/auth/refresh:
+    post:
+      consumes:
+      - application/json
+      description: Refresh access token using refresh token
+      parameters:
+      - description: Refresh token
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/model.RefreshRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.RefreshResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      summary: Token refresh
       tags:
       - Auth
   /api/v1/auth/register:
@@ -293,6 +327,111 @@ paths:
       summary: Create a new payment invoice
       tags:
       - payments
+  /api/v1/user/avatar:
+    post:
+      consumes:
+      - multipart/form-data
+      description: Uploads a user avatar image file (supports multiple languages)
+      parameters:
+      - description: Image file to upload
+        in: formData
+        name: file
+        required: true
+        type: file
+      - description: 'Language preference (e.g., ''de'' for German, default: ''en'')'
+        in: header
+        name: Accept-Language
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Avatar muvaffaqiyatli yuklandi
+          schema:
+            $ref: '#/definitions/model.SuccessResponse'
+        "400":
+          description: Noto'g'ri so'rov
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Avtorizatsiyadan o'tilmagan
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Yuklashda xatolik yuz berdi
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Upload user avatar
+      tags:
+      - users
+  /api/v1/user/avatar/{user_id}:
+    get:
+      description: Downloads a user's avatar by user ID (supports multiple languages)
+      parameters:
+      - description: 'Language preference (e.g., ''de'' for German, default: ''en'')'
+        in: header
+        name: Accept-Language
+        type: string
+      - description: User ID to download avatar for
+        in: path
+        name: user_id
+        required: true
+        type: string
+      produces:
+      - application/octet-stream
+      responses:
+        "200":
+          description: Avatar image file
+          schema:
+            type: file
+        "400":
+          description: Noto'g'ri so'rov
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: Avatar topilmadi
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Faylni yuklashda xatolik yuz berdi
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      summary: Download user avatar
+      tags:
+      - users
+  /api/v1/user/me:
+    get:
+      consumes:
+      - application/json
+      description: Get the profile of the currently authenticated user with all user
+        details
+      parameters:
+      - description: 'Language preference (e.g., ''de'' for German, default: ''en'')'
+        in: header
+        name: Accept-Language
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Foydalanuvchi profili muvaffaqiyatli yuklandi" "uz
+          schema:
+            $ref: '#/definitions/model.UserResponse'
+        "401":
+          description: Avtorizatsiyadan o'tilmagan" "uz
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: Foydalanuvchi topilmadi" "uz
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get current user profile
+      tags:
+      - users
   /api/v1/user/password-update:
     put:
       consumes:
@@ -305,11 +444,6 @@ paths:
         required: true
         schema:
           $ref: '#/definitions/model.UpdatePasswordRequest'
-      - default: uz
-        description: 'Tilni belgilash uchun (masalan: uz,de)'
-        in: header
-        name: Accept-Language
-        type: string
       produces:
       - application/json
       responses:

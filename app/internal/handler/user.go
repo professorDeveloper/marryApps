@@ -19,7 +19,6 @@ import (
 // @Failure 401 {object} model.ErrorResponse
 // @Failure 404 {object} model.ErrorResponse
 // @Router /api/v1/user/me [get]
-// @Param Accept-Language header string false "Tilni belgilash uchun (masalan: uz,de)" default(uz) 
 
 func (h *Handler) getUser(c echo.Context) error {
 	userID := c.Get("user_id").(string)
@@ -40,21 +39,43 @@ func (h *Handler) getUser(c echo.Context) error {
 	return c.JSON(http.StatusOK, user)
 }
 
-// UpdateUser godoc
-// @Summary Update user profile
-// @Description Update the profile of the currently authenticated user
+// GetMe godoc
+// @Summary Get current user profile
+// @Description Get the profile of the currently authenticated user with all user details
 // @Tags users
-// @Accept  json
-// @Produce  json
-// @Security ApiKeyAuth
-// @Param request body model.UpdateUserRequest true "User update data"
-// @Success 200 {object} model.UserResponse
-// @Failure 400 {object} model.ErrorResponse
-// @Failure 401 {object} model.ErrorResponse
-// @Failure 500 {object} model.ErrorResponse
-// @Router /api/v1/user/update [put]
-// @Param Accept-Language header string false "Tilni belgilash uchun (masalan: uz,de)" default(uz) 
-
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param Accept-Language header string false "Language preference (e.g., 'de' for German, default: 'en')"
+// @Success 200 {object} model.UserResponse "User profile retrieved successfully"
+// @Success 200 {object} model.UserResponse "Benutzerprofil erfolgreich abgerufen" "de"
+// @Success 200 {object} model.UserResponse "Foydalanuvchi profili muvaffaqiyatli yuklandi" "uz"
+// @Failure 401 {object} model.ErrorResponse "Unauthorized"
+// @Failure 401 {object} model.ErrorResponse "Nicht autorisiert" "de"
+// @Failure 401 {object} model.ErrorResponse "Avtorizatsiyadan o'tilmagan" "uz"
+// @Failure 404 {object} model.ErrorResponse "User not found"
+// @Failure 404 {object} model.ErrorResponse "Benutzer nicht gefunden" "de"
+// @Failure 404 {object} model.ErrorResponse "Foydalanuvchi topilmadi" "uz"
+// @Router /api/v1/user/me [get]
+// 
+// Response Example:
+// {
+//   "id": "550e8400-e29b-41d4-a716-446655440000",
+//   "fullName": "John Doe",
+//   "email": "john.doe@example.com",
+//   "phoneNumber": "+1234567890",
+//   "role": ('admin', 'moderator', 'user'),
+//   "gender": ("male","female","not_specified"),
+//   "status": ("active", "blocked", "onhold"),
+//   "photo": "https://example.com/avatars/john.jpg",
+//   "level": "B1", "B2", "C1", "C2", "not_specified",
+//   "xp": 100,
+//   "balance": 1000,
+//   "group": "premium", "basic",
+//   "isVerified": true,
+//   "isAgreedForUserContract": true,
+//   "dateOfBirth": "1990-01-01T00:00:00Z"
+// }
 func (h *Handler) updateUser(c echo.Context) error {
 	userID := c.Get("user_id").(string)
 	if userID == "" {
@@ -95,7 +116,6 @@ func (h *Handler) updateUser(c echo.Context) error {
 // @Failure 400 {object} model.ErrorResponse
 // @Failure 401 {object} model.ErrorResponse
 // @Router /api/v1/user/password-update [put]
-// @Param Accept-Language header string false "Tilni belgilash uchun (masalan: uz,de)" default(uz) 
 func (h *Handler) updatePassword(c echo.Context) error {
 	userID, ok := c.Get("user_id").(string)
 	if !ok || userID == "" {
