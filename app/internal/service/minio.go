@@ -64,8 +64,10 @@ func (s *MinioS) PutAvatar(ctx context.Context, file io.Reader, size int64, user
 func (s *MinioS) GetAvatar(ctx context.Context, objectName string) (*RealMinio.Object, error) {
 	bucketName := model.AvatarBucketName
 	folderName := model.AvatarFolderName
+	fmt.Println("objectName:",objectName)
 	obj, err := s.minioClient.GetObject(ctx, bucketName, folderName,objectName)
 	if err != nil {
+		fmt.Println(err)
 		return nil, fmt.Errorf("minio get object failed: %w", err)
 	}
 

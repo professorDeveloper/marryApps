@@ -92,13 +92,15 @@ func (h *Handler) UploadAvatar(c echo.Context) error {
 // @Summary Download user avatar
 // @Description Downloads a user's avatar by object name
 // @Tags users
+// @Accept json
 // @Produce octet-stream
-// @Param object_name query string true "Object name of the avatar"
+// @Security BearerAuth
+// @Param input body model.DownloadAvatarRequest true "Avatar object name"
 // @Success 200 {file} file "Avatar image file"
 // @Failure 400 {object} model.ErrorResponse "Invalid request"
 // @Failure 404 {object} model.ErrorResponse "Avatar not found"
 // @Failure 500 {object} model.ErrorResponse "Failed to download file"
-// @Router /api/v1/user/avatar [get]
+// @Router /api/v1/user/avatar/download [post]
 func (h *Handler) DownloadAvatar(c echo.Context) error {
 	lang := "uz"
 	if langInterface := c.Get("lang"); langInterface != nil {

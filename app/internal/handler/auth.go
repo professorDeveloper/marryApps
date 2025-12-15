@@ -91,6 +91,7 @@ func (h *Handler) RegisterUser(c echo.Context) error {
 // @Tags auth
 // @Accept json
 // @Produce json
+// @Security BearerAuth
 // @Param input body model.RefreshRequest true "Refresh token"
 // @Success 200 {object} model.RefreshResponse "Token refreshed successfully"
 // @Failure 400 {object} model.ErrorResponse "Invalid request format"

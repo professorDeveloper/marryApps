@@ -30,10 +30,16 @@ definitions:
       error_note:
         type: string
     type: object
+  model.DownloadAvatarRequest:
+    properties:
+      object_name:
+        example: c0f18a64-7f5c-4425-9414-1b01cddee9d9/avatar.png
+        type: string
+    type: object
   model.DownloadAvatarResponse:
     properties:
       object_name:
-        example: avatar.jpg
+        example: c0f18a64-7f5c-4425-9414-1b01cddee9d9/avatar.png
         type: string
     type: object
   model.ErrorResponse:
@@ -305,6 +311,8 @@ paths:
           description: Invalid or expired refresh token
           schema:
             $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
       summary: Token refresh
       tags:
       - auth
@@ -415,36 +423,6 @@ paths:
       tags:
       - payments
   /api/v1/user/avatar:
-    get:
-      description: Downloads a user's avatar by object name
-      parameters:
-      - description: Object name of the avatar
-        in: query
-        name: object_name
-        required: true
-        type: string
-      produces:
-      - application/octet-stream
-      responses:
-        "200":
-          description: Avatar image file
-          schema:
-            type: file
-        "400":
-          description: Invalid request
-          schema:
-            $ref: '#/definitions/model.ErrorResponse'
-        "404":
-          description: Avatar not found
-          schema:
-            $ref: '#/definitions/model.ErrorResponse'
-        "500":
-          description: Failed to download file
-          schema:
-            $ref: '#/definitions/model.ErrorResponse'
-      summary: Download user avatar
-      tags:
-      - users
     post:
       consumes:
       - multipart/form-data
@@ -477,6 +455,42 @@ paths:
       security:
       - BearerAuth: []
       summary: Upload user avatar
+      tags:
+      - users
+  /api/v1/user/avatar/download:
+    post:
+      consumes:
+      - application/json
+      description: Downloads a user's avatar by object name
+      parameters:
+      - description: Avatar object name
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/model.DownloadAvatarRequest'
+      produces:
+      - application/octet-stream
+      responses:
+        "200":
+          description: Avatar image file
+          schema:
+            type: file
+        "400":
+          description: Invalid request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: Avatar not found
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Failed to download file
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Download user avatar
       tags:
       - users
   /api/v1/user/me:

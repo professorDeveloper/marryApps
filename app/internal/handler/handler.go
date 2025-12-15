@@ -20,7 +20,7 @@ func (h *Handler) Register(router *echo.Echo) {
 	p.Use(router)
 
 	api := router.Group("/api/v1")
-	
+
 	{
 		auth := api.Group("/auth")
 		{
@@ -43,7 +43,7 @@ func (h *Handler) Register(router *echo.Echo) {
 			user.PUT("/update", h.UpdateUser,mw.CheckLanguage(),mw.CheckAuth(h.cfg))
 			user.PUT("/password-update", h.UpdatePassword,mw.CheckLanguage(),mw.CheckAuth(h.cfg))
 			user.POST("/avatar", h.UploadAvatar,mw.CheckLanguage(),mw.CheckAuth(h.cfg))
-			user.GET("/avatar", h.DownloadAvatar,mw.CheckLanguage(),mw.CheckAuth(h.cfg))
+			user.POST("/avatar/download", h.DownloadAvatar,mw.CheckLanguage(),mw.CheckAuth(h.cfg))
 		}
 	}
 

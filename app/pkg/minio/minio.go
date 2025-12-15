@@ -2,6 +2,7 @@ package minio
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"log"
 	"strings"
@@ -62,6 +63,7 @@ func (m *Minio) PutObject(ctx context.Context, bucketName, folderName, objectNam
 		folderName = strings.TrimSuffix(folderName, "/")
 		objectPath = folderName + "/" + objectName
 	}
+	fmt.Println(objectPath)
 	info, err := m.Client.PutObject(
 		ctx,
 		bucketName,
@@ -75,12 +77,13 @@ func (m *Minio) PutObject(ctx context.Context, bucketName, folderName, objectNam
 	}
 	return info.Size, nil
 }
-func (m *Minio) GetObject(ctx context.Context, bucketName, folderName,objectName string) (*minio.Object, error) {
+func (m *Minio) GetObject(ctx context.Context, bucketName, folderName, objectName string) (*minio.Object, error) {
 	objectPath := objectName
 	if folderName != "" {
 		folderName = strings.TrimSuffix(folderName, "/")
 		objectPath = folderName + "/" + objectName
 	}
+	fmt.Println(objectPath)
 	obj, err := m.Client.GetObject(
 		ctx,
 		bucketName,
@@ -93,7 +96,7 @@ func (m *Minio) GetObject(ctx context.Context, bucketName, folderName,objectName
 	return obj, nil
 }
 
-func (m *Minio) RemoveObject(ctx context.Context, bucketName, folderName,objectName string) error {
+func (m *Minio) RemoveObject(ctx context.Context, bucketName, folderName, objectName string) error {
 	opts := minio.RemoveObjectOptions{}
 	objectPath := objectName
 	if folderName != "" {
