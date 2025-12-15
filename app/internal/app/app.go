@@ -26,17 +26,22 @@ import (
 	_ "gitlab.yurtal.tech/company/blitz/back/internal/api/docs"
 )
 
-// @title Swagger Blitz API
+// @title Blitz API
 // @version 1.0
-// @description Blitz API server.
-// @host back.blitz.yurtal.tech
-// @BasePath /
-// @schemes https
-
+// @description Blitz API server with multi-language support
+// @host localhost:8080
+// @BasePath /api/v1
+// @schemes http
+// @contact.name API Support
+// @contact.url https://blitz.yurtal.tech/support
 // @securityDefinitions.apikey ApiKeyAuth
 // @in header
 // @name Authorization
-// @Param Accept-Language header string false "Tilni belgilash uchun (masalan: uz,de)" default(uz)
+// @description Type "Bearer" followed by a space and JWT token.
+// @securityDefinitions.apikey ApiKeyAuth
+// @in header
+// @name Accept-Language
+// @description Language preference (e.g., 'de' for German, 'uz' for Uzbek, default: 'en')
 
 func Run(cfg *config.Config) {
 	ctx, cancel := context.WithCancel(context.Background())
@@ -61,7 +66,7 @@ func Run(cfg *config.Config) {
 		l.Fatalf("app - Run - RunMigrations: %v", err)
 	}
 
-	minioClient, err := minio.New(minio.Endpoint(cfg.Minio.Endpoint), minio.AccessKeyID(cfg.Minio.AccessKey), minio.SecretAccessKey(cfg.Minio.SecretKey),minio.UseSSL(cfg.Minio.UseSSL))
+	minioClient, err := minio.New(minio.Endpoint(cfg.Minio.Endpoint), minio.AccessKeyID(cfg.Minio.AccessKey), minio.SecretAccessKey(cfg.Minio.SecretKey), minio.UseSSL(cfg.Minio.UseSSL))
 	if err != nil {
 		l.Fatalf("app - Run - minio.New: %v", err)
 	}

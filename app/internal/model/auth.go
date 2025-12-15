@@ -36,19 +36,16 @@ type LoginResponse struct {
 	User         UserResponse `json:"user"`
 }
 
-// ErrorResponse represents an error response
 type ErrorResponse struct {
 	Message string `json:"message" example:"error message"`
 }
 
-// RegisterRequest represents registration request body
 type RegisterRequest struct {
 	FullName    string `json:"fullName"`
 	PhoneNumber string `json:"phoneNumber"`
 	Password    string `json:"password"`
 }
 
-// UserResponse represents a safe subset of user data returned to clients
 type UserResponse struct {
 	ID                      string    `json:"id" example:"1234567890"`
 	OverAll                 *int32    `json:"overAll,omitempty" example:"1"`

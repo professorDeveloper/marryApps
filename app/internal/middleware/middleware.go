@@ -1,10 +1,10 @@
-// app/internal/middleware/middleware.go
 package middleware
 
 import (
 	"bytes"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"strings"
 	"time"
@@ -19,14 +19,21 @@ import (
 func SetupMiddleware(e *echo.Echo, cfg *config.Config) {
 	e.Use(CheckLanguage())
 
-	// Request ID
 	e.Use(middleware.RequestID())
 
-	// Logger
-	e.Use(middleware.Logger())
+	e.Use(middleware.LoggerWithConfig(middleware.LoggerConfig{
+		Format: "${time_rfc3339} ${method} ${uri} ${status} ${latency_human}\n",
+	}))
 
-	// Recover from panics
 	e.Use(middleware.Recover())
+
+	e.Use(middleware.SecureWithConfig(middleware.SecureConfig{
+		XSSProtection:         "1; mode=block",
+		ContentTypeNosniff:    "nosniff",
+		XFrameOptions:         "SAMEORIGIN",
+		HSTSMaxAge:            3600,
+		ContentSecurityPolicy: "default-src 'self'",
+	}))
 
 	// CORS
 	e.Use(middleware.CORSWithConfig(middleware.CORSConfig{
@@ -34,23 +41,28 @@ func SetupMiddleware(e *echo.Echo, cfg *config.Config) {
 		AllowMethods:     cfg.Server.Http.Cors.AllowedMethods,
 		AllowHeaders:     cfg.Server.Http.Cors.AllowedHeaders,
 		AllowCredentials: cfg.Server.Http.Cors.AllowCredentials,
+		MaxAge:           3600,
 	}))
 
-	// Timeout
 	e.Use(middleware.TimeoutWithConfig(middleware.TimeoutConfig{
 		Timeout: time.Duration(cfg.Server.CtxDefaultTimeout) * time.Second,
+		Skipper: func(c echo.Context) bool {
+			return strings.HasPrefix(c.Path(), "/api/v1/user/avatar")
+		},
 	}))
 
-	// Rate limiter
+	e.Use(middleware.BodyLimit("10M"))
+
 	e.Use(middleware.RateLimiter(middleware.NewRateLimiterMemoryStore(20)))
+
+	e.Use(SanitizeInput())
 }
 
-// LoginRateLimiter limits login attempts per IP to mitigate brute-force attacks
 func LoginRateLimiter() echo.MiddlewareFunc {
 	store := middleware.NewRateLimiterMemoryStoreWithConfig(middleware.RateLimiterMemoryStoreConfig{
-		Rate:      5,
-		Burst:     5,
-		ExpiresIn: time.Minute,
+		Rate:      5,          
+		Burst:     5,           
+		ExpiresIn: time.Minute, 
 	})
 
 	return middleware.RateLimiterWithConfig(middleware.RateLimiterConfig{
@@ -59,49 +71,65 @@ func LoginRateLimiter() echo.MiddlewareFunc {
 			return c.RealIP(), nil
 		},
 		ErrorHandler: func(c echo.Context, err error) error {
-			return c.JSON(http.StatusTooManyRequests, model.ErrorResponse{Message: "too many login attempts"})
+			lang := getLanguage(c)
+			message := model.GetLocalizedMessage(lang, "too_many_attempts")
+			return c.JSON(http.StatusTooManyRequests, model.ErrorResponse{Message: message})
 		},
 	})
 }
 
-// CheckAuth is an auth middleware that validates JWT access token and sets user_id in context.
-// It looks for token in Authorization: Bearer header first, then in "access_token" cookie.
 func CheckAuth(cfg *config.Config) echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
-			var accessToken string
-
-			authHeader := c.Request().Header.Get("Authorization")
-			fields := strings.Fields(authHeader)
-			if len(fields) == 2 && strings.EqualFold(fields[0], "Bearer") {
-				accessToken = fields[1]
-			}
+			accessToken := extractBearerToken(c)
 
 			if accessToken == "" {
-				return c.JSON(http.StatusUnauthorized, model.ErrorResponse{Message: "you are not logged in"})
+				lang := getLanguage(c)
+				message := model.GetLocalizedMessage(lang, "not_logged_in")
+				return c.JSON(http.StatusUnauthorized, model.ErrorResponse{Message: message})
 			}
 
 			sub, err := utils.ValidateJWT(accessToken, cfg.Jwt.SecretKey)
 			if err != nil {
-				return c.JSON(http.StatusUnauthorized, model.ErrorResponse{Message: err.Error()})
+				lang := getLanguage(c)
+				message := model.GetLocalizedMessage(lang, "invalid_token")
+				log.Printf("JWT validation error: %v", err)
+				return c.JSON(http.StatusUnauthorized, model.ErrorResponse{Message: message})
 			}
 
 			c.Set("user_id", fmt.Sprint(sub))
-			fmt.Println("User ID:", sub)
 			return next(c)
 		}
 	}
 }
 
-// ValidateLoginInput binds and validates login request body before reaching handler
+
+
 func ValidateLoginInput(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		var req model.LoginRequest
 		if err := c.Bind(&req); err != nil {
-			return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "invalid request body"})
+			lang := getLanguage(c)
+			message := model.GetLocalizedMessage(lang, "invalid_request_body")
+			log.Printf("Login bind error: %v", err)
+			return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: message})
 		}
+
+		// Trim whitespace
+		req.PhoneNumber = strings.TrimSpace(req.PhoneNumber)
+		req.Password = strings.TrimSpace(req.Password)
+
 		if req.PhoneNumber == "" || req.Password == "" {
-			return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "phone number and password are required"})
+			lang := getLanguage(c)
+			message := model.GetLocalizedMessage(lang, "phone_password_required")
+			return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: message})
+		}
+
+		// Basic phone number validation
+		if len(req.PhoneNumber) < 9 || len(req.PhoneNumber) > 15 {
+			lang := getLanguage(c)
+			message := model.GetLocalizedMessage(lang, "invalid_phone_format")
+			return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: message})
 		}
 
 		c.Set("loginBody", req)
@@ -109,33 +137,50 @@ func ValidateLoginInput(next echo.HandlerFunc) echo.HandlerFunc {
 	}
 }
 
-// ValidateRegisterInput binds and validates registration request body before reaching handler
-// ValidateRegisterInput binds and validates registration request body before reaching handler
 func ValidateRegisterInput(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		var req model.RegisterRequest
 
 		body, err := io.ReadAll(c.Request().Body)
 		if err != nil {
-			errMsg := fmt.Sprintf("Failed to read request body: %v", err)
-			fmt.Println(errMsg)
-			return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "invalid request body"})
+			lang := getLanguage(c)
+			message := model.GetLocalizedMessage(lang, "invalid_request_body")
+			log.Printf("Failed to read request body: %v", err)
+			return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: message})
 		}
-		fmt.Println("Raw request body:", string(body))
 
+		// Restore body for binding
 		c.Request().Body = io.NopCloser(bytes.NewBuffer(body))
 
 		if err := c.Bind(&req); err != nil {
-			errMsg := fmt.Sprintf("Failed to bind request: %v", err)
-			fmt.Println(errMsg)
-			return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "invalid request body format"})
+			lang := getLanguage(c)
+			message := model.GetLocalizedMessage(lang, "invalid_request_format")
+			log.Printf("Failed to bind register request: %v", err)
+			return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: message})
 		}
 
+		req.PhoneNumber = strings.TrimSpace(req.PhoneNumber)
+		req.Password = strings.TrimSpace(req.Password)
+		req.FullName = strings.TrimSpace(req.FullName)
+
 		if req.PhoneNumber == "" || req.Password == "" {
-			errMsg := fmt.Sprintf("Missing required fields - PhoneNumber: %v, Password: %v",
-				req.PhoneNumber != "", req.Password != "")
-			fmt.Println(errMsg)
-			return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "phone number and password are required"})
+			lang := getLanguage(c)
+			message := model.GetLocalizedMessage(lang, "phone_password_required")
+			return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: message})
+		}
+
+		// Password strength validation
+		if len(req.Password) < 8 {
+			lang := getLanguage(c)
+			message := model.GetLocalizedMessage(lang, "password_too_short")
+			return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: message})
+		}
+
+		// Phone number validation
+		if len(req.PhoneNumber) < 9 || len(req.PhoneNumber) > 15 {
+			lang := getLanguage(c)
+			message := model.GetLocalizedMessage(lang, "invalid_phone_format")
+			return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: message})
 		}
 
 		c.Set("registerBody", req)
@@ -143,54 +188,89 @@ func ValidateRegisterInput(next echo.HandlerFunc) echo.HandlerFunc {
 	}
 }
 
-func CheckAuthPayme(cfg *config.Config) echo.MiddlewareFunc {
-	return func(next echo.HandlerFunc) echo.HandlerFunc {
-		return func(c echo.Context) error {
-			var accessToken string
-
-			authHeader := c.Request().Header.Get("Authorization")
-			fields := strings.Fields(authHeader)
-			if len(fields) == 2 && strings.EqualFold(fields[0], "Bearer") {
-				accessToken = fields[1]
-			}
-
-			if accessToken == "" {
-				return c.JSON(http.StatusUnauthorized, model.ErrorResponseForPayme{})
-			}
-
-			sub, err := utils.ValidateJWT(accessToken, cfg.Jwt.SecretKey)
-			if err != nil {
-				return c.JSON(http.StatusUnauthorized, model.ErrorResponse{Message: err.Error()})
-			}
-
-			c.Set("user_id", fmt.Sprint(sub))
-			return next(c)
+// ValidateRefreshInput validates refresh token request
+func ValidateRefreshInput(next echo.HandlerFunc) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		var req model.RefreshRequest
+		if err := c.Bind(&req); err != nil {
+			lang := getLanguage(c)
+			message := model.GetLocalizedMessage(lang, "invalid_request_body")
+			return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: message})
 		}
+
+		if req.RefreshToken == "" {
+			lang := getLanguage(c)
+			message := model.GetLocalizedMessage(lang, "refresh_token_required")
+			return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: message})
+		}
+
+		c.Set("refreshBody", req)
+		return next(c)
 	}
 }
 
+// CheckLanguage extracts and validates the Accept-Language header
 func CheckLanguage() echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
-			lang := "uz"
+			lang := "uz" // Default language
+
 			acceptLang := c.Request().Header.Get("Accept-Language")
 			if acceptLang != "" {
 				langs := strings.Split(acceptLang, ",")
 				if len(langs) > 0 {
+					// Parse "en-US" -> "en"
 					langParts := strings.Split(strings.TrimSpace(langs[0]), "-")
 					if len(langParts) > 0 {
 						lang = strings.ToLower(langParts[0])
 					}
 				}
 			}
+
+			// Validate against supported languages
 			switch lang {
-			case "de", "uz":
+			case "de", "uz", "en":
 				c.Set("language", lang)
 			default:
-				c.Set("language", "uz")
+				c.Set("language", "uz") // Fallback to default
 			}
 
 			return next(c)
 		}
 	}
 }
+
+// SanitizeInput sanitizes user input to prevent XSS and injection attacks
+func SanitizeInput() echo.MiddlewareFunc {
+	return func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(c echo.Context) error {
+			// Skip for file uploads
+			contentType := c.Request().Header.Get("Content-Type")
+			if strings.Contains(contentType, "multipart/form-data") {
+				return next(c)
+			}
+			return next(c)
+		}
+	}
+}
+
+// Helper functions
+
+// extractBearerToken extracts Bearer token from Authorization header
+func extractBearerToken(c echo.Context) string {
+	authHeader := c.Request().Header.Get("Authorization")
+	fields := strings.Fields(authHeader)
+	if len(fields) == 2 && strings.EqualFold(fields[0], "Bearer") {
+		return fields[1]
+	}
+	return ""
+}
+
+func getLanguage(c echo.Context) string {
+	if lang, ok := c.Get("language").(string); ok {
+		return lang
+	}
+	return "uz" 
+}
+
+

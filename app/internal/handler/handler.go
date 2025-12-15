@@ -30,7 +30,7 @@ func (h *Handler) Register(router *echo.Echo) {
 		}
 		payments := api.Group("/payments")
 		{
-			payments.POST("/create", h.CreateInvoice,mw.CheckLanguage(),mw.CheckAuthPayme(h.cfg))
+			payments.POST("/create", h.CreateInvoice,mw.CheckLanguage(),mw.CheckAuth(h.cfg))
 		}
 		levelPrice := api.Group("/level-price")
 		{
@@ -38,9 +38,9 @@ func (h *Handler) Register(router *echo.Echo) {
 		}
 		user := api.Group("/user")
 		{
-			user.GET("/me", h.getUser,mw.CheckLanguage(),mw.CheckAuth(h.cfg))
-			user.PUT("/update", h.updateUser,mw.CheckLanguage(),mw.CheckAuth(h.cfg))
-			user.PUT("/password-update", h.updatePassword,mw.CheckLanguage(),mw.CheckAuth(h.cfg))
+			user.GET("/me", h.GetUser,mw.CheckLanguage(),mw.CheckAuth(h.cfg))
+			user.PUT("/update", h.UpdateUser,mw.CheckLanguage(),mw.CheckAuth(h.cfg))
+			user.PUT("/password-update", h.UpdatePassword,mw.CheckLanguage(),mw.CheckAuth(h.cfg))
 			user.POST("/avatar", h.UploadAvatar,mw.CheckLanguage(),mw.CheckAuth(h.cfg))
 			user.GET("/avatar", h.DownloadAvatar,mw.CheckLanguage(),mw.CheckAuth(h.cfg))
 		}

@@ -9,12 +9,61 @@ const docTemplate = `{
     "info": {
         "description": "{{escape .Description}}",
         "title": "{{.Title}}",
-        "contact": {},
+        "contact": {
+            "name": "API Support",
+            "url": "https://blitz.yurtal.tech/support"
+        },
         "version": "{{.Version}}"
     },
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
+        "/api/v1/auth/login": {
+            "post": {
+                "description": "Authenticate user and return access token",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "User login",
+                "parameters": [
+                    {
+                        "description": "Login credentials",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.LoginRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successfully logged in",
+                        "schema": {
+                            "$ref": "#/definitions/model.LoginResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request format",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/auth/login/with-google": {
             "post": {
                 "description": "Register a new user using Google and return token with user data",
@@ -25,7 +74,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "Auth"
+                    "auth"
                 ],
                 "summary": "User registration with Google",
                 "parameters": [
@@ -41,19 +90,19 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "OK",
+                        "description": "Successfully authenticated with Google",
                         "schema": {
                             "$ref": "#/definitions/model.LoginResponse"
                         }
                     },
                     "400": {
-                        "description": "Bad Request",
+                        "description": "Invalid request body or app type",
                         "schema": {
                             "$ref": "#/definitions/model.ErrorResponse"
                         }
                     },
                     "401": {
-                        "description": "Unauthorized",
+                        "description": "Invalid Google ID Token",
                         "schema": {
                             "$ref": "#/definitions/model.ErrorResponse"
                         }
@@ -71,7 +120,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "Auth"
+                    "auth"
                 ],
                 "summary": "Token refresh",
                 "parameters": [
@@ -87,13 +136,19 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "OK",
+                        "description": "Token refreshed successfully",
                         "schema": {
                             "$ref": "#/definitions/model.RefreshResponse"
                         }
                     },
+                    "400": {
+                        "description": "Invalid request format",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
                     "401": {
-                        "description": "Unauthorized",
+                        "description": "Invalid or expired refresh token",
                         "schema": {
                             "$ref": "#/definitions/model.ErrorResponse"
                         }
@@ -111,7 +166,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "Auth"
+                    "auth"
                 ],
                 "summary": "User registration",
                 "parameters": [
@@ -127,10 +182,13 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "201": {
-                        "description": "Created"
+                        "description": "User successfully registered",
+                        "schema": {
+                            "$ref": "#/definitions/model.RegisterResponse"
+                        }
                     },
                     "400": {
-                        "description": "Bad Request",
+                        "description": "Invalid request or registration error",
                         "schema": {
                             "$ref": "#/definitions/model.ErrorResponse"
                         }
@@ -140,11 +198,6 @@ const docTemplate = `{
         },
         "/api/v1/level-price/create": {
             "post": {
-                "security": [
-                    {
-                        "ApiKeyAuth": []
-                    }
-                ],
                 "description": "Creates a new price for a specific level in the system",
                 "consumes": [
                     "application/json"
@@ -264,13 +317,58 @@ const docTemplate = `{
             }
         },
         "/api/v1/user/avatar": {
+            "get": {
+                "description": "Downloads a user's avatar by object name",
+                "produces": [
+                    "application/octet-stream"
+                ],
+                "tags": [
+                    "users"
+                ],
+                "summary": "Download user avatar",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Object name of the avatar",
+                        "name": "object_name",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Avatar image file",
+                        "schema": {
+                            "type": "file"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Avatar not found",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Failed to download file",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    }
+                }
+            },
             "post": {
                 "security": [
                     {
                         "BearerAuth": []
                     }
                 ],
-                "description": "Uploads a user avatar image file (supports multiple languages)",
+                "description": "Uploads a user avatar image file",
                 "consumes": [
                     "multipart/form-data"
                 ],
@@ -288,88 +386,29 @@ const docTemplate = `{
                         "name": "file",
                         "in": "formData",
                         "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "Language preference (e.g., 'de' for German, default: 'en')",
-                        "name": "Accept-Language",
-                        "in": "header"
                     }
                 ],
                 "responses": {
                     "200": {
-                        "description": "Avatar muvaffaqiyatli yuklandi",
+                        "description": "Avatar successfully uploaded",
                         "schema": {
-                            "$ref": "#/definitions/model.SuccessResponse"
+                            "$ref": "#/definitions/model.DownloadAvatarResponse"
                         }
                     },
                     "400": {
-                        "description": "Noto'g'ri so'rov",
+                        "description": "Invalid request or file not found",
                         "schema": {
                             "$ref": "#/definitions/model.ErrorResponse"
                         }
                     },
                     "401": {
-                        "description": "Avtorizatsiyadan o'tilmagan",
+                        "description": "Unauthorized",
                         "schema": {
                             "$ref": "#/definitions/model.ErrorResponse"
                         }
                     },
                     "500": {
-                        "description": "Yuklashda xatolik yuz berdi",
-                        "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
-                        }
-                    }
-                }
-            }
-        },
-        "/api/v1/user/avatar/{user_id}": {
-            "get": {
-                "description": "Downloads a user's avatar by user ID (supports multiple languages)",
-                "produces": [
-                    "application/octet-stream"
-                ],
-                "tags": [
-                    "users"
-                ],
-                "summary": "Download user avatar",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Language preference (e.g., 'de' for German, default: 'en')",
-                        "name": "Accept-Language",
-                        "in": "header"
-                    },
-                    {
-                        "type": "string",
-                        "description": "User ID to download avatar for",
-                        "name": "user_id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Avatar image file",
-                        "schema": {
-                            "type": "file"
-                        }
-                    },
-                    "400": {
-                        "description": "Noto'g'ri so'rov",
-                        "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
-                        }
-                    },
-                    "404": {
-                        "description": "Avatar topilmadi",
-                        "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Faylni yuklashda xatolik yuz berdi",
+                        "description": "Failed to process upload",
                         "schema": {
                             "$ref": "#/definitions/model.ErrorResponse"
                         }
@@ -384,7 +423,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Get the profile of the currently authenticated user with all user details",
+                "description": "Get the profile of the currently authenticated user",
                 "consumes": [
                     "application/json"
                 ],
@@ -395,29 +434,76 @@ const docTemplate = `{
                     "users"
                 ],
                 "summary": "Get current user profile",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Language preference (e.g., 'de' for German, default: 'en')",
-                        "name": "Accept-Language",
-                        "in": "header"
-                    }
-                ],
                 "responses": {
                     "200": {
-                        "description": "Foydalanuvchi profili muvaffaqiyatli yuklandi\" \"uz",
+                        "description": "User profile retrieved successfully",
                         "schema": {
                             "$ref": "#/definitions/model.UserResponse"
                         }
                     },
                     "401": {
-                        "description": "Avtorizatsiyadan o'tilmagan\" \"uz",
+                        "description": "Unauthorized",
                         "schema": {
                             "$ref": "#/definitions/model.ErrorResponse"
                         }
                     },
                     "404": {
-                        "description": "Foydalanuvchi topilmadi\" \"uz",
+                        "description": "User not found",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Update the profile information of the currently authenticated user",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "users"
+                ],
+                "summary": "Update current user profile",
+                "parameters": [
+                    {
+                        "description": "User update data",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.UpdateUserRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "User profile updated successfully",
+                        "schema": {
+                            "$ref": "#/definitions/model.UserResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request format",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Failed to update user",
                         "schema": {
                             "$ref": "#/definitions/model.ErrorResponse"
                         }
@@ -429,7 +515,7 @@ const docTemplate = `{
             "put": {
                 "security": [
                     {
-                        "ApiKeyAuth": []
+                        "BearerAuth": []
                     }
                 ],
                 "description": "Update the password of the currently authenticated user",
@@ -456,19 +542,25 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "OK",
+                        "description": "Password updated successfully",
                         "schema": {
                             "$ref": "#/definitions/model.SuccessResponse"
                         }
                     },
                     "400": {
-                        "description": "Bad Request",
+                        "description": "Invalid request format or user ID",
                         "schema": {
                             "$ref": "#/definitions/model.ErrorResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Failed to update password",
                         "schema": {
                             "$ref": "#/definitions/model.ErrorResponse"
                         }
@@ -525,6 +617,15 @@ const docTemplate = `{
                 }
             }
         },
+        "model.DownloadAvatarResponse": {
+            "type": "object",
+            "properties": {
+                "object_name": {
+                    "type": "string",
+                    "example": "avatar.jpg"
+                }
+            }
+        },
         "model.ErrorResponse": {
             "type": "object",
             "properties": {
@@ -550,6 +651,19 @@ const docTemplate = `{
             "properties": {
                 "provider": {
                     "type": "string"
+                }
+            }
+        },
+        "model.LoginRequest": {
+            "type": "object",
+            "properties": {
+                "password": {
+                    "type": "string",
+                    "example": "password123"
+                },
+                "phoneNumber": {
+                    "type": "string",
+                    "example": "1234567890"
                 }
             }
         },
@@ -619,6 +733,14 @@ const docTemplate = `{
                 }
             }
         },
+        "model.RegisterResponse": {
+            "type": "object",
+            "properties": {
+                "message": {
+                    "type": "string"
+                }
+            }
+        },
         "model.SuccessResponse": {
             "type": "object",
             "properties": {
@@ -638,6 +760,56 @@ const docTemplate = `{
                 "newPassword": {
                     "type": "string",
                     "example": "newPassword123"
+                }
+            }
+        },
+        "model.UpdateUserRequest": {
+            "type": "object",
+            "properties": {
+                "XP": {
+                    "type": "integer"
+                },
+                "balance": {
+                    "type": "integer"
+                },
+                "dateOfBirth": {
+                    "type": "string"
+                },
+                "email": {
+                    "type": "string"
+                },
+                "fullName": {
+                    "type": "string"
+                },
+                "gender": {
+                    "type": "string"
+                },
+                "group": {
+                    "type": "string"
+                },
+                "isAgreedForUserContract": {
+                    "type": "boolean"
+                },
+                "isVerified": {
+                    "type": "boolean"
+                },
+                "level": {
+                    "type": "string"
+                },
+                "overAll": {
+                    "type": "integer"
+                },
+                "phoneNumber": {
+                    "type": "string"
+                },
+                "photo": {
+                    "type": "string"
+                },
+                "role": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
                 }
             }
         },
@@ -713,8 +885,9 @@ const docTemplate = `{
     },
     "securityDefinitions": {
         "ApiKeyAuth": {
+            "description": "Language preference (e.g., 'de' for German, 'uz' for Uzbek, default: 'en')",
             "type": "apiKey",
-            "name": "Authorization",
+            "name": "Accept-Language",
             "in": "header"
         }
     }
@@ -723,11 +896,11 @@ const docTemplate = `{
 // SwaggerInfo holds exported Swagger Info so clients can modify it
 var SwaggerInfo = &swag.Spec{
 	Version:          "1.0",
-	Host:             "back.blitz.yurtal.tech",
-	BasePath:         "/",
-	Schemes:          []string{"https"},
-	Title:            "Swagger Blitz API",
-	Description:      "Blitz API server.",
+	Host:             "localhost:8080",
+	BasePath:         "/api/v1",
+	Schemes:          []string{"http"},
+	Title:            "Blitz API",
+	Description:      "Blitz API server with multi-language support",
 	InfoInstanceName: "swagger",
 	SwaggerTemplate:  docTemplate,
 	LeftDelim:        "{{",

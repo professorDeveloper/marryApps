@@ -1,4 +1,4 @@
-basePath: /
+basePath: /api/v1
 definitions:
   model.CreateInvoiceResponse:
     properties:
@@ -30,6 +30,12 @@ definitions:
       error_note:
         type: string
     type: object
+  model.DownloadAvatarResponse:
+    properties:
+      object_name:
+        example: avatar.jpg
+        type: string
+    type: object
   model.ErrorResponse:
     properties:
       message:
@@ -46,6 +52,15 @@ definitions:
   model.IndexCreation:
     properties:
       provider:
+        type: string
+    type: object
+  model.LoginRequest:
+    properties:
+      password:
+        example: password123
+        type: string
+      phoneNumber:
+        example: "1234567890"
         type: string
     type: object
   model.LoginResponse:
@@ -92,6 +107,11 @@ definitions:
       phoneNumber:
         type: string
     type: object
+  model.RegisterResponse:
+    properties:
+      message:
+        type: string
+    type: object
   model.SuccessResponse:
     properties:
       message:
@@ -105,6 +125,39 @@ definitions:
         type: string
       newPassword:
         example: newPassword123
+        type: string
+    type: object
+  model.UpdateUserRequest:
+    properties:
+      XP:
+        type: integer
+      balance:
+        type: integer
+      dateOfBirth:
+        type: string
+      email:
+        type: string
+      fullName:
+        type: string
+      gender:
+        type: string
+      group:
+        type: string
+      isAgreedForUserContract:
+        type: boolean
+      isVerified:
+        type: boolean
+      level:
+        type: string
+      overAll:
+        type: integer
+      phoneNumber:
+        type: string
+      photo:
+        type: string
+      role:
+        type: string
+      status:
         type: string
     type: object
   model.UserResponse:
@@ -158,13 +211,45 @@ definitions:
         example: 100
         type: integer
     type: object
-host: back.blitz.yurtal.tech
+host: localhost:8080
 info:
-  contact: {}
-  description: Blitz API server.
-  title: Swagger Blitz API
+  contact:
+    name: API Support
+    url: https://blitz.yurtal.tech/support
+  description: Blitz API server with multi-language support
+  title: Blitz API
   version: "1.0"
 paths:
+  /api/v1/auth/login:
+    post:
+      consumes:
+      - application/json
+      description: Authenticate user and return access token
+      parameters:
+      - description: Login credentials
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successfully logged in
+          schema:
+            $ref: '#/definitions/model.LoginResponse'
+        "400":
+          description: Invalid request format
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      summary: User login
+      tags:
+      - auth
   /api/v1/auth/login/with-google:
     post:
       consumes:
@@ -181,20 +266,20 @@ paths:
       - application/json
       responses:
         "200":
-          description: OK
+          description: Successfully authenticated with Google
           schema:
             $ref: '#/definitions/model.LoginResponse'
         "400":
-          description: Bad Request
+          description: Invalid request body or app type
           schema:
             $ref: '#/definitions/model.ErrorResponse'
         "401":
-          description: Unauthorized
+          description: Invalid Google ID Token
           schema:
             $ref: '#/definitions/model.ErrorResponse'
       summary: User registration with Google
       tags:
-      - Auth
+      - auth
   /api/v1/auth/refresh:
     post:
       consumes:
@@ -211,16 +296,20 @@ paths:
       - application/json
       responses:
         "200":
-          description: OK
+          description: Token refreshed successfully
           schema:
             $ref: '#/definitions/model.RefreshResponse'
+        "400":
+          description: Invalid request format
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
         "401":
-          description: Unauthorized
+          description: Invalid or expired refresh token
           schema:
             $ref: '#/definitions/model.ErrorResponse'
       summary: Token refresh
       tags:
-      - Auth
+      - auth
   /api/v1/auth/register:
     post:
       consumes:
@@ -237,14 +326,16 @@ paths:
       - application/json
       responses:
         "201":
-          description: Created
+          description: User successfully registered
+          schema:
+            $ref: '#/definitions/model.RegisterResponse'
         "400":
-          description: Bad Request
+          description: Invalid request or registration error
           schema:
             $ref: '#/definitions/model.ErrorResponse'
       summary: User registration
       tags:
-      - Auth
+      - auth
   /api/v1/level-price/create:
     post:
       consumes:
@@ -282,8 +373,6 @@ paths:
           description: Internal server error
           schema:
             $ref: '#/definitions/model.CreatePriceForLevelResponse'
-      security:
-      - ApiKeyAuth: []
       summary: Create a new price level
       tags:
       - level-prices
@@ -328,55 +417,12 @@ paths:
       tags:
       - payments
   /api/v1/user/avatar:
-    post:
-      consumes:
-      - multipart/form-data
-      description: Uploads a user avatar image file (supports multiple languages)
-      parameters:
-      - description: Image file to upload
-        in: formData
-        name: file
-        required: true
-        type: file
-      - description: 'Language preference (e.g., ''de'' for German, default: ''en'')'
-        in: header
-        name: Accept-Language
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Avatar muvaffaqiyatli yuklandi
-          schema:
-            $ref: '#/definitions/model.SuccessResponse'
-        "400":
-          description: Noto'g'ri so'rov
-          schema:
-            $ref: '#/definitions/model.ErrorResponse'
-        "401":
-          description: Avtorizatsiyadan o'tilmagan
-          schema:
-            $ref: '#/definitions/model.ErrorResponse'
-        "500":
-          description: Yuklashda xatolik yuz berdi
-          schema:
-            $ref: '#/definitions/model.ErrorResponse'
-      security:
-      - BearerAuth: []
-      summary: Upload user avatar
-      tags:
-      - users
-  /api/v1/user/avatar/{user_id}:
     get:
-      description: Downloads a user's avatar by user ID (supports multiple languages)
+      description: Downloads a user's avatar by object name
       parameters:
-      - description: 'Language preference (e.g., ''de'' for German, default: ''en'')'
-        in: header
-        name: Accept-Language
-        type: string
-      - description: User ID to download avatar for
-        in: path
-        name: user_id
+      - description: Object name of the avatar
+        in: query
+        name: object_name
         required: true
         type: string
       produces:
@@ -387,49 +433,112 @@ paths:
           schema:
             type: file
         "400":
-          description: Noto'g'ri so'rov
+          description: Invalid request
           schema:
             $ref: '#/definitions/model.ErrorResponse'
         "404":
-          description: Avatar topilmadi
+          description: Avatar not found
           schema:
             $ref: '#/definitions/model.ErrorResponse'
         "500":
-          description: Faylni yuklashda xatolik yuz berdi
+          description: Failed to download file
           schema:
             $ref: '#/definitions/model.ErrorResponse'
       summary: Download user avatar
+      tags:
+      - users
+    post:
+      consumes:
+      - multipart/form-data
+      description: Uploads a user avatar image file
+      parameters:
+      - description: Image file to upload
+        in: formData
+        name: file
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Avatar successfully uploaded
+          schema:
+            $ref: '#/definitions/model.DownloadAvatarResponse'
+        "400":
+          description: Invalid request or file not found
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Failed to process upload
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Upload user avatar
       tags:
       - users
   /api/v1/user/me:
     get:
       consumes:
       - application/json
-      description: Get the profile of the currently authenticated user with all user
-        details
-      parameters:
-      - description: 'Language preference (e.g., ''de'' for German, default: ''en'')'
-        in: header
-        name: Accept-Language
-        type: string
+      description: Get the profile of the currently authenticated user
       produces:
       - application/json
       responses:
         "200":
-          description: Foydalanuvchi profili muvaffaqiyatli yuklandi" "uz
+          description: User profile retrieved successfully
           schema:
             $ref: '#/definitions/model.UserResponse'
         "401":
-          description: Avtorizatsiyadan o'tilmagan" "uz
+          description: Unauthorized
           schema:
             $ref: '#/definitions/model.ErrorResponse'
         "404":
-          description: Foydalanuvchi topilmadi" "uz
+          description: User not found
           schema:
             $ref: '#/definitions/model.ErrorResponse'
       security:
       - BearerAuth: []
       summary: Get current user profile
+      tags:
+      - users
+    put:
+      consumes:
+      - application/json
+      description: Update the profile information of the currently authenticated user
+      parameters:
+      - description: User update data
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.UpdateUserRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: User profile updated successfully
+          schema:
+            $ref: '#/definitions/model.UserResponse'
+        "400":
+          description: Invalid request format
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Failed to update user
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update current user profile
       tags:
       - users
   /api/v1/user/password-update:
@@ -448,27 +557,33 @@ paths:
       - application/json
       responses:
         "200":
-          description: OK
+          description: Password updated successfully
           schema:
             $ref: '#/definitions/model.SuccessResponse'
         "400":
-          description: Bad Request
+          description: Invalid request format or user ID
           schema:
             $ref: '#/definitions/model.ErrorResponse'
         "401":
           description: Unauthorized
           schema:
             $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Failed to update password
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
       security:
-      - ApiKeyAuth: []
+      - BearerAuth: []
       summary: Update user password
       tags:
       - users
 schemes:
-- https
+- http
 securityDefinitions:
   ApiKeyAuth:
+    description: 'Language preference (e.g., ''de'' for German, ''uz'' for Uzbek,
+      default: ''en'')'
     in: header
-    name: Authorization
+    name: Accept-Language
     type: apiKey
 swagger: "2.0"
