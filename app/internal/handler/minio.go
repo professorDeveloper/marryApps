@@ -15,7 +15,6 @@ import (
 // @Tags users
 // @Accept mpfd
 // @Produce json
-// @Security BearerAuth
 // @Param file formData file true "Image file to upload"
 // @Param Accept-Language header string false "Language preference (e.g., 'de' for German, default: 'en')"
 // @Success 200 {object} model.SuccessResponse "Avatar successfully uploaded"
@@ -86,7 +85,6 @@ func (h *Handler) UploadAvatar(c echo.Context) error {
 // @Tags users
 // @Produce octet-stream
 // @Param Accept-Language header string false "Language preference (e.g., 'de' for German, default: 'en')"
-// @Param user_id path string true "User ID to download avatar for"
 // @Success 200 {file} file "Avatar image file"
 // @Failure 400 {object} model.ErrorResponse "Invalid request"
 // @Failure 400 {object} model.ErrorResponse "Ungültige Anforderung"
@@ -97,7 +95,7 @@ func (h *Handler) UploadAvatar(c echo.Context) error {
 // @Failure 500 {object} model.ErrorResponse "Failed to download file"
 // @Failure 500 {object} model.ErrorResponse "Fehler beim Herunterladen der Datei"
 // @Failure 500 {object} model.ErrorResponse "Faylni yuklashda xatolik yuz berdi"
-// @Router /api/v1/user/avatar/{user_id} [get]
+// @Router /api/v1/user/avatar[get]
 func (h *Handler) DownloadAvatar(c echo.Context) error {
 	lang := c.Get("lang").(string)
 	req := model.DownloadAvatarRequest{}

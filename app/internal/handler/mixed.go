@@ -13,7 +13,6 @@ import (
 // @Tags level-prices
 // @Accept json
 // @Produce json
-// @Security ApiKeyAuth
 // @Param Authorization header string true "Bearer token" default(Bearer <your_token>)
 // @Param request body model.CreatePriceForLevelRequest true "Price level creation details"
 // @Success 200 {object} model.CreatePriceForLevelResponse "Successfully created price level"
