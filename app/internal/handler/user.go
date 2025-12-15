@@ -50,7 +50,7 @@ func (h *Handler) GetUser(c echo.Context) error {
 // @Failure 400 {object} model.ErrorResponse "Invalid request format"
 // @Failure 401 {object} model.ErrorResponse "Unauthorized"
 // @Failure 500 {object} model.ErrorResponse "Failed to update user"
-// @Router /api/v1/user/me [put]
+// @Router /api/v1/user/update [put]
 func (h *Handler) UpdateUser(c echo.Context) error {
 	userID := c.Get("user_id").(string)
 	if userID == "" {

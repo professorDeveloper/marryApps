@@ -24,8 +24,28 @@ import (
 // @Router /api/v1/user/avatar [post]
 func (h *Handler) UploadAvatar(c echo.Context) error {
 	ctx := c.Request().Context()
-	userID := c.Get("user_id").(string)
-	lang := c.Get("lang").(string)
+	
+	// Safely get user_id from context
+	userIDInterface := c.Get("user_id")
+	if userIDInterface == nil {
+		return c.JSON(http.StatusUnauthorized, model.ErrorResponse{
+			Message: "User ID not found in context",
+		})
+	}
+	userID, ok := userIDInterface.(string)
+	if !ok {
+		return c.JSON(http.StatusInternalServerError, model.ErrorResponse{
+			Message: "Invalid user ID format",
+		})
+	}
+
+	// Safely get lang from context with default fallback
+	lang := "uz" // Default language
+	if langInterface := c.Get("lang"); langInterface != nil {
+		if langStr, ok := langInterface.(string); ok {
+			lang = langStr
+		}
+	}
 
 	fileHeader, err := c.FormFile("file")
 	if err != nil {
@@ -83,7 +103,14 @@ func (h *Handler) UploadAvatar(c echo.Context) error {
 // @Failure 500 {object} model.ErrorResponse "Failed to download file"
 // @Router /api/v1/user/avatar [get]
 func (h *Handler) DownloadAvatar(c echo.Context) error {
-	lang := c.Get("lang").(string)
+	// Safely get lang from context with default fallback
+	lang := "uz" // Default language
+	if langInterface := c.Get("lang"); langInterface != nil {
+		if langStr, ok := langInterface.(string); ok {
+			lang = langStr
+		}
+	}
+
 	req := model.DownloadAvatarRequest{}
 	if err := c.Bind(&req); err != nil {
 		if lang == "de" {

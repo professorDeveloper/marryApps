@@ -20,6 +20,7 @@ func (h *Handler) Register(router *echo.Echo) {
 	p.Use(router)
 
 	api := router.Group("/api/v1")
+	
 	{
 		auth := api.Group("/auth")
 		{

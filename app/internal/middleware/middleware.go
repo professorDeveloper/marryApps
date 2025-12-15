@@ -60,9 +60,9 @@ func SetupMiddleware(e *echo.Echo, cfg *config.Config) {
 
 func LoginRateLimiter() echo.MiddlewareFunc {
 	store := middleware.NewRateLimiterMemoryStoreWithConfig(middleware.RateLimiterMemoryStoreConfig{
-		Rate:      5,          
-		Burst:     5,           
-		ExpiresIn: time.Minute, 
+		Rate:      5,
+		Burst:     5,
+		ExpiresIn: time.Minute,
 	})
 
 	return middleware.RateLimiterWithConfig(middleware.RateLimiterConfig{
@@ -81,20 +81,31 @@ func LoginRateLimiter() echo.MiddlewareFunc {
 func CheckAuth(cfg *config.Config) echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
-			accessToken := extractBearerToken(c)
+			// Extract token from Authorization header
+			authHeader := c.Request().Header.Get("Authorization")
+			var accessToken string
+
+			// Try standard "Bearer TOKEN" format first
+			fields := strings.Fields(authHeader)
+			if len(fields) == 2 && strings.EqualFold(fields[0], "Bearer") {
+				accessToken = fields[1]
+			} else if authHeader != "" && !strings.Contains(authHeader, " ") {
+				// Fallback: accept just the token without "Bearer" prefix
+				accessToken = authHeader
+			}
 
 			if accessToken == "" {
-				lang := getLanguage(c)
-				message := model.GetLocalizedMessage(lang, "not_logged_in")
-				return c.JSON(http.StatusUnauthorized, model.ErrorResponse{Message: message})
+				return c.JSON(http.StatusUnauthorized, model.ErrorResponse{
+					Message: "You are not logged in",
+				})
 			}
 
 			sub, err := utils.ValidateJWT(accessToken, cfg.Jwt.SecretKey)
 			if err != nil {
-				lang := getLanguage(c)
-				message := model.GetLocalizedMessage(lang, "invalid_token")
 				log.Printf("JWT validation error: %v", err)
-				return c.JSON(http.StatusUnauthorized, model.ErrorResponse{Message: message})
+				return c.JSON(http.StatusUnauthorized, model.ErrorResponse{
+					Message: "Invalid token",
+				})
 			}
 
 			c.Set("user_id", fmt.Sprint(sub))
@@ -102,8 +113,6 @@ func CheckAuth(cfg *config.Config) echo.MiddlewareFunc {
 		}
 	}
 }
-
-
 
 func ValidateLoginInput(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {
@@ -254,23 +263,11 @@ func SanitizeInput() echo.MiddlewareFunc {
 	}
 }
 
-// Helper functions
 
-// extractBearerToken extracts Bearer token from Authorization header
-func extractBearerToken(c echo.Context) string {
-	authHeader := c.Request().Header.Get("Authorization")
-	fields := strings.Fields(authHeader)
-	if len(fields) == 2 && strings.EqualFold(fields[0], "Bearer") {
-		return fields[1]
-	}
-	return ""
-}
 
 func getLanguage(c echo.Context) string {
 	if lang, ok := c.Get("language").(string); ok {
 		return lang
 	}
-	return "uz" 
+	return "uz"
 }
-
-

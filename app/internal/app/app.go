@@ -28,20 +28,15 @@ import (
 
 // @title Blitz API
 // @version 1.0
-// @description Blitz API server with multi-language support
+// @description Blitz API server with multi-language support (de, uz, en)
 // @host localhost:8080
-// @BasePath /api/v1
-// @schemes http
-// @contact.name API Support
-// @contact.url https://blitz.yurtal.tech/support
-// @securityDefinitions.apikey ApiKeyAuth
+// @BasePath /
+// @schemes http https
+
+// @securityDefinitions.apikey BearerAuth
 // @in header
 // @name Authorization
-// @description Type "Bearer" followed by a space and JWT token.
-// @securityDefinitions.apikey ApiKeyAuth
-// @in header
-// @name Accept-Language
-// @description Language preference (e.g., 'de' for German, 'uz' for Uzbek, default: 'en')
+// @description Type "Bearer" followed by a space and your JWT token
 
 func Run(cfg *config.Config) {
 	ctx, cancel := context.WithCancel(context.Background())

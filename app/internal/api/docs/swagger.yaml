@@ -1,4 +1,4 @@
-basePath: /api/v1
+basePath: /
 definitions:
   model.CreateInvoiceResponse:
     properties:
@@ -213,10 +213,8 @@ definitions:
     type: object
 host: localhost:8080
 info:
-  contact:
-    name: API Support
-    url: https://blitz.yurtal.tech/support
-  description: Blitz API server with multi-language support
+  contact: {}
+  description: Blitz API server with multi-language support (de, uz, en)
   title: Blitz API
   version: "1.0"
 paths:
@@ -506,41 +504,6 @@ paths:
       summary: Get current user profile
       tags:
       - users
-    put:
-      consumes:
-      - application/json
-      description: Update the profile information of the currently authenticated user
-      parameters:
-      - description: User update data
-        in: body
-        name: request
-        required: true
-        schema:
-          $ref: '#/definitions/model.UpdateUserRequest'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: User profile updated successfully
-          schema:
-            $ref: '#/definitions/model.UserResponse'
-        "400":
-          description: Invalid request format
-          schema:
-            $ref: '#/definitions/model.ErrorResponse'
-        "401":
-          description: Unauthorized
-          schema:
-            $ref: '#/definitions/model.ErrorResponse'
-        "500":
-          description: Failed to update user
-          schema:
-            $ref: '#/definitions/model.ErrorResponse'
-      security:
-      - BearerAuth: []
-      summary: Update current user profile
-      tags:
-      - users
   /api/v1/user/password-update:
     put:
       consumes:
@@ -577,13 +540,49 @@ paths:
       summary: Update user password
       tags:
       - users
+  /api/v1/user/update:
+    put:
+      consumes:
+      - application/json
+      description: Update the profile information of the currently authenticated user
+      parameters:
+      - description: User update data
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.UpdateUserRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: User profile updated successfully
+          schema:
+            $ref: '#/definitions/model.UserResponse'
+        "400":
+          description: Invalid request format
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Failed to update user
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update current user profile
+      tags:
+      - users
 schemes:
 - http
+- https
 securityDefinitions:
-  ApiKeyAuth:
-    description: 'Language preference (e.g., ''de'' for German, ''uz'' for Uzbek,
-      default: ''en'')'
+  BearerAuth:
+    description: Type "Bearer" followed by a space and your JWT token
     in: header
-    name: Accept-Language
+    name: Authorization
     type: apiKey
 swagger: "2.0"

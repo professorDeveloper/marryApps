@@ -1,19 +1,17 @@
 {
     "schemes": [
-        "http"
+        "http",
+        "https"
     ],
     "swagger": "2.0",
     "info": {
-        "description": "Blitz API server with multi-language support",
+        "description": "Blitz API server with multi-language support (de, uz, en)",
         "title": "Blitz API",
-        "contact": {
-            "name": "API Support",
-            "url": "https://blitz.yurtal.tech/support"
-        },
+        "contact": {},
         "version": "1.0"
     },
     "host": "localhost:8080",
-    "basePath": "/api/v1",
+    "basePath": "/",
     "paths": {
         "/api/v1/auth/login": {
             "post": {
@@ -451,61 +449,6 @@
                         }
                     }
                 }
-            },
-            "put": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Update the profile information of the currently authenticated user",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "users"
-                ],
-                "summary": "Update current user profile",
-                "parameters": [
-                    {
-                        "description": "User update data",
-                        "name": "request",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/model.UpdateUserRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "User profile updated successfully",
-                        "schema": {
-                            "$ref": "#/definitions/model.UserResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "Invalid request format",
-                        "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Failed to update user",
-                        "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
-                        }
-                    }
-                }
             }
         },
         "/api/v1/user/password-update": {
@@ -558,6 +501,63 @@
                     },
                     "500": {
                         "description": "Failed to update password",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/user/update": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Update the profile information of the currently authenticated user",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "users"
+                ],
+                "summary": "Update current user profile",
+                "parameters": [
+                    {
+                        "description": "User update data",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.UpdateUserRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "User profile updated successfully",
+                        "schema": {
+                            "$ref": "#/definitions/model.UserResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request format",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Failed to update user",
                         "schema": {
                             "$ref": "#/definitions/model.ErrorResponse"
                         }
@@ -881,10 +881,10 @@
         }
     },
     "securityDefinitions": {
-        "ApiKeyAuth": {
-            "description": "Language preference (e.g., 'de' for German, 'uz' for Uzbek, default: 'en')",
+        "BearerAuth": {
+            "description": "Type \"Bearer\" followed by a space and your JWT token",
             "type": "apiKey",
-            "name": "Accept-Language",
+            "name": "Authorization",
             "in": "header"
         }
     }
