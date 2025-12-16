@@ -30,13 +30,13 @@ definitions:
       error_note:
         type: string
     type: object
-  model.DownloadAvatarRequest:
+  model.DownloadRequest:
     properties:
       object_name:
         example: c0f18a64-7f5c-4425-9414-1b01cddee9d9/avatar.png
         type: string
     type: object
-  model.DownloadAvatarResponse:
+  model.DownloadResponse:
     properties:
       object_name:
         example: c0f18a64-7f5c-4425-9414-1b01cddee9d9/avatar.png
@@ -382,6 +382,219 @@ paths:
       summary: Create a new price level
       tags:
       - level-prices
+  /api/v1/library/audio:
+    post:
+      consumes:
+      - multipart/form-data
+      description: Uploads a user audio file
+      parameters:
+      - description: Audio file to upload
+        in: formData
+        name: file
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Audio successfully uploaded
+          schema:
+            $ref: '#/definitions/model.DownloadResponse'
+        "400":
+          description: Invalid request or file not found
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Failed to process upload
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Upload user audio
+      tags:
+      - library
+  /api/v1/library/audio/download:
+    post:
+      consumes:
+      - application/json
+      description: Downloads audio podcast by object name
+      parameters:
+      - description: Audio object name
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/model.DownloadRequest'
+      produces:
+      - application/octet-stream
+      responses:
+        "200":
+          description: Audio file
+          schema:
+            type: file
+        "400":
+          description: Invalid request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: Audio not found
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Failed to download file
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Download user audio
+      tags:
+      - library
+  /api/v1/library/book:
+    post:
+      consumes:
+      - multipart/form-data
+      description: Uploads a book file
+      parameters:
+      - description: Book file to upload
+        in: formData
+        name: file
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Book successfully uploaded
+          schema:
+            $ref: '#/definitions/model.DownloadResponse'
+        "400":
+          description: Invalid request or file not found
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Failed to process upload
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Upload book
+      tags:
+      - library
+  /api/v1/library/book/download:
+    post:
+      consumes:
+      - application/json
+      description: Downloads a book by object name
+      parameters:
+      - description: Book object name
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/model.DownloadRequest'
+      produces:
+      - application/octet-stream
+      responses:
+        "200":
+          description: Book file
+          schema:
+            type: file
+        "400":
+          description: Invalid request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: Book not found
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Failed to download file
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Download book
+      tags:
+      - library
+  /api/v1/library/video:
+    post:
+      consumes:
+      - multipart/form-data
+      description: Uploads a video file
+      parameters:
+      - description: Video file to upload
+        in: formData
+        name: file
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Video successfully uploaded
+          schema:
+            $ref: '#/definitions/model.DownloadResponse'
+        "400":
+          description: Invalid request or file not found
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Failed to process upload
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Upload video
+      tags:
+      - library
+  /api/v1/library/video/download:
+    post:
+      consumes:
+      - application/json
+      description: Downloads video by object name
+      parameters:
+      - description: Video object name
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/model.DownloadRequest'
+      produces:
+      - application/octet-stream
+      responses:
+        "200":
+          description: Video file
+          schema:
+            type: file
+        "400":
+          description: Invalid request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: Video not found
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Failed to download file
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Download video
+      tags:
+      - library
   /api/v1/payments/create:
     post:
       consumes:
@@ -439,7 +652,7 @@ paths:
         "200":
           description: Avatar successfully uploaded
           schema:
-            $ref: '#/definitions/model.DownloadAvatarResponse'
+            $ref: '#/definitions/model.DownloadResponse'
         "400":
           description: Invalid request or file not found
           schema:
@@ -468,7 +681,7 @@ paths:
         name: input
         required: true
         schema:
-          $ref: '#/definitions/model.DownloadAvatarRequest'
+          $ref: '#/definitions/model.DownloadRequest'
       produces:
       - application/octet-stream
       responses:

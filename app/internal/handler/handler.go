@@ -45,6 +45,15 @@ func (h *Handler) Register(router *echo.Echo) {
 			user.POST("/avatar", h.UploadAvatar,mw.CheckLanguage(),mw.CheckAuth(h.cfg))
 			user.POST("/avatar/download", h.DownloadAvatar,mw.CheckLanguage(),mw.CheckAuth(h.cfg))
 		}
+		libarary := api.Group("/library")
+		{
+			libarary.POST("/book", h.UploadBook,mw.CheckLanguage(),mw.CheckAuth(h.cfg))
+			libarary.POST("/book/download", h.DownloadBook,mw.CheckLanguage(),mw.CheckAuth(h.cfg))
+			libarary.POST("/audio", h.UploadAudio,mw.CheckLanguage(),mw.CheckAuth(h.cfg))
+			libarary.POST("/audio/download", h.DownloadAudio,mw.CheckLanguage(),mw.CheckAuth(h.cfg))
+			libarary.POST("/video", h.UploadVideo,mw.CheckLanguage(),mw.CheckAuth(h.cfg))
+			libarary.POST("/video/download", h.DownloadVideo,mw.CheckLanguage(),mw.CheckAuth(h.cfg))
+		}
 	}
 
 }

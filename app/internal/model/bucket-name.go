@@ -2,11 +2,15 @@ package model
 
 const AvatarBucketName = "blitz"
 const AvatarFolderName = "avatars"
+const BookFolderName = "books"
+const AudioFolderName = "audios"
+const VideoFolderName = "videos"
 
-type DownloadAvatarRequest struct {
+
+type DownloadRequest struct {
 	ObjectName string `json:"object_name" example:"c0f18a64-7f5c-4425-9414-1b01cddee9d9/avatar.png"`
 }
 
-type DownloadAvatarResponse struct {
+type DownloadResponse struct {
 	ObjectName string `json:"object_name" example:"c0f18a64-7f5c-4425-9414-1b01cddee9d9/avatar.png"`
 }
