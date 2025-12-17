@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"log"
 	"net/http"
 
 	"github.com/google/uuid"
@@ -30,10 +31,8 @@ func (h *Handler) GetUser(c echo.Context) error {
 
 	user, err := h.service.Auth().GetUserByID(c.Request().Context(), userID)
 	if err != nil {
-		if lang == "de" {
-			return c.JSON(http.StatusNotFound, model.ErrorResponse{Message: "Benutzer nicht gefunden"})
-		}
-		return c.JSON(http.StatusNotFound, model.ErrorResponse{Message: "Foydalanuvchini topib bo'lmadi"})
+		message := model.GetLocalizedMessage(lang, "user_not_found")
+		return c.JSON(http.StatusNotFound, model.ErrorResponse{Message: message})
 	}
 	return c.JSON(http.StatusOK, user)
 }
@@ -62,18 +61,18 @@ func (h *Handler) UpdateUser(c echo.Context) error {
 
 	var req model.UpdateUserRequest
 	if err := c.Bind(&req); err != nil {
-		if lang == "de" {
-			return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "Ungültiges Anfrageformat"})
-		}
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "Noto'g'ri formatda so'rov yuborilgan"})
+		message := model.GetLocalizedMessage(lang, "bad_request")
+		log.Printf("Bind error: %v", err)
+		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: message})
 	}
+
+	log.Printf("UpdateUserRequest: %+v", req)
 
 	user, err := h.service.Auth().UpdateUser(c.Request().Context(), req, userID)
 	if err != nil {
-		if lang == "de" {
-			return c.JSON(http.StatusInternalServerError, model.ErrorResponse{Message: "Fehler beim Aktualisieren des Benutzers"})
-		}
-		return c.JSON(http.StatusInternalServerError, model.ErrorResponse{Message: "Foydalanuvchini ma'lumotlarini yangilab bo'lmadi"})
+		log.Printf("UpdateUser error: %v", err)
+		message := model.GetLocalizedMessage(lang, "user_info_cannot_be_reached")
+		return c.JSON(http.StatusInternalServerError, model.ErrorResponse{Message: message})
 	}
 
 	return c.JSON(http.StatusOK, user)

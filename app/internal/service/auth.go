@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -31,39 +32,73 @@ func NewAuthS(cfg *config.Config, repo *repository.Repository) *AuthS {
 }
 
 func (s *AuthS) Register(ctx context.Context, req model.RegisterRequest) error {
-	if req.PhoneNumber == "" || req.Password == "" {
+	if req.PhoneNumber == "" {
 		return errors.New(http.StatusText(http.StatusBadRequest))
 	}
 
+	log.Printf("Starting registration for phone: %s", req.PhoneNumber)
+
 	_, err := s.repo.PgRepo.Repo.GetUserByPhoneNumber(ctx, &req.PhoneNumber)
 	if err == nil {
+		log.Printf("User with phone %s already exists", req.PhoneNumber)
 		return errors.New("user already exists")
 	}
 	if !errors.Is(err, pgx.ErrNoRows) {
+		log.Printf("Error checking user existence: %v", err)
 		return err
 	}
-
-	hash, err := utils.HashPassword(req.Password)
+password := req.DateOfBirth.Format("20060102")	
+hash, err := utils.HashPassword(password)
 	if err != nil {
+		log.Printf("Error hashing password: %v", err)
 		return err
 	}
 
 	fullName := req.FullName
 	phoneNumber := req.PhoneNumber
-	status := "active"
+	status := "onhold"
+	dateOfBirth := req.DateOfBirth
+
+	validRoles := map[string]bool{"admin": true, "moderator": true, "student": true, "teacher": true}
+	role := strings.TrimSpace(req.Role)
+	if role == "" || !validRoles[role] {
+		role = "student"
+		log.Printf("Using default role: %s", role)
+	}
+
+	log.Printf("Creating user with params - Phone: %s, Role: %s, Status: %s",
+		phoneNumber, role, status)
+
 	userParams := pg.CreateUserParams{
 		ID:           uuid.NewString(),
 		PhoneNumber:  &phoneNumber,
 		FullName:     &fullName,
 		PasswordHash: &hash,
 		Status:       &status,
+		DateOfBirth:  pgtype.Timestamp{Time: dateOfBirth, Valid: true},
+		Role:         &role,
 	}
 
-	_, err = s.repo.PgRepo.Repo.CreateUser(ctx, userParams)
+	log.Printf("Final user params before CreateUser: %+v", userParams)
+	log.Printf("Role pointer value: %s", *userParams.Role)
+
+	user, err := s.repo.PgRepo.Repo.CreateUser(ctx, userParams)
 	if err != nil {
-		return err
+		log.Printf("Error creating user: %v", err)
+		if pqErr, ok := err.(interface {
+			Get(k string) (interface{}, bool)
+		}); ok {
+			if constraint, ok := pqErr.Get("constraint"); ok {
+				log.Printf("Database constraint violation: %v", constraint)
+			}
+			if detail, ok := pqErr.Get("detail"); ok {
+				log.Printf("Error details: %v", detail)
+			}
+		}
+		return fmt.Errorf("failed to create user: %w", err)
 	}
 
+	log.Printf("Successfully created user with ID: %s", user.ID)
 	return nil
 }
 
@@ -109,7 +144,7 @@ func (s *AuthS) LoginWithEmail(ctx context.Context, req model.LoginEmailRequest,
 	user, err := s.repo.PgRepo.Repo.GetUserByEmail(ctx, &req.Email)
 
 	if err == pgx.ErrNoRows {
-		status := "active"
+		status := "onhold"
 		userParams := pg.CreateUserParams{
 			ID:       uuid.NewString(),
 			Email:    &req.Email,
@@ -209,39 +244,38 @@ func (s *AuthS) Refresh(ctx context.Context, req model.RefreshRequest, jwtCfg *c
 }
 
 func (s *AuthS) UpdateUserPassword(ctx context.Context, userID uuid.UUID, currentPassword, newPassword string) error {
-    existingUser, err := s.repo.PgRepo.Repo.GetUserByID(ctx, fmt.Sprint(userID))
-    if err != nil {
-        return fmt.Errorf("failed to get user: %w", err) 
-    }
+	existingUser, err := s.repo.PgRepo.Repo.GetUserByID(ctx, fmt.Sprint(userID))
+	if err != nil {
+		return fmt.Errorf("failed to get user: %w", err)
+	}
 
-    if existingUser.GoogleId != nil { 
-        return fmt.Errorf("password cannot be updated for users who logged in by Auth2")
-    }
+	if existingUser.GoogleId != nil {
+		return fmt.Errorf("password cannot be updated for users who logged in by Auth2")
+	}
 
-    if existingUser.PasswordHash == nil { 
-        return fmt.Errorf("user has no password set or password hash is invalid")
-    }
+	if existingUser.PasswordHash == nil {
+		return fmt.Errorf("user has no password set or password hash is invalid")
+	}
 
-    if err := utils.VerifyPassword(*existingUser.PasswordHash, currentPassword); err != nil {
-     return fmt.Errorf("invalid current password")
-    }
+	if err := utils.VerifyPassword(*existingUser.PasswordHash, currentPassword); err != nil {
+		return fmt.Errorf("invalid current password")
+	}
 
-    hashedPassword, err := utils.HashPassword(newPassword)
-    if err != nil {
-        return fmt.Errorf("failed to hash password: %w", err)
-    }
+	hashedPassword, err := utils.HashPassword(newPassword)
+	if err != nil {
+		return fmt.Errorf("failed to hash password: %w", err)
+	}
 
-    params := pg.UpdateUserPasswordParams{
-        ID:       existingUser.ID,
-        PasswordHash: &hashedPassword,
-    }
-    
-    
-    if _, err := s.repo.PgRepo.Repo.UpdateUserPassword(ctx, params); err != nil {
-        return fmt.Errorf("failed to update password: %w", err)
-    }
-    
-    return nil
+	params := pg.UpdateUserPasswordParams{
+		ID:           existingUser.ID,
+		PasswordHash: &hashedPassword,
+	}
+
+	if _, err := s.repo.PgRepo.Repo.UpdateUserPassword(ctx, params); err != nil {
+		return fmt.Errorf("failed to update password: %w", err)
+	}
+
+	return nil
 }
 
 func (s *AuthS) GetUserByID(ctx context.Context, userID string) (model.UserResponse, error) {
@@ -261,61 +295,92 @@ func (s *AuthS) UpdateUser(ctx context.Context, req model.UpdateUserRequest, use
 		return model.UserResponse{}, fmt.Errorf("failed to fetch user: %w", err)
 	}
 
-	
-
 	params := pg.UpdateUserParams{
-		ID:                      userID,
-		FullName:                existingUser.FullName,
-		Role:                    existingUser.Role,
-		Email:                   existingUser.Email,
-		PhoneNumber:             existingUser.PhoneNumber,
-		Group:                   existingUser.Group,
-		Photo:                   existingUser.Photo,
-		Gender:                  existingUser.Gender,
-		OverAll:                 existingUser.OverAll, 
-		Level:                   existingUser.Level,
-		XP:                      existingUser.XP,
-		Balance:                 existingUser.Balance,
-		IsAgreedForUserContract: existingUser.IsAgreedForUserContract,
-		IsVerified:              existingUser.IsVerified,
-		Status:                  existingUser.Status,
-		DateOfBirth:             existingUser.DateOfBirth,
-		FirebaseToken:           existingUser.FirebaseToken,
-		GoogleId:                existingUser.GoogleId,
-		PasswordHash:            existingUser.PasswordHash,
+		ID:          existingUser.ID,
+		FullName:    existingUser.FullName,
+		Email:       existingUser.Email,
+		PhoneNumber: existingUser.PhoneNumber,
+		Gender:      existingUser.Gender,
+		OverAll:     existingUser.OverAll,
+		XP:          existingUser.XP,
+		Balance:     existingUser.Balance,
+		DateOfBirth: existingUser.DateOfBirth,
+		Photo:       existingUser.Photo,
+		FirebaseToken: existingUser.FirebaseToken,
+		GoogleId:      existingUser.GoogleId,
+		IsVerified:    existingUser.IsVerified,
+		Status:        existingUser.Status,
+		Group:         existingUser.Group,
+		Role:          existingUser.Role,
+		PasswordHash:  existingUser.PasswordHash,
 	}
 
-	if req.FullName != nil {
+	validGenders := map[string]bool{
+		"male":   true,
+		"female": true,
+		"other":  true,
+	}
+
+	if req.FullName != nil && *req.FullName != "" {
 		params.FullName = req.FullName
 	}
-	if req.Email != nil {
+	if req.Email != nil && *req.Email != "" {
 		params.Email = req.Email
 	}
-	if req.PhoneNumber != nil {
+	if req.PhoneNumber != nil && *req.PhoneNumber != "" {
 		params.PhoneNumber = req.PhoneNumber
 	}
-	if req.Gender != nil {
+	if req.Gender != nil && *req.Gender != "" {
+		gender := strings.ToLower(*req.Gender)
+		if !validGenders[gender] {
+			return model.UserResponse{}, fmt.Errorf("invalid gender value: %s. Allowed values: male, female, other", *req.Gender)
+		}
 		params.Gender = req.Gender
 	}
-	if req.OverAll != nil {
+	if req.OverAll != nil && *req.OverAll >= 0 {
 		params.OverAll = req.OverAll
 	}
-	if req.XP != nil {
+	if req.XP != nil && *req.XP >= 0 {
 		params.XP = req.XP
 	}
-	if req.Balance != nil {
+	if req.Balance != nil && *req.Balance >= 0 {
 		params.Balance = req.Balance
 	}
-	if req.Level != nil {
-		params.Level = req.Level
+	if req.Photo != nil && *req.Photo != "" {
+		params.Photo = req.Photo
 	}
 
-	if !req.DateOfBirth.IsZero() {
+	if req.DateOfBirth != nil && *req.DateOfBirth != "" && *req.DateOfBirth != "string" {
+		dateStr := *req.DateOfBirth
+
+		var parsedTime time.Time
+		formats := []string{
+			time.RFC3339,
+			"2006-01-02",
+			"2006-01-02T15:04:05Z",
+			"2006-01-02T15:04:05",
+			"01/02/2006",
+		}
+
+		var parseErr error
+		for _, format := range formats {
+			parsedTime, parseErr = time.Parse(format, dateStr)
+			if parseErr == nil {
+				break
+			}
+		}
+
+		if parseErr != nil {
+			log.Printf("Failed to parse date '%s': %v", dateStr, parseErr)
+			return model.UserResponse{}, fmt.Errorf("invalid date format: %s", dateStr)
+		}
+
 		params.DateOfBirth = pgtype.Timestamp{
-			Time:  req.DateOfBirth.UTC(),
+			Time:  parsedTime.UTC(),
 			Valid: true,
 		}
 	}
+
 	user, err := s.repo.PgRepo.Repo.UpdateUser(ctx, params)
 	if err != nil {
 		log.Printf("Failed to update user: %v", err)
@@ -324,6 +389,7 @@ func (s *AuthS) UpdateUser(ctx context.Context, req model.UpdateUserRequest, use
 
 	return toUserResponse(user), nil
 }
+
 func toUserResponse(u pg.User) model.UserResponse {
 	var dateOfBirth time.Time
 	if u.DateOfBirth.Valid {
@@ -331,21 +397,19 @@ func toUserResponse(u pg.User) model.UserResponse {
 	}
 
 	return model.UserResponse{
-		ID:                      u.ID,
-		FullName:                u.FullName,
-		Email:                   u.Email,
-		Role:                    u.Role,
-		Gender:                  u.Gender,
-		Status:                  u.Status,
-		Photo:                   u.Photo,
-		PhoneNumber:             u.PhoneNumber,
-		XP:                      u.XP,
-		Balance:                 u.Balance,
-		Group:                   u.Group,
-		Level:                   u.Level,
-		OverAll:                 u.OverAll,
-		IsVerified:              u.IsVerified,
-		IsAgreedForUserContract: u.IsAgreedForUserContract,
-		DateOfBirth:             dateOfBirth,
+		ID:          u.ID,
+		FullName:    u.FullName,
+		Email:       u.Email,
+		Role:        u.Role,
+		Gender:      u.Gender,
+		Status:      u.Status,
+		Photo:       u.Photo,
+		PhoneNumber: u.PhoneNumber,
+		XP:          u.XP,
+		Balance:     u.Balance,
+		Group:       u.Group,
+		OverAll:     u.OverAll,
+		IsVerified:  u.IsVerified,
+		DateOfBirth: dateOfBirth,
 	}
 }

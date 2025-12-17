@@ -39,7 +39,7 @@ func (s *PaymentS) CreateInvoice(c echo.Context, ctx context.Context) (*model.Ch
 	if err != nil {
 		return nil, fmt.Errorf("error finding user: %w", err)
 	}
-	priceForLevel, err := s.repo.PgRepo.Repo.GetPaymentPriceForLevelByLevel(ctx, user.Level)
+	priceForLevel, err := s.repo.PgRepo.Repo.GetPaymentPriceForLevelByLevel(ctx, user.Group)
 	if err != nil {
 		return nil, fmt.Errorf("error finding price for level: %w", err)
 	}

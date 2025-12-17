@@ -1,9 +1,7 @@
 package middleware
 
 import (
-	"bytes"
 	"fmt"
-	"io"
 	"log"
 	"net/http"
 	"strings"
@@ -112,88 +110,89 @@ func CheckAuth(cfg *config.Config) echo.MiddlewareFunc {
 }
 
 func ValidateLoginInput(next echo.HandlerFunc) echo.HandlerFunc {
-	return func(c echo.Context) error {
-		var req model.LoginRequest
-		if err := c.Bind(&req); err != nil {
-			lang := getLanguage(c)
-			message := model.GetLocalizedMessage(lang, "invalid_request_body")
-			log.Printf("Login bind error: %v", err)
-			return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: message})
-		}
+    return func(c echo.Context) error {
+        var req model.LoginRequest
+        if err := c.Bind(&req); err != nil {
+            lang := getLanguage(c)
+            message := model.GetLocalizedMessage(lang, "invalid_request_body")
+            log.Printf("Login bind error: %v", err)
+            return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: message})
+        }
 
-		req.PhoneNumber = strings.TrimSpace(req.PhoneNumber)
-		req.Password = strings.TrimSpace(req.Password)
+        req.PhoneNumber = strings.TrimSpace(req.PhoneNumber)
+        req.Password = strings.TrimSpace(req.Password)
 
-		if req.PhoneNumber == "" || req.Password == "" {
-			lang := getLanguage(c)
-			message := model.GetLocalizedMessage(lang, "phone_password_required")
-			return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: message})
-		}
+        if req.PhoneNumber == "" || req.Password == "" {
+            lang := getLanguage(c)
+            message := model.GetLocalizedMessage(lang, "phone_password_required")
+            return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: message})
+        }
 
-		// Basic phone number validation
-		if len(req.PhoneNumber) < 9 || len(req.PhoneNumber) > 15 {
-			lang := getLanguage(c)
-			message := model.GetLocalizedMessage(lang, "invalid_phone_format")
-			return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: message})
-		}
+        if !isValidUzPhoneNumber(req.PhoneNumber) {
+            lang := getLanguage(c)
+            message := model.GetLocalizedMessage(lang, "invalid_phone_format")
+            return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: message})
+        }
 
-		c.Set("loginBody", req)
-		return next(c)
-	}
+        c.Set("loginBody", req)
+        return next(c)
+    }
 }
 
 func ValidateRegisterInput(next echo.HandlerFunc) echo.HandlerFunc {
-	return func(c echo.Context) error {
-		var req model.RegisterRequest
-
-		body, err := io.ReadAll(c.Request().Body)
-		if err != nil {
-			lang := getLanguage(c)
-			message := model.GetLocalizedMessage(lang, "invalid_request_body")
-			log.Printf("Failed to read request body: %v", err)
-			return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: message})
-		}
-
-		// Restore body for binding
-		c.Request().Body = io.NopCloser(bytes.NewBuffer(body))
-
-		if err := c.Bind(&req); err != nil {
-			lang := getLanguage(c)
-			message := model.GetLocalizedMessage(lang, "invalid_request_format")
-			log.Printf("Failed to bind register request: %v", err)
-			return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: message})
-		}
-
-		req.PhoneNumber = strings.TrimSpace(req.PhoneNumber)
-		req.Password = strings.TrimSpace(req.Password)
-		req.FullName = strings.TrimSpace(req.FullName)
-
-		if req.PhoneNumber == "" || req.Password == "" {
-			lang := getLanguage(c)
-			message := model.GetLocalizedMessage(lang, "phone_password_required")
-			return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: message})
-		}
-
-		// Password strength validation
-		if len(req.Password) < 8 {
-			lang := getLanguage(c)
-			message := model.GetLocalizedMessage(lang, "password_too_short")
-			return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: message})
-		}
-
-		// Phone number validation
-		if len(req.PhoneNumber) < 9 || len(req.PhoneNumber) > 15 {
-			lang := getLanguage(c)
-			message := model.GetLocalizedMessage(lang, "invalid_phone_format")
-			return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: message})
-		}
-
-		c.Set("registerBody", req)
-		return next(c)
-	}
+    return func(c echo.Context) error {
+        var req model.RegisterRequest
+        if err := c.Bind(&req); err != nil {
+            lang := getLanguage(c)
+            message := model.GetLocalizedMessage(lang, "invalid_request_format")
+            log.Printf("Failed to bind register request: %v", err)
+            return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: message})
+        }
+        req.PhoneNumber = strings.TrimSpace(req.PhoneNumber)
+        req.FullName = strings.TrimSpace(req.FullName)
+        if req.PhoneNumber == "" || req.DateOfBirth.IsZero() {
+            lang := getLanguage(c)
+            message := model.GetLocalizedMessage(lang, "phone_password_required")
+            return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: message})
+        }
+        if !isValidUzPhoneNumber(req.PhoneNumber) {
+            lang := getLanguage(c)
+            message := model.GetLocalizedMessage(lang, "invalid_phone_format")
+            if message == "" {
+                message = "Phone number must be in the format +998XXXXXXXXX"
+            }
+            return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: message})
+        }
+        // Date of birth validation
+        now := time.Now()
+        minAgeDate := now.AddDate(-100, 0, 0) // 100 years ago
+        maxAgeDate := now.AddDate(-10, 0, 0)  // 10 years ago
+        if req.DateOfBirth.Before(minAgeDate) || req.DateOfBirth.After(maxAgeDate) {
+            lang := getLanguage(c)
+            message := model.GetLocalizedMessage(lang, "invalid_date_of_birth")
+            if message == "" {
+                message = "Date of birth must be between 10 and 100 years ago"
+            }
+            return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: message})
+        }
+        c.Set("register_request", &req)
+        return next(c)
+    }
 }
-
-// ValidateRefreshInput validates refresh token request
+func isValidUzPhoneNumber(phone string) bool {
+    if len(phone) != 13 {
+        return false
+    }
+    if !strings.HasPrefix(phone, "+998") {
+        return false
+    }
+    for _, c := range phone[4:] {
+        if c < '0' || c > '9' {
+            return false
+        }
+    }
+    return true
+}
 func ValidateRefreshInput(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		var req model.RefreshRequest
@@ -214,11 +213,10 @@ func ValidateRefreshInput(next echo.HandlerFunc) echo.HandlerFunc {
 	}
 }
 
-// CheckLanguage extracts and validates the Accept-Language header
 func CheckLanguage() echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
-			lang := "uz" // Default language
+			lang := "uz"
 
 			acceptLang := c.Request().Header.Get("Accept-Language")
 			if acceptLang != "" {
@@ -257,8 +255,6 @@ func SanitizeInput() echo.MiddlewareFunc {
 		}
 	}
 }
-
-
 
 func getLanguage(c echo.Context) string {
 	if lang, ok := c.Get("language").(string); ok {

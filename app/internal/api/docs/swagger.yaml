@@ -33,13 +33,13 @@ definitions:
   model.DownloadRequest:
     properties:
       object_name:
-        example: c0f18a64-7f5c-4425-9414-1b01cddee9d9/avatar.png
+        example: c0f18a64-7f5c-4425-9414-1b01cddee9d9/{extension}
         type: string
     type: object
   model.DownloadResponse:
     properties:
       object_name:
-        example: c0f18a64-7f5c-4425-9414-1b01cddee9d9/avatar.png
+        example: c0f18a64-7f5c-4425-9414-1b01cddee9d9/{extension}
         type: string
     type: object
   model.ErrorResponse:
@@ -63,10 +63,10 @@ definitions:
   model.LoginRequest:
     properties:
       password:
-        example: password123
+        example: "20020406"
         type: string
       phoneNumber:
-        example: "1234567890"
+        example: "+998934722002"
         type: string
     type: object
   model.LoginResponse:
@@ -106,11 +106,17 @@ definitions:
     type: object
   model.RegisterRequest:
     properties:
-      fullName:
+      dateOfBirth:
+        example: "2002-04-06T00:00:00Z"
         type: string
-      password:
+      fullName:
+        example: Muslimbek Yarashev
         type: string
       phoneNumber:
+        example: "+998934722002"
+        type: string
+      role:
+        example: student
         type: string
     type: object
   model.RegisterResponse:
@@ -135,8 +141,6 @@ definitions:
     type: object
   model.UpdateUserRequest:
     properties:
-      XP:
-        type: integer
       balance:
         type: integer
       dateOfBirth:
@@ -147,12 +151,6 @@ definitions:
         type: string
       gender:
         type: string
-      group:
-        type: string
-      isAgreedForUserContract:
-        type: boolean
-      isVerified:
-        type: boolean
       level:
         type: string
       overAll:
@@ -161,10 +159,8 @@ definitions:
         type: string
       photo:
         type: string
-      role:
-        type: string
-      status:
-        type: string
+      xp:
+        type: integer
     type: object
   model.UserResponse:
     properties:
@@ -189,9 +185,6 @@ definitions:
       id:
         example: "1234567890"
         type: string
-      isAgreedForUserContract:
-        example: true
-        type: boolean
       isVerified:
         example: true
         type: boolean
@@ -217,7 +210,7 @@ definitions:
         example: 100
         type: integer
     type: object
-host: back.blitz.yurtal.tech
+host: localhost:8080
 info:
   contact: {}
   description: Blitz API server with multi-language support (de, uz)
@@ -228,7 +221,8 @@ paths:
     post:
       consumes:
       - application/json
-      description: Authenticate user and return access token
+      description: Authenticate user and return access token and password gonna be
+        YYYYMMDD
       parameters:
       - description: Login credentials
         in: body
@@ -804,7 +798,7 @@ paths:
       tags:
       - users
 schemes:
-- https
+- http
 securityDefinitions:
   BearerAuth:
     description: Type "Bearer" followed by a space and your JWT token

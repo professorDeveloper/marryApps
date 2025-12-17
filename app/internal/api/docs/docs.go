@@ -17,7 +17,7 @@ const docTemplate = `{
     "paths": {
         "/api/v1/auth/login": {
             "post": {
-                "description": "Authenticate user and return access token",
+                "description": "Authenticate user and return access token and password gonna be YYYYMMDD",
                 "consumes": [
                     "application/json"
                 ],
@@ -974,7 +974,7 @@ const docTemplate = `{
             "properties": {
                 "object_name": {
                     "type": "string",
-                    "example": "c0f18a64-7f5c-4425-9414-1b01cddee9d9/avatar.png"
+                    "example": "c0f18a64-7f5c-4425-9414-1b01cddee9d9/{extension}"
                 }
             }
         },
@@ -983,7 +983,7 @@ const docTemplate = `{
             "properties": {
                 "object_name": {
                     "type": "string",
-                    "example": "c0f18a64-7f5c-4425-9414-1b01cddee9d9/avatar.png"
+                    "example": "c0f18a64-7f5c-4425-9414-1b01cddee9d9/{extension}"
                 }
             }
         },
@@ -1020,11 +1020,11 @@ const docTemplate = `{
             "properties": {
                 "password": {
                     "type": "string",
-                    "example": "password123"
+                    "example": "20020406"
                 },
                 "phoneNumber": {
                     "type": "string",
-                    "example": "1234567890"
+                    "example": "+998934722002"
                 }
             }
         },
@@ -1083,14 +1083,21 @@ const docTemplate = `{
         "model.RegisterRequest": {
             "type": "object",
             "properties": {
-                "fullName": {
-                    "type": "string"
+                "dateOfBirth": {
+                    "type": "string",
+                    "example": "2002-04-06T00:00:00Z"
                 },
-                "password": {
-                    "type": "string"
+                "fullName": {
+                    "type": "string",
+                    "example": "Muslimbek Yarashev"
                 },
                 "phoneNumber": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "+998934722002"
+                },
+                "role": {
+                    "type": "string",
+                    "example": "student"
                 }
             }
         },
@@ -1127,9 +1134,6 @@ const docTemplate = `{
         "model.UpdateUserRequest": {
             "type": "object",
             "properties": {
-                "XP": {
-                    "type": "integer"
-                },
                 "balance": {
                     "type": "integer"
                 },
@@ -1145,15 +1149,6 @@ const docTemplate = `{
                 "gender": {
                     "type": "string"
                 },
-                "group": {
-                    "type": "string"
-                },
-                "isAgreedForUserContract": {
-                    "type": "boolean"
-                },
-                "isVerified": {
-                    "type": "boolean"
-                },
                 "level": {
                     "type": "string"
                 },
@@ -1166,11 +1161,8 @@ const docTemplate = `{
                 "photo": {
                     "type": "string"
                 },
-                "role": {
-                    "type": "string"
-                },
-                "status": {
-                    "type": "string"
+                "xp": {
+                    "type": "integer"
                 }
             }
         },
@@ -1204,10 +1196,6 @@ const docTemplate = `{
                 "id": {
                     "type": "string",
                     "example": "1234567890"
-                },
-                "isAgreedForUserContract": {
-                    "type": "boolean",
-                    "example": true
                 },
                 "isVerified": {
                     "type": "boolean",
@@ -1257,9 +1245,9 @@ const docTemplate = `{
 // SwaggerInfo holds exported Swagger Info so clients can modify it
 var SwaggerInfo = &swag.Spec{
 	Version:          "1.0",
-	Host:             "back.blitz.yurtal.tech",
+	Host:             "localhost:8080",
 	BasePath:         "/",
-	Schemes:          []string{"https"},
+	Schemes:          []string{"http"},
 	Title:            "Blitz API",
 	Description:      "Blitz API server with multi-language support (de, uz)",
 	InfoInstanceName: "swagger",

@@ -40,26 +40,24 @@ type StudentPayment struct {
 }
 
 type User struct {
-	ID                      string           `json:"id"`
-	GoogleId                *string          `json:"googleId"`
-	FullName                *string          `json:"fullName"`
-	DateOfBirth             pgtype.Timestamp `json:"dateOfBirth"`
-	OverAll                 *int32           `json:"overAll"`
-	Level                   *string          `json:"level"`
-	Email                   *string          `json:"email"`
-	PhoneNumber             *string          `json:"phoneNumber"`
-	PasswordHash            *string          `json:"passwordHash"`
-	Role                    *string          `json:"role"`
-	Gender                  *string          `json:"gender"`
-	IsAgreedForUserContract *bool            `json:"isAgreedForUserContract"`
-	IsVerified              *bool            `json:"isVerified"`
-	Status                  *string          `json:"status"`
-	Group                   *string          `json:"group"`
-	Photo                   *string          `json:"photo"`
-	XP                      *int32           `json:"XP"`
-	Balance                 *int64           `json:"balance"`
-	FirebaseToken           *string          `json:"firebaseToken"`
-	CreatedAt               pgtype.Timestamp `json:"createdAt"`
-	UpdatedAt               pgtype.Timestamp `json:"updatedAt"`
-	DeletedAt               pgtype.Timestamp `json:"deletedAt"`
+	ID            string           `json:"id"`
+	GoogleId      *string          `json:"googleId"`
+	FullName      *string          `json:"fullName"`
+	DateOfBirth   pgtype.Timestamp `json:"dateOfBirth"`
+	OverAll       *int32           `json:"overAll"`
+	Email         *string          `json:"email"`
+	PhoneNumber   *string          `json:"phoneNumber"`
+	PasswordHash  *string          `json:"passwordHash"`
+	Role          *string          `json:"role"`
+	Gender        *string          `json:"gender"`
+	IsVerified    *bool            `json:"isVerified"`
+	Status        *string          `json:"status"`
+	Group         *string          `json:"group"`
+	Photo         *string          `json:"photo"`
+	XP            *int32           `json:"XP"`
+	Balance       *int64           `json:"balance"`
+	FirebaseToken *string          `json:"firebaseToken"`
+	CreatedAt     pgtype.Timestamp `json:"createdAt"`
+	UpdatedAt     pgtype.Timestamp `json:"updatedAt"`
+	DeletedAt     pgtype.Timestamp `json:"deletedAt"`
 }

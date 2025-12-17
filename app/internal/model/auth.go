@@ -16,8 +16,8 @@ type RegisterResponse struct {
 	Message string `json:"message"`
 }
 type LoginRequest struct {
-	PhoneNumber string `json:"phoneNumber" example:"1234567890"`
-	Password    string `json:"password" example:"password123"`
+	PhoneNumber string `json:"phoneNumber" example:"+998934722002"`
+	Password    string `json:"password" example:"20020406"`
 }
 type GoogleAuthRequest struct {
 	IDToken string `json:"id_token"`
@@ -29,7 +29,6 @@ type LoginEmailRequest struct {
 	FullName string `json:"full_name"`
 }
 
-// LoginResponse represents successful login response
 type LoginResponse struct {
 	AccessToken  string       `json:"accessToken" example:"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."`
 	RefreshToken string       `json:"refreshToken" example:"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."`
@@ -41,9 +40,10 @@ type ErrorResponse struct {
 }
 
 type RegisterRequest struct {
-	FullName    string `json:"fullName"`
-	PhoneNumber string `json:"phoneNumber"`
-	Password    string `json:"password"`
+	FullName    string `json:"fullName" example:"Muslimbek Yarashev"`
+	PhoneNumber string `json:"phoneNumber" example:"+998934722002"`
+	Role        string `json:"role" example:"student"`
+	DateOfBirth time.Time `json:"dateOfBirth" example:"2002-04-06T00:00:00Z"`
 }
 
 type UserResponse struct {
@@ -61,27 +61,22 @@ type UserResponse struct {
 	Balance                 *int64    `json:"balance,omitempty" example:"1000"`
 	Group                   *string   `json:"group,omitempty" example:"group_1"`
 	IsVerified              *bool     `json:"isVerified,omitempty" example:"true"`
-	IsAgreedForUserContract *bool     `json:"isAgreedForUserContract,omitempty" example:"true"`
 	DateOfBirth             time.Time `json:"dateOfBirth,omitempty" example:"2022-01-01T00:00:00Z"`
 }
 
 type UpdateUserRequest struct {
-	FullName                *string   `json:"fullName"`
-	Email                   *string   `json:"email"`
-	PhoneNumber             *string   `json:"phoneNumber"`
-	Gender                  *string   `json:"gender"`
-	Photo                   *string   `json:"photo"`
-	Group                   *string   `json:"group"`
-	Role                    *string   `json:"role"`
-	Status                  *string   `json:"status"`
-	Level                   *string   `json:"level"`
-	XP                      *int32    `json:"XP"`
-	Balance                 *int64    `json:"balance"`
-	OverAll                 *int32    `json:"overAll"`
-	IsVerified              *bool     `json:"isVerified"`
-	IsAgreedForUserContract *bool     `json:"isAgreedForUserContract"`
-	DateOfBirth             time.Time `json:"dateOfBirth"`
+	FullName    *string `json:"fullName"`
+	Email       *string `json:"email"`
+	PhoneNumber *string `json:"phoneNumber"`
+	Gender      *string `json:"gender"`
+	Photo       *string `json:"photo"`
+	DateOfBirth *string `json:"dateOfBirth"` 
+	Level       *string  `json:"level,omitempty"`
+	XP          *int32  `json:"xp,omitempty"`
+	Balance     *int64  `json:"balance,omitempty"`
+	OverAll     *int32  `json:"overAll,omitempty"`
 }
+
 
 type UpdatePasswordRequest struct {
 	CurrentPassword string `json:"currentPassword" example:"password123"`

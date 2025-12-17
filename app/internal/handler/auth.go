@@ -3,6 +3,7 @@ package handler
 import (
 	"context"
 	"fmt"
+	"log"
 	"net/http"
 
 	"github.com/labstack/echo/v4"
@@ -12,7 +13,7 @@ import (
 
 // Login handles user login
 // @Summary User login
-// @Description Authenticate user and return access token
+// @Description Authenticate user and return access token and password gonna be YYYYMMDD
 // @Tags auth
 // @Accept json
 // @Produce json
@@ -31,6 +32,7 @@ func (h *Handler) Login(c echo.Context) error {
 		}
 	} else {
 		if err := c.Bind(&req); err != nil {
+			log.Printf("Failed to bind login request: %v", err)
 			return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "invalid request body"})
 		}
 	}
@@ -38,7 +40,7 @@ func (h *Handler) Login(c echo.Context) error {
 
 	resp, err := h.service.Auth().Login(c.Request().Context(), req, &h.cfg.Jwt)
 	if err != nil {
-		fmt.Println(model.ErrorResponse{Message: err.Error()})
+		log.Printf("Login failed: %v", err)
 
 		if lang == "de" {
 			return c.JSON(http.StatusUnauthorized, model.ErrorResponse{Message: "Ungültige Anmeldeinformationen"})
@@ -61,28 +63,38 @@ func (h *Handler) Login(c echo.Context) error {
 // @Router /api/v1/auth/register [post]
 func (h *Handler) RegisterUser(c echo.Context) error {
 	var req model.RegisterRequest
-	if v := c.Get("registerBody"); v != nil {
-		if r, ok := v.(model.RegisterRequest); ok {
-			req = r
+	if v := c.Get("register_request"); v != nil {
+		if r, ok := v.(*model.RegisterRequest); ok {
+			req = *r
 		} else {
-			return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "invalid request body"})
+			log.Printf("Failed to parse register request from context")
+			return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "invalid request data"})
 		}
 	} else {
 		if err := c.Bind(&req); err != nil {
-			return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "invalid request body"})
+			log.Printf("Failed to bind register request: %v", err)
+			return c.JSON(http.StatusBadRequest, model.ErrorResponse{
+				Message: "invalid request format",
+			})
+		}
+
+		if req.PhoneNumber == "" || req.DateOfBirth.IsZero() {
+			return c.JSON(http.StatusBadRequest, model.ErrorResponse{
+				Message: "phone number and date of birth are required",
+			})
 		}
 	}
-	lang := c.Get("language").(string)
-
+	log.Printf("Register request: %+v", req)
 	err := h.service.Auth().Register(c.Request().Context(), req)
 	if err != nil {
-		if lang == "de" {
-			return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "Fehler beim Registrieren"})
-		}
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "Register qilishda xatolik"})
+		log.Printf("Registration failed: %v", err)
+		return c.JSON(http.StatusBadRequest, model.ErrorResponse{
+			Message: "registration failed: " + err.Error(),
+		})
 	}
-
-	return c.JSON(http.StatusCreated, model.RegisterResponse{Message: "User successfully registered"})
+	return c.JSON(http.StatusCreated, model.RegisterResponse{
+		Message: "User registered successfully",
+	})
 }
 
 // Refresh handles token refresh
@@ -136,6 +148,7 @@ func (h *Handler) Refresh(c echo.Context) error {
 // @Router /api/v1/auth/login/with-google [post]
 func (h *Handler) RegisterWithGoogle(c echo.Context) error {
 	req := new(model.GoogleAuthRequest)
+	lang := c.Get("language").(string)
 
 	if err := c.Bind(req); err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid request body"})
@@ -149,7 +162,8 @@ func (h *Handler) RegisterWithGoogle(c echo.Context) error {
 	case "ios":
 		clientId = h.cfg.Google.IOSClientId
 	default:
-		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid app type"})
+		message := model.GetLocalizedMessage(lang, "invalid_app_type")
+		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: message})
 	}
 
 	payload, err := idtoken.Validate(context.Background(), req.IDToken, clientId)
@@ -158,7 +172,6 @@ func (h *Handler) RegisterWithGoogle(c echo.Context) error {
 	}
 	email, _ := payload.Claims["email"].(string)
 	name, _ := payload.Claims["name"].(string)
-	lang := c.Get("language").(string)
 
 	resp, err := h.service.Auth().LoginWithEmail(c.Request().Context(), model.LoginEmailRequest{
 		Email:    email,
@@ -167,10 +180,8 @@ func (h *Handler) RegisterWithGoogle(c echo.Context) error {
 	}, &h.cfg.Jwt)
 	if err != nil {
 		fmt.Println(err)
-		if lang == "de" {
-			return c.JSON(http.StatusUnauthorized, model.ErrorResponse{Message: "Fehler beim Google Anmelden"})
-		}
-		return c.JSON(http.StatusUnauthorized, model.ErrorResponse{Message: "Google bilan login qilishda xatolik"})
+		message := model.GetLocalizedMessage(lang, "google_login_failed")
+		return c.JSON(http.StatusUnauthorized, model.ErrorResponse{Message: message})
 	}
 
 	return c.JSON(http.StatusOK, resp)

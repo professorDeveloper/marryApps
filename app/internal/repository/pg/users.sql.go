@@ -13,56 +13,27 @@ import (
 
 const createUser = `-- name: CreateUser :one
 INSERT INTO users (
-    id,
-    "fullName",
-    "dateOfBirth",
-    "overAll",
-    level,
-    email,
-    "phoneNumber",
-    "passwordHash",
-    role,
-    gender,
-    "isAgreedForUserContract",
-    "isVerified",
-    status,
-    "group",
-    photo,
-    "XP",
-    balance,
-    "firebaseToken",
-    "googleId"
+    id, "fullName", "dateOfBirth", email, "phoneNumber", 
+    "passwordHash", role, "isVerified", status, "group", "googleId"
 )
 VALUES (
-    $1, $2, $3, $4, $5,
-    $6, $7, $8, $9, $10,
-    $11, $12, $13, $14,
-    $15, $16, $17, $18,
-    $19
+    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11
 )
-RETURNING id, "googleId", "fullName", "dateOfBirth", "overAll", level, email, "phoneNumber", "passwordHash", role, gender, "isAgreedForUserContract", "isVerified", status, "group", photo, "XP", balance, "firebaseToken", "createdAt", "updatedAt", "deletedAt"
+RETURNING id, "googleId", "fullName", "dateOfBirth", "overAll", email, "phoneNumber", "passwordHash", role, gender, "isVerified", status, "group", photo, "XP", balance, "firebaseToken", "createdAt", "updatedAt", "deletedAt"
 `
 
 type CreateUserParams struct {
-	ID                      string           `json:"id"`
-	FullName                *string          `json:"fullName"`
-	DateOfBirth             pgtype.Timestamp `json:"dateOfBirth"`
-	OverAll                 *int32           `json:"overAll"`
-	Level                   *string          `json:"level"`
-	Email                   *string          `json:"email"`
-	PhoneNumber             *string          `json:"phoneNumber"`
-	PasswordHash            *string          `json:"passwordHash"`
-	Role                    *string          `json:"role"`
-	Gender                  *string          `json:"gender"`
-	IsAgreedForUserContract *bool            `json:"isAgreedForUserContract"`
-	IsVerified              *bool            `json:"isVerified"`
-	Status                  *string          `json:"status"`
-	Group                   *string          `json:"group"`
-	Photo                   *string          `json:"photo"`
-	XP                      *int32           `json:"XP"`
-	Balance                 *int64           `json:"balance"`
-	FirebaseToken           *string          `json:"firebaseToken"`
-	GoogleId                *string          `json:"googleId"`
+	ID           string           `json:"id"`
+	FullName     *string          `json:"fullName"`
+	DateOfBirth  pgtype.Timestamp `json:"dateOfBirth"`
+	Email        *string          `json:"email"`
+	PhoneNumber  *string          `json:"phoneNumber"`
+	PasswordHash *string          `json:"passwordHash"`
+	Role         *string          `json:"role"`
+	IsVerified   *bool            `json:"isVerified"`
+	Status       *string          `json:"status"`
+	Group        *string          `json:"group"`
+	GoogleId     *string          `json:"googleId"`
 }
 
 func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, error) {
@@ -70,21 +41,13 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 		arg.ID,
 		arg.FullName,
 		arg.DateOfBirth,
-		arg.OverAll,
-		arg.Level,
 		arg.Email,
 		arg.PhoneNumber,
 		arg.PasswordHash,
 		arg.Role,
-		arg.Gender,
-		arg.IsAgreedForUserContract,
 		arg.IsVerified,
 		arg.Status,
 		arg.Group,
-		arg.Photo,
-		arg.XP,
-		arg.Balance,
-		arg.FirebaseToken,
 		arg.GoogleId,
 	)
 	var i User
@@ -94,13 +57,11 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 		&i.FullName,
 		&i.DateOfBirth,
 		&i.OverAll,
-		&i.Level,
 		&i.Email,
 		&i.PhoneNumber,
 		&i.PasswordHash,
 		&i.Role,
 		&i.Gender,
-		&i.IsAgreedForUserContract,
 		&i.IsVerified,
 		&i.Status,
 		&i.Group,
@@ -116,7 +77,8 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 }
 
 const getAllUsers = `-- name: GetAllUsers :many
-SELECT id, "googleId", "fullName", "dateOfBirth", "overAll", level, email, "phoneNumber", "passwordHash", role, gender, "isAgreedForUserContract", "isVerified", status, "group", photo, "XP", balance, "firebaseToken", "createdAt", "updatedAt", "deletedAt" FROM users
+
+SELECT id, "googleId", "fullName", "dateOfBirth", "overAll", email, "phoneNumber", "passwordHash", role, gender, "isVerified", status, "group", photo, "XP", balance, "firebaseToken", "createdAt", "updatedAt", "deletedAt" FROM users
 `
 
 func (q *Queries) GetAllUsers(ctx context.Context) ([]User, error) {
@@ -134,13 +96,11 @@ func (q *Queries) GetAllUsers(ctx context.Context) ([]User, error) {
 			&i.FullName,
 			&i.DateOfBirth,
 			&i.OverAll,
-			&i.Level,
 			&i.Email,
 			&i.PhoneNumber,
 			&i.PasswordHash,
 			&i.Role,
 			&i.Gender,
-			&i.IsAgreedForUserContract,
 			&i.IsVerified,
 			&i.Status,
 			&i.Group,
@@ -163,7 +123,8 @@ func (q *Queries) GetAllUsers(ctx context.Context) ([]User, error) {
 }
 
 const getUserByEmail = `-- name: GetUserByEmail :one
-SELECT id, "googleId", "fullName", "dateOfBirth", "overAll", level, email, "phoneNumber", "passwordHash", role, gender, "isAgreedForUserContract", "isVerified", status, "group", photo, "XP", balance, "firebaseToken", "createdAt", "updatedAt", "deletedAt" FROM users WHERE email = $1
+
+SELECT id, "googleId", "fullName", "dateOfBirth", "overAll", email, "phoneNumber", "passwordHash", role, gender, "isVerified", status, "group", photo, "XP", balance, "firebaseToken", "createdAt", "updatedAt", "deletedAt" FROM users WHERE email = $1
 `
 
 func (q *Queries) GetUserByEmail(ctx context.Context, email *string) (User, error) {
@@ -175,13 +136,11 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email *string) (User, erro
 		&i.FullName,
 		&i.DateOfBirth,
 		&i.OverAll,
-		&i.Level,
 		&i.Email,
 		&i.PhoneNumber,
 		&i.PasswordHash,
 		&i.Role,
 		&i.Gender,
-		&i.IsAgreedForUserContract,
 		&i.IsVerified,
 		&i.Status,
 		&i.Group,
@@ -197,7 +156,8 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email *string) (User, erro
 }
 
 const getUserByID = `-- name: GetUserByID :one
-SELECT id, "googleId", "fullName", "dateOfBirth", "overAll", level, email, "phoneNumber", "passwordHash", role, gender, "isAgreedForUserContract", "isVerified", status, "group", photo, "XP", balance, "firebaseToken", "createdAt", "updatedAt", "deletedAt" FROM users WHERE id = $1
+
+SELECT id, "googleId", "fullName", "dateOfBirth", "overAll", email, "phoneNumber", "passwordHash", role, gender, "isVerified", status, "group", photo, "XP", balance, "firebaseToken", "createdAt", "updatedAt", "deletedAt" FROM users WHERE id = $1
 `
 
 func (q *Queries) GetUserByID(ctx context.Context, id string) (User, error) {
@@ -209,13 +169,11 @@ func (q *Queries) GetUserByID(ctx context.Context, id string) (User, error) {
 		&i.FullName,
 		&i.DateOfBirth,
 		&i.OverAll,
-		&i.Level,
 		&i.Email,
 		&i.PhoneNumber,
 		&i.PasswordHash,
 		&i.Role,
 		&i.Gender,
-		&i.IsAgreedForUserContract,
 		&i.IsVerified,
 		&i.Status,
 		&i.Group,
@@ -231,7 +189,8 @@ func (q *Queries) GetUserByID(ctx context.Context, id string) (User, error) {
 }
 
 const getUserByPhoneNumber = `-- name: GetUserByPhoneNumber :one
-SELECT id, "googleId", "fullName", "dateOfBirth", "overAll", level, email, "phoneNumber", "passwordHash", role, gender, "isAgreedForUserContract", "isVerified", status, "group", photo, "XP", balance, "firebaseToken", "createdAt", "updatedAt", "deletedAt" FROM users WHERE "phoneNumber" = $1
+
+SELECT id, "googleId", "fullName", "dateOfBirth", "overAll", email, "phoneNumber", "passwordHash", role, gender, "isVerified", status, "group", photo, "XP", balance, "firebaseToken", "createdAt", "updatedAt", "deletedAt" FROM users WHERE "phoneNumber" = $1
 `
 
 func (q *Queries) GetUserByPhoneNumber(ctx context.Context, phonenumber *string) (User, error) {
@@ -243,13 +202,11 @@ func (q *Queries) GetUserByPhoneNumber(ctx context.Context, phonenumber *string)
 		&i.FullName,
 		&i.DateOfBirth,
 		&i.OverAll,
-		&i.Level,
 		&i.Email,
 		&i.PhoneNumber,
 		&i.PasswordHash,
 		&i.Role,
 		&i.Gender,
-		&i.IsAgreedForUserContract,
 		&i.IsVerified,
 		&i.Status,
 		&i.Group,
@@ -269,46 +226,42 @@ UPDATE users SET
     "fullName" = $2,
     "dateOfBirth" = $3,
     "overAll" = $4,
-    level = $5,
-    email = $6,
-    "phoneNumber" = $7,
-    "passwordHash" = $8,
-    role = $9,
-    gender = $10,
-    "isAgreedForUserContract" = $11,
-    "isVerified" = $12,
-    status = $13,
-    "group" = $14,
-    photo = $15,
-    "XP" = $16,
-    balance = $17,
-    "firebaseToken" = $18,
-    "googleId" = $19,
+    email = $5,
+    "phoneNumber" = $6,
+    "passwordHash" = $7,
+    role = $8,
+    gender = $9,
+    "isVerified" = $10,
+    status = $11,
+    "group" = $12,
+    photo = $13,
+    "XP" = $14,
+    balance = $15,
+    "firebaseToken" = $16,
+    "googleId" = $17,
     "updatedAt" = NOW()
 WHERE id = $1
-RETURNING id, "googleId", "fullName", "dateOfBirth", "overAll", level, email, "phoneNumber", "passwordHash", role, gender, "isAgreedForUserContract", "isVerified", status, "group", photo, "XP", balance, "firebaseToken", "createdAt", "updatedAt", "deletedAt"
+RETURNING id, "googleId", "fullName", "dateOfBirth", "overAll", email, "phoneNumber", "passwordHash", role, gender, "isVerified", status, "group", photo, "XP", balance, "firebaseToken", "createdAt", "updatedAt", "deletedAt"
 `
 
 type UpdateUserParams struct {
-	ID                      string           `json:"id"`
-	FullName                *string          `json:"fullName"`
-	DateOfBirth             pgtype.Timestamp `json:"dateOfBirth"`
-	OverAll                 *int32           `json:"overAll"`
-	Level                   *string          `json:"level"`
-	Email                   *string          `json:"email"`
-	PhoneNumber             *string          `json:"phoneNumber"`
-	PasswordHash            *string          `json:"passwordHash"`
-	Role                    *string          `json:"role"`
-	Gender                  *string          `json:"gender"`
-	IsAgreedForUserContract *bool            `json:"isAgreedForUserContract"`
-	IsVerified              *bool            `json:"isVerified"`
-	Status                  *string          `json:"status"`
-	Group                   *string          `json:"group"`
-	Photo                   *string          `json:"photo"`
-	XP                      *int32           `json:"XP"`
-	Balance                 *int64           `json:"balance"`
-	FirebaseToken           *string          `json:"firebaseToken"`
-	GoogleId                *string          `json:"googleId"`
+	ID            string           `json:"id"`
+	FullName      *string          `json:"fullName"`
+	DateOfBirth   pgtype.Timestamp `json:"dateOfBirth"`
+	OverAll       *int32           `json:"overAll"`
+	Email         *string          `json:"email"`
+	PhoneNumber   *string          `json:"phoneNumber"`
+	PasswordHash  *string          `json:"passwordHash"`
+	Role          *string          `json:"role"`
+	Gender        *string          `json:"gender"`
+	IsVerified    *bool            `json:"isVerified"`
+	Status        *string          `json:"status"`
+	Group         *string          `json:"group"`
+	Photo         *string          `json:"photo"`
+	XP            *int32           `json:"XP"`
+	Balance       *int64           `json:"balance"`
+	FirebaseToken *string          `json:"firebaseToken"`
+	GoogleId      *string          `json:"googleId"`
 }
 
 func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (User, error) {
@@ -317,13 +270,11 @@ func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (User, e
 		arg.FullName,
 		arg.DateOfBirth,
 		arg.OverAll,
-		arg.Level,
 		arg.Email,
 		arg.PhoneNumber,
 		arg.PasswordHash,
 		arg.Role,
 		arg.Gender,
-		arg.IsAgreedForUserContract,
 		arg.IsVerified,
 		arg.Status,
 		arg.Group,
@@ -340,13 +291,11 @@ func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (User, e
 		&i.FullName,
 		&i.DateOfBirth,
 		&i.OverAll,
-		&i.Level,
 		&i.Email,
 		&i.PhoneNumber,
 		&i.PasswordHash,
 		&i.Role,
 		&i.Gender,
-		&i.IsAgreedForUserContract,
 		&i.IsVerified,
 		&i.Status,
 		&i.Group,
@@ -362,10 +311,14 @@ func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (User, e
 }
 
 const updateUserPassword = `-- name: UpdateUserPassword :one
+
 UPDATE users SET
-    "passwordHash" = $2
+
+"passwordHash" = $2
+
 WHERE id = $1
-RETURNING id, "googleId", "fullName", "dateOfBirth", "overAll", level, email, "phoneNumber", "passwordHash", role, gender, "isAgreedForUserContract", "isVerified", status, "group", photo, "XP", balance, "firebaseToken", "createdAt", "updatedAt", "deletedAt"
+
+RETURNING id, "googleId", "fullName", "dateOfBirth", "overAll", email, "phoneNumber", "passwordHash", role, gender, "isVerified", status, "group", photo, "XP", balance, "firebaseToken", "createdAt", "updatedAt", "deletedAt"
 `
 
 type UpdateUserPasswordParams struct {
@@ -382,13 +335,11 @@ func (q *Queries) UpdateUserPassword(ctx context.Context, arg UpdateUserPassword
 		&i.FullName,
 		&i.DateOfBirth,
 		&i.OverAll,
-		&i.Level,
 		&i.Email,
 		&i.PhoneNumber,
 		&i.PasswordHash,
 		&i.Role,
 		&i.Gender,
-		&i.IsAgreedForUserContract,
 		&i.IsVerified,
 		&i.Status,
 		&i.Group,

@@ -51,10 +51,10 @@ func (s *MinioS) PutAvatar(ctx context.Context, file io.Reader, size int64, user
 		extension = ".bin"
 	}
 
-	objectName := fmt.Sprintf("%s/avatar%s", userID, extension)
+	objectName := fmt.Sprintf("%s_avatar%s",userID, extension)
 
 	fullReader := io.MultiReader(bytes.NewReader(fileBuffer[:n]), file)
-	_, err = s.minioClient.PutObject(ctx, bucketName, folderName, objectName, fullReader, size, objectName)
+	_, err = s.minioClient.PutObject(ctx, bucketName,folderName,objectName, fullReader, size, extension)
 	if err != nil {
 		return "", fmt.Errorf("minio put object failed: %w", err)
 	}
@@ -107,7 +107,7 @@ func (s *MinioS) PutBook(ctx context.Context, file io.Reader, size int64, fileNa
 		extension)
 
 	fullReader := io.MultiReader(bytes.NewReader(fileBuffer[:n]), file)
-	_, err = s.minioClient.PutObject(ctx, bucketName, folderName, objectName, fullReader, size, objectName)
+	_, err = s.minioClient.PutObject(ctx, bucketName, folderName, objectName, fullReader, size,extension)
 	if err != nil {
 		return "", fmt.Errorf("minio put object failed: %w", err)
 	}
