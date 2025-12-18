@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"time"
 
 	"github.com/labstack/echo/v4"
 	"gitlab.yurtal.tech/company/blitz/back/internal/model"
@@ -52,23 +53,27 @@ func (h *Handler) Login(c echo.Context) error {
 }
 
 // RegisterUser handles user registration
-// @Summary User registration
-// @Description Register a new user and return token with user data
+// @Summary Register a new user account
+// @Description Register a new user with phone number and date of birth. Password is automatically generated from date of birth in YYYYMMDD format. User role defaults to 'student' if not provided.
 // @Tags auth
 // @Accept json
 // @Produce json
-// @Param input body model.RegisterRequest true "Registration data"
+// @Param input body model.RegisterRequest true "User registration data"
 // @Success 201 {object} model.RegisterResponse "User successfully registered"
-// @Failure 400 {object} model.ErrorResponse "Invalid request or registration error"
+// @Failure 400 {object} model.ErrorResponse "Bad request - invalid input, missing required fields, or user already exists with phone number"
+// @Failure 500 {object} model.ErrorResponse "Internal server error"
 // @Router /api/v1/auth/register [post]
 func (h *Handler) RegisterUser(c echo.Context) error {
 	var req model.RegisterRequest
+
 	if v := c.Get("register_request"); v != nil {
 		if r, ok := v.(*model.RegisterRequest); ok {
 			req = *r
 		} else {
 			log.Printf("Failed to parse register request from context")
-			return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "invalid request data"})
+			return c.JSON(http.StatusBadRequest, model.ErrorResponse{
+				Message: "invalid request data",
+			})
 		}
 	} else {
 		if err := c.Bind(&req); err != nil {
@@ -78,20 +83,44 @@ func (h *Handler) RegisterUser(c echo.Context) error {
 			})
 		}
 
-		if req.PhoneNumber == "" || req.DateOfBirth.IsZero() {
+		if req.PhoneNumber == "" {
 			return c.JSON(http.StatusBadRequest, model.ErrorResponse{
-				Message: "phone number and date of birth are required",
+				Message: "phone number is required",
+			})
+		}
+
+		if req.FullName == "" {
+			return c.JSON(http.StatusBadRequest, model.ErrorResponse{
+				Message: "full name is required",
+			})
+		}
+
+		// Validate date of birth format
+		if req.DateOfBirth == "" {
+			return c.JSON(http.StatusBadRequest, model.ErrorResponse{
+				Message: "date of birth is required in YYYY-MM-DD format",
+			})
+		}
+		// Basic format validation
+		_, err := time.Parse("2006-01-02", req.DateOfBirth)
+		if err != nil {
+			return c.JSON(http.StatusBadRequest, model.ErrorResponse{
+				Message: "invalid date format, expected YYYY-MM-DD",
 			})
 		}
 	}
-	log.Printf("Register request: %+v", req)
+
+	log.Printf("Register request received - Phone: %s, Name: %s", req.PhoneNumber, req.FullName)
+
 	err := h.service.Auth().Register(c.Request().Context(), req)
 	if err != nil {
-		log.Printf("Registration failed: %v", err)
+		log.Printf("Registration failed for phone %s: %v", req.PhoneNumber, err)
 		return c.JSON(http.StatusBadRequest, model.ErrorResponse{
 			Message: "registration failed: " + err.Error(),
 		})
 	}
+
+	log.Printf("User successfully registered with phone: %s", req.PhoneNumber)
 	return c.JSON(http.StatusCreated, model.RegisterResponse{
 		Message: "User registered successfully",
 	})

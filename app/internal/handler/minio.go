@@ -82,17 +82,17 @@ func (h *Handler) UploadImage(c echo.Context) error {
 	return c.JSON(http.StatusOK, model.DownloadResponse{ObjectName: objectName})
 }
 
-// DownloadAvatar downloads user avatar from MinIO
-// @Summary Download user avatar
-// @Description Downloads a user's avatar by object name
+// DownloadAvatar downloads image from MinIO
+// @Summary Download image
+// @Description Downloads a image by object name
 // @Tags users
 // @Accept json
 // @Produce octet-stream
 // @Security BearerAuth
-// @Param input body model.DownloadRequest true "Avatar object name"
-// @Success 200 {file} file "Avatar image file"
+// @Param input body model.DownloadRequest true "Image object name"
+// @Success 200 {file} file "Image file"
 // @Failure 400 {object} model.ErrorResponse "Invalid request"
-// @Failure 404 {object} model.ErrorResponse "Avatar not found"
+// @Failure 404 {object} model.ErrorResponse "Image not found"
 // @Failure 500 {object} model.ErrorResponse "Failed to download file"
 // @Router /api/v1/user/image/download [post]
 func (h *Handler) DownloadImage(c echo.Context) error {

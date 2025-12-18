@@ -30,11 +30,6 @@ definitions:
       error_note:
         type: string
     type: object
-  model.Date:
-    properties:
-      time.Time:
-        type: string
-    type: object
   model.DownloadRequest:
     properties:
       object_name:
@@ -110,6 +105,20 @@ definitions:
         type: string
     type: object
   model.RegisterRequest:
+    properties:
+      dateOfBirth:
+        example: "2002-04-06"
+        format: date
+        type: string
+      fullName:
+        example: Muslimbek Yarashev
+        type: string
+      phoneNumber:
+        example: "+998934722002"
+        type: string
+      role:
+        example: student
+        type: string
     type: object
   model.RegisterResponse:
     properties:
@@ -306,9 +315,11 @@ paths:
     post:
       consumes:
       - application/json
-      description: Register a new user and return token with user data
+      description: Register a new user with phone number and date of birth. Password
+        is automatically generated from date of birth in YYYYMMDD format. User role
+        defaults to 'student' if not provided.
       parameters:
-      - description: Registration data
+      - description: User registration data
         in: body
         name: input
         required: true
@@ -322,10 +333,15 @@ paths:
           schema:
             $ref: '#/definitions/model.RegisterResponse'
         "400":
-          description: Invalid request or registration error
+          description: Bad request - invalid input, missing required fields, or user
+            already exists with phone number
           schema:
             $ref: '#/definitions/model.ErrorResponse'
-      summary: User registration
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      summary: Register a new user account
       tags:
       - auth
   /api/v1/level-price/create:
@@ -660,9 +676,9 @@ paths:
     post:
       consumes:
       - application/json
-      description: Downloads a user's avatar by object name
+      description: Downloads a image by object name
       parameters:
-      - description: Avatar object name
+      - description: Image object name
         in: body
         name: input
         required: true
@@ -672,7 +688,7 @@ paths:
       - application/octet-stream
       responses:
         "200":
-          description: Avatar image file
+          description: Image file
           schema:
             type: file
         "400":
@@ -680,7 +696,7 @@ paths:
           schema:
             $ref: '#/definitions/model.ErrorResponse'
         "404":
-          description: Avatar not found
+          description: Image not found
           schema:
             $ref: '#/definitions/model.ErrorResponse'
         "500":
@@ -689,7 +705,7 @@ paths:
             $ref: '#/definitions/model.ErrorResponse'
       security:
       - BearerAuth: []
-      summary: Download user avatar
+      summary: Download image
       tags:
       - users
   /api/v1/user/me:

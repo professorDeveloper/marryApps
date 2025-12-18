@@ -39,16 +39,22 @@ func (s *AuthS) Register(ctx context.Context, req model.RegisterRequest) error {
 		return fmt.Errorf("full name is required")
 	}
 
-	if req.DateOfBirth.IsZero() {
+	dateOfBirth, err := time.Parse("2006-01-02", req.DateOfBirth)
+	if err != nil {
+		return fmt.Errorf("invalid date format, expected YYYY-MM-DD")
+	}
+
+	// Validate date
+	if dateOfBirth.IsZero() {
 		return fmt.Errorf("date of birth is required")
 	}
-	if req.DateOfBirth.After(time.Now()) {
+	if dateOfBirth.After(time.Now()) {
 		return fmt.Errorf("date of birth cannot be in the future")
 	}
 
 	log.Printf("Starting registration for phone: %s", req.PhoneNumber)
 
-	_, err := s.repo.PgRepo.Repo.GetUserByPhoneNumber(ctx, &req.PhoneNumber)
+	_, err = s.repo.PgRepo.Repo.GetUserByPhoneNumber(ctx, &req.PhoneNumber)
 	if err == nil {
 		log.Printf("User with phone %s already exists", req.PhoneNumber)
 		return fmt.Errorf("user with this phone number already exists")
@@ -58,7 +64,8 @@ func (s *AuthS) Register(ctx context.Context, req model.RegisterRequest) error {
 		return fmt.Errorf("failed to check user existence: %w", err)
 	}
 
-	password := req.DateOfBirth.Format("20060102") // YYYYMMDD format
+	// Generate password from the parsed date of birth
+	password := dateOfBirth.Format("20060102")
 	hash, err := utils.HashPassword(password)
 	if err != nil {
 		log.Printf("Error hashing password: %v", err)
@@ -83,7 +90,7 @@ func (s *AuthS) Register(ctx context.Context, req model.RegisterRequest) error {
 		PhoneNumber:  &req.PhoneNumber,
 		FullName:     strings.TrimSpace(req.FullName),
 		PasswordHash: &hash,
-		DateOfBirth:  pgtype.Date{Time: req.DateOfBirth.Time, Valid: true},
+		DateOfBirth:  pgtype.Date{Time: dateOfBirth, Valid: true},
 		Role:         pg.NullUserRole{UserRole: userRole, Valid: true},
 	}
 
@@ -405,28 +412,22 @@ func toUserResponse(u pg.User) model.UserResponse {
 	if u.DateOfBirth.Valid {
 		dateOfBirth = u.DateOfBirth.Time
 	}
-
-	// Convert non-pointer fields to pointers for the response
 	if u.FullName != "" {
 		fullName = &u.FullName
 	}
 
-	// Copy pointer fields
 	email = u.Email
 
-	// Convert role from NullUserRole to *string
 	if u.Role.Valid {
 		roleStr := string(u.Role.UserRole)
 		role = &roleStr
 	}
 
-	// Convert gender from NullUserGender to *string
 	if u.Gender.Valid {
 		genderStr := string(u.Gender.UserGender)
 		gender = &genderStr
 	}
 
-	// Convert status from NullUserStatus to *string
 	if u.Status.Valid {
 		statusStr := string(u.Status.UserStatus)
 		status = &statusStr

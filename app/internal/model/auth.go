@@ -38,33 +38,29 @@ type LoginResponse struct {
 	User         UserResponse `json:"user"`
 }
 
+type RegisterRequest struct {
+	FullName    string `json:"fullName" example:"Muslimbek Yarashev"`
+	PhoneNumber string `json:"phoneNumber" example:"+998934722002"`
+	Role        string `json:"role" example:"student"`
+	DateOfBirth string `json:"dateOfBirth" example:"2002-04-06" format:"date"`
+}
+
 type ErrorResponse struct {
 	Message string `json:"message" example:"error message"`
 }
 
-// Date is a custom type for handling dates in YYYY-MM-DD format
 type Date struct {
 	time.Time
 }
 
-// UnmarshalJSON implements the json.Unmarshaler interface for the Date type
 func (d *Date) UnmarshalJSON(b []byte) error {
-	// Remove the surrounding quotes
 	s := strings.Trim(string(b), "\"")
-	// Parse the date in YYYY-MM-DD format
 	t, err := time.Parse("2006-01-02", s)
 	if err != nil {
 		return err
 	}
 	d.Time = t
 	return nil
-}
-
-type RegisterRequest struct {
-	FullName    string `json:"fullName" example:"Muslimbek Yarashev"`
-	PhoneNumber string `json:"phoneNumber" example:"+998934722002"`
-	Role        string `json:"role" example:"student"`
-	DateOfBirth Date   `json:"dateOfBirth" example:"2002-04-06"`
 }
 
 type UserResponse struct {

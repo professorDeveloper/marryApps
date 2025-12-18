@@ -160,7 +160,7 @@ const docTemplate = `{
         },
         "/api/v1/auth/register": {
             "post": {
-                "description": "Register a new user and return token with user data",
+                "description": "Register a new user with phone number and date of birth. Password is automatically generated from date of birth in YYYYMMDD format. User role defaults to 'student' if not provided.",
                 "consumes": [
                     "application/json"
                 ],
@@ -170,10 +170,10 @@ const docTemplate = `{
                 "tags": [
                     "auth"
                 ],
-                "summary": "User registration",
+                "summary": "Register a new user account",
                 "parameters": [
                     {
-                        "description": "Registration data",
+                        "description": "User registration data",
                         "name": "input",
                         "in": "body",
                         "required": true,
@@ -190,7 +190,13 @@ const docTemplate = `{
                         }
                     },
                     "400": {
-                        "description": "Invalid request or registration error",
+                        "description": "Bad request - invalid input, missing required fields, or user already exists with phone number",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
                         "schema": {
                             "$ref": "#/definitions/model.ErrorResponse"
                         }
@@ -716,7 +722,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Downloads a user's avatar by object name",
+                "description": "Downloads a image by object name",
                 "consumes": [
                     "application/json"
                 ],
@@ -726,10 +732,10 @@ const docTemplate = `{
                 "tags": [
                     "users"
                 ],
-                "summary": "Download user avatar",
+                "summary": "Download image",
                 "parameters": [
                     {
-                        "description": "Avatar object name",
+                        "description": "Image object name",
                         "name": "input",
                         "in": "body",
                         "required": true,
@@ -740,7 +746,7 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "Avatar image file",
+                        "description": "Image file",
                         "schema": {
                             "type": "file"
                         }
@@ -752,7 +758,7 @@ const docTemplate = `{
                         }
                     },
                     "404": {
-                        "description": "Avatar not found",
+                        "description": "Image not found",
                         "schema": {
                             "$ref": "#/definitions/model.ErrorResponse"
                         }
@@ -969,14 +975,6 @@ const docTemplate = `{
                 }
             }
         },
-        "model.Date": {
-            "type": "object",
-            "properties": {
-                "time.Time": {
-                    "type": "string"
-                }
-            }
-        },
         "model.DownloadRequest": {
             "type": "object",
             "properties": {
@@ -1089,7 +1087,26 @@ const docTemplate = `{
             }
         },
         "model.RegisterRequest": {
-            "type": "object"
+            "type": "object",
+            "properties": {
+                "dateOfBirth": {
+                    "type": "string",
+                    "format": "date",
+                    "example": "2002-04-06"
+                },
+                "fullName": {
+                    "type": "string",
+                    "example": "Muslimbek Yarashev"
+                },
+                "phoneNumber": {
+                    "type": "string",
+                    "example": "+998934722002"
+                },
+                "role": {
+                    "type": "string",
+                    "example": "student"
+                }
+            }
         },
         "model.RegisterResponse": {
             "type": "object",
