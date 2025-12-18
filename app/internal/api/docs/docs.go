@@ -969,6 +969,14 @@ const docTemplate = `{
                 }
             }
         },
+        "model.Date": {
+            "type": "object",
+            "properties": {
+                "time.Time": {
+                    "type": "string"
+                }
+            }
+        },
         "model.DownloadRequest": {
             "type": "object",
             "properties": {
@@ -1020,7 +1028,7 @@ const docTemplate = `{
             "properties": {
                 "password": {
                     "type": "string",
-                    "example": "20020406"
+                    "example": "20021220"
                 },
                 "phoneNumber": {
                     "type": "string",
@@ -1081,25 +1089,7 @@ const docTemplate = `{
             }
         },
         "model.RegisterRequest": {
-            "type": "object",
-            "properties": {
-                "dateOfBirth": {
-                    "type": "string",
-                    "example": "2002-04-06T00:00:00Z"
-                },
-                "fullName": {
-                    "type": "string",
-                    "example": "Muslimbek Yarashev"
-                },
-                "phoneNumber": {
-                    "type": "string",
-                    "example": "+998934722002"
-                },
-                "role": {
-                    "type": "string",
-                    "example": "student"
-                }
-            }
+            "type": "object"
         },
         "model.RegisterResponse": {
             "type": "object",
@@ -1245,7 +1235,7 @@ const docTemplate = `{
 // SwaggerInfo holds exported Swagger Info so clients can modify it
 var SwaggerInfo = &swag.Spec{
 	Version:          "1.0",
-	Host:             "blitz.yurtal.tech",
+	Host:             "back.blitz.yurtal.tech",
 	BasePath:         "/",
 	Schemes:          []string{"https"},
 	Title:            "Blitz API",

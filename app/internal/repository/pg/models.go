@@ -5,8 +5,185 @@
 package pg
 
 import (
+	"database/sql/driver"
+	"fmt"
+
 	"github.com/jackc/pgx/v5/pgtype"
 )
+
+type ProficiencyLevel string
+
+const (
+	ProficiencyLevelB1 ProficiencyLevel = "B1"
+	ProficiencyLevelB2 ProficiencyLevel = "B2"
+	ProficiencyLevelC1 ProficiencyLevel = "C1"
+	ProficiencyLevelC2 ProficiencyLevel = "C2"
+)
+
+func (e *ProficiencyLevel) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = ProficiencyLevel(s)
+	case string:
+		*e = ProficiencyLevel(s)
+	default:
+		return fmt.Errorf("unsupported scan type for ProficiencyLevel: %T", src)
+	}
+	return nil
+}
+
+type NullProficiencyLevel struct {
+	ProficiencyLevel ProficiencyLevel `json:"proficiency_level"`
+	Valid            bool             `json:"valid"` // Valid is true if ProficiencyLevel is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullProficiencyLevel) Scan(value interface{}) error {
+	if value == nil {
+		ns.ProficiencyLevel, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.ProficiencyLevel.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullProficiencyLevel) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.ProficiencyLevel), nil
+}
+
+type UserGender string
+
+const (
+	UserGenderMale   UserGender = "male"
+	UserGenderFemale UserGender = "female"
+	UserGenderOther  UserGender = "other"
+)
+
+func (e *UserGender) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = UserGender(s)
+	case string:
+		*e = UserGender(s)
+	default:
+		return fmt.Errorf("unsupported scan type for UserGender: %T", src)
+	}
+	return nil
+}
+
+type NullUserGender struct {
+	UserGender UserGender `json:"user_gender"`
+	Valid      bool       `json:"valid"` // Valid is true if UserGender is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullUserGender) Scan(value interface{}) error {
+	if value == nil {
+		ns.UserGender, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.UserGender.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullUserGender) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.UserGender), nil
+}
+
+type UserRole string
+
+const (
+	UserRoleAdmin     UserRole = "admin"
+	UserRoleModerator UserRole = "moderator"
+	UserRoleStudent   UserRole = "student"
+	UserRoleTeacher   UserRole = "teacher"
+)
+
+func (e *UserRole) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = UserRole(s)
+	case string:
+		*e = UserRole(s)
+	default:
+		return fmt.Errorf("unsupported scan type for UserRole: %T", src)
+	}
+	return nil
+}
+
+type NullUserRole struct {
+	UserRole UserRole `json:"user_role"`
+	Valid    bool     `json:"valid"` // Valid is true if UserRole is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullUserRole) Scan(value interface{}) error {
+	if value == nil {
+		ns.UserRole, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.UserRole.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullUserRole) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.UserRole), nil
+}
+
+type UserStatus string
+
+const (
+	UserStatusActive  UserStatus = "active"
+	UserStatusBlocked UserStatus = "blocked"
+	UserStatusOnhold  UserStatus = "onhold"
+)
+
+func (e *UserStatus) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = UserStatus(s)
+	case string:
+		*e = UserStatus(s)
+	default:
+		return fmt.Errorf("unsupported scan type for UserStatus: %T", src)
+	}
+	return nil
+}
+
+type NullUserStatus struct {
+	UserStatus UserStatus `json:"user_status"`
+	Valid      bool       `json:"valid"` // Valid is true if UserStatus is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullUserStatus) Scan(value interface{}) error {
+	if value == nil {
+		ns.UserStatus, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.UserStatus.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullUserStatus) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.UserStatus), nil
+}
 
 type PriceForLevel struct {
 	ID      string             `json:"id"`
@@ -40,24 +217,25 @@ type StudentPayment struct {
 }
 
 type User struct {
-	ID            string           `json:"id"`
-	GoogleId      *string          `json:"googleId"`
-	FullName      *string          `json:"fullName"`
-	DateOfBirth   pgtype.Timestamp `json:"dateOfBirth"`
-	OverAll       *int32           `json:"overAll"`
-	Email         *string          `json:"email"`
-	PhoneNumber   *string          `json:"phoneNumber"`
-	PasswordHash  *string          `json:"passwordHash"`
-	Role          *string          `json:"role"`
-	Gender        *string          `json:"gender"`
-	IsVerified    *bool            `json:"isVerified"`
-	Status        *string          `json:"status"`
-	Group         *string          `json:"group"`
-	Photo         *string          `json:"photo"`
-	XP            *int32           `json:"XP"`
-	Balance       *int64           `json:"balance"`
-	FirebaseToken *string          `json:"firebaseToken"`
-	CreatedAt     pgtype.Timestamp `json:"createdAt"`
-	UpdatedAt     pgtype.Timestamp `json:"updatedAt"`
-	DeletedAt     pgtype.Timestamp `json:"deletedAt"`
+	ID            string               `json:"id"`
+	GoogleId      *string              `json:"googleId"`
+	FullName      string               `json:"fullName"`
+	DateOfBirth   pgtype.Date          `json:"dateOfBirth"`
+	OverAll       *int32               `json:"overAll"`
+	Level         NullProficiencyLevel `json:"level"`
+	Email         *string              `json:"email"`
+	PhoneNumber   *string              `json:"phoneNumber"`
+	PasswordHash  *string              `json:"passwordHash"`
+	Role          NullUserRole         `json:"role"`
+	Gender        NullUserGender       `json:"gender"`
+	IsVerified    *bool                `json:"isVerified"`
+	Status        NullUserStatus       `json:"status"`
+	Group         *string              `json:"group"`
+	Photo         *string              `json:"photo"`
+	XP            *int32               `json:"XP"`
+	Balance       *int64               `json:"balance"`
+	FirebaseToken *string              `json:"firebaseToken"`
+	CreatedAt     pgtype.Timestamptz   `json:"createdAt"`
+	UpdatedAt     pgtype.Timestamptz   `json:"updatedAt"`
+	DeletedAt     pgtype.Timestamptz   `json:"deletedAt"`
 }

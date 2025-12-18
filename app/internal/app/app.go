@@ -29,7 +29,7 @@ import (
 // @title Blitz API
 // @version 1.0
 // @description Blitz API server with multi-language support (de, uz)
-// @host blitz.yurtal.tech
+// @host back.blitz.yurtal.tech
 // @BasePath /
 // @schemes https
 

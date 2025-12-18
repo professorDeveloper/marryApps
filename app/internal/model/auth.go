@@ -1,6 +1,9 @@
 package model
 
-import "time"
+import (
+	"strings"
+	"time"
+)
 
 type User struct {
 	ID       string  `json:"id"`
@@ -17,7 +20,7 @@ type RegisterResponse struct {
 }
 type LoginRequest struct {
 	PhoneNumber string `json:"phoneNumber" example:"+998934722002"`
-	Password    string `json:"password" example:"20020406"`
+	Password    string `json:"password" example:"20021220"`
 }
 type GoogleAuthRequest struct {
 	IDToken string `json:"id_token"`
@@ -39,29 +42,47 @@ type ErrorResponse struct {
 	Message string `json:"message" example:"error message"`
 }
 
+// Date is a custom type for handling dates in YYYY-MM-DD format
+type Date struct {
+	time.Time
+}
+
+// UnmarshalJSON implements the json.Unmarshaler interface for the Date type
+func (d *Date) UnmarshalJSON(b []byte) error {
+	// Remove the surrounding quotes
+	s := strings.Trim(string(b), "\"")
+	// Parse the date in YYYY-MM-DD format
+	t, err := time.Parse("2006-01-02", s)
+	if err != nil {
+		return err
+	}
+	d.Time = t
+	return nil
+}
+
 type RegisterRequest struct {
 	FullName    string `json:"fullName" example:"Muslimbek Yarashev"`
 	PhoneNumber string `json:"phoneNumber" example:"+998934722002"`
 	Role        string `json:"role" example:"student"`
-	DateOfBirth time.Time `json:"dateOfBirth" example:"2002-04-06T00:00:00Z"`
+	DateOfBirth Date   `json:"dateOfBirth" example:"2002-04-06"`
 }
 
 type UserResponse struct {
-	ID                      string    `json:"id" example:"1234567890"`
-	OverAll                 *int32    `json:"overAll,omitempty" example:"1"`
-	FullName                *string   `json:"fullName,omitempty" example:"John Doe"`
-	Email                   *string   `json:"email,omitempty" example:"user@example.com"`
-	Role                    *string   `json:"role,omitempty" example:"user"`
-	Gender                  *string   `json:"gender,omitempty" example:"male"`
-	Status                  *string   `json:"status,omitempty" example:"active"`
-	Photo                   *string   `json:"photo,omitempty" example:"https://example.com/photo.jpg"`
-	PhoneNumber             *string   `json:"phoneNumber,omitempty" example:"+998901234567"`
-	Level                   *string   `json:"level,omitempty" example:"level_1"`
-	XP                      *int32    `json:"xp,omitempty" example:"100"`
-	Balance                 *int64    `json:"balance,omitempty" example:"1000"`
-	Group                   *string   `json:"group,omitempty" example:"group_1"`
-	IsVerified              *bool     `json:"isVerified,omitempty" example:"true"`
-	DateOfBirth             time.Time `json:"dateOfBirth,omitempty" example:"2022-01-01T00:00:00Z"`
+	ID          string    `json:"id" example:"1234567890"`
+	OverAll     *int32    `json:"overAll,omitempty" example:"1"`
+	FullName    *string   `json:"fullName,omitempty" example:"John Doe"`
+	Email       *string   `json:"email,omitempty" example:"user@example.com"`
+	Role        *string   `json:"role,omitempty" example:"user"`
+	Gender      *string   `json:"gender,omitempty" example:"male"`
+	Status      *string   `json:"status,omitempty" example:"active"`
+	Photo       *string   `json:"photo,omitempty" example:"https://example.com/photo.jpg"`
+	PhoneNumber *string   `json:"phoneNumber,omitempty" example:"+998901234567"`
+	Level       *string   `json:"level,omitempty" example:"level_1"`
+	XP          *int32    `json:"xp,omitempty" example:"100"`
+	Balance     *int64    `json:"balance,omitempty" example:"1000"`
+	Group       *string   `json:"group,omitempty" example:"group_1"`
+	IsVerified  *bool     `json:"isVerified,omitempty" example:"true"`
+	DateOfBirth time.Time `json:"dateOfBirth,omitempty" example:"2022-01-01T00:00:00Z"`
 }
 
 type UpdateUserRequest struct {
@@ -70,13 +91,12 @@ type UpdateUserRequest struct {
 	PhoneNumber *string `json:"phoneNumber"`
 	Gender      *string `json:"gender"`
 	Photo       *string `json:"photo"`
-	DateOfBirth *string `json:"dateOfBirth"` 
-	Level       *string  `json:"level,omitempty"`
+	DateOfBirth *string `json:"dateOfBirth"`
+	Level       *string `json:"level,omitempty"`
 	XP          *int32  `json:"xp,omitempty"`
 	Balance     *int64  `json:"balance,omitempty"`
 	OverAll     *int32  `json:"overAll,omitempty"`
 }
-
 
 type UpdatePasswordRequest struct {
 	CurrentPassword string `json:"currentPassword" example:"password123"`

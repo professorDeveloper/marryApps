@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	"math/rand"
 	"net/http"
 	"strings"
 	"time"
@@ -32,13 +31,19 @@ func NewAuthS(cfg *config.Config, repo *repository.Repository) *AuthS {
 	}
 }
 
-func (b *AuthS) GenerateCode4() string {
-	rand.Seed(time.Now().UnixNano())
-	return fmt.Sprintf("%04d", rand.Intn(10000))
-}
 func (s *AuthS) Register(ctx context.Context, req model.RegisterRequest) error {
 	if req.PhoneNumber == "" {
-		return errors.New(http.StatusText(http.StatusBadRequest))
+		return fmt.Errorf("phone number is required")
+	}
+	if req.FullName == "" {
+		return fmt.Errorf("full name is required")
+	}
+
+	if req.DateOfBirth.IsZero() {
+		return fmt.Errorf("date of birth is required")
+	}
+	if req.DateOfBirth.After(time.Now()) {
+		return fmt.Errorf("date of birth cannot be in the future")
 	}
 
 	log.Printf("Starting registration for phone: %s", req.PhoneNumber)
@@ -46,46 +51,41 @@ func (s *AuthS) Register(ctx context.Context, req model.RegisterRequest) error {
 	_, err := s.repo.PgRepo.Repo.GetUserByPhoneNumber(ctx, &req.PhoneNumber)
 	if err == nil {
 		log.Printf("User with phone %s already exists", req.PhoneNumber)
-		return errors.New("user already exists")
+		return fmt.Errorf("user with this phone number already exists")
 	}
 	if !errors.Is(err, pgx.ErrNoRows) {
 		log.Printf("Error checking user existence: %v", err)
-		return err
+		return fmt.Errorf("failed to check user existence: %w", err)
 	}
-	password := req.DateOfBirth.Format("20060102")
+
+	password := req.DateOfBirth.Format("20060102") // YYYYMMDD format
 	hash, err := utils.HashPassword(password)
 	if err != nil {
 		log.Printf("Error hashing password: %v", err)
-		return err
+		return fmt.Errorf("failed to process password: %w", err)
+	}
+	validRoles := map[string]pg.UserRole{
+		"admin":     pg.UserRoleAdmin,
+		"moderator": pg.UserRoleModerator,
+		"student":   pg.UserRoleStudent,
+		"teacher":   pg.UserRoleTeacher,
 	}
 
-	fullName := req.FullName
-	phoneNumber := req.PhoneNumber
-	status := "onhold"
-	dateOfBirth := req.DateOfBirth
-
-	validRoles := map[string]bool{"admin": true, "moderator": true, "student": true, "teacher": true}
-	role := strings.TrimSpace(req.Role)
-	if role == "" || !validRoles[role] {
-		role = "student"
-		log.Printf("Using default role: %s", role)
+	role := strings.TrimSpace(strings.ToLower(req.Role))
+	userRole, validRole := validRoles[role]
+	if !validRole {
+		userRole = pg.UserRoleStudent
+		log.Printf("Using default role: %s", userRole)
 	}
-
-	log.Printf("Creating user with params - Phone: %s, Role: %s, Status: %s",
-		phoneNumber, role, status)
 
 	userParams := pg.CreateUserParams{
 		ID:           uuid.NewString(),
-		PhoneNumber:  &phoneNumber,
-		FullName:     &fullName,
+		PhoneNumber:  &req.PhoneNumber,
+		FullName:     strings.TrimSpace(req.FullName),
 		PasswordHash: &hash,
-		Status:       &status,
-		DateOfBirth:  pgtype.Timestamp{Time: dateOfBirth, Valid: true},
-		Role:         &role,
+		DateOfBirth:  pgtype.Date{Time: req.DateOfBirth.Time, Valid: true},
+		Role:         pg.NullUserRole{UserRole: userRole, Valid: true},
 	}
-
-	log.Printf("Final user params before CreateUser: %+v", userParams)
-	log.Printf("Role pointer value: %s", *userParams.Role)
 
 	user, err := s.repo.PgRepo.Repo.CreateUser(ctx, userParams)
 	if err != nil {
@@ -153,9 +153,9 @@ func (s *AuthS) LoginWithEmail(ctx context.Context, req model.LoginEmailRequest,
 		userParams := pg.CreateUserParams{
 			ID:       uuid.NewString(),
 			Email:    &req.Email,
-			FullName: &req.FullName,
+			FullName: req.FullName,
 			GoogleId: &req.IdToken,
-			Status:   &status,
+			Status:   pg.NullUserStatus{UserStatus: pg.UserStatus(status), Valid: true},
 		}
 		_, err = s.repo.PgRepo.Repo.CreateUser(ctx, userParams)
 		if err != nil {
@@ -186,7 +186,7 @@ func (s *AuthS) LoginWithEmail(ctx context.Context, req model.LoginEmailRequest,
 	_, err = s.repo.PgRepo.Repo.UpdateUser(ctx, pg.UpdateUserParams{
 		ID:       user.ID,
 		GoogleId: &req.IdToken,
-		FullName: &req.FullName,
+		FullName: req.FullName,
 	})
 	if err != nil {
 		return model.LoginResponse{}, errors.New(http.StatusText(http.StatusUnauthorized))
@@ -300,24 +300,18 @@ func (s *AuthS) UpdateUser(ctx context.Context, req model.UpdateUserRequest, use
 		return model.UserResponse{}, fmt.Errorf("failed to fetch user: %w", err)
 	}
 
+	// Initialize params with existing user data
 	params := pg.UpdateUserParams{
-		ID:            existingUser.ID,
-		FullName:      existingUser.FullName,
-		Email:         existingUser.Email,
-		PhoneNumber:   existingUser.PhoneNumber,
-		Gender:        existingUser.Gender,
-		OverAll:       existingUser.OverAll,
-		XP:            existingUser.XP,
-		Balance:       existingUser.Balance,
-		DateOfBirth:   existingUser.DateOfBirth,
-		Photo:         existingUser.Photo,
-		FirebaseToken: existingUser.FirebaseToken,
-		GoogleId:      existingUser.GoogleId,
-		IsVerified:    existingUser.IsVerified,
-		Status:        existingUser.Status,
-		Group:         existingUser.Group,
-		Role:          existingUser.Role,
-		PasswordHash:  existingUser.PasswordHash,
+		ID:          existingUser.ID,
+		FullName:    existingUser.FullName, // Direct string value
+		Email:       existingUser.Email,
+		PhoneNumber: existingUser.PhoneNumber,
+		Gender:      existingUser.Gender, // Keep existing gender
+		OverAll:     existingUser.OverAll,
+		XP:          existingUser.XP,
+		Balance:     existingUser.Balance,
+		DateOfBirth: existingUser.DateOfBirth,
+		Photo:       existingUser.Photo,
 	}
 
 	validGenders := map[string]bool{
@@ -327,7 +321,7 @@ func (s *AuthS) UpdateUser(ctx context.Context, req model.UpdateUserRequest, use
 	}
 
 	if req.FullName != nil && *req.FullName != "" {
-		params.FullName = req.FullName
+		params.FullName = *req.FullName
 	}
 	if req.Email != nil && *req.Email != "" {
 		params.Email = req.Email
@@ -340,7 +334,9 @@ func (s *AuthS) UpdateUser(ctx context.Context, req model.UpdateUserRequest, use
 		if !validGenders[gender] {
 			return model.UserResponse{}, fmt.Errorf("invalid gender value: %s. Allowed values: male, female, other", *req.Gender)
 		}
-		params.Gender = req.Gender
+		// Convert string to UserGender type and create NullUserGender
+		userGender := pg.UserGender(gender)
+		params.Gender = pg.NullUserGender{UserGender: userGender, Valid: true}
 	}
 	if req.OverAll != nil && *req.OverAll >= 0 {
 		params.OverAll = req.OverAll
@@ -380,7 +376,8 @@ func (s *AuthS) UpdateUser(ctx context.Context, req model.UpdateUserRequest, use
 			return model.UserResponse{}, fmt.Errorf("invalid date format: %s", dateStr)
 		}
 
-		params.DateOfBirth = pgtype.Timestamp{
+		// Use pgtype.Date instead of pgtype.Timestamp
+		params.DateOfBirth = pgtype.Date{
 			Time:  parsedTime.UTC(),
 			Valid: true,
 		}
@@ -396,18 +393,52 @@ func (s *AuthS) UpdateUser(ctx context.Context, req model.UpdateUserRequest, use
 }
 
 func toUserResponse(u pg.User) model.UserResponse {
-	var dateOfBirth time.Time
+	var (
+		dateOfBirth time.Time
+		fullName    *string
+		email       *string
+		role        *string
+		gender      *string
+		status      *string
+	)
+
 	if u.DateOfBirth.Valid {
 		dateOfBirth = u.DateOfBirth.Time
 	}
 
+	// Convert non-pointer fields to pointers for the response
+	if u.FullName != "" {
+		fullName = &u.FullName
+	}
+
+	// Copy pointer fields
+	email = u.Email
+
+	// Convert role from NullUserRole to *string
+	if u.Role.Valid {
+		roleStr := string(u.Role.UserRole)
+		role = &roleStr
+	}
+
+	// Convert gender from NullUserGender to *string
+	if u.Gender.Valid {
+		genderStr := string(u.Gender.UserGender)
+		gender = &genderStr
+	}
+
+	// Convert status from NullUserStatus to *string
+	if u.Status.Valid {
+		statusStr := string(u.Status.UserStatus)
+		status = &statusStr
+	}
+
 	return model.UserResponse{
 		ID:          u.ID,
-		FullName:    u.FullName,
-		Email:       u.Email,
-		Role:        u.Role,
-		Gender:      u.Gender,
-		Status:      u.Status,
+		FullName:    fullName,
+		Email:       email,
+		Role:        role,
+		Gender:      gender,
+		Status:      status,
 		Photo:       u.Photo,
 		PhoneNumber: u.PhoneNumber,
 		XP:          u.XP,
