@@ -27,11 +27,11 @@ type AuthI interface {
 type MinioI interface {
 	PutAvatar(ctx context.Context, file io.Reader, size int64, userID string) (string, error)
 	GetAvatar(ctx context.Context, objectName string) (*RealMinio.Object, error)
-	PutVideo(ctx context.Context, file io.Reader, size int64,fileName string) (string, error)
+	PutVideo(ctx context.Context, file io.Reader, size int64,fileName string,extension string) (string, error)
 	GetVideo(ctx context.Context, objectName string) (*RealMinio.Object, error)
-	PutAudio(ctx context.Context, file io.Reader, size int64,fileName string) (string, error)
+	PutAudio(ctx context.Context, file io.Reader, size int64,fileName string,extension string) (string, error)
 	GetAudio(ctx context.Context, objectName string) (*RealMinio.Object, error)
-	PutBook(ctx context.Context, file io.Reader, size int64,fileName string) (string, error)
+	PutBook(ctx context.Context, file io.Reader, size int64,fileName string,extension string) (string, error)
 	GetBook(ctx context.Context, objectName string) (*RealMinio.Object, error)
 }
 type PaymentI interface {

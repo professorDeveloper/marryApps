@@ -42,8 +42,8 @@ func (h *Handler) Register(router *echo.Echo) {
 			user.GET("/me", h.GetUser,mw.CheckLanguage(),mw.CheckAuth(h.cfg))
 			user.PUT("/update", h.UpdateUser,mw.CheckLanguage(),mw.CheckAuth(h.cfg))
 			user.PUT("/password-update", h.UpdatePassword,mw.CheckLanguage(),mw.CheckAuth(h.cfg))
-			user.POST("/avatar", h.UploadAvatar,mw.CheckLanguage(),mw.CheckAuth(h.cfg))
-			user.POST("/avatar/download", h.DownloadAvatar,mw.CheckLanguage(),mw.CheckAuth(h.cfg))
+			user.POST("/image", h.UploadImage,mw.CheckLanguage(),mw.CheckAuth(h.cfg))
+			user.POST("/image/download", h.DownloadImage,mw.CheckLanguage(),mw.CheckAuth(h.cfg))
 		}
 		libarary := api.Group("/library")
 		{

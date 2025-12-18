@@ -24,26 +24,32 @@ type (
 		Google   GoogleConfig   `yaml:"google"`
 		Payme    PaymeConfig    `yaml:"payme"`
 		Click    ClickConfig    `yaml:"click"`
+		OTP      OTPConfig      `yaml:"otp"`
 	}
-	
+
 	ClickConfig struct {
 		Url            string `env:"CLICK_API_URL" env-default:""`
 		ServiceID      string `env:"CLICK_SERVICE_ID" env-default:""`
 		SecretKey      string `env:"CLICK_SECRET_KEY" env-default:""`
 		MerchantID     string `env:"CLICK_MERCHANT_ID" env-default:""`
 		MerchantUserID string `env:"CLICK_MERCHANT_USER_ID" env-default:""`
-		ReturnUrl    string `env:"CLICK_RETURN_URL" env-default:""`
+		ReturnUrl      string `env:"CLICK_RETURN_URL" env-default:""`
 	}
-	
+	OTPConfig struct {
+		Username string `env:"OTP_USERNAME" env-default:""`
+		Secret   string `env:"OTP_SECRET_KEY" env-default:""`
+		ApiUrl   string `env:"OTP_API_URL" env-default:""`
+	}
+
 	PaymeConfig struct {
-		Url          string `env:"PAYME_API_URL" env-default:""`
-		ClientKey string `env:"PAYME_MERCHANT_KEY" env-default:""`
-		MerchantID   string `env:"PAYME_MERCHANT_ID" env-default:""`
-		Login string `env:"PAYME_API_LOGIN" env-default:""`
-		Password string `env:"PAYME_API_PASSWORD" env-default:""`
-		ReturnUrl string `env:"PAYME_RETURN_URL" env-default:""`
+		Url        string `env:"PAYME_API_URL" env-default:""`
+		ClientKey  string `env:"PAYME_MERCHANT_KEY" env-default:""`
+		MerchantID string `env:"PAYME_MERCHANT_ID" env-default:""`
+		Login      string `env:"PAYME_API_LOGIN" env-default:""`
+		Password   string `env:"PAYME_API_PASSWORD" env-default:""`
+		ReturnUrl  string `env:"PAYME_RETURN_URL" env-default:""`
 	}
-	
+
 	AppConfig struct {
 		Name          string `yaml:"name"    env:"APP_NAME"`
 		Version       string `yaml:"version" env:"APP_VERSION"`

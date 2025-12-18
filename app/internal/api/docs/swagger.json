@@ -9,7 +9,7 @@
         "contact": {},
         "version": "1.0"
     },
-    "host": "back.blitz.yurtal.tech",
+    "host": "blitz.yurtal.tech",
     "basePath": "/",
     "paths": {
         "/api/v1/auth/login": {

@@ -210,7 +210,7 @@ definitions:
         example: 100
         type: integer
     type: object
-host: back.blitz.yurtal.tech
+host: blitz.yurtal.tech
 info:
   contact: {}
   description: Blitz API server with multi-language support (de, uz)

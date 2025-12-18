@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"path/filepath"
+	"strings"
 
 	"github.com/labstack/echo/v4"
 	"gitlab.yurtal.tech/company/blitz/back/internal/model"
@@ -21,8 +23,8 @@ import (
 // @Failure 400 {object} model.ErrorResponse "Invalid request or file not found"
 // @Failure 401 {object} model.ErrorResponse "Unauthorized"
 // @Failure 500 {object} model.ErrorResponse "Failed to process upload"
-// @Router /api/v1/user/avatar [post]
-func (h *Handler) UploadAvatar(c echo.Context) error {
+// @Router /api/v1/user/image [post]
+func (h *Handler) UploadImage(c echo.Context) error {
 	ctx := c.Request().Context()
 
 	userIDInterface := c.Get("user_id")
@@ -92,8 +94,8 @@ func (h *Handler) UploadAvatar(c echo.Context) error {
 // @Failure 400 {object} model.ErrorResponse "Invalid request"
 // @Failure 404 {object} model.ErrorResponse "Avatar not found"
 // @Failure 500 {object} model.ErrorResponse "Failed to download file"
-// @Router /api/v1/user/avatar/download [post]
-func (h *Handler) DownloadAvatar(c echo.Context) error {
+// @Router /api/v1/user/image/download [post]
+func (h *Handler) DownloadImage(c echo.Context) error {
 	lang := "uz"
 	if langInterface := c.Get("lang"); langInterface != nil {
 		if langStr, ok := langInterface.(string); ok {
@@ -167,12 +169,15 @@ func (h *Handler) UploadBook(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, model.ErrorResponse{Message: message})
 	}
 	defer src.Close()
+	fileExt := strings.ToLower(filepath.Ext(fileHeader.Filename))
+
 
 	objectName, err := h.service.Minio().PutBook(
 		ctx,
 		src,
 		fileHeader.Size,
 		fileHeader.Filename,
+		fileExt,
 	)
 
 	if err != nil {
@@ -230,7 +235,6 @@ func (h *Handler) DownloadBook(c echo.Context) error {
 
 	return nil
 }
-
 // UploadAudio handles audio upload to MinIO
 // @Summary Upload user audio
 // @Description Uploads a user audio file
@@ -271,6 +275,8 @@ func (h *Handler) UploadAudio(c echo.Context) error {
 		message := model.GetLocalizedMessage(lang, "error_while_getting_file")
 		return c.JSON(http.StatusInternalServerError, model.ErrorResponse{Message: message})
 	}
+	fileExt := strings.ToLower(filepath.Ext(fileHeader.Filename))
+
 	defer src.Close()
 
 	objectName, err := h.service.Minio().PutAudio(
@@ -278,6 +284,7 @@ func (h *Handler) UploadAudio(c echo.Context) error {
 		src,
 		fileHeader.Size,
 		fileHeader.Filename,
+		fileExt,
 	)
 
 	if err != nil {
@@ -365,11 +372,12 @@ func (h *Handler) UploadVideo(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: message})
 	}
 
-	maxSize := int64(50 * 1024 * 1024)
+	maxSize := int64(100 * 1024 * 1024)
 	if fileHeader.Size > maxSize {
 		message := model.GetLocalizedMessage(lang, "file_too_large")
 		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: message})
 	}
+	fileExt := strings.ToLower(filepath.Ext(fileHeader.Filename))
 
 	src, err := fileHeader.Open()
 	if err != nil {
@@ -383,6 +391,7 @@ func (h *Handler) UploadVideo(c echo.Context) error {
 		src,
 		fileHeader.Size,
 		fileHeader.Filename,
+		fileExt,
 	)
 
 	if err != nil {

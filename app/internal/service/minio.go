@@ -31,8 +31,8 @@ func NewMinioS(cfg *config.Config, minioClient *minioClient.Minio) *MinioS {
 
 func (s *MinioS) PutAvatar(ctx context.Context, file io.Reader, size int64, userID string) (string, error) {
 
-	bucketName := model.AvatarBucketName
-	folderName := model.AvatarFolderName
+	bucketName := model.BucketName
+	folderName := model.ImageFolderName
 	s.minioClient.CreateBucket(ctx, bucketName, "")
 
 	fileBuffer := make([]byte, 512)
@@ -63,8 +63,8 @@ func (s *MinioS) PutAvatar(ctx context.Context, file io.Reader, size int64, user
 }
 
 func (s *MinioS) GetAvatar(ctx context.Context, objectName string) (*RealMinio.Object, error) {
-	bucketName := model.AvatarBucketName
-	folderName := model.AvatarFolderName
+	bucketName := model.BucketName
+	folderName := model.ImageFolderName
 	fmt.Println("objectName:", objectName)
 	obj, err := s.minioClient.GetObject(ctx, bucketName, folderName, objectName)
 	if err != nil {
@@ -75,9 +75,9 @@ func (s *MinioS) GetAvatar(ctx context.Context, objectName string) (*RealMinio.O
 	return obj, nil
 }
 
-func (s *MinioS) PutBook(ctx context.Context, file io.Reader, size int64, fileName string) (string, error) {
+func (s *MinioS) PutBook(ctx context.Context, file io.Reader, size int64, fileName string,extension string) (string, error) {
 
-	bucketName := model.AvatarBucketName
+	bucketName := model.BucketName
 	folderName := model.BookFolderName
 	s.minioClient.CreateBucket(ctx, bucketName, "")
 
@@ -87,15 +87,6 @@ func (s *MinioS) PutBook(ctx context.Context, file io.Reader, size int64, fileNa
 		return "", fmt.Errorf("fayl buferini o'qishda xato: %w", err)
 	}
 
-	contentType := http.DetectContentType(fileBuffer[:n])
-
-	extensions, _ := mime.ExtensionsByType(contentType)
-	extension := ""
-	if len(extensions) > 0 {
-		extension = extensions[0]
-	} else {
-		extension = ".bin"
-	}
 	now := time.Now()
 	timestamp := now.Format("20060102150405")
 	cleanFileName := strings.ReplaceAll(fileName, " ", "_")
@@ -115,7 +106,7 @@ func (s *MinioS) PutBook(ctx context.Context, file io.Reader, size int64, fileNa
 	return objectName, nil
 }
 func (s *MinioS) GetBook(ctx context.Context, objectName string) (*RealMinio.Object, error) {
-	bucketName := model.AvatarBucketName
+	bucketName := model.BucketName
 	folderName := model.BookFolderName
 	fmt.Println("objectName:", objectName)
 	obj, err := s.minioClient.GetObject(ctx, bucketName, folderName, objectName)
@@ -127,9 +118,9 @@ func (s *MinioS) GetBook(ctx context.Context, objectName string) (*RealMinio.Obj
 	return obj, nil
 }
 
-func (s *MinioS) PutAudio(ctx context.Context, file io.Reader, size int64, fileName string) (string, error) {
+func (s *MinioS) PutAudio(ctx context.Context, file io.Reader, size int64, fileName string,extension string) (string, error) {
 
-	bucketName := model.AvatarBucketName
+	bucketName := model.BucketName
 	folderName := model.AudioFolderName
 	s.minioClient.CreateBucket(ctx, bucketName, "")
 
@@ -139,15 +130,6 @@ func (s *MinioS) PutAudio(ctx context.Context, file io.Reader, size int64, fileN
 		return "", fmt.Errorf("fayl buferini o'qishda xato: %w", err)
 	}
 
-	contentType := http.DetectContentType(fileBuffer[:n])
-
-	extensions, _ := mime.ExtensionsByType(contentType)
-	extension := ""
-	if len(extensions) > 0 {
-		extension = extensions[0]
-	} else {
-		extension = ".bin"
-	}
 	now := time.Now()
 	timestamp := now.Format("20060102150405")
 	cleanFileName := strings.ReplaceAll(fileName, " ", "_")
@@ -159,7 +141,7 @@ func (s *MinioS) PutAudio(ctx context.Context, file io.Reader, size int64, fileN
 		extension)
 
 	fullReader := io.MultiReader(bytes.NewReader(fileBuffer[:n]), file)
-	_, err = s.minioClient.PutObject(ctx, bucketName, folderName, objectName, fullReader, size, objectName)
+	_, err = s.minioClient.PutObject(ctx, bucketName, folderName, objectName, fullReader, size, extension)
 	if err != nil {
 		return "", fmt.Errorf("minio put object failed: %w", err)
 	}
@@ -167,7 +149,7 @@ func (s *MinioS) PutAudio(ctx context.Context, file io.Reader, size int64, fileN
 	return objectName, nil
 }
 func (s *MinioS) GetAudio(ctx context.Context, objectName string) (*RealMinio.Object, error) {
-	bucketName := model.AvatarBucketName
+	bucketName := model.BucketName
 	folderName := model.AudioFolderName
 	fmt.Println("objectName:", objectName)
 	obj, err := s.minioClient.GetObject(ctx, bucketName, folderName, objectName)
@@ -179,9 +161,9 @@ func (s *MinioS) GetAudio(ctx context.Context, objectName string) (*RealMinio.Ob
 	return obj, nil
 }
 
-func (s *MinioS) PutVideo(ctx context.Context, file io.Reader, size int64, fileName string) (string, error) {
+func (s *MinioS) PutVideo(ctx context.Context, file io.Reader, size int64, fileName string,extension string) (string, error) {
 
-	bucketName := model.AvatarBucketName
+	bucketName := model.BucketName
 	folderName := model.VideoFolderName
 	s.minioClient.CreateBucket(ctx, bucketName, "")
 
@@ -190,17 +172,6 @@ func (s *MinioS) PutVideo(ctx context.Context, file io.Reader, size int64, fileN
 	if err != nil && err != io.EOF {
 		return "", fmt.Errorf("fayl buferini o'qishda xato: %w", err)
 	}
-
-	contentType := http.DetectContentType(fileBuffer[:n])
-
-	extensions, _ := mime.ExtensionsByType(contentType)
-	extension := ""
-	if len(extensions) > 0 {
-		extension = extensions[0]
-	} else {
-		extension = ".bin"
-	}
-
 	now := time.Now()
 	timestamp := now.Format("20060102150405")
 	cleanFileName := strings.ReplaceAll(fileName, " ", "_")
@@ -212,7 +183,7 @@ func (s *MinioS) PutVideo(ctx context.Context, file io.Reader, size int64, fileN
 		extension)
 
 	fullReader := io.MultiReader(bytes.NewReader(fileBuffer[:n]), file)
-	_, err = s.minioClient.PutObject(ctx, bucketName, folderName, objectName, fullReader, size, objectName)
+	_, err = s.minioClient.PutObject(ctx, bucketName, folderName, objectName, fullReader, size, extension)
 	if err != nil {
 		return "", fmt.Errorf("minio put object failed: %w", err)
 	}
@@ -220,7 +191,7 @@ func (s *MinioS) PutVideo(ctx context.Context, file io.Reader, size int64, fileN
 	return objectName, nil
 }
 func (s *MinioS) GetVideo(ctx context.Context, objectName string) (*RealMinio.Object, error) {
-	bucketName := model.AvatarBucketName
+	bucketName := model.BucketName
 	folderName := model.VideoFolderName
 	fmt.Println("objectName:", objectName)
 	obj, err := s.minioClient.GetObject(ctx, bucketName, folderName, objectName)

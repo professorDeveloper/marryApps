@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"math/rand"
 	"net/http"
 	"strings"
 	"time"
@@ -31,6 +32,10 @@ func NewAuthS(cfg *config.Config, repo *repository.Repository) *AuthS {
 	}
 }
 
+func (b *AuthS) GenerateCode4() string {
+	rand.Seed(time.Now().UnixNano())
+	return fmt.Sprintf("%04d", rand.Intn(10000))
+}
 func (s *AuthS) Register(ctx context.Context, req model.RegisterRequest) error {
 	if req.PhoneNumber == "" {
 		return errors.New(http.StatusText(http.StatusBadRequest))
@@ -47,8 +52,8 @@ func (s *AuthS) Register(ctx context.Context, req model.RegisterRequest) error {
 		log.Printf("Error checking user existence: %v", err)
 		return err
 	}
-password := req.DateOfBirth.Format("20060102")	
-hash, err := utils.HashPassword(password)
+	password := req.DateOfBirth.Format("20060102")
+	hash, err := utils.HashPassword(password)
 	if err != nil {
 		log.Printf("Error hashing password: %v", err)
 		return err
@@ -296,16 +301,16 @@ func (s *AuthS) UpdateUser(ctx context.Context, req model.UpdateUserRequest, use
 	}
 
 	params := pg.UpdateUserParams{
-		ID:          existingUser.ID,
-		FullName:    existingUser.FullName,
-		Email:       existingUser.Email,
-		PhoneNumber: existingUser.PhoneNumber,
-		Gender:      existingUser.Gender,
-		OverAll:     existingUser.OverAll,
-		XP:          existingUser.XP,
-		Balance:     existingUser.Balance,
-		DateOfBirth: existingUser.DateOfBirth,
-		Photo:       existingUser.Photo,
+		ID:            existingUser.ID,
+		FullName:      existingUser.FullName,
+		Email:         existingUser.Email,
+		PhoneNumber:   existingUser.PhoneNumber,
+		Gender:        existingUser.Gender,
+		OverAll:       existingUser.OverAll,
+		XP:            existingUser.XP,
+		Balance:       existingUser.Balance,
+		DateOfBirth:   existingUser.DateOfBirth,
+		Photo:         existingUser.Photo,
 		FirebaseToken: existingUser.FirebaseToken,
 		GoogleId:      existingUser.GoogleId,
 		IsVerified:    existingUser.IsVerified,
