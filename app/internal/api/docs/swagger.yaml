@@ -629,7 +629,7 @@ paths:
       summary: Create a new payment invoice
       tags:
       - payments
-  /api/v1/user/avatar:
+  /api/v1/user/image:
     post:
       consumes:
       - multipart/form-data
@@ -664,7 +664,7 @@ paths:
       summary: Upload user avatar
       tags:
       - users
-  /api/v1/user/avatar/download:
+  /api/v1/user/image/download:
     post:
       consumes:
       - application/json

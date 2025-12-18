@@ -654,7 +654,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/v1/user/avatar": {
+        "/api/v1/user/image": {
             "post": {
                 "security": [
                     {
@@ -709,7 +709,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/v1/user/avatar/download": {
+        "/api/v1/user/image/download": {
             "post": {
                 "security": [
                     {
