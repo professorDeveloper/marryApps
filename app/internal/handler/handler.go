@@ -230,6 +230,57 @@ func (h *Handler) Register(router *echo.Echo) {
 			branchCompoundStock.GET("", h.GetCompoundStockByBranch, mw.CheckLanguage(), mw.CheckAuth(h.cfg))
 		}
 
+		// Goods endpoints
+		goods := api.Group("/goods")
+		{
+			goods.POST("", h.CreateGood, mw.CheckLanguage(), mw.CheckAuth(h.cfg))
+			goods.GET("", h.GetAllGoods, mw.CheckLanguage(), mw.CheckAuth(h.cfg))
+			goods.GET("/:id", h.GetGood, mw.CheckLanguage(), mw.CheckAuth(h.cfg))
+			goods.GET("/search/by-price", h.GetGoodsByPriceRange, mw.CheckLanguage(), mw.CheckAuth(h.cfg))
+			goods.GET("/search", h.SearchGoods, mw.CheckLanguage(), mw.CheckAuth(h.cfg))
+			goods.PUT("/:id", h.UpdateGood, mw.CheckLanguage(), mw.CheckAuth(h.cfg))
+			goods.PUT("/:id/price", h.UpdateGoodPrice, mw.CheckLanguage(), mw.CheckAuth(h.cfg))
+			goods.DELETE("/:id", h.DeleteGood, mw.CheckLanguage(), mw.CheckAuth(h.cfg))
+			goods.POST("/:id/restore", h.RestoreGood, mw.CheckLanguage(), mw.CheckAuth(h.cfg))
+			// Good details endpoints
+			goods.GET("/:good_id/details", h.GetGoodDetailsByGood, mw.CheckLanguage(), mw.CheckAuth(h.cfg))
+		}
+
+		// Good details endpoints
+		goodDetails := api.Group("/good-details")
+		{
+			goodDetails.POST("", h.CreateGoodDetail, mw.CheckLanguage(), mw.CheckAuth(h.cfg))
+			goodDetails.GET("/:id", h.GetGoodDetail, mw.CheckLanguage(), mw.CheckAuth(h.cfg))
+			goodDetails.PUT("/:id", h.UpdateGoodDetail, mw.CheckLanguage(), mw.CheckAuth(h.cfg))
+			goodDetails.PUT("/:id/quantity", h.UpdateGoodDetailQuantity, mw.CheckLanguage(), mw.CheckAuth(h.cfg))
+			goodDetails.DELETE("/:id", h.DeleteGoodDetail, mw.CheckLanguage(), mw.CheckAuth(h.cfg))
+			goodDetails.POST("/:id/restore", h.RestoreGoodDetail, mw.CheckLanguage(), mw.CheckAuth(h.cfg))
+		}
+
+		// Category goods endpoints
+		categoryGoods := api.Group("/categories/:category_id/goods")
+		{
+			categoryGoods.GET("", h.GetGoodsByCategory, mw.CheckLanguage(), mw.CheckAuth(h.cfg))
+		}
+
+		// Department goods endpoints
+		departmentGoods := api.Group("/departments/:department_id/goods")
+		{
+			departmentGoods.GET("", h.GetGoodsByDepartment, mw.CheckLanguage(), mw.CheckAuth(h.cfg))
+		}
+
+		// Ingredient goods endpoints
+		ingredientGoods := api.Group("/ingredients/:ingredient_id/goods")
+		{
+			ingredientGoods.GET("", h.GetGoodDetailsByIngredient, mw.CheckLanguage(), mw.CheckAuth(h.cfg))
+		}
+
+		// Compound goods endpoints
+		compoundGoods := api.Group("/compounds/:compound_id/goods")
+		{
+			compoundGoods.GET("", h.GetGoodDetailsByCompound, mw.CheckLanguage(), mw.CheckAuth(h.cfg))
+		}
+
 	}
 
 }

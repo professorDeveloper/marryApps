@@ -22,11 +22,7 @@ CREATE TABLE IF NOT EXISTS goods_details (
   quantity     BIGINT    NOT NULL,
   created_at   TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
   updated_at   TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-  deleted_at   BIGINT    DEFAULT 0,
-  CONSTRAINT chk_ingredient_or_compound CHECK (
-    (ingredient_id IS NOT NULL AND compound_id IS NULL) OR
-    (ingredient_id IS NULL AND compound_id IS NOT NULL)
-  )
+  deleted_at   BIGINT    DEFAULT 0
 );
 
 

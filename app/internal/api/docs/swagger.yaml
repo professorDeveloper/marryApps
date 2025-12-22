@@ -232,6 +232,57 @@ definitions:
       storage_id:
         type: string
     type: object
+  model.CreateGoodDetailRequest:
+    properties:
+      compound_id:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+      good_id:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+      ingredient_id:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+      measurement:
+        example: kg
+        type: string
+      quantity:
+        example: 250
+        type: integer
+    required:
+    - good_id
+    - quantity
+    type: object
+  model.CreateGoodRequest:
+    properties:
+      category_id:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+      cook_time:
+        example: 30
+        type: integer
+      department_id:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+      description:
+        example: Classic Italian pizza with tomatoes and mozzarella
+        type: string
+      description_i18n:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+      name:
+        example: Pizza Margherita
+        type: string
+      name_i18n:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+      price:
+        example: "15000.00"
+        type: string
+    required:
+    - name
+    - price
+    type: object
   model.CreateHallRequest:
     properties:
       branch_id:
@@ -364,6 +415,69 @@ definitions:
     properties:
       message:
         example: error message
+        type: string
+    type: object
+  model.GoodDetailResponse:
+    properties:
+      compound_id:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+      created_at:
+        example: "2022-01-01T00:00:00Z"
+        type: string
+      good_id:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+      id:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+      ingredient_id:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+      measurement:
+        example: kg
+        type: string
+      quantity:
+        example: 250
+        type: integer
+      updated_at:
+        example: "2022-01-01T00:00:00Z"
+        type: string
+    type: object
+  model.GoodResponse:
+    properties:
+      category_id:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+      cook_time:
+        example: 30
+        type: integer
+      created_at:
+        example: "2022-01-01T00:00:00Z"
+        type: string
+      department_id:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+      description:
+        example: Classic Italian pizza with tomatoes and mozzarella
+        type: string
+      description_i18n:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+      id:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+      name:
+        example: Pizza Margherita
+        type: string
+      name_i18n:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+      price:
+        example: "15000.00"
+        type: string
+      updated_at:
+        example: "2022-01-01T00:00:00Z"
         type: string
     type: object
   model.HallResponse:
@@ -673,6 +787,67 @@ definitions:
       storage_id:
         type: string
     type: object
+  model.UpdateGoodDetailQuantityRequest:
+    properties:
+      quantity:
+        example: 250
+        type: integer
+    required:
+    - quantity
+    type: object
+  model.UpdateGoodDetailRequest:
+    properties:
+      compound_id:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+      good_id:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+      ingredient_id:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+      measurement:
+        example: kg
+        type: string
+      quantity:
+        example: 250
+        type: integer
+    type: object
+  model.UpdateGoodPriceRequest:
+    properties:
+      price:
+        example: "15000.00"
+        type: string
+    required:
+    - price
+    type: object
+  model.UpdateGoodRequest:
+    properties:
+      category_id:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+      cook_time:
+        example: 30
+        type: integer
+      department_id:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+      description:
+        example: Classic Italian pizza with tomatoes and mozzarella
+        type: string
+      description_i18n:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+      name:
+        example: Pizza Margherita
+        type: string
+      name_i18n:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+      price:
+        example: "15000.00"
+        type: string
+    type: object
   model.UpdateHallRequest:
     properties:
       branch_id:
@@ -798,7 +973,7 @@ definitions:
         example: admin
         type: string
     type: object
-host: back.maryai.yurtal.tech
+host: localhost:8080
 info:
   contact: {}
   description: MaryAI API server with multi-language support (uz, ru, en)
@@ -1249,6 +1424,56 @@ paths:
       summary: Create a new category
       tags:
       - categories
+  /api/v1/categories/{category_id}/goods:
+    get:
+      description: Get goods by category with pagination
+      parameters:
+      - default: uz
+        description: Language (uz, ru, en)
+        in: query
+        name: lang
+        type: string
+      - description: Category ID
+        in: path
+        name: category_id
+        required: true
+        type: string
+      - default: 20
+        description: Limit
+        in: query
+        name: limit
+        type: integer
+      - default: 0
+        description: Offset
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/model.GoodResponse'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get goods by category
+      tags:
+      - Goods
   /api/v1/categories/{id}:
     delete:
       consumes:
@@ -2347,6 +2572,56 @@ paths:
       summary: Get compound details by compound ID
       tags:
       - Compound Details
+  /api/v1/compounds/{compound_id}/goods:
+    get:
+      description: Get all good details using a specific compound with pagination
+      parameters:
+      - default: uz
+        description: Language (uz, ru, en)
+        in: query
+        name: lang
+        type: string
+      - description: Compound ID
+        in: path
+        name: compound_id
+        required: true
+        type: string
+      - default: 20
+        description: Limit
+        in: query
+        name: limit
+        type: integer
+      - default: 0
+        description: Offset
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/model.GoodDetailResponse'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get good details by compound ID
+      tags:
+      - Good Details
   /api/v1/compounds/{compound_id}/stock:
     get:
       description: Get all stock entries for a specific compound across all branches
@@ -2718,6 +2993,56 @@ paths:
       summary: Create a new department
       tags:
       - departments
+  /api/v1/departments/{department_id}/goods:
+    get:
+      description: Get goods by department with pagination
+      parameters:
+      - default: uz
+        description: Language (uz, ru, en)
+        in: query
+        name: lang
+        type: string
+      - description: Department ID
+        in: path
+        name: department_id
+        required: true
+        type: string
+      - default: 20
+        description: Limit
+        in: query
+        name: limit
+        type: integer
+      - default: 0
+        description: Offset
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/model.GoodResponse'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get goods by department
+      tags:
+      - Goods
   /api/v1/departments/{id}:
     delete:
       consumes:
@@ -2966,6 +3291,717 @@ paths:
       summary: Get departments by storage ID
       tags:
       - departments
+  /api/v1/good-details:
+    post:
+      consumes:
+      - application/json
+      description: Create a new good detail (ingredient or compound in a good)
+      parameters:
+      - default: uz
+        description: Language (uz, ru, en)
+        in: query
+        name: lang
+        type: string
+      - description: Create good detail request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.CreateGoodDetailRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/model.GoodDetailResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create good detail
+      tags:
+      - Good Details
+  /api/v1/good-details/{id}:
+    delete:
+      description: Delete a good detail (soft delete)
+      parameters:
+      - default: uz
+        description: Language (uz, ru, en)
+        in: query
+        name: lang
+        type: string
+      - description: Detail ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete good detail
+      tags:
+      - Good Details
+    get:
+      description: Get good detail by ID
+      parameters:
+      - default: uz
+        description: Language (uz, ru, en)
+        in: query
+        name: lang
+        type: string
+      - description: Detail ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.GoodDetailResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get good detail
+      tags:
+      - Good Details
+    put:
+      consumes:
+      - application/json
+      description: Update good detail
+      parameters:
+      - default: uz
+        description: Language (uz, ru, en)
+        in: query
+        name: lang
+        type: string
+      - description: Detail ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Update good detail request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.UpdateGoodDetailRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.GoodDetailResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update good detail
+      tags:
+      - Good Details
+  /api/v1/good-details/{id}/quantity:
+    put:
+      consumes:
+      - application/json
+      description: Update good detail quantity
+      parameters:
+      - default: uz
+        description: Language (uz, ru, en)
+        in: query
+        name: lang
+        type: string
+      - description: Detail ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Update quantity request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.UpdateGoodDetailQuantityRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.GoodDetailResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update good detail quantity
+      tags:
+      - Good Details
+  /api/v1/good-details/{id}/restore:
+    post:
+      description: Restore a deleted good detail
+      parameters:
+      - default: uz
+        description: Language (uz, ru, en)
+        in: query
+        name: lang
+        type: string
+      - description: Detail ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.GoodDetailResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Restore good detail
+      tags:
+      - Good Details
+  /api/v1/goods:
+    get:
+      description: Get all goods with pagination
+      parameters:
+      - default: uz
+        description: Language (uz, ru, en)
+        in: query
+        name: lang
+        type: string
+      - default: 20
+        description: Limit
+        in: query
+        name: limit
+        type: integer
+      - default: 0
+        description: Offset
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/model.GoodResponse'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get all goods
+      tags:
+      - Goods
+    post:
+      consumes:
+      - application/json
+      description: Create a new good/menu item
+      parameters:
+      - default: uz
+        description: Language (uz, ru, en)
+        in: query
+        name: lang
+        type: string
+      - description: Create good request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.CreateGoodRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/model.GoodResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create good
+      tags:
+      - Goods
+  /api/v1/goods/{good_id}/details:
+    get:
+      description: Get all good details for a specific good
+      parameters:
+      - default: uz
+        description: Language (uz, ru, en)
+        in: query
+        name: lang
+        type: string
+      - description: Good ID
+        in: path
+        name: good_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/model.GoodDetailResponse'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get good details by good ID
+      tags:
+      - Good Details
+  /api/v1/goods/{id}:
+    delete:
+      description: Delete a good (soft delete)
+      parameters:
+      - default: uz
+        description: Language (uz, ru, en)
+        in: query
+        name: lang
+        type: string
+      - description: Good ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete good
+      tags:
+      - Goods
+    get:
+      description: Get good by ID
+      parameters:
+      - default: uz
+        description: Language (uz, ru, en)
+        in: query
+        name: lang
+        type: string
+      - description: Good ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.GoodResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get good
+      tags:
+      - Goods
+    put:
+      consumes:
+      - application/json
+      description: Update good details
+      parameters:
+      - default: uz
+        description: Language (uz, ru, en)
+        in: query
+        name: lang
+        type: string
+      - description: Good ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Update good request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.UpdateGoodRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.GoodResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update good
+      tags:
+      - Goods
+  /api/v1/goods/{id}/price:
+    put:
+      consumes:
+      - application/json
+      description: Update good price
+      parameters:
+      - default: uz
+        description: Language (uz, ru, en)
+        in: query
+        name: lang
+        type: string
+      - description: Good ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Update good price request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.UpdateGoodPriceRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.GoodResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update good price
+      tags:
+      - Goods
+  /api/v1/goods/{id}/restore:
+    post:
+      description: Restore a deleted good
+      parameters:
+      - default: uz
+        description: Language (uz, ru, en)
+        in: query
+        name: lang
+        type: string
+      - description: Good ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.GoodResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Restore good
+      tags:
+      - Goods
+  /api/v1/goods/search:
+    get:
+      description: Search goods by name or description
+      parameters:
+      - default: uz
+        description: Language (uz, ru, en)
+        in: query
+        name: lang
+        type: string
+      - description: Search query
+        in: query
+        name: query
+        required: true
+        type: string
+      - default: 20
+        description: Limit
+        in: query
+        name: limit
+        type: integer
+      - default: 0
+        description: Offset
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/model.GoodResponse'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Search goods
+      tags:
+      - Goods
+  /api/v1/goods/search/by-price:
+    get:
+      description: Get goods within a price range with pagination
+      parameters:
+      - default: uz
+        description: Language (uz, ru, en)
+        in: query
+        name: lang
+        type: string
+      - description: Minimum price
+        in: query
+        name: min_price
+        required: true
+        type: string
+      - description: Maximum price
+        in: query
+        name: max_price
+        required: true
+        type: string
+      - default: 20
+        description: Limit
+        in: query
+        name: limit
+        type: integer
+      - default: 0
+        description: Offset
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/model.GoodResponse'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get goods by price range
+      tags:
+      - Goods
   /api/v1/halls:
     get:
       consumes:
@@ -4189,6 +5225,56 @@ paths:
       summary: Get compound details by ingredient ID
       tags:
       - Compound Details
+  /api/v1/ingredients/{ingredient_id}/goods:
+    get:
+      description: Get all good details using a specific ingredient with pagination
+      parameters:
+      - default: uz
+        description: Language (uz, ru, en)
+        in: query
+        name: lang
+        type: string
+      - description: Ingredient ID
+        in: path
+        name: ingredient_id
+        required: true
+        type: string
+      - default: 20
+        description: Limit
+        in: query
+        name: limit
+        type: integer
+      - default: 0
+        description: Offset
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/model.GoodDetailResponse'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get good details by ingredient ID
+      tags:
+      - Good Details
   /api/v1/ingredients/{ingredientId}/stock:
     get:
       consumes:
@@ -5486,7 +6572,7 @@ paths:
       tags:
       - users
 schemes:
-- https
+- http
 securityDefinitions:
   BearerAuth:
     description: Type "Bearer" followed by a space and your JWT token

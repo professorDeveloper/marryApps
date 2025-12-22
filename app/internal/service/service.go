@@ -175,6 +175,32 @@ type CompoundI interface {
 	RestoreCompoundStock(ctx context.Context, stockID string) (*model.CompoundStockResponse, error)
 }
 
+type GoodsI interface {
+	// Goods methods
+	CreateGood(ctx context.Context, name string, description *string, nameI18n, descriptionI18n, categoryID, departmentID *string, price string, cookTime *int32) (*model.GoodResponse, error)
+	GetGoodByID(ctx context.Context, goodID string) (*model.GoodResponse, error)
+	GetAllGoods(ctx context.Context, limit, offset int32) ([]*model.GoodResponse, error)
+	GetGoodsByCategory(ctx context.Context, categoryID string, limit, offset int32) ([]*model.GoodResponse, error)
+	GetGoodsByDepartment(ctx context.Context, departmentID string, limit, offset int32) ([]*model.GoodResponse, error)
+	GetGoodsByPriceRange(ctx context.Context, minPrice, maxPrice string, limit, offset int32) ([]*model.GoodResponse, error)
+	UpdateGood(ctx context.Context, goodID string, name, description, nameI18n, descriptionI18n, categoryID, departmentID, price *string, cookTime *int32) (*model.GoodResponse, error)
+	UpdateGoodPrice(ctx context.Context, goodID, price string) (*model.GoodResponse, error)
+	DeleteGood(ctx context.Context, goodID string) error
+	RestoreGood(ctx context.Context, goodID string) (*model.GoodResponse, error)
+	SearchGoods(ctx context.Context, query string, limit, offset int32) ([]*model.GoodResponse, error)
+
+	// Good details methods
+	CreateGoodDetail(ctx context.Context, goodID string, ingredientID, compoundID *string, measurement *string, quantity int64) (*model.GoodDetailResponse, error)
+	GetGoodDetailByID(ctx context.Context, detailID string) (*model.GoodDetailResponse, error)
+	GetGoodDetailsByGood(ctx context.Context, goodID string) ([]*model.GoodDetailResponse, error)
+	GetGoodDetailsByIngredient(ctx context.Context, ingredientID string, limit, offset int32) ([]*model.GoodDetailResponse, error)
+	GetGoodDetailsByCompound(ctx context.Context, compoundID string, limit, offset int32) ([]*model.GoodDetailResponse, error)
+	UpdateGoodDetail(ctx context.Context, detailID string, goodID, ingredientID, compoundID *string, measurement *string, quantity *int64) (*model.GoodDetailResponse, error)
+	UpdateGoodDetailQuantity(ctx context.Context, detailID string, quantity int64) (*model.GoodDetailResponse, error)
+	DeleteGoodDetail(ctx context.Context, detailID string) error
+	RestoreGoodDetail(ctx context.Context, detailID string) (*model.GoodDetailResponse, error)
+}
+
 type I interface {
 	Auth() AuthI
 	Payment() PaymentI
@@ -188,6 +214,7 @@ type I interface {
 	Hall() HallI
 	Category() CategoryI
 	Compound() CompoundI
+	Goods() GoodsI
 }
 
 type Service struct {
@@ -203,6 +230,7 @@ type Service struct {
 	hall         HallI
 	category     CategoryI
 	compound     CompoundI
+	goods        GoodsI
 }
 
 func New(cfg *config.Config, repo *repository.Repository, clickClient *paymentClick.Client, paymeClient *paymentPayme.Client, minioClient *minio.Minio) *Service {
@@ -219,6 +247,7 @@ func New(cfg *config.Config, repo *repository.Repository, clickClient *paymentCl
 		hall:         NewHallS(repo),
 		category:     NewCategoryS(repo),
 		compound:     NewCompoundS(repo),
+		goods:        NewGoodsS(repo),
 	}
 }
 
@@ -267,4 +296,8 @@ func (s *Service) Category() CategoryI {
 
 func (s *Service) Compound() CompoundI {
 	return s.compound
+}
+
+func (s *Service) Goods() GoodsI {
+	return s.goods
 }
