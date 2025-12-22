@@ -5,6 +5,14 @@ definitions:
       quantity:
         type: integer
     type: object
+  model.AddToCompoundStockRequest:
+    properties:
+      quantity:
+        example: 50
+        type: integer
+    required:
+    - quantity
+    type: object
   model.BranchResponse:
     properties:
       address:
@@ -49,6 +57,84 @@ definitions:
         example: "2022-01-01T00:00:00Z"
         type: string
     type: object
+  model.CompoundDetailResponse:
+    properties:
+      compound_id:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+      created_at:
+        example: "2022-01-01T00:00:00Z"
+        type: string
+      id:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+      ingredient_id:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+      quantity:
+        example: 500
+        type: integer
+      updated_at:
+        example: "2022-01-01T00:00:00Z"
+        type: string
+    type: object
+  model.CompoundResponse:
+    properties:
+      created_at:
+        example: "2022-01-01T00:00:00Z"
+        type: string
+      department_id:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+      description:
+        example: Base dough for all pizzas
+        type: string
+      description_i18n:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+      id:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+      measurement:
+        example: kg
+        type: string
+      name:
+        example: Pizza Dough
+        type: string
+      name_i18n:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+      price:
+        example: "500.50"
+        type: string
+      quantity:
+        example: 10
+        type: integer
+      updated_at:
+        example: "2022-01-01T00:00:00Z"
+        type: string
+    type: object
+  model.CompoundStockResponse:
+    properties:
+      branch_id:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+      compound_id:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+      created_at:
+        example: "2022-01-01T00:00:00Z"
+        type: string
+      id:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+      quantity:
+        example: 100
+        type: integer
+      updated_at:
+        example: "2022-01-01T00:00:00Z"
+        type: string
+    type: object
   model.CreateBranchRequest:
     properties:
       address:
@@ -77,6 +163,65 @@ definitions:
       storage_id:
         example: 123e4567-e89b-12d3-a456-426614174000
         type: string
+    type: object
+  model.CreateCompoundDetailRequest:
+    properties:
+      compound_id:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+      ingredient_id:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+      quantity:
+        example: 500
+        type: integer
+    required:
+    - compound_id
+    - ingredient_id
+    type: object
+  model.CreateCompoundRequest:
+    properties:
+      department_id:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+      description:
+        example: Base dough for all pizzas
+        type: string
+      description_i18n:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+      measurement:
+        example: kg
+        type: string
+      name:
+        example: Pizza Dough
+        type: string
+      name_i18n:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+      price:
+        example: "500.50"
+        type: string
+      quantity:
+        example: 10
+        type: integer
+    required:
+    - name
+    type: object
+  model.CreateCompoundStockRequest:
+    properties:
+      branch_id:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+      compound_id:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+      quantity:
+        example: 100
+        type: integer
+    required:
+    - branch_id
+    - compound_id
     type: object
   model.CreateDepartmentRequest:
     properties:
@@ -376,6 +521,14 @@ definitions:
       message:
         type: string
     type: object
+  model.RemoveFromCompoundStockRequest:
+    properties:
+      quantity:
+        example: 50
+        type: integer
+    required:
+    - quantity
+    type: object
   model.ShiftResponse:
     properties:
       branch_id:
@@ -465,6 +618,51 @@ definitions:
       storage_id:
         example: 123e4567-e89b-12d3-a456-426614174000
         type: string
+    type: object
+  model.UpdateCompoundDetailRequest:
+    properties:
+      compound_id:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+      ingredient_id:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+      quantity:
+        example: 500
+        type: integer
+    type: object
+  model.UpdateCompoundRequest:
+    properties:
+      department_id:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+      description:
+        example: Base dough for all pizzas
+        type: string
+      description_i18n:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+      measurement:
+        example: kg
+        type: string
+      name:
+        example: Pizza Dough
+        type: string
+      name_i18n:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+      price:
+        example: "500.50"
+        type: string
+      quantity:
+        example: 10
+        type: integer
+    type: object
+  model.UpdateCompoundStockRequest:
+    properties:
+      quantity:
+        example: 100
+        type: integer
     type: object
   model.UpdateDepartmentRequest:
     properties:
@@ -774,6 +972,56 @@ paths:
       summary: Create a new branch
       tags:
       - branches
+  /api/v1/branches/{branch_id}/compound-stock:
+    get:
+      description: Get all compound stocks for a specific branch with pagination
+      parameters:
+      - default: uz
+        description: Language (uz, ru, en)
+        in: query
+        name: lang
+        type: string
+      - description: Branch ID
+        in: path
+        name: branch_id
+        required: true
+        type: string
+      - default: 20
+        description: Limit
+        in: query
+        name: limit
+        type: integer
+      - default: 0
+        description: Offset
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/model.CompoundStockResponse'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get compound stock by branch
+      tags:
+      - Compound Stock
   /api/v1/branches/{branchId}/ingredient-stock:
     get:
       consumes:
@@ -1375,6 +1623,1029 @@ paths:
       summary: Get categories by storage
       tags:
       - categories
+  /api/v1/compound-details:
+    post:
+      consumes:
+      - application/json
+      description: Create a new compound detail (ingredient in a compound)
+      parameters:
+      - default: uz
+        description: Language (uz, ru, en)
+        in: query
+        name: lang
+        type: string
+      - description: Create compound detail request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.CreateCompoundDetailRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/model.CompoundDetailResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create compound detail
+      tags:
+      - Compound Details
+  /api/v1/compound-details/{id}:
+    delete:
+      description: Delete a compound detail (soft delete)
+      parameters:
+      - default: uz
+        description: Language (uz, ru, en)
+        in: query
+        name: lang
+        type: string
+      - description: Detail ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete compound detail
+      tags:
+      - Compound Details
+    get:
+      description: Get compound detail by ID
+      parameters:
+      - default: uz
+        description: Language (uz, ru, en)
+        in: query
+        name: lang
+        type: string
+      - description: Detail ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.CompoundDetailResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get compound detail
+      tags:
+      - Compound Details
+    put:
+      consumes:
+      - application/json
+      description: Update compound detail quantity
+      parameters:
+      - default: uz
+        description: Language (uz, ru, en)
+        in: query
+        name: lang
+        type: string
+      - description: Detail ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Update compound detail request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.UpdateCompoundDetailRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.CompoundDetailResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update compound detail
+      tags:
+      - Compound Details
+  /api/v1/compound-details/{id}/restore:
+    post:
+      description: Restore a deleted compound detail
+      parameters:
+      - default: uz
+        description: Language (uz, ru, en)
+        in: query
+        name: lang
+        type: string
+      - description: Detail ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.CompoundDetailResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Restore compound detail
+      tags:
+      - Compound Details
+  /api/v1/compound-stock:
+    get:
+      description: Get all compound stocks with pagination
+      parameters:
+      - default: uz
+        description: Language (uz, ru, en)
+        in: query
+        name: lang
+        type: string
+      - default: 20
+        description: Limit
+        in: query
+        name: limit
+        type: integer
+      - default: 0
+        description: Offset
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/model.CompoundStockResponse'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get all compound stock
+      tags:
+      - Compound Stock
+    post:
+      consumes:
+      - application/json
+      description: Create a new compound stock entry for a branch
+      parameters:
+      - default: uz
+        description: Language (uz, ru, en)
+        in: query
+        name: lang
+        type: string
+      - description: Create compound stock request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.CreateCompoundStockRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/model.CompoundStockResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create compound stock
+      tags:
+      - Compound Stock
+  /api/v1/compound-stock/{id}:
+    delete:
+      description: Delete compound stock (soft delete)
+      parameters:
+      - default: uz
+        description: Language (uz, ru, en)
+        in: query
+        name: lang
+        type: string
+      - description: Stock ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete compound stock
+      tags:
+      - Compound Stock
+    get:
+      description: Get compound stock by ID
+      parameters:
+      - default: uz
+        description: Language (uz, ru, en)
+        in: query
+        name: lang
+        type: string
+      - description: Stock ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.CompoundStockResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get compound stock
+      tags:
+      - Compound Stock
+    put:
+      consumes:
+      - application/json
+      description: Update compound stock quantity
+      parameters:
+      - default: uz
+        description: Language (uz, ru, en)
+        in: query
+        name: lang
+        type: string
+      - description: Stock ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Update compound stock request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.UpdateCompoundStockRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.CompoundStockResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update compound stock
+      tags:
+      - Compound Stock
+  /api/v1/compound-stock/{id}/add:
+    post:
+      consumes:
+      - application/json
+      description: Add quantity to compound stock
+      parameters:
+      - default: uz
+        description: Language (uz, ru, en)
+        in: query
+        name: lang
+        type: string
+      - description: Stock ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Add to compound stock request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.AddToCompoundStockRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.CompoundStockResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Add to compound stock
+      tags:
+      - Compound Stock
+  /api/v1/compound-stock/{id}/remove:
+    post:
+      consumes:
+      - application/json
+      description: Remove quantity from compound stock
+      parameters:
+      - default: uz
+        description: Language (uz, ru, en)
+        in: query
+        name: lang
+        type: string
+      - description: Stock ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Remove from compound stock request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.RemoveFromCompoundStockRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.CompoundStockResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Remove from compound stock
+      tags:
+      - Compound Stock
+  /api/v1/compound-stock/{id}/restore:
+    post:
+      description: Restore deleted compound stock
+      parameters:
+      - default: uz
+        description: Language (uz, ru, en)
+        in: query
+        name: lang
+        type: string
+      - description: Stock ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.CompoundStockResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Restore compound stock
+      tags:
+      - Compound Stock
+  /api/v1/compound-stock/search:
+    get:
+      description: Get compound stock for a specific compound in a specific branch
+      parameters:
+      - default: uz
+        description: Language (uz, ru, en)
+        in: query
+        name: lang
+        type: string
+      - description: Compound ID
+        in: query
+        name: compound_id
+        required: true
+        type: string
+      - description: Branch ID
+        in: query
+        name: branch_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.CompoundStockResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get compound stock by compound and branch
+      tags:
+      - Compound Stock
+  /api/v1/compounds:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve all compounds with pagination
+      parameters:
+      - description: 'Limit (default: 20)'
+        in: query
+        name: limit
+        type: integer
+      - description: 'Offset (default: 0)'
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Compounds found
+          schema:
+            items:
+              $ref: '#/definitions/model.CompoundResponse'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get all compounds
+      tags:
+      - compounds
+    post:
+      consumes:
+      - application/json
+      description: Create a new compound with ingredients and pricing
+      parameters:
+      - description: Compound creation data
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/model.CreateCompoundRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Compound created successfully
+          schema:
+            $ref: '#/definitions/model.CompoundResponse'
+        "400":
+          description: Invalid request data
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create a new compound
+      tags:
+      - compounds
+  /api/v1/compounds/{compound_id}/details:
+    get:
+      description: Get all compound details for a specific compound
+      parameters:
+      - default: uz
+        description: Language (uz, ru, en)
+        in: query
+        name: lang
+        type: string
+      - description: Compound ID
+        in: path
+        name: compound_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/model.CompoundDetailResponse'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get compound details by compound ID
+      tags:
+      - Compound Details
+  /api/v1/compounds/{compound_id}/stock:
+    get:
+      description: Get all stock entries for a specific compound across all branches
+        with pagination
+      parameters:
+      - default: uz
+        description: Language (uz, ru, en)
+        in: query
+        name: lang
+        type: string
+      - description: Compound ID
+        in: path
+        name: compound_id
+        required: true
+        type: string
+      - default: 20
+        description: Limit
+        in: query
+        name: limit
+        type: integer
+      - default: 0
+        description: Offset
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/model.CompoundStockResponse'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get compound stock by compound
+      tags:
+      - Compound Stock
+  /api/v1/compounds/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Soft delete a compound by ID
+      parameters:
+      - description: Compound ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: Compound deleted successfully
+        "400":
+          description: Invalid ID format
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: Compound not found
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete a compound
+      tags:
+      - compounds
+    get:
+      consumes:
+      - application/json
+      description: Retrieve a specific compound by its ID
+      parameters:
+      - description: Compound ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Compound found
+          schema:
+            $ref: '#/definitions/model.CompoundResponse'
+        "400":
+          description: Invalid ID format
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: Compound not found
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get a compound by ID
+      tags:
+      - compounds
+    put:
+      consumes:
+      - application/json
+      description: Update an existing compound
+      parameters:
+      - description: Compound ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Compound update data
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/model.UpdateCompoundRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Compound updated successfully
+          schema:
+            $ref: '#/definitions/model.CompoundResponse'
+        "400":
+          description: Invalid request data
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: Compound not found
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update a compound
+      tags:
+      - compounds
+  /api/v1/compounds/{id}/restore:
+    post:
+      consumes:
+      - application/json
+      description: Restore a soft-deleted compound by ID
+      parameters:
+      - description: Compound ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Compound restored successfully
+          schema:
+            $ref: '#/definitions/model.CompoundResponse'
+        "400":
+          description: Invalid ID format
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: Compound not found
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Restore a compound
+      tags:
+      - compounds
+  /api/v1/compounds/department/{departmentId}:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve all compounds for a specific department
+      parameters:
+      - description: Department ID
+        in: path
+        name: departmentId
+        required: true
+        type: string
+      - description: 'Limit (default: 20)'
+        in: query
+        name: limit
+        type: integer
+      - description: 'Offset (default: 0)'
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Compounds found
+          schema:
+            items:
+              $ref: '#/definitions/model.CompoundResponse'
+            type: array
+        "400":
+          description: Invalid ID format
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get compounds by department
+      tags:
+      - compounds
+  /api/v1/compounds/search:
+    get:
+      consumes:
+      - application/json
+      description: Search for compounds by name or description with pagination
+      parameters:
+      - description: Search query
+        in: query
+        name: q
+        required: true
+        type: string
+      - description: 'Limit (default: 20)'
+        in: query
+        name: limit
+        type: integer
+      - description: 'Offset (default: 0)'
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Compounds found
+          schema:
+            items:
+              $ref: '#/definitions/model.CompoundResponse'
+            type: array
+        "400":
+          description: Invalid request data
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Search compounds
+      tags:
+      - compounds
   /api/v1/departments:
     get:
       consumes:
@@ -2868,6 +4139,56 @@ paths:
       summary: Restore ingredient
       tags:
       - ingredients
+  /api/v1/ingredients/{ingredient_id}/compounds:
+    get:
+      description: Get all compound details using a specific ingredient with pagination
+      parameters:
+      - default: uz
+        description: Language (uz, ru, en)
+        in: query
+        name: lang
+        type: string
+      - description: Ingredient ID
+        in: path
+        name: ingredient_id
+        required: true
+        type: string
+      - default: 20
+        description: Limit
+        in: query
+        name: limit
+        type: integer
+      - default: 0
+        description: Offset
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/model.CompoundDetailResponse'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get compound details by ingredient ID
+      tags:
+      - Compound Details
   /api/v1/ingredients/{ingredientId}/stock:
     get:
       consumes:
@@ -4165,7 +5486,7 @@ paths:
       tags:
       - users
 schemes:
-- http
+- https
 securityDefinitions:
   BearerAuth:
     description: Type "Bearer" followed by a space and your JWT token

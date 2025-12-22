@@ -141,6 +141,40 @@ type CategoryI interface {
 	SearchCategories(ctx context.Context, query string, limit, offset int32) ([]*model.CategoryResponse, error)
 }
 
+type CompoundI interface {
+	// Compound methods
+	CreateCompound(ctx context.Context, name string, nameI18n, description, descriptionI18n, measurement, departmentID *string, quantity int32, price *string) (*model.CompoundResponse, error)
+	GetCompoundByID(ctx context.Context, compoundID string) (*model.CompoundResponse, error)
+	GetAllCompounds(ctx context.Context, limit, offset int32) ([]*model.CompoundResponse, error)
+	GetCompoundsByDepartmentID(ctx context.Context, departmentID string, limit, offset int32) ([]*model.CompoundResponse, error)
+	UpdateCompound(ctx context.Context, compoundID string, name, nameI18n, description, descriptionI18n, measurement, departmentID *string, quantity *int32, price *string) (*model.CompoundResponse, error)
+	DeleteCompound(ctx context.Context, compoundID string) error
+	RestoreCompound(ctx context.Context, compoundID string) (*model.CompoundResponse, error)
+	SearchCompounds(ctx context.Context, query string, limit, offset int32) ([]*model.CompoundResponse, error)
+
+	// CompoundDetail methods
+	CreateCompoundDetail(ctx context.Context, compoundID, ingredientID string, quantity int64) (*model.CompoundDetailResponse, error)
+	GetCompoundDetailByID(ctx context.Context, detailID string) (*model.CompoundDetailResponse, error)
+	GetCompoundDetailsByCompoundID(ctx context.Context, compoundID string) ([]*model.CompoundDetailResponse, error)
+	GetCompoundDetailsByIngredientID(ctx context.Context, ingredientID string, limit, offset int32) ([]*model.CompoundDetailResponse, error)
+	UpdateCompoundDetail(ctx context.Context, detailID string, compoundID, ingredientID *string, quantity *int64) (*model.CompoundDetailResponse, error)
+	DeleteCompoundDetail(ctx context.Context, detailID string) error
+	RestoreCompoundDetail(ctx context.Context, detailID string) (*model.CompoundDetailResponse, error)
+
+	// CompoundStock methods
+	CreateCompoundStock(ctx context.Context, compoundID, branchID string, quantity int64) (*model.CompoundStockResponse, error)
+	GetCompoundStockByID(ctx context.Context, stockID string) (*model.CompoundStockResponse, error)
+	GetStockByCompoundAndBranch(ctx context.Context, compoundID, branchID string) (*model.CompoundStockResponse, error)
+	GetAllCompoundStock(ctx context.Context, limit, offset int32) ([]*model.CompoundStockResponse, error)
+	GetCompoundStockByBranchID(ctx context.Context, branchID string, limit, offset int32) ([]*model.CompoundStockResponse, error)
+	GetCompoundStockByCompoundID(ctx context.Context, compoundID string, limit, offset int32) ([]*model.CompoundStockResponse, error)
+	UpdateCompoundStock(ctx context.Context, stockID string, quantity int64) (*model.CompoundStockResponse, error)
+	AddToCompoundStock(ctx context.Context, stockID string, quantity int64) (*model.CompoundStockResponse, error)
+	RemoveFromCompoundStock(ctx context.Context, stockID string, quantity int64) (*model.CompoundStockResponse, error)
+	DeleteCompoundStock(ctx context.Context, stockID string) error
+	RestoreCompoundStock(ctx context.Context, stockID string) (*model.CompoundStockResponse, error)
+}
+
 type I interface {
 	Auth() AuthI
 	Payment() PaymentI
@@ -153,6 +187,7 @@ type I interface {
 	Department() DepartmentI
 	Hall() HallI
 	Category() CategoryI
+	Compound() CompoundI
 }
 
 type Service struct {
@@ -167,6 +202,7 @@ type Service struct {
 	department   DepartmentI
 	hall         HallI
 	category     CategoryI
+	compound     CompoundI
 }
 
 func New(cfg *config.Config, repo *repository.Repository, clickClient *paymentClick.Client, paymeClient *paymentPayme.Client, minioClient *minio.Minio) *Service {
@@ -182,6 +218,7 @@ func New(cfg *config.Config, repo *repository.Repository, clickClient *paymentCl
 		department:   NewDepartmentS(repo),
 		hall:         NewHallS(repo),
 		category:     NewCategoryS(repo),
+		compound:     NewCompoundS(repo),
 	}
 }
 
@@ -226,4 +263,8 @@ func (s *Service) Hall() HallI {
 
 func (s *Service) Category() CategoryI {
 	return s.category
+}
+
+func (s *Service) Compound() CompoundI {
+	return s.compound
 }

@@ -31,7 +31,7 @@ import (
 // @description MaryAI API server with multi-language support (uz, ru, en)
 // @host back.maryai.yurtal.tech
 // @BasePath /
-// @schemes http
+// @schemes https
 
 // @securityDefinitions.apikey BearerAuth
 // @in header

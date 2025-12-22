@@ -182,6 +182,54 @@ func (h *Handler) Register(router *echo.Echo) {
 			categories.POST("/:id/restore", h.RestoreCategory, mw.CheckLanguage(), mw.CheckAuth(h.cfg))
 		}
 
+		compounds := api.Group("/compounds")
+		{
+			compounds.POST("", h.CreateCompound, mw.CheckLanguage(), mw.CheckAuth(h.cfg))
+			compounds.GET("", h.GetAllCompounds, mw.CheckLanguage(), mw.CheckAuth(h.cfg))
+			compounds.GET("/:id", h.GetCompoundByID, mw.CheckLanguage(), mw.CheckAuth(h.cfg))
+			compounds.GET("/department/:departmentId", h.GetCompoundsByDepartmentID, mw.CheckLanguage(), mw.CheckAuth(h.cfg))
+			compounds.PUT("/:id", h.UpdateCompound, mw.CheckLanguage(), mw.CheckAuth(h.cfg))
+			compounds.DELETE("/:id", h.DeleteCompound, mw.CheckLanguage(), mw.CheckAuth(h.cfg))
+			compounds.POST("/:id/restore", h.RestoreCompound, mw.CheckLanguage(), mw.CheckAuth(h.cfg))
+			compounds.GET("/search", h.SearchCompounds, mw.CheckLanguage(), mw.CheckAuth(h.cfg))
+			// Compound details endpoints
+			compounds.GET("/:compound_id/details", h.GetCompoundDetailsByCompound, mw.CheckLanguage(), mw.CheckAuth(h.cfg))
+			// Compound stock endpoints
+			compounds.GET("/:compound_id/stock", h.GetCompoundStockByCompound, mw.CheckLanguage(), mw.CheckAuth(h.cfg))
+		}
+
+		compoundDetails := api.Group("/compound-details")
+		{
+			compoundDetails.POST("", h.CreateCompoundDetail, mw.CheckLanguage(), mw.CheckAuth(h.cfg))
+			compoundDetails.GET("/:id", h.GetCompoundDetail, mw.CheckLanguage(), mw.CheckAuth(h.cfg))
+			compoundDetails.PUT("/:id", h.UpdateCompoundDetail, mw.CheckLanguage(), mw.CheckAuth(h.cfg))
+			compoundDetails.DELETE("/:id", h.DeleteCompoundDetail, mw.CheckLanguage(), mw.CheckAuth(h.cfg))
+			compoundDetails.POST("/:id/restore", h.RestoreCompoundDetail, mw.CheckLanguage(), mw.CheckAuth(h.cfg))
+		}
+
+		ingredientCompounds := api.Group("/ingredients/:ingredient_id/compounds")
+		{
+			ingredientCompounds.GET("", h.GetCompoundDetailsByIngredient, mw.CheckLanguage(), mw.CheckAuth(h.cfg))
+		}
+
+		compoundStock := api.Group("/compound-stock")
+		{
+			compoundStock.POST("", h.CreateCompoundStock, mw.CheckLanguage(), mw.CheckAuth(h.cfg))
+			compoundStock.GET("", h.GetAllCompoundStock, mw.CheckLanguage(), mw.CheckAuth(h.cfg))
+			compoundStock.GET("/search", h.GetCompoundStockByBranchAndCompound, mw.CheckLanguage(), mw.CheckAuth(h.cfg))
+			compoundStock.GET("/:id", h.GetCompoundStock, mw.CheckLanguage(), mw.CheckAuth(h.cfg))
+			compoundStock.PUT("/:id", h.UpdateCompoundStock, mw.CheckLanguage(), mw.CheckAuth(h.cfg))
+			compoundStock.POST("/:id/add", h.AddToCompoundStock, mw.CheckLanguage(), mw.CheckAuth(h.cfg))
+			compoundStock.POST("/:id/remove", h.RemoveFromCompoundStock, mw.CheckLanguage(), mw.CheckAuth(h.cfg))
+			compoundStock.DELETE("/:id", h.DeleteCompoundStock, mw.CheckLanguage(), mw.CheckAuth(h.cfg))
+			compoundStock.POST("/:id/restore", h.RestoreCompoundStock, mw.CheckLanguage(), mw.CheckAuth(h.cfg))
+		}
+
+		branchCompoundStock := api.Group("/branches/:branch_id/compound-stock")
+		{
+			branchCompoundStock.GET("", h.GetCompoundStockByBranch, mw.CheckLanguage(), mw.CheckAuth(h.cfg))
+		}
+
 	}
 
 }
