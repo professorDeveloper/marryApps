@@ -1,5 +1,143 @@
 basePath: /
 definitions:
+  handler.stockAdjustRequest:
+    properties:
+      quantity:
+        type: integer
+    type: object
+  model.BranchResponse:
+    properties:
+      address:
+        type: string
+      created_at:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      name_i18n:
+        type: string
+      phone:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  model.CategoryResponse:
+    properties:
+      created_at:
+        example: "2022-01-01T00:00:00Z"
+        type: string
+      department_id:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+      id:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+      name:
+        example: Appetizers
+        type: string
+      name_i18n:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+      parent:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+      storage_id:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+      updated_at:
+        example: "2022-01-01T00:00:00Z"
+        type: string
+    type: object
+  model.CreateBranchRequest:
+    properties:
+      address:
+        type: string
+      name:
+        type: string
+      name_i18n:
+        type: string
+      phone:
+        type: string
+    type: object
+  model.CreateCategoryRequest:
+    properties:
+      department_id:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+      name:
+        example: Appetizers
+        type: string
+      name_i18n:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+      parent:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+      storage_id:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+    type: object
+  model.CreateDepartmentRequest:
+    properties:
+      name:
+        type: string
+      name_i18n:
+        type: string
+      storage_id:
+        type: string
+    type: object
+  model.CreateHallRequest:
+    properties:
+      branch_id:
+        type: string
+      name:
+        type: string
+      name_i18n:
+        type: string
+    type: object
+  model.CreateIngredientGroupRequest:
+    properties:
+      name:
+        example: Vegetables
+        type: string
+      name_i18n:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+    type: object
+  model.CreateIngredientRequest:
+    properties:
+      brand_id:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+      group_id:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+      measurement:
+        example: kg
+        type: string
+      name:
+        example: Tomato
+        type: string
+      name_i18n:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+      picture_url:
+        example: https://example.com/tomato.jpg
+        type: string
+    type: object
+  model.CreateIngredientStockRequest:
+    properties:
+      branch_id:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+      ingredient_id:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+      quantity:
+        example: 100
+        type: integer
+    type: object
   model.CreateInvoiceResponse:
     properties:
       data:
@@ -14,26 +152,61 @@ definitions:
       error_note:
         type: string
     type: object
-  model.CreatePriceForLevelRequest:
+  model.CreateShiftRequest:
     properties:
-      amount:
-        type: integer
-      level:
+      branch_id:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+      close_time:
+        example: "17:00:00"
+        type: string
+      name:
+        example: Morning Shift
+        type: string
+      open_time:
+        example: "09:00:00"
+        type: string
+      role:
+        example: waiter
+        type: string
+      working_days:
+        example: Mon,Tue,Wed,Thu,Fri
         type: string
     type: object
-  model.CreatePriceForLevelResponse:
+  model.CreateStorageRequest:
     properties:
-      data:
-        $ref: '#/definitions/model.PriceForLevelResponse'
-      error:
-        type: integer
-      error_note:
+      branch_id:
+        type: string
+      name:
+        type: string
+      name_i18n:
         type: string
     type: object
-  model.DownloadRequest:
+  model.CreateTranslationRequest:
     properties:
-      object_name:
-        example: c0f18a64-7f5c-4425-9414-1b01cddee9d9/{extension}
+      en:
+        example: Hello
+        type: string
+      ru:
+        example: Привет
+        type: string
+      uz:
+        example: Salom
+        type: string
+    type: object
+  model.DepartmentResponse:
+    properties:
+      created_at:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      name_i18n:
+        type: string
+      storage_id:
+        type: string
+      updated_at:
         type: string
     type: object
   model.DownloadResponse:
@@ -48,25 +221,107 @@ definitions:
         example: error message
         type: string
     type: object
-  model.GoogleAuthRequest:
+  model.HallResponse:
     properties:
-      app_type:
+      branch_id:
         type: string
-      id_token:
+      created_at:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      name_i18n:
+        type: string
+      updated_at:
         type: string
     type: object
   model.IndexCreation:
     properties:
+      plan_id:
+        type: string
       provider:
+        type: string
+    type: object
+  model.IngredientGroupResponse:
+    properties:
+      created_at:
+        example: "2022-01-01T00:00:00Z"
+        type: string
+      id:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+      name:
+        example: Vegetables
+        type: string
+      name_i18n:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+      updated_at:
+        example: "2022-01-01T00:00:00Z"
+        type: string
+    type: object
+  model.IngredientResponse:
+    properties:
+      brand_id:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+      created_at:
+        example: "2022-01-01T00:00:00Z"
+        type: string
+      group_id:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+      id:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+      measurement:
+        example: kg
+        type: string
+      name:
+        example: Tomato
+        type: string
+      name_i18n:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+      picture_url:
+        example: https://example.com/tomato.jpg
+        type: string
+      updated_at:
+        example: "2022-01-01T00:00:00Z"
+        type: string
+    type: object
+  model.IngredientStockResponse:
+    properties:
+      branch_id:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+      created_at:
+        example: "2022-01-01T00:00:00Z"
+        type: string
+      id:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+      ingredient_id:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+      quantity:
+        example: 100
+        type: integer
+      updated_at:
+        example: "2022-01-01T00:00:00Z"
         type: string
     type: object
   model.LoginRequest:
     properties:
       password:
-        example: "20021220"
+        example: Password:Javohir
         type: string
-      phoneNumber:
-        example: "+998934722002"
+      pincode:
+        example: "1234"
+        type: string
+      username:
+        example: admin
         type: string
     type: object
   model.LoginResponse:
@@ -79,15 +334,6 @@ definitions:
         type: string
       user:
         $ref: '#/definitions/model.UserResponse'
-    type: object
-  model.PriceForLevelResponse:
-    properties:
-      amount:
-        type: integer
-      id:
-        type: string
-      level:
-        type: string
     type: object
   model.RefreshRequest:
     properties:
@@ -106,18 +352,23 @@ definitions:
     type: object
   model.RegisterRequest:
     properties:
-      dateOfBirth:
-        example: "2002-04-06"
-        format: date
-        type: string
       fullName:
-        example: Muslimbek Yarashev
+        example: Javohir Khasanov
+        type: string
+      password:
+        example: Password:Javohir
         type: string
       phoneNumber:
-        example: "+998934722002"
+        example: "+998957749110"
+        type: string
+      pincode:
+        example: "1234"
         type: string
       role:
-        example: student
+        example: user
+        type: string
+      username:
+        example: admin
         type: string
     type: object
   model.RegisterResponse:
@@ -125,11 +376,149 @@ definitions:
       message:
         type: string
     type: object
+  model.ShiftResponse:
+    properties:
+      branch_id:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+      close_time:
+        example: "17:00:00"
+        type: string
+      created_at:
+        example: "2022-01-01T00:00:00Z"
+        type: string
+      id:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+      name:
+        example: Morning Shift
+        type: string
+      open_time:
+        example: "09:00:00"
+        type: string
+      role:
+        example: waiter
+        type: string
+      updated_at:
+        example: "2022-01-01T00:00:00Z"
+        type: string
+      working_days:
+        example: Mon,Tue,Wed,Thu,Fri
+        type: string
+    type: object
+  model.StorageResponse:
+    properties:
+      branch_id:
+        type: string
+      created_at:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      name_i18n:
+        type: string
+      updated_at:
+        type: string
+    type: object
   model.SuccessResponse:
     properties:
       message:
         example: Password updated successfully
         type: string
+    type: object
+  model.TranslationResponse:
+    properties:
+      created_at:
+        example: "2022-01-01T00:00:00Z"
+        type: string
+      en:
+        example: Hello
+        type: string
+      id:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+      ru:
+        example: Привет
+        type: string
+      updated_at:
+        example: "2022-01-01T00:00:00Z"
+        type: string
+      uz:
+        example: Salom
+        type: string
+    type: object
+  model.UpdateCategoryRequest:
+    properties:
+      department_id:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+      name:
+        example: Appetizers
+        type: string
+      name_i18n:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+      parent:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+      storage_id:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+    type: object
+  model.UpdateDepartmentRequest:
+    properties:
+      name:
+        type: string
+      name_i18n:
+        type: string
+      storage_id:
+        type: string
+    type: object
+  model.UpdateHallRequest:
+    properties:
+      branch_id:
+        type: string
+      name:
+        type: string
+      name_i18n:
+        type: string
+    type: object
+  model.UpdateIngredientGroupRequest:
+    properties:
+      name:
+        example: Vegetables
+        type: string
+      name_i18n:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+    type: object
+  model.UpdateIngredientRequest:
+    properties:
+      brand_id:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+      group_id:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+      measurement:
+        example: kg
+        type: string
+      name:
+        example: Tomato
+        type: string
+      name_i18n:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+      picture_url:
+        example: https://example.com/tomato.jpg
+        type: string
+    type: object
+  model.UpdateIngredientStockRequest:
+    properties:
+      quantity:
+        example: 100
+        type: integer
     type: object
   model.UpdatePasswordRequest:
     properties:
@@ -140,82 +529,82 @@ definitions:
         example: newPassword123
         type: string
     type: object
+  model.UpdateShiftRequest:
+    properties:
+      close_time:
+        example: "17:00:00"
+        type: string
+      name:
+        example: Morning Shift
+        type: string
+      open_time:
+        example: "09:00:00"
+        type: string
+      role:
+        example: waiter
+        type: string
+      working_days:
+        example: Mon,Tue,Wed,Thu,Fri
+        type: string
+    type: object
+  model.UpdateStorageRequest:
+    properties:
+      branch_id:
+        type: string
+      name:
+        type: string
+      name_i18n:
+        type: string
+    type: object
   model.UpdateUserRequest:
     properties:
-      balance:
-        type: integer
-      dateOfBirth:
-        type: string
       email:
         type: string
-      fullName:
+      full_name:
         type: string
-      gender:
+      phone_number:
         type: string
-      level:
+      username:
         type: string
-      overAll:
-        type: integer
-      phoneNumber:
-        type: string
-      photo:
-        type: string
-      xp:
-        type: integer
     type: object
   model.UserResponse:
     properties:
-      balance:
-        example: 1000
+      brand_id:
+        example: 1
         type: integer
-      dateOfBirth:
+      created_at:
         example: "2022-01-01T00:00:00Z"
         type: string
       email:
         example: user@example.com
         type: string
-      fullName:
+      full_name:
         example: John Doe
         type: string
-      gender:
-        example: male
-        type: string
-      group:
-        example: group_1
-        type: string
       id:
-        example: "1234567890"
+        example: 123e4567-e89b-12d3-a456-426614174000
         type: string
-      isVerified:
-        example: true
-        type: boolean
-      level:
-        example: level_1
-        type: string
-      overAll:
-        example: 1
-        type: integer
-      phoneNumber:
+      phone_number:
         example: "+998901234567"
-        type: string
-      photo:
-        example: https://example.com/photo.jpg
         type: string
       role:
         example: user
         type: string
-      status:
-        example: active
+      shift_id:
+        example: 123e4567-e89b-12d3-a456-426614174000
         type: string
-      xp:
-        example: 100
-        type: integer
+      updated_at:
+        example: "2022-01-01T00:00:00Z"
+        type: string
+      username:
+        example: admin
+        type: string
     type: object
-host: back.blitz.yurtal.tech
+host: back.maryai.yurtal.tech
 info:
   contact: {}
-  description: Blitz API server with multi-language support (de, uz)
-  title: Blitz API
+  description: MaryAI API server with multi-language support (uz, ru, en)
+  title: MaryAI API
   version: "1.0"
 paths:
   /api/v1/auth/login:
@@ -247,36 +636,6 @@ paths:
           schema:
             $ref: '#/definitions/model.ErrorResponse'
       summary: User login
-      tags:
-      - auth
-  /api/v1/auth/login/with-google:
-    post:
-      consumes:
-      - application/json
-      description: Register a new user using Google and return token with user data
-      parameters:
-      - description: Google auth request
-        in: body
-        name: input
-        required: true
-        schema:
-          $ref: '#/definitions/model.GoogleAuthRequest'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Successfully authenticated with Google
-          schema:
-            $ref: '#/definitions/model.LoginResponse'
-        "400":
-          description: Invalid request body or app type
-          schema:
-            $ref: '#/definitions/model.ErrorResponse'
-        "401":
-          description: Invalid Google ID Token
-          schema:
-            $ref: '#/definitions/model.ErrorResponse'
-      summary: User registration with Google
       tags:
       - auth
   /api/v1/auth/refresh:
@@ -315,9 +674,7 @@ paths:
     post:
       consumes:
       - application/json
-      description: Register a new user with phone number and date of birth. Password
-        is automatically generated from date of birth in YYYYMMDD format. User role
-        defaults to 'student' if not provided.
+      description: Register a new user. User role defaults to 'user' if not provided.
       parameters:
       - description: User registration data
         in: body
@@ -344,53 +701,2227 @@ paths:
       summary: Register a new user account
       tags:
       - auth
-  /api/v1/level-price/create:
-    post:
+  /api/v1/branches:
+    get:
       consumes:
       - application/json
-      description: Creates a new price for a specific level in the system
+      description: Retrieve all branches with pagination
       parameters:
-      - default: Bearer <your_token>
-        description: Bearer token
-        in: header
-        name: Authorization
-        required: true
-        type: string
-      - description: Price level creation details
-        in: body
-        name: request
-        required: true
-        schema:
-          $ref: '#/definitions/model.CreatePriceForLevelRequest'
+      - default: 20
+        description: 'Limit results (default: 20)'
+        in: query
+        name: limit
+        type: integer
+      - default: 0
+        description: 'Offset for pagination (default: 0)'
+        in: query
+        name: offset
+        type: integer
       produces:
       - application/json
       responses:
         "200":
-          description: Successfully created price level
+          description: List of all branches
           schema:
-            $ref: '#/definitions/model.CreatePriceForLevelResponse'
-        "400":
-          description: Invalid request or price level already exists
-          schema:
-            $ref: '#/definitions/model.CreatePriceForLevelResponse'
+            items:
+              $ref: '#/definitions/model.BranchResponse'
+            type: array
         "401":
-          description: Unauthorized - Invalid or missing token
+          description: Unauthorized
           schema:
-            $ref: '#/definitions/model.CreatePriceForLevelResponse'
+            $ref: '#/definitions/model.ErrorResponse'
         "500":
           description: Internal server error
           schema:
-            $ref: '#/definitions/model.CreatePriceForLevelResponse'
-      summary: Create a new price level
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get all branches
       tags:
-      - level-prices
-  /api/v1/library/audio:
+      - branches
+    post:
+      consumes:
+      - application/json
+      description: Create a new branch with name, address, and phone
+      parameters:
+      - description: Branch creation data
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/model.CreateBranchRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Branch created successfully
+          schema:
+            $ref: '#/definitions/model.BranchResponse'
+        "400":
+          description: Invalid request data
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create a new branch
+      tags:
+      - branches
+  /api/v1/branches/{branchId}/ingredient-stock:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve all ingredient stock for a specific branch
+      parameters:
+      - description: Branch ID
+        in: path
+        name: branchId
+        required: true
+        type: string
+      - default: 20
+        description: 'Limit results (default: 20)'
+        in: query
+        name: limit
+        type: integer
+      - default: 0
+        description: 'Offset for pagination (default: 0)'
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of ingredient stock for the branch
+          schema:
+            items:
+              $ref: '#/definitions/model.IngredientStockResponse'
+            type: array
+        "400":
+          description: Invalid branch ID
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get stock by branch ID
+      tags:
+      - ingredient-stock
+  /api/v1/branches/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Soft delete a branch (mark as deleted without removing from database)
+      parameters:
+      - description: Branch ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Branch deleted successfully
+          schema:
+            $ref: '#/definitions/model.SuccessResponse'
+        "400":
+          description: Invalid branch ID
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete branch
+      tags:
+      - branches
+    get:
+      consumes:
+      - application/json
+      description: Retrieve a specific branch by its ID
+      parameters:
+      - description: Branch ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Branch details
+          schema:
+            $ref: '#/definitions/model.BranchResponse'
+        "400":
+          description: Invalid branch ID
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: Branch not found
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get branch by ID
+      tags:
+      - branches
+  /api/v1/branches/{id}/restore:
+    post:
+      consumes:
+      - application/json
+      description: Restore a previously deleted branch
+      parameters:
+      - description: Branch ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Branch restored successfully
+          schema:
+            $ref: '#/definitions/model.SuccessResponse'
+        "400":
+          description: Invalid branch ID
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Restore branch
+      tags:
+      - branches
+  /api/v1/categories:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve all categories with pagination
+      parameters:
+      - description: 'Limit (default: 20)'
+        in: query
+        name: limit
+        type: integer
+      - description: 'Offset (default: 0)'
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Categories found
+          schema:
+            items:
+              $ref: '#/definitions/model.CategoryResponse'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get all categories
+      tags:
+      - categories
+    post:
+      consumes:
+      - application/json
+      description: Create a new category with name and optional relationships (department,
+        storage, parent)
+      parameters:
+      - description: Category creation data
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/model.CreateCategoryRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Category created successfully
+          schema:
+            $ref: '#/definitions/model.CategoryResponse'
+        "400":
+          description: Invalid request data
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create a new category
+      tags:
+      - categories
+  /api/v1/categories/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Soft delete a category by ID
+      parameters:
+      - description: Category ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: Category deleted successfully
+        "400":
+          description: Invalid ID format
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: Category not found
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete a category
+      tags:
+      - categories
+    get:
+      consumes:
+      - application/json
+      description: Retrieve a specific category by its ID
+      parameters:
+      - description: Category ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Category found
+          schema:
+            $ref: '#/definitions/model.CategoryResponse'
+        "400":
+          description: Invalid ID format
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: Category not found
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get a category by ID
+      tags:
+      - categories
+    put:
+      consumes:
+      - application/json
+      description: Update an existing category
+      parameters:
+      - description: Category ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Category update data
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/model.UpdateCategoryRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Category updated successfully
+          schema:
+            $ref: '#/definitions/model.CategoryResponse'
+        "400":
+          description: Invalid request data
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: Category not found
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update a category
+      tags:
+      - categories
+  /api/v1/categories/{id}/restore:
+    post:
+      consumes:
+      - application/json
+      description: Restore a soft-deleted category by ID
+      parameters:
+      - description: Category ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Category restored successfully
+          schema:
+            $ref: '#/definitions/model.CategoryResponse'
+        "400":
+          description: Invalid ID format
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: Category not found
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Restore a category
+      tags:
+      - categories
+  /api/v1/categories/department/{departmentId}:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve all categories for a specific department
+      parameters:
+      - description: Department ID
+        in: path
+        name: departmentId
+        required: true
+        type: string
+      - description: 'Limit (default: 20)'
+        in: query
+        name: limit
+        type: integer
+      - description: 'Offset (default: 0)'
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Categories found
+          schema:
+            items:
+              $ref: '#/definitions/model.CategoryResponse'
+            type: array
+        "400":
+          description: Invalid ID format
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get categories by department
+      tags:
+      - categories
+  /api/v1/categories/parent/{parentId}:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve all subcategories for a specific parent category
+      parameters:
+      - description: Parent Category ID
+        in: path
+        name: parentId
+        required: true
+        type: string
+      - description: 'Limit (default: 20)'
+        in: query
+        name: limit
+        type: integer
+      - description: 'Offset (default: 0)'
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Subcategories found
+          schema:
+            items:
+              $ref: '#/definitions/model.CategoryResponse'
+            type: array
+        "400":
+          description: Invalid ID format
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get subcategories by parent
+      tags:
+      - categories
+  /api/v1/categories/root:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve all root categories (categories without parent)
+      parameters:
+      - description: 'Limit (default: 20)'
+        in: query
+        name: limit
+        type: integer
+      - description: 'Offset (default: 0)'
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Root categories found
+          schema:
+            items:
+              $ref: '#/definitions/model.CategoryResponse'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get root categories
+      tags:
+      - categories
+  /api/v1/categories/search:
+    get:
+      consumes:
+      - application/json
+      description: Search for categories by name with pagination
+      parameters:
+      - description: Search query
+        in: query
+        name: q
+        required: true
+        type: string
+      - description: 'Limit (default: 20)'
+        in: query
+        name: limit
+        type: integer
+      - description: 'Offset (default: 0)'
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Categories found
+          schema:
+            items:
+              $ref: '#/definitions/model.CategoryResponse'
+            type: array
+        "400":
+          description: Invalid request data
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Search categories
+      tags:
+      - categories
+  /api/v1/categories/storage/{storageId}:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve all categories for a specific storage
+      parameters:
+      - description: Storage ID
+        in: path
+        name: storageId
+        required: true
+        type: string
+      - description: 'Limit (default: 20)'
+        in: query
+        name: limit
+        type: integer
+      - description: 'Offset (default: 0)'
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Categories found
+          schema:
+            items:
+              $ref: '#/definitions/model.CategoryResponse'
+            type: array
+        "400":
+          description: Invalid ID format
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get categories by storage
+      tags:
+      - categories
+  /api/v1/departments:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve all departments with pagination
+      parameters:
+      - description: 'Limit (default: 20)'
+        in: query
+        name: limit
+        type: integer
+      - description: 'Offset (default: 0)'
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Departments found
+          schema:
+            items:
+              $ref: '#/definitions/model.DepartmentResponse'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get all departments
+      tags:
+      - departments
+    post:
+      consumes:
+      - application/json
+      description: Create a new department with name, optional translation ID, and
+        storage ID
+      parameters:
+      - description: Department creation data
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/model.CreateDepartmentRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Department created successfully
+          schema:
+            $ref: '#/definitions/model.DepartmentResponse'
+        "400":
+          description: Invalid request data
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create a new department
+      tags:
+      - departments
+  /api/v1/departments/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Soft delete a department by ID
+      parameters:
+      - description: Department ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: Department deleted successfully
+        "400":
+          description: Invalid ID format
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: Department not found
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete a department
+      tags:
+      - departments
+    get:
+      consumes:
+      - application/json
+      description: Retrieve a specific department by its ID
+      parameters:
+      - description: Department ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Department found
+          schema:
+            $ref: '#/definitions/model.DepartmentResponse'
+        "400":
+          description: Invalid ID format
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: Department not found
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get a department by ID
+      tags:
+      - departments
+    put:
+      consumes:
+      - application/json
+      description: Update an existing department
+      parameters:
+      - description: Department ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Department update data
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/model.UpdateDepartmentRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Department updated successfully
+          schema:
+            $ref: '#/definitions/model.DepartmentResponse'
+        "400":
+          description: Invalid request data
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: Department not found
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update a department
+      tags:
+      - departments
+  /api/v1/departments/{id}/restore:
+    post:
+      consumes:
+      - application/json
+      description: Restore a soft-deleted department by ID
+      parameters:
+      - description: Department ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Department restored successfully
+          schema:
+            $ref: '#/definitions/model.DepartmentResponse'
+        "400":
+          description: Invalid ID format
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: Department not found
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Restore a department
+      tags:
+      - departments
+  /api/v1/departments/search:
+    get:
+      consumes:
+      - application/json
+      description: Search for departments by name with pagination
+      parameters:
+      - description: Search query
+        in: query
+        name: q
+        required: true
+        type: string
+      - description: 'Limit (default: 20)'
+        in: query
+        name: limit
+        type: integer
+      - description: 'Offset (default: 0)'
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Departments found
+          schema:
+            items:
+              $ref: '#/definitions/model.DepartmentResponse'
+            type: array
+        "400":
+          description: Invalid request data
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Search departments
+      tags:
+      - departments
+  /api/v1/departments/storage/{storageId}:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve all departments for a specific storage
+      parameters:
+      - description: Storage ID
+        in: path
+        name: storageId
+        required: true
+        type: string
+      - description: 'Limit (default: 20)'
+        in: query
+        name: limit
+        type: integer
+      - description: 'Offset (default: 0)'
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Departments found
+          schema:
+            items:
+              $ref: '#/definitions/model.DepartmentResponse'
+            type: array
+        "400":
+          description: Invalid ID format
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get departments by storage ID
+      tags:
+      - departments
+  /api/v1/halls:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve all halls with pagination
+      parameters:
+      - description: 'Limit (default: 20)'
+        in: query
+        name: limit
+        type: integer
+      - description: 'Offset (default: 0)'
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Halls found
+          schema:
+            items:
+              $ref: '#/definitions/model.HallResponse'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get all halls
+      tags:
+      - halls
+    post:
+      consumes:
+      - application/json
+      description: Create a new hall with name, branch ID, and optional translation
+        ID
+      parameters:
+      - description: Hall creation data
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/model.CreateHallRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Hall created successfully
+          schema:
+            $ref: '#/definitions/model.HallResponse'
+        "400":
+          description: Invalid request data
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create a new hall
+      tags:
+      - halls
+  /api/v1/halls/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Soft delete a hall by ID
+      parameters:
+      - description: Hall ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: Hall deleted successfully
+        "400":
+          description: Invalid ID format
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: Hall not found
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete a hall
+      tags:
+      - halls
+    get:
+      consumes:
+      - application/json
+      description: Retrieve a specific hall by its ID
+      parameters:
+      - description: Hall ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Hall found
+          schema:
+            $ref: '#/definitions/model.HallResponse'
+        "400":
+          description: Invalid ID format
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: Hall not found
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get a hall by ID
+      tags:
+      - halls
+    put:
+      consumes:
+      - application/json
+      description: Update an existing hall
+      parameters:
+      - description: Hall ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Hall update data
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/model.UpdateHallRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Hall updated successfully
+          schema:
+            $ref: '#/definitions/model.HallResponse'
+        "400":
+          description: Invalid request data
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: Hall not found
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update a hall
+      tags:
+      - halls
+  /api/v1/halls/{id}/restore:
+    post:
+      consumes:
+      - application/json
+      description: Restore a soft-deleted hall by ID
+      parameters:
+      - description: Hall ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Hall restored successfully
+          schema:
+            $ref: '#/definitions/model.HallResponse'
+        "400":
+          description: Invalid ID format
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: Hall not found
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Restore a hall
+      tags:
+      - halls
+  /api/v1/halls/branch/{branchId}:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve all halls for a specific branch
+      parameters:
+      - description: Branch ID
+        in: path
+        name: branchId
+        required: true
+        type: string
+      - description: 'Limit (default: 20)'
+        in: query
+        name: limit
+        type: integer
+      - description: 'Offset (default: 0)'
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Halls found
+          schema:
+            items:
+              $ref: '#/definitions/model.HallResponse'
+            type: array
+        "400":
+          description: Invalid ID format
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get halls by branch ID
+      tags:
+      - halls
+  /api/v1/halls/search:
+    get:
+      consumes:
+      - application/json
+      description: Search for halls by name with pagination
+      parameters:
+      - description: Search query
+        in: query
+        name: q
+        required: true
+        type: string
+      - description: 'Limit (default: 20)'
+        in: query
+        name: limit
+        type: integer
+      - description: 'Offset (default: 0)'
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Halls found
+          schema:
+            items:
+              $ref: '#/definitions/model.HallResponse'
+            type: array
+        "400":
+          description: Invalid request data
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Search halls
+      tags:
+      - halls
+  /api/v1/ingredient-groups:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve all ingredient groups with pagination
+      parameters:
+      - default: 20
+        description: 'Limit results (default: 20)'
+        in: query
+        name: limit
+        type: integer
+      - default: 0
+        description: 'Offset for pagination (default: 0)'
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of all ingredient groups
+          schema:
+            items:
+              $ref: '#/definitions/model.IngredientGroupResponse'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get all ingredient groups
+      tags:
+      - ingredient-groups
+    post:
+      consumes:
+      - application/json
+      description: Create a new ingredient group with name and optional translation
+      parameters:
+      - description: Ingredient group creation data
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/model.CreateIngredientGroupRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Ingredient group created successfully
+          schema:
+            $ref: '#/definitions/model.IngredientGroupResponse'
+        "400":
+          description: Invalid request data
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create a new ingredient group
+      tags:
+      - ingredient-groups
+  /api/v1/ingredient-groups/{groupId}/ingredients:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve all ingredients belonging to a specific group
+      parameters:
+      - description: Ingredient Group ID
+        in: path
+        name: groupId
+        required: true
+        type: string
+      - default: 20
+        description: 'Limit results (default: 20)'
+        in: query
+        name: limit
+        type: integer
+      - default: 0
+        description: 'Offset for pagination (default: 0)'
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of ingredients in the group
+          schema:
+            items:
+              $ref: '#/definitions/model.IngredientResponse'
+            type: array
+        "400":
+          description: Invalid group ID
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get ingredients by group ID
+      tags:
+      - ingredients
+  /api/v1/ingredient-groups/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Soft delete an ingredient group (mark as deleted without removing
+        from database)
+      parameters:
+      - description: Ingredient Group ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Ingredient group deleted successfully
+          schema:
+            $ref: '#/definitions/model.SuccessResponse'
+        "400":
+          description: Invalid group ID
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete ingredient group
+      tags:
+      - ingredient-groups
+    get:
+      consumes:
+      - application/json
+      description: Retrieve a specific ingredient group by its ID
+      parameters:
+      - description: Ingredient Group ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Ingredient group details
+          schema:
+            $ref: '#/definitions/model.IngredientGroupResponse'
+        "400":
+          description: Invalid group ID
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: Ingredient group not found
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get ingredient group by ID
+      tags:
+      - ingredient-groups
+    put:
+      consumes:
+      - application/json
+      description: Update an existing ingredient group's information
+      parameters:
+      - description: Ingredient Group ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Ingredient group update data
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/model.UpdateIngredientGroupRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Ingredient group updated successfully
+          schema:
+            $ref: '#/definitions/model.IngredientGroupResponse'
+        "400":
+          description: Invalid request data
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: Ingredient group not found
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update ingredient group
+      tags:
+      - ingredient-groups
+  /api/v1/ingredient-groups/{id}/restore:
+    post:
+      consumes:
+      - application/json
+      description: Restore a previously deleted ingredient group
+      parameters:
+      - description: Ingredient Group ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Ingredient group restored successfully
+          schema:
+            $ref: '#/definitions/model.SuccessResponse'
+        "400":
+          description: Invalid group ID
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Restore ingredient group
+      tags:
+      - ingredient-groups
+  /api/v1/ingredient-stock:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve all ingredient stock records with pagination
+      parameters:
+      - default: 20
+        description: 'Limit results (default: 20)'
+        in: query
+        name: limit
+        type: integer
+      - default: 0
+        description: 'Offset for pagination (default: 0)'
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of all ingredient stock
+          schema:
+            items:
+              $ref: '#/definitions/model.IngredientStockResponse'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get all ingredient stock
+      tags:
+      - ingredient-stock
+    post:
+      consumes:
+      - application/json
+      description: Create a new stock record for an ingredient at a specific branch
+      parameters:
+      - description: Ingredient stock creation data
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/model.CreateIngredientStockRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Ingredient stock created successfully
+          schema:
+            $ref: '#/definitions/model.IngredientStockResponse'
+        "400":
+          description: Invalid request data
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create ingredient stock
+      tags:
+      - ingredient-stock
+  /api/v1/ingredient-stock/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Soft delete an ingredient stock record (mark as deleted without
+        removing from database)
+      parameters:
+      - description: Ingredient Stock ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Ingredient stock deleted successfully
+          schema:
+            $ref: '#/definitions/model.SuccessResponse'
+        "400":
+          description: Invalid stock ID
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete ingredient stock
+      tags:
+      - ingredient-stock
+    get:
+      consumes:
+      - application/json
+      description: Retrieve a specific ingredient stock record by its ID
+      parameters:
+      - description: Ingredient Stock ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Ingredient stock details
+          schema:
+            $ref: '#/definitions/model.IngredientStockResponse'
+        "400":
+          description: Invalid stock ID
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: Ingredient stock not found
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get ingredient stock by ID
+      tags:
+      - ingredient-stock
+    put:
+      consumes:
+      - application/json
+      description: Update the quantity of an ingredient stock record
+      parameters:
+      - description: Ingredient Stock ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Stock update data
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/model.UpdateIngredientStockRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Ingredient stock updated successfully
+          schema:
+            $ref: '#/definitions/model.IngredientStockResponse'
+        "400":
+          description: Invalid request data
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: Ingredient stock not found
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update ingredient stock
+      tags:
+      - ingredient-stock
+  /api/v1/ingredient-stock/{id}/add:
+    post:
+      consumes:
+      - application/json
+      description: Add a specified quantity to an existing ingredient stock
+      parameters:
+      - description: Ingredient Stock ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Quantity to add
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/handler.stockAdjustRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Quantity added successfully
+          schema:
+            $ref: '#/definitions/model.IngredientStockResponse'
+        "400":
+          description: Invalid request data
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Add to ingredient stock
+      tags:
+      - ingredient-stock
+  /api/v1/ingredient-stock/{id}/remove:
+    post:
+      consumes:
+      - application/json
+      description: Remove a specified quantity from an existing ingredient stock
+      parameters:
+      - description: Ingredient Stock ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Quantity to remove
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/handler.stockAdjustRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Quantity removed successfully
+          schema:
+            $ref: '#/definitions/model.IngredientStockResponse'
+        "400":
+          description: Invalid request data
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Remove from ingredient stock
+      tags:
+      - ingredient-stock
+  /api/v1/ingredient-stock/{id}/restore:
+    post:
+      consumes:
+      - application/json
+      description: Restore a previously deleted ingredient stock record
+      parameters:
+      - description: Ingredient Stock ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Ingredient stock restored successfully
+          schema:
+            $ref: '#/definitions/model.SuccessResponse'
+        "400":
+          description: Invalid stock ID
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Restore ingredient stock
+      tags:
+      - ingredient-stock
+  /api/v1/ingredient-stock/search:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve stock information for a specific ingredient at a specific
+        branch
+      parameters:
+      - description: Ingredient ID
+        in: query
+        name: ingredient_id
+        required: true
+        type: string
+      - description: Branch ID
+        in: query
+        name: branch_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Ingredient stock details
+          schema:
+            $ref: '#/definitions/model.IngredientStockResponse'
+        "400":
+          description: Invalid parameters
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: Ingredient stock not found
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get stock by ingredient and branch
+      tags:
+      - ingredient-stock
+  /api/v1/ingredients:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve all ingredients with pagination
+      parameters:
+      - default: 20
+        description: 'Limit results (default: 20)'
+        in: query
+        name: limit
+        type: integer
+      - default: 0
+        description: 'Offset for pagination (default: 0)'
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of all ingredients
+          schema:
+            items:
+              $ref: '#/definitions/model.IngredientResponse'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get all ingredients
+      tags:
+      - ingredients
+    post:
+      consumes:
+      - application/json
+      description: Create a new ingredient with name, group, measurement, and optional
+        fields
+      parameters:
+      - description: Ingredient creation data
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/model.CreateIngredientRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Ingredient created successfully
+          schema:
+            $ref: '#/definitions/model.IngredientResponse'
+        "400":
+          description: Invalid request data
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create a new ingredient
+      tags:
+      - ingredients
+  /api/v1/ingredients/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Soft delete an ingredient (mark as deleted without removing from
+        database)
+      parameters:
+      - description: Ingredient ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Ingredient deleted successfully
+          schema:
+            $ref: '#/definitions/model.SuccessResponse'
+        "400":
+          description: Invalid ingredient ID
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete ingredient
+      tags:
+      - ingredients
+    get:
+      consumes:
+      - application/json
+      description: Retrieve a specific ingredient by its ID
+      parameters:
+      - description: Ingredient ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Ingredient details
+          schema:
+            $ref: '#/definitions/model.IngredientResponse'
+        "400":
+          description: Invalid ingredient ID
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: Ingredient not found
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get ingredient by ID
+      tags:
+      - ingredients
+    put:
+      consumes:
+      - application/json
+      description: Update an existing ingredient's information
+      parameters:
+      - description: Ingredient ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Ingredient update data
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/model.UpdateIngredientRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Ingredient updated successfully
+          schema:
+            $ref: '#/definitions/model.IngredientResponse'
+        "400":
+          description: Invalid request data
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: Ingredient not found
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update ingredient
+      tags:
+      - ingredients
+  /api/v1/ingredients/{id}/restore:
+    post:
+      consumes:
+      - application/json
+      description: Restore a previously deleted ingredient
+      parameters:
+      - description: Ingredient ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Ingredient restored successfully
+          schema:
+            $ref: '#/definitions/model.SuccessResponse'
+        "400":
+          description: Invalid ingredient ID
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Restore ingredient
+      tags:
+      - ingredients
+  /api/v1/ingredients/{ingredientId}/stock:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve stock for a specific ingredient across all branches
+      parameters:
+      - description: Ingredient ID
+        in: path
+        name: ingredientId
+        required: true
+        type: string
+      - default: 20
+        description: 'Limit results (default: 20)'
+        in: query
+        name: limit
+        type: integer
+      - default: 0
+        description: 'Offset for pagination (default: 0)'
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of stock for the ingredient
+          schema:
+            items:
+              $ref: '#/definitions/model.IngredientStockResponse'
+            type: array
+        "400":
+          description: Invalid ingredient ID
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get stock by ingredient ID
+      tags:
+      - ingredient-stock
+  /api/v1/media/image:
     post:
       consumes:
       - multipart/form-data
-      description: Uploads a user audio file
+      description: Uploads a user image file
       parameters:
-      - description: Audio file to upload
+      - description: Image file to upload
         in: formData
         name: file
         required: true
@@ -399,7 +2930,7 @@ paths:
       - application/json
       responses:
         "200":
-          description: Audio successfully uploaded
+          description: Image successfully uploaded
           schema:
             $ref: '#/definitions/model.DownloadResponse'
         "400":
@@ -416,117 +2947,10 @@ paths:
             $ref: '#/definitions/model.ErrorResponse'
       security:
       - BearerAuth: []
-      summary: Upload user audio
+      summary: Upload user image
       tags:
-      - library
-  /api/v1/library/audio/download:
-    post:
-      consumes:
-      - application/json
-      description: Downloads audio podcast by object name
-      parameters:
-      - description: Audio object name
-        in: body
-        name: input
-        required: true
-        schema:
-          $ref: '#/definitions/model.DownloadRequest'
-      produces:
-      - application/octet-stream
-      responses:
-        "200":
-          description: Audio file
-          schema:
-            type: file
-        "400":
-          description: Invalid request
-          schema:
-            $ref: '#/definitions/model.ErrorResponse'
-        "404":
-          description: Audio not found
-          schema:
-            $ref: '#/definitions/model.ErrorResponse'
-        "500":
-          description: Failed to download file
-          schema:
-            $ref: '#/definitions/model.ErrorResponse'
-      security:
-      - BearerAuth: []
-      summary: Download user audio
-      tags:
-      - library
-  /api/v1/library/book:
-    post:
-      consumes:
-      - multipart/form-data
-      description: Uploads a book file
-      parameters:
-      - description: Book file to upload
-        in: formData
-        name: file
-        required: true
-        type: file
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Book successfully uploaded
-          schema:
-            $ref: '#/definitions/model.DownloadResponse'
-        "400":
-          description: Invalid request or file not found
-          schema:
-            $ref: '#/definitions/model.ErrorResponse'
-        "401":
-          description: Unauthorized
-          schema:
-            $ref: '#/definitions/model.ErrorResponse'
-        "500":
-          description: Failed to process upload
-          schema:
-            $ref: '#/definitions/model.ErrorResponse'
-      security:
-      - BearerAuth: []
-      summary: Upload book
-      tags:
-      - library
-  /api/v1/library/book/download:
-    post:
-      consumes:
-      - application/json
-      description: Downloads a book by object name
-      parameters:
-      - description: Book object name
-        in: body
-        name: input
-        required: true
-        schema:
-          $ref: '#/definitions/model.DownloadRequest'
-      produces:
-      - application/octet-stream
-      responses:
-        "200":
-          description: Book file
-          schema:
-            type: file
-        "400":
-          description: Invalid request
-          schema:
-            $ref: '#/definitions/model.ErrorResponse'
-        "404":
-          description: Book not found
-          schema:
-            $ref: '#/definitions/model.ErrorResponse'
-        "500":
-          description: Failed to download file
-          schema:
-            $ref: '#/definitions/model.ErrorResponse'
-      security:
-      - BearerAuth: []
-      summary: Download book
-      tags:
-      - library
-  /api/v1/library/video:
+      - media
+  /api/v1/media/video:
     post:
       consumes:
       - multipart/form-data
@@ -560,19 +2984,18 @@ paths:
       - BearerAuth: []
       summary: Upload video
       tags:
-      - library
-  /api/v1/library/video/download:
-    post:
+      - media
+  /api/v1/media/video/download:
+    get:
       consumes:
       - application/json
       description: Downloads video by object name
       parameters:
       - description: Video object name
-        in: body
-        name: input
+        in: query
+        name: object_name
         required: true
-        schema:
-          $ref: '#/definitions/model.DownloadRequest'
+        type: string
       produces:
       - application/octet-stream
       responses:
@@ -596,7 +3019,7 @@ paths:
       - BearerAuth: []
       summary: Download video
       tags:
-      - library
+      - media
   /api/v1/payments/create:
     post:
       consumes:
@@ -637,26 +3060,53 @@ paths:
       summary: Create a new payment invoice
       tags:
       - payments
-  /api/v1/user/image:
-    post:
+  /api/v1/shifts:
+    get:
       consumes:
-      - multipart/form-data
-      description: Uploads a user avatar image file
-      parameters:
-      - description: Image file to upload
-        in: formData
-        name: file
-        required: true
-        type: file
+      - application/json
+      description: Retrieve all shifts in the system
       produces:
       - application/json
       responses:
         "200":
-          description: Avatar successfully uploaded
+          description: List of all shifts
           schema:
-            $ref: '#/definitions/model.DownloadResponse'
+            items:
+              $ref: '#/definitions/model.ShiftResponse'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get all shifts
+      tags:
+      - shifts
+    post:
+      consumes:
+      - application/json
+      description: Create a new shift for staff scheduling
+      parameters:
+      - description: Shift creation data
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/model.CreateShiftRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Shift created successfully
+          schema:
+            $ref: '#/definitions/model.ShiftResponse'
         "400":
-          description: Invalid request or file not found
+          description: Invalid request data
           schema:
             $ref: '#/definitions/model.ErrorResponse'
         "401":
@@ -664,50 +3114,666 @@ paths:
           schema:
             $ref: '#/definitions/model.ErrorResponse'
         "500":
-          description: Failed to process upload
+          description: Internal server error
           schema:
             $ref: '#/definitions/model.ErrorResponse'
       security:
       - BearerAuth: []
-      summary: Upload user avatar
+      summary: Create a new shift
       tags:
-      - users
-  /api/v1/user/image/download:
-    post:
+      - shifts
+  /api/v1/shifts/{id}:
+    delete:
       consumes:
       - application/json
-      description: Downloads a image by object name
+      description: Delete a shift from the system
       parameters:
-      - description: Image object name
+      - description: Shift ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Shift deleted successfully
+          schema:
+            $ref: '#/definitions/model.SuccessResponse'
+        "400":
+          description: Invalid shift ID
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete shift
+      tags:
+      - shifts
+    get:
+      consumes:
+      - application/json
+      description: Retrieve a specific shift by its ID
+      parameters:
+      - description: Shift ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Shift details
+          schema:
+            $ref: '#/definitions/model.ShiftResponse'
+        "400":
+          description: Invalid shift ID
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: Shift not found
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get shift by ID
+      tags:
+      - shifts
+    put:
+      consumes:
+      - application/json
+      description: Update an existing shift details
+      parameters:
+      - description: Shift ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Shift update data
         in: body
         name: input
         required: true
         schema:
-          $ref: '#/definitions/model.DownloadRequest'
+          $ref: '#/definitions/model.UpdateShiftRequest'
       produces:
-      - application/octet-stream
+      - application/json
       responses:
         "200":
-          description: Image file
+          description: Shift updated successfully
           schema:
-            type: file
+            $ref: '#/definitions/model.ShiftResponse'
         "400":
-          description: Invalid request
+          description: Invalid request data
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
           schema:
             $ref: '#/definitions/model.ErrorResponse'
         "404":
-          description: Image not found
+          description: Shift not found
           schema:
             $ref: '#/definitions/model.ErrorResponse'
         "500":
-          description: Failed to download file
+          description: Internal server error
           schema:
             $ref: '#/definitions/model.ErrorResponse'
       security:
       - BearerAuth: []
-      summary: Download image
+      summary: Update shift
       tags:
-      - users
+      - shifts
+  /api/v1/shifts/branch/{branchId}:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve all shifts for a specific branch
+      parameters:
+      - description: Branch ID
+        in: path
+        name: branchId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of shifts for the branch
+          schema:
+            items:
+              $ref: '#/definitions/model.ShiftResponse'
+            type: array
+        "400":
+          description: Invalid branch ID
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get shifts by branch
+      tags:
+      - shifts
+  /api/v1/storages:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve all storages with pagination
+      parameters:
+      - default: 20
+        description: 'Limit results (default: 20)'
+        in: query
+        name: limit
+        type: integer
+      - default: 0
+        description: 'Offset for pagination (default: 0)'
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of all storages
+          schema:
+            items:
+              $ref: '#/definitions/model.StorageResponse'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get all storages
+      tags:
+      - storages
+    post:
+      consumes:
+      - application/json
+      description: Create a new storage with name, branch ID, and optional translation
+        ID
+      parameters:
+      - description: Storage creation data
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/model.CreateStorageRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Storage created successfully
+          schema:
+            $ref: '#/definitions/model.StorageResponse'
+        "400":
+          description: Invalid request data
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create a new storage
+      tags:
+      - storages
+  /api/v1/storages/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Soft delete a storage (mark as deleted without removing from database)
+      parameters:
+      - description: Storage ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Storage deleted successfully
+          schema:
+            $ref: '#/definitions/model.SuccessResponse'
+        "400":
+          description: Invalid storage ID
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete storage
+      tags:
+      - storages
+    get:
+      consumes:
+      - application/json
+      description: Retrieve a specific storage by its ID
+      parameters:
+      - description: Storage ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Storage details
+          schema:
+            $ref: '#/definitions/model.StorageResponse'
+        "400":
+          description: Invalid storage ID
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: Storage not found
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get storage by ID
+      tags:
+      - storages
+    put:
+      consumes:
+      - application/json
+      description: Update a storage's information
+      parameters:
+      - description: Storage ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Storage update data
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/model.UpdateStorageRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Storage updated successfully
+          schema:
+            $ref: '#/definitions/model.StorageResponse'
+        "400":
+          description: Invalid request data
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update storage
+      tags:
+      - storages
+  /api/v1/storages/{id}/restore:
+    post:
+      consumes:
+      - application/json
+      description: Restore a previously deleted storage
+      parameters:
+      - description: Storage ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Storage restored successfully
+          schema:
+            $ref: '#/definitions/model.SuccessResponse'
+        "400":
+          description: Invalid storage ID
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Restore storage
+      tags:
+      - storages
+  /api/v1/storages/branch/{branchId}:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve all storages for a specific branch
+      parameters:
+      - description: Branch ID
+        in: path
+        name: branchId
+        required: true
+        type: string
+      - default: 20
+        description: 'Limit results (default: 20)'
+        in: query
+        name: limit
+        type: integer
+      - default: 0
+        description: 'Offset for pagination (default: 0)'
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of storages for the branch
+          schema:
+            items:
+              $ref: '#/definitions/model.StorageResponse'
+            type: array
+        "400":
+          description: Invalid branch ID
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get storages by branch ID
+      tags:
+      - storages
+  /api/v1/storages/search:
+    get:
+      consumes:
+      - application/json
+      description: Search for storages by name
+      parameters:
+      - description: Search query
+        in: query
+        name: q
+        required: true
+        type: string
+      - default: 20
+        description: 'Limit results (default: 20)'
+        in: query
+        name: limit
+        type: integer
+      - default: 0
+        description: 'Offset for pagination (default: 0)'
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of matching storages
+          schema:
+            items:
+              $ref: '#/definitions/model.StorageResponse'
+            type: array
+        "400":
+          description: Invalid parameters
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Search storages
+      tags:
+      - storages
+  /api/v1/translations:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve all translations with pagination
+      parameters:
+      - default: 20
+        description: 'Limit results (default: 20)'
+        in: query
+        name: limit
+        type: integer
+      - default: 0
+        description: 'Offset for pagination (default: 0)'
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of all translations
+          schema:
+            items:
+              $ref: '#/definitions/model.TranslationResponse'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get all translations
+      tags:
+      - translations
+    post:
+      consumes:
+      - application/json
+      description: Create a new translation with uz, ru, en content
+      parameters:
+      - description: Translation creation data
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/model.CreateTranslationRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Translation created successfully
+          schema:
+            $ref: '#/definitions/model.TranslationResponse'
+        "400":
+          description: Invalid request data
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create a new translation
+      tags:
+      - translations
+  /api/v1/translations/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Soft delete a translation (mark as deleted without removing from
+        database)
+      parameters:
+      - description: Translation ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Translation deleted successfully
+          schema:
+            $ref: '#/definitions/model.SuccessResponse'
+        "400":
+          description: Invalid translation ID
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete translation
+      tags:
+      - translations
+    get:
+      consumes:
+      - application/json
+      description: Retrieve a specific translation by its ID
+      parameters:
+      - description: Translation ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Translation details
+          schema:
+            $ref: '#/definitions/model.TranslationResponse'
+        "400":
+          description: Invalid translation ID
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: Translation not found
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get translation by ID
+      tags:
+      - translations
+  /api/v1/translations/{id}/restore:
+    post:
+      consumes:
+      - application/json
+      description: Restore a previously deleted translation
+      parameters:
+      - description: Translation ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Translation restored successfully
+          schema:
+            $ref: '#/definitions/model.SuccessResponse'
+        "400":
+          description: Invalid translation ID
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Restore translation
+      tags:
+      - translations
   /api/v1/user/me:
     get:
       consumes:
@@ -733,6 +3799,41 @@ paths:
       summary: Get current user profile
       tags:
       - users
+  /api/v1/user/media/download:
+    get:
+      consumes:
+      - application/json
+      description: Downloads an image by object name
+      parameters:
+      - description: Image object name
+        in: query
+        name: object_name
+        required: true
+        type: string
+      produces:
+      - application/octet-stream
+      responses:
+        "200":
+          description: Image file
+          schema:
+            type: file
+        "400":
+          description: Invalid request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: Image not found
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Failed to download file
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Download image
+      tags:
+      - media
   /api/v1/user/password-update:
     put:
       consumes:
@@ -805,8 +3906,266 @@ paths:
       summary: Update current user profile
       tags:
       - users
+  /api/v1/users/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Soft delete a user (mark as deleted without removing from database)
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: User deleted successfully
+          schema:
+            $ref: '#/definitions/model.SuccessResponse'
+        "400":
+          description: Invalid user ID
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete user
+      tags:
+      - users
+  /api/v1/users/{id}/restore:
+    post:
+      consumes:
+      - application/json
+      description: Restore a previously deleted user
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: User restored successfully
+          schema:
+            $ref: '#/definitions/model.SuccessResponse'
+        "400":
+          description: Invalid user ID
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Restore user
+      tags:
+      - users
+  /api/v1/users/by-role:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve all users with a specific role (requires authentication)
+      parameters:
+      - description: User role (admin, manager, cashier, waiter, kitchen, user, superadmin)
+        in: query
+        name: role
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of users with the specified role
+          schema:
+            items:
+              $ref: '#/definitions/model.UserResponse'
+            type: array
+        "400":
+          description: Invalid role parameter
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get users by role
+      tags:
+      - users
+  /api/v1/users/cashiers:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve all cashier staff members
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of cashiers
+          schema:
+            items:
+              $ref: '#/definitions/model.UserResponse'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get cashiers
+      tags:
+      - users
+  /api/v1/users/kitchen-staff:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve all kitchen staff members
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of kitchen staff
+          schema:
+            items:
+              $ref: '#/definitions/model.UserResponse'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get kitchen staff
+      tags:
+      - users
+  /api/v1/users/search:
+    get:
+      consumes:
+      - application/json
+      description: Search users by name, phone, or username with pagination
+      parameters:
+      - description: Search query (name, phone, or username)
+        in: query
+        name: query
+        required: true
+        type: string
+      - default: 20
+        description: 'Limit results (default: 20)'
+        in: query
+        name: limit
+        type: integer
+      - default: 0
+        description: 'Offset for pagination (default: 0)'
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of matching users
+          schema:
+            items:
+              $ref: '#/definitions/model.UserResponse'
+            type: array
+        "400":
+          description: Invalid query parameter
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Search users
+      tags:
+      - users
+  /api/v1/users/staff:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve all staff members (non-user role employees)
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of all staff members
+          schema:
+            items:
+              $ref: '#/definitions/model.UserResponse'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get all staff members
+      tags:
+      - users
+  /api/v1/users/waiters:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve all waiter staff members
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of waiters
+          schema:
+            items:
+              $ref: '#/definitions/model.UserResponse'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get waiters
+      tags:
+      - users
 schemes:
-- https
+- http
 securityDefinitions:
   BearerAuth:
     description: Type "Bearer" followed by a space and your JWT token

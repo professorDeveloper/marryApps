@@ -1,10 +1,10 @@
 package repository
 
 import (
-	mn "gitlab.yurtal.tech/company/blitz/back/internal/repository/minio"
-	"gitlab.yurtal.tech/company/blitz/back/internal/repository/pg"
-	"gitlab.yurtal.tech/company/blitz/back/pkg/minio"
-	"gitlab.yurtal.tech/company/blitz/back/pkg/postgres"
+	mn "gitlab.yurtal.tech/company/maryai/back/internal/repository/minio"
+	"gitlab.yurtal.tech/company/maryai/back/internal/repository/pg"
+	"gitlab.yurtal.tech/company/maryai/back/pkg/minio"
+	"gitlab.yurtal.tech/company/maryai/back/pkg/postgres"
 )
 
 type (

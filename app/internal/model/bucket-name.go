@@ -1,9 +1,7 @@
 package model
 
-const BucketName = "blitz"
+const BucketName = "MaryAI"
 const ImageFolderName = "images"
-const BookFolderName = "books"
-const AudioFolderName = "audios"
 const VideoFolderName = "videos"
 
 

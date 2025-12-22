@@ -3,8 +3,8 @@ package main
 import (
 	"log"
 
-	"gitlab.yurtal.tech/company/blitz/back/internal/app"
-	"gitlab.yurtal.tech/company/blitz/back/internal/config"
+	"gitlab.yurtal.tech/company/maryai/back/internal/app"
+	"gitlab.yurtal.tech/company/maryai/back/internal/config"
 )
 
 func main() {

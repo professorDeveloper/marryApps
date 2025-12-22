@@ -9,7 +9,7 @@ import (
 	"net/http"
 
 	"github.com/labstack/echo/v4"
-	"gitlab.yurtal.tech/company/blitz/back/internal/model"
+	"gitlab.yurtal.tech/company/maryai/back/internal/model"
 )
 
 func ClickResponsePrepare(req *model.ClickCompleteRequest, prepareID int64, code int, note string) model.ClickPrepareResponse {
@@ -110,15 +110,21 @@ func (h *Handler) CreateInvoice(c echo.Context) error {
 			ErrorNote: "Provider is required",
 		})
 	}
+	if req.PlanID == "" {
+		return c.JSON(http.StatusBadRequest, model.CreateInvoiceResponse{
+			Error:     -5,
+			ErrorNote: "plan_id is required",
+		})
+	}
 
 	var invoice *model.CheckoutURL
 	var err error
 
 	switch req.Provider {
 	case "click":
-		invoice, err = h.service.Payment().CreateInvoice(c, c.Request().Context())
+		invoice, err = h.service.Payment().CreateInvoice(c, c.Request().Context(), req.PlanID)
 	case "payme":
-		invoice, err = h.service.Payment().CreatePaymeInvoice(c, c.Request().Context())
+		invoice, err = h.service.Payment().CreatePaymeInvoice(c, c.Request().Context(), req.PlanID)
 	default:
 		return c.JSON(http.StatusBadRequest, model.CreateInvoiceResponse{
 			Error:     -5,

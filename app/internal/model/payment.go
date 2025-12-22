@@ -30,6 +30,7 @@ type ClickConfirmResponse struct {
 }
 type IndexCreation struct {
 	Provider string `json:"provider"`
+	PlanID   string `json:"plan_id"`
 }
 
 type CreateInvoiceResponse struct {

@@ -1,0 +1,187 @@
+package model
+
+import "time"
+
+type CreateBranchRequest struct {
+	Name     *string `json:"name"`
+	NameI18n *string `json:"name_i18n"`
+	Address  *string `json:"address"`
+	Phone    *string `json:"phone"`
+}
+
+type UpdateBranchRequest struct {
+	Name     *string `json:"name"`
+	NameI18n *string `json:"name_i18n"`
+	Address  *string `json:"address"`
+	Phone    *string `json:"phone"`
+}
+
+type BranchResponse struct {
+	ID        string     `json:"id"`
+	Name      *string    `json:"name"`
+	NameI18n  *string    `json:"name_i18n"`
+	Address   *string    `json:"address"`
+	Phone     *string    `json:"phone"`
+	CreatedAt *time.Time `json:"created_at"`
+	UpdatedAt *time.Time `json:"updated_at"`
+}
+
+type CreateStorageRequest struct {
+	Name     *string `json:"name"`
+	BranchID string  `json:"branch_id"`
+	NameI18n *string `json:"name_i18n"`
+}
+
+type UpdateStorageRequest struct {
+	Name     *string `json:"name"`
+	BranchID *string `json:"branch_id"`
+	NameI18n *string `json:"name_i18n"`
+}
+
+type StorageResponse struct {
+	ID        string     `json:"id"`
+	Name      *string    `json:"name"`
+	BranchID  string     `json:"branch_id"`
+	NameI18n  *string    `json:"name_i18n"`
+	CreatedAt *time.Time `json:"created_at"`
+	UpdatedAt *time.Time `json:"updated_at"`
+}
+
+type CreateDepartmentRequest struct {
+	Name      *string `json:"name"`
+	NameI18n  *string `json:"name_i18n"`
+	StorageID string  `json:"storage_id"`
+}
+
+type UpdateDepartmentRequest struct {
+	Name      *string `json:"name"`
+	NameI18n  *string `json:"name_i18n"`
+	StorageID *string `json:"storage_id"`
+}
+
+type DepartmentResponse struct {
+	ID        string     `json:"id"`
+	Name      *string    `json:"name"`
+	NameI18n  *string    `json:"name_i18n"`
+	StorageID string     `json:"storage_id"`
+	CreatedAt *time.Time `json:"created_at"`
+	UpdatedAt *time.Time `json:"updated_at"`
+}
+
+// ==================== HALLS ====================
+
+type CreateHallRequest struct {
+	Name     *string `json:"name"`
+	BranchID string  `json:"branch_id"`
+	NameI18n *string `json:"name_i18n"`
+}
+
+type UpdateHallRequest struct {
+	Name     *string `json:"name"`
+	BranchID *string `json:"branch_id"`
+	NameI18n *string `json:"name_i18n"`
+}
+
+type HallResponse struct {
+	ID        string     `json:"id"`
+	BranchID  string     `json:"branch_id"`
+	Name      *string    `json:"name"`
+	NameI18n  *string    `json:"name_i18n"`
+	CreatedAt *time.Time `json:"created_at"`
+	UpdatedAt *time.Time `json:"updated_at"`
+}
+
+// Translation-related models
+type CreateTranslationRequest struct {
+	Uz *string `json:"uz" example:"Salom"`
+	Ru *string `json:"ru" example:"Привет"`
+	En *string `json:"en" example:"Hello"`
+}
+
+type UpdateTranslationRequest struct {
+	Uz *string `json:"uz,omitempty" example:"Salom"`
+	Ru *string `json:"ru,omitempty" example:"Привет"`
+	En *string `json:"en,omitempty" example:"Hello"`
+}
+
+type TranslationResponse struct {
+	ID        string     `json:"id" example:"123e4567-e89b-12d3-a456-426614174000"`
+	Uz        *string    `json:"uz,omitempty" example:"Salom"`
+	Ru        *string    `json:"ru,omitempty" example:"Привет"`
+	En        *string    `json:"en,omitempty" example:"Hello"`
+	CreatedAt *time.Time `json:"created_at,omitempty" example:"2022-01-01T00:00:00Z"`
+	UpdatedAt *time.Time `json:"updated_at,omitempty" example:"2022-01-01T00:00:00Z"`
+}
+
+// ==================== INGREDIENT GROUPS ====================
+
+type CreateIngredientGroupRequest struct {
+	Name     *string `json:"name" example:"Vegetables"`
+	NameI18n *string `json:"name_i18n,omitempty" example:"123e4567-e89b-12d3-a456-426614174000"`
+}
+
+type UpdateIngredientGroupRequest struct {
+	Name     *string `json:"name,omitempty" example:"Vegetables"`
+	NameI18n *string `json:"name_i18n,omitempty" example:"123e4567-e89b-12d3-a456-426614174000"`
+}
+
+type IngredientGroupResponse struct {
+	ID        string     `json:"id" example:"123e4567-e89b-12d3-a456-426614174000"`
+	Name      *string    `json:"name,omitempty" example:"Vegetables"`
+	NameI18n  *string    `json:"name_i18n,omitempty" example:"123e4567-e89b-12d3-a456-426614174000"`
+	CreatedAt *time.Time `json:"created_at,omitempty" example:"2022-01-01T00:00:00Z"`
+	UpdatedAt *time.Time `json:"updated_at,omitempty" example:"2022-01-01T00:00:00Z"`
+}
+
+// ==================== INGREDIENTS ====================
+
+type CreateIngredientRequest struct {
+	Name        *string `json:"name" example:"Tomato"`
+	NameI18n    *string `json:"name_i18n,omitempty" example:"123e4567-e89b-12d3-a456-426614174000"`
+	GroupID     *string `json:"group_id,omitempty" example:"123e4567-e89b-12d3-a456-426614174000"`
+	Measurement *string `json:"measurement,omitempty" example:"kg"`
+	PictureUrl  *string `json:"picture_url,omitempty" example:"https://example.com/tomato.jpg"`
+	BrandID     *string `json:"brand_id,omitempty" example:"123e4567-e89b-12d3-a456-426614174000"`
+}
+
+type UpdateIngredientRequest struct {
+	Name        *string `json:"name,omitempty" example:"Tomato"`
+	NameI18n    *string `json:"name_i18n,omitempty" example:"123e4567-e89b-12d3-a456-426614174000"`
+	GroupID     *string `json:"group_id,omitempty" example:"123e4567-e89b-12d3-a456-426614174000"`
+	Measurement *string `json:"measurement,omitempty" example:"kg"`
+	PictureUrl  *string `json:"picture_url,omitempty" example:"https://example.com/tomato.jpg"`
+	BrandID     *string `json:"brand_id,omitempty" example:"123e4567-e89b-12d3-a456-426614174000"`
+}
+
+type IngredientResponse struct {
+	ID          string     `json:"id" example:"123e4567-e89b-12d3-a456-426614174000"`
+	Name        *string    `json:"name,omitempty" example:"Tomato"`
+	NameI18n    *string    `json:"name_i18n,omitempty" example:"123e4567-e89b-12d3-a456-426614174000"`
+	GroupID     *string    `json:"group_id,omitempty" example:"123e4567-e89b-12d3-a456-426614174000"`
+	Measurement *string    `json:"measurement,omitempty" example:"kg"`
+	PictureUrl  *string    `json:"picture_url,omitempty" example:"https://example.com/tomato.jpg"`
+	BrandID     *string    `json:"brand_id,omitempty" example:"123e4567-e89b-12d3-a456-426614174000"`
+	CreatedAt   *time.Time `json:"created_at,omitempty" example:"2022-01-01T00:00:00Z"`
+	UpdatedAt   *time.Time `json:"updated_at,omitempty" example:"2022-01-01T00:00:00Z"`
+}
+
+// ==================== INGREDIENT STOCK ====================
+
+type CreateIngredientStockRequest struct {
+	IngredientID *string `json:"ingredient_id" example:"123e4567-e89b-12d3-a456-426614174000"`
+	Quantity     *int64  `json:"quantity" example:"100"`
+	BranchID     *string `json:"branch_id" example:"123e4567-e89b-12d3-a456-426614174000"`
+}
+
+type UpdateIngredientStockRequest struct {
+	Quantity *int64 `json:"quantity,omitempty" example:"100"`
+}
+
+type IngredientStockResponse struct {
+	ID           string     `json:"id" example:"123e4567-e89b-12d3-a456-426614174000"`
+	IngredientID string     `json:"ingredient_id" example:"123e4567-e89b-12d3-a456-426614174000"`
+	Quantity     int64      `json:"quantity" example:"100"`
+	BranchID     string     `json:"branch_id" example:"123e4567-e89b-12d3-a456-426614174000"`
+	CreatedAt    *time.Time `json:"created_at,omitempty" example:"2022-01-01T00:00:00Z"`
+	UpdatedAt    *time.Time `json:"updated_at,omitempty" example:"2022-01-01T00:00:00Z"`
+}

@@ -11,12 +11,11 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgtype"
-	"gitlab.yurtal.tech/company/blitz/back/internal/config"
-	"gitlab.yurtal.tech/company/blitz/back/internal/model"
-	"gitlab.yurtal.tech/company/blitz/back/internal/repository"
-	"gitlab.yurtal.tech/company/blitz/back/internal/repository/pg"
-	"gitlab.yurtal.tech/company/blitz/back/pkg/utils"
+	"gitlab.yurtal.tech/company/maryai/back/internal/config"
+	"gitlab.yurtal.tech/company/maryai/back/internal/model"
+	"gitlab.yurtal.tech/company/maryai/back/internal/repository"
+	"gitlab.yurtal.tech/company/maryai/back/internal/repository/pg"
+	"gitlab.yurtal.tech/company/maryai/back/pkg/utils"
 )
 
 type AuthS struct {
@@ -38,60 +37,58 @@ func (s *AuthS) Register(ctx context.Context, req model.RegisterRequest) error {
 	if req.FullName == "" {
 		return fmt.Errorf("full name is required")
 	}
-
-	dateOfBirth, err := time.Parse("2006-01-02", req.DateOfBirth)
-	if err != nil {
-		return fmt.Errorf("invalid date format, expected YYYY-MM-DD")
-	}
-
-	// Validate date
-	if dateOfBirth.IsZero() {
-		return fmt.Errorf("date of birth is required")
-	}
-	if dateOfBirth.After(time.Now()) {
-		return fmt.Errorf("date of birth cannot be in the future")
-	}
-
 	log.Printf("Starting registration for phone: %s", req.PhoneNumber)
-
-	_, err = s.repo.PgRepo.Repo.GetUserByPhoneNumber(ctx, &req.PhoneNumber)
+	_, err := s.repo.PgRepo.Repo.GetUserByPhoneNumber(ctx, &req.PhoneNumber)
 	if err == nil {
-		log.Printf("User with phone %s already exists", req.PhoneNumber)
 		return fmt.Errorf("user with this phone number already exists")
 	}
 	if !errors.Is(err, pgx.ErrNoRows) {
-		log.Printf("Error checking user existence: %v", err)
 		return fmt.Errorf("failed to check user existence: %w", err)
 	}
-
-	// Generate password from the parsed date of birth
-	password := dateOfBirth.Format("20060102")
-	hash, err := utils.HashPassword(password)
-	if err != nil {
-		log.Printf("Error hashing password: %v", err)
-		return fmt.Errorf("failed to process password: %w", err)
+	var hashPassword *string
+	if strings.TrimSpace(req.Password) != "" {
+		h, err := utils.HashPassword(req.Password)
+		if err != nil {
+			return fmt.Errorf("failed to process password: %w", err)
+		}
+		hashPassword = &h
 	}
 	validRoles := map[string]pg.UserRole{
-		"admin":     pg.UserRoleAdmin,
-		"moderator": pg.UserRoleModerator,
-		"student":   pg.UserRoleStudent,
-		"teacher":   pg.UserRoleTeacher,
+		"admin":      pg.UserRoleAdmin,
+		"user":       pg.UserRoleUser,
+		"cashier":    pg.UserRoleCashier,
+		"superadmin": pg.UserRoleSuperadmin,
+		"kitchen":    pg.UserRoleKitchen,
+		"waiter":     pg.UserRoleWaiter,
+		"manager":    pg.UserRoleManager,
 	}
 
 	role := strings.TrimSpace(strings.ToLower(req.Role))
 	userRole, validRole := validRoles[role]
 	if !validRole {
-		userRole = pg.UserRoleStudent
+		userRole = pg.UserRoleUser
 		log.Printf("Using default role: %s", userRole)
 	}
 
+	fullName := strings.TrimSpace(req.FullName)
+	username := strings.TrimSpace(req.Username)
+	if username == "" {
+		username = strings.TrimSpace(req.PhoneNumber)
+	}
+	pincode := strings.TrimSpace(req.Pincode)
+	var pincodePtr *string
+	if pincode != "" {
+		pincodePtr = &pincode
+	}
 	userParams := pg.CreateUserParams{
-		ID:           uuid.NewString(),
-		PhoneNumber:  &req.PhoneNumber,
-		FullName:     strings.TrimSpace(req.FullName),
-		PasswordHash: &hash,
-		DateOfBirth:  pgtype.Date{Time: dateOfBirth, Valid: true},
+		ID:           uuid.New(),
+		FullName:     &fullName,
 		Role:         pg.NullUserRole{UserRole: userRole, Valid: true},
+		Email:        nil,
+		Pincode:      pincodePtr,
+		PhoneNumber:  &req.PhoneNumber,
+		HashPassword: hashPassword,
+		Username:     &username,
 	}
 
 	user, err := s.repo.PgRepo.Repo.CreateUser(ctx, userParams)
@@ -110,103 +107,44 @@ func (s *AuthS) Register(ctx context.Context, req model.RegisterRequest) error {
 		return fmt.Errorf("failed to create user: %w", err)
 	}
 
-	log.Printf("Successfully created user with ID: %s", user.ID)
+	log.Printf("Successfully created user with ID: %s", user.ID.String())
 	return nil
 }
 
 func (s *AuthS) Login(ctx context.Context, req model.LoginRequest, jwtCfg *config.JwtConfig) (model.LoginResponse, error) {
-	if req.PhoneNumber == "" || req.Password == "" {
+	if req.Username == "" {
 		return model.LoginResponse{}, errors.New(http.StatusText(http.StatusBadRequest))
 	}
-
-	user, err := s.repo.PgRepo.Repo.GetUserByPhoneNumber(ctx, &req.PhoneNumber)
+	user, err := s.repo.PgRepo.Repo.GetUserByUsername(ctx, &req.Username)
 	if err != nil {
 		return model.LoginResponse{}, errors.New(http.StatusText(http.StatusUnauthorized))
 	}
-
-	if err := utils.VerifyPassword(*user.PasswordHash, req.Password); err != nil {
-		return model.LoginResponse{}, errors.New(http.StatusText(http.StatusUnauthorized))
-	}
-
-	accessToken, err := utils.CreateJWT(time.Duration(jwtCfg.AccessToken.ExpiresIn)*time.Second,
-		user.ID,
-		jwtCfg.SecretKey)
-	if err != nil {
-		return model.LoginResponse{}, err
-	}
-	refreshToken, err := utils.CreateJWT(time.Duration(jwtCfg.RefreshToken.ExpiresIn)*time.Second,
-		user.ID,
-		jwtCfg.SecretKey)
-	if err != nil {
-		return model.LoginResponse{}, err
-	}
-
-	return model.LoginResponse{
-		AccessToken:  accessToken,
-		RefreshToken: refreshToken,
-		User:         toUserResponse(user),
-	}, nil
-}
-
-func (s *AuthS) LoginWithEmail(ctx context.Context, req model.LoginEmailRequest, jwtCfg *config.JwtConfig) (model.LoginResponse, error) {
-	if req.Email == "" || req.IdToken == "" {
-		return model.LoginResponse{}, errors.New(http.StatusText(http.StatusBadRequest))
-	}
-
-	user, err := s.repo.PgRepo.Repo.GetUserByEmail(ctx, &req.Email)
-
-	if err == pgx.ErrNoRows {
-		status := "onhold"
-		userParams := pg.CreateUserParams{
-			ID:       uuid.NewString(),
-			Email:    &req.Email,
-			FullName: req.FullName,
-			GoogleId: &req.IdToken,
-			Status:   pg.NullUserStatus{UserStatus: pg.UserStatus(status), Valid: true},
-		}
-		_, err = s.repo.PgRepo.Repo.CreateUser(ctx, userParams)
-		if err != nil {
+	if req.Password != "" {
+		if user.HashPassword == nil || *user.HashPassword == "" {
 			return model.LoginResponse{}, errors.New(http.StatusText(http.StatusUnauthorized))
 		}
-		accessToken, err := utils.CreateJWT(time.Duration(jwtCfg.AccessToken.ExpiresIn)*time.Second,
-			user.ID,
-			jwtCfg.SecretKey)
-		if err != nil {
-			return model.LoginResponse{}, err
+		if err := utils.VerifyPassword(*user.HashPassword, req.Password); err != nil {
+			return model.LoginResponse{}, errors.New(http.StatusText(http.StatusUnauthorized))
 		}
-		refreshToken, err := utils.CreateJWT(time.Duration(jwtCfg.RefreshToken.ExpiresIn)*time.Second,
-			user.ID,
-			jwtCfg.SecretKey)
-		if err != nil {
-			return model.LoginResponse{}, err
+	} else if req.Pincode != "" {
+		if user.Pincode == nil || strings.TrimSpace(*user.Pincode) == "" {
+			return model.LoginResponse{}, errors.New(http.StatusText(http.StatusUnauthorized))
 		}
-		return model.LoginResponse{
-			AccessToken:  accessToken,
-			RefreshToken: refreshToken,
-			User:         toUserResponse(user),
-		}, nil
-	}
-	if err != nil {
-		return model.LoginResponse{}, err
-	}
-
-	_, err = s.repo.PgRepo.Repo.UpdateUser(ctx, pg.UpdateUserParams{
-		ID:       user.ID,
-		GoogleId: &req.IdToken,
-		FullName: req.FullName,
-	})
-	if err != nil {
-		return model.LoginResponse{}, errors.New(http.StatusText(http.StatusUnauthorized))
+		if strings.TrimSpace(*user.Pincode) != req.Pincode {
+			return model.LoginResponse{}, errors.New(http.StatusText(http.StatusUnauthorized))
+		}
+	} else {
+		return model.LoginResponse{}, errors.New(http.StatusText(http.StatusBadRequest))
 	}
 
 	accessToken, err := utils.CreateJWT(time.Duration(jwtCfg.AccessToken.ExpiresIn)*time.Second,
-		user.ID,
+		user.ID.String(),
 		jwtCfg.SecretKey)
 	if err != nil {
 		return model.LoginResponse{}, err
 	}
 	refreshToken, err := utils.CreateJWT(time.Duration(jwtCfg.RefreshToken.ExpiresIn)*time.Second,
-		user.ID,
+		user.ID.String(),
 		jwtCfg.SecretKey)
 	if err != nil {
 		return model.LoginResponse{}, err
@@ -231,19 +169,23 @@ func (s *AuthS) Refresh(ctx context.Context, req model.RefreshRequest, jwtCfg *c
 		return model.RefreshResponse{}, errors.New(http.StatusText(http.StatusUnauthorized))
 	}
 
-	user, gErr := s.repo.PgRepo.Repo.GetUserByID(ctx, fmt.Sprint(sub))
+	userUUID, parseErr := uuid.Parse(fmt.Sprint(sub))
+	if parseErr != nil {
+		return model.RefreshResponse{}, parseErr
+	}
+	user, gErr := s.repo.PgRepo.Repo.GetUserByID(ctx, userUUID)
 	if gErr != nil {
 		return model.RefreshResponse{}, gErr
 	}
 
 	accessToken, err := utils.CreateJWT(time.Duration(jwtCfg.AccessToken.ExpiresIn)*time.Second,
-		user.ID,
+		user.ID.String(),
 		jwtCfg.SecretKey)
 	if err != nil {
 		return model.RefreshResponse{}, err
 	}
 	refreshToken, err = utils.CreateJWT(time.Duration(jwtCfg.RefreshToken.ExpiresIn)*time.Second,
-		user.ID,
+		user.ID.String(),
 		jwtCfg.SecretKey)
 	if err != nil {
 		return model.RefreshResponse{}, err
@@ -256,20 +198,16 @@ func (s *AuthS) Refresh(ctx context.Context, req model.RefreshRequest, jwtCfg *c
 }
 
 func (s *AuthS) UpdateUserPassword(ctx context.Context, userID uuid.UUID, currentPassword, newPassword string) error {
-	existingUser, err := s.repo.PgRepo.Repo.GetUserByID(ctx, fmt.Sprint(userID))
+	existingUser, err := s.repo.PgRepo.Repo.GetUserByID(ctx, userID)
 	if err != nil {
 		return fmt.Errorf("failed to get user: %w", err)
 	}
 
-	if existingUser.GoogleId != nil {
-		return fmt.Errorf("password cannot be updated for users who logged in by Auth2")
-	}
-
-	if existingUser.PasswordHash == nil {
+	if existingUser.HashPassword == nil || *existingUser.HashPassword == "" {
 		return fmt.Errorf("user has no password set or password hash is invalid")
 	}
 
-	if err := utils.VerifyPassword(*existingUser.PasswordHash, currentPassword); err != nil {
+	if err := utils.VerifyPassword(*existingUser.HashPassword, currentPassword); err != nil {
 		return fmt.Errorf("invalid current password")
 	}
 
@@ -278,10 +216,7 @@ func (s *AuthS) UpdateUserPassword(ctx context.Context, userID uuid.UUID, curren
 		return fmt.Errorf("failed to hash password: %w", err)
 	}
 
-	params := pg.UpdateUserPasswordParams{
-		ID:           existingUser.ID,
-		PasswordHash: &hashedPassword,
-	}
+	params := pg.UpdateUserPasswordParams{ID: existingUser.ID, HashPassword: &hashedPassword}
 
 	if _, err := s.repo.PgRepo.Repo.UpdateUserPassword(ctx, params); err != nil {
 		return fmt.Errorf("failed to update password: %w", err)
@@ -291,7 +226,11 @@ func (s *AuthS) UpdateUserPassword(ctx context.Context, userID uuid.UUID, curren
 }
 
 func (s *AuthS) GetUserByID(ctx context.Context, userID string) (model.UserResponse, error) {
-	user, err := s.repo.PgRepo.Repo.GetUserByID(ctx, userID)
+	uuidID, err := uuid.Parse(userID)
+	if err != nil {
+		return model.UserResponse{}, err
+	}
+	user, err := s.repo.PgRepo.Repo.GetUserByID(ctx, uuidID)
 	if err != nil {
 		return model.UserResponse{}, err
 	}
@@ -299,7 +238,11 @@ func (s *AuthS) GetUserByID(ctx context.Context, userID string) (model.UserRespo
 }
 
 func (s *AuthS) UpdateUser(ctx context.Context, req model.UpdateUserRequest, userID string) (model.UserResponse, error) {
-	existingUser, err := s.repo.PgRepo.Repo.GetUserByID(ctx, userID)
+	uuidID, err := uuid.Parse(userID)
+	if err != nil {
+		return model.UserResponse{}, err
+	}
+	existingUser, err := s.repo.PgRepo.Repo.GetUserByID(ctx, uuidID)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return model.UserResponse{}, fmt.Errorf("user not found")
@@ -307,87 +250,27 @@ func (s *AuthS) UpdateUser(ctx context.Context, req model.UpdateUserRequest, use
 		return model.UserResponse{}, fmt.Errorf("failed to fetch user: %w", err)
 	}
 
-	// Initialize params with existing user data
 	params := pg.UpdateUserParams{
-		ID:          existingUser.ID,
-		FullName:    existingUser.FullName, // Direct string value
-		Email:       existingUser.Email,
-		PhoneNumber: existingUser.PhoneNumber,
-		Gender:      existingUser.Gender, // Keep existing gender
-		OverAll:     existingUser.OverAll,
-		XP:          existingUser.XP,
-		Balance:     existingUser.Balance,
-		DateOfBirth: existingUser.DateOfBirth,
-		Photo:       existingUser.Photo,
-	}
-
-	validGenders := map[string]bool{
-		"male":   true,
-		"female": true,
-		"other":  true,
+		ID:           existingUser.ID,
+		FullName:     existingUser.FullName,
+		Username:     existingUser.Username,
+		Role:         existingUser.Role,
+		Email:        existingUser.Email,
+		ShiftID:      existingUser.ShiftID,
+		Pincode:      existingUser.Pincode,
+		HashPassword: existingUser.HashPassword,
+		BrandID:      existingUser.BrandID,
+		PhoneNumber:  existingUser.PhoneNumber,
 	}
 
 	if req.FullName != nil && *req.FullName != "" {
-		params.FullName = *req.FullName
+		params.FullName = req.FullName
 	}
 	if req.Email != nil && *req.Email != "" {
 		params.Email = req.Email
 	}
 	if req.PhoneNumber != nil && *req.PhoneNumber != "" {
 		params.PhoneNumber = req.PhoneNumber
-	}
-	if req.Gender != nil && *req.Gender != "" {
-		gender := strings.ToLower(*req.Gender)
-		if !validGenders[gender] {
-			return model.UserResponse{}, fmt.Errorf("invalid gender value: %s. Allowed values: male, female, other", *req.Gender)
-		}
-		// Convert string to UserGender type and create NullUserGender
-		userGender := pg.UserGender(gender)
-		params.Gender = pg.NullUserGender{UserGender: userGender, Valid: true}
-	}
-	if req.OverAll != nil && *req.OverAll >= 0 {
-		params.OverAll = req.OverAll
-	}
-	if req.XP != nil && *req.XP >= 0 {
-		params.XP = req.XP
-	}
-	if req.Balance != nil && *req.Balance >= 0 {
-		params.Balance = req.Balance
-	}
-	if req.Photo != nil && *req.Photo != "" {
-		params.Photo = req.Photo
-	}
-
-	if req.DateOfBirth != nil && *req.DateOfBirth != "" && *req.DateOfBirth != "string" {
-		dateStr := *req.DateOfBirth
-
-		var parsedTime time.Time
-		formats := []string{
-			time.RFC3339,
-			"2006-01-02",
-			"2006-01-02T15:04:05Z",
-			"2006-01-02T15:04:05",
-			"01/02/2006",
-		}
-
-		var parseErr error
-		for _, format := range formats {
-			parsedTime, parseErr = time.Parse(format, dateStr)
-			if parseErr == nil {
-				break
-			}
-		}
-
-		if parseErr != nil {
-			log.Printf("Failed to parse date '%s': %v", dateStr, parseErr)
-			return model.UserResponse{}, fmt.Errorf("invalid date format: %s", dateStr)
-		}
-
-		// Use pgtype.Date instead of pgtype.Timestamp
-		params.DateOfBirth = pgtype.Date{
-			Time:  parsedTime.UTC(),
-			Valid: true,
-		}
 	}
 
 	user, err := s.repo.PgRepo.Repo.UpdateUser(ctx, params)
@@ -401,52 +284,147 @@ func (s *AuthS) UpdateUser(ctx context.Context, req model.UpdateUserRequest, use
 
 func toUserResponse(u pg.User) model.UserResponse {
 	var (
-		dateOfBirth time.Time
-		fullName    *string
-		email       *string
-		role        *string
-		gender      *string
-		status      *string
+		fullName  *string
+		email     *string
+		role      *string
+		username  *string
+		shiftID   *string
+		createdAt *time.Time
+		updatedAt *time.Time
+		brandID   *int64
 	)
 
-	if u.DateOfBirth.Valid {
-		dateOfBirth = u.DateOfBirth.Time
-	}
-	if u.FullName != "" {
-		fullName = &u.FullName
+	if u.FullName != nil {
+		fullName = u.FullName
 	}
 
 	email = u.Email
+	username = u.Username
+	if u.ShiftID.Valid {
+		s := u.ShiftID.String()
+		shiftID = &s
+	}
+	if u.CreatedAt.Valid {
+		t := u.CreatedAt.Time
+		createdAt = &t
+	}
+	if u.UpdatedAt.Valid {
+		t := u.UpdatedAt.Time
+		updatedAt = &t
+	}
 
 	if u.Role.Valid {
 		roleStr := string(u.Role.UserRole)
 		role = &roleStr
 	}
 
-	if u.Gender.Valid {
-		genderStr := string(u.Gender.UserGender)
-		gender = &genderStr
-	}
-
-	if u.Status.Valid {
-		statusStr := string(u.Status.UserStatus)
-		status = &statusStr
-	}
-
 	return model.UserResponse{
-		ID:          u.ID,
+		ID:          u.ID.String(),
 		FullName:    fullName,
-		Email:       email,
+		Username:    username,
 		Role:        role,
-		Gender:      gender,
-		Status:      status,
-		Photo:       u.Photo,
+		Email:       email,
 		PhoneNumber: u.PhoneNumber,
-		XP:          u.XP,
-		Balance:     u.Balance,
-		Group:       u.Group,
-		OverAll:     u.OverAll,
-		IsVerified:  u.IsVerified,
-		DateOfBirth: dateOfBirth,
+		ShiftID:     shiftID,
+		BrandID:     brandID,
+		CreatedAt:   createdAt,
+		UpdatedAt:   updatedAt,
 	}
+}
+
+// Additional methods for QR ordering system
+
+// GetUsersByRole retrieves all users of a specific role
+func (s *AuthS) GetUsersByRole(ctx context.Context, role string) ([]model.UserResponse, error) {
+	userRole := pg.NullUserRole{
+		UserRole: pg.UserRole(role),
+		Valid:    true,
+	}
+	users, err := s.repo.PgRepo.Repo.GetUsersByRole(ctx, userRole)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get users by role: %w", err)
+	}
+
+	var responses []model.UserResponse
+	for _, user := range users {
+		responses = append(responses, toUserResponse(user))
+	}
+	return responses, nil
+}
+
+// GetAllStaff retrieves all active staff members
+func (s *AuthS) GetAllStaff(ctx context.Context) ([]model.UserResponse, error) {
+	users, err := s.repo.PgRepo.Repo.GetAllUsers(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get staff: %w", err)
+	}
+
+	var responses []model.UserResponse
+	for _, user := range users {
+		responses = append(responses, toUserResponse(user))
+	}
+	return responses, nil
+}
+
+// GetKitchenStaff retrieves all kitchen staff members
+func (s *AuthS) GetKitchenStaff(ctx context.Context) ([]model.UserResponse, error) {
+	return s.GetUsersByRole(ctx, string(pg.UserRoleKitchen))
+}
+
+// GetWaiters retrieves all waiter staff members
+func (s *AuthS) GetWaiters(ctx context.Context) ([]model.UserResponse, error) {
+	return s.GetUsersByRole(ctx, string(pg.UserRoleWaiter))
+}
+
+// GetCashiers retrieves all cashier staff members
+func (s *AuthS) GetCashiers(ctx context.Context) ([]model.UserResponse, error) {
+	return s.GetUsersByRole(ctx, string(pg.UserRoleCashier))
+}
+
+// DeleteUser performs a soft delete on a user
+func (s *AuthS) DeleteUser(ctx context.Context, userID string) error {
+	uuidID, err := uuid.Parse(userID)
+	if err != nil {
+		return fmt.Errorf("invalid user ID format: %w", err)
+	}
+
+	_, err = s.repo.PgRepo.Repo.SoftDeleteUser(ctx, uuidID)
+	if err != nil {
+		return fmt.Errorf("failed to delete user: %w", err)
+	}
+
+	return nil
+}
+
+// RestoreUser restores a soft-deleted user
+func (s *AuthS) RestoreUser(ctx context.Context, userID string) error {
+	uuidID, err := uuid.Parse(userID)
+	if err != nil {
+		return fmt.Errorf("invalid user ID format: %w", err)
+	}
+
+	_, err = s.repo.PgRepo.Repo.RestoreUser(ctx, uuidID)
+	if err != nil {
+		return fmt.Errorf("failed to restore user: %w", err)
+	}
+
+	return nil
+}
+
+// SearchUsers performs a full-text search on users
+func (s *AuthS) SearchUsers(ctx context.Context, query string, limit, offset int32) ([]model.UserResponse, error) {
+	users, err := s.repo.PgRepo.Repo.SearchUsers(ctx, pg.SearchUsersParams{
+		Column1: &query,
+		Limit:   limit,
+		Offset:  offset,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to search users: %w", err)
+	}
+
+	var responses []model.UserResponse
+	for _, user := range users {
+		responses = append(responses, toUserResponse(user))
+	}
+	return responses, nil
 }

@@ -1,5 +1,5 @@
 app:
-  name: Blitz Back Service
+  name: MaryAI Back Service
   version: "1.0.0"
   is-debug: false
   is-development: false

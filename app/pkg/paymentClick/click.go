@@ -7,7 +7,7 @@ import (
 	"net/url"
 	"strconv"
 
-	"gitlab.yurtal.tech/company/blitz/back/internal/model"
+	"gitlab.yurtal.tech/company/maryai/back/internal/model"
 )
 
 type Client struct {

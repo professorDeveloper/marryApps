@@ -10,26 +10,16 @@ type User struct {
 	FullName *string `json:"fullName,omitempty"`
 	Email    *string `json:"email,omitempty"`
 	Role     *string `json:"role,omitempty"`
-	Gender   *string `json:"gender,omitempty"`
 	Status   *string `json:"status,omitempty"`
-	Photo    *string `json:"photo,omitempty"`
 }
 
 type RegisterResponse struct {
 	Message string `json:"message"`
 }
 type LoginRequest struct {
-	PhoneNumber string `json:"phoneNumber" example:"+998934722002"`
-	Password    string `json:"password" example:"20021220"`
-}
-type GoogleAuthRequest struct {
-	IDToken string `json:"id_token"`
-	AppType string `json:"app_type"`
-}
-type LoginEmailRequest struct {
-	Email    string `json:"email" example:"user@example.com"`
-	IdToken  string `json:"id_token"`
-	FullName string `json:"full_name"`
+	Username string `json:"username" example:"admin"`
+	Password string `json:"password,omitempty" example:"Password:Javohir"`
+	Pincode  string `json:"pincode,omitempty" example:"1234"`
 }
 
 type LoginResponse struct {
@@ -39,10 +29,12 @@ type LoginResponse struct {
 }
 
 type RegisterRequest struct {
-	FullName    string `json:"fullName" example:"Muslimbek Yarashev"`
-	PhoneNumber string `json:"phoneNumber" example:"+998934722002"`
-	Role        string `json:"role" example:"student"`
-	DateOfBirth string `json:"dateOfBirth" example:"2002-04-06" format:"date"`
+	FullName    string `json:"fullName" example:"Javohir Khasanov"`
+	PhoneNumber string `json:"phoneNumber" example:"+998957749110"`
+	Username    string `json:"username" example:"admin"`
+	Password    string `json:"password,omitempty" example:"Password:Javohir"`
+	Pincode     string `json:"pincode,omitempty" example:"1234"`
+	Role        string `json:"role" example:"user"`
 }
 
 type ErrorResponse struct {
@@ -64,34 +56,23 @@ func (d *Date) UnmarshalJSON(b []byte) error {
 }
 
 type UserResponse struct {
-	ID          string    `json:"id" example:"1234567890"`
-	OverAll     *int32    `json:"overAll,omitempty" example:"1"`
-	FullName    *string   `json:"fullName,omitempty" example:"John Doe"`
-	Email       *string   `json:"email,omitempty" example:"user@example.com"`
-	Role        *string   `json:"role,omitempty" example:"user"`
-	Gender      *string   `json:"gender,omitempty" example:"male"`
-	Status      *string   `json:"status,omitempty" example:"active"`
-	Photo       *string   `json:"photo,omitempty" example:"https://example.com/photo.jpg"`
-	PhoneNumber *string   `json:"phoneNumber,omitempty" example:"+998901234567"`
-	Level       *string   `json:"level,omitempty" example:"level_1"`
-	XP          *int32    `json:"xp,omitempty" example:"100"`
-	Balance     *int64    `json:"balance,omitempty" example:"1000"`
-	Group       *string   `json:"group,omitempty" example:"group_1"`
-	IsVerified  *bool     `json:"isVerified,omitempty" example:"true"`
-	DateOfBirth time.Time `json:"dateOfBirth,omitempty" example:"2022-01-01T00:00:00Z"`
+	ID          string     `json:"id" example:"123e4567-e89b-12d3-a456-426614174000"`
+	FullName    *string    `json:"full_name,omitempty" example:"John Doe"`
+	Username    *string    `json:"username,omitempty" example:"admin"`
+	Role        *string    `json:"role,omitempty" example:"user"`
+	Email       *string    `json:"email,omitempty" example:"user@example.com"`
+	PhoneNumber *string    `json:"phone_number,omitempty" example:"+998901234567"`
+	ShiftID     *string    `json:"shift_id,omitempty" example:"123e4567-e89b-12d3-a456-426614174000"`
+	BrandID     *int64     `json:"brand_id,omitempty" example:"1"`
+	CreatedAt   *time.Time `json:"created_at,omitempty" example:"2022-01-01T00:00:00Z"`
+	UpdatedAt   *time.Time `json:"updated_at,omitempty" example:"2022-01-01T00:00:00Z"`
 }
 
 type UpdateUserRequest struct {
-	FullName    *string `json:"fullName"`
+	FullName    *string `json:"full_name"`
+	Username    *string `json:"username"`
 	Email       *string `json:"email"`
-	PhoneNumber *string `json:"phoneNumber"`
-	Gender      *string `json:"gender"`
-	Photo       *string `json:"photo"`
-	DateOfBirth *string `json:"dateOfBirth"`
-	Level       *string `json:"level,omitempty"`
-	XP          *int32  `json:"xp,omitempty"`
-	Balance     *int64  `json:"balance,omitempty"`
-	OverAll     *int32  `json:"overAll,omitempty"`
+	PhoneNumber *string `json:"phone_number"`
 }
 
 type UpdatePasswordRequest struct {
@@ -117,4 +98,34 @@ type RefreshResponse struct {
 }
 type LogoutResponse struct {
 	Message string `json:"message" example:"User logged out successfully"`
+}
+
+// Shift-related models
+type ShiftResponse struct {
+	ID          string     `json:"id" example:"123e4567-e89b-12d3-a456-426614174000"`
+	Name        *string    `json:"name,omitempty" example:"Morning Shift"`
+	Role        *string    `json:"role,omitempty" example:"waiter"`
+	WorkingDays *string    `json:"working_days,omitempty" example:"Mon,Tue,Wed,Thu,Fri"`
+	OpenTime    *string    `json:"open_time,omitempty" example:"09:00:00"`
+	CloseTime   *string    `json:"close_time,omitempty" example:"17:00:00"`
+	BranchID    *string    `json:"branch_id,omitempty" example:"123e4567-e89b-12d3-a456-426614174000"`
+	CreatedAt   *time.Time `json:"created_at,omitempty" example:"2022-01-01T00:00:00Z"`
+	UpdatedAt   *time.Time `json:"updated_at,omitempty" example:"2022-01-01T00:00:00Z"`
+}
+
+type CreateShiftRequest struct {
+	Name        string  `json:"name" example:"Morning Shift"`
+	Role        *string `json:"role,omitempty" example:"waiter"`
+	WorkingDays *string `json:"working_days,omitempty" example:"Mon,Tue,Wed,Thu,Fri"`
+	OpenTime    *string `json:"open_time,omitempty" example:"09:00:00"`
+	CloseTime   *string `json:"close_time,omitempty" example:"17:00:00"`
+	BranchID    string  `json:"branch_id" example:"123e4567-e89b-12d3-a456-426614174000"`
+}
+
+type UpdateShiftRequest struct {
+	Name        *string `json:"name,omitempty" example:"Morning Shift"`
+	Role        *string `json:"role,omitempty" example:"waiter"`
+	WorkingDays *string `json:"working_days,omitempty" example:"Mon,Tue,Wed,Thu,Fri"`
+	OpenTime    *string `json:"open_time,omitempty" example:"09:00:00"`
+	CloseTime   *string `json:"close_time,omitempty" example:"17:00:00"`
 }

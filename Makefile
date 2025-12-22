@@ -31,3 +31,6 @@ local-infra-up:
 
 local-infra-down:
 	docker compose -f docker-compose.local-infra.yml down
+
+local-infra-full-down:
+	docker compose -f docker-compose.local-infra.yml down -v

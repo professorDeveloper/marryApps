@@ -1,15 +1,12 @@
 package handler
 
 import (
-	"context"
 	"fmt"
 	"log"
 	"net/http"
-	"time"
 
 	"github.com/labstack/echo/v4"
-	"gitlab.yurtal.tech/company/blitz/back/internal/model"
-	"google.golang.org/api/idtoken"
+	"gitlab.yurtal.tech/company/maryai/back/internal/model"
 )
 
 // Login handles user login
@@ -43,10 +40,10 @@ func (h *Handler) Login(c echo.Context) error {
 	if err != nil {
 		log.Printf("Login failed: %v", err)
 
-		if lang == "de" {
+		if lang == "ru" {
 			return c.JSON(http.StatusUnauthorized, model.ErrorResponse{Message: "Ungültige Anmeldeinformationen"})
 		}
-		return c.JSON(http.StatusUnauthorized, model.ErrorResponse{Message: "Fehler beim Anmelden"})
+		return c.JSON(http.StatusUnauthorized, model.ErrorResponse{Message: "ru: Xatolik login qilishda"})
 	}
 
 	return c.JSON(http.StatusOK, resp)
@@ -54,7 +51,7 @@ func (h *Handler) Login(c echo.Context) error {
 
 // RegisterUser handles user registration
 // @Summary Register a new user account
-// @Description Register a new user with phone number and date of birth. Password is automatically generated from date of birth in YYYYMMDD format. User role defaults to 'student' if not provided.
+// @Description Register a new user. User role defaults to 'user' if not provided.
 // @Tags auth
 // @Accept json
 // @Produce json
@@ -95,19 +92,6 @@ func (h *Handler) RegisterUser(c echo.Context) error {
 			})
 		}
 
-		// Validate date of birth format
-		if req.DateOfBirth == "" {
-			return c.JSON(http.StatusBadRequest, model.ErrorResponse{
-				Message: "date of birth is required in YYYY-MM-DD format",
-			})
-		}
-		// Basic format validation
-		_, err := time.Parse("2006-01-02", req.DateOfBirth)
-		if err != nil {
-			return c.JSON(http.StatusBadRequest, model.ErrorResponse{
-				Message: "invalid date format, expected YYYY-MM-DD",
-			})
-		}
 	}
 
 	log.Printf("Register request received - Phone: %s, Name: %s", req.PhoneNumber, req.FullName)
@@ -155,8 +139,8 @@ func (h *Handler) Refresh(c echo.Context) error {
 	resp, err := h.service.Auth().Refresh(c.Request().Context(), req, &h.cfg.Jwt)
 	if err != nil {
 		fmt.Println(err)
-		if lang == "de" {
-			return c.JSON(http.StatusUnauthorized, model.ErrorResponse{Message: "Fehler beim Anmelden"})
+		if lang == "ru" {
+			return c.JSON(http.StatusUnauthorized, model.ErrorResponse{Message: "ru: Xatolik login qilishda"})
 		}
 		return c.JSON(http.StatusUnauthorized, model.ErrorResponse{Message: "Login qilishda xatolik"})
 	}
@@ -164,54 +148,217 @@ func (h *Handler) Refresh(c echo.Context) error {
 	return c.JSON(http.StatusOK, resp)
 }
 
-// RegisterWithGoogle handles user registration with Google
-// @Summary User registration with Google
-// @Description Register a new user using Google and return token with user data
-// @Tags auth
+// GetUsersByRole retrieves users by their role
+// @Summary Get users by role
+// @Description Retrieve all users with a specific role (requires authentication)
+// @Tags users
 // @Accept json
 // @Produce json
-// @Param input body model.GoogleAuthRequest true "Google auth request"
-// @Success 200 {object} model.LoginResponse "Successfully authenticated with Google"
-// @Failure 400 {object} model.ErrorResponse "Invalid request body or app type"
-// @Failure 401 {object} model.ErrorResponse "Invalid Google ID Token"
-// @Router /api/v1/auth/login/with-google [post]
-func (h *Handler) RegisterWithGoogle(c echo.Context) error {
-	req := new(model.GoogleAuthRequest)
-	lang := c.Get("language").(string)
-
-	if err := c.Bind(req); err != nil {
-		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid request body"})
-	}
-	var clientId string
-	switch req.AppType {
-	case "web":
-		clientId = h.cfg.Google.WebClientId
-	case "android":
-		clientId = h.cfg.Google.AndroidClientId
-	case "ios":
-		clientId = h.cfg.Google.IOSClientId
-	default:
-		message := model.GetLocalizedMessage(lang, "invalid_app_type")
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: message})
+// @Security BearerAuth
+// @Param role query string true "User role (admin, manager, cashier, waiter, kitchen, user, superadmin)"
+// @Success 200 {array} model.UserResponse "List of users with the specified role"
+// @Failure 400 {object} model.ErrorResponse "Invalid role parameter"
+// @Failure 401 {object} model.ErrorResponse "Unauthorized"
+// @Router /api/v1/users/by-role [get]
+func (h *Handler) GetUsersByRole(c echo.Context) error {
+	role := c.QueryParam("role")
+	if role == "" {
+		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "role parameter is required"})
 	}
 
-	payload, err := idtoken.Validate(context.Background(), req.IDToken, clientId)
+	users, err := h.service.Auth().GetUsersByRole(c.Request().Context(), role)
 	if err != nil {
-		return c.JSON(http.StatusUnauthorized, map[string]string{"error": "Invalid Google ID Token"})
+		log.Printf("GetUsersByRole failed: %v", err)
+		return c.JSON(http.StatusInternalServerError, model.ErrorResponse{Message: "failed to fetch users"})
 	}
-	email, _ := payload.Claims["email"].(string)
-	name, _ := payload.Claims["name"].(string)
 
-	resp, err := h.service.Auth().LoginWithEmail(c.Request().Context(), model.LoginEmailRequest{
-		Email:    email,
-		IdToken:  req.IDToken,
-		FullName: name,
-	}, &h.cfg.Jwt)
+	return c.JSON(http.StatusOK, users)
+}
+
+// GetAllStaff retrieves all staff members
+// @Summary Get all staff members
+// @Description Retrieve all staff members (non-user role employees)
+// @Tags users
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {array} model.UserResponse "List of all staff members"
+// @Failure 401 {object} model.ErrorResponse "Unauthorized"
+// @Failure 500 {object} model.ErrorResponse "Internal server error"
+// @Router /api/v1/users/staff [get]
+func (h *Handler) GetAllStaff(c echo.Context) error {
+	staff, err := h.service.Auth().GetAllStaff(c.Request().Context())
 	if err != nil {
-		fmt.Println(err)
-		message := model.GetLocalizedMessage(lang, "google_login_failed")
-		return c.JSON(http.StatusUnauthorized, model.ErrorResponse{Message: message})
+		log.Printf("GetAllStaff failed: %v", err)
+		return c.JSON(http.StatusInternalServerError, model.ErrorResponse{Message: "failed to fetch staff"})
 	}
 
-	return c.JSON(http.StatusOK, resp)
+	return c.JSON(http.StatusOK, staff)
+}
+
+// GetKitchenStaff retrieves kitchen staff
+// @Summary Get kitchen staff
+// @Description Retrieve all kitchen staff members
+// @Tags users
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {array} model.UserResponse "List of kitchen staff"
+// @Failure 401 {object} model.ErrorResponse "Unauthorized"
+// @Failure 500 {object} model.ErrorResponse "Internal server error"
+// @Router /api/v1/users/kitchen-staff [get]
+func (h *Handler) GetKitchenStaff(c echo.Context) error {
+	staff, err := h.service.Auth().GetKitchenStaff(c.Request().Context())
+	if err != nil {
+		log.Printf("GetKitchenStaff failed: %v", err)
+		return c.JSON(http.StatusInternalServerError, model.ErrorResponse{Message: "failed to fetch kitchen staff"})
+	}
+
+	return c.JSON(http.StatusOK, staff)
+}
+
+// GetWaiters retrieves waiter staff
+// @Summary Get waiters
+// @Description Retrieve all waiter staff members
+// @Tags users
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {array} model.UserResponse "List of waiters"
+// @Failure 401 {object} model.ErrorResponse "Unauthorized"
+// @Failure 500 {object} model.ErrorResponse "Internal server error"
+// @Router /api/v1/users/waiters [get]
+func (h *Handler) GetWaiters(c echo.Context) error {
+	waiters, err := h.service.Auth().GetWaiters(c.Request().Context())
+	if err != nil {
+		log.Printf("GetWaiters failed: %v", err)
+		return c.JSON(http.StatusInternalServerError, model.ErrorResponse{Message: "failed to fetch waiters"})
+	}
+
+	return c.JSON(http.StatusOK, waiters)
+}
+
+// GetCashiers retrieves cashier staff
+// @Summary Get cashiers
+// @Description Retrieve all cashier staff members
+// @Tags users
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {array} model.UserResponse "List of cashiers"
+// @Failure 401 {object} model.ErrorResponse "Unauthorized"
+// @Failure 500 {object} model.ErrorResponse "Internal server error"
+// @Router /api/v1/users/cashiers [get]
+func (h *Handler) GetCashiers(c echo.Context) error {
+	cashiers, err := h.service.Auth().GetCashiers(c.Request().Context())
+	if err != nil {
+		log.Printf("GetCashiers failed: %v", err)
+		return c.JSON(http.StatusInternalServerError, model.ErrorResponse{Message: "failed to fetch cashiers"})
+	}
+
+	return c.JSON(http.StatusOK, cashiers)
+}
+
+// SearchUsers searches users by query
+// @Summary Search users
+// @Description Search users by name, phone, or username with pagination
+// @Tags users
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param query query string true "Search query (name, phone, or username)"
+// @Param limit query int false "Limit results (default: 20)" default(20)
+// @Param offset query int false "Offset for pagination (default: 0)" default(0)
+// @Success 200 {array} model.UserResponse "List of matching users"
+// @Failure 400 {object} model.ErrorResponse "Invalid query parameter"
+// @Failure 401 {object} model.ErrorResponse "Unauthorized"
+// @Failure 500 {object} model.ErrorResponse "Internal server error"
+// @Router /api/v1/users/search [get]
+func (h *Handler) SearchUsers(c echo.Context) error {
+	query := c.QueryParam("query")
+	if query == "" {
+		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "query parameter is required"})
+	}
+
+	limitStr := c.QueryParam("limit")
+	offsetStr := c.QueryParam("offset")
+
+	limit := int32(20)
+	offset := int32(0)
+
+	if limitStr != "" {
+		var l int32
+		if _, err := fmt.Sscanf(limitStr, "%d", &l); err == nil && l > 0 {
+			limit = l
+		}
+	}
+
+	if offsetStr != "" {
+		var o int32
+		if _, err := fmt.Sscanf(offsetStr, "%d", &o); err == nil && o >= 0 {
+			offset = o
+		}
+	}
+
+	users, err := h.service.Auth().SearchUsers(c.Request().Context(), query, limit, offset)
+	if err != nil {
+		log.Printf("SearchUsers failed: %v", err)
+		return c.JSON(http.StatusInternalServerError, model.ErrorResponse{Message: "failed to search users"})
+	}
+
+	return c.JSON(http.StatusOK, users)
+}
+
+// DeleteUser soft deletes a user
+// @Summary Delete user
+// @Description Soft delete a user (mark as deleted without removing from database)
+// @Tags users
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path string true "User ID"
+// @Success 200 {object} model.SuccessResponse "User deleted successfully"
+// @Failure 400 {object} model.ErrorResponse "Invalid user ID"
+// @Failure 401 {object} model.ErrorResponse "Unauthorized"
+// @Failure 500 {object} model.ErrorResponse "Internal server error"
+// @Router /api/v1/users/{id} [delete]
+func (h *Handler) DeleteUser(c echo.Context) error {
+	userID := c.Param("id")
+	if userID == "" {
+		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "user id is required"})
+	}
+
+	if err := h.service.Auth().DeleteUser(c.Request().Context(), userID); err != nil {
+		log.Printf("DeleteUser failed for id %s: %v", userID, err)
+		return c.JSON(http.StatusInternalServerError, model.ErrorResponse{Message: "failed to delete user"})
+	}
+
+	return c.JSON(http.StatusOK, model.SuccessResponse{Message: "User deleted successfully"})
+}
+
+// RestoreUser restores a soft-deleted user
+// @Summary Restore user
+// @Description Restore a previously deleted user
+// @Tags users
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path string true "User ID"
+// @Success 200 {object} model.SuccessResponse "User restored successfully"
+// @Failure 400 {object} model.ErrorResponse "Invalid user ID"
+// @Failure 401 {object} model.ErrorResponse "Unauthorized"
+// @Failure 500 {object} model.ErrorResponse "Internal server error"
+// @Router /api/v1/users/{id}/restore [post]
+func (h *Handler) RestoreUser(c echo.Context) error {
+	userID := c.Param("id")
+	if userID == "" {
+		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "user id is required"})
+	}
+
+	if err := h.service.Auth().RestoreUser(c.Request().Context(), userID); err != nil {
+		log.Printf("RestoreUser failed for id %s: %v", userID, err)
+		return c.JSON(http.StatusInternalServerError, model.ErrorResponse{Message: "failed to restore user"})
+	}
+
+	return c.JSON(http.StatusOK, model.SuccessResponse{Message: "User restored successfully"})
 }

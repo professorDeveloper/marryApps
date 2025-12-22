@@ -1,7 +1,9 @@
 package middleware
 
 import (
+	"errors"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"strings"
@@ -9,9 +11,9 @@ import (
 
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
-	"gitlab.yurtal.tech/company/blitz/back/internal/config"
-	"gitlab.yurtal.tech/company/blitz/back/internal/model"
-	"gitlab.yurtal.tech/company/blitz/back/pkg/utils"
+	"gitlab.yurtal.tech/company/maryai/back/internal/config"
+	"gitlab.yurtal.tech/company/maryai/back/internal/model"
+	"gitlab.yurtal.tech/company/maryai/back/pkg/utils"
 )
 
 func SetupMiddleware(e *echo.Echo, cfg *config.Config) {
@@ -119,18 +121,18 @@ func ValidateLoginInput(next echo.HandlerFunc) echo.HandlerFunc {
 			return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: message})
 		}
 
-		req.PhoneNumber = strings.TrimSpace(req.PhoneNumber)
+		req.Username = strings.TrimSpace(req.Username)
 		req.Password = strings.TrimSpace(req.Password)
+		req.Pincode = strings.TrimSpace(req.Pincode)
 
-		if req.PhoneNumber == "" || req.Password == "" {
+		if req.Username == "" {
 			lang := getLanguage(c)
 			message := model.GetLocalizedMessage(lang, "phone_password_required")
 			return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: message})
 		}
-
-		if !isValidUzPhoneNumber(req.PhoneNumber) {
+		if req.Password == "" && req.Pincode == "" {
 			lang := getLanguage(c)
-			message := model.GetLocalizedMessage(lang, "invalid_phone_format")
+			message := model.GetLocalizedMessage(lang, "phone_password_required")
 			return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: message})
 		}
 
@@ -145,26 +147,28 @@ func ValidateRegisterInput(next echo.HandlerFunc) echo.HandlerFunc {
 		if err := c.Bind(&req); err != nil {
 			lang := getLanguage(c)
 			message := model.GetLocalizedMessage(lang, "invalid_request_format")
+			if errors.Is(err, io.EOF) {
+				message = "empty request body"
+			}
 			log.Printf("Failed to bind register request: %v", err)
 			return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: message})
 		}
 		req.PhoneNumber = strings.TrimSpace(req.PhoneNumber)
 		req.FullName = strings.TrimSpace(req.FullName)
-		if req.PhoneNumber == "" || req.DateOfBirth == "" {
+		req.Username = strings.TrimSpace(req.Username)
+		req.Password = strings.TrimSpace(req.Password)
+		req.Pincode = strings.TrimSpace(req.Pincode)
+		if req.PhoneNumber == "" {
 			lang := getLanguage(c)
 			message := model.GetLocalizedMessage(lang, "phone_password_required")
 			return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: message})
 		}
-
-		dateOfBirth, err := time.Parse("2006-01-02", req.DateOfBirth)
-		if err != nil {
+		if req.FullName == "" {
 			lang := getLanguage(c)
-			message := model.GetLocalizedMessage(lang, "invalid_date_format")
-			if message == "" {
-				message = "Invalid date format. Please use YYYY-MM-DD"
-			}
+			message := model.GetLocalizedMessage(lang, "invalid_request_format")
 			return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: message})
 		}
+
 		if !isValidUzPhoneNumber(req.PhoneNumber) {
 			lang := getLanguage(c)
 			message := model.GetLocalizedMessage(lang, "invalid_phone_format")
@@ -173,21 +177,10 @@ func ValidateRegisterInput(next echo.HandlerFunc) echo.HandlerFunc {
 			}
 			return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: message})
 		}
-		now := time.Now()
-		minAgeDate := now.AddDate(-100, 0, 0)
-		maxAgeDate := now.AddDate(-18, 0, 0) 
-		if dateOfBirth.Before(minAgeDate) || dateOfBirth.After(maxAgeDate) {
-			lang := getLanguage(c)
-			message := model.GetLocalizedMessage(lang, "invalid_date_of_birth")
-			if message == "" {
-				message = "Date of birth must be between 18 and 100 years ago"
-			}
-			return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: message})
-		}
 
-		req.DateOfBirth = dateOfBirth.Format("2006-01-02")
 		c.Set("register_request", &req)
 		return next(c)
+
 	}
 }
 func isValidUzPhoneNumber(phone string) bool {
@@ -242,7 +235,7 @@ func CheckLanguage() echo.MiddlewareFunc {
 
 			// Validate against supported languages
 			switch lang {
-			case "de", "uz", "en":
+			case "ru", "uz", "en":
 				c.Set("language", lang)
 			default:
 				c.Set("language", "uz") // Fallback to default

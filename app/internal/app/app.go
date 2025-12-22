@@ -12,26 +12,26 @@ import (
 
 	"github.com/labstack/echo/v4"
 	echoSwagger "github.com/swaggo/echo-swagger"
-	"gitlab.yurtal.tech/company/blitz/back/internal/config"
-	"gitlab.yurtal.tech/company/blitz/back/internal/handler"
-	"gitlab.yurtal.tech/company/blitz/back/internal/migrate"
-	"gitlab.yurtal.tech/company/blitz/back/internal/repository"
-	"gitlab.yurtal.tech/company/blitz/back/internal/service"
-	"gitlab.yurtal.tech/company/blitz/back/pkg/logger"
-	"gitlab.yurtal.tech/company/blitz/back/pkg/minio"
-	"gitlab.yurtal.tech/company/blitz/back/pkg/paymentClick"
-	"gitlab.yurtal.tech/company/blitz/back/pkg/paymentPayme"
-	pg "gitlab.yurtal.tech/company/blitz/back/pkg/postgres"
+	"gitlab.yurtal.tech/company/maryai/back/internal/config"
+	"gitlab.yurtal.tech/company/maryai/back/internal/handler"
+	"gitlab.yurtal.tech/company/maryai/back/internal/migrate"
+	"gitlab.yurtal.tech/company/maryai/back/internal/repository"
+	"gitlab.yurtal.tech/company/maryai/back/internal/service"
+	"gitlab.yurtal.tech/company/maryai/back/pkg/logger"
+	"gitlab.yurtal.tech/company/maryai/back/pkg/minio"
+	"gitlab.yurtal.tech/company/maryai/back/pkg/paymentClick"
+	"gitlab.yurtal.tech/company/maryai/back/pkg/paymentPayme"
+	pg "gitlab.yurtal.tech/company/maryai/back/pkg/postgres"
 
-	_ "gitlab.yurtal.tech/company/blitz/back/internal/api/docs"
+	_ "gitlab.yurtal.tech/company/maryai/back/internal/api/docs"
 )
 
-// @title Blitz API
+// @title MaryAI API
 // @version 1.0
-// @description Blitz API server with multi-language support (de, uz)
-// @host back.blitz.yurtal.tech
+// @description MaryAI API server with multi-language support (uz, ru, en)
+// @host back.maryai.yurtal.tech
 // @BasePath /
-// @schemes https
+// @schemes http
 
 // @securityDefinitions.apikey BearerAuth
 // @in header

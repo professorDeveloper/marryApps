@@ -4,11 +4,11 @@ global:
 
 scrape_configs:
   # Scrape metrics from your application
-  - job_name: 'blitz-backend'
+  - job_name: 'maryai-backend'
     static_configs:
       - targets: ['host.docker.internal:7070']
         labels:
-          service: 'blitz-backend'
+          service: 'maryai-backend'
   
   # Scrape Prometheus itself
   - job_name: 'prometheus'

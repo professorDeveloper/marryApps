@@ -6,7 +6,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
-	"gitlab.yurtal.tech/company/blitz/back/internal/model"
+	"gitlab.yurtal.tech/company/maryai/back/internal/model"
 )
 
 // GetUser godoc

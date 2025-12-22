@@ -1,70 +1,67 @@
--- name: CreatePayment :one
-INSERT INTO "studentPayments" (
-    "id", "student", "priceForLevel", "isPaid", "clickTransId", "clickPayDocId",
-    "error", "errorNote", "status", "merchantPrepareId", "paymeId", "provider",
-    "orderNumber", "paidAt", "timePaymeTransCreated", "reason", "amount",
-    "cancelTime", "created", "updated"
+-- name: CreateUserPayment :one
+INSERT INTO user_payments (
+    id,
+    user_id,
+    price_for_plan_id,
+    provider,
+    order_number,
+    amount
 ) VALUES (
-    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
-    $11, $12, $13, $14, $15, $16, $17, $18, $19, $20
+    $1, $2, $3, $4, $5, $6
 ) RETURNING *;
 
--- name: GetPayment :one
-SELECT * FROM "studentPayments" WHERE "id" = $1;
+-- name: GetUserPayment :one
+SELECT * FROM user_payments WHERE id = $1;
 
--- name: GetPayments :many
-SELECT * FROM "studentPayments";
+-- name: GetUserPayments :many
+SELECT * FROM user_payments;
 
--- name: UpdatePayment :one
-UPDATE "studentPayments" SET
-    "student" = $2,
-    "priceForLevel" = $3,
-    "isPaid" = $4,
-    "clickTransId" = $5,
-    "clickPayDocId" = $6,
-    "error" = $7,
-    "errorNote" = $8,
-    "status" = $9,
-    "merchantPrepareId" = $10,
-    "paymeId" = $11,
-    "provider" = $12,
-    "orderNumber" = $13,
-    "paidAt" = $14,
-    "timePaymeTransCreated" = $15,
-    "reason" = $16,
-    "amount" = $17,
-    "cancelTime" = $18,
-    "created" = $19,
-    "updated" = $20
-WHERE "id" = $1
+-- name: UpdateUserPayment :one
+UPDATE user_payments SET
+    user_id = $2,
+    price_for_plan_id = $3,
+    is_paid = $4,
+    click_trans_id = $5,
+    click_pay_doc_id = $6,
+    error = $7,
+    error_note = $8,
+    status = $9,
+    merchant_prepare_id = $10,
+    payme_id = $11,
+    provider = $12,
+    order_number = $13,
+    paid_at = $14,
+    time_payme_trans_created = $15,
+    reason = $16,
+    amount = $17,
+    cancel_time = $18,
+    updated_at = CURRENT_TIMESTAMP
+WHERE id = $1
 RETURNING *;
 
--- name: DeletePayment :exec
-DELETE FROM "studentPayments" WHERE "id" = $1;
+-- name: DeleteUserPayment :exec
+DELETE FROM user_payments WHERE id = $1;
 
--- name: GetPaymentPriceForLevel :one
-SELECT * FROM "priceForLevels" WHERE "id" = $1;
--- name: GetPaymentPriceForLevelByLevel :one
-SELECT * FROM "priceForLevels" WHERE "level" = $1;
+-- name: GetPriceForPlan :one
+SELECT * FROM price_for_plans WHERE id = $1;
 
--- name: CreatePaymentPriceForLevel :one
-INSERT INTO "priceForLevels" (
-    "id", "level", "amount", "created", "updated"
+-- name: CreatePriceForPlan :one
+INSERT INTO price_for_plans (
+    id, name, amount
 ) VALUES (
-    $1, $2, $3, $4, $5
+    $1, $2, $3
 ) RETURNING *;
 
--- name: GetPaymentPriceForLevels :many
-SELECT * FROM "priceForLevels";
+-- name: GetPriceForPlans :many
+SELECT * FROM price_for_plans;
 
--- name: UpdatePaymentPriceForLevel :one
-UPDATE "priceForLevels" SET
-    "level" = $2,
-    "amount" = $3,
-    "created" = $4,
-    "updated" = $5
-WHERE "id" = $1
+-- name: UpdatePriceForPlan :one
+UPDATE price_for_plans SET
+    name = $2,
+    amount = $3,
+    updated_at = CURRENT_TIMESTAMP
+WHERE id = $1
 RETURNING *;
 
--- name: DeletePaymentPriceForLevel :exec
-DELETE FROM "priceForLevels" WHERE "id" = $1;
+-- name: DeletePriceForPlan :exec
+DELETE FROM price_for_plans WHERE id = $1;
