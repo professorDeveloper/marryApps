@@ -23,7 +23,7 @@ func NewCompoundS(repo *repository.Repository) *CompoundS {
 }
 
 // CreateCompound creates a new compound
-func (c *CompoundS) CreateCompound(ctx context.Context, name string, nameI18n, description, descriptionI18n, measurement, departmentID *string, quantity int32, price *string) (*model.CompoundResponse, error) {
+func (c *CompoundS) CreateCompound(ctx context.Context, name string, nameI18n, description, descriptionI18n, measurement, departmentID *string, quantity int32, price *string, pictureUrl *string) (*model.CompoundResponse, error) {
 	if name == "" {
 		return nil, fmt.Errorf("compound name is required")
 	}
@@ -77,6 +77,7 @@ func (c *CompoundS) CreateCompound(ctx context.Context, name string, nameI18n, d
 		Measurement:     measurementType,
 		Price:           numPrice,
 		DepartmentID:    deptID,
+		PictureUrl:      pictureUrl,
 	})
 	if err != nil {
 		log.Printf("CreateCompound failed: %v", err)
@@ -148,7 +149,7 @@ func (c *CompoundS) GetCompoundsByDepartmentID(ctx context.Context, departmentID
 }
 
 // UpdateCompound updates a compound
-func (c *CompoundS) UpdateCompound(ctx context.Context, compoundID string, name, nameI18n, description, descriptionI18n, measurement, departmentID *string, quantity *int32, price *string) (*model.CompoundResponse, error) {
+func (c *CompoundS) UpdateCompound(ctx context.Context, compoundID string, name, nameI18n, description, descriptionI18n, measurement, departmentID *string, quantity *int32, price *string, pictureUrl *string) (*model.CompoundResponse, error) {
 	id, err := uuid.Parse(compoundID)
 	if err != nil {
 		return nil, fmt.Errorf("invalid compound ID: %w", err)
@@ -218,6 +219,11 @@ func (c *CompoundS) UpdateCompound(ctx context.Context, compoundID string, name,
 		finalDeptID = pgtype.UUID{Bytes: deptID, Valid: true}
 	}
 
+	finalPictureUrl := existing.PictureUrl
+	if pictureUrl != nil {
+		finalPictureUrl = pictureUrl
+	}
+
 	compound, err := c.repo.PgRepo.Repo.UpdateCompound(ctx, pg.UpdateCompoundParams{
 		ID:              id,
 		Name:            finalName,
@@ -228,6 +234,7 @@ func (c *CompoundS) UpdateCompound(ctx context.Context, compoundID string, name,
 		Measurement:     finalMeasurement,
 		Price:           finalPrice,
 		DepartmentID:    finalDeptID,
+		PictureUrl:      finalPictureUrl,
 	})
 	if err != nil {
 		log.Printf("UpdateCompound failed: %v", err)
@@ -344,6 +351,7 @@ func toCompoundResponse(comp pg.Compound) *model.CompoundResponse {
 		DescriptionI18n: descriptionI18nStr,
 		Quantity:        quantityInt64,
 		Measurement:     measurementStr,
+		PictureUrl:      comp.PictureUrl,
 		Price:           priceStr,
 		DepartmentID:    deptIDStr,
 		CreatedAt:       createdAt,

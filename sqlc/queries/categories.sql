@@ -1,45 +1,45 @@
 -- ==================== CATEGORIES QUERIES ====================
 
 -- name: CreateCategory :one
-INSERT INTO categories (id, name, name_i18n, department_id, storage_id, parent)
-VALUES ($1, $2, $3, $4, $5, $6)
-RETURNING id, name, name_i18n, department_id, storage_id, parent, created_at, updated_at, deleted_at;
+INSERT INTO categories (id, name, picture_url, name_i18n, department_id, storage_id, parent)
+VALUES ($1, $2, $3, $4, $5, $6, $7)
+RETURNING id, name, picture_url, name_i18n, department_id, storage_id, parent, created_at, updated_at, deleted_at;
 
 -- name: GetCategoryByID :one
-SELECT id, name, name_i18n, department_id, storage_id, parent, created_at, updated_at, deleted_at
+SELECT id, name, picture_url, name_i18n, department_id, storage_id, parent, created_at, updated_at, deleted_at
 FROM categories
 WHERE id = $1 AND deleted_at = 0;
 
 -- name: GetAllCategories :many
-SELECT id, name, name_i18n, department_id, storage_id, parent, created_at, updated_at, deleted_at
+SELECT id, name, picture_url, name_i18n, department_id, storage_id, parent, created_at, updated_at, deleted_at
 FROM categories
 WHERE deleted_at = 0
 ORDER BY created_at DESC
 LIMIT $1 OFFSET $2;
 
 -- name: GetCategoriesByDepartmentID :many
-SELECT id, name, name_i18n, department_id, storage_id, parent, created_at, updated_at, deleted_at
+SELECT id, name, picture_url, name_i18n, department_id, storage_id, parent, created_at, updated_at, deleted_at
 FROM categories
 WHERE department_id = $1 AND deleted_at = 0
 ORDER BY created_at DESC
 LIMIT $2 OFFSET $3;
 
 -- name: GetCategoriesByStorageID :many
-SELECT id, name, name_i18n, department_id, storage_id, parent, created_at, updated_at, deleted_at
+SELECT id, name, picture_url, name_i18n, department_id, storage_id, parent, created_at, updated_at, deleted_at
 FROM categories
 WHERE storage_id = $1 AND deleted_at = 0
 ORDER BY created_at DESC
 LIMIT $2 OFFSET $3;
 
 -- name: GetCategoriesByParentID :many
-SELECT id, name, name_i18n, department_id, storage_id, parent, created_at, updated_at, deleted_at
+SELECT id, name, picture_url, name_i18n, department_id, storage_id, parent, created_at, updated_at, deleted_at
 FROM categories
 WHERE parent = $1 AND deleted_at = 0
 ORDER BY created_at DESC
 LIMIT $2 OFFSET $3;
 
 -- name: GetRootCategories :many
-SELECT id, name, name_i18n, department_id, storage_id, parent, created_at, updated_at, deleted_at
+SELECT id, name, picture_url, name_i18n, department_id, storage_id, parent, created_at, updated_at, deleted_at
 FROM categories
 WHERE parent IS NULL AND deleted_at = 0
 ORDER BY created_at DESC
@@ -48,13 +48,14 @@ LIMIT $1 OFFSET $2;
 -- name: UpdateCategory :one
 UPDATE categories
 SET name = COALESCE($2, name),
-    name_i18n = COALESCE($3, name_i18n),
-    department_id = COALESCE($4, department_id),
-    storage_id = COALESCE($5, storage_id),
-    parent = COALESCE($6, parent),
+    picture_url = COALESCE($3, picture_url),
+    name_i18n = COALESCE($4, name_i18n),
+    department_id = COALESCE($5, department_id),
+    storage_id = COALESCE($6, storage_id),
+    parent = COALESCE($7, parent),
     updated_at = NOW()
 WHERE id = $1 AND deleted_at = 0
-RETURNING id, name, name_i18n, department_id, storage_id, parent, created_at, updated_at, deleted_at;
+RETURNING id, name, picture_url, name_i18n, department_id, storage_id, parent, created_at, updated_at, deleted_at;
 
 -- name: DeleteCategory :exec
 UPDATE categories
@@ -67,7 +68,7 @@ SET deleted_at = 0
 WHERE id = $1 AND deleted_at != 0;
 
 -- name: SearchCategories :many
-SELECT id, name, name_i18n, department_id, storage_id, parent, created_at, updated_at, deleted_at
+SELECT id, name, picture_url, name_i18n, department_id, storage_id, parent, created_at, updated_at, deleted_at
 FROM categories
 WHERE deleted_at = 0 AND name ILIKE '%' || $1 || '%'
 ORDER BY created_at DESC
@@ -89,6 +90,7 @@ SELECT COUNT(*) FROM categories WHERE parent IS NULL AND deleted_at = 0;
 SELECT 
     c.id,
     c.name,
+    c.picture_url,
     c.name_i18n,
     c.department_id,
     c.storage_id,

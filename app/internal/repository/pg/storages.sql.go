@@ -35,16 +35,17 @@ func (q *Queries) CountStoragesByBranch(ctx context.Context, branchID pgtype.UUI
 }
 
 const createStorage = `-- name: CreateStorage :one
-INSERT INTO storages (id, name, branch_id, name_i18n)
-VALUES ($1, $2, $3, $4)
-RETURNING id, name, branch_id, name_i18n, created_at, updated_at, deleted_at
+INSERT INTO storages (id, name, branch_id, name_i18n, picture_url)
+VALUES ($1, $2, $3, $4, $5)
+RETURNING id, name, branch_id, name_i18n, picture_url, created_at, updated_at, deleted_at
 `
 
 type CreateStorageParams struct {
-	ID       uuid.UUID   `json:"id"`
-	Name     string      `json:"name"`
-	BranchID pgtype.UUID `json:"branch_id"`
-	NameI18n pgtype.UUID `json:"name_i18n"`
+	ID         uuid.UUID   `json:"id"`
+	Name       string      `json:"name"`
+	BranchID   pgtype.UUID `json:"branch_id"`
+	NameI18n   pgtype.UUID `json:"name_i18n"`
+	PictureUrl *string     `json:"picture_url"`
 }
 
 func (q *Queries) CreateStorage(ctx context.Context, arg CreateStorageParams) (Storage, error) {
@@ -53,6 +54,7 @@ func (q *Queries) CreateStorage(ctx context.Context, arg CreateStorageParams) (S
 		arg.Name,
 		arg.BranchID,
 		arg.NameI18n,
+		arg.PictureUrl,
 	)
 	var i Storage
 	err := row.Scan(
@@ -60,6 +62,7 @@ func (q *Queries) CreateStorage(ctx context.Context, arg CreateStorageParams) (S
 		&i.Name,
 		&i.BranchID,
 		&i.NameI18n,
+		&i.PictureUrl,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
@@ -79,7 +82,7 @@ func (q *Queries) DeleteStorage(ctx context.Context, id uuid.UUID) error {
 }
 
 const getAllStorages = `-- name: GetAllStorages :many
-SELECT id, name, branch_id, name_i18n, created_at, updated_at, deleted_at
+SELECT id, name, branch_id, name_i18n, picture_url, created_at, updated_at, deleted_at
 FROM storages
 WHERE deleted_at = 0
 ORDER BY created_at DESC
@@ -105,6 +108,7 @@ func (q *Queries) GetAllStorages(ctx context.Context, arg GetAllStoragesParams) 
 			&i.Name,
 			&i.BranchID,
 			&i.NameI18n,
+			&i.PictureUrl,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.DeletedAt,
@@ -120,7 +124,7 @@ func (q *Queries) GetAllStorages(ctx context.Context, arg GetAllStoragesParams) 
 }
 
 const getStorageByID = `-- name: GetStorageByID :one
-SELECT id, name, branch_id, name_i18n, created_at, updated_at, deleted_at
+SELECT id, name, branch_id, name_i18n, picture_url, created_at, updated_at, deleted_at
 FROM storages
 WHERE id = $1 AND deleted_at = 0
 `
@@ -133,6 +137,7 @@ func (q *Queries) GetStorageByID(ctx context.Context, id uuid.UUID) (Storage, er
 		&i.Name,
 		&i.BranchID,
 		&i.NameI18n,
+		&i.PictureUrl,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
@@ -144,18 +149,20 @@ const getStorageStats = `-- name: GetStorageStats :one
 SELECT 
     s.id,
     s.name,
+    s.picture_url,
     COUNT(DISTINCT d.id) as department_count,
     COUNT(DISTINCT c.id) as category_count
 FROM storages s
 LEFT JOIN departments d ON s.id = d.storage_id AND d.deleted_at = 0
 LEFT JOIN categories c ON s.id = c.storage_id AND c.deleted_at = 0
 WHERE s.id = $1 AND s.deleted_at = 0
-GROUP BY s.id, s.name
+GROUP BY s.id, s.name, s.picture_url
 `
 
 type GetStorageStatsRow struct {
 	ID              uuid.UUID `json:"id"`
 	Name            string    `json:"name"`
+	PictureUrl      *string   `json:"picture_url"`
 	DepartmentCount int64     `json:"department_count"`
 	CategoryCount   int64     `json:"category_count"`
 }
@@ -166,6 +173,7 @@ func (q *Queries) GetStorageStats(ctx context.Context, id uuid.UUID) (GetStorage
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
+		&i.PictureUrl,
 		&i.DepartmentCount,
 		&i.CategoryCount,
 	)
@@ -178,6 +186,7 @@ SELECT
     s.name,
     s.branch_id,
     s.name_i18n,
+    s.picture_url,
     s.created_at,
     s.updated_at,
     b.name as branch_name,
@@ -192,6 +201,7 @@ type GetStorageWithBranchRow struct {
 	Name          string             `json:"name"`
 	BranchID      pgtype.UUID        `json:"branch_id"`
 	NameI18n      pgtype.UUID        `json:"name_i18n"`
+	PictureUrl    *string            `json:"picture_url"`
 	CreatedAt     pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt     pgtype.Timestamptz `json:"updated_at"`
 	BranchName    *string            `json:"branch_name"`
@@ -206,6 +216,7 @@ func (q *Queries) GetStorageWithBranch(ctx context.Context, id uuid.UUID) (GetSt
 		&i.Name,
 		&i.BranchID,
 		&i.NameI18n,
+		&i.PictureUrl,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.BranchName,
@@ -215,7 +226,7 @@ func (q *Queries) GetStorageWithBranch(ctx context.Context, id uuid.UUID) (GetSt
 }
 
 const getStoragesByBranchID = `-- name: GetStoragesByBranchID :many
-SELECT id, name, branch_id, name_i18n, created_at, updated_at, deleted_at
+SELECT id, name, branch_id, name_i18n, picture_url, created_at, updated_at, deleted_at
 FROM storages
 WHERE branch_id = $1 AND deleted_at = 0
 ORDER BY created_at DESC
@@ -242,6 +253,7 @@ func (q *Queries) GetStoragesByBranchID(ctx context.Context, arg GetStoragesByBr
 			&i.Name,
 			&i.BranchID,
 			&i.NameI18n,
+			&i.PictureUrl,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.DeletedAt,
@@ -268,7 +280,7 @@ func (q *Queries) RestoreStorage(ctx context.Context, id uuid.UUID) error {
 }
 
 const searchStorages = `-- name: SearchStorages :many
-SELECT id, name, branch_id, name_i18n, created_at, updated_at, deleted_at
+SELECT id, name, branch_id, name_i18n, picture_url, created_at, updated_at, deleted_at
 FROM storages
 WHERE deleted_at = 0 AND name ILIKE '%' || $1 || '%'
 ORDER BY created_at DESC
@@ -295,6 +307,7 @@ func (q *Queries) SearchStorages(ctx context.Context, arg SearchStoragesParams) 
 			&i.Name,
 			&i.BranchID,
 			&i.NameI18n,
+			&i.PictureUrl,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.DeletedAt,
@@ -314,16 +327,18 @@ UPDATE storages
 SET name = COALESCE($2, name),
     branch_id = COALESCE($3, branch_id),
     name_i18n = COALESCE($4, name_i18n),
+    picture_url = COALESCE($5, picture_url),
     updated_at = NOW()
 WHERE id = $1 AND deleted_at = 0
-RETURNING id, name, branch_id, name_i18n, created_at, updated_at, deleted_at
+RETURNING id, name, branch_id, name_i18n, picture_url, created_at, updated_at, deleted_at
 `
 
 type UpdateStorageParams struct {
-	ID       uuid.UUID   `json:"id"`
-	Name     string      `json:"name"`
-	BranchID pgtype.UUID `json:"branch_id"`
-	NameI18n pgtype.UUID `json:"name_i18n"`
+	ID         uuid.UUID   `json:"id"`
+	Name       string      `json:"name"`
+	BranchID   pgtype.UUID `json:"branch_id"`
+	NameI18n   pgtype.UUID `json:"name_i18n"`
+	PictureUrl *string     `json:"picture_url"`
 }
 
 func (q *Queries) UpdateStorage(ctx context.Context, arg UpdateStorageParams) (Storage, error) {
@@ -332,6 +347,7 @@ func (q *Queries) UpdateStorage(ctx context.Context, arg UpdateStorageParams) (S
 		arg.Name,
 		arg.BranchID,
 		arg.NameI18n,
+		arg.PictureUrl,
 	)
 	var i Storage
 	err := row.Scan(
@@ -339,6 +355,7 @@ func (q *Queries) UpdateStorage(ctx context.Context, arg UpdateStorageParams) (S
 		&i.Name,
 		&i.BranchID,
 		&i.NameI18n,
+		&i.PictureUrl,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,

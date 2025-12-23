@@ -10,7 +10,6 @@ import (
 	"gitlab.yurtal.tech/company/maryai/back/internal/model"
 )
 
-
 // CreateIngredientGroup creates a new ingredient group
 // @Summary Create a new ingredient group
 // @Description Create a new ingredient group with name and optional translation
@@ -44,7 +43,7 @@ func (h *Handler) CreateIngredientGroup(c echo.Context) error {
 		nameI18nUUID = &id
 	}
 
-	group, err := h.service.Ingredient().CreateIngredientGroup(c.Request().Context(), *req.Name, nameI18nUUID)
+	group, err := h.service.Ingredient().CreateIngredientGroup(c.Request().Context(), *req.Name, nameI18nUUID, req.PictureUrl)
 	if err != nil {
 		log.Printf("CreateIngredientGroup failed: %v", err)
 		return c.JSON(http.StatusInternalServerError, model.ErrorResponse{Message: "failed to create ingredient group"})
@@ -158,7 +157,7 @@ func (h *Handler) UpdateIngredientGroup(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "invalid request format"})
 	}
 
-	group, err := h.service.Ingredient().UpdateIngredientGroup(c.Request().Context(), groupID, req.Name, req.NameI18n)
+	group, err := h.service.Ingredient().UpdateIngredientGroup(c.Request().Context(), groupID, req.Name, req.NameI18n, req.PictureUrl)
 	if err != nil {
 		log.Printf("UpdateIngredientGroup failed for id %s: %v", groupID, err)
 		return c.JSON(http.StatusInternalServerError, model.ErrorResponse{Message: "failed to update ingredient group"})

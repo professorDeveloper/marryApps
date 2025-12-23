@@ -23,7 +23,7 @@ func NewGoodsS(repo *repository.Repository) *GoodsS {
 }
 
 // CreateGood creates a new good/menu item
-func (g *GoodsS) CreateGood(ctx context.Context, name string, description *string, nameI18n, descriptionI18n, categoryID, departmentID *string, price string, cookTime *int32) (*model.GoodResponse, error) {
+func (g *GoodsS) CreateGood(ctx context.Context, name string, description *string, nameI18n, descriptionI18n, categoryID, departmentID *string, price string, cookTime *int32, pictureUrl *string) (*model.GoodResponse, error) {
 	if name == "" {
 		return nil, fmt.Errorf("good name is required")
 	}
@@ -82,6 +82,7 @@ func (g *GoodsS) CreateGood(ctx context.Context, name string, description *strin
 		DepartmentID:    departmentUUID,
 		Price:           numPrice,
 		CookTime:        cookTime,
+		PictureUrl:      pictureUrl,
 	})
 	if err != nil {
 		log.Printf("CreateGood failed: %v", err)
@@ -202,7 +203,7 @@ func (g *GoodsS) GetGoodsByPriceRange(ctx context.Context, minPrice, maxPrice st
 }
 
 // UpdateGood updates a good
-func (g *GoodsS) UpdateGood(ctx context.Context, goodID string, name, description, nameI18n, descriptionI18n, categoryID, departmentID, price *string, cookTime *int32) (*model.GoodResponse, error) {
+func (g *GoodsS) UpdateGood(ctx context.Context, goodID string, name, description, nameI18n, descriptionI18n, categoryID, departmentID, price *string, cookTime *int32, pictureUrl *string) (*model.GoodResponse, error) {
 	id, err := uuid.Parse(goodID)
 	if err != nil {
 		return nil, fmt.Errorf("invalid good ID: %w", err)
@@ -269,6 +270,7 @@ func (g *GoodsS) UpdateGood(ctx context.Context, goodID string, name, descriptio
 		DepartmentID:    departmentUUID,
 		Price:           priceNum,
 		CookTime:        cookTime,
+		PictureUrl:      pictureUrl,
 	})
 	if err != nil {
 		log.Printf("UpdateGood failed: %v", err)
@@ -660,6 +662,7 @@ func toGoodResponse(good pg.Good) *model.GoodResponse {
 		DescriptionI18n: descriptionI18nStr,
 		CategoryID:      categoryIDStr,
 		DepartmentID:    departmentIDStr,
+		PictureUrl:      good.PictureUrl,
 		Price:           priceStr,
 		CookTime:        good.CookTime,
 		CreatedAt:       createdAt,

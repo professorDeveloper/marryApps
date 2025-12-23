@@ -68,9 +68,9 @@ func (q *Queries) CountGoodsByDepartment(ctx context.Context, departmentID pgtyp
 }
 
 const createGood = `-- name: CreateGood :one
-INSERT INTO goods (id, name, description, name_i18n, description_i18n, category_id, department_id, price, cook_time)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-RETURNING id, name, description, name_i18n, description_i18n, category_id, department_id, price, cook_time, created_at, updated_at, deleted_at
+INSERT INTO goods (id, name, description, name_i18n, description_i18n, category_id, department_id, picture_url, price, cook_time)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+RETURNING id, name, description, name_i18n, description_i18n, category_id, department_id, picture_url, price, cook_time, created_at, updated_at, deleted_at
 `
 
 type CreateGoodParams struct {
@@ -81,6 +81,7 @@ type CreateGoodParams struct {
 	DescriptionI18n pgtype.UUID    `json:"description_i18n"`
 	CategoryID      pgtype.UUID    `json:"category_id"`
 	DepartmentID    pgtype.UUID    `json:"department_id"`
+	PictureUrl      *string        `json:"picture_url"`
 	Price           pgtype.Numeric `json:"price"`
 	CookTime        *int32         `json:"cook_time"`
 }
@@ -94,6 +95,7 @@ func (q *Queries) CreateGood(ctx context.Context, arg CreateGoodParams) (Good, e
 		arg.DescriptionI18n,
 		arg.CategoryID,
 		arg.DepartmentID,
+		arg.PictureUrl,
 		arg.Price,
 		arg.CookTime,
 	)
@@ -106,6 +108,7 @@ func (q *Queries) CreateGood(ctx context.Context, arg CreateGoodParams) (Good, e
 		&i.DescriptionI18n,
 		&i.CategoryID,
 		&i.DepartmentID,
+		&i.PictureUrl,
 		&i.Price,
 		&i.CookTime,
 		&i.CreatedAt,
@@ -231,7 +234,7 @@ func (q *Queries) GetAllGoodDetails(ctx context.Context, arg GetAllGoodDetailsPa
 }
 
 const getAllGoods = `-- name: GetAllGoods :many
-SELECT id, name, description, name_i18n, description_i18n, category_id, department_id, price, cook_time, created_at, updated_at, deleted_at
+SELECT id, name, description, name_i18n, description_i18n, category_id, department_id, picture_url, price, cook_time, created_at, updated_at, deleted_at
 FROM goods
 WHERE deleted_at = 0
 ORDER BY created_at DESC
@@ -260,6 +263,7 @@ func (q *Queries) GetAllGoods(ctx context.Context, arg GetAllGoodsParams) ([]Goo
 			&i.DescriptionI18n,
 			&i.CategoryID,
 			&i.DepartmentID,
+			&i.PictureUrl,
 			&i.Price,
 			&i.CookTime,
 			&i.CreatedAt,
@@ -277,7 +281,7 @@ func (q *Queries) GetAllGoods(ctx context.Context, arg GetAllGoodsParams) ([]Goo
 }
 
 const getGoodByID = `-- name: GetGoodByID :one
-SELECT id, name, description, name_i18n, description_i18n, category_id, department_id, price, cook_time, created_at, updated_at, deleted_at
+SELECT id, name, description, name_i18n, description_i18n, category_id, department_id, picture_url, price, cook_time, created_at, updated_at, deleted_at
 FROM goods
 WHERE id = $1 AND deleted_at = 0
 `
@@ -293,6 +297,7 @@ func (q *Queries) GetGoodByID(ctx context.Context, id uuid.UUID) (Good, error) {
 		&i.DescriptionI18n,
 		&i.CategoryID,
 		&i.DepartmentID,
+		&i.PictureUrl,
 		&i.Price,
 		&i.CookTime,
 		&i.CreatedAt,
@@ -457,6 +462,7 @@ SELECT
     g.description,
     g.name_i18n,
     g.description_i18n,
+    g.picture_url,
     g.price,
     g.cook_time,
     g.created_at,
@@ -475,6 +481,7 @@ type GetGoodWithRelationsRow struct {
 	Description     *string            `json:"description"`
 	NameI18n        pgtype.UUID        `json:"name_i18n"`
 	DescriptionI18n pgtype.UUID        `json:"description_i18n"`
+	PictureUrl      *string            `json:"picture_url"`
 	Price           pgtype.Numeric     `json:"price"`
 	CookTime        *int32             `json:"cook_time"`
 	CreatedAt       pgtype.Timestamptz `json:"created_at"`
@@ -492,6 +499,7 @@ func (q *Queries) GetGoodWithRelations(ctx context.Context, id uuid.UUID) (GetGo
 		&i.Description,
 		&i.NameI18n,
 		&i.DescriptionI18n,
+		&i.PictureUrl,
 		&i.Price,
 		&i.CookTime,
 		&i.CreatedAt,
@@ -503,7 +511,7 @@ func (q *Queries) GetGoodWithRelations(ctx context.Context, id uuid.UUID) (GetGo
 }
 
 const getGoodsByCategoryID = `-- name: GetGoodsByCategoryID :many
-SELECT id, name, description, name_i18n, description_i18n, category_id, department_id, price, cook_time, created_at, updated_at, deleted_at
+SELECT id, name, description, name_i18n, description_i18n, category_id, department_id, picture_url, price, cook_time, created_at, updated_at, deleted_at
 FROM goods
 WHERE category_id = $1 AND deleted_at = 0
 ORDER BY name ASC
@@ -533,6 +541,7 @@ func (q *Queries) GetGoodsByCategoryID(ctx context.Context, arg GetGoodsByCatego
 			&i.DescriptionI18n,
 			&i.CategoryID,
 			&i.DepartmentID,
+			&i.PictureUrl,
 			&i.Price,
 			&i.CookTime,
 			&i.CreatedAt,
@@ -550,7 +559,7 @@ func (q *Queries) GetGoodsByCategoryID(ctx context.Context, arg GetGoodsByCatego
 }
 
 const getGoodsByDepartmentID = `-- name: GetGoodsByDepartmentID :many
-SELECT id, name, description, name_i18n, description_i18n, category_id, department_id, price, cook_time, created_at, updated_at, deleted_at
+SELECT id, name, description, name_i18n, description_i18n, category_id, department_id, picture_url, price, cook_time, created_at, updated_at, deleted_at
 FROM goods
 WHERE department_id = $1 AND deleted_at = 0
 ORDER BY name ASC
@@ -580,6 +589,7 @@ func (q *Queries) GetGoodsByDepartmentID(ctx context.Context, arg GetGoodsByDepa
 			&i.DescriptionI18n,
 			&i.CategoryID,
 			&i.DepartmentID,
+			&i.PictureUrl,
 			&i.Price,
 			&i.CookTime,
 			&i.CreatedAt,
@@ -597,7 +607,7 @@ func (q *Queries) GetGoodsByDepartmentID(ctx context.Context, arg GetGoodsByDepa
 }
 
 const getGoodsByPriceRange = `-- name: GetGoodsByPriceRange :many
-SELECT id, name, description, name_i18n, description_i18n, category_id, department_id, price, cook_time, created_at, updated_at, deleted_at
+SELECT id, name, description, name_i18n, description_i18n, category_id, department_id, picture_url, price, cook_time, created_at, updated_at, deleted_at
 FROM goods
 WHERE price >= $1 AND price <= $2 AND deleted_at = 0
 ORDER BY price ASC
@@ -633,6 +643,7 @@ func (q *Queries) GetGoodsByPriceRange(ctx context.Context, arg GetGoodsByPriceR
 			&i.DescriptionI18n,
 			&i.CategoryID,
 			&i.DepartmentID,
+			&i.PictureUrl,
 			&i.Price,
 			&i.CookTime,
 			&i.CreatedAt,
@@ -653,6 +664,7 @@ const getPopularGoods = `-- name: GetPopularGoods :many
 SELECT 
     g.id,
     g.name,
+    g.picture_url,
     g.price,
     g.cook_time,
     COUNT(oi.id) as order_count,
@@ -660,7 +672,7 @@ SELECT
 FROM goods g
 LEFT JOIN order_items oi ON g.id = oi.good_id AND oi.deleted_at = 0
 WHERE g.deleted_at = 0
-GROUP BY g.id, g.name, g.price, g.cook_time
+GROUP BY g.id, g.name, g.picture_url, g.price, g.cook_time
 ORDER BY order_count DESC
 LIMIT $1 OFFSET $2
 `
@@ -673,6 +685,7 @@ type GetPopularGoodsParams struct {
 type GetPopularGoodsRow struct {
 	ID           uuid.UUID      `json:"id"`
 	Name         string         `json:"name"`
+	PictureUrl   *string        `json:"picture_url"`
 	Price        pgtype.Numeric `json:"price"`
 	CookTime     *int32         `json:"cook_time"`
 	OrderCount   int64          `json:"order_count"`
@@ -691,6 +704,7 @@ func (q *Queries) GetPopularGoods(ctx context.Context, arg GetPopularGoodsParams
 		if err := rows.Scan(
 			&i.ID,
 			&i.Name,
+			&i.PictureUrl,
 			&i.Price,
 			&i.CookTime,
 			&i.OrderCount,
@@ -729,7 +743,7 @@ func (q *Queries) RestoreGoodDetail(ctx context.Context, id uuid.UUID) error {
 }
 
 const searchGoods = `-- name: SearchGoods :many
-SELECT id, name, description, name_i18n, description_i18n, category_id, department_id, price, cook_time, created_at, updated_at, deleted_at
+SELECT id, name, description, name_i18n, description_i18n, category_id, department_id, picture_url, price, cook_time, created_at, updated_at, deleted_at
 FROM goods
 WHERE deleted_at = 0 
 AND (name ILIKE '%' || $1 || '%' OR description ILIKE '%' || $1 || '%')
@@ -760,6 +774,7 @@ func (q *Queries) SearchGoods(ctx context.Context, arg SearchGoodsParams) ([]Goo
 			&i.DescriptionI18n,
 			&i.CategoryID,
 			&i.DepartmentID,
+			&i.PictureUrl,
 			&i.Price,
 			&i.CookTime,
 			&i.CreatedAt,
@@ -784,11 +799,12 @@ SET name = COALESCE($2, name),
     description_i18n = COALESCE($5, description_i18n),
     category_id = COALESCE($6, category_id),
     department_id = COALESCE($7, department_id),
-    price = COALESCE($8, price),
-    cook_time = COALESCE($9, cook_time),
+    picture_url = COALESCE($8, picture_url),
+    price = COALESCE($9, price),
+    cook_time = COALESCE($10, cook_time),
     updated_at = NOW()
 WHERE id = $1 AND deleted_at = 0
-RETURNING id, name, description, name_i18n, description_i18n, category_id, department_id, price, cook_time, created_at, updated_at, deleted_at
+RETURNING id, name, description, name_i18n, description_i18n, category_id, department_id, picture_url, price, cook_time, created_at, updated_at, deleted_at
 `
 
 type UpdateGoodParams struct {
@@ -799,6 +815,7 @@ type UpdateGoodParams struct {
 	DescriptionI18n pgtype.UUID    `json:"description_i18n"`
 	CategoryID      pgtype.UUID    `json:"category_id"`
 	DepartmentID    pgtype.UUID    `json:"department_id"`
+	PictureUrl      *string        `json:"picture_url"`
 	Price           pgtype.Numeric `json:"price"`
 	CookTime        *int32         `json:"cook_time"`
 }
@@ -812,6 +829,7 @@ func (q *Queries) UpdateGood(ctx context.Context, arg UpdateGoodParams) (Good, e
 		arg.DescriptionI18n,
 		arg.CategoryID,
 		arg.DepartmentID,
+		arg.PictureUrl,
 		arg.Price,
 		arg.CookTime,
 	)
@@ -824,6 +842,7 @@ func (q *Queries) UpdateGood(ctx context.Context, arg UpdateGoodParams) (Good, e
 		&i.DescriptionI18n,
 		&i.CategoryID,
 		&i.DepartmentID,
+		&i.PictureUrl,
 		&i.Price,
 		&i.CookTime,
 		&i.CreatedAt,
@@ -913,7 +932,7 @@ UPDATE goods
 SET price = $2,
     updated_at = NOW()
 WHERE id = $1 AND deleted_at = 0
-RETURNING id, name, description, name_i18n, description_i18n, category_id, department_id, price, cook_time, created_at, updated_at, deleted_at
+RETURNING id, name, description, name_i18n, description_i18n, category_id, department_id, picture_url, price, cook_time, created_at, updated_at, deleted_at
 `
 
 type UpdateGoodPriceParams struct {
@@ -932,6 +951,7 @@ func (q *Queries) UpdateGoodPrice(ctx context.Context, arg UpdateGoodPriceParams
 		&i.DescriptionI18n,
 		&i.CategoryID,
 		&i.DepartmentID,
+		&i.PictureUrl,
 		&i.Price,
 		&i.CookTime,
 		&i.CreatedAt,

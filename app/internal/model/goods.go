@@ -11,6 +11,7 @@ type CreateGoodRequest struct {
 	DescriptionI18n *string `json:"description_i18n,omitempty" example:"123e4567-e89b-12d3-a456-426614174000"`
 	CategoryID      *string `json:"category_id,omitempty" example:"123e4567-e89b-12d3-a456-426614174000"`
 	DepartmentID    *string `json:"department_id,omitempty" example:"123e4567-e89b-12d3-a456-426614174000"`
+	PictureUrl      *string `json:"picture_url,omitempty" example:"https://example.com/pizza-margherita.jpg"`
 	Price           string  `json:"price" binding:"required" example:"15000.00"`
 	CookTime        *int32  `json:"cook_time,omitempty" example:"30"`
 }
@@ -22,6 +23,7 @@ type UpdateGoodRequest struct {
 	DescriptionI18n *string `json:"description_i18n,omitempty" example:"123e4567-e89b-12d3-a456-426614174000"`
 	CategoryID      *string `json:"category_id,omitempty" example:"123e4567-e89b-12d3-a456-426614174000"`
 	DepartmentID    *string `json:"department_id,omitempty" example:"123e4567-e89b-12d3-a456-426614174000"`
+	PictureUrl      *string `json:"picture_url,omitempty" example:"https://example.com/pizza-margherita.jpg"`
 	Price           *string `json:"price,omitempty" example:"15000.00"`
 	CookTime        *int32  `json:"cook_time,omitempty" example:"30"`
 }
@@ -38,6 +40,7 @@ type GoodResponse struct {
 	DescriptionI18n *string    `json:"description_i18n,omitempty" example:"123e4567-e89b-12d3-a456-426614174000"`
 	CategoryID      *string    `json:"category_id,omitempty" example:"123e4567-e89b-12d3-a456-426614174000"`
 	DepartmentID    *string    `json:"department_id,omitempty" example:"123e4567-e89b-12d3-a456-426614174000"`
+	PictureUrl      *string    `json:"picture_url,omitempty" example:"https://example.com/pizza-margherita.jpg"`
 	Price           string     `json:"price" example:"15000.00"`
 	CookTime        *int32     `json:"cook_time,omitempty" example:"30"`
 	CreatedAt       *time.Time `json:"created_at,omitempty" example:"2022-01-01T00:00:00Z"`

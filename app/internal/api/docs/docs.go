@@ -8753,6 +8753,10 @@ const docTemplate = `{
                     "type": "string",
                     "example": "123e4567-e89b-12d3-a456-426614174000"
                 },
+                "picture_url": {
+                    "type": "string",
+                    "example": "https://example.com/image.jpg"
+                },
                 "storage_id": {
                     "type": "string",
                     "example": "123e4567-e89b-12d3-a456-426614174000"
@@ -8826,6 +8830,10 @@ const docTemplate = `{
                 "name_i18n": {
                     "type": "string",
                     "example": "123e4567-e89b-12d3-a456-426614174000"
+                },
+                "picture_url": {
+                    "type": "string",
+                    "example": "https://example.com/pizza-dough.jpg"
                 },
                 "price": {
                     "type": "string",
@@ -8906,6 +8914,10 @@ const docTemplate = `{
                     "type": "string",
                     "example": "123e4567-e89b-12d3-a456-426614174000"
                 },
+                "picture_url": {
+                    "type": "string",
+                    "example": "https://example.com/image.jpg"
+                },
                 "storage_id": {
                     "type": "string",
                     "example": "123e4567-e89b-12d3-a456-426614174000"
@@ -8962,6 +8974,10 @@ const docTemplate = `{
                 "name_i18n": {
                     "type": "string",
                     "example": "123e4567-e89b-12d3-a456-426614174000"
+                },
+                "picture_url": {
+                    "type": "string",
+                    "example": "https://example.com/pizza-dough.jpg"
                 },
                 "price": {
                     "type": "string",
@@ -9072,6 +9088,10 @@ const docTemplate = `{
                     "type": "string",
                     "example": "123e4567-e89b-12d3-a456-426614174000"
                 },
+                "picture_url": {
+                    "type": "string",
+                    "example": "https://example.com/pizza-margherita.jpg"
+                },
                 "price": {
                     "type": "string",
                     "example": "15000.00"
@@ -9102,6 +9122,10 @@ const docTemplate = `{
                 "name_i18n": {
                     "type": "string",
                     "example": "123e4567-e89b-12d3-a456-426614174000"
+                },
+                "picture_url": {
+                    "type": "string",
+                    "example": "https://example.com/vegetables.jpg"
                 }
             }
         },
@@ -9212,6 +9236,9 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "name_i18n": {
+                    "type": "string"
+                },
+                "picture_url": {
                     "type": "string"
                 }
             }
@@ -9350,6 +9377,10 @@ const docTemplate = `{
                     "type": "string",
                     "example": "123e4567-e89b-12d3-a456-426614174000"
                 },
+                "picture_url": {
+                    "type": "string",
+                    "example": "https://example.com/pizza-margherita.jpg"
+                },
                 "price": {
                     "type": "string",
                     "example": "15000.00"
@@ -9412,6 +9443,10 @@ const docTemplate = `{
                 "name_i18n": {
                     "type": "string",
                     "example": "123e4567-e89b-12d3-a456-426614174000"
+                },
+                "picture_url": {
+                    "type": "string",
+                    "example": "https://example.com/vegetables.jpg"
                 },
                 "updated_at": {
                     "type": "string",
@@ -9652,6 +9687,9 @@ const docTemplate = `{
                 "name_i18n": {
                     "type": "string"
                 },
+                "picture_url": {
+                    "type": "string"
+                },
                 "updated_at": {
                     "type": "string"
                 }
@@ -9714,6 +9752,10 @@ const docTemplate = `{
                     "type": "string",
                     "example": "123e4567-e89b-12d3-a456-426614174000"
                 },
+                "picture_url": {
+                    "type": "string",
+                    "example": "https://example.com/image.jpg"
+                },
                 "storage_id": {
                     "type": "string",
                     "example": "123e4567-e89b-12d3-a456-426614174000"
@@ -9763,6 +9805,10 @@ const docTemplate = `{
                 "name_i18n": {
                     "type": "string",
                     "example": "123e4567-e89b-12d3-a456-426614174000"
+                },
+                "picture_url": {
+                    "type": "string",
+                    "example": "https://example.com/pizza-dough.jpg"
                 },
                 "price": {
                     "type": "string",
@@ -9877,6 +9923,10 @@ const docTemplate = `{
                     "type": "string",
                     "example": "123e4567-e89b-12d3-a456-426614174000"
                 },
+                "picture_url": {
+                    "type": "string",
+                    "example": "https://example.com/pizza-margherita.jpg"
+                },
                 "price": {
                     "type": "string",
                     "example": "15000.00"
@@ -9907,6 +9957,10 @@ const docTemplate = `{
                 "name_i18n": {
                     "type": "string",
                     "example": "123e4567-e89b-12d3-a456-426614174000"
+                },
+                "picture_url": {
+                    "type": "string",
+                    "example": "https://example.com/vegetables.jpg"
                 }
             }
         },
@@ -9996,6 +10050,9 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "name_i18n": {
+                    "type": "string"
+                },
+                "picture_url": {
                     "type": "string"
                 }
             }

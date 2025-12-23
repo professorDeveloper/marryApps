@@ -50,6 +50,9 @@ definitions:
       parent:
         example: 123e4567-e89b-12d3-a456-426614174000
         type: string
+      picture_url:
+        example: https://example.com/image.jpg
+        type: string
       storage_id:
         example: 123e4567-e89b-12d3-a456-426614174000
         type: string
@@ -103,6 +106,9 @@ definitions:
         type: string
       name_i18n:
         example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+      picture_url:
+        example: https://example.com/pizza-dough.jpg
         type: string
       price:
         example: "500.50"
@@ -160,6 +166,9 @@ definitions:
       parent:
         example: 123e4567-e89b-12d3-a456-426614174000
         type: string
+      picture_url:
+        example: https://example.com/image.jpg
+        type: string
       storage_id:
         example: 123e4567-e89b-12d3-a456-426614174000
         type: string
@@ -198,6 +207,9 @@ definitions:
         type: string
       name_i18n:
         example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+      picture_url:
+        example: https://example.com/pizza-dough.jpg
         type: string
       price:
         example: "500.50"
@@ -276,6 +288,9 @@ definitions:
       name_i18n:
         example: 123e4567-e89b-12d3-a456-426614174000
         type: string
+      picture_url:
+        example: https://example.com/pizza-margherita.jpg
+        type: string
       price:
         example: "15000.00"
         type: string
@@ -299,6 +314,9 @@ definitions:
         type: string
       name_i18n:
         example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+      picture_url:
+        example: https://example.com/vegetables.jpg
         type: string
     type: object
   model.CreateIngredientRequest:
@@ -376,6 +394,8 @@ definitions:
       name:
         type: string
       name_i18n:
+        type: string
+      picture_url:
         type: string
     type: object
   model.CreateTranslationRequest:
@@ -473,6 +493,9 @@ definitions:
       name_i18n:
         example: 123e4567-e89b-12d3-a456-426614174000
         type: string
+      picture_url:
+        example: https://example.com/pizza-margherita.jpg
+        type: string
       price:
         example: "15000.00"
         type: string
@@ -515,6 +538,9 @@ definitions:
         type: string
       name_i18n:
         example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+      picture_url:
+        example: https://example.com/vegetables.jpg
         type: string
       updated_at:
         example: "2022-01-01T00:00:00Z"
@@ -685,6 +711,8 @@ definitions:
         type: string
       name_i18n:
         type: string
+      picture_url:
+        type: string
       updated_at:
         type: string
     type: object
@@ -729,6 +757,9 @@ definitions:
       parent:
         example: 123e4567-e89b-12d3-a456-426614174000
         type: string
+      picture_url:
+        example: https://example.com/image.jpg
+        type: string
       storage_id:
         example: 123e4567-e89b-12d3-a456-426614174000
         type: string
@@ -764,6 +795,9 @@ definitions:
         type: string
       name_i18n:
         example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+      picture_url:
+        example: https://example.com/pizza-dough.jpg
         type: string
       price:
         example: "500.50"
@@ -844,6 +878,9 @@ definitions:
       name_i18n:
         example: 123e4567-e89b-12d3-a456-426614174000
         type: string
+      picture_url:
+        example: https://example.com/pizza-margherita.jpg
+        type: string
       price:
         example: "15000.00"
         type: string
@@ -864,6 +901,9 @@ definitions:
         type: string
       name_i18n:
         example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+      picture_url:
+        example: https://example.com/vegetables.jpg
         type: string
     type: object
   model.UpdateIngredientRequest:
@@ -927,6 +967,8 @@ definitions:
       name:
         type: string
       name_i18n:
+        type: string
+      picture_url:
         type: string
     type: object
   model.UpdateUserRequest:

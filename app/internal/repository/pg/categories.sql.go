@@ -58,14 +58,15 @@ func (q *Queries) CountRootCategories(ctx context.Context) (int64, error) {
 
 const createCategory = `-- name: CreateCategory :one
 
-INSERT INTO categories (id, name, name_i18n, department_id, storage_id, parent)
-VALUES ($1, $2, $3, $4, $5, $6)
-RETURNING id, name, name_i18n, department_id, storage_id, parent, created_at, updated_at, deleted_at
+INSERT INTO categories (id, name, picture_url, name_i18n, department_id, storage_id, parent)
+VALUES ($1, $2, $3, $4, $5, $6, $7)
+RETURNING id, name, picture_url, name_i18n, department_id, storage_id, parent, created_at, updated_at, deleted_at
 `
 
 type CreateCategoryParams struct {
 	ID           uuid.UUID   `json:"id"`
 	Name         string      `json:"name"`
+	PictureUrl   *string     `json:"picture_url"`
 	NameI18n     pgtype.UUID `json:"name_i18n"`
 	DepartmentID pgtype.UUID `json:"department_id"`
 	StorageID    pgtype.UUID `json:"storage_id"`
@@ -77,6 +78,7 @@ func (q *Queries) CreateCategory(ctx context.Context, arg CreateCategoryParams) 
 	row := q.db.QueryRow(ctx, createCategory,
 		arg.ID,
 		arg.Name,
+		arg.PictureUrl,
 		arg.NameI18n,
 		arg.DepartmentID,
 		arg.StorageID,
@@ -86,6 +88,7 @@ func (q *Queries) CreateCategory(ctx context.Context, arg CreateCategoryParams) 
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
+		&i.PictureUrl,
 		&i.NameI18n,
 		&i.DepartmentID,
 		&i.StorageID,
@@ -109,7 +112,7 @@ func (q *Queries) DeleteCategory(ctx context.Context, id uuid.UUID) error {
 }
 
 const getAllCategories = `-- name: GetAllCategories :many
-SELECT id, name, name_i18n, department_id, storage_id, parent, created_at, updated_at, deleted_at
+SELECT id, name, picture_url, name_i18n, department_id, storage_id, parent, created_at, updated_at, deleted_at
 FROM categories
 WHERE deleted_at = 0
 ORDER BY created_at DESC
@@ -133,6 +136,7 @@ func (q *Queries) GetAllCategories(ctx context.Context, arg GetAllCategoriesPara
 		if err := rows.Scan(
 			&i.ID,
 			&i.Name,
+			&i.PictureUrl,
 			&i.NameI18n,
 			&i.DepartmentID,
 			&i.StorageID,
@@ -152,7 +156,7 @@ func (q *Queries) GetAllCategories(ctx context.Context, arg GetAllCategoriesPara
 }
 
 const getCategoriesByDepartmentID = `-- name: GetCategoriesByDepartmentID :many
-SELECT id, name, name_i18n, department_id, storage_id, parent, created_at, updated_at, deleted_at
+SELECT id, name, picture_url, name_i18n, department_id, storage_id, parent, created_at, updated_at, deleted_at
 FROM categories
 WHERE department_id = $1 AND deleted_at = 0
 ORDER BY created_at DESC
@@ -177,6 +181,7 @@ func (q *Queries) GetCategoriesByDepartmentID(ctx context.Context, arg GetCatego
 		if err := rows.Scan(
 			&i.ID,
 			&i.Name,
+			&i.PictureUrl,
 			&i.NameI18n,
 			&i.DepartmentID,
 			&i.StorageID,
@@ -196,7 +201,7 @@ func (q *Queries) GetCategoriesByDepartmentID(ctx context.Context, arg GetCatego
 }
 
 const getCategoriesByParentID = `-- name: GetCategoriesByParentID :many
-SELECT id, name, name_i18n, department_id, storage_id, parent, created_at, updated_at, deleted_at
+SELECT id, name, picture_url, name_i18n, department_id, storage_id, parent, created_at, updated_at, deleted_at
 FROM categories
 WHERE parent = $1 AND deleted_at = 0
 ORDER BY created_at DESC
@@ -221,6 +226,7 @@ func (q *Queries) GetCategoriesByParentID(ctx context.Context, arg GetCategories
 		if err := rows.Scan(
 			&i.ID,
 			&i.Name,
+			&i.PictureUrl,
 			&i.NameI18n,
 			&i.DepartmentID,
 			&i.StorageID,
@@ -240,7 +246,7 @@ func (q *Queries) GetCategoriesByParentID(ctx context.Context, arg GetCategories
 }
 
 const getCategoriesByStorageID = `-- name: GetCategoriesByStorageID :many
-SELECT id, name, name_i18n, department_id, storage_id, parent, created_at, updated_at, deleted_at
+SELECT id, name, picture_url, name_i18n, department_id, storage_id, parent, created_at, updated_at, deleted_at
 FROM categories
 WHERE storage_id = $1 AND deleted_at = 0
 ORDER BY created_at DESC
@@ -265,6 +271,7 @@ func (q *Queries) GetCategoriesByStorageID(ctx context.Context, arg GetCategorie
 		if err := rows.Scan(
 			&i.ID,
 			&i.Name,
+			&i.PictureUrl,
 			&i.NameI18n,
 			&i.DepartmentID,
 			&i.StorageID,
@@ -284,7 +291,7 @@ func (q *Queries) GetCategoriesByStorageID(ctx context.Context, arg GetCategorie
 }
 
 const getCategoryByID = `-- name: GetCategoryByID :one
-SELECT id, name, name_i18n, department_id, storage_id, parent, created_at, updated_at, deleted_at
+SELECT id, name, picture_url, name_i18n, department_id, storage_id, parent, created_at, updated_at, deleted_at
 FROM categories
 WHERE id = $1 AND deleted_at = 0
 `
@@ -295,6 +302,7 @@ func (q *Queries) GetCategoryByID(ctx context.Context, id uuid.UUID) (Category, 
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
+		&i.PictureUrl,
 		&i.NameI18n,
 		&i.DepartmentID,
 		&i.StorageID,
@@ -310,6 +318,7 @@ const getCategoryWithRelations = `-- name: GetCategoryWithRelations :one
 SELECT 
     c.id,
     c.name,
+    c.picture_url,
     c.name_i18n,
     c.department_id,
     c.storage_id,
@@ -329,6 +338,7 @@ WHERE c.id = $1 AND c.deleted_at = 0
 type GetCategoryWithRelationsRow struct {
 	ID             uuid.UUID          `json:"id"`
 	Name           string             `json:"name"`
+	PictureUrl     *string            `json:"picture_url"`
 	NameI18n       pgtype.UUID        `json:"name_i18n"`
 	DepartmentID   pgtype.UUID        `json:"department_id"`
 	StorageID      pgtype.UUID        `json:"storage_id"`
@@ -346,6 +356,7 @@ func (q *Queries) GetCategoryWithRelations(ctx context.Context, id uuid.UUID) (G
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
+		&i.PictureUrl,
 		&i.NameI18n,
 		&i.DepartmentID,
 		&i.StorageID,
@@ -360,7 +371,7 @@ func (q *Queries) GetCategoryWithRelations(ctx context.Context, id uuid.UUID) (G
 }
 
 const getRootCategories = `-- name: GetRootCategories :many
-SELECT id, name, name_i18n, department_id, storage_id, parent, created_at, updated_at, deleted_at
+SELECT id, name, picture_url, name_i18n, department_id, storage_id, parent, created_at, updated_at, deleted_at
 FROM categories
 WHERE parent IS NULL AND deleted_at = 0
 ORDER BY created_at DESC
@@ -384,6 +395,7 @@ func (q *Queries) GetRootCategories(ctx context.Context, arg GetRootCategoriesPa
 		if err := rows.Scan(
 			&i.ID,
 			&i.Name,
+			&i.PictureUrl,
 			&i.NameI18n,
 			&i.DepartmentID,
 			&i.StorageID,
@@ -414,7 +426,7 @@ func (q *Queries) RestoreCategory(ctx context.Context, id uuid.UUID) error {
 }
 
 const searchCategories = `-- name: SearchCategories :many
-SELECT id, name, name_i18n, department_id, storage_id, parent, created_at, updated_at, deleted_at
+SELECT id, name, picture_url, name_i18n, department_id, storage_id, parent, created_at, updated_at, deleted_at
 FROM categories
 WHERE deleted_at = 0 AND name ILIKE '%' || $1 || '%'
 ORDER BY created_at DESC
@@ -439,6 +451,7 @@ func (q *Queries) SearchCategories(ctx context.Context, arg SearchCategoriesPara
 		if err := rows.Scan(
 			&i.ID,
 			&i.Name,
+			&i.PictureUrl,
 			&i.NameI18n,
 			&i.DepartmentID,
 			&i.StorageID,
@@ -460,18 +473,20 @@ func (q *Queries) SearchCategories(ctx context.Context, arg SearchCategoriesPara
 const updateCategory = `-- name: UpdateCategory :one
 UPDATE categories
 SET name = COALESCE($2, name),
-    name_i18n = COALESCE($3, name_i18n),
-    department_id = COALESCE($4, department_id),
-    storage_id = COALESCE($5, storage_id),
-    parent = COALESCE($6, parent),
+    picture_url = COALESCE($3, picture_url),
+    name_i18n = COALESCE($4, name_i18n),
+    department_id = COALESCE($5, department_id),
+    storage_id = COALESCE($6, storage_id),
+    parent = COALESCE($7, parent),
     updated_at = NOW()
 WHERE id = $1 AND deleted_at = 0
-RETURNING id, name, name_i18n, department_id, storage_id, parent, created_at, updated_at, deleted_at
+RETURNING id, name, picture_url, name_i18n, department_id, storage_id, parent, created_at, updated_at, deleted_at
 `
 
 type UpdateCategoryParams struct {
 	ID           uuid.UUID   `json:"id"`
 	Name         string      `json:"name"`
+	PictureUrl   *string     `json:"picture_url"`
 	NameI18n     pgtype.UUID `json:"name_i18n"`
 	DepartmentID pgtype.UUID `json:"department_id"`
 	StorageID    pgtype.UUID `json:"storage_id"`
@@ -482,6 +497,7 @@ func (q *Queries) UpdateCategory(ctx context.Context, arg UpdateCategoryParams) 
 	row := q.db.QueryRow(ctx, updateCategory,
 		arg.ID,
 		arg.Name,
+		arg.PictureUrl,
 		arg.NameI18n,
 		arg.DepartmentID,
 		arg.StorageID,
@@ -491,6 +507,7 @@ func (q *Queries) UpdateCategory(ctx context.Context, arg UpdateCategoryParams) 
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
+		&i.PictureUrl,
 		&i.NameI18n,
 		&i.DepartmentID,
 		&i.StorageID,

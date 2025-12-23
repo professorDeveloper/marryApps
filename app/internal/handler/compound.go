@@ -34,7 +34,7 @@ func (h *Handler) CreateCompound(c echo.Context) error {
 	}
 
 	quantity := int32(req.Quantity)
-	compound, err := h.service.Compound().CreateCompound(c.Request().Context(), req.Name, req.NameI18n, req.Description, req.DescriptionI18n, req.Measurement, req.DepartmentID, quantity, req.Price)
+	compound, err := h.service.Compound().CreateCompound(c.Request().Context(), req.Name, req.NameI18n, req.Description, req.DescriptionI18n, req.Measurement, req.DepartmentID, quantity, req.Price, req.PictureUrl)
 	if err != nil {
 		log.Printf("CreateCompound failed: %v", err)
 		return c.JSON(http.StatusInternalServerError, model.ErrorResponse{Message: "failed to create compound"})
@@ -188,7 +188,7 @@ func (h *Handler) UpdateCompound(c echo.Context) error {
 		quantity = &q
 	}
 
-	compound, err := h.service.Compound().UpdateCompound(c.Request().Context(), compoundID, req.Name, req.NameI18n, req.Description, req.DescriptionI18n, req.Measurement, req.DepartmentID, quantity, req.Price)
+	compound, err := h.service.Compound().UpdateCompound(c.Request().Context(), compoundID, req.Name, req.NameI18n, req.Description, req.DescriptionI18n, req.Measurement, req.DepartmentID, quantity, req.Price, req.PictureUrl)
 	if err != nil {
 		log.Printf("UpdateCompound failed for ID %s: %v", compoundID, err)
 		return c.JSON(http.StatusInternalServerError, model.ErrorResponse{Message: "failed to update compound"})

@@ -21,7 +21,7 @@ func NewStorageS(repo *repository.Repository) *StorageS {
 }
 
 // CreateStorage creates a new storage
-func (s *StorageS) CreateStorage(ctx context.Context, name string, branchID string, nameI18n *uuid.UUID) (*model.StorageResponse, error) {
+func (s *StorageS) CreateStorage(ctx context.Context, name string, branchID string, nameI18n *uuid.UUID, pictureUrl *string) (*model.StorageResponse, error) {
 	if name == "" {
 		return nil, fmt.Errorf("storage name is required")
 	}
@@ -40,10 +40,11 @@ func (s *StorageS) CreateStorage(ctx context.Context, name string, branchID stri
 	}
 
 	storage, err := s.repo.PgRepo.Repo.CreateStorage(ctx, pg.CreateStorageParams{
-		ID:       uuid.New(),
-		Name:     name,
-		BranchID: pgtype.UUID{Bytes: bID, Valid: true},
-		NameI18n: nameI18nUUID,
+		ID:         uuid.New(),
+		Name:       name,
+		BranchID:   pgtype.UUID{Bytes: bID, Valid: true},
+		NameI18n:   nameI18nUUID,
+		PictureUrl: pictureUrl,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to create storage: %w", err)
@@ -110,7 +111,7 @@ func (s *StorageS) GetStoragesByBranchID(ctx context.Context, branchID string, l
 }
 
 // UpdateStorage updates a storage
-func (s *StorageS) UpdateStorage(ctx context.Context, storageID string, name *string, branchID *string, nameI18n *string) (*model.StorageResponse, error) {
+func (s *StorageS) UpdateStorage(ctx context.Context, storageID string, name *string, branchID *string, nameI18n *string, pictureUrl *string) (*model.StorageResponse, error) {
 	id, err := uuid.Parse(storageID)
 	if err != nil {
 		return nil, fmt.Errorf("invalid storage ID: %w", err)
@@ -145,11 +146,17 @@ func (s *StorageS) UpdateStorage(ctx context.Context, storageID string, name *st
 		updatedNameI18n = pgtype.UUID{Bytes: uuid, Valid: true}
 	}
 
+	updatedPictureUrl := currentStorage.PictureUrl
+	if pictureUrl != nil {
+		updatedPictureUrl = pictureUrl
+	}
+
 	storage, err := s.repo.PgRepo.Repo.UpdateStorage(ctx, pg.UpdateStorageParams{
-		ID:       id,
-		Name:     updatedName,
-		BranchID: updatedBranchID,
-		NameI18n: updatedNameI18n,
+		ID:         id,
+		Name:       updatedName,
+		BranchID:   updatedBranchID,
+		NameI18n:   updatedNameI18n,
+		PictureUrl: updatedPictureUrl,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to update storage: %w", err)
@@ -231,11 +238,12 @@ func toStorageResponse(st pg.Storage) *model.StorageResponse {
 	branchID := st.BranchID.String()
 
 	return &model.StorageResponse{
-		ID:        st.ID.String(),
-		Name:      &name,
-		BranchID:  branchID,
-		NameI18n:  nameI18nStr,
-		CreatedAt: createdAt,
-		UpdatedAt: updatedAt,
+		ID:         st.ID.String(),
+		Name:       &name,
+		BranchID:   branchID,
+		NameI18n:   nameI18nStr,
+		PictureUrl: st.PictureUrl,
+		CreatedAt:  createdAt,
+		UpdatedAt:  updatedAt,
 	}
 }

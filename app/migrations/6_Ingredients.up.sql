@@ -1,12 +1,13 @@
 CREATE TYPE measurement_type AS ENUM ('kg', 'l', 'piece');
 
 CREATE TABLE IF NOT EXISTS ingredient_groups (
-  id         UUID      PRIMARY KEY DEFAULT gen_random_uuid(),
-  name       TEXT      NOT NULL,
-  name_i18n  UUID      REFERENCES translations(id) ON DELETE SET NULL,
-  created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-  updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-  deleted_at BIGINT    DEFAULT 0
+  id          UUID      PRIMARY KEY DEFAULT gen_random_uuid(),
+  name        TEXT      NOT NULL,
+  picture_url TEXT,
+  name_i18n   UUID      REFERENCES translations(id) ON DELETE SET NULL,
+  created_at  TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+  updated_at  TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+  deleted_at  BIGINT    DEFAULT 0
 );
 
 CREATE TABLE IF NOT EXISTS ingredients (

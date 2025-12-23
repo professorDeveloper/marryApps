@@ -22,7 +22,7 @@ func NewCategoryS(repo *repository.Repository) *CategoryS {
 	return &CategoryS{repo: repo}
 }
 
-func (c *CategoryS) CreateCategory(ctx context.Context, name string, nameI18n, departmentID, storageID, parent *string) (*model.CategoryResponse, error) {
+func (c *CategoryS) CreateCategory(ctx context.Context, name string, nameI18n, departmentID, storageID, parent *string, pictureUrl *string) (*model.CategoryResponse, error) {
 	if name == "" {
 		return nil, fmt.Errorf("category name is required")
 	}
@@ -71,6 +71,7 @@ func (c *CategoryS) CreateCategory(ctx context.Context, name string, nameI18n, d
 		DepartmentID: deptID,
 		StorageID:    storageUUID,
 		Parent:       parentUUID,
+		PictureUrl:   pictureUrl,
 	})
 	if err != nil {
 		log.Printf("CreateCategory failed: %v", err)
@@ -208,7 +209,7 @@ func (c *CategoryS) GetRootCategories(ctx context.Context, limit, offset int32) 
 }
 
 // UpdateCategory updates a category
-func (c *CategoryS) UpdateCategory(ctx context.Context, categoryID string, name, nameI18n, departmentID, storageID, parent *string) (*model.CategoryResponse, error) {
+func (c *CategoryS) UpdateCategory(ctx context.Context, categoryID string, name, nameI18n, departmentID, storageID, parent *string, pictureUrl *string) (*model.CategoryResponse, error) {
 	id, err := uuid.Parse(categoryID)
 	if err != nil {
 		return nil, fmt.Errorf("invalid category ID: %w", err)
@@ -264,6 +265,11 @@ func (c *CategoryS) UpdateCategory(ctx context.Context, categoryID string, name,
 		finalParent = pgtype.UUID{Bytes: parentID, Valid: true}
 	}
 
+	finalPictureUrl := existing.PictureUrl
+	if pictureUrl != nil {
+		finalPictureUrl = pictureUrl
+	}
+
 	category, err := c.repo.PgRepo.Repo.UpdateCategory(ctx, pg.UpdateCategoryParams{
 		ID:           id,
 		Name:         finalName,
@@ -271,6 +277,7 @@ func (c *CategoryS) UpdateCategory(ctx context.Context, categoryID string, name,
 		DepartmentID: finalDeptID,
 		StorageID:    finalStorageID,
 		Parent:       finalParent,
+		PictureUrl:   finalPictureUrl,
 	})
 	if err != nil {
 		log.Printf("UpdateCategory failed: %v", err)
@@ -373,6 +380,7 @@ func toCategoryResponse(cat pg.Category) *model.CategoryResponse {
 		ID:           cat.ID.String(),
 		Name:         cat.Name,
 		NameI18n:     nameI18nStr,
+		PictureUrl:   cat.PictureUrl,
 		DepartmentID: deptIDStr,
 		StorageID:    storageIDStr,
 		Parent:       parentStr,

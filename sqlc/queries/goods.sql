@@ -1,36 +1,36 @@
 -- name: CreateGood :one
-INSERT INTO goods (id, name, description, name_i18n, description_i18n, category_id, department_id, price, cook_time)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-RETURNING id, name, description, name_i18n, description_i18n, category_id, department_id, price, cook_time, created_at, updated_at, deleted_at;
+INSERT INTO goods (id, name, description, name_i18n, description_i18n, category_id, department_id, picture_url, price, cook_time)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+RETURNING id, name, description, name_i18n, description_i18n, category_id, department_id, picture_url, price, cook_time, created_at, updated_at, deleted_at;
 
 -- name: GetGoodByID :one
-SELECT id, name, description, name_i18n, description_i18n, category_id, department_id, price, cook_time, created_at, updated_at, deleted_at
+SELECT id, name, description, name_i18n, description_i18n, category_id, department_id, picture_url, price, cook_time, created_at, updated_at, deleted_at
 FROM goods
 WHERE id = $1 AND deleted_at = 0;
 
 -- name: GetAllGoods :many
-SELECT id, name, description, name_i18n, description_i18n, category_id, department_id, price, cook_time, created_at, updated_at, deleted_at
+SELECT id, name, description, name_i18n, description_i18n, category_id, department_id, picture_url, price, cook_time, created_at, updated_at, deleted_at
 FROM goods
 WHERE deleted_at = 0
 ORDER BY created_at DESC
 LIMIT $1 OFFSET $2;
 
 -- name: GetGoodsByCategoryID :many
-SELECT id, name, description, name_i18n, description_i18n, category_id, department_id, price, cook_time, created_at, updated_at, deleted_at
+SELECT id, name, description, name_i18n, description_i18n, category_id, department_id, picture_url, price, cook_time, created_at, updated_at, deleted_at
 FROM goods
 WHERE category_id = $1 AND deleted_at = 0
 ORDER BY name ASC
 LIMIT $2 OFFSET $3;
 
 -- name: GetGoodsByDepartmentID :many
-SELECT id, name, description, name_i18n, description_i18n, category_id, department_id, price, cook_time, created_at, updated_at, deleted_at
+SELECT id, name, description, name_i18n, description_i18n, category_id, department_id, picture_url, price, cook_time, created_at, updated_at, deleted_at
 FROM goods
 WHERE department_id = $1 AND deleted_at = 0
 ORDER BY name ASC
 LIMIT $2 OFFSET $3;
 
 -- name: GetGoodsByPriceRange :many
-SELECT id, name, description, name_i18n, description_i18n, category_id, department_id, price, cook_time, created_at, updated_at, deleted_at
+SELECT id, name, description, name_i18n, description_i18n, category_id, department_id, picture_url, price, cook_time, created_at, updated_at, deleted_at
 FROM goods
 WHERE price >= $1 AND price <= $2 AND deleted_at = 0
 ORDER BY price ASC
@@ -44,18 +44,19 @@ SET name = COALESCE($2, name),
     description_i18n = COALESCE($5, description_i18n),
     category_id = COALESCE($6, category_id),
     department_id = COALESCE($7, department_id),
-    price = COALESCE($8, price),
-    cook_time = COALESCE($9, cook_time),
+    picture_url = COALESCE($8, picture_url),
+    price = COALESCE($9, price),
+    cook_time = COALESCE($10, cook_time),
     updated_at = NOW()
 WHERE id = $1 AND deleted_at = 0
-RETURNING id, name, description, name_i18n, description_i18n, category_id, department_id, price, cook_time, created_at, updated_at, deleted_at;
+RETURNING id, name, description, name_i18n, description_i18n, category_id, department_id, picture_url, price, cook_time, created_at, updated_at, deleted_at;
 
 -- name: UpdateGoodPrice :one
 UPDATE goods
 SET price = $2,
     updated_at = NOW()
 WHERE id = $1 AND deleted_at = 0
-RETURNING id, name, description, name_i18n, description_i18n, category_id, department_id, price, cook_time, created_at, updated_at, deleted_at;
+RETURNING id, name, description, name_i18n, description_i18n, category_id, department_id, picture_url, price, cook_time, created_at, updated_at, deleted_at;
 
 -- name: DeleteGood :exec
 UPDATE goods
@@ -68,7 +69,7 @@ SET deleted_at = 0
 WHERE id = $1 AND deleted_at != 0;
 
 -- name: SearchGoods :many
-SELECT id, name, description, name_i18n, description_i18n, category_id, department_id, price, cook_time, created_at, updated_at, deleted_at
+SELECT id, name, description, name_i18n, description_i18n, category_id, department_id, picture_url, price, cook_time, created_at, updated_at, deleted_at
 FROM goods
 WHERE deleted_at = 0 
 AND (name ILIKE '%' || $1 || '%' OR description ILIKE '%' || $1 || '%')
@@ -91,6 +92,7 @@ SELECT
     g.description,
     g.name_i18n,
     g.description_i18n,
+    g.picture_url,
     g.price,
     g.cook_time,
     g.created_at,
@@ -106,6 +108,7 @@ WHERE g.id = $1 AND g.deleted_at = 0;
 SELECT 
     g.id,
     g.name,
+    g.picture_url,
     g.price,
     g.cook_time,
     COUNT(oi.id) as order_count,
@@ -113,7 +116,7 @@ SELECT
 FROM goods g
 LEFT JOIN order_items oi ON g.id = oi.good_id AND oi.deleted_at = 0
 WHERE g.deleted_at = 0
-GROUP BY g.id, g.name, g.price, g.cook_time
+GROUP BY g.id, g.name, g.picture_url, g.price, g.cook_time
 ORDER BY order_count DESC
 LIMIT $1 OFFSET $2;
 

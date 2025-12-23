@@ -27,24 +27,27 @@ type BranchResponse struct {
 }
 
 type CreateStorageRequest struct {
-	Name     *string `json:"name"`
-	BranchID string  `json:"branch_id"`
-	NameI18n *string `json:"name_i18n"`
+	Name       *string `json:"name"`
+	BranchID   string  `json:"branch_id"`
+	NameI18n   *string `json:"name_i18n"`
+	PictureUrl *string `json:"picture_url"`
 }
 
 type UpdateStorageRequest struct {
-	Name     *string `json:"name"`
-	BranchID *string `json:"branch_id"`
-	NameI18n *string `json:"name_i18n"`
+	Name       *string `json:"name"`
+	BranchID   *string `json:"branch_id"`
+	NameI18n   *string `json:"name_i18n"`
+	PictureUrl *string `json:"picture_url"`
 }
 
 type StorageResponse struct {
-	ID        string     `json:"id"`
-	Name      *string    `json:"name"`
-	BranchID  string     `json:"branch_id"`
-	NameI18n  *string    `json:"name_i18n"`
-	CreatedAt *time.Time `json:"created_at"`
-	UpdatedAt *time.Time `json:"updated_at"`
+	ID         string     `json:"id"`
+	Name       *string    `json:"name"`
+	BranchID   string     `json:"branch_id"`
+	NameI18n   *string    `json:"name_i18n"`
+	PictureUrl *string    `json:"picture_url"`
+	CreatedAt  *time.Time `json:"created_at"`
+	UpdatedAt  *time.Time `json:"updated_at"`
 }
 
 type CreateDepartmentRequest struct {
@@ -116,21 +119,24 @@ type TranslationResponse struct {
 // ==================== INGREDIENT GROUPS ====================
 
 type CreateIngredientGroupRequest struct {
-	Name     *string `json:"name" example:"Vegetables"`
-	NameI18n *string `json:"name_i18n,omitempty" example:"123e4567-e89b-12d3-a456-426614174000"`
+	Name       *string `json:"name" example:"Vegetables"`
+	NameI18n   *string `json:"name_i18n,omitempty" example:"123e4567-e89b-12d3-a456-426614174000"`
+	PictureUrl *string `json:"picture_url,omitempty" example:"https://example.com/vegetables.jpg"`
 }
 
 type UpdateIngredientGroupRequest struct {
-	Name     *string `json:"name,omitempty" example:"Vegetables"`
-	NameI18n *string `json:"name_i18n,omitempty" example:"123e4567-e89b-12d3-a456-426614174000"`
+	Name       *string `json:"name,omitempty" example:"Vegetables"`
+	NameI18n   *string `json:"name_i18n,omitempty" example:"123e4567-e89b-12d3-a456-426614174000"`
+	PictureUrl *string `json:"picture_url,omitempty" example:"https://example.com/vegetables.jpg"`
 }
 
 type IngredientGroupResponse struct {
-	ID        string     `json:"id" example:"123e4567-e89b-12d3-a456-426614174000"`
-	Name      *string    `json:"name,omitempty" example:"Vegetables"`
-	NameI18n  *string    `json:"name_i18n,omitempty" example:"123e4567-e89b-12d3-a456-426614174000"`
-	CreatedAt *time.Time `json:"created_at,omitempty" example:"2022-01-01T00:00:00Z"`
-	UpdatedAt *time.Time `json:"updated_at,omitempty" example:"2022-01-01T00:00:00Z"`
+	ID         string     `json:"id" example:"123e4567-e89b-12d3-a456-426614174000"`
+	Name       *string    `json:"name,omitempty" example:"Vegetables"`
+	NameI18n   *string    `json:"name_i18n,omitempty" example:"123e4567-e89b-12d3-a456-426614174000"`
+	PictureUrl *string    `json:"picture_url,omitempty" example:"https://example.com/vegetables.jpg"`
+	CreatedAt  *time.Time `json:"created_at,omitempty" example:"2022-01-01T00:00:00Z"`
+	UpdatedAt  *time.Time `json:"updated_at,omitempty" example:"2022-01-01T00:00:00Z"`
 }
 
 // ==================== INGREDIENTS ====================

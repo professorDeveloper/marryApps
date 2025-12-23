@@ -118,9 +118,9 @@ func (q *Queries) CountCompoundsByDepartment(ctx context.Context, departmentID p
 }
 
 const createCompound = `-- name: CreateCompound :one
-INSERT INTO compounds (id, name, name_i18n, description, description_i18n, quantity, measurement, price, department_id)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-RETURNING id, name, name_i18n, description, description_i18n, quantity, measurement, price, department_id, created_at, updated_at, deleted_at
+INSERT INTO compounds (id, name, name_i18n, description, description_i18n, quantity, picture_url, measurement, price, department_id)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+RETURNING id, name, name_i18n, description, description_i18n, quantity, picture_url, measurement, price, department_id, created_at, updated_at, deleted_at
 `
 
 type CreateCompoundParams struct {
@@ -130,6 +130,7 @@ type CreateCompoundParams struct {
 	Description     *string             `json:"description"`
 	DescriptionI18n pgtype.UUID         `json:"description_i18n"`
 	Quantity        *int32              `json:"quantity"`
+	PictureUrl      *string             `json:"picture_url"`
 	Measurement     NullMeasurementType `json:"measurement"`
 	Price           pgtype.Numeric      `json:"price"`
 	DepartmentID    pgtype.UUID         `json:"department_id"`
@@ -143,6 +144,7 @@ func (q *Queries) CreateCompound(ctx context.Context, arg CreateCompoundParams) 
 		arg.Description,
 		arg.DescriptionI18n,
 		arg.Quantity,
+		arg.PictureUrl,
 		arg.Measurement,
 		arg.Price,
 		arg.DepartmentID,
@@ -155,6 +157,7 @@ func (q *Queries) CreateCompound(ctx context.Context, arg CreateCompoundParams) 
 		&i.Description,
 		&i.DescriptionI18n,
 		&i.Quantity,
+		&i.PictureUrl,
 		&i.Measurement,
 		&i.Price,
 		&i.DepartmentID,
@@ -362,7 +365,7 @@ func (q *Queries) GetAllCompoundStock(ctx context.Context, arg GetAllCompoundSto
 }
 
 const getAllCompounds = `-- name: GetAllCompounds :many
-SELECT id, name, name_i18n, description, description_i18n, quantity, measurement, price, department_id, created_at, updated_at, deleted_at
+SELECT id, name, name_i18n, description, description_i18n, quantity, picture_url, measurement, price, department_id, created_at, updated_at, deleted_at
 FROM compounds
 WHERE deleted_at = 0
 ORDER BY created_at DESC
@@ -390,6 +393,7 @@ func (q *Queries) GetAllCompounds(ctx context.Context, arg GetAllCompoundsParams
 			&i.Description,
 			&i.DescriptionI18n,
 			&i.Quantity,
+			&i.PictureUrl,
 			&i.Measurement,
 			&i.Price,
 			&i.DepartmentID,
@@ -408,7 +412,7 @@ func (q *Queries) GetAllCompounds(ctx context.Context, arg GetAllCompoundsParams
 }
 
 const getCompoundByID = `-- name: GetCompoundByID :one
-SELECT id, name, name_i18n, description, description_i18n, quantity, measurement, price, department_id, created_at, updated_at, deleted_at
+SELECT id, name, name_i18n, description, description_i18n, quantity, picture_url, measurement, price, department_id, created_at, updated_at, deleted_at
 FROM compounds
 WHERE id = $1 AND deleted_at = 0
 `
@@ -423,6 +427,7 @@ func (q *Queries) GetCompoundByID(ctx context.Context, id uuid.UUID) (Compound, 
 		&i.Description,
 		&i.DescriptionI18n,
 		&i.Quantity,
+		&i.PictureUrl,
 		&i.Measurement,
 		&i.Price,
 		&i.DepartmentID,
@@ -988,6 +993,7 @@ SELECT
     c.description,
     c.description_i18n,
     c.quantity,
+    c.picture_url,
     c.measurement,
     c.price,
     c.department_id,
@@ -1006,6 +1012,7 @@ type GetCompoundWithDepartmentRow struct {
 	Description     *string             `json:"description"`
 	DescriptionI18n pgtype.UUID         `json:"description_i18n"`
 	Quantity        *int32              `json:"quantity"`
+	PictureUrl      *string             `json:"picture_url"`
 	Measurement     NullMeasurementType `json:"measurement"`
 	Price           pgtype.Numeric      `json:"price"`
 	DepartmentID    pgtype.UUID         `json:"department_id"`
@@ -1024,6 +1031,7 @@ func (q *Queries) GetCompoundWithDepartment(ctx context.Context, id uuid.UUID) (
 		&i.Description,
 		&i.DescriptionI18n,
 		&i.Quantity,
+		&i.PictureUrl,
 		&i.Measurement,
 		&i.Price,
 		&i.DepartmentID,
@@ -1078,7 +1086,7 @@ func (q *Queries) GetCompoundWithIngredients(ctx context.Context, id uuid.UUID) 
 }
 
 const getCompoundsByDepartmentID = `-- name: GetCompoundsByDepartmentID :many
-SELECT id, name, name_i18n, description, description_i18n, quantity, measurement, price, department_id, created_at, updated_at, deleted_at
+SELECT id, name, name_i18n, description, description_i18n, quantity, picture_url, measurement, price, department_id, created_at, updated_at, deleted_at
 FROM compounds
 WHERE department_id = $1 AND deleted_at = 0
 ORDER BY created_at DESC
@@ -1107,6 +1115,7 @@ func (q *Queries) GetCompoundsByDepartmentID(ctx context.Context, arg GetCompoun
 			&i.Description,
 			&i.DescriptionI18n,
 			&i.Quantity,
+			&i.PictureUrl,
 			&i.Measurement,
 			&i.Price,
 			&i.DepartmentID,
@@ -1276,7 +1285,7 @@ func (q *Queries) RestoreCompoundStock(ctx context.Context, id uuid.UUID) error 
 }
 
 const searchCompounds = `-- name: SearchCompounds :many
-SELECT id, name, name_i18n, description, description_i18n, quantity, measurement, price, department_id, created_at, updated_at, deleted_at
+SELECT id, name, name_i18n, description, description_i18n, quantity, picture_url, measurement, price, department_id, created_at, updated_at, deleted_at
 FROM compounds
 WHERE deleted_at = 0 
 AND (name ILIKE '%' || $1 || '%' OR description ILIKE '%' || $1 || '%')
@@ -1306,6 +1315,7 @@ func (q *Queries) SearchCompounds(ctx context.Context, arg SearchCompoundsParams
 			&i.Description,
 			&i.DescriptionI18n,
 			&i.Quantity,
+			&i.PictureUrl,
 			&i.Measurement,
 			&i.Price,
 			&i.DepartmentID,
@@ -1330,12 +1340,13 @@ SET name = COALESCE($2, name),
     description = COALESCE($4, description),
     description_i18n = COALESCE($5, description_i18n),
     quantity = COALESCE($6, quantity),
-    measurement = COALESCE($7, measurement),
-    price = COALESCE($8, price),
-    department_id = COALESCE($9, department_id),
+    picture_url = COALESCE($7, picture_url),
+    measurement = COALESCE($8, measurement),
+    price = COALESCE($9, price),
+    department_id = COALESCE($10, department_id),
     updated_at = NOW()
 WHERE id = $1 AND deleted_at = 0
-RETURNING id, name, name_i18n, description, description_i18n, quantity, measurement, price, department_id, created_at, updated_at, deleted_at
+RETURNING id, name, name_i18n, description, description_i18n, quantity, picture_url, measurement, price, department_id, created_at, updated_at, deleted_at
 `
 
 type UpdateCompoundParams struct {
@@ -1345,6 +1356,7 @@ type UpdateCompoundParams struct {
 	Description     *string             `json:"description"`
 	DescriptionI18n pgtype.UUID         `json:"description_i18n"`
 	Quantity        *int32              `json:"quantity"`
+	PictureUrl      *string             `json:"picture_url"`
 	Measurement     NullMeasurementType `json:"measurement"`
 	Price           pgtype.Numeric      `json:"price"`
 	DepartmentID    pgtype.UUID         `json:"department_id"`
@@ -1358,6 +1370,7 @@ func (q *Queries) UpdateCompound(ctx context.Context, arg UpdateCompoundParams) 
 		arg.Description,
 		arg.DescriptionI18n,
 		arg.Quantity,
+		arg.PictureUrl,
 		arg.Measurement,
 		arg.Price,
 		arg.DepartmentID,
@@ -1370,6 +1383,7 @@ func (q *Queries) UpdateCompound(ctx context.Context, arg UpdateCompoundParams) 
 		&i.Description,
 		&i.DescriptionI18n,
 		&i.Quantity,
+		&i.PictureUrl,
 		&i.Measurement,
 		&i.Price,
 		&i.DepartmentID,

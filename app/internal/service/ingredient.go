@@ -20,7 +20,7 @@ func NewIngredientS(repo *repository.Repository) *IngredientS {
 	return &IngredientS{repo: repo}
 }
 
-func (i *IngredientS) CreateIngredientGroup(ctx context.Context, name string, nameI18n *uuid.UUID) (*model.IngredientGroupResponse, error) {
+func (i *IngredientS) CreateIngredientGroup(ctx context.Context, name string, nameI18n *uuid.UUID, pictureUrl *string) (*model.IngredientGroupResponse, error) {
 	if name == "" {
 		return nil, fmt.Errorf("ingredient group name is required")
 	}
@@ -31,9 +31,10 @@ func (i *IngredientS) CreateIngredientGroup(ctx context.Context, name string, na
 	}
 
 	group, err := i.repo.PgRepo.Repo.CreateIngredientGroup(ctx, pg.CreateIngredientGroupParams{
-		ID:       uuid.New(),
-		Name:     name,
-		NameI18n: nameI18nUUID,
+		ID:         uuid.New(),
+		Name:       name,
+		NameI18n:   nameI18nUUID,
+		PictureUrl: pictureUrl,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to create ingredient group: %w", err)
@@ -76,7 +77,7 @@ func (i *IngredientS) GetAllIngredientGroups(ctx context.Context, limit, offset 
 }
 
 // UpdateIngredientGroup updates an ingredient group
-func (i *IngredientS) UpdateIngredientGroup(ctx context.Context, groupID string, name *string, nameI18n *string) (*model.IngredientGroupResponse, error) {
+func (i *IngredientS) UpdateIngredientGroup(ctx context.Context, groupID string, name *string, nameI18n *string, pictureUrl *string) (*model.IngredientGroupResponse, error) {
 	id, err := uuid.Parse(groupID)
 	if err != nil {
 		return nil, fmt.Errorf("invalid ingredient group ID: %w", err)
@@ -102,10 +103,16 @@ func (i *IngredientS) UpdateIngredientGroup(ctx context.Context, groupID string,
 		updatedNameI18n = pgtype.UUID{Bytes: uuid, Valid: true}
 	}
 
+	updatedPictureUrl := groupData.PictureUrl
+	if pictureUrl != nil {
+		updatedPictureUrl = pictureUrl
+	}
+
 	group, err := i.repo.PgRepo.Repo.UpdateIngredientGroup(ctx, pg.UpdateIngredientGroupParams{
-		ID:       id,
-		Name:     updatedName,
-		NameI18n: updatedNameI18n,
+		ID:         id,
+		Name:       updatedName,
+		NameI18n:   updatedNameI18n,
+		PictureUrl: updatedPictureUrl,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to update ingredient group: %w", err)
@@ -587,11 +594,12 @@ func toIngredientGroupResponse(g pg.IngredientGroup) *model.IngredientGroupRespo
 
 	name := g.Name
 	return &model.IngredientGroupResponse{
-		ID:        g.ID.String(),
-		Name:      &name,
-		NameI18n:  nameI18nStr,
-		CreatedAt: createdAt,
-		UpdatedAt: updatedAt,
+		ID:         g.ID.String(),
+		Name:       &name,
+		NameI18n:   nameI18nStr,
+		PictureUrl: g.PictureUrl,
+		CreatedAt:  createdAt,
+		UpdatedAt:  updatedAt,
 	}
 }
 

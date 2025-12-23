@@ -122,24 +122,31 @@ func (q *Queries) CreateIngredient(ctx context.Context, arg CreateIngredientPara
 
 const createIngredientGroup = `-- name: CreateIngredientGroup :one
 
-INSERT INTO ingredient_groups (id, name, name_i18n)
-VALUES ($1, $2, $3)
-RETURNING id, name, name_i18n, created_at, updated_at, deleted_at
+INSERT INTO ingredient_groups (id, name, picture_url, name_i18n)
+VALUES ($1, $2, $3, $4)
+RETURNING id, name, picture_url, name_i18n, created_at, updated_at, deleted_at
 `
 
 type CreateIngredientGroupParams struct {
-	ID       uuid.UUID   `json:"id"`
-	Name     string      `json:"name"`
-	NameI18n pgtype.UUID `json:"name_i18n"`
+	ID         uuid.UUID   `json:"id"`
+	Name       string      `json:"name"`
+	PictureUrl *string     `json:"picture_url"`
+	NameI18n   pgtype.UUID `json:"name_i18n"`
 }
 
 // ==================== INGREDIENT GROUPS QUERIES ====================
 func (q *Queries) CreateIngredientGroup(ctx context.Context, arg CreateIngredientGroupParams) (IngredientGroup, error) {
-	row := q.db.QueryRow(ctx, createIngredientGroup, arg.ID, arg.Name, arg.NameI18n)
+	row := q.db.QueryRow(ctx, createIngredientGroup,
+		arg.ID,
+		arg.Name,
+		arg.PictureUrl,
+		arg.NameI18n,
+	)
 	var i IngredientGroup
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
+		&i.PictureUrl,
 		&i.NameI18n,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -219,7 +226,7 @@ func (q *Queries) DeleteIngredientStock(ctx context.Context, id uuid.UUID) error
 }
 
 const getAllIngredientGroups = `-- name: GetAllIngredientGroups :many
-SELECT id, name, name_i18n, created_at, updated_at, deleted_at
+SELECT id, name, picture_url, name_i18n, created_at, updated_at, deleted_at
 FROM ingredient_groups
 WHERE deleted_at = 0
 ORDER BY created_at DESC
@@ -243,6 +250,7 @@ func (q *Queries) GetAllIngredientGroups(ctx context.Context, arg GetAllIngredie
 		if err := rows.Scan(
 			&i.ID,
 			&i.Name,
+			&i.PictureUrl,
 			&i.NameI18n,
 			&i.CreatedAt,
 			&i.UpdatedAt,
@@ -371,7 +379,7 @@ func (q *Queries) GetIngredientByID(ctx context.Context, id uuid.UUID) (Ingredie
 }
 
 const getIngredientGroupByID = `-- name: GetIngredientGroupByID :one
-SELECT id, name, name_i18n, created_at, updated_at, deleted_at
+SELECT id, name, picture_url, name_i18n, created_at, updated_at, deleted_at
 FROM ingredient_groups
 WHERE id = $1 AND deleted_at = 0
 `
@@ -382,6 +390,7 @@ func (q *Queries) GetIngredientGroupByID(ctx context.Context, id uuid.UUID) (Ing
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
+		&i.PictureUrl,
 		&i.NameI18n,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -640,7 +649,7 @@ func (q *Queries) RestoreIngredientStock(ctx context.Context, id uuid.UUID) erro
 }
 
 const searchIngredientGroups = `-- name: SearchIngredientGroups :many
-SELECT id, name, name_i18n, created_at, updated_at, deleted_at
+SELECT id, name, picture_url, name_i18n, created_at, updated_at, deleted_at
 FROM ingredient_groups
 WHERE deleted_at = 0 AND name ILIKE '%' || $1 || '%'
 ORDER BY created_at DESC
@@ -666,6 +675,7 @@ func (q *Queries) SearchIngredientGroups(ctx context.Context, arg SearchIngredie
 		if err := rows.Scan(
 			&i.ID,
 			&i.Name,
+			&i.PictureUrl,
 			&i.NameI18n,
 			&i.CreatedAt,
 			&i.UpdatedAt,
@@ -780,25 +790,33 @@ func (q *Queries) UpdateIngredient(ctx context.Context, arg UpdateIngredientPara
 const updateIngredientGroup = `-- name: UpdateIngredientGroup :one
 UPDATE ingredient_groups
 SET name = COALESCE($2, name),
-    name_i18n = COALESCE($3, name_i18n),
+    picture_url = COALESCE($3, picture_url),
+    name_i18n = COALESCE($4, name_i18n),
     updated_at = NOW()
 WHERE id = $1 AND deleted_at = 0
-RETURNING id, name, name_i18n, created_at, updated_at, deleted_at
+RETURNING id, name, picture_url, name_i18n, created_at, updated_at, deleted_at
 `
 
 type UpdateIngredientGroupParams struct {
-	ID       uuid.UUID   `json:"id"`
-	Name     string      `json:"name"`
-	NameI18n pgtype.UUID `json:"name_i18n"`
+	ID         uuid.UUID   `json:"id"`
+	Name       string      `json:"name"`
+	PictureUrl *string     `json:"picture_url"`
+	NameI18n   pgtype.UUID `json:"name_i18n"`
 }
 
 // UpdateIngredientGroup updates an ingredient group
 func (q *Queries) UpdateIngredientGroup(ctx context.Context, arg UpdateIngredientGroupParams) (IngredientGroup, error) {
-	row := q.db.QueryRow(ctx, updateIngredientGroup, arg.ID, arg.Name, arg.NameI18n)
+	row := q.db.QueryRow(ctx, updateIngredientGroup,
+		arg.ID,
+		arg.Name,
+		arg.PictureUrl,
+		arg.NameI18n,
+	)
 	var i IngredientGroup
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
+		&i.PictureUrl,
 		&i.NameI18n,
 		&i.CreatedAt,
 		&i.UpdatedAt,

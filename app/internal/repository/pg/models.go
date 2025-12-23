@@ -139,6 +139,7 @@ type CafeTable struct {
 type Category struct {
 	ID           uuid.UUID          `json:"id"`
 	Name         string             `json:"name"`
+	PictureUrl   *string            `json:"picture_url"`
 	NameI18n     pgtype.UUID        `json:"name_i18n"`
 	DepartmentID pgtype.UUID        `json:"department_id"`
 	StorageID    pgtype.UUID        `json:"storage_id"`
@@ -155,6 +156,7 @@ type Compound struct {
 	Description     *string             `json:"description"`
 	DescriptionI18n pgtype.UUID         `json:"description_i18n"`
 	Quantity        *int32              `json:"quantity"`
+	PictureUrl      *string             `json:"picture_url"`
 	Measurement     NullMeasurementType `json:"measurement"`
 	Price           pgtype.Numeric      `json:"price"`
 	DepartmentID    pgtype.UUID         `json:"department_id"`
@@ -201,6 +203,7 @@ type Good struct {
 	DescriptionI18n pgtype.UUID        `json:"description_i18n"`
 	CategoryID      pgtype.UUID        `json:"category_id"`
 	DepartmentID    pgtype.UUID        `json:"department_id"`
+	PictureUrl      *string            `json:"picture_url"`
 	Price           pgtype.Numeric     `json:"price"`
 	CookTime        *int32             `json:"cook_time"`
 	CreatedAt       pgtype.Timestamptz `json:"created_at"`
@@ -244,12 +247,13 @@ type Ingredient struct {
 }
 
 type IngredientGroup struct {
-	ID        uuid.UUID          `json:"id"`
-	Name      string             `json:"name"`
-	NameI18n  pgtype.UUID        `json:"name_i18n"`
-	CreatedAt pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
-	DeletedAt *int64             `json:"deleted_at"`
+	ID         uuid.UUID          `json:"id"`
+	Name       string             `json:"name"`
+	PictureUrl *string            `json:"picture_url"`
+	NameI18n   pgtype.UUID        `json:"name_i18n"`
+	CreatedAt  pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt  pgtype.Timestamptz `json:"updated_at"`
+	DeletedAt  *int64             `json:"deleted_at"`
 }
 
 type IngredientStock struct {
@@ -346,13 +350,14 @@ type Shift struct {
 }
 
 type Storage struct {
-	ID        uuid.UUID          `json:"id"`
-	Name      string             `json:"name"`
-	BranchID  pgtype.UUID        `json:"branch_id"`
-	NameI18n  pgtype.UUID        `json:"name_i18n"`
-	CreatedAt pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
-	DeletedAt *int64             `json:"deleted_at"`
+	ID         uuid.UUID          `json:"id"`
+	Name       string             `json:"name"`
+	BranchID   pgtype.UUID        `json:"branch_id"`
+	NameI18n   pgtype.UUID        `json:"name_i18n"`
+	PictureUrl *string            `json:"picture_url"`
+	CreatedAt  pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt  pgtype.Timestamptz `json:"updated_at"`
+	DeletedAt  *int64             `json:"deleted_at"`
 }
 
 type Supplier struct {

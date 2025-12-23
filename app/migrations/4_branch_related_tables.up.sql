@@ -3,6 +3,7 @@ CREATE TABLE IF NOT EXISTS storages (
   name       TEXT      NOT NULL,
   branch_id  UUID      REFERENCES branches(id) ON DELETE CASCADE,
   name_i18n  UUID      REFERENCES translations(id) ON DELETE SET NULL,
+  picture_url TEXT,
   created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
   deleted_at BIGINT    DEFAULT 0
@@ -31,6 +32,7 @@ CREATE TABLE IF NOT EXISTS departments (
 CREATE TABLE IF NOT EXISTS categories (
   id            UUID      PRIMARY KEY DEFAULT gen_random_uuid(),
   name          TEXT      NOT NULL,
+  picture_url   TEXT,
   name_i18n     UUID      REFERENCES translations(id) ON DELETE CASCADE,
   department_id UUID      REFERENCES departments(id) ON DELETE CASCADE,
   storage_id    UUID      REFERENCES storages(id) ON DELETE CASCADE,

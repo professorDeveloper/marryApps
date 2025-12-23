@@ -66,11 +66,11 @@ type OrganizationI interface {
 }
 
 type StorageI interface {
-	CreateStorage(ctx context.Context, name string, branchID string, nameI18n *uuid.UUID) (*model.StorageResponse, error)
+	CreateStorage(ctx context.Context, name string, branchID string, nameI18n *uuid.UUID, pictureUrl *string) (*model.StorageResponse, error)
 	GetStorageByID(ctx context.Context, storageID string) (*model.StorageResponse, error)
 	GetAllStorages(ctx context.Context, limit, offset int32) ([]model.StorageResponse, error)
 	GetStoragesByBranchID(ctx context.Context, branchID string, limit, offset int32) ([]model.StorageResponse, error)
-	UpdateStorage(ctx context.Context, storageID string, name *string, branchID *string, nameI18n *string) (*model.StorageResponse, error)
+	UpdateStorage(ctx context.Context, storageID string, name *string, branchID *string, nameI18n *string, pictureUrl *string) (*model.StorageResponse, error)
 	DeleteStorage(ctx context.Context, storageID string) error
 	RestoreStorage(ctx context.Context, storageID string) error
 	SearchStorages(ctx context.Context, query string, limit, offset int32) ([]model.StorageResponse, error)
@@ -99,10 +99,10 @@ type HallI interface {
 }
 
 type IngredientI interface {
-	CreateIngredientGroup(ctx context.Context, name string, nameI18n *uuid.UUID) (*model.IngredientGroupResponse, error)
+	CreateIngredientGroup(ctx context.Context, name string, nameI18n *uuid.UUID, pictureUrl *string) (*model.IngredientGroupResponse, error)
 	GetIngredientGroupByID(ctx context.Context, groupID string) (*model.IngredientGroupResponse, error)
 	GetAllIngredientGroups(ctx context.Context, limit, offset int32) ([]model.IngredientGroupResponse, error)
-	UpdateIngredientGroup(ctx context.Context, groupID string, name *string, nameI18n *string) (*model.IngredientGroupResponse, error)
+	UpdateIngredientGroup(ctx context.Context, groupID string, name *string, nameI18n *string, pictureUrl *string) (*model.IngredientGroupResponse, error)
 	DeleteIngredientGroup(ctx context.Context, groupID string) error
 	RestoreIngredientGroup(ctx context.Context, groupID string) error
 
@@ -128,14 +128,14 @@ type IngredientI interface {
 }
 
 type CategoryI interface {
-	CreateCategory(ctx context.Context, name string, nameI18n, departmentID, storageID, parent *string) (*model.CategoryResponse, error)
+	CreateCategory(ctx context.Context, name string, nameI18n, departmentID, storageID, parent *string, pictureUrl *string) (*model.CategoryResponse, error)
 	GetCategoryByID(ctx context.Context, categoryID string) (*model.CategoryResponse, error)
 	GetAllCategories(ctx context.Context, limit, offset int32) ([]*model.CategoryResponse, error)
 	GetCategoriesByDepartmentID(ctx context.Context, departmentID string, limit, offset int32) ([]*model.CategoryResponse, error)
 	GetCategoriesByStorageID(ctx context.Context, storageID string, limit, offset int32) ([]*model.CategoryResponse, error)
 	GetCategoriesByParentID(ctx context.Context, parentID string, limit, offset int32) ([]*model.CategoryResponse, error)
 	GetRootCategories(ctx context.Context, limit, offset int32) ([]*model.CategoryResponse, error)
-	UpdateCategory(ctx context.Context, categoryID string, name, nameI18n, departmentID, storageID, parent *string) (*model.CategoryResponse, error)
+	UpdateCategory(ctx context.Context, categoryID string, name, nameI18n, departmentID, storageID, parent *string, pictureUrl *string) (*model.CategoryResponse, error)
 	DeleteCategory(ctx context.Context, categoryID string) error
 	RestoreCategory(ctx context.Context, categoryID string) (*model.CategoryResponse, error)
 	SearchCategories(ctx context.Context, query string, limit, offset int32) ([]*model.CategoryResponse, error)
@@ -143,11 +143,11 @@ type CategoryI interface {
 
 type CompoundI interface {
 	// Compound methods
-	CreateCompound(ctx context.Context, name string, nameI18n, description, descriptionI18n, measurement, departmentID *string, quantity int32, price *string) (*model.CompoundResponse, error)
+	CreateCompound(ctx context.Context, name string, nameI18n, description, descriptionI18n, measurement, departmentID *string, quantity int32, price *string, pictureUrl *string) (*model.CompoundResponse, error)
 	GetCompoundByID(ctx context.Context, compoundID string) (*model.CompoundResponse, error)
 	GetAllCompounds(ctx context.Context, limit, offset int32) ([]*model.CompoundResponse, error)
 	GetCompoundsByDepartmentID(ctx context.Context, departmentID string, limit, offset int32) ([]*model.CompoundResponse, error)
-	UpdateCompound(ctx context.Context, compoundID string, name, nameI18n, description, descriptionI18n, measurement, departmentID *string, quantity *int32, price *string) (*model.CompoundResponse, error)
+	UpdateCompound(ctx context.Context, compoundID string, name, nameI18n, description, descriptionI18n, measurement, departmentID *string, quantity *int32, price *string, pictureUrl *string) (*model.CompoundResponse, error)
 	DeleteCompound(ctx context.Context, compoundID string) error
 	RestoreCompound(ctx context.Context, compoundID string) (*model.CompoundResponse, error)
 	SearchCompounds(ctx context.Context, query string, limit, offset int32) ([]*model.CompoundResponse, error)
@@ -177,13 +177,13 @@ type CompoundI interface {
 
 type GoodsI interface {
 	// Goods methods
-	CreateGood(ctx context.Context, name string, description *string, nameI18n, descriptionI18n, categoryID, departmentID *string, price string, cookTime *int32) (*model.GoodResponse, error)
+	CreateGood(ctx context.Context, name string, description *string, nameI18n, descriptionI18n, categoryID, departmentID *string, price string, cookTime *int32, pictureUrl *string) (*model.GoodResponse, error)
 	GetGoodByID(ctx context.Context, goodID string) (*model.GoodResponse, error)
 	GetAllGoods(ctx context.Context, limit, offset int32) ([]*model.GoodResponse, error)
 	GetGoodsByCategory(ctx context.Context, categoryID string, limit, offset int32) ([]*model.GoodResponse, error)
 	GetGoodsByDepartment(ctx context.Context, departmentID string, limit, offset int32) ([]*model.GoodResponse, error)
 	GetGoodsByPriceRange(ctx context.Context, minPrice, maxPrice string, limit, offset int32) ([]*model.GoodResponse, error)
-	UpdateGood(ctx context.Context, goodID string, name, description, nameI18n, descriptionI18n, categoryID, departmentID, price *string, cookTime *int32) (*model.GoodResponse, error)
+	UpdateGood(ctx context.Context, goodID string, name, description, nameI18n, descriptionI18n, categoryID, departmentID, price *string, cookTime *int32, pictureUrl *string) (*model.GoodResponse, error)
 	UpdateGoodPrice(ctx context.Context, goodID, price string) (*model.GoodResponse, error)
 	DeleteGood(ctx context.Context, goodID string) error
 	RestoreGood(ctx context.Context, goodID string) (*model.GoodResponse, error)
