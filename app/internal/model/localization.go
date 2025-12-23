@@ -46,5 +46,18 @@ func GetLocalizedMessage(lang, key string) string {
 		return message
 	}
 
+	
+
 	return "Unknown error"
+}
+
+type SuccessResponses[T any] struct {
+	Status string `json:"status" example:"success"`
+	Data   T      `json:"data"`
+}
+
+
+type ErrorResponses struct {
+    Status string      `json:"status" example:"error"`
+    Error  interface{} `json:"error"`
 }

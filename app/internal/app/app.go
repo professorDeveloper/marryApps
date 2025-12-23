@@ -22,6 +22,7 @@ import (
 	"gitlab.yurtal.tech/company/maryai/back/pkg/paymentClick"
 	"gitlab.yurtal.tech/company/maryai/back/pkg/paymentPayme"
 	pg "gitlab.yurtal.tech/company/maryai/back/pkg/postgres"
+	"gitlab.yurtal.tech/company/maryai/back/pkg/validate"
 
 	_ "gitlab.yurtal.tech/company/maryai/back/internal/api/docs"
 )
@@ -42,6 +43,9 @@ func Run(cfg *config.Config) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	l := logger.New(cfg.Logger.Level)
+
+	// Initialize validator
+	validate.Init()
 
 	clickClient := paymentClick.NewClient(slog.Default(), http.DefaultClient, paymentClick.BaseUrl(cfg.Click.Url), paymentClick.MerchantUserId(cfg.Click.MerchantUserID), paymentClick.SecretKey(cfg.Click.SecretKey), paymentClick.ServiceId(cfg.Click.ServiceID), paymentClick.MerchantId(cfg.Click.MerchantID), paymentClick.ReturnUrl(cfg.Click.ReturnUrl))
 	paymeClient := paymentPayme.NewClient(slog.Default(), http.DefaultClient, paymentPayme.BaseUrl(cfg.Payme.Url), paymentPayme.ClientKey(cfg.Payme.ClientKey), paymentPayme.MerchantId(cfg.Payme.MerchantID), paymentPayme.Login(cfg.Payme.Login), paymentPayme.Password(cfg.Payme.Password), paymentPayme.ReturnUrl(cfg.Payme.ReturnUrl))

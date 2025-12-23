@@ -6735,7 +6735,6 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Uploads a user image file",
                 "consumes": [
                     "multipart/form-data"
                 ],
@@ -6745,11 +6744,11 @@ const docTemplate = `{
                 "tags": [
                     "media"
                 ],
-                "summary": "Upload user image",
+                "summary": "Rasm yuklash",
                 "parameters": [
                     {
                         "type": "file",
-                        "description": "Image file to upload",
+                        "description": "Rasm fayli",
                         "name": "file",
                         "in": "formData",
                         "required": true
@@ -6757,25 +6756,51 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "Image successfully uploaded",
+                        "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/model.DownloadResponse"
+                            "$ref": "#/definitions/model.DownloadSuccessResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/media/image/download": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/octet-stream"
+                ],
+                "tags": [
+                    "media"
+                ],
+                "summary": "Rasmni yuklab olish",
+                "parameters": [
+                    {
+                        "description": "Rasm obyekt nomi",
+                        "name": "input",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.DownloadRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Rasm fayli",
+                        "schema": {
+                            "type": "file"
                         }
                     },
-                    "400": {
-                        "description": "Invalid request or file not found",
-                        "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Failed to process upload",
+                    "404": {
+                        "description": "Rasm topilmadi",
                         "schema": {
                             "$ref": "#/definitions/model.ErrorResponse"
                         }
@@ -6790,7 +6815,6 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Uploads a video file",
                 "consumes": [
                     "multipart/form-data"
                 ],
@@ -6800,11 +6824,11 @@ const docTemplate = `{
                 "tags": [
                     "media"
                 ],
-                "summary": "Upload video",
+                "summary": "Video yuklash",
                 "parameters": [
                     {
                         "type": "file",
-                        "description": "Video file to upload",
+                        "description": "Video fayli",
                         "name": "file",
                         "in": "formData",
                         "required": true
@@ -6812,40 +6836,21 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "Video successfully uploaded",
+                        "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/model.DownloadResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "Invalid request or file not found",
-                        "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Failed to process upload",
-                        "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
+                            "$ref": "#/definitions/model.DownloadSuccessResponse"
                         }
                     }
                 }
             }
         },
         "/api/v1/media/video/download": {
-            "get": {
+            "post": {
                 "security": [
                     {
                         "BearerAuth": []
                     }
                 ],
-                "description": "Downloads video by object name",
                 "consumes": [
                     "application/json"
                 ],
@@ -6855,39 +6860,23 @@ const docTemplate = `{
                 "tags": [
                     "media"
                 ],
-                "summary": "Download video",
+                "summary": "Videoni yuklab olish",
                 "parameters": [
                     {
-                        "type": "string",
-                        "description": "Video object name",
-                        "name": "object_name",
-                        "in": "query",
-                        "required": true
+                        "description": "Video obyekt nomi",
+                        "name": "input",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.DownloadRequest"
+                        }
                     }
                 ],
                 "responses": {
                     "200": {
-                        "description": "Video file",
+                        "description": "Video fayli",
                         "schema": {
                             "type": "file"
-                        }
-                    },
-                    "400": {
-                        "description": "Invalid request",
-                        "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
-                        }
-                    },
-                    "404": {
-                        "description": "Video not found",
-                        "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Failed to download file",
-                        "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
                         }
                     }
                 }
@@ -8103,61 +8092,6 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/v1/user/media/download": {
-            "get": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Downloads an image by object name",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/octet-stream"
-                ],
-                "tags": [
-                    "media"
-                ],
-                "summary": "Download image",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Image object name",
-                        "name": "object_name",
-                        "in": "query",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Image file",
-                        "schema": {
-                            "type": "file"
-                        }
-                    },
-                    "400": {
-                        "description": "Invalid request",
-                        "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
-                        }
-                    },
-                    "404": {
-                        "description": "Image not found",
-                        "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Failed to download file",
-                        "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
-                        }
-                    }
-                }
-            }
-        },
         "/api/v1/user/password-update": {
             "put": {
                 "security": [
@@ -9283,12 +9217,33 @@ const docTemplate = `{
                 }
             }
         },
+        "model.DownloadRequest": {
+            "type": "object",
+            "properties": {
+                "object_name": {
+                    "type": "string",
+                    "example": "c0f18a64-7f5c-4425-9414-1b01cddee9d9/{extension}"
+                }
+            }
+        },
         "model.DownloadResponse": {
             "type": "object",
             "properties": {
                 "object_name": {
                     "type": "string",
                     "example": "c0f18a64-7f5c-4425-9414-1b01cddee9d9/{extension}"
+                }
+            }
+        },
+        "model.DownloadSuccessResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/model.DownloadResponse"
+                },
+                "status": {
+                    "type": "string",
+                    "example": "success"
                 }
             }
         },

@@ -425,10 +425,24 @@ definitions:
       updated_at:
         type: string
     type: object
+  model.DownloadRequest:
+    properties:
+      object_name:
+        example: c0f18a64-7f5c-4425-9414-1b01cddee9d9/{extension}
+        type: string
+    type: object
   model.DownloadResponse:
     properties:
       object_name:
         example: c0f18a64-7f5c-4425-9414-1b01cddee9d9/{extension}
+        type: string
+    type: object
+  model.DownloadSuccessResponse:
+    properties:
+      data:
+        $ref: '#/definitions/model.DownloadResponse'
+      status:
+        example: success
         type: string
     type: object
   model.ErrorResponse:
@@ -5368,9 +5382,8 @@ paths:
     post:
       consumes:
       - multipart/form-data
-      description: Uploads a user image file
       parameters:
-      - description: Image file to upload
+      - description: Rasm fayli
         in: formData
         name: file
         required: true
@@ -5379,33 +5392,47 @@ paths:
       - application/json
       responses:
         "200":
-          description: Image successfully uploaded
+          description: OK
           schema:
-            $ref: '#/definitions/model.DownloadResponse'
-        "400":
-          description: Invalid request or file not found
+            $ref: '#/definitions/model.DownloadSuccessResponse'
+      security:
+      - BearerAuth: []
+      summary: Rasm yuklash
+      tags:
+      - media
+  /api/v1/media/image/download:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Rasm obyekt nomi
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/model.DownloadRequest'
+      produces:
+      - application/octet-stream
+      responses:
+        "200":
+          description: Rasm fayli
           schema:
-            $ref: '#/definitions/model.ErrorResponse'
-        "401":
-          description: Unauthorized
-          schema:
-            $ref: '#/definitions/model.ErrorResponse'
-        "500":
-          description: Failed to process upload
+            type: file
+        "404":
+          description: Rasm topilmadi
           schema:
             $ref: '#/definitions/model.ErrorResponse'
       security:
       - BearerAuth: []
-      summary: Upload user image
+      summary: Rasmni yuklab olish
       tags:
       - media
   /api/v1/media/video:
     post:
       consumes:
       - multipart/form-data
-      description: Uploads a video file
       parameters:
-      - description: Video file to upload
+      - description: Video fayli
         in: formData
         name: file
         required: true
@@ -5414,59 +5441,35 @@ paths:
       - application/json
       responses:
         "200":
-          description: Video successfully uploaded
+          description: OK
           schema:
-            $ref: '#/definitions/model.DownloadResponse'
-        "400":
-          description: Invalid request or file not found
-          schema:
-            $ref: '#/definitions/model.ErrorResponse'
-        "401":
-          description: Unauthorized
-          schema:
-            $ref: '#/definitions/model.ErrorResponse'
-        "500":
-          description: Failed to process upload
-          schema:
-            $ref: '#/definitions/model.ErrorResponse'
+            $ref: '#/definitions/model.DownloadSuccessResponse'
       security:
       - BearerAuth: []
-      summary: Upload video
+      summary: Video yuklash
       tags:
       - media
   /api/v1/media/video/download:
-    get:
+    post:
       consumes:
       - application/json
-      description: Downloads video by object name
       parameters:
-      - description: Video object name
-        in: query
-        name: object_name
+      - description: Video obyekt nomi
+        in: body
+        name: input
         required: true
-        type: string
+        schema:
+          $ref: '#/definitions/model.DownloadRequest'
       produces:
       - application/octet-stream
       responses:
         "200":
-          description: Video file
+          description: Video fayli
           schema:
             type: file
-        "400":
-          description: Invalid request
-          schema:
-            $ref: '#/definitions/model.ErrorResponse'
-        "404":
-          description: Video not found
-          schema:
-            $ref: '#/definitions/model.ErrorResponse'
-        "500":
-          description: Failed to download file
-          schema:
-            $ref: '#/definitions/model.ErrorResponse'
       security:
       - BearerAuth: []
-      summary: Download video
+      summary: Videoni yuklab olish
       tags:
       - media
   /api/v1/payments/create:
@@ -6248,41 +6251,6 @@ paths:
       summary: Get current user profile
       tags:
       - users
-  /api/v1/user/media/download:
-    get:
-      consumes:
-      - application/json
-      description: Downloads an image by object name
-      parameters:
-      - description: Image object name
-        in: query
-        name: object_name
-        required: true
-        type: string
-      produces:
-      - application/octet-stream
-      responses:
-        "200":
-          description: Image file
-          schema:
-            type: file
-        "400":
-          description: Invalid request
-          schema:
-            $ref: '#/definitions/model.ErrorResponse'
-        "404":
-          description: Image not found
-          schema:
-            $ref: '#/definitions/model.ErrorResponse'
-        "500":
-          description: Failed to download file
-          schema:
-            $ref: '#/definitions/model.ErrorResponse'
-      security:
-      - BearerAuth: []
-      summary: Download image
-      tags:
-      - media
   /api/v1/user/password-update:
     put:
       consumes:

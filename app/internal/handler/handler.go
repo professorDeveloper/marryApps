@@ -126,9 +126,9 @@ func (h *Handler) Register(router *echo.Echo) {
 		media := api.Group("/media")
 		{
 			media.POST("/video", h.UploadVideo, mw.CheckLanguage(), mw.CheckAuth(h.cfg))
-			media.GET("/video/download", h.DownloadVideo, mw.CheckLanguage(), mw.CheckAuth(h.cfg))
+			media.POST("/video/download", h.DownloadVideo, mw.CheckLanguage(), mw.CheckAuth(h.cfg))
 			media.POST("/image", h.UploadImage, mw.CheckLanguage(), mw.CheckAuth(h.cfg))
-			media.GET("/image/download", h.DownloadImage, mw.CheckLanguage(), mw.CheckAuth(h.cfg))
+			media.POST("/image/download", h.DownloadImage, mw.CheckLanguage(), mw.CheckAuth(h.cfg))
 		}
 
 		ingredientGroups := api.Group("/ingredient-groups")

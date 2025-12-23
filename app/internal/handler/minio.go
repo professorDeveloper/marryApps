@@ -3,237 +3,157 @@ package handler
 import (
 	"fmt"
 	"io"
+	"log"
+	"mime"
 	"net/http"
 	"path/filepath"
 	"strings"
 
 	"github.com/labstack/echo/v4"
 	"gitlab.yurtal.tech/company/maryai/back/internal/model"
+	validator "gitlab.yurtal.tech/company/maryai/back/pkg/validate"
 )
 
-// UploadImage handles image upload to MinIO
-// @Summary Upload user image
-// @Description Uploads a user image file
-// @Tags media
-// @Accept mpfd
-// @Produce json
-// @Param file formData file true "Image file to upload"
-// @Security BearerAuth
-// @Success 200 {object} model.DownloadResponse "Image successfully uploaded"
-// @Failure 400 {object} model.ErrorResponse "Invalid request or file not found"
-// @Failure 401 {object} model.ErrorResponse "Unauthorized"
-// @Failure 500 {object} model.ErrorResponse "Failed to process upload"
-// @Router /api/v1/media/image [post]
-func (h *Handler) UploadImage(c echo.Context) error {
-	ctx := c.Request().Context()
-
-	userIDInterface := c.Get("user_id")
-	if userIDInterface == nil {
-		return c.JSON(http.StatusUnauthorized, model.ErrorResponse{
-			Message: "User ID not found in context",
-		})
-	}
-	userID, ok := userIDInterface.(string)
-	if !ok {
-		return c.JSON(http.StatusInternalServerError, model.ErrorResponse{
-			Message: "Invalid user ID format",
-		})
-	}
-
-	lang := "uz"
-	if langInterface := c.Get("lang"); langInterface != nil {
-		if langStr, ok := langInterface.(string); ok {
-			lang = langStr
-		}
-	}
-
-	fileHeader, err := c.FormFile("file")
+// DownloadVideo handles video download from MinIO
+// @Summary      Videoni yuklab olish
+// @Tags         media
+// @Accept       json
+// @Security     BearerAuth
+// @Produce      octet-stream
+// @Param        input body model.DownloadRequest true "Video obyekt nomi"
+// @Success      200 {file} binary "Video fayli"
+// @Router       /api/v1/media/video/download [post]
+func (h *Handler) DownloadVideo(c echo.Context) error {
+	req, err := validator.BindAndValidate[model.DownloadRequest](c)
 	if err != nil {
-		message := model.GetLocalizedMessage(lang, "file_not_fount")
-		fmt.Printf("Error getting file from form (UploadImage): %v\n", err)
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: message})
+		return err
 	}
 
-	maxSize := int64(50 * 1024 * 1024)
-	if fileHeader.Size > maxSize {
-		message := model.GetLocalizedMessage(lang, "file_too_large")
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: message})
-	}
-
-	src, err := fileHeader.Open()
+	object, err := h.service.Minio().GetVideo(c.Request().Context(), req.ObjectName)
 	if err != nil {
-		message := model.GetLocalizedMessage(lang, "error_while_getting_file")
-		return c.JSON(http.StatusInternalServerError, model.ErrorResponse{Message: message})
+		log.Printf("MinIO GetVideo Error: %v", err)
+		return echo.NewHTTPError(http.StatusNotFound, "file_not_found")
 	}
-	defer src.Close()
+	defer object.Close()
 
-	objectName, err := h.service.Minio().PutImage(
-		ctx,
-		src,
-		fileHeader.Size,
-		userID,
-	)
-
-	if err != nil {
-		fmt.Printf("Minioga yuklashda xatolik: %v\n", err)
-		message := model.GetLocalizedMessage(lang, "error_while_getting_file")
-		return c.JSON(http.StatusInternalServerError, model.ErrorResponse{Message: message})
-	}
-
-	return c.JSON(http.StatusOK, model.DownloadResponse{ObjectName: objectName})
+	return h.streamFile(c, object, req.ObjectName)
 }
 
 // DownloadImage downloads image from MinIO
-// @Summary Download image
-// @Description Downloads an image by object name
-// @Tags media
-// @Accept json
-// @Produce octet-stream
-// @Security BearerAuth
-// @Param object_name query string true "Image object name"
-// @Success 200 {file} file "Image file"
-// @Failure 400 {object} model.ErrorResponse "Invalid request"
-// @Failure 404 {object} model.ErrorResponse "Image not found"
-// @Failure 500 {object} model.ErrorResponse "Failed to download file"
-// @Router /api/v1/user/media/download [get]
+// @Summary      Rasmni yuklab olish
+// @Tags         media
+// @Accept       json
+// @Produce      octet-stream
+// @Security     BearerAuth
+// @Param        input body model.DownloadRequest true "Rasm obyekt nomi"
+// @Success      200 {file} binary "Rasm fayli"
+// @Failure      404 {object} model.ErrorResponse "Rasm topilmadi"
+// @Router       /api/v1/media/image/download [post]
 func (h *Handler) DownloadImage(c echo.Context) error {
-	lang := "uz"
-	if langInterface := c.Get("lang"); langInterface != nil {
-		if langStr, ok := langInterface.(string); ok {
-			lang = langStr
+	req, err := validator.BindAndValidate[model.DownloadRequest](c)
+	if err != nil {
+		return err
+	}
+
+	object, err := h.service.Minio().GetImage(c.Request().Context(), req.ObjectName)
+	if err != nil {
+		log.Printf("MinIO GetImage Error: %v", err)
+		return echo.NewHTTPError(http.StatusNotFound, "file_not_found")
+	}
+	defer object.Close()
+	return h.streamFile(c, object, req.ObjectName)
+}
+
+// UploadImage handles image upload
+// @Summary      Rasm yuklash
+// @Tags         media
+// @Accept       mpfd
+// @Produce      json
+// @Security     BearerAuth
+// @Param        file formData file true "Rasm fayli"
+// @Success      200 {object} model.DownloadSuccessResponse
+// @Router       /api/v1/media/image [post]
+func (h *Handler) UploadImage(c echo.Context) error {
+		return h.handleGenericUpload(c,"image")
+}
+
+
+
+// UploadVideo handles video upload to MinIO
+// @Summary      Video yuklash
+// @Tags         media
+// @Accept       mpfd
+// @Produce      json
+// @Security     BearerAuth
+// @Param        file formData file true "Video fayli"
+// @Success      200 {object} model.DownloadSuccessResponse
+// @Router       /api/v1/media/video [post]
+func (h *Handler) UploadVideo(c echo.Context) error {
+	return h.handleGenericUpload(c, "video")
+}
+
+func (h *Handler) streamFile(c echo.Context, r io.Reader, filename string) error {
+	cleanName := filepath.Base(filename)
+	contentType := "application/octet-stream"
+	ext := filepath.Ext(cleanName)
+	if ext != "" {
+		if t := mime.TypeByExtension(ext); t != "" {
+			contentType = t
 		}
 	}
 
-	objectName := c.QueryParam("object_name")
-	if objectName == "" {
-		message := model.GetLocalizedMessage(lang, "invalid_request_body")
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: message})
-	}
-	ctx := c.Request().Context()
-
-	object, err := h.service.Minio().GetImage(ctx, objectName)
-	if err != nil {
-		message := model.GetLocalizedMessage(lang, "error_while_getting_file")
-		return c.JSON(http.StatusNotFound, model.ErrorResponse{Message: message})
-	}
-	defer object.Close()
-
-	c.Response().Header().Set(echo.HeaderContentDisposition, fmt.Sprintf("attachment; filename=%s", objectName))
-	c.Response().Header().Set(echo.HeaderContentType, "application/octet-stream")
+	c.Response().Header().Set(echo.HeaderContentDisposition, fmt.Sprintf("attachment; filename=%q", cleanName))
+	c.Response().Header().Set(echo.HeaderContentType, contentType)
 	c.Response().Header().Set("X-Content-Type-Options", "nosniff")
 
-	if _, err = io.Copy(c.Response().Writer, object); err != nil {
-		message := model.GetLocalizedMessage(lang, "error_while_getting_file")
-		return c.JSON(http.StatusInternalServerError, model.ErrorResponse{Message: message})
+	if _, err := io.Copy(c.Response().Writer, r); err != nil {
+		if c.Request().Context().Err() != nil {
+			return nil
+		}
+		log.Printf("Streaming Error: %v", err)
+		return echo.NewHTTPError(http.StatusInternalServerError, "download_failed")
 	}
-
 	return nil
 }
 
-// UploadVideo handles video upload to MinIO
-// @Summary Upload video
-// @Description Uploads a video file
-// @Tags media
-// @Accept mpfd
-// @Produce json
-// @Param file formData file true "Video file to upload"
-// @Security BearerAuth
-// @Success 200 {object} model.DownloadResponse "Video successfully uploaded"
-// @Failure 400 {object} model.ErrorResponse "Invalid request or file not found"
-// @Failure 401 {object} model.ErrorResponse "Unauthorized"
-// @Failure 500 {object} model.ErrorResponse "Failed to process upload"
-// @Router /api/v1/media/video [post]
-func (h *Handler) UploadVideo(c echo.Context) error {
+func (h *Handler) handleGenericUpload(c echo.Context, fileType string) error {
 	ctx := c.Request().Context()
-
-	lang := "uz"
-	if langInterface := c.Get("lang"); langInterface != nil {
-		if langStr, ok := langInterface.(string); ok {
-			lang = langStr
-		}
-	}
-
 	fileHeader, err := c.FormFile("file")
 	if err != nil {
-		message := model.GetLocalizedMessage(lang, "file_not_fount")
-		fmt.Printf("Error getting file from form (UploadVideo): %v\n", err)
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: message})
+		return echo.NewHTTPError(http.StatusBadRequest, "file_not_found")
 	}
 
-	maxSize := int64(100 * 1024 * 1024)
-	if fileHeader.Size > maxSize {
-		message := model.GetLocalizedMessage(lang, "file_too_large")
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: message})
+	maxSize := int64(50 * 1024 * 1024)
+	if fileType == "video" {
+		maxSize = 100 * 1024 * 1024
 	}
-	fileExt := strings.ToLower(filepath.Ext(fileHeader.Filename))
+	if fileHeader.Size > maxSize {
+		return echo.NewHTTPError(http.StatusBadRequest, "file_too_large")
+	}
 
 	src, err := fileHeader.Open()
 	if err != nil {
-		message := model.GetLocalizedMessage(lang, "error_while_getting_file")
-		return c.JSON(http.StatusInternalServerError, model.ErrorResponse{Message: message})
+		return echo.NewHTTPError(http.StatusInternalServerError, "file_open_error")
 	}
 	defer src.Close()
 
-	objectName, err := h.service.Minio().PutVideo(
-		ctx,
-		src,
-		fileHeader.Size,
-		fileHeader.Filename,
-		fileExt,
-	)
+	fileExt := strings.ToLower(filepath.Ext(fileHeader.Filename))
+	var objectName string
+
+	switch fileType {
+	case "video":
+		objectName, err = h.service.Minio().UploadVideo(ctx, src, fileHeader.Size, fileHeader.Filename, fileExt)
+	case "image":
+		objectName, err = h.service.Minio().UploadImage(ctx, src, fileHeader.Size, fileHeader.Filename, fileExt)
+	}
 
 	if err != nil {
-		fmt.Printf("MinIOga yuklashda xatolik: %v\n", err)
-		message := model.GetLocalizedMessage(lang, "error_while_getting_file")
-		return c.JSON(http.StatusInternalServerError, model.ErrorResponse{Message: message})
+		log.Printf("Upload Error (%s): %v", fileType, err)
+		return echo.NewHTTPError(http.StatusInternalServerError, "upload_failed")
 	}
 
-	return c.JSON(http.StatusOK, model.DownloadResponse{ObjectName: objectName})
-}
-
-// DownloadVideo downloads video from MinIO
-// @Summary Download video
-// @Description Downloads video by object name
-// @Tags media
-// @Accept json
-// @Produce octet-stream
-// @Security BearerAuth
-// @Param object_name query string true "Video object name"
-// @Success 200 {file} file "Video file"
-// @Failure 400 {object} model.ErrorResponse "Invalid request"
-// @Failure 404 {object} model.ErrorResponse "Video not found"
-// @Failure 500 {object} model.ErrorResponse "Failed to download file"
-// @Router /api/v1/media/video/download [get]
-func (h *Handler) DownloadVideo(c echo.Context) error {
-	lang := "uz"
-	if langInterface := c.Get("lang"); langInterface != nil {
-		if langStr, ok := langInterface.(string); ok {
-			lang = langStr
-		}
-	}
-
-	objectName := c.QueryParam("object_name")
-	if objectName == "" {
-		message := model.GetLocalizedMessage(lang, "invalid_request_body")
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: message})
-	}
-	ctx := c.Request().Context()
-
-	object, err := h.service.Minio().GetVideo(ctx, objectName)
-	if err != nil {
-		message := model.GetLocalizedMessage(lang, "error_while_getting_file")
-		return c.JSON(http.StatusNotFound, model.ErrorResponse{Message: message})
-	}
-	defer object.Close()
-
-	c.Response().Header().Set(echo.HeaderContentDisposition, fmt.Sprintf("attachment; filename=%s", objectName))
-	c.Response().Header().Set(echo.HeaderContentType, "application/octet-stream")
-	c.Response().Header().Set("X-Content-Type-Options", "nosniff")
-
-	if _, err = io.Copy(c.Response().Writer, object); err != nil {
-		message := model.GetLocalizedMessage(lang, "error_while_getting_file")
-		return c.JSON(http.StatusInternalServerError, model.ErrorResponse{Message: message})
-	}
-
-	return nil
+	return c.JSON(http.StatusOK, model.SuccessResponses[model.DownloadResponse]{
+		Status: "success",
+		Data:   model.DownloadResponse{ObjectName: objectName},
+	})
 }
