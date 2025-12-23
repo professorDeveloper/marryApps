@@ -33,8 +33,8 @@ type AuthI interface {
 	SearchUsers(ctx context.Context, query string, limit, offset int32) ([]model.UserResponse, error)
 }
 type MinioI interface {
-	PutAvatar(ctx context.Context, file io.Reader, size int64, userID string) (string, error)
-	GetAvatar(ctx context.Context, objectName string) (*RealMinio.Object, error)
+	PutImage(ctx context.Context, file io.Reader, size int64, userID string) (string, error)
+	GetImage(ctx context.Context, objectName string) (*RealMinio.Object, error)
 	PutVideo(ctx context.Context, file io.Reader, size int64, fileName string, extension string) (string, error)
 	GetVideo(ctx context.Context, objectName string) (*RealMinio.Object, error)
 }

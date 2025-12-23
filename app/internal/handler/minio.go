@@ -50,6 +50,7 @@ func (h *Handler) UploadImage(c echo.Context) error {
 	fileHeader, err := c.FormFile("file")
 	if err != nil {
 		message := model.GetLocalizedMessage(lang, "file_not_fount")
+		fmt.Printf("Error getting file from form (UploadImage): %v\n", err)
 		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: message})
 	}
 
@@ -66,7 +67,7 @@ func (h *Handler) UploadImage(c echo.Context) error {
 	}
 	defer src.Close()
 
-	objectName, err := h.service.Minio().PutAvatar(
+	objectName, err := h.service.Minio().PutImage(
 		ctx,
 		src,
 		fileHeader.Size,
@@ -74,7 +75,7 @@ func (h *Handler) UploadImage(c echo.Context) error {
 	)
 
 	if err != nil {
-		fmt.Printf("MinIOga yuklashda xatolik: %v\n", err)
+		fmt.Printf("Minioga yuklashda xatolik: %v\n", err)
 		message := model.GetLocalizedMessage(lang, "error_while_getting_file")
 		return c.JSON(http.StatusInternalServerError, model.ErrorResponse{Message: message})
 	}
@@ -110,7 +111,7 @@ func (h *Handler) DownloadImage(c echo.Context) error {
 	}
 	ctx := c.Request().Context()
 
-	object, err := h.service.Minio().GetAvatar(ctx, objectName)
+	object, err := h.service.Minio().GetImage(ctx, objectName)
 	if err != nil {
 		message := model.GetLocalizedMessage(lang, "error_while_getting_file")
 		return c.JSON(http.StatusNotFound, model.ErrorResponse{Message: message})
@@ -155,6 +156,7 @@ func (h *Handler) UploadVideo(c echo.Context) error {
 	fileHeader, err := c.FormFile("file")
 	if err != nil {
 		message := model.GetLocalizedMessage(lang, "file_not_fount")
+		fmt.Printf("Error getting file from form (UploadVideo): %v\n", err)
 		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: message})
 	}
 

@@ -29,7 +29,7 @@ func NewMinioS(cfg *config.Config, minioClient *minioClient.Minio) *MinioS {
 	}
 }
 
-func (s *MinioS) PutAvatar(ctx context.Context, file io.Reader, size int64, userID string) (string, error) {
+func (s *MinioS) PutImage(ctx context.Context, file io.Reader, size int64, userID string) (string, error) {
 
 	bucketName := model.BucketName
 	folderName := model.ImageFolderName
@@ -62,7 +62,7 @@ func (s *MinioS) PutAvatar(ctx context.Context, file io.Reader, size int64, user
 	return objectName, nil
 }
 
-func (s *MinioS) GetAvatar(ctx context.Context, objectName string) (*RealMinio.Object, error) {
+func (s *MinioS) GetImage(ctx context.Context, objectName string) (*RealMinio.Object, error) {
 	bucketName := model.BucketName
 	folderName := model.ImageFolderName
 	fmt.Println("objectName:", objectName)
