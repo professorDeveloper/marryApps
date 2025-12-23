@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -21,7 +22,6 @@ func NewCategoryS(repo *repository.Repository) *CategoryS {
 	return &CategoryS{repo: repo}
 }
 
-// CreateCategory creates a new category
 func (c *CategoryS) CreateCategory(ctx context.Context, name string, nameI18n, departmentID, storageID, parent *string) (*model.CategoryResponse, error) {
 	if name == "" {
 		return nil, fmt.Errorf("category name is required")
@@ -359,6 +359,16 @@ func toCategoryResponse(cat pg.Category) *model.CategoryResponse {
 		parentStr = &str
 	}
 
+	var createdAt *time.Time
+	if cat.CreatedAt.Valid {
+		createdAt = &cat.CreatedAt.Time
+	}
+
+	var updatedAt *time.Time
+	if cat.UpdatedAt.Valid {
+		updatedAt = &cat.UpdatedAt.Time
+	}
+
 	return &model.CategoryResponse{
 		ID:           cat.ID.String(),
 		Name:         cat.Name,
@@ -366,7 +376,7 @@ func toCategoryResponse(cat pg.Category) *model.CategoryResponse {
 		DepartmentID: deptIDStr,
 		StorageID:    storageIDStr,
 		Parent:       parentStr,
-		CreatedAt:    nil,
-		UpdatedAt:    nil,
+		CreatedAt:    createdAt,
+		UpdatedAt:    updatedAt,
 	}
 }

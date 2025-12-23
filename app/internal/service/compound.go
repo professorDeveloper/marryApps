@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -325,6 +326,16 @@ func toCompoundResponse(comp pg.Compound) *model.CompoundResponse {
 		measurementStr = &str
 	}
 
+	var createdAt *time.Time
+	if comp.CreatedAt.Valid {
+		createdAt = &comp.CreatedAt.Time
+	}
+
+	var updatedAt *time.Time
+	if comp.UpdatedAt.Valid {
+		updatedAt = &comp.UpdatedAt.Time
+	}
+
 	return &model.CompoundResponse{
 		ID:              comp.ID.String(),
 		Name:            comp.Name,
@@ -335,8 +346,8 @@ func toCompoundResponse(comp pg.Compound) *model.CompoundResponse {
 		Measurement:     measurementStr,
 		Price:           priceStr,
 		DepartmentID:    deptIDStr,
-		CreatedAt:       nil,
-		UpdatedAt:       nil,
+		CreatedAt:       createdAt,
+		UpdatedAt:       updatedAt,
 	}
 }
 
@@ -743,24 +754,44 @@ func (c *CompoundS) RestoreCompoundStock(ctx context.Context, stockID string) (*
 
 // Helper function to convert database compound detail to response model
 func toCompoundDetailResponse(detail pg.CompoundsDetail) *model.CompoundDetailResponse {
+	var createdAt *time.Time
+	if detail.CreatedAt.Valid {
+		createdAt = &detail.CreatedAt.Time
+	}
+
+	var updatedAt *time.Time
+	if detail.UpdatedAt.Valid {
+		updatedAt = &detail.UpdatedAt.Time
+	}
+
 	return &model.CompoundDetailResponse{
 		ID:           detail.ID.String(),
 		CompoundID:   detail.CompoundID.String(),
 		IngredientID: detail.IngredientID.String(),
 		Quantity:     detail.Quantity,
-		CreatedAt:    nil,
-		UpdatedAt:    nil,
+		CreatedAt:    createdAt,
+		UpdatedAt:    updatedAt,
 	}
 }
 
 // Helper function to convert database compound stock to response model
 func toCompoundStockResponse(stock pg.CompoundStock) *model.CompoundStockResponse {
+	var createdAt *time.Time
+	if stock.CreatedAt.Valid {
+		createdAt = &stock.CreatedAt.Time
+	}
+
+	var updatedAt *time.Time
+	if stock.UpdatedAt.Valid {
+		updatedAt = &stock.UpdatedAt.Time
+	}
+
 	return &model.CompoundStockResponse{
 		ID:         stock.ID.String(),
 		CompoundID: stock.CompoundID.String(),
 		Quantity:   stock.Quantity,
 		BranchID:   stock.BranchID.String(),
-		CreatedAt:  nil,
-		UpdatedAt:  nil,
+		CreatedAt:  createdAt,
+		UpdatedAt:  updatedAt,
 	}
 }

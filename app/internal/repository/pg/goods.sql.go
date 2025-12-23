@@ -68,7 +68,6 @@ func (q *Queries) CountGoodsByDepartment(ctx context.Context, departmentID pgtyp
 }
 
 const createGood = `-- name: CreateGood :one
-
 INSERT INTO goods (id, name, description, name_i18n, description_i18n, category_id, department_id, price, cook_time)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 RETURNING id, name, description, name_i18n, description_i18n, category_id, department_id, price, cook_time, created_at, updated_at, deleted_at
@@ -86,7 +85,6 @@ type CreateGoodParams struct {
 	CookTime        *int32         `json:"cook_time"`
 }
 
-// ==================== GOODS (MENU ITEMS) QUERIES ====================
 func (q *Queries) CreateGood(ctx context.Context, arg CreateGoodParams) (Good, error) {
 	row := q.db.QueryRow(ctx, createGood,
 		arg.ID,
@@ -118,7 +116,6 @@ func (q *Queries) CreateGood(ctx context.Context, arg CreateGoodParams) (Good, e
 }
 
 const createGoodDetail = `-- name: CreateGoodDetail :one
-
 INSERT INTO goods_details (id, good_id, ingredient_id, compound_id, measurement, quantity)
 VALUES ($1, $2, $3, $4, $5, $6)
 RETURNING id, good_id, ingredient_id, compound_id, measurement, quantity, created_at, updated_at, deleted_at
@@ -133,7 +130,6 @@ type CreateGoodDetailParams struct {
 	Quantity     int64               `json:"quantity"`
 }
 
-// ==================== GOODS DETAILS QUERIES ====================
 func (q *Queries) CreateGoodDetail(ctx context.Context, arg CreateGoodDetailParams) (GoodsDetail, error) {
 	row := q.db.QueryRow(ctx, createGoodDetail,
 		arg.ID,

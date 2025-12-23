@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -20,7 +21,6 @@ type GoodsS struct {
 func NewGoodsS(repo *repository.Repository) *GoodsS {
 	return &GoodsS{repo: repo}
 }
-
 
 // CreateGood creates a new good/menu item
 func (g *GoodsS) CreateGood(ctx context.Context, name string, description *string, nameI18n, descriptionI18n, categoryID, departmentID *string, price string, cookTime *int32) (*model.GoodResponse, error) {
@@ -642,6 +642,16 @@ func toGoodResponse(good pg.Good) *model.GoodResponse {
 		priceStr = good.Price.Int.String()
 	}
 
+	var createdAt *time.Time
+	if good.CreatedAt.Valid {
+		createdAt = &good.CreatedAt.Time
+	}
+
+	var updatedAt *time.Time
+	if good.UpdatedAt.Valid {
+		updatedAt = &good.UpdatedAt.Time
+	}
+
 	return &model.GoodResponse{
 		ID:              good.ID.String(),
 		Name:            good.Name,
@@ -652,8 +662,8 @@ func toGoodResponse(good pg.Good) *model.GoodResponse {
 		DepartmentID:    departmentIDStr,
 		Price:           priceStr,
 		CookTime:        good.CookTime,
-		CreatedAt:       nil,
-		UpdatedAt:       nil,
+		CreatedAt:       createdAt,
+		UpdatedAt:       updatedAt,
 	}
 }
 
@@ -677,6 +687,16 @@ func toGoodDetailResponse(detail pg.GoodsDetail) *model.GoodDetailResponse {
 		measurementStr = &str
 	}
 
+	var createdAt *time.Time
+	if detail.CreatedAt.Valid {
+		createdAt = &detail.CreatedAt.Time
+	}
+
+	var updatedAt *time.Time
+	if detail.UpdatedAt.Valid {
+		updatedAt = &detail.UpdatedAt.Time
+	}
+
 	return &model.GoodDetailResponse{
 		ID:           detail.ID.String(),
 		GoodID:       detail.GoodID.String(),
@@ -684,7 +704,7 @@ func toGoodDetailResponse(detail pg.GoodsDetail) *model.GoodDetailResponse {
 		CompoundID:   compoundIDStr,
 		Measurement:  measurementStr,
 		Quantity:     detail.Quantity,
-		CreatedAt:    nil,
-		UpdatedAt:    nil,
+		CreatedAt:    createdAt,
+		UpdatedAt:    updatedAt,
 	}
 }

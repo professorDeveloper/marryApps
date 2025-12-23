@@ -33,7 +33,7 @@ func (h *Handler) CreateDepartment(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "name is required"})
 	}
 
-	department, err := h.service.Department().CreateDepartment(c.Request().Context(), *req.Name, nil, &req.StorageID)
+	department, err := h.service.Department().CreateDepartment(c.Request().Context(), *req.Name, req.NameI18n, &req.StorageID)
 	if err != nil {
 		log.Printf("CreateDepartment failed: %v", err)
 		return c.JSON(http.StatusInternalServerError, model.ErrorResponse{Message: "failed to create department"})

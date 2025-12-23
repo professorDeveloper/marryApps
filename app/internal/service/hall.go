@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -229,6 +230,16 @@ func toHallResponse(hall pg.Hall) *model.HallResponse {
 		nameI18nStr = &str
 	}
 
+	var createdAt *time.Time
+	if hall.CreatedAt.Valid {
+		createdAt = &hall.CreatedAt.Time
+	}
+
+	var updatedAt *time.Time
+	if hall.UpdatedAt.Valid {
+		updatedAt = &hall.UpdatedAt.Time
+	}
+
 	name := hall.Name
 	branchID := hall.BranchID.String()
 
@@ -237,7 +248,7 @@ func toHallResponse(hall pg.Hall) *model.HallResponse {
 		BranchID:  branchID,
 		Name:      &name,
 		NameI18n:  nameI18nStr,
-		CreatedAt: nil,
-		UpdatedAt: nil,
+		CreatedAt: createdAt,
+		UpdatedAt: updatedAt,
 	}
 }

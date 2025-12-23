@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -574,13 +575,23 @@ func toIngredientGroupResponse(g pg.IngredientGroup) *model.IngredientGroupRespo
 		nameI18nStr = &uuidStr
 	}
 
+	var createdAt *time.Time
+	if g.CreatedAt.Valid {
+		createdAt = &g.CreatedAt.Time
+	}
+
+	var updatedAt *time.Time
+	if g.UpdatedAt.Valid {
+		updatedAt = &g.UpdatedAt.Time
+	}
+
 	name := g.Name
 	return &model.IngredientGroupResponse{
 		ID:        g.ID.String(),
 		Name:      &name,
 		NameI18n:  nameI18nStr,
-		CreatedAt: nil,
-		UpdatedAt: nil,
+		CreatedAt: createdAt,
+		UpdatedAt: updatedAt,
 	}
 }
 
@@ -613,6 +624,16 @@ func toIngredientResponse(ing pg.Ingredient) *model.IngredientResponse {
 		measurementStr = &str
 	}
 
+	var createdAt *time.Time
+	if ing.CreatedAt.Valid {
+		createdAt = &ing.CreatedAt.Time
+	}
+
+	var updatedAt *time.Time
+	if ing.UpdatedAt.Valid {
+		updatedAt = &ing.UpdatedAt.Time
+	}
+
 	name := ing.Name
 	return &model.IngredientResponse{
 		ID:          ing.ID.String(),
@@ -622,8 +643,8 @@ func toIngredientResponse(ing pg.Ingredient) *model.IngredientResponse {
 		Measurement: measurementStr,
 		PictureUrl:  ing.PictureUrl,
 		BrandID:     brandIDStr,
-		CreatedAt:   nil,
-		UpdatedAt:   nil,
+		CreatedAt:   createdAt,
+		UpdatedAt:   updatedAt,
 	}
 }
 
@@ -632,12 +653,22 @@ func toIngredientStockResponse(s pg.IngredientStock) *model.IngredientStockRespo
 		return nil
 	}
 
+	var createdAt *time.Time
+	if s.CreatedAt.Valid {
+		createdAt = &s.CreatedAt.Time
+	}
+
+	var updatedAt *time.Time
+	if s.UpdatedAt.Valid {
+		updatedAt = &s.UpdatedAt.Time
+	}
+
 	return &model.IngredientStockResponse{
 		ID:           s.ID.String(),
 		IngredientID: s.IngredientID.String(),
 		Quantity:     s.Quantity,
 		BranchID:     s.BranchID.String(),
-		CreatedAt:    nil,
-		UpdatedAt:    nil,
+		CreatedAt:    createdAt,
+		UpdatedAt:    updatedAt,
 	}
 }

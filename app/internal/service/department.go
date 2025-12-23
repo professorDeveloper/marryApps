@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -21,15 +22,18 @@ func NewDepartmentS(repo *repository.Repository) *DepartmentS {
 	return &DepartmentS{repo: repo}
 }
 
-// CreateDepartment creates a new department
-func (d *DepartmentS) CreateDepartment(ctx context.Context, name string, nameI18n *uuid.UUID, storageID *string) (*model.DepartmentResponse, error) {
+func (d *DepartmentS) CreateDepartment(ctx context.Context, name string, nameI18n *string, storageID *string) (*model.DepartmentResponse, error) {
 	if name == "" {
 		return nil, fmt.Errorf("department name is required")
 	}
 
 	nameI18nUUID := pgtype.UUID{}
-	if nameI18n != nil {
-		nameI18nUUID = pgtype.UUID{Bytes: *nameI18n, Valid: true}
+	if nameI18n != nil && *nameI18n != "" {
+		i18nID, err := uuid.Parse(*nameI18n)
+		if err != nil {
+			return nil, fmt.Errorf("invalid name_i18n: %w", err)
+		}
+		nameI18nUUID = pgtype.UUID{Bytes: i18nID, Valid: true}
 	}
 
 	storageUUID := pgtype.UUID{}
@@ -235,13 +239,23 @@ func toDepartmentResponse(dept pg.Department) *model.DepartmentResponse {
 		storageIDStr = dept.StorageID.String()
 	}
 
+	var createdAt *time.Time
+	if dept.CreatedAt.Valid {
+		createdAt = &dept.CreatedAt.Time
+	}
+
+	var updatedAt *time.Time
+	if dept.UpdatedAt.Valid {
+		updatedAt = &dept.UpdatedAt.Time
+	}
+
 	name := dept.Name
 	return &model.DepartmentResponse{
 		ID:        dept.ID.String(),
 		Name:      &name,
 		NameI18n:  nameI18nStr,
 		StorageID: storageIDStr,
-		CreatedAt: nil,
-		UpdatedAt: nil,
+		CreatedAt: createdAt,
+		UpdatedAt: updatedAt,
 	}
 }

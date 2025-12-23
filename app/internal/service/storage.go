@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -216,6 +217,16 @@ func toStorageResponse(st pg.Storage) *model.StorageResponse {
 		nameI18nStr = &uuidStr
 	}
 
+	var createdAt *time.Time
+	if st.CreatedAt.Valid {
+		createdAt = &st.CreatedAt.Time
+	}
+
+	var updatedAt *time.Time
+	if st.UpdatedAt.Valid {
+		updatedAt = &st.UpdatedAt.Time
+	}
+
 	name := st.Name
 	branchID := st.BranchID.String()
 
@@ -224,7 +235,7 @@ func toStorageResponse(st pg.Storage) *model.StorageResponse {
 		Name:      &name,
 		BranchID:  branchID,
 		NameI18n:  nameI18nStr,
-		CreatedAt: nil,
-		UpdatedAt: nil,
+		CreatedAt: createdAt,
+		UpdatedAt: updatedAt,
 	}
 }

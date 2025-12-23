@@ -77,7 +77,7 @@ type StorageI interface {
 }
 
 type DepartmentI interface {
-	CreateDepartment(ctx context.Context, name string, nameI18n *uuid.UUID, storageID *string) (*model.DepartmentResponse, error)
+	CreateDepartment(ctx context.Context, name string, nameI18n *string, storageID *string) (*model.DepartmentResponse, error)
 	GetDepartmentByID(ctx context.Context, departmentID string) (*model.DepartmentResponse, error)
 	GetAllDepartments(ctx context.Context, limit, offset int32) ([]*model.DepartmentResponse, error)
 	GetDepartmentsByStorageID(ctx context.Context, storageID string, limit, offset int32) ([]*model.DepartmentResponse, error)

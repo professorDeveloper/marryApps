@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -160,6 +161,17 @@ func toBranchResponse(b pg.Branch) *model.BranchResponse {
 		uuidStr := uuid.UUID(b.NameI18n.Bytes).String()
 		nameI18nStr = &uuidStr
 	}
+
+	var createdAt *time.Time
+	if b.CreatedAt.Valid {
+		createdAt = &b.CreatedAt.Time
+	}
+
+	var updatedAt *time.Time
+	if b.UpdatedAt.Valid {
+		updatedAt = &b.UpdatedAt.Time
+	}
+
 	name := b.Name
 	return &model.BranchResponse{
 		ID:        b.ID.String(),
@@ -167,8 +179,8 @@ func toBranchResponse(b pg.Branch) *model.BranchResponse {
 		NameI18n:  nameI18nStr,
 		Address:   b.Address,
 		Phone:     b.Phone,
-		CreatedAt: nil,
-		UpdatedAt: nil,
+		CreatedAt: createdAt,
+		UpdatedAt: updatedAt,
 	}
 }
 
@@ -176,12 +188,23 @@ func toTranslationResponse(t pg.Translation) *model.TranslationResponse {
 	if t.ID == uuid.Nil {
 		return nil
 	}
+
+	var createdAt *time.Time
+	if t.CreatedAt.Valid {
+		createdAt = &t.CreatedAt.Time
+	}
+
+	var updatedAt *time.Time
+	if t.UpdatedAt.Valid {
+		updatedAt = &t.UpdatedAt.Time
+	}
+
 	return &model.TranslationResponse{
 		ID:        t.ID.String(),
 		Uz:        t.Uz,
 		Ru:        t.Ru,
 		En:        t.En,
-		CreatedAt: nil,
-		UpdatedAt: nil,
+		CreatedAt: createdAt,
+		UpdatedAt: updatedAt,
 	}
 }
