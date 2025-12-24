@@ -31,7 +31,6 @@ CREATE INDEX idx_goods_category ON goods(category_id) WHERE deleted_at = 0;
 CREATE INDEX idx_goods_department ON goods(department_id) WHERE deleted_at = 0;
 CREATE INDEX idx_goods_details_good ON goods_details(good_id) WHERE deleted_at = 0;
 
--- Create triggers to automatically update updated_at column
 CREATE OR REPLACE FUNCTION update_updated_at_column()
 RETURNS TRIGGER AS $$
 BEGIN

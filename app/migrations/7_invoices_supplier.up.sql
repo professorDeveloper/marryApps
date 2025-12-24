@@ -1,20 +1,12 @@
-CREATE TABLE IF NOT EXISTS suppliers (
-  id           UUID      PRIMARY KEY DEFAULT gen_random_uuid(),
-  name         TEXT      NOT NULL,
-  contact      TEXT,
-  phone        VARCHAR(20) UNIQUE,
-  email        TEXT UNIQUE,
-  address      TEXT,
-  created_at   TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-  updated_at   TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-  deleted_at   BIGINT    DEFAULT 0
-);
+CREATE TYPE invoice_status AS ENUM ('pending', 'arrived', 'received', 'cancelled');
 
 CREATE TABLE IF NOT EXISTS invoices (
   id           UUID      PRIMARY KEY DEFAULT gen_random_uuid(),
-  supplier_id  UUID      NOT NULL REFERENCES suppliers(id) ON DELETE RESTRICT,
+  supplier_name TEXT,
+  supplier_phone VARCHAR(100) UNIQUE,
+  supplier_email VARCHAR(100) UNIQUE,
   total_amount DECIMAL(15,2) NOT NULL DEFAULT 0,
-  status       VARCHAR(20) DEFAULT 'pending',
+  status       invoice_status DEFAULT 'pending',
   date         TIMESTAMP NOT NULL,
   created_at   TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
   updated_at   TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
@@ -33,6 +25,7 @@ CREATE TABLE IF NOT EXISTS invoice_detailed (
   deleted_at     BIGINT    DEFAULT 0
 );
 
-CREATE INDEX idx_invoices_supplier ON invoices(supplier_id) WHERE deleted_at = 0;
+CREATE INDEX idx_invoices_supplier_name ON invoices(supplier_name) WHERE deleted_at = 0;
+CREATE INDEX idx_invoices_supplier_phone ON invoices(supplier_phone) WHERE deleted_at = 0;
 CREATE INDEX idx_invoices_date ON invoices(date) WHERE deleted_at = 0;
 CREATE INDEX idx_invoice_detailed_invoice ON invoice_detailed(invoice_id) WHERE deleted_at = 0;

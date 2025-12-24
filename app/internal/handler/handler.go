@@ -167,6 +167,52 @@ func (h *Handler) Register(router *echo.Echo) {
 			ingredientStock.POST("/:id/restore", h.RestoreIngredientStock, mw.CheckLanguage(), mw.CheckAuth(h.cfg))
 		}
 
+		orders := api.Group("/orders")
+		{
+			orders.POST("", h.CreateOrder, mw.CheckLanguage(), mw.CheckAuth(h.cfg))
+			orders.GET("", h.GetAllOrders, mw.CheckLanguage(), mw.CheckAuth(h.cfg))
+			orders.GET("/:id", h.GetOrderByID, mw.CheckLanguage(), mw.CheckAuth(h.cfg))
+			orders.PUT("/:id", h.UpdateOrder, mw.CheckLanguage(), mw.CheckAuth(h.cfg))
+			orders.DELETE("/:id", h.DeleteOrder, mw.CheckLanguage(), mw.CheckAuth(h.cfg))
+			orders.POST("/:id/restore", h.RestoreOrder, mw.CheckLanguage(), mw.CheckAuth(h.cfg))
+
+			orders.PUT("/:id/status", h.UpdateOrderStatus, mw.CheckLanguage(), mw.CheckAuth(h.cfg))
+			orders.POST("/:id/pay", h.MarkOrderPaid, mw.CheckLanguage(), mw.CheckAuth(h.cfg))
+			orders.POST("/:id/cancel", h.CancelOrder, mw.CheckLanguage(), mw.CheckAuth(h.cfg))
+			orders.POST("/:id/cooking", h.MarkOrderCooking, mw.CheckLanguage(), mw.CheckAuth(h.cfg))
+			orders.POST("/:id/ready", h.MarkOrderReady, mw.CheckLanguage(), mw.CheckAuth(h.cfg))
+			orders.POST("/:id/served", h.MarkOrderServed, mw.CheckLanguage(), mw.CheckAuth(h.cfg))
+
+			orders.GET("/status/:status", h.GetOrdersByStatus, mw.CheckLanguage(), mw.CheckAuth(h.cfg))
+			orders.GET("/table/:tableId", h.GetOrdersByTableID, mw.CheckLanguage(), mw.CheckAuth(h.cfg))
+			orders.GET("/waiter/:waiterId", h.GetOrdersByWaiterID, mw.CheckLanguage(), mw.CheckAuth(h.cfg))
+			orders.POST("/:id/assign-waiter/:waiterId", h.AssignWaiterToOrder, mw.CheckLanguage(), mw.CheckAuth(h.cfg))
+			orders.POST("/:id/assign-cashier/:cashierId", h.AssignCashierToOrder, mw.CheckLanguage(), mw.CheckAuth(h.cfg))
+		}
+
+		orderItems := api.Group("/order-items")
+		{
+			orderItems.POST("", h.CreateOrderItem, mw.CheckLanguage(), mw.CheckAuth(h.cfg))
+			orderItems.GET("", h.GetAllOrderItems, mw.CheckLanguage(), mw.CheckAuth(h.cfg))
+			orderItems.GET("/:id", h.GetOrderItemByID, mw.CheckLanguage(), mw.CheckAuth(h.cfg))
+			orderItems.PUT("/:id", h.UpdateOrderItem, mw.CheckLanguage(), mw.CheckAuth(h.cfg))
+			orderItems.DELETE("/:id", h.DeleteOrderItem, mw.CheckLanguage(), mw.CheckAuth(h.cfg))
+			orderItems.POST("/:id/restore", h.RestoreOrderItem, mw.CheckLanguage(), mw.CheckAuth(h.cfg))
+
+			orderItems.GET("/order/:orderId", h.GetOrderItemsByOrderID, mw.CheckLanguage(), mw.CheckAuth(h.cfg))
+			orderItems.GET("/status/:status", h.GetOrderItemsByStatus, mw.CheckLanguage(), mw.CheckAuth(h.cfg))
+			orderItems.PUT("/:id/quantity", h.UpdateOrderItemQuantity, mw.CheckLanguage(), mw.CheckAuth(h.cfg))
+			orderItems.PUT("/:id/status", h.UpdateOrderItemStatus, mw.CheckLanguage(), mw.CheckAuth(h.cfg))
+			orderItems.POST("/:id/cancel", h.CancelOrderItem, mw.CheckLanguage(), mw.CheckAuth(h.cfg))
+			orderItems.POST("/:id/cooking", h.MarkOrderItemCooking, mw.CheckLanguage(), mw.CheckAuth(h.cfg))
+			orderItems.POST("/:id/ready", h.MarkOrderItemReady, mw.CheckLanguage(), mw.CheckAuth(h.cfg))
+		}
+
+		// kitchen := api.Group("/kitchen")
+		// {
+		// 	kitchen.GET("/queue", h.GetKitchenQueue, mw.CheckLanguage(), mw.CheckAuth(h.cfg))
+		// }
+
 		categories := api.Group("/categories")
 		{
 			categories.POST("", h.CreateCategory, mw.CheckLanguage(), mw.CheckAuth(h.cfg))
@@ -279,6 +325,65 @@ func (h *Handler) Register(router *echo.Echo) {
 		compoundGoods := api.Group("/compounds/:compound_id/goods")
 		{
 			compoundGoods.GET("", h.GetGoodDetailsByCompound, mw.CheckLanguage(), mw.CheckAuth(h.cfg))
+		}
+
+		// Cafe Table endpoints
+		cafeTables := api.Group("/cafe-tables")
+		{
+			cafeTables.POST("", h.CreateCafeTable, mw.CheckLanguage(), mw.CheckAuth(h.cfg))
+			cafeTables.GET("", h.GetAllCafeTables, mw.CheckLanguage(), mw.CheckAuth(h.cfg))
+			cafeTables.GET("/:id", h.GetCafeTableByID, mw.CheckLanguage(), mw.CheckAuth(h.cfg))
+			cafeTables.GET("/hall/:hall_id", h.GetCafeTablesByHallID, mw.CheckLanguage(), mw.CheckAuth(h.cfg))
+			cafeTables.GET("/status/:status", h.GetCafeTablesByStatus, mw.CheckLanguage(), mw.CheckAuth(h.cfg))
+			cafeTables.GET("/hall-status", h.GetCafeTablesByHallAndStatus, mw.CheckLanguage(), mw.CheckAuth(h.cfg))
+			cafeTables.PUT("/:id", h.UpdateCafeTable, mw.CheckLanguage(), mw.CheckAuth(h.cfg))
+			cafeTables.PATCH("/:id/status", h.UpdateCafeTableStatus, mw.CheckLanguage(), mw.CheckAuth(h.cfg))
+			cafeTables.DELETE("/:id", h.DeleteCafeTable, mw.CheckLanguage(), mw.CheckAuth(h.cfg))
+			cafeTables.POST("/:id/restore", h.RestoreCafeTable, mw.CheckLanguage(), mw.CheckAuth(h.cfg))
+			cafeTables.POST("/:id/set-free", h.SetTableFree, mw.CheckLanguage(), mw.CheckAuth(h.cfg))
+			cafeTables.POST("/:id/set-busy", h.SetTableBusy, mw.CheckLanguage(), mw.CheckAuth(h.cfg))
+			cafeTables.GET("/available/hall/:hall_id", h.GetAvailableTablesByHall, mw.CheckLanguage(), mw.CheckAuth(h.cfg))
+			cafeTables.GET("/available/capacity", h.GetAvailableTablesByCapacity, mw.CheckLanguage(), mw.CheckAuth(h.cfg))
+			cafeTables.GET("/available/hall/:hall_id/capacity", h.GetAvailableTablesByHallAndCapacity, mw.CheckLanguage(), mw.CheckAuth(h.cfg))
+			cafeTables.GET("/stats/occupancy", h.GetTableOccupancyStats, mw.CheckLanguage(), mw.CheckAuth(h.cfg))
+			cafeTables.GET("/search", h.SearchCafeTables, mw.CheckLanguage(), mw.CheckAuth(h.cfg))
+		}
+
+		// Invoice endpoints (supplier invoices)
+		invoices := api.Group("/invoices")
+		{
+			invoices.POST("", h.CreateSupplierInvoice, mw.CheckLanguage(), mw.CheckAuth(h.cfg))
+			invoices.GET("", h.GetAllInvoices, mw.CheckLanguage(), mw.CheckAuth(h.cfg))
+			invoices.GET("/:id", h.GetInvoice, mw.CheckLanguage(), mw.CheckAuth(h.cfg))
+			invoices.GET("/status/:status", h.GetInvoicesByStatus, mw.CheckLanguage(), mw.CheckAuth(h.cfg))
+			invoices.GET("/supplier/:supplier_id", h.GetInvoicesBySupplier, mw.CheckLanguage(), mw.CheckAuth(h.cfg))
+			invoices.GET("/date-range", h.GetInvoicesByDateRange, mw.CheckLanguage(), mw.CheckAuth(h.cfg))
+			invoices.GET("/search", h.SearchInvoices, mw.CheckLanguage(), mw.CheckAuth(h.cfg))
+			invoices.PUT("/:id", h.UpdateInvoice, mw.CheckLanguage(), mw.CheckAuth(h.cfg))
+			invoices.PATCH("/:id/status", h.UpdateInvoiceStatus, mw.CheckLanguage(), mw.CheckAuth(h.cfg))
+			invoices.POST("/:id/mark-arrived", h.MarkInvoiceArrived, mw.CheckLanguage(), mw.CheckAuth(h.cfg))
+			invoices.POST("/:id/mark-received", h.MarkInvoiceReceived, mw.CheckLanguage(), mw.CheckAuth(h.cfg))
+			invoices.POST("/:id/cancel", h.CancelInvoice, mw.CheckLanguage(), mw.CheckAuth(h.cfg))
+			invoices.DELETE("/:id", h.DeleteInvoice, mw.CheckLanguage(), mw.CheckAuth(h.cfg))
+			invoices.POST("/:id/restore", h.RestoreInvoice, mw.CheckLanguage(), mw.CheckAuth(h.cfg))
+			invoices.GET("/:id/details", h.GetInvoiceWithDetails, mw.CheckLanguage(), mw.CheckAuth(h.cfg))
+			invoices.GET("/stats/supplier", h.GetInvoiceStatsBySupplier, mw.CheckLanguage(), mw.CheckAuth(h.cfg))
+			invoices.GET("/stats/date-range", h.GetInvoiceStatsByDateRange, mw.CheckLanguage(), mw.CheckAuth(h.cfg))
+		}
+
+		// Invoice detail endpoints
+		invoiceDetails := api.Group("/invoice-details")
+		{
+			invoiceDetails.POST("", h.CreateInvoiceDetail, mw.CheckLanguage(), mw.CheckAuth(h.cfg))
+			invoiceDetails.GET("", h.GetAllInvoiceDetails, mw.CheckLanguage(), mw.CheckAuth(h.cfg))
+			invoiceDetails.GET("/:id", h.GetInvoiceDetail, mw.CheckLanguage(), mw.CheckAuth(h.cfg))
+			invoiceDetails.GET("/invoice/:invoice_id", h.GetInvoiceDetailsByInvoice, mw.CheckLanguage(), mw.CheckAuth(h.cfg))
+			invoiceDetails.GET("/ingredient/:ingredient_id", h.GetInvoiceDetailsByIngredient, mw.CheckLanguage(), mw.CheckAuth(h.cfg))
+			invoiceDetails.PUT("/:id", h.UpdateInvoiceDetail, mw.CheckLanguage(), mw.CheckAuth(h.cfg))
+			invoiceDetails.PUT("/:id/quantity", h.UpdateInvoiceDetailQuantity, mw.CheckLanguage(), mw.CheckAuth(h.cfg))
+			invoiceDetails.DELETE("/:id", h.DeleteInvoiceDetail, mw.CheckLanguage(), mw.CheckAuth(h.cfg))
+			invoiceDetails.POST("/:id/restore", h.RestoreInvoiceDetail, mw.CheckLanguage(), mw.CheckAuth(h.cfg))
+			invoiceDetails.GET("/:id/with-ingredient", h.GetInvoiceDetailWithIngredient, mw.CheckLanguage(), mw.CheckAuth(h.cfg))
 		}
 
 	}

@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"io"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
@@ -201,6 +202,99 @@ type GoodsI interface {
 	RestoreGoodDetail(ctx context.Context, detailID string) (*model.GoodDetailResponse, error)
 }
 
+type CafeTableI interface {
+	CreateCafeTable(ctx context.Context, hallID string, number int32, capacity int32, status *string) (*model.CafeTableResponse, error)
+	GetCafeTableByID(ctx context.Context, tableID string) (*model.CafeTableResponse, error)
+	GetAllCafeTables(ctx context.Context, limit, offset int32) ([]model.CafeTableResponse, error)
+	GetCafeTablesByHallID(ctx context.Context, hallID string, limit, offset int32) ([]model.CafeTableResponse, error)
+	GetCafeTablesByStatus(ctx context.Context, status string, limit, offset int32) ([]model.CafeTableResponse, error)
+	GetCafeTablesByHallAndStatus(ctx context.Context, hallID, status string) ([]model.CafeTableResponse, error)
+	GetAvailableTablesByHall(ctx context.Context, hallID string) ([]model.CafeTableResponse, error)
+	GetAvailableTablesByCapacity(ctx context.Context, capacity, limit, offset int32) ([]model.CafeTableResponse, error)
+	GetAvailableTablesByHallAndCapacity(ctx context.Context, hallID string, capacity int32) ([]model.CafeTableResponse, error)
+	UpdateCafeTable(ctx context.Context, tableID string, hallID *string, number *int32, capacity *int32, status *string) (*model.CafeTableResponse, error)
+	UpdateCafeTableStatus(ctx context.Context, tableID string, status string) (*model.CafeTableResponse, error)
+	SetTableFree(ctx context.Context, tableID string) (*model.CafeTableResponse, error)
+	SetTableBusy(ctx context.Context, tableID string) (*model.CafeTableResponse, error)
+	DeleteCafeTable(ctx context.Context, tableID string) error
+	RestoreCafeTable(ctx context.Context, tableID string) error
+	GetTableOccupancyStats(ctx context.Context) (*model.TableOccupancyStats, error)
+	SearchCafeTables(ctx context.Context, query string, limit, offset int32) ([]model.CafeTableResponse, error)
+}
+
+type InvoiceI interface {
+	// Invoice methods
+	CreateInvoice(ctx context.Context, req *model.CreateInvoiceRequest) (*model.InvoiceResponse, error)
+	GetInvoiceByID(ctx context.Context, id string) (*model.InvoiceResponse, error)
+	GetAllInvoices(ctx context.Context, limit, offset int32) ([]*model.InvoiceResponse, error)
+	GetInvoicesByStatus(ctx context.Context, status string, limit, offset int32) ([]*model.InvoiceResponse, error)
+	GetInvoicesBySupplier(ctx context.Context, supplierName string, limit, offset int32) ([]*model.InvoiceResponse, error)
+	GetInvoicesByDateRange(ctx context.Context, startDate, endDate time.Time, limit, offset int32) ([]*model.InvoiceResponse, error)
+	UpdateInvoice(ctx context.Context, id string, req *model.UpdateInvoiceRequest) (*model.InvoiceResponse, error)
+	UpdateInvoiceStatus(ctx context.Context, id string, status string) (*model.InvoiceResponse, error)
+	MarkInvoiceArrived(ctx context.Context, id string) (*model.InvoiceResponse, error)
+	MarkInvoiceReceived(ctx context.Context, id string) (*model.InvoiceResponse, error)
+	CancelInvoice(ctx context.Context, id string) (*model.InvoiceResponse, error)
+	DeleteInvoice(ctx context.Context, id string) error
+	RestoreInvoice(ctx context.Context, id string) error
+	CountInvoices(ctx context.Context) (int64, error)
+	CountInvoicesByStatus(ctx context.Context, status string) (int64, error)
+	SearchInvoices(ctx context.Context, query string, limit, offset int32) ([]*model.InvoiceResponse, error)
+	GetInvoiceWithDetails(ctx context.Context, id string) (*model.InvoiceWithDetailsResponse, error)
+	GetInvoiceStatsBySupplier(ctx context.Context, limit, offset int32) ([]*model.InvoiceStatsBySupplierResponse, error)
+	GetInvoiceStatsByDateRange(ctx context.Context, startDate, endDate time.Time) (*model.InvoiceStatsByDateRangeResponse, error)
+	// Invoice detail methods
+	CreateInvoiceDetail(ctx context.Context, invoiceID string, req *model.CreateInvoiceDetailRequest) (*model.InvoiceDetailResponse, error)
+	GetInvoiceDetailByID(ctx context.Context, id string) (*model.InvoiceDetailResponse, error)
+	GetAllInvoiceDetails(ctx context.Context, limit, offset int32) ([]*model.InvoiceDetailResponse, error)
+	GetInvoiceDetailsByInvoiceID(ctx context.Context, invoiceID string) ([]*model.InvoiceDetailResponse, error)
+	GetInvoiceDetailsByIngredientID(ctx context.Context, ingredientID string, limit, offset int32) ([]*model.InvoiceDetailResponse, error)
+	UpdateInvoiceDetail(ctx context.Context, id string, req *model.UpdateInvoiceDetailRequest) (*model.InvoiceDetailResponse, error)
+	UpdateInvoiceDetailQuantity(ctx context.Context, id string, quantity int64) (*model.InvoiceDetailResponse, error)
+	DeleteInvoiceDetail(ctx context.Context, id string) error
+	RestoreInvoiceDetail(ctx context.Context, id string) error
+	DeleteInvoiceDetailsByInvoiceID(ctx context.Context, invoiceID string) error
+	CountInvoiceDetails(ctx context.Context) (int64, error)
+	CountInvoiceDetailsByInvoice(ctx context.Context, invoiceID string) (int64, error)
+	GetInvoiceDetailWithIngredient(ctx context.Context, id string) (*model.InvoiceDetailWithIngredientResponse, error)
+}
+
+type OrderI interface {
+	CreateOrder(ctx context.Context, req model.CreateOrderRequest) (*model.OrderResponse, error)
+	GetOrderByID(ctx context.Context, orderID string) (*model.OrderResponse, error)
+	GetAllOrders(ctx context.Context, limit, offset int32) ([]model.OrderResponse, error)
+	GetOrdersByStatus(ctx context.Context, status string, limit, offset int32) ([]model.OrderResponse, error)
+	GetOrdersByWaiterID(ctx context.Context, waiterID string, limit, offset int32) ([]model.OrderResponse, error)
+	GetOrdersByTableID(ctx context.Context, tableID string) ([]model.OrderResponse, error)
+	UpdateOrder(ctx context.Context, orderID string, req model.UpdateOrderRequest) (*model.OrderResponse, error)
+	UpdateOrderStatus(ctx context.Context, orderID string, status string) (*model.OrderResponse, error)
+	MarkOrderPaid(ctx context.Context, orderID string, cashierID string) (*model.OrderResponse, error)
+	AssignWaiterToOrder(ctx context.Context, orderID string, waiterID string) (*model.OrderResponse, error)
+	AssignCashierToOrder(ctx context.Context, orderID string, cashierID string) (*model.OrderResponse, error)
+	CancelOrder(ctx context.Context, orderID string) (*model.OrderResponse, error)
+	MarkOrderCooking(ctx context.Context, orderID string) (*model.OrderResponse, error)
+	MarkOrderReady(ctx context.Context, orderID string) (*model.OrderResponse, error)
+	MarkOrderServed(ctx context.Context, orderID string) (*model.OrderResponse, error)
+	DeleteOrder(ctx context.Context, orderID string) error
+	RestoreOrder(ctx context.Context, orderID string) error
+
+	CreateOrderItem(ctx context.Context, req model.CreateOrderItemRequest) (*model.OrderItemResponse, error)
+	GetOrderItemByID(ctx context.Context, itemID string) (*model.OrderItemResponse, error)
+	GetAllOrderItems(ctx context.Context, limit, offset int32) ([]model.OrderItemResponse, error)
+	GetOrderItemsByOrderID(ctx context.Context, orderID string) ([]model.OrderItemResponse, error)
+	GetOrderItemsByStatus(ctx context.Context, status string, limit, offset int32) ([]model.OrderItemResponse, error)
+	UpdateOrderItem(ctx context.Context, itemID string, req model.UpdateOrderItemRequest) (*model.OrderItemResponse, error)
+	UpdateOrderItemQuantity(ctx context.Context, itemID string, quantity int32) (*model.OrderItemResponse, error)
+	UpdateOrderItemStatus(ctx context.Context, itemID string, status string) (*model.OrderItemResponse, error)
+	CancelOrderItem(ctx context.Context, itemID string) (*model.OrderItemResponse, error)
+	MarkOrderItemCooking(ctx context.Context, itemID string) (*model.OrderItemResponse, error)
+	MarkOrderItemReady(ctx context.Context, itemID string) (*model.OrderItemResponse, error)
+	DeleteOrderItem(ctx context.Context, itemID string) error
+	RestoreOrderItem(ctx context.Context, itemID string) error
+
+	GetKitchenQueue(ctx context.Context) ([]KitchenQueueItem, error)
+}
+
 type I interface {
 	Auth() AuthI
 	Payment() PaymentI
@@ -215,6 +309,9 @@ type I interface {
 	Category() CategoryI
 	Compound() CompoundI
 	Goods() GoodsI
+	CafeTable() CafeTableI
+	Invoice() InvoiceI
+	Order() OrderI
 }
 
 type Service struct {
@@ -231,6 +328,9 @@ type Service struct {
 	category     CategoryI
 	compound     CompoundI
 	goods        GoodsI
+	cafeTable    CafeTableI
+	invoice      InvoiceI
+	order        OrderI
 }
 
 func New(cfg *config.Config, repo *repository.Repository, clickClient *paymentClick.Client, paymeClient *paymentPayme.Client, minioClient *minio.Minio) *Service {
@@ -248,6 +348,9 @@ func New(cfg *config.Config, repo *repository.Repository, clickClient *paymentCl
 		category:     NewCategoryS(repo),
 		compound:     NewCompoundS(repo),
 		goods:        NewGoodsS(repo),
+		cafeTable:    NewCafeTableS(repo),
+		invoice:      NewInvoiceS(repo),
+		order:        NewOrderS(repo),
 	}
 }
 
@@ -300,4 +403,16 @@ func (s *Service) Compound() CompoundI {
 
 func (s *Service) Goods() GoodsI {
 	return s.goods
+}
+
+func (s *Service) CafeTable() CafeTableI {
+	return s.cafeTable
+}
+
+func (s *Service) Invoice() InvoiceI {
+	return s.invoice
+}
+
+func (s *Service) Order() OrderI {
+	return s.order
 }

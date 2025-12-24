@@ -12,6 +12,50 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+type InvoiceStatus string
+
+const (
+	InvoiceStatusPending   InvoiceStatus = "pending"
+	InvoiceStatusArrived   InvoiceStatus = "arrived"
+	InvoiceStatusReceived  InvoiceStatus = "received"
+	InvoiceStatusCancelled InvoiceStatus = "cancelled"
+)
+
+func (e *InvoiceStatus) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = InvoiceStatus(s)
+	case string:
+		*e = InvoiceStatus(s)
+	default:
+		return fmt.Errorf("unsupported scan type for InvoiceStatus: %T", src)
+	}
+	return nil
+}
+
+type NullInvoiceStatus struct {
+	InvoiceStatus InvoiceStatus `json:"invoice_status"`
+	Valid         bool          `json:"valid"` // Valid is true if InvoiceStatus is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullInvoiceStatus) Scan(value interface{}) error {
+	if value == nil {
+		ns.InvoiceStatus, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.InvoiceStatus.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullInvoiceStatus) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.InvoiceStatus), nil
+}
+
 type MeasurementType string
 
 const (
@@ -53,6 +97,138 @@ func (ns NullMeasurementType) Value() (driver.Value, error) {
 		return nil, nil
 	}
 	return string(ns.MeasurementType), nil
+}
+
+type OrderItemsStatus string
+
+const (
+	OrderItemsStatusPending   OrderItemsStatus = "pending"
+	OrderItemsStatusCooking   OrderItemsStatus = "cooking"
+	OrderItemsStatusReady     OrderItemsStatus = "ready"
+	OrderItemsStatusCancelled OrderItemsStatus = "cancelled"
+)
+
+func (e *OrderItemsStatus) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = OrderItemsStatus(s)
+	case string:
+		*e = OrderItemsStatus(s)
+	default:
+		return fmt.Errorf("unsupported scan type for OrderItemsStatus: %T", src)
+	}
+	return nil
+}
+
+type NullOrderItemsStatus struct {
+	OrderItemsStatus OrderItemsStatus `json:"order_items_status"`
+	Valid            bool             `json:"valid"` // Valid is true if OrderItemsStatus is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullOrderItemsStatus) Scan(value interface{}) error {
+	if value == nil {
+		ns.OrderItemsStatus, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.OrderItemsStatus.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullOrderItemsStatus) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.OrderItemsStatus), nil
+}
+
+type OrderStatus string
+
+const (
+	OrderStatusOpen      OrderStatus = "open"
+	OrderStatusCooking   OrderStatus = "cooking"
+	OrderStatusReady     OrderStatus = "ready"
+	OrderStatusServed    OrderStatus = "served"
+	OrderStatusPaid      OrderStatus = "paid"
+	OrderStatusCancelled OrderStatus = "cancelled"
+)
+
+func (e *OrderStatus) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = OrderStatus(s)
+	case string:
+		*e = OrderStatus(s)
+	default:
+		return fmt.Errorf("unsupported scan type for OrderStatus: %T", src)
+	}
+	return nil
+}
+
+type NullOrderStatus struct {
+	OrderStatus OrderStatus `json:"order_status"`
+	Valid       bool        `json:"valid"` // Valid is true if OrderStatus is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullOrderStatus) Scan(value interface{}) error {
+	if value == nil {
+		ns.OrderStatus, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.OrderStatus.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullOrderStatus) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.OrderStatus), nil
+}
+
+type TableStatus string
+
+const (
+	TableStatusFree TableStatus = "free"
+	TableStatusBusy TableStatus = "busy"
+)
+
+func (e *TableStatus) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = TableStatus(s)
+	case string:
+		*e = TableStatus(s)
+	default:
+		return fmt.Errorf("unsupported scan type for TableStatus: %T", src)
+	}
+	return nil
+}
+
+type NullTableStatus struct {
+	TableStatus TableStatus `json:"table_status"`
+	Valid       bool        `json:"valid"` // Valid is true if TableStatus is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullTableStatus) Scan(value interface{}) error {
+	if value == nil {
+		ns.TableStatus, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.TableStatus.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullTableStatus) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.TableStatus), nil
 }
 
 type UserRole string
@@ -130,7 +306,7 @@ type CafeTable struct {
 	HallID    uuid.UUID          `json:"hall_id"`
 	Number    int32              `json:"number"`
 	Capacity  int32              `json:"capacity"`
-	Status    *string            `json:"status"`
+	Status    NullTableStatus    `json:"status"`
 	CreatedAt pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
 	DeletedAt *int64             `json:"deleted_at"`
@@ -267,14 +443,16 @@ type IngredientStock struct {
 }
 
 type Invoice struct {
-	ID          uuid.UUID          `json:"id"`
-	SupplierID  uuid.UUID          `json:"supplier_id"`
-	TotalAmount pgtype.Numeric     `json:"total_amount"`
-	Status      *string            `json:"status"`
-	Date        pgtype.Timestamp   `json:"date"`
-	CreatedAt   pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
-	DeletedAt   *int64             `json:"deleted_at"`
+	ID            uuid.UUID          `json:"id"`
+	SupplierName  *string            `json:"supplier_name"`
+	SupplierPhone *string            `json:"supplier_phone"`
+	SupplierEmail *string            `json:"supplier_email"`
+	TotalAmount   pgtype.Numeric     `json:"total_amount"`
+	Status        NullInvoiceStatus  `json:"status"`
+	Date          pgtype.Timestamp   `json:"date"`
+	CreatedAt     pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt     pgtype.Timestamptz `json:"updated_at"`
+	DeletedAt     *int64             `json:"deleted_at"`
 }
 
 type InvoiceDetailed struct {
@@ -294,7 +472,7 @@ type Order struct {
 	TableID     pgtype.UUID        `json:"table_id"`
 	WaiterID    pgtype.UUID        `json:"waiter_id"`
 	CashierID   pgtype.UUID        `json:"cashier_id"`
-	Status      *string            `json:"status"`
+	Status      NullOrderStatus    `json:"status"`
 	GuestCount  *int32             `json:"guest_count"`
 	TotalAmount pgtype.Numeric     `json:"total_amount"`
 	Comment     *string            `json:"comment"`
@@ -304,16 +482,16 @@ type Order struct {
 }
 
 type OrderItem struct {
-	ID        uuid.UUID          `json:"id"`
-	GoodID    uuid.UUID          `json:"good_id"`
-	OrderID   uuid.UUID          `json:"order_id"`
-	Quantity  int32              `json:"quantity"`
-	Price     pgtype.Numeric     `json:"price"`
-	Status    *string            `json:"status"`
-	Comment   *string            `json:"comment"`
-	CreatedAt pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
-	DeletedAt *int64             `json:"deleted_at"`
+	ID        uuid.UUID            `json:"id"`
+	GoodID    uuid.UUID            `json:"good_id"`
+	OrderID   uuid.UUID            `json:"order_id"`
+	Quantity  int32                `json:"quantity"`
+	Price     pgtype.Numeric       `json:"price"`
+	Status    NullOrderItemsStatus `json:"status"`
+	Comment   *string              `json:"comment"`
+	CreatedAt pgtype.Timestamptz   `json:"created_at"`
+	UpdatedAt pgtype.Timestamptz   `json:"updated_at"`
+	DeletedAt *int64               `json:"deleted_at"`
 }
 
 type PriceForPlan struct {
@@ -358,18 +536,6 @@ type Storage struct {
 	CreatedAt  pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt  pgtype.Timestamptz `json:"updated_at"`
 	DeletedAt  *int64             `json:"deleted_at"`
-}
-
-type Supplier struct {
-	ID        uuid.UUID          `json:"id"`
-	Name      string             `json:"name"`
-	Contact   *string            `json:"contact"`
-	Phone     *string            `json:"phone"`
-	Email     *string            `json:"email"`
-	Address   *string            `json:"address"`
-	CreatedAt pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
-	DeletedAt *int64             `json:"deleted_at"`
 }
 
 type Translation struct {

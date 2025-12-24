@@ -30,6 +30,29 @@ definitions:
       updated_at:
         type: string
     type: object
+  model.CafeTableResponse:
+    properties:
+      capacity:
+        example: 4
+        type: integer
+      created_at:
+        type: string
+      hall_id:
+        example: a1b2c3d4-e5f6-4a5b-8c9d-e0f1a2b3c4d5
+        type: string
+      id:
+        example: c0f18a64-7f5c-4425-9414-1b01cddee9d9
+        type: string
+      number:
+        example: 5
+        type: integer
+      status:
+        allOf:
+        - $ref: '#/definitions/model.TableStatus'
+        example: free
+      updated_at:
+        type: string
+    type: object
   model.CategoryResponse:
     properties:
       created_at:
@@ -151,6 +174,27 @@ definitions:
         type: string
       phone:
         type: string
+    type: object
+  model.CreateCafeTableRequest:
+    properties:
+      capacity:
+        example: 4
+        minimum: 1
+        type: integer
+      hall_id:
+        example: a1b2c3d4-e5f6-4a5b-8c9d-e0f1a2b3c4d5
+        type: string
+      number:
+        example: 5
+        minimum: 1
+        type: integer
+      status:
+        example: free
+        type: string
+    required:
+    - capacity
+    - hall_id
+    - number
     type: object
   model.CreateCategoryRequest:
     properties:
@@ -352,6 +396,54 @@ definitions:
         example: 100
         type: integer
     type: object
+  model.CreateInvoiceDetailRequest:
+    properties:
+      ingredient_id:
+        example: e2g30c86-9h7e-6647-1636-3d23effg1f1
+        type: string
+      invoice_id:
+        example: c0f18a64-7f5c-4425-9414-1b01cddee9d9
+        type: string
+      price:
+        example: "500000"
+        type: string
+      price_per_unit:
+        example: "10000"
+        type: string
+      quantity:
+        example: 50
+        type: integer
+    required:
+    - ingredient_id
+    - invoice_id
+    - price
+    - price_per_unit
+    - quantity
+    type: object
+  model.CreateInvoiceRequest:
+    properties:
+      date:
+        example: "2024-01-01T00:00:00Z"
+        type: string
+      status:
+        example: pending
+        type: string
+      supplier_email:
+        example: supplier@example.com
+        type: string
+      supplier_name:
+        example: ABC Supplier
+        type: string
+      supplier_phone:
+        example: "998901234567"
+        type: string
+      total_amount:
+        example: "1000000"
+        type: string
+    required:
+    - supplier_name
+    - total_amount
+    type: object
   model.CreateInvoiceResponse:
     properties:
       data:
@@ -365,6 +457,57 @@ definitions:
         type: integer
       error_note:
         type: string
+    type: object
+  model.CreateOrderItemRequest:
+    properties:
+      comment:
+        type: string
+      good_id:
+        example: d4e5f6a7-b8c9-4a5b-8c9d-e0f1a2b3c4d5
+        type: string
+      order_id:
+        example: a1b2c3d4-e5f6-4a5b-8c9d-e0f1a2b3c4d5
+        type: string
+      price:
+        example: "50000"
+        type: string
+      quantity:
+        example: 2
+        minimum: 1
+        type: integer
+      status:
+        example: pending
+        type: string
+    required:
+    - good_id
+    - order_id
+    - price
+    - quantity
+    type: object
+  model.CreateOrderRequest:
+    properties:
+      cashier_id:
+        example: a1b2c3d4-e5f6-4a5b-8c9d-e0f1a2b3c4d5
+        type: string
+      comment:
+        type: string
+      guest_count:
+        example: 2
+        type: integer
+      status:
+        example: open
+        type: string
+      table_id:
+        example: a1b2c3d4-e5f6-4a5b-8c9d-e0f1a2b3c4d5
+        type: string
+      total_amount:
+        example: "100000"
+        type: string
+      waiter_id:
+        example: a1b2c3d4-e5f6-4a5b-8c9d-e0f1a2b3c4d5
+        type: string
+    required:
+    - table_id
     type: object
   model.CreateShiftRequest:
     properties:
@@ -611,6 +754,178 @@ definitions:
         example: "2022-01-01T00:00:00Z"
         type: string
     type: object
+  model.InvoiceDetailResponse:
+    properties:
+      created_at:
+        type: string
+      id:
+        example: d1f29b75-8g6d-5536-0525-2c12deeef0e0
+        type: string
+      ingredient_id:
+        example: e2g30c86-9h7e-6647-1636-3d23effg1f1
+        type: string
+      invoice_id:
+        example: c0f18a64-7f5c-4425-9414-1b01cddee9d9
+        type: string
+      price:
+        example: "500000"
+        type: string
+      price_per_unit:
+        example: "10000"
+        type: string
+      quantity:
+        example: 50
+        type: integer
+      updated_at:
+        type: string
+    type: object
+  model.InvoiceDetailWithIngredientResponse:
+    properties:
+      created_at:
+        type: string
+      id:
+        example: d1f29b75-8g6d-5536-0525-2c12deeef0e0
+        type: string
+      ingredient_id:
+        example: e2g30c86-9h7e-6647-1636-3d23effg1f1
+        type: string
+      ingredient_measurement:
+        example: kg
+        type: string
+      ingredient_name:
+        example: Tomato
+        type: string
+      ingredient_picture:
+        example: http://example.com/tomato.jpg
+        type: string
+      invoice_id:
+        example: c0f18a64-7f5c-4425-9414-1b01cddee9d9
+        type: string
+      price:
+        example: "500000"
+        type: string
+      price_per_unit:
+        example: "10000"
+        type: string
+      quantity:
+        example: 50
+        type: integer
+      updated_at:
+        type: string
+    type: object
+  model.InvoiceResponse:
+    properties:
+      created_at:
+        type: string
+      date:
+        type: string
+      id:
+        example: c0f18a64-7f5c-4425-9414-1b01cddee9d9
+        type: string
+      status:
+        allOf:
+        - $ref: '#/definitions/model.InvoiceStatus'
+        example: pending
+      supplier_email:
+        example: supplier@example.com
+        type: string
+      supplier_name:
+        example: ABC Supplier
+        type: string
+      supplier_phone:
+        example: "998901234567"
+        type: string
+      total_amount:
+        example: "1000000"
+        type: string
+      updated_at:
+        type: string
+    type: object
+  model.InvoiceStatsByDateRangeResponse:
+    properties:
+      arrived_count:
+        example: 15
+        type: integer
+      avg_invoice_amount:
+        example: "1000000"
+        type: string
+      cancelled_count:
+        example: 5
+        type: integer
+      invoice_count:
+        example: 50
+        type: integer
+      pending_count:
+        example: 10
+        type: integer
+      received_count:
+        example: 20
+        type: integer
+      total_spent:
+        example: "50000000"
+        type: string
+    type: object
+  model.InvoiceStatsBySupplierResponse:
+    properties:
+      avg_invoice_amount:
+        example: "1000000"
+        type: string
+      invoice_count:
+        example: 10
+        type: integer
+      last_order_date:
+        type: string
+      supplier_name:
+        example: ABC Supplier
+        type: string
+      total_spent:
+        example: "10000000"
+        type: string
+    type: object
+  model.InvoiceStatus:
+    enum:
+    - pending
+    - arrived
+    - received
+    type: string
+    x-enum-varnames:
+    - InvoiceStatusPending
+    - InvoiceStatusArrived
+    - InvoiceStatusReceived
+  model.InvoiceWithDetailsResponse:
+    properties:
+      created_at:
+        type: string
+      date:
+        type: string
+      id:
+        example: c0f18a64-7f5c-4425-9414-1b01cddee9d9
+        type: string
+      item_count:
+        example: 5
+        type: integer
+      status:
+        allOf:
+        - $ref: '#/definitions/model.InvoiceStatus'
+        example: pending
+      supplier_email:
+        example: supplier@example.com
+        type: string
+      supplier_name:
+        example: ABC Supplier
+        type: string
+      supplier_phone:
+        example: "998901234567"
+        type: string
+      total_amount:
+        example: "1000000"
+        type: string
+      total_quantity:
+        example: 100
+        type: integer
+      updated_at:
+        type: string
+    type: object
   model.LoginRequest:
     properties:
       password:
@@ -634,6 +949,101 @@ definitions:
       user:
         $ref: '#/definitions/model.UserResponse'
     type: object
+  model.MarkOrderPaidRequest:
+    properties:
+      cashier_id:
+        example: a1b2c3d4-e5f6-4a5b-8c9d-e0f1a2b3c4d5
+        type: string
+    required:
+    - cashier_id
+    type: object
+  model.OrderItemResponse:
+    properties:
+      comment:
+        type: string
+      created_at:
+        type: string
+      good_id:
+        example: d4e5f6a7-b8c9-4a5b-8c9d-e0f1a2b3c4d5
+        type: string
+      id:
+        example: c0f18a64-7f5c-4425-9414-1b01cddee9d9
+        type: string
+      order_id:
+        example: a1b2c3d4-e5f6-4a5b-8c9d-e0f1a2b3c4d5
+        type: string
+      price:
+        example: "50000"
+        type: string
+      quantity:
+        example: 2
+        type: integer
+      status:
+        allOf:
+        - $ref: '#/definitions/model.OrderItemStatus'
+        example: pending
+      updated_at:
+        type: string
+    type: object
+  model.OrderItemStatus:
+    enum:
+    - pending
+    - cooking
+    - ready
+    - cancelled
+    type: string
+    x-enum-varnames:
+    - OrderItemStatusPending
+    - OrderItemStatusCooking
+    - OrderItemStatusReady
+    - OrderItemStatusCancelled
+  model.OrderResponse:
+    properties:
+      cashier_id:
+        example: a1b2c3d4-e5f6-4a5b-8c9d-e0f1a2b3c4d5
+        type: string
+      comment:
+        type: string
+      created_at:
+        type: string
+      guest_count:
+        example: 2
+        type: integer
+      id:
+        example: c0f18a64-7f5c-4425-9414-1b01cddee9d9
+        type: string
+      status:
+        allOf:
+        - $ref: '#/definitions/model.OrderStatus'
+        example: open
+      table_id:
+        example: a1b2c3d4-e5f6-4a5b-8c9d-e0f1a2b3c4d5
+        type: string
+      total_amount:
+        example: "100000"
+        type: string
+      updated_at:
+        type: string
+      waiter_id:
+        example: a1b2c3d4-e5f6-4a5b-8c9d-e0f1a2b3c4d5
+        type: string
+    type: object
+  model.OrderStatus:
+    enum:
+    - open
+    - cooking
+    - ready
+    - served
+    - paid
+    - cancelled
+    type: string
+    x-enum-varnames:
+    - OrderStatusOpen
+    - OrderStatusCooking
+    - OrderStatusReady
+    - OrderStatusServed
+    - OrderStatusPaid
+    - OrderStatusCancelled
   model.RefreshRequest:
     properties:
       refreshToken:
@@ -736,6 +1146,38 @@ definitions:
         example: Password updated successfully
         type: string
     type: object
+  model.TableOccupancyStats:
+    properties:
+      available_seats:
+        example: 120
+        type: integer
+      busy_percentage:
+        example: 40
+        type: integer
+      busy_tables:
+        example: 20
+        type: integer
+      free_percentage:
+        example: 60
+        type: integer
+      free_tables:
+        example: 30
+        type: integer
+      total_capacity:
+        example: 200
+        type: integer
+      total_tables:
+        example: 50
+        type: integer
+    type: object
+  model.TableStatus:
+    enum:
+    - free
+    - busy
+    type: string
+    x-enum-varnames:
+    - TableStatusFree
+    - TableStatusBusy
   model.TranslationResponse:
     properties:
       created_at:
@@ -756,6 +1198,29 @@ definitions:
       uz:
         example: Salom
         type: string
+    type: object
+  model.UpdateCafeTableRequest:
+    properties:
+      capacity:
+        example: 4
+        type: integer
+      hall_id:
+        example: a1b2c3d4-e5f6-4a5b-8c9d-e0f1a2b3c4d5
+        type: string
+      number:
+        example: 5
+        type: integer
+      status:
+        example: available
+        type: string
+    type: object
+  model.UpdateCafeTableStatusRequest:
+    properties:
+      status:
+        example: busy
+        type: string
+    required:
+    - status
     type: object
   model.UpdateCategoryRequest:
     properties:
@@ -947,6 +1412,125 @@ definitions:
         example: 100
         type: integer
     type: object
+  model.UpdateInvoiceDetailQuantityRequest:
+    properties:
+      quantity:
+        example: 50
+        type: integer
+    required:
+    - quantity
+    type: object
+  model.UpdateInvoiceDetailRequest:
+    properties:
+      ingredient_id:
+        example: e2g30c86-9h7e-6647-1636-3d23effg1f1
+        type: string
+      price:
+        example: "500000"
+        type: string
+      price_per_unit:
+        example: "10000"
+        type: string
+      quantity:
+        example: 50
+        type: integer
+    type: object
+  model.UpdateInvoiceRequest:
+    properties:
+      date:
+        example: "2024-01-01T00:00:00Z"
+        type: string
+      status:
+        example: pending
+        type: string
+      supplier_email:
+        example: supplier@example.com
+        type: string
+      supplier_name:
+        example: ABC Supplier
+        type: string
+      supplier_phone:
+        example: "998901234567"
+        type: string
+      total_amount:
+        example: "1000000"
+        type: string
+    type: object
+  model.UpdateInvoiceStatusRequest:
+    properties:
+      status:
+        example: arrived
+        type: string
+    required:
+    - status
+    type: object
+  model.UpdateOrderItemQuantityRequest:
+    properties:
+      quantity:
+        example: 2
+        type: integer
+    required:
+    - quantity
+    type: object
+  model.UpdateOrderItemRequest:
+    properties:
+      comment:
+        type: string
+      good_id:
+        example: d4e5f6a7-b8c9-4a5b-8c9d-e0f1a2b3c4d5
+        type: string
+      order_id:
+        example: a1b2c3d4-e5f6-4a5b-8c9d-e0f1a2b3c4d5
+        type: string
+      price:
+        example: "50000"
+        type: string
+      quantity:
+        example: 2
+        type: integer
+      status:
+        example: pending
+        type: string
+    type: object
+  model.UpdateOrderItemStatusRequest:
+    properties:
+      status:
+        example: cooking
+        type: string
+    required:
+    - status
+    type: object
+  model.UpdateOrderRequest:
+    properties:
+      cashier_id:
+        example: a1b2c3d4-e5f6-4a5b-8c9d-e0f1a2b3c4d5
+        type: string
+      comment:
+        type: string
+      guest_count:
+        example: 2
+        type: integer
+      status:
+        example: open
+        type: string
+      table_id:
+        example: a1b2c3d4-e5f6-4a5b-8c9d-e0f1a2b3c4d5
+        type: string
+      total_amount:
+        example: "100000"
+        type: string
+      waiter_id:
+        example: a1b2c3d4-e5f6-4a5b-8c9d-e0f1a2b3c4d5
+        type: string
+    type: object
+  model.UpdateOrderStatusRequest:
+    properties:
+      status:
+        example: cooking
+        type: string
+    required:
+    - status
+    type: object
   model.UpdatePasswordRequest:
     properties:
       currentPassword:
@@ -1029,7 +1613,7 @@ definitions:
         example: admin
         type: string
     type: object
-host: back.maryai.yurtal.tech
+host: localhost:8080
 info:
   contact: {}
   description: MaryAI API server with multi-language support (uz, ru, en)
@@ -1408,6 +1992,565 @@ paths:
       summary: Restore branch
       tags:
       - branches
+  /api/v1/cafe-tables:
+    get:
+      consumes:
+      - application/json
+      description: Get all cafe tables with pagination
+      parameters:
+      - default: 10
+        description: Limit
+        in: query
+        name: limit
+        type: integer
+      - default: 0
+        description: Offset
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/model.CafeTableResponse'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get all cafe tables
+      tags:
+      - cafe-tables
+    post:
+      consumes:
+      - application/json
+      description: Create a new cafe table in a specific hall
+      parameters:
+      - description: Create Cafe Table Request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.CreateCafeTableRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/model.CafeTableResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create a new cafe table
+      tags:
+      - cafe-tables
+  /api/v1/cafe-tables/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Soft delete a cafe table
+      parameters:
+      - description: Cafe Table ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - Bearer: []
+      - BearerAuth: []
+      summary: Delete a cafe table
+      tags:
+      - cafe-tables
+    get:
+      consumes:
+      - application/json
+      description: Get a specific cafe table by its ID
+      parameters:
+      - description: Cafe Table ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.CafeTableResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get cafe table by ID
+      tags:
+      - cafe-tables
+    put:
+      consumes:
+      - application/json
+      description: Update a cafe table details
+      parameters:
+      - description: Cafe Table ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Update Cafe Table Request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.UpdateCafeTableRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.CafeTableResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - Bearer: []
+      - BearerAuth: []
+      summary: Update a cafe table
+      tags:
+      - cafe-tables
+  /api/v1/cafe-tables/{id}/restore:
+    post:
+      consumes:
+      - application/json
+      description: Restore a soft deleted cafe table
+      parameters:
+      - description: Cafe Table ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Restore a cafe table
+      tags:
+      - cafe-tables
+  /api/v1/cafe-tables/{id}/set-busy:
+    post:
+      consumes:
+      - application/json
+      description: Mark a cafe table as busy (occupied)
+      parameters:
+      - description: Cafe Table ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.CafeTableResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Set table as busy
+      tags:
+      - cafe-tables
+  /api/v1/cafe-tables/{id}/set-free:
+    post:
+      consumes:
+      - application/json
+      description: Mark a cafe table as free (available)
+      parameters:
+      - description: Cafe Table ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.CafeTableResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Set table as free
+      tags:
+      - cafe-tables
+  /api/v1/cafe-tables/{id}/status:
+    patch:
+      consumes:
+      - application/json
+      description: Update the status of a cafe table
+      parameters:
+      - description: Cafe Table ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Update Cafe Table Status Request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.UpdateCafeTableStatusRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.CafeTableResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - Bearer: []
+      - BearerAuth: []
+      summary: Update cafe table status
+      tags:
+      - cafe-tables
+  /api/v1/cafe-tables/available/capacity:
+    get:
+      consumes:
+      - application/json
+      description: Get available tables that can accommodate a minimum number of guests
+      parameters:
+      - description: Minimum capacity
+        in: query
+        name: capacity
+        required: true
+        type: integer
+      - default: 10
+        description: Limit
+        in: query
+        name: limit
+        type: integer
+      - default: 0
+        description: Offset
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/model.CafeTableResponse'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get available tables by capacity
+      tags:
+      - cafe-tables
+  /api/v1/cafe-tables/available/hall/{hall_id}:
+    get:
+      consumes:
+      - application/json
+      description: Get all available (free) tables in a specific hall
+      parameters:
+      - description: Hall ID
+        in: path
+        name: hall_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/model.CafeTableResponse'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get available tables by hall
+      tags:
+      - cafe-tables
+  /api/v1/cafe-tables/available/hall/{hall_id}/capacity:
+    get:
+      consumes:
+      - application/json
+      description: Get available tables in a specific hall that can accommodate a
+        minimum number of guests
+      parameters:
+      - description: Hall ID
+        in: path
+        name: hall_id
+        required: true
+        type: string
+      - description: Minimum capacity
+        in: query
+        name: capacity
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/model.CafeTableResponse'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get available tables by hall and capacity
+      tags:
+      - cafe-tables
+  /api/v1/cafe-tables/hall-status:
+    get:
+      consumes:
+      - application/json
+      description: Get tables in a specific hall with a specific status
+      parameters:
+      - description: Hall ID
+        in: query
+        name: hall_id
+        type: string
+      - description: Status
+        in: query
+        name: status
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/model.CafeTableResponse'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get cafe tables by hall and status
+      tags:
+      - cafe-tables
+  /api/v1/cafe-tables/hall/{hall_id}:
+    get:
+      consumes:
+      - application/json
+      description: Get all tables in a specific hall
+      parameters:
+      - description: Hall ID
+        in: path
+        name: hall_id
+        required: true
+        type: string
+      - default: 10
+        description: Limit
+        in: query
+        name: limit
+        type: integer
+      - default: 0
+        description: Offset
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/model.CafeTableResponse'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get cafe tables by hall ID
+      tags:
+      - cafe-tables
+  /api/v1/cafe-tables/search:
+    get:
+      consumes:
+      - application/json
+      description: Search cafe tables by number or status
+      parameters:
+      - description: Search query
+        in: query
+        name: query
+        type: string
+      - default: 10
+        description: Limit
+        in: query
+        name: limit
+        type: integer
+      - default: 0
+        description: Offset
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/model.CafeTableResponse'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Search cafe tables
+      tags:
+      - cafe-tables
+  /api/v1/cafe-tables/stats/occupancy:
+    get:
+      consumes:
+      - application/json
+      description: Get overall cafe table occupancy statistics
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.TableOccupancyStats'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get table occupancy statistics
+      tags:
+      - cafe-tables
+  /api/v1/cafe-tables/status/{status}:
+    get:
+      consumes:
+      - application/json
+      description: Get tables with a specific status
+      parameters:
+      - description: Status
+        in: path
+        name: status
+        required: true
+        type: string
+      - default: 10
+        description: Limit
+        in: query
+        name: limit
+        type: integer
+      - default: 0
+        description: Offset
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/model.CafeTableResponse'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get cafe tables by status
+      tags:
+      - cafe-tables
   /api/v1/categories:
     get:
       consumes:
@@ -5378,6 +6521,1220 @@ paths:
       summary: Get stock by ingredient ID
       tags:
       - ingredient-stock
+  /api/v1/invoice-details:
+    get:
+      description: Get all invoice details with pagination
+      parameters:
+      - default: uz
+        description: Language (uz, ru, en)
+        in: query
+        name: lang
+        type: string
+      - default: 20
+        description: Limit
+        in: query
+        name: limit
+        type: integer
+      - default: 0
+        description: Offset
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/model.InvoiceDetailResponse'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get all invoice details
+      tags:
+      - Invoice Details
+    post:
+      consumes:
+      - application/json
+      description: Create a new line item in an invoice
+      parameters:
+      - default: uz
+        description: Language (uz, ru, en)
+        in: query
+        name: lang
+        type: string
+      - description: Create invoice detail request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.CreateInvoiceDetailRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/model.InvoiceDetailResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create invoice detail
+      tags:
+      - Invoice Details
+  /api/v1/invoice-details/{id}:
+    delete:
+      description: Delete (soft delete) an invoice detail
+      parameters:
+      - default: uz
+        description: Language (uz, ru, en)
+        in: query
+        name: lang
+        type: string
+      - description: Invoice Detail ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete invoice detail
+      tags:
+      - Invoice Details
+    get:
+      description: Get a single invoice detail by its ID
+      parameters:
+      - default: uz
+        description: Language (uz, ru, en)
+        in: query
+        name: lang
+        type: string
+      - description: Invoice Detail ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.InvoiceDetailResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get invoice detail by ID
+      tags:
+      - Invoice Details
+    put:
+      consumes:
+      - application/json
+      description: Update an existing invoice detail (line item)
+      parameters:
+      - default: uz
+        description: Language (uz, ru, en)
+        in: query
+        name: lang
+        type: string
+      - description: Invoice Detail ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Update invoice detail request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.UpdateInvoiceDetailRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.InvoiceDetailResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update invoice detail
+      tags:
+      - Invoice Details
+  /api/v1/invoice-details/{id}/quantity:
+    put:
+      consumes:
+      - application/json
+      description: Update the quantity of a line item in an invoice
+      parameters:
+      - default: uz
+        description: Language (uz, ru, en)
+        in: query
+        name: lang
+        type: string
+      - description: Invoice Detail ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Quantity update request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.UpdateInvoiceDetailQuantityRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.InvoiceDetailResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update invoice detail quantity
+      tags:
+      - Invoice Details
+  /api/v1/invoice-details/{id}/restore:
+    post:
+      description: Restore a soft-deleted invoice detail
+      parameters:
+      - default: uz
+        description: Language (uz, ru, en)
+        in: query
+        name: lang
+        type: string
+      - description: Invoice Detail ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.InvoiceDetailResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Restore invoice detail
+      tags:
+      - Invoice Details
+  /api/v1/invoice-details/{id}/with-ingredient:
+    get:
+      description: Get invoice detail including the associated ingredient information
+      parameters:
+      - default: uz
+        description: Language (uz, ru, en)
+        in: query
+        name: lang
+        type: string
+      - description: Invoice Detail ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.InvoiceDetailWithIngredientResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get invoice detail with ingredient
+      tags:
+      - Invoice Details
+  /api/v1/invoice-details/ingredient/{ingredient_id}:
+    get:
+      description: Get all invoice details containing a specific ingredient with pagination
+      parameters:
+      - default: uz
+        description: Language (uz, ru, en)
+        in: query
+        name: lang
+        type: string
+      - description: Ingredient ID
+        in: path
+        name: ingredient_id
+        required: true
+        type: string
+      - default: 20
+        description: Limit
+        in: query
+        name: limit
+        type: integer
+      - default: 0
+        description: Offset
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/model.InvoiceDetailResponse'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get invoice details by ingredient ID
+      tags:
+      - Invoice Details
+  /api/v1/invoice-details/invoice/{invoice_id}:
+    get:
+      description: Get all line items for a specific invoice with pagination
+      parameters:
+      - default: uz
+        description: Language (uz, ru, en)
+        in: query
+        name: lang
+        type: string
+      - description: Invoice ID
+        in: path
+        name: invoice_id
+        required: true
+        type: string
+      - default: 20
+        description: Limit
+        in: query
+        name: limit
+        type: integer
+      - default: 0
+        description: Offset
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/model.InvoiceDetailResponse'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get invoice details by invoice ID
+      tags:
+      - Invoice Details
+  /api/v1/invoices:
+    get:
+      description: Get all invoices with pagination
+      parameters:
+      - default: uz
+        description: Language (uz, ru, en)
+        in: query
+        name: lang
+        type: string
+      - default: 20
+        description: Limit
+        in: query
+        name: limit
+        type: integer
+      - default: 0
+        description: Offset
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/model.InvoiceResponse'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get all invoices
+      tags:
+      - Invoices
+    post:
+      consumes:
+      - application/json
+      description: Create a new supplier invoice
+      parameters:
+      - default: uz
+        description: Language (uz, ru, en)
+        in: query
+        name: lang
+        type: string
+      - description: Create invoice request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.CreateInvoiceRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/model.InvoiceResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create supplier invoice
+      tags:
+      - Invoices
+  /api/v1/invoices/{id}:
+    delete:
+      description: Delete (soft delete) an invoice
+      parameters:
+      - default: uz
+        description: Language (uz, ru, en)
+        in: query
+        name: lang
+        type: string
+      - description: Invoice ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete invoice
+      tags:
+      - Invoices
+    get:
+      description: Get a single invoice by its ID
+      parameters:
+      - default: uz
+        description: Language (uz, ru, en)
+        in: query
+        name: lang
+        type: string
+      - description: Invoice ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.InvoiceResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get invoice by ID
+      tags:
+      - Invoices
+    put:
+      consumes:
+      - application/json
+      description: Update an existing invoice
+      parameters:
+      - default: uz
+        description: Language (uz, ru, en)
+        in: query
+        name: lang
+        type: string
+      - description: Invoice ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Update invoice request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.UpdateInvoiceRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.InvoiceResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update invoice
+      tags:
+      - Invoices
+  /api/v1/invoices/{id}/cancel:
+    post:
+      description: Cancel an invoice and mark it as cancelled
+      parameters:
+      - default: uz
+        description: Language (uz, ru, en)
+        in: query
+        name: lang
+        type: string
+      - description: Invoice ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.InvoiceResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Cancel invoice
+      tags:
+      - Invoices
+  /api/v1/invoices/{id}/details:
+    get:
+      description: Get a complete invoice including all line items and ingredient
+        details
+      parameters:
+      - default: uz
+        description: Language (uz, ru, en)
+        in: query
+        name: lang
+        type: string
+      - description: Invoice ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.InvoiceWithDetailsResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get invoice with details
+      tags:
+      - Invoices
+  /api/v1/invoices/{id}/mark-arrived:
+    post:
+      description: Mark an invoice as arrived at the location
+      parameters:
+      - default: uz
+        description: Language (uz, ru, en)
+        in: query
+        name: lang
+        type: string
+      - description: Invoice ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.InvoiceResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Mark invoice arrived
+      tags:
+      - Invoices
+  /api/v1/invoices/{id}/mark-received:
+    post:
+      description: Mark an invoice as fully received and verified
+      parameters:
+      - default: uz
+        description: Language (uz, ru, en)
+        in: query
+        name: lang
+        type: string
+      - description: Invoice ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.InvoiceResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Mark invoice received
+      tags:
+      - Invoices
+  /api/v1/invoices/{id}/restore:
+    post:
+      description: Restore a soft-deleted invoice
+      parameters:
+      - default: uz
+        description: Language (uz, ru, en)
+        in: query
+        name: lang
+        type: string
+      - description: Invoice ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.InvoiceResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Restore invoice
+      tags:
+      - Invoices
+  /api/v1/invoices/{id}/status:
+    patch:
+      consumes:
+      - application/json
+      description: Update the status of an invoice
+      parameters:
+      - default: uz
+        description: Language (uz, ru, en)
+        in: query
+        name: lang
+        type: string
+      - description: Invoice ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Status update request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.UpdateInvoiceStatusRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.InvoiceResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update invoice status
+      tags:
+      - Invoices
+  /api/v1/invoices/date-range:
+    get:
+      description: Get invoices within a specified date range
+      parameters:
+      - default: uz
+        description: Language (uz, ru, en)
+        in: query
+        name: lang
+        type: string
+      - description: Start date (RFC3339 format)
+        in: query
+        name: start_date
+        required: true
+        type: string
+      - description: End date (RFC3339 format)
+        in: query
+        name: end_date
+        required: true
+        type: string
+      - default: 20
+        description: Limit
+        in: query
+        name: limit
+        type: integer
+      - default: 0
+        description: Offset
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/model.InvoiceResponse'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get invoices by date range
+      tags:
+      - Invoices
+  /api/v1/invoices/search:
+    get:
+      description: Search invoices by supplier name
+      parameters:
+      - default: uz
+        description: Language (uz, ru, en)
+        in: query
+        name: lang
+        type: string
+      - description: Search query (supplier name)
+        in: query
+        name: q
+        required: true
+        type: string
+      - default: 20
+        description: Limit
+        in: query
+        name: limit
+        type: integer
+      - default: 0
+        description: Offset
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/model.InvoiceResponse'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Search invoices
+      tags:
+      - Invoices
+  /api/v1/invoices/stats/date-range:
+    get:
+      description: Get invoice statistics for a specific date range
+      parameters:
+      - default: uz
+        description: Language (uz, ru, en)
+        in: query
+        name: lang
+        type: string
+      - description: Start date (RFC3339 format)
+        in: query
+        name: start_date
+        required: true
+        type: string
+      - description: End date (RFC3339 format)
+        in: query
+        name: end_date
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.InvoiceStatsByDateRangeResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get invoice stats by date range
+      tags:
+      - Invoices
+  /api/v1/invoices/stats/supplier:
+    get:
+      description: Get invoice statistics grouped by supplier
+      parameters:
+      - default: uz
+        description: Language (uz, ru, en)
+        in: query
+        name: lang
+        type: string
+      - default: 20
+        description: Limit
+        in: query
+        name: limit
+        type: integer
+      - default: 0
+        description: Offset
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/model.InvoiceStatsBySupplierResponse'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get invoice stats by supplier
+      tags:
+      - Invoices
+  /api/v1/invoices/status/{status}:
+    get:
+      description: Get invoices filtered by status with pagination
+      parameters:
+      - default: uz
+        description: Language (uz, ru, en)
+        in: query
+        name: lang
+        type: string
+      - description: Invoice status (pending, arrived, received)
+        in: path
+        name: status
+        required: true
+        type: string
+      - default: 20
+        description: Limit
+        in: query
+        name: limit
+        type: integer
+      - default: 0
+        description: Offset
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/model.InvoiceResponse'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get invoices by status
+      tags:
+      - Invoices
+  /api/v1/invoices/supplier/{supplier_id}:
+    get:
+      description: Get invoices for a specific supplier with pagination
+      parameters:
+      - default: uz
+        description: Language (uz, ru, en)
+        in: query
+        name: lang
+        type: string
+      - description: Supplier ID
+        in: path
+        name: supplier_id
+        required: true
+        type: string
+      - default: 20
+        description: Limit
+        in: query
+        name: limit
+        type: integer
+      - default: 0
+        description: Offset
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/model.InvoiceResponse'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get invoices by supplier
+      tags:
+      - Invoices
   /api/v1/media/image:
     post:
       consumes:
@@ -5472,6 +7829,1274 @@ paths:
       summary: Videoni yuklab olish
       tags:
       - media
+  /api/v1/order-items:
+    get:
+      description: Get all order items with pagination
+      parameters:
+      - default: uz
+        description: Language (uz, ru, en)
+        in: query
+        name: lang
+        type: string
+      - default: 20
+        description: Limit
+        in: query
+        name: limit
+        type: integer
+      - default: 0
+        description: Offset
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/model.OrderItemResponse'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get all order items
+      tags:
+      - Order Items
+    post:
+      consumes:
+      - application/json
+      description: Create a new order item
+      parameters:
+      - default: uz
+        description: Language (uz, ru, en)
+        in: query
+        name: lang
+        type: string
+      - description: Create order item request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.CreateOrderItemRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/model.OrderItemResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create order item
+      tags:
+      - Order Items
+  /api/v1/order-items/{id}:
+    delete:
+      description: Delete (soft delete) an order item
+      parameters:
+      - default: uz
+        description: Language (uz, ru, en)
+        in: query
+        name: lang
+        type: string
+      - description: Order Item ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.SuccessResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete order item
+      tags:
+      - Order Items
+    get:
+      description: Get a single order item by its ID
+      parameters:
+      - default: uz
+        description: Language (uz, ru, en)
+        in: query
+        name: lang
+        type: string
+      - description: Order Item ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.OrderItemResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get order item by ID
+      tags:
+      - Order Items
+    put:
+      consumes:
+      - application/json
+      description: Update an existing order item
+      parameters:
+      - default: uz
+        description: Language (uz, ru, en)
+        in: query
+        name: lang
+        type: string
+      - description: Order Item ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Update order item request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.UpdateOrderItemRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.OrderItemResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update order item
+      tags:
+      - Order Items
+  /api/v1/order-items/{id}/cancel:
+    post:
+      description: Cancel an order item
+      parameters:
+      - default: uz
+        description: Language (uz, ru, en)
+        in: query
+        name: lang
+        type: string
+      - description: Order Item ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.OrderItemResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Cancel order item
+      tags:
+      - Order Items
+  /api/v1/order-items/{id}/cooking:
+    post:
+      description: Mark an order item as cooking
+      parameters:
+      - default: uz
+        description: Language (uz, ru, en)
+        in: query
+        name: lang
+        type: string
+      - description: Order Item ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.OrderItemResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Mark order item cooking
+      tags:
+      - Order Items
+  /api/v1/order-items/{id}/quantity:
+    put:
+      consumes:
+      - application/json
+      description: Update the quantity of an order item
+      parameters:
+      - default: uz
+        description: Language (uz, ru, en)
+        in: query
+        name: lang
+        type: string
+      - description: Order Item ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Update order item quantity request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.UpdateOrderItemQuantityRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.OrderItemResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update order item quantity
+      tags:
+      - Order Items
+  /api/v1/order-items/{id}/ready:
+    post:
+      description: Mark an order item as ready
+      parameters:
+      - default: uz
+        description: Language (uz, ru, en)
+        in: query
+        name: lang
+        type: string
+      - description: Order Item ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.OrderItemResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Mark order item ready
+      tags:
+      - Order Items
+  /api/v1/order-items/{id}/restore:
+    post:
+      description: Restore a soft-deleted order item
+      parameters:
+      - default: uz
+        description: Language (uz, ru, en)
+        in: query
+        name: lang
+        type: string
+      - description: Order Item ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.SuccessResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Restore order item
+      tags:
+      - Order Items
+  /api/v1/order-items/{id}/status:
+    put:
+      consumes:
+      - application/json
+      description: Update the status of an order item
+      parameters:
+      - default: uz
+        description: Language (uz, ru, en)
+        in: query
+        name: lang
+        type: string
+      - description: Order Item ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Update order item status request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.UpdateOrderItemStatusRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.OrderItemResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update order item status
+      tags:
+      - Order Items
+  /api/v1/order-items/order/{orderId}:
+    get:
+      description: Get all order items for a given order
+      parameters:
+      - default: uz
+        description: Language (uz, ru, en)
+        in: query
+        name: lang
+        type: string
+      - description: Order ID
+        in: path
+        name: orderId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/model.OrderItemResponse'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get order items by order
+      tags:
+      - Order Items
+  /api/v1/order-items/status/{status}:
+    get:
+      description: Get order items filtered by status with pagination
+      parameters:
+      - default: uz
+        description: Language (uz, ru, en)
+        in: query
+        name: lang
+        type: string
+      - description: Order item status
+        in: path
+        name: status
+        required: true
+        type: string
+      - default: 20
+        description: Limit
+        in: query
+        name: limit
+        type: integer
+      - default: 0
+        description: Offset
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/model.OrderItemResponse'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get order items by status
+      tags:
+      - Order Items
+  /api/v1/orders:
+    get:
+      description: Get all orders with pagination
+      parameters:
+      - default: uz
+        description: Language (uz, ru, en)
+        in: query
+        name: lang
+        type: string
+      - default: 20
+        description: Limit
+        in: query
+        name: limit
+        type: integer
+      - default: 0
+        description: Offset
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/model.OrderResponse'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get all orders
+      tags:
+      - Orders
+    post:
+      consumes:
+      - application/json
+      description: Create a new order
+      parameters:
+      - default: uz
+        description: Language (uz, ru, en)
+        in: query
+        name: lang
+        type: string
+      - description: Create order request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.CreateOrderRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/model.OrderResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create order
+      tags:
+      - Orders
+  /api/v1/orders/{id}:
+    delete:
+      description: Delete (soft delete) an order
+      parameters:
+      - default: uz
+        description: Language (uz, ru, en)
+        in: query
+        name: lang
+        type: string
+      - description: Order ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.SuccessResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete order
+      tags:
+      - Orders
+    get:
+      description: Get a single order by its ID
+      parameters:
+      - default: uz
+        description: Language (uz, ru, en)
+        in: query
+        name: lang
+        type: string
+      - description: Order ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.OrderResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get order by ID
+      tags:
+      - Orders
+    put:
+      consumes:
+      - application/json
+      description: Update an existing order
+      parameters:
+      - default: uz
+        description: Language (uz, ru, en)
+        in: query
+        name: lang
+        type: string
+      - description: Order ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Update order request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.UpdateOrderRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.OrderResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update order
+      tags:
+      - Orders
+  /api/v1/orders/{id}/assign-cashier/{cashierId}:
+    post:
+      description: Assign a cashier to an order
+      parameters:
+      - default: uz
+        description: Language (uz, ru, en)
+        in: query
+        name: lang
+        type: string
+      - description: Order ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Cashier ID
+        in: path
+        name: cashierId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.OrderResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Assign cashier to order
+      tags:
+      - Orders
+  /api/v1/orders/{id}/assign-waiter/{waiterId}:
+    post:
+      description: Assign a waiter to an order
+      parameters:
+      - default: uz
+        description: Language (uz, ru, en)
+        in: query
+        name: lang
+        type: string
+      - description: Order ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Waiter ID
+        in: path
+        name: waiterId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.OrderResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Assign waiter to order
+      tags:
+      - Orders
+  /api/v1/orders/{id}/cancel:
+    post:
+      description: Cancel an order
+      parameters:
+      - default: uz
+        description: Language (uz, ru, en)
+        in: query
+        name: lang
+        type: string
+      - description: Order ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.OrderResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Cancel order
+      tags:
+      - Orders
+  /api/v1/orders/{id}/cooking:
+    post:
+      description: Mark an order as cooking
+      parameters:
+      - default: uz
+        description: Language (uz, ru, en)
+        in: query
+        name: lang
+        type: string
+      - description: Order ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.OrderResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Mark order cooking
+      tags:
+      - Orders
+  /api/v1/orders/{id}/pay:
+    post:
+      consumes:
+      - application/json
+      description: Mark an order as paid
+      parameters:
+      - default: uz
+        description: Language (uz, ru, en)
+        in: query
+        name: lang
+        type: string
+      - description: Order ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Mark order paid request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.MarkOrderPaidRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.OrderResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Mark order paid
+      tags:
+      - Orders
+  /api/v1/orders/{id}/ready:
+    post:
+      description: Mark an order as ready
+      parameters:
+      - default: uz
+        description: Language (uz, ru, en)
+        in: query
+        name: lang
+        type: string
+      - description: Order ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.OrderResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Mark order ready
+      tags:
+      - Orders
+  /api/v1/orders/{id}/restore:
+    post:
+      description: Restore a soft-deleted order
+      parameters:
+      - default: uz
+        description: Language (uz, ru, en)
+        in: query
+        name: lang
+        type: string
+      - description: Order ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.SuccessResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Restore order
+      tags:
+      - Orders
+  /api/v1/orders/{id}/served:
+    post:
+      description: Mark an order as served
+      parameters:
+      - default: uz
+        description: Language (uz, ru, en)
+        in: query
+        name: lang
+        type: string
+      - description: Order ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.OrderResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Mark order served
+      tags:
+      - Orders
+  /api/v1/orders/{id}/status:
+    put:
+      consumes:
+      - application/json
+      description: Update status of an existing order
+      parameters:
+      - default: uz
+        description: Language (uz, ru, en)
+        in: query
+        name: lang
+        type: string
+      - description: Order ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Update order status request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.UpdateOrderStatusRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.OrderResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update order status
+      tags:
+      - Orders
+  /api/v1/orders/status/{status}:
+    get:
+      description: Get orders filtered by status with pagination
+      parameters:
+      - default: uz
+        description: Language (uz, ru, en)
+        in: query
+        name: lang
+        type: string
+      - description: Order status
+        in: path
+        name: status
+        required: true
+        type: string
+      - default: 20
+        description: Limit
+        in: query
+        name: limit
+        type: integer
+      - default: 0
+        description: Offset
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/model.OrderResponse'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get orders by status
+      tags:
+      - Orders
+  /api/v1/orders/table/{tableId}:
+    get:
+      description: Get orders filtered by table ID
+      parameters:
+      - default: uz
+        description: Language (uz, ru, en)
+        in: query
+        name: lang
+        type: string
+      - description: Table ID
+        in: path
+        name: tableId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/model.OrderResponse'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get orders by table
+      tags:
+      - Orders
+  /api/v1/orders/waiter/{waiterId}:
+    get:
+      description: Get orders filtered by waiter ID with pagination
+      parameters:
+      - default: uz
+        description: Language (uz, ru, en)
+        in: query
+        name: lang
+        type: string
+      - description: Waiter ID
+        in: path
+        name: waiterId
+        required: true
+        type: string
+      - default: 20
+        description: Limit
+        in: query
+        name: limit
+        type: integer
+      - default: 0
+        description: Offset
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/model.OrderResponse'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get orders by waiter
+      tags:
+      - Orders
   /api/v1/payments/create:
     post:
       consumes:
@@ -6582,7 +10207,7 @@ paths:
       tags:
       - users
 schemes:
-- https
+- http
 securityDefinitions:
   BearerAuth:
     description: Type "Bearer" followed by a space and your JWT token

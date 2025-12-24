@@ -1,9 +1,12 @@
+CREATE TYPE table_status AS ENUM ('free', 'busy');
+
+
 CREATE TABLE IF NOT EXISTS cafe_tables (
   id         UUID      PRIMARY KEY DEFAULT gen_random_uuid(),
   hall_id    UUID      NOT NULL REFERENCES halls(id) ON DELETE CASCADE,
   number     INTEGER   NOT NULL,
   capacity   INTEGER   NOT NULL DEFAULT 4,
-  status     VARCHAR(20) DEFAULT 'available',
+  status     table_status DEFAULT 'free',
   created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
   deleted_at BIGINT    DEFAULT 0

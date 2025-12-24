@@ -30,9 +30,9 @@ import (
 // @title MaryAI API
 // @version 1.0
 // @description MaryAI API server with multi-language support (uz, ru, en)
-// @host back.maryai.yurtal.tech
+// @host localhost:8080
 // @BasePath /
-// @schemes https
+// @schemes http
 
 // @securityDefinitions.apikey BearerAuth
 // @in header
@@ -44,7 +44,6 @@ func Run(cfg *config.Config) {
 	defer cancel()
 	l := logger.New(cfg.Logger.Level)
 
-	// Initialize validator
 	validate.Init()
 
 	clickClient := paymentClick.NewClient(slog.Default(), http.DefaultClient, paymentClick.BaseUrl(cfg.Click.Url), paymentClick.MerchantUserId(cfg.Click.MerchantUserID), paymentClick.SecretKey(cfg.Click.SecretKey), paymentClick.ServiceId(cfg.Click.ServiceID), paymentClick.MerchantId(cfg.Click.MerchantID), paymentClick.ReturnUrl(cfg.Click.ReturnUrl))

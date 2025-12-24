@@ -57,7 +57,6 @@ func (q *Queries) CountRootCategories(ctx context.Context) (int64, error) {
 }
 
 const createCategory = `-- name: CreateCategory :one
-
 INSERT INTO categories (id, name, picture_url, name_i18n, department_id, storage_id, parent)
 VALUES ($1, $2, $3, $4, $5, $6, $7)
 RETURNING id, name, picture_url, name_i18n, department_id, storage_id, parent, created_at, updated_at, deleted_at
@@ -73,7 +72,6 @@ type CreateCategoryParams struct {
 	Parent       pgtype.UUID `json:"parent"`
 }
 
-// ==================== CATEGORIES QUERIES ====================
 func (q *Queries) CreateCategory(ctx context.Context, arg CreateCategoryParams) (Category, error) {
 	row := q.db.QueryRow(ctx, createCategory,
 		arg.ID,

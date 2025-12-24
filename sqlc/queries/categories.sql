@@ -1,5 +1,3 @@
--- ==================== CATEGORIES QUERIES ====================
-
 -- name: CreateCategory :one
 INSERT INTO categories (id, name, picture_url, name_i18n, department_id, storage_id, parent)
 VALUES ($1, $2, $3, $4, $5, $6, $7)

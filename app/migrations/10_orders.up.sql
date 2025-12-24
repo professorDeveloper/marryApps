@@ -1,9 +1,13 @@
+CREATE TYPE order_status AS ENUM ('open', 'cooking', 'ready', 'served', 'paid', 'cancelled');
+CREATE TYPE order_items_status AS ENUM ('pending', 'cooking', 'ready', 'cancelled');
+
+
 CREATE TABLE IF NOT EXISTS orders (
   id           UUID      PRIMARY KEY DEFAULT gen_random_uuid(),
   table_id     UUID      REFERENCES cafe_tables(id) ON DELETE SET NULL,
   waiter_id    UUID      REFERENCES users(id) ON DELETE SET NULL,
   cashier_id   UUID      REFERENCES users(id) ON DELETE SET NULL,
-  status       VARCHAR(20) DEFAULT 'pending',
+  status       order_status DEFAULT 'open',
   guest_count  INTEGER   DEFAULT 1,
   total_amount DECIMAL(15,2) NOT NULL DEFAULT 0,
   comment      TEXT,
@@ -18,7 +22,7 @@ CREATE TABLE IF NOT EXISTS order_items (
   order_id   UUID      NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
   quantity   INTEGER   NOT NULL DEFAULT 1,
   price      DECIMAL(15,2) NOT NULL,
-  status     VARCHAR(20) DEFAULT 'pending',
+  status     order_items_status DEFAULT 'pending',
   comment    TEXT,
   created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
@@ -35,7 +39,6 @@ CREATE INDEX idx_order_items_order ON order_items(order_id) WHERE deleted_at = 0
 CREATE INDEX idx_order_items_good ON order_items(good_id) WHERE deleted_at = 0;
 CREATE INDEX idx_order_items_status ON order_items(status) WHERE deleted_at = 0;
 
--- Create triggers to automatically update updated_at column
 CREATE OR REPLACE FUNCTION update_updated_at_column()
 RETURNS TRIGGER AS $$
 BEGIN

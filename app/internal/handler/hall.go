@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 	"gitlab.yurtal.tech/company/maryai/back/internal/model"
 )
@@ -29,6 +30,15 @@ func (h *Handler) CreateHall(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "invalid request format"})
 	}
 
+	var nameI18nUUID *uuid.UUID
+	if req.NameI18n != nil && *req.NameI18n != "" {
+		id, err := uuid.Parse(*req.NameI18n)
+		if err != nil {
+			return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "invalid name_i18n UUID format"})
+		}
+		nameI18nUUID = &id
+	}
+
 	if req.Name == nil || *req.Name == "" {
 		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "name is required"})
 	}
@@ -36,7 +46,7 @@ func (h *Handler) CreateHall(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "branch_id is required"})
 	}
 
-	hall, err := h.service.Hall().CreateHall(c.Request().Context(), *req.Name, req.BranchID, nil)
+	hall, err := h.service.Hall().CreateHall(c.Request().Context(), *req.Name, req.BranchID, nameI18nUUID)
 	if err != nil {
 		log.Printf("CreateHall failed: %v", err)
 		return c.JSON(http.StatusInternalServerError, model.ErrorResponse{Message: "failed to create hall"})
