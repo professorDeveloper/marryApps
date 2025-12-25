@@ -11,7 +11,6 @@ import Select from '@mui/material/Select';
 import { Toolbar } from '@mui/x-data-grid';
 import MenuItem from '@mui/material/MenuItem';
 import Checkbox from '@mui/material/Checkbox';
-import InputLabel from '@mui/material/InputLabel';
 import FormControl from '@mui/material/FormControl';
 
 import { Iconify } from 'src/components/iconify';
@@ -22,8 +21,6 @@ import {
   CustomToolbarQuickFilter,
   CustomToolbarExportButton,
   CustomToolbarFilterButton,
-  CustomToolbarColumnsButton,
-  CustomToolbarSettingsButton,
 } from 'src/components/custom-data-grid';
 
 import { ProductTableFiltersResult } from './product-table-filters-result';
@@ -74,9 +71,7 @@ export function ProductTableToolbar({
   );
 
   const renderLeftPanel = () => (
-    <>
-      <CustomToolbarQuickFilter />
-    </>
+    <CustomToolbarQuickFilter />
   );
 
   const renderRightPanel = () => (

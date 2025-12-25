@@ -30,10 +30,8 @@ import { useToolbarSettings, CustomGridActionsCellItem } from 'src/components/cu
 import { ProductTableToolbar } from '../product-table-toolbar';
 import {
   RenderCellStock,
-  RenderCellPrice,
   RenderCellProduct,
   RenderCellPublish,
-  RenderCellCreatedAt,
 } from '../product-table-row';
 
 // ----------------------------------------------------------------------
@@ -235,7 +233,7 @@ const useGetColumns = ({ onDeleteRow }: UseGetColumnsProps) => {
       //   width: 160,
       //   renderCell: (params) => <RenderCellCreatedAt params={params} />,
       // },
-            {
+        {
         field: 'publish',
         headerName: 'Obmor',
         width: 120,
@@ -248,7 +246,7 @@ const useGetColumns = ({ onDeleteRow }: UseGetColumnsProps) => {
       {
         field: 'inventoryType',
         headerName: 'Rang',
-        width: 160,
+        width: 140,
         type: 'singleSelect',
         filterable: false,
         valueOptions: PRODUCT_STOCK_OPTIONS,

@@ -8,10 +8,11 @@ import { DashboardLayout } from 'src/layouts/dashboard';
 
 import { LoadingScreen } from 'src/components/loading-screen';
 
+import { ProductListView } from 'src/sections/products/product-list-view';
+
 import { AuthGuard } from 'src/auth/guard';
 
 import { usePathname } from '../hooks';
-import { ProductListView } from 'src/sections/products/product-list-view';
 
 // ----------------------------------------------------------------------
 
