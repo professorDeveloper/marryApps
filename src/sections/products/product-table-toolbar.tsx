@@ -4,14 +4,9 @@ import type { IProductTableFilters } from 'src/types/product';
 import type { CustomToolbarSettingsButtonProps } from 'src/components/custom-data-grid';
 
 import { useState, useCallback } from 'react';
-import { varAlpha } from 'minimal-shared/utils';
 
 import Button from '@mui/material/Button';
-import Select from '@mui/material/Select';
 import { Toolbar } from '@mui/x-data-grid';
-import MenuItem from '@mui/material/MenuItem';
-import Checkbox from '@mui/material/Checkbox';
-import FormControl from '@mui/material/FormControl';
 
 import { Iconify } from 'src/components/iconify';
 import {
@@ -24,6 +19,7 @@ import {
 } from 'src/components/custom-data-grid';
 
 import { ProductTableFiltersResult } from './product-table-filters-result';
+
 
 // ----------------------------------------------------------------------
 
@@ -111,64 +107,5 @@ export function ProductTableToolbar({
         />
       )}
     </>
-  );
-}
-
-// ----------------------------------------------------------------------
-
-type FilterSelectProps = {
-  label: string;
-  value: string[];
-  options: FilterOption[];
-  onChange: (event: SelectChangeEvent<string[]>) => void;
-  onApply: () => void;
-};
-
-function FilterSelect({ label, value, options, onChange, onApply }: FilterSelectProps) {
-  const id = `filter-${label.toLowerCase()}-select`;
-
-  return (
-    <FormControl sx={{ flexShrink: 0, width: { xs: 1, md: 200 } }}>
-      {/* <InputLabel htmlFor={id}>{label}</InputLabel> */}
-      <Select
-        multiple
-        label={label}
-        value={value}
-        onChange={onChange}
-        onClose={onApply}
-        renderValue={(selected) => {
-          const output = options
-            .filter((opt) => selected.includes(opt.value))
-            .map((opt) => opt.label);
-
-          return output.join(', ');
-        }}
-        inputProps={{ id }}
-      >
-        {options.map((option) => (
-          <MenuItem key={option.value} value={option.value}>
-            <Checkbox
-              disableRipple
-              size="small"
-              checked={value.includes(option.value)}
-              slotProps={{ input: { id: `${option.value}-checkbox` } }}
-            />
-            {option.label}
-          </MenuItem>
-        ))}
-
-        <MenuItem
-          onClick={onApply}
-          sx={(theme) => ({
-            justifyContent: 'center',
-            fontWeight: theme.typography.button,
-            bgcolor: varAlpha(theme.vars.palette.grey['500Channel'], 0.08),
-            border: `solid 1px ${varAlpha(theme.vars.palette.grey['500Channel'], 0.16)}`,
-          })}
-        >
-          Apply
-        </MenuItem>
-      </Select>
-    </FormControl>
   );
 }

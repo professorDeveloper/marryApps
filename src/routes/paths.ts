@@ -6,7 +6,7 @@ const MOCK_TITLE = _postTitles[2];
 
 const ROOTS = {
   AUTH: '/auth',
-  DASHBOARD: '/dashboard',
+  MENU: '/menu',
 };
 
 // ----------------------------------------------------------------------
@@ -45,24 +45,27 @@ export const paths = {
     },
   },
   // DASHBOARD
-  dashboard: {
-    root: ROOTS.DASHBOARD,
-    two: `${ROOTS.DASHBOARD}/two`,
-    three: `${ROOTS.DASHBOARD}/three`,
+  menu: {
+    root: ROOTS.MENU,
+    two: `${ROOTS.MENU}/two`,
+    three: `${ROOTS.MENU}/three`,
     group: {
-      root: `${ROOTS.DASHBOARD}/group`,
-      five: `${ROOTS.DASHBOARD}/group/five`,
-      six: `${ROOTS.DASHBOARD}/group/six`,
+      root: `${ROOTS.MENU}/group`,
+      five: `${ROOTS.MENU}/group/five`,
+      six: `${ROOTS.MENU}/group/six`,
     },
      product: {
-      root: `${ROOTS.DASHBOARD}/product`,
-      new: `${ROOTS.DASHBOARD}/product/new`,
-      details: (id: string) => `${ROOTS.DASHBOARD}/product/${id}`,
-      edit: (id: string) => `${ROOTS.DASHBOARD}/product/${id}/edit`,
+      root: `${ROOTS.MENU}/product`,
+      new: `${ROOTS.MENU}/product/new`,
+      details: (id: string) => `${ROOTS.MENU}/product/${id}`,
+      edit: (id: string) => `${ROOTS.MENU}/product/${id}/edit`,
       demo: {
-        details: `${ROOTS.DASHBOARD}/product/${MOCK_ID}`,
-        edit: `${ROOTS.DASHBOARD}/product/${MOCK_ID}/edit`,
+        details: `${ROOTS.MENU}/product/${MOCK_ID}`,
+        edit: `${ROOTS.MENU}/product/${MOCK_ID}/edit`,
       },
+    },
+    category: {
+      root: `${ROOTS.MENU}/category`,
     },
   },
 };

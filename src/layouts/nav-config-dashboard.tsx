@@ -52,14 +52,15 @@ export const navData: NavSectionProps['data'] = [
     subheader: 'Overview',
     items: [
       {
-        title: 'Product',
-        path: paths.dashboard.product.root,
+        title: 'Menyu',
+        path: paths.menu.product.root,
         icon: ICONS.product,
         children: [
-          { title: 'List', path: paths.dashboard.product.root },
-          { title: 'New', path: paths.dashboard.product.new },
-          { title: 'Details', path: paths.dashboard.product.demo.details },
-          { title: 'Edit', path: paths.dashboard.product.demo.edit },
+              { title: 'Bo\'limlar', path: paths.menu.product.root },
+           { title: 'Kategoriyalar', path: paths.menu.category.root },
+{ title: 'Yarim tayyor mahsulotlar', path: paths.menu.product.demo.details },
+                 { title: 'Taomlar', path: paths.menu.product.demo.edit },
+          { title: 'Modifikatorlar', path: paths.menu.product.demo.edit },
         ],
       },
     ],
@@ -69,12 +70,12 @@ export const navData: NavSectionProps['data'] = [
     items: [
       {
         title: 'Group',
-        path: paths.dashboard.group.root,
+        path: paths.menu.group.root,
         icon: ICONS.user,
         children: [
-          { title: 'Four', path: paths.dashboard.group.root },
-          { title: 'Five', path: paths.dashboard.group.five },
-          { title: 'Six', path: paths.dashboard.group.six },
+          { title: 'Four', path: paths.menu.group.root },
+          { title: 'Five', path: paths.menu.group.five },
+          { title: 'Six', path: paths.menu.group.six },
         ],
       },
     ],

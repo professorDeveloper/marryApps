@@ -21,13 +21,18 @@ export function RenderCellPrice({ params }: ParamsProps) {
   return fCurrency(params.row.price);
 }
 
+// export function RenderCellPublish({ params }: ParamsProps) {
+//   return (
+//     <Label variant="soft" color={params.row.publish === 'published' ? 'info' : 'default'}>
+//       {params.row.publish}
+//     </Label>
+//   );
+// }
+
 export function RenderCellPublish({ params }: ParamsProps) {
-  return (
-    <Label variant="soft" color={params.row.publish === 'published' ? 'info' : 'default'}>
-      {params.row.publish}
-    </Label>
-  );
+  return <span>{params.row.publish}</span>;
 }
+
 
 // export function RenderCellCreatedAt({ params }: ParamsProps) {
 //   return (
@@ -93,11 +98,11 @@ export function RenderCellProduct({ params, href }: ParamsProps & { href: string
             {params.row.name}
           </Link>
         }
-        secondary={params.row.category}
-        slotProps={{
-          primary: { noWrap: true },
-          secondary: { sx: { color: 'text.disabled' } },
-        }}
+        // secondary={params.row.category}
+        // slotProps={{
+        //   primary: { noWrap: true },
+        //   secondary: { sx: { color: 'text.disabled' } },
+        // }}
       />
     </Box>
   );

@@ -27,12 +27,12 @@ import { ConfirmDialog } from 'src/components/custom-dialog';
 import { CustomBreadcrumbs } from 'src/components/custom-breadcrumbs';
 import { useToolbarSettings, CustomGridActionsCellItem } from 'src/components/custom-data-grid';
 
-import { ProductTableToolbar } from '../product-table-toolbar';
+import { ProductTableToolbar } from './product-table-toolbar';
 import {
   RenderCellStock,
   RenderCellProduct,
   RenderCellPublish,
-} from '../product-table-row';
+} from './product-table-row';
 
 // ----------------------------------------------------------------------
 
@@ -119,14 +119,14 @@ export function ProductListView() {
         <CustomBreadcrumbs
           heading="List"
           links={[
-            { name: 'Dashboard', href: paths.dashboard.root },
-            { name: 'Product', href: paths.dashboard.product.root },
+            { name: 'Menu', href: paths.menu.root },
+            { name: 'Product', href: paths.menu.product.root },
             { name: 'List' },
           ]}
           action={
             <Button
               component={RouterLink}
-              href={paths.dashboard.product.new}
+              href={paths.menu.product.new}
               variant="contained"
               startIcon={<Iconify icon="mingcute:add-line" />}
             >
@@ -223,16 +223,10 @@ const useGetColumns = ({ onDeleteRow }: UseGetColumnsProps) => {
         renderCell: (params) => (
           <RenderCellProduct
             params={params}
-            href={paths.dashboard.product.details(params.row.id)}
+            href={paths.menu.product.details(params.row.id)}
           />
         ),
       },
-      // {
-      //   field: 'createdAt',
-      //   headerName: 'Create at',
-      //   width: 160,
-      //   renderCell: (params) => <RenderCellCreatedAt params={params} />,
-      // },
         {
         field: 'publish',
         headerName: 'Obmor',
@@ -268,13 +262,13 @@ const useGetColumns = ({ onDeleteRow }: UseGetColumnsProps) => {
             showInMenu
             label="Edit"
             icon={<Iconify icon="solar:pen-bold" />}
-            href={paths.dashboard.product.edit(params.row.id)}
+            href={paths.menu.product.edit(params.row.id)}
           />,
           <CustomGridActionsCellItem
             showInMenu
             label="View"
             icon={<Iconify icon="solar:eye-bold" />}
-            href={paths.dashboard.product.details(params.row.id)}
+            href={paths.menu.product.details(params.row.id)}
           />,
           <CustomGridActionsCellItem
             showInMenu
