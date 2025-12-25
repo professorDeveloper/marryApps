@@ -14,7 +14,7 @@ build_image_prod:
     name: gcr.io/kaniko-project/executor:v1.21.0-debug
     entrypoint: [""]
   only:
-    - main
+    - master
   script:
     - echo "Building main with tag $TAG"
     - mkdir -p /kaniko/.docker
@@ -57,7 +57,7 @@ deploy_prod:
   image:
     name: alpine:3.19
   only:
-    - main
+    - master
   before_script:
     - apk add --no-cache openssh-client
   script:
