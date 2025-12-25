@@ -33,7 +33,6 @@ export function RenderCellPublish({ params }: ParamsProps) {
   return <span>{params.row.publish}</span>;
 }
 
-
 // export function RenderCellCreatedAt({ params }: ParamsProps) {
 //   return (
 //     <Box sx={{ gap: 0.5, display: 'flex', flexDirection: 'column' }}>
@@ -72,7 +71,6 @@ export function RenderCellStock({ params }: ParamsProps) {
     </Box>
   );
 }
-
 
 export function RenderCellProduct({ params, href }: ParamsProps & { href: string }) {
   return (
