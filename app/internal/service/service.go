@@ -19,6 +19,7 @@ import (
 type AuthI interface {
 	Register(ctx context.Context, req model.RegisterRequest) error
 	Login(ctx context.Context, req model.LoginRequest, jwtCfg *config.JwtConfig) (model.LoginResponse, error)
+	LoginGlobal(ctx context.Context, req model.LoginRequest, jwtCfg *config.JwtConfig) (model.LoginResponse, error)
 	Refresh(ctx context.Context, req model.RefreshRequest, jwtCfg *config.JwtConfig) (model.RefreshResponse, error)
 	UpdateUserPassword(ctx context.Context, userID uuid.UUID, currentPassword, newPassword string) error
 	GetUserByID(ctx context.Context, userID string) (model.UserResponse, error)
@@ -312,6 +313,7 @@ type I interface {
 	CafeTable() CafeTableI
 	Invoice() InvoiceI
 	Order() OrderI
+	Brand() BrandI
 }
 
 type Service struct {
@@ -331,6 +333,7 @@ type Service struct {
 	cafeTable    CafeTableI
 	invoice      InvoiceI
 	order        OrderI
+	brand        BrandI
 }
 
 func New(cfg *config.Config, repo *repository.Repository, clickClient *paymentClick.Client, paymeClient *paymentPayme.Client, minioClient *minio.Minio) *Service {
@@ -351,6 +354,7 @@ func New(cfg *config.Config, repo *repository.Repository, clickClient *paymentCl
 		cafeTable:    NewCafeTableS(repo),
 		invoice:      NewInvoiceS(repo),
 		order:        NewOrderS(repo),
+		brand:        NewBrandS(repo),
 	}
 }
 
@@ -415,4 +419,8 @@ func (s *Service) Invoice() InvoiceI {
 
 func (s *Service) Order() OrderI {
 	return s.order
+}
+
+func (s *Service) Brand() BrandI {
+	return s.brand
 }

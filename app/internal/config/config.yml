@@ -44,6 +44,12 @@ postgres:
   max-pool-size: 10
   driver: pgx
 
+main-postgres:
+  port: 5432
+  ssl: false
+  max-pool-size: 5
+  driver: pgx
+
 redis:
   username: default
   port: 6379

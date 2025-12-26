@@ -9,7 +9,7 @@ import (
 	"gitlab.yurtal.tech/company/maryai/back/internal/config"
 	"gitlab.yurtal.tech/company/maryai/back/internal/model"
 	"gitlab.yurtal.tech/company/maryai/back/internal/repository"
-	"gitlab.yurtal.tech/company/maryai/back/internal/repository/pg"
+	pg "gitlab.yurtal.tech/company/maryai/back/internal/repository/pg/tenantsdb"
 	"gitlab.yurtal.tech/company/maryai/back/pkg/paymentClick"
 	"gitlab.yurtal.tech/company/maryai/back/pkg/paymentPayme"
 )
@@ -46,7 +46,7 @@ func (s *PaymentS) CreateInvoice(c echo.Context, ctx context.Context, planID str
 		return nil, fmt.Errorf("invalid plan_id: %w", err)
 	}
 
-	plan, err := s.repo.PgRepo.Repo.GetPriceForPlan(ctx, planUUID)
+	plan, err := s.repo.Tenant(ctx).GetPriceForPlan(ctx, planUUID)
 	if err != nil {
 		return nil, fmt.Errorf("plan not found: %w", err)
 	}
@@ -54,7 +54,7 @@ func (s *PaymentS) CreateInvoice(c echo.Context, ctx context.Context, planID str
 		return nil, fmt.Errorf("invalid amount: %v", plan.Amount)
 	}
 
-	payments, err := s.repo.PgRepo.Repo.GetUserPayments(ctx)
+	payments, err := s.repo.Tenant(ctx).GetUserPayments(ctx)
 	var orderNumber int32 = 1000000
 	if err == nil && len(payments) > 0 {
 		for _, payment := range payments {
@@ -73,7 +73,7 @@ func (s *PaymentS) CreateInvoice(c echo.Context, ctx context.Context, planID str
 		Amount:         plan.Amount,
 	}
 
-	_, err = s.repo.PgRepo.Repo.CreateUserPayment(ctx, createPaymentParams)
+	_, err = s.repo.Tenant(ctx).CreateUserPayment(ctx, createPaymentParams)
 	if err != nil {
 		return nil, fmt.Errorf("failed to save payment record: %w", err)
 	}

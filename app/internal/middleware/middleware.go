@@ -2,7 +2,6 @@ package middleware
 
 import (
 	"errors"
-	"fmt"
 	"io"
 	"log"
 	"net/http"
@@ -97,7 +96,8 @@ func CheckAuth(cfg *config.Config) echo.MiddlewareFunc {
 				})
 			}
 
-			sub, err := utils.ValidateJWT(accessToken, cfg.Jwt.SecretKey)
+			// Try to validate with new JWT format (with brand_id)
+			claims, err := utils.ValidateJWTWithClaims(accessToken, cfg.Jwt.SecretKey)
 			if err != nil {
 				log.Printf("JWT validation error: %v", err)
 				return c.JSON(http.StatusUnauthorized, model.ErrorResponse{
@@ -105,9 +105,37 @@ func CheckAuth(cfg *config.Config) echo.MiddlewareFunc {
 				})
 			}
 
-			c.Set("user_id", fmt.Sprint(sub))
+			c.Set("user_id", claims.UserID.String())
+			if claims.BrandID != nil {
+				c.Set("brand_id", claims.BrandID.String())
+			} else {
+				c.Set("brand_id", "")
+			}
+
+			role := claims.Role
+			if role == "" {
+				role = "user"
+			}
+			c.Set("role", role)
+			c.Set("is_global", claims.IsGlobal)
+			// Also set for backward compatibility with old code that looks for "user_id" as string
+			c.Set("jwt_secret", cfg.Jwt.SecretKey)
+
 			return next(c)
 		}
+	}
+}
+
+func RequireGlobalSuperadmin(next echo.HandlerFunc) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		role, _ := c.Get("role").(string)
+		isGlobal, _ := c.Get("is_global").(bool)
+
+		if !isGlobal || role != "superadmin" {
+			return c.JSON(http.StatusForbidden, model.ErrorResponse{Message: "Forbidden"})
+		}
+
+		return next(c)
 	}
 }
 
@@ -124,6 +152,10 @@ func ValidateLoginInput(next echo.HandlerFunc) echo.HandlerFunc {
 		req.Username = strings.TrimSpace(req.Username)
 		req.Password = strings.TrimSpace(req.Password)
 		req.Pincode = strings.TrimSpace(req.Pincode)
+		if req.BrandID != nil {
+			b := strings.TrimSpace(*req.BrandID)
+			req.BrandID = &b
+		}
 
 		if req.Username == "" {
 			lang := getLanguage(c)
@@ -134,6 +166,16 @@ func ValidateLoginInput(next echo.HandlerFunc) echo.HandlerFunc {
 			lang := getLanguage(c)
 			message := model.GetLocalizedMessage(lang, "phone_password_required")
 			return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: message})
+		}
+		if c.Path() == "/api/v1/auth/login" {
+			if req.BrandID == nil || strings.TrimSpace(*req.BrandID) == "" {
+				lang := getLanguage(c)
+				message := model.GetLocalizedMessage(lang, "invalid_request_format")
+				if message == "" {
+					message = "brandId is required"
+				}
+				return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: message})
+			}
 		}
 
 		c.Set("loginBody", req)

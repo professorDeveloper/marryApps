@@ -11,7 +11,7 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 	"gitlab.yurtal.tech/company/maryai/back/internal/model"
 	"gitlab.yurtal.tech/company/maryai/back/internal/repository"
-	"gitlab.yurtal.tech/company/maryai/back/internal/repository/pg"
+	pg "gitlab.yurtal.tech/company/maryai/back/internal/repository/pg/tenantsdb"
 )
 
 type InvoiceS struct {
@@ -63,7 +63,7 @@ func (s *InvoiceS) CreateInvoice(ctx context.Context, req *model.CreateInvoiceRe
 		Date:          date,
 	}
 
-	invoice, err := s.repo.PgRepo.Repo.CreateInvoice(ctx, params)
+	invoice, err := s.repo.Tenant(ctx).CreateInvoice(ctx, params)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create invoice: %w", err)
 	}
@@ -78,7 +78,7 @@ func (s *InvoiceS) GetInvoiceByID(ctx context.Context, id string) (*model.Invoic
 		return nil, fmt.Errorf("invalid invoice id: %w", err)
 	}
 
-	invoice, err := s.repo.PgRepo.Repo.GetInvoiceByID(ctx, invoiceID)
+	invoice, err := s.repo.Tenant(ctx).GetInvoiceByID(ctx, invoiceID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get invoice: %w", err)
 	}
@@ -88,7 +88,7 @@ func (s *InvoiceS) GetInvoiceByID(ctx context.Context, id string) (*model.Invoic
 
 // GetAllInvoices retrieves all invoices with pagination
 func (s *InvoiceS) GetAllInvoices(ctx context.Context, limit, offset int32) ([]*model.InvoiceResponse, error) {
-	invoices, err := s.repo.PgRepo.Repo.GetAllInvoices(ctx, pg.GetAllInvoicesParams{
+	invoices, err := s.repo.Tenant(ctx).GetAllInvoices(ctx, pg.GetAllInvoicesParams{
 		Limit:  limit,
 		Offset: offset,
 	})
@@ -111,7 +111,7 @@ func (s *InvoiceS) GetInvoicesByStatus(ctx context.Context, status string, limit
 		Valid:         true,
 	}
 
-	invoices, err := s.repo.PgRepo.Repo.GetInvoicesByStatus(ctx, pg.GetInvoicesByStatusParams{
+	invoices, err := s.repo.Tenant(ctx).GetInvoicesByStatus(ctx, pg.GetInvoicesByStatusParams{
 		Status: invoiceStatus,
 		Limit:  limit,
 		Offset: offset,
@@ -130,7 +130,7 @@ func (s *InvoiceS) GetInvoicesByStatus(ctx context.Context, status string, limit
 
 // GetInvoicesBySupplier retrieves invoices by supplier name
 func (s *InvoiceS) GetInvoicesBySupplier(ctx context.Context, supplierName string, limit, offset int32) ([]*model.InvoiceResponse, error) {
-	invoices, err := s.repo.PgRepo.Repo.GetInvoicesBySupplier(ctx, pg.GetInvoicesBySupplierParams{
+	invoices, err := s.repo.Tenant(ctx).GetInvoicesBySupplier(ctx, pg.GetInvoicesBySupplierParams{
 		Column1: &supplierName,
 		Limit:   limit,
 		Offset:  offset,
@@ -158,7 +158,7 @@ func (s *InvoiceS) GetInvoicesByDateRange(ctx context.Context, startDate, endDat
 		Valid: true,
 	}
 
-	invoices, err := s.repo.PgRepo.Repo.GetInvoicesByDateRange(ctx, pg.GetInvoicesByDateRangeParams{
+	invoices, err := s.repo.Tenant(ctx).GetInvoicesByDateRange(ctx, pg.GetInvoicesByDateRangeParams{
 		Date:   startTS,
 		Date_2: endTS,
 		Limit:  limit,
@@ -222,7 +222,7 @@ func (s *InvoiceS) UpdateInvoice(ctx context.Context, id string, req *model.Upda
 		Date:          date,
 	}
 
-	invoice, err := s.repo.PgRepo.Repo.UpdateInvoice(ctx, params)
+	invoice, err := s.repo.Tenant(ctx).UpdateInvoice(ctx, params)
 	if err != nil {
 		return nil, fmt.Errorf("failed to update invoice: %w", err)
 	}
@@ -242,7 +242,7 @@ func (s *InvoiceS) UpdateInvoiceStatus(ctx context.Context, id string, status st
 		Valid:         true,
 	}
 
-	invoice, err := s.repo.PgRepo.Repo.UpdateInvoiceStatus(ctx, pg.UpdateInvoiceStatusParams{
+	invoice, err := s.repo.Tenant(ctx).UpdateInvoiceStatus(ctx, pg.UpdateInvoiceStatusParams{
 		ID:     invoiceID,
 		Status: invoiceStatus,
 	})
@@ -260,7 +260,7 @@ func (s *InvoiceS) MarkInvoiceArrived(ctx context.Context, id string) (*model.In
 		return nil, fmt.Errorf("invalid invoice id: %w", err)
 	}
 
-	invoice, err := s.repo.PgRepo.Repo.MarkInvoiceArrived(ctx, invoiceID)
+	invoice, err := s.repo.Tenant(ctx).MarkInvoiceArrived(ctx, invoiceID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to mark invoice as arrived: %w", err)
 	}
@@ -275,7 +275,7 @@ func (s *InvoiceS) MarkInvoiceReceived(ctx context.Context, id string) (*model.I
 		return nil, fmt.Errorf("invalid invoice id: %w", err)
 	}
 
-	invoice, err := s.repo.PgRepo.Repo.MarkInvoiceReceived(ctx, invoiceID)
+	invoice, err := s.repo.Tenant(ctx).MarkInvoiceReceived(ctx, invoiceID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to mark invoice as received: %w", err)
 	}
@@ -290,7 +290,7 @@ func (s *InvoiceS) CancelInvoice(ctx context.Context, id string) (*model.Invoice
 		return nil, fmt.Errorf("invalid invoice id: %w", err)
 	}
 
-	invoice, err := s.repo.PgRepo.Repo.CancelInvoice(ctx, invoiceID)
+	invoice, err := s.repo.Tenant(ctx).CancelInvoice(ctx, invoiceID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to cancel invoice: %w", err)
 	}
@@ -305,7 +305,7 @@ func (s *InvoiceS) DeleteInvoice(ctx context.Context, id string) error {
 		return fmt.Errorf("invalid invoice id: %w", err)
 	}
 
-	if err := s.repo.PgRepo.Repo.DeleteInvoice(ctx, invoiceID); err != nil {
+	if err := s.repo.Tenant(ctx).DeleteInvoice(ctx, invoiceID); err != nil {
 		return fmt.Errorf("failed to delete invoice: %w", err)
 	}
 
@@ -319,7 +319,7 @@ func (s *InvoiceS) RestoreInvoice(ctx context.Context, id string) error {
 		return fmt.Errorf("invalid invoice id: %w", err)
 	}
 
-	if err := s.repo.PgRepo.Repo.RestoreInvoice(ctx, invoiceID); err != nil {
+	if err := s.repo.Tenant(ctx).RestoreInvoice(ctx, invoiceID); err != nil {
 		return fmt.Errorf("failed to restore invoice: %w", err)
 	}
 
@@ -328,7 +328,7 @@ func (s *InvoiceS) RestoreInvoice(ctx context.Context, id string) error {
 
 // CountInvoices counts all invoices
 func (s *InvoiceS) CountInvoices(ctx context.Context) (int64, error) {
-	count, err := s.repo.PgRepo.Repo.CountInvoices(ctx)
+	count, err := s.repo.Tenant(ctx).CountInvoices(ctx)
 	if err != nil {
 		return 0, fmt.Errorf("failed to count invoices: %w", err)
 	}
@@ -343,7 +343,7 @@ func (s *InvoiceS) CountInvoicesByStatus(ctx context.Context, status string) (in
 		Valid:         true,
 	}
 
-	count, err := s.repo.PgRepo.Repo.CountInvoicesByStatus(ctx, invoiceStatus)
+	count, err := s.repo.Tenant(ctx).CountInvoicesByStatus(ctx, invoiceStatus)
 	if err != nil {
 		return 0, fmt.Errorf("failed to count invoices by status: %w", err)
 	}
@@ -353,7 +353,7 @@ func (s *InvoiceS) CountInvoicesByStatus(ctx context.Context, status string) (in
 
 // SearchInvoices searches invoices
 func (s *InvoiceS) SearchInvoices(ctx context.Context, query string, limit, offset int32) ([]*model.InvoiceResponse, error) {
-	invoices, err := s.repo.PgRepo.Repo.SearchInvoices(ctx, pg.SearchInvoicesParams{
+	invoices, err := s.repo.Tenant(ctx).SearchInvoices(ctx, pg.SearchInvoicesParams{
 		Column1: &query,
 		Limit:   limit,
 		Offset:  offset,
@@ -377,7 +377,7 @@ func (s *InvoiceS) GetInvoiceWithDetails(ctx context.Context, id string) (*model
 		return nil, fmt.Errorf("invalid invoice id: %w", err)
 	}
 
-	invoice, err := s.repo.PgRepo.Repo.GetInvoiceWithDetails(ctx, invoiceID)
+	invoice, err := s.repo.Tenant(ctx).GetInvoiceWithDetails(ctx, invoiceID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get invoice with details: %w", err)
 	}
@@ -387,7 +387,7 @@ func (s *InvoiceS) GetInvoiceWithDetails(ctx context.Context, id string) (*model
 
 // GetInvoiceStatsBySupplier retrieves statistics by supplier
 func (s *InvoiceS) GetInvoiceStatsBySupplier(ctx context.Context, limit, offset int32) ([]*model.InvoiceStatsBySupplierResponse, error) {
-	stats, err := s.repo.PgRepo.Repo.GetInvoiceStatsBySupplier(ctx, pg.GetInvoiceStatsBySupplierParams{
+	stats, err := s.repo.Tenant(ctx).GetInvoiceStatsBySupplier(ctx, pg.GetInvoiceStatsBySupplierParams{
 		Limit:  limit,
 		Offset: offset,
 	})
@@ -428,7 +428,7 @@ func (s *InvoiceS) GetInvoiceStatsByDateRange(ctx context.Context, startDate, en
 		Valid: true,
 	}
 
-	stats, err := s.repo.PgRepo.Repo.GetInvoiceStatsByDateRange(ctx, pg.GetInvoiceStatsByDateRangeParams{
+	stats, err := s.repo.Tenant(ctx).GetInvoiceStatsByDateRange(ctx, pg.GetInvoiceStatsByDateRangeParams{
 		Date:   startTS,
 		Date_2: endTS,
 	})
@@ -484,7 +484,7 @@ func (s *InvoiceS) CreateInvoiceDetail(ctx context.Context, invoiceID string, re
 		PricePerUnit: pricePerUnit,
 	}
 
-	detail, err := s.repo.PgRepo.Repo.CreateInvoiceDetail(ctx, params)
+	detail, err := s.repo.Tenant(ctx).CreateInvoiceDetail(ctx, params)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create invoice detail: %w", err)
 	}
@@ -499,7 +499,7 @@ func (s *InvoiceS) GetInvoiceDetailByID(ctx context.Context, id string) (*model.
 		return nil, fmt.Errorf("invalid detail id: %w", err)
 	}
 
-	detail, err := s.repo.PgRepo.Repo.GetInvoiceDetailByID(ctx, detailID)
+	detail, err := s.repo.Tenant(ctx).GetInvoiceDetailByID(ctx, detailID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get invoice detail: %w", err)
 	}
@@ -509,7 +509,7 @@ func (s *InvoiceS) GetInvoiceDetailByID(ctx context.Context, id string) (*model.
 
 // GetAllInvoiceDetails retrieves all invoice details with pagination
 func (s *InvoiceS) GetAllInvoiceDetails(ctx context.Context, limit, offset int32) ([]*model.InvoiceDetailResponse, error) {
-	details, err := s.repo.PgRepo.Repo.GetAllInvoiceDetails(ctx, pg.GetAllInvoiceDetailsParams{
+	details, err := s.repo.Tenant(ctx).GetAllInvoiceDetails(ctx, pg.GetAllInvoiceDetailsParams{
 		Limit:  limit,
 		Offset: offset,
 	})
@@ -532,7 +532,7 @@ func (s *InvoiceS) GetInvoiceDetailsByInvoiceID(ctx context.Context, invoiceID s
 		return nil, fmt.Errorf("invalid invoice id: %w", err)
 	}
 
-	details, err := s.repo.PgRepo.Repo.GetInvoiceDetailsByInvoiceID(ctx, invUUID)
+	details, err := s.repo.Tenant(ctx).GetInvoiceDetailsByInvoiceID(ctx, invUUID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get invoice details by invoice id: %w", err)
 	}
@@ -552,7 +552,7 @@ func (s *InvoiceS) GetInvoiceDetailsByIngredientID(ctx context.Context, ingredie
 		return nil, fmt.Errorf("invalid ingredient id: %w", err)
 	}
 
-	details, err := s.repo.PgRepo.Repo.GetInvoiceDetailsByIngredientID(ctx, pg.GetInvoiceDetailsByIngredientIDParams{
+	details, err := s.repo.Tenant(ctx).GetInvoiceDetailsByIngredientID(ctx, pg.GetInvoiceDetailsByIngredientIDParams{
 		IngredientID: ingUUID,
 		Limit:        limit,
 		Offset:       offset,
@@ -620,7 +620,7 @@ func (s *InvoiceS) UpdateInvoiceDetail(ctx context.Context, id string, req *mode
 		PricePerUnit: pricePerUnit,
 	}
 
-	detail, err := s.repo.PgRepo.Repo.UpdateInvoiceDetail(ctx, params)
+	detail, err := s.repo.Tenant(ctx).UpdateInvoiceDetail(ctx, params)
 	if err != nil {
 		return nil, fmt.Errorf("failed to update invoice detail: %w", err)
 	}
@@ -635,7 +635,7 @@ func (s *InvoiceS) UpdateInvoiceDetailQuantity(ctx context.Context, id string, q
 		return nil, fmt.Errorf("invalid detail id: %w", err)
 	}
 
-	detail, err := s.repo.PgRepo.Repo.UpdateInvoiceDetailQuantity(ctx, pg.UpdateInvoiceDetailQuantityParams{
+	detail, err := s.repo.Tenant(ctx).UpdateInvoiceDetailQuantity(ctx, pg.UpdateInvoiceDetailQuantityParams{
 		ID:       detailID,
 		Quantity: quantity,
 	})
@@ -653,7 +653,7 @@ func (s *InvoiceS) DeleteInvoiceDetail(ctx context.Context, id string) error {
 		return fmt.Errorf("invalid detail id: %w", err)
 	}
 
-	if err := s.repo.PgRepo.Repo.DeleteInvoiceDetail(ctx, detailID); err != nil {
+	if err := s.repo.Tenant(ctx).DeleteInvoiceDetail(ctx, detailID); err != nil {
 		return fmt.Errorf("failed to delete invoice detail: %w", err)
 	}
 
@@ -667,7 +667,7 @@ func (s *InvoiceS) RestoreInvoiceDetail(ctx context.Context, id string) error {
 		return fmt.Errorf("invalid detail id: %w", err)
 	}
 
-	if err := s.repo.PgRepo.Repo.RestoreInvoiceDetail(ctx, detailID); err != nil {
+	if err := s.repo.Tenant(ctx).RestoreInvoiceDetail(ctx, detailID); err != nil {
 		return fmt.Errorf("failed to restore invoice detail: %w", err)
 	}
 
@@ -681,7 +681,7 @@ func (s *InvoiceS) DeleteInvoiceDetailsByInvoiceID(ctx context.Context, invoiceI
 		return fmt.Errorf("invalid invoice id: %w", err)
 	}
 
-	if err := s.repo.PgRepo.Repo.DeleteInvoiceDetailsByInvoiceID(ctx, invUUID); err != nil {
+	if err := s.repo.Tenant(ctx).DeleteInvoiceDetailsByInvoiceID(ctx, invUUID); err != nil {
 		return fmt.Errorf("failed to delete invoice details by invoice id: %w", err)
 	}
 
@@ -690,7 +690,7 @@ func (s *InvoiceS) DeleteInvoiceDetailsByInvoiceID(ctx context.Context, invoiceI
 
 // CountInvoiceDetails counts all invoice details
 func (s *InvoiceS) CountInvoiceDetails(ctx context.Context) (int64, error) {
-	count, err := s.repo.PgRepo.Repo.CountInvoiceDetails(ctx)
+	count, err := s.repo.Tenant(ctx).CountInvoiceDetails(ctx)
 	if err != nil {
 		return 0, fmt.Errorf("failed to count invoice details: %w", err)
 	}
@@ -705,7 +705,7 @@ func (s *InvoiceS) CountInvoiceDetailsByInvoice(ctx context.Context, invoiceID s
 		return 0, fmt.Errorf("invalid invoice id: %w", err)
 	}
 
-	count, err := s.repo.PgRepo.Repo.CountInvoiceDetailsByInvoice(ctx, invUUID)
+	count, err := s.repo.Tenant(ctx).CountInvoiceDetailsByInvoice(ctx, invUUID)
 	if err != nil {
 		return 0, fmt.Errorf("failed to count invoice details by invoice: %w", err)
 	}
@@ -720,7 +720,7 @@ func (s *InvoiceS) GetInvoiceDetailWithIngredient(ctx context.Context, id string
 		return nil, fmt.Errorf("invalid detail id: %w", err)
 	}
 
-	detail, err := s.repo.PgRepo.Repo.GetInvoiceDetailWithIngredient(ctx, detailID)
+	detail, err := s.repo.Tenant(ctx).GetInvoiceDetailWithIngredient(ctx, detailID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get invoice detail with ingredient: %w", err)
 	}

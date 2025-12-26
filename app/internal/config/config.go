@@ -10,20 +10,22 @@ import (
 
 type (
 	Config struct {
-		App      AppConfig      `yaml:"app"`
-		Server   ServerConfig   `yaml:"server"`
-		Postgres PostgresConfig `yaml:"postgres"`
-		Redis    RedisConfig    `yaml:"redis"`
-		Minio    MinioConfig    `yaml:"minio"`
-		Security SecurityConfig `yaml:"security"`
-		Cookie   CookieConfig   `yaml:"cookie"`
-		Session  SessionConfig  `yaml:"session"`
-		Metrics  MetricsConfig  `yaml:"metrics"`
-		Logger   LoggerConfig   `yaml:"logger"`
-		Jwt      JwtConfig      `yaml:"jwt"`
-		Payme    PaymeConfig    `yaml:"payme"`
-		Click    ClickConfig    `yaml:"click"`
-		OTP      OTPConfig      `yaml:"otp"`
+		App          AppConfig              `yaml:"app"`
+		Server       ServerConfig           `yaml:"server"`
+		Postgres     PostgresConfig         `yaml:"postgres"`
+		MainPostgres MainPostgresConfig     `yaml:"main-postgres"`
+		GlobalSA     GlobalSuperadminConfig `yaml:"global-superadmin"`
+		Redis        RedisConfig            `yaml:"redis"`
+		Minio        MinioConfig            `yaml:"minio"`
+		Security     SecurityConfig         `yaml:"security"`
+		Cookie       CookieConfig           `yaml:"cookie"`
+		Session      SessionConfig          `yaml:"session"`
+		Metrics      MetricsConfig          `yaml:"metrics"`
+		Logger       LoggerConfig           `yaml:"logger"`
+		Jwt          JwtConfig              `yaml:"jwt"`
+		Payme        PaymeConfig            `yaml:"payme"`
+		Click        ClickConfig            `yaml:"click"`
+		OTP          OTPConfig              `yaml:"otp"`
 	}
 
 	ClickConfig struct {
@@ -38,6 +40,12 @@ type (
 		Username string `env:"OTP_USERNAME" env-default:""`
 		Secret   string `env:"OTP_SECRET_KEY" env-default:""`
 		ApiUrl   string `env:"OTP_API_URL" env-default:""`
+	}
+
+	GlobalSuperadminConfig struct {
+		Username string `yaml:"username" env:"GLOBAL_SUPERADMIN_USERNAME" env-default:""`
+		Password string `yaml:"password" env:"GLOBAL_SUPERADMIN_PASSWORD" env-default:""`
+		Email    string `yaml:"email" env:"GLOBAL_SUPERADMIN_EMAIL" env-default:""`
 	}
 
 	PaymeConfig struct {
@@ -116,6 +124,17 @@ type (
 		Ssl         bool   `yaml:"ssl" env:"POSTGRES_SSL"`
 		MaxPoolSize int32  `yaml:"max-pool-size" env:"POSTGRES_MAX_POOL_SIZE"`
 		Driver      string `yaml:"driver" env:"POSTGRES_DRIVER"`
+	}
+
+	MainPostgresConfig struct {
+		Host        string `yaml:"host" env:"MAIN_POSTGRES_HOST"`
+		Port        int    `yaml:"port" env:"MAIN_POSTGRES_PORT"`
+		User        string `yaml:"user" env:"MAIN_POSTGRES_USER"`
+		Db          string `yaml:"db" env:"MAIN_POSTGRES_DB"`
+		Password    string `yaml:"password" env:"MAIN_POSTGRES_PASSWORD"`
+		Ssl         bool   `yaml:"ssl" env:"MAIN_POSTGRES_SSL"`
+		MaxPoolSize int32  `yaml:"max-pool-size" env:"MAIN_POSTGRES_MAX_POOL_SIZE"`
+		Driver      string `yaml:"driver" env:"MAIN_POSTGRES_DRIVER"`
 	}
 
 	RedisConfig struct {

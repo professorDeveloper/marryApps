@@ -7,7 +7,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 	"gitlab.yurtal.tech/company/maryai/back/internal/repository"
-	"gitlab.yurtal.tech/company/maryai/back/internal/repository/pg"
+	pg "gitlab.yurtal.tech/company/maryai/back/internal/repository/pg/tenantsdb"
 )
 
 type ShiftS struct {
@@ -59,7 +59,7 @@ func (s *ShiftS) CreateShift(ctx context.Context, name string, role *string, wor
 		},
 	}
 
-	shift, err := s.repo.PgRepo.Repo.CreateShift(ctx, params)
+	shift, err := s.repo.Tenant(ctx).CreateShift(ctx, params)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create shift: %w", err)
 	}
@@ -74,7 +74,7 @@ func (s *ShiftS) GetShiftByID(ctx context.Context, shiftID string) (*ShiftRespon
 		return nil, fmt.Errorf("invalid shift ID: %w", err)
 	}
 
-	shift, err := s.repo.PgRepo.Repo.GetShiftByID(ctx, shiftUUID)
+	shift, err := s.repo.Tenant(ctx).GetShiftByID(ctx, shiftUUID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get shift: %w", err)
 	}
@@ -84,7 +84,7 @@ func (s *ShiftS) GetShiftByID(ctx context.Context, shiftID string) (*ShiftRespon
 
 // GetAllShifts retrieves all shifts
 func (s *ShiftS) GetAllShifts(ctx context.Context) ([]ShiftResponse, error) {
-	shifts, err := s.repo.PgRepo.Repo.GetAllShifts(ctx)
+	shifts, err := s.repo.Tenant(ctx).GetAllShifts(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get shifts: %w", err)
 	}
@@ -103,7 +103,7 @@ func (s *ShiftS) GetShiftsByBranchID(ctx context.Context, branchID string) ([]Sh
 		return nil, fmt.Errorf("invalid branch ID: %w", err)
 	}
 
-	shifts, err := s.repo.PgRepo.Repo.GetShiftsByBranchID(ctx, pgtype.UUID{
+	shifts, err := s.repo.Tenant(ctx).GetShiftsByBranchID(ctx, pgtype.UUID{
 		Bytes: branchUUID,
 		Valid: true,
 	})
@@ -126,7 +126,7 @@ func (s *ShiftS) UpdateShift(ctx context.Context, shiftID string, name *string, 
 	}
 
 	// Get existing shift to preserve values
-	existingShift, err := s.repo.PgRepo.Repo.GetShiftByID(ctx, shiftUUID)
+	existingShift, err := s.repo.Tenant(ctx).GetShiftByID(ctx, shiftUUID)
 	if err != nil {
 		return nil, fmt.Errorf("shift not found: %w", err)
 	}
@@ -163,7 +163,7 @@ func (s *ShiftS) UpdateShift(ctx context.Context, shiftID string, name *string, 
 		BranchID:    existingShift.BranchID,
 	}
 
-	shift, err := s.repo.PgRepo.Repo.UpdateShift(ctx, params)
+	shift, err := s.repo.Tenant(ctx).UpdateShift(ctx, params)
 	if err != nil {
 		return nil, fmt.Errorf("failed to update shift: %w", err)
 	}
@@ -178,7 +178,7 @@ func (s *ShiftS) DeleteShift(ctx context.Context, shiftID string) error {
 		return fmt.Errorf("invalid shift ID: %w", err)
 	}
 
-	_, err = s.repo.PgRepo.Repo.SoftDeleteShift(ctx, shiftUUID)
+	_, err = s.repo.Tenant(ctx).SoftDeleteShift(ctx, shiftUUID)
 	if err != nil {
 		return fmt.Errorf("failed to delete shift: %w", err)
 	}

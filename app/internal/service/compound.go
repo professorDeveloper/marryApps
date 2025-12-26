@@ -11,7 +11,7 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 	"gitlab.yurtal.tech/company/maryai/back/internal/model"
 	"gitlab.yurtal.tech/company/maryai/back/internal/repository"
-	pg "gitlab.yurtal.tech/company/maryai/back/internal/repository/pg"
+	pg "gitlab.yurtal.tech/company/maryai/back/internal/repository/pg/tenantsdb"
 )
 
 type CompoundS struct {
@@ -67,7 +67,7 @@ func (c *CompoundS) CreateCompound(ctx context.Context, name string, nameI18n, d
 		measurementType.Valid = true
 	}
 
-	compound, err := c.repo.PgRepo.Repo.CreateCompound(ctx, pg.CreateCompoundParams{
+	compound, err := c.repo.Tenant(ctx).CreateCompound(ctx, pg.CreateCompoundParams{
 		ID:              id,
 		Name:            name,
 		NameI18n:        nameI18nUUID,
@@ -94,7 +94,7 @@ func (c *CompoundS) GetCompoundByID(ctx context.Context, compoundID string) (*mo
 		return nil, fmt.Errorf("invalid compound ID: %w", err)
 	}
 
-	compound, err := c.repo.PgRepo.Repo.GetCompoundByID(ctx, id)
+	compound, err := c.repo.Tenant(ctx).GetCompoundByID(ctx, id)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return nil, fmt.Errorf("compound not found")
@@ -108,7 +108,7 @@ func (c *CompoundS) GetCompoundByID(ctx context.Context, compoundID string) (*mo
 
 // GetAllCompounds retrieves all compounds with pagination
 func (c *CompoundS) GetAllCompounds(ctx context.Context, limit, offset int32) ([]*model.CompoundResponse, error) {
-	compounds, err := c.repo.PgRepo.Repo.GetAllCompounds(ctx, pg.GetAllCompoundsParams{
+	compounds, err := c.repo.Tenant(ctx).GetAllCompounds(ctx, pg.GetAllCompoundsParams{
 		Limit:  limit,
 		Offset: offset,
 	})
@@ -131,7 +131,7 @@ func (c *CompoundS) GetCompoundsByDepartmentID(ctx context.Context, departmentID
 		return nil, fmt.Errorf("invalid department ID: %w", err)
 	}
 
-	compounds, err := c.repo.PgRepo.Repo.GetCompoundsByDepartmentID(ctx, pg.GetCompoundsByDepartmentIDParams{
+	compounds, err := c.repo.Tenant(ctx).GetCompoundsByDepartmentID(ctx, pg.GetCompoundsByDepartmentIDParams{
 		DepartmentID: pgtype.UUID{Bytes: id, Valid: true},
 		Limit:        limit,
 		Offset:       offset,
@@ -156,7 +156,7 @@ func (c *CompoundS) UpdateCompound(ctx context.Context, compoundID string, name,
 	}
 
 	// Get existing compound
-	existing, err := c.repo.PgRepo.Repo.GetCompoundByID(ctx, id)
+	existing, err := c.repo.Tenant(ctx).GetCompoundByID(ctx, id)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return nil, fmt.Errorf("compound not found")
@@ -224,7 +224,7 @@ func (c *CompoundS) UpdateCompound(ctx context.Context, compoundID string, name,
 		finalPictureUrl = pictureUrl
 	}
 
-	compound, err := c.repo.PgRepo.Repo.UpdateCompound(ctx, pg.UpdateCompoundParams{
+	compound, err := c.repo.Tenant(ctx).UpdateCompound(ctx, pg.UpdateCompoundParams{
 		ID:              id,
 		Name:            finalName,
 		NameI18n:        finalNameI18n,
@@ -251,7 +251,7 @@ func (c *CompoundS) DeleteCompound(ctx context.Context, compoundID string) error
 		return fmt.Errorf("invalid compound ID: %w", err)
 	}
 
-	if err := c.repo.PgRepo.Repo.DeleteCompound(ctx, id); err != nil {
+	if err := c.repo.Tenant(ctx).DeleteCompound(ctx, id); err != nil {
 		log.Printf("DeleteCompound failed: %v", err)
 		return fmt.Errorf("failed to delete compound: %w", err)
 	}
@@ -265,7 +265,7 @@ func (c *CompoundS) RestoreCompound(ctx context.Context, compoundID string) (*mo
 		return nil, fmt.Errorf("invalid compound ID: %w", err)
 	}
 
-	if err := c.repo.PgRepo.Repo.RestoreCompound(ctx, id); err != nil {
+	if err := c.repo.Tenant(ctx).RestoreCompound(ctx, id); err != nil {
 		log.Printf("RestoreCompound failed: %v", err)
 		return nil, fmt.Errorf("failed to restore compound: %w", err)
 	}
@@ -279,7 +279,7 @@ func (c *CompoundS) SearchCompounds(ctx context.Context, query string, limit, of
 		return nil, fmt.Errorf("search query is required")
 	}
 
-	compounds, err := c.repo.PgRepo.Repo.SearchCompounds(ctx, pg.SearchCompoundsParams{
+	compounds, err := c.repo.Tenant(ctx).SearchCompounds(ctx, pg.SearchCompoundsParams{
 		Column1: &query,
 		Limit:   limit,
 		Offset:  offset,
@@ -374,7 +374,7 @@ func (c *CompoundS) CreateCompoundDetail(ctx context.Context, compoundID, ingred
 		return nil, fmt.Errorf("invalid ingredient ID: %w", err)
 	}
 
-	detail, err := c.repo.PgRepo.Repo.CreateCompoundDetail(ctx, pg.CreateCompoundDetailParams{
+	detail, err := c.repo.Tenant(ctx).CreateCompoundDetail(ctx, pg.CreateCompoundDetailParams{
 		ID:           id,
 		CompoundID:   compID,
 		IngredientID: ingID,
@@ -395,7 +395,7 @@ func (c *CompoundS) GetCompoundDetailByID(ctx context.Context, detailID string) 
 		return nil, fmt.Errorf("invalid detail ID: %w", err)
 	}
 
-	detail, err := c.repo.PgRepo.Repo.GetCompoundDetailByID(ctx, id)
+	detail, err := c.repo.Tenant(ctx).GetCompoundDetailByID(ctx, id)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return nil, fmt.Errorf("compound detail not found")
@@ -414,7 +414,7 @@ func (c *CompoundS) GetCompoundDetailsByCompoundID(ctx context.Context, compound
 		return nil, fmt.Errorf("invalid compound ID: %w", err)
 	}
 
-	details, err := c.repo.PgRepo.Repo.GetCompoundDetailsByCompoundID(ctx, id)
+	details, err := c.repo.Tenant(ctx).GetCompoundDetailsByCompoundID(ctx, id)
 	if err != nil {
 		log.Printf("GetCompoundDetailsByCompoundID failed: %v", err)
 		return nil, fmt.Errorf("failed to retrieve compound details: %w", err)
@@ -434,7 +434,7 @@ func (c *CompoundS) GetCompoundDetailsByIngredientID(ctx context.Context, ingred
 		return nil, fmt.Errorf("invalid ingredient ID: %w", err)
 	}
 
-	details, err := c.repo.PgRepo.Repo.GetCompoundDetailsByIngredientID(ctx, pg.GetCompoundDetailsByIngredientIDParams{
+	details, err := c.repo.Tenant(ctx).GetCompoundDetailsByIngredientID(ctx, pg.GetCompoundDetailsByIngredientIDParams{
 		IngredientID: id,
 		Limit:        limit,
 		Offset:       offset,
@@ -459,7 +459,7 @@ func (c *CompoundS) UpdateCompoundDetail(ctx context.Context, detailID string, c
 	}
 
 	// Get existing detail
-	existing, err := c.repo.PgRepo.Repo.GetCompoundDetailByID(ctx, id)
+	existing, err := c.repo.Tenant(ctx).GetCompoundDetailByID(ctx, id)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return nil, fmt.Errorf("compound detail not found")
@@ -490,7 +490,7 @@ func (c *CompoundS) UpdateCompoundDetail(ctx context.Context, detailID string, c
 		finalQuantity = *quantity
 	}
 
-	detail, err := c.repo.PgRepo.Repo.UpdateCompoundDetail(ctx, pg.UpdateCompoundDetailParams{
+	detail, err := c.repo.Tenant(ctx).UpdateCompoundDetail(ctx, pg.UpdateCompoundDetailParams{
 		ID:           id,
 		CompoundID:   finalCompoundID,
 		IngredientID: finalIngredientID,
@@ -511,7 +511,7 @@ func (c *CompoundS) DeleteCompoundDetail(ctx context.Context, detailID string) e
 		return fmt.Errorf("invalid detail ID: %w", err)
 	}
 
-	if err := c.repo.PgRepo.Repo.DeleteCompoundDetail(ctx, id); err != nil {
+	if err := c.repo.Tenant(ctx).DeleteCompoundDetail(ctx, id); err != nil {
 		log.Printf("DeleteCompoundDetail failed: %v", err)
 		return fmt.Errorf("failed to delete compound detail: %w", err)
 	}
@@ -525,7 +525,7 @@ func (c *CompoundS) RestoreCompoundDetail(ctx context.Context, detailID string) 
 		return nil, fmt.Errorf("invalid detail ID: %w", err)
 	}
 
-	if err := c.repo.PgRepo.Repo.RestoreCompoundDetail(ctx, id); err != nil {
+	if err := c.repo.Tenant(ctx).RestoreCompoundDetail(ctx, id); err != nil {
 		log.Printf("RestoreCompoundDetail failed: %v", err)
 		return nil, fmt.Errorf("failed to restore compound detail: %w", err)
 	}
@@ -548,7 +548,7 @@ func (c *CompoundS) CreateCompoundStock(ctx context.Context, compoundID, branchI
 		return nil, fmt.Errorf("invalid branch ID: %w", err)
 	}
 
-	stock, err := c.repo.PgRepo.Repo.CreateCompoundStock(ctx, pg.CreateCompoundStockParams{
+	stock, err := c.repo.Tenant(ctx).CreateCompoundStock(ctx, pg.CreateCompoundStockParams{
 		ID:         id,
 		CompoundID: compID,
 		Quantity:   quantity,
@@ -569,7 +569,7 @@ func (c *CompoundS) GetCompoundStockByID(ctx context.Context, stockID string) (*
 		return nil, fmt.Errorf("invalid stock ID: %w", err)
 	}
 
-	stock, err := c.repo.PgRepo.Repo.GetCompoundStockByID(ctx, id)
+	stock, err := c.repo.Tenant(ctx).GetCompoundStockByID(ctx, id)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return nil, fmt.Errorf("compound stock not found")
@@ -593,7 +593,7 @@ func (c *CompoundS) GetStockByCompoundAndBranch(ctx context.Context, compoundID,
 		return nil, fmt.Errorf("invalid branch ID: %w", err)
 	}
 
-	stock, err := c.repo.PgRepo.Repo.GetStockByCompoundAndBranch(ctx, pg.GetStockByCompoundAndBranchParams{
+	stock, err := c.repo.Tenant(ctx).GetStockByCompoundAndBranch(ctx, pg.GetStockByCompoundAndBranchParams{
 		CompoundID: compID,
 		BranchID:   bID,
 	})
@@ -610,7 +610,7 @@ func (c *CompoundS) GetStockByCompoundAndBranch(ctx context.Context, compoundID,
 
 // GetAllCompoundStock retrieves all compound stocks with pagination
 func (c *CompoundS) GetAllCompoundStock(ctx context.Context, limit, offset int32) ([]*model.CompoundStockResponse, error) {
-	stocks, err := c.repo.PgRepo.Repo.GetAllCompoundStock(ctx, pg.GetAllCompoundStockParams{
+	stocks, err := c.repo.Tenant(ctx).GetAllCompoundStock(ctx, pg.GetAllCompoundStockParams{
 		Limit:  limit,
 		Offset: offset,
 	})
@@ -633,7 +633,7 @@ func (c *CompoundS) GetCompoundStockByBranchID(ctx context.Context, branchID str
 		return nil, fmt.Errorf("invalid branch ID: %w", err)
 	}
 
-	stocks, err := c.repo.PgRepo.Repo.GetCompoundStockByBranchID(ctx, pg.GetCompoundStockByBranchIDParams{
+	stocks, err := c.repo.Tenant(ctx).GetCompoundStockByBranchID(ctx, pg.GetCompoundStockByBranchIDParams{
 		BranchID: bID,
 		Limit:    limit,
 		Offset:   offset,
@@ -657,7 +657,7 @@ func (c *CompoundS) GetCompoundStockByCompoundID(ctx context.Context, compoundID
 		return nil, fmt.Errorf("invalid compound ID: %w", err)
 	}
 
-	stocks, err := c.repo.PgRepo.Repo.GetCompoundStockByCompoundID(ctx, pg.GetCompoundStockByCompoundIDParams{
+	stocks, err := c.repo.Tenant(ctx).GetCompoundStockByCompoundID(ctx, pg.GetCompoundStockByCompoundIDParams{
 		CompoundID: compID,
 		Limit:      limit,
 		Offset:     offset,
@@ -681,7 +681,7 @@ func (c *CompoundS) UpdateCompoundStock(ctx context.Context, stockID string, qua
 		return nil, fmt.Errorf("invalid stock ID: %w", err)
 	}
 
-	stock, err := c.repo.PgRepo.Repo.UpdateCompoundStock(ctx, pg.UpdateCompoundStockParams{
+	stock, err := c.repo.Tenant(ctx).UpdateCompoundStock(ctx, pg.UpdateCompoundStockParams{
 		ID:       id,
 		Quantity: quantity,
 	})
@@ -700,7 +700,7 @@ func (c *CompoundS) AddToCompoundStock(ctx context.Context, stockID string, quan
 		return nil, fmt.Errorf("invalid stock ID: %w", err)
 	}
 
-	stock, err := c.repo.PgRepo.Repo.AddToCompoundStock(ctx, pg.AddToCompoundStockParams{
+	stock, err := c.repo.Tenant(ctx).AddToCompoundStock(ctx, pg.AddToCompoundStockParams{
 		ID:       id,
 		Quantity: quantity,
 	})
@@ -719,7 +719,7 @@ func (c *CompoundS) RemoveFromCompoundStock(ctx context.Context, stockID string,
 		return nil, fmt.Errorf("invalid stock ID: %w", err)
 	}
 
-	stock, err := c.repo.PgRepo.Repo.RemoveFromCompoundStock(ctx, pg.RemoveFromCompoundStockParams{
+	stock, err := c.repo.Tenant(ctx).RemoveFromCompoundStock(ctx, pg.RemoveFromCompoundStockParams{
 		ID:       id,
 		Quantity: quantity,
 	})
@@ -738,7 +738,7 @@ func (c *CompoundS) DeleteCompoundStock(ctx context.Context, stockID string) err
 		return fmt.Errorf("invalid stock ID: %w", err)
 	}
 
-	if err := c.repo.PgRepo.Repo.DeleteCompoundStock(ctx, id); err != nil {
+	if err := c.repo.Tenant(ctx).DeleteCompoundStock(ctx, id); err != nil {
 		log.Printf("DeleteCompoundStock failed: %v", err)
 		return fmt.Errorf("failed to delete compound stock: %w", err)
 	}
@@ -752,7 +752,7 @@ func (c *CompoundS) RestoreCompoundStock(ctx context.Context, stockID string) (*
 		return nil, fmt.Errorf("invalid stock ID: %w", err)
 	}
 
-	if err := c.repo.PgRepo.Repo.RestoreCompoundStock(ctx, id); err != nil {
+	if err := c.repo.Tenant(ctx).RestoreCompoundStock(ctx, id); err != nil {
 		log.Printf("RestoreCompoundStock failed: %v", err)
 		return nil, fmt.Errorf("failed to restore compound stock: %w", err)
 	}

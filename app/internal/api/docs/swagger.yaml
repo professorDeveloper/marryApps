@@ -30,6 +30,24 @@ definitions:
       updated_at:
         type: string
     type: object
+  model.BrandResponse:
+    properties:
+      brand_db_id:
+        example: 1672531200000
+        type: integer
+      created_at:
+        example: "2022-01-01T00:00:00Z"
+        type: string
+      id:
+        example: 550e8400-e29b-41d4-a716-446655440000
+        type: string
+      name:
+        example: My Restaurant
+        type: string
+      updated_at:
+        example: "2022-01-01T00:00:00Z"
+        type: string
+    type: object
   model.CafeTableResponse:
     properties:
       capacity:
@@ -174,6 +192,16 @@ definitions:
         type: string
       phone:
         type: string
+    type: object
+  model.CreateBrandRequest:
+    properties:
+      name:
+        example: My Restaurant
+        maxLength: 255
+        minLength: 1
+        type: string
+    required:
+    - name
     type: object
   model.CreateCafeTableRequest:
     properties:
@@ -594,6 +622,15 @@ definitions:
         example: error message
         type: string
     type: object
+  model.GlobalLoginRequest:
+    properties:
+      password:
+        example: superadmin123
+        type: string
+      username:
+        example: superadmin
+        type: string
+    type: object
   model.GoodDetailResponse:
     properties:
       compound_id:
@@ -928,6 +965,9 @@ definitions:
     type: object
   model.LoginRequest:
     properties:
+      brandId:
+        example: 550e8400-e29b-41d4-a716-446655440000
+        type: string
       password:
         example: Password:Javohir
         type: string
@@ -1061,6 +1101,9 @@ definitions:
     type: object
   model.RegisterRequest:
     properties:
+      brandId:
+        example: 550e8400-e29b-41d4-a716-446655440000
+        type: string
       fullName:
         example: Javohir Khasanov
         type: string
@@ -1197,6 +1240,14 @@ definitions:
         type: string
       uz:
         example: Salom
+        type: string
+    type: object
+  model.UpdateBrandRequest:
+    properties:
+      name:
+        example: Updated Restaurant Name
+        maxLength: 255
+        minLength: 1
         type: string
     type: object
   model.UpdateCafeTableRequest:
@@ -1583,8 +1634,8 @@ definitions:
   model.UserResponse:
     properties:
       brand_id:
-        example: 1
-        type: integer
+        example: 550e8400-e29b-41d4-a716-446655440000
+        type: string
       created_at:
         example: "2022-01-01T00:00:00Z"
         type: string
@@ -1613,13 +1664,258 @@ definitions:
         example: admin
         type: string
     type: object
-host: back.maryai.yurtal.tech
+host: localhost:8080
 info:
   contact: {}
   description: MaryAI API server with multi-language support (uz, ru, en)
   title: MaryAI API
   version: "1.0"
 paths:
+  /api/v1/admin/brands:
+    get:
+      consumes:
+      - application/json
+      description: Get all brands with pagination
+      parameters:
+      - description: 'Limit (default: 10, max: 100)'
+        in: query
+        maximum: 100
+        minimum: 1
+        name: limit
+        type: integer
+      - description: 'Offset (default: 0)'
+        in: query
+        minimum: 0
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/model.BrandResponse'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: List brands
+      tags:
+      - brands
+    post:
+      consumes:
+      - application/json
+      description: Create a new brand
+      parameters:
+      - description: Brand creation request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.CreateBrandRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/model.BrandResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Create brand
+      tags:
+      - brands
+  /api/v1/admin/brands/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Delete a brand by ID
+      parameters:
+      - description: Brand ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Delete brand
+      tags:
+      - brands
+    get:
+      consumes:
+      - application/json
+      description: Get a brand by ID
+      parameters:
+      - description: Brand ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.BrandResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Get brand
+      tags:
+      - brands
+    put:
+      consumes:
+      - application/json
+      description: Update a brand by ID
+      parameters:
+      - description: Brand ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Brand update request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.UpdateBrandRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.BrandResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Update brand
+      tags:
+      - brands
+  /api/v1/admin/brands/{id}/init-schema:
+    post:
+      consumes:
+      - application/json
+      description: Create a schema for the brand and run tenant migrations
+      parameters:
+      - description: Brand ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Schema initialized successfully
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Initialize tenant schema
+      tags:
+      - brands
+  /api/v1/auth/global/login:
+    post:
+      consumes:
+      - application/json
+      description: Authenticate global superadmin (main DB) and return access and
+        refresh tokens
+      parameters:
+      - description: Login credentials
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.GlobalLoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successfully logged in
+          schema:
+            $ref: '#/definitions/model.LoginResponse'
+        "400":
+          description: Invalid request format
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      summary: Global superadmin login
+      tags:
+      - auth
   /api/v1/auth/login:
     post:
       consumes:
@@ -10207,7 +10503,7 @@ paths:
       tags:
       - users
 schemes:
-- https
+- http
 securityDefinitions:
   BearerAuth:
     description: Type "Bearer" followed by a space and your JWT token

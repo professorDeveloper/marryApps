@@ -9,7 +9,7 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 	"gitlab.yurtal.tech/company/maryai/back/internal/model"
 	"gitlab.yurtal.tech/company/maryai/back/internal/repository"
-	"gitlab.yurtal.tech/company/maryai/back/internal/repository/pg"
+	pg "gitlab.yurtal.tech/company/maryai/back/internal/repository/pg/tenantsdb"
 )
 
 type StorageS struct {
@@ -39,7 +39,7 @@ func (s *StorageS) CreateStorage(ctx context.Context, name string, branchID stri
 		nameI18nUUID = pgtype.UUID{Bytes: *nameI18n, Valid: true}
 	}
 
-	storage, err := s.repo.PgRepo.Repo.CreateStorage(ctx, pg.CreateStorageParams{
+	storage, err := s.repo.Tenant(ctx).CreateStorage(ctx, pg.CreateStorageParams{
 		ID:         uuid.New(),
 		Name:       name,
 		BranchID:   pgtype.UUID{Bytes: bID, Valid: true},
@@ -60,7 +60,7 @@ func (s *StorageS) GetStorageByID(ctx context.Context, storageID string) (*model
 		return nil, fmt.Errorf("invalid storage ID: %w", err)
 	}
 
-	storage, err := s.repo.PgRepo.Repo.GetStorageByID(ctx, id)
+	storage, err := s.repo.Tenant(ctx).GetStorageByID(ctx, id)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get storage: %w", err)
 	}
@@ -70,7 +70,7 @@ func (s *StorageS) GetStorageByID(ctx context.Context, storageID string) (*model
 
 // GetAllStorages retrieves all storages with pagination
 func (s *StorageS) GetAllStorages(ctx context.Context, limit, offset int32) ([]model.StorageResponse, error) {
-	storages, err := s.repo.PgRepo.Repo.GetAllStorages(ctx, pg.GetAllStoragesParams{
+	storages, err := s.repo.Tenant(ctx).GetAllStorages(ctx, pg.GetAllStoragesParams{
 		Limit:  limit,
 		Offset: offset,
 	})
@@ -93,7 +93,7 @@ func (s *StorageS) GetStoragesByBranchID(ctx context.Context, branchID string, l
 		return nil, fmt.Errorf("invalid branch ID: %w", err)
 	}
 
-	storages, err := s.repo.PgRepo.Repo.GetStoragesByBranchID(ctx, pg.GetStoragesByBranchIDParams{
+	storages, err := s.repo.Tenant(ctx).GetStoragesByBranchID(ctx, pg.GetStoragesByBranchIDParams{
 		BranchID: pgtype.UUID{Bytes: bID, Valid: true},
 		Limit:    limit,
 		Offset:   offset,
@@ -118,7 +118,7 @@ func (s *StorageS) UpdateStorage(ctx context.Context, storageID string, name *st
 	}
 
 	// Get current storage to use as default
-	currentStorage, err := s.repo.PgRepo.Repo.GetStorageByID(ctx, id)
+	currentStorage, err := s.repo.Tenant(ctx).GetStorageByID(ctx, id)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get storage: %w", err)
 	}
@@ -151,7 +151,7 @@ func (s *StorageS) UpdateStorage(ctx context.Context, storageID string, name *st
 		updatedPictureUrl = pictureUrl
 	}
 
-	storage, err := s.repo.PgRepo.Repo.UpdateStorage(ctx, pg.UpdateStorageParams{
+	storage, err := s.repo.Tenant(ctx).UpdateStorage(ctx, pg.UpdateStorageParams{
 		ID:         id,
 		Name:       updatedName,
 		BranchID:   updatedBranchID,
@@ -172,7 +172,7 @@ func (s *StorageS) DeleteStorage(ctx context.Context, storageID string) error {
 		return fmt.Errorf("invalid storage ID: %w", err)
 	}
 
-	if err := s.repo.PgRepo.Repo.DeleteStorage(ctx, id); err != nil {
+	if err := s.repo.Tenant(ctx).DeleteStorage(ctx, id); err != nil {
 		return fmt.Errorf("failed to delete storage: %w", err)
 	}
 
@@ -186,7 +186,7 @@ func (s *StorageS) RestoreStorage(ctx context.Context, storageID string) error {
 		return fmt.Errorf("invalid storage ID: %w", err)
 	}
 
-	if err := s.repo.PgRepo.Repo.RestoreStorage(ctx, id); err != nil {
+	if err := s.repo.Tenant(ctx).RestoreStorage(ctx, id); err != nil {
 		return fmt.Errorf("failed to restore storage: %w", err)
 	}
 
@@ -195,7 +195,7 @@ func (s *StorageS) RestoreStorage(ctx context.Context, storageID string) error {
 
 // SearchStorages searches storages by name
 func (s *StorageS) SearchStorages(ctx context.Context, query string, limit, offset int32) ([]model.StorageResponse, error) {
-	storages, err := s.repo.PgRepo.Repo.SearchStorages(ctx, pg.SearchStoragesParams{
+	storages, err := s.repo.Tenant(ctx).SearchStorages(ctx, pg.SearchStoragesParams{
 		Column1: &query,
 		Limit:   limit,
 		Offset:  offset,

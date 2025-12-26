@@ -28,6 +28,9 @@ func (h *Handler) Register(router *echo.Echo) {
 			auth.POST("/register", h.RegisterUser, mw.CheckLanguage(), mw.ValidateRegisterInput)
 			auth.POST("/refresh", h.Refresh, mw.CheckLanguage())
 		}
+
+		// Global login
+		auth.POST("/global/login", h.LoginGlobal, mw.LoginRateLimiter(), mw.CheckLanguage(), mw.ValidateLoginInput)
 		payments := api.Group("/payments")
 		{
 			payments.POST("/create", h.CreateInvoice, mw.CheckLanguage(), mw.CheckAuth(h.cfg))
@@ -384,6 +387,17 @@ func (h *Handler) Register(router *echo.Echo) {
 			invoiceDetails.DELETE("/:id", h.DeleteInvoiceDetail, mw.CheckLanguage(), mw.CheckAuth(h.cfg))
 			invoiceDetails.POST("/:id/restore", h.RestoreInvoiceDetail, mw.CheckLanguage(), mw.CheckAuth(h.cfg))
 			invoiceDetails.GET("/:id/with-ingredient", h.GetInvoiceDetailWithIngredient, mw.CheckLanguage(), mw.CheckAuth(h.cfg))
+		}
+
+		// Brand management endpoints (admin only)
+		brands := api.Group("/admin/brands")
+		{
+			brands.POST("", h.CreateBrand, mw.CheckLanguage(), mw.CheckAuth(h.cfg), mw.RequireGlobalSuperadmin)
+			brands.GET("", h.ListBrands, mw.CheckLanguage(), mw.CheckAuth(h.cfg), mw.RequireGlobalSuperadmin)
+			brands.GET("/:id", h.GetBrand, mw.CheckLanguage(), mw.CheckAuth(h.cfg), mw.RequireGlobalSuperadmin)
+			brands.PUT("/:id", h.UpdateBrand, mw.CheckLanguage(), mw.CheckAuth(h.cfg), mw.RequireGlobalSuperadmin)
+			brands.DELETE("/:id", h.DeleteBrand, mw.CheckLanguage(), mw.CheckAuth(h.cfg), mw.RequireGlobalSuperadmin)
+			brands.POST("/:id/init-schema", h.InitializeTenantSchema, mw.CheckLanguage(), mw.CheckAuth(h.cfg), mw.RequireGlobalSuperadmin)
 		}
 
 	}

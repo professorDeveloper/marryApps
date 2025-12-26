@@ -7,7 +7,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 	"gitlab.yurtal.tech/company/maryai/back/internal/model"
-	"gitlab.yurtal.tech/company/maryai/back/internal/repository/pg"
+	pg "gitlab.yurtal.tech/company/maryai/back/internal/repository/pg/tenantsdb"
 )
 
 type PaymeClient interface {
@@ -30,7 +30,7 @@ func (s *PaymentS) CreatePaymeInvoice(c echo.Context, ctx context.Context, planI
 		return nil, fmt.Errorf("invalid plan_id: %w", err)
 	}
 
-	plan, err := s.repo.PgRepo.Repo.GetPriceForPlan(ctx, planUUID)
+	plan, err := s.repo.Tenant(ctx).GetPriceForPlan(ctx, planUUID)
 	if err != nil {
 		return nil, fmt.Errorf("plan not found: %w", err)
 	}
@@ -38,7 +38,7 @@ func (s *PaymentS) CreatePaymeInvoice(c echo.Context, ctx context.Context, planI
 		return nil, fmt.Errorf("invalid amount: %v", plan.Amount)
 	}
 
-	payments, err := s.repo.PgRepo.Repo.GetUserPayments(ctx)
+	payments, err := s.repo.Tenant(ctx).GetUserPayments(ctx)
 	var orderNumber int32 = 1000000
 	if err == nil && len(payments) > 0 {
 		for _, payment := range payments {
@@ -57,7 +57,7 @@ func (s *PaymentS) CreatePaymeInvoice(c echo.Context, ctx context.Context, planI
 		Amount:         plan.Amount,
 	}
 
-	_, err = s.repo.PgRepo.Repo.CreateUserPayment(ctx, createPaymentParams)
+	_, err = s.repo.Tenant(ctx).CreateUserPayment(ctx, createPaymentParams)
 	if err != nil {
 		return nil, fmt.Errorf("failed to save payment record: %w", err)
 	}

@@ -11,7 +11,7 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 	"gitlab.yurtal.tech/company/maryai/back/internal/model"
 	"gitlab.yurtal.tech/company/maryai/back/internal/repository"
-	pg "gitlab.yurtal.tech/company/maryai/back/internal/repository/pg"
+	pg "gitlab.yurtal.tech/company/maryai/back/internal/repository/pg/tenantsdb"
 )
 
 type CategoryS struct {
@@ -64,7 +64,7 @@ func (c *CategoryS) CreateCategory(ctx context.Context, name string, nameI18n, d
 		parentUUID = pgtype.UUID{Bytes: id, Valid: true}
 	}
 
-	category, err := c.repo.PgRepo.Repo.CreateCategory(ctx, pg.CreateCategoryParams{
+	category, err := c.repo.Tenant(ctx).CreateCategory(ctx, pg.CreateCategoryParams{
 		ID:           id,
 		Name:         name,
 		NameI18n:     nameI18nUUID,
@@ -88,7 +88,7 @@ func (c *CategoryS) GetCategoryByID(ctx context.Context, categoryID string) (*mo
 		return nil, fmt.Errorf("invalid category ID: %w", err)
 	}
 
-	category, err := c.repo.PgRepo.Repo.GetCategoryByID(ctx, id)
+	category, err := c.repo.Tenant(ctx).GetCategoryByID(ctx, id)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return nil, fmt.Errorf("category not found")
@@ -102,7 +102,7 @@ func (c *CategoryS) GetCategoryByID(ctx context.Context, categoryID string) (*mo
 
 // GetAllCategories retrieves all categories with pagination
 func (c *CategoryS) GetAllCategories(ctx context.Context, limit, offset int32) ([]*model.CategoryResponse, error) {
-	categories, err := c.repo.PgRepo.Repo.GetAllCategories(ctx, pg.GetAllCategoriesParams{
+	categories, err := c.repo.Tenant(ctx).GetAllCategories(ctx, pg.GetAllCategoriesParams{
 		Limit:  limit,
 		Offset: offset,
 	})
@@ -125,7 +125,7 @@ func (c *CategoryS) GetCategoriesByDepartmentID(ctx context.Context, departmentI
 		return nil, fmt.Errorf("invalid department ID: %w", err)
 	}
 
-	categories, err := c.repo.PgRepo.Repo.GetCategoriesByDepartmentID(ctx, pg.GetCategoriesByDepartmentIDParams{
+	categories, err := c.repo.Tenant(ctx).GetCategoriesByDepartmentID(ctx, pg.GetCategoriesByDepartmentIDParams{
 		DepartmentID: pgtype.UUID{Bytes: id, Valid: true},
 		Limit:        limit,
 		Offset:       offset,
@@ -149,7 +149,7 @@ func (c *CategoryS) GetCategoriesByStorageID(ctx context.Context, storageID stri
 		return nil, fmt.Errorf("invalid storage ID: %w", err)
 	}
 
-	categories, err := c.repo.PgRepo.Repo.GetCategoriesByStorageID(ctx, pg.GetCategoriesByStorageIDParams{
+	categories, err := c.repo.Tenant(ctx).GetCategoriesByStorageID(ctx, pg.GetCategoriesByStorageIDParams{
 		StorageID: pgtype.UUID{Bytes: id, Valid: true},
 		Limit:     limit,
 		Offset:    offset,
@@ -173,7 +173,7 @@ func (c *CategoryS) GetCategoriesByParentID(ctx context.Context, parentID string
 		return nil, fmt.Errorf("invalid parent ID: %w", err)
 	}
 
-	categories, err := c.repo.PgRepo.Repo.GetCategoriesByParentID(ctx, pg.GetCategoriesByParentIDParams{
+	categories, err := c.repo.Tenant(ctx).GetCategoriesByParentID(ctx, pg.GetCategoriesByParentIDParams{
 		Parent: pgtype.UUID{Bytes: id, Valid: true},
 		Limit:  limit,
 		Offset: offset,
@@ -192,7 +192,7 @@ func (c *CategoryS) GetCategoriesByParentID(ctx context.Context, parentID string
 
 // GetRootCategories retrieves root categories (no parent)
 func (c *CategoryS) GetRootCategories(ctx context.Context, limit, offset int32) ([]*model.CategoryResponse, error) {
-	categories, err := c.repo.PgRepo.Repo.GetRootCategories(ctx, pg.GetRootCategoriesParams{
+	categories, err := c.repo.Tenant(ctx).GetRootCategories(ctx, pg.GetRootCategoriesParams{
 		Limit:  limit,
 		Offset: offset,
 	})
@@ -216,7 +216,7 @@ func (c *CategoryS) UpdateCategory(ctx context.Context, categoryID string, name,
 	}
 
 	// Get existing category
-	existing, err := c.repo.PgRepo.Repo.GetCategoryByID(ctx, id)
+	existing, err := c.repo.Tenant(ctx).GetCategoryByID(ctx, id)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return nil, fmt.Errorf("category not found")
@@ -270,7 +270,7 @@ func (c *CategoryS) UpdateCategory(ctx context.Context, categoryID string, name,
 		finalPictureUrl = pictureUrl
 	}
 
-	category, err := c.repo.PgRepo.Repo.UpdateCategory(ctx, pg.UpdateCategoryParams{
+	category, err := c.repo.Tenant(ctx).UpdateCategory(ctx, pg.UpdateCategoryParams{
 		ID:           id,
 		Name:         finalName,
 		NameI18n:     finalNameI18n,
@@ -294,7 +294,7 @@ func (c *CategoryS) DeleteCategory(ctx context.Context, categoryID string) error
 		return fmt.Errorf("invalid category ID: %w", err)
 	}
 
-	if err := c.repo.PgRepo.Repo.DeleteCategory(ctx, id); err != nil {
+	if err := c.repo.Tenant(ctx).DeleteCategory(ctx, id); err != nil {
 		log.Printf("DeleteCategory failed: %v", err)
 		return fmt.Errorf("failed to delete category: %w", err)
 	}
@@ -308,7 +308,7 @@ func (c *CategoryS) RestoreCategory(ctx context.Context, categoryID string) (*mo
 		return nil, fmt.Errorf("invalid category ID: %w", err)
 	}
 
-	if err := c.repo.PgRepo.Repo.RestoreCategory(ctx, id); err != nil {
+	if err := c.repo.Tenant(ctx).RestoreCategory(ctx, id); err != nil {
 		log.Printf("RestoreCategory failed: %v", err)
 		return nil, fmt.Errorf("failed to restore category: %w", err)
 	}
@@ -323,7 +323,7 @@ func (c *CategoryS) SearchCategories(ctx context.Context, query string, limit, o
 	}
 
 	q := query
-	categories, err := c.repo.PgRepo.Repo.SearchCategories(ctx, pg.SearchCategoriesParams{
+	categories, err := c.repo.Tenant(ctx).SearchCategories(ctx, pg.SearchCategoriesParams{
 		Column1: &q,
 		Limit:   limit,
 		Offset:  offset,

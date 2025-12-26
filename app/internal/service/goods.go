@@ -11,7 +11,7 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 	"gitlab.yurtal.tech/company/maryai/back/internal/model"
 	"gitlab.yurtal.tech/company/maryai/back/internal/repository"
-	pg "gitlab.yurtal.tech/company/maryai/back/internal/repository/pg"
+	pg "gitlab.yurtal.tech/company/maryai/back/internal/repository/pg/tenantsdb"
 )
 
 type GoodsS struct {
@@ -72,7 +72,7 @@ func (g *GoodsS) CreateGood(ctx context.Context, name string, description *strin
 	numPrice := pgtype.Numeric{}
 	numPrice.Scan(price)
 
-	good, err := g.repo.PgRepo.Repo.CreateGood(ctx, pg.CreateGoodParams{
+	good, err := g.repo.Tenant(ctx).CreateGood(ctx, pg.CreateGoodParams{
 		ID:              id,
 		Name:            name,
 		Description:     description,
@@ -99,7 +99,7 @@ func (g *GoodsS) GetGoodByID(ctx context.Context, goodID string) (*model.GoodRes
 		return nil, fmt.Errorf("invalid good ID: %w", err)
 	}
 
-	good, err := g.repo.PgRepo.Repo.GetGoodByID(ctx, id)
+	good, err := g.repo.Tenant(ctx).GetGoodByID(ctx, id)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return nil, fmt.Errorf("good not found")
@@ -113,7 +113,7 @@ func (g *GoodsS) GetGoodByID(ctx context.Context, goodID string) (*model.GoodRes
 
 // GetAllGoods retrieves all goods with pagination
 func (g *GoodsS) GetAllGoods(ctx context.Context, limit, offset int32) ([]*model.GoodResponse, error) {
-	goods, err := g.repo.PgRepo.Repo.GetAllGoods(ctx, pg.GetAllGoodsParams{
+	goods, err := g.repo.Tenant(ctx).GetAllGoods(ctx, pg.GetAllGoodsParams{
 		Limit:  limit,
 		Offset: offset,
 	})
@@ -136,7 +136,7 @@ func (g *GoodsS) GetGoodsByCategory(ctx context.Context, categoryID string, limi
 		return nil, fmt.Errorf("invalid category ID: %w", err)
 	}
 
-	goods, err := g.repo.PgRepo.Repo.GetGoodsByCategoryID(ctx, pg.GetGoodsByCategoryIDParams{
+	goods, err := g.repo.Tenant(ctx).GetGoodsByCategoryID(ctx, pg.GetGoodsByCategoryIDParams{
 		CategoryID: pgtype.UUID{Bytes: id, Valid: true},
 		Limit:      limit,
 		Offset:     offset,
@@ -160,7 +160,7 @@ func (g *GoodsS) GetGoodsByDepartment(ctx context.Context, departmentID string, 
 		return nil, fmt.Errorf("invalid department ID: %w", err)
 	}
 
-	goods, err := g.repo.PgRepo.Repo.GetGoodsByDepartmentID(ctx, pg.GetGoodsByDepartmentIDParams{
+	goods, err := g.repo.Tenant(ctx).GetGoodsByDepartmentID(ctx, pg.GetGoodsByDepartmentIDParams{
 		DepartmentID: pgtype.UUID{Bytes: id, Valid: true},
 		Limit:        limit,
 		Offset:       offset,
@@ -184,7 +184,7 @@ func (g *GoodsS) GetGoodsByPriceRange(ctx context.Context, minPrice, maxPrice st
 	minNum.Scan(minPrice)
 	maxNum.Scan(maxPrice)
 
-	goods, err := g.repo.PgRepo.Repo.GetGoodsByPriceRange(ctx, pg.GetGoodsByPriceRangeParams{
+	goods, err := g.repo.Tenant(ctx).GetGoodsByPriceRange(ctx, pg.GetGoodsByPriceRangeParams{
 		Price:   minNum,
 		Price_2: maxNum,
 		Limit:   limit,
@@ -260,7 +260,7 @@ func (g *GoodsS) UpdateGood(ctx context.Context, goodID string, name, descriptio
 		finalDescription = description
 	}
 
-	good, err := g.repo.PgRepo.Repo.UpdateGood(ctx, pg.UpdateGoodParams{
+	good, err := g.repo.Tenant(ctx).UpdateGood(ctx, pg.UpdateGoodParams{
 		ID:              id,
 		Name:            finalName,
 		Description:     finalDescription,
@@ -290,7 +290,7 @@ func (g *GoodsS) UpdateGoodPrice(ctx context.Context, goodID, price string) (*mo
 	priceNum := pgtype.Numeric{}
 	priceNum.Scan(price)
 
-	good, err := g.repo.PgRepo.Repo.UpdateGoodPrice(ctx, pg.UpdateGoodPriceParams{
+	good, err := g.repo.Tenant(ctx).UpdateGoodPrice(ctx, pg.UpdateGoodPriceParams{
 		ID:    id,
 		Price: priceNum,
 	})
@@ -309,7 +309,7 @@ func (g *GoodsS) DeleteGood(ctx context.Context, goodID string) error {
 		return fmt.Errorf("invalid good ID: %w", err)
 	}
 
-	if err := g.repo.PgRepo.Repo.DeleteGood(ctx, id); err != nil {
+	if err := g.repo.Tenant(ctx).DeleteGood(ctx, id); err != nil {
 		log.Printf("DeleteGood failed: %v", err)
 		return fmt.Errorf("failed to delete good: %w", err)
 	}
@@ -323,7 +323,7 @@ func (g *GoodsS) RestoreGood(ctx context.Context, goodID string) (*model.GoodRes
 		return nil, fmt.Errorf("invalid good ID: %w", err)
 	}
 
-	if err := g.repo.PgRepo.Repo.RestoreGood(ctx, id); err != nil {
+	if err := g.repo.Tenant(ctx).RestoreGood(ctx, id); err != nil {
 		log.Printf("RestoreGood failed: %v", err)
 		return nil, fmt.Errorf("failed to restore good: %w", err)
 	}
@@ -337,7 +337,7 @@ func (g *GoodsS) SearchGoods(ctx context.Context, query string, limit, offset in
 		return nil, fmt.Errorf("search query is required")
 	}
 
-	goods, err := g.repo.PgRepo.Repo.SearchGoods(ctx, pg.SearchGoodsParams{
+	goods, err := g.repo.Tenant(ctx).SearchGoods(ctx, pg.SearchGoodsParams{
 		Column1: &query,
 		Limit:   limit,
 		Offset:  offset,
@@ -390,7 +390,7 @@ func (g *GoodsS) CreateGoodDetail(ctx context.Context, goodID string, ingredient
 		measurementType.Valid = true
 	}
 
-	detail, err := g.repo.PgRepo.Repo.CreateGoodDetail(ctx, pg.CreateGoodDetailParams{
+	detail, err := g.repo.Tenant(ctx).CreateGoodDetail(ctx, pg.CreateGoodDetailParams{
 		ID:           id,
 		GoodID:       gID,
 		IngredientID: ingID,
@@ -413,7 +413,7 @@ func (g *GoodsS) GetGoodDetailByID(ctx context.Context, detailID string) (*model
 		return nil, fmt.Errorf("invalid detail ID: %w", err)
 	}
 
-	detail, err := g.repo.PgRepo.Repo.GetGoodDetailByID(ctx, id)
+	detail, err := g.repo.Tenant(ctx).GetGoodDetailByID(ctx, id)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return nil, fmt.Errorf("good detail not found")
@@ -432,7 +432,7 @@ func (g *GoodsS) GetGoodDetailsByGood(ctx context.Context, goodID string) ([]*mo
 		return nil, fmt.Errorf("invalid good ID: %w", err)
 	}
 
-	details, err := g.repo.PgRepo.Repo.GetGoodDetailsByGoodID(ctx, id)
+	details, err := g.repo.Tenant(ctx).GetGoodDetailsByGoodID(ctx, id)
 	if err != nil {
 		log.Printf("GetGoodDetailsByGood failed: %v", err)
 		return nil, fmt.Errorf("failed to retrieve good details: %w", err)
@@ -452,7 +452,7 @@ func (g *GoodsS) GetGoodDetailsByIngredient(ctx context.Context, ingredientID st
 		return nil, fmt.Errorf("invalid ingredient ID: %w", err)
 	}
 
-	details, err := g.repo.PgRepo.Repo.GetGoodDetailsByIngredientID(ctx, pg.GetGoodDetailsByIngredientIDParams{
+	details, err := g.repo.Tenant(ctx).GetGoodDetailsByIngredientID(ctx, pg.GetGoodDetailsByIngredientIDParams{
 		IngredientID: pgtype.UUID{Bytes: id, Valid: true},
 		Limit:        limit,
 		Offset:       offset,
@@ -476,7 +476,7 @@ func (g *GoodsS) GetGoodDetailsByCompound(ctx context.Context, compoundID string
 		return nil, fmt.Errorf("invalid compound ID: %w", err)
 	}
 
-	details, err := g.repo.PgRepo.Repo.GetGoodDetailsByCompoundID(ctx, pg.GetGoodDetailsByCompoundIDParams{
+	details, err := g.repo.Tenant(ctx).GetGoodDetailsByCompoundID(ctx, pg.GetGoodDetailsByCompoundIDParams{
 		CompoundID: pgtype.UUID{Bytes: id, Valid: true},
 		Limit:      limit,
 		Offset:     offset,
@@ -501,7 +501,7 @@ func (g *GoodsS) UpdateGoodDetail(ctx context.Context, detailID string, goodID, 
 	}
 
 	// Get existing detail
-	existing, err := g.repo.PgRepo.Repo.GetGoodDetailByID(ctx, id)
+	existing, err := g.repo.Tenant(ctx).GetGoodDetailByID(ctx, id)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return nil, fmt.Errorf("good detail not found")
@@ -549,7 +549,7 @@ func (g *GoodsS) UpdateGoodDetail(ctx context.Context, detailID string, goodID, 
 		finalQuantity = *quantity
 	}
 
-	detail, err := g.repo.PgRepo.Repo.UpdateGoodDetail(ctx, pg.UpdateGoodDetailParams{
+	detail, err := g.repo.Tenant(ctx).UpdateGoodDetail(ctx, pg.UpdateGoodDetailParams{
 		ID:           id,
 		GoodID:       finalGoodID,
 		IngredientID: finalIngredientID,
@@ -572,7 +572,7 @@ func (g *GoodsS) UpdateGoodDetailQuantity(ctx context.Context, detailID string, 
 		return nil, fmt.Errorf("invalid detail ID: %w", err)
 	}
 
-	detail, err := g.repo.PgRepo.Repo.UpdateGoodDetailQuantity(ctx, pg.UpdateGoodDetailQuantityParams{
+	detail, err := g.repo.Tenant(ctx).UpdateGoodDetailQuantity(ctx, pg.UpdateGoodDetailQuantityParams{
 		ID:       id,
 		Quantity: quantity,
 	})
@@ -591,7 +591,7 @@ func (g *GoodsS) DeleteGoodDetail(ctx context.Context, detailID string) error {
 		return fmt.Errorf("invalid detail ID: %w", err)
 	}
 
-	if err := g.repo.PgRepo.Repo.DeleteGoodDetail(ctx, id); err != nil {
+	if err := g.repo.Tenant(ctx).DeleteGoodDetail(ctx, id); err != nil {
 		log.Printf("DeleteGoodDetail failed: %v", err)
 		return fmt.Errorf("failed to delete good detail: %w", err)
 	}
@@ -605,7 +605,7 @@ func (g *GoodsS) RestoreGoodDetail(ctx context.Context, detailID string) (*model
 		return nil, fmt.Errorf("invalid detail ID: %w", err)
 	}
 
-	if err := g.repo.PgRepo.Repo.RestoreGoodDetail(ctx, id); err != nil {
+	if err := g.repo.Tenant(ctx).RestoreGoodDetail(ctx, id); err != nil {
 		log.Printf("RestoreGoodDetail failed: %v", err)
 		return nil, fmt.Errorf("failed to restore good detail: %w", err)
 	}

@@ -9,7 +9,7 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 	"gitlab.yurtal.tech/company/maryai/back/internal/model"
 	"gitlab.yurtal.tech/company/maryai/back/internal/repository"
-	"gitlab.yurtal.tech/company/maryai/back/internal/repository/pg"
+	pg "gitlab.yurtal.tech/company/maryai/back/internal/repository/pg/tenantsdb"
 )
 
 type OrderS struct {
@@ -64,7 +64,7 @@ func (s *OrderS) CreateOrder(ctx context.Context, req model.CreateOrderRequest) 
 		totalAmount.Valid = false
 	}
 
-	order, err := s.repo.PgRepo.Repo.CreateOrder(ctx, pg.CreateOrderParams{
+	order, err := s.repo.Tenant(ctx).CreateOrder(ctx, pg.CreateOrderParams{
 		ID:          uuid.New(),
 		TableID:     pgtype.UUID{Bytes: tableUUID, Valid: true},
 		WaiterID:    waiterUUID,
@@ -87,7 +87,7 @@ func (s *OrderS) GetOrderByID(ctx context.Context, orderID string) (*model.Order
 		return nil, fmt.Errorf("invalid order id: %w", err)
 	}
 
-	order, err := s.repo.PgRepo.Repo.GetOrderByID(ctx, id)
+	order, err := s.repo.Tenant(ctx).GetOrderByID(ctx, id)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get order: %w", err)
 	}
@@ -96,7 +96,7 @@ func (s *OrderS) GetOrderByID(ctx context.Context, orderID string) (*model.Order
 }
 
 func (s *OrderS) GetAllOrders(ctx context.Context, limit, offset int32) ([]model.OrderResponse, error) {
-	orders, err := s.repo.PgRepo.Repo.GetAllOrders(ctx, pg.GetAllOrdersParams{Limit: limit, Offset: offset})
+	orders, err := s.repo.Tenant(ctx).GetAllOrders(ctx, pg.GetAllOrdersParams{Limit: limit, Offset: offset})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get orders: %w", err)
 	}
@@ -110,7 +110,7 @@ func (s *OrderS) GetAllOrders(ctx context.Context, limit, offset int32) ([]model
 
 func (s *OrderS) GetOrdersByStatus(ctx context.Context, status string, limit, offset int32) ([]model.OrderResponse, error) {
 	st := pg.NullOrderStatus{OrderStatus: pg.OrderStatus(status), Valid: true}
-	orders, err := s.repo.PgRepo.Repo.GetOrdersByStatus(ctx, pg.GetOrdersByStatusParams{Status: st, Limit: limit, Offset: offset})
+	orders, err := s.repo.Tenant(ctx).GetOrdersByStatus(ctx, pg.GetOrdersByStatusParams{Status: st, Limit: limit, Offset: offset})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get orders by status: %w", err)
 	}
@@ -128,7 +128,7 @@ func (s *OrderS) GetOrdersByWaiterID(ctx context.Context, waiterID string, limit
 		return nil, fmt.Errorf("invalid waiter id: %w", err)
 	}
 
-	orders, err := s.repo.PgRepo.Repo.GetOrdersByWaiterID(ctx, pg.GetOrdersByWaiterIDParams{WaiterID: pgtype.UUID{Bytes: id, Valid: true}, Limit: limit, Offset: offset})
+	orders, err := s.repo.Tenant(ctx).GetOrdersByWaiterID(ctx, pg.GetOrdersByWaiterIDParams{WaiterID: pgtype.UUID{Bytes: id, Valid: true}, Limit: limit, Offset: offset})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get orders by waiter: %w", err)
 	}
@@ -146,7 +146,7 @@ func (s *OrderS) GetOrdersByTableID(ctx context.Context, tableID string) ([]mode
 		return nil, fmt.Errorf("invalid table id: %w", err)
 	}
 
-	orders, err := s.repo.PgRepo.Repo.GetOrdersByTableID(ctx, pgtype.UUID{Bytes: id, Valid: true})
+	orders, err := s.repo.Tenant(ctx).GetOrdersByTableID(ctx, pgtype.UUID{Bytes: id, Valid: true})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get orders by table: %w", err)
 	}
@@ -164,7 +164,7 @@ func (s *OrderS) UpdateOrder(ctx context.Context, orderID string, req model.Upda
 		return nil, fmt.Errorf("invalid order id: %w", err)
 	}
 
-	existing, err := s.repo.PgRepo.Repo.GetOrderByID(ctx, id)
+	existing, err := s.repo.Tenant(ctx).GetOrderByID(ctx, id)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get order: %w", err)
 	}
@@ -220,7 +220,7 @@ func (s *OrderS) UpdateOrder(ctx context.Context, orderID string, req model.Upda
 		finalComment = req.Comment
 	}
 
-	order, err := s.repo.PgRepo.Repo.UpdateOrder(ctx, pg.UpdateOrderParams{
+	order, err := s.repo.Tenant(ctx).UpdateOrder(ctx, pg.UpdateOrderParams{
 		ID:          id,
 		TableID:     finalTableID,
 		WaiterID:    finalWaiterID,
@@ -244,7 +244,7 @@ func (s *OrderS) UpdateOrderStatus(ctx context.Context, orderID string, status s
 	}
 
 	st := pg.NullOrderStatus{OrderStatus: pg.OrderStatus(status), Valid: true}
-	order, err := s.repo.PgRepo.Repo.UpdateOrderStatus(ctx, pg.UpdateOrderStatusParams{ID: id, Status: st})
+	order, err := s.repo.Tenant(ctx).UpdateOrderStatus(ctx, pg.UpdateOrderStatusParams{ID: id, Status: st})
 	if err != nil {
 		return nil, fmt.Errorf("failed to update order status: %w", err)
 	}
@@ -262,7 +262,7 @@ func (s *OrderS) MarkOrderPaid(ctx context.Context, orderID string, cashierID st
 		return nil, fmt.Errorf("invalid cashier id: %w", err)
 	}
 
-	order, err := s.repo.PgRepo.Repo.MarkOrderPaid(ctx, pg.MarkOrderPaidParams{ID: oID, CashierID: pgtype.UUID{Bytes: cID, Valid: true}})
+	order, err := s.repo.Tenant(ctx).MarkOrderPaid(ctx, pg.MarkOrderPaidParams{ID: oID, CashierID: pgtype.UUID{Bytes: cID, Valid: true}})
 	if err != nil {
 		return nil, fmt.Errorf("failed to mark order paid: %w", err)
 	}
@@ -275,7 +275,7 @@ func (s *OrderS) DeleteOrder(ctx context.Context, orderID string) error {
 		return fmt.Errorf("invalid order id: %w", err)
 	}
 
-	if err := s.repo.PgRepo.Repo.DeleteOrder(ctx, id); err != nil {
+	if err := s.repo.Tenant(ctx).DeleteOrder(ctx, id); err != nil {
 		return fmt.Errorf("failed to delete order: %w", err)
 	}
 	return nil
@@ -287,7 +287,7 @@ func (s *OrderS) RestoreOrder(ctx context.Context, orderID string) error {
 		return fmt.Errorf("invalid order id: %w", err)
 	}
 
-	if err := s.repo.PgRepo.Repo.RestoreOrder(ctx, id); err != nil {
+	if err := s.repo.Tenant(ctx).RestoreOrder(ctx, id); err != nil {
 		return fmt.Errorf("failed to restore order: %w", err)
 	}
 	return nil
@@ -303,7 +303,7 @@ func (s *OrderS) AssignWaiterToOrder(ctx context.Context, orderID string, waiter
 		return nil, fmt.Errorf("invalid waiter id: %w", err)
 	}
 
-	order, err := s.repo.PgRepo.Repo.AssignWaiterToOrder(ctx, pg.AssignWaiterToOrderParams{ID: oID, WaiterID: pgtype.UUID{Bytes: wID, Valid: true}})
+	order, err := s.repo.Tenant(ctx).AssignWaiterToOrder(ctx, pg.AssignWaiterToOrderParams{ID: oID, WaiterID: pgtype.UUID{Bytes: wID, Valid: true}})
 	if err != nil {
 		return nil, fmt.Errorf("failed to assign waiter: %w", err)
 	}
@@ -320,7 +320,7 @@ func (s *OrderS) AssignCashierToOrder(ctx context.Context, orderID string, cashi
 		return nil, fmt.Errorf("invalid cashier id: %w", err)
 	}
 
-	order, err := s.repo.PgRepo.Repo.AssignCashierToOrder(ctx, pg.AssignCashierToOrderParams{ID: oID, CashierID: pgtype.UUID{Bytes: cID, Valid: true}})
+	order, err := s.repo.Tenant(ctx).AssignCashierToOrder(ctx, pg.AssignCashierToOrderParams{ID: oID, CashierID: pgtype.UUID{Bytes: cID, Valid: true}})
 	if err != nil {
 		return nil, fmt.Errorf("failed to assign cashier: %w", err)
 	}
@@ -333,7 +333,7 @@ func (s *OrderS) CancelOrder(ctx context.Context, orderID string) (*model.OrderR
 		return nil, fmt.Errorf("invalid order id: %w", err)
 	}
 
-	order, err := s.repo.PgRepo.Repo.CancelOrder(ctx, id)
+	order, err := s.repo.Tenant(ctx).CancelOrder(ctx, id)
 	if err != nil {
 		return nil, fmt.Errorf("failed to cancel order: %w", err)
 	}
@@ -345,7 +345,7 @@ func (s *OrderS) MarkOrderCooking(ctx context.Context, orderID string) (*model.O
 	if err != nil {
 		return nil, fmt.Errorf("invalid order id: %w", err)
 	}
-	order, err := s.repo.PgRepo.Repo.MarkOrderCooking(ctx, id)
+	order, err := s.repo.Tenant(ctx).MarkOrderCooking(ctx, id)
 	if err != nil {
 		return nil, fmt.Errorf("failed to mark order cooking: %w", err)
 	}
@@ -357,7 +357,7 @@ func (s *OrderS) MarkOrderReady(ctx context.Context, orderID string) (*model.Ord
 	if err != nil {
 		return nil, fmt.Errorf("invalid order id: %w", err)
 	}
-	order, err := s.repo.PgRepo.Repo.MarkOrderReady(ctx, id)
+	order, err := s.repo.Tenant(ctx).MarkOrderReady(ctx, id)
 	if err != nil {
 		return nil, fmt.Errorf("failed to mark order ready: %w", err)
 	}
@@ -369,7 +369,7 @@ func (s *OrderS) MarkOrderServed(ctx context.Context, orderID string) (*model.Or
 	if err != nil {
 		return nil, fmt.Errorf("invalid order id: %w", err)
 	}
-	order, err := s.repo.PgRepo.Repo.MarkOrderServed(ctx, id)
+	order, err := s.repo.Tenant(ctx).MarkOrderServed(ctx, id)
 	if err != nil {
 		return nil, fmt.Errorf("failed to mark order served: %w", err)
 	}
@@ -409,7 +409,7 @@ func (s *OrderS) CreateOrderItem(ctx context.Context, req model.CreateOrderItemR
 		status = pg.NullOrderItemsStatus{OrderItemsStatus: pg.OrderItemsStatus(*req.Status), Valid: true}
 	}
 
-	item, err := s.repo.PgRepo.Repo.CreateOrderItem(ctx, pg.CreateOrderItemParams{
+	item, err := s.repo.Tenant(ctx).CreateOrderItem(ctx, pg.CreateOrderItemParams{
 		ID:       uuid.New(),
 		GoodID:   gID,
 		OrderID:  oID,
@@ -431,7 +431,7 @@ func (s *OrderS) GetOrderItemByID(ctx context.Context, itemID string) (*model.Or
 		return nil, fmt.Errorf("invalid order item id: %w", err)
 	}
 
-	item, err := s.repo.PgRepo.Repo.GetOrderItemByID(ctx, id)
+	item, err := s.repo.Tenant(ctx).GetOrderItemByID(ctx, id)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get order item: %w", err)
 	}
@@ -440,7 +440,7 @@ func (s *OrderS) GetOrderItemByID(ctx context.Context, itemID string) (*model.Or
 }
 
 func (s *OrderS) GetAllOrderItems(ctx context.Context, limit, offset int32) ([]model.OrderItemResponse, error) {
-	items, err := s.repo.PgRepo.Repo.GetAllOrderItems(ctx, pg.GetAllOrderItemsParams{Limit: limit, Offset: offset})
+	items, err := s.repo.Tenant(ctx).GetAllOrderItems(ctx, pg.GetAllOrderItemsParams{Limit: limit, Offset: offset})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get order items: %w", err)
 	}
@@ -458,7 +458,7 @@ func (s *OrderS) GetOrderItemsByOrderID(ctx context.Context, orderID string) ([]
 		return nil, fmt.Errorf("invalid order id: %w", err)
 	}
 
-	items, err := s.repo.PgRepo.Repo.GetOrderItemsByOrderID(ctx, id)
+	items, err := s.repo.Tenant(ctx).GetOrderItemsByOrderID(ctx, id)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get order items: %w", err)
 	}
@@ -472,7 +472,7 @@ func (s *OrderS) GetOrderItemsByOrderID(ctx context.Context, orderID string) ([]
 
 func (s *OrderS) GetOrderItemsByStatus(ctx context.Context, status string, limit, offset int32) ([]model.OrderItemResponse, error) {
 	st := pg.NullOrderItemsStatus{OrderItemsStatus: pg.OrderItemsStatus(status), Valid: true}
-	items, err := s.repo.PgRepo.Repo.GetOrderItemsByStatus(ctx, pg.GetOrderItemsByStatusParams{Status: st, Limit: limit, Offset: offset})
+	items, err := s.repo.Tenant(ctx).GetOrderItemsByStatus(ctx, pg.GetOrderItemsByStatusParams{Status: st, Limit: limit, Offset: offset})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get order items by status: %w", err)
 	}
@@ -490,7 +490,7 @@ func (s *OrderS) UpdateOrderItem(ctx context.Context, itemID string, req model.U
 		return nil, fmt.Errorf("invalid order item id: %w", err)
 	}
 
-	existing, err := s.repo.PgRepo.Repo.GetOrderItemByID(ctx, id)
+	existing, err := s.repo.Tenant(ctx).GetOrderItemByID(ctx, id)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get order item: %w", err)
 	}
@@ -537,7 +537,7 @@ func (s *OrderS) UpdateOrderItem(ctx context.Context, itemID string, req model.U
 		finalComment = req.Comment
 	}
 
-	item, err := s.repo.PgRepo.Repo.UpdateOrderItem(ctx, pg.UpdateOrderItemParams{
+	item, err := s.repo.Tenant(ctx).UpdateOrderItem(ctx, pg.UpdateOrderItemParams{
 		ID:       id,
 		GoodID:   finalGoodID,
 		OrderID:  finalOrderID,
@@ -562,7 +562,7 @@ func (s *OrderS) UpdateOrderItemQuantity(ctx context.Context, itemID string, qua
 		return nil, fmt.Errorf("quantity must be greater than 0")
 	}
 
-	item, err := s.repo.PgRepo.Repo.UpdateOrderItemQuantity(ctx, pg.UpdateOrderItemQuantityParams{ID: id, Quantity: quantity})
+	item, err := s.repo.Tenant(ctx).UpdateOrderItemQuantity(ctx, pg.UpdateOrderItemQuantityParams{ID: id, Quantity: quantity})
 	if err != nil {
 		return nil, fmt.Errorf("failed to update order item quantity: %w", err)
 	}
@@ -576,7 +576,7 @@ func (s *OrderS) UpdateOrderItemStatus(ctx context.Context, itemID string, statu
 	}
 
 	st := pg.NullOrderItemsStatus{OrderItemsStatus: pg.OrderItemsStatus(status), Valid: true}
-	item, err := s.repo.PgRepo.Repo.UpdateOrderItemStatus(ctx, pg.UpdateOrderItemStatusParams{ID: id, Status: st})
+	item, err := s.repo.Tenant(ctx).UpdateOrderItemStatus(ctx, pg.UpdateOrderItemStatusParams{ID: id, Status: st})
 	if err != nil {
 		return nil, fmt.Errorf("failed to update order item status: %w", err)
 	}
@@ -588,7 +588,7 @@ func (s *OrderS) DeleteOrderItem(ctx context.Context, itemID string) error {
 	if err != nil {
 		return fmt.Errorf("invalid order item id: %w", err)
 	}
-	if err := s.repo.PgRepo.Repo.DeleteOrderItem(ctx, id); err != nil {
+	if err := s.repo.Tenant(ctx).DeleteOrderItem(ctx, id); err != nil {
 		return fmt.Errorf("failed to delete order item: %w", err)
 	}
 	return nil
@@ -599,7 +599,7 @@ func (s *OrderS) RestoreOrderItem(ctx context.Context, itemID string) error {
 	if err != nil {
 		return fmt.Errorf("invalid order item id: %w", err)
 	}
-	if err := s.repo.PgRepo.Repo.RestoreOrderItem(ctx, id); err != nil {
+	if err := s.repo.Tenant(ctx).RestoreOrderItem(ctx, id); err != nil {
 		return fmt.Errorf("failed to restore order item: %w", err)
 	}
 	return nil
@@ -610,7 +610,7 @@ func (s *OrderS) CancelOrderItem(ctx context.Context, itemID string) (*model.Ord
 	if err != nil {
 		return nil, fmt.Errorf("invalid order item id: %w", err)
 	}
-	item, err := s.repo.PgRepo.Repo.CancelOrderItem(ctx, id)
+	item, err := s.repo.Tenant(ctx).CancelOrderItem(ctx, id)
 	if err != nil {
 		return nil, fmt.Errorf("failed to cancel order item: %w", err)
 	}
@@ -622,7 +622,7 @@ func (s *OrderS) MarkOrderItemCooking(ctx context.Context, itemID string) (*mode
 	if err != nil {
 		return nil, fmt.Errorf("invalid order item id: %w", err)
 	}
-	item, err := s.repo.PgRepo.Repo.MarkOrderItemCooking(ctx, id)
+	item, err := s.repo.Tenant(ctx).MarkOrderItemCooking(ctx, id)
 	if err != nil {
 		return nil, fmt.Errorf("failed to mark order item cooking: %w", err)
 	}
@@ -634,7 +634,7 @@ func (s *OrderS) MarkOrderItemReady(ctx context.Context, itemID string) (*model.
 	if err != nil {
 		return nil, fmt.Errorf("invalid order item id: %w", err)
 	}
-	item, err := s.repo.PgRepo.Repo.MarkOrderItemReady(ctx, id)
+	item, err := s.repo.Tenant(ctx).MarkOrderItemReady(ctx, id)
 	if err != nil {
 		return nil, fmt.Errorf("failed to mark order item ready: %w", err)
 	}
@@ -661,7 +661,7 @@ type KitchenQueueItem struct {
 }
 
 func (s *OrderS) GetKitchenQueue(ctx context.Context) ([]KitchenQueueItem, error) {
-	rows, err := s.repo.PgRepo.Repo.GetKitchenQueue(ctx)
+	rows, err := s.repo.Tenant(ctx).GetKitchenQueue(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get kitchen queue: %w", err)
 	}

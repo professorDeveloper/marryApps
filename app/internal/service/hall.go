@@ -11,7 +11,7 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 	"gitlab.yurtal.tech/company/maryai/back/internal/model"
 	"gitlab.yurtal.tech/company/maryai/back/internal/repository"
-	pg "gitlab.yurtal.tech/company/maryai/back/internal/repository/pg"
+	pg "gitlab.yurtal.tech/company/maryai/back/internal/repository/pg/tenantsdb"
 )
 
 type HallS struct {
@@ -41,7 +41,7 @@ func (h *HallS) CreateHall(ctx context.Context, name string, branchID string, na
 		nameI18nUUID = pgtype.UUID{Bytes: *nameI18n, Valid: true}
 	}
 
-	hall, err := h.repo.PgRepo.Repo.CreateHall(ctx, pg.CreateHallParams{
+	hall, err := h.repo.Tenant(ctx).CreateHall(ctx, pg.CreateHallParams{
 		ID:       uuid.New(),
 		BranchID: bID,
 		Name:     name,
@@ -62,7 +62,7 @@ func (h *HallS) GetHallByID(ctx context.Context, hallID string) (*model.HallResp
 		return nil, fmt.Errorf("invalid hall ID: %w", err)
 	}
 
-	hall, err := h.repo.PgRepo.Repo.GetHallByID(ctx, id)
+	hall, err := h.repo.Tenant(ctx).GetHallByID(ctx, id)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return nil, fmt.Errorf("hall not found")
@@ -76,7 +76,7 @@ func (h *HallS) GetHallByID(ctx context.Context, hallID string) (*model.HallResp
 
 // GetAllHalls retrieves all halls with pagination
 func (h *HallS) GetAllHalls(ctx context.Context, limit, offset int32) ([]*model.HallResponse, error) {
-	halls, err := h.repo.PgRepo.Repo.GetAllHalls(ctx, pg.GetAllHallsParams{
+	halls, err := h.repo.Tenant(ctx).GetAllHalls(ctx, pg.GetAllHallsParams{
 		Limit:  limit,
 		Offset: offset,
 	})
@@ -99,7 +99,7 @@ func (h *HallS) GetHallsByBranchID(ctx context.Context, branchID string, limit, 
 		return nil, fmt.Errorf("invalid branch ID: %w", err)
 	}
 
-	halls, err := h.repo.PgRepo.Repo.GetHallsByBranchID(ctx, pg.GetHallsByBranchIDParams{
+	halls, err := h.repo.Tenant(ctx).GetHallsByBranchID(ctx, pg.GetHallsByBranchIDParams{
 		BranchID: id,
 		Limit:    limit,
 		Offset:   offset,
@@ -124,7 +124,7 @@ func (h *HallS) UpdateHall(ctx context.Context, hallID string, name *string, bra
 	}
 
 	// Get existing hall
-	existing, err := h.repo.PgRepo.Repo.GetHallByID(ctx, id)
+	existing, err := h.repo.Tenant(ctx).GetHallByID(ctx, id)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return nil, fmt.Errorf("hall not found")
@@ -155,7 +155,7 @@ func (h *HallS) UpdateHall(ctx context.Context, hallID string, name *string, bra
 		finalNameI18n = pgtype.UUID{Bytes: nameI18nUUID, Valid: true}
 	}
 
-	hall, err := h.repo.PgRepo.Repo.UpdateHall(ctx, pg.UpdateHallParams{
+	hall, err := h.repo.Tenant(ctx).UpdateHall(ctx, pg.UpdateHallParams{
 		ID:       id,
 		BranchID: finalBranchID,
 		Name:     finalName,
@@ -176,7 +176,7 @@ func (h *HallS) DeleteHall(ctx context.Context, hallID string) error {
 		return fmt.Errorf("invalid hall ID: %w", err)
 	}
 
-	if err := h.repo.PgRepo.Repo.DeleteHall(ctx, id); err != nil {
+	if err := h.repo.Tenant(ctx).DeleteHall(ctx, id); err != nil {
 		log.Printf("DeleteHall failed: %v", err)
 		return fmt.Errorf("failed to delete hall: %w", err)
 	}
@@ -190,12 +190,11 @@ func (h *HallS) RestoreHall(ctx context.Context, hallID string) (*model.HallResp
 		return nil, fmt.Errorf("invalid hall ID: %w", err)
 	}
 
-	if err := h.repo.PgRepo.Repo.RestoreHall(ctx, id); err != nil {
+	if err := h.repo.Tenant(ctx).RestoreHall(ctx, id); err != nil {
 		log.Printf("RestoreHall failed: %v", err)
 		return nil, fmt.Errorf("failed to restore hall: %w", err)
 	}
-
-	return h.GetHallByID(ctx, hallID)
+	return toHallResponse(pg.Hall{ID: id}), nil
 }
 
 // SearchHalls searches for halls by name
@@ -205,7 +204,7 @@ func (h *HallS) SearchHalls(ctx context.Context, query string, limit, offset int
 	}
 
 	q := query
-	halls, err := h.repo.PgRepo.Repo.SearchHalls(ctx, pg.SearchHallsParams{
+	halls, err := h.repo.Tenant(ctx).SearchHalls(ctx, pg.SearchHallsParams{
 		Column1: &q,
 		Limit:   limit,
 		Offset:  offset,

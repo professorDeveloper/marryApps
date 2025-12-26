@@ -9,7 +9,7 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 	"gitlab.yurtal.tech/company/maryai/back/internal/model"
 	"gitlab.yurtal.tech/company/maryai/back/internal/repository"
-	"gitlab.yurtal.tech/company/maryai/back/internal/repository/pg"
+	pg "gitlab.yurtal.tech/company/maryai/back/internal/repository/pg/tenantsdb"
 )
 
 type IngredientS struct {
@@ -30,7 +30,7 @@ func (i *IngredientS) CreateIngredientGroup(ctx context.Context, name string, na
 		nameI18nUUID = pgtype.UUID{Bytes: *nameI18n, Valid: true}
 	}
 
-	group, err := i.repo.PgRepo.Repo.CreateIngredientGroup(ctx, pg.CreateIngredientGroupParams{
+	group, err := i.repo.Tenant(ctx).CreateIngredientGroup(ctx, pg.CreateIngredientGroupParams{
 		ID:         uuid.New(),
 		Name:       name,
 		NameI18n:   nameI18nUUID,
@@ -50,7 +50,7 @@ func (i *IngredientS) GetIngredientGroupByID(ctx context.Context, groupID string
 		return nil, fmt.Errorf("invalid ingredient group ID: %w", err)
 	}
 
-	group, err := i.repo.PgRepo.Repo.GetIngredientGroupByID(ctx, id)
+	group, err := i.repo.Tenant(ctx).GetIngredientGroupByID(ctx, id)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get ingredient group: %w", err)
 	}
@@ -60,7 +60,7 @@ func (i *IngredientS) GetIngredientGroupByID(ctx context.Context, groupID string
 
 // GetAllIngredientGroups retrieves all ingredient groups
 func (i *IngredientS) GetAllIngredientGroups(ctx context.Context, limit, offset int32) ([]model.IngredientGroupResponse, error) {
-	groups, err := i.repo.PgRepo.Repo.GetAllIngredientGroups(ctx, pg.GetAllIngredientGroupsParams{
+	groups, err := i.repo.Tenant(ctx).GetAllIngredientGroups(ctx, pg.GetAllIngredientGroupsParams{
 		Limit:  limit,
 		Offset: offset,
 	})
@@ -84,7 +84,7 @@ func (i *IngredientS) UpdateIngredientGroup(ctx context.Context, groupID string,
 	}
 
 	// Use current values as defaults
-	groupData, err := i.repo.PgRepo.Repo.GetIngredientGroupByID(ctx, id)
+	groupData, err := i.repo.Tenant(ctx).GetIngredientGroupByID(ctx, id)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get ingredient group: %w", err)
 	}
@@ -108,7 +108,7 @@ func (i *IngredientS) UpdateIngredientGroup(ctx context.Context, groupID string,
 		updatedPictureUrl = pictureUrl
 	}
 
-	group, err := i.repo.PgRepo.Repo.UpdateIngredientGroup(ctx, pg.UpdateIngredientGroupParams{
+	group, err := i.repo.Tenant(ctx).UpdateIngredientGroup(ctx, pg.UpdateIngredientGroupParams{
 		ID:         id,
 		Name:       updatedName,
 		NameI18n:   updatedNameI18n,
@@ -128,7 +128,7 @@ func (i *IngredientS) DeleteIngredientGroup(ctx context.Context, groupID string)
 		return fmt.Errorf("invalid ingredient group ID: %w", err)
 	}
 
-	if err := i.repo.PgRepo.Repo.DeleteIngredientGroup(ctx, id); err != nil {
+	if err := i.repo.Tenant(ctx).DeleteIngredientGroup(ctx, id); err != nil {
 		return fmt.Errorf("failed to delete ingredient group: %w", err)
 	}
 
@@ -142,7 +142,7 @@ func (i *IngredientS) RestoreIngredientGroup(ctx context.Context, groupID string
 		return fmt.Errorf("invalid ingredient group ID: %w", err)
 	}
 
-	if err := i.repo.PgRepo.Repo.RestoreIngredientGroup(ctx, id); err != nil {
+	if err := i.repo.Tenant(ctx).RestoreIngredientGroup(ctx, id); err != nil {
 		return fmt.Errorf("failed to restore ingredient group: %w", err)
 	}
 
@@ -185,7 +185,7 @@ func (i *IngredientS) CreateIngredient(ctx context.Context, name string, nameI18
 		measurementNullable = pg.NullMeasurementType{MeasurementType: pg.MeasurementType(*measurement), Valid: true}
 	}
 
-	ingredient, err := i.repo.PgRepo.Repo.CreateIngredient(ctx, pg.CreateIngredientParams{
+	ingredient, err := i.repo.Tenant(ctx).CreateIngredient(ctx, pg.CreateIngredientParams{
 		ID:          uuid.New(),
 		Name:        name,
 		NameI18n:    nameI18nUUID,
@@ -208,7 +208,7 @@ func (i *IngredientS) GetIngredientByID(ctx context.Context, ingredientID string
 		return nil, fmt.Errorf("invalid ingredient ID: %w", err)
 	}
 
-	ingredient, err := i.repo.PgRepo.Repo.GetIngredientByID(ctx, id)
+	ingredient, err := i.repo.Tenant(ctx).GetIngredientByID(ctx, id)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get ingredient: %w", err)
 	}
@@ -218,7 +218,7 @@ func (i *IngredientS) GetIngredientByID(ctx context.Context, ingredientID string
 
 // GetAllIngredients retrieves all ingredients
 func (i *IngredientS) GetAllIngredients(ctx context.Context, limit, offset int32) ([]model.IngredientResponse, error) {
-	ingredients, err := i.repo.PgRepo.Repo.GetAllIngredients(ctx, pg.GetAllIngredientsParams{
+	ingredients, err := i.repo.Tenant(ctx).GetAllIngredients(ctx, pg.GetAllIngredientsParams{
 		Limit:  limit,
 		Offset: offset,
 	})
@@ -241,7 +241,7 @@ func (i *IngredientS) GetIngredientsByGroupID(ctx context.Context, groupID strin
 		return nil, fmt.Errorf("invalid group ID: %w", err)
 	}
 
-	ingredients, err := i.repo.PgRepo.Repo.GetIngredientsByGroupID(ctx, pg.GetIngredientsByGroupIDParams{
+	ingredients, err := i.repo.Tenant(ctx).GetIngredientsByGroupID(ctx, pg.GetIngredientsByGroupIDParams{
 		GroupID: pgtype.UUID{Bytes: id, Valid: true},
 		Limit:   limit,
 		Offset:  offset,
@@ -265,7 +265,7 @@ func (i *IngredientS) UpdateIngredient(ctx context.Context, ingredientID string,
 		return nil, fmt.Errorf("invalid ingredient ID: %w", err)
 	}
 
-	existing, err := i.repo.PgRepo.Repo.GetIngredientByID(ctx, id)
+	existing, err := i.repo.Tenant(ctx).GetIngredientByID(ctx, id)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get ingredient: %w", err)
 	}
@@ -307,7 +307,7 @@ func (i *IngredientS) UpdateIngredient(ctx context.Context, ingredientID string,
 		finalMeasurement = pg.NullMeasurementType{MeasurementType: pg.MeasurementType(*measurement), Valid: true}
 	}
 
-	ingredient, err := i.repo.PgRepo.Repo.UpdateIngredient(ctx, pg.UpdateIngredientParams{
+	ingredient, err := i.repo.Tenant(ctx).UpdateIngredient(ctx, pg.UpdateIngredientParams{
 		ID:          id,
 		Name:        finalName,
 		NameI18n:    finalNameI18n,
@@ -330,7 +330,7 @@ func (i *IngredientS) DeleteIngredient(ctx context.Context, ingredientID string)
 		return fmt.Errorf("invalid ingredient ID: %w", err)
 	}
 
-	if err := i.repo.PgRepo.Repo.DeleteIngredient(ctx, id); err != nil {
+	if err := i.repo.Tenant(ctx).DeleteIngredient(ctx, id); err != nil {
 		return fmt.Errorf("failed to delete ingredient: %w", err)
 	}
 
@@ -344,7 +344,7 @@ func (i *IngredientS) RestoreIngredient(ctx context.Context, ingredientID string
 		return fmt.Errorf("invalid ingredient ID: %w", err)
 	}
 
-	if err := i.repo.PgRepo.Repo.RestoreIngredient(ctx, id); err != nil {
+	if err := i.repo.Tenant(ctx).RestoreIngredient(ctx, id); err != nil {
 		return fmt.Errorf("failed to restore ingredient: %w", err)
 	}
 
@@ -372,7 +372,7 @@ func (i *IngredientS) CreateIngredientStock(ctx context.Context, ingredientID st
 		return nil, fmt.Errorf("invalid branch ID: %w", err)
 	}
 
-	stock, err := i.repo.PgRepo.Repo.CreateIngredientStock(ctx, pg.CreateIngredientStockParams{
+	stock, err := i.repo.Tenant(ctx).CreateIngredientStock(ctx, pg.CreateIngredientStockParams{
 		ID:           uuid.New(),
 		IngredientID: ingID,
 		Quantity:     quantity,
@@ -392,7 +392,7 @@ func (i *IngredientS) GetIngredientStockByID(ctx context.Context, stockID string
 		return nil, fmt.Errorf("invalid stock ID: %w", err)
 	}
 
-	stock, err := i.repo.PgRepo.Repo.GetIngredientStockByID(ctx, id)
+	stock, err := i.repo.Tenant(ctx).GetIngredientStockByID(ctx, id)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get ingredient stock: %w", err)
 	}
@@ -412,7 +412,7 @@ func (i *IngredientS) GetStockByIngredientAndBranch(ctx context.Context, ingredi
 		return nil, fmt.Errorf("invalid branch ID: %w", err)
 	}
 
-	stock, err := i.repo.PgRepo.Repo.GetStockByIngredientAndBranch(ctx, pg.GetStockByIngredientAndBranchParams{
+	stock, err := i.repo.Tenant(ctx).GetStockByIngredientAndBranch(ctx, pg.GetStockByIngredientAndBranchParams{
 		IngredientID: ingID,
 		BranchID:     bID,
 	})
@@ -425,7 +425,7 @@ func (i *IngredientS) GetStockByIngredientAndBranch(ctx context.Context, ingredi
 
 // GetAllIngredientStock retrieves all ingredient stock entries
 func (i *IngredientS) GetAllIngredientStock(ctx context.Context, limit, offset int32) ([]model.IngredientStockResponse, error) {
-	stocks, err := i.repo.PgRepo.Repo.GetAllIngredientStock(ctx, pg.GetAllIngredientStockParams{
+	stocks, err := i.repo.Tenant(ctx).GetAllIngredientStock(ctx, pg.GetAllIngredientStockParams{
 		Limit:  limit,
 		Offset: offset,
 	})
@@ -448,7 +448,7 @@ func (i *IngredientS) GetStockByBranchID(ctx context.Context, branchID string, l
 		return nil, fmt.Errorf("invalid branch ID: %w", err)
 	}
 
-	stocks, err := i.repo.PgRepo.Repo.GetStockByBranchID(ctx, pg.GetStockByBranchIDParams{
+	stocks, err := i.repo.Tenant(ctx).GetStockByBranchID(ctx, pg.GetStockByBranchIDParams{
 		BranchID: bID,
 		Limit:    limit,
 		Offset:   offset,
@@ -472,7 +472,7 @@ func (i *IngredientS) GetStockByIngredientID(ctx context.Context, ingredientID s
 		return nil, fmt.Errorf("invalid ingredient ID: %w", err)
 	}
 
-	stocks, err := i.repo.PgRepo.Repo.GetStockByIngredientID(ctx, pg.GetStockByIngredientIDParams{
+	stocks, err := i.repo.Tenant(ctx).GetStockByIngredientID(ctx, pg.GetStockByIngredientIDParams{
 		IngredientID: ingID,
 		Limit:        limit,
 		Offset:       offset,
@@ -496,7 +496,7 @@ func (i *IngredientS) UpdateIngredientStock(ctx context.Context, stockID string,
 		return nil, fmt.Errorf("invalid stock ID: %w", err)
 	}
 
-	stock, err := i.repo.PgRepo.Repo.UpdateIngredientStock(ctx, pg.UpdateIngredientStockParams{
+	stock, err := i.repo.Tenant(ctx).UpdateIngredientStock(ctx, pg.UpdateIngredientStockParams{
 		ID:       id,
 		Quantity: quantity,
 	})
@@ -514,7 +514,7 @@ func (i *IngredientS) AddToIngredientStock(ctx context.Context, stockID string, 
 		return nil, fmt.Errorf("invalid stock ID: %w", err)
 	}
 
-	stock, err := i.repo.PgRepo.Repo.AddToIngredientStock(ctx, pg.AddToIngredientStockParams{
+	stock, err := i.repo.Tenant(ctx).AddToIngredientStock(ctx, pg.AddToIngredientStockParams{
 		ID:       id,
 		Quantity: quantity,
 	})
@@ -532,7 +532,7 @@ func (i *IngredientS) RemoveFromIngredientStock(ctx context.Context, stockID str
 		return nil, fmt.Errorf("invalid stock ID: %w", err)
 	}
 
-	stock, err := i.repo.PgRepo.Repo.RemoveFromIngredientStock(ctx, pg.RemoveFromIngredientStockParams{
+	stock, err := i.repo.Tenant(ctx).RemoveFromIngredientStock(ctx, pg.RemoveFromIngredientStockParams{
 		ID:       id,
 		Quantity: quantity,
 	})
@@ -550,7 +550,7 @@ func (i *IngredientS) DeleteIngredientStock(ctx context.Context, stockID string)
 		return fmt.Errorf("invalid stock ID: %w", err)
 	}
 
-	if err := i.repo.PgRepo.Repo.DeleteIngredientStock(ctx, id); err != nil {
+	if err := i.repo.Tenant(ctx).DeleteIngredientStock(ctx, id); err != nil {
 		return fmt.Errorf("failed to delete ingredient stock: %w", err)
 	}
 
@@ -564,7 +564,7 @@ func (i *IngredientS) RestoreIngredientStock(ctx context.Context, stockID string
 		return fmt.Errorf("invalid stock ID: %w", err)
 	}
 
-	if err := i.repo.PgRepo.Repo.RestoreIngredientStock(ctx, id); err != nil {
+	if err := i.repo.Tenant(ctx).RestoreIngredientStock(ctx, id); err != nil {
 		return fmt.Errorf("failed to restore ingredient stock: %w", err)
 	}
 

@@ -17,9 +17,15 @@ type RegisterResponse struct {
 	Message string `json:"message"`
 }
 type LoginRequest struct {
-	Username string `json:"username" example:"admin"`
-	Password string `json:"password,omitempty" example:"Password:Javohir"`
-	Pincode  string `json:"pincode,omitempty" example:"1234"`
+	Username string  `json:"username" example:"admin"`
+	Password string  `json:"password,omitempty" example:"Password:Javohir"`
+	Pincode  string  `json:"pincode,omitempty" example:"1234"`
+	BrandID  *string `json:"brandId,omitempty" example:"550e8400-e29b-41d4-a716-446655440000"`
+}
+
+type GlobalLoginRequest struct {
+	Username string `json:"username" example:"superadmin"`
+	Password string `json:"password" example:"superadmin123"`
 }
 
 type LoginResponse struct {
@@ -29,12 +35,13 @@ type LoginResponse struct {
 }
 
 type RegisterRequest struct {
-	FullName    string `json:"fullName" example:"Javohir Khasanov"`
-	PhoneNumber string `json:"phoneNumber" example:"+998957749110"`
-	Username    string `json:"username" example:"admin"`
-	Password    string `json:"password,omitempty" example:"Password:Javohir"`
-	Pincode     string `json:"pincode,omitempty" example:"1234"`
-	Role        string `json:"role" example:"user"`
+	FullName    string  `json:"fullName" example:"Javohir Khasanov"`
+	PhoneNumber string  `json:"phoneNumber" example:"+998957749110"`
+	Username    string  `json:"username" example:"admin"`
+	Password    string  `json:"password,omitempty" example:"Password:Javohir"`
+	Pincode     string  `json:"pincode,omitempty" example:"1234"`
+	Role        string  `json:"role" example:"user"`
+	BrandID     *string `json:"brandId,omitempty" example:"550e8400-e29b-41d4-a716-446655440000"`
 }
 
 type ErrorResponse struct {
@@ -63,7 +70,7 @@ type UserResponse struct {
 	Email       *string    `json:"email,omitempty" example:"user@example.com"`
 	PhoneNumber *string    `json:"phone_number,omitempty" example:"+998901234567"`
 	ShiftID     *string    `json:"shift_id,omitempty" example:"123e4567-e89b-12d3-a456-426614174000"`
-	BrandID     *int64     `json:"brand_id,omitempty" example:"1"`
+	BrandID     *string    `json:"brand_id,omitempty" example:"550e8400-e29b-41d4-a716-446655440000"`
 	CreatedAt   *time.Time `json:"created_at,omitempty" example:"2022-01-01T00:00:00Z"`
 	UpdatedAt   *time.Time `json:"updated_at,omitempty" example:"2022-01-01T00:00:00Z"`
 }

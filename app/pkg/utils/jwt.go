@@ -1,0 +1,80 @@
+package utils
+
+import (
+	"fmt"
+	"time"
+
+	"github.com/dgrijalva/jwt-go"
+	"github.com/google/uuid"
+)
+
+// JWTClaims represents custom JWT claims with multi-tenant support
+type JWTClaims struct {
+	UserID   uuid.UUID  `json:"user_id"`
+	BrandID  *uuid.UUID `json:"brand_id,omitempty"`
+	Role     string     `json:"role"`
+	IsGlobal bool       `json:"is_global"`
+	jwt.StandardClaims
+}
+
+// CreateJWTWithClaims creates a JWT token with custom claims including role/is_global and optional brand_id
+func CreateJWTWithClaims(ttl time.Duration, userID uuid.UUID, brandID *uuid.UUID, role string, isGlobal bool, secretKey string) (string, error) {
+	now := time.Now().UTC()
+	expiresAt := now.Add(ttl)
+
+	claims := JWTClaims{
+		UserID:   userID,
+		BrandID:  brandID,
+		Role:     role,
+		IsGlobal: isGlobal,
+		StandardClaims: jwt.StandardClaims{
+			Subject:   userID.String(),
+			ExpiresAt: expiresAt.Unix(),
+			IssuedAt:  now.Unix(),
+			NotBefore: now.Unix(),
+		},
+	}
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	tokenString, err := token.SignedString([]byte(secretKey))
+	if err != nil {
+		return "", fmt.Errorf("failed to sign token: %w", err)
+	}
+
+	return tokenString, nil
+}
+
+// ValidateJWTWithClaims validates JWT and returns custom claims
+func ValidateJWTWithClaims(tokenString string, secretKey string) (*JWTClaims, error) {
+	claims := &JWTClaims{}
+
+	token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+		}
+		return []byte(secretKey), nil
+	})
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse token: %w", err)
+	}
+
+	if !token.Valid {
+		return nil, fmt.Errorf("invalid token")
+	}
+
+	if claims, ok := token.Claims.(*JWTClaims); ok && token.Valid {
+		return claims, nil
+	}
+
+	return nil, fmt.Errorf("invalid claims format")
+}
+
+// ParseUUID parses a string to UUID, returning error if invalid
+func ParseUUID(s string) (uuid.UUID, error) {
+	id, err := uuid.Parse(s)
+	if err != nil {
+		return uuid.Nil, fmt.Errorf("invalid UUID format: %w", err)
+	}
+	return id, nil
+}

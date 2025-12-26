@@ -11,7 +11,7 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 	"gitlab.yurtal.tech/company/maryai/back/internal/model"
 	"gitlab.yurtal.tech/company/maryai/back/internal/repository"
-	pg "gitlab.yurtal.tech/company/maryai/back/internal/repository/pg"
+	pg "gitlab.yurtal.tech/company/maryai/back/internal/repository/pg/tenantsdb"
 )
 
 type DepartmentS struct {
@@ -45,7 +45,7 @@ func (d *DepartmentS) CreateDepartment(ctx context.Context, name string, nameI18
 		storageUUID = pgtype.UUID{Bytes: id, Valid: true}
 	}
 
-	department, err := d.repo.PgRepo.Repo.CreateDepartment(ctx, pg.CreateDepartmentParams{
+	department, err := d.repo.Tenant(ctx).CreateDepartment(ctx, pg.CreateDepartmentParams{
 		ID:        uuid.New(),
 		Name:      name,
 		NameI18n:  nameI18nUUID,
@@ -66,7 +66,7 @@ func (d *DepartmentS) GetDepartmentByID(ctx context.Context, departmentID string
 		return nil, fmt.Errorf("invalid department ID: %w", err)
 	}
 
-	department, err := d.repo.PgRepo.Repo.GetDepartmentByID(ctx, id)
+	department, err := d.repo.Tenant(ctx).GetDepartmentByID(ctx, id)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return nil, fmt.Errorf("department not found")
@@ -80,7 +80,7 @@ func (d *DepartmentS) GetDepartmentByID(ctx context.Context, departmentID string
 
 // GetAllDepartments retrieves all departments with pagination
 func (d *DepartmentS) GetAllDepartments(ctx context.Context, limit, offset int32) ([]*model.DepartmentResponse, error) {
-	departments, err := d.repo.PgRepo.Repo.GetAllDepartments(ctx, pg.GetAllDepartmentsParams{
+	departments, err := d.repo.Tenant(ctx).GetAllDepartments(ctx, pg.GetAllDepartmentsParams{
 		Limit:  limit,
 		Offset: offset,
 	})
@@ -103,7 +103,7 @@ func (d *DepartmentS) GetDepartmentsByStorageID(ctx context.Context, storageID s
 		return nil, fmt.Errorf("invalid storage ID: %w", err)
 	}
 
-	departments, err := d.repo.PgRepo.Repo.GetDepartmentsByStorageID(ctx, pg.GetDepartmentsByStorageIDParams{
+	departments, err := d.repo.Tenant(ctx).GetDepartmentsByStorageID(ctx, pg.GetDepartmentsByStorageIDParams{
 		StorageID: pgtype.UUID{Bytes: id, Valid: true},
 		Limit:     limit,
 		Offset:    offset,
@@ -128,7 +128,7 @@ func (d *DepartmentS) UpdateDepartment(ctx context.Context, departmentID string,
 	}
 
 	// Get existing department
-	existing, err := d.repo.PgRepo.Repo.GetDepartmentByID(ctx, id)
+	existing, err := d.repo.Tenant(ctx).GetDepartmentByID(ctx, id)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return nil, fmt.Errorf("department not found")
@@ -159,7 +159,7 @@ func (d *DepartmentS) UpdateDepartment(ctx context.Context, departmentID string,
 		finalStorageID = pgtype.UUID{Bytes: storageUUID, Valid: true}
 	}
 
-	department, err := d.repo.PgRepo.Repo.UpdateDepartment(ctx, pg.UpdateDepartmentParams{
+	department, err := d.repo.Tenant(ctx).UpdateDepartment(ctx, pg.UpdateDepartmentParams{
 		ID:        id,
 		Name:      finalName,
 		NameI18n:  finalNameI18n,
@@ -180,7 +180,7 @@ func (d *DepartmentS) DeleteDepartment(ctx context.Context, departmentID string)
 		return fmt.Errorf("invalid department ID: %w", err)
 	}
 
-	if err := d.repo.PgRepo.Repo.DeleteDepartment(ctx, id); err != nil {
+	if err := d.repo.Tenant(ctx).DeleteDepartment(ctx, id); err != nil {
 		log.Printf("DeleteDepartment failed: %v", err)
 		return fmt.Errorf("failed to delete department: %w", err)
 	}
@@ -194,7 +194,7 @@ func (d *DepartmentS) RestoreDepartment(ctx context.Context, departmentID string
 		return nil, fmt.Errorf("invalid department ID: %w", err)
 	}
 
-	if err := d.repo.PgRepo.Repo.RestoreDepartment(ctx, id); err != nil {
+	if err := d.repo.Tenant(ctx).RestoreDepartment(ctx, id); err != nil {
 		log.Printf("RestoreDepartment failed: %v", err)
 		return nil, fmt.Errorf("failed to restore department: %w", err)
 	}
@@ -209,7 +209,7 @@ func (d *DepartmentS) SearchDepartments(ctx context.Context, query string, limit
 	}
 
 	q := query
-	departments, err := d.repo.PgRepo.Repo.SearchDepartments(ctx, pg.SearchDepartmentsParams{
+	departments, err := d.repo.Tenant(ctx).SearchDepartments(ctx, pg.SearchDepartmentsParams{
 		Column1: &q,
 		Limit:   limit,
 		Offset:  offset,

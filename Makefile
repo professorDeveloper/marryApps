@@ -24,7 +24,8 @@ swaggen:
 	cd ${APP_DIR} && swag init -g internal/app/app.go -o internal/api/docs
 
 sqlc-gen:
-	cd ${SQLC_DIR}/ && sqlc generate
+	cd ${SQLC_DIR}/tenants && sqlc generate
+	cd ${SQLC_DIR}/main && sqlc generate
 
 local-infra-up:
 	docker compose -f docker-compose.local-infra.yml up -d
@@ -34,3 +35,9 @@ local-infra-down:
 
 local-infra-full-down:
 	docker compose -f docker-compose.local-infra.yml down -v
+
+local-infra-reset: local-infra-full-down local-infra-up
+	@echo "Waiting for PostgreSQL to be ready..."
+	@sleep 5
+	@echo "Infrastructure reset complete!"
+

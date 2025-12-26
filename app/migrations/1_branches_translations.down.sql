@@ -1,4 +1,0 @@
-DROP TABLE IF EXISTS translations CASCADE;
-DROP TABLE IF EXISTS branches CASCADE;
-
-DROP INDEX IF EXISTS idx_branches_deleted;

@@ -9,7 +9,7 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 	"gitlab.yurtal.tech/company/maryai/back/internal/model"
 	"gitlab.yurtal.tech/company/maryai/back/internal/repository"
-	"gitlab.yurtal.tech/company/maryai/back/internal/repository/pg"
+	pg "gitlab.yurtal.tech/company/maryai/back/internal/repository/pg/tenantsdb"
 )
 
 type OrganizationS struct {
@@ -31,7 +31,7 @@ func (o *OrganizationS) CreateBranch(ctx context.Context, name string, nameI18n 
 		nameI18nUUID = pgtype.UUID{Bytes: *nameI18n, Valid: true}
 	}
 
-	branch, err := o.repo.PgRepo.Repo.CreateBranch(ctx, pg.CreateBranchParams{
+	branch, err := o.repo.Tenant(ctx).CreateBranch(ctx, pg.CreateBranchParams{
 		ID: uuid.New(), Name: name, NameI18n: nameI18nUUID, Address: address, Phone: phone,
 	})
 	if err != nil {
@@ -46,7 +46,7 @@ func (o *OrganizationS) GetBranchByID(ctx context.Context, branchID string) (*mo
 	if err != nil {
 		return nil, fmt.Errorf("invalid branch ID: %w", err)
 	}
-	branch, err := o.repo.PgRepo.Repo.GetBranchByID(ctx, id)
+	branch, err := o.repo.Tenant(ctx).GetBranchByID(ctx, id)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get branch: %w", err)
 	}
@@ -55,7 +55,7 @@ func (o *OrganizationS) GetBranchByID(ctx context.Context, branchID string) (*mo
 
 // GetAllBranches retrieves all branches
 func (o *OrganizationS) GetAllBranches(ctx context.Context, limit, offset int32) ([]model.BranchResponse, error) {
-	branches, err := o.repo.PgRepo.Repo.GetAllBranches(ctx, pg.GetAllBranchesParams{Limit: limit, Offset: offset})
+	branches, err := o.repo.Tenant(ctx).GetAllBranches(ctx, pg.GetAllBranchesParams{Limit: limit, Offset: offset})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get branches: %w", err)
 	}
@@ -72,7 +72,7 @@ func (o *OrganizationS) DeleteBranch(ctx context.Context, branchID string) error
 	if err != nil {
 		return fmt.Errorf("invalid branch ID: %w", err)
 	}
-	if err := o.repo.PgRepo.Repo.DeleteBranch(ctx, id); err != nil {
+	if err := o.repo.Tenant(ctx).DeleteBranch(ctx, id); err != nil {
 		return fmt.Errorf("failed to delete branch: %w", err)
 	}
 	return nil
@@ -84,7 +84,7 @@ func (o *OrganizationS) RestoreBranch(ctx context.Context, branchID string) erro
 	if err != nil {
 		return fmt.Errorf("invalid branch ID: %w", err)
 	}
-	if err := o.repo.PgRepo.Repo.RestoreBranch(ctx, id); err != nil {
+	if err := o.repo.Tenant(ctx).RestoreBranch(ctx, id); err != nil {
 		return fmt.Errorf("failed to restore branch: %w", err)
 	}
 	return nil
@@ -92,7 +92,7 @@ func (o *OrganizationS) RestoreBranch(ctx context.Context, branchID string) erro
 
 // CreateTranslation creates a new translation
 func (o *OrganizationS) CreateTranslation(ctx context.Context, uz, ru, en *string) (*model.TranslationResponse, error) {
-	translation, err := o.repo.PgRepo.Repo.CreateTranslation(ctx, pg.CreateTranslationParams{
+	translation, err := o.repo.Tenant(ctx).CreateTranslation(ctx, pg.CreateTranslationParams{
 		ID: uuid.New(), Uz: uz, Ru: ru, En: en,
 	})
 	if err != nil {
@@ -107,7 +107,7 @@ func (o *OrganizationS) GetTranslationByID(ctx context.Context, translationID st
 	if err != nil {
 		return nil, fmt.Errorf("invalid translation ID: %w", err)
 	}
-	translation, err := o.repo.PgRepo.Repo.GetTranslationByID(ctx, id)
+	translation, err := o.repo.Tenant(ctx).GetTranslationByID(ctx, id)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get translation: %w", err)
 	}
@@ -116,7 +116,7 @@ func (o *OrganizationS) GetTranslationByID(ctx context.Context, translationID st
 
 // GetAllTranslations retrieves all translations
 func (o *OrganizationS) GetAllTranslations(ctx context.Context, limit, offset int32) ([]model.TranslationResponse, error) {
-	translations, err := o.repo.PgRepo.Repo.GetAllTranslations(ctx, pg.GetAllTranslationsParams{Limit: limit, Offset: offset})
+	translations, err := o.repo.Tenant(ctx).GetAllTranslations(ctx, pg.GetAllTranslationsParams{Limit: limit, Offset: offset})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get translations: %w", err)
 	}
@@ -133,7 +133,7 @@ func (o *OrganizationS) DeleteTranslation(ctx context.Context, translationID str
 	if err != nil {
 		return fmt.Errorf("invalid translation ID: %w", err)
 	}
-	if err := o.repo.PgRepo.Repo.DeleteTranslation(ctx, id); err != nil {
+	if err := o.repo.Tenant(ctx).DeleteTranslation(ctx, id); err != nil {
 		return fmt.Errorf("failed to delete translation: %w", err)
 	}
 	return nil
@@ -145,7 +145,7 @@ func (o *OrganizationS) RestoreTranslation(ctx context.Context, translationID st
 	if err != nil {
 		return fmt.Errorf("invalid translation ID: %w", err)
 	}
-	if err := o.repo.PgRepo.Repo.RestoreTranslation(ctx, id); err != nil {
+	if err := o.repo.Tenant(ctx).RestoreTranslation(ctx, id); err != nil {
 		return fmt.Errorf("failed to restore translation: %w", err)
 	}
 	return nil

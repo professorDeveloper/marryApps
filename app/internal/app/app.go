@@ -30,9 +30,9 @@ import (
 // @title MaryAI API
 // @version 1.0
 // @description MaryAI API server with multi-language support (uz, ru, en)
-// @host back.maryai.yurtal.tech
+// @host localhost:8080
 // @BasePath /
-// @schemes https
+// @schemes http
 
 // @securityDefinitions.apikey BearerAuth
 // @in header
@@ -51,17 +51,47 @@ func Run(cfg *config.Config) {
 
 	e := echo.New()
 
-	pgClient, err := pg.New(pg.Username(cfg.Postgres.User), pg.Password(cfg.Postgres.Password),
+	mainPgClient, err := pg.New(pg.Username(cfg.MainPostgres.User), pg.Password(cfg.MainPostgres.Password),
+		pg.Host(cfg.MainPostgres.Host), pg.Port(cfg.MainPostgres.Port),
+		pg.Database(cfg.MainPostgres.Db), pg.MaxPoolSize(cfg.MainPostgres.MaxPoolSize))
+	if err != nil {
+		l.Fatalf("app - Run - pg.New(main): %v", err)
+	}
+	defer mainPgClient.Close()
+
+	tenantPgClient, err := pg.New(pg.Username(cfg.Postgres.User), pg.Password(cfg.Postgres.Password),
 		pg.Host(cfg.Postgres.Host), pg.Port(cfg.Postgres.Port),
 		pg.Database(cfg.Postgres.Db), pg.MaxPoolSize(cfg.Postgres.MaxPoolSize))
 	if err != nil {
-		l.Fatalf("app - Run - pg.New: %v", err)
+		l.Fatalf("app - Run - pg.New(tenant): %v", err)
 	}
-	defer pgClient.Close()
+	defer tenantPgClient.Close()
 
-	err = migrate.RunMigrations(ctx, pgClient.Pool)
+	err = migrate.RunMigrationsFromSubdir(ctx, mainPgClient.Pool, "main")
 	if err != nil {
-		l.Fatalf("app - Run - RunMigrations: %v", err)
+		l.Fatalf("app - Run - RunMigrations(main): %v", err)
+	}
+
+	globalUsername := cfg.GlobalSA.Username
+	globalPassword := cfg.GlobalSA.Password
+	globalEmail := cfg.GlobalSA.Email
+	if globalUsername != "" && globalPassword != "" && globalEmail != "" {
+		_, sErr := mainPgClient.Pool.Exec(
+			ctx,
+			"INSERT INTO users (username, password, email, role) VALUES ($1, $2, $3, 'superadmin') ON CONFLICT (username) DO UPDATE SET password = EXCLUDED.password, email = EXCLUDED.email, role = 'superadmin', updated_at = NOW()",
+			globalUsername,
+			globalPassword,
+			globalEmail,
+		)
+		if sErr != nil {
+			l.Fatalf("app - Run - seed global superadmin: %v", sErr)
+		}
+		l.Info("seeded global superadmin in main DB")
+	}
+
+	err = migrate.RunMigrationsFromSubdir(ctx, tenantPgClient.Pool, "tenants")
+	if err != nil {
+		l.Fatalf("app - Run - RunMigrations(tenants): %v", err)
 	}
 
 	minioClient, err := minio.New(minio.Endpoint(cfg.Minio.Endpoint), minio.AccessKeyID(cfg.Minio.AccessKey), minio.SecretAccessKey(cfg.Minio.SecretKey), minio.UseSSL(cfg.Minio.UseSSL))
@@ -69,7 +99,7 @@ func Run(cfg *config.Config) {
 		l.Fatalf("app - Run - minio.New: %v", err)
 	}
 
-	repos := repository.New(pgClient, minioClient)
+	repos := repository.New(mainPgClient.Pool, tenantPgClient.Pool, minioClient)
 
 	service := service.New(cfg, repos, clickClient, paymeClient, minioClient)
 

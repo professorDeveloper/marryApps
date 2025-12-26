@@ -8,7 +8,7 @@ import (
 	"github.com/google/uuid"
 	"gitlab.yurtal.tech/company/maryai/back/internal/model"
 	"gitlab.yurtal.tech/company/maryai/back/internal/repository"
-	"gitlab.yurtal.tech/company/maryai/back/internal/repository/pg"
+	pg "gitlab.yurtal.tech/company/maryai/back/internal/repository/pg/tenantsdb"
 )
 
 type CafeTableS struct {
@@ -46,7 +46,7 @@ func (s *CafeTableS) CreateCafeTable(ctx context.Context, hallID string, number 
 		Valid:       true,
 	}
 
-	table, err := s.repo.PgRepo.Repo.CreateCafeTable(ctx, pg.CreateCafeTableParams{
+	table, err := s.repo.Tenant(ctx).CreateCafeTable(ctx, pg.CreateCafeTableParams{
 		ID:       uuid.New(),
 		HallID:   hID,
 		Number:   number,
@@ -67,7 +67,7 @@ func (s *CafeTableS) GetCafeTableByID(ctx context.Context, tableID string) (*mod
 		return nil, fmt.Errorf("invalid table ID: %w", err)
 	}
 
-	table, err := s.repo.PgRepo.Repo.GetCafeTableByID(ctx, id)
+	table, err := s.repo.Tenant(ctx).GetCafeTableByID(ctx, id)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get cafe table: %w", err)
 	}
@@ -77,7 +77,7 @@ func (s *CafeTableS) GetCafeTableByID(ctx context.Context, tableID string) (*mod
 
 // GetAllCafeTables retrieves all cafe tables with pagination
 func (s *CafeTableS) GetAllCafeTables(ctx context.Context, limit, offset int32) ([]model.CafeTableResponse, error) {
-	tables, err := s.repo.PgRepo.Repo.GetAllCafeTables(ctx, pg.GetAllCafeTablesParams{
+	tables, err := s.repo.Tenant(ctx).GetAllCafeTables(ctx, pg.GetAllCafeTablesParams{
 		Limit:  limit,
 		Offset: offset,
 	})
@@ -100,7 +100,7 @@ func (s *CafeTableS) GetCafeTablesByHallID(ctx context.Context, hallID string, l
 		return nil, fmt.Errorf("invalid hall ID: %w", err)
 	}
 
-	tables, err := s.repo.PgRepo.Repo.GetCafeTablesByHallID(ctx, hID)
+	tables, err := s.repo.Tenant(ctx).GetCafeTablesByHallID(ctx, hID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get cafe tables by hall: %w", err)
 	}
@@ -134,7 +134,7 @@ func (s *CafeTableS) GetCafeTablesByStatus(ctx context.Context, status string, l
 		Valid:       true,
 	}
 
-	tables, err := s.repo.PgRepo.Repo.GetCafeTablesByStatus(ctx, pg.GetCafeTablesByStatusParams{
+	tables, err := s.repo.Tenant(ctx).GetCafeTablesByStatus(ctx, pg.GetCafeTablesByStatusParams{
 		Status: nullStatus,
 		Limit:  limit,
 		Offset: offset,
@@ -163,7 +163,7 @@ func (s *CafeTableS) GetCafeTablesByHallAndStatus(ctx context.Context, hallID, s
 		Valid:       true,
 	}
 
-	tables, err := s.repo.PgRepo.Repo.GetCafeTablesByHallAndStatus(ctx, pg.GetCafeTablesByHallAndStatusParams{
+	tables, err := s.repo.Tenant(ctx).GetCafeTablesByHallAndStatus(ctx, pg.GetCafeTablesByHallAndStatusParams{
 		HallID: hID,
 		Status: nullStatus,
 	})
@@ -186,7 +186,7 @@ func (s *CafeTableS) GetAvailableTablesByHall(ctx context.Context, hallID string
 		return nil, fmt.Errorf("invalid hall ID: %w", err)
 	}
 
-	tables, err := s.repo.PgRepo.Repo.GetAvailableTablesByHall(ctx, hID)
+	tables, err := s.repo.Tenant(ctx).GetAvailableTablesByHall(ctx, hID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get available tables: %w", err)
 	}
@@ -205,7 +205,7 @@ func (s *CafeTableS) GetAvailableTablesByCapacity(ctx context.Context, capacity,
 		return nil, fmt.Errorf("capacity must be greater than 0")
 	}
 
-	tables, err := s.repo.PgRepo.Repo.GetAvailableTablesByCapacity(ctx, pg.GetAvailableTablesByCapacityParams{
+	tables, err := s.repo.Tenant(ctx).GetAvailableTablesByCapacity(ctx, pg.GetAvailableTablesByCapacityParams{
 		Capacity: capacity,
 		Limit:    limit,
 		Offset:   offset,
@@ -229,7 +229,7 @@ func (s *CafeTableS) GetAvailableTablesByHallAndCapacity(ctx context.Context, ha
 		return nil, fmt.Errorf("invalid hall ID: %w", err)
 	}
 
-	tables, err := s.repo.PgRepo.Repo.GetAvailableTablesByHallAndCapacity(ctx, pg.GetAvailableTablesByHallAndCapacityParams{
+	tables, err := s.repo.Tenant(ctx).GetAvailableTablesByHallAndCapacity(ctx, pg.GetAvailableTablesByHallAndCapacityParams{
 		HallID:   hID,
 		Capacity: capacity,
 	})
@@ -253,7 +253,7 @@ func (s *CafeTableS) UpdateCafeTable(ctx context.Context, tableID string, hallID
 	}
 
 	// Get current table to use as defaults
-	currentTable, err := s.repo.PgRepo.Repo.GetCafeTableByID(ctx, id)
+	currentTable, err := s.repo.Tenant(ctx).GetCafeTableByID(ctx, id)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get cafe table: %w", err)
 	}
@@ -285,7 +285,7 @@ func (s *CafeTableS) UpdateCafeTable(ctx context.Context, tableID string, hallID
 		}
 	}
 
-	table, err := s.repo.PgRepo.Repo.UpdateCafeTable(ctx, pg.UpdateCafeTableParams{
+	table, err := s.repo.Tenant(ctx).UpdateCafeTable(ctx, pg.UpdateCafeTableParams{
 		ID:       id,
 		HallID:   updatedHallID,
 		Number:   updatedNumber,
@@ -315,7 +315,7 @@ func (s *CafeTableS) UpdateCafeTableStatus(ctx context.Context, tableID string, 
 		Valid:       true,
 	}
 
-	table, err := s.repo.PgRepo.Repo.UpdateCafeTableStatus(ctx, pg.UpdateCafeTableStatusParams{
+	table, err := s.repo.Tenant(ctx).UpdateCafeTableStatus(ctx, pg.UpdateCafeTableStatusParams{
 		ID:     id,
 		Status: nullStatus,
 	})
@@ -333,7 +333,7 @@ func (s *CafeTableS) SetTableFree(ctx context.Context, tableID string) (*model.C
 		return nil, fmt.Errorf("invalid table ID: %w", err)
 	}
 
-	table, err := s.repo.PgRepo.Repo.SetTableFree(ctx, id)
+	table, err := s.repo.Tenant(ctx).SetTableFree(ctx, id)
 	if err != nil {
 		return nil, fmt.Errorf("failed to set table free: %w", err)
 	}
@@ -348,7 +348,7 @@ func (s *CafeTableS) SetTableBusy(ctx context.Context, tableID string) (*model.C
 		return nil, fmt.Errorf("invalid table ID: %w", err)
 	}
 
-	table, err := s.repo.PgRepo.Repo.SetTableBusy(ctx, id)
+	table, err := s.repo.Tenant(ctx).SetTableBusy(ctx, id)
 	if err != nil {
 		return nil, fmt.Errorf("failed to set table busy: %w", err)
 	}
@@ -363,7 +363,7 @@ func (s *CafeTableS) DeleteCafeTable(ctx context.Context, tableID string) error 
 		return fmt.Errorf("invalid table ID: %w", err)
 	}
 
-	if err := s.repo.PgRepo.Repo.DeleteCafeTable(ctx, id); err != nil {
+	if err := s.repo.Tenant(ctx).DeleteCafeTable(ctx, id); err != nil {
 		return fmt.Errorf("failed to delete cafe table: %w", err)
 	}
 
@@ -377,7 +377,7 @@ func (s *CafeTableS) RestoreCafeTable(ctx context.Context, tableID string) error
 		return fmt.Errorf("invalid table ID: %w", err)
 	}
 
-	if err := s.repo.PgRepo.Repo.RestoreCafeTable(ctx, id); err != nil {
+	if err := s.repo.Tenant(ctx).RestoreCafeTable(ctx, id); err != nil {
 		return fmt.Errorf("failed to restore cafe table: %w", err)
 	}
 
@@ -386,7 +386,7 @@ func (s *CafeTableS) RestoreCafeTable(ctx context.Context, tableID string) error
 
 // GetTableOccupancyStats returns occupancy statistics for all tables
 func (s *CafeTableS) GetTableOccupancyStats(ctx context.Context) (*model.TableOccupancyStats, error) {
-	stats, err := s.repo.PgRepo.Repo.GetTableOccupancyStats(ctx)
+	stats, err := s.repo.Tenant(ctx).GetTableOccupancyStats(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get occupancy stats: %w", err)
 	}
@@ -405,7 +405,7 @@ func (s *CafeTableS) GetTableOccupancyStats(ctx context.Context) (*model.TableOc
 // SearchCafeTables searches for cafe tables by query
 func (s *CafeTableS) SearchCafeTables(ctx context.Context, query string, limit, offset int32) ([]model.CafeTableResponse, error) {
 	// Get all tables and filter by number/hall
-	tables, err := s.repo.PgRepo.Repo.GetAllCafeTables(ctx, pg.GetAllCafeTablesParams{
+	tables, err := s.repo.Tenant(ctx).GetAllCafeTables(ctx, pg.GetAllCafeTablesParams{
 		Limit:  9999, // Get all tables
 		Offset: 0,
 	})

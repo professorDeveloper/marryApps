@@ -49,6 +49,45 @@ func (h *Handler) Login(c echo.Context) error {
 	return c.JSON(http.StatusOK, resp)
 }
 
+// LoginGlobal handles global (main DB) superadmin login
+// @Summary Global superadmin login
+// @Description Authenticate global superadmin (main DB) and return access and refresh tokens
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param request body model.GlobalLoginRequest true "Login credentials"
+// @Success 200 {object} model.LoginResponse "Successfully logged in"
+// @Failure 400 {object} model.ErrorResponse "Invalid request format"
+// @Failure 401 {object} model.ErrorResponse "Unauthorized"
+// @Router /api/v1/auth/global/login [post]
+func (h *Handler) LoginGlobal(c echo.Context) error {
+	var req model.LoginRequest
+	if v := c.Get("loginBody"); v != nil {
+		if r, ok := v.(model.LoginRequest); ok {
+			req = r
+		} else {
+			return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "invalid request body"})
+		}
+	} else {
+		if err := c.Bind(&req); err != nil {
+			log.Printf("Failed to bind login request: %v", err)
+			return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "invalid request body"})
+		}
+	}
+	lang := c.Get("language").(string)
+
+	resp, err := h.service.Auth().LoginGlobal(c.Request().Context(), req, &h.cfg.Jwt)
+	if err != nil {
+		log.Printf("Global login failed: %v", err)
+		if lang == "ru" {
+			return c.JSON(http.StatusUnauthorized, model.ErrorResponse{Message: "Ungültige Anmeldeinformationen"})
+		}
+		return c.JSON(http.StatusUnauthorized, model.ErrorResponse{Message: "ru: Xatolik login qilishda"})
+	}
+
+	return c.JSON(http.StatusOK, resp)
+}
+
 // RegisterUser handles user registration
 // @Summary Register a new user account
 // @Description Register a new user. User role defaults to 'user' if not provided.
