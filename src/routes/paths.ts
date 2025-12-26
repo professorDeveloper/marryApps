@@ -54,7 +54,7 @@ export const paths = {
       five: `${ROOTS.MENU}/group/five`,
       six: `${ROOTS.MENU}/group/six`,
     },
-     product: {
+    product: {
       root: `${ROOTS.MENU}/product`,
       new: `${ROOTS.MENU}/product/new`,
       details: (id: string) => `${ROOTS.MENU}/product/${id}`,
@@ -66,6 +66,25 @@ export const paths = {
     },
     category: {
       root: `${ROOTS.MENU}/category`,
+      new: `${ROOTS.MENU}/category/new`,
+      details: (id: string) => `${ROOTS.MENU}/category/${id}`,
+      edit: (id: string) => `${ROOTS.MENU}/category/${id}/edit`,
     },
+    user: {
+      root: `${ROOTS.MENU}/user`,
+      new: `${ROOTS.MENU}/user/new`,
+      details: (id: string) => `${ROOTS.MENU}/user/${id}`,
+      edit: (id: string) => `${ROOTS.MENU}/user/${id}/edit`,
+    },
+    order: {
+      root: `${ROOTS.MENU}/order`,
+      new: `${ROOTS.MENU}/order/new`,
+      details: (id: string) => `${ROOTS.MENU}/order/${id}`,
+      edit: (id: string) => `${ROOTS.MENU}/order/${id}/edit`,
+    },
+  },
+  // DASHBOARD
+  dashboard: {
+    root: '/',
   },
 };

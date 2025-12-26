@@ -9,10 +9,12 @@ import { DashboardLayout } from 'src/layouts/dashboard';
 import { LoadingScreen } from 'src/components/loading-screen';
 
 import { ProductListView } from 'src/sections/products/product-list-view';
+import { CategoryListView } from 'src/sections/category/category-list-view';
 
 import { AuthGuard } from 'src/auth/guard';
 
 import { usePathname } from '../hooks';
+// import { UserListView } from 'src/sections/products/EXAMPLE-user-list-view';
 
 // ----------------------------------------------------------------------
 
@@ -57,7 +59,11 @@ export const dashboardRoutes: RouteObject[] = [
         ],
       },
       { path: 'product', element: <ProductListView /> },
+      { path: 'category', element: <CategoryListView /> },
+      // { path: 'order', element: <OrderListView /> },
+      // { path: 'user', element: <UserListView /> },
+
     ],
-    
+
   },
 ];

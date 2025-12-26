@@ -1,9 +1,6 @@
+// src/components/generic-table-view/generic-table-toolbar.tsx
 import type { UseSetStateReturn } from 'minimal-shared/hooks';
-import type { SelectChangeEvent } from '@mui/material/Select';
-import type { IProductTableFilters } from 'src/types/product';
 import type { CustomToolbarSettingsButtonProps } from 'src/components/custom-data-grid';
-
-import { useState, useCallback } from 'react';
 
 import Button from '@mui/material/Button';
 import { Toolbar } from '@mui/x-data-grid';
@@ -18,57 +15,47 @@ import {
   CustomToolbarFilterButton,
 } from 'src/components/custom-data-grid';
 
-import { ProductTableFiltersResult } from './product-table-filters-result';
-
+import { GenericFiltersResult, type GenericTableFilters } from './generic-filters-result';
 
 // ----------------------------------------------------------------------
 
-type FilterOption = {
+interface FilterOption {
   value: string;
   label: string;
-};
+}
 
-type Props = CustomToolbarSettingsButtonProps & {
+interface GenericTableToolbarProps<T extends GenericTableFilters = any>
+  extends CustomToolbarSettingsButtonProps {
   canReset: boolean;
   filteredResults: number;
   selectedRowCount: number;
-  filters: UseSetStateReturn<IProductTableFilters>;
-  options: {
-    stocks: FilterOption[];
-    publishs: FilterOption[];
+  filters: UseSetStateReturn<T>;
+  filterOptions: {
+    [key: string]: FilterOption[];
   };
+  filterKeys?: (keyof T)[];
   onOpenConfirmDeleteRows: () => void;
-};
+  onRenderFiltersResult?: (
+    filters: T,
+    resetFilters: () => void
+  ) => React.ReactNode;
+}
 
-export function ProductTableToolbar({
-  options,
+export function GenericTableToolbar<T extends GenericTableFilters = any>({
   filters,
   canReset,
   filteredResults,
   selectedRowCount,
   onOpenConfirmDeleteRows,
-  /********/
+  filterOptions,
+  filterKeys,
+  onRenderFiltersResult,
   settings,
   onChangeSettings,
-}: Props) {
-  const { state: currentFilters, setState: updateFilters } = filters;
+}: GenericTableToolbarProps<T>) {
+  const { state: currentFilters, resetState: resetFilters } = filters;
 
-  const [stock, setStock] = useState<string[]>(currentFilters.stock || []);
-  const [publish, setPublish] = useState<string[]>(currentFilters.publish || []);
-
-  const handleSelect = useCallback(
-    (setter: (value: string[]) => void) => (event: SelectChangeEvent<string[]>) => {
-      const value = event.target.value;
-      const parsedValue = typeof value === 'string' ? value.split(',') : value;
-
-      setter(parsedValue);
-    },
-    []
-  );
-
-  const renderLeftPanel = () => (
-    <CustomToolbarQuickFilter />
-  );
+  const renderLeftPanel = () => <CustomToolbarQuickFilter />;
 
   const renderRightPanel = () => (
     <>
@@ -79,14 +66,12 @@ export function ProductTableToolbar({
           startIcon={<Iconify icon="solar:trash-bin-trash-bold" />}
           onClick={onOpenConfirmDeleteRows}
         >
-          Delete ({selectedRowCount})
+          O&apos;chirish ({selectedRowCount})
         </Button>
       )}
 
-      {/* <CustomToolbarColumnsButton /> */}
       <CustomToolbarFilterButton />
       <CustomToolbarExportButton />
-      {/* <CustomToolbarSettingsButton settings={settings} onChangeSettings={onChangeSettings} /> */}
     </>
   );
 
@@ -100,11 +85,16 @@ export function ProductTableToolbar({
       </Toolbar>
 
       {canReset && (
-        <ProductTableFiltersResult
-          filters={filters}
-          totalResults={filteredResults}
-          sx={{ p: 2.5, pt: 0 }}
-        />
+        onRenderFiltersResult ? (
+          onRenderFiltersResult(currentFilters, resetFilters)
+        ) : filterKeys && filterKeys.length > 0 ? (
+          <GenericFiltersResult<T>
+            filters={filters}
+            totalResults={filteredResults}
+            sx={{ p: 2.5, pt: 0 }}
+            filterKeys={filterKeys}
+          />
+        ) : null
       )}
     </>
   );

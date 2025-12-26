@@ -81,9 +81,19 @@ export const endpoints = {
     details: '/api/product/details',
     search: '/api/product/search',
   },
-   category: {
+  category: {
     list: '/api/product/list',
     details: '/api/product/details',
     search: '/api/product/search',
+  },
+  user: {
+    list: '/api/user/list',
+    details: '/api/user/details',
+    search: '/api/user/search',
+  },
+  order: {
+    list: '/api/order/list',
+    details: '/api/order/details',
+    search: '/api/order/search',
   },
 } as const;

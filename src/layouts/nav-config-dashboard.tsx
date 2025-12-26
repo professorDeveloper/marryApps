@@ -52,16 +52,17 @@ export const navData: NavSectionProps['data'] = [
     subheader: 'Overview',
     items: [
       {
-         title: 'Menyu',
-         path: paths.menu.product.root,
-         icon: ICONS.product,
-         children: [
-               { title: 'Bo\'limlar', path: paths.menu.product.root },
-            { title: 'Kategoriyalar', path: paths.menu.category.root },
- { title: 'Yarim tayyor mahsulotlar', path: paths.menu.product.demo.details },
-                  { title: 'Taomlar', path: paths.menu.product.demo.edit },
-           { title: 'Modifikatorlar', path: paths.menu.product.demo.edit },
-         ],
+        title: 'Menyu',
+        path: paths.menu.product.root,
+        icon: ICONS.product,
+        deepMatch: true,
+        children: [
+          { title: 'Bo\'limlar', path: paths.menu.product.root },
+          { title: 'Kategoriyalar', path: paths.menu.category.root },
+          { title: 'Yarim tayyor mahsulotlar', path: paths.menu.order.root },
+          { title: 'Taomlar', path: paths.menu.product.demo.edit },
+          { title: 'Modifikatorlar', path: paths.menu.product.demo.edit },
+        ],
       },
     ],
   },
