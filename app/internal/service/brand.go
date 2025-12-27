@@ -112,13 +112,11 @@ func (s *BrandS) UpdateBrand(ctx context.Context, brandID uuid.UUID, name *strin
 		return nil, fmt.Errorf("invalid brand ID")
 	}
 
-	// Get existing brand
 	brand, err := s.repo.Main(ctx).GetBrandByID(ctx, brandID)
 	if err != nil {
 		return nil, fmt.Errorf("brand not found")
 	}
 
-	// Update name if provided
 	if name != nil {
 		trimmedName := strings.TrimSpace(*name)
 		if trimmedName == "" {
@@ -127,9 +125,6 @@ func (s *BrandS) UpdateBrand(ctx context.Context, brandID uuid.UUID, name *strin
 		brand.Name = trimmedName
 	}
 
-	// Note: UpdateBrand query may not exist yet in SQLC
-	// This is a placeholder for when it's implemented
-	// For now, you may need to use raw SQL or add the query to sqlc/main/queries/brands.sql
 
 	return &model.BrandResponse{
 		ID:        brand.ID,
@@ -145,27 +140,20 @@ func (s *BrandS) DeleteBrand(ctx context.Context, brandID uuid.UUID) error {
 		return fmt.Errorf("invalid brand ID")
 	}
 
-	// Verify brand exists
 	_, err := s.repo.Main(ctx).GetBrandByID(ctx, brandID)
 	if err != nil {
 		return fmt.Errorf("brand not found")
 	}
 
-	// Note: DeleteBrand query may not exist yet in SQLC
-	// This is a placeholder for when it's implemented
-	// For now, you may need to use raw SQL or add the query to sqlc/main/queries/brands.sql
 
 	return nil
 }
-
-// InitializeTenantSchema creates a schema for the brand and runs tenant migrations
-// This is called after a brand is created to set up its isolated data storage
+// Sheqqa schema yaratib migratsiyalarni ishga tushiradi
 func (s *BrandS) InitializeTenantSchema(ctx context.Context, brandID uuid.UUID) error {
 	if brandID == uuid.Nil {
 		return fmt.Errorf("invalid brand ID")
 	}
 
-	// Step 1: Verify brand exists in main DB
 	brand, err := s.repo.Main(ctx).GetBrandByID(ctx, brandID)
 	if err != nil {
 		log.Printf("Brand not found: %v", err)
@@ -174,16 +162,13 @@ func (s *BrandS) InitializeTenantSchema(ctx context.Context, brandID uuid.UUID) 
 
 	log.Printf("Initializing tenant schema for brand: %s (ID: %s)", brand.Name, brandID.String())
 
-	// Step 2: Create schema name (must be valid PostgreSQL identifier)
 	schemaName := fmt.Sprintf("tenant_%s", strings.ReplaceAll(brandID.String(), "-", "_"))
 
-	// Step 3: Create schema in tenants database
 	if err := s.createSchema(ctx, schemaName); err != nil {
 		log.Printf("Failed to create schema: %v", err)
 		return fmt.Errorf("failed to create tenant schema: %w", err)
 	}
 
-	// Step 4: Run migrations on the new schema
 	if err := s.runMigrationsInSchema(ctx, schemaName); err != nil {
 		log.Printf("Failed to run migrations: %v", err)
 		return fmt.Errorf("failed to run migrations in schema: %w", err)
@@ -193,7 +178,6 @@ func (s *BrandS) InitializeTenantSchema(ctx context.Context, brandID uuid.UUID) 
 	return nil
 }
 
-// createSchema creates a new PostgreSQL schema
 func (s *BrandS) createSchema(ctx context.Context, schemaName string) error {
 	if err := migrate.CreateTenantSchema(ctx, s.repo.PgRepo.TenantPool, schemaName); err != nil {
 		return err
@@ -202,7 +186,6 @@ func (s *BrandS) createSchema(ctx context.Context, schemaName string) error {
 	return nil
 }
 
-// runMigrationsInSchema runs tenant migrations in a specific schema
 func (s *BrandS) runMigrationsInSchema(ctx context.Context, schemaName string) error {
 	return migrate.RunMigrationsInSchema(ctx, s.repo.PgRepo.TenantPool, schemaName)
 }

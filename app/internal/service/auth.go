@@ -38,13 +38,72 @@ func (s *AuthS) Register(ctx context.Context, req model.RegisterRequest) error {
 	if req.FullName == "" {
 		return fmt.Errorf("full name is required")
 	}
+
 	log.Printf("Starting registration for phone: %s", req.PhoneNumber)
-	_, err := s.repo.Tenant(ctx).GetUserByPhoneNumber(ctx, &req.PhoneNumber)
-	if err == nil {
-		return fmt.Errorf("user with this phone number already exists")
+
+	//roli superadmin bulmagan userga brandid kerak
+	role := strings.TrimSpace(strings.ToLower(req.Role))
+	if role != "superadmin" {
+		if req.BrandID == nil || strings.TrimSpace(*req.BrandID) == "" {
+			return fmt.Errorf("brandId is required for non-superadmin users")
+		}
 	}
-	if !errors.Is(err, pgx.ErrNoRows) {
-		return fmt.Errorf("failed to check user existence: %w", err)
+
+	var parsedBrandID uuid.UUID
+	var tenantResolver *TenantResolver
+
+	if role != "superadmin" {
+		var err error
+		parsedBrandID, err = uuid.Parse(strings.TrimSpace(*req.BrandID))
+		if err != nil {
+			return fmt.Errorf("invalid brand ID format: %w", err)
+		}
+
+		_, err = s.repo.Main(ctx).GetBrandByID(ctx, parsedBrandID)
+		if err != nil {
+			return fmt.Errorf("brand not found: %w", err)
+		}
+
+		tenantResolver = NewTenantResolver(s.repo)
+		_, err = tenantResolver.ResolveTenantByBrandID(ctx, parsedBrandID)
+		if err != nil {
+			return fmt.Errorf("failed to resolve tenant: %w", err)
+		}
+
+		schemaName := fmt.Sprintf("tenant_%s", strings.ReplaceAll(parsedBrandID.String(), "-", "_"))
+		log.Printf("Setting schema to: %s for user registration", schemaName)
+
+		tx, err := s.repo.TenantPool.Begin(ctx)
+		if err != nil {
+			return fmt.Errorf("failed to begin transaction: %w", err)
+		}
+
+		if _, err := tx.Exec(ctx, fmt.Sprintf("SET LOCAL search_path TO \"%s\", public", schemaName)); err != nil {
+			tx.Rollback(ctx)
+			return fmt.Errorf("failed to set schema: %w", err)
+		}
+
+		var existingID string
+		checkPhoneErr := tx.QueryRow(ctx,
+			"SELECT id FROM users WHERE phone_number = $1 AND deleted_at = 0 LIMIT 1",
+			&req.PhoneNumber).Scan(&existingID)
+
+		tx.Rollback(ctx) 
+
+		if checkPhoneErr == nil {
+			return fmt.Errorf("user with this phone number already exists")
+		}
+		if !errors.Is(checkPhoneErr, pgx.ErrNoRows) {
+			return fmt.Errorf("failed to check user existence: %w", checkPhoneErr)
+		}
+	} else {
+		_, err := s.repo.Tenant(ctx).GetUserByPhoneNumber(ctx, &req.PhoneNumber)
+		if err == nil {
+			return fmt.Errorf("user with this phone number already exists")
+		}
+		if !errors.Is(err, pgx.ErrNoRows) {
+			return fmt.Errorf("failed to check user existence: %w", err)
+		}
 	}
 	var hashPassword *string
 	if strings.TrimSpace(req.Password) != "" {
@@ -64,7 +123,6 @@ func (s *AuthS) Register(ctx context.Context, req model.RegisterRequest) error {
 		"manager":    pg.UserRoleManager,
 	}
 
-	role := strings.TrimSpace(strings.ToLower(req.Role))
 	userRole, validRole := validRoles[role]
 	if !validRole {
 		userRole = pg.UserRoleUser
@@ -82,22 +140,11 @@ func (s *AuthS) Register(ctx context.Context, req model.RegisterRequest) error {
 		pincodePtr = &pincode
 	}
 
-	// Handle brand_id if provided
 	brandID := pgtype.UUID{}
 
-	// Superadmin doesn't need a brand_id, they manage all brands
-	if strings.ToLower(strings.TrimSpace(req.Role)) == "superadmin" {
+	if role == "superadmin" {
 		log.Printf("User is superadmin, no brand_id required")
 	} else if req.BrandID != nil && strings.TrimSpace(*req.BrandID) != "" {
-		parsedBrandID, err := uuid.Parse(strings.TrimSpace(*req.BrandID))
-		if err != nil {
-			return fmt.Errorf("invalid brand ID format: %w", err)
-		}
-		// Verify brand exists in main database
-		_, err = s.repo.Main(ctx).GetBrandByID(ctx, parsedBrandID)
-		if err != nil {
-			return fmt.Errorf("brand not found: %w", err)
-		}
 		brandID = pgtype.UUID{Bytes: parsedBrandID, Valid: true}
 		log.Printf("User will be created with brand_id: %s", parsedBrandID.String())
 	}
@@ -112,6 +159,45 @@ func (s *AuthS) Register(ctx context.Context, req model.RegisterRequest) error {
 		HashPassword: hashPassword,
 		Username:     &username,
 		BrandID:      brandID,
+	}
+
+	if role != "superadmin" && parsedBrandID != uuid.Nil {
+		schemaName := fmt.Sprintf("tenant_%s", strings.ReplaceAll(parsedBrandID.String(), "-", "_"))
+		tx, err := s.repo.TenantPool.Begin(ctx)
+		if err != nil {
+			return fmt.Errorf("failed to begin transaction: %w", err)
+		}
+
+		if _, err := tx.Exec(ctx, fmt.Sprintf("SET LOCAL search_path TO \"%s\", public", schemaName)); err != nil {
+			tx.Rollback(ctx)
+			return fmt.Errorf("failed to set schema: %w", err)
+		}
+
+		q := s.repo.Tenant(ctx).WithTx(tx)
+		user, err := q.CreateUser(ctx, userParams)
+		if err != nil {
+			log.Printf("Error creating user in schema %s: %v", schemaName, err)
+			tx.Rollback(ctx)
+			if pqErr, ok := err.(interface {
+				Get(k string) (interface{}, bool)
+			}); ok {
+				if constraint, ok := pqErr.Get("constraint"); ok {
+					log.Printf("Database constraint violation: %v", constraint)
+				}
+				if detail, ok := pqErr.Get("detail"); ok {
+					log.Printf("Error details: %v", detail)
+				}
+			}
+			return fmt.Errorf("failed to create user: %w", err)
+		}
+
+		if err := tx.Commit(ctx); err != nil {
+			log.Printf("Failed to commit transaction: %v", err)
+			return fmt.Errorf("failed to commit transaction: %w", err)
+		}
+
+		log.Printf("Successfully created user with ID: %s in schema: %s", user.ID.String(), schemaName)
+		return nil
 	}
 
 	user, err := s.repo.Tenant(ctx).CreateUser(ctx, userParams)
@@ -180,13 +266,88 @@ func (s *AuthS) Login(ctx context.Context, req model.LoginRequest, jwtCfg *confi
 		return model.LoginResponse{}, errors.New(http.StatusText(http.StatusBadRequest))
 	}
 
-	// brand_id for tenant token
 	brandID := &brandUUID
 
 	role := string(pg.UserRoleUser)
 	if user.Role.Valid {
 		role = string(user.Role.UserRole)
 	}
+
+	accessToken, err := utils.CreateJWTWithClaims(
+		time.Duration(jwtCfg.AccessToken.ExpiresIn)*time.Second,
+		user.ID,
+		brandID,
+		role,
+		false,
+		jwtCfg.SecretKey,
+	)
+	if err != nil {
+		return model.LoginResponse{}, err
+	}
+	refreshToken, err := utils.CreateJWTWithClaims(
+		time.Duration(jwtCfg.RefreshToken.ExpiresIn)*time.Second,
+		user.ID,
+		brandID,
+		role,
+		false,
+		jwtCfg.SecretKey,
+	)
+	if err != nil {
+		return model.LoginResponse{}, err
+	}
+
+	return model.LoginResponse{
+		AccessToken:  accessToken,
+		RefreshToken: refreshToken,
+		User:         toUserResponse(user),
+	}, nil
+}
+
+func (s *AuthS) LoginWithPincode(ctx context.Context, req model.PincodeLoginRequest, jwtCfg *config.JwtConfig) (model.LoginResponse, error) {
+	if strings.TrimSpace(req.Pincode) == "" {
+		return model.LoginResponse{}, errors.New(http.StatusText(http.StatusBadRequest))
+	}
+	if strings.TrimSpace(req.BrandID) == "" {
+		return model.LoginResponse{}, errors.New(http.StatusText(http.StatusBadRequest))
+	}
+
+	brandUUID, err := uuid.Parse(strings.TrimSpace(req.BrandID))
+	if err != nil {
+		return model.LoginResponse{}, errors.New(http.StatusText(http.StatusBadRequest))
+	}
+
+	schemaName := fmt.Sprintf("tenant_%s", strings.ReplaceAll(brandUUID.String(), "-", "_"))
+	tx, err := s.repo.PgRepo.TenantPool.Begin(ctx)
+	if err != nil {
+		return model.LoginResponse{}, err
+	}
+	defer tx.Rollback(ctx)
+
+	if _, err := tx.Exec(ctx, fmt.Sprintf("SET LOCAL search_path TO \"%s\", public", schemaName)); err != nil {
+		return model.LoginResponse{}, errors.New(http.StatusText(http.StatusUnauthorized))
+	}
+
+	q := s.repo.Tenant(ctx).WithTx(tx)
+
+	user, err := q.GetUserByPincode(ctx, &req.Pincode)
+	if err != nil {
+		log.Printf("LoginWithPincode: User not found with pincode: %s, error: %v", req.Pincode, err)
+		return model.LoginResponse{}, errors.New(http.StatusText(http.StatusUnauthorized))
+	}
+
+	if user.Pincode == nil || strings.TrimSpace(*user.Pincode) != req.Pincode {
+		log.Printf("LoginWithPincode: Pincode verification failed for user: %s", user.ID)
+		return model.LoginResponse{}, errors.New(http.StatusText(http.StatusUnauthorized))
+	}
+
+	brandID := &brandUUID
+
+	role := string(pg.UserRoleUser)
+	if user.Role.Valid {
+		role = string(user.Role.UserRole)
+	}
+
+	log.Printf("LoginWithPincode: Successfully authenticated user %s with role %s", user.ID, role)
 
 	accessToken, err := utils.CreateJWTWithClaims(
 		time.Duration(jwtCfg.AccessToken.ExpiresIn)*time.Second,
@@ -254,7 +415,6 @@ func (s *AuthS) LoginGlobal(ctx context.Context, req model.LoginRequest, jwtCfg 
 
 	log.Printf("LoginGlobal: User found. Username: %s, Email: %s, Role: %s", u.Username, u.Email, u.Role)
 
-	// Simple plain text password comparison for main DB
 	if u.Password != password {
 		log.Printf("LoginGlobal: Password verification failed for user %s", u.Username)
 		return model.LoginResponse{}, errors.New(http.StatusText(http.StatusUnauthorized))
@@ -306,14 +466,12 @@ func (s *AuthS) Refresh(ctx context.Context, req model.RefreshRequest, jwtCfg *c
 		return model.RefreshResponse{}, errors.New(http.StatusText(http.StatusUnauthorized))
 	}
 
-	// Validate refresh token with new JWT claims
 	claims, err := utils.ValidateJWTWithClaims(req.RefreshToken, jwtCfg.SecretKey)
 	if err != nil {
 		return model.RefreshResponse{}, errors.New(http.StatusText(http.StatusUnauthorized))
 	}
 
 	if claims.IsGlobal {
-		// Global superadmin token refresh
 		var role string
 		err := s.repo.PgRepo.MainPool.QueryRow(
 			ctx,
@@ -551,9 +709,7 @@ func toUserResponse(u pg.User) model.UserResponse {
 	}
 }
 
-// Additional methods for QR ordering system
 
-// GetUsersByRole retrieves all users of a specific role
 func (s *AuthS) GetUsersByRole(ctx context.Context, role string) ([]model.UserResponse, error) {
 	userRole := pg.NullUserRole{
 		UserRole: pg.UserRole(role),
@@ -571,7 +727,6 @@ func (s *AuthS) GetUsersByRole(ctx context.Context, role string) ([]model.UserRe
 	return responses, nil
 }
 
-// GetAllStaff retrieves all active staff members
 func (s *AuthS) GetAllStaff(ctx context.Context) ([]model.UserResponse, error) {
 	users, err := s.repo.Tenant(ctx).GetAllUsers(ctx)
 	if err != nil {
@@ -585,22 +740,18 @@ func (s *AuthS) GetAllStaff(ctx context.Context) ([]model.UserResponse, error) {
 	return responses, nil
 }
 
-// GetKitchenStaff retrieves all kitchen staff members
 func (s *AuthS) GetKitchenStaff(ctx context.Context) ([]model.UserResponse, error) {
 	return s.GetUsersByRole(ctx, string(pg.UserRoleKitchen))
 }
 
-// GetWaiters retrieves all waiter staff members
 func (s *AuthS) GetWaiters(ctx context.Context) ([]model.UserResponse, error) {
 	return s.GetUsersByRole(ctx, string(pg.UserRoleWaiter))
 }
 
-// GetCashiers retrieves all cashier staff members
 func (s *AuthS) GetCashiers(ctx context.Context) ([]model.UserResponse, error) {
 	return s.GetUsersByRole(ctx, string(pg.UserRoleCashier))
 }
 
-// DeleteUser performs a soft delete on a user
 func (s *AuthS) DeleteUser(ctx context.Context, userID string) error {
 	uuidID, err := uuid.Parse(userID)
 	if err != nil {
@@ -615,7 +766,6 @@ func (s *AuthS) DeleteUser(ctx context.Context, userID string) error {
 	return nil
 }
 
-// RestoreUser restores a soft-deleted user
 func (s *AuthS) RestoreUser(ctx context.Context, userID string) error {
 	uuidID, err := uuid.Parse(userID)
 	if err != nil {
@@ -630,7 +780,6 @@ func (s *AuthS) RestoreUser(ctx context.Context, userID string) error {
 	return nil
 }
 
-// SearchUsers performs a full-text search on users
 func (s *AuthS) SearchUsers(ctx context.Context, query string, limit, offset int32) ([]model.UserResponse, error) {
 	users, err := s.repo.Tenant(ctx).SearchUsers(ctx, pg.SearchUsersParams{
 		Column1: &query,

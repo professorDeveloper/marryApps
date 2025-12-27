@@ -30,11 +30,11 @@ import (
 // @title MaryAI API
 // @version 1.0
 // @description MaryAI API server with multi-language support (uz, ru, en)
-// @host localhost:8080
+// @host back.maryai.yurtal.tech
 // @BasePath /
-// @schemes http
+// @schemes https
 
-// @securityDefinitions.apikey BearerAuth
+// @securityDefinitions.apiKey BearerAuth
 // @in header
 // @name Authorization
 // @description Type "Bearer" followed by a space and your JWT token
@@ -103,7 +103,7 @@ func Run(cfg *config.Config) {
 
 	service := service.New(cfg, repos, clickClient, paymeClient, minioClient)
 
-	handler := handler.New(l, cfg, service)
+	handler := handler.New(l, cfg, service, repos)
 	handler.Register(e)
 
 	e.GET("/swagger/*", echoSwagger.WrapHandler)

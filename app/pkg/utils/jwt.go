@@ -8,7 +8,6 @@ import (
 	"github.com/google/uuid"
 )
 
-// JWTClaims represents custom JWT claims with multi-tenant support
 type JWTClaims struct {
 	UserID   uuid.UUID  `json:"user_id"`
 	BrandID  *uuid.UUID `json:"brand_id,omitempty"`
@@ -17,7 +16,6 @@ type JWTClaims struct {
 	jwt.StandardClaims
 }
 
-// CreateJWTWithClaims creates a JWT token with custom claims including role/is_global and optional brand_id
 func CreateJWTWithClaims(ttl time.Duration, userID uuid.UUID, brandID *uuid.UUID, role string, isGlobal bool, secretKey string) (string, error) {
 	now := time.Now().UTC()
 	expiresAt := now.Add(ttl)
@@ -44,7 +42,6 @@ func CreateJWTWithClaims(ttl time.Duration, userID uuid.UUID, brandID *uuid.UUID
 	return tokenString, nil
 }
 
-// ValidateJWTWithClaims validates JWT and returns custom claims
 func ValidateJWTWithClaims(tokenString string, secretKey string) (*JWTClaims, error) {
 	claims := &JWTClaims{}
 
@@ -70,7 +67,6 @@ func ValidateJWTWithClaims(tokenString string, secretKey string) (*JWTClaims, er
 	return nil, fmt.Errorf("invalid claims format")
 }
 
-// ParseUUID parses a string to UUID, returning error if invalid
 func ParseUUID(s string) (uuid.UUID, error) {
 	id, err := uuid.Parse(s)
 	if err != nil {

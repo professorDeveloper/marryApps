@@ -1084,6 +1084,15 @@ definitions:
     - OrderStatusServed
     - OrderStatusPaid
     - OrderStatusCancelled
+  model.PincodeLoginRequest:
+    properties:
+      brandId:
+        example: 550e8400-e29b-41d4-a716-446655440000
+        type: string
+      pincode:
+        example: "1234"
+        type: string
+    type: object
   model.RefreshRequest:
     properties:
       refreshToken:
@@ -1706,7 +1715,7 @@ paths:
           schema:
             $ref: '#/definitions/model.ErrorResponse'
       security:
-      - Bearer: []
+      - BearerAuth: []
       summary: List brands
       tags:
       - brands
@@ -1737,7 +1746,7 @@ paths:
           schema:
             $ref: '#/definitions/model.ErrorResponse'
       security:
-      - Bearer: []
+      - BearerAuth: []
       summary: Create brand
       tags:
       - brands
@@ -1770,7 +1779,7 @@ paths:
           schema:
             $ref: '#/definitions/model.ErrorResponse'
       security:
-      - Bearer: []
+      - BearerAuth: []
       summary: Delete brand
       tags:
       - brands
@@ -1804,7 +1813,7 @@ paths:
           schema:
             $ref: '#/definitions/model.ErrorResponse'
       security:
-      - Bearer: []
+      - BearerAuth: []
       summary: Get brand
       tags:
       - brands
@@ -1844,7 +1853,7 @@ paths:
           schema:
             $ref: '#/definitions/model.ErrorResponse'
       security:
-      - Bearer: []
+      - BearerAuth: []
       summary: Update brand
       tags:
       - brands
@@ -1881,7 +1890,7 @@ paths:
           schema:
             $ref: '#/definitions/model.ErrorResponse'
       security:
-      - Bearer: []
+      - BearerAuth: []
       summary: Initialize tenant schema
       tags:
       - brands
@@ -1945,6 +1954,37 @@ paths:
           schema:
             $ref: '#/definitions/model.ErrorResponse'
       summary: User login
+      tags:
+      - auth
+  /api/v1/auth/login-pincode:
+    post:
+      consumes:
+      - application/json
+      description: Authenticate user using pincode and brand ID. Used for kitchen
+        staff, terminals, and cashiers
+      parameters:
+      - description: Pincode login credentials
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.PincodeLoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successfully logged in
+          schema:
+            $ref: '#/definitions/model.LoginResponse'
+        "400":
+          description: Invalid request format
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      summary: User login with pincode
       tags:
       - auth
   /api/v1/auth/refresh:

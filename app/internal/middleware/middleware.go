@@ -275,7 +275,6 @@ func CheckLanguage() echo.MiddlewareFunc {
 				}
 			}
 
-			// Validate against supported languages
 			switch lang {
 			case "ru", "uz", "en":
 				c.Set("language", lang)
@@ -288,11 +287,9 @@ func CheckLanguage() echo.MiddlewareFunc {
 	}
 }
 
-// SanitizeInput sanitizes user input to prevent XSS and injection attacks
 func SanitizeInput() echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
-			// Skip for file uploads
 			contentType := c.Request().Header.Get("Content-Type")
 			if strings.Contains(contentType, "multipart/form-data") {
 				return next(c)

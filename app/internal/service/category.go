@@ -81,7 +81,6 @@ func (c *CategoryS) CreateCategory(ctx context.Context, name string, nameI18n, d
 	return toCategoryResponse(category), nil
 }
 
-// GetCategoryByID retrieves a category by ID
 func (c *CategoryS) GetCategoryByID(ctx context.Context, categoryID string) (*model.CategoryResponse, error) {
 	id, err := uuid.Parse(categoryID)
 	if err != nil {
@@ -100,7 +99,6 @@ func (c *CategoryS) GetCategoryByID(ctx context.Context, categoryID string) (*mo
 	return toCategoryResponse(category), nil
 }
 
-// GetAllCategories retrieves all categories with pagination
 func (c *CategoryS) GetAllCategories(ctx context.Context, limit, offset int32) ([]*model.CategoryResponse, error) {
 	categories, err := c.repo.Tenant(ctx).GetAllCategories(ctx, pg.GetAllCategoriesParams{
 		Limit:  limit,
@@ -118,7 +116,6 @@ func (c *CategoryS) GetAllCategories(ctx context.Context, limit, offset int32) (
 	return responses, nil
 }
 
-// GetCategoriesByDepartmentID retrieves categories by department ID
 func (c *CategoryS) GetCategoriesByDepartmentID(ctx context.Context, departmentID string, limit, offset int32) ([]*model.CategoryResponse, error) {
 	id, err := uuid.Parse(departmentID)
 	if err != nil {
@@ -142,7 +139,6 @@ func (c *CategoryS) GetCategoriesByDepartmentID(ctx context.Context, departmentI
 	return responses, nil
 }
 
-// GetCategoriesByStorageID retrieves categories by storage ID
 func (c *CategoryS) GetCategoriesByStorageID(ctx context.Context, storageID string, limit, offset int32) ([]*model.CategoryResponse, error) {
 	id, err := uuid.Parse(storageID)
 	if err != nil {
@@ -166,7 +162,6 @@ func (c *CategoryS) GetCategoriesByStorageID(ctx context.Context, storageID stri
 	return responses, nil
 }
 
-// GetCategoriesByParentID retrieves subcategories by parent ID
 func (c *CategoryS) GetCategoriesByParentID(ctx context.Context, parentID string, limit, offset int32) ([]*model.CategoryResponse, error) {
 	id, err := uuid.Parse(parentID)
 	if err != nil {
@@ -190,7 +185,6 @@ func (c *CategoryS) GetCategoriesByParentID(ctx context.Context, parentID string
 	return responses, nil
 }
 
-// GetRootCategories retrieves root categories (no parent)
 func (c *CategoryS) GetRootCategories(ctx context.Context, limit, offset int32) ([]*model.CategoryResponse, error) {
 	categories, err := c.repo.Tenant(ctx).GetRootCategories(ctx, pg.GetRootCategoriesParams{
 		Limit:  limit,
@@ -208,14 +202,12 @@ func (c *CategoryS) GetRootCategories(ctx context.Context, limit, offset int32) 
 	return responses, nil
 }
 
-// UpdateCategory updates a category
 func (c *CategoryS) UpdateCategory(ctx context.Context, categoryID string, name, nameI18n, departmentID, storageID, parent *string, pictureUrl *string) (*model.CategoryResponse, error) {
 	id, err := uuid.Parse(categoryID)
 	if err != nil {
 		return nil, fmt.Errorf("invalid category ID: %w", err)
 	}
 
-	// Get existing category
 	existing, err := c.repo.Tenant(ctx).GetCategoryByID(ctx, id)
 	if err != nil {
 		if err == pgx.ErrNoRows {
@@ -287,7 +279,6 @@ func (c *CategoryS) UpdateCategory(ctx context.Context, categoryID string, name,
 	return toCategoryResponse(category), nil
 }
 
-// DeleteCategory soft deletes a category
 func (c *CategoryS) DeleteCategory(ctx context.Context, categoryID string) error {
 	id, err := uuid.Parse(categoryID)
 	if err != nil {
@@ -301,7 +292,6 @@ func (c *CategoryS) DeleteCategory(ctx context.Context, categoryID string) error
 	return nil
 }
 
-// RestoreCategory restores a soft-deleted category
 func (c *CategoryS) RestoreCategory(ctx context.Context, categoryID string) (*model.CategoryResponse, error) {
 	id, err := uuid.Parse(categoryID)
 	if err != nil {
@@ -316,7 +306,6 @@ func (c *CategoryS) RestoreCategory(ctx context.Context, categoryID string) (*mo
 	return c.GetCategoryByID(ctx, categoryID)
 }
 
-// SearchCategories searches for categories by name
 func (c *CategoryS) SearchCategories(ctx context.Context, query string, limit, offset int32) ([]*model.CategoryResponse, error) {
 	if query == "" {
 		return nil, fmt.Errorf("search query is required")
@@ -340,7 +329,6 @@ func (c *CategoryS) SearchCategories(ctx context.Context, query string, limit, o
 	return responses, nil
 }
 
-// Helper function to convert database category to response model
 func toCategoryResponse(cat pg.Category) *model.CategoryResponse {
 	var nameI18nStr *string
 	if cat.NameI18n.Valid {

@@ -22,7 +22,6 @@ func NewCompoundS(repo *repository.Repository) *CompoundS {
 	return &CompoundS{repo: repo}
 }
 
-// CreateCompound creates a new compound
 func (c *CompoundS) CreateCompound(ctx context.Context, name string, nameI18n, description, descriptionI18n, measurement, departmentID *string, quantity int32, price *string, pictureUrl *string) (*model.CompoundResponse, error) {
 	if name == "" {
 		return nil, fmt.Errorf("compound name is required")
@@ -87,7 +86,6 @@ func (c *CompoundS) CreateCompound(ctx context.Context, name string, nameI18n, d
 	return toCompoundResponse(compound), nil
 }
 
-// GetCompoundByID retrieves a compound by ID
 func (c *CompoundS) GetCompoundByID(ctx context.Context, compoundID string) (*model.CompoundResponse, error) {
 	id, err := uuid.Parse(compoundID)
 	if err != nil {
@@ -106,7 +104,6 @@ func (c *CompoundS) GetCompoundByID(ctx context.Context, compoundID string) (*mo
 	return toCompoundResponse(compound), nil
 }
 
-// GetAllCompounds retrieves all compounds with pagination
 func (c *CompoundS) GetAllCompounds(ctx context.Context, limit, offset int32) ([]*model.CompoundResponse, error) {
 	compounds, err := c.repo.Tenant(ctx).GetAllCompounds(ctx, pg.GetAllCompoundsParams{
 		Limit:  limit,
@@ -124,7 +121,6 @@ func (c *CompoundS) GetAllCompounds(ctx context.Context, limit, offset int32) ([
 	return responses, nil
 }
 
-// GetCompoundsByDepartmentID retrieves compounds by department ID
 func (c *CompoundS) GetCompoundsByDepartmentID(ctx context.Context, departmentID string, limit, offset int32) ([]*model.CompoundResponse, error) {
 	id, err := uuid.Parse(departmentID)
 	if err != nil {
@@ -148,14 +144,12 @@ func (c *CompoundS) GetCompoundsByDepartmentID(ctx context.Context, departmentID
 	return responses, nil
 }
 
-// UpdateCompound updates a compound
 func (c *CompoundS) UpdateCompound(ctx context.Context, compoundID string, name, nameI18n, description, descriptionI18n, measurement, departmentID *string, quantity *int32, price *string, pictureUrl *string) (*model.CompoundResponse, error) {
 	id, err := uuid.Parse(compoundID)
 	if err != nil {
 		return nil, fmt.Errorf("invalid compound ID: %w", err)
 	}
 
-	// Get existing compound
 	existing, err := c.repo.Tenant(ctx).GetCompoundByID(ctx, id)
 	if err != nil {
 		if err == pgx.ErrNoRows {
@@ -359,9 +353,7 @@ func toCompoundResponse(comp pg.Compound) *model.CompoundResponse {
 	}
 }
 
-// ==================== COMPOUND DETAILS ====================
 
-// CreateCompoundDetail creates a new compound detail
 func (c *CompoundS) CreateCompoundDetail(ctx context.Context, compoundID, ingredientID string, quantity int64) (*model.CompoundDetailResponse, error) {
 	id := uuid.New()
 	compID, err := uuid.Parse(compoundID)
@@ -388,7 +380,6 @@ func (c *CompoundS) CreateCompoundDetail(ctx context.Context, compoundID, ingred
 	return toCompoundDetailResponse(detail), nil
 }
 
-// GetCompoundDetailByID retrieves a compound detail by ID
 func (c *CompoundS) GetCompoundDetailByID(ctx context.Context, detailID string) (*model.CompoundDetailResponse, error) {
 	id, err := uuid.Parse(detailID)
 	if err != nil {
@@ -407,7 +398,6 @@ func (c *CompoundS) GetCompoundDetailByID(ctx context.Context, detailID string) 
 	return toCompoundDetailResponse(detail), nil
 }
 
-// GetCompoundDetailsByCompoundID retrieves all details for a compound
 func (c *CompoundS) GetCompoundDetailsByCompoundID(ctx context.Context, compoundID string) ([]*model.CompoundDetailResponse, error) {
 	id, err := uuid.Parse(compoundID)
 	if err != nil {
@@ -427,7 +417,6 @@ func (c *CompoundS) GetCompoundDetailsByCompoundID(ctx context.Context, compound
 	return responses, nil
 }
 
-// GetCompoundDetailsByIngredientID retrieves all compound details for an ingredient
 func (c *CompoundS) GetCompoundDetailsByIngredientID(ctx context.Context, ingredientID string, limit, offset int32) ([]*model.CompoundDetailResponse, error) {
 	id, err := uuid.Parse(ingredientID)
 	if err != nil {
@@ -451,14 +440,12 @@ func (c *CompoundS) GetCompoundDetailsByIngredientID(ctx context.Context, ingred
 	return responses, nil
 }
 
-// UpdateCompoundDetail updates a compound detail
 func (c *CompoundS) UpdateCompoundDetail(ctx context.Context, detailID string, compoundID, ingredientID *string, quantity *int64) (*model.CompoundDetailResponse, error) {
 	id, err := uuid.Parse(detailID)
 	if err != nil {
 		return nil, fmt.Errorf("invalid detail ID: %w", err)
 	}
 
-	// Get existing detail
 	existing, err := c.repo.Tenant(ctx).GetCompoundDetailByID(ctx, id)
 	if err != nil {
 		if err == pgx.ErrNoRows {

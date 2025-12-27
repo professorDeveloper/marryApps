@@ -20,6 +20,7 @@ type AuthI interface {
 	Register(ctx context.Context, req model.RegisterRequest) error
 	Login(ctx context.Context, req model.LoginRequest, jwtCfg *config.JwtConfig) (model.LoginResponse, error)
 	LoginGlobal(ctx context.Context, req model.LoginRequest, jwtCfg *config.JwtConfig) (model.LoginResponse, error)
+	LoginWithPincode(ctx context.Context, req model.PincodeLoginRequest, jwtCfg *config.JwtConfig) (model.LoginResponse, error)
 	Refresh(ctx context.Context, req model.RefreshRequest, jwtCfg *config.JwtConfig) (model.RefreshResponse, error)
 	UpdateUserPassword(ctx context.Context, userID uuid.UUID, currentPassword, newPassword string) error
 	GetUserByID(ctx context.Context, userID string) (model.UserResponse, error)

@@ -49,6 +49,39 @@ func (h *Handler) Login(c echo.Context) error {
 	return c.JSON(http.StatusOK, resp)
 }
 
+// LoginWithPincode handles user login via pincode (for kitchen, terminals, cashiers)
+// @Summary User login with pincode
+// @Description Authenticate user using pincode and brand ID. Used for kitchen staff, terminals, and cashiers
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param request body model.PincodeLoginRequest true "Pincode login credentials"
+// @Success 200 {object} model.LoginResponse "Successfully logged in"
+// @Failure 400 {object} model.ErrorResponse "Invalid request format"
+// @Failure 401 {object} model.ErrorResponse "Unauthorized"
+// @Router /api/v1/auth/login-pincode [post]
+func (h *Handler) LoginWithPincode(c echo.Context) error {
+	var req model.PincodeLoginRequest
+	if err := c.Bind(&req); err != nil {
+		log.Printf("Failed to bind pincode login request: %v", err)
+		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "invalid request body"})
+	}
+
+	lang := c.Get("language").(string)
+
+	resp, err := h.service.Auth().LoginWithPincode(c.Request().Context(), req, &h.cfg.Jwt)
+	if err != nil {
+		log.Printf("Pincode login failed: %v", err)
+
+		if lang == "ru" {
+			return c.JSON(http.StatusUnauthorized, model.ErrorResponse{Message: "Ungültige Anmeldeinformationen"})
+		}
+		return c.JSON(http.StatusUnauthorized, model.ErrorResponse{Message: "ru: Xatolik login qilishda"})
+	}
+
+	return c.JSON(http.StatusOK, resp)
+}
+
 // LoginGlobal handles global (main DB) superadmin login
 // @Summary Global superadmin login
 // @Description Authenticate global superadmin (main DB) and return access and refresh tokens

@@ -5,6 +5,7 @@ import (
 	"github.com/labstack/echo/v4"
 	"gitlab.yurtal.tech/company/maryai/back/internal/config"
 	mw "gitlab.yurtal.tech/company/maryai/back/internal/middleware"
+	"gitlab.yurtal.tech/company/maryai/back/internal/repository"
 	"gitlab.yurtal.tech/company/maryai/back/internal/service"
 	"gitlab.yurtal.tech/company/maryai/back/pkg/logger"
 )
@@ -13,6 +14,7 @@ type Handler struct {
 	logger  *logger.Logger
 	service service.I
 	cfg     *config.Config
+	repo    *repository.Repository
 }
 
 func (h *Handler) Register(router *echo.Echo) {
@@ -25,6 +27,7 @@ func (h *Handler) Register(router *echo.Echo) {
 		auth := api.Group("/auth")
 		{
 			auth.POST("/login", h.Login, mw.LoginRateLimiter(), mw.CheckLanguage(), mw.ValidateLoginInput)
+			auth.POST("/login-pincode", h.LoginWithPincode, mw.LoginRateLimiter(), mw.CheckLanguage())
 			auth.POST("/register", h.RegisterUser, mw.CheckLanguage(), mw.ValidateRegisterInput)
 			auth.POST("/refresh", h.Refresh, mw.CheckLanguage())
 		}
@@ -68,13 +71,13 @@ func (h *Handler) Register(router *echo.Echo) {
 		}
 
 		// Branch management endpoints
-		branches := api.Group("/branches")
+		branches := api.Group("/branches", mw.CheckAuth(h.cfg), mw.TenantMiddleware(h.repo))
 		{
-			branches.POST("", h.CreateBranch, mw.CheckLanguage(), mw.CheckAuth(h.cfg))
-			branches.GET("", h.GetAllBranches, mw.CheckLanguage(), mw.CheckAuth(h.cfg))
-			branches.GET("/:id", h.GetBranchByID, mw.CheckLanguage(), mw.CheckAuth(h.cfg))
-			branches.DELETE("/:id", h.DeleteBranch, mw.CheckLanguage(), mw.CheckAuth(h.cfg))
-			branches.POST("/:id/restore", h.RestoreBranch, mw.CheckLanguage(), mw.CheckAuth(h.cfg))
+			branches.POST("", h.CreateBranch, mw.CheckLanguage())
+			branches.GET("", h.GetAllBranches, mw.CheckLanguage())
+			branches.GET("/:id", h.GetBranchByID, mw.CheckLanguage())
+			branches.DELETE("/:id", h.DeleteBranch, mw.CheckLanguage())
+			branches.POST("/:id/restore", h.RestoreBranch, mw.CheckLanguage())
 		}
 
 		// Translation management endpoints
@@ -404,10 +407,11 @@ func (h *Handler) Register(router *echo.Echo) {
 
 }
 
-func New(logger *logger.Logger, cfg *config.Config, service service.I) *Handler {
+func New(logger *logger.Logger, cfg *config.Config, service service.I, repo *repository.Repository) *Handler {
 	return &Handler{
 		logger:  logger,
 		service: service,
 		cfg:     cfg,
+		repo:    repo,
 	}
 }

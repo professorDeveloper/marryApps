@@ -23,9 +23,14 @@ type LoginRequest struct {
 	BrandID  *string `json:"brandId,omitempty" example:"550e8400-e29b-41d4-a716-446655440000"`
 }
 
+type PincodeLoginRequest struct {
+	Pincode string `json:"pincode" example:"1234"`
+	BrandID string `json:"brandId" example:"550e8400-e29b-41d4-a716-446655440000"`
+}
+
 type GlobalLoginRequest struct {
 	Username string `json:"username" example:"superadmin"`
-	Password string `json:"password" example:"superadmin123"`
+	Password string `json:"password" example:"superadmin"`
 }
 
 type LoginResponse struct {
@@ -107,7 +112,6 @@ type LogoutResponse struct {
 	Message string `json:"message" example:"User logged out successfully"`
 }
 
-// Shift-related models
 type ShiftResponse struct {
 	ID          string     `json:"id" example:"123e4567-e89b-12d3-a456-426614174000"`
 	Name        *string    `json:"name,omitempty" example:"Morning Shift"`

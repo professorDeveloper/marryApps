@@ -14,7 +14,7 @@ import (
 // CreateBrand creates a new brand
 // @Summary Create brand
 // @Description Create a new brand
-// @Security Bearer
+// @Security BearerAuth
 // @Tags brands
 // @Accept json
 // @Produce json
@@ -56,13 +56,13 @@ func (h *Handler) CreateBrand(c echo.Context) error {
 // @Tags brands
 // @Accept json
 // @Produce json
+// @Security BearerAuth
 // @Param id path string true "Brand ID"
 // @Success 200 {object} model.BrandResponse
 // @Failure 400 {object} model.ErrorResponse
 // @Failure 404 {object} model.ErrorResponse
 // @Failure 500 {object} model.ErrorResponse
 // @Router /api/v1/admin/brands/{id} [get]
-// @Security Bearer
 func (h *Handler) GetBrand(c echo.Context) error {
 	brandIDStr := c.Param("id")
 	brandID, err := uuid.Parse(brandIDStr)
@@ -89,13 +89,13 @@ func (h *Handler) GetBrand(c echo.Context) error {
 // @Tags brands
 // @Accept json
 // @Produce json
+// @Security BearerAuth
 // @Param limit query int false "Limit (default: 10, max: 100)" minimum(1) maximum(100)
 // @Param offset query int false "Offset (default: 0)" minimum(0)
 // @Success 200 {array} model.BrandResponse
 // @Failure 400 {object} model.ErrorResponse
 // @Failure 500 {object} model.ErrorResponse
 // @Router /api/v1/admin/brands [get]
-// @Security Bearer
 func (h *Handler) ListBrands(c echo.Context) error {
 	limitStr := c.QueryParam("limit")
 	offsetStr := c.QueryParam("offset")
@@ -144,6 +144,7 @@ func (h *Handler) ListBrands(c echo.Context) error {
 // @Tags brands
 // @Accept json
 // @Produce json
+// @Security BearerAuth
 // @Param id path string true "Brand ID"
 // @Param request body model.UpdateBrandRequest true "Brand update request"
 // @Success 200 {object} model.BrandResponse
@@ -151,7 +152,6 @@ func (h *Handler) ListBrands(c echo.Context) error {
 // @Failure 404 {object} model.ErrorResponse
 // @Failure 500 {object} model.ErrorResponse
 // @Router /api/v1/admin/brands/{id} [put]
-// @Security Bearer
 func (h *Handler) UpdateBrand(c echo.Context) error {
 	brandIDStr := c.Param("id")
 	brandID, err := uuid.Parse(brandIDStr)
@@ -193,13 +193,13 @@ func (h *Handler) UpdateBrand(c echo.Context) error {
 // @Tags brands
 // @Accept json
 // @Produce json
+// @Security BearerAuth
 // @Param id path string true "Brand ID"
 // @Success 204
 // @Failure 400 {object} model.ErrorResponse
 // @Failure 404 {object} model.ErrorResponse
 // @Failure 500 {object} model.ErrorResponse
 // @Router /api/v1/admin/brands/{id} [delete]
-// @Security Bearer
 func (h *Handler) DeleteBrand(c echo.Context) error {
 	brandIDStr := c.Param("id")
 	brandID, err := uuid.Parse(brandIDStr)
@@ -226,13 +226,13 @@ func (h *Handler) DeleteBrand(c echo.Context) error {
 // @Tags brands
 // @Accept json
 // @Produce json
+// @Security BearerAuth
 // @Param id path string true "Brand ID"
 // @Success 200 {object} map[string]string "Schema initialized successfully"
 // @Failure 400 {object} model.ErrorResponse
 // @Failure 404 {object} model.ErrorResponse
 // @Failure 500 {object} model.ErrorResponse
 // @Router /api/v1/admin/brands/{id}/init-schema [post]
-// @Security Bearer
 func (h *Handler) InitializeTenantSchema(c echo.Context) error {
 	brandIDStr := c.Param("id")
 	brandID, err := uuid.Parse(brandIDStr)
