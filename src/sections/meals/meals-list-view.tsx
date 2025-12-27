@@ -4,11 +4,10 @@
 // Faqat BITTA fayl - hamma logic, filters va renderers shu yerda
 
 import type { GridColDef } from '@mui/x-data-grid';
-import type { IOrderItem } from 'src/types/order';
+import type { ISemifinishedItem } from 'src/types/semifinished';
 
 import { useMemo, useCallback } from 'react';
 
-import { Chip } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
 
 import { paths } from 'src/routes/paths';
@@ -16,11 +15,12 @@ import { paths } from 'src/routes/paths';
 import { useGenericDataTable } from 'src/hooks/use-generic-data-table';
 
 import { endpoints } from 'src/lib/axios';
-import { mockOrders } from 'src/_mock/_orders';
+import { mockMeals } from 'src/_mock/_meals';
 
 import { Iconify } from 'src/components/iconify';
 import { CustomGridActionsCellItem } from 'src/components/custom-data-grid';
-import { RenderCellItem ,
+import {
+    RenderCellItem,
     GenericTableView,
 } from 'src/components/generic-table-view';
 
@@ -33,6 +33,17 @@ const STATUS_OPTIONS = [
     { value: 'completed', label: 'Completed' },
     { value: 'cancelled', label: 'Cancelled' },
     { value: 'refunded', label: 'Refunded' },
+];
+
+const UNIT_OPTIONS = [
+    { value: 'kg', label: 'kg' },
+    { value: 'g', label: 'g' },
+    { value: 'l', label: 'l' },
+    { value: 'ml', label: 'ml' },
+    { value: 'm', label: 'm' },
+    { value: 'cm', label: 'cm' },
+    { value: 'dona', label: 'dona' },
+    { value: 'paket', label: 'paket' },
 ];
 
 const STATUS_COLOR_MAP = {
@@ -51,81 +62,26 @@ const STATUS_COLOR_MAP = {
  */
 function RenderCellOrderNumber({ params }: { params: any }) {
     const { row } = params;
-    const customer = row.customer;
 
     return (
         <RenderCellItem
-            params={{
-                ...params,
-                row: {
-                    ...row,
-                    name: row.orderNumber,
-                    coverUrl: customer.avatarUrl,
-                },
-            }}
-            href={paths.menu.order.details(row.id)}
+            params={params}
+            href={`/dashboard/meals/${row.id}`}
             imageField="coverUrl"
             nameField="name"
         />
     );
 }
 
-/**
- * Status renderer with color chip
- */
-function RenderCellStatus({ params }: { params: any }) {
-    const { value } = params;
-
-    return (
-        <Chip
-            label={value}
-            color={STATUS_COLOR_MAP[value as keyof typeof STATUS_COLOR_MAP]}
-            size="small"
-            variant="soft"
-        />
-    );
-}
-
-/**
- * Customer info renderer
- */
-function RenderCellCustomer({ params }: { params: any }) {
-    const { customer } = params.row;
-
-    return (
-        <div>
-            <div style={{ fontWeight: 500 }}>{customer.name}</div>
-            <div style={{ fontSize: '0.875rem', color: '#999' }}>{customer.email}</div>
-        </div>
-    );
-}
-
-/**
- * Amount renderer with formatting
- */
-function RenderCellAmount({ params }: { params: any }) {
-    const { value } = params;
-
-    return <div>${value.toFixed(2)}</div>;
-}
-
-/**
- * Quantity renderer
- */
-function RenderCellQuantity({ params }: { params: any }) {
-    const { totalQuantity } = params.row;
-
-    return <div>{totalQuantity} items</div>;
-}
 
 // ============================================================================
 // MAIN COMPONENT
 // ============================================================================
 
-export function OrderListView() {
+export function Meals() {
     const theme = useTheme();
-   // Generic hook ishlatamiz - product API'dan data olamiz (mock uchun)
-    const { data: orders, loading } = useGenericDataTable<IOrderItem>({
+    // Generic hook ishlatamiz - product API'dan data olamiz (mock uchun)
+    const { data: orders, loading } = useGenericDataTable<ISemifinishedItem>({
         endpoint: endpoints.product.list, // Product API'dan data (mock)
         dataKey: 'products',
     });
@@ -134,44 +90,40 @@ export function OrderListView() {
     const columns = useMemo<GridColDef[]>(
         () => [
             {
-                field: 'orderNumber',
-                headerName: 'Order Number',
+                field: 'name',
+                headerName: 'Nomi',
                 flex: 1,
-                minWidth: 160,
+                minWidth: 200,
                 hideable: false,
                 renderCell: (params) => <RenderCellOrderNumber params={params} />,
             },
             {
-                field: 'customer',
-                headerName: 'Customer',
-                flex: 1,
-                minWidth: 200,
-                sortable: false,
-                filterable: false,
-                renderCell: (params) => <RenderCellCustomer params={params} />,
-            },
-            {
-                field: 'totalAmount',
-                headerName: 'Amount',
+                field: 'unit',
+                headerName: "O'lchov birligi",
                 width: 120,
-                align: 'right',
-                renderCell: (params) => <RenderCellAmount params={params} />,
-            },
-            {
-                field: 'totalQuantity',
-                headerName: 'Items',
-                width: 100,
-                renderCell: (params) => <RenderCellQuantity params={params} />,
-            },
-            {
-                field: 'status',
-                headerName: 'Status',
-                width: 130,
                 type: 'singleSelect',
-                filterable: true,
                 editable: true,
-                valueOptions: STATUS_OPTIONS,
-                renderCell: (params) => <RenderCellStatus params={params} />,
+                filterable: false,
+                valueOptions: UNIT_OPTIONS,
+            },
+            {
+                field: 'category',
+                headerName: 'Guruh',
+                width: 140,
+                type: 'string',
+            },
+            {
+                field: 'originalPrice',
+                headerName: 'Asl Narxi',
+                width: 120,
+                type: 'number',
+                renderCell: (params) => `${params.value?.toLocaleString()} so'm`,
+            },
+            {
+                field: 'quantity',
+                headerName: 'Miqdori',
+                width: 100,
+                type: 'number',
             },
             {
                 type: 'actions',
@@ -188,13 +140,13 @@ export function OrderListView() {
                         showInMenu
                         label="Edit"
                         icon={<Iconify icon="solar:pen-bold" />}
-                        href={paths.menu.order.edit(params.row.id)}
+                        href={paths.menu.meals.edit(params.row.id)}
                     />,
                     <CustomGridActionsCellItem
                         showInMenu
                         label="View"
                         icon={<Iconify icon="solar:eye-bold" />}
-                        href={paths.menu.order.details(params.row.id)}
+                        href={paths.menu.meals.details(params.row.id)}
                     />,
                     <CustomGridActionsCellItem
                         showInMenu
@@ -220,21 +172,21 @@ export function OrderListView() {
     }, []);
 
     return (
-        <GenericTableView<IOrderItem>
-            data={mockOrders}
+        <GenericTableView<ISemifinishedItem>
+            data={mockMeals}
             loading={loading}
             columns={columns}
             breadcrumbs={{
-                heading: 'Buyurtmalar',
+                heading: 'Mahsulotlar',
                 links: [
                     { name: 'Dashboard', href: paths.dashboard.root },
-                    { name: 'Orders', href: paths.menu.order.root },
+                    { name: 'Mahsulotlar', href: paths.menu.meals.root },
                     { name: 'List' },
                 ],
             }}
             addButton={{
-                label: 'Buyurtma qo\'shish',
-                href: paths.menu.order.new,
+                label: 'Mahsulot qo\'shish',
+                href: paths.menu.meals.new,
             }}
             filterOptions={{
                 status: STATUS_OPTIONS,

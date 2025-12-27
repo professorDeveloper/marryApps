@@ -28,10 +28,12 @@ export function NavList({
   const { value: open, onFalse: onClose, onToggle } = useBoolean(isActive);
 
   useEffect(() => {
-    if (!isActive) {
+    // Only close menu items if they are children (depth > 1)
+    // Keep parent menu items (depth === 1 or undefined) open when navigating within their children
+    if (!isActive && depth !== undefined && depth > 1) {
       onClose();
     }
-  }, [isActive]);
+  }, [isActive, depth, onClose]);
 
   const handleToggleMenu = useCallback(() => {
     if (data.children) {

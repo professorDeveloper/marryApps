@@ -1,7 +1,7 @@
-import type { ISemifinishedItem } from "src/types/semifinished";
+import type { IMealsItem } from "src/types/meals";
 
 // Mock order data - production'da API'dan olasiz
-export const mockOrders: ISemifinishedItem[] = [
+export const mockMeals: IMealsItem[] = [
     {
         id: '1',
         sku: '16H9UR0',
@@ -120,7 +120,7 @@ export const mockOrders: ISemifinishedItem[] = [
         totalQuantity: 2,
         status: 'completed',
     },
-    {
+     {
         id: '3',
         sku: '16H9UR0',
         orderNumber: '#60100',

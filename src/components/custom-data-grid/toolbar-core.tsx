@@ -197,7 +197,7 @@ export function CustomToolbarQuickFilter({
       render={(props) => (
         <Box
           {...props}
-          sx={[{ width: 1, maxWidth: { md: 260 } }, ...(Array.isArray(sx) ? sx : [sx])]}
+          sx={[{ width: 400, maxWidth: { md: 360 } }, ...(Array.isArray(sx) ? sx : [sx])]}
         >
           <QuickFilterControl
             render={({ ref, ...controlProps }, state) => (

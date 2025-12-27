@@ -59,9 +59,8 @@ export const navData: NavSectionProps['data'] = [
         children: [
           { title: 'Bo\'limlar', path: paths.menu.product.root },
           { title: 'Kategoriyalar', path: paths.menu.category.root },
-          { title: 'Yarim tayyor mahsulotlar', path: paths.menu.order.root },
-          { title: 'Taomlar', path: paths.menu.product.demo.edit },
-          { title: 'Modifikatorlar', path: paths.menu.product.demo.edit },
+          { title: 'Yarim tayyor mahsulotlar', path: paths.menu.semifinished.root },
+          { title: 'Taomlar', path: paths.menu.meals.root },
         ],
       },
     ],

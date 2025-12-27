@@ -59,10 +59,6 @@ export const paths = {
       new: `${ROOTS.MENU}/product/new`,
       details: (id: string) => `${ROOTS.MENU}/product/${id}`,
       edit: (id: string) => `${ROOTS.MENU}/product/${id}/edit`,
-      demo: {
-        details: `${ROOTS.MENU}/product/${MOCK_ID}`,
-        edit: `${ROOTS.MENU}/product/${MOCK_ID}/edit`,
-      },
     },
     category: {
       root: `${ROOTS.MENU}/category`,
@@ -76,11 +72,17 @@ export const paths = {
       details: (id: string) => `${ROOTS.MENU}/user/${id}`,
       edit: (id: string) => `${ROOTS.MENU}/user/${id}/edit`,
     },
-    order: {
-      root: `${ROOTS.MENU}/order`,
-      new: `${ROOTS.MENU}/order/new`,
-      details: (id: string) => `${ROOTS.MENU}/order/${id}`,
-      edit: (id: string) => `${ROOTS.MENU}/order/${id}/edit`,
+    semifinished: {
+      root: `${ROOTS.MENU}/semifinished`,
+      new: `${ROOTS.MENU}/semifinished/new`,
+      details: (id: string) => `${ROOTS.MENU}/semifinished/${id}`,
+      edit: (id: string) => `${ROOTS.MENU}/semifinished/${id}/edit`,
+    },
+    meals: {
+      root: `${ROOTS.MENU}/meals`,
+      new: `${ROOTS.MENU}/meals/new`,
+      details: (id: string) => `${ROOTS.MENU}/meals/${id}`,
+      edit: (id: string) => `${ROOTS.MENU}/meals/${id}/edit`,
     },
   },
   // DASHBOARD

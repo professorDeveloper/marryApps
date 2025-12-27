@@ -4,13 +4,20 @@ import type { IDateValue } from './common';
 // ORDER TYPES
 // ============================================================================
 
-export type IOrderTableFilters = {
+export type IMealsTableFilters = {
     status: string[];
 };
 
-export type IOrderItem = {
+export type IMealsItem = {
     id: string;
+    sku: string;
     orderNumber: string;
+    name: string;
+    unit: string;
+    category: string;
+    originalPrice: number;
+    quantity: number;
+    coverUrl: string;
     createdAt: IDateValue;
     customer: {
         id: string;
@@ -23,6 +30,9 @@ export type IOrderItem = {
         id: string;
         sku: string;
         name: string;
+        unit: string;
+        category: string;
+        originalPrice: number;
         quantity: number;
         price: number;
         coverUrl: string;
