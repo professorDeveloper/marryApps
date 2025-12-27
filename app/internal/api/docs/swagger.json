@@ -1,6 +1,6 @@
 {
     "schemes": [
-        "http"
+        "https"
     ],
     "swagger": "2.0",
     "info": {
@@ -9,7 +9,7 @@
         "contact": {},
         "version": "1.0"
     },
-    "host": "localhost:8080",
+    "host": "back.maryai.yurtal.tech",
     "basePath": "/",
     "paths": {
         "/api/v1/admin/brands": {
@@ -14618,7 +14618,7 @@
             "properties": {
                 "password": {
                     "type": "string",
-                    "example": "superadmin123"
+                    "example": "superadmin"
                 },
                 "username": {
                     "type": "string",
