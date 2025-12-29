@@ -5,6 +5,7 @@
 import type { FC } from 'react';
 
 import { useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
@@ -31,6 +32,7 @@ export const ImageUploadField: FC<ImageUploadFieldProps> = ({
     onRemove,
     height = 300,
 }) => {
+    const { t } = useTranslation('menu');
     const inputRef = useRef<HTMLInputElement>(null);
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const [loading, setLoading] = useState(false);
@@ -41,13 +43,13 @@ export const ImageUploadField: FC<ImageUploadFieldProps> = ({
 
         // Check file type
         if (!file.type.startsWith('image/')) {
-            alert('Please select an image file');
+            alert(t('mealsProducts.alert_select_image'));
             return;
         }
 
         // Check file size (max 5MB)
         if (file.size > 5 * 1024 * 1024) {
-            alert('File size must be less than 5MB');
+            alert(t('mealsProducts.alert_max_size'));
             return;
         }
 
@@ -86,7 +88,7 @@ export const ImageUploadField: FC<ImageUploadFieldProps> = ({
 
                 <Box
                     sx={{
-                            
+
                         width: 250,
                         height: 250,
                         bgcolor: value ? 'transparent' : 'action.hover',
@@ -127,7 +129,7 @@ export const ImageUploadField: FC<ImageUploadFieldProps> = ({
                         <Stack alignItems="center" spacing={1}>
                             <Iconify icon="eva:cloud-upload-fill" sx={{ fontSize: 48, color: 'text.secondary' }} />
                             <Typography variant="body2" color="textSecondary" align="center">
-                                Rasmni yuklash uchun bosing
+                                {t('mealsProducts.upload_prompt')}
                             </Typography>
                         </Stack>
                     )}
@@ -176,12 +178,12 @@ export const ImageUploadField: FC<ImageUploadFieldProps> = ({
                         startIcon={<Iconify icon="eva:cloud-upload-fill" />}
                         onClick={handleClick}
                     >
-                        Boshqa rasm yuklash
+                        {t('mealsProducts.upload_another')}
                     </Button>
                 )}
 
                 <Typography variant="caption" color="textSecondary">
-                    JPG, PNG, GIF - maksimal 5MB
+                    {t('mealsProducts.file_types')}
                 </Typography>
             </Stack>
         </Card>

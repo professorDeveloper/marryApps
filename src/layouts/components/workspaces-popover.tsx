@@ -13,6 +13,8 @@ import Typography from '@mui/material/Typography';
 import ButtonBase from '@mui/material/ButtonBase';
 import Button, { buttonClasses } from '@mui/material/Button';
 
+import { useTranslate } from 'src/locales/use-locales';
+
 import { Iconify } from 'src/components/iconify';
 import { Scrollbar } from 'src/components/scrollbar';
 import { CustomPopover } from 'src/components/custom-popover';
@@ -34,6 +36,8 @@ export function WorkspacesPopover({ data = [], sx, ...other }: WorkspacesPopover
   const { open, anchorEl, onClose, onOpen } = usePopover();
 
   const [workspace, setWorkspace] = useState(data[0]);
+
+  const { t } = useTranslate('menu');
 
   const handleChangeWorkspace = useCallback(
     (newValue: (typeof data)[0]) => {
@@ -165,7 +169,7 @@ export function WorkspacesPopover({ data = [], sx, ...other }: WorkspacesPopover
           },
         }}
       >
-        Yangi ish maydoni qo&apos;shish
+        {t('workspaces.add')}
       </Button>
     </CustomPopover>
   );

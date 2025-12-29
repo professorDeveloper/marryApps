@@ -6,6 +6,7 @@ import type { FC } from 'react';
 import type { CardSection, GenericEditViewProps } from './types';
 
 import { useState, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
@@ -33,6 +34,7 @@ export const GenericEditView: FC<GenericEditViewProps> = ({
     const router = useRouter();
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+    const { t } = useTranslation('menu');
 
     const [loading, setLoading] = useState(externalLoading);
     const [error, setError] = useState<string | null>(null);
@@ -89,7 +91,7 @@ export const GenericEditView: FC<GenericEditViewProps> = ({
         <Box sx={{ p: 3 }}>
             {/* Breadcrumbs */}
             <CustomBreadcrumbs
-                heading={isNew ? `Create ${config.title}` : `Edit ${config.title}`}
+                heading={isNew ? `${config.title}` : `${config.title}`}
                 links={config.breadcrumbs}
             />
 
@@ -124,7 +126,7 @@ export const GenericEditView: FC<GenericEditViewProps> = ({
                                     disabled={loading}
                                     startIcon={<Iconify icon="solar:check-circle-bold" />}
                                 >
-                                    {loading ? `Saqlanmoqda...` : `Saqlash`}
+                                    {loading ? t('loading') : t('save')}
                                 </Button>
 
                                 {!isNew && config.showDeleteButton !== false && (
@@ -145,7 +147,7 @@ export const GenericEditView: FC<GenericEditViewProps> = ({
                                     variant="outlined"
                                     onClick={() => router.back()}
                                 >
-                                   Bekor qilish
+                                    {t('cancel')}
                                 </Button>
                             </Stack>
                         </Box>
@@ -181,7 +183,7 @@ export const GenericEditView: FC<GenericEditViewProps> = ({
                                     disabled={loading}
                                     startIcon={<Iconify icon="solar:check-circle-bold" />}
                                 >
-                                    {loading ? `Saving...` : `Save ${config.title}`}
+                                    {loading ? t('loading') : `${t('save')} ${config.title}`}
                                 </Button>
 
                                 {!isNew && config.showDeleteButton !== false && (
@@ -202,7 +204,7 @@ export const GenericEditView: FC<GenericEditViewProps> = ({
                                     variant="outlined"
                                     onClick={() => router.back()}
                                 >
-                                    Bekor qilish
+                                    {t('cancel')}
                                 </Button>
                             </Stack>
                         )}

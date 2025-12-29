@@ -2,6 +2,7 @@ import type { GridBaseIconProps } from '@mui/x-data-grid';
 import type { SvgIconProps } from '@mui/material/SvgIcon';
 import type { Theme, CSSObject, Components } from '@mui/material/styles';
 
+import i18next from 'i18next';
 import { varAlpha } from 'minimal-shared/utils';
 
 import { gridClasses } from '@mui/x-data-grid';
@@ -233,6 +234,13 @@ const MuiDataGrid: Components<Theme>['MuiDataGrid'] = {
       quickFilterIcon: SearchIcon,
       quickFilterClearIcon: CloseIcon,
     },
+    // Locale text wired to i18next translations
+    localeText: {
+      // Filter panel
+      filterPanelColumns: String(i18next.t('menu.toolbar.columns')),
+      filterPanelOperator: String(i18next.t('menu.toolbar.operator')),
+      filterPanelInputLabel: String(i18next.t('menu.toolbar.value')),
+    },
     slotProps: {
       baseSelect: {
         native: true,
@@ -292,9 +300,9 @@ const MuiDataGrid: Components<Theme>['MuiDataGrid'] = {
       color: theme.vars.palette.text.secondary,
       backgroundColor: theme.vars.palette.background.neutral,
       [`&.${gridClasses['columnHeader--sorted']}, &.${gridClasses['columnHeader--sorted']} .${gridClasses.sortIcon}`]:
-        {
-          color: theme.vars.palette.text.primary,
-        },
+      {
+        color: theme.vars.palette.text.primary,
+      },
     }),
     /**
      * @cell

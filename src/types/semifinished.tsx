@@ -16,6 +16,7 @@ export type ISemifinishedItem = {
     unit: string;
     category: string;
     originalPrice: number;
+    costprice: number;
     quantity: number;
     coverUrl: string;
     createdAt: IDateValue;

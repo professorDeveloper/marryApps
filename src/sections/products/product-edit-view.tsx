@@ -56,31 +56,20 @@ const IMAGE_SECTION: CardSection = {
 const BASIC_INFO_SECTION: CardSection = {
     id: 'basic',
     title: 'Asosiy ma\'lumotlar',
-    columns: 2,
+    columns: 1,
     fields: [
         {
             key: 'name',
-            label: 'Mahsulot nomi',
+            label: 'Ichimliklar',
             type: 'text',
             required: true,
             defaultValue: '',
         },
         {
-            key: 'sku',
-            label: 'SKU',
+            key: 'name',
+            label: 'Ichimliklar ombori',
             type: 'text',
-            defaultValue: '',
-        },
-        {
-            key: 'code',
-            label: 'Kod',
-            type: 'text',
-            defaultValue: '',
-        },
-        {
-            key: 'category',
-            label: 'Toifa',
-            type: 'text',
+            required: true,
             defaultValue: '',
         },
     ],
@@ -89,7 +78,7 @@ const BASIC_INFO_SECTION: CardSection = {
 const PRICING_SECTION: CardSection = {
     id: 'pricing',
     title: 'Narxlash',
-    columns: 2,
+    columns: 1,
     fields: [
         {
             key: 'price',
@@ -156,6 +145,7 @@ const COLORS_SECTION: CardSection = {
 const ADVANCED_SECTION: CardSection = {
     id: 'advanced',
     title: 'Qo\'shimcha variantlar',
+    columns: 1,
     fields: [
         {
             key: 'sizes',
@@ -232,10 +222,7 @@ export function ProductEditView({ product, isNew = false }: ProductEditViewProps
         leftSidecard: IMAGE_SECTION,
         sections: [
             BASIC_INFO_SECTION,
-            // PRICING_SECTION,
             COLORS_SECTION,
-            // DESCRIPTIONS_SECTION,
-            // ADVANCED_SECTION,
         ],
         onSubmit: handleSubmit,
         onDelete: !isNew ? handleDelete : undefined,

@@ -27,9 +27,7 @@ const authJwt = {
       element: (
         <GuestGuard>
           <AuthSplitLayout
-            slotProps={{
-              section: { title: 'Hi, Welcome back' },
-            }}
+           
           >
             <Jwt.SignInPage />
           </AuthSplitLayout>

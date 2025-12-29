@@ -13,9 +13,14 @@ export type IMealsItem = {
     sku: string;
     orderNumber: string;
     name: string;
+    section?: string;
+    stock?: string;
     unit: string;
     category: string;
     originalPrice: number;
+    price?: number;
+    profit?: number;
+    profitnumber?: number;
     quantity: number;
     coverUrl: string;
     createdAt: IDateValue;

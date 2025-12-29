@@ -12,9 +12,11 @@ export const defaultSettings: SettingsState = {
   direction: themeConfig.direction,
   contrast: 'default',
   navLayout: 'vertical',
-  primaryColor: 'default',
+  // Default app primary color changed to orange preset per request
+  primaryColor: 'preset4',
   navColor: 'integrate',
-  compactLayout: true,
+  // Default: compact layout should be off
+  compactLayout: false,
   fontSize: 16,
   fontFamily: themeConfig.fontFamily.primary,
   version: CONFIG.appVersion,

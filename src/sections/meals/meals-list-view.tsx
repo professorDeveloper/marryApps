@@ -4,9 +4,10 @@
 // Faqat BITTA fayl - hamma logic, filters va renderers shu yerda
 
 import type { GridColDef } from '@mui/x-data-grid';
-import type { ISemifinishedItem } from 'src/types/semifinished';
+import type { IMealsItem } from 'src/types/meals';
 
 import { useMemo, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { useTheme } from '@mui/material/styles';
 
@@ -30,24 +31,6 @@ import { formatDate, formatPrice, formatQuantity } from 'src/components/generic-
 // ============================================================================
 // CONSTANTS
 // ============================================================================
-
-const STATUS_OPTIONS = [
-    { value: 'pending', label: 'Kutilmoqda' },
-    { value: 'completed', label: 'Tugallandi' },
-    { value: 'cancelled', label: 'Bekor qilindi' },
-    { value: 'refunded', label: 'Pul qaytarildi' },
-];
-
-const UNIT_OPTIONS = [
-    { value: 'kg', label: 'kg' },
-    { value: 'g', label: 'g' },
-    { value: 'l', label: 'l' },
-    { value: 'ml', label: 'ml' },
-    { value: 'm', label: 'm' },
-    { value: 'cm', label: 'cm' },
-    { value: 'dona', label: 'dona' },
-    { value: 'paket', label: 'paket' },
-];
 
 const STATUS_COLOR_MAP = {
     pending: 'warning',
@@ -84,15 +67,15 @@ function RenderCellOrderNumber({ params }: { params: any }) {
 /**
  * Meals item'uchun modal render function
  */
-function renderMealsSpecifications(item: ISemifinishedItem) {
+function renderMealsSpecifications(item: IMealsItem, t: any) {
     const specs = [
-        { label: 'Nomi', value: item.name || '-' },
-        { label: 'SKU', value: item.sku || '-' },
-        { label: 'O\'lchov birligi', value: item.unit || '-' },
-        { label: 'Guruh', value: item.category || '-' },
-        { label: 'Asl Narxi', value: formatPrice(item.originalPrice) },
-        { label: 'Miqdori', value: formatQuantity(item.quantity) },
-        { label: 'Yaratilgan', value: formatDate(item.createdAt) },
+        { label: t('mealsProducts.name'), value: item.name || '-' },
+        { label: t('mealsProducts.sku'), value: item.sku || '-' },
+        { label: t('mealsProducts.unit'), value: item.unit || '-' },
+        { label: t('mealsProducts.category'), value: item.category || '-' },
+        { label: t('mealsProducts.originalPrice'), value: formatPrice(item.originalPrice) },
+        { label: t('mealsProducts.quantity'), value: formatQuantity(item.quantity) },
+        { label: t('mealsProducts.createdAt'), value: formatDate(item.createdAt) },
     ];
 
     return <SpecificationsTable rows={specs} />;
@@ -104,51 +87,93 @@ function renderMealsSpecifications(item: ISemifinishedItem) {
 
 export function Meals() {
     const theme = useTheme();
+    const { t } = useTranslation('menu');
     // Generic hook ishlatamiz - product API'dan data olamiz (mock uchun)
-    const { data: orders, loading } = useGenericDataTable<ISemifinishedItem>({
+    const { data: orders, loading } = useGenericDataTable<IMealsItem>({
         endpoint: endpoints.product.list, // Product API'dan data (mock)
         dataKey: 'products',
     });
 
     // View modal hook'i
-    const { isOpen, selectedData, openModal, closeModal } = useGenericViewModal<ISemifinishedItem>();
+    const { isOpen, selectedData, openModal, closeModal } = useGenericViewModal<IMealsItem>();
+
+    // Update options with translations
+    const statusOptions = useMemo(
+        () => [
+            { value: 'pending', label: t('mealsProducts.pending') },
+            { value: 'completed', label: t('mealsProducts.completed') },
+            { value: 'cancelled', label: t('mealsProducts.cancelled') },
+            { value: 'refunded', label: t('mealsProducts.refunded') },
+        ],
+        [t]
+    );
+
+    const unitOptions = useMemo(
+        () => [
+            { value: 'kg', label: t('mealsProducts.kg') },
+            { value: 'g', label: t('mealsProducts.g') },
+            { value: 'l', label: t('mealsProducts.l') },
+            { value: 'ml', label: t('mealsProducts.ml') },
+            { value: 'm', label: t('mealsProducts.m') },
+            { value: 'cm', label: t('mealsProducts.cm') },
+            { value: 'dona', label: t('mealsProducts.dona') },
+            { value: 'paket', label: t('mealsProducts.paket') },
+        ],
+        [t]
+    );
 
     // Columns config - Product page'si kabi
     const columns = useMemo<GridColDef[]>(
         () => [
             {
                 field: 'name',
-                headerName: 'Nomi',
+                headerName: t('mealsProducts.name'),
                 flex: 1,
                 minWidth: 200,
                 hideable: false,
                 renderCell: (params) => <RenderCellOrderNumber params={params} />,
             },
             {
-                field: 'unit',
-                headerName: "O'lchov birligi",
-                width: 120,
-                type: 'singleSelect',
-                editable: true,
-                filterable: false,
-                valueOptions: UNIT_OPTIONS,
+                field: 'category',
+                headerName: t('mealsProducts.category'),
+                width: 140,
+                type: 'string',
             },
             {
-                field: 'category',
-                headerName: 'Guruh',
+                field: 'section',
+                headerName: t('mealsProducts.section'),
+                width: 140,
+                type: 'string',
+            },
+            {
+                field: 'stock',
+                headerName: t('mealsProducts.stock'),
                 width: 140,
                 type: 'string',
             },
             {
                 field: 'originalPrice',
-                headerName: 'Asl Narxi',
+                headerName: t('mealsProducts.originalPrice'),
                 width: 120,
                 type: 'number',
                 renderCell: (params) => `${params.value?.toLocaleString()} so'm`,
             },
             {
-                field: 'quantity',
-                headerName: 'Miqdori',
+                field: 'price',
+                headerName: t('mealsProducts.price'),
+                width: 120,
+                type: 'number',
+                renderCell: (params) => `${params.value?.toLocaleString()} so'm`,
+            },
+            {
+                field: 'profitnumber',
+                headerName: t('mealsProducts.profitnumber'),
+                width: 100,
+                type: 'number',
+            },
+            {
+                field: 'profit',
+                headerName: `${t('mealsProducts.profit')}`,
                 width: 100,
                 type: 'number',
             },
@@ -165,19 +190,19 @@ export function Meals() {
                 getActions: (params) => [
                     <CustomGridActionsCellItem
                         showInMenu
-                        label="Edit"
+                        label={t('mealsProducts.edit')}
                         icon={<Iconify icon="solar:pen-bold" />}
                         href={paths.menu.meals.edit(params.row.id)}
                     />,
                     <CustomGridActionsCellItem
                         showInMenu
-                        label="View"
+                        label={t('mealsProducts.view')}
                         icon={<Iconify icon="solar:eye-bold" />}
                         onClick={() => openModal(params.row)}
                     />,
                     <CustomGridActionsCellItem
                         showInMenu
-                        label="Delete"
+                        label={t('mealsProducts.delete')}
                         icon={<Iconify icon="solar:trash-bin-trash-bold" />}
                         onClick={() => handleDelete(params.row.id)}
                         style={{ color: theme.vars.palette.error.main }}
@@ -185,7 +210,7 @@ export function Meals() {
                 ],
             },
         ],
-        [theme.vars.palette.error.main]
+        [theme.vars.palette.error.main, t, unitOptions, statusOptions]
     );
 
     const handleDelete = useCallback((id: string) => {
@@ -200,24 +225,24 @@ export function Meals() {
 
     return (
         <>
-            <GenericTableView<ISemifinishedItem>
+            <GenericTableView<IMealsItem>
                 data={mockMeals}
                 loading={loading}
                 columns={columns}
                 breadcrumbs={{
-                    heading: 'Mahsulotlar',
+                    heading: t('mealsProducts.title'),
                     links: [
-                        { name: 'Bosh paneli', href: paths.dashboard.root },
-                        { name: 'Mahsulotlar', href: paths.menu.meals.root },
-                        { name: 'Ro\'yxat' },
+                        { name: t('app'), href: paths.menu.root },
+                        { name: t('mealsProducts.title'), href: paths.menu.meals.root },
+                        { name: t('mealsProducts.list') },
                     ],
                 }}
                 addButton={{
-                    label: 'Mahsulot qo\'shish',
+                    label: t('mealsProducts.add'),
                     href: paths.menu.meals.new,
                 }}
                 filterOptions={{
-                    status: STATUS_OPTIONS,
+                    status: statusOptions,
                 }}
                 initialFilters={{
                     status: [],
@@ -232,9 +257,9 @@ export function Meals() {
             <GenericViewModal
                 isOpen={isOpen}
                 onClose={closeModal}
-                title={selectedData?.name || 'Mahsulot'}
+                title={selectedData?.name || t('mealsProducts.title')}
                 data={selectedData}
-                renderContent={renderMealsSpecifications}
+                renderContent={(data) => renderMealsSpecifications(data, t)}
                 maxWidth="sm"
                 slideDirection="left"
                 position="right"

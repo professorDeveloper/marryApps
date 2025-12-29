@@ -145,6 +145,7 @@ function renderSemifinishedSpecifications(item: ISemifinishedItem, t: any) {
         { label: t('semifinishedProducts.unit'), value: getUnitLabel(item.unit) },
         { label: t('semifinishedProducts.category'), value: item.category || '-' },
         { label: t('semifinishedProducts.originalPrice'), value: formatPrice(item.originalPrice) },
+        { label: t('semifinishedProducts.costprice'), value: formatPrice(item.costprice) },
         { label: t('semifinishedProducts.quantity'), value: formatQuantity(item.quantity) },
         { label: t('semifinishedProducts.status'), value: getStatusLabel(item.status || 'pending') },
         { label: t('semifinishedProducts.createdAt'), value: formatDate(item.createdAt) },
@@ -222,28 +223,21 @@ export function HalfMeals() {
                 width: 140,
                 type: 'string',
             },
-            {
-                field: 'originalPrice',
-                headerName: t('semifinishedProducts.originalPrice'),
+           
+              {
+                field: 'costprice',
+                headerName: t('semifinishedProducts.costprice'),
                 width: 120,
                 type: 'number',
                 renderCell: (params) => `${params.value?.toLocaleString()} so'm`,
-            },
+            },  
             {
                 field: 'quantity',
                 headerName: t('semifinishedProducts.quantity'),
                 width: 100,
                 type: 'number',
             },
-            {
-                field: 'status',
-                headerName: t('semifinishedProducts.status'),
-                width: 140,
-                type: 'singleSelect',
-                filterable: false,
-                valueOptions: statusOptions,
-                renderCell: (params) => <RenderCellStatus params={params} />,
-            },
+
             {
                 type: 'actions',
                 field: 'actions',

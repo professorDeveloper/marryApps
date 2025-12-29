@@ -11,7 +11,7 @@ import Alert from '@mui/material/Alert';
 import { useTheme } from '@mui/material/styles';
 import { iconButtonClasses } from '@mui/material/IconButton';
 
-import { _contacts, _notifications } from 'src/_mock';
+import { _notifications } from 'src/_mock';
 
 import { Logo } from 'src/components/logo';
 import { useSettingsContext } from 'src/components/settings';
@@ -22,16 +22,15 @@ import { NavMobile } from './nav-mobile';
 import { VerticalDivider } from './content';
 import { NavVertical } from './nav-vertical';
 import { NavHorizontal } from './nav-horizontal';
-import { _account } from '../nav-config-account';
 import { Searchbar } from '../components/searchbar';
+import { getNavData } from '../nav-config-dashboard';
 import { _workspaces } from '../nav-config-workspace';
+import { getAccountData } from '../nav-config-account';
 import { MenuButton } from '../components/menu-button';
 import { AccountDrawer } from '../components/account-drawer';
 import { SettingsButton } from '../components/settings-button';
 import { LanguagePopover } from '../components/language-popover';
-import { ContactsPopover } from '../components/contacts-popover';
 import { WorkspacesPopover } from '../components/workspaces-popover';
-import { navData as dashboardNavData } from '../nav-config-dashboard';
 import { dashboardLayoutVars, dashboardNavColorVars } from './css-vars';
 import { NotificationsDrawer } from '../components/notifications-drawer';
 import { MainSection, layoutClasses, HeaderSection, LayoutSection } from '../core';
@@ -65,12 +64,13 @@ export function DashboardLayout({
   const settings = useSettingsContext();
 
   const { t: tLayout } = useTranslation('layout');
+  const { t: tMenu } = useTranslation('menu');
 
   const navVars = dashboardNavColorVars(theme, settings.state.navColor, settings.state.navLayout);
 
   const { value: open, onFalse: onClose, onTrue: onOpen } = useBoolean();
 
-  const navData = slotProps?.nav?.data ?? dashboardNavData;
+  const navData = slotProps?.nav?.data ?? getNavData(tMenu);
 
   const isNavMini = settings.state.navLayout === 'mini';
   const isNavHorizontal = settings.state.navLayout === 'horizontal';
@@ -164,13 +164,13 @@ export function DashboardLayout({
           <NotificationsDrawer data={_notifications} />
 
           {/** @slot Contacts popover */}
-          <ContactsPopover data={_contacts} />
+          {/* <ContactsPopover data={_contacts} /> */}
 
           {/** @slot Settings button */}
           <SettingsButton />
 
           {/** @slot Account drawer */}
-          <AccountDrawer data={_account} />
+          <AccountDrawer data={getAccountData(tMenu)} />
         </Box>
       ),
     };

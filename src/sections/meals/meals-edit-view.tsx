@@ -5,6 +5,7 @@
 import type { CardSection, GenericEditViewConfig } from 'src/components/generic-edit-view';
 
 import { useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { paths } from 'src/routes/paths';
 import { useRouter } from 'src/routes/hooks';
@@ -26,11 +27,11 @@ export interface MealEditViewProps {
 
 const IMAGE_SECTION: CardSection = {
     id: 'image',
-    title: 'Taom rasmi',
+    title: 'mealsProducts.imageTitle',
     fields: [
         {
             key: 'image',
-            label: 'Rasm URL\'si',
+            label: 'mealsProducts.imageUrl',
             type: 'url',
             placeholder: 'https://example.com/image.jpg',
             defaultValue: '',
@@ -40,33 +41,59 @@ const IMAGE_SECTION: CardSection = {
 
 const BASIC_INFO_SECTION: CardSection = {
     id: 'basic',
-    title: 'Asosiy ma\'lumotlar',
-    columns: 2,
+    title: 'mealsProducts.basicTitle',
+    columns: 1,
     fields: [
         {
             key: 'name',
-            label: 'Taom nomi',
+            label: 'mealsProducts.name',
             type: 'text',
             required: true,
             defaultValue: '',
         },
         {
-            key: 'category',
-            label: 'Toifa',
+            key: 'section',
+            label: 'mealsProducts.category',
             type: 'select',
             options: [
-                { value: 'breakfast', label: 'Nonushta' },
-                { value: 'lunch', label: 'Tushlik' },
-                { value: 'dinner', label: 'Kechki ovqat' },
-                { value: 'snack', label: 'Zakuska' },
+                { value: 'breakfast', label: 'mealsProducts.tushlik' },
+                { value: 'lunch', label: 'mealsProducts.tushlik' },
+                { value: 'dinner', label: 'mealsProducts.kechki' },
+                { value: 'snack', label: 'mealsProducts.snack' },
             ],
             defaultValue: '',
         },
         {
-            key: 'description',
-            label: 'Tavsifi',
-            type: 'textarea',
-            rows: 3,
+            key: 'inventory',
+            label: 'mealsProducts.inventory',
+            type: 'select',
+            options: [
+                { value: 'breakfast', label: 'mealsProducts.tushlik' },
+                { value: 'lunch', label: 'mealsProducts.tushlik' },
+                { value: 'dinner', label: 'mealsProducts.kechki' },
+                { value: 'snack', label: 'mealsProducts.snack' },
+            ],
+            defaultValue: '',
+        },
+   {
+            key: 'name',
+            label: 'mealsProducts.price',
+            type: 'text',
+            required: true,
+            defaultValue: '',
+        },
+         {
+            key: 'name',
+            label: 'mealsProducts.cookingTime',
+            type: 'text',
+            required: true,
+            defaultValue: '',
+        },
+         {
+            key: 'name',
+            label: 'mealsProducts.barcode',
+            type: 'text',
+            required: true,
             defaultValue: '',
         },
     ],
@@ -74,30 +101,30 @@ const BASIC_INFO_SECTION: CardSection = {
 
 const NUTRITION_SECTION: CardSection = {
     id: 'nutrition',
-    title: 'Oziqlanish ma\'lumotlari',
+    title: 'mealsProducts.nutritionTitle',
     columns: 2,
     fields: [
         {
             key: 'calories',
-            label: 'Kalorilari',
+            label: 'mealsProducts.calories',
             type: 'number',
             defaultValue: 0,
         },
         {
             key: 'protein',
-            label: 'Oqsil (g)',
+            label: 'mealsProducts.protein',
             type: 'number',
             defaultValue: 0,
         },
         {
             key: 'carbs',
-            label: 'Uglevodlar (g)',
+            label: 'mealsProducts.carbs',
             type: 'number',
             defaultValue: 0,
         },
         {
             key: 'fat',
-            label: 'Yog\' (g)',
+            label: 'mealsProducts.fat',
             type: 'number',
             defaultValue: 0,
         },
@@ -106,18 +133,18 @@ const NUTRITION_SECTION: CardSection = {
 
 const PRICE_SECTION: CardSection = {
     id: 'price',
-    title: 'Narxlash',
+    title: 'mealsProducts.priceTitle',
     columns: 2,
     fields: [
         {
             key: 'price',
-            label: 'Narx',
+            label: 'mealsProducts.price',
             type: 'number',
             defaultValue: 0,
         },
         {
             key: 'discount',
-            label: 'Chegirma %',
+            label: 'mealsProducts.discount',
             type: 'number',
             defaultValue: 0,
         },
@@ -126,34 +153,34 @@ const PRICE_SECTION: CardSection = {
 
 const SETTINGS_SECTION: CardSection = {
     id: 'settings',
-    title: 'Sozlamalar',
+    title: 'mealsProducts.settingsTitle',
     columns: 2,
     fields: [
         {
             key: 'publish',
-            label: 'Nashr qilish holati',
+            label: 'mealsProducts.publish',
             type: 'select',
             options: [
-                { value: 'published', label: 'Nashr qilingan' },
-                { value: 'draft', label: 'Qoralama' },
+                { value: 'published', label: 'mealsProducts.published' },
+                { value: 'draft', label: 'mealsProducts.draft' },
             ],
             defaultValue: 'draft',
         },
         {
             key: 'isSpicy',
-            label: 'Achchiq',
+            label: 'mealsProducts.isSpicy',
             type: 'switch',
             defaultValue: false,
         },
         {
             key: 'isVegetarian',
-            label: 'Vegetarian taom',
+            label: 'mealsProducts.isVegetarian',
             type: 'switch',
             defaultValue: false,
         },
         {
             key: 'isPopular',
-            label: 'Mashhur',
+            label: 'mealsProducts.isPopular',
             type: 'switch',
             defaultValue: false,
         },
@@ -166,6 +193,60 @@ const SETTINGS_SECTION: CardSection = {
 
 export function MealEditView({ meal, isNew = false }: MealEditViewProps) {
     const router = useRouter();
+    const { t } = useTranslation('menu');
+
+    // Create translated copies of sections so UI gets actual strings instead of raw keys
+    const IMAGE_SECTION_T: CardSection = {
+        ...IMAGE_SECTION,
+        title: typeof IMAGE_SECTION.title === 'string' ? t(IMAGE_SECTION.title) : IMAGE_SECTION.title,
+        fields: IMAGE_SECTION.fields.map((f) => ({
+            ...f,
+            label: typeof f.label === 'string' && f.label.startsWith('mealsProducts.') ? t(f.label) : f.label,
+            placeholder: typeof f.placeholder === 'string' && f.placeholder.startsWith('mealsProducts.') ? t(f.placeholder) : f.placeholder,
+        })),
+    };
+
+    const BASIC_INFO_SECTION_T: CardSection = {
+        ...BASIC_INFO_SECTION,
+        title: typeof BASIC_INFO_SECTION.title === 'string' ? t(BASIC_INFO_SECTION.title) : BASIC_INFO_SECTION.title,
+        fields: BASIC_INFO_SECTION.fields.map((f) => ({
+            ...f,
+            label: typeof f.label === 'string' && f.label.startsWith('mealsProducts.') ? t(f.label) : f.label,
+            options: Array.isArray(f.options)
+                ? f.options.map((opt: any) => ({ ...opt, label: typeof opt.label === 'string' && opt.label.startsWith('mealsProducts.') ? t(opt.label) : opt.label }))
+                : f.options,
+        })),
+    };
+
+    const NUTRITION_SECTION_T: CardSection = {
+        ...NUTRITION_SECTION,
+        title: typeof NUTRITION_SECTION.title === 'string' ? t(NUTRITION_SECTION.title) : NUTRITION_SECTION.title,
+        fields: NUTRITION_SECTION.fields.map((f) => ({
+            ...f,
+            label: typeof f.label === 'string' && f.label.startsWith('mealsProducts.') ? t(f.label) : f.label,
+        })),
+    };
+
+    const PRICE_SECTION_T: CardSection = {
+        ...PRICE_SECTION,
+        title: typeof PRICE_SECTION.title === 'string' ? t(PRICE_SECTION.title) : PRICE_SECTION.title,
+        fields: PRICE_SECTION.fields.map((f) => ({
+            ...f,
+            label: typeof f.label === 'string' && f.label.startsWith('mealsProducts.') ? t(f.label) : f.label,
+        })),
+    };
+
+    const SETTINGS_SECTION_T: CardSection = {
+        ...SETTINGS_SECTION,
+        title: typeof SETTINGS_SECTION.title === 'string' ? t(SETTINGS_SECTION.title) : SETTINGS_SECTION.title,
+        fields: SETTINGS_SECTION.fields.map((f) => ({
+            ...f,
+            label: typeof f.label === 'string' && f.label.startsWith('mealsProducts.') ? t(f.label) : f.label,
+            options: Array.isArray(f.options)
+                ? f.options.map((opt: any) => ({ ...opt, label: typeof opt.label === 'string' && opt.label.startsWith('mealsProducts.') ? t(opt.label) : opt.label }))
+                : f.options,
+        })),
+    };
 
     // Handle form submission
     const handleSubmit = useCallback(
@@ -196,19 +277,19 @@ export function MealEditView({ meal, isNew = false }: MealEditViewProps) {
     }, [meal?.id, router]);
 
     const config: GenericEditViewConfig = {
-        title: 'Meal',
+        title: t('mealsProducts.title'),
         entityName: 'meal',
         breadcrumbs: [
-            { name: 'Menu', href: paths.menu.root },
-            { name: 'Meals', href: paths.menu.meals.root },
-            { name: isNew ? 'New' : 'Edit', href: '' },
+            { name: t('app'), href: paths.menu.root },
+            { name: t('mealsProducts.title'), href: paths.menu.meals.root },
+            { name: isNew ? t('mealsProducts.new') : t('mealsProducts.edit'), href: '' },
         ],
-        leftSidecard: IMAGE_SECTION,
+        leftSidecard: IMAGE_SECTION_T,
         sections: [
-            BASIC_INFO_SECTION,
-            NUTRITION_SECTION,
-            PRICE_SECTION,
-            SETTINGS_SECTION,
+            BASIC_INFO_SECTION_T,
+            // NUTRITION_SECTION_T,
+            // PRICE_SECTION_T,
+            // SETTINGS_SECTION_T,
         ],
         onSubmit: handleSubmit,
         onDelete: !isNew ? handleDelete : undefined,

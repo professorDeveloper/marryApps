@@ -6,6 +6,8 @@ import Badge from '@mui/material/Badge';
 import SvgIcon from '@mui/material/SvgIcon';
 import IconButton from '@mui/material/IconButton';
 
+import { useTranslate } from 'src/locales/use-locales';
+
 import { useSettingsContext } from 'src/components/settings';
 import { varTap, varHover, transitionTap } from 'src/components/animate';
 
@@ -13,6 +15,7 @@ import { varTap, varHover, transitionTap } from 'src/components/animate';
 
 export function SettingsButton({ sx, ...other }: IconButtonProps) {
   const settings = useSettingsContext();
+  const { t } = useTranslate('menu');
 
   return (
     <IconButton
@@ -20,7 +23,7 @@ export function SettingsButton({ sx, ...other }: IconButtonProps) {
       whileTap={varTap(0.96)}
       whileHover={varHover(1.04)}
       transition={transitionTap()}
-      aria-label="Sozlamalar tugmasi"
+      aria-label={t('settingsDrawer.title')}
       onClick={settings.onToggleDrawer}
       sx={[{ p: 0, width: 40, height: 40 }, ...(Array.isArray(sx) ? sx : [sx])]}
       {...other}

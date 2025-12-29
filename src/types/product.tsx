@@ -41,6 +41,7 @@ export type IProductItem = {
   coverUrl: string;
   images: string[];
   colors: string[];
+  color?: string;
   quantity: number;
   category: string;
   available: number;

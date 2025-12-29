@@ -44,38 +44,76 @@ const ICONS = {
 
 // ----------------------------------------------------------------------
 
-export const navData: NavSectionProps['data'] = [
+import type { TFunction } from 'i18next';
+
+export const getNavData = (t: TFunction): NavSectionProps['data'] => [
   /**
    * Overview
    */
   {
-    subheader: 'Umumiy',
+    subheader: t('overview.subheader', 'Overview'),
     items: [
       {
-        title: 'Menyu',
+        title: t('overview.menu.title', 'Menu'),
         path: paths.menu.product.root,
         icon: ICONS.product,
         deepMatch: true,
         children: [
-          { title: 'Bo\'limlar', path: paths.menu.product.root },
-          { title: 'Kategoriyalar', path: paths.menu.category.root },
-          { title: 'Yarim tayyor mahsulotlar', path: paths.menu.semifinished.root },
-          { title: 'Taomlar', path: paths.menu.meals.root },
+          { title: t('overview.menu.sections', 'Sections'), path: paths.menu.product.root },
+          { title: t('overview.menu.categories', 'Categories'), path: paths.menu.category.root },
+          { title: t('overview.menu.semifinished', 'Semifinished'), path: paths.menu.semifinished.root },
+          { title: t('overview.menu.meals', 'Meals'), path: paths.menu.meals.root },
         ],
       },
     ],
   },
   {
-    subheader: 'Boshqarish',
+    subheader: t('management.subheader', 'Management'),
     items: [
       {
-        title: 'Guruh',
+        title: t('management.group.title', 'Group'),
         path: paths.menu.group.root,
         icon: ICONS.user,
         children: [
-          { title: 'To\'rtta', path: paths.menu.group.root },
-          { title: 'Besh', path: paths.menu.group.five },
-          { title: 'Olti', path: paths.menu.group.six },
+          { title: t('management.group.four', 'Four'), path: paths.menu.group.root },
+          { title: t('management.group.five', 'Five'), path: paths.menu.group.five },
+          { title: t('management.group.six', 'Six'), path: paths.menu.group.six },
+        ],
+      },
+    ],
+  },
+];
+
+// Backward compatibility: default navData (English) to avoid returning objects
+export const navData: NavSectionProps['data'] = [
+  {
+    subheader: 'Overview',
+    items: [
+      {
+        title: 'Menu',
+        path: paths.menu.product.root,
+        icon: ICONS.product,
+        deepMatch: true,
+        children: [
+          { title: "Sections", path: paths.menu.product.root },
+          { title: 'Categories', path: paths.menu.category.root },
+          { title: 'Semifinished', path: paths.menu.semifinished.root },
+          { title: 'Meals', path: paths.menu.meals.root },
+        ],
+      },
+    ],
+  },
+  {
+    subheader: 'Management',
+    items: [
+      {
+        title: 'Group',
+        path: paths.menu.group.root,
+        icon: ICONS.user,
+        children: [
+          { title: 'Four', path: paths.menu.group.root },
+          { title: 'Five', path: paths.menu.group.five },
+          { title: 'Six', path: paths.menu.group.six },
         ],
       },
     ],

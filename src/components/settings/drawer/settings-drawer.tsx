@@ -13,6 +13,7 @@ import Typography from '@mui/material/Typography';
 import { useColorScheme } from '@mui/material/styles';
 
 import { themeConfig } from 'src/theme/theme-config';
+import { useTranslate } from 'src/locales/use-locales';
 import { primaryColorPresets } from 'src/theme/with-settings';
 
 import { Label } from '../../label';
@@ -32,6 +33,7 @@ import { NavColorOptions, NavLayoutOptions } from './nav-layout-option';
 export function SettingsDrawer({ sx, defaultSettings }: SettingsDrawerProps) {
   const settings = useSettingsContext();
   const { mode, setMode, colorScheme } = useColorScheme();
+  const { t } = useTranslate('menu');
 
   // Visible options by default settings
   const visibility = {
@@ -68,12 +70,12 @@ export function SettingsDrawer({ sx, defaultSettings }: SettingsDrawerProps) {
       }}
     >
       <Typography variant="h6" sx={{ flexGrow: 1 }}>
-        Sozlamalar
+        {t('settingsDrawer.title')}
       </Typography>
 
       <FullScreenButton />
 
-      <Tooltip title="Hammasini qayta tiklash">
+      <Tooltip title={t('settingsDrawer.resetAll')}>
         <IconButton onClick={handleReset}>
           <Badge color="error" variant="dot" invisible={!settings.canReset}>
             <Iconify icon="solar:restart-bold" />
@@ -81,7 +83,7 @@ export function SettingsDrawer({ sx, defaultSettings }: SettingsDrawerProps) {
         </IconButton>
       </Tooltip>
 
-      <Tooltip title="Yopish">
+      <Tooltip title={t('settingsDrawer.close')}>
         <IconButton onClick={settings.onCloseDrawer}>
           <Iconify icon="mingcute:close-line" />
         </IconButton>
@@ -91,23 +93,11 @@ export function SettingsDrawer({ sx, defaultSettings }: SettingsDrawerProps) {
 
   const renderMode = () => (
     <BaseOption
-      label="Rejim"
+      label={t('settingsDrawer.mode')}
+      labelPosition="inline"
       selected={settings.state.mode === 'dark'}
       icon={<SvgIcon>{settingIcons.moon}</SvgIcon>}
-      action={
-        mode === 'system' ? (
-          <Label
-            sx={{
-              height: 20,
-              cursor: 'inherit',
-              borderRadius: '20px',
-              fontWeight: 'fontWeightSemiBold',
-            }}
-          >
-            System
-          </Label>
-        ) : null
-      }
+      action={mode === 'system' ? <Label sx={{ height: 20, cursor: 'inherit', borderRadius: '20px', fontWeight: 'fontWeightSemiBold' }}>{t('settingsDrawer.system')}</Label> : null}
       onChangeOption={() => {
         setMode(colorScheme === 'light' ? 'dark' : 'light');
         settings.setState({ mode: colorScheme === 'light' ? 'dark' : 'light' });
@@ -117,7 +107,7 @@ export function SettingsDrawer({ sx, defaultSettings }: SettingsDrawerProps) {
 
   const renderContrast = () => (
     <BaseOption
-      label="Contrast"
+      label={t('settingsDrawer.contrast')}
       selected={settings.state.contrast === 'high'}
       icon={<SvgIcon>{settingIcons.contrast}</SvgIcon>}
       onChangeOption={() => {
@@ -130,7 +120,7 @@ export function SettingsDrawer({ sx, defaultSettings }: SettingsDrawerProps) {
 
   const renderDirection = () => (
     <BaseOption
-      label="Right to left"
+      label={t('settingsDrawer.direction')}
       selected={settings.state.direction === 'rtl'}
       icon={<SvgIcon>{settingIcons.alignRight}</SvgIcon>}
       onChangeOption={() => {
@@ -142,7 +132,7 @@ export function SettingsDrawer({ sx, defaultSettings }: SettingsDrawerProps) {
   const renderCompactLayout = () => (
     <BaseOption
       tooltip="Dashboard only and available at large resolutions > 1600px (xl)"
-      label="Compact"
+      label={t('settingsDrawer.compact')}
       selected={!!settings.state.compactLayout}
       icon={<SvgIcon>{settingIcons.autofitWidth}</SvgIcon>}
       onChangeOption={() => {
@@ -153,7 +143,7 @@ export function SettingsDrawer({ sx, defaultSettings }: SettingsDrawerProps) {
 
   const renderPresets = () => (
     <LargeBlock
-      title="Presets"
+      title={t('settingsDrawer.presets')}
       canReset={settings.state.primaryColor !== defaultSettings.primaryColor}
       onReset={() => {
         settings.setState({ primaryColor: defaultSettings.primaryColor });
@@ -176,10 +166,10 @@ export function SettingsDrawer({ sx, defaultSettings }: SettingsDrawerProps) {
   );
 
   const renderNav = () => (
-    <LargeBlock title="Nav" tooltip="Dashboard only" sx={{ gap: 2.5 }}>
+    <LargeBlock title={t('settingsDrawer.nav')} tooltip="Dashboard only" sx={{ gap: 2.5 }}>
       {visibility.navLayout && (
         <SmallBlock
-          label="Layout"
+          label={t('settingsDrawer.layout')}
           canReset={settings.state.navLayout !== defaultSettings.navLayout}
           onReset={() => {
             settings.setState({ navLayout: defaultSettings.navLayout });
@@ -213,7 +203,7 @@ export function SettingsDrawer({ sx, defaultSettings }: SettingsDrawerProps) {
       )}
       {visibility.navColor && (
         <SmallBlock
-          label="Color"
+          label={t('settingsDrawer.color')}
           canReset={settings.state.navColor !== defaultSettings.navColor}
           onReset={() => {
             settings.setState({ navColor: defaultSettings.navColor });
@@ -243,10 +233,10 @@ export function SettingsDrawer({ sx, defaultSettings }: SettingsDrawerProps) {
   );
 
   const renderFont = () => (
-    <LargeBlock title="Font" sx={{ gap: 2.5 }}>
+    <LargeBlock title={t('settingsDrawer.font')} sx={{ gap: 2.5 }}>
       {visibility.fontFamily && (
         <SmallBlock
-          label="Family"
+          label={t('settingsDrawer.family')}
           canReset={settings.state.fontFamily !== defaultSettings.fontFamily}
           onReset={() => {
             settings.setState({ fontFamily: defaultSettings.fontFamily });
@@ -269,7 +259,7 @@ export function SettingsDrawer({ sx, defaultSettings }: SettingsDrawerProps) {
       )}
       {visibility.fontSize && (
         <SmallBlock
-          label="Size"
+          label={t('settingsDrawer.size')}
           canReset={settings.state.fontSize !== defaultSettings.fontSize}
           onReset={() => {
             settings.setState({ fontSize: defaultSettings.fontSize });
@@ -320,16 +310,18 @@ export function SettingsDrawer({ sx, defaultSettings }: SettingsDrawerProps) {
             flexDirection: 'column',
           }}
         >
-          <Box sx={{ gap: 2, display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)' }}>
+          <Box sx={{ gap: 2, display: 'grid', gridTemplateColumns: 'repeat(1, 1fr)' }}>
             {visibility.mode && renderMode()}
-            {visibility.contrast && renderContrast()}
-            {visibility.direction && renderDirection()}
-            {visibility.compactLayout && renderCompactLayout()}
+            {/* Contrast option temporarily disabled per request */}
+            {/* {visibility.contrast && renderContrast()} */}
+            {/* Right-to-left option temporarily disabled per request */}
+            {/* {visibility.direction && renderDirection()} */}
+            {/* {visibility.compactLayout && renderCompactLayout()} */}
           </Box>
 
-          {(visibility.navColor || visibility.navLayout) && renderNav()}
-          {visibility.primaryColor && renderPresets()}
-          {(visibility.fontFamily || visibility.fontSize) && renderFont()}
+          {/* {(visibility.navColor || visibility.navLayout) && renderNav()} */}
+          {/* {visibility.primaryColor && renderPresets()} */}
+          {/* {(visibility.fontFamily || visibility.fontSize) && renderFont()} */}
         </Box>
       </Scrollbar>
     </Drawer>

@@ -1,1 +1,0 @@
-const a={lang:"O'zbek",description:"Keyingi loyihangizning boshlang'ich nuqtasi MUI asosida yaratilgan. Oson sozlash aplikatsiyalarni tezroq va yaxshiroq qurish uchun yordam beradi."},i={demo:a};export{i as default,a as demo};

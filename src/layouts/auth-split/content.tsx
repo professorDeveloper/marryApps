@@ -28,6 +28,20 @@ export function AuthSplitContent({
           alignItems: 'center',
           flexDirection: 'column',
           p: theme.spacing(3, 2, 10, 2),
+          backgroundImage: 'url(https://imageproxy.wolt.com/assets/6881eed2494117b965bfa052)',
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          backgroundAttachment: 'fixed',
+          '&::before': {
+            content: '""',
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            zIndex: 0,
+          },
           [theme.breakpoints.up(layoutQuery)]: {
             justifyContent: 'center',
             p: theme.spacing(10, 2, 10, 2),
@@ -42,6 +56,11 @@ export function AuthSplitContent({
           width: 1,
           display: 'flex',
           flexDirection: 'column',
+          position: 'relative',
+          backgroundColor: 'white',
+          padding: 3,
+          borderRadius: 4,
+          zIndex: 1,
           maxWidth: 'var(--layout-auth-content-width)',
         }}
       >

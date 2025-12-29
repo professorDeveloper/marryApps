@@ -5,6 +5,7 @@ import type {
   GridColumnVisibilityModel,
 } from '@mui/x-data-grid';
 
+import i18next from 'i18next';
 import { useBoolean, useSetState } from 'minimal-shared/hooks';
 import { useMemo, useState, useEffect, useCallback } from 'react';
 
@@ -41,41 +42,41 @@ export interface GenericTableConfig<T = any> {
   // Ma'lumotlar
   data: T[];
   loading: boolean;
-  
+
   // Columns
   columns: GridColDef[];
-  
+
   // Breadcrumb
   breadcrumbs: {
     heading: string;
     links: BreadcrumbLink[];
   };
-  
+
   // Add button
   addButton?: {
     label: string;
     href: string;
   };
-  
+
   // Filter options
   filterOptions?: {
     [key: string]: FilterOption[];
   };
-  
+
   // Delete handlers
   onDeleteRow?: (id: string) => void;
   onDeleteRows?: (ids: string[]) => void;
-  
+
   // Filter state
   initialFilters?: Record<string, any>;
-  
+
   // Hidden columns
   hideColumns?: Record<string, boolean>;
   hideColumnsTogglable?: string[];
-  
+
   // Custom toolbar
   renderToolbar?: (props: any) => React.ReactNode;
-  
+
   // Identifikator field nomi (default: 'id')
   idField?: string;
 }
@@ -206,6 +207,12 @@ export function GenericTableView<T extends Record<string, any>>({
           }}
         >
           <DataGrid
+            // build localeText at render time so translations reflect current i18next language
+            localeText={{
+              filterPanelColumns: String(i18next.t('toolbar.columns', { ns: 'menu' })),
+              filterPanelOperator: String(i18next.t('toolbar.operator', { ns: 'menu' })),
+              filterPanelInputLabel: String(i18next.t('toolbar.value', { ns: 'menu' })),
+            }}
             {...toolbarOptions.settings}
             checkboxSelection
             disableRowSelectionOnClick

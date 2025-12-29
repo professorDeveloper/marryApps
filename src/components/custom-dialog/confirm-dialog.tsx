@@ -1,5 +1,7 @@
 import type { ConfirmDialogProps } from './types';
 
+import { useTranslation } from 'react-i18next';
+
 import Button from '@mui/material/Button';
 import Dialog from '@mui/material/Dialog';
 import DialogTitle from '@mui/material/DialogTitle';
@@ -16,6 +18,7 @@ export function ConfirmDialog({
   onClose,
   ...other
 }: ConfirmDialogProps) {
+  const { t } = useTranslation('menu');
   return (
     <Dialog fullWidth maxWidth="xs" open={open} onClose={onClose} {...other}>
       <DialogTitle sx={{ pb: 2 }}>{title}</DialogTitle>
@@ -26,7 +29,7 @@ export function ConfirmDialog({
         {action}
 
         <Button variant="outlined" color="inherit" onClick={onClose}>
-          Bekor qilish
+          {t('cancel')}
         </Button>
       </DialogActions>
     </Dialog>

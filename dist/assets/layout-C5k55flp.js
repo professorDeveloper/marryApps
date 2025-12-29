@@ -1,0 +1,1 @@
+const e="This is an info Alert.",n="Need help?",t={en:"English","uz-Latn":"O'zbek (Lotin)","uz-Cyrl":"Ўзбек (Кирил)",ru:"Русский"},l={infoAlert:e,needHelp:n,languages:t};export{l as default,e as infoAlert,t as languages,n as needHelp};

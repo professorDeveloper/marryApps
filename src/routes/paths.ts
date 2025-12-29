@@ -55,10 +55,10 @@ export const paths = {
       six: `${ROOTS.MENU}/group/six`,
     },
     product: {
-      root: `${ROOTS.MENU}/product`,
-      new: `${ROOTS.MENU}/product/new`,
-      details: (id: string) => `${ROOTS.MENU}/product/${id}`,
-      edit: (id: string) => `${ROOTS.MENU}/product/${id}/edit`,
+      root: `${ROOTS.MENU}/section`,
+      new: `${ROOTS.MENU}/section/new`,
+      details: (id: string) => `${ROOTS.MENU}/section/${id}`,
+      edit: (id: string) => `${ROOTS.MENU}/section/${id}/edit`,
     },
     category: {
       root: `${ROOTS.MENU}/category`,

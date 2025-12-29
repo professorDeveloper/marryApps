@@ -27,6 +27,7 @@ import {
   ColumnsPanelTrigger,
 } from '@mui/x-data-grid';
 
+import { useTranslate } from 'src/locales/use-locales';
 import { ExportIcon, FilterIcon, ViewColumnsIcon } from 'src/theme/core/components/mui-x-data-grid';
 
 import { Iconify } from '../iconify';
@@ -81,7 +82,8 @@ export function CustomToolbarColumnsButton({
   showLabel,
 }: Pick<ToolbarButtonBaseProps, 'showLabel'>) {
   const apiRef = useGridApiContext();
-  const label = apiRef.current.getLocaleText('toolbarColumns');
+  const { t } = useTranslate('menu');
+  const label = t('toolbar.columns');
 
   return (
     <ColumnsPanelTrigger
@@ -103,14 +105,15 @@ export function CustomToolbarFilterButton({
   showLabel,
 }: Pick<ToolbarButtonBaseProps, 'showLabel'>) {
   const apiRef = useGridApiContext();
-  const label = apiRef.current.getLocaleText('toolbarFilters');
+  const { t } = useTranslate('menu');
+  const label = t('toolbar.filters');
 
   return (
     <FilterPanelTrigger
       render={(props, state) => (
         <ToolbarButtonBase
           {...props}
-          label={String('Filtr')}
+          label={String(label)}
           showLabel={showLabel}
           icon={
             <Badge variant="dot" color="error" badgeContent={state.filterCount}>
@@ -129,9 +132,10 @@ export function CustomToolbarExportButton({
   showLabel,
 }: Pick<ToolbarButtonBaseProps, 'showLabel'>) {
   const apiRef = useGridApiContext();
-  const label = apiRef.current.getLocaleText('toolbarExport');
-  const csvLabel = apiRef.current.getLocaleText('toolbarExportCSV');
-  const printLabel = apiRef.current.getLocaleText('toolbarExportPrint');
+  const { t } = useTranslate('menu');
+  const label = t('toolbar.export');
+  const csvLabel = t('toolbar.exportCsv');
+  const printLabel = t('toolbar.exportPrint');
 
   const { open, anchorEl, onClose, onOpen } = usePopover();
 
@@ -143,7 +147,7 @@ export function CustomToolbarExportButton({
         aria-haspopup="true"
         aria-expanded={open ? 'true' : undefined}
         onClick={onOpen}
-        label={String("Eksport qilish")}
+        label={String(label)}
         icon={<ExportIcon />}
         showLabel={showLabel}
       />
@@ -188,8 +192,9 @@ export function CustomToolbarQuickFilter({
   ...other
 }: CustomToolbarQuickFilterProps) {
   const apiRef = useGridApiContext();
-  const label = apiRef.current.getLocaleText('toolbarQuickFilterLabel');
-  const placeholder = apiRef.current.getLocaleText('toolbarQuickFilterPlaceholder');
+  const { t } = useTranslate('menu');
+  const label = t('toolbar.quickFilterLabel');
+  const placeholder = t('toolbar.quickFilterPlaceholder');
 
   return (
     <QuickFilter
@@ -216,7 +221,7 @@ export function CustomToolbarQuickFilter({
                     ),
                     endAdornment: state.value ? (
                       <InputAdornment position="end">
-                        <QuickFilterClear edge="end" size="small" aria-label="Qidiruvni tozalash">
+                        <QuickFilterClear edge="end" size="small" aria-label={String(t('menu.toolbar.quickFilterClear'))}>
                           <Iconify icon="mingcute:close-line" width={16} />
                         </QuickFilterClear>
                       </InputAdornment>

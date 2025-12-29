@@ -6,17 +6,17 @@
 import type { GridColDef } from '@mui/x-data-grid';
 import type { ICategory } from 'src/types/category';
 
-import { useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useMemo, useState, useEffect, useCallback } from 'react';
 
+import Box from '@mui/material/Box';
 import { useTheme } from '@mui/material/styles';
 
 import { paths } from 'src/routes/paths';
 
-import { useGenericDataTable } from 'src/hooks/use-generic-data-table';
 import { useGenericViewModal } from 'src/hooks/use-generic-view-modal';
 
-import { endpoints } from 'src/lib/axios';
+import { CATEGORY_MOCK_DATA } from 'src/_mock/_category';
 
 import { Iconify } from 'src/components/iconify';
 import { CustomGridActionsCellItem } from 'src/components/custom-data-grid';
@@ -36,7 +36,7 @@ function RenderCellCategory({ params, href }: { params: any; href: string }) {
     <RenderCellItem
       params={params}
       href={href}
-      imageField="coverUrl"
+      imageField="image"
       nameField="name"
     />
   );
@@ -78,13 +78,32 @@ function RenderCellWarehouse({ params }: { params: any }) {
 }
 
 /**
- * Category-specific status renderer
+ * Category-specific status renderer - faqat rang, katta, markazda
  */
 function RenderCellStatus({ params }: { params: any }) {
-  const { t } = useTranslation('menu');
   const statusValue = params.row.status?.toLowerCase();
-  const labelKey = statusValue === 'active' ? 'categories.active' : 'categories.inactive';
-  return <span>{t(labelKey)}</span>;
+  const color = statusValue === 'active' ? '#22C55E' : '#EF4444'; // Yashil / Qizil
+
+  return (
+    <Box
+      sx={{
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        width: '100%',
+        height: '100%',
+      }}
+    >
+      <Box
+        sx={{
+          width: 24,
+          height: 24,
+          borderRadius: '6px',
+          backgroundColor: color,
+        }}
+      />
+    </Box>
+  );
 }
 
 // ============================================================================
@@ -138,10 +157,21 @@ export function CategoryListView() {
   const theme = useTheme();
   const { t } = useTranslation('menu');
 
-  const { data: categories, loading } = useGenericDataTable<ICategory>({
-    endpoint: endpoints.category.list,
-    dataKey: 'products',
-  });
+  // Mock data-ni state-ga o'tkazamiz
+  const [categories, setCategories] = useState<ICategory[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  // Component mount qilinganda mock data-ni load qilish
+  useEffect(() => {
+    setLoading(true);
+    // Simulate API call delay
+    const timer = setTimeout(() => {
+      setCategories(CATEGORY_MOCK_DATA);
+      setLoading(false);
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, []);
 
   // View modal hook'i
   const { isOpen, selectedData, openModal, closeModal } = useGenericViewModal<ICategory>();
@@ -152,7 +182,7 @@ export function CategoryListView() {
       { value: 'tushlik', label: t('categories.tushlik') },
       { value: 'kechki', label: t('categories.kechki') },
       { value: 'nonushta', label: t('categories.nonushta') },
-      { value: 'snack', label: t('categories.snack') },
+      { value: 'Oshxona', label: t('categories.snack') },
     ],
     [t]
   );

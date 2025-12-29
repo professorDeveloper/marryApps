@@ -1,5 +1,6 @@
 import type { IconButtonProps } from '@mui/material/IconButton';
 
+import { useTranslation } from 'react-i18next';
 import { varAlpha } from 'minimal-shared/utils';
 import { useBoolean } from 'minimal-shared/hooks';
 
@@ -48,6 +49,8 @@ export function AccountDrawer({ data = [], sx, ...other }: AccountDrawerProps) {
 
   const { value: open, onFalse: onClose, onTrue: onOpen } = useBoolean();
 
+  const { t: tMenu } = useTranslation('menu');
+
   const renderAvatar = () => (
     <AnimateBorder
       sx={{ mb: 2, p: '6px', width: 96, height: 96, borderRadius: '50%' }}
@@ -75,7 +78,7 @@ export function AccountDrawer({ data = [], sx, ...other }: AccountDrawerProps) {
       ]}
     >
       {data.map((option) => {
-        const rootLabel = pathname.includes('/menu') ? 'Asosiy' : 'Menyu';
+        const rootLabel = pathname.includes('/menu') ? tMenu('overview.menu.title', 'Menu') : tMenu('overview.menu.title', 'Menu');
         const rootHref = pathname.includes('/menu') ? '/' : paths.menu.root;
 
         return (

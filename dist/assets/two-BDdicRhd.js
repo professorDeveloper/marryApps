@@ -1,1 +1,0 @@
-import{j as t,f as a}from"./index-CIGTft7t.js";import{B as e}from"./view-BM8cxd_I.js";const i={title:`Page two | Dashboard - ${a.appName}`};function n(){return t.jsxs(t.Fragment,{children:[t.jsx("title",{children:i.title}),t.jsx(e,{title:"Sahifa ikkinchi"})]})}export{n as default};

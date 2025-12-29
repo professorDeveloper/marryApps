@@ -2,10 +2,12 @@
 // PRODUCT EDIT VIEW - USING GENERIC EDIT COMPONENT
 // ============================================================================
 
+import type { TFunction } from 'i18next';
 import type { ISemifinishedItem } from 'src/types/semifinished';
 import type { CardSection, GenericEditViewConfig } from 'src/components/generic-edit-view';
 
 import { useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { paths } from 'src/routes/paths';
 import { useRouter } from 'src/routes/hooks';
@@ -41,11 +43,11 @@ const COLOR_OPTIONS = [
 
 const IMAGE_SECTION: CardSection = {
     id: 'image',
-    title: 'Qopqog\' rasmi',
+    title: 'semifinishedProducts.imageTitle',
     fields: [
         {
             key: 'coverUrl',
-            label: 'Rasm URL\'si',
+            label: 'semifinishedProducts.imageUrl',
             type: 'url',
             placeholder: 'https://example.com/image.jpg',
             defaultValue: '',
@@ -55,31 +57,31 @@ const IMAGE_SECTION: CardSection = {
 
 const BASIC_INFO_SECTION: CardSection = {
     id: 'basic',
-    title: 'Asosiy ma\'lumotlar',
-    columns: 2,
+    title: 'semifinishedProducts.basicTitle',
+    columns: 1,
     fields: [
         {
             key: 'name',
-            label: 'Mahsulot nomi',
+            label: 'semifinishedProducts.name',
             type: 'text',
             required: true,
             defaultValue: '',
         },
         {
             key: 'sku',
-            label: 'SKU',
+            label: 'semifinishedProducts.sku',
             type: 'text',
             defaultValue: '',
         },
         {
             key: 'code',
-            label: 'Kod',
+            label: 'semifinishedProducts.quantity',
             type: 'text',
             defaultValue: '',
         },
         {
             key: 'category',
-            label: 'Toifa',
+            label: 'semifinishedProducts.category',
             type: 'text',
             defaultValue: '',
         },
@@ -88,30 +90,30 @@ const BASIC_INFO_SECTION: CardSection = {
 
 const PRICING_SECTION: CardSection = {
     id: 'pricing',
-    title: 'Narxlash',
+    title: 'semifinishedProducts.pricingTitle',
     columns: 2,
     fields: [
         {
             key: 'price',
-            label: 'Narx',
+            label: 'semifinishedProducts.price',
             type: 'number',
             defaultValue: 0,
         },
         {
             key: 'priceSale',
-            label: 'Sale Price',
+            label: 'semifinishedProducts.priceSale',
             type: 'number',
             defaultValue: null,
         },
         {
             key: 'taxes',
-            label: 'Taxes',
+            label: 'semifinishedProducts.taxes',
             type: 'number',
             defaultValue: 0,
         },
         {
             key: 'quantity',
-            label: 'Quantity',
+            label: 'semifinishedProducts.quantity',
             type: 'number',
             defaultValue: 0,
         },
@@ -120,11 +122,11 @@ const PRICING_SECTION: CardSection = {
 
 const COLORS_SECTION: CardSection = {
     id: 'colors',
-    title: 'Colors',
+    title: 'semifinishedProducts.colorsTitle',
     fields: [
         {
             key: 'colors',
-            label: 'Select Colors',
+            label: 'semifinishedProducts.selectColors',
             type: 'color',
             colors: COLOR_OPTIONS,
             defaultValue: [],
@@ -192,6 +194,7 @@ const ADVANCED_SECTION: CardSection = {
 
 export function SemifinishedEditView({ semifinished, isNew = false }: SemifinishedEditViewProps) {
     const router = useRouter();
+    const { t } = useTranslation('menu');
 
     // Handle form submission
     const handleSubmit = useCallback(
@@ -221,19 +224,24 @@ export function SemifinishedEditView({ semifinished, isNew = false }: Semifinish
         }
     }, [semifinished?.id, router]);
 
+    const IMAGE_SECTION_T = translateSection(IMAGE_SECTION, t);
+    const BASIC_INFO_SECTION_T = translateSection(BASIC_INFO_SECTION, t);
+    const PRICING_SECTION_T = translateSection(PRICING_SECTION, t);
+    const COLORS_SECTION_T = translateSection(COLORS_SECTION, t);
+
     const config: GenericEditViewConfig = {
-        title: 'Product',
+        title: t('semifinishedProducts.title', 'Product'),
         entityName: 'semifinished',
         breadcrumbs: [
-            { name: 'Menu', href: paths.menu.root },
-            { name: 'Product', href: paths.menu.semifinished.root },
-            { name: isNew ? 'New' : 'Edit', href: '' },
+            { name: t('overview.menu.title', 'Menu'), href: paths.menu.root },
+            { name: t('semifinishedProducts.title', 'Product'), href: paths.menu.semifinished.root },
+            { name: isNew ? t('new', 'New') : t('edit', 'Edit'), href: '' },
         ],
-        leftSidecard: IMAGE_SECTION,
+        leftSidecard: IMAGE_SECTION_T,
         sections: [
-            BASIC_INFO_SECTION,
-            // PRICING_SECTION,
-            COLORS_SECTION,
+            BASIC_INFO_SECTION_T,
+            // PRICING_SECTION_T,
+            // COLORS_SECTION_T,
             // DESCRIPTIONS_SECTION,
             // ADVANCED_SECTION,
         ],
@@ -249,4 +257,26 @@ export function SemifinishedEditView({ semifinished, isNew = false }: Semifinish
             isNew={isNew}
         />
     );
+}
+
+// Runtime helper: translate CardSection objects that may contain translation keys
+function translateSection(section: CardSection, t: TFunction): CardSection {
+    const mapped = { ...section } as CardSection;
+    // translate title if it looks like a key
+    if (typeof mapped.title === 'string' && mapped.title.includes('.')) {
+        mapped.title = t(mapped.title as string, mapped.title as string);
+    }
+    if (Array.isArray(mapped.fields)) {
+        mapped.fields = mapped.fields.map((f) => {
+            const nf = { ...f };
+            if (typeof nf.label === 'string' && nf.label.includes('.')) {
+                nf.label = t(nf.label as string, nf.label as string);
+            }
+            if (nf.options && Array.isArray(nf.options)) {
+                nf.options = nf.options.map((opt) => ({ ...opt, label: typeof opt.label === 'string' && opt.label.includes('.') ? t(opt.label as string, opt.label as string) : opt.label }));
+            }
+            return nf;
+        });
+    }
+    return mapped;
 }

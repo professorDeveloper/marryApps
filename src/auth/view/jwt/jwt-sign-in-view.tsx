@@ -6,8 +6,10 @@ import { zodResolver } from '@hookform/resolvers/zod';
 
 import Box from '@mui/material/Box';
 import Link from '@mui/material/Link';
+import Stack from '@mui/material/Stack';
 import Alert from '@mui/material/Alert';
 import Button from '@mui/material/Button';
+import Typography from '@mui/material/Typography';
 import IconButton from '@mui/material/IconButton';
 import InputAdornment from '@mui/material/InputAdornment';
 
@@ -20,7 +22,6 @@ import { Form, Field, schemaUtils } from 'src/components/hook-form';
 
 import { useAuthContext } from '../../hooks';
 import { getErrorMessage } from '../../utils';
-import { FormHead } from '../../components/form-head';
 import { signInWithPassword } from '../../context/jwt';
 
 // ----------------------------------------------------------------------
@@ -75,23 +76,32 @@ export function JwtSignInView() {
   });
 
   const renderForm = () => (
-    <Box sx={{ gap: 3, display: 'flex', flexDirection: 'column' }}>
-      <Field.Text name="email" label="Email manzili" slotProps={{ inputLabel: { shrink: true } }} />
+    <Stack spacing={3}>
+      <Field.Text
+        name="email"
+        label="Email"
+        placeholder="demo@minimals.cc"
+        slotProps={{ inputLabel: { shrink: true } }}
+      />
 
-      <Box sx={{ gap: 1.5, display: 'flex', flexDirection: 'column' }}>
-        <Link
-          component={RouterLink}
-          href="#"
-          variant="body2"
-          color="inherit"
-          sx={{ alignSelf: 'flex-end' }}
-        >
-          Parolni unutdingizmi?
-        </Link>
+      <Stack spacing={1.5}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+            Parol
+          </Typography>
+          <Link
+            component={RouterLink}
+            href="#"
+            variant="caption"
+            color="info.main"
+            sx={{ textDecoration: 'none', '&:hover': { textDecoration: 'underline' } }}
+          >
+            Parolni unutdingizmi?
+          </Link>
+        </Box>
 
         <Field.Text
           name="password"
-          label="Parol"
           placeholder="6+ belgi"
           type={showPassword.value ? 'text' : 'password'}
           slotProps={{
@@ -99,9 +109,10 @@ export function JwtSignInView() {
             input: {
               endAdornment: (
                 <InputAdornment position="end">
-                  <IconButton onClick={showPassword.onToggle} edge="end">
+                  <IconButton onClick={showPassword.onToggle} edge="end" size="small">
                     <Iconify
                       icon={showPassword.value ? 'solar:eye-bold' : 'solar:eye-closed-bold'}
+                      width={20}
                     />
                   </IconButton>
                 </InputAdornment>
@@ -109,7 +120,7 @@ export function JwtSignInView() {
             },
           }}
         />
-      </Box>
+      </Stack>
 
       <Button
         fullWidth
@@ -118,43 +129,74 @@ export function JwtSignInView() {
         type="submit"
         variant="contained"
         loading={isSubmitting}
-        loadingIndicator="Sign in..."
+        loadingIndicator="Kirish..."
+        sx={{
+          py: 1.5,
+          fontSize: '1rem',
+          fontWeight: 600,
+          textTransform: 'none',
+          bgcolor: '#1a202c',
+          '&:hover': { bgcolor: '#0f172a' },
+        }}
       >
-        Sign in
+        Kirish
       </Button>
-    </Box>
+    </Stack>
   );
 
   return (
-    <>
-      <FormHead
-        title="Sign in to your account"
-        description={
-          <>
-            {`Don’t have an account? `}
-            <Link component={RouterLink} href={paths.auth.jwt.signUp} variant="subtitle2">
-              Get started
-            </Link>
-          </>
-        }
-        sx={{ textAlign: { xs: 'center', md: 'left' } }}
-      />
+    <Stack spacing={3}>
+      <Box sx={{ textAlign: 'center' }}>
+        <Box
+          sx={{
+            width: 64,
+            height: 64,
+            mx: 'auto',
+            mb: 2,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            borderRadius: '50%',
+            bgcolor: 'rgba(79, 172, 254, 0.1)',
+          }}
+        >
+          <Typography variant="h3" sx={{ color: '#4facfe' }}>
+            M
+          </Typography>
+        </Box>
 
-      <Alert severity="info" sx={{ mb: 3 }}>
-        Use <strong>{defaultValues.email}</strong>
-        {' with password '}
-        <strong>{defaultValues.password}</strong>
-      </Alert>
+        <Typography variant="h4" sx={{ mb: 1, fontWeight: 700 }}>
+          Hisobingizga kirish
+        </Typography>
 
-      {!!errorMessage && (
-        <Alert severity="error" sx={{ mb: 3 }}>
-          {errorMessage}
-        </Alert>
-      )}
+        <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+          Hisobingiz yo&rsquo;qmi?{' '}
+          <Link
+            component={RouterLink}
+            href={paths.auth.jwt.signUp}
+            sx={{ color: '#4facfe', textDecoration: 'none', fontWeight: 600 }}
+          >
+            Ro&rsquo;yhatdan o&rsquo;ting
+          </Link>
+        </Typography>
+      </Box>
 
       <Form methods={methods} onSubmit={onSubmit}>
         {renderForm()}
       </Form>
-    </>
+
+      {!!errorMessage && (
+        <Alert severity="error">
+          {errorMessage}
+        </Alert>
+      )}
+{/* 
+      <Alert severity="info" sx={{ bgcolor: 'rgba(13, 110, 253, 0.1)' }}>
+        <Typography variant="caption">
+          Sinash email: <strong>{defaultValues.email}</strong> va parol:{' '}
+          <strong>{defaultValues.password}</strong>
+        </Typography>
+      </Alert> */}
+    </Stack>
   );
 }

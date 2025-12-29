@@ -13,9 +13,7 @@ import { useTheme } from '@mui/material/styles';
 
 import { paths } from 'src/routes/paths';
 
-import { useGenericDataTable } from 'src/hooks/use-generic-data-table';
-
-import { endpoints } from 'src/lib/axios';
+import { PRODUCT_MOCK_DATA } from 'src/_mock/_product';
 
 import { Iconify } from 'src/components/iconify';
 import { CustomGridActionsCellItem } from 'src/components/custom-data-grid';
@@ -71,6 +69,28 @@ function RenderCellStockProduct({ params }: { params: any }) {
   return <span>{t(labelKey)}</span>;
 }
 
+/**
+ * Product-specific color renderer - rang uchun torburchak box
+ */
+function RenderCellColor({ params }: { params: any }) {
+  const colorValue = params.row.color || '#FFFFFF';
+  return (
+    <div
+      style={{
+        width: 32,
+        height: 32,
+        borderRadius: 4,
+        backgroundColor: colorValue,
+        border: '1px solid #ddd',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}
+      title={colorValue}
+    />
+  );
+}
+
 export function ProductListView() {
   const theme = useTheme();
   const { t } = useTranslation('menu');
@@ -95,11 +115,9 @@ export function ProductListView() {
     [t]
   );
 
-  // Generic hook ishlatamiz
-  const { data: products, loading } = useGenericDataTable<IProductItem>({
-    endpoint: endpoints.product.list,
-    dataKey: 'products',
-  });
+  // Mock data ishlatamiz - backend integratsiya o'rniga
+  const products = PRODUCT_MOCK_DATA;
+  const loading = false;
 
   // Columns config
   const columns = useMemo<GridColDef[]>(
@@ -135,6 +153,17 @@ export function ProductListView() {
         filterable: false,
         valueOptions: stockOptions,
         renderCell: (params) => <RenderCellStockProduct params={params} />,
+      },
+      {
+        field: 'color',
+        headerName: t('products.color'),
+        width: 80,
+        align: 'center',
+        headerAlign: 'center',
+        sortable: false,
+        filterable: false,
+        disableColumnMenu: true,
+        renderCell: (params) => <RenderCellColor params={params} />,
       },
       {
         type: 'actions',

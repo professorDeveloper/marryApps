@@ -52,7 +52,7 @@ export const dashboardRoutes: RouteObject[] = [
     path: 'menu',
     element: CONFIG.auth.skip ? dashboardLayout() : <AuthGuard>{dashboardLayout()}</AuthGuard>,
     children: [
-      { element: <Navigate to="product" replace />, index: true },
+      { element: <Navigate to="section" replace />, index: true },
       { path: 'two', element: <PageTwo /> },
       { path: 'three', element: <PageThree /> },
       {
@@ -63,9 +63,9 @@ export const dashboardRoutes: RouteObject[] = [
           { path: 'six', element: <PageSix /> },
         ],
       },
-      { path: 'product', element: <ProductListView /> },
-      { path: 'product/new', element: <ProductEditView isNew /> },
-      { path: 'product/:id/edit', element: <ProductEditView /> },
+      { path: 'section', element: <ProductListView /> },
+      { path: 'section/new', element: <ProductEditView isNew /> },
+      { path: 'section/:id/edit', element: <ProductEditView /> },
       { path: 'category', element: <CategoryListView /> },
       { path: 'category/new', element: <CategoryEditView isNew /> },
       { path: 'category/:id/edit', element: <CategoryEditView /> },

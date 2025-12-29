@@ -17,6 +17,8 @@ export type BaseOptionProps = Omit<ButtonBaseProps, 'action'> & {
   selected: boolean;
   icon: React.ReactNode;
   action?: React.ReactNode;
+  centerLabel?: boolean;
+  labelPosition?: 'top' | 'bottom' | 'inline';
   onChangeOption: () => void;
 };
 
@@ -27,6 +29,8 @@ export function BaseOption({
   action,
   tooltip,
   selected,
+  centerLabel,
+  labelPosition = 'bottom',
   onChangeOption,
   ...other
 }: BaseOptionProps) {
@@ -34,13 +38,20 @@ export function BaseOption({
     <ItemRoot disableRipple selected={selected} onClick={onChangeOption} sx={sx} {...other}>
       <TopContainer>
         {icon}
+        {labelPosition === 'inline' ? (
+          <InlineLabel>{label}</InlineLabel>
+        ) : labelPosition === 'top' ? (
+          <TopLabelContainer>
+            <ItemLabel center={!!centerLabel}>{label}</ItemLabel>
+          </TopLabelContainer>
+        ) : null}
         {action ?? (
           <Switch name={label} size="small" color="default" checked={selected} sx={{ mr: -0.75 }} />
         )}
       </TopContainer>
 
       <BottomContainer>
-        <ItemLabel>{label}</ItemLabel>
+        {labelPosition === 'bottom' ? <ItemLabel center={!!centerLabel}>{label}</ItemLabel> : <div />}
 
         {tooltip && (
           <Tooltip
@@ -82,9 +93,23 @@ const ItemRoot = styled(ButtonBase, {
 const TopContainer = styled('div')(({ theme }) => ({
   width: '100%',
   display: 'flex',
-  alignItems: 'center',
+  alignItems: 'start',
   marginBottom: theme.spacing(3),
   justifyContent: 'space-between',
+}));
+
+const TopLabelContainer = styled('div')(({ theme }) => ({
+  flex: 1,
+  display: 'flex',
+  justifyContent: 'center',
+  padding: theme.spacing(0, 1),
+}));
+
+const InlineLabel = styled('span')(({ theme }) => ({
+  marginLeft: theme.spacing(1.5),
+  lineHeight: '18px',
+  fontSize: theme.typography.pxToRem(13),
+  fontWeight: theme.typography.fontWeightSemiBold,
 }));
 
 const BottomContainer = styled('div')(({ theme }) => ({
@@ -92,10 +117,19 @@ const BottomContainer = styled('div')(({ theme }) => ({
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'space-between',
+  position: 'relative',
 }));
 
-const ItemLabel = styled('span')(({ theme }) => ({
+const ItemLabel = styled('span')<{ center?: boolean }>(({ theme, center }) => ({
   lineHeight: '18px',
   fontSize: theme.typography.pxToRem(13),
   fontWeight: theme.typography.fontWeightSemiBold,
+  ...(center
+    ? {
+      position: 'absolute',
+      left: 0,
+      right: 0,
+      textAlign: 'center',
+    }
+    : {}),
 }));
