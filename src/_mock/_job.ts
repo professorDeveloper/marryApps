@@ -34,30 +34,30 @@ export const JOB_WORKING_SCHEDULE_OPTIONS = [
 ];
 
 export const JOB_EMPLOYMENT_TYPE_OPTIONS = [
-  { label: 'Full-time', value: 'Full-time' },
-  { label: 'Part-time', value: 'Part-time' },
-  { label: 'On demand', value: 'On demand' },
-  { label: 'Negotiable', value: 'Negotiable' },
+  { label: 'To\'liq ish', value: 'Full-time' },
+  { label: 'Qisman ish', value: 'Part-time' },
+  { label: 'Talab asosida', value: 'On demand' },
+  { label: 'Muzokaralar', value: 'Negotiable' },
 ];
 
 export const JOB_EXPERIENCE_OPTIONS = [
-  { label: 'No experience', value: 'No experience' },
-  { label: '1 year exp', value: '1 year exp' },
-  { label: '2 year exp', value: '2 year exp' },
-  { label: '> 3 year exp', value: '> 3 year exp' },
+  { label: 'Tajribasi yo\'q', value: 'No experience' },
+  { label: '1 yil tajriba', value: '1 year exp' },
+  { label: '2 yil tajriba', value: '2 year exp' },
+  { label: '> 3 yil tajriba', value: '> 3 year exp' },
 ];
 
 export const JOB_BENEFIT_OPTIONS = [
-  { label: 'Free parking', value: 'Free parking' },
-  { label: 'Bonus commission', value: 'Bonus commission' },
-  { label: 'Travel', value: 'Travel' },
-  { label: 'Device support', value: 'Device support' },
-  { label: 'Health care', value: 'Health care' },
-  { label: 'Training', value: 'Training' },
-  { label: 'Health insurance', value: 'Health insurance' },
-  { label: 'Retirement plans', value: 'Retirement plans' },
-  { label: 'Paid time off', value: 'Paid time off' },
-  { label: 'Flexible work schedule', value: 'Flexible work schedule' },
+  { label: 'Bepul parkovka', value: 'Free parking' },
+  { label: 'Bonus komissiya', value: 'Bonus commission' },
+  { label: 'Sayohat', value: 'Travel' },
+  { label: 'Qurilma qo\'llabi', value: 'Device support' },
+  { label: 'Sog\'liqsizlik xizmati', value: 'Health care' },
+  { label: 'O\'qitish', value: 'Training' },
+  { label: 'Sog\'liqsizlik sug\'urtasi', value: 'Health insurance' },
+  { label: 'Pensiya rejasi', value: 'Retirement plans' },
+  { label: 'Pul bilan odam kunlari', value: 'Paid time off' },
+  { label: 'Moslashtirilgan ish jadavali', value: 'Flexible work schedule' },
 ];
 
 export const JOB_PUBLISH_OPTIONS = [

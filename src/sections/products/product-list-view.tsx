@@ -30,14 +30,14 @@ import {
 // ============================================================================
 
 const PUBLISH_OPTIONS = [
-  { value: 'published', label: 'Published' },
-  { value: 'draft', label: 'Draft' },
+  { value: 'published', label: 'Nashr qilingan' },
+  { value: 'draft', label: 'Qoralama' },
 ];
 
 const STOCK_OPTIONS = [
-  { value: 'in stock', label: 'In stock' },
-  { value: 'low stock', label: 'Low stock' },
-  { value: 'out of stock', label: 'Out of stock' },
+  { value: 'in stock', label: 'Zaxirada mavjud' },
+  { value: 'low stock', label: 'Zaxira kam' },
+  { value: 'out of stock', label: 'Zaxira tugagan' },
 ];
 
 

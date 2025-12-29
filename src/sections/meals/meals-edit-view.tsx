@@ -134,14 +134,14 @@ const SETTINGS_SECTION: CardSection = {
             label: 'Nashr qilish holati',
             type: 'select',
             options: [
-                { value: 'published', label: 'Published' },
-                { value: 'draft', label: 'Draft' },
+                { value: 'published', label: 'Nashr qilingan' },
+                { value: 'draft', label: 'Qoralama' },
             ],
             defaultValue: 'draft',
         },
         {
             key: 'isSpicy',
-            label: 'Spicy',
+            label: 'Achchiq',
             type: 'switch',
             defaultValue: false,
         },
@@ -153,7 +153,7 @@ const SETTINGS_SECTION: CardSection = {
         },
         {
             key: 'isPopular',
-            label: 'Popular',
+            label: 'Mashhur',
             type: 'switch',
             defaultValue: false,
         },
