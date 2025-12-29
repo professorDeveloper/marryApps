@@ -11,11 +11,13 @@ import {
   IconButton,
   Slide,
   type SlideProps,
-  Divider,
+
   Stack,
   Paper,
 } from '@mui/material';
+
 import { forwardRef, useCallback, useMemo } from 'react';
+
 import { Iconify } from 'src/components/iconify';
 
 // ============================================================================
@@ -191,7 +193,7 @@ export function GenericViewModal({
               textAlign: 'center',
             }}
           >
-            Ma'lumot topilmadi
+            Malumot topilmadi
           </Typography>
         </Box>
       );
