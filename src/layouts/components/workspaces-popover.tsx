@@ -25,7 +25,7 @@ export type WorkspacesPopoverProps = ButtonBaseProps & {
     id: string;
     name: string;
     logo: string;
-    plan: string;
+    // plan: string;
   }[];
 };
 
@@ -93,7 +93,7 @@ export function WorkspacesPopover({ data = [], sx, ...other }: WorkspacesPopover
         {workspace?.name}
       </Box>
 
-      <Label
+      {/* <Label
         color={workspace?.plan === 'Free' ? 'default' : 'info'}
         sx={{
           height: 22,
@@ -102,7 +102,7 @@ export function WorkspacesPopover({ data = [], sx, ...other }: WorkspacesPopover
         }}
       >
         {workspace?.plan}
-      </Label>
+      </Label> */}
 
       <Iconify width={16} icon="carbon:chevron-sort" sx={{ color: 'text.disabled' }} />
     </ButtonBase>
@@ -138,7 +138,7 @@ export function WorkspacesPopover({ data = [], sx, ...other }: WorkspacesPopover
                 {option.name}
               </Typography>
 
-              <Label color={option.plan === 'Free' ? 'default' : 'info'}>{option.plan}</Label>
+              {/* <Label color={option.plan === 'Free' ? 'default' : 'info'}>{option.plan}</Label> */}
             </MenuItem>
           ))}
         </MenuList>
@@ -166,7 +166,7 @@ export function WorkspacesPopover({ data = [], sx, ...other }: WorkspacesPopover
           },
         }}
       >
-        Yangi ish maydoni qo'shish
+        Yangi ish maydoni qo&apos;shish
       </Button>
     </CustomPopover>
   );

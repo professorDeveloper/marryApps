@@ -6,6 +6,7 @@
 import type { GridColDef } from '@mui/x-data-grid';
 import type { IProductItem } from 'src/types/product';
 
+import { useTranslation } from 'react-i18next';
 import { useMemo, useState, useCallback } from 'react';
 
 import { useTheme } from '@mui/material/styles';
@@ -24,21 +25,6 @@ import {
   RenderCellStock,
   GenericTableView,
 } from 'src/components/generic-table-view';
-
-// ============================================================================
-// CONSTANTS
-// ============================================================================
-
-const PUBLISH_OPTIONS = [
-  { value: 'published', label: 'Nashr qilingan' },
-  { value: 'draft', label: 'Qoralama' },
-];
-
-const STOCK_OPTIONS = [
-  { value: 'in stock', label: 'Zaxirada mavjud' },
-  { value: 'low stock', label: 'Zaxira kam' },
-  { value: 'out of stock', label: 'Zaxira tugagan' },
-];
 
 
 // ============================================================================
@@ -63,13 +49,52 @@ function RenderCellProduct({ params, href }: { params: any; href: string }) {
  * Product-specific publish status renderer
  */
 function RenderCellPublish({ params }: { params: any }) {
-  return <span>{params.row.publish}</span>;
+  const { t } = useTranslation('menu');
+  const statusValue = params.row.publish?.toLowerCase();
+  const labelKey = statusValue === 'published' ? 'products.published' : 'products.draft';
+  return <span>{t(labelKey)}</span>;
+}
+
+/**
+ * Product-specific stock status renderer
+ */
+function RenderCellStockProduct({ params }: { params: any }) {
+  const { t } = useTranslation('menu');
+  const stockValue = params.row.inventoryType?.toLowerCase();
+  let labelKey = 'products.inStock';
+
+  if (stockValue === 'low stock' || stockValue === 'low') {
+    labelKey = 'products.lowStock';
+  } else if (stockValue === 'out of stock' || stockValue === 'out') {
+    labelKey = 'products.outOfStock';
+  }
+
+  return <span>{t(labelKey)}</span>;
 }
 
 export function ProductListView() {
   const theme = useTheme();
+  const { t } = useTranslation('menu');
   const [viewModalOpen, setViewModalOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<IProductItem | null>(null);
+
+  // Update options with translations - Dinamik tilga nisbatan yangilandi
+  const publishOptions = useMemo(
+    () => [
+      { value: 'published', label: t('products.published') },
+      { value: 'draft', label: t('products.draft') },
+    ],
+    [t]
+  );
+
+  const stockOptions = useMemo(
+    () => [
+      { value: 'in stock', label: t('products.inStock') },
+      { value: 'low stock', label: t('products.lowStock') },
+      { value: 'out of stock', label: t('products.outOfStock') },
+    ],
+    [t]
+  );
 
   // Generic hook ishlatamiz
   const { data: products, loading } = useGenericDataTable<IProductItem>({
@@ -82,7 +107,7 @@ export function ProductListView() {
     () => [
       {
         field: 'name',
-        headerName: 'Nomi',
+        headerName: t('products.name'),
         flex: 1,
         minWidth: 360,
         hideable: false,
@@ -95,22 +120,22 @@ export function ProductListView() {
       },
       {
         field: 'publish',
-        headerName: 'Obmor',
+        headerName: t('products.publish'),
         width: 120,
         type: 'singleSelect',
         editable: true,
         filterable: false,
-        valueOptions: PUBLISH_OPTIONS,
+        valueOptions: publishOptions,
         renderCell: (params) => <RenderCellPublish params={params} />,
       },
       {
         field: 'inventoryType',
-        headerName: 'Rang',
+        headerName: t('products.stock'),
         width: 140,
         type: 'singleSelect',
         filterable: false,
-        valueOptions: STOCK_OPTIONS,
-        renderCell: (params) => <RenderCellStock params={params} />,
+        valueOptions: stockOptions,
+        renderCell: (params) => <RenderCellStockProduct params={params} />,
       },
       {
         type: 'actions',
@@ -125,19 +150,19 @@ export function ProductListView() {
         getActions: (params) => [
           <CustomGridActionsCellItem
             showInMenu
-            label="Edit"
+            label={t('products.edit')}
             icon={<Iconify icon="solar:pen-bold" />}
             href={paths.menu.product.edit(params.row.id)}
           />,
           <CustomGridActionsCellItem
             showInMenu
-            label="View"
+            label={t('products.view')}
             icon={<Iconify icon="solar:eye-bold" />}
             onClick={() => handleViewProduct(params.row)}
           />,
           <CustomGridActionsCellItem
             showInMenu
-            label="Delete"
+            label={t('products.delete')}
             icon={<Iconify icon="solar:trash-bin-trash-bold" />}
             onClick={() => handleDelete(params.row.id)}
             style={{ color: theme.vars.palette.error.main }}
@@ -145,7 +170,7 @@ export function ProductListView() {
         ],
       },
     ],
-    [theme.vars.palette.error.main]
+    [theme.vars.palette.error.main, t, publishOptions, stockOptions]
   );
 
   const handleDelete = useCallback((id: string) => {
@@ -168,18 +193,44 @@ export function ProductListView() {
     setSelectedProduct(null);
   }, []);
 
-  // Specifications uchun render function
+  // Specifications uchun render function - 4 tilga to'liq integratsiya
   const renderProductSpecifications = useCallback((product: IProductItem) => {
     const specs = [
-      { label: 'Nomi', value: product.name || '-' },
-      { label: 'Narxi', value: `$${product.price || 0}` },
-      { label: 'Zaxira turi', value: product.inventoryType || '-' },
-      { label: 'Status', value: product.publish || '-' },
-      { label: 'Kategoriya', value: product.category || '-' },
+      {
+        label: t('products.name'),
+        value: product.name || '-'
+      },
+      {
+        label: t('products.price'),
+        value: `$${product.price || 0}`
+      },
+      {
+        label: t('products.stock'),
+        value: (() => {
+          const stockValue = product.inventoryType?.toLowerCase();
+          if (stockValue === 'low stock' || stockValue === 'low') {
+            return t('products.lowStock');
+          }
+          if (stockValue === 'out of stock' || stockValue === 'out') {
+            return t('products.outOfStock');
+          }
+          return t('products.inStock');
+        })()
+      },
+      {
+        label: t('products.publish'),
+        value: product.publish?.toLowerCase() === 'published'
+          ? t('products.published')
+          : t('products.draft')
+      },
+      {
+        label: t('products.category'),
+        value: product.category || '-'
+      },
     ];
 
     return <SpecificationsTable rows={specs} />;
-  }, []);
+  }, [t]);
 
   return (
     <>
@@ -188,20 +239,20 @@ export function ProductListView() {
         loading={loading}
         columns={columns}
         breadcrumbs={{
-          heading: 'Mahsulotlar',
+          heading: t('products.title'),
           links: [
-            { name: 'Menu', href: paths.menu.root },
-            { name: 'Product', href: paths.menu.product.root },
-            { name: 'List' },
+            { name: t('app'), href: paths.menu.root },
+            { name: t('products.title'), href: paths.menu.product.root },
+            { name: t('products.list') },
           ],
         }}
         addButton={{
-          label: 'Mahsulot qo\'shish',
+          label: t('products.add'),
           href: paths.menu.product.new,
         }}
         filterOptions={{
-          publish: PUBLISH_OPTIONS,
-          stock: STOCK_OPTIONS,
+          publish: publishOptions,
+          stock: stockOptions,
         }}
         initialFilters={{
           publish: [],
@@ -216,7 +267,7 @@ export function ProductListView() {
       <GenericViewModal
         isOpen={viewModalOpen}
         onClose={handleCloseModal}
-        title={selectedProduct?.name || 'Mahsulot'}
+        title={selectedProduct?.name || t('products.title')}
         data={selectedProduct}
         renderContent={renderProductSpecifications}
         maxWidth="sm"

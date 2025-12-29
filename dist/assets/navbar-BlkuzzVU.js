@@ -1,0 +1,1 @@
+const c="App",n="Job",o="User",t="Travel",s="Invoice",e={title:"Blog",caption:"Custom keyboard shortcuts."},a="Sub header",r={app:"App",job:"Job",user:o,travel:t,invoice:s,blog:e,subheader:a};export{c as app,e as blog,r as default,s as invoice,n as job,a as subheader,t as travel,o as user};

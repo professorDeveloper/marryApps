@@ -1,7 +1,7 @@
 import type { IconButtonProps } from '@mui/material/IconButton';
 
 import { m } from 'framer-motion';
-import { useState, useCallback } from 'react';
+import { useCallback } from 'react';
 import { usePopover } from 'minimal-shared/hooks';
 
 import MenuList from '@mui/material/MenuList';
@@ -11,6 +11,7 @@ import IconButton from '@mui/material/IconButton';
 import { FlagIcon } from 'src/components/flag-icon';
 import { CustomPopover } from 'src/components/custom-popover';
 import { varTap, varHover, transitionTap } from 'src/components/animate';
+import { useTranslate } from 'src/locales/use-locales';
 
 // ----------------------------------------------------------------------
 
@@ -24,17 +25,17 @@ export type LanguagePopoverProps = IconButtonProps & {
 
 export function LanguagePopover({ data = [], sx, ...other }: LanguagePopoverProps) {
   const { open, anchorEl, onClose, onOpen } = usePopover();
+  const { onChangeLang, currentLang } = useTranslate();
 
-  const [locale, setLocale] = useState<string>(data[0].value);
-
-  const currentLang = data.find((lang) => lang.value === locale);
+  // Hozirgi tilni olish
+  const currentLangData = data.find((lang) => lang.value === currentLang.value);
 
   const handleChangeLang = useCallback(
     (lang: string) => {
-      setLocale(lang);
+      onChangeLang(lang as any);
       onClose();
     },
-    [onClose]
+    [onClose, onChangeLang]
   );
 
   const renderMenuList = () => (
@@ -43,7 +44,7 @@ export function LanguagePopover({ data = [], sx, ...other }: LanguagePopoverProp
         {data?.map((option) => (
           <MenuItem
             key={option.value}
-            selected={option.value === currentLang?.value}
+            selected={option.value === currentLangData?.value}
             onClick={() => handleChangeLang(option.value)}
           >
             <FlagIcon code={option.countryCode} />
@@ -74,7 +75,7 @@ export function LanguagePopover({ data = [], sx, ...other }: LanguagePopoverProp
         ]}
         {...other}
       >
-        <FlagIcon code={currentLang?.countryCode} />
+        <FlagIcon code={currentLangData?.countryCode} />
       </IconButton>
 
       {renderMenuList()}

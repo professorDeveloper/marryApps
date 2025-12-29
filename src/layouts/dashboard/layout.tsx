@@ -3,6 +3,7 @@ import type { NavItemProps, NavSectionProps } from 'src/components/nav-section';
 import type { MainSectionProps, HeaderSectionProps, LayoutSectionProps } from '../core';
 
 import { merge } from 'es-toolkit';
+import { useTranslation } from 'react-i18next';
 import { useBoolean } from 'minimal-shared/hooks';
 
 import Box from '@mui/material/Box';
@@ -63,6 +64,8 @@ export function DashboardLayout({
 
   const settings = useSettingsContext();
 
+  const { t: tLayout } = useTranslation('layout');
+
   const navVars = dashboardNavColorVars(theme, settings.state.navColor, settings.state.navLayout);
 
   const { value: open, onFalse: onClose, onTrue: onOpen } = useBoolean();
@@ -94,7 +97,7 @@ export function DashboardLayout({
     const headerSlots: HeaderSectionProps['slots'] = {
       topArea: (
         <Alert severity="info" sx={{ display: 'none', borderRadius: 0 }}>
-          This is an info Alert.
+          {tLayout('infoAlert')}
         </Alert>
       ),
       bottomArea: isNavHorizontal ? (
@@ -150,11 +153,10 @@ export function DashboardLayout({
           {/** @slot Language popover */}
           <LanguagePopover
             data={[
-              { value: 'en', label: 'English', countryCode: 'GB' },
-              { value: 'fr', label: 'French', countryCode: 'FR' },
-              { value: 'vi', label: 'Vietnamese', countryCode: 'VN' },
-              { value: 'cn', label: 'Chinese', countryCode: 'CN' },
-              { value: 'ar', label: 'Arabic', countryCode: 'SA' },
+              { value: 'en', label: tLayout('languages.en'), countryCode: 'GB' },
+              { value: 'uz-Latn', label: tLayout('languages.uz-Latn'), countryCode: 'UZ' },
+              { value: 'uz-Cyrl', label: tLayout('languages.uz-Cyrl'), countryCode: 'UZ' },
+              { value: 'ru', label: tLayout('languages.ru'), countryCode: 'RU' },
             ]}
           />
 

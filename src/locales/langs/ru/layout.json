@@ -1,0 +1,10 @@
+{
+  "infoAlert": "Это информационное предупреждение.",
+  "needHelp": "Нужна помощь?",
+  "languages": {
+    "en": "English",
+    "uz-Latn": "O'zbek (Lotin)",
+    "uz-Cyrl": "Ўзбек (Кирил)",
+    "ru": "Русский"
+  }
+}

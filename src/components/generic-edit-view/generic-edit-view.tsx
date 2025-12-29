@@ -108,7 +108,7 @@ export const GenericEditView: FC<GenericEditViewProps> = ({
                     {config.leftSidecard && (
                         <Box>
                             <ImageUploadField
-                                label="Cover Image"
+                                label=""
                                 value={formData.coverUrl}
                                 onChange={(value) => handleChange('coverUrl', value)}
                             />

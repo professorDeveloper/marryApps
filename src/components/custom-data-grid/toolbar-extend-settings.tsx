@@ -63,14 +63,14 @@ const GRID_DENSITY_OPTIONS: {
   value: GridSettingsState['density'];
   icon: React.ReactNode;
 }[] = [
-  { label: 'Kompakt zichlik', value: 'compact', icon: <DensityCompactIcon /> },
-  { label: 'Standart zichlik', value: 'standard', icon: <DensityStandardIcon /> },
-  {
-    label: 'Qulaylik zichligi',
-    value: 'comfortable',
-    icon: <DensityComfortableIcon />,
-  },
-];
+    { label: 'Kompakt zichlik', value: 'compact', icon: <DensityCompactIcon /> },
+    { label: 'Standart zichlik', value: 'standard', icon: <DensityStandardIcon /> },
+    {
+      label: 'Qulaylik zichligi',
+      value: 'comfortable',
+      icon: <DensityComfortableIcon />,
+    },
+  ];
 
 export function CustomToolbarSettingsButton({
   settings,

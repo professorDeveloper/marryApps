@@ -57,8 +57,8 @@ export const navData: NavSectionProps['data'] = [
         icon: ICONS.product,
         deepMatch: true,
         children: [
-          { title: 'Mahsulotlar', path: paths.menu.product.root },
-          { title: 'Toifalar', path: paths.menu.category.root },
+          { title: 'Bo\'limlar', path: paths.menu.product.root },
+          { title: 'Kategoriyalar', path: paths.menu.category.root },
           { title: 'Yarim tayyor mahsulotlar', path: paths.menu.semifinished.root },
           { title: 'Taomlar', path: paths.menu.meals.root },
         ],

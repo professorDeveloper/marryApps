@@ -1,0 +1,1 @@
+const a="Ilova",c="Ish",o="Foydalanuvchi",t="Sayohat",n="Hisob-faktura",s={title:"Blog",caption:"Sozlangan klaviatura yorliqlari."},l="Ostangi sarlavha",i={app:a,job:"Ish",user:o,travel:t,invoice:n,blog:s,subheader:l};export{a as app,s as blog,i as default,n as invoice,c as job,l as subheader,t as travel,o as user};

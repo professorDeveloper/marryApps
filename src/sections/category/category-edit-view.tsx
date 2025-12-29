@@ -130,7 +130,7 @@ export function CategoryEditView({ category, isNew = false }: CategoryEditViewPr
         title: 'Category',
         entityName: 'category',
         breadcrumbs: [
-            { name: 'Menu', href: paths.menu.root },
+            { name: 'Menyu', href: paths.menu.root },
             { name: 'Category', href: paths.menu.category.root },
             { name: isNew ? 'New' : 'Edit', href: '' },
         ],

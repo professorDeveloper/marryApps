@@ -3,6 +3,7 @@ import type { SimpleCompactContentProps } from './content';
 import type { MainSectionProps, HeaderSectionProps, LayoutSectionProps } from '../core';
 
 import { merge } from 'es-toolkit';
+import { useTranslation } from 'react-i18next';
 
 import Box from '@mui/material/Box';
 import Link from '@mui/material/Link';
@@ -37,13 +38,14 @@ export function SimpleLayout({
   slotProps,
   layoutQuery = 'md',
 }: SimpleLayoutProps) {
+  const { t: tLayout } = useTranslation('layout');
   const renderHeader = () => {
     const headerSlotProps: HeaderSectionProps['slotProps'] = { container: { maxWidth: false } };
 
     const headerSlots: HeaderSectionProps['slots'] = {
       topArea: (
         <Alert severity="info" sx={{ display: 'none', borderRadius: 0 }}>
-          This is an info Alert.
+          {tLayout('infoAlert')}
         </Alert>
       ),
       leftArea: <Logo />,
@@ -56,7 +58,7 @@ export function SimpleLayout({
             color="inherit"
             sx={{ typography: 'subtitle2' }}
           >
-            Need help?
+            {tLayout('needHelp')}
           </Link>
 
           {/** @slot Settings button */}

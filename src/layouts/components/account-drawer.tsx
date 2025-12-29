@@ -183,7 +183,7 @@ export function AccountDrawer({ data = [], sx, ...other }: AccountDrawerProps) {
                 <Avatar
                   alt={_mock.fullName(index + 1)}
                   src={_mock.image.avatar(index + 1)}
-                  onClick={() => {}}
+                  onClick={() => { }}
                 />
               </Tooltip>
             ))}
