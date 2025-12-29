@@ -32,7 +32,7 @@ export function BackToTopButton({
 
   return (
     <Fab
-      aria-label="Back to top"
+      aria-label="Yuqoriga qaytish"
       onClick={onBackToTop}
       sx={[
         (theme) => ({

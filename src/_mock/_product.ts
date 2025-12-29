@@ -45,25 +45,25 @@ export const PRODUCT_SIZE_OPTIONS = [
 ];
 
 export const PRODUCT_STOCK_OPTIONS = [
-  { value: 'in stock', label: 'In stock' },
-  { value: 'low stock', label: 'Low stock' },
-  { value: 'out of stock', label: 'Out of stock' },
+  { value: 'in stock', label: 'Zaxirada mavjud' },
+  { value: 'low stock', label: 'Zaxira kam' },
+  { value: 'out of stock', label: 'Zaxira tugagan' },
 ];
 
 export const PRODUCT_PUBLISH_OPTIONS = [
-  { value: 'published', label: 'Published' },
-  { value: 'draft', label: 'Draft' },
+  { value: 'published', label: 'Nashr qilingan' },
+  { value: 'draft', label: 'Qoralama' },
 ];
 
 export const PRODUCT_SORT_OPTIONS = [
   { value: 'featured', label: 'Featured' },
-  { value: 'newest', label: 'Newest' },
-  { value: 'priceDesc', label: 'Price: High - Low' },
-  { value: 'priceAsc', label: 'Price: Low - High' },
+  { value: 'newest', label: 'Eng yangi' },
+  { value: 'priceDesc', label: 'Narx: Yuqori - Past' },
+  { value: 'priceAsc', label: 'Narx: Past - Yuqori' },
 ];
 
 export const PRODUCT_CATEGORY_GROUP_OPTIONS = [
-  { group: 'Clothing', classify: ['Shirts', 'T-shirts', 'Jeans', 'Leather', 'Accessories'] },
-  { group: 'Tailored', classify: ['Suits', 'Blazers', 'Trousers', 'Waistcoats', 'Apparel'] },
-  { group: 'Accessories', classify: ['Shoes', 'Backpacks and bags', 'Bracelets', 'Face masks'] },
+  { group: 'Kiyim', classify: ['Ko\'ylaklar', 'T-ko\'ylak', 'Jeans', 'Charm', 'Aksessuarlar'] },
+  { group: 'Tayyorlangan', classify: ['Kostyumlar', 'Blazerlar', 'Shim', 'Jiletka', 'Kiyim'] },
+  { group: 'Aksessuarlar', classify: ['Tuflya', 'Sumkalar', 'Birgutlar', 'Yuz niqobi'] },
 ];

@@ -122,7 +122,7 @@ export const _analyticTraffic = [
 // ECOMMERCE
 // ----------------------------------------------------------------------
 
-export const _ecommerceSalesOverview = ['Total profit', 'Total income', 'Total expenses'].map(
+export const _ecommerceSalesOverview = ['Jami foyda', 'Jami daromad', 'Jami xarajatlar'].map(
   (label, index) => ({
     label,
     totalAmount: _mock.number.price(index) * 100,
@@ -131,7 +131,7 @@ export const _ecommerceSalesOverview = ['Total profit', 'Total income', 'Total e
 );
 
 export const _ecommerceBestSalesman = Array.from({ length: 5 }, (_, index) => {
-  const category = ['CAP', 'Branded shoes', 'Headphone', 'Cell phone', 'Earings'][index];
+  const category = ['SHAPKA', 'Brendli tuflya', 'Quloqtut', 'Mobil telefon', 'Dumaloq'][index];
 
   return {
     id: _mock.id(index),
@@ -210,7 +210,7 @@ export const _bankingRecentTransitions = [
     name: _mock.fullName(2),
     avatarUrl: _mock.image.avatar(2),
     type: 'Income',
-    message: 'Receive money from',
+    message: 'Pul qabul qilish',
     category: 'Annette black',
     date: _mock.time(2),
     status: 'progress',
@@ -221,7 +221,7 @@ export const _bankingRecentTransitions = [
     name: _mock.fullName(3),
     avatarUrl: _mock.image.avatar(3),
     type: 'Expenses',
-    message: 'Payment for',
+    message: 'To\'lov',
     category: 'Courtney henry',
     date: _mock.time(3),
     status: 'completed',

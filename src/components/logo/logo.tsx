@@ -191,7 +191,7 @@ export function Logo({
     <LogoRoot
       component={RouterLink}
       href={href}
-      aria-label="Logo"
+      aria-label="Logotip"
       underline="none"
       className={mergeClasses([logoClasses.root, className])}
       sx={[
