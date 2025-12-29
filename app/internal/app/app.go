@@ -14,7 +14,7 @@ import (
 	echoSwagger "github.com/swaggo/echo-swagger"
 	"gitlab.yurtal.tech/company/maryai/back/internal/config"
 	"gitlab.yurtal.tech/company/maryai/back/internal/handler"
-	mw "gitlab.yurtal.tech/company/maryai/back/internal/middleware"
+	// mw "gitlab.yurtal.tech/company/maryai/back/internal/middleware"
 	"gitlab.yurtal.tech/company/maryai/back/internal/migrate"
 	"gitlab.yurtal.tech/company/maryai/back/internal/repository"
 	"gitlab.yurtal.tech/company/maryai/back/internal/service"
@@ -51,7 +51,7 @@ func Run(cfg *config.Config) {
 	paymeClient := paymentPayme.NewClient(slog.Default(), http.DefaultClient, paymentPayme.BaseUrl(cfg.Payme.Url), paymentPayme.ClientKey(cfg.Payme.ClientKey), paymentPayme.MerchantId(cfg.Payme.MerchantID), paymentPayme.Login(cfg.Payme.Login), paymentPayme.Password(cfg.Payme.Password), paymentPayme.ReturnUrl(cfg.Payme.ReturnUrl))
 
 	e := echo.New()
-	mw.SetupMiddleware(e, cfg)
+	// mw.SetupMiddleware(e, cfg)
 
 	mainPgClient, err := pg.New(pg.Username(cfg.MainPostgres.User), pg.Password(cfg.MainPostgres.Password),
 		pg.Host(cfg.MainPostgres.Host), pg.Port(cfg.MainPostgres.Port),
