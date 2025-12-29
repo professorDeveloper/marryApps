@@ -147,7 +147,7 @@ const SETTINGS_SECTION: CardSection = {
         },
         {
             key: 'isVegetarian',
-            label: 'Vegetarian',
+            label: 'Vegetarian taom',
             type: 'switch',
             defaultValue: false,
         },

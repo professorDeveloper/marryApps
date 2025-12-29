@@ -108,7 +108,7 @@ export const _userAddressBook = Array.from({ length: 4 }, (_, index) => ({
   name: _mock.fullName(index),
   phoneNumber: _mock.phoneNumber(index),
   fullAddress: _mock.fullAddress(index),
-  addressType: (index === 0 && 'Home') || 'Office',
+  addressType: (index === 0 && 'Asosiy') || 'Ofis',
 }));
 
 export const _userInvoices = Array.from({ length: 10 }, (_, index) => ({

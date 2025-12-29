@@ -207,9 +207,9 @@ export function Meals() {
                 breadcrumbs={{
                     heading: 'Mahsulotlar',
                     links: [
-                        { name: 'Dashboard', href: paths.dashboard.root },
+                        { name: 'Bosh paneli', href: paths.dashboard.root },
                         { name: 'Mahsulotlar', href: paths.menu.meals.root },
-                        { name: 'List' },
+                        { name: 'Ro\'yxat' },
                     ],
                 }}
                 addButton={{

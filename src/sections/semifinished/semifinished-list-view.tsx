@@ -223,9 +223,9 @@ export function HalfMeals() {
                 breadcrumbs={{
                     heading: 'Yarim tayyor mahsulotlar',
                     links: [
-                        { name: 'Dashboard', href: paths.dashboard.root },
+                        { name: 'Bosh paneli', href: paths.dashboard.root },
                         { name: 'Yarim tayyor mahsulotlar', href: paths.menu.semifinished.root },
-                        { name: 'List' },
+                        { name: 'Ro\'yxat' },
                     ],
                 }}
                 addButton={{
