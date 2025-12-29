@@ -124,7 +124,7 @@ export const GenericEditView: FC<GenericEditViewProps> = ({
                                     disabled={loading}
                                     startIcon={<Iconify icon="solar:check-circle-bold" />}
                                 >
-                                    {loading ? `Saving...` : `Save ${config.title}`}
+                                    {loading ? `Saqlanmoqda...` : `Saqlash`}
                                 </Button>
 
                                 {!isNew && config.showDeleteButton !== false && (

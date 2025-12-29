@@ -91,22 +91,22 @@ export function JwtSignUpView() {
       >
         <Field.Text
           name="firstName"
-          label="First name"
+          label="Ismi"
           slotProps={{ inputLabel: { shrink: true } }}
         />
         <Field.Text
           name="lastName"
-          label="Last name"
+          label="Familiyasi"
           slotProps={{ inputLabel: { shrink: true } }}
         />
       </Box>
 
-      <Field.Text name="email" label="Email address" slotProps={{ inputLabel: { shrink: true } }} />
+      <Field.Text name="email" label="Email manzili" slotProps={{ inputLabel: { shrink: true } }} />
 
       <Field.Text
         name="password"
-        label="Password"
-        placeholder="6+ characters"
+        label="Parol"
+        placeholder="6+ belgi"
         type={showPassword.value ? 'text' : 'password'}
         slotProps={{
           inputLabel: { shrink: true },
@@ -129,9 +129,9 @@ export function JwtSignUpView() {
         type="submit"
         variant="contained"
         loading={isSubmitting}
-        loadingIndicator="Create account..."
+        loadingIndicator="hisob yaratish..."
       >
-        Create account
+        Hisob yaratish
       </Button>
     </Box>
   );
@@ -144,7 +144,7 @@ export function JwtSignUpView() {
           <>
             {`Already have an account? `}
             <Link component={RouterLink} href={paths.auth.jwt.signIn} variant="subtitle2">
-              Get started
+              Kirish
             </Link>
           </>
         }

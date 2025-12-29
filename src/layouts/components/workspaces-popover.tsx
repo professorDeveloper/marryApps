@@ -166,7 +166,7 @@ export function WorkspacesPopover({ data = [], sx, ...other }: WorkspacesPopover
           },
         }}
       >
-        Create workspace
+        Yangi ish maydoni qo'shish
       </Button>
     </CustomPopover>
   );

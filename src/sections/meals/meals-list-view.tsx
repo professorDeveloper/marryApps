@@ -32,10 +32,10 @@ import { formatDate, formatPrice, formatQuantity } from 'src/components/generic-
 // ============================================================================
 
 const STATUS_OPTIONS = [
-    { value: 'pending', label: 'Pending' },
-    { value: 'completed', label: 'Completed' },
-    { value: 'cancelled', label: 'Cancelled' },
-    { value: 'refunded', label: 'Refunded' },
+    { value: 'pending', label: 'Kutilmoqda' },
+    { value: 'completed', label: 'Tugallandi' },
+    { value: 'cancelled', label: 'Bekor qilindi' },
+    { value: 'refunded', label: 'Pul qaytarildi' },
 ];
 
 const UNIT_OPTIONS = [

@@ -41,11 +41,11 @@ const COLOR_OPTIONS = [
 
 const IMAGE_SECTION: CardSection = {
     id: 'image',
-    title: 'Cover Image',
+    title: 'Qopqog\' rasmi',
     fields: [
         {
             key: 'coverUrl',
-            label: 'Image URL',
+            label: 'Rasm URL\'si',
             type: 'url',
             placeholder: 'https://example.com/image.jpg',
             defaultValue: '',
@@ -55,12 +55,12 @@ const IMAGE_SECTION: CardSection = {
 
 const BASIC_INFO_SECTION: CardSection = {
     id: 'basic',
-    title: 'Basic Information',
+    title: 'Asosiy ma\'lumotlar',
     columns: 2,
     fields: [
         {
             key: 'name',
-            label: 'Product Name',
+            label: 'Mahsulot nomi',
             type: 'text',
             required: true,
             defaultValue: '',
@@ -73,13 +73,13 @@ const BASIC_INFO_SECTION: CardSection = {
         },
         {
             key: 'code',
-            label: 'Code',
+            label: 'Kod',
             type: 'text',
             defaultValue: '',
         },
         {
             key: 'category',
-            label: 'Category',
+            label: 'Toifa',
             type: 'text',
             defaultValue: '',
         },
@@ -88,12 +88,12 @@ const BASIC_INFO_SECTION: CardSection = {
 
 const PRICING_SECTION: CardSection = {
     id: 'pricing',
-    title: 'Pricing',
+    title: 'Narxlash',
     columns: 2,
     fields: [
         {
             key: 'price',
-            label: 'Price',
+            label: 'Narx',
             type: 'number',
             defaultValue: 0,
         },
@@ -134,18 +134,18 @@ const COLORS_SECTION: CardSection = {
 
 // const DESCRIPTIONS_SECTION: CardSection = {
 //     id: 'descriptions',
-//     title: 'Descriptions',
+//     title: 'Tavsiflar',
 //     fields: [
 //         {
 //             key: 'description',
-//             label: 'Description',
+//             label: 'Tavsifi',
 //             type: 'textarea',
 //             rows: 4,
 //             defaultValue: '',
 //         },
 //         {
 //             key: 'subDescription',
-//             label: 'Sub Description',
+//             label: 'Qo\'shimcha tavsif',
 //             type: 'textarea',
 //             rows: 2,
 //             defaultValue: '',
@@ -155,25 +155,25 @@ const COLORS_SECTION: CardSection = {
 
 const ADVANCED_SECTION: CardSection = {
     id: 'advanced',
-    title: 'Advanced Options',
+    title: 'Qo\'shimcha variantlar',
     fields: [
         {
             key: 'sizes',
-            label: 'Sizes (comma-separated)',
+            label: 'O\'lchamlar (vergul bilan ajratilgan)',
             type: 'text',
             placeholder: 'S, M, L, XL',
             defaultValue: [],
         },
         {
             key: 'tags',
-            label: 'Tags (comma-separated)',
+            label: 'Teglar (vergul bilan ajratilgan)',
             type: 'text',
-            placeholder: 'electronics, popular, new',
+            placeholder: 'elektronika, populyar, yangi',
             defaultValue: [],
         },
         {
             key: 'gender',
-            label: 'For Male',
+            label: 'Erkaklar uchun',
             type: 'switch',
             defaultValue: false,
         },

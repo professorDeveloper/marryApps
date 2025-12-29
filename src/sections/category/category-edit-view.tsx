@@ -41,12 +41,12 @@ const IMAGE_SECTION: CardSection = {
 
 const BASIC_INFO_SECTION: CardSection = {
     id: 'basic',
-    title: 'Basic Information',
+    title: 'Asosiy ma\'lumotlar',
     columns: 2,
     fields: [
         {
             key: 'name',
-            label: 'Category Name',
+            label: 'Toifaning nomi',
             type: 'text',
             required: true,
             defaultValue: '',
@@ -59,7 +59,7 @@ const BASIC_INFO_SECTION: CardSection = {
         },
         {
             key: 'description',
-            label: 'Description',
+            label: 'Tavsifi',
             type: 'textarea',
             rows: 3,
             defaultValue: '',
@@ -69,16 +69,16 @@ const BASIC_INFO_SECTION: CardSection = {
 
 const SETTINGS_SECTION: CardSection = {
     id: 'settings',
-    title: 'Settings',
+    title: 'Sozlamalar',
     columns: 2,
     fields: [
         {
             key: 'publish',
-            label: 'Publish Status',
+            label: 'Nashr qilish holati',
             type: 'select',
             options: [
-                { value: 'published', label: 'Published' },
-                { value: 'draft', label: 'Draft' },
+                { value: 'published', label: 'Nashr qilingan' },
+                { value: 'draft', label: 'Qoralama' },
             ],
             defaultValue: 'draft',
         },

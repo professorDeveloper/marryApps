@@ -26,11 +26,11 @@ export interface MealEditViewProps {
 
 const IMAGE_SECTION: CardSection = {
     id: 'image',
-    title: 'Meal Image',
+    title: 'Taom rasmi',
     fields: [
         {
             key: 'image',
-            label: 'Image URL',
+            label: 'Rasm URL\'si',
             type: 'url',
             placeholder: 'https://example.com/image.jpg',
             defaultValue: '',
@@ -40,31 +40,31 @@ const IMAGE_SECTION: CardSection = {
 
 const BASIC_INFO_SECTION: CardSection = {
     id: 'basic',
-    title: 'Basic Information',
+    title: 'Asosiy ma\'lumotlar',
     columns: 2,
     fields: [
         {
             key: 'name',
-            label: 'Meal Name',
+            label: 'Taom nomi',
             type: 'text',
             required: true,
             defaultValue: '',
         },
         {
             key: 'category',
-            label: 'Category',
+            label: 'Toifa',
             type: 'select',
             options: [
-                { value: 'breakfast', label: 'Breakfast' },
-                { value: 'lunch', label: 'Lunch' },
-                { value: 'dinner', label: 'Dinner' },
-                { value: 'snack', label: 'Snack' },
+                { value: 'breakfast', label: 'Nonushta' },
+                { value: 'lunch', label: 'Tushlik' },
+                { value: 'dinner', label: 'Kechki ovqat' },
+                { value: 'snack', label: 'Zakuska' },
             ],
             defaultValue: '',
         },
         {
             key: 'description',
-            label: 'Description',
+            label: 'Tavsifi',
             type: 'textarea',
             rows: 3,
             defaultValue: '',
@@ -74,30 +74,30 @@ const BASIC_INFO_SECTION: CardSection = {
 
 const NUTRITION_SECTION: CardSection = {
     id: 'nutrition',
-    title: 'Nutrition Info',
+    title: 'Oziqlanish ma\'lumotlari',
     columns: 2,
     fields: [
         {
             key: 'calories',
-            label: 'Calories',
+            label: 'Kalorilari',
             type: 'number',
             defaultValue: 0,
         },
         {
             key: 'protein',
-            label: 'Protein (g)',
+            label: 'Oqsil (g)',
             type: 'number',
             defaultValue: 0,
         },
         {
             key: 'carbs',
-            label: 'Carbohydrates (g)',
+            label: 'Uglevodlar (g)',
             type: 'number',
             defaultValue: 0,
         },
         {
             key: 'fat',
-            label: 'Fat (g)',
+            label: 'Yog\' (g)',
             type: 'number',
             defaultValue: 0,
         },
@@ -106,18 +106,18 @@ const NUTRITION_SECTION: CardSection = {
 
 const PRICE_SECTION: CardSection = {
     id: 'price',
-    title: 'Pricing',
+    title: 'Narxlash',
     columns: 2,
     fields: [
         {
             key: 'price',
-            label: 'Price',
+            label: 'Narx',
             type: 'number',
             defaultValue: 0,
         },
         {
             key: 'discount',
-            label: 'Discount %',
+            label: 'Chegirma %',
             type: 'number',
             defaultValue: 0,
         },
