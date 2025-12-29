@@ -63,10 +63,10 @@ const GRID_DENSITY_OPTIONS: {
   value: GridSettingsState['density'];
   icon: React.ReactNode;
 }[] = [
-  { label: 'Compact density', value: 'compact', icon: <DensityCompactIcon /> },
-  { label: 'Standard density', value: 'standard', icon: <DensityStandardIcon /> },
+  { label: 'Kompakt zichlik', value: 'compact', icon: <DensityCompactIcon /> },
+  { label: 'Standart zichlik', value: 'standard', icon: <DensityStandardIcon /> },
   {
-    label: 'Comfortable density',
+    label: 'Qulaylik zichligi',
     value: 'comfortable',
     icon: <DensityComfortableIcon />,
   },
@@ -76,7 +76,7 @@ export function CustomToolbarSettingsButton({
   settings,
   onChangeSettings,
   showLabel,
-  label = 'Settings',
+  label = 'Sozlamalar',
 }: Pick<ToolbarButtonBaseProps, 'label' | 'showLabel'> & CustomToolbarSettingsButtonProps) {
   const { open, anchorEl, onClose, onOpen } = usePopover();
 
@@ -155,8 +155,8 @@ export function CustomToolbarSettingsButton({
 
         <Divider />
 
-        {renderToggleOption('Show column borders', 'showColumnVerticalBorder')}
-        {renderToggleOption('Show cell borders', 'showCellVerticalBorder')}
+        {renderToggleOption('Ustun chegaralarini ko\'rsatish', 'showColumnVerticalBorder')}
+        {renderToggleOption('Hujayraning chegaralarini ko\'rsatish', 'showCellVerticalBorder')}
       </Menu>
     </>
   );

@@ -145,7 +145,7 @@ export const GenericEditView: FC<GenericEditViewProps> = ({
                                     variant="outlined"
                                     onClick={() => router.back()}
                                 >
-                                    Cancel
+                                   Bekor qilish
                                 </Button>
                             </Stack>
                         </Box>
@@ -202,7 +202,7 @@ export const GenericEditView: FC<GenericEditViewProps> = ({
                                     variant="outlined"
                                     onClick={() => router.back()}
                                 >
-                                    Cancel
+                                    Bekor qilish
                                 </Button>
                             </Stack>
                         )}

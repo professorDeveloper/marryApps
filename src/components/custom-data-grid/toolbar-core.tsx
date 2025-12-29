@@ -110,7 +110,7 @@ export function CustomToolbarFilterButton({
       render={(props, state) => (
         <ToolbarButtonBase
           {...props}
-          label={String(label)}
+          label={String('Filtr')}
           showLabel={showLabel}
           icon={
             <Badge variant="dot" color="error" badgeContent={state.filterCount}>
@@ -143,7 +143,7 @@ export function CustomToolbarExportButton({
         aria-haspopup="true"
         aria-expanded={open ? 'true' : undefined}
         onClick={onOpen}
-        label={String(label)}
+        label={String("Eksport qilish")}
         icon={<ExportIcon />}
         showLabel={showLabel}
       />
@@ -216,7 +216,7 @@ export function CustomToolbarQuickFilter({
                     ),
                     endAdornment: state.value ? (
                       <InputAdornment position="end">
-                        <QuickFilterClear edge="end" size="small" aria-label="Clear search">
+                        <QuickFilterClear edge="end" size="small" aria-label="Qidiruvni tozalash">
                           <Iconify icon="mingcute:close-line" width={16} />
                         </QuickFilterClear>
                       </InputAdornment>

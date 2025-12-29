@@ -127,7 +127,7 @@ export const ImageUploadField: FC<ImageUploadFieldProps> = ({
                         <Stack alignItems="center" spacing={1}>
                             <Iconify icon="eva:cloud-upload-fill" sx={{ fontSize: 48, color: 'text.secondary' }} />
                             <Typography variant="body2" color="textSecondary" align="center">
-                                Rasmni yuklash uchun bosing yoki shu yerga tortib tashlang
+                                Rasmni yuklash uchun bosing
                             </Typography>
                         </Stack>
                     )}

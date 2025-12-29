@@ -203,7 +203,7 @@ export function SemifinishedEditView({ semifinished, isNew = false }: Semifinish
                 // After successful save, redirect to semifinished list
                 router.push(paths.menu.semifinished.root);
             } catch (err) {
-                 console.log("Error saving semifinished:", err);
+                console.log("Error saving semifinished:", err);
             }
         },
         [router]
@@ -217,7 +217,7 @@ export function SemifinishedEditView({ semifinished, isNew = false }: Semifinish
 
             router.push(paths.menu.semifinished.root);
         } catch (err) {
-             console.log("Error deleting semifinished:", err);
+            console.log("Error deleting semifinished:", err);
         }
     }, [semifinished?.id, router]);
 

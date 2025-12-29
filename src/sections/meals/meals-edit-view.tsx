@@ -177,7 +177,7 @@ export function MealEditView({ meal, isNew = false }: MealEditViewProps) {
                 // After successful save, redirect to meal list
                 router.push(paths.menu.meals.root);
             } catch (err) {
-               console.log("Error saving meal:", err);
+                console.log("Error saving meal:", err);
             }
         },
         [router]
@@ -191,7 +191,7 @@ export function MealEditView({ meal, isNew = false }: MealEditViewProps) {
 
             router.push(paths.menu.meals.root);
         } catch (err) {
-             console.log("Error deleting meal:", err);
+            console.log("Error deleting meal:", err);
         }
     }, [meal?.id, router]);
 
