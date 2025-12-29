@@ -33,3 +33,4 @@ CREATE TABLE IF NOT EXISTS database_credentials (
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
+
