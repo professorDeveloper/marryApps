@@ -84,7 +84,7 @@ export function FontSizeOptions({
       step={1}
       size="small"
       valueLabelDisplay="on"
-      aria-label="Change font size"
+      aria-label="Shrift o'lchamini o'zgartirish"
       valueLabelFormat={(val) => `${val}px`}
       value={value}
       min={options[0]}
