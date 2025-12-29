@@ -22,7 +22,6 @@ import { CustomGridActionsCellItem } from 'src/components/custom-data-grid';
 import { GenericViewModal, SpecificationsTable } from 'src/components/generic-view-view';
 import {
   RenderCellItem,
-  RenderCellStock,
   GenericTableView,
 } from 'src/components/generic-table-view';
 

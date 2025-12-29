@@ -6,8 +6,8 @@
 import type { GridColDef } from '@mui/x-data-grid';
 import type { ISemifinishedItem } from 'src/types/semifinished';
 
-import { useTranslation } from 'react-i18next';
 import { useMemo, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { Chip } from '@mui/material';
 import { useTheme } from '@mui/material/styles';

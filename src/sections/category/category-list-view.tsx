@@ -6,8 +6,8 @@
 import type { GridColDef } from '@mui/x-data-grid';
 import type { ICategory } from 'src/types/category';
 
-import { useTranslation } from 'react-i18next';
 import { useMemo, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { useTheme } from '@mui/material/styles';
 
@@ -20,9 +20,9 @@ import { endpoints } from 'src/lib/axios';
 
 import { Iconify } from 'src/components/iconify';
 import { CustomGridActionsCellItem } from 'src/components/custom-data-grid';
+import { formatDate } from 'src/components/generic-view-view/modal-formatters';
+import { RenderCellItem, GenericTableView } from 'src/components/generic-table-view';
 import { GenericViewModal, SpecificationsTable } from 'src/components/generic-view-view';
-import { formatDate, formatStatus } from 'src/components/generic-view-view/modal-formatters';
-import { RenderCellItem, RenderCellStock, GenericTableView } from 'src/components/generic-table-view';
 
 // ============================================================================
 // CUSTOM RENDERERS
