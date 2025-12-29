@@ -29,7 +29,7 @@ import {
 // ----------------------------------------------------------------------
 
 // Supported languages
-export const supportedLngs = ['en', 'fr', 'vi', 'cn', 'ar'] as const;
+export const supportedLngs = ['en', 'fr', 'vi', 'cn', 'ar', 'uz'] as const;
 export type LangCode = (typeof supportedLngs)[number];
 
 // Fallback and default namespace
@@ -109,6 +109,13 @@ export const allLangs: LangOption[] = [
     systemValue: {
       components: { ...arSACore.components, ...arSDDataGrid.components },
     },
+  },
+  {
+    value: 'uz',
+    label: 'O\'zbek',
+    countryCode: 'UZ',
+    adapterLocale: 'uz',
+    numberFormat: { code: 'uz-UZ', currency: 'UZS' },
   },
 ];
 

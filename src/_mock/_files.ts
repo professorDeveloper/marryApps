@@ -5,7 +5,7 @@ import { _tags, _fileNames } from './assets';
 
 const GB = 1000000000 * 24;
 
-const FOLDERS = ['Docs', 'Projects', 'Work', 'Training', 'Sport', 'Foods'];
+const FOLDERS = ['Hujjatlar', 'Loyahalar', 'Ish', 'O\'qitish', 'Sport', 'Taomlar'];
 
 const URLS = [
   _mock.image.cover(1),

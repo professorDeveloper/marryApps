@@ -4,67 +4,67 @@ import { _tags } from './assets';
 // ----------------------------------------------------------------------
 
 export const TOUR_DETAILS_TABS = [
-  { label: 'Tour content', value: 'content' },
-  { label: 'Booker', value: 'bookers' },
+  { label: 'Sayohat kontent', value: 'content' },
+  { label: 'Bron beruvchi', value: 'bookers' },
 ];
 
 export const TOUR_SORT_OPTIONS = [
-  { label: 'Latest', value: 'latest' },
-  { label: 'Popular', value: 'popular' },
-  { label: 'Oldest', value: 'oldest' },
+  { label: 'Eng yangi', value: 'latest' },
+  { label: 'Mashhur', value: 'popular' },
+  { label: 'Eng eski', value: 'oldest' },
 ];
 
 export const TOUR_PUBLISH_OPTIONS = [
-  { label: 'Published', value: 'published' },
-  { label: 'Draft', value: 'draft' },
+  { label: 'Nashr qilingan', value: 'published' },
+  { label: 'Qoralama', value: 'draft' },
 ];
 
 export const TOUR_SERVICE_OPTIONS = [
-  { label: 'Audio guide', value: 'Audio guide' },
-  { label: 'Food and drinks', value: 'Food and drinks' },
-  { label: 'Lunch', value: 'Lunch' },
-  { label: 'Private tour', value: 'Private tour' },
-  { label: 'Special activities', value: 'Special activities' },
-  { label: 'Entrance fees', value: 'Entrance fees' },
-  { label: 'Gratuities', value: 'Gratuities' },
-  { label: 'Pick-up and drop off', value: 'Pick-up and drop off' },
-  { label: 'Professional guide', value: 'Professional guide' },
-  { label: 'Transport by air-conditioned', value: 'Transport by air-conditioned' },
+  { label: 'Audio gid', value: 'Audio guide' },
+  { label: 'Ovqat va ichimliklar', value: 'Food and drinks' },
+  { label: 'Tushlik', value: 'Lunch' },
+  { label: 'Shaxsiy sayohat', value: 'Private tour' },
+  { label: 'Maxsus faoliyatlar', value: 'Special activities' },
+  { label: 'Kirish to\'lovlari', value: 'Entrance fees' },
+  { label: 'Bahshish', value: 'Gratuities' },
+  { label: 'Olib ketish va tashlab ketish', value: 'Pick-up and drop off' },
+  { label: 'Professional gid', value: 'Professional guide' },
+  { label: 'Konditsioner transporti', value: 'Transport by air-conditioned' },
 ];
 
 const CONTENT = `
-<h6>Description</h6>
+<h6>Tavsifi</h6>
 
-<p>Occaecati est et illo quibusdam accusamus qui. Incidunt aut et molestiae ut facere aut. Est quidem iusto praesentium excepturi harum nihil tenetur facilis. Ut omnis voluptates nihil accusantium doloribus eaque debitis.</p>
+<p>Bu sayohat O'zbekistonning eng qiziqarli joylariga olib boradi. Qadimiy tumanlar, madaniy meroslar va tabiatning go'zalligi sizi hayratda qoldiradi.</p>
 
-<h6>Highlights</h6>
+<h6>Asosiy joylar</h6>
 
 <ul>
-  <li>A fermentum in morbi pretium aliquam adipiscing donec tempus.</li>
-  <li>Vulputate placerat amet pulvinar lorem nisl.</li>
-  <li>Consequat feugiat habitant gravida quisque elit bibendum id adipiscing sed.</li>
-  <li>Etiam duis lobortis in fames ultrices commodo nibh.</li>
+  <li>Samarqand shahri - qadimiy shaharlarnig bir.</li>
+  <li>Bukhoro - tijorat yo'lining markazi.</li>
+  <li>Xiva - raqiblardan dozirabning moydoni.</li>
+  <li>Toshkent - zamonaviy o'zbekistonning do'kxona.</li>
 </ul>
 
-<h6>Program</h6>
+<h6>Dastur</h6>
 
 <p>
-  <strong>Day 1</strong>
+  <strong>1-kun</strong>
 </p>
 
-<p>Amet minim mollit non deserunt ullamco est sit aliqua dolor do amet sint. Velit officia consequat duis enim velit mollit. Exercitation veniam consequat sunt nostrud amet.</p>
+<p>Toshkent shahriga kelish va mehmanxonaga yollanish. Shaharnomani o'rganish va stalinlarning esdalari.</p>
 
 <p>
-  <strong>Day 2</strong>
+  <strong>2-kun</strong>
 </p>
 
-<p>Amet minim mollit non deserunt ullamco est sit aliqua dolor do amet sint. Velit officia consequat duis enim velit mollit. Exercitation veniam consequat sunt nostrud amet.</p>
+<p>Samarqandga borish. Qadimiy madaniy yodgorliklari va tarixiy joylarni ko'rib chiqish.</p>
 
 <p>
-  <strong>Day 3</strong>
+  <strong>3-kun</strong>
 </p>
 
-<p>Amet minim mollit non deserunt ullamco est sit aliqua dolor do amet sint. Velit officia consequat duis enim velit mollit. Exercitation veniam consequat sunt nostrud amet.</p>
+<p>Buxoroga sayohat. Tarixiy bazaar va qadimiy arxitektura bilan tanishish va shuning uchun vaqt sarflash.</p>
 `;
 
 const BOOKER = Array.from({ length: 12 }, (_, index) => ({

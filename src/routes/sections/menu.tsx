@@ -1,6 +1,6 @@
 import type { RouteObject } from 'react-router';
 
-import { Outlet } from 'react-router';
+import { Outlet, Navigate } from 'react-router';
 import { lazy, Suspense } from 'react';
 
 import { CONFIG } from 'src/global-config';
@@ -52,7 +52,7 @@ export const dashboardRoutes: RouteObject[] = [
     path: 'menu',
     element: CONFIG.auth.skip ? dashboardLayout() : <AuthGuard>{dashboardLayout()}</AuthGuard>,
     children: [
-      { element: <IndexPage />, index: true },
+      { element: <Navigate to="product" replace />, index: true },
       { path: 'two', element: <PageTwo /> },
       { path: 'three', element: <PageThree /> },
       {

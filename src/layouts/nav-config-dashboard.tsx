@@ -49,7 +49,7 @@ export const navData: NavSectionProps['data'] = [
    * Overview
    */
   {
-    subheader: 'Overview',
+    subheader: 'Umumiy',
     items: [
       {
         title: 'Menyu',
@@ -57,8 +57,8 @@ export const navData: NavSectionProps['data'] = [
         icon: ICONS.product,
         deepMatch: true,
         children: [
-          { title: 'Bo\'limlar', path: paths.menu.product.root },
-          { title: 'Kategoriyalar', path: paths.menu.category.root },
+          { title: 'Mahsulotlar', path: paths.menu.product.root },
+          { title: 'Toifalar', path: paths.menu.category.root },
           { title: 'Yarim tayyor mahsulotlar', path: paths.menu.semifinished.root },
           { title: 'Taomlar', path: paths.menu.meals.root },
         ],
@@ -66,16 +66,16 @@ export const navData: NavSectionProps['data'] = [
     ],
   },
   {
-    subheader: 'Management',
+    subheader: 'Boshqarish',
     items: [
       {
-        title: 'Group',
+        title: 'Guruh',
         path: paths.menu.group.root,
         icon: ICONS.user,
         children: [
-          { title: 'Four', path: paths.menu.group.root },
-          { title: 'Five', path: paths.menu.group.five },
-          { title: 'Six', path: paths.menu.group.six },
+          { title: 'To\'rtta', path: paths.menu.group.root },
+          { title: 'Besh', path: paths.menu.group.five },
+          { title: 'Olti', path: paths.menu.group.six },
         ],
       },
     ],

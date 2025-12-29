@@ -267,7 +267,7 @@ export function GenericViewModal({
           flexDirection: 'column',
           borderRadius:
             position === 'right' && !isMobile
-              ? 0
+              ? 1
               : isMobile
                 ? 0
                 : theme.spacing(2),

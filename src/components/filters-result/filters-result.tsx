@@ -27,7 +27,7 @@ export function FiltersResult({
     <ResultRoot sx={sx} {...other}>
       <ResultLabel>
         <strong>{totalResults}</strong>
-        <span> results found</span>
+        <span> natija topildi</span>
       </ResultLabel>
 
       <ResultContent>
@@ -38,7 +38,7 @@ export function FiltersResult({
           onClick={onReset}
           startIcon={<Iconify icon="solar:trash-bin-trash-bold" />}
         >
-          Clear
+          Tozalash
         </Button>
       </ResultContent>
     </ResultRoot>

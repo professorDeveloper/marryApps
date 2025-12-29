@@ -3,10 +3,10 @@ import { _mock } from './_mock';
 // ----------------------------------------------------------------------
 
 export const USER_STATUS_OPTIONS = [
-  { value: 'active', label: 'Active' },
-  { value: 'pending', label: 'Pending' },
-  { value: 'banned', label: 'Banned' },
-  { value: 'rejected', label: 'Rejected' },
+  { value: 'active', label: 'Faol' },
+  { value: 'pending', label: 'Kutilmoqda' },
+  { value: 'banned', label: 'Blok qilingan' },
+  { value: 'rejected', label: 'Rad etilgan' },
 ];
 
 export const _userAbout = {
@@ -20,7 +20,7 @@ export const _userAbout = {
   totalFollowers: _mock.number.nativeL(1),
   totalFollowing: _mock.number.nativeL(2),
   quote:
-    'Tart I love sugar plum I love oat cake. Sweet roll caramels I love jujubes. Topping cake wafer..',
+    'Men shokolad va shakarchendilikni juda yoqtirasiz. Qoz shokoladi va boshqa taomlar.',
   socialLinks: {
     facebook: `https://www.facebook.com/frankie`,
     instagram: `https://www.instagram.com/frankie`,
