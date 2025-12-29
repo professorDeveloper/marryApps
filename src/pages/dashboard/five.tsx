@@ -11,7 +11,7 @@ export default function Page() {
     <>
       <title>{metadata.title}</title>
 
-      <BlankView title="Page five" />
+      <BlankView title="Sahifa beshinchi" />
     </>
   );
 }

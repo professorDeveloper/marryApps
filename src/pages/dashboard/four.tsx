@@ -11,7 +11,7 @@ export default function Page() {
     <>
       <title>{metadata.title}</title>
 
-      <BlankView title="Page four" />
+      <BlankView title="Sahifa to'rtinchi" />
     </>
   );
 }

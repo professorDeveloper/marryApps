@@ -139,10 +139,10 @@ export function JwtSignUpView() {
   return (
     <>
       <FormHead
-        title="Get started absolutely free"
+        title="Mutlaqo bepul boshlang"
         description={
           <>
-            {`Already have an account? `}
+            {`Allaqachon akkauntingiz bormi? `}
             <Link component={RouterLink} href={paths.auth.jwt.signIn} variant="subtitle2">
               Kirish
             </Link>

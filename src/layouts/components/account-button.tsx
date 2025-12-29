@@ -21,7 +21,7 @@ export function AccountButton({ photoURL, displayName, sx, ...other }: AccountBu
       whileTap={varTap(0.96)}
       whileHover={varHover(1.04)}
       transition={transitionTap()}
-      aria-label="Account button"
+      aria-label="Akkaunt tugmasi"
       sx={[{ p: 0 }, ...(Array.isArray(sx) ? sx : [sx])]}
       {...other}
     >

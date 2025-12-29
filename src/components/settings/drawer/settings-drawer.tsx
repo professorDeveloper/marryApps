@@ -68,12 +68,12 @@ export function SettingsDrawer({ sx, defaultSettings }: SettingsDrawerProps) {
       }}
     >
       <Typography variant="h6" sx={{ flexGrow: 1 }}>
-        Settings
+        Sozlamalar
       </Typography>
 
       <FullScreenButton />
 
-      <Tooltip title="Reset all">
+      <Tooltip title="Hammasini qayta tiklash">
         <IconButton onClick={handleReset}>
           <Badge color="error" variant="dot" invisible={!settings.canReset}>
             <Iconify icon="solar:restart-bold" />
@@ -81,7 +81,7 @@ export function SettingsDrawer({ sx, defaultSettings }: SettingsDrawerProps) {
         </IconButton>
       </Tooltip>
 
-      <Tooltip title="Close">
+      <Tooltip title="Yopish">
         <IconButton onClick={settings.onCloseDrawer}>
           <Iconify icon="mingcute:close-line" />
         </IconButton>
@@ -91,7 +91,7 @@ export function SettingsDrawer({ sx, defaultSettings }: SettingsDrawerProps) {
 
   const renderMode = () => (
     <BaseOption
-      label="Mode"
+      label="Rejim"
       selected={settings.state.mode === 'dark'}
       icon={<SvgIcon>{settingIcons.moon}</SvgIcon>}
       action={

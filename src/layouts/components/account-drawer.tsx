@@ -188,7 +188,7 @@ export function AccountDrawer({ data = [], sx, ...other }: AccountDrawerProps) {
               </Tooltip>
             ))}
 
-            <Tooltip title="Add account">
+            <Tooltip title="Akkaunt qo'shish">
               <IconButton
                 sx={[
                   (theme) => ({

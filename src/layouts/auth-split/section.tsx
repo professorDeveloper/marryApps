@@ -32,9 +32,9 @@ export function AuthSplitSection({
   method,
   methods,
   layoutQuery = 'md',
-  title = 'Manage the job',
+  title = 'Ishni yanada samarali boshqarish',
   imgUrl = `${CONFIG.assetsDir}/assets/illustrations/illustration-dashboard.webp`,
-  subtitle = 'More effectively with optimized workflows.',
+  subtitle = 'Optimallashtirilgan iş oqimlari bilan.',
   ...other
 }: AuthSplitSectionProps) {
   return (

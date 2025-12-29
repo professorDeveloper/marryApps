@@ -69,7 +69,7 @@ export function NotificationsDrawer({ data = [], sx, ...other }: NotificationsDr
       </Typography>
 
       {!!totalUnRead && (
-        <Tooltip title="Mark all as read">
+        <Tooltip title="Barchasini o'qilgan deb belgilash">
           <IconButton color="primary" onClick={handleMarkAllAsRead}>
             <Iconify icon="eva:done-all-fill" />
           </IconButton>
@@ -130,7 +130,7 @@ export function NotificationsDrawer({ data = [], sx, ...other }: NotificationsDr
         whileTap={varTap(0.96)}
         whileHover={varHover(1.04)}
         transition={transitionTap()}
-        aria-label="Notifications button"
+        aria-label="Bildirishnomalar tugmasi"
         onClick={onOpen}
         sx={sx}
         {...other}

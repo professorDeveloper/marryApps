@@ -126,12 +126,12 @@ const PRICE_SECTION: CardSection = {
 
 const SETTINGS_SECTION: CardSection = {
     id: 'settings',
-    title: 'Settings',
+    title: 'Sozlamalar',
     columns: 2,
     fields: [
         {
             key: 'publish',
-            label: 'Publish Status',
+            label: 'Nashr qilish holati',
             type: 'select',
             options: [
                 { value: 'published', label: 'Published' },
