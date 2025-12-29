@@ -13,12 +13,15 @@ import { useTheme } from '@mui/material/styles';
 import { paths } from 'src/routes/paths';
 
 import { useGenericDataTable } from 'src/hooks/use-generic-data-table';
+import { useGenericViewModal } from 'src/hooks/use-generic-view-modal';
 
 import { endpoints } from 'src/lib/axios';
 
 import { Iconify } from 'src/components/iconify';
 import { CustomGridActionsCellItem } from 'src/components/custom-data-grid';
 import { RenderCellItem, RenderCellStock, GenericTableView } from 'src/components/generic-table-view';
+import { GenericViewModal, SpecificationsTable } from 'src/components/generic-view-view';
+import { formatDate, formatStatus } from 'src/components/generic-view-view/modal-formatters';
 
 // ============================================================================
 // CONSTANTS
@@ -84,6 +87,28 @@ function RenderCellPublish({ params }: { params: any }) {
   return <span>{params.row.publish}</span>;
 }
 
+// ============================================================================
+// SPECIFICATIONS RENDERING
+// ============================================================================
+
+/**
+ * Category-specific render function uchun modal
+ */
+function renderCategorySpecifications(category: ICategory) {
+  const specs = [
+    { label: 'Nomi', value: category.name || '-' },
+    { label: 'Slug', value: category.slug || '-' },
+    { label: 'Status', value: formatStatus(category.status).label || '-' },
+    { label: 'Bo\'lim (Oshpaz)', value: category.kitchen || '-' },
+    { label: 'Ombor', value: category.warehouse || '-' },
+    { label: 'Mahsulotlar soni', value: String(category.productsCount || 0) },
+    { label: 'Yaratilgan', value: formatDate(category.createdAt) },
+    { label: 'Yangilangan', value: formatDate(category.updatedAt) },
+  ];
+
+  return <SpecificationsTable rows={specs} />;
+}
+
 export function CategoryListView() {
   const theme = useTheme();
 
@@ -91,6 +116,9 @@ export function CategoryListView() {
     endpoint: endpoints.category.list,
     dataKey: 'products',
   });
+
+  // View modal hook'i
+  const { isOpen, selectedData, openModal, closeModal } = useGenericViewModal<ICategory>();
 
   // Columns config
   const columns = useMemo<GridColDef[]>(
@@ -118,7 +146,7 @@ export function CategoryListView() {
         valueOptions: PUBLISH_KITCHEN,
         renderCell: (params) => <RenderCellPublish params={params} />,
       },
-       {
+      {
         field: 'publish',
         headerName: 'Ombor',
         width: 120,
@@ -158,7 +186,7 @@ export function CategoryListView() {
             showInMenu
             label="View"
             icon={<Iconify icon="solar:eye-bold" />}
-            href={paths.menu.category.details(params.row.id)}
+            onClick={() => openModal(params.row)}
           />,
           <CustomGridActionsCellItem
             showInMenu
@@ -184,31 +212,45 @@ export function CategoryListView() {
   }, []);
 
   return (
-    <GenericTableView<ICategory>
-      data={categories}
-      loading={loading}
-      columns={columns}
-      breadcrumbs={{
-        heading: 'Kategoriyalar',
-        links: [
-          { name: 'Menu', href: paths.menu.root },
-          { name: 'Category', href: paths.menu.category.root },
-          { name: 'List' },
-        ],
-      }}
-      addButton={{
-        label: 'Kategoriya qo\'shish',
-        href: paths.menu.category.new,
-      }}
-      filterOptions={{
-        status: STATUS_OPTIONS,
-      }}
-      initialFilters={{
-        status: [],
-      }}
-      hideColumnsTogglable={['actions']}
-      onDeleteRow={handleDelete}
-      onDeleteRows={handleDeleteMultiple}
-    />
+    <>
+      <GenericTableView<ICategory>
+        data={categories}
+        loading={loading}
+        columns={columns}
+        breadcrumbs={{
+          heading: 'Kategoriyalar',
+          links: [
+            { name: 'Menu', href: paths.menu.root },
+            { name: 'Category', href: paths.menu.category.root },
+            { name: 'List' },
+          ],
+        }}
+        addButton={{
+          label: 'Kategoriya qo\'shish',
+          href: paths.menu.category.new,
+        }}
+        filterOptions={{
+          status: STATUS_OPTIONS,
+        }}
+        initialFilters={{
+          status: [],
+        }}
+        hideColumnsTogglable={['actions']}
+        onDeleteRow={handleDelete}
+        onDeleteRows={handleDeleteMultiple}
+      />
+
+      {/* Category View Modal */}
+      <GenericViewModal
+        isOpen={isOpen}
+        onClose={closeModal}
+        title={selectedData?.name || 'Kategoriya'}
+        data={selectedData}
+        renderContent={renderCategorySpecifications}
+        maxWidth="sm"
+        slideDirection="left"
+        position="right"
+      />
+    </>
   );
 }

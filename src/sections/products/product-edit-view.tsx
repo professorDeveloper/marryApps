@@ -127,7 +127,7 @@ const COLORS_SECTION: CardSection = {
             label: 'Select Colors',
             type: 'color',
             colors: COLOR_OPTIONS,
-            defaultValue: [],
+            defaultValue: COLOR_OPTIONS[0],
         },
     ],
 };
@@ -217,7 +217,7 @@ export function ProductEditView({ product, isNew = false }: ProductEditViewProps
 
             router.push(paths.menu.product.root);
         } catch (err) {
-             console.log("Error deleting product:", err);
+            console.log("Error deleting product:", err);
         }
     }, [product?.id, router]);
 

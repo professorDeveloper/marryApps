@@ -90,7 +90,7 @@ export const EditFormField: FC<EditFormFieldProps> = ({ field, value, onChange }
     // Color picker field
     if (field.type === 'color') {
         const colors = field.colors || [];
-        const selectedColors = (value || []).map(String);
+        const selectedColor = value ? String(value) : null;
 
         return (
             <Box>
@@ -110,11 +110,7 @@ export const EditFormField: FC<EditFormFieldProps> = ({ field, value, onChange }
                         <Box
                             key={color}
                             onClick={() => {
-                                if (selectedColors.includes(color)) {
-                                    onChange(selectedColors.filter((c: string) => c !== color));
-                                } else {
-                                    onChange([...selectedColors, color]);
-                                }
+                                onChange(color);
                             }}
                             sx={{
                                 width: '70%',
@@ -122,7 +118,7 @@ export const EditFormField: FC<EditFormFieldProps> = ({ field, value, onChange }
                                 bgcolor: color,
                                 borderRadius: 1,
                                 cursor: 'pointer',
-                                border: selectedColors.includes(color) ? '3px solid #333' : '1px solid #ddd',
+                                border: selectedColor === color ? '3px solid #333' : '1px solid #ddd',
                                 transition: 'all 0.2s',
                                 '&:hover': {
                                     transform: 'scale(1.1)',

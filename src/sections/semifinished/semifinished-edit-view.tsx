@@ -26,8 +26,8 @@ export interface SemifinishedEditViewProps {
 // ============================================================================
 
 const COLOR_OPTIONS = [
-    '#000000',
     '#FFFFFF',
+    '#000000',
     '#EF4444',
     '#3B82F6',
     '#10B981',

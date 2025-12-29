@@ -14,6 +14,7 @@ import { useTheme } from '@mui/material/styles';
 import { paths } from 'src/routes/paths';
 
 import { useGenericDataTable } from 'src/hooks/use-generic-data-table';
+import { useGenericViewModal } from 'src/hooks/use-generic-view-modal';
 
 import { endpoints } from 'src/lib/axios';
 import { mockOrders } from 'src/_mock/_orders';
@@ -24,6 +25,8 @@ import {
     RenderCellItem,
     GenericTableView,
 } from 'src/components/generic-table-view';
+import { GenericViewModal, SpecificationsTable } from 'src/components/generic-view-view';
+import { formatPrice, formatQuantity, formatDate } from 'src/components/generic-view-view/modal-formatters';
 
 // ============================================================================
 // CONSTANTS
@@ -91,6 +94,27 @@ function RenderCellStatus({ params }: { params: any }) {
 }
 
 // ============================================================================
+// SPECIFICATIONS RENDERING
+// ============================================================================
+
+/**
+ * Semifinished item'uchun modal render function
+ */
+function renderSemifinishedSpecifications(item: ISemifinishedItem) {
+    const specs = [
+        { label: 'Nomi', value: item.name || '-' },
+        { label: 'SKU', value: item.sku || '-' },
+        { label: 'O\'lchov birligi', value: item.unit || '-' },
+        { label: 'Guruh', value: item.category || '-' },
+        { label: 'Asl Narxi', value: formatPrice(item.originalPrice) },
+        { label: 'Miqdori', value: formatQuantity(item.quantity) },
+        { label: 'Yaratilgan', value: formatDate(item.createdAt) },
+    ];
+
+    return <SpecificationsTable rows={specs} />;
+}
+
+// ============================================================================
 // MAIN COMPONENT
 // ============================================================================
 
@@ -101,6 +125,9 @@ export function HalfMeals() {
         endpoint: endpoints.product.list, // Product API'dan data (mock)
         dataKey: 'products',
     });
+
+    // View modal hook'i
+    const { isOpen, selectedData, openModal, closeModal } = useGenericViewModal<ISemifinishedItem>();
 
     // Columns config - Product page'si kabi
     const columns = useMemo<GridColDef[]>(
@@ -162,7 +189,7 @@ export function HalfMeals() {
                         showInMenu
                         label="View"
                         icon={<Iconify icon="solar:eye-bold" />}
-                        href={paths.menu.semifinished.details(params.row.id)}
+                        onClick={() => openModal(params.row)}
                     />,
                     <CustomGridActionsCellItem
                         showInMenu
@@ -188,32 +215,46 @@ export function HalfMeals() {
     }, []);
 
     return (
-        <GenericTableView<ISemifinishedItem>
-            data={mockOrders}
-            loading={loading}
-            columns={columns}
-            breadcrumbs={{
-                heading: 'Yarim tayyor mahsulotlar',
-                links: [
-                    { name: 'Dashboard', href: paths.dashboard.root },
-                    { name: 'Yarim tayyor mahsulotlar', href: paths.menu.semifinished.root },
-                    { name: 'List' },
-                ],
-            }}
-            addButton={{
-                label: 'Mahsulot qo\'shish',
-                href: paths.menu.semifinished.new,
-            }}
-            filterOptions={{
-                status: STATUS_OPTIONS,
-            }}
-            initialFilters={{
-                status: [],
-            }}
-            hideColumns={{}}
-            hideColumnsTogglable={['actions']}
-            onDeleteRow={handleDelete}
-            onDeleteRows={handleDeleteMultiple}
-        />
+        <>
+            <GenericTableView<ISemifinishedItem>
+                data={mockOrders}
+                loading={loading}
+                columns={columns}
+                breadcrumbs={{
+                    heading: 'Yarim tayyor mahsulotlar',
+                    links: [
+                        { name: 'Dashboard', href: paths.dashboard.root },
+                        { name: 'Yarim tayyor mahsulotlar', href: paths.menu.semifinished.root },
+                        { name: 'List' },
+                    ],
+                }}
+                addButton={{
+                    label: 'Mahsulot qo\'shish',
+                    href: paths.menu.semifinished.new,
+                }}
+                filterOptions={{
+                    status: STATUS_OPTIONS,
+                }}
+                initialFilters={{
+                    status: [],
+                }}
+                hideColumns={{}}
+                hideColumnsTogglable={['actions']}
+                onDeleteRow={handleDelete}
+                onDeleteRows={handleDeleteMultiple}
+            />
+
+            {/* Semifinished Item View Modal */}
+            <GenericViewModal
+                isOpen={isOpen}
+                onClose={closeModal}
+                title={selectedData?.name || 'Yarim tayyor mahsulot'}
+                data={selectedData}
+                renderContent={renderSemifinishedSpecifications}
+                maxWidth="sm"
+                slideDirection="left"
+                position="right"
+            />
+        </>
     );
 }

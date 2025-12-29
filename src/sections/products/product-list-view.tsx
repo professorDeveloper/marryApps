@@ -6,7 +6,7 @@
 import type { GridColDef } from '@mui/x-data-grid';
 import type { IProductItem } from 'src/types/product';
 
-import { useMemo, useCallback } from 'react';
+import { useMemo, useCallback, useState } from 'react';
 
 import { useTheme } from '@mui/material/styles';
 
@@ -18,10 +18,12 @@ import { endpoints } from 'src/lib/axios';
 
 import { Iconify } from 'src/components/iconify';
 import { CustomGridActionsCellItem } from 'src/components/custom-data-grid';
-import { RenderCellItem ,
+import {
+  RenderCellItem,
   RenderCellStock,
   GenericTableView,
 } from 'src/components/generic-table-view';
+import { GenericViewModal, SpecificationsTable } from 'src/components/generic-view-view';
 
 // ============================================================================
 // CONSTANTS
@@ -37,6 +39,7 @@ const STOCK_OPTIONS = [
   { value: 'low stock', label: 'Low stock' },
   { value: 'out of stock', label: 'Out of stock' },
 ];
+
 
 // ============================================================================
 // CUSTOM RENDERERS
@@ -65,6 +68,8 @@ function RenderCellPublish({ params }: { params: any }) {
 
 export function ProductListView() {
   const theme = useTheme();
+  const [viewModalOpen, setViewModalOpen] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState<IProductItem | null>(null);
 
   // Generic hook ishlatamiz
   const { data: products, loading } = useGenericDataTable<IProductItem>({
@@ -128,7 +133,7 @@ export function ProductListView() {
             showInMenu
             label="View"
             icon={<Iconify icon="solar:eye-bold" />}
-            href={paths.menu.product.details(params.row.id)}
+            onClick={() => handleViewProduct(params.row)}
           />,
           <CustomGridActionsCellItem
             showInMenu
@@ -153,35 +158,71 @@ export function ProductListView() {
     // Bu yerda API delete request qiling
   }, []);
 
+  const handleViewProduct = useCallback((product: IProductItem) => {
+    setSelectedProduct(product);
+    setViewModalOpen(true);
+  }, []);
+
+  const handleCloseModal = useCallback(() => {
+    setViewModalOpen(false);
+    setSelectedProduct(null);
+  }, []);
+
+  // Specifications uchun render function
+  const renderProductSpecifications = useCallback((product: IProductItem) => {
+    const specs = [
+      { label: 'Nomi', value: product.name || '-' },
+      { label: 'Narxi', value: `$${product.price || 0}` },
+      { label: 'Zaxira turi', value: product.inventoryType || '-' },
+      { label: 'Status', value: product.publish || '-' },
+      { label: 'Kategoriya', value: product.category || '-' },
+    ];
+
+    return <SpecificationsTable rows={specs} />;
+  }, []);
+
   return (
-    <GenericTableView<IProductItem>
-      data={products}
-      loading={loading}
-      columns={columns}
-      breadcrumbs={{
-        heading: 'Mahsulotlar',
-        links: [
-          { name: 'Menu', href: paths.menu.root },
-          { name: 'Product', href: paths.menu.product.root },
-          { name: 'List' },
-        ],
-      }}
-      addButton={{
-        label: 'Mahsulot qo\'shish',
-        href: paths.menu.product.new,
-      }}
-      filterOptions={{
-        publish: PUBLISH_OPTIONS,
-        stock: STOCK_OPTIONS,
-      }}
-      initialFilters={{
-        publish: [],
-        stock: [],
-      }}
-      hideColumns={{ category: false }}
-      hideColumnsTogglable={['category', 'actions']}
-      onDeleteRow={handleDelete}
-      onDeleteRows={handleDeleteMultiple}
-    />
+    <>
+      <GenericTableView<IProductItem>
+        data={products}
+        loading={loading}
+        columns={columns}
+        breadcrumbs={{
+          heading: 'Mahsulotlar',
+          links: [
+            { name: 'Menu', href: paths.menu.root },
+            { name: 'Product', href: paths.menu.product.root },
+            { name: 'List' },
+          ],
+        }}
+        addButton={{
+          label: 'Mahsulot qo\'shish',
+          href: paths.menu.product.new,
+        }}
+        filterOptions={{
+          publish: PUBLISH_OPTIONS,
+          stock: STOCK_OPTIONS,
+        }}
+        initialFilters={{
+          publish: [],
+          stock: [],
+        }}
+        hideColumns={{ category: false }}
+        hideColumnsTogglable={['category', 'actions']}
+        onDeleteRow={handleDelete}
+        onDeleteRows={handleDeleteMultiple}
+      />
+
+      <GenericViewModal
+        isOpen={viewModalOpen}
+        onClose={handleCloseModal}
+        title={selectedProduct?.name || 'Mahsulot'}
+        data={selectedProduct}
+        renderContent={renderProductSpecifications}
+        maxWidth="sm"
+        slideDirection="left"
+        position="right"
+      />
+    </>
   );
 }

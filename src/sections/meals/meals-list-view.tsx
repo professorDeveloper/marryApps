@@ -13,6 +13,7 @@ import { useTheme } from '@mui/material/styles';
 import { paths } from 'src/routes/paths';
 
 import { useGenericDataTable } from 'src/hooks/use-generic-data-table';
+import { useGenericViewModal } from 'src/hooks/use-generic-view-modal';
 
 import { endpoints } from 'src/lib/axios';
 import { mockMeals } from 'src/_mock/_meals';
@@ -23,6 +24,8 @@ import {
     RenderCellItem,
     GenericTableView,
 } from 'src/components/generic-table-view';
+import { GenericViewModal, SpecificationsTable } from 'src/components/generic-view-view';
+import { formatPrice, formatQuantity, formatDate } from 'src/components/generic-view-view/modal-formatters';
 
 // ============================================================================
 // CONSTANTS
@@ -75,6 +78,27 @@ function RenderCellOrderNumber({ params }: { params: any }) {
 
 
 // ============================================================================
+// SPECIFICATIONS RENDERING
+// ============================================================================
+
+/**
+ * Meals item'uchun modal render function
+ */
+function renderMealsSpecifications(item: ISemifinishedItem) {
+    const specs = [
+        { label: 'Nomi', value: item.name || '-' },
+        { label: 'SKU', value: item.sku || '-' },
+        { label: 'O\'lchov birligi', value: item.unit || '-' },
+        { label: 'Guruh', value: item.category || '-' },
+        { label: 'Asl Narxi', value: formatPrice(item.originalPrice) },
+        { label: 'Miqdori', value: formatQuantity(item.quantity) },
+        { label: 'Yaratilgan', value: formatDate(item.createdAt) },
+    ];
+
+    return <SpecificationsTable rows={specs} />;
+}
+
+// ============================================================================
 // MAIN COMPONENT
 // ============================================================================
 
@@ -85,6 +109,9 @@ export function Meals() {
         endpoint: endpoints.product.list, // Product API'dan data (mock)
         dataKey: 'products',
     });
+
+    // View modal hook'i
+    const { isOpen, selectedData, openModal, closeModal } = useGenericViewModal<ISemifinishedItem>();
 
     // Columns config - Product page'si kabi
     const columns = useMemo<GridColDef[]>(
@@ -146,7 +173,7 @@ export function Meals() {
                         showInMenu
                         label="View"
                         icon={<Iconify icon="solar:eye-bold" />}
-                        href={paths.menu.meals.details(params.row.id)}
+                        onClick={() => openModal(params.row)}
                     />,
                     <CustomGridActionsCellItem
                         showInMenu
@@ -172,32 +199,46 @@ export function Meals() {
     }, []);
 
     return (
-        <GenericTableView<ISemifinishedItem>
-            data={mockMeals}
-            loading={loading}
-            columns={columns}
-            breadcrumbs={{
-                heading: 'Mahsulotlar',
-                links: [
-                    { name: 'Dashboard', href: paths.dashboard.root },
-                    { name: 'Mahsulotlar', href: paths.menu.meals.root },
-                    { name: 'List' },
-                ],
-            }}
-            addButton={{
-                label: 'Mahsulot qo\'shish',
-                href: paths.menu.meals.new,
-            }}
-            filterOptions={{
-                status: STATUS_OPTIONS,
-            }}
-            initialFilters={{
-                status: [],
-            }}
-            hideColumns={{}}
-            hideColumnsTogglable={['actions']}
-            onDeleteRow={handleDelete}
-            onDeleteRows={handleDeleteMultiple}
-        />
+        <>
+            <GenericTableView<ISemifinishedItem>
+                data={mockMeals}
+                loading={loading}
+                columns={columns}
+                breadcrumbs={{
+                    heading: 'Mahsulotlar',
+                    links: [
+                        { name: 'Dashboard', href: paths.dashboard.root },
+                        { name: 'Mahsulotlar', href: paths.menu.meals.root },
+                        { name: 'List' },
+                    ],
+                }}
+                addButton={{
+                    label: 'Mahsulot qo\'shish',
+                    href: paths.menu.meals.new,
+                }}
+                filterOptions={{
+                    status: STATUS_OPTIONS,
+                }}
+                initialFilters={{
+                    status: [],
+                }}
+                hideColumns={{}}
+                hideColumnsTogglable={['actions']}
+                onDeleteRow={handleDelete}
+                onDeleteRows={handleDeleteMultiple}
+            />
+
+            {/* Meals Item View Modal */}
+            <GenericViewModal
+                isOpen={isOpen}
+                onClose={closeModal}
+                title={selectedData?.name || 'Mahsulot'}
+                data={selectedData}
+                renderContent={renderMealsSpecifications}
+                maxWidth="sm"
+                slideDirection="left"
+                position="right"
+            />
+        </>
     );
 }
