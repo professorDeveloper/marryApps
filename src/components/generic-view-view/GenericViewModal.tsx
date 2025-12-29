@@ -191,7 +191,7 @@ export function GenericViewModal({
               textAlign: 'center',
             }}
           >
-            Malumot topilmadi
+            Ma&apos;lumot topilmadi
           </Typography>
         </Box>
       );

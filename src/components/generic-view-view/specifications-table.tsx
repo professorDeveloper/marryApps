@@ -33,7 +33,7 @@ export function SpecificationsTable({ rows }: SpecificationsTableProps) {
                     color: theme.palette.text.secondary,
                 }}
             >
-                <Typography variant="body2">Ma'lumot topilmadi</Typography>
+                <Typography variant="body2">Ma&apos;lumot topilmadi</Typography>
             </Box>
         );
     }
