@@ -1,22 +1,20 @@
-import {
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Button,
-  Box,
-  Typography,
-  useTheme,
-  useMediaQuery,
-  IconButton,
-  Slide,
-  type SlideProps,
+import { useMemo, forwardRef, useCallback } from 'react';
 
+import {
+  Box,
+  Slide,
   Stack,
   Paper,
-} from '@mui/material';
+  Dialog,
+  useTheme,
+  Typography,
+  IconButton,
+  DialogTitle,
+  DialogContent,
 
-import { forwardRef, useCallback, useMemo } from 'react';
+  useMediaQuery,
+  type SlideProps,
+} from '@mui/material';
 
 import { Iconify } from 'src/components/iconify';
 

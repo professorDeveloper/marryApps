@@ -1,4 +1,4 @@
-import { Box, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, useTheme, Typography } from '@mui/material';
+import { Box, Table, Paper, TableRow, useTheme, TableBody, TableCell, TableHead, Typography, TableContainer } from '@mui/material';
 
 // ============================================================================
 // TYPES

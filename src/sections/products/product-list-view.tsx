@@ -6,7 +6,7 @@
 import type { GridColDef } from '@mui/x-data-grid';
 import type { IProductItem } from 'src/types/product';
 
-import { useMemo, useCallback, useState } from 'react';
+import { useMemo, useState, useCallback } from 'react';
 
 import { useTheme } from '@mui/material/styles';
 
@@ -18,12 +18,12 @@ import { endpoints } from 'src/lib/axios';
 
 import { Iconify } from 'src/components/iconify';
 import { CustomGridActionsCellItem } from 'src/components/custom-data-grid';
+import { GenericViewModal, SpecificationsTable } from 'src/components/generic-view-view';
 import {
   RenderCellItem,
   RenderCellStock,
   GenericTableView,
 } from 'src/components/generic-table-view';
-import { GenericViewModal, SpecificationsTable } from 'src/components/generic-view-view';
 
 // ============================================================================
 // CONSTANTS

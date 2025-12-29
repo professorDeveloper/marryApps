@@ -1,25 +1,25 @@
 export { GenericViewModal } from './GenericViewModal';
-export type { GenericViewModalProps } from './GenericViewModal';
-
 export { SpecificationsTable } from './specifications-table';
-export type { SpecificationsTableProps, SpecificationRow } from './specifications-table';
 
 export {
+    unitMap,
+    formatTag,
+    statusMap,
     formatDate,
-    formatDateTime,
     formatTime,
+    formatUnit,
     formatPrice,
-    formatQuantity,
+    formatEmail,
+    formatArray,
+    formatField,
     formatNumber,
     formatStatus,
-    formatPhoneNumber,
-    formatEmail,
-    formatAddress,
     truncateText,
-    formatArray,
-    formatTag,
-    formatUnit,
-    formatField,
-    statusMap,
-    unitMap,
+    formatAddress,
+    formatDateTime,
+    formatQuantity,
+    formatPhoneNumber,
 } from './modal-formatters';
+export type { GenericViewModalProps } from './GenericViewModal';
+
+export type { SpecificationRow, SpecificationsTableProps } from './specifications-table';

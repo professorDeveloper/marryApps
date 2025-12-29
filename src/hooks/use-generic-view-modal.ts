@@ -3,7 +3,7 @@
  * Har xil data turlari bilan ishlaydi
  */
 
-import { useCallback, useState } from 'react';
+import { useState, useCallback } from 'react';
 
 // ============================================================================
 // TYPES

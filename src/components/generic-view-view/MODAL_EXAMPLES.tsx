@@ -9,7 +9,9 @@
  */
 
 import { useState, useCallback } from 'react';
-import { Box, Button, Stack } from '@mui/material';
+
+import { Box, Stack, Button } from '@mui/material';
+
 import { GenericViewModal, SpecificationsTable, type SpecificationRow } from 'src/components/generic-view-view';
 
 // ============================================================================

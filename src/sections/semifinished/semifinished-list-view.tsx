@@ -21,12 +21,12 @@ import { mockOrders } from 'src/_mock/_orders';
 
 import { Iconify } from 'src/components/iconify';
 import { CustomGridActionsCellItem } from 'src/components/custom-data-grid';
+import { GenericViewModal, SpecificationsTable } from 'src/components/generic-view-view';
 import {
     RenderCellItem,
     GenericTableView,
 } from 'src/components/generic-table-view';
-import { GenericViewModal, SpecificationsTable } from 'src/components/generic-view-view';
-import { formatPrice, formatQuantity, formatDate } from 'src/components/generic-view-view/modal-formatters';
+import { formatDate, formatPrice, formatQuantity } from 'src/components/generic-view-view/modal-formatters';
 
 // ============================================================================
 // CONSTANTS

@@ -125,9 +125,7 @@ export const statusMap = {
     'out of stock': { label: 'Zaxirada yo\'q', color: 'error' as const },
 };
 
-export const formatStatus = (status: string): { label: string; color: 'success' | 'warning' | 'error' | 'info' } => {
-    return statusMap[status as keyof typeof statusMap] || { label: status, color: 'info' as const };
-};
+export const formatStatus = (status: string): { label: string; color: 'success' | 'warning' | 'error' | 'info' } => statusMap[status as keyof typeof statusMap] || { label: status, color: 'info' as const };
 
 // ============================================================================
 // STRING FORMATTERS
