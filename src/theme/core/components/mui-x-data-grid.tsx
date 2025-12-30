@@ -245,7 +245,6 @@ const MuiDataGrid: Components<Theme>['MuiDataGrid'] = {
         equals: String(i18next.t('menu.toolbar.operators.equals')),
         // notEquals: String(i18next.t('menu.toolbar.operators.notEquals')),
         greaterThan: String(i18next.t('menu.toolbar.operators.greaterThan')),
-        lessThan: String(i18next.t('menu.toolbar.operators.lessThan')),
         greaterThanOrEqual: String(i18next.t('menu.toolbar.operators.greaterThanOrEqual')),
         lessThanOrEqual: String(i18next.t('menu.toolbar.operators.lessThanOrEqual')),
         contains: String(i18next.t('menu.toolbar.operators.contains')),

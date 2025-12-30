@@ -61,6 +61,9 @@
     "quickFilterLabel": "Tezkor filtr",
     "quickFilterPlaceholder": "Qidirish...",
     "quickFilterClear": "Qidiruvni tozalash",
+    "filterPanelInputPlaceholder": "Qiymatni filtrlash",
+    "filterOperatorIsEmpty": "Bo'sh",
+    "filterOperatorIsNotEmpty": "Bo'sh emas",
     "operator": "Operator",
     "value": "Qiymat",
     "operators": {
@@ -73,6 +76,7 @@
       "contains": "o'z ichiga oladi",
       "startsWith": "bilan boshlanadi",
       "endsWith": "bilan tugaydi",
+      "doesNotContain": "o'z ichiga olmaydi",
       "isAnyOf": "quyidagilardan biri",
       "is": "bu"
     }
@@ -91,6 +95,7 @@
     "draft": "Qoralama",
     "inStock": "Zaxirada mavjud",
     "lowStock": "Zaxira kam",
+    "color": "Rang",
     "outOfStock": "Zaxira tugagan",
     "category": "Kategoriya",
     "price": "Narxi",

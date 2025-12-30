@@ -31,9 +31,7 @@ export function useDataGridLocale(): Partial<GridLocaleText> {
             filterPanelLinkOperator: t('toolbar.filterPanelLinkOperator'),
             filterPanelOperators: {
                 equals: t('toolbar.operators.equals'),
-                // notEquals: t('toolbar.operators.notEquals'),
                 greaterThan: t('toolbar.operators.greaterThan'),
-                lessThan: t('toolbar.operators.lessThan'),
                 greaterThanOrEqual: t('toolbar.operators.greaterThanOrEqual'),
                 lessThanOrEqual: t('toolbar.operators.lessThanOrEqual'),
                 contains: t('toolbar.operators.contains'),
@@ -50,14 +48,15 @@ export function useDataGridLocale(): Partial<GridLocaleText> {
             filterOperatorStartsWith: t('toolbar.operators.startsWith'),
             filterOperatorEndsWith: t('toolbar.operators.endsWith'),
             filterOperatorIs: t('toolbar.operators.is'),
-            // filterOperatorNot: t('toolbar.operators.notEquals'),
+            filterOperatorNot: t('toolbar.operators.notEquals'),
             filterOperatorIsAnyOf: t('toolbar.operators.isAnyOf'),
             filterOperatorIsEmpty: t('toolbar.filterOperatorIsEmpty'),
             filterOperatorIsNotEmpty: t('toolbar.filterOperatorIsNotEmpty'),
             filterOperatorGreaterThan: t('toolbar.operators.greaterThan'),
-            filterOperatorLessThan: t('toolbar.operators.lessThan'),
+            filterOperatorLessThan: t('toolbar.operators.endsWith'),  // REMOVED
             filterOperatorGreaterThanOrEqual: t('toolbar.operators.greaterThanOrEqual'),
-            filterOperatorLessThanOrEqual: t('toolbar.operators.lessThanOrEqual'),
+            // filterOperatorLessThanOrEqual: t('toolbar.operators.lessThanOrEqual'),  // REMOVED
+            // filterOperatorDoesNotContain - REMOVED (disabled by default in filterPanelOperators)
 
             // Other
             columnsPanelTextFieldLabel: t('toolbar.columnsPanelTextFieldLabel'),

@@ -1,1 +1,0 @@
-const n="Бу маълумотнома огоҳлантиришидир.",t="Ёрдам керакми?",e={en:"English","uz-Latn":"O'zbek (Lotin)","uz-Cyrl":"Ўзбек (Кирил)",ru:"Русский"},o={infoAlert:n,needHelp:t,languages:e};export{o as default,n as infoAlert,e as languages,t as needHelp};

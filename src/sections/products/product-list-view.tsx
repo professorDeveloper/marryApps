@@ -143,15 +143,7 @@ export function ProductListView() {
         valueOptions: publishOptions,
         renderCell: (params) => <RenderCellPublish params={params} />,
       },
-      {
-        field: 'inventoryType',
-        headerName: t('products.stock'),
-        width: 140,
-        type: 'singleSelect',
-        filterable: false,
-        valueOptions: stockOptions,
-        renderCell: (params) => <RenderCellStockProduct params={params} />,
-      },
+      
       {
         field: 'color',
         headerName: t('products.color'),
