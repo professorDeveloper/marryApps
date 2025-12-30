@@ -4,11 +4,12 @@ import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { paths } from 'src/routes/paths';
+
 import { _reportsSales } from 'src/_mock/_reports';
 
 import { Iconify } from 'src/components/iconify';
 import { CustomGridActionsCellItem } from 'src/components/custom-data-grid';
-import { GenericTableView, RenderCellItem } from 'src/components/generic-table-view';
+import { RenderCellItem, GenericTableView } from 'src/components/generic-table-view';
 
 export function SalesListView() {
   const { t } = useTranslation('menu');

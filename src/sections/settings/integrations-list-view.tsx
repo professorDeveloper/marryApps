@@ -4,12 +4,13 @@ import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { paths } from 'src/routes/paths';
+
 import { _settingsIntegrations } from 'src/_mock/_settings';
 
-import { Iconify } from 'src/components/iconify';
-import { CustomGridActionsCellItem } from 'src/components/custom-data-grid';
-import { GenericTableView } from 'src/components/generic-table-view';
 import { Label } from 'src/components/label';
+import { Iconify } from 'src/components/iconify';
+import { GenericTableView } from 'src/components/generic-table-view';
+import { CustomGridActionsCellItem } from 'src/components/custom-data-grid';
 
 export function SettingsIntegrationsListView() {
   const { t } = useTranslation('menu');

@@ -1,7 +1,7 @@
 import type { GridColDef } from '@mui/x-data-grid';
 
-import { useTranslation } from 'react-i18next';
 import { useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { paths } from 'src/routes/paths';
 
@@ -9,7 +9,7 @@ import { _warehouses } from 'src/_mock/_warehouse';
 
 import { Iconify } from 'src/components/iconify';
 import { CustomGridActionsCellItem } from 'src/components/custom-data-grid';
-import { GenericTableView, RenderCellItem } from 'src/components/generic-table-view';
+import { RenderCellItem, GenericTableView } from 'src/components/generic-table-view';
 
 export function WarehouseListView() {
   const { t } = useTranslation('menu');
