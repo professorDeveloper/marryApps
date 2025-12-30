@@ -2,21 +2,29 @@ import { _mock } from './_mock';
 
 export const _warehouses = Array.from({ length: 4 }, (_, index) => ({
   id: _mock.id(index),
-  name: `Sklad ${index + 1}`,
+  // translatable name using i18n key and params
+  nameKey: 'mock.warehouse.name',
+  nameParams: { index: index + 1 },
   code: `WH-${index + 1}`,
   stock: _mock.number.nativeL(index + 10),
-  location: `Block ${index + 1}`,
+  // translatable location
+  locationKey: 'mock.warehouse.location',
+  locationParams: { index: index + 1 },
   manager: _mock.fullName(index),
 }));
 
 export const _stocks = Array.from({ length: 4 }, (_, index) => ({
   id: _mock.id(index),
   sku: `STK-${100 + index}`,
-  name: `Item ${index + 1}`,
+  // translatable name + optional image
+  nameKey: 'mock.stock.name',
+  nameParams: { index: index + 1 },
   coverUrl: _mock.image.product(index),
   quantity: _mock.number.nativeL(index + 5),
   warehouseId: _mock.id(index % 4),
-  location: `Shelf ${index + 1}`,
+  // translatable location
+  locationKey: 'mock.stock.location',
+  locationParams: { index: index + 1 },
 }));
 
 export const _transfers = Array.from({ length: 4 }, (_, index) => ({
@@ -30,7 +38,9 @@ export const _transfers = Array.from({ length: 4 }, (_, index) => ({
 
 export const _locations = Array.from({ length: 4 }, (_, index) => ({
   id: _mock.id(index),
-  name: `Location ${index + 1}`,
+  // translatable location name
+  nameKey: 'mock.location.name',
+  nameParams: { index: index + 1 },
   code: `LOC-${index + 1}`,
   capacity: _mock.number.nativeL(index + 20),
 }));

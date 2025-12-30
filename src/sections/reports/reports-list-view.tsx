@@ -19,7 +19,7 @@ export function ReportsListView() {
   const columns = useMemo<GridColDef[]>(
     () => [
       { field: 'title', headerName: t('overview.reports.sales', 'Title'), flex: 1, minWidth: 240 },
-      { field: 'type', headerName: t('overview.reports.custom', 'Type'), width: 140 },
+      { field: 'type', headerName: t('overview.reports.custom', 'Type'), width: 140, renderCell: (params) => <span>{t(`overview.reports.${params.value}`)}</span> },
       { field: 'createdAt', headerName: 'Date', width: 160 },
       {
         type: 'actions',

@@ -279,6 +279,19 @@
       "profile": "Profile",
       "notifications": "Notifications",
       "integrations": "Integrations"
+    },
+    "mock": {
+      "warehouse": {
+        "name": "Warehouse {{index}}",
+        "location": "Block {{index}}"
+      },
+      "stock": {
+        "name": "Item {{index}}",
+        "location": "Shelf {{index}}"
+      },
+      "location": {
+        "name": "Location {{index}}"
+      }
     }
   },
   "management": {

@@ -265,6 +265,19 @@
       "profile": "Profil",
       "notifications": "Bildirishnomalar",
       "integrations": "Integratsiyalar"
+    },
+    "mock": {
+      "warehouse": {
+        "name": "Ombor {{index}}",
+        "location": "Blok {{index}}"
+      },
+      "stock": {
+        "name": "Mahsulot {{index}}",
+        "location": "Polka {{index}}"
+      },
+      "location": {
+        "name": "Joy {{index}}"
+      }
     }
   },
   "management": {

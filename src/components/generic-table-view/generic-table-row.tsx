@@ -76,6 +76,8 @@ export function RenderCellStock({ params }: ParamsProps) {
  * @param imageField - Field name for image URL (default: 'coverUrl')
  * @param nameField - Field name for item name (default: 'name')
  */
+import { useTranslation } from 'react-i18next';
+
 export function RenderCellItem({
     params,
     imageField = 'coverUrl',
@@ -87,11 +89,17 @@ export function RenderCellItem({
     // Defensive: params or params.row can be undefined in some runtimes; render fallback
     const row = params?.row ?? null;
 
+    const { t } = useTranslation('menu');
+
     if (!row) {
         return <span>-</span>;
     }
 
-    const name = row[nameField] ?? '-';
+    // Prefer i18n key if provided (e.g., nameKey / nameParams)
+    const nameKey = row[`${nameField}Key`];
+    const nameParams = row[`${nameField}Params`] || undefined;
+
+    const name = (nameKey && t(nameKey, nameParams)) || row[nameField] || '-';
     const src = row[imageField] ?? null;
 
     return (
@@ -118,7 +126,7 @@ export function RenderCellItem({
             />
         </Box>
     );
-}
+} 
 
 /**
  * Generic text renderer
