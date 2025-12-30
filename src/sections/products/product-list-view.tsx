@@ -29,13 +29,12 @@ import {
 // ============================================================================
 
 /**
- * Product-specific renderer that includes product image and name with link
+ * Product-specific renderer that includes product image and name
  */
-function RenderCellProduct({ params, href }: { params: any; href: string }) {
+function RenderCellProduct({ params }: { params: any }) {
   return (
     <RenderCellItem
       params={params}
-      href={href}
       imageField="coverUrl"
       nameField="name"
     />
@@ -131,7 +130,6 @@ export function ProductListView() {
         renderCell: (params) => (
           <RenderCellProduct
             params={params}
-            href={paths.menu.product.details(params.row.id)}
           />
         ),
       },

@@ -81,7 +81,20 @@
     "quickFilterPlaceholder": "Поиск...",
     "quickFilterClear": "Очистить поиск",
     "operator": "Оператор",
-    "value": "Значение"
+    "value": "Значение",
+    "operators": {
+      "equals": "равно",
+      "notEquals": "не равно",
+      "greaterThan": "больше",
+      "lessThan": "меньше",
+      "greaterThanOrEqual": "больше или равно",
+      "lessThanOrEqual": "меньше или равно",
+      "contains": "содержит",
+      "startsWith": "начинается с",
+      "endsWith": "заканчивается на",
+      "isAnyOf": "является одним из",
+      "is": "является"
+    }
   },
   "categories": {
     "title": "Категории",

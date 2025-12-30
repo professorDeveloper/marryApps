@@ -5,7 +5,6 @@ import type {
   GridColumnVisibilityModel,
 } from '@mui/x-data-grid';
 
-import i18next from 'i18next';
 import { useBoolean, useSetState } from 'minimal-shared/hooks';
 import { useMemo, useState, useEffect, useCallback } from 'react';
 
@@ -14,6 +13,8 @@ import Button from '@mui/material/Button';
 import { DataGrid, gridClasses } from '@mui/x-data-grid';
 
 import { RouterLink } from 'src/routes/components';
+
+import { useDataGridLocale } from 'src/hooks/use-data-grid-locale';
 
 import { DashboardContent } from 'src/layouts/dashboard';
 
@@ -98,6 +99,7 @@ export function GenericTableView<T extends Record<string, any>>({
 }: GenericTableConfig<T>) {
   const confirmDialog = useBoolean();
   const toolbarOptions = useToolbarSettings();
+  const dataGridLocale = useDataGridLocale();
 
   const [tableData, setTableData] = useState<T[]>(data);
   const [selectedRows, setSelectedRows] = useState<GridRowSelectionModel>({
@@ -207,12 +209,8 @@ export function GenericTableView<T extends Record<string, any>>({
           }}
         >
           <DataGrid
-            // build localeText at render time so translations reflect current i18next language
-            localeText={{
-              filterPanelColumns: String(i18next.t('toolbar.columns', { ns: 'menu' })),
-              filterPanelOperator: String(i18next.t('toolbar.operator', { ns: 'menu' })),
-              filterPanelInputLabel: String(i18next.t('toolbar.value', { ns: 'menu' })),
-            }}
+            // use fully localized locale text from hook
+            localeText={dataGridLocale}
             {...toolbarOptions.settings}
             checkboxSelection
             disableRowSelectionOnClick

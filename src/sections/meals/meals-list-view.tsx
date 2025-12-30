@@ -44,7 +44,7 @@ const STATUS_COLOR_MAP = {
 // ============================================================================
 
 /**
- * Order number renderer with customer avatar
+ * Order number renderer
  */
 function RenderCellOrderNumber({ params }: { params: any }) {
     const { row } = params;
@@ -52,7 +52,6 @@ function RenderCellOrderNumber({ params }: { params: any }) {
     return (
         <RenderCellItem
             params={params}
-            href={`/dashboard/meals/${row.id}`}
             imageField="coverUrl"
             nameField="name"
         />

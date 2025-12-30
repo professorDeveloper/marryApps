@@ -34,7 +34,7 @@ import { formatDate, formatPrice, formatQuantity } from 'src/components/generic-
 // ============================================================================
 
 /**
- * Order number renderer with customer avatar
+ * Order number renderer
  */
 function RenderCellOrderNumber({ params }: { params: any }) {
     const { row } = params;
@@ -42,7 +42,6 @@ function RenderCellOrderNumber({ params }: { params: any }) {
     return (
         <RenderCellItem
             params={params}
-            href={`/dashboard/semifinished/${row.id}`}
             imageField="coverUrl"
             nameField="name"
         />
@@ -223,14 +222,14 @@ export function HalfMeals() {
                 width: 140,
                 type: 'string',
             },
-           
-              {
+
+            {
                 field: 'costprice',
                 headerName: t('semifinishedProducts.costprice'),
                 width: 120,
                 type: 'number',
                 renderCell: (params) => `${params.value?.toLocaleString()} so'm`,
-            },  
+            },
             {
                 field: 'quantity',
                 headerName: t('semifinishedProducts.quantity'),

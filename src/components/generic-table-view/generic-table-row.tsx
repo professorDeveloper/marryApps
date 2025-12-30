@@ -76,17 +76,14 @@ export function RenderCellStock({ params }: ParamsProps) {
 /**
  * Generic item renderer with avatar and name
  * @param params - Grid cell params
- * @param href - Navigation URL
  * @param imageField - Field name for image URL (default: 'coverUrl')
  * @param nameField - Field name for item name (default: 'name')
  */
 export function RenderCellItem({
     params,
-    href,
     imageField = 'coverUrl',
     nameField = 'name',
 }: ParamsProps & {
-    href: string;
     imageField?: string;
     nameField?: string;
 }) {
@@ -109,9 +106,7 @@ export function RenderCellItem({
 
             <ListItemText
                 primary={
-                    <Link component={RouterLink} href={href} color="inherit">
-                        {params.row[nameField]}
-                    </Link>
+                    <span>{params.row[nameField]}</span>
                 }
             />
         </Box>

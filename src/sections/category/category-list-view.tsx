@@ -29,13 +29,12 @@ import { GenericViewModal, SpecificationsTable } from 'src/components/generic-vi
 // ============================================================================
 
 /**
- * Category-specific renderer that includes category image and name with link
+ * Category-specific renderer that includes category image and name
  */
-function RenderCellCategory({ params, href }: { params: any; href: string }) {
+function RenderCellCategory({ params }: { params: any }) {
   return (
     <RenderCellItem
       params={params}
-      href={href}
       imageField="image"
       nameField="name"
     />
@@ -217,7 +216,6 @@ export function CategoryListView() {
         renderCell: (params) => (
           <RenderCellCategory
             params={params}
-            href={paths.menu.category.details(params.row.id)}
           />
         ),
       },

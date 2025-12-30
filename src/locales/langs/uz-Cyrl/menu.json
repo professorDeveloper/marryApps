@@ -62,7 +62,20 @@
     "quickFilterPlaceholder": "Қидириш...",
     "quickFilterClear": "Қидиришни тозалаш",
     "operator": "Оператор",
-    "value": "Қиймат"
+    "value": "Қиймат",
+    "operators": {
+      "equals": "тенг",
+      "notEquals": "тенг эмас",
+      "greaterThan": "катта",
+      "lessThan": "кичик",
+      "greaterThanOrEqual": "катта ёки тенг",
+      "lessThanOrEqual": "кичик ёки тенг",
+      "contains": "ўз ичига олади",
+      "startsWith": "билан бошланади",
+      "endsWith": "билан тугайди",
+      "isAnyOf": "қуйидагилардан бири",
+      "is": "бу"
+    }
   },
   "products": {
     "title": "Бўлим",

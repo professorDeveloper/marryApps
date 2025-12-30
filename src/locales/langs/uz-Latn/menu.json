@@ -62,7 +62,20 @@
     "quickFilterPlaceholder": "Qidirish...",
     "quickFilterClear": "Qidiruvni tozalash",
     "operator": "Operator",
-    "value": "Qiymat"
+    "value": "Qiymat",
+    "operators": {
+      "equals": "teng",
+      "notEquals": "teng emas",
+      "greaterThan": "katta",
+      "lessThan": "kichik",
+      "greaterThanOrEqual": "katta yoki teng",
+      "lessThanOrEqual": "kichik yoki teng",
+      "contains": "o'z ichiga oladi",
+      "startsWith": "bilan boshlanadi",
+      "endsWith": "bilan tugaydi",
+      "isAnyOf": "quyidagilardan biri",
+      "is": "bu"
+    }
   },
   "products": {
     "title": "Bo'lim",

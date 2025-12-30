@@ -74,7 +74,20 @@
     "quickFilterPlaceholder": "Search...",
     "quickFilterClear": "Clear search",
     "operator": "Operator",
-    "value": "Value"
+    "value": "Value",
+    "operators": {
+      "equals": "equals",
+      "notEquals": "is not",
+      "greaterThan": "is greater than",
+      "lessThan": "is less than",
+      "greaterThanOrEqual": "is greater than or equal to",
+      "lessThanOrEqual": "is less than or equal to",
+      "contains": "contains",
+      "startsWith": "starts with",
+      "endsWith": "ends with",
+      "isAnyOf": "is any of",
+      "is": "is"
+    }
   },
   "products": {
     "title": "Section",

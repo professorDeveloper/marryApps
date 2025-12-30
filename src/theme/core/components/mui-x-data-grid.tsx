@@ -240,7 +240,21 @@ const MuiDataGrid: Components<Theme>['MuiDataGrid'] = {
       filterPanelColumns: String(i18next.t('menu.toolbar.columns')),
       filterPanelOperator: String(i18next.t('menu.toolbar.operator')),
       filterPanelInputLabel: String(i18next.t('menu.toolbar.value')),
-    },
+      // Filter operators (using record for type safety)
+      filterPanelOperators: {
+        equals: String(i18next.t('menu.toolbar.operators.equals')),
+        // notEquals: String(i18next.t('menu.toolbar.operators.notEquals')),
+        greaterThan: String(i18next.t('menu.toolbar.operators.greaterThan')),
+        lessThan: String(i18next.t('menu.toolbar.operators.lessThan')),
+        greaterThanOrEqual: String(i18next.t('menu.toolbar.operators.greaterThanOrEqual')),
+        lessThanOrEqual: String(i18next.t('menu.toolbar.operators.lessThanOrEqual')),
+        contains: String(i18next.t('menu.toolbar.operators.contains')),
+        startsWith: String(i18next.t('menu.toolbar.operators.startsWith')),
+        endsWith: String(i18next.t('menu.toolbar.operators.endsWith')),
+        isAnyOf: String(i18next.t('menu.toolbar.operators.isAnyOf')),
+        is: String(i18next.t('menu.toolbar.operators.is')),
+      } as unknown as Record<string, string>,
+    } as any,
     slotProps: {
       baseSelect: {
         native: true,
