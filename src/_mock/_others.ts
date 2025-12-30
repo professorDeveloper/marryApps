@@ -56,46 +56,50 @@ export const _notifications = Array.from({ length: 9 }, (_, index) => ({
   id: _mock.id(index),
   avatarUrl: [
     _mock.image.avatar(1),
+    null,
+    null,
     _mock.image.avatar(2),
+    null,
+    null,
+    null,
     _mock.image.avatar(3),
-    _mock.image.avatar(4),
-    _mock.image.avatar(5),
-    null,
-    null,
-    null,
-    null,
     null,
   ][index],
-  type: ['friend', 'project', 'file', 'tags', 'payment', 'order', 'delivery', 'chat', 'mail'][
-    index
-  ],
+  // POS-focused notification types: use existing icon types where appropriate
+  type: [
+    'order', // New POS order
+    'payment', // Payment received
+    'payment', // Payment failed
+    'tags', // Low stock (use tags icon)
+    'order', // Refund requested
+    'order', // Order canceled
+    'delivery', // Delivery assigned
+    'chat', // Cash drawer opened / staff message
+    'mail', // System alert
+  ][index],
   category: [
-    'Communication',
-    'Project UI',
-    'File manager',
-    'File manager',
-    'File manager',
+    'POS Order',
+    'Payment',
+    'Payment',
+    'Inventory',
+    'Refund',
     'Order',
-    'Order',
-    'Communication',
-    'Communication',
+    'Delivery',
+    'POS System',
+    'System',
   ][index],
-  isUnRead: _mock.boolean(index),
+  isUnRead: index < 4, // mark first 4 as unread
   createdAt: _mock.time(index),
   title:
-    (index === 0 && `<p><strong>Deja Brady</strong> sent you a friend request</p>`) ||
-    (index === 1 &&
-      `<p><strong>Jayvon Hull</strong> mentioned you in <strong><a href='#'>Mary AI</a></strong></p>`) ||
-    (index === 2 &&
-      `<p><strong>Lainey Davidson</strong> added file to <strong><a href='#'>File manager</a></strong></p>`) ||
-    (index === 3 &&
-      `<p><strong>Angelique Morse</strong> added new tags to <strong><a href='#'>File manager<a/></strong></p>`) ||
-    (index === 4 &&
-      `<p><strong>Giana Brandt</strong> request a payment of <strong>$200</strong></p>`) ||
-    (index === 5 && `<p>Your order is placed waiting for shipping</p>`) ||
-    (index === 6 && `<p>Delivery processing your order is being shipped</p>`) ||
-    (index === 7 && `<p>You have new message 5 unread messages</p>`) ||
-    (index === 8 && `<p>You have new mail`) ||
+    (index === 0 && `<p><strong>Order #${1000 + index}</strong> placed at POS by <strong>${_mock.fullName(index)}</strong></p>`) ||
+    (index === 1 && `<p>Payment of <strong>$${(25 + index * 5).toFixed(2)}</strong> received (Card)</p>`) ||
+    (index === 2 && `<p><strong>Payment failed</strong> for Order #${1000 + index} (Card declined)</p>`) ||
+    (index === 3 && `<p><strong>Low stock</strong> for <strong>${_mock.productName(index)}</strong> — <strong>3</strong> left</p>`) ||
+    (index === 4 && `<p><strong>Refund requested</strong> for Order #${1000 + index}</p>`) ||
+    (index === 5 && `<p><strong>Order #${1000 + index}</strong> was canceled by customer</p>`) ||
+    (index === 6 && `<p>Delivery assigned to <strong>${_mock.fullName(index + 1)}</strong> for Order #${1000 + index}</p>`) ||
+    (index === 7 && `<p>Cash drawer opened by <strong>${_mock.fullName(index + 2)}</strong></p>`) ||
+    (index === 8 && `<p><strong>System alert:</strong> POS sync failed at ${_mock.time(index)}</p>`) ||
     '',
 }));
 
