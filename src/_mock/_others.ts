@@ -91,15 +91,15 @@ export const _notifications = Array.from({ length: 9 }, (_, index) => ({
   isUnRead: index < 4, // mark first 4 as unread
   createdAt: _mock.time(index),
   title:
-    (index === 0 && `<p><strong>Order #${1000 + index}</strong> placed at POS by <strong>${_mock.fullName(index)}</strong></p>`) ||
-    (index === 1 && `<p>Payment of <strong>$${(25 + index * 5).toFixed(2)}</strong> received (Card)</p>`) ||
-    (index === 2 && `<p><strong>Payment failed</strong> for Order #${1000 + index} (Card declined)</p>`) ||
-    (index === 3 && `<p><strong>Low stock</strong> for <strong>${_mock.productName(index)}</strong> — <strong>3</strong> left</p>`) ||
-    (index === 4 && `<p><strong>Refund requested</strong> for Order #${1000 + index}</p>`) ||
-    (index === 5 && `<p><strong>Order #${1000 + index}</strong> was canceled by customer</p>`) ||
-    (index === 6 && `<p>Delivery assigned to <strong>${_mock.fullName(index + 1)}</strong> for Order #${1000 + index}</p>`) ||
-    (index === 7 && `<p>Cash drawer opened by <strong>${_mock.fullName(index + 2)}</strong></p>`) ||
-    (index === 8 && `<p><strong>System alert:</strong> POS sync failed at ${_mock.time(index)}</p>`) ||
+    (index === 0 && `<p><strong>#${1000 + index} buyurtma</strong> POSda <strong>${_mock.fullName(index)}</strong> tomonidan berildi</p>`) ||
+    (index === 1 && `<p><strong>$${(25 + index * 5).toFixed(2)}</strong> summa to'lov qabul qilindi (Karta)</p>`) ||
+    (index === 2 && `<p><strong>#${1000 + index} buyurtma</strong> uchun to'lov muvaffaqiyatsiz (karta rad etildi)</p>`) ||
+    (index === 3 && `<p><strong>${_mock.productName(index)}</strong> mahsuloti kam qoldi — faqat <strong>3</strong> qoldi</p>`) ||
+    (index === 4 && `<p><strong>#${1000 + index} buyurtma</strong> uchun qaytarish so'raldi</p>`) ||
+    (index === 5 && `<p><strong>#${1000 + index} buyurtma</strong> mijoz tomonidan bekor qilindi</p>`) ||
+    (index === 6 && `<p><strong>#${1000 + index} buyurtma</strong> uchun yetkazib beruvchi <strong>${_mock.fullName(index + 1)}</strong>ga belgilandi</p>`) ||
+    (index === 7 && `<p>Kassa tortmasi <strong>${_mock.fullName(index + 2)}</strong> tomonidan ochildi</p>`) ||
+    (index === 8 && `<p><strong>Tizim ogohlantirishi:</strong> POS sinxronizatsiyasi ${_mock.time(index)} da muvaffaqiyatsiz bo'ldi</p>`) ||
     '',
 }));
 
