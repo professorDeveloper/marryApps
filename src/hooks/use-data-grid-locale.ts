@@ -44,6 +44,8 @@ export function useDataGridLocale(): Partial<GridLocaleText> {
             filterPanelInputLabel: t('toolbar.value'),
             filterPanelInputPlaceholder: t('toolbar.filterPanelInputPlaceholder'),
             filterOperatorContains: t('toolbar.operators.contains'),
+            filterOperatorDoesNotContain: t('toolbar.operators.doesNotContain'),
+            filterOperatorDoesNotEqual: t('toolbar.operators.notEquals'),
             filterOperatorEquals: t('toolbar.operators.equals'),
             filterOperatorStartsWith: t('toolbar.operators.startsWith'),
             filterOperatorEndsWith: t('toolbar.operators.endsWith'),
