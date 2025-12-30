@@ -32,6 +32,7 @@ import { GenericTableToolbar } from './generic-table-toolbar';
 interface BreadcrumbLink {
   name: string;
   href?: string;
+  icon?: React.ReactNode;
 }
 
 interface FilterOption {

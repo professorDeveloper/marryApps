@@ -248,7 +248,7 @@
     "warehouse": {
       "title": "Ombor",
       "stocks": "Stoklar",
-      "transfers": "Ko'chirishlar",
+      "transfers": "O'tkazmalar",
       "locations": "Joylashuvlar",
       "suppliers": "Yetkazib beruvchilar"
     },

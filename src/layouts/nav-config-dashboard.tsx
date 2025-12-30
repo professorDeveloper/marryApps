@@ -54,6 +54,11 @@ export const getNavData = (t: TFunction): NavSectionProps['data'] => [
     subheader: t('overview.subheader', 'Overview'),
     items: [
       {
+        title: t('dashboard', 'Dashboard'),
+        path: paths.dashboard.root,
+        icon: ICONS.dashboard,
+      },
+      {
         title: t('overview.menu.title', 'Menu'),
         path: paths.menu.product.root,
         icon: ICONS.product,
@@ -86,7 +91,22 @@ export const getNavData = (t: TFunction): NavSectionProps['data'] => [
           { title: t('overview.reports.custom', 'Custom'), path: paths.menu.reports.custom.root },
           { title: t('overview.reports.archives', 'Archives'), path: paths.menu.reports.archives.root },
         ],
-      },
+      }
+    ],
+  },
+  {
+    subheader: t('management.subheader', 'Management'),
+    items: [
+      // {
+      //   title: t('management.group.title', 'Group'),
+      //   path: paths.menu.group.root,
+      //   icon: ICONS.user,
+      //   children: [
+      //     { title: t('management.group.four', 'Four'), path: paths.menu.group.root },
+      //     { title: t('management.group.five', 'Five'), path: paths.menu.group.five },
+      //     { title: t('management.group.six', 'Six'), path: paths.menu.group.six },
+      //   ],
+      // },
       {
         title: t('overview.settings.title', 'Sozlamalar'),
         path: paths.menu.settings.root,
@@ -100,21 +120,6 @@ export const getNavData = (t: TFunction): NavSectionProps['data'] => [
       },
     ],
   },
-  {
-    subheader: t('management.subheader', 'Management'),
-    items: [
-      {
-        title: t('management.group.title', 'Group'),
-        path: paths.menu.group.root,
-        icon: ICONS.user,
-        children: [
-          { title: t('management.group.four', 'Four'), path: paths.menu.group.root },
-          { title: t('management.group.five', 'Five'), path: paths.menu.group.five },
-          { title: t('management.group.six', 'Six'), path: paths.menu.group.six },
-        ],
-      },
-    ],
-  },
 ];
 
 // Backward compatibility: default navData (English) to avoid returning objects
@@ -122,6 +127,11 @@ export const navData: NavSectionProps['data'] = [
   {
     subheader: 'Overview',
     items: [
+      {
+        title: 'Dashboard',
+        path: paths.dashboard.root,
+        icon: ICONS.dashboard,
+      },
       {
         title: 'Menu',
         path: paths.menu.product.root,
