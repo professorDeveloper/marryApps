@@ -90,6 +90,7 @@
       "equals": "равно",
       "notEquals": "не равно",
       "greaterThan": "больше",
+      "doesNotContain": "не содержит",
       "lessThan": "меньше",
       "greaterThanOrEqual": "больше или равно",
       "lessThanOrEqual": "меньше или равно",

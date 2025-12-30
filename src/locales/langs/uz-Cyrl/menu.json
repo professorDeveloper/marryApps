@@ -70,6 +70,7 @@
       "equals": "тенг",
       "notEquals": "тенг эмас",
       "greaterThan": "катта",
+      "doesNotContain": "ўз ичига олмайди",
       "lessThan": "кичик",
       "greaterThanOrEqual": "катта ёки тенг",
       "lessThanOrEqual": "кичик ёки тенг",

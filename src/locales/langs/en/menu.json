@@ -83,6 +83,7 @@
       "notEquals": "is not",
       "greaterThan": "is greater than",
       "lessThan": "is less than",
+      "doesNotContain": "does not contain",
       "greaterThanOrEqual": "is greater than or equal to",
       "lessThanOrEqual": "is less than or equal to",
       "contains": "contains",
