@@ -87,6 +87,16 @@ export function RenderCellItem({
     imageField?: string;
     nameField?: string;
 }) {
+    // Defensive: params or params.row can be undefined in some runtimes; render fallback
+    const row = params?.row ?? null;
+
+    if (!row) {
+        return <span>-</span>;
+    }
+
+    const name = row[nameField] ?? '-';
+    const src = row[imageField] ?? null;
+
     return (
         <Box
             sx={{
@@ -98,15 +108,15 @@ export function RenderCellItem({
             }}
         >
             <Avatar
-                alt={params.row[nameField]}
-                src={params.row[imageField]}
+                alt={name}
+                src={src}
                 variant="rounded"
                 sx={{ width: 64, height: 64 }}
             />
 
             <ListItemText
                 primary={
-                    <span>{params.row[nameField]}</span>
+                    <span>{name}</span>
                 }
             />
         </Box>

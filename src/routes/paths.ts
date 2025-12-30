@@ -84,6 +84,97 @@ export const paths = {
       details: (id: string) => `${ROOTS.MENU}/meals/${id}`,
       edit: (id: string) => `${ROOTS.MENU}/meals/${id}/edit`,
     },
+    warehouse: {
+      root: `${ROOTS.MENU}/warehouse`,
+      new: `${ROOTS.MENU}/warehouse/new`,
+      details: (id: string) => `${ROOTS.MENU}/warehouse/${id}`,
+      edit: (id: string) => `${ROOTS.MENU}/warehouse/${id}/edit`,
+      stocks: {
+        root: `${ROOTS.MENU}/warehouse/stocks`,
+        new: `${ROOTS.MENU}/warehouse/stocks/new`,
+        details: (id: string) => `${ROOTS.MENU}/warehouse/stocks/${id}`,
+        edit: (id: string) => `${ROOTS.MENU}/warehouse/stocks/${id}/edit`,
+      },
+      transfers: {
+        root: `${ROOTS.MENU}/warehouse/transfers`,
+        new: `${ROOTS.MENU}/warehouse/transfers/new`,
+        details: (id: string) => `${ROOTS.MENU}/warehouse/transfers/${id}`,
+        edit: (id: string) => `${ROOTS.MENU}/warehouse/transfers/${id}/edit`,
+      },
+      locations: {
+        root: `${ROOTS.MENU}/warehouse/locations`,
+        new: `${ROOTS.MENU}/warehouse/locations/new`,
+        details: (id: string) => `${ROOTS.MENU}/warehouse/locations/${id}`,
+        edit: (id: string) => `${ROOTS.MENU}/warehouse/locations/${id}/edit`,
+      },
+      suppliers: {
+        root: `${ROOTS.MENU}/warehouse/suppliers`,
+        new: `${ROOTS.MENU}/warehouse/suppliers/new`,
+        details: (id: string) => `${ROOTS.MENU}/warehouse/suppliers/${id}`,
+        edit: (id: string) => `${ROOTS.MENU}/warehouse/suppliers/${id}/edit`,
+      },
+    },
+    reports: {
+      root: `${ROOTS.MENU}/reports`,
+      new: `${ROOTS.MENU}/reports/new`,
+      details: (id: string) => `${ROOTS.MENU}/reports/${id}`,
+      edit: (id: string) => `${ROOTS.MENU}/reports/${id}/edit`,
+      sales: {
+        root: `${ROOTS.MENU}/reports/sales`,
+        new: `${ROOTS.MENU}/reports/sales/new`,
+        details: (id: string) => `${ROOTS.MENU}/reports/sales/${id}`,
+        edit: (id: string) => `${ROOTS.MENU}/reports/sales/${id}/edit`,
+      },
+      inventory: {
+        root: `${ROOTS.MENU}/reports/inventory`,
+        new: `${ROOTS.MENU}/reports/inventory/new`,
+        details: (id: string) => `${ROOTS.MENU}/reports/inventory/${id}`,
+        edit: (id: string) => `${ROOTS.MENU}/reports/inventory/${id}/edit`,
+      },
+      custom: {
+        root: `${ROOTS.MENU}/reports/custom`,
+        new: `${ROOTS.MENU}/reports/custom/new`,
+        details: (id: string) => `${ROOTS.MENU}/reports/custom/${id}`,
+        edit: (id: string) => `${ROOTS.MENU}/reports/custom/${id}/edit`,
+      },
+      archives: {
+        root: `${ROOTS.MENU}/reports/archives`,
+        new: `${ROOTS.MENU}/reports/archives/new`,
+        details: (id: string) => `${ROOTS.MENU}/reports/archives/${id}`,
+        edit: (id: string) => `${ROOTS.MENU}/reports/archives/${id}/edit`,
+      },
+    },
+    settings: {
+      root: `${ROOTS.MENU}/settings`,
+      new: `${ROOTS.MENU}/settings/new`,
+      details: (id: string) => `${ROOTS.MENU}/settings/${id}`,
+      edit: (id: string) => `${ROOTS.MENU}/settings/${id}/edit`,
+      general: {
+        root: `${ROOTS.MENU}/settings/general`,
+        new: `${ROOTS.MENU}/settings/general/new`,
+        details: (id: string) => `${ROOTS.MENU}/settings/general/${id}`,
+        edit: (id: string) => `${ROOTS.MENU}/settings/general/${id}/edit`,
+      },
+      profile: {
+        root: `${ROOTS.MENU}/settings/profile`,
+        new: `${ROOTS.MENU}/settings/profile/new`,
+        details: (id: string) => `${ROOTS.MENU}/settings/profile/${id}`,
+        edit: (id: string) => `${ROOTS.MENU}/settings/profile/${id}/edit`,
+      },
+      notifications: {
+        root: `${ROOTS.MENU}/settings/notifications`,
+        new: `${ROOTS.MENU}/settings/notifications/new`,
+        details: (id: string) => `${ROOTS.MENU}/settings/notifications/${id}`,
+        edit: (id: string) => `${ROOTS.MENU}/settings/notifications/${id}/edit`,
+      },
+      integrations: {
+        root: `${ROOTS.MENU}/settings/integrations`,
+        new: `${ROOTS.MENU}/settings/integrations/new`,
+        details: (id: string) => `${ROOTS.MENU}/settings/integrations/${id}`,
+        edit: (id: string) => `${ROOTS.MENU}/settings/integrations/${id}/edit`,
+      },
+    },
+
   },
   // DASHBOARD
   dashboard: {

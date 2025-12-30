@@ -17,6 +17,29 @@ import { CategoryEditView } from 'src/sections/category/category-edit-view';
 import { HalfMeals } from 'src/sections/semifinished/semifinished-list-view';
 import { SemifinishedEditView } from 'src/sections/semifinished/semifinished-edit-view';
 
+import { WarehouseListView } from 'src/sections/warehouse/warehouse-list-view';
+import { WarehouseEditView } from 'src/sections/warehouse/warehouse-edit-view';
+import { StocksListView } from 'src/sections/warehouse/stocks-list-view';
+import { StocksEditView } from 'src/sections/warehouse/stocks-edit-view';
+import { TransfersListView } from 'src/sections/warehouse/transfers-list-view';
+import { TransfersEditView } from 'src/sections/warehouse/transfers-edit-view';
+import { LocationsListView } from 'src/sections/warehouse/locations-list-view';
+import { LocationsEditView } from 'src/sections/warehouse/locations-edit-view';
+import { SuppliersListView } from 'src/sections/warehouse/suppliers-list-view';
+import { SuppliersEditView } from 'src/sections/warehouse/suppliers-edit-view';
+import { ReportsListView } from 'src/sections/reports/reports-list-view';
+import { ReportsEditView } from 'src/sections/reports/reports-edit-view';
+import { SalesListView } from 'src/sections/reports/sales-list-view';
+import { InventoryReportsListView } from 'src/sections/reports/inventory-list-view';
+import { CustomReportsListView } from 'src/sections/reports/custom-list-view';
+import { ArchivesListView } from 'src/sections/reports/archives-list-view';
+import { SettingsListView } from 'src/sections/settings/settings-list-view';
+import { SettingsEditView } from 'src/sections/settings/settings-edit-view';
+import { SettingsGeneralListView } from 'src/sections/settings/general-list-view';
+import { SettingsProfileListView } from 'src/sections/settings/profile-list-view';
+import { SettingsNotificationsListView } from 'src/sections/settings/notifications-list-view';
+import { SettingsIntegrationsListView } from 'src/sections/settings/integrations-list-view';
+
 import { AuthGuard } from 'src/auth/guard';
 
 import { usePathname } from '../hooks';
@@ -75,6 +98,35 @@ export const dashboardRoutes: RouteObject[] = [
       { path: 'meals', element: <Meals /> },
       { path: 'meals/new', element: <MealEditView isNew /> },
       { path: 'meals/:id/edit', element: <MealEditView /> },
+      { path: 'warehouse', element: <WarehouseListView /> },
+      { path: 'warehouse/new', element: <WarehouseEditView isNew /> },
+      { path: 'warehouse/:id/edit', element: <WarehouseEditView /> },
+      { path: 'warehouse/stocks', element: <StocksListView /> },
+      { path: 'warehouse/stocks/new', element: <StocksEditView isNew /> },
+      { path: 'warehouse/stocks/:id/edit', element: <StocksEditView /> },
+      { path: 'warehouse/transfers', element: <TransfersListView /> },
+      { path: 'warehouse/transfers/new', element: <TransfersEditView isNew /> },
+      { path: 'warehouse/transfers/:id/edit', element: <TransfersEditView /> },
+      { path: 'warehouse/locations', element: <LocationsListView /> },
+      { path: 'warehouse/locations/new', element: <LocationsEditView isNew /> },
+      { path: 'warehouse/locations/:id/edit', element: <LocationsEditView /> },
+      { path: 'warehouse/suppliers', element: <SuppliersListView /> },
+      { path: 'warehouse/suppliers/new', element: <SuppliersEditView isNew /> },
+      { path: 'warehouse/suppliers/:id/edit', element: <SuppliersEditView /> },
+      { path: 'reports', element: <ReportsListView /> },
+      { path: 'reports/new', element: <ReportsEditView isNew /> },
+      { path: 'reports/:id/edit', element: <ReportsEditView /> },
+      { path: 'reports/sales', element: <SalesListView /> },
+      { path: 'reports/inventory', element: <InventoryReportsListView /> },
+      { path: 'reports/custom', element: <CustomReportsListView /> },
+      { path: 'reports/archives', element: <ArchivesListView /> },
+      { path: 'settings', element: <SettingsListView /> },
+      { path: 'settings/new', element: <SettingsEditView isNew /> },
+      { path: 'settings/:id/edit', element: <SettingsEditView /> },
+      { path: 'settings/general', element: <SettingsGeneralListView /> },
+      { path: 'settings/profile', element: <SettingsProfileListView /> },
+      { path: 'settings/notifications', element: <SettingsNotificationsListView /> },
+      { path: 'settings/integrations', element: <SettingsIntegrationsListView /> },
     ],
 
   },

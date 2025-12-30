@@ -25,3 +25,7 @@ export * from './_overview';
 export * from './_calendar';
 
 export * from './_category';
+
+export * from './_warehouse';
+export * from './_reports';
+export * from './_settings';

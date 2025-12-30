@@ -244,6 +244,27 @@
       "categories": "Kategoriyalar",
       "semifinished": "Yarim tayyor mahsulotlar",
       "meals": "Taomlar"
+    },
+    "warehouse": {
+      "title": "Ombor",
+      "stocks": "Stoklar",
+      "transfers": "Ko'chirishlar",
+      "locations": "Joylashuvlar",
+      "suppliers": "Yetkazib beruvchilar"
+    },
+    "reports": {
+      "title": "Hisobotlar",
+      "sales": "Sotuvlar",
+      "inventory": "Inventarizatsiya",
+      "custom": "Maxsus",
+      "archives": "Arxivlar"
+    },
+    "settings": {
+      "title": "Sozlamalar",
+      "general": "Umumiy",
+      "profile": "Profil",
+      "notifications": "Bildirishnomalar",
+      "integrations": "Integratsiyalar"
     }
   },
   "management": {

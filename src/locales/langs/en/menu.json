@@ -258,6 +258,27 @@
       "categories": "Categories",
       "semifinished": "Semifinished",
       "meals": "Meals"
+    },
+    "warehouse": {
+      "title": "Warehouse",
+      "stocks": "Stocks",
+      "transfers": "Transfers",
+      "locations": "Locations",
+      "suppliers": "Suppliers"
+    },
+    "reports": {
+      "title": "Reports",
+      "sales": "Sales",
+      "inventory": "Inventory",
+      "custom": "Custom",
+      "archives": "Archives"
+    },
+    "settings": {
+      "title": "Settings",
+      "general": "General",
+      "profile": "Profile",
+      "notifications": "Notifications",
+      "integrations": "Integrations"
     }
   },
   "management": {

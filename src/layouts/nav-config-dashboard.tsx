@@ -65,6 +65,39 @@ export const getNavData = (t: TFunction): NavSectionProps['data'] => [
           { title: t('overview.menu.meals', 'Meals'), path: paths.menu.meals.root },
         ],
       },
+      {
+        title: t('overview.warehouse.title', 'Ombor'),
+        path: paths.menu.warehouse.root,
+        icon: ICONS.folder,
+        children: [
+          { title: t('overview.warehouse.stocks', 'Stocks'), path: paths.menu.warehouse.stocks.root },
+          { title: t('overview.warehouse.transfers', 'Transfers'), path: paths.menu.warehouse.transfers.root },
+          { title: t('overview.warehouse.locations', 'Locations'), path: paths.menu.warehouse.locations.root },
+          { title: t('overview.warehouse.suppliers', 'Suppliers'), path: paths.menu.warehouse.suppliers.root },
+        ],
+      },
+      {
+        title: t('overview.reports.title', 'Hisobotlar'),
+        path: paths.menu.reports.root,
+        icon: ICONS.analytics,
+        children: [
+          { title: t('overview.reports.sales', 'Sales'), path: paths.menu.reports.sales.root },
+          { title: t('overview.reports.inventory', 'Inventory'), path: paths.menu.reports.inventory.root },
+          { title: t('overview.reports.custom', 'Custom'), path: paths.menu.reports.custom.root },
+          { title: t('overview.reports.archives', 'Archives'), path: paths.menu.reports.archives.root },
+        ],
+      },
+      {
+        title: t('overview.settings.title', 'Sozlamalar'),
+        path: paths.menu.settings.root,
+        icon: ICONS.params,
+        children: [
+          { title: t('overview.settings.general', 'General'), path: paths.menu.settings.general.root },
+          { title: t('overview.settings.profile', 'Profile'), path: paths.menu.settings.profile.root },
+          { title: t('overview.settings.notifications', 'Notifications'), path: paths.menu.settings.notifications.root },
+          { title: t('overview.settings.integrations', 'Integrations'), path: paths.menu.settings.integrations.root },
+        ],
+      },
     ],
   },
   {
@@ -101,6 +134,29 @@ export const navData: NavSectionProps['data'] = [
           { title: 'Meals', path: paths.menu.meals.root },
         ],
       },
+      {
+        title: 'Ombor',
+        path: paths.menu.warehouse.root,
+        icon: ICONS.folder,
+        children: [
+          { title: 'Stocks', path: paths.menu.warehouse.stocks.root },
+          { title: 'Transfers', path: paths.menu.warehouse.transfers.root },
+          { title: 'Locations', path: paths.menu.warehouse.locations.root },
+          { title: 'Suppliers', path: paths.menu.warehouse.suppliers.root },
+        ],
+      },
+
+      {
+        title: 'Hisobotlar',
+        path: paths.menu.reports.root,
+        icon: ICONS.analytics,
+        children: [
+          { title: 'Sales', path: paths.menu.reports.root },
+          { title: 'Inventory', path: paths.menu.reports.root },
+          { title: 'Custom', path: paths.menu.reports.root },
+          { title: 'Archives', path: paths.menu.reports.root },
+        ],
+      },
     ],
   },
   {
@@ -114,6 +170,17 @@ export const navData: NavSectionProps['data'] = [
           { title: 'Four', path: paths.menu.group.root },
           { title: 'Five', path: paths.menu.group.five },
           { title: 'Six', path: paths.menu.group.six },
+        ],
+      },
+      {
+        title: 'Sozlamalar',
+        path: paths.menu.settings.root,
+        icon: ICONS.params,
+        children: [
+          { title: 'General', path: paths.menu.settings.root },
+          { title: 'Profile', path: paths.menu.settings.root },
+          { title: 'Notifications', path: paths.menu.settings.root },
+          { title: 'Integrations', path: paths.menu.settings.root },
         ],
       },
     ],
