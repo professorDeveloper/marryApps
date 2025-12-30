@@ -61,7 +61,7 @@ export const getNavData = (t: TFunction): NavSectionProps['data'] => [
       {
         title: t('overview.menu.title', 'Menu'),
         path: paths.menu.product.root,
-        icon: ICONS.product,
+        icon: ICONS.menuItem,
         deepMatch: true,
         children: [
           { title: t('overview.menu.sections', 'Sections'), path: paths.menu.product.root },
@@ -73,7 +73,7 @@ export const getNavData = (t: TFunction): NavSectionProps['data'] => [
       {
         title: t('overview.warehouse.title', 'Ombor'),
         path: paths.menu.warehouse.root,
-        icon: ICONS.folder,
+        icon: ICONS.banking,
         children: [
           { title: t('overview.warehouse.stocks', 'Stocks'), path: paths.menu.warehouse.stocks.root },
           { title: t('overview.warehouse.transfers', 'Transfers'), path: paths.menu.warehouse.transfers.root },
@@ -84,7 +84,7 @@ export const getNavData = (t: TFunction): NavSectionProps['data'] => [
       {
         title: t('overview.reports.title', 'Hisobotlar'),
         path: paths.menu.reports.root,
-        icon: ICONS.analytics,
+        icon: ICONS.file,
         children: [
           { title: t('overview.reports.sales', 'Sales'), path: paths.menu.reports.sales.root },
           { title: t('overview.reports.inventory', 'Inventory'), path: paths.menu.reports.inventory.root },
@@ -110,7 +110,7 @@ export const getNavData = (t: TFunction): NavSectionProps['data'] => [
       {
         title: t('overview.settings.title', 'Sozlamalar'),
         path: paths.menu.settings.root,
-        icon: ICONS.params,
+        icon: ICONS.blog,
         children: [
           { title: t('overview.settings.general', 'General'), path: paths.menu.settings.general.root },
           { title: t('overview.settings.profile', 'Profile'), path: paths.menu.settings.profile.root },

@@ -319,7 +319,7 @@ export function SettingsDrawer({ sx, defaultSettings }: SettingsDrawerProps) {
             {/* {visibility.compactLayout && renderCompactLayout()} */}
           </Box>
 
-          {/* {(visibility.navColor || visibility.navLayout) && renderNav()} */}
+          {(visibility.navColor || visibility.navLayout) && renderNav()}
           {/* {visibility.primaryColor && renderPresets()} */}
           {/* {(visibility.fontFamily || visibility.fontSize) && renderFont()} */}
         </Box>
