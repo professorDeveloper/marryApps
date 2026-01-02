@@ -263,6 +263,12 @@ export function GenericTableView<T extends Record<string, any>>({
               '& .MuiDataGrid-main': {
                 overflow: 'visible',
               },
+              '& .MuiDataGrid-cell:focus, & .MuiDataGrid-cell:focus-within': {
+                outline: 'none',
+              },
+              '& .MuiDataGrid-columnHeader:focus, & .MuiDataGrid-columnHeader:focus-within': {
+                outline: 'none',
+              },
             }}
           />
         </Card>
