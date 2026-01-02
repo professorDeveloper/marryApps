@@ -96,7 +96,7 @@
   "products": {
     "title": "Section",
     "list": "List",
-    "add": "Add Product",
+    "add": "Add",
     "edit": "Edit",
     "view": "View",
     "delete": "Delete",
@@ -116,7 +116,7 @@
   "categories": {
     "title": "Categories",
     "list": "List",
-    "add": "Add Category",
+    "add": "Add",
     "edit": "Edit",
     "view": "View",
     "delete": "Delete",
@@ -151,7 +151,7 @@
   "semifinishedProducts": {
     "title": "Semifinished Products",
     "list": "List",
-    "add": "Add Semifinished Product",
+    "add": "Add",
     "edit": "Edit",
     "view": "View",
     "delete": "Delete",
@@ -191,7 +191,7 @@
   "mealsProducts": {
     "title": "Meals",
     "list": "List",
-    "add": "Add Meal",
+    "add": "Add",
     "edit": "Edit",
     "view": "View",
     "delete": "Delete",

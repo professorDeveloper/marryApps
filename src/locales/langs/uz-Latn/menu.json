@@ -17,7 +17,7 @@
     "mode": "Rejim"
   },
   "workspaces": {
-    "add": "Yangi ish maydoni qo'shish"
+    "add": "Filial qo'shish"
   },
   "profile": "Profil",
   "logout": "Chiqish",
@@ -84,7 +84,7 @@
   "products": {
     "title": "Bo'lim",
     "list": "Ro'yxat",
-    "add": "Mahsulot qo'shish",
+    "add": "Qo'shish",
     "edit": "Tahrirlash",
     "view": "Ko'rish",
     "delete": "O'chirish",
@@ -104,7 +104,7 @@
   "categories": {
     "title": "Kategoriyalar",
     "list": "Ro'yxat",
-    "add": "Kategoriya qo'shish",
+    "add": "Qo'shish",
     "edit": "Tahrirlash",
     "view": "Ko'rish",
     "delete": "O'chirish",
@@ -138,7 +138,7 @@
   "semifinishedProducts": {
     "title": "Yarim tayyor mahsulotlar",
     "list": "Ro'yxat",
-    "add": "Yarim tayyor mahsulot qo'shish",
+    "add": "Qo'shish",
     "edit": "Tahrirlash",
     "view": "Ko'rish",
     "delete": "O'chirish",
@@ -178,7 +178,7 @@
   "mealsProducts": {
     "title": "Taomlar",
     "list": "Ro'yxat",
-    "add": "Taom qo'shish",
+    "add": "Qo'shish",
     "edit": "Tahrirlash",
     "view": "Ko'rish",
     "delete": "O'chirish",
