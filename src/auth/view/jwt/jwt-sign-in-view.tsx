@@ -85,22 +85,8 @@ export function JwtSignInView() {
       />
 
       <Stack spacing={1.5}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
-            Parol
-          </Typography>
-          <Link
-            component={RouterLink}
-            href="#"
-            variant="caption"
-            color="info.main"
-            sx={{ textDecoration: 'none', '&:hover': { textDecoration: 'underline' } }}
-          >
-            Parolni unutdingizmi?
-          </Link>
-        </Box>
-
         <Field.Text
+          label="Parol"
           name="password"
           placeholder="6+ belgi"
           type={showPassword.value ? 'text' : 'password'}
@@ -166,18 +152,7 @@ export function JwtSignInView() {
         </Box>
 
         <Typography variant="h4" sx={{ mb: 1, fontWeight: 700 }}>
-          Hisobingizga kirish
-        </Typography>
-
-        <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-          Hisobingiz yo&rsquo;qmi?{' '}
-          <Link
-            component={RouterLink}
-            href={paths.auth.jwt.signUp}
-            sx={{ color: '#4facfe', textDecoration: 'none', fontWeight: 600 }}
-          >
-            Ro&rsquo;yhatdan o&rsquo;ting
-          </Link>
+          Hisobga kirish
         </Typography>
       </Box>
 
@@ -190,13 +165,6 @@ export function JwtSignInView() {
           {errorMessage}
         </Alert>
       )}
-{/* 
-      <Alert severity="info" sx={{ bgcolor: 'rgba(13, 110, 253, 0.1)' }}>
-        <Typography variant="caption">
-          Sinash email: <strong>{defaultValues.email}</strong> va parol:{' '}
-          <strong>{defaultValues.password}</strong>
-        </Typography>
-      </Alert> */}
     </Stack>
   );
 }

@@ -202,11 +202,10 @@ export function GenericTableView<T extends Record<string, any>>({
 
         <Card
           sx={{
-            minHeight: 640,
-            flexGrow: { md: 1 },
-            display: { md: 'flex' },
-            height: { xs: 800, md: '1px' },
-            flexDirection: { md: 'column' },
+            display: 'flex',
+            flexDirection: 'column',
+            height: 'auto',
+            minHeight: 0,
           }}
         >
           <DataGrid
@@ -250,9 +249,19 @@ export function GenericTableView<T extends Record<string, any>>({
               },
             }}
             sx={{
+              border: 0,
+              '& .MuiDataGrid-root': {
+                border: 0,
+              },
               [`& .${gridClasses.cell}`]: {
                 display: 'flex',
                 alignItems: 'center',
+              },
+              '& .MuiDataGrid-virtualScroller': {
+                overflow: 'visible !important',
+              },
+              '& .MuiDataGrid-main': {
+                overflow: 'visible',
               },
             }}
           />

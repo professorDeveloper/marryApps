@@ -12,5 +12,10 @@
     }
   ],
   // https://mui.com/material-ui/guides/minimizing-bundle-size/#avoid-vs-code-auto-importing-from-barrel-files
-  "typescript.preferences.autoImportSpecifierExcludeRegexes": ["^@mui/[^/]+$"]
+  "typescript.preferences.autoImportSpecifierExcludeRegexes": [
+    "^@mui/[^/]+$"
+  ],
+  "[typescriptreact]": {
+    "editor.defaultFormatter": "vscode.typescript-language-features"
+  }
 }
