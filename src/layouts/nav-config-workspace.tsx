@@ -19,7 +19,7 @@ export const _workspaces: WorkspacesPopoverProps['data'] = [
   },
   {
     id: 'team-3',
-    name: 'Nomdor Novza',
+    name: 'Friends Oqsaroy',
     // plan: 'Pro',
     logo: `${CONFIG.assetsDir}/assets/icons/workspaces/logo-4.webp`,
   },

@@ -82,12 +82,7 @@ export function WorkspacesPopover({ data = [], sx, ...other }: WorkspacesPopover
       ]}
       {...other}
     >
-      <Box
-        component="img"
-        alt={workspace?.name}
-        src={workspace?.logo}
-        sx={{ width: 24, height: 24, borderRadius: '50%' }}
-      />
+      <Avatar alt={workspace?.name} src={workspace?.logo} sx={{ width: 24, height: 24 }} />
 
       <Box
         component="span"
