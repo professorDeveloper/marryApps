@@ -248,7 +248,7 @@ export const ToolbarContainer = styled('div')(({ theme }) => ({
   display: 'flex',
   flexWrap: 'wrap',
   flexDirection: 'column',
-  gap: theme.spacing(2),
+  gap: theme.spacing(1),
   [theme.breakpoints.up('md')]: {
     alignItems: 'center',
     flexDirection: 'row',
@@ -258,7 +258,7 @@ export const ToolbarContainer = styled('div')(({ theme }) => ({
 export const ToolbarLeftPanel = styled('div')(({ theme }) => ({
   display: 'flex',
   flexDirection: 'column',
-  gap: theme.spacing(2),
+  gap: theme.spacing(1),
   [theme.breakpoints.up('md')]: {
     flexDirection: 'row',
   },

@@ -181,7 +181,15 @@ export function GenericTableView<T extends Record<string, any>>({
 
   return (
     <>
-      <DashboardContent sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
+      <DashboardContent
+        sx={{
+          flexGrow: 1,
+          display: 'flex',
+          flexDirection: 'column',
+          '--layout-dashboard-content-pt': { xs: '16px', md: '24px' },
+          '--layout-dashboard-content-pb': { xs: '16px', md: '24px' },
+        }}
+      >
         <CustomBreadcrumbs
           heading={breadcrumbs.heading}
           links={breadcrumbs.links}
@@ -197,7 +205,7 @@ export function GenericTableView<T extends Record<string, any>>({
               </Button>
             )
           }
-          sx={{ mb: { xs: 3, md: 5 } }}
+          sx={{ mb: { xs: 2, md: 3 } }}
         />
 
         <Card

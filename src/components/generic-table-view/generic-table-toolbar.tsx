@@ -55,7 +55,12 @@ export function GenericTableToolbar<T extends GenericTableFilters = any>({
 }: GenericTableToolbarProps<T>) {
   const { state: currentFilters, resetState: resetFilters } = filters;
 
-  const renderLeftPanel = () => <CustomToolbarQuickFilter />;
+  const renderLeftPanel = () => (
+    <CustomToolbarQuickFilter
+      sx={{ width: 280, maxWidth: { md: 280 } }}
+      slotProps={{ textField: { size: 'small' } }}
+    />
+  );
 
   const renderRightPanel = () => (
     <>
