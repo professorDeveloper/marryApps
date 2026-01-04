@@ -28,19 +28,18 @@ func SetupMiddleware(e *echo.Echo, cfg *config.Config) {
 	e.Use(middleware.Recover())
 
 	e.Use(middleware.SecureWithConfig(middleware.SecureConfig{
-		XSSProtection:         "1; mode=block",
-		ContentTypeNosniff:    "nosniff",
-		XFrameOptions:         "SAMEORIGIN",
-		HSTSMaxAge:            3600,
-		ContentSecurityPolicy: "default-src 'self'",
+		XSSProtection:      "1; mode=block",
+		ContentTypeNosniff: "nosniff",
+		XFrameOptions:      "SAMEORIGIN",
+		HSTSMaxAge:         3600,
+		// Removed CSP temporarily
 	}))
 
-	// CORS
 	e.Use(middleware.CORSWithConfig(middleware.CORSConfig{
-		AllowOrigins:     cfg.Server.Http.Cors.AllowedOrigins,
-		AllowMethods:     cfg.Server.Http.Cors.AllowedMethods,
-		AllowHeaders:     cfg.Server.Http.Cors.AllowedHeaders,
-		AllowCredentials: cfg.Server.Http.Cors.AllowCredentials,
+		AllowOrigins:     []string{"*"}, // TEMPORARY - replace with specific origins
+		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"},
+		AllowHeaders:     []string{"*"},
+		AllowCredentials: true,
 		MaxAge:           3600,
 	}))
 
