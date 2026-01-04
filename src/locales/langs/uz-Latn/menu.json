@@ -99,7 +99,9 @@
     "outOfStock": "Zaxira tugagan",
     "category": "Kategoriya",
     "price": "Narxi",
-    "specifications": "Xususiyatlari"
+    "specifications": "Xususiyatlari",
+    "storage": "Do'kon"
+    
   },
   "categories": {
     "title": "Kategoriyalar",

@@ -58,7 +58,7 @@ export function JwtSignUpView() {
   const defaultValues: SignUpSchemaType = {
     fullName: '',
     username: '',
-    phoneNumber: '+998957749122',
+    phoneNumber: '',
     password: '',
     pincode: '',
   };
@@ -94,7 +94,7 @@ export function JwtSignUpView() {
   });
 
   const renderForm = () => (
-    <Stack spacing={3}>
+    <Stack spacing={2}>
       <Field.Text
         name="fullName"
         label="To'liq ism"
@@ -116,7 +116,7 @@ export function JwtSignUpView() {
         slotProps={{ inputLabel: { shrink: true } }}
       />
 
-      <Stack spacing={1.5}>
+      <Stack spacing={1}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
             Parol
@@ -126,7 +126,7 @@ export function JwtSignUpView() {
 
         <Field.Text
           name="password"
-          placeholder="6+ belgi"
+          placeholder="Kamida 6 ta belgi"
           type={showPassword.value ? 'text' : 'password'}
           slotProps={{
             inputLabel: { shrink: true },

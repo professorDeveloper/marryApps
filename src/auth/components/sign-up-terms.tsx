@@ -10,24 +10,23 @@ export function SignUpTerms({ sx, ...other }: BoxProps) {
     <Box
       component="span"
       sx={[
-        () => ({
-          mt: 3,
-          display: 'block',
-          textAlign: 'center',
-          typography: 'caption',
-          color: 'text.secondary',
-        }),
-        ...(Array.isArray(sx) ? sx : [sx]),
+      () => ({
+        display: 'block',
+        textAlign: 'center',
+        typography: 'caption',
+        color: 'text.secondary',
+      }),
+      ...(Array.isArray(sx) ? sx : [sx]),
       ]}
       {...other}
     >
-      {'By signing up, I agree to '}
+      {'Ro\'yxatdan o\'tish orqali men quyidagi shartlarga roziman: '}
       <Link underline="always" color="text.primary">
-        Terms of service
+      Xizmat ko‘rsatish shartlari
       </Link>
-      {' and '}
+      {' va '}
       <Link underline="always" color="text.primary">
-        Privacy policy
+      Maxfiylik siyosati
       </Link>
       .
     </Box>
