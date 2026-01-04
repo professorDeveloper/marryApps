@@ -18,7 +18,7 @@ import { useRouter } from 'src/routes/hooks';
 import { RouterLink } from 'src/routes/components';
 
 import { Iconify } from 'src/components/iconify';
-import { Form, Field, schemaUtils } from 'src/components/hook-form';
+import { Form, Field } from 'src/components/hook-form';
 
 import { useAuthContext } from '../../hooks';
 import { getErrorMessage } from '../../utils';
@@ -56,8 +56,8 @@ export function JwtSignInView() {
 
   const defaultValues: SignInSchemaType = {
     username: 'sami',
-    password: '',
-    pincode: 'XXXX',
+    password: 'Sami1010',
+    pincode: '1111',
   };
 
   const methods = useForm({
@@ -79,7 +79,7 @@ export function JwtSignInView() {
       });
       await checkUserSession?.();
 
-      router.refresh();
+      router.push(paths.menu.root);
     } catch (error) {
       console.error(error);
       const feedbackMessage = getErrorMessage(error);

@@ -52,6 +52,50 @@ export const fetcher = async <T = unknown>(
   }
 };
 
+// POST request helper
+export const poster = async <T = unknown>(
+  url: string,
+  data: unknown,
+  config?: AxiosRequestConfig
+): Promise<T> => {
+  try {
+    const res = await axiosInstance.post<T>(url, data, config);
+    return res.data;
+  } catch (error) {
+    console.error('Poster failed:', error);
+    throw error;
+  }
+};
+
+// PUT request helper
+export const putter = async <T = unknown>(
+  url: string,
+  data: unknown,
+  config?: AxiosRequestConfig
+): Promise<T> => {
+  try {
+    const res = await axiosInstance.put<T>(url, data, config);
+    return res.data;
+  } catch (error) {
+    console.error('Putter failed:', error);
+    throw error;
+  }
+};
+
+// DELETE request helper
+export const deleter = async <T = unknown>(
+  url: string,
+  config?: AxiosRequestConfig
+): Promise<T> => {
+  try {
+    const res = await axiosInstance.delete<T>(url, config);
+    return res.data;
+  } catch (error) {
+    console.error('Deleter failed:', error);
+    throw error;
+  }
+};
+
 // ----------------------------------------------------------------------
 
 export const endpoints = {
@@ -93,5 +137,12 @@ export const endpoints = {
     list: '/api/order/list',
     details: '/api/order/details',
     search: '/api/order/search',
+  },
+  department: {
+    list: '/api/v1/departments',
+    details: (id: string) => `/api/v1/departments/${id}`,
+    create: '/api/v1/departments',
+    update: (id: string) => `/api/v1/departments/${id}`,
+    delete: (id: string) => `/api/v1/departments/${id}`,
   },
 } as const;

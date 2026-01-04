@@ -1,4 +1,4 @@
-import type { IProductItem } from 'src/types/product';
+import type { IProductItem } from 'src/types/departments';
 
 export const PRODUCT_GENDER_OPTIONS = [
   { label: 'Men', value: 'Men' },

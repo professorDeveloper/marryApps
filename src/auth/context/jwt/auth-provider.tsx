@@ -3,11 +3,9 @@ import type { AuthState } from '../../types';
 import { useSetState } from 'minimal-shared/hooks';
 import { useMemo, useEffect, useCallback } from 'react';
 
-import axios, { endpoints } from 'src/lib/axios';
-
 import { JWT_STORAGE_KEY } from './constant';
 import { AuthContext } from '../auth-context';
-import { setSession, isValidToken } from './utils';
+import { jwtDecode, setSession, isValidToken } from './utils';
 
 // ----------------------------------------------------------------------
 
@@ -31,9 +29,16 @@ export function AuthProvider({ children }: Props) {
       if (accessToken && isValidToken(accessToken)) {
         setSession(accessToken);
 
-        const res = await axios.get(endpoints.auth.me);
+        // Decode user info from token instead of fetching from /me endpoint
+        const decoded = jwtDecode(accessToken);
 
-        const { user } = res.data;
+        const user = {
+          id: decoded.sub || decoded.id || 'user',
+          username: decoded.username || 'User',
+          fullName: decoded.fullName || decoded.name || 'User',
+          email: decoded.email || '',
+          role: decoded.role || 'user',
+        };
 
         setState({ user: { ...user, accessToken }, loading: false });
       } else {
