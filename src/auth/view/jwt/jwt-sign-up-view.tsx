@@ -56,11 +56,11 @@ export function JwtSignUpView() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const defaultValues: SignUpSchemaType = {
-    fullName: 'Sami',
-    username: 'sami',
+    fullName: '',
+    username: '',
     phoneNumber: '+998957749122',
     password: '',
-    pincode: 'XXXX',
+    pincode: '',
   };
 
   const methods = useForm({
@@ -122,6 +122,7 @@ export function JwtSignUpView() {
             Parol
           </Typography>
         </Box>
+
 
         <Field.Text
           name="password"

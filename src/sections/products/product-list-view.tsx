@@ -142,8 +142,7 @@ export function ProductListView() {
         filterable: false,
         valueOptions: publishOptions,
         renderCell: (params) => <RenderCellPublish params={params} />,
-      },
-      
+      }, 
       {
         field: 'color',
         headerName: t('products.color'),
