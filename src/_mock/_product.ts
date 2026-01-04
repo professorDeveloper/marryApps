@@ -1,4 +1,4 @@
-import type { IProductItem } from 'src/types/departments';
+import type { IProductItem } from 'src/types/departments.tsx';
 
 export const PRODUCT_GENDER_OPTIONS = [
   { label: 'Men', value: 'Men' },
