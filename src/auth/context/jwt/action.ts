@@ -6,23 +6,34 @@ import { JWT_STORAGE_KEY } from './constant';
 // ----------------------------------------------------------------------
 
 export type SignInParams = {
-  email: string;
+  username: string;
   password: string;
+  pincode: string;
 };
 
 export type SignUpParams = {
-  email: string;
+  fullName: string;
+  username: string;
   password: string;
-  firstName: string;
-  lastName: string;
+  phoneNumber: string;
+  pincode: string;
+  role: 'user' | 'admin';
 };
 
 /** **************************************
  * Sign in
  *************************************** */
-export const signInWithPassword = async ({ email, password }: SignInParams): Promise<void> => {
+export const signInWithPassword = async ({
+  username,
+  password,
+  pincode
+}: SignInParams): Promise<void> => {
   try {
-    const params = { email, password };
+    const params = {
+      username,
+      password,
+      pincode
+    };
 
     const res = await axios.post(endpoints.auth.signIn, params);
 
@@ -43,16 +54,20 @@ export const signInWithPassword = async ({ email, password }: SignInParams): Pro
  * Sign up
  *************************************** */
 export const signUp = async ({
-  email,
+  fullName,
+  username,
   password,
-  firstName,
-  lastName,
+  phoneNumber,
+  pincode,
+  role = 'user',
 }: SignUpParams): Promise<void> => {
   const params = {
-    email,
+    fullName,
+    username,
     password,
-    firstName,
-    lastName,
+    phoneNumber,
+    pincode,
+    role,
   };
 
   try {

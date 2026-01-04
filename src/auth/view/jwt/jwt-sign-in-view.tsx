@@ -29,11 +29,18 @@ import { signInWithPassword } from '../../context/jwt';
 export type SignInSchemaType = z.infer<typeof SignInSchema>;
 
 export const SignInSchema = z.object({
-  email: schemaUtils.email(),
+  username: z
+    .string()
+    .min(1, { message: 'Foydalanuvchi nomi kerak!' }),
   password: z
     .string()
-    .min(1, { message: 'Password is required!' })
-    .min(6, { message: 'Password must be at least 6 characters!' }),
+    .min(1, { message: 'Parol kerak!' })
+    .min(6, { message: 'Parol kamida 6 ta belgi bo\'lishi kerak!' }),
+  pincode: z
+    .string()
+    .min(4, { message: 'PIN kod kamida 4 ta raqam bo\'lishi kerak!' })
+    .max(4, { message: 'PIN kod 4 ta raqam bo\'lishi kerak!' })
+    .regex(/^\d+$/, { message: 'PIN kod faqat raqamlardan iborat bo\'lishi kerak!' }),
 });
 
 // ----------------------------------------------------------------------
@@ -48,8 +55,9 @@ export function JwtSignInView() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const defaultValues: SignInSchemaType = {
-    email: 'demo@minimals.cc',
-    password: '@2Minimal',
+    username: 'sami',
+    password: '',
+    pincode: 'XXXX',
   };
 
   const methods = useForm({
@@ -64,7 +72,11 @@ export function JwtSignInView() {
 
   const onSubmit = handleSubmit(async (data) => {
     try {
-      await signInWithPassword({ email: data.email, password: data.password });
+      await signInWithPassword({
+        username: data.username,
+        password: data.password,
+        pincode: data.pincode
+      });
       await checkUserSession?.();
 
       router.refresh();
@@ -78,9 +90,9 @@ export function JwtSignInView() {
   const renderForm = () => (
     <Stack spacing={3}>
       <Field.Text
-        name="email"
-        label="Email"
-        placeholder="demo@minimals.cc"
+        name="username"
+        label="Foydalanuvchi nomi"
+        placeholder="sami"
         slotProps={{ inputLabel: { shrink: true } }}
       />
 
@@ -107,6 +119,21 @@ export function JwtSignInView() {
           }}
         />
       </Stack>
+
+      <Field.Text
+        name="pincode"
+        label="PIN kod"
+        placeholder="XXXX"
+        type="password"
+        slotProps={{
+          inputLabel: { shrink: true },
+          input: {
+            inputProps: {
+              maxLength: 4,
+            }
+          }
+        }}
+      />
 
       <Button
         fullWidth
@@ -151,8 +178,19 @@ export function JwtSignInView() {
           </Typography>
         </Box>
 
-        <Typography variant="h4" sx={{ mb: 1, fontWeight: 700 }}>
+        <Typography variant="h4" sx={{ mb: 1, fontWeight: 700, color: 'text.primary' }}>
           Hisobga kirish
+        </Typography>
+
+        <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+          Hisobingiz yoqmi?{' '}
+          <Link
+            component={RouterLink}
+            href={paths.auth.jwt.signUp}
+            sx={{ color: '#4facfe', textDecoration: 'none', fontWeight: 600 }}
+          >
+            Yaratish
+          </Link>
         </Typography>
       </Box>
 

@@ -30,13 +30,18 @@ import { SignUpTerms } from '../../components/sign-up-terms';
 export type SignUpSchemaType = z.infer<typeof SignUpSchema>;
 
 export const SignUpSchema = z.object({
-  firstName: z.string().min(1, { message: 'First name is required!' }),
-  lastName: z.string().min(1, { message: 'Last name is required!' }),
-  email: schemaUtils.email(),
+  fullName: z.string().min(1, { message: 'To\'liq ism kerak!' }),
+  username: z.string().min(1, { message: 'Foydalanuvchi nomi kerak!' }),
+  phoneNumber: z.string().min(1, { message: 'Telefon raqami kerak!' }),
   password: z
     .string()
-    .min(1, { message: 'Password is required!' })
-    .min(6, { message: 'Password must be at least 6 characters!' }),
+    .min(1, { message: 'Parol kerak!' })
+    .min(6, { message: 'Parol kamida 6 ta belgi bo\'lishi kerak!' }),
+  pincode: z
+    .string()
+    .min(4, { message: 'PIN kod kamida 4 ta raqam bo\'lishi kerak!' })
+    .max(4, { message: 'PIN kod 4 ta raqam bo\'lishi kerak!' })
+    .regex(/^\d+$/, { message: 'PIN kod faqat raqamlardan iborat bo\'lishi kerak!' }),
 });
 
 // ----------------------------------------------------------------------
@@ -51,10 +56,11 @@ export function JwtSignUpView() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const defaultValues: SignUpSchemaType = {
-    firstName: 'Hello',
-    lastName: 'Friend',
-    email: 'hello@gmail.com',
-    password: '@2Minimal',
+    fullName: 'Sami',
+    username: 'sami',
+    phoneNumber: '+998957749122',
+    password: '',
+    pincode: 'XXXX',
   };
 
   const methods = useForm({
@@ -70,10 +76,12 @@ export function JwtSignUpView() {
   const onSubmit = handleSubmit(async (data) => {
     try {
       await signUp({
-        email: data.email,
+        fullName: data.fullName,
+        username: data.username,
         password: data.password,
-        firstName: data.firstName,
-        lastName: data.lastName,
+        phoneNumber: data.phoneNumber,
+        pincode: data.pincode,
+        role: 'user',
       });
       await checkUserSession?.();
 
@@ -87,29 +95,25 @@ export function JwtSignUpView() {
 
   const renderForm = () => (
     <Stack spacing={3}>
-      <Stack
-        spacing={2}
-        direction={{ xs: 'column', sm: 'row' }}
-      >
-        <Field.Text
-          name="firstName"
-          label="Ismi"
-          placeholder="Ismi"
-          slotProps={{ inputLabel: { shrink: true } }}
-        />
-        <Field.Text
-          name="lastName"
-          label="Familiyasi"
-          placeholder="Familiyasi"
-          slotProps={{ inputLabel: { shrink: true } }}
-        />
-      </Stack>
+      <Field.Text
+        name="fullName"
+        label="To'liq ism"
+        placeholder="Sami"
+        slotProps={{ inputLabel: { shrink: true } }}
+      />
 
-      <Field.Text 
-        name="email" 
-        label="Email" 
-        placeholder="example@maryai.com"
-        slotProps={{ inputLabel: { shrink: true } }} 
+      <Field.Text
+        name="username"
+        label="Foydalanuvchi nomi"
+        placeholder="sami"
+        slotProps={{ inputLabel: { shrink: true } }}
+      />
+
+      <Field.Text
+        name="phoneNumber"
+        label="Telefon raqami"
+        placeholder="+998 95 774 91 22"
+        slotProps={{ inputLabel: { shrink: true } }}
       />
 
       <Stack spacing={1.5}>
@@ -129,7 +133,7 @@ export function JwtSignUpView() {
               endAdornment: (
                 <InputAdornment position="end">
                   <IconButton onClick={showPassword.onToggle} edge="end" size="small">
-                    <Iconify 
+                    <Iconify
                       icon={showPassword.value ? 'solar:eye-bold' : 'solar:eye-closed-bold'}
                       width={20}
                     />
@@ -140,6 +144,21 @@ export function JwtSignUpView() {
           }}
         />
       </Stack>
+
+      <Field.Text
+        name="pincode"
+        label="PIN kod"
+        placeholder="XXXX"
+        type="password"
+        slotProps={{
+          inputLabel: { shrink: true },
+          input: {
+            inputProps: {
+              maxLength: 4,
+            }
+          }
+        }}
+      />
 
       <Button
         fullWidth
@@ -187,9 +206,9 @@ export function JwtSignUpView() {
         </Box>
 
         <Typography variant="h4" sx={{ mb: 1, fontWeight: 700 }}>
-          Mutlaqo bepul boshlang
+          Hisob yaratish
         </Typography>
-        
+
         <Typography variant="body2" sx={{ color: 'text.secondary' }}>
           Allaqachon akkauntingiz bormi?{' '}
           <Link
