@@ -2,7 +2,7 @@
 // DEPARTMENTS EDIT VIEW - REAL API INTEGRATION
 // ============================================================================
 
-import type { IDepartmentFormData } from 'src/types/departments';
+import type { IDepartmentFormData } from 'src/types/departments.tsx';
 import type { CardSection, GenericEditViewConfig } from 'src/components/generic-edit-view';
 
 import { useCallback } from 'react';

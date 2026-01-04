@@ -3,7 +3,7 @@
 // ============================================================================
 
 import type { GridColDef } from '@mui/x-data-grid';
-import type { IDepartmentItem } from 'src/types/departments';
+import type { IDepartmentItem } from 'src/types/departments.tsx';
 
 import { useTranslation } from 'react-i18next';
 import { useMemo, useState, useCallback } from 'react';
