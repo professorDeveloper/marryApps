@@ -23,6 +23,7 @@ import (
 	"gitlab.yurtal.tech/company/maryai/back/pkg/paymentPayme"
 	pg "gitlab.yurtal.tech/company/maryai/back/pkg/postgres"
 	"gitlab.yurtal.tech/company/maryai/back/pkg/validate"
+	"gitlab.yurtal.tech/company/maryai/back/internal/middleware"
 
 	_ "gitlab.yurtal.tech/company/maryai/back/internal/api/docs"
 )
@@ -50,6 +51,7 @@ func Run(cfg *config.Config) {
 	paymeClient := paymentPayme.NewClient(slog.Default(), http.DefaultClient, paymentPayme.BaseUrl(cfg.Payme.Url), paymentPayme.ClientKey(cfg.Payme.ClientKey), paymentPayme.MerchantId(cfg.Payme.MerchantID), paymentPayme.Login(cfg.Payme.Login), paymentPayme.Password(cfg.Payme.Password), paymentPayme.ReturnUrl(cfg.Payme.ReturnUrl))
 
 	e := echo.New()
+	middleware.SetupMiddleware(e, cfg)
 
 	pgClient, err := pg.New(pg.Username(cfg.Postgres.User), pg.Password(cfg.Postgres.Password),
 		pg.Host(cfg.Postgres.Host), pg.Port(cfg.Postgres.Port),
