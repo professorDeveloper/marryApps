@@ -105,6 +105,7 @@ const ContentRoot = styled('div', {
   flexDirection: 'column',
   justifyContent: 'center',
   padding: theme.spacing(0, 3),
+  paddingTop: theme.spacing(3),
   ...(filled && {
     borderRadius: Number(theme.shape.borderRadius) * 2,
     backgroundColor: varAlpha(theme.vars.palette.grey['500Channel'], 0.04),

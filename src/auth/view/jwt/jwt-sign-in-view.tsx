@@ -183,7 +183,7 @@ export function JwtSignInView() {
           Hisobga kirish
         </Typography>
 
-        <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+        {/* <Typography variant="body2" sx={{ color: 'text.secondary' }}>
           Hisobingiz yoqmi?{' '}
           <Link
             component={RouterLink}
@@ -192,7 +192,7 @@ export function JwtSignInView() {
           >
             Yaratish
           </Link>
-        </Typography>
+        </Typography> */}
       </Box>
 
       <Form methods={methods} onSubmit={onSubmit}>
