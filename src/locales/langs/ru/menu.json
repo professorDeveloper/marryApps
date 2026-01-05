@@ -55,13 +55,14 @@
   "results_found": "результатов найдено",
   "total_results": "Всего результатов",
   "departments": {
-    "title": "Раздел",
+    "title": "Отделения",
     "list": "Список",
-    "add": "Добавить",
+    "add": "Добавить отделение",
     "edit": "Редактировать",
     "view": "Просмотр",
     "delete": "Удалить",
     "name": "Название",
+    "name_i18n": "Название (i18n)",
     "publish": "Статус",
     "stock": "Цвет",
     "published": "Опубликовано",
@@ -74,8 +75,11 @@
     "price": "Цена",
     "specifications": "Характеристики",
     "storage": "Хранилище",
+    "storageId": "ID хранилища",
     "created": "Создано",
-    "updated": "Обновлено"
+    "updated": "Обновлено",
+    "basicInfo": "Основная информация",
+    "storageSection": "Хранилище"
   },
   "toolbar": {
     "columns": "Колонки",
@@ -269,6 +273,27 @@
       "categories": "Категории",
       "semifinished": "Полуфабрикаты",
       "meals": "Блюда"
+    },
+    "warehouse": {
+      "title": "Склад",
+      "stocks": "Запасы",
+      "transfers": "Передачи",
+      "locations": "Местоположения",
+      "suppliers": "Поставщики"
+    },
+    "reports": {
+      "title": "Отчеты",
+      "sales": "Продажи",
+      "inventory": "Инвентарь",
+      "custom": "Пользовательский",
+      "archives": "Архивы"
+    },
+    "settings": {
+      "title": "Настройки",
+      "general": "Основные",
+      "profile": "Профиль",
+      "notifications": "Уведомления",
+      "integrations": "Интеграции"
     }
   },
   "management": {

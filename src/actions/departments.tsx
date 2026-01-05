@@ -1,5 +1,5 @@
 import type { SWRConfiguration } from 'swr';
-import type { IProductItem, IDepartmentItem, IDepartmentFormData, IStorageItem } from 'src/types/departments.tsx';
+import type { IProductItem, IStorageItem, IDepartmentItem, IDepartmentFormData } from 'src/types/departments.tsx';
 
 import useSWR, { mutate } from 'swr';
 import { useMemo, useCallback } from 'react';

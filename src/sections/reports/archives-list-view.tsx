@@ -5,15 +5,13 @@ import { useTranslation } from 'react-i18next';
 
 import { paths } from 'src/routes/paths';
 
-import { _reportsArchives } from 'src/_mock/_reports';
-
 import { Iconify } from 'src/components/iconify';
 import { CustomGridActionsCellItem } from 'src/components/custom-data-grid';
 import { RenderCellItem, GenericTableView } from 'src/components/generic-table-view';
 
 export function ArchivesListView() {
   const { t } = useTranslation('menu');
-  const rows = _reportsArchives;
+  const rows: any[] = [];
 
   const columns = useMemo<GridColDef[]>(
     () => [

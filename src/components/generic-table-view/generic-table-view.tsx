@@ -233,7 +233,7 @@ export function GenericTableView<T extends Record<string, any>>({
             onColumnVisibilityModelChange={(newModel) => setColumnVisibilityModel(newModel)}
             onRowSelectionModelChange={(newSelectionModel) => setSelectedRows(newSelectionModel)}
             slots={{
-              noRowsOverlay: () => <EmptyContent />,
+              noRowsOverlay: () => <EmptyContent title="Ishlab chiqish jarayonida" />,
               noResultsOverlay: () => <EmptyContent title="Natija topilmadi" />,
               toolbar: renderToolbar || (() => (
                 <GenericTableToolbar

@@ -6,6 +6,7 @@ import type { IDepartmentFormData } from 'src/types/departments.tsx';
 import type { CardSection, GenericEditViewConfig } from 'src/components/generic-edit-view';
 
 import { useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { paths } from 'src/routes/paths';
 import { useRouter, useParams } from 'src/routes/hooks';
@@ -23,50 +24,6 @@ export interface DepartmentEditViewProps {
 }
 
 // ============================================================================
-// FIELD CONFIGS
-// ============================================================================
-
-const BASIC_INFO_SECTION: CardSection = {
-    id: 'basic',
-    title: 'Asosiy ma\'lumotlar',
-    columns: 2,
-    fields: [
-        {
-            key: 'name',
-            label: 'Department Name',
-            type: 'text',
-            required: true,
-            defaultValue: '',
-            placeholder: 'e.g., Kitchen',
-        },
-        {
-            key: 'name_i18n',
-            label: 'Name (i18n)',
-            type: 'text',
-            required: true,
-            defaultValue: '',
-            placeholder: 'e.g., ошхона (Uzbek)',
-        },
-    ],
-};
-
-const STORAGE_SECTION: CardSection = {
-    id: 'storage',
-    title: 'Storage',
-    columns: 1,
-    fields: [
-        {
-            key: 'storage_id',
-            label: 'Storage ID',
-            type: 'text',
-            required: true,
-            defaultValue: '',
-            placeholder: 'e.g., 1234567890',
-        },
-    ],
-};
-
-// ============================================================================
 // COMPONENT
 // ============================================================================
 
@@ -74,12 +31,54 @@ export function ProductEditView({ isNew = false }: DepartmentEditViewProps) {
     const router = useRouter();
     const params = useParams();
     const id = params.id as string | undefined;
+    const { t } = useTranslation('menu');
     const { createDepartment } = useCreateDepartment();
     const { updateDepartment } = useUpdateDepartment();
     const { deleteDepartment } = useDeleteDepartment();
 
     // Load department if editing
     const { department, departmentLoading } = useGetDepartment(!isNew && id ? id : '');
+
+    // Create section configs with translations
+    const BASIC_INFO_SECTION: CardSection = {
+        id: 'basic',
+        title: t('departments.basicInfo'),
+        columns: 2,
+        fields: [
+            {
+                key: 'name',
+                label: t('departments.name'),
+                type: 'text',
+                required: true,
+                defaultValue: '',
+                placeholder: 'e.g., Kitchen',
+            },
+            {
+                key: 'name_i18n',
+                label: t('departments.name_i18n'),
+                type: 'text',
+                required: true,
+                defaultValue: '',
+                placeholder: 'e.g., ошхона (Uzbek)',
+            },
+        ],
+    };
+
+    const STORAGE_SECTION: CardSection = {
+        id: 'storage',
+        title: t('departments.storageSection'),
+        columns: 1,
+        fields: [
+            {
+                key: 'storage_id',
+                label: t('departments.storageId'),
+                type: 'text',
+                required: true,
+                defaultValue: '',
+                placeholder: 'e.g., 1234567890',
+            },
+        ],
+    };
 
     // Handle form submission
     const handleSubmit = useCallback(
@@ -121,12 +120,12 @@ export function ProductEditView({ isNew = false }: DepartmentEditViewProps) {
     }, [id, deleteDepartment, router]);
 
     const config: GenericEditViewConfig = {
-        title: 'Department',
-        entityName: 'department',
+        title: t('departments.title'),
+        entityName: t('departments.title'),
         breadcrumbs: [
-            { name: 'Menu', href: paths.menu.root },
-            { name: 'Departments', href: paths.menu.product.root },
-            { name: isNew ? 'New' : 'Edit', href: '' },
+            { name: t('app'), href: paths.menu.root },
+            { name: t('departments.title'), href: paths.menu.product.root },
+            { name: isNew ? t('departments.add') : t('departments.edit'), href: '' },
         ],
         sections: [
             BASIC_INFO_SECTION,

@@ -103,13 +103,14 @@
     }
   },
   "departments": {
-    "title": "Бўлим",
+    "title": "Бўлимлар",
     "list": "Рўйхат",
-    "add": "Қўшиш",
+    "add": "Бўлим қўшиш",
     "edit": "Таҳрирлаш",
     "view": "Кўриш",
     "delete": "Ўчириш",
     "name": "Номи",
+    "name_i18n": "Номи (i18n)",
     "publish": "Обмор",
     "stock": "Ранг",
     "published": "Нашр қилинган",
@@ -122,8 +123,11 @@
     "price": "Нархи",
     "specifications": "Хусусиятлари",
     "storage": "Омбор",
+    "storageId": "Омбор ID",
     "created": "Яратилган",
-    "updated": "Янгиланган"
+    "updated": "Янгиланган",
+    "basicInfo": "Асосий маълумотлар",
+    "storageSection": "Омбор"
   },
   "categories": {
     "title": "Категориялар",
@@ -269,6 +273,27 @@
       "categories": "Категориялар",
       "semifinished": "Ярим тайёр маҳсулотлар",
       "meals": "Таомлар"
+    },
+    "warehouse": {
+      "title": "Омбор",
+      "stocks": "Стокlar",
+      "transfers": "Ўтказмалар",
+      "locations": "Жойлашувлар",
+      "suppliers": "Етказиб берувчилар"
+    },
+    "reports": {
+      "title": "Ҳисоботлар",
+      "sales": "Сотувлар",
+      "inventory": "Инвентаризация",
+      "custom": "Махсус",
+      "archives": "Архивлар"
+    },
+    "settings": {
+      "title": "Созламалар",
+      "general": "Умумий",
+      "profile": "Профил",
+      "notifications": "Билдиришномалар",
+      "integrations": "Интеграциялар"
     }
   },
   "management": {

@@ -5,8 +5,6 @@ import { useTranslation } from 'react-i18next';
 
 import { paths } from 'src/routes/paths';
 
-import { _settings } from 'src/_mock/_settings';
-
 import { Iconify } from 'src/components/iconify';
 import { GenericTableView } from 'src/components/generic-table-view';
 import { CustomGridActionsCellItem } from 'src/components/custom-data-grid';
@@ -14,7 +12,7 @@ import { CustomGridActionsCellItem } from 'src/components/custom-data-grid';
 export function SettingsListView() {
   const { t } = useTranslation('menu');
 
-  const settings = _settings;
+  const settings: any[] = [];
 
   const columns = useMemo<GridColDef[]>(
     () => [

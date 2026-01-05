@@ -5,8 +5,6 @@ import { useTranslation } from 'react-i18next';
 
 import { paths } from 'src/routes/paths';
 
-import { _reports } from 'src/_mock/_reports';
-
 import { Iconify } from 'src/components/iconify';
 import { GenericTableView } from 'src/components/generic-table-view';
 import { CustomGridActionsCellItem } from 'src/components/custom-data-grid';
@@ -14,7 +12,7 @@ import { CustomGridActionsCellItem } from 'src/components/custom-data-grid';
 export function ReportsListView() {
   const { t } = useTranslation('menu');
 
-  const reports = _reports;
+  const reports: any[] = [];
 
   const columns = useMemo<GridColDef[]>(
     () => [

@@ -103,13 +103,14 @@
     }
   },
   "departments": {
-    "title": "Bo'lim",
+    "title": "Bo'limlar",
     "list": "Ro'yxat",
-    "add": "Qo'shish",
+    "add": "Bo'lim qo'shish",
     "edit": "Tahrirlash",
     "view": "Ko'rish",
     "delete": "O'chirish",
     "name": "Nomi",
+    "name_i18n": "Nomi (i18n)",
     "publish": "Obmor",
     "stock": "Rang",
     "published": "Oshxona",
@@ -122,8 +123,11 @@
     "price": "Narxi",
     "specifications": "Xususiyatlari",
     "storage": "Ombor",
+    "storageId": "Ombor ID",
     "created": "Yaratilgan",
-    "updated": "Yangilangan"
+    "updated": "Yangilangan",
+    "basicInfo": "Asosiy ma'lumotlar",
+    "storageSection": "Ombor"
   },
   "categories": {
     "title": "Kategoriyalar",

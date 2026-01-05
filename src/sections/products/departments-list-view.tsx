@@ -8,12 +8,13 @@ import type { IDepartmentItem } from 'src/types/departments.tsx';
 import { useTranslation } from 'react-i18next';
 import { useMemo, useState, useCallback } from 'react';
 
+import { Avatar } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
 
 import { paths } from 'src/routes/paths';
 import { useRouter } from 'src/routes/hooks';
 
-import { useGetDepartments, useDeleteDepartment, useGetStorages, useGetStorageName } from 'src/actions/departments';
+import { useGetStorages, useGetDepartments, useGetStorageName, useDeleteDepartment } from 'src/actions/departments';
 
 import { Iconify } from 'src/components/iconify';
 import {
@@ -32,9 +33,28 @@ import { GenericViewModal, SpecificationsTable } from 'src/components/generic-vi
 function RenderCellDepartmentName({ params }: { params: any }) {
   const { t } = useTranslation('menu');
 
+  // Get initials from department name
+  const getInitials = (name: string) => name
+      .split(' ')
+      .map(word => word[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2);
+
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-      <Iconify icon="solar:add-folder-bold" width={24} height={24} />
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8, paddingTop: 20, paddingBottom: 20 }}>
+      <Avatar
+        sx={{
+          width: 60,
+          height: 60,
+          fontSize: '3',
+          fontWeight: 'bold',
+          color: '#000000',
+          borderRadius: '15%',
+        }}
+      >
+        {getInitials(params.row.name)}
+      </Avatar>
       <div>
         <div style={{ fontWeight: 500 }}>{params.row.name}</div>
         <div style={{ fontSize: '0.75rem', opacity: 0.6 }}>{params.row.name_i18n}</div>
@@ -93,7 +113,7 @@ export function ProductListView() {
     () => [
       {
         field: 'name',
-        headerName: t('departments.name') || 'Name',
+        headerName: t('departments.name'),
         flex: 1,
         minWidth: 280,
         hideable: false,
@@ -101,20 +121,20 @@ export function ProductListView() {
       },
       {
         field: 'storage_id',
-        headerName: t('departments.storage') || 'Storage ID',
+        headerName: t('departments.storage'),
         width: 180,
         renderCell: (params) => <RenderCellStorageId params={params} />,
       },
       {
         field: 'created_at',
-        headerName: t('departments.created') || 'Created',
+        headerName: t('departments.created'),
         width: 200,
         sortable: true,
         renderCell: (params) => <RenderCellDate params={params} dateField="created_at" />,
       },
       {
         field: 'updated_at',
-        headerName: t('departments.updated') || 'Updated',
+        headerName: t('departments.updated'),
         width: 200,
         sortable: true,
         renderCell: (params) => <RenderCellDate params={params} dateField="updated_at" />,
@@ -132,19 +152,19 @@ export function ProductListView() {
         getActions: (params) => [
           <CustomGridActionsCellItem
             showInMenu
-            label={t('departments.edit') || 'Edit'}
+            label={t('departments.edit')}
             icon={<Iconify icon="solar:pen-bold" />}
             onClick={() => handleEditDepartment(params.row.id)}
           />,
           <CustomGridActionsCellItem
             showInMenu
-            label={t('departments.view') || 'View'}
+            label={t('departments.view')}
             icon={<Iconify icon="solar:eye-bold" />}
             onClick={() => handleViewDepartment(params.row)}
           />,
           <CustomGridActionsCellItem
             showInMenu
-            label={t('departments.delete') || 'Delete'}
+            label={t('departments.delete')}
             icon={<Iconify icon="solar:trash-bin-trash-bold" />}
             onClick={() => handleDeleteDepartment(params.row.id)}
             style={{ color: theme.vars.palette.error.main }}
@@ -189,23 +209,23 @@ export function ProductListView() {
 
     const specs = [
       {
-        label: t('departments.name') || 'Name',
+        label: t('departments.name'),
         value: dept.name || '-',
       },
       {
-        label: t('departments.name_i18n') || 'Name (i18n)',
+        label: t('departments.name_i18n'),
         value: dept.name_i18n || '-',
       },
       {
-        label: t('departments.storage') || 'Storage',
+        label: t('departments.storage'),
         value: storageName || '-',
       },
       {
-        label: t('departments.created') || 'Created',
+        label: t('departments.created'),
         value: new Date(dept.created_at).toLocaleString(),
       },
       {
-        label: t('departments.updated') || 'Updated',
+        label: t('departments.updated'),
         value: new Date(dept.updated_at).toLocaleString(),
       },
     ];
@@ -220,14 +240,14 @@ export function ProductListView() {
         loading={departmentsLoading}
         columns={columns}
         breadcrumbs={{
-          heading: t('departments.title') || 'Departments',
+          heading: t('departments.title'),
           links: [
-            { name: t('app') || 'Menu', href: paths.menu.root },
-            { name: t('departments.title') || 'Departments' },
+            { name: t('app'), href: paths.menu.root },
+            { name: t('departments.title') },
           ],
         }}
         addButton={{
-          label: t('departments.add') || 'Add Department',
+          label: t('departments.add'),
           href: paths.menu.product.new,
         }}
         filterOptions={{}}
@@ -249,7 +269,7 @@ export function ProductListView() {
       <GenericViewModal
         isOpen={viewModalOpen}
         onClose={handleCloseModal}
-        title={selectedDepartment?.name || t('departments.title') || 'Department'}
+        title={selectedDepartment?.name || t('departments.title')}
         data={selectedDepartment}
         renderContent={renderDepartmentSpecifications}
         maxWidth="sm"

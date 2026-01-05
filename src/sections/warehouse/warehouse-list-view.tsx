@@ -5,8 +5,6 @@ import { useTranslation } from 'react-i18next';
 
 import { paths } from 'src/routes/paths';
 
-import { _warehouses } from 'src/_mock/_warehouse';
-
 import { Iconify } from 'src/components/iconify';
 import { CustomGridActionsCellItem } from 'src/components/custom-data-grid';
 import { RenderCellItem, GenericTableView } from 'src/components/generic-table-view';
@@ -14,7 +12,7 @@ import { RenderCellItem, GenericTableView } from 'src/components/generic-table-v
 export function WarehouseListView() {
   const { t } = useTranslation('menu');
 
-  const warehouses = _warehouses;
+  const warehouses: any[] = [];
 
   const columns = useMemo<GridColDef[]>(
     () => [
@@ -80,8 +78,8 @@ export function WarehouseListView() {
         label: t('add'),
         href: paths.menu.warehouse.new,
       }}
-      onDeleteRow={() => {}}
-      onDeleteRows={() => {}}
+      onDeleteRow={() => { }}
+      onDeleteRows={() => { }}
     />
   );
 }

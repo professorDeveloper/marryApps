@@ -5,15 +5,13 @@ import { useTranslation } from 'react-i18next';
 
 import { paths } from 'src/routes/paths';
 
-import { _locations } from 'src/_mock/_warehouse';
-
 import { Iconify } from 'src/components/iconify';
 import { GenericTableView } from 'src/components/generic-table-view';
 import { CustomGridActionsCellItem } from 'src/components/custom-data-grid';
 
 export function LocationsListView() {
   const { t } = useTranslation('menu');
-  const rows = _locations;
+  const rows: any[] = [];
 
   const columns = useMemo<GridColDef[]>(
     () => [

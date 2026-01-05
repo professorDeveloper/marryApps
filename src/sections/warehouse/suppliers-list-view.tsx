@@ -5,15 +5,13 @@ import { useTranslation } from 'react-i18next';
 
 import { paths } from 'src/routes/paths';
 
-import { _suppliers } from 'src/_mock/_warehouse';
-
 import { Iconify } from 'src/components/iconify';
 import { CustomGridActionsCellItem } from 'src/components/custom-data-grid';
 import { RenderCellItem, GenericTableView } from 'src/components/generic-table-view';
 
 export function SuppliersListView() {
   const { t } = useTranslation('menu');
-  const rows = _suppliers;
+  const rows: any[] = [];
 
   const columns = useMemo<GridColDef[]>(
     () => [

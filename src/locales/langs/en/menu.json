@@ -115,13 +115,14 @@
     }
   },
   "departments": {
-    "title": "Section",
+    "title": "Departments",
     "list": "List",
-    "add": "Add",
+    "add": "Add Department",
     "edit": "Edit",
     "view": "View",
     "delete": "Delete",
     "name": "Name",
+    "name_i18n": "Name (i18n)",
     "publish": "Status",
     "stock": "Color",
     "color": "Color",
@@ -134,8 +135,11 @@
     "price": "Price",
     "specifications": "Specifications",
     "storage": "Storage",
+    "storageId": "Storage ID",
     "created": "Created",
-    "updated": "Updated"
+    "updated": "Updated",
+    "basicInfo": "Basic Information",
+    "storageSection": "Storage"
   },
   "categories": {
     "title": "Categories",
