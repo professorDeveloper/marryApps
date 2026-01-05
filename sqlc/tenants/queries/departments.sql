@@ -1,22 +1,22 @@
 -- name: CreateDepartment :one
-INSERT INTO departments (id, name, name_i18n, storage_id)
-VALUES ($1, $2, $3, $4)
-RETURNING id, name, name_i18n, storage_id, created_at, updated_at, deleted_at;
+INSERT INTO departments (id, name, name_i18n, storage_id, color_code)
+VALUES ($1, $2, $3, $4, $5)
+RETURNING id, name, name_i18n, storage_id, color_code, created_at, updated_at, deleted_at;
 
 -- name: GetDepartmentByID :one
-SELECT id, name, name_i18n, storage_id, created_at, updated_at, deleted_at
+SELECT id, name, name_i18n, storage_id, color_code, created_at, updated_at, deleted_at
 FROM departments
 WHERE id = $1 AND deleted_at = 0;
 
 -- name: GetAllDepartments :many
-SELECT id, name, name_i18n, storage_id, created_at, updated_at, deleted_at
+SELECT id, name, name_i18n, storage_id, color_code, created_at, updated_at, deleted_at
 FROM departments
 WHERE deleted_at = 0
 ORDER BY created_at DESC
 LIMIT $1 OFFSET $2;
 
 -- name: GetDepartmentsByStorageID :many
-SELECT id, name, name_i18n, storage_id, created_at, updated_at, deleted_at
+SELECT id, name, name_i18n, storage_id, color_code, created_at, updated_at, deleted_at
 FROM departments
 WHERE storage_id = $1 AND deleted_at = 0
 ORDER BY created_at DESC
@@ -27,9 +27,10 @@ UPDATE departments
 SET name = COALESCE($2, name),
     name_i18n = COALESCE($3, name_i18n),
     storage_id = COALESCE($4, storage_id),
+    color_code = COALESCE($5, color_code),
     updated_at = NOW()
 WHERE id = $1 AND deleted_at = 0
-RETURNING id, name, name_i18n, storage_id, created_at, updated_at, deleted_at;
+RETURNING id, name, name_i18n, storage_id, color_code, created_at, updated_at, deleted_at;
 
 -- name: DeleteDepartment :exec
 UPDATE departments
@@ -42,7 +43,7 @@ SET deleted_at = 0
 WHERE id = $1 AND deleted_at != 0;
 
 -- name: SearchDepartments :many
-SELECT id, name, name_i18n, storage_id, created_at, updated_at, deleted_at
+SELECT id, name, name_i18n, storage_id, color_code, created_at, updated_at, deleted_at
 FROM departments
 WHERE deleted_at = 0 AND name ILIKE '%' || $1 || '%'
 ORDER BY created_at DESC

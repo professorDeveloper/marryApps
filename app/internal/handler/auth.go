@@ -11,7 +11,7 @@ import (
 
 // Login handles user login
 // @Summary User login
-// @Description Authenticate user and return access token and password gonna be YYYYMMDD
+// @Description Authenticate user using username, password, and brand_id (slug) and return access token
 // @Tags auth
 // @Accept json
 // @Produce json
@@ -51,7 +51,7 @@ func (h *Handler) Login(c echo.Context) error {
 
 // LoginWithPincode handles user login via pincode (for kitchen, terminals, cashiers)
 // @Summary User login with pincode
-// @Description Authenticate user using pincode and brand ID. Used for kitchen staff, terminals, and cashiers
+// @Description Authenticate user using pincode and brand_id (slug). Used for kitchen staff, terminals, and cashiers
 // @Tags auth
 // @Accept json
 // @Produce json

@@ -231,53 +231,6 @@ func (ns NullTableStatus) Value() (driver.Value, error) {
 	return string(ns.TableStatus), nil
 }
 
-type UserRole string
-
-const (
-	UserRoleAdmin      UserRole = "admin"
-	UserRoleUser       UserRole = "user"
-	UserRoleCashier    UserRole = "cashier"
-	UserRoleSuperadmin UserRole = "superadmin"
-	UserRoleKitchen    UserRole = "kitchen"
-	UserRoleWaiter     UserRole = "waiter"
-	UserRoleManager    UserRole = "manager"
-)
-
-func (e *UserRole) Scan(src interface{}) error {
-	switch s := src.(type) {
-	case []byte:
-		*e = UserRole(s)
-	case string:
-		*e = UserRole(s)
-	default:
-		return fmt.Errorf("unsupported scan type for UserRole: %T", src)
-	}
-	return nil
-}
-
-type NullUserRole struct {
-	UserRole UserRole `json:"user_role"`
-	Valid    bool     `json:"valid"` // Valid is true if UserRole is not NULL
-}
-
-// Scan implements the Scanner interface.
-func (ns *NullUserRole) Scan(value interface{}) error {
-	if value == nil {
-		ns.UserRole, ns.Valid = "", false
-		return nil
-	}
-	ns.Valid = true
-	return ns.UserRole.Scan(value)
-}
-
-// Value implements the driver Valuer interface.
-func (ns NullUserRole) Value() (driver.Value, error) {
-	if !ns.Valid {
-		return nil, nil
-	}
-	return string(ns.UserRole), nil
-}
-
 type Attendance struct {
 	ID           uuid.UUID          `json:"id"`
 	UserID       uuid.UUID          `json:"user_id"`
@@ -316,6 +269,7 @@ type Category struct {
 	ID           uuid.UUID          `json:"id"`
 	Name         string             `json:"name"`
 	PictureUrl   *string            `json:"picture_url"`
+	ColorCode    *string            `json:"color_code"`
 	NameI18n     pgtype.UUID        `json:"name_i18n"`
 	DepartmentID pgtype.UUID        `json:"department_id"`
 	StorageID    pgtype.UUID        `json:"storage_id"`
@@ -333,6 +287,7 @@ type Compound struct {
 	DescriptionI18n pgtype.UUID         `json:"description_i18n"`
 	Quantity        *int32              `json:"quantity"`
 	PictureUrl      *string             `json:"picture_url"`
+	ColorCode       *string             `json:"color_code"`
 	Measurement     NullMeasurementType `json:"measurement"`
 	Price           pgtype.Numeric      `json:"price"`
 	DepartmentID    pgtype.UUID         `json:"department_id"`
@@ -364,6 +319,7 @@ type CompoundsDetail struct {
 type Department struct {
 	ID        uuid.UUID          `json:"id"`
 	Name      string             `json:"name"`
+	ColorCode *string            `json:"color_code"`
 	NameI18n  pgtype.UUID        `json:"name_i18n"`
 	StorageID pgtype.UUID        `json:"storage_id"`
 	CreatedAt pgtype.Timestamptz `json:"created_at"`
@@ -380,6 +336,7 @@ type Good struct {
 	CategoryID      pgtype.UUID        `json:"category_id"`
 	DepartmentID    pgtype.UUID        `json:"department_id"`
 	PictureUrl      *string            `json:"picture_url"`
+	ColorCode       *string            `json:"color_code"`
 	Price           pgtype.Numeric     `json:"price"`
 	CookTime        *int32             `json:"cook_time"`
 	CreatedAt       pgtype.Timestamptz `json:"created_at"`
@@ -416,6 +373,7 @@ type Ingredient struct {
 	GroupID     pgtype.UUID         `json:"group_id"`
 	Measurement NullMeasurementType `json:"measurement"`
 	PictureUrl  *string             `json:"picture_url"`
+	ColorCode   *string             `json:"color_code"`
 	BrandID     pgtype.UUID         `json:"brand_id"`
 	CreatedAt   pgtype.Timestamptz  `json:"created_at"`
 	UpdatedAt   pgtype.Timestamptz  `json:"updated_at"`
@@ -426,6 +384,7 @@ type IngredientGroup struct {
 	ID         uuid.UUID          `json:"id"`
 	Name       string             `json:"name"`
 	PictureUrl *string            `json:"picture_url"`
+	ColorCode  *string            `json:"color_code"`
 	NameI18n   pgtype.UUID        `json:"name_i18n"`
 	CreatedAt  pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt  pgtype.Timestamptz `json:"updated_at"`
@@ -517,7 +476,7 @@ type QrSession struct {
 type Shift struct {
 	ID          uuid.UUID          `json:"id"`
 	Name        string             `json:"name"`
-	Role        NullUserRole       `json:"role"`
+	Role        *string            `json:"role"`
 	WorkingDays *string            `json:"working_days"`
 	OpenTime    *int64             `json:"open_time"`
 	CloseTime   *int64             `json:"close_time"`
@@ -533,6 +492,7 @@ type Storage struct {
 	BranchID   pgtype.UUID        `json:"branch_id"`
 	NameI18n   pgtype.UUID        `json:"name_i18n"`
 	PictureUrl *string            `json:"picture_url"`
+	ColorCode  *string            `json:"color_code"`
 	CreatedAt  pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt  pgtype.Timestamptz `json:"updated_at"`
 	DeletedAt  *int64             `json:"deleted_at"`
@@ -552,7 +512,7 @@ type User struct {
 	ID           uuid.UUID          `json:"id"`
 	FullName     *string            `json:"full_name"`
 	Username     *string            `json:"username"`
-	Role         NullUserRole       `json:"role"`
+	Role         string             `json:"role"`
 	Email        *string            `json:"email"`
 	ShiftID      pgtype.UUID        `json:"shift_id"`
 	Pincode      *string            `json:"pincode"`

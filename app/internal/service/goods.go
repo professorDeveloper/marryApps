@@ -14,6 +14,25 @@ import (
 	pg "gitlab.yurtal.tech/company/maryai/back/internal/repository/pg/tenantsdb"
 )
 
+// Helper function to convert good response
+func goodToResponse(g pg.Good) *model.GoodResponse {
+	return &model.GoodResponse{
+		ID:              g.ID.String(),
+		Name:            g.Name,
+		Description:     g.Description,
+		NameI18n:        uuidToStr(g.NameI18n),
+		DescriptionI18n: uuidToStr(g.DescriptionI18n),
+		CategoryID:      uuidToStr(g.CategoryID),
+		DepartmentID:    uuidToStr(g.DepartmentID),
+		Price:           fmt.Sprintf("%v", g.Price),
+		CookTime:        g.CookTime,
+		PictureUrl:      g.PictureUrl,
+		ColorCode:       g.ColorCode,
+		CreatedAt:       timestampToTime(g.CreatedAt),
+		UpdatedAt:       timestampToTime(g.UpdatedAt),
+	}
+}
+
 type GoodsS struct {
 	repo *repository.Repository
 }
@@ -23,7 +42,7 @@ func NewGoodsS(repo *repository.Repository) *GoodsS {
 }
 
 // CreateGood creates a new good/menu item
-func (g *GoodsS) CreateGood(ctx context.Context, name string, description *string, nameI18n, descriptionI18n, categoryID, departmentID *string, price string, cookTime *int32, pictureUrl *string) (*model.GoodResponse, error) {
+func (g *GoodsS) CreateGood(ctx context.Context, name string, description *string, nameI18n, descriptionI18n, categoryID, departmentID *string, price string, cookTime *int32, pictureUrl *string, colorCode *string) (*model.GoodResponse, error) {
 	if name == "" {
 		return nil, fmt.Errorf("good name is required")
 	}
@@ -83,13 +102,14 @@ func (g *GoodsS) CreateGood(ctx context.Context, name string, description *strin
 		Price:           numPrice,
 		CookTime:        cookTime,
 		PictureUrl:      pictureUrl,
+		ColorCode:       colorCode,
 	})
 	if err != nil {
 		log.Printf("CreateGood failed: %v", err)
 		return nil, fmt.Errorf("failed to create good: %w", err)
 	}
 
-	return toGoodResponse(good), nil
+	return goodToResponse(good), nil
 }
 
 // GetGoodByID retrieves a good by ID
@@ -108,7 +128,7 @@ func (g *GoodsS) GetGoodByID(ctx context.Context, goodID string) (*model.GoodRes
 		return nil, fmt.Errorf("failed to retrieve good: %w", err)
 	}
 
-	return toGoodResponse(good), nil
+	return goodToResponse(good), nil
 }
 
 // GetAllGoods retrieves all goods with pagination
@@ -124,7 +144,7 @@ func (g *GoodsS) GetAllGoods(ctx context.Context, limit, offset int32) ([]*model
 
 	var responses []*model.GoodResponse
 	for _, good := range goods {
-		responses = append(responses, toGoodResponse(good))
+		responses = append(responses, goodToResponse(good))
 	}
 	return responses, nil
 }
@@ -148,7 +168,7 @@ func (g *GoodsS) GetGoodsByCategory(ctx context.Context, categoryID string, limi
 
 	var responses []*model.GoodResponse
 	for _, good := range goods {
-		responses = append(responses, toGoodResponse(good))
+		responses = append(responses, goodToResponse(good))
 	}
 	return responses, nil
 }
@@ -172,7 +192,7 @@ func (g *GoodsS) GetGoodsByDepartment(ctx context.Context, departmentID string, 
 
 	var responses []*model.GoodResponse
 	for _, good := range goods {
-		responses = append(responses, toGoodResponse(good))
+		responses = append(responses, goodToResponse(good))
 	}
 	return responses, nil
 }
@@ -197,13 +217,13 @@ func (g *GoodsS) GetGoodsByPriceRange(ctx context.Context, minPrice, maxPrice st
 
 	var responses []*model.GoodResponse
 	for _, good := range goods {
-		responses = append(responses, toGoodResponse(good))
+		responses = append(responses, goodToResponse(good))
 	}
 	return responses, nil
 }
 
 // UpdateGood updates a good
-func (g *GoodsS) UpdateGood(ctx context.Context, goodID string, name, description, nameI18n, descriptionI18n, categoryID, departmentID, price *string, cookTime *int32, pictureUrl *string) (*model.GoodResponse, error) {
+func (g *GoodsS) UpdateGood(ctx context.Context, goodID string, name, description, nameI18n, descriptionI18n, categoryID, departmentID, price *string, cookTime *int32, pictureUrl *string, colorCode *string) (*model.GoodResponse, error) {
 	id, err := uuid.Parse(goodID)
 	if err != nil {
 		return nil, fmt.Errorf("invalid good ID: %w", err)
@@ -271,13 +291,14 @@ func (g *GoodsS) UpdateGood(ctx context.Context, goodID string, name, descriptio
 		Price:           priceNum,
 		CookTime:        cookTime,
 		PictureUrl:      pictureUrl,
+		ColorCode:       colorCode,
 	})
 	if err != nil {
 		log.Printf("UpdateGood failed: %v", err)
 		return nil, fmt.Errorf("failed to update good: %w", err)
 	}
 
-	return toGoodResponse(good), nil
+	return goodToResponse(good), nil
 }
 
 // UpdateGoodPrice updates the price of a good
@@ -299,7 +320,7 @@ func (g *GoodsS) UpdateGoodPrice(ctx context.Context, goodID, price string) (*mo
 		return nil, fmt.Errorf("failed to update good price: %w", err)
 	}
 
-	return toGoodResponse(good), nil
+	return goodToResponse(good), nil
 }
 
 // DeleteGood deletes a good
@@ -349,7 +370,21 @@ func (g *GoodsS) SearchGoods(ctx context.Context, query string, limit, offset in
 
 	var responses []*model.GoodResponse
 	for _, good := range goods {
-		responses = append(responses, toGoodResponse(good))
+		responses = append(responses, &model.GoodResponse{
+			ID:              good.ID.String(),
+			Name:            good.Name,
+			Description:     good.Description,
+			NameI18n:        uuidToStr(good.NameI18n),
+			DescriptionI18n: uuidToStr(good.DescriptionI18n),
+			CategoryID:      uuidToStr(good.CategoryID),
+			DepartmentID:    uuidToStr(good.DepartmentID),
+			Price:           fmt.Sprintf("%v", good.Price),
+			CookTime:        good.CookTime,
+			PictureUrl:      good.PictureUrl,
+			ColorCode:       nil, // SearchGoods doesn't include color_code
+			CreatedAt:       timestampToTime(good.CreatedAt),
+			UpdatedAt:       timestampToTime(good.UpdatedAt),
+		})
 	}
 	return responses, nil
 }
@@ -614,61 +649,6 @@ func (g *GoodsS) RestoreGoodDetail(ctx context.Context, detailID string) (*model
 }
 
 // Helper function to convert database good to response model
-func toGoodResponse(good pg.Good) *model.GoodResponse {
-	var nameI18nStr *string
-	if good.NameI18n.Valid {
-		str := good.NameI18n.String()
-		nameI18nStr = &str
-	}
-
-	var descriptionI18nStr *string
-	if good.DescriptionI18n.Valid {
-		str := good.DescriptionI18n.String()
-		descriptionI18nStr = &str
-	}
-
-	var categoryIDStr *string
-	if good.CategoryID.Valid {
-		str := good.CategoryID.String()
-		categoryIDStr = &str
-	}
-
-	var departmentIDStr *string
-	if good.DepartmentID.Valid {
-		str := good.DepartmentID.String()
-		departmentIDStr = &str
-	}
-
-	var priceStr string
-	if good.Price.Valid && good.Price.Int != nil {
-		priceStr = good.Price.Int.String()
-	}
-
-	var createdAt *time.Time
-	if good.CreatedAt.Valid {
-		createdAt = &good.CreatedAt.Time
-	}
-
-	var updatedAt *time.Time
-	if good.UpdatedAt.Valid {
-		updatedAt = &good.UpdatedAt.Time
-	}
-
-	return &model.GoodResponse{
-		ID:              good.ID.String(),
-		Name:            good.Name,
-		Description:     good.Description,
-		NameI18n:        nameI18nStr,
-		DescriptionI18n: descriptionI18nStr,
-		CategoryID:      categoryIDStr,
-		DepartmentID:    departmentIDStr,
-		PictureUrl:      good.PictureUrl,
-		Price:           priceStr,
-		CookTime:        good.CookTime,
-		CreatedAt:       createdAt,
-		UpdatedAt:       updatedAt,
-	}
-}
 
 // Helper function to convert database good detail to response model
 func toGoodDetailResponse(detail pg.GoodsDetail) *model.GoodDetailResponse {

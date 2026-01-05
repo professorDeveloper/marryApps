@@ -1,22 +1,22 @@
 -- name: CreateCompound :one
-INSERT INTO compounds (id, name, name_i18n, description, description_i18n, quantity, picture_url, measurement, price, department_id)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-RETURNING id, name, name_i18n, description, description_i18n, quantity, picture_url, measurement, price, department_id, created_at, updated_at, deleted_at;
+INSERT INTO compounds (id, name, name_i18n, description, description_i18n, quantity, picture_url, color_code, measurement, price, department_id)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+RETURNING id, name, name_i18n, description, description_i18n, quantity, picture_url, color_code, measurement, price, department_id, created_at, updated_at, deleted_at;
 
 -- name: GetCompoundByID :one
-SELECT id, name, name_i18n, description, description_i18n, quantity, picture_url, measurement, price, department_id, created_at, updated_at, deleted_at
+SELECT id, name, name_i18n, description, description_i18n, quantity, picture_url, color_code, measurement, price, department_id, created_at, updated_at, deleted_at
 FROM compounds
 WHERE id = $1 AND deleted_at = 0;
 
 -- name: GetAllCompounds :many
-SELECT id, name, name_i18n, description, description_i18n, quantity, picture_url, measurement, price, department_id, created_at, updated_at, deleted_at
+SELECT id, name, name_i18n, description, description_i18n, quantity, picture_url, color_code, measurement, price, department_id, created_at, updated_at, deleted_at
 FROM compounds
 WHERE deleted_at = 0
 ORDER BY created_at DESC
 LIMIT $1 OFFSET $2;
 
 -- name: GetCompoundsByDepartmentID :many
-SELECT id, name, name_i18n, description, description_i18n, quantity, picture_url, measurement, price, department_id, created_at, updated_at, deleted_at
+SELECT id, name, name_i18n, description, description_i18n, quantity, picture_url, color_code, measurement, price, department_id, created_at, updated_at, deleted_at
 FROM compounds
 WHERE department_id = $1 AND deleted_at = 0
 ORDER BY created_at DESC
@@ -30,12 +30,13 @@ SET name = COALESCE($2, name),
     description_i18n = COALESCE($5, description_i18n),
     quantity = COALESCE($6, quantity),
     picture_url = COALESCE($7, picture_url),
-    measurement = COALESCE($8, measurement),
-    price = COALESCE($9, price),
-    department_id = COALESCE($10, department_id),
+    color_code = COALESCE($8, color_code),
+    measurement = COALESCE($9, measurement),
+    price = COALESCE($10, price),
+    department_id = COALESCE($11, department_id),
     updated_at = NOW()
 WHERE id = $1 AND deleted_at = 0
-RETURNING id, name, name_i18n, description, description_i18n, quantity, picture_url, measurement, price, department_id, created_at, updated_at, deleted_at;
+RETURNING id, name, name_i18n, description, description_i18n, quantity, picture_url, color_code, measurement, price, department_id, created_at, updated_at, deleted_at;
 
 -- name: DeleteCompound :exec
 UPDATE compounds
@@ -48,7 +49,7 @@ SET deleted_at = 0
 WHERE id = $1 AND deleted_at != 0;
 
 -- name: SearchCompounds :many
-SELECT id, name, name_i18n, description, description_i18n, quantity, picture_url, measurement, price, department_id, created_at, updated_at, deleted_at
+SELECT id, name, name_i18n, description, description_i18n, quantity, picture_url, color_code, measurement, price, department_id, created_at, updated_at, deleted_at
 FROM compounds
 WHERE deleted_at = 0 
 AND (name ILIKE '%' || $1 || '%' OR description ILIKE '%' || $1 || '%')

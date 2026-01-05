@@ -35,9 +35,9 @@ func (q *Queries) CountDepartmentsByStorage(ctx context.Context, storageID pgtyp
 }
 
 const createDepartment = `-- name: CreateDepartment :one
-INSERT INTO departments (id, name, name_i18n, storage_id)
-VALUES ($1, $2, $3, $4)
-RETURNING id, name, name_i18n, storage_id, created_at, updated_at, deleted_at
+INSERT INTO departments (id, name, name_i18n, storage_id, color_code)
+VALUES ($1, $2, $3, $4, $5)
+RETURNING id, name, name_i18n, storage_id, color_code, created_at, updated_at, deleted_at
 `
 
 type CreateDepartmentParams struct {
@@ -45,21 +45,35 @@ type CreateDepartmentParams struct {
 	Name      string      `json:"name"`
 	NameI18n  pgtype.UUID `json:"name_i18n"`
 	StorageID pgtype.UUID `json:"storage_id"`
+	ColorCode *string     `json:"color_code"`
 }
 
-func (q *Queries) CreateDepartment(ctx context.Context, arg CreateDepartmentParams) (Department, error) {
+type CreateDepartmentRow struct {
+	ID        uuid.UUID          `json:"id"`
+	Name      string             `json:"name"`
+	NameI18n  pgtype.UUID        `json:"name_i18n"`
+	StorageID pgtype.UUID        `json:"storage_id"`
+	ColorCode *string            `json:"color_code"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
+	DeletedAt *int64             `json:"deleted_at"`
+}
+
+func (q *Queries) CreateDepartment(ctx context.Context, arg CreateDepartmentParams) (CreateDepartmentRow, error) {
 	row := q.db.QueryRow(ctx, createDepartment,
 		arg.ID,
 		arg.Name,
 		arg.NameI18n,
 		arg.StorageID,
+		arg.ColorCode,
 	)
-	var i Department
+	var i CreateDepartmentRow
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
 		&i.NameI18n,
 		&i.StorageID,
+		&i.ColorCode,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
@@ -79,7 +93,7 @@ func (q *Queries) DeleteDepartment(ctx context.Context, id uuid.UUID) error {
 }
 
 const getAllDepartments = `-- name: GetAllDepartments :many
-SELECT id, name, name_i18n, storage_id, created_at, updated_at, deleted_at
+SELECT id, name, name_i18n, storage_id, color_code, created_at, updated_at, deleted_at
 FROM departments
 WHERE deleted_at = 0
 ORDER BY created_at DESC
@@ -91,20 +105,32 @@ type GetAllDepartmentsParams struct {
 	Offset int32 `json:"offset"`
 }
 
-func (q *Queries) GetAllDepartments(ctx context.Context, arg GetAllDepartmentsParams) ([]Department, error) {
+type GetAllDepartmentsRow struct {
+	ID        uuid.UUID          `json:"id"`
+	Name      string             `json:"name"`
+	NameI18n  pgtype.UUID        `json:"name_i18n"`
+	StorageID pgtype.UUID        `json:"storage_id"`
+	ColorCode *string            `json:"color_code"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
+	DeletedAt *int64             `json:"deleted_at"`
+}
+
+func (q *Queries) GetAllDepartments(ctx context.Context, arg GetAllDepartmentsParams) ([]GetAllDepartmentsRow, error) {
 	rows, err := q.db.Query(ctx, getAllDepartments, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []Department
+	var items []GetAllDepartmentsRow
 	for rows.Next() {
-		var i Department
+		var i GetAllDepartmentsRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.Name,
 			&i.NameI18n,
 			&i.StorageID,
+			&i.ColorCode,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.DeletedAt,
@@ -120,19 +146,31 @@ func (q *Queries) GetAllDepartments(ctx context.Context, arg GetAllDepartmentsPa
 }
 
 const getDepartmentByID = `-- name: GetDepartmentByID :one
-SELECT id, name, name_i18n, storage_id, created_at, updated_at, deleted_at
+SELECT id, name, name_i18n, storage_id, color_code, created_at, updated_at, deleted_at
 FROM departments
 WHERE id = $1 AND deleted_at = 0
 `
 
-func (q *Queries) GetDepartmentByID(ctx context.Context, id uuid.UUID) (Department, error) {
+type GetDepartmentByIDRow struct {
+	ID        uuid.UUID          `json:"id"`
+	Name      string             `json:"name"`
+	NameI18n  pgtype.UUID        `json:"name_i18n"`
+	StorageID pgtype.UUID        `json:"storage_id"`
+	ColorCode *string            `json:"color_code"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
+	DeletedAt *int64             `json:"deleted_at"`
+}
+
+func (q *Queries) GetDepartmentByID(ctx context.Context, id uuid.UUID) (GetDepartmentByIDRow, error) {
 	row := q.db.QueryRow(ctx, getDepartmentByID, id)
-	var i Department
+	var i GetDepartmentByIDRow
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
 		&i.NameI18n,
 		&i.StorageID,
+		&i.ColorCode,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
@@ -207,7 +245,7 @@ func (q *Queries) GetDepartmentWithStorage(ctx context.Context, id uuid.UUID) (G
 }
 
 const getDepartmentsByStorageID = `-- name: GetDepartmentsByStorageID :many
-SELECT id, name, name_i18n, storage_id, created_at, updated_at, deleted_at
+SELECT id, name, name_i18n, storage_id, color_code, created_at, updated_at, deleted_at
 FROM departments
 WHERE storage_id = $1 AND deleted_at = 0
 ORDER BY created_at DESC
@@ -220,20 +258,32 @@ type GetDepartmentsByStorageIDParams struct {
 	Offset    int32       `json:"offset"`
 }
 
-func (q *Queries) GetDepartmentsByStorageID(ctx context.Context, arg GetDepartmentsByStorageIDParams) ([]Department, error) {
+type GetDepartmentsByStorageIDRow struct {
+	ID        uuid.UUID          `json:"id"`
+	Name      string             `json:"name"`
+	NameI18n  pgtype.UUID        `json:"name_i18n"`
+	StorageID pgtype.UUID        `json:"storage_id"`
+	ColorCode *string            `json:"color_code"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
+	DeletedAt *int64             `json:"deleted_at"`
+}
+
+func (q *Queries) GetDepartmentsByStorageID(ctx context.Context, arg GetDepartmentsByStorageIDParams) ([]GetDepartmentsByStorageIDRow, error) {
 	rows, err := q.db.Query(ctx, getDepartmentsByStorageID, arg.StorageID, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []Department
+	var items []GetDepartmentsByStorageIDRow
 	for rows.Next() {
-		var i Department
+		var i GetDepartmentsByStorageIDRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.Name,
 			&i.NameI18n,
 			&i.StorageID,
+			&i.ColorCode,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.DeletedAt,
@@ -260,7 +310,7 @@ func (q *Queries) RestoreDepartment(ctx context.Context, id uuid.UUID) error {
 }
 
 const searchDepartments = `-- name: SearchDepartments :many
-SELECT id, name, name_i18n, storage_id, created_at, updated_at, deleted_at
+SELECT id, name, name_i18n, storage_id, color_code, created_at, updated_at, deleted_at
 FROM departments
 WHERE deleted_at = 0 AND name ILIKE '%' || $1 || '%'
 ORDER BY created_at DESC
@@ -273,20 +323,32 @@ type SearchDepartmentsParams struct {
 	Offset  int32   `json:"offset"`
 }
 
-func (q *Queries) SearchDepartments(ctx context.Context, arg SearchDepartmentsParams) ([]Department, error) {
+type SearchDepartmentsRow struct {
+	ID        uuid.UUID          `json:"id"`
+	Name      string             `json:"name"`
+	NameI18n  pgtype.UUID        `json:"name_i18n"`
+	StorageID pgtype.UUID        `json:"storage_id"`
+	ColorCode *string            `json:"color_code"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
+	DeletedAt *int64             `json:"deleted_at"`
+}
+
+func (q *Queries) SearchDepartments(ctx context.Context, arg SearchDepartmentsParams) ([]SearchDepartmentsRow, error) {
 	rows, err := q.db.Query(ctx, searchDepartments, arg.Column1, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []Department
+	var items []SearchDepartmentsRow
 	for rows.Next() {
-		var i Department
+		var i SearchDepartmentsRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.Name,
 			&i.NameI18n,
 			&i.StorageID,
+			&i.ColorCode,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.DeletedAt,
@@ -306,9 +368,10 @@ UPDATE departments
 SET name = COALESCE($2, name),
     name_i18n = COALESCE($3, name_i18n),
     storage_id = COALESCE($4, storage_id),
+    color_code = COALESCE($5, color_code),
     updated_at = NOW()
 WHERE id = $1 AND deleted_at = 0
-RETURNING id, name, name_i18n, storage_id, created_at, updated_at, deleted_at
+RETURNING id, name, name_i18n, storage_id, color_code, created_at, updated_at, deleted_at
 `
 
 type UpdateDepartmentParams struct {
@@ -316,21 +379,35 @@ type UpdateDepartmentParams struct {
 	Name      string      `json:"name"`
 	NameI18n  pgtype.UUID `json:"name_i18n"`
 	StorageID pgtype.UUID `json:"storage_id"`
+	ColorCode *string     `json:"color_code"`
 }
 
-func (q *Queries) UpdateDepartment(ctx context.Context, arg UpdateDepartmentParams) (Department, error) {
+type UpdateDepartmentRow struct {
+	ID        uuid.UUID          `json:"id"`
+	Name      string             `json:"name"`
+	NameI18n  pgtype.UUID        `json:"name_i18n"`
+	StorageID pgtype.UUID        `json:"storage_id"`
+	ColorCode *string            `json:"color_code"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
+	DeletedAt *int64             `json:"deleted_at"`
+}
+
+func (q *Queries) UpdateDepartment(ctx context.Context, arg UpdateDepartmentParams) (UpdateDepartmentRow, error) {
 	row := q.db.QueryRow(ctx, updateDepartment,
 		arg.ID,
 		arg.Name,
 		arg.NameI18n,
 		arg.StorageID,
+		arg.ColorCode,
 	)
-	var i Department
+	var i UpdateDepartmentRow
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
 		&i.NameI18n,
 		&i.StorageID,
+		&i.ColorCode,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,

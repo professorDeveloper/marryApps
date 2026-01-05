@@ -19,7 +19,6 @@ func NewCafeTableS(repo *repository.Repository) *CafeTableS {
 	return &CafeTableS{repo: repo}
 }
 
-// CreateCafeTable creates a new cafe table
 func (s *CafeTableS) CreateCafeTable(ctx context.Context, hallID string, number int32, capacity int32, status *string) (*model.CafeTableResponse, error) {
 	if hallID == "" {
 		return nil, fmt.Errorf("hall_id is required")
@@ -60,7 +59,6 @@ func (s *CafeTableS) CreateCafeTable(ctx context.Context, hallID string, number 
 	return toCafeTableResponse(table), nil
 }
 
-// GetCafeTableByID retrieves a cafe table by ID
 func (s *CafeTableS) GetCafeTableByID(ctx context.Context, tableID string) (*model.CafeTableResponse, error) {
 	id, err := uuid.Parse(tableID)
 	if err != nil {
@@ -93,7 +91,6 @@ func (s *CafeTableS) GetAllCafeTables(ctx context.Context, limit, offset int32) 
 	return responses, nil
 }
 
-// GetCafeTablesByHallID retrieves all tables in a specific hall with pagination
 func (s *CafeTableS) GetCafeTablesByHallID(ctx context.Context, hallID string, limit, offset int32) ([]model.CafeTableResponse, error) {
 	hID, err := uuid.Parse(hallID)
 	if err != nil {
@@ -105,7 +102,6 @@ func (s *CafeTableS) GetCafeTablesByHallID(ctx context.Context, hallID string, l
 		return nil, fmt.Errorf("failed to get cafe tables by hall: %w", err)
 	}
 
-	// Apply pagination manually since SQLC doesn't support it for this method
 	start := offset
 	end := offset + limit
 	if int32(len(tables)) < start {

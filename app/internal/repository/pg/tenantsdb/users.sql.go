@@ -67,7 +67,7 @@ SELECT COUNT(*) FROM users
 WHERE role = $1 AND deleted_at = 0
 `
 
-func (q *Queries) CountUsersByRole(ctx context.Context, role NullUserRole) (int64, error) {
+func (q *Queries) CountUsersByRole(ctx context.Context, role string) (int64, error) {
 	row := q.db.QueryRow(ctx, countUsersByRole, role)
 	var count int64
 	err := row.Scan(&count)
@@ -151,13 +151,13 @@ RETURNING id, name, role, working_days, open_time, close_time, branch_id, create
 `
 
 type CreateShiftParams struct {
-	ID          uuid.UUID    `json:"id"`
-	Name        string       `json:"name"`
-	Role        NullUserRole `json:"role"`
-	WorkingDays *string      `json:"working_days"`
-	OpenTime    *int64       `json:"open_time"`
-	CloseTime   *int64       `json:"close_time"`
-	BranchID    pgtype.UUID  `json:"branch_id"`
+	ID          uuid.UUID   `json:"id"`
+	Name        string      `json:"name"`
+	Role        *string     `json:"role"`
+	WorkingDays *string     `json:"working_days"`
+	OpenTime    *int64      `json:"open_time"`
+	CloseTime   *int64      `json:"close_time"`
+	BranchID    pgtype.UUID `json:"branch_id"`
 }
 
 func (q *Queries) CreateShift(ctx context.Context, arg CreateShiftParams) (Shift, error) {
@@ -206,16 +206,16 @@ RETURNING id, full_name, username, role, email, shift_id, pincode, hash_password
 `
 
 type CreateUserParams struct {
-	ID           uuid.UUID    `json:"id"`
-	FullName     *string      `json:"full_name"`
-	Username     *string      `json:"username"`
-	Role         NullUserRole `json:"role"`
-	Email        *string      `json:"email"`
-	ShiftID      pgtype.UUID  `json:"shift_id"`
-	Pincode      *string      `json:"pincode"`
-	HashPassword *string      `json:"hash_password"`
-	BrandID      pgtype.UUID  `json:"brand_id"`
-	PhoneNumber  *string      `json:"phone_number"`
+	ID           uuid.UUID   `json:"id"`
+	FullName     *string     `json:"full_name"`
+	Username     *string     `json:"username"`
+	Role         string      `json:"role"`
+	Email        *string     `json:"email"`
+	ShiftID      pgtype.UUID `json:"shift_id"`
+	Pincode      *string     `json:"pincode"`
+	HashPassword *string     `json:"hash_password"`
+	BrandID      pgtype.UUID `json:"brand_id"`
+	PhoneNumber  *string     `json:"phone_number"`
 }
 
 func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, error) {
@@ -417,11 +417,11 @@ type GetAttendanceStatsByRoleParams struct {
 }
 
 type GetAttendanceStatsByRoleRow struct {
-	Role             NullUserRole `json:"role"`
-	TotalAttendances int64        `json:"total_attendances"`
-	TotalHours       int64        `json:"total_hours"`
-	AvgHoursPerDay   float64      `json:"avg_hours_per_day"`
-	UniqueUsers      int64        `json:"unique_users"`
+	Role             string  `json:"role"`
+	TotalAttendances int64   `json:"total_attendances"`
+	TotalHours       int64   `json:"total_hours"`
+	AvgHoursPerDay   float64 `json:"avg_hours_per_day"`
+	UniqueUsers      int64   `json:"unique_users"`
 }
 
 func (q *Queries) GetAttendanceStatsByRole(ctx context.Context, arg GetAttendanceStatsByRoleParams) ([]GetAttendanceStatsByRoleRow, error) {
@@ -477,7 +477,7 @@ type GetAttendancesByDateRangeRow struct {
 	DeletedAt    *int64             `json:"deleted_at"`
 	FullName     *string            `json:"full_name"`
 	Username     *string            `json:"username"`
-	Role         NullUserRole       `json:"role"`
+	Role         string             `json:"role"`
 }
 
 func (q *Queries) GetAttendancesByDateRange(ctx context.Context, arg GetAttendancesByDateRangeParams) ([]GetAttendancesByDateRangeRow, error) {
@@ -613,7 +613,7 @@ type GetAttendancesForTodayRow struct {
 	DeletedAt    *int64             `json:"deleted_at"`
 	FullName     *string            `json:"full_name"`
 	Username     *string            `json:"username"`
-	Role         NullUserRole       `json:"role"`
+	Role         string             `json:"role"`
 }
 
 func (q *Queries) GetAttendancesForToday(ctx context.Context) ([]GetAttendancesForTodayRow, error) {
@@ -765,7 +765,7 @@ GROUP BY s.id
 type GetShiftWithUsersRow struct {
 	ID          uuid.UUID          `json:"id"`
 	Name        string             `json:"name"`
-	Role        NullUserRole       `json:"role"`
+	Role        *string            `json:"role"`
 	WorkingDays *string            `json:"working_days"`
 	OpenTime    *int64             `json:"open_time"`
 	CloseTime   *int64             `json:"close_time"`
@@ -838,7 +838,7 @@ WHERE role = $1 AND deleted_at = 0
 ORDER BY name ASC
 `
 
-func (q *Queries) GetShiftsByRole(ctx context.Context, role NullUserRole) ([]Shift, error) {
+func (q *Queries) GetShiftsByRole(ctx context.Context, role *string) ([]Shift, error) {
 	rows, err := q.db.Query(ctx, getShiftsByRole, role)
 	if err != nil {
 		return nil, err
@@ -883,7 +883,7 @@ ORDER BY s.name ASC
 type GetShiftsWithUserCountsRow struct {
 	ID          uuid.UUID          `json:"id"`
 	Name        string             `json:"name"`
-	Role        NullUserRole       `json:"role"`
+	Role        *string            `json:"role"`
 	WorkingDays *string            `json:"working_days"`
 	OpenTime    *int64             `json:"open_time"`
 	CloseTime   *int64             `json:"close_time"`
@@ -1154,7 +1154,7 @@ type GetUserWithAttendanceStatsRow struct {
 	ID                 uuid.UUID          `json:"id"`
 	FullName           *string            `json:"full_name"`
 	Username           *string            `json:"username"`
-	Role               NullUserRole       `json:"role"`
+	Role               string             `json:"role"`
 	Email              *string            `json:"email"`
 	ShiftID            pgtype.UUID        `json:"shift_id"`
 	Pincode            *string            `json:"pincode"`
@@ -1223,7 +1223,7 @@ type GetUserWithShiftRow struct {
 	ID               uuid.UUID          `json:"id"`
 	FullName         *string            `json:"full_name"`
 	Username         *string            `json:"username"`
-	Role             NullUserRole       `json:"role"`
+	Role             string             `json:"role"`
 	Email            *string            `json:"email"`
 	Pincode          *string            `json:"pincode"`
 	BrandID          pgtype.UUID        `json:"brand_id"`
@@ -1232,7 +1232,7 @@ type GetUserWithShiftRow struct {
 	UpdatedAt        pgtype.Timestamptz `json:"updated_at"`
 	ShiftID          pgtype.UUID        `json:"shift_id"`
 	ShiftName        *string            `json:"shift_name"`
-	ShiftRole        NullUserRole       `json:"shift_role"`
+	ShiftRole        *string            `json:"shift_role"`
 	ShiftWorkingDays *string            `json:"shift_working_days"`
 	ShiftOpenTime    *int64             `json:"shift_open_time"`
 	ShiftCloseTime   *int64             `json:"shift_close_time"`
@@ -1296,7 +1296,7 @@ type GetUserWithShiftAndBranchRow struct {
 	ID               uuid.UUID          `json:"id"`
 	FullName         *string            `json:"full_name"`
 	Username         *string            `json:"username"`
-	Role             NullUserRole       `json:"role"`
+	Role             string             `json:"role"`
 	Email            *string            `json:"email"`
 	Pincode          *string            `json:"pincode"`
 	BrandID          pgtype.UUID        `json:"brand_id"`
@@ -1305,7 +1305,7 @@ type GetUserWithShiftAndBranchRow struct {
 	UpdatedAt        pgtype.Timestamptz `json:"updated_at"`
 	ShiftID          pgtype.UUID        `json:"shift_id"`
 	ShiftName        *string            `json:"shift_name"`
-	ShiftRole        NullUserRole       `json:"shift_role"`
+	ShiftRole        *string            `json:"shift_role"`
 	ShiftWorkingDays *string            `json:"shift_working_days"`
 	ShiftOpenTime    *int64             `json:"shift_open_time"`
 	ShiftCloseTime   *int64             `json:"shift_close_time"`
@@ -1389,7 +1389,7 @@ WHERE role = $1 AND deleted_at = 0
 ORDER BY full_name ASC
 `
 
-func (q *Queries) GetUsersByRole(ctx context.Context, role NullUserRole) ([]User, error) {
+func (q *Queries) GetUsersByRole(ctx context.Context, role string) ([]User, error) {
 	rows, err := q.db.Query(ctx, getUsersByRole, role)
 	if err != nil {
 		return nil, err
@@ -1431,9 +1431,9 @@ LIMIT $2 OFFSET $3
 `
 
 type GetUsersByRolePaginatedParams struct {
-	Role   NullUserRole `json:"role"`
-	Limit  int32        `json:"limit"`
-	Offset int32        `json:"offset"`
+	Role   string `json:"role"`
+	Limit  int32  `json:"limit"`
+	Offset int32  `json:"offset"`
 }
 
 func (q *Queries) GetUsersByRolePaginated(ctx context.Context, arg GetUsersByRolePaginatedParams) ([]User, error) {
@@ -1640,10 +1640,10 @@ LIMIT $3 OFFSET $4
 `
 
 type SearchUsersByRoleParams struct {
-	Role    NullUserRole `json:"role"`
-	Column2 *string      `json:"column_2"`
-	Limit   int32        `json:"limit"`
-	Offset  int32        `json:"offset"`
+	Role    string  `json:"role"`
+	Column2 *string `json:"column_2"`
+	Limit   int32   `json:"limit"`
+	Offset  int32   `json:"offset"`
 }
 
 func (q *Queries) SearchUsersByRole(ctx context.Context, arg SearchUsersByRoleParams) ([]User, error) {
@@ -1816,13 +1816,13 @@ RETURNING id, name, role, working_days, open_time, close_time, branch_id, create
 `
 
 type UpdateShiftParams struct {
-	ID          uuid.UUID    `json:"id"`
-	Name        string       `json:"name"`
-	Role        NullUserRole `json:"role"`
-	WorkingDays *string      `json:"working_days"`
-	OpenTime    *int64       `json:"open_time"`
-	CloseTime   *int64       `json:"close_time"`
-	BranchID    pgtype.UUID  `json:"branch_id"`
+	ID          uuid.UUID   `json:"id"`
+	Name        string      `json:"name"`
+	Role        *string     `json:"role"`
+	WorkingDays *string     `json:"working_days"`
+	OpenTime    *int64      `json:"open_time"`
+	CloseTime   *int64      `json:"close_time"`
+	BranchID    pgtype.UUID `json:"branch_id"`
 }
 
 func (q *Queries) UpdateShift(ctx context.Context, arg UpdateShiftParams) (Shift, error) {
@@ -1867,16 +1867,16 @@ RETURNING id, full_name, username, role, email, shift_id, pincode, hash_password
 `
 
 type UpdateUserParams struct {
-	ID           uuid.UUID    `json:"id"`
-	FullName     *string      `json:"full_name"`
-	Username     *string      `json:"username"`
-	Role         NullUserRole `json:"role"`
-	Email        *string      `json:"email"`
-	ShiftID      pgtype.UUID  `json:"shift_id"`
-	Pincode      *string      `json:"pincode"`
-	HashPassword *string      `json:"hash_password"`
-	BrandID      pgtype.UUID  `json:"brand_id"`
-	PhoneNumber  *string      `json:"phone_number"`
+	ID           uuid.UUID   `json:"id"`
+	FullName     *string     `json:"full_name"`
+	Username     *string     `json:"username"`
+	Role         string      `json:"role"`
+	Email        *string     `json:"email"`
+	ShiftID      pgtype.UUID `json:"shift_id"`
+	Pincode      *string     `json:"pincode"`
+	HashPassword *string     `json:"hash_password"`
+	BrandID      pgtype.UUID `json:"brand_id"`
+	PhoneNumber  *string     `json:"phone_number"`
 }
 
 func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (User, error) {

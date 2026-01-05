@@ -1,36 +1,36 @@
 -- name: CreateGood :one
-INSERT INTO goods (id, name, description, name_i18n, description_i18n, category_id, department_id, picture_url, price, cook_time)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-RETURNING id, name, description, name_i18n, description_i18n, category_id, department_id, picture_url, price, cook_time, created_at, updated_at, deleted_at;
+INSERT INTO goods (id, name, description, name_i18n, description_i18n, category_id, department_id, picture_url, color_code, price, cook_time)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+RETURNING id, name, description, name_i18n, description_i18n, category_id, department_id, picture_url, color_code, price, cook_time, created_at, updated_at, deleted_at;
 
 -- name: GetGoodByID :one
-SELECT id, name, description, name_i18n, description_i18n, category_id, department_id, picture_url, price, cook_time, created_at, updated_at, deleted_at
+SELECT id, name, description, name_i18n, description_i18n, category_id, department_id, picture_url, color_code, price, cook_time, created_at, updated_at, deleted_at
 FROM goods
 WHERE id = $1 AND deleted_at = 0;
 
 -- name: GetAllGoods :many
-SELECT id, name, description, name_i18n, description_i18n, category_id, department_id, picture_url, price, cook_time, created_at, updated_at, deleted_at
+SELECT id, name, description, name_i18n, description_i18n, category_id, department_id, picture_url, color_code, price, cook_time, created_at, updated_at, deleted_at
 FROM goods
 WHERE deleted_at = 0
 ORDER BY created_at DESC
 LIMIT $1 OFFSET $2;
 
 -- name: GetGoodsByCategoryID :many
-SELECT id, name, description, name_i18n, description_i18n, category_id, department_id, picture_url, price, cook_time, created_at, updated_at, deleted_at
+SELECT id, name, description, name_i18n, description_i18n, category_id, department_id, picture_url, color_code, price, cook_time, created_at, updated_at, deleted_at
 FROM goods
 WHERE category_id = $1 AND deleted_at = 0
 ORDER BY name ASC
 LIMIT $2 OFFSET $3;
 
 -- name: GetGoodsByDepartmentID :many
-SELECT id, name, description, name_i18n, description_i18n, category_id, department_id, picture_url, price, cook_time, created_at, updated_at, deleted_at
+SELECT id, name, description, name_i18n, description_i18n, category_id, department_id, picture_url, color_code, price, cook_time, created_at, updated_at, deleted_at
 FROM goods
 WHERE department_id = $1 AND deleted_at = 0
 ORDER BY name ASC
 LIMIT $2 OFFSET $3;
 
 -- name: GetGoodsByPriceRange :many
-SELECT id, name, description, name_i18n, description_i18n, category_id, department_id, picture_url, price, cook_time, created_at, updated_at, deleted_at
+SELECT id, name, description, name_i18n, description_i18n, category_id, department_id, picture_url, color_code, price, cook_time, created_at, updated_at, deleted_at
 FROM goods
 WHERE price >= $1 AND price <= $2 AND deleted_at = 0
 ORDER BY price ASC
@@ -45,18 +45,19 @@ SET name = COALESCE($2, name),
     category_id = COALESCE($6, category_id),
     department_id = COALESCE($7, department_id),
     picture_url = COALESCE($8, picture_url),
-    price = COALESCE($9, price),
-    cook_time = COALESCE($10, cook_time),
+    color_code = COALESCE($9, color_code),
+    price = COALESCE($10, price),
+    cook_time = COALESCE($11, cook_time),
     updated_at = NOW()
 WHERE id = $1 AND deleted_at = 0
-RETURNING id, name, description, name_i18n, description_i18n, category_id, department_id, picture_url, price, cook_time, created_at, updated_at, deleted_at;
+RETURNING id, name, description, name_i18n, description_i18n, category_id, department_id, picture_url, color_code, price, cook_time, created_at, updated_at, deleted_at;
 
 -- name: UpdateGoodPrice :one
 UPDATE goods
 SET price = $2,
     updated_at = NOW()
 WHERE id = $1 AND deleted_at = 0
-RETURNING id, name, description, name_i18n, description_i18n, category_id, department_id, picture_url, price, cook_time, created_at, updated_at, deleted_at;
+RETURNING id, name, description, name_i18n, description_i18n, category_id, department_id, picture_url, color_code, price, cook_time, created_at, updated_at, deleted_at;
 
 -- name: DeleteGood :exec
 UPDATE goods

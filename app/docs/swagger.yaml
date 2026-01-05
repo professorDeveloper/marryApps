@@ -31,7 +31,7 @@ definitions:
     type: object
   model.BrandResponse:
     properties:
-      brand_db_id:
+      brand_id_id:
         example: 1672531200000
         type: integer
       created_at:

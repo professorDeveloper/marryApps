@@ -14,6 +14,54 @@ import (
 	pg "gitlab.yurtal.tech/company/maryai/back/internal/repository/pg/tenantsdb"
 )
 
+// Helper function to create a compound response
+func compoundToResponse(c pg.Compound) *model.CompoundResponse {
+	qty := int64(0)
+	if c.Quantity != nil {
+		qty = int64(*c.Quantity)
+	}
+
+	return &model.CompoundResponse{
+		ID:              c.ID.String(),
+		Name:            c.Name,
+		NameI18n:        uuidToStr(c.NameI18n),
+		Description:     c.Description,
+		DescriptionI18n: uuidToStr(c.DescriptionI18n),
+		Quantity:        qty,
+		Measurement:     toMeasurementString(c.Measurement),
+		Price:           toPriceString(c.Price),
+		DepartmentID:    uuidToStr(c.DepartmentID),
+		PictureUrl:      c.PictureUrl,
+		ColorCode:       c.ColorCode,
+		CreatedAt:       timestampToTime(c.CreatedAt),
+		UpdatedAt:       timestampToTime(c.UpdatedAt),
+	}
+}
+
+// Helper functions to convert measurement and price types
+func toMeasurementString(measurement pg.NullMeasurementType) *string {
+	if measurement.Valid {
+		str := string(measurement.MeasurementType)
+		return &str
+	}
+	return nil
+}
+
+func toPriceString(price pgtype.Numeric) *string {
+	if price.Valid {
+		// Convert Numeric to string via Float64Value
+		f64, err := price.Float64Value()
+		if err == nil && f64.Valid {
+			str := fmt.Sprintf("%v", f64.Float64)
+			return &str
+		}
+		// Fallback: return zero string
+		str := "0"
+		return &str
+	}
+	return nil
+}
+
 type CompoundS struct {
 	repo *repository.Repository
 }
@@ -22,7 +70,7 @@ func NewCompoundS(repo *repository.Repository) *CompoundS {
 	return &CompoundS{repo: repo}
 }
 
-func (c *CompoundS) CreateCompound(ctx context.Context, name string, nameI18n, description, descriptionI18n, measurement, departmentID *string, quantity int32, price *string, pictureUrl *string) (*model.CompoundResponse, error) {
+func (c *CompoundS) CreateCompound(ctx context.Context, name string, nameI18n, description, descriptionI18n, measurement, departmentID *string, quantity int32, price *string, pictureUrl *string, colorCode *string) (*model.CompoundResponse, error) {
 	if name == "" {
 		return nil, fmt.Errorf("compound name is required")
 	}
@@ -77,13 +125,34 @@ func (c *CompoundS) CreateCompound(ctx context.Context, name string, nameI18n, d
 		Price:           numPrice,
 		DepartmentID:    deptID,
 		PictureUrl:      pictureUrl,
+		ColorCode:       colorCode,
 	})
 	if err != nil {
 		log.Printf("CreateCompound failed: %v", err)
 		return nil, fmt.Errorf("failed to create compound: %w", err)
 	}
 
-	return toCompoundResponse(compound), nil
+	// Convert int32 to int64 for response
+	var qty int64
+	if compound.Quantity != nil {
+		qty = int64(*compound.Quantity)
+	}
+
+	return &model.CompoundResponse{
+		ID:              compound.ID.String(),
+		Name:            compound.Name,
+		NameI18n:        uuidToStr(compound.NameI18n),
+		Description:     compound.Description,
+		DescriptionI18n: uuidToStr(compound.DescriptionI18n),
+		Quantity:        qty,
+		Measurement:     toMeasurementString(compound.Measurement),
+		Price:           toPriceString(compound.Price),
+		DepartmentID:    uuidToStr(compound.DepartmentID),
+		PictureUrl:      compound.PictureUrl,
+		ColorCode:       compound.ColorCode,
+		CreatedAt:       timestampToTime(compound.CreatedAt),
+		UpdatedAt:       timestampToTime(compound.UpdatedAt),
+	}, nil
 }
 
 func (c *CompoundS) GetCompoundByID(ctx context.Context, compoundID string) (*model.CompoundResponse, error) {
@@ -101,7 +170,7 @@ func (c *CompoundS) GetCompoundByID(ctx context.Context, compoundID string) (*mo
 		return nil, fmt.Errorf("failed to retrieve compound: %w", err)
 	}
 
-	return toCompoundResponse(compound), nil
+	return compoundToResponse(compound), nil
 }
 
 func (c *CompoundS) GetAllCompounds(ctx context.Context, limit, offset int32) ([]*model.CompoundResponse, error) {
@@ -116,7 +185,7 @@ func (c *CompoundS) GetAllCompounds(ctx context.Context, limit, offset int32) ([
 
 	var responses []*model.CompoundResponse
 	for _, comp := range compounds {
-		responses = append(responses, toCompoundResponse(comp))
+		responses = append(responses, compoundToResponse(comp))
 	}
 	return responses, nil
 }
@@ -139,12 +208,12 @@ func (c *CompoundS) GetCompoundsByDepartmentID(ctx context.Context, departmentID
 
 	var responses []*model.CompoundResponse
 	for _, comp := range compounds {
-		responses = append(responses, toCompoundResponse(comp))
+		responses = append(responses, compoundToResponse(comp))
 	}
 	return responses, nil
 }
 
-func (c *CompoundS) UpdateCompound(ctx context.Context, compoundID string, name, nameI18n, description, descriptionI18n, measurement, departmentID *string, quantity *int32, price *string, pictureUrl *string) (*model.CompoundResponse, error) {
+func (c *CompoundS) UpdateCompound(ctx context.Context, compoundID string, name, nameI18n, description, descriptionI18n, measurement, departmentID *string, quantity *int32, price *string, pictureUrl *string, colorCode *string) (*model.CompoundResponse, error) {
 	id, err := uuid.Parse(compoundID)
 	if err != nil {
 		return nil, fmt.Errorf("invalid compound ID: %w", err)
@@ -218,6 +287,11 @@ func (c *CompoundS) UpdateCompound(ctx context.Context, compoundID string, name,
 		finalPictureUrl = pictureUrl
 	}
 
+	finalColorCode := existing.ColorCode
+	if colorCode != nil {
+		finalColorCode = colorCode
+	}
+
 	compound, err := c.repo.Tenant(ctx).UpdateCompound(ctx, pg.UpdateCompoundParams{
 		ID:              id,
 		Name:            finalName,
@@ -229,13 +303,14 @@ func (c *CompoundS) UpdateCompound(ctx context.Context, compoundID string, name,
 		Price:           finalPrice,
 		DepartmentID:    finalDeptID,
 		PictureUrl:      finalPictureUrl,
+		ColorCode:       finalColorCode,
 	})
 	if err != nil {
 		log.Printf("UpdateCompound failed: %v", err)
 		return nil, fmt.Errorf("failed to update compound: %w", err)
 	}
 
-	return toCompoundResponse(compound), nil
+	return compoundToResponse(compound), nil
 }
 
 // DeleteCompound soft deletes a compound
@@ -285,74 +360,12 @@ func (c *CompoundS) SearchCompounds(ctx context.Context, query string, limit, of
 
 	var responses []*model.CompoundResponse
 	for _, comp := range compounds {
-		responses = append(responses, toCompoundResponse(comp))
+		responses = append(responses, compoundToResponse(comp))
 	}
 	return responses, nil
 }
 
 // Helper function to convert database compound to response model
-func toCompoundResponse(comp pg.Compound) *model.CompoundResponse {
-	var nameI18nStr *string
-	if comp.NameI18n.Valid {
-		str := comp.NameI18n.String()
-		nameI18nStr = &str
-	}
-
-	var descriptionI18nStr *string
-	if comp.DescriptionI18n.Valid {
-		str := comp.DescriptionI18n.String()
-		descriptionI18nStr = &str
-	}
-
-	var deptIDStr *string
-	if comp.DepartmentID.Valid {
-		str := comp.DepartmentID.String()
-		deptIDStr = &str
-	}
-
-	var quantityInt64 int64
-	if comp.Quantity != nil {
-		quantityInt64 = int64(*comp.Quantity)
-	}
-
-	var priceStr *string
-	if comp.Price.Valid && comp.Price.Int != nil {
-		priceValue := comp.Price.Int.String()
-		priceStr = &priceValue
-	}
-
-	var measurementStr *string
-	if comp.Measurement.Valid {
-		str := string(comp.Measurement.MeasurementType)
-		measurementStr = &str
-	}
-
-	var createdAt *time.Time
-	if comp.CreatedAt.Valid {
-		createdAt = &comp.CreatedAt.Time
-	}
-
-	var updatedAt *time.Time
-	if comp.UpdatedAt.Valid {
-		updatedAt = &comp.UpdatedAt.Time
-	}
-
-	return &model.CompoundResponse{
-		ID:              comp.ID.String(),
-		Name:            comp.Name,
-		NameI18n:        nameI18nStr,
-		Description:     comp.Description,
-		DescriptionI18n: descriptionI18nStr,
-		Quantity:        quantityInt64,
-		Measurement:     measurementStr,
-		PictureUrl:      comp.PictureUrl,
-		Price:           priceStr,
-		DepartmentID:    deptIDStr,
-		CreatedAt:       createdAt,
-		UpdatedAt:       updatedAt,
-	}
-}
-
 
 func (c *CompoundS) CreateCompoundDetail(ctx context.Context, compoundID, ingredientID string, quantity int64) (*model.CompoundDetailResponse, error) {
 	id := uuid.New()

@@ -27,22 +27,20 @@ func SetupMiddleware(e *echo.Echo, cfg *config.Config) {
 	e.Use(middleware.Recover())
 
 	e.Use(middleware.SecureWithConfig(middleware.SecureConfig{
-		XSSProtection:         "1; mode=block",
-		ContentTypeNosniff:    "nosniff",
-		XFrameOptions:         "SAMEORIGIN",
-		HSTSMaxAge:            3600,
-		ContentSecurityPolicy: "default-src 'self'",
+		XSSProtection:      "1; mode=block",
+		ContentTypeNosniff: "nosniff",
+		XFrameOptions:      "SAMEORIGIN",
+		HSTSMaxAge:         3600,
+		// Removed CSP temporarily
 	}))
 
-	// CORS
 	e.Use(middleware.CORSWithConfig(middleware.CORSConfig{
-		AllowOrigins:     cfg.Server.Http.Cors.AllowedOrigins,
-		AllowMethods:     cfg.Server.Http.Cors.AllowedMethods,
-		AllowHeaders:     cfg.Server.Http.Cors.AllowedHeaders,
-		AllowCredentials: cfg.Server.Http.Cors.AllowCredentials,
+		AllowOrigins:     []string{"*"},
+		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"},
+		AllowHeaders:     []string{"*"},
+		AllowCredentials: true,
 		MaxAge:           3600,
 	}))
-
 	e.Use(middleware.TimeoutWithConfig(middleware.TimeoutConfig{
 		Timeout: time.Duration(cfg.Server.CtxDefaultTimeout) * time.Second,
 		Skipper: func(c echo.Context) bool {
@@ -107,7 +105,7 @@ func CheckAuth(cfg *config.Config) echo.MiddlewareFunc {
 
 			c.Set("user_id", claims.UserID.String())
 			if claims.BrandID != nil {
-				c.Set("brand_id", claims.BrandID.String())
+				c.Set("brand_id", *claims.BrandID)
 			} else {
 				c.Set("brand_id", "")
 			}
@@ -151,7 +149,6 @@ func ValidateLoginInput(next echo.HandlerFunc) echo.HandlerFunc {
 
 		req.Username = strings.TrimSpace(req.Username)
 		req.Password = strings.TrimSpace(req.Password)
-		req.Pincode = strings.TrimSpace(req.Pincode)
 		if req.BrandID != nil {
 			b := strings.TrimSpace(*req.BrandID)
 			req.BrandID = &b
@@ -162,7 +159,7 @@ func ValidateLoginInput(next echo.HandlerFunc) echo.HandlerFunc {
 			message := model.GetLocalizedMessage(lang, "phone_password_required")
 			return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: message})
 		}
-		if req.Password == "" && req.Pincode == "" {
+		if req.Password == "" {
 			lang := getLanguage(c)
 			message := model.GetLocalizedMessage(lang, "phone_password_required")
 			return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: message})
@@ -172,7 +169,7 @@ func ValidateLoginInput(next echo.HandlerFunc) echo.HandlerFunc {
 				lang := getLanguage(c)
 				message := model.GetLocalizedMessage(lang, "invalid_request_format")
 				if message == "" {
-					message = "brandId is required"
+					message = "brand_id is required"
 				}
 				return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: message})
 			}
@@ -200,6 +197,10 @@ func ValidateRegisterInput(next echo.HandlerFunc) echo.HandlerFunc {
 		req.Username = strings.TrimSpace(req.Username)
 		req.Password = strings.TrimSpace(req.Password)
 		req.Pincode = strings.TrimSpace(req.Pincode)
+		if req.BrandID != nil {
+			b := strings.TrimSpace(*req.BrandID)
+			req.BrandID = &b
+		}
 		if req.PhoneNumber == "" {
 			lang := getLanguage(c)
 			message := model.GetLocalizedMessage(lang, "phone_password_required")

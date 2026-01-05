@@ -12,6 +12,7 @@ type CreateCompoundRequest struct {
 	Quantity        int64   `json:"quantity" example:"10"`
 	Measurement     *string `json:"measurement,omitempty" example:"kg"`
 	PictureUrl      *string `json:"picture_url,omitempty" example:"https://example.com/pizza-dough.jpg"`
+	ColorCode       *string `json:"color_code,omitempty" example:"#FF5733"`
 	Price           *string `json:"price,omitempty" example:"500.50"`
 	DepartmentID    *string `json:"department_id,omitempty" example:"123e4567-e89b-12d3-a456-426614174000"`
 }
@@ -24,6 +25,7 @@ type UpdateCompoundRequest struct {
 	Quantity        *int64  `json:"quantity,omitempty" example:"10"`
 	Measurement     *string `json:"measurement,omitempty" example:"kg"`
 	PictureUrl      *string `json:"picture_url,omitempty" example:"https://example.com/pizza-dough.jpg"`
+	ColorCode       *string `json:"color_code,omitempty" example:"#FF5733"`
 	Price           *string `json:"price,omitempty" example:"500.50"`
 	DepartmentID    *string `json:"department_id,omitempty" example:"123e4567-e89b-12d3-a456-426614174000"`
 }
@@ -37,6 +39,7 @@ type CompoundResponse struct {
 	Quantity        int64      `json:"quantity" example:"10"`
 	Measurement     *string    `json:"measurement,omitempty" example:"kg"`
 	PictureUrl      *string    `json:"picture_url,omitempty" example:"https://example.com/pizza-dough.jpg"`
+	ColorCode       *string    `json:"color_code,omitempty" example:"#FF5733"`
 	Price           *string    `json:"price,omitempty" example:"500.50"`
 	DepartmentID    *string    `json:"department_id,omitempty" example:"123e4567-e89b-12d3-a456-426614174000"`
 	CreatedAt       *time.Time `json:"created_at,omitempty" example:"2022-01-01T00:00:00Z"`

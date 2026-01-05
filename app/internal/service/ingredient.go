@@ -12,6 +12,19 @@ import (
 	pg "gitlab.yurtal.tech/company/maryai/back/internal/repository/pg/tenantsdb"
 )
 
+// Mapper functions for ingredient groups and ingredients
+func mapIngredientGroupToResponse(id uuid.UUID, name string, nameI18n pgtype.UUID, pictureUrl *string, colorCode *string, createdAt, updatedAt pgtype.Timestamptz) *model.IngredientGroupResponse {
+	return &model.IngredientGroupResponse{
+		ID:         id.String(),
+		Name:       &name,
+		NameI18n:   uuidToStr(nameI18n),
+		PictureUrl: pictureUrl,
+		ColorCode:  colorCode,
+		CreatedAt:  timestampToTime(createdAt),
+		UpdatedAt:  timestampToTime(updatedAt),
+	}
+}
+
 type IngredientS struct {
 	repo *repository.Repository
 }
@@ -20,7 +33,7 @@ func NewIngredientS(repo *repository.Repository) *IngredientS {
 	return &IngredientS{repo: repo}
 }
 
-func (i *IngredientS) CreateIngredientGroup(ctx context.Context, name string, nameI18n *uuid.UUID, pictureUrl *string) (*model.IngredientGroupResponse, error) {
+func (i *IngredientS) CreateIngredientGroup(ctx context.Context, name string, nameI18n *uuid.UUID, pictureUrl *string, colorCode *string) (*model.IngredientGroupResponse, error) {
 	if name == "" {
 		return nil, fmt.Errorf("ingredient group name is required")
 	}
@@ -35,12 +48,13 @@ func (i *IngredientS) CreateIngredientGroup(ctx context.Context, name string, na
 		Name:       name,
 		NameI18n:   nameI18nUUID,
 		PictureUrl: pictureUrl,
+		ColorCode:  colorCode,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to create ingredient group: %w", err)
 	}
 
-	return toIngredientGroupResponse(group), nil
+	return mapIngredientGroupToResponse(group.ID, group.Name, group.NameI18n, group.PictureUrl, group.ColorCode, group.CreatedAt, group.UpdatedAt), nil
 }
 
 // GetIngredientGroupByID retrieves an ingredient group by ID
@@ -55,7 +69,7 @@ func (i *IngredientS) GetIngredientGroupByID(ctx context.Context, groupID string
 		return nil, fmt.Errorf("failed to get ingredient group: %w", err)
 	}
 
-	return toIngredientGroupResponse(group), nil
+	return mapIngredientGroupToResponse(group.ID, group.Name, group.NameI18n, group.PictureUrl, group.ColorCode, group.CreatedAt, group.UpdatedAt), nil
 }
 
 // GetAllIngredientGroups retrieves all ingredient groups
@@ -70,14 +84,14 @@ func (i *IngredientS) GetAllIngredientGroups(ctx context.Context, limit, offset 
 
 	var responses []model.IngredientGroupResponse
 	for _, g := range groups {
-		responses = append(responses, *toIngredientGroupResponse(g))
+		responses = append(responses, *mapIngredientGroupToResponse(g.ID, g.Name, g.NameI18n, g.PictureUrl, g.ColorCode, g.CreatedAt, g.UpdatedAt))
 	}
 
 	return responses, nil
 }
 
 // UpdateIngredientGroup updates an ingredient group
-func (i *IngredientS) UpdateIngredientGroup(ctx context.Context, groupID string, name *string, nameI18n *string, pictureUrl *string) (*model.IngredientGroupResponse, error) {
+func (i *IngredientS) UpdateIngredientGroup(ctx context.Context, groupID string, name *string, nameI18n *string, pictureUrl *string, colorCode *string) (*model.IngredientGroupResponse, error) {
 	id, err := uuid.Parse(groupID)
 	if err != nil {
 		return nil, fmt.Errorf("invalid ingredient group ID: %w", err)
@@ -108,17 +122,23 @@ func (i *IngredientS) UpdateIngredientGroup(ctx context.Context, groupID string,
 		updatedPictureUrl = pictureUrl
 	}
 
+	updatedColorCode := groupData.ColorCode
+	if colorCode != nil {
+		updatedColorCode = colorCode
+	}
+
 	group, err := i.repo.Tenant(ctx).UpdateIngredientGroup(ctx, pg.UpdateIngredientGroupParams{
 		ID:         id,
 		Name:       updatedName,
 		NameI18n:   updatedNameI18n,
 		PictureUrl: updatedPictureUrl,
+		ColorCode:  updatedColorCode,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to update ingredient group: %w", err)
 	}
 
-	return toIngredientGroupResponse(group), nil
+	return mapIngredientGroupToResponse(group.ID, group.Name, group.NameI18n, group.PictureUrl, group.ColorCode, group.CreatedAt, group.UpdatedAt), nil
 }
 
 // DeleteIngredientGroup soft deletes an ingredient group
@@ -152,7 +172,7 @@ func (i *IngredientS) RestoreIngredientGroup(ctx context.Context, groupID string
 // ==================== INGREDIENTS ====================
 
 // CreateIngredient creates a new ingredient
-func (i *IngredientS) CreateIngredient(ctx context.Context, name string, nameI18n *uuid.UUID, groupID *string, measurement *string, pictureUrl *string, brandID *string) (*model.IngredientResponse, error) {
+func (i *IngredientS) CreateIngredient(ctx context.Context, name string, nameI18n *uuid.UUID, groupID *string, measurement *string, pictureUrl *string, brandID *string, colorCode *string) (*model.IngredientResponse, error) {
 	if name == "" {
 		return nil, fmt.Errorf("ingredient name is required")
 	}
@@ -193,12 +213,31 @@ func (i *IngredientS) CreateIngredient(ctx context.Context, name string, nameI18
 		Measurement: measurementNullable,
 		PictureUrl:  pictureUrl,
 		BrandID:     brandUUID,
+		ColorCode:   colorCode,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to create ingredient: %w", err)
 	}
 
-	return toIngredientResponse(ingredient), nil
+	// Convert measurement to string pointer
+	var measurementStr *string
+	if ingredient.Measurement.Valid {
+		str := string(ingredient.Measurement.MeasurementType)
+		measurementStr = &str
+	}
+
+	return &model.IngredientResponse{
+		ID:          ingredient.ID.String(),
+		Name:        &ingredient.Name,
+		NameI18n:    uuidToStr(ingredient.NameI18n),
+		GroupID:     uuidToStr(ingredient.GroupID),
+		BrandID:     uuidToStr(ingredient.BrandID),
+		Measurement: measurementStr,
+		PictureUrl:  ingredient.PictureUrl,
+		ColorCode:   ingredient.ColorCode,
+		CreatedAt:   timestampToTime(ingredient.CreatedAt),
+		UpdatedAt:   timestampToTime(ingredient.UpdatedAt),
+	}, nil
 }
 
 // GetIngredientByID retrieves an ingredient by ID
@@ -213,7 +252,25 @@ func (i *IngredientS) GetIngredientByID(ctx context.Context, ingredientID string
 		return nil, fmt.Errorf("failed to get ingredient: %w", err)
 	}
 
-	return toIngredientResponse(ingredient), nil
+	// Convert measurement to string pointer
+	var measurementStr *string
+	if ingredient.Measurement.Valid {
+		str := string(ingredient.Measurement.MeasurementType)
+		measurementStr = &str
+	}
+
+	return &model.IngredientResponse{
+		ID:          ingredient.ID.String(),
+		Name:        &ingredient.Name,
+		NameI18n:    uuidToStr(ingredient.NameI18n),
+		GroupID:     uuidToStr(ingredient.GroupID),
+		BrandID:     uuidToStr(ingredient.BrandID),
+		Measurement: measurementStr,
+		PictureUrl:  ingredient.PictureUrl,
+		ColorCode:   ingredient.ColorCode,
+		CreatedAt:   timestampToTime(ingredient.CreatedAt),
+		UpdatedAt:   timestampToTime(ingredient.UpdatedAt),
+	}, nil
 }
 
 // GetAllIngredients retrieves all ingredients
@@ -228,7 +285,25 @@ func (i *IngredientS) GetAllIngredients(ctx context.Context, limit, offset int32
 
 	var responses []model.IngredientResponse
 	for _, ing := range ingredients {
-		responses = append(responses, *toIngredientResponse(ing))
+		// Convert measurement to string pointer
+		var measurementStr *string
+		if ing.Measurement.Valid {
+			str := string(ing.Measurement.MeasurementType)
+			measurementStr = &str
+		}
+
+		responses = append(responses, model.IngredientResponse{
+			ID:          ing.ID.String(),
+			Name:        &ing.Name,
+			NameI18n:    uuidToStr(ing.NameI18n),
+			GroupID:     uuidToStr(ing.GroupID),
+			BrandID:     uuidToStr(ing.BrandID),
+			Measurement: measurementStr,
+			PictureUrl:  ing.PictureUrl,
+			ColorCode:   ing.ColorCode,
+			CreatedAt:   timestampToTime(ing.CreatedAt),
+			UpdatedAt:   timestampToTime(ing.UpdatedAt),
+		})
 	}
 
 	return responses, nil
@@ -252,14 +327,32 @@ func (i *IngredientS) GetIngredientsByGroupID(ctx context.Context, groupID strin
 
 	var responses []model.IngredientResponse
 	for _, ing := range ingredients {
-		responses = append(responses, *toIngredientResponse(ing))
+		// Convert measurement to string pointer
+		var measurementStr *string
+		if ing.Measurement.Valid {
+			str := string(ing.Measurement.MeasurementType)
+			measurementStr = &str
+		}
+
+		responses = append(responses, model.IngredientResponse{
+			ID:          ing.ID.String(),
+			Name:        &ing.Name,
+			NameI18n:    uuidToStr(ing.NameI18n),
+			GroupID:     uuidToStr(ing.GroupID),
+			BrandID:     uuidToStr(ing.BrandID),
+			Measurement: measurementStr,
+			PictureUrl:  ing.PictureUrl,
+			ColorCode:   ing.ColorCode,
+			CreatedAt:   timestampToTime(ing.CreatedAt),
+			UpdatedAt:   timestampToTime(ing.UpdatedAt),
+		})
 	}
 
 	return responses, nil
 }
 
 // UpdateIngredient updates an ingredient
-func (i *IngredientS) UpdateIngredient(ctx context.Context, ingredientID string, name *string, nameI18n *string, groupID *string, measurement *string, pictureUrl *string, brandID *string) (*model.IngredientResponse, error) {
+func (i *IngredientS) UpdateIngredient(ctx context.Context, ingredientID string, name *string, nameI18n *string, groupID *string, measurement *string, pictureUrl *string, brandID *string, colorCode *string) (*model.IngredientResponse, error) {
 	id, err := uuid.Parse(ingredientID)
 	if err != nil {
 		return nil, fmt.Errorf("invalid ingredient ID: %w", err)
@@ -307,6 +400,11 @@ func (i *IngredientS) UpdateIngredient(ctx context.Context, ingredientID string,
 		finalMeasurement = pg.NullMeasurementType{MeasurementType: pg.MeasurementType(*measurement), Valid: true}
 	}
 
+	finalColorCode := existing.ColorCode
+	if colorCode != nil {
+		finalColorCode = colorCode
+	}
+
 	ingredient, err := i.repo.Tenant(ctx).UpdateIngredient(ctx, pg.UpdateIngredientParams{
 		ID:          id,
 		Name:        finalName,
@@ -315,12 +413,31 @@ func (i *IngredientS) UpdateIngredient(ctx context.Context, ingredientID string,
 		Measurement: finalMeasurement,
 		PictureUrl:  pictureUrl,
 		BrandID:     finalBrandID,
+		ColorCode:   finalColorCode,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to update ingredient: %w", err)
 	}
 
-	return toIngredientResponse(ingredient), nil
+	// Convert measurement to string pointer
+	var measurementStr *string
+	if ingredient.Measurement.Valid {
+		str := string(ingredient.Measurement.MeasurementType)
+		measurementStr = &str
+	}
+
+	return &model.IngredientResponse{
+		ID:          ingredient.ID.String(),
+		Name:        &ingredient.Name,
+		NameI18n:    uuidToStr(ingredient.NameI18n),
+		GroupID:     uuidToStr(ingredient.GroupID),
+		BrandID:     uuidToStr(ingredient.BrandID),
+		Measurement: measurementStr,
+		PictureUrl:  ingredient.PictureUrl,
+		ColorCode:   ingredient.ColorCode,
+		CreatedAt:   timestampToTime(ingredient.CreatedAt),
+		UpdatedAt:   timestampToTime(ingredient.UpdatedAt),
+	}, nil
 }
 
 // DeleteIngredient soft deletes an ingredient
@@ -569,91 +686,6 @@ func (i *IngredientS) RestoreIngredientStock(ctx context.Context, stockID string
 	}
 
 	return nil
-}
-
-func toIngredientGroupResponse(g pg.IngredientGroup) *model.IngredientGroupResponse {
-	if g.ID == uuid.Nil {
-		return nil
-	}
-
-	var nameI18nStr *string
-	if g.NameI18n.Valid {
-		uuidStr := uuid.UUID(g.NameI18n.Bytes).String()
-		nameI18nStr = &uuidStr
-	}
-
-	var createdAt *time.Time
-	if g.CreatedAt.Valid {
-		createdAt = &g.CreatedAt.Time
-	}
-
-	var updatedAt *time.Time
-	if g.UpdatedAt.Valid {
-		updatedAt = &g.UpdatedAt.Time
-	}
-
-	name := g.Name
-	return &model.IngredientGroupResponse{
-		ID:         g.ID.String(),
-		Name:       &name,
-		NameI18n:   nameI18nStr,
-		PictureUrl: g.PictureUrl,
-		CreatedAt:  createdAt,
-		UpdatedAt:  updatedAt,
-	}
-}
-
-func toIngredientResponse(ing pg.Ingredient) *model.IngredientResponse {
-	if ing.ID == uuid.Nil {
-		return nil
-	}
-
-	var nameI18nStr *string
-	if ing.NameI18n.Valid {
-		uuidStr := uuid.UUID(ing.NameI18n.Bytes).String()
-		nameI18nStr = &uuidStr
-	}
-
-	var groupIDStr *string
-	if ing.GroupID.Valid {
-		str := ing.GroupID.String()
-		groupIDStr = &str
-	}
-
-	var brandIDStr *string
-	if ing.BrandID.Valid {
-		str := ing.BrandID.String()
-		brandIDStr = &str
-	}
-
-	var measurementStr *string
-	if ing.Measurement.Valid {
-		str := string(ing.Measurement.MeasurementType)
-		measurementStr = &str
-	}
-
-	var createdAt *time.Time
-	if ing.CreatedAt.Valid {
-		createdAt = &ing.CreatedAt.Time
-	}
-
-	var updatedAt *time.Time
-	if ing.UpdatedAt.Valid {
-		updatedAt = &ing.UpdatedAt.Time
-	}
-
-	name := ing.Name
-	return &model.IngredientResponse{
-		ID:          ing.ID.String(),
-		Name:        &name,
-		NameI18n:    nameI18nStr,
-		GroupID:     groupIDStr,
-		Measurement: measurementStr,
-		PictureUrl:  ing.PictureUrl,
-		BrandID:     brandIDStr,
-		CreatedAt:   createdAt,
-		UpdatedAt:   updatedAt,
-	}
 }
 
 func toIngredientStockResponse(s pg.IngredientStock) *model.IngredientStockResponse {

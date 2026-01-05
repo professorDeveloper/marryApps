@@ -9,7 +9,7 @@ import (
 type BrandResponse struct {
 	ID        uuid.UUID `json:"id" example:"550e8400-e29b-41d4-a716-446655440000"`
 	Name      string    `json:"name" example:"My Restaurant"`
-	BrandDbID int64     `json:"brand_db_id" example:"1672531200000"`
+	BrandID   string    `json:"brand_id" example:"my_restaurant"`
 	CreatedAt time.Time `json:"created_at" example:"2022-01-01T00:00:00Z"`
 	UpdatedAt time.Time `json:"updated_at" example:"2022-01-01T00:00:00Z"`
 }

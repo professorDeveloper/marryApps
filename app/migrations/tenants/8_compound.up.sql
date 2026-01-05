@@ -6,6 +6,7 @@ CREATE TABLE IF NOT EXISTS compounds (
   description_i18n UUID      REFERENCES translations(id) ON DELETE SET NULL,
   quantity         INTEGER,
   picture_url      TEXT,
+  color_code       TEXT,
   measurement      measurement_type,
   price            DECIMAL(15,2),
   department_id    UUID      REFERENCES departments(id) ON DELETE SET NULL,

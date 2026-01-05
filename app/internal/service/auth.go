@@ -19,6 +19,36 @@ import (
 	"gitlab.yurtal.tech/company/maryai/back/pkg/utils"
 )
 
+func roleToString(v interface{}) (string, bool) {
+	if v == nil {
+		return "", false
+	}
+	switch t := v.(type) {
+	case *string:
+		if t == nil {
+			return "", false
+		}
+		ss := strings.TrimSpace(*t)
+		if ss == "" {
+			return "", false
+		}
+		return ss, true
+	case string:
+		if strings.TrimSpace(t) == "" {
+			return "", false
+		}
+		return t, true
+	case []byte:
+		ss := strings.TrimSpace(string(t))
+		if ss == "" {
+			return "", false
+		}
+		return ss, true
+	default:
+		return "", false
+	}
+}
+
 type AuthS struct {
 	cfg  *config.Config
 	repo *repository.Repository
@@ -41,36 +71,27 @@ func (s *AuthS) Register(ctx context.Context, req model.RegisterRequest) error {
 
 	log.Printf("Starting registration for phone: %s", req.PhoneNumber)
 
-	//roli superadmin bulmagan userga brandid kerak
 	role := strings.TrimSpace(strings.ToLower(req.Role))
 	if role != "superadmin" {
 		if req.BrandID == nil || strings.TrimSpace(*req.BrandID) == "" {
-			return fmt.Errorf("brandId is required for non-superadmin users")
+			return fmt.Errorf("brand_id is required for non-superadmin users")
 		}
 	}
 
-	var parsedBrandID uuid.UUID
+	var tenantBrandUUID uuid.UUID
 	var tenantResolver *TenantResolver
+	var brandIDSlug string
 
 	if role != "superadmin" {
-		var err error
-		parsedBrandID, err = uuid.Parse(strings.TrimSpace(*req.BrandID))
-		if err != nil {
-			return fmt.Errorf("invalid brand ID format: %w", err)
-		}
-
-		_, err = s.repo.Main(ctx).GetBrandByID(ctx, parsedBrandID)
-		if err != nil {
-			return fmt.Errorf("brand not found: %w", err)
-		}
-
+		brandIDSlug = strings.TrimSpace(*req.BrandID)
 		tenantResolver = NewTenantResolver(s.repo)
-		_, err = tenantResolver.ResolveTenantByBrandID(ctx, parsedBrandID)
+		tenantCfg, err := tenantResolver.ResolveTenantByBrandID(ctx, brandIDSlug)
 		if err != nil {
 			return fmt.Errorf("failed to resolve tenant: %w", err)
 		}
+		tenantBrandUUID = tenantCfg.BrandUUID
 
-		schemaName := fmt.Sprintf("tenant_%s", strings.ReplaceAll(parsedBrandID.String(), "-", "_"))
+		schemaName := fmt.Sprintf("tenant_%s", brandIDSlug)
 		log.Printf("Setting schema to: %s for user registration", schemaName)
 
 		tx, err := s.repo.TenantPool.Begin(ctx)
@@ -88,7 +109,7 @@ func (s *AuthS) Register(ctx context.Context, req model.RegisterRequest) error {
 			"SELECT id FROM users WHERE phone_number = $1 AND deleted_at = 0 LIMIT 1",
 			&req.PhoneNumber).Scan(&existingID)
 
-		tx.Rollback(ctx) 
+		tx.Rollback(ctx)
 
 		if checkPhoneErr == nil {
 			return fmt.Errorf("user with this phone number already exists")
@@ -113,19 +134,19 @@ func (s *AuthS) Register(ctx context.Context, req model.RegisterRequest) error {
 		}
 		hashPassword = &h
 	}
-	validRoles := map[string]pg.UserRole{
-		"admin":      pg.UserRoleAdmin,
-		"user":       pg.UserRoleUser,
-		"cashier":    pg.UserRoleCashier,
-		"superadmin": pg.UserRoleSuperadmin,
-		"kitchen":    pg.UserRoleKitchen,
-		"waiter":     pg.UserRoleWaiter,
-		"manager":    pg.UserRoleManager,
+	validRoles := map[string]string{
+		"admin":      "admin",
+		"user":       "user",
+		"cashier":    "cashier",
+		"superadmin": "superadmin",
+		"kitchen":    "kitchen",
+		"waiter":     "waiter",
+		"manager":    "manager",
 	}
 
 	userRole, validRole := validRoles[role]
 	if !validRole {
-		userRole = pg.UserRoleUser
+		userRole = "user"
 		log.Printf("Using default role: %s", userRole)
 	}
 
@@ -144,15 +165,15 @@ func (s *AuthS) Register(ctx context.Context, req model.RegisterRequest) error {
 
 	if role == "superadmin" {
 		log.Printf("User is superadmin, no brand_id required")
-	} else if req.BrandID != nil && strings.TrimSpace(*req.BrandID) != "" {
-		brandID = pgtype.UUID{Bytes: parsedBrandID, Valid: true}
-		log.Printf("User will be created with brand_id: %s", parsedBrandID.String())
+	} else if brandIDSlug != "" && tenantBrandUUID != uuid.Nil {
+		brandID = pgtype.UUID{Bytes: tenantBrandUUID, Valid: true}
+		log.Printf("User will be created with brand_id: %s", tenantBrandUUID.String())
 	}
 
 	userParams := pg.CreateUserParams{
 		ID:           uuid.New(),
 		FullName:     &fullName,
-		Role:         pg.NullUserRole{UserRole: userRole, Valid: true},
+		Role:         userRole,
 		Email:        nil,
 		Pincode:      pincodePtr,
 		PhoneNumber:  &req.PhoneNumber,
@@ -161,8 +182,8 @@ func (s *AuthS) Register(ctx context.Context, req model.RegisterRequest) error {
 		BrandID:      brandID,
 	}
 
-	if role != "superadmin" && parsedBrandID != uuid.Nil {
-		schemaName := fmt.Sprintf("tenant_%s", strings.ReplaceAll(parsedBrandID.String(), "-", "_"))
+	if role != "superadmin" && brandIDSlug != "" {
+		schemaName := fmt.Sprintf("tenant_%s", brandIDSlug)
 		tx, err := s.repo.TenantPool.Begin(ctx)
 		if err != nil {
 			return fmt.Errorf("failed to begin transaction: %w", err)
@@ -227,12 +248,11 @@ func (s *AuthS) Login(ctx context.Context, req model.LoginRequest, jwtCfg *confi
 	if req.BrandID == nil || strings.TrimSpace(*req.BrandID) == "" {
 		return model.LoginResponse{}, errors.New(http.StatusText(http.StatusBadRequest))
 	}
-	brandUUID, err := uuid.Parse(strings.TrimSpace(*req.BrandID))
-	if err != nil {
+	if strings.TrimSpace(req.Password) == "" {
 		return model.LoginResponse{}, errors.New(http.StatusText(http.StatusBadRequest))
 	}
-
-	schemaName := fmt.Sprintf("tenant_%s", strings.ReplaceAll(brandUUID.String(), "-", "_"))
+	brandIDSlug := strings.TrimSpace(*req.BrandID)
+	schemaName := fmt.Sprintf("tenant_%s", brandIDSlug)
 	tx, err := s.repo.PgRepo.TenantPool.Begin(ctx)
 	if err != nil {
 		return model.LoginResponse{}, err
@@ -248,29 +268,18 @@ func (s *AuthS) Login(ctx context.Context, req model.LoginRequest, jwtCfg *confi
 	if err != nil {
 		return model.LoginResponse{}, errors.New(http.StatusText(http.StatusUnauthorized))
 	}
-	if req.Password != "" {
-		if user.HashPassword == nil || *user.HashPassword == "" {
-			return model.LoginResponse{}, errors.New(http.StatusText(http.StatusUnauthorized))
-		}
-		if err := utils.VerifyPassword(*user.HashPassword, req.Password); err != nil {
-			return model.LoginResponse{}, errors.New(http.StatusText(http.StatusUnauthorized))
-		}
-	} else if req.Pincode != "" {
-		if user.Pincode == nil || strings.TrimSpace(*user.Pincode) == "" {
-			return model.LoginResponse{}, errors.New(http.StatusText(http.StatusUnauthorized))
-		}
-		if strings.TrimSpace(*user.Pincode) != req.Pincode {
-			return model.LoginResponse{}, errors.New(http.StatusText(http.StatusUnauthorized))
-		}
-	} else {
-		return model.LoginResponse{}, errors.New(http.StatusText(http.StatusBadRequest))
+	if user.HashPassword == nil || *user.HashPassword == "" {
+		return model.LoginResponse{}, errors.New(http.StatusText(http.StatusUnauthorized))
+	}
+	if err := utils.VerifyPassword(*user.HashPassword, req.Password); err != nil {
+		return model.LoginResponse{}, errors.New(http.StatusText(http.StatusUnauthorized))
 	}
 
-	brandID := &brandUUID
+	brandID := &brandIDSlug
 
-	role := string(pg.UserRoleUser)
-	if user.Role.Valid {
-		role = string(user.Role.UserRole)
+	role := "user"
+	if roleStr, ok := roleToString(user.Role); ok {
+		role = roleStr
 	}
 
 	accessToken, err := utils.CreateJWTWithClaims(
@@ -310,13 +319,8 @@ func (s *AuthS) LoginWithPincode(ctx context.Context, req model.PincodeLoginRequ
 	if strings.TrimSpace(req.BrandID) == "" {
 		return model.LoginResponse{}, errors.New(http.StatusText(http.StatusBadRequest))
 	}
-
-	brandUUID, err := uuid.Parse(strings.TrimSpace(req.BrandID))
-	if err != nil {
-		return model.LoginResponse{}, errors.New(http.StatusText(http.StatusBadRequest))
-	}
-
-	schemaName := fmt.Sprintf("tenant_%s", strings.ReplaceAll(brandUUID.String(), "-", "_"))
+	brandIDSlug := strings.TrimSpace(req.BrandID)
+	schemaName := fmt.Sprintf("tenant_%s", brandIDSlug)
 	tx, err := s.repo.PgRepo.TenantPool.Begin(ctx)
 	if err != nil {
 		return model.LoginResponse{}, err
@@ -340,11 +344,11 @@ func (s *AuthS) LoginWithPincode(ctx context.Context, req model.PincodeLoginRequ
 		return model.LoginResponse{}, errors.New(http.StatusText(http.StatusUnauthorized))
 	}
 
-	brandID := &brandUUID
+	brandID := &brandIDSlug
 
-	role := string(pg.UserRoleUser)
-	if user.Role.Valid {
-		role = string(user.Role.UserRole)
+	role := "user"
+	if roleStr, ok := roleToString(user.Role); ok {
+		role = roleStr
 	}
 
 	log.Printf("LoginWithPincode: Successfully authenticated user %s with role %s", user.ID, role)
@@ -517,7 +521,11 @@ func (s *AuthS) Refresh(ctx context.Context, req model.RefreshRequest, jwtCfg *c
 	if claims.BrandID == nil {
 		return model.RefreshResponse{}, errors.New(http.StatusText(http.StatusUnauthorized))
 	}
-	schemaName := fmt.Sprintf("tenant_%s", strings.ReplaceAll(claims.BrandID.String(), "-", "_"))
+	brandIDSlug := strings.TrimSpace(*claims.BrandID)
+	if brandIDSlug == "" {
+		return model.RefreshResponse{}, errors.New(http.StatusText(http.StatusUnauthorized))
+	}
+	schemaName := fmt.Sprintf("tenant_%s", brandIDSlug)
 	tx, err := s.repo.PgRepo.TenantPool.Begin(ctx)
 	if err != nil {
 		return model.RefreshResponse{}, err
@@ -535,9 +543,9 @@ func (s *AuthS) Refresh(ctx context.Context, req model.RefreshRequest, jwtCfg *c
 
 	brandID := claims.BrandID
 
-	role := string(pg.UserRoleUser)
-	if user.Role.Valid {
-		role = string(user.Role.UserRole)
+	role := "user"
+	if roleStr, ok := roleToString(user.Role); ok {
+		role = roleStr
 	}
 
 	accessToken, err := utils.CreateJWTWithClaims(
@@ -690,8 +698,7 @@ func toUserResponse(u pg.User) model.UserResponse {
 		brandID = &b
 	}
 
-	if u.Role.Valid {
-		roleStr := string(u.Role.UserRole)
+	if roleStr, ok := roleToString(u.Role); ok {
 		role = &roleStr
 	}
 
@@ -709,13 +716,9 @@ func toUserResponse(u pg.User) model.UserResponse {
 	}
 }
 
-
 func (s *AuthS) GetUsersByRole(ctx context.Context, role string) ([]model.UserResponse, error) {
-	userRole := pg.NullUserRole{
-		UserRole: pg.UserRole(role),
-		Valid:    true,
-	}
-	users, err := s.repo.Tenant(ctx).GetUsersByRole(ctx, userRole)
+	role = strings.TrimSpace(strings.ToLower(role))
+	users, err := s.repo.Tenant(ctx).GetUsersByRole(ctx, role)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get users by role: %w", err)
 	}
@@ -741,15 +744,15 @@ func (s *AuthS) GetAllStaff(ctx context.Context) ([]model.UserResponse, error) {
 }
 
 func (s *AuthS) GetKitchenStaff(ctx context.Context) ([]model.UserResponse, error) {
-	return s.GetUsersByRole(ctx, string(pg.UserRoleKitchen))
+	return s.GetUsersByRole(ctx, "kitchen")
 }
 
 func (s *AuthS) GetWaiters(ctx context.Context) ([]model.UserResponse, error) {
-	return s.GetUsersByRole(ctx, string(pg.UserRoleWaiter))
+	return s.GetUsersByRole(ctx, "waiter")
 }
 
 func (s *AuthS) GetCashiers(ctx context.Context) ([]model.UserResponse, error) {
-	return s.GetUsersByRole(ctx, string(pg.UserRoleCashier))
+	return s.GetUsersByRole(ctx, "cashier")
 }
 
 func (s *AuthS) DeleteUser(ctx context.Context, userID string) error {

@@ -32,9 +32,9 @@ definitions:
     type: object
   model.BrandResponse:
     properties:
-      brand_db_id:
-        example: 1672531200000
-        type: integer
+      brand_id:
+        example: my_restaurant
+        type: string
       created_at:
         example: "2022-01-01T00:00:00Z"
         type: string
@@ -73,6 +73,9 @@ definitions:
     type: object
   model.CategoryResponse:
     properties:
+      color_code:
+        example: '#FF5733'
+        type: string
       created_at:
         example: "2022-01-01T00:00:00Z"
         type: string
@@ -124,6 +127,9 @@ definitions:
     type: object
   model.CompoundResponse:
     properties:
+      color_code:
+        example: '#FF5733'
+        type: string
       created_at:
         example: "2022-01-01T00:00:00Z"
         type: string
@@ -226,6 +232,9 @@ definitions:
     type: object
   model.CreateCategoryRequest:
     properties:
+      color_code:
+        example: '#FF5733'
+        type: string
       department_id:
         example: 123e4567-e89b-12d3-a456-426614174000
         type: string
@@ -262,6 +271,9 @@ definitions:
     type: object
   model.CreateCompoundRequest:
     properties:
+      color_code:
+        example: '#FF5733'
+        type: string
       department_id:
         example: 123e4567-e89b-12d3-a456-426614174000
         type: string
@@ -309,6 +321,8 @@ definitions:
     type: object
   model.CreateDepartmentRequest:
     properties:
+      color_code:
+        type: string
       name:
         type: string
       name_i18n:
@@ -341,6 +355,9 @@ definitions:
     properties:
       category_id:
         example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+      color_code:
+        example: '#FF5733'
         type: string
       cook_time:
         example: 30
@@ -381,6 +398,9 @@ definitions:
     type: object
   model.CreateIngredientGroupRequest:
     properties:
+      color_code:
+        example: '#FF5733'
+        type: string
       name:
         example: Vegetables
         type: string
@@ -395,6 +415,9 @@ definitions:
     properties:
       brand_id:
         example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+      color_code:
+        example: '#FF5733'
         type: string
       group_id:
         example: 123e4567-e89b-12d3-a456-426614174000
@@ -562,6 +585,8 @@ definitions:
     properties:
       branch_id:
         type: string
+      color_code:
+        type: string
       name:
         type: string
       name_i18n:
@@ -583,6 +608,8 @@ definitions:
     type: object
   model.DepartmentResponse:
     properties:
+      color_code:
+        type: string
       created_at:
         type: string
       id:
@@ -663,6 +690,9 @@ definitions:
       category_id:
         example: 123e4567-e89b-12d3-a456-426614174000
         type: string
+      color_code:
+        example: '#FF5733'
+        type: string
       cook_time:
         example: 30
         type: integer
@@ -721,6 +751,9 @@ definitions:
     type: object
   model.IngredientGroupResponse:
     properties:
+      color_code:
+        example: '#FF5733'
+        type: string
       created_at:
         example: "2022-01-01T00:00:00Z"
         type: string
@@ -744,6 +777,9 @@ definitions:
     properties:
       brand_id:
         example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+      color_code:
+        example: '#FF5733'
         type: string
       created_at:
         example: "2022-01-01T00:00:00Z"
@@ -965,14 +1001,11 @@ definitions:
     type: object
   model.LoginRequest:
     properties:
-      brandId:
-        example: 550e8400-e29b-41d4-a716-446655440000
+      brand_id:
+        example: my_restaurant
         type: string
       password:
         example: Password:Javohir
-        type: string
-      pincode:
-        example: "1234"
         type: string
       username:
         example: admin
@@ -1086,8 +1119,8 @@ definitions:
     - OrderStatusCancelled
   model.PincodeLoginRequest:
     properties:
-      brandId:
-        example: 550e8400-e29b-41d4-a716-446655440000
+      brand_id:
+        example: my_restaurant
         type: string
       pincode:
         example: "1234"
@@ -1110,8 +1143,8 @@ definitions:
     type: object
   model.RegisterRequest:
     properties:
-      brandId:
-        example: 550e8400-e29b-41d4-a716-446655440000
+      brand_id:
+        example: my_restaurant
         type: string
       fullName:
         example: Javohir Khasanov
@@ -1178,6 +1211,8 @@ definitions:
   model.StorageResponse:
     properties:
       branch_id:
+        type: string
+      color_code:
         type: string
       created_at:
         type: string
@@ -1284,6 +1319,9 @@ definitions:
     type: object
   model.UpdateCategoryRequest:
     properties:
+      color_code:
+        example: '#FF5733'
+        type: string
       department_id:
         example: 123e4567-e89b-12d3-a456-426614174000
         type: string
@@ -1317,6 +1355,9 @@ definitions:
     type: object
   model.UpdateCompoundRequest:
     properties:
+      color_code:
+        example: '#FF5733'
+        type: string
       department_id:
         example: 123e4567-e89b-12d3-a456-426614174000
         type: string
@@ -1353,6 +1394,8 @@ definitions:
     type: object
   model.UpdateDepartmentRequest:
     properties:
+      color_code:
+        type: string
       name:
         type: string
       name_i18n:
@@ -1399,6 +1442,9 @@ definitions:
       category_id:
         example: 123e4567-e89b-12d3-a456-426614174000
         type: string
+      color_code:
+        example: '#FF5733'
+        type: string
       cook_time:
         example: 30
         type: integer
@@ -1435,6 +1481,9 @@ definitions:
     type: object
   model.UpdateIngredientGroupRequest:
     properties:
+      color_code:
+        example: '#FF5733'
+        type: string
       name:
         example: Vegetables
         type: string
@@ -1449,6 +1498,9 @@ definitions:
     properties:
       brand_id:
         example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+      color_code:
+        example: '#FF5733'
         type: string
       group_id:
         example: 123e4567-e89b-12d3-a456-426614174000
@@ -1622,6 +1674,8 @@ definitions:
     properties:
       branch_id:
         type: string
+      color_code:
+        type: string
       name:
         type: string
       name_i18n:
@@ -1673,7 +1727,7 @@ definitions:
         example: admin
         type: string
     type: object
-host: back.staging.maryai.yurtal.tech
+host: localhost:8080
 info:
   contact: {}
   description: MaryAI API server with multi-language support (uz, ru, en)
@@ -1857,43 +1911,6 @@ paths:
       summary: Update brand
       tags:
       - brands
-  /api/v1/admin/brands/{id}/init-schema:
-    post:
-      consumes:
-      - application/json
-      description: Create a schema for the brand and run tenant migrations
-      parameters:
-      - description: Brand ID
-        in: path
-        name: id
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Schema initialized successfully
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/model.ErrorResponse'
-        "404":
-          description: Not Found
-          schema:
-            $ref: '#/definitions/model.ErrorResponse'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/model.ErrorResponse'
-      security:
-      - BearerAuth: []
-      summary: Initialize tenant schema
-      tags:
-      - brands
   /api/v1/auth/global/login:
     post:
       consumes:
@@ -1929,8 +1946,8 @@ paths:
     post:
       consumes:
       - application/json
-      description: Authenticate user and return access token and password gonna be
-        YYYYMMDD
+      description: Authenticate user using username, password, and brand_id (slug)
+        and return access token
       parameters:
       - description: Login credentials
         in: body
@@ -1960,7 +1977,7 @@ paths:
     post:
       consumes:
       - application/json
-      description: Authenticate user using pincode and brand ID. Used for kitchen
+      description: Authenticate user using pincode and brand_id (slug). Used for kitchen
         staff, terminals, and cashiers
       parameters:
       - description: Pincode login credentials
@@ -10543,7 +10560,7 @@ paths:
       tags:
       - users
 schemes:
-- https
+- http
 securityDefinitions:
   BearerAuth:
     description: Type "Bearer" followed by a space and your JWT token

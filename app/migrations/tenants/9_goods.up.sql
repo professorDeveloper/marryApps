@@ -7,6 +7,7 @@ CREATE TABLE IF NOT EXISTS goods (
   category_id      UUID      REFERENCES categories(id) ON DELETE SET NULL,
   department_id    UUID      REFERENCES departments(id) ON DELETE SET NULL,
   picture_url      TEXT,
+  color_code       TEXT,
   price            DECIMAL(15,2) NOT NULL,
   cook_time        INTEGER,
   created_at       TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),

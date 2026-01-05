@@ -220,38 +220,38 @@ func (h *Handler) DeleteBrand(c echo.Context) error {
 	return c.NoContent(http.StatusNoContent)
 }
 
-// InitializeTenantSchema initializes a tenant schema for a brand
-// @Summary Initialize tenant schema
-// @Description Create a schema for the brand and run tenant migrations
-// @Tags brands
-// @Accept json
-// @Produce json
-// @Security BearerAuth
-// @Param id path string true "Brand ID"
-// @Success 200 {object} map[string]string "Schema initialized successfully"
-// @Failure 400 {object} model.ErrorResponse
-// @Failure 404 {object} model.ErrorResponse
-// @Failure 500 {object} model.ErrorResponse
-// @Router /api/v1/admin/brands/{id}/init-schema [post]
-func (h *Handler) InitializeTenantSchema(c echo.Context) error {
-	brandIDStr := c.Param("id")
-	brandID, err := uuid.Parse(brandIDStr)
-	if err != nil {
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{
-			Message: "Invalid brand ID format",
-		})
-	}
+// // InitializeTenantSchema initializes a tenant schema for a brand
+// // @Summary Initialize tenant schema
+// // @Description Create a schema for the brand and run tenant migrations
+// // @Tags brands
+// // @Accept json
+// // @Produce json
+// // @Security BearerAuth
+// // @Param id path string true "Brand ID"
+// // @Success 200 {object} map[string]string "Schema initialized successfully"
+// // @Failure 400 {object} model.ErrorResponse
+// // @Failure 404 {object} model.ErrorResponse
+// // @Failure 500 {object} model.ErrorResponse
+// // @Router /api/v1/admin/brands/{id}/init-schema [post]
+// func (h *Handler) InitializeTenantSchema(c echo.Context) error {
+// 	brandIDStr := c.Param("id")
+// 	brandID, err := uuid.Parse(brandIDStr)
+// 	if err != nil {
+// 		return c.JSON(http.StatusBadRequest, model.ErrorResponse{
+// 			Message: "Invalid brand ID format",
+// 		})
+// 	}
 
-	ctx := c.Request().Context()
-	if err := h.service.Brand().InitializeTenantSchema(ctx, brandID); err != nil {
-		log.Printf("Failed to initialize tenant schema: %v", err)
-		return c.JSON(http.StatusInternalServerError, model.ErrorResponse{
-			Message: "Failed to initialize tenant schema: " + err.Error(),
-		})
-	}
+// 	ctx := c.Request().Context()
+// 	if err := h.service.Brand().InitializeTenantSchema(ctx, brandID); err != nil {
+// 		log.Printf("Failed to initialize tenant schema: %v", err)
+// 		return c.JSON(http.StatusInternalServerError, model.ErrorResponse{
+// 			Message: "Failed to initialize tenant schema: " + err.Error(),
+// 		})
+// 	}
 
-	return c.JSON(http.StatusOK, map[string]string{
-		"message": "Tenant schema initialized successfully",
-		"brandId": brandID.String(),
-	})
-}
+// 	return c.JSON(http.StatusOK, map[string]string{
+// 		"message": "Tenant schema initialized successfully",
+// 		"brandId": brandID.String(),
+// 	})
+// }

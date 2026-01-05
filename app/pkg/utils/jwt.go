@@ -9,14 +9,14 @@ import (
 )
 
 type JWTClaims struct {
-	UserID   uuid.UUID  `json:"user_id"`
-	BrandID  *uuid.UUID `json:"brand_id,omitempty"`
-	Role     string     `json:"role"`
-	IsGlobal bool       `json:"is_global"`
+	UserID   uuid.UUID `json:"user_id"`
+	BrandID  *string   `json:"brand_id,omitempty"`
+	Role     string    `json:"role"`
+	IsGlobal bool      `json:"is_global"`
 	jwt.StandardClaims
 }
 
-func CreateJWTWithClaims(ttl time.Duration, userID uuid.UUID, brandID *uuid.UUID, role string, isGlobal bool, secretKey string) (string, error) {
+func CreateJWTWithClaims(ttl time.Duration, userID uuid.UUID, brandID *string, role string, isGlobal bool, secretKey string) (string, error) {
 	now := time.Now().UTC()
 	expiresAt := now.Add(ttl)
 

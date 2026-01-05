@@ -14,7 +14,8 @@ import (
 	echoSwagger "github.com/swaggo/echo-swagger"
 	"gitlab.yurtal.tech/company/maryai/back/internal/config"
 	"gitlab.yurtal.tech/company/maryai/back/internal/handler"
-	// mw "gitlab.yurtal.tech/company/maryai/back/internal/middleware"
+	"gitlab.yurtal.tech/company/maryai/back/internal/middleware"
+
 	"gitlab.yurtal.tech/company/maryai/back/internal/migrate"
 	"gitlab.yurtal.tech/company/maryai/back/internal/repository"
 	"gitlab.yurtal.tech/company/maryai/back/internal/service"
@@ -31,9 +32,10 @@ import (
 // @title MaryAI API
 // @version 1.0
 // @description MaryAI API server with multi-language support (uz, ru, en)
-// @host back.staging.maryai.yurtal.tech
+// host back.staging.maryai.yurtal.tech
+// @host localhost:8080
 // @BasePath /
-// @schemes https
+// @schemes http
 
 // @securityDefinitions.apikey BearerAuth
 // @in header
@@ -51,7 +53,7 @@ func Run(cfg *config.Config) {
 	paymeClient := paymentPayme.NewClient(slog.Default(), http.DefaultClient, paymentPayme.BaseUrl(cfg.Payme.Url), paymentPayme.ClientKey(cfg.Payme.ClientKey), paymentPayme.MerchantId(cfg.Payme.MerchantID), paymentPayme.Login(cfg.Payme.Login), paymentPayme.Password(cfg.Payme.Password), paymentPayme.ReturnUrl(cfg.Payme.ReturnUrl))
 
 	e := echo.New()
-	// mw.SetupMiddleware(e, cfg)
+	middleware.SetupMiddleware(e, cfg)
 
 	mainPgClient, err := pg.New(pg.Username(cfg.MainPostgres.User), pg.Password(cfg.MainPostgres.Password),
 		pg.Host(cfg.MainPostgres.Host), pg.Port(cfg.MainPostgres.Port),
@@ -63,7 +65,7 @@ func Run(cfg *config.Config) {
 
 	tenantPgClient, err := pg.New(pg.Username(cfg.Postgres.User), pg.Password(cfg.Postgres.Password),
 		pg.Host(cfg.Postgres.Host), pg.Port(cfg.Postgres.Port),
-		pg.Database(cfg.Postgres.Db), pg.MaxPoolSize(cfg.Postgres.MaxPoolSize))
+		pg.Database(cfg.Postgres.Db), pg.MaxPoolSize(cfg.Postgres.MaxPoolSize), pg.SimpleProtocol())
 	if err != nil {
 		l.Fatalf("app - Run - pg.New(tenant): %v", err)
 	}
@@ -72,23 +74,6 @@ func Run(cfg *config.Config) {
 	err = migrate.RunMigrationsFromSubdir(ctx, mainPgClient.Pool, "main")
 	if err != nil {
 		l.Fatalf("app - Run - RunMigrations(main): %v", err)
-	}
-
-	globalUsername := cfg.GlobalSA.Username
-	globalPassword := cfg.GlobalSA.Password
-	globalEmail := cfg.GlobalSA.Email
-	if globalUsername != "" && globalPassword != "" && globalEmail != "" {
-		_, sErr := mainPgClient.Pool.Exec(
-			ctx,
-			"INSERT INTO users (username, password, email, role) VALUES ($1, $2, $3, 'superadmin') ON CONFLICT (username) DO UPDATE SET password = EXCLUDED.password, email = EXCLUDED.email, role = 'superadmin', updated_at = NOW()",
-			globalUsername,
-			globalPassword,
-			globalEmail,
-		)
-		if sErr != nil {
-			l.Fatalf("app - Run - seed global superadmin: %v", sErr)
-		}
-		l.Info("seeded global superadmin in main DB")
 	}
 
 	err = migrate.RunMigrationsFromSubdir(ctx, tenantPgClient.Pool, "tenants")

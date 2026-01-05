@@ -33,7 +33,7 @@ func (h *Handler) CreateDepartment(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "name is required"})
 	}
 
-	department, err := h.service.Department().CreateDepartment(c.Request().Context(), *req.Name, req.NameI18n, &req.StorageID)
+	department, err := h.service.Department().CreateDepartment(c.Request().Context(), *req.Name, req.NameI18n, req.ColorCode, &req.StorageID)
 	if err != nil {
 		log.Printf("CreateDepartment failed: %v", err)
 		return c.JSON(http.StatusInternalServerError, model.ErrorResponse{Message: "failed to create department"})
@@ -181,7 +181,7 @@ func (h *Handler) UpdateDepartment(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "invalid request format"})
 	}
 
-	department, err := h.service.Department().UpdateDepartment(c.Request().Context(), departmentID, req.Name, req.NameI18n, req.StorageID)
+	department, err := h.service.Department().UpdateDepartment(c.Request().Context(), departmentID, req.Name, req.NameI18n, req.ColorCode, req.StorageID)
 	if err != nil {
 		log.Printf("UpdateDepartment failed for ID %s: %v", departmentID, err)
 		return c.JSON(http.StatusInternalServerError, model.ErrorResponse{Message: "failed to update department"})

@@ -1,17 +1,17 @@
 -- ==================== INGREDIENT GROUPS QUERIES ====================
 
 -- name: CreateIngredientGroup :one
-INSERT INTO ingredient_groups (id, name, picture_url, name_i18n)
-VALUES ($1, $2, $3, $4)
-RETURNING id, name, picture_url, name_i18n, created_at, updated_at, deleted_at;
+INSERT INTO ingredient_groups (id, name, picture_url, name_i18n, color_code)
+VALUES ($1, $2, $3, $4, $5)
+RETURNING id, name, picture_url, name_i18n, color_code, created_at, updated_at, deleted_at;
 
 -- name: GetIngredientGroupByID :one
-SELECT id, name, picture_url, name_i18n, created_at, updated_at, deleted_at
+SELECT id, name, picture_url, name_i18n, color_code, created_at, updated_at, deleted_at
 FROM ingredient_groups
 WHERE id = $1 AND deleted_at = 0;
 
 -- name: GetAllIngredientGroups :many
-SELECT id, name, picture_url, name_i18n, created_at, updated_at, deleted_at
+SELECT id, name, picture_url, name_i18n, color_code, created_at, updated_at, deleted_at
 FROM ingredient_groups
 WHERE deleted_at = 0
 ORDER BY created_at DESC
@@ -23,9 +23,10 @@ UPDATE ingredient_groups
 SET name = COALESCE($2, name),
     picture_url = COALESCE($3, picture_url),
     name_i18n = COALESCE($4, name_i18n),
+    color_code = COALESCE($5, color_code),
     updated_at = NOW()
 WHERE id = $1 AND deleted_at = 0
-RETURNING id, name, picture_url, name_i18n, created_at, updated_at, deleted_at;
+RETURNING id, name, picture_url, name_i18n, color_code, created_at, updated_at, deleted_at;
 
 -- DeleteIngredientGroup soft deletes an ingredient group
 -- name: DeleteIngredientGroup :exec
@@ -41,7 +42,7 @@ WHERE id = $1 AND deleted_at != 0;
 
 -- SearchIngredientGroups searches ingredient groups by name
 -- name: SearchIngredientGroups :many
-SELECT id, name, picture_url, name_i18n, created_at, updated_at, deleted_at
+SELECT id, name, picture_url, name_i18n, color_code, created_at, updated_at, deleted_at
 FROM ingredient_groups
 WHERE deleted_at = 0 AND name ILIKE '%' || $1 || '%'
 ORDER BY created_at DESC
@@ -54,19 +55,19 @@ SELECT COUNT(*) FROM ingredient_groups WHERE deleted_at = 0;
 
 -- CreateIngredient creates a new ingredient
 -- name: CreateIngredient :one
-INSERT INTO ingredients (id, name, name_i18n, group_id, measurement, picture_url, brand_id)
-VALUES ($1, $2, $3, $4, $5, $6, $7)
-RETURNING id, name, name_i18n, group_id, measurement, picture_url, brand_id, created_at, updated_at, deleted_at;
+INSERT INTO ingredients (id, name, name_i18n, group_id, measurement, picture_url, color_code, brand_id)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+RETURNING id, name, name_i18n, group_id, measurement, picture_url, color_code, brand_id, created_at, updated_at, deleted_at;
 
 -- GetIngredientByID retrieves an ingredient by ID
 -- name: GetIngredientByID :one
-SELECT id, name, name_i18n, group_id, measurement, picture_url, brand_id, created_at, updated_at, deleted_at
+SELECT id, name, name_i18n, group_id, measurement, picture_url, color_code, brand_id, created_at, updated_at, deleted_at
 FROM ingredients
 WHERE id = $1 AND deleted_at = 0;
 
 -- GetAllIngredients retrieves all ingredients with pagination
 -- name: GetAllIngredients :many
-SELECT id, name, name_i18n, group_id, measurement, picture_url, brand_id, created_at, updated_at, deleted_at
+SELECT id, name, name_i18n, group_id, measurement, picture_url, color_code, brand_id, created_at, updated_at, deleted_at
 FROM ingredients
 WHERE deleted_at = 0
 ORDER BY created_at DESC
@@ -74,7 +75,7 @@ LIMIT $1 OFFSET $2;
 
 -- GetIngredientsByGroupID retrieves ingredients by group ID
 -- name: GetIngredientsByGroupID :many
-SELECT id, name, name_i18n, group_id, measurement, picture_url, brand_id, created_at, updated_at, deleted_at
+SELECT id, name, name_i18n, group_id, measurement, picture_url, color_code, brand_id, created_at, updated_at, deleted_at
 FROM ingredients
 WHERE group_id = $1 AND deleted_at = 0
 ORDER BY created_at DESC
@@ -88,10 +89,11 @@ SET name = COALESCE($2, name),
     group_id = COALESCE($4, group_id),
     measurement = COALESCE($5, measurement),
     picture_url = COALESCE($6, picture_url),
-    brand_id = COALESCE($7, brand_id),
+    color_code = COALESCE($7, color_code),
+    brand_id = COALESCE($8, brand_id),
     updated_at = NOW()
 WHERE id = $1 AND deleted_at = 0
-RETURNING id, name, name_i18n, group_id, measurement, picture_url, brand_id, created_at, updated_at, deleted_at;
+RETURNING id, name, name_i18n, group_id, measurement, picture_url, color_code, brand_id, created_at, updated_at, deleted_at;
 
 -- DeleteIngredient soft deletes an ingredient
 -- name: DeleteIngredient :exec
@@ -107,7 +109,7 @@ WHERE id = $1 AND deleted_at != 0;
 
 -- SearchIngredients searches ingredients by name
 -- name: SearchIngredients :many
-SELECT id, name, name_i18n, group_id, measurement, picture_url, brand_id, created_at, updated_at, deleted_at
+SELECT id, name, name_i18n, group_id, measurement, picture_url, color_code, brand_id, created_at, updated_at, deleted_at
 FROM ingredients
 WHERE deleted_at = 0 AND name ILIKE '%' || $1 || '%'
 ORDER BY created_at DESC

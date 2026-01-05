@@ -4,6 +4,12 @@ import "time"
 
 type Option func(*Postgres)
 
+func SimpleProtocol() Option {
+	return func(c *Postgres) {
+		c.simpleProtocol = true
+	}
+}
+
 func Username(username string) Option {
 	return func(c *Postgres) {
 		c.username = username

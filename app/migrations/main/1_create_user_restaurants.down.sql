@@ -1,4 +1,3 @@
-DROP TABLE IF EXISTS database_credentials;
 DROP TABLE IF EXISTS users;
 DROP TABLE IF EXISTS brands;
 

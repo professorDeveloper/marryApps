@@ -291,64 +291,6 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/v1/admin/brands/{id}/init-schema": {
-            "post": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Create a schema for the brand and run tenant migrations",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "brands"
-                ],
-                "summary": "Initialize tenant schema",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Brand ID",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Schema initialized successfully",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
-                        }
-                    },
-                    "404": {
-                        "description": "Not Found",
-                        "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
-                        }
-                    }
-                }
-            }
-        },
         "/api/v1/auth/global/login": {
             "post": {
                 "description": "Authenticate global superadmin (main DB) and return access and refresh tokens",
@@ -397,7 +339,7 @@ const docTemplate = `{
         },
         "/api/v1/auth/login": {
             "post": {
-                "description": "Authenticate user and return access token and password gonna be YYYYMMDD",
+                "description": "Authenticate user using username, password, and brand_id (slug) and return access token",
                 "consumes": [
                     "application/json"
                 ],
@@ -443,7 +385,7 @@ const docTemplate = `{
         },
         "/api/v1/auth/login-pincode": {
             "post": {
-                "description": "Authenticate user using pincode and brand ID. Used for kitchen staff, terminals, and cashiers",
+                "description": "Authenticate user using pincode and brand_id (slug). Used for kitchen staff, terminals, and cashiers",
                 "consumes": [
                     "application/json"
                 ],
@@ -13786,9 +13728,9 @@ const docTemplate = `{
         "model.BrandResponse": {
             "type": "object",
             "properties": {
-                "brand_db_id": {
-                    "type": "integer",
-                    "example": 1672531200000
+                "brand_id": {
+                    "type": "string",
+                    "example": "my_restaurant"
                 },
                 "created_at": {
                     "type": "string",
@@ -13846,6 +13788,10 @@ const docTemplate = `{
         "model.CategoryResponse": {
             "type": "object",
             "properties": {
+                "color_code": {
+                    "type": "string",
+                    "example": "#FF5733"
+                },
                 "created_at": {
                     "type": "string",
                     "example": "2022-01-01T00:00:00Z"
@@ -13916,6 +13862,10 @@ const docTemplate = `{
         "model.CompoundResponse": {
             "type": "object",
             "properties": {
+                "color_code": {
+                    "type": "string",
+                    "example": "#FF5733"
+                },
                 "created_at": {
                     "type": "string",
                     "example": "2022-01-01T00:00:00Z"
@@ -14057,6 +14007,10 @@ const docTemplate = `{
         "model.CreateCategoryRequest": {
             "type": "object",
             "properties": {
+                "color_code": {
+                    "type": "string",
+                    "example": "#FF5733"
+                },
                 "department_id": {
                     "type": "string",
                     "example": "123e4567-e89b-12d3-a456-426614174000"
@@ -14110,6 +14064,10 @@ const docTemplate = `{
                 "name"
             ],
             "properties": {
+                "color_code": {
+                    "type": "string",
+                    "example": "#FF5733"
+                },
                 "department_id": {
                     "type": "string",
                     "example": "123e4567-e89b-12d3-a456-426614174000"
@@ -14172,6 +14130,9 @@ const docTemplate = `{
         "model.CreateDepartmentRequest": {
             "type": "object",
             "properties": {
+                "color_code": {
+                    "type": "string"
+                },
                 "name": {
                     "type": "string"
                 },
@@ -14222,6 +14183,10 @@ const docTemplate = `{
                 "category_id": {
                     "type": "string",
                     "example": "123e4567-e89b-12d3-a456-426614174000"
+                },
+                "color_code": {
+                    "type": "string",
+                    "example": "#FF5733"
                 },
                 "cook_time": {
                     "type": "integer",
@@ -14274,6 +14239,10 @@ const docTemplate = `{
         "model.CreateIngredientGroupRequest": {
             "type": "object",
             "properties": {
+                "color_code": {
+                    "type": "string",
+                    "example": "#FF5733"
+                },
                 "name": {
                     "type": "string",
                     "example": "Vegetables"
@@ -14294,6 +14263,10 @@ const docTemplate = `{
                 "brand_id": {
                     "type": "string",
                     "example": "123e4567-e89b-12d3-a456-426614174000"
+                },
+                "color_code": {
+                    "type": "string",
+                    "example": "#FF5733"
                 },
                 "group_id": {
                     "type": "string",
@@ -14526,6 +14499,9 @@ const docTemplate = `{
                 "branch_id": {
                     "type": "string"
                 },
+                "color_code": {
+                    "type": "string"
+                },
                 "name": {
                     "type": "string"
                 },
@@ -14557,6 +14533,9 @@ const docTemplate = `{
         "model.DepartmentResponse": {
             "type": "object",
             "properties": {
+                "color_code": {
+                    "type": "string"
+                },
                 "created_at": {
                     "type": "string"
                 },
@@ -14673,6 +14652,10 @@ const docTemplate = `{
                     "type": "string",
                     "example": "123e4567-e89b-12d3-a456-426614174000"
                 },
+                "color_code": {
+                    "type": "string",
+                    "example": "#FF5733"
+                },
                 "cook_time": {
                     "type": "integer",
                     "example": 30
@@ -14756,6 +14739,10 @@ const docTemplate = `{
         "model.IngredientGroupResponse": {
             "type": "object",
             "properties": {
+                "color_code": {
+                    "type": "string",
+                    "example": "#FF5733"
+                },
                 "created_at": {
                     "type": "string",
                     "example": "2022-01-01T00:00:00Z"
@@ -14788,6 +14775,10 @@ const docTemplate = `{
                 "brand_id": {
                     "type": "string",
                     "example": "123e4567-e89b-12d3-a456-426614174000"
+                },
+                "color_code": {
+                    "type": "string",
+                    "example": "#FF5733"
                 },
                 "created_at": {
                     "type": "string",
@@ -15099,17 +15090,13 @@ const docTemplate = `{
         "model.LoginRequest": {
             "type": "object",
             "properties": {
-                "brandId": {
+                "brand_id": {
                     "type": "string",
-                    "example": "550e8400-e29b-41d4-a716-446655440000"
+                    "example": "my_restaurant"
                 },
                 "password": {
                     "type": "string",
                     "example": "Password:Javohir"
-                },
-                "pincode": {
-                    "type": "string",
-                    "example": "1234"
                 },
                 "username": {
                     "type": "string",
@@ -15270,9 +15257,9 @@ const docTemplate = `{
         "model.PincodeLoginRequest": {
             "type": "object",
             "properties": {
-                "brandId": {
+                "brand_id": {
                     "type": "string",
-                    "example": "550e8400-e29b-41d4-a716-446655440000"
+                    "example": "my_restaurant"
                 },
                 "pincode": {
                     "type": "string",
@@ -15305,9 +15292,9 @@ const docTemplate = `{
         "model.RegisterRequest": {
             "type": "object",
             "properties": {
-                "brandId": {
+                "brand_id": {
                     "type": "string",
-                    "example": "550e8400-e29b-41d4-a716-446655440000"
+                    "example": "my_restaurant"
                 },
                 "fullName": {
                     "type": "string",
@@ -15400,6 +15387,9 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "branch_id": {
+                    "type": "string"
+                },
+                "color_code": {
                     "type": "string"
                 },
                 "created_at": {
@@ -15551,6 +15541,10 @@ const docTemplate = `{
         "model.UpdateCategoryRequest": {
             "type": "object",
             "properties": {
+                "color_code": {
+                    "type": "string",
+                    "example": "#FF5733"
+                },
                 "department_id": {
                     "type": "string",
                     "example": "123e4567-e89b-12d3-a456-426614174000"
@@ -15597,6 +15591,10 @@ const docTemplate = `{
         "model.UpdateCompoundRequest": {
             "type": "object",
             "properties": {
+                "color_code": {
+                    "type": "string",
+                    "example": "#FF5733"
+                },
                 "department_id": {
                     "type": "string",
                     "example": "123e4567-e89b-12d3-a456-426614174000"
@@ -15647,6 +15645,9 @@ const docTemplate = `{
         "model.UpdateDepartmentRequest": {
             "type": "object",
             "properties": {
+                "color_code": {
+                    "type": "string"
+                },
                 "name": {
                     "type": "string"
                 },
@@ -15714,6 +15715,10 @@ const docTemplate = `{
                     "type": "string",
                     "example": "123e4567-e89b-12d3-a456-426614174000"
                 },
+                "color_code": {
+                    "type": "string",
+                    "example": "#FF5733"
+                },
                 "cook_time": {
                     "type": "integer",
                     "example": 30
@@ -15765,6 +15770,10 @@ const docTemplate = `{
         "model.UpdateIngredientGroupRequest": {
             "type": "object",
             "properties": {
+                "color_code": {
+                    "type": "string",
+                    "example": "#FF5733"
+                },
                 "name": {
                     "type": "string",
                     "example": "Vegetables"
@@ -15785,6 +15794,10 @@ const docTemplate = `{
                 "brand_id": {
                     "type": "string",
                     "example": "123e4567-e89b-12d3-a456-426614174000"
+                },
+                "color_code": {
+                    "type": "string",
+                    "example": "#FF5733"
                 },
                 "group_id": {
                     "type": "string",
@@ -16031,6 +16044,9 @@ const docTemplate = `{
                 "branch_id": {
                     "type": "string"
                 },
+                "color_code": {
+                    "type": "string"
+                },
                 "name": {
                     "type": "string"
                 },
@@ -16118,9 +16134,9 @@ const docTemplate = `{
 // SwaggerInfo holds exported Swagger Info so clients can modify it
 var SwaggerInfo = &swag.Spec{
 	Version:          "1.0",
-	Host:             "back.staging.maryai.yurtal.tech",
+	Host:             "localhost:8080",
 	BasePath:         "/",
-	Schemes:          []string{"https"},
+	Schemes:          []string{"http"},
 	Title:            "MaryAI API",
 	Description:      "MaryAI API server with multi-language support (uz, ru, en)",
 	InfoInstanceName: "swagger",

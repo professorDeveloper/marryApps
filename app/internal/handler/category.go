@@ -33,7 +33,7 @@ func (h *Handler) CreateCategory(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "name is required"})
 	}
 
-	category, err := h.service.Category().CreateCategory(c.Request().Context(), req.Name, req.NameI18n, req.DepartmentID, req.StorageID, req.Parent, req.PictureUrl)
+	category, err := h.service.Category().CreateCategory(c.Request().Context(), req.Name, req.NameI18n, req.DepartmentID, req.StorageID, req.Parent, req.PictureUrl, req.ColorCode)
 	if err != nil {
 		log.Printf("CreateCategory failed: %v", err)
 		return c.JSON(http.StatusInternalServerError, model.ErrorResponse{Message: "failed to create category"})
@@ -309,7 +309,7 @@ func (h *Handler) UpdateCategory(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "invalid request format"})
 	}
 
-	category, err := h.service.Category().UpdateCategory(c.Request().Context(), categoryID, req.Name, req.NameI18n, req.DepartmentID, req.StorageID, req.Parent, req.PictureUrl)
+	category, err := h.service.Category().UpdateCategory(c.Request().Context(), categoryID, req.Name, req.NameI18n, req.DepartmentID, req.StorageID, req.Parent, req.PictureUrl, req.ColorCode)
 	if err != nil {
 		log.Printf("UpdateCategory failed for ID %s: %v", categoryID, err)
 		return c.JSON(http.StatusInternalServerError, model.ErrorResponse{Message: "failed to update category"})

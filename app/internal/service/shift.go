@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -38,18 +39,18 @@ func (s *ShiftS) CreateShift(ctx context.Context, name string, role *string, wor
 	// For now, we'll leave them as nil and let the DB handle defaults
 	// In production, you might want to parse time.Time and convert to unix timestamp
 
-	roleNullable := pg.NullUserRole{}
-	if role != nil && *role != "" {
-		roleNullable = pg.NullUserRole{
-			UserRole: pg.UserRole(*role),
-			Valid:    true,
+	var roleValue *string
+	if role != nil {
+		roleStr := strings.TrimSpace(strings.ToLower(*role))
+		if roleStr != "" {
+			roleValue = &roleStr
 		}
 	}
 
 	params := pg.CreateShiftParams{
 		ID:          uuid.New(),
 		Name:        name,
-		Role:        roleNullable,
+		Role:        roleValue,
 		WorkingDays: workingDays,
 		OpenTime:    openTimeInt,
 		CloseTime:   closeTimeInt,
@@ -138,10 +139,10 @@ func (s *ShiftS) UpdateShift(ctx context.Context, shiftID string, name *string, 
 	}
 
 	finalRole := existingShift.Role
-	if role != nil && *role != "" {
-		finalRole = pg.NullUserRole{
-			UserRole: pg.UserRole(*role),
-			Valid:    true,
+	if role != nil {
+		roleStr := strings.TrimSpace(strings.ToLower(*role))
+		if roleStr != "" {
+			finalRole = &roleStr
 		}
 	}
 
@@ -204,8 +205,7 @@ func toShiftResponse(shift pg.Shift) *ShiftResponse {
 	}
 
 	var role *string
-	if shift.Role.Valid {
-		roleStr := string(shift.Role.UserRole)
+	if roleStr, ok := roleToString(shift.Role); ok {
 		role = &roleStr
 	}
 

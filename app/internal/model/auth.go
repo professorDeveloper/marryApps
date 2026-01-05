@@ -19,13 +19,12 @@ type RegisterResponse struct {
 type LoginRequest struct {
 	Username string  `json:"username" example:"admin"`
 	Password string  `json:"password,omitempty" example:"Password:Javohir"`
-	Pincode  string  `json:"pincode,omitempty" example:"1234"`
-	BrandID  *string `json:"brandId,omitempty" example:"550e8400-e29b-41d4-a716-446655440000"`
+	BrandID  *string `json:"brand_id,omitempty" example:"my_restaurant"`
 }
 
 type PincodeLoginRequest struct {
 	Pincode string `json:"pincode" example:"1234"`
-	BrandID string `json:"brandId" example:"550e8400-e29b-41d4-a716-446655440000"`
+	BrandID string `json:"brand_id" example:"my_restaurant"`
 }
 
 type GlobalLoginRequest struct {
@@ -46,7 +45,7 @@ type RegisterRequest struct {
 	Password    string  `json:"password,omitempty" example:"Password:Javohir"`
 	Pincode     string  `json:"pincode,omitempty" example:"1234"`
 	Role        string  `json:"role" example:"user"`
-	BrandID     *string `json:"brandId,omitempty" example:"550e8400-e29b-41d4-a716-446655440000"`
+	BrandID     *string `json:"brand_id,omitempty" example:"my_restaurant"`
 }
 
 type ErrorResponse struct {

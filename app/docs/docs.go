@@ -13740,7 +13740,7 @@ const docTemplate = `{
         "model.BrandResponse": {
             "type": "object",
             "properties": {
-                "brand_db_id": {
+                "brand_id_id": {
                     "type": "integer",
                     "example": 1672531200000
                 },

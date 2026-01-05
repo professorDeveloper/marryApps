@@ -4,7 +4,9 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"regexp"
 	"strings"
+	"unicode"
 
 	"github.com/google/uuid"
 	"gitlab.yurtal.tech/company/maryai/back/internal/migrate"
@@ -32,22 +34,74 @@ func NewBrandS(repo *repository.Repository) *BrandS {
 	}
 }
 
+func normalizeBrandDb(name string) string {
+	// Remove Uzbek apostrophe-like chars so:
+	// Oʻ -> o, Gʻ -> g, O' -> o, etc.
+	s := strings.ToLower(name)
+	s = strings.NewReplacer("ʻ", "", "’", "", "‘", "", "`", "", "'", "").Replace(s)
+
+	// Keep only letters/digits as tokens; convert separators to underscore.
+	var b strings.Builder
+	prevUnderscore := false
+	for _, r := range s {
+		if unicode.IsLetter(r) || unicode.IsDigit(r) {
+			b.WriteRune(r)
+			prevUnderscore = false
+			continue
+		}
+		if !prevUnderscore {
+			b.WriteByte('_')
+			prevUnderscore = true
+		}
+	}
+	out := b.String()
+	out = regexp.MustCompile(`_+`).ReplaceAllString(out, "_")
+	out = strings.Trim(out, "_")
+	return out
+}
+
 func (s *BrandS) CreateBrand(ctx context.Context, name string) (*model.BrandResponse, error) {
 	name = strings.TrimSpace(name)
 	if name == "" {
 		return nil, fmt.Errorf("brand name cannot be empty")
 	}
 
-	brand, err := s.repo.Main(ctx).CreateBrand(ctx, name)
+	brandID := normalizeBrandDb(name)
+	if brandID == "" {
+		return nil, fmt.Errorf("brand name cannot be empty")
+	}
+
+	brand, err := s.repo.Main(ctx).CreateBrand(ctx, pgmain.CreateBrandParams{Name: name, BrandID: brandID})
 	if err != nil {
 		log.Printf("Failed to create brand: %v", err)
 		return nil, fmt.Errorf("failed to create brand: %w", err)
 	}
 
+	schemaName := fmt.Sprintf("tenant_%s", brand.BrandID)
+
+	if err := s.createSchema(ctx, schemaName); err != nil {
+		log.Printf("Failed to create schema: %v", err)
+		if _, dErr := s.repo.PgRepo.MainPool.Exec(ctx, "DELETE FROM brands WHERE id = $1", brand.ID); dErr != nil {
+			log.Printf("Failed to rollback brand after schema creation error: %v", dErr)
+		}
+		return nil, fmt.Errorf("failed to create tenant schema: %w", err)
+	}
+
+	if err := s.runMigrationsInSchema(ctx, schemaName); err != nil {
+		log.Printf("Failed to run migrations: %v", err)
+		if _, sErr := s.repo.PgRepo.TenantPool.Exec(ctx, fmt.Sprintf("DROP SCHEMA IF EXISTS %s CASCADE", schemaName)); sErr != nil {
+			log.Printf("Failed to drop schema after migrations error: %v", sErr)
+		}
+		if _, dErr := s.repo.PgRepo.MainPool.Exec(ctx, "DELETE FROM brands WHERE id = $1", brand.ID); dErr != nil {
+			log.Printf("Failed to rollback brand after migrations error: %v", dErr)
+		}
+		return nil, fmt.Errorf("failed to run migrations in schema: %w", err)
+	}
+
 	return &model.BrandResponse{
 		ID:        brand.ID,
 		Name:      brand.Name,
-		BrandDbID: brand.BrandDbID,
+		BrandID:   brand.BrandID,
 		CreatedAt: brand.CreatedAt.Time,
 		UpdatedAt: brand.UpdatedAt.Time,
 	}, nil
@@ -67,7 +121,7 @@ func (s *BrandS) GetBrand(ctx context.Context, brandID uuid.UUID) (*model.BrandR
 	return &model.BrandResponse{
 		ID:        brand.ID,
 		Name:      brand.Name,
-		BrandDbID: brand.BrandDbID,
+		BrandID:   brand.BrandID,
 		CreatedAt: brand.CreatedAt.Time,
 		UpdatedAt: brand.UpdatedAt.Time,
 	}, nil
@@ -98,7 +152,7 @@ func (s *BrandS) ListBrands(ctx context.Context, limit, offset int32) ([]model.B
 		responses = append(responses, model.BrandResponse{
 			ID:        brand.ID,
 			Name:      brand.Name,
-			BrandDbID: brand.BrandDbID,
+			BrandID:   brand.BrandID,
 			CreatedAt: brand.CreatedAt.Time,
 			UpdatedAt: brand.UpdatedAt.Time,
 		})
@@ -125,11 +179,10 @@ func (s *BrandS) UpdateBrand(ctx context.Context, brandID uuid.UUID, name *strin
 		brand.Name = trimmedName
 	}
 
-
 	return &model.BrandResponse{
 		ID:        brand.ID,
 		Name:      brand.Name,
-		BrandDbID: brand.BrandDbID,
+		BrandID:   brand.BrandID,
 		CreatedAt: brand.CreatedAt.Time,
 		UpdatedAt: brand.UpdatedAt.Time,
 	}, nil
@@ -145,9 +198,9 @@ func (s *BrandS) DeleteBrand(ctx context.Context, brandID uuid.UUID) error {
 		return fmt.Errorf("brand not found")
 	}
 
-
 	return nil
 }
+
 // Sheqqa schema yaratib migratsiyalarni ishga tushiradi
 func (s *BrandS) InitializeTenantSchema(ctx context.Context, brandID uuid.UUID) error {
 	if brandID == uuid.Nil {
@@ -162,7 +215,7 @@ func (s *BrandS) InitializeTenantSchema(ctx context.Context, brandID uuid.UUID) 
 
 	log.Printf("Initializing tenant schema for brand: %s (ID: %s)", brand.Name, brandID.String())
 
-	schemaName := fmt.Sprintf("tenant_%s", strings.ReplaceAll(brandID.String(), "-", "_"))
+	schemaName := fmt.Sprintf("tenant_%s", brand.BrandID)
 
 	if err := s.createSchema(ctx, schemaName); err != nil {
 		log.Printf("Failed to create schema: %v", err)

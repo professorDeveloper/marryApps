@@ -57,9 +57,9 @@ func (q *Queries) CountRootCategories(ctx context.Context) (int64, error) {
 }
 
 const createCategory = `-- name: CreateCategory :one
-INSERT INTO categories (id, name, picture_url, name_i18n, department_id, storage_id, parent)
-VALUES ($1, $2, $3, $4, $5, $6, $7)
-RETURNING id, name, picture_url, name_i18n, department_id, storage_id, parent, created_at, updated_at, deleted_at
+INSERT INTO categories (id, name, picture_url, name_i18n, department_id, storage_id, parent, color_code)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+RETURNING id, name, picture_url, name_i18n, department_id, storage_id, parent, color_code, created_at, updated_at, deleted_at
 `
 
 type CreateCategoryParams struct {
@@ -70,9 +70,24 @@ type CreateCategoryParams struct {
 	DepartmentID pgtype.UUID `json:"department_id"`
 	StorageID    pgtype.UUID `json:"storage_id"`
 	Parent       pgtype.UUID `json:"parent"`
+	ColorCode    *string     `json:"color_code"`
 }
 
-func (q *Queries) CreateCategory(ctx context.Context, arg CreateCategoryParams) (Category, error) {
+type CreateCategoryRow struct {
+	ID           uuid.UUID          `json:"id"`
+	Name         string             `json:"name"`
+	PictureUrl   *string            `json:"picture_url"`
+	NameI18n     pgtype.UUID        `json:"name_i18n"`
+	DepartmentID pgtype.UUID        `json:"department_id"`
+	StorageID    pgtype.UUID        `json:"storage_id"`
+	Parent       pgtype.UUID        `json:"parent"`
+	ColorCode    *string            `json:"color_code"`
+	CreatedAt    pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
+	DeletedAt    *int64             `json:"deleted_at"`
+}
+
+func (q *Queries) CreateCategory(ctx context.Context, arg CreateCategoryParams) (CreateCategoryRow, error) {
 	row := q.db.QueryRow(ctx, createCategory,
 		arg.ID,
 		arg.Name,
@@ -81,8 +96,9 @@ func (q *Queries) CreateCategory(ctx context.Context, arg CreateCategoryParams) 
 		arg.DepartmentID,
 		arg.StorageID,
 		arg.Parent,
+		arg.ColorCode,
 	)
-	var i Category
+	var i CreateCategoryRow
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
@@ -91,6 +107,7 @@ func (q *Queries) CreateCategory(ctx context.Context, arg CreateCategoryParams) 
 		&i.DepartmentID,
 		&i.StorageID,
 		&i.Parent,
+		&i.ColorCode,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
@@ -110,7 +127,7 @@ func (q *Queries) DeleteCategory(ctx context.Context, id uuid.UUID) error {
 }
 
 const getAllCategories = `-- name: GetAllCategories :many
-SELECT id, name, picture_url, name_i18n, department_id, storage_id, parent, created_at, updated_at, deleted_at
+SELECT id, name, picture_url, name_i18n, department_id, storage_id, parent, color_code, created_at, updated_at, deleted_at
 FROM categories
 WHERE deleted_at = 0
 ORDER BY created_at DESC
@@ -122,15 +139,29 @@ type GetAllCategoriesParams struct {
 	Offset int32 `json:"offset"`
 }
 
-func (q *Queries) GetAllCategories(ctx context.Context, arg GetAllCategoriesParams) ([]Category, error) {
+type GetAllCategoriesRow struct {
+	ID           uuid.UUID          `json:"id"`
+	Name         string             `json:"name"`
+	PictureUrl   *string            `json:"picture_url"`
+	NameI18n     pgtype.UUID        `json:"name_i18n"`
+	DepartmentID pgtype.UUID        `json:"department_id"`
+	StorageID    pgtype.UUID        `json:"storage_id"`
+	Parent       pgtype.UUID        `json:"parent"`
+	ColorCode    *string            `json:"color_code"`
+	CreatedAt    pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
+	DeletedAt    *int64             `json:"deleted_at"`
+}
+
+func (q *Queries) GetAllCategories(ctx context.Context, arg GetAllCategoriesParams) ([]GetAllCategoriesRow, error) {
 	rows, err := q.db.Query(ctx, getAllCategories, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []Category
+	var items []GetAllCategoriesRow
 	for rows.Next() {
-		var i Category
+		var i GetAllCategoriesRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.Name,
@@ -139,6 +170,7 @@ func (q *Queries) GetAllCategories(ctx context.Context, arg GetAllCategoriesPara
 			&i.DepartmentID,
 			&i.StorageID,
 			&i.Parent,
+			&i.ColorCode,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.DeletedAt,
@@ -154,7 +186,7 @@ func (q *Queries) GetAllCategories(ctx context.Context, arg GetAllCategoriesPara
 }
 
 const getCategoriesByDepartmentID = `-- name: GetCategoriesByDepartmentID :many
-SELECT id, name, picture_url, name_i18n, department_id, storage_id, parent, created_at, updated_at, deleted_at
+SELECT id, name, picture_url, name_i18n, department_id, storage_id, parent, color_code, created_at, updated_at, deleted_at
 FROM categories
 WHERE department_id = $1 AND deleted_at = 0
 ORDER BY created_at DESC
@@ -167,15 +199,29 @@ type GetCategoriesByDepartmentIDParams struct {
 	Offset       int32       `json:"offset"`
 }
 
-func (q *Queries) GetCategoriesByDepartmentID(ctx context.Context, arg GetCategoriesByDepartmentIDParams) ([]Category, error) {
+type GetCategoriesByDepartmentIDRow struct {
+	ID           uuid.UUID          `json:"id"`
+	Name         string             `json:"name"`
+	PictureUrl   *string            `json:"picture_url"`
+	NameI18n     pgtype.UUID        `json:"name_i18n"`
+	DepartmentID pgtype.UUID        `json:"department_id"`
+	StorageID    pgtype.UUID        `json:"storage_id"`
+	Parent       pgtype.UUID        `json:"parent"`
+	ColorCode    *string            `json:"color_code"`
+	CreatedAt    pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
+	DeletedAt    *int64             `json:"deleted_at"`
+}
+
+func (q *Queries) GetCategoriesByDepartmentID(ctx context.Context, arg GetCategoriesByDepartmentIDParams) ([]GetCategoriesByDepartmentIDRow, error) {
 	rows, err := q.db.Query(ctx, getCategoriesByDepartmentID, arg.DepartmentID, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []Category
+	var items []GetCategoriesByDepartmentIDRow
 	for rows.Next() {
-		var i Category
+		var i GetCategoriesByDepartmentIDRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.Name,
@@ -184,6 +230,7 @@ func (q *Queries) GetCategoriesByDepartmentID(ctx context.Context, arg GetCatego
 			&i.DepartmentID,
 			&i.StorageID,
 			&i.Parent,
+			&i.ColorCode,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.DeletedAt,
@@ -199,7 +246,7 @@ func (q *Queries) GetCategoriesByDepartmentID(ctx context.Context, arg GetCatego
 }
 
 const getCategoriesByParentID = `-- name: GetCategoriesByParentID :many
-SELECT id, name, picture_url, name_i18n, department_id, storage_id, parent, created_at, updated_at, deleted_at
+SELECT id, name, picture_url, name_i18n, department_id, storage_id, parent, color_code, created_at, updated_at, deleted_at
 FROM categories
 WHERE parent = $1 AND deleted_at = 0
 ORDER BY created_at DESC
@@ -212,15 +259,29 @@ type GetCategoriesByParentIDParams struct {
 	Offset int32       `json:"offset"`
 }
 
-func (q *Queries) GetCategoriesByParentID(ctx context.Context, arg GetCategoriesByParentIDParams) ([]Category, error) {
+type GetCategoriesByParentIDRow struct {
+	ID           uuid.UUID          `json:"id"`
+	Name         string             `json:"name"`
+	PictureUrl   *string            `json:"picture_url"`
+	NameI18n     pgtype.UUID        `json:"name_i18n"`
+	DepartmentID pgtype.UUID        `json:"department_id"`
+	StorageID    pgtype.UUID        `json:"storage_id"`
+	Parent       pgtype.UUID        `json:"parent"`
+	ColorCode    *string            `json:"color_code"`
+	CreatedAt    pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
+	DeletedAt    *int64             `json:"deleted_at"`
+}
+
+func (q *Queries) GetCategoriesByParentID(ctx context.Context, arg GetCategoriesByParentIDParams) ([]GetCategoriesByParentIDRow, error) {
 	rows, err := q.db.Query(ctx, getCategoriesByParentID, arg.Parent, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []Category
+	var items []GetCategoriesByParentIDRow
 	for rows.Next() {
-		var i Category
+		var i GetCategoriesByParentIDRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.Name,
@@ -229,6 +290,7 @@ func (q *Queries) GetCategoriesByParentID(ctx context.Context, arg GetCategories
 			&i.DepartmentID,
 			&i.StorageID,
 			&i.Parent,
+			&i.ColorCode,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.DeletedAt,
@@ -244,7 +306,7 @@ func (q *Queries) GetCategoriesByParentID(ctx context.Context, arg GetCategories
 }
 
 const getCategoriesByStorageID = `-- name: GetCategoriesByStorageID :many
-SELECT id, name, picture_url, name_i18n, department_id, storage_id, parent, created_at, updated_at, deleted_at
+SELECT id, name, picture_url, name_i18n, department_id, storage_id, parent, color_code, created_at, updated_at, deleted_at
 FROM categories
 WHERE storage_id = $1 AND deleted_at = 0
 ORDER BY created_at DESC
@@ -257,15 +319,29 @@ type GetCategoriesByStorageIDParams struct {
 	Offset    int32       `json:"offset"`
 }
 
-func (q *Queries) GetCategoriesByStorageID(ctx context.Context, arg GetCategoriesByStorageIDParams) ([]Category, error) {
+type GetCategoriesByStorageIDRow struct {
+	ID           uuid.UUID          `json:"id"`
+	Name         string             `json:"name"`
+	PictureUrl   *string            `json:"picture_url"`
+	NameI18n     pgtype.UUID        `json:"name_i18n"`
+	DepartmentID pgtype.UUID        `json:"department_id"`
+	StorageID    pgtype.UUID        `json:"storage_id"`
+	Parent       pgtype.UUID        `json:"parent"`
+	ColorCode    *string            `json:"color_code"`
+	CreatedAt    pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
+	DeletedAt    *int64             `json:"deleted_at"`
+}
+
+func (q *Queries) GetCategoriesByStorageID(ctx context.Context, arg GetCategoriesByStorageIDParams) ([]GetCategoriesByStorageIDRow, error) {
 	rows, err := q.db.Query(ctx, getCategoriesByStorageID, arg.StorageID, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []Category
+	var items []GetCategoriesByStorageIDRow
 	for rows.Next() {
-		var i Category
+		var i GetCategoriesByStorageIDRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.Name,
@@ -274,6 +350,7 @@ func (q *Queries) GetCategoriesByStorageID(ctx context.Context, arg GetCategorie
 			&i.DepartmentID,
 			&i.StorageID,
 			&i.Parent,
+			&i.ColorCode,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.DeletedAt,
@@ -289,14 +366,28 @@ func (q *Queries) GetCategoriesByStorageID(ctx context.Context, arg GetCategorie
 }
 
 const getCategoryByID = `-- name: GetCategoryByID :one
-SELECT id, name, picture_url, name_i18n, department_id, storage_id, parent, created_at, updated_at, deleted_at
+SELECT id, name, picture_url, name_i18n, department_id, storage_id, parent, color_code, created_at, updated_at, deleted_at
 FROM categories
 WHERE id = $1 AND deleted_at = 0
 `
 
-func (q *Queries) GetCategoryByID(ctx context.Context, id uuid.UUID) (Category, error) {
+type GetCategoryByIDRow struct {
+	ID           uuid.UUID          `json:"id"`
+	Name         string             `json:"name"`
+	PictureUrl   *string            `json:"picture_url"`
+	NameI18n     pgtype.UUID        `json:"name_i18n"`
+	DepartmentID pgtype.UUID        `json:"department_id"`
+	StorageID    pgtype.UUID        `json:"storage_id"`
+	Parent       pgtype.UUID        `json:"parent"`
+	ColorCode    *string            `json:"color_code"`
+	CreatedAt    pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
+	DeletedAt    *int64             `json:"deleted_at"`
+}
+
+func (q *Queries) GetCategoryByID(ctx context.Context, id uuid.UUID) (GetCategoryByIDRow, error) {
 	row := q.db.QueryRow(ctx, getCategoryByID, id)
-	var i Category
+	var i GetCategoryByIDRow
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
@@ -305,6 +396,7 @@ func (q *Queries) GetCategoryByID(ctx context.Context, id uuid.UUID) (Category, 
 		&i.DepartmentID,
 		&i.StorageID,
 		&i.Parent,
+		&i.ColorCode,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
@@ -321,6 +413,7 @@ SELECT
     c.department_id,
     c.storage_id,
     c.parent,
+    c.color_code,
     c.created_at,
     c.updated_at,
     d.name as department_name,
@@ -341,6 +434,7 @@ type GetCategoryWithRelationsRow struct {
 	DepartmentID   pgtype.UUID        `json:"department_id"`
 	StorageID      pgtype.UUID        `json:"storage_id"`
 	Parent         pgtype.UUID        `json:"parent"`
+	ColorCode      *string            `json:"color_code"`
 	CreatedAt      pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
 	DepartmentName *string            `json:"department_name"`
@@ -359,6 +453,7 @@ func (q *Queries) GetCategoryWithRelations(ctx context.Context, id uuid.UUID) (G
 		&i.DepartmentID,
 		&i.StorageID,
 		&i.Parent,
+		&i.ColorCode,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DepartmentName,
@@ -369,7 +464,7 @@ func (q *Queries) GetCategoryWithRelations(ctx context.Context, id uuid.UUID) (G
 }
 
 const getRootCategories = `-- name: GetRootCategories :many
-SELECT id, name, picture_url, name_i18n, department_id, storage_id, parent, created_at, updated_at, deleted_at
+SELECT id, name, picture_url, name_i18n, department_id, storage_id, parent, color_code, created_at, updated_at, deleted_at
 FROM categories
 WHERE parent IS NULL AND deleted_at = 0
 ORDER BY created_at DESC
@@ -381,15 +476,29 @@ type GetRootCategoriesParams struct {
 	Offset int32 `json:"offset"`
 }
 
-func (q *Queries) GetRootCategories(ctx context.Context, arg GetRootCategoriesParams) ([]Category, error) {
+type GetRootCategoriesRow struct {
+	ID           uuid.UUID          `json:"id"`
+	Name         string             `json:"name"`
+	PictureUrl   *string            `json:"picture_url"`
+	NameI18n     pgtype.UUID        `json:"name_i18n"`
+	DepartmentID pgtype.UUID        `json:"department_id"`
+	StorageID    pgtype.UUID        `json:"storage_id"`
+	Parent       pgtype.UUID        `json:"parent"`
+	ColorCode    *string            `json:"color_code"`
+	CreatedAt    pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
+	DeletedAt    *int64             `json:"deleted_at"`
+}
+
+func (q *Queries) GetRootCategories(ctx context.Context, arg GetRootCategoriesParams) ([]GetRootCategoriesRow, error) {
 	rows, err := q.db.Query(ctx, getRootCategories, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []Category
+	var items []GetRootCategoriesRow
 	for rows.Next() {
-		var i Category
+		var i GetRootCategoriesRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.Name,
@@ -398,6 +507,7 @@ func (q *Queries) GetRootCategories(ctx context.Context, arg GetRootCategoriesPa
 			&i.DepartmentID,
 			&i.StorageID,
 			&i.Parent,
+			&i.ColorCode,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.DeletedAt,
@@ -424,7 +534,7 @@ func (q *Queries) RestoreCategory(ctx context.Context, id uuid.UUID) error {
 }
 
 const searchCategories = `-- name: SearchCategories :many
-SELECT id, name, picture_url, name_i18n, department_id, storage_id, parent, created_at, updated_at, deleted_at
+SELECT id, name, picture_url, name_i18n, department_id, storage_id, parent, color_code, created_at, updated_at, deleted_at
 FROM categories
 WHERE deleted_at = 0 AND name ILIKE '%' || $1 || '%'
 ORDER BY created_at DESC
@@ -437,15 +547,29 @@ type SearchCategoriesParams struct {
 	Offset  int32   `json:"offset"`
 }
 
-func (q *Queries) SearchCategories(ctx context.Context, arg SearchCategoriesParams) ([]Category, error) {
+type SearchCategoriesRow struct {
+	ID           uuid.UUID          `json:"id"`
+	Name         string             `json:"name"`
+	PictureUrl   *string            `json:"picture_url"`
+	NameI18n     pgtype.UUID        `json:"name_i18n"`
+	DepartmentID pgtype.UUID        `json:"department_id"`
+	StorageID    pgtype.UUID        `json:"storage_id"`
+	Parent       pgtype.UUID        `json:"parent"`
+	ColorCode    *string            `json:"color_code"`
+	CreatedAt    pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
+	DeletedAt    *int64             `json:"deleted_at"`
+}
+
+func (q *Queries) SearchCategories(ctx context.Context, arg SearchCategoriesParams) ([]SearchCategoriesRow, error) {
 	rows, err := q.db.Query(ctx, searchCategories, arg.Column1, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []Category
+	var items []SearchCategoriesRow
 	for rows.Next() {
-		var i Category
+		var i SearchCategoriesRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.Name,
@@ -454,6 +578,7 @@ func (q *Queries) SearchCategories(ctx context.Context, arg SearchCategoriesPara
 			&i.DepartmentID,
 			&i.StorageID,
 			&i.Parent,
+			&i.ColorCode,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.DeletedAt,
@@ -476,9 +601,10 @@ SET name = COALESCE($2, name),
     department_id = COALESCE($5, department_id),
     storage_id = COALESCE($6, storage_id),
     parent = COALESCE($7, parent),
+    color_code = COALESCE($8, color_code),
     updated_at = NOW()
 WHERE id = $1 AND deleted_at = 0
-RETURNING id, name, picture_url, name_i18n, department_id, storage_id, parent, created_at, updated_at, deleted_at
+RETURNING id, name, picture_url, name_i18n, department_id, storage_id, parent, color_code, created_at, updated_at, deleted_at
 `
 
 type UpdateCategoryParams struct {
@@ -489,9 +615,24 @@ type UpdateCategoryParams struct {
 	DepartmentID pgtype.UUID `json:"department_id"`
 	StorageID    pgtype.UUID `json:"storage_id"`
 	Parent       pgtype.UUID `json:"parent"`
+	ColorCode    *string     `json:"color_code"`
 }
 
-func (q *Queries) UpdateCategory(ctx context.Context, arg UpdateCategoryParams) (Category, error) {
+type UpdateCategoryRow struct {
+	ID           uuid.UUID          `json:"id"`
+	Name         string             `json:"name"`
+	PictureUrl   *string            `json:"picture_url"`
+	NameI18n     pgtype.UUID        `json:"name_i18n"`
+	DepartmentID pgtype.UUID        `json:"department_id"`
+	StorageID    pgtype.UUID        `json:"storage_id"`
+	Parent       pgtype.UUID        `json:"parent"`
+	ColorCode    *string            `json:"color_code"`
+	CreatedAt    pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
+	DeletedAt    *int64             `json:"deleted_at"`
+}
+
+func (q *Queries) UpdateCategory(ctx context.Context, arg UpdateCategoryParams) (UpdateCategoryRow, error) {
 	row := q.db.QueryRow(ctx, updateCategory,
 		arg.ID,
 		arg.Name,
@@ -500,8 +641,9 @@ func (q *Queries) UpdateCategory(ctx context.Context, arg UpdateCategoryParams) 
 		arg.DepartmentID,
 		arg.StorageID,
 		arg.Parent,
+		arg.ColorCode,
 	)
-	var i Category
+	var i UpdateCategoryRow
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
@@ -510,6 +652,7 @@ func (q *Queries) UpdateCategory(ctx context.Context, arg UpdateCategoryParams) 
 		&i.DepartmentID,
 		&i.StorageID,
 		&i.Parent,
+		&i.ColorCode,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,

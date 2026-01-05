@@ -3,7 +3,6 @@ package service
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -11,6 +10,20 @@ import (
 	"gitlab.yurtal.tech/company/maryai/back/internal/repository"
 	pg "gitlab.yurtal.tech/company/maryai/back/internal/repository/pg/tenantsdb"
 )
+
+// Generic function to map any storage row to response
+func mapStorageToResponse(id uuid.UUID, name string, branchID pgtype.UUID, nameI18n pgtype.UUID, pictureUrl *string, colorCode *string, createdAt, updatedAt pgtype.Timestamptz) *model.StorageResponse {
+	return &model.StorageResponse{
+		ID:         id.String(),
+		Name:       &name,
+		BranchID:   branchID.String(),
+		NameI18n:   uuidToStr(nameI18n),
+		PictureUrl: pictureUrl,
+		ColorCode:  colorCode,
+		CreatedAt:  timestampToTime(createdAt),
+		UpdatedAt:  timestampToTime(updatedAt),
+	}
+}
 
 type StorageS struct {
 	repo *repository.Repository
@@ -21,7 +34,7 @@ func NewStorageS(repo *repository.Repository) *StorageS {
 }
 
 // CreateStorage creates a new storage
-func (s *StorageS) CreateStorage(ctx context.Context, name string, branchID string, nameI18n *uuid.UUID, pictureUrl *string) (*model.StorageResponse, error) {
+func (s *StorageS) CreateStorage(ctx context.Context, name string, branchID string, nameI18n *uuid.UUID, pictureUrl *string, colorCode *string) (*model.StorageResponse, error) {
 	if name == "" {
 		return nil, fmt.Errorf("storage name is required")
 	}
@@ -45,12 +58,13 @@ func (s *StorageS) CreateStorage(ctx context.Context, name string, branchID stri
 		BranchID:   pgtype.UUID{Bytes: bID, Valid: true},
 		NameI18n:   nameI18nUUID,
 		PictureUrl: pictureUrl,
+		ColorCode:  colorCode,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to create storage: %w", err)
 	}
 
-	return toStorageResponse(storage), nil
+	return mapStorageToResponse(storage.ID, storage.Name, storage.BranchID, storage.NameI18n, storage.PictureUrl, storage.ColorCode, storage.CreatedAt, storage.UpdatedAt), nil
 }
 
 // GetStorageByID retrieves a storage by ID
@@ -65,7 +79,7 @@ func (s *StorageS) GetStorageByID(ctx context.Context, storageID string) (*model
 		return nil, fmt.Errorf("failed to get storage: %w", err)
 	}
 
-	return toStorageResponse(storage), nil
+	return mapStorageToResponse(storage.ID, storage.Name, storage.BranchID, storage.NameI18n, storage.PictureUrl, storage.ColorCode, storage.CreatedAt, storage.UpdatedAt), nil
 }
 
 // GetAllStorages retrieves all storages with pagination
@@ -80,7 +94,7 @@ func (s *StorageS) GetAllStorages(ctx context.Context, limit, offset int32) ([]m
 
 	var responses []model.StorageResponse
 	for _, str := range storages {
-		responses = append(responses, *toStorageResponse(str))
+		responses = append(responses, *mapStorageToResponse(str.ID, str.Name, str.BranchID, str.NameI18n, str.PictureUrl, str.ColorCode, str.CreatedAt, str.UpdatedAt))
 	}
 
 	return responses, nil
@@ -104,14 +118,14 @@ func (s *StorageS) GetStoragesByBranchID(ctx context.Context, branchID string, l
 
 	var responses []model.StorageResponse
 	for _, str := range storages {
-		responses = append(responses, *toStorageResponse(str))
+		responses = append(responses, *mapStorageToResponse(str.ID, str.Name, str.BranchID, str.NameI18n, str.PictureUrl, str.ColorCode, str.CreatedAt, str.UpdatedAt))
 	}
 
 	return responses, nil
 }
 
 // UpdateStorage updates a storage
-func (s *StorageS) UpdateStorage(ctx context.Context, storageID string, name *string, branchID *string, nameI18n *string, pictureUrl *string) (*model.StorageResponse, error) {
+func (s *StorageS) UpdateStorage(ctx context.Context, storageID string, name *string, branchID *string, nameI18n *string, pictureUrl *string, colorCode *string) (*model.StorageResponse, error) {
 	id, err := uuid.Parse(storageID)
 	if err != nil {
 		return nil, fmt.Errorf("invalid storage ID: %w", err)
@@ -151,18 +165,24 @@ func (s *StorageS) UpdateStorage(ctx context.Context, storageID string, name *st
 		updatedPictureUrl = pictureUrl
 	}
 
+	updatedColorCode := currentStorage.ColorCode
+	if colorCode != nil {
+		updatedColorCode = colorCode
+	}
+
 	storage, err := s.repo.Tenant(ctx).UpdateStorage(ctx, pg.UpdateStorageParams{
 		ID:         id,
 		Name:       updatedName,
 		BranchID:   updatedBranchID,
 		NameI18n:   updatedNameI18n,
 		PictureUrl: updatedPictureUrl,
+		ColorCode:  updatedColorCode,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to update storage: %w", err)
 	}
 
-	return toStorageResponse(storage), nil
+	return mapStorageToResponse(storage.ID, storage.Name, storage.BranchID, storage.NameI18n, storage.PictureUrl, storage.ColorCode, storage.CreatedAt, storage.UpdatedAt), nil
 }
 
 // DeleteStorage soft deletes a storage
@@ -206,44 +226,10 @@ func (s *StorageS) SearchStorages(ctx context.Context, query string, limit, offs
 
 	var responses []model.StorageResponse
 	for _, str := range storages {
-		responses = append(responses, *toStorageResponse(str))
+		responses = append(responses, *mapStorageToResponse(str.ID, str.Name, str.BranchID, str.NameI18n, str.PictureUrl, str.ColorCode, str.CreatedAt, str.UpdatedAt))
 	}
 
 	return responses, nil
 }
 
 // Helper function
-func toStorageResponse(st pg.Storage) *model.StorageResponse {
-	if st.ID == uuid.Nil {
-		return nil
-	}
-
-	var nameI18nStr *string
-	if st.NameI18n.Valid {
-		uuidStr := uuid.UUID(st.NameI18n.Bytes).String()
-		nameI18nStr = &uuidStr
-	}
-
-	var createdAt *time.Time
-	if st.CreatedAt.Valid {
-		createdAt = &st.CreatedAt.Time
-	}
-
-	var updatedAt *time.Time
-	if st.UpdatedAt.Valid {
-		updatedAt = &st.UpdatedAt.Time
-	}
-
-	name := st.Name
-	branchID := st.BranchID.String()
-
-	return &model.StorageResponse{
-		ID:         st.ID.String(),
-		Name:       &name,
-		BranchID:   branchID,
-		NameI18n:   nameI18nStr,
-		PictureUrl: st.PictureUrl,
-		CreatedAt:  createdAt,
-		UpdatedAt:  updatedAt,
-	}
-}

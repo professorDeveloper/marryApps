@@ -1,10 +1,9 @@
-CREATE TYPE user_role AS ENUM ('admin', 'user', 'cashier', 'superadmin', 'kitchen', 'waiter', 'manager');
-
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
 CREATE TABLE IF NOT EXISTS shifts (
   id           UUID      PRIMARY KEY DEFAULT gen_random_uuid(),
   name         TEXT      NOT NULL,
-  role         user_role,
+  role         TEXT CHECK (role IN ('admin', 'user', 'cashier', 'superadmin', 'kitchen', 'waiter', 'manager')),
   working_days TEXT,
   open_time    BIGINT,
   close_time   BIGINT,
@@ -18,7 +17,7 @@ CREATE TABLE IF NOT EXISTS users (
   id            UUID      PRIMARY KEY DEFAULT gen_random_uuid(),
   full_name     TEXT,
   username      TEXT      UNIQUE,
-  role          user_role DEFAULT 'user',
+  role          TEXT NOT NULL DEFAULT 'user' CHECK (role IN ('admin', 'user', 'cashier', 'superadmin', 'kitchen', 'waiter', 'manager')),
   email         TEXT      UNIQUE,
   shift_id      UUID      REFERENCES shifts(id) ON DELETE CASCADE,
   pincode       VARCHAR(10) UNIQUE,

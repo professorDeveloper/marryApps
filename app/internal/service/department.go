@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -14,6 +13,19 @@ import (
 	pg "gitlab.yurtal.tech/company/maryai/back/internal/repository/pg/tenantsdb"
 )
 
+// Generic function to map any department row to response
+func mapDepartmentToResponse(id uuid.UUID, name string, nameI18n, storageID pgtype.UUID, colorCode *string, createdAt, updatedAt pgtype.Timestamptz) *model.DepartmentResponse {
+	return &model.DepartmentResponse{
+		ID:        id.String(),
+		Name:      &name,
+		NameI18n:  uuidToStr(nameI18n),
+		ColorCode: colorCode,
+		StorageID: storageID.String(),
+		CreatedAt: timestampToTime(createdAt),
+		UpdatedAt: timestampToTime(updatedAt),
+	}
+}
+
 type DepartmentS struct {
 	repo *repository.Repository
 }
@@ -22,7 +34,7 @@ func NewDepartmentS(repo *repository.Repository) *DepartmentS {
 	return &DepartmentS{repo: repo}
 }
 
-func (d *DepartmentS) CreateDepartment(ctx context.Context, name string, nameI18n *string, storageID *string) (*model.DepartmentResponse, error) {
+func (d *DepartmentS) CreateDepartment(ctx context.Context, name string, nameI18n, colorCode *string, storageID *string) (*model.DepartmentResponse, error) {
 	if name == "" {
 		return nil, fmt.Errorf("department name is required")
 	}
@@ -49,6 +61,7 @@ func (d *DepartmentS) CreateDepartment(ctx context.Context, name string, nameI18
 		ID:        uuid.New(),
 		Name:      name,
 		NameI18n:  nameI18nUUID,
+		ColorCode: colorCode,
 		StorageID: storageUUID,
 	})
 	if err != nil {
@@ -56,7 +69,7 @@ func (d *DepartmentS) CreateDepartment(ctx context.Context, name string, nameI18
 		return nil, fmt.Errorf("failed to create department: %w", err)
 	}
 
-	return toDepartmentResponse(department), nil
+	return mapDepartmentToResponse(department.ID, department.Name, department.NameI18n, department.StorageID, department.ColorCode, department.CreatedAt, department.UpdatedAt), nil
 }
 
 // GetDepartmentByID retrieves a department by ID
@@ -75,7 +88,7 @@ func (d *DepartmentS) GetDepartmentByID(ctx context.Context, departmentID string
 		return nil, fmt.Errorf("failed to retrieve department: %w", err)
 	}
 
-	return toDepartmentResponse(department), nil
+	return mapDepartmentToResponse(department.ID, department.Name, department.NameI18n, department.StorageID, department.ColorCode, department.CreatedAt, department.UpdatedAt), nil
 }
 
 // GetAllDepartments retrieves all departments with pagination
@@ -91,7 +104,7 @@ func (d *DepartmentS) GetAllDepartments(ctx context.Context, limit, offset int32
 
 	var responses []*model.DepartmentResponse
 	for _, dept := range departments {
-		responses = append(responses, toDepartmentResponse(dept))
+		responses = append(responses, mapDepartmentToResponse(dept.ID, dept.Name, dept.NameI18n, dept.StorageID, dept.ColorCode, dept.CreatedAt, dept.UpdatedAt))
 	}
 	return responses, nil
 }
@@ -115,13 +128,13 @@ func (d *DepartmentS) GetDepartmentsByStorageID(ctx context.Context, storageID s
 
 	var responses []*model.DepartmentResponse
 	for _, dept := range departments {
-		responses = append(responses, toDepartmentResponse(dept))
+		responses = append(responses, mapDepartmentToResponse(dept.ID, dept.Name, dept.NameI18n, dept.StorageID, dept.ColorCode, dept.CreatedAt, dept.UpdatedAt))
 	}
 	return responses, nil
 }
 
 // UpdateDepartment updates a department
-func (d *DepartmentS) UpdateDepartment(ctx context.Context, departmentID string, name *string, nameI18n *string, storageID *string) (*model.DepartmentResponse, error) {
+func (d *DepartmentS) UpdateDepartment(ctx context.Context, departmentID string, name *string, nameI18n *string, colorCode *string, storageID *string) (*model.DepartmentResponse, error) {
 	id, err := uuid.Parse(departmentID)
 	if err != nil {
 		return nil, fmt.Errorf("invalid department ID: %w", err)
@@ -150,6 +163,11 @@ func (d *DepartmentS) UpdateDepartment(ctx context.Context, departmentID string,
 		finalNameI18n = pgtype.UUID{Bytes: nameI18nUUID, Valid: true}
 	}
 
+	finalColorCode := existing.ColorCode
+	if colorCode != nil {
+		finalColorCode = colorCode
+	}
+
 	finalStorageID := existing.StorageID
 	if storageID != nil && *storageID != "" {
 		storageUUID, err := uuid.Parse(*storageID)
@@ -163,6 +181,7 @@ func (d *DepartmentS) UpdateDepartment(ctx context.Context, departmentID string,
 		ID:        id,
 		Name:      finalName,
 		NameI18n:  finalNameI18n,
+		ColorCode: finalColorCode,
 		StorageID: finalStorageID,
 	})
 	if err != nil {
@@ -170,7 +189,7 @@ func (d *DepartmentS) UpdateDepartment(ctx context.Context, departmentID string,
 		return nil, fmt.Errorf("failed to update department: %w", err)
 	}
 
-	return toDepartmentResponse(department), nil
+	return mapDepartmentToResponse(department.ID, department.Name, department.NameI18n, department.StorageID, department.ColorCode, department.CreatedAt, department.UpdatedAt), nil
 }
 
 // DeleteDepartment soft deletes a department
@@ -221,41 +240,9 @@ func (d *DepartmentS) SearchDepartments(ctx context.Context, query string, limit
 
 	var responses []*model.DepartmentResponse
 	for _, dept := range departments {
-		responses = append(responses, toDepartmentResponse(dept))
+		responses = append(responses, mapDepartmentToResponse(dept.ID, dept.Name, dept.NameI18n, dept.StorageID, dept.ColorCode, dept.CreatedAt, dept.UpdatedAt))
 	}
 	return responses, nil
 }
 
 // Helper function to convert database department to response model
-func toDepartmentResponse(dept pg.Department) *model.DepartmentResponse {
-	var nameI18nStr *string
-	if dept.NameI18n.Valid {
-		str := dept.NameI18n.String()
-		nameI18nStr = &str
-	}
-
-	storageIDStr := ""
-	if dept.StorageID.Valid {
-		storageIDStr = dept.StorageID.String()
-	}
-
-	var createdAt *time.Time
-	if dept.CreatedAt.Valid {
-		createdAt = &dept.CreatedAt.Time
-	}
-
-	var updatedAt *time.Time
-	if dept.UpdatedAt.Valid {
-		updatedAt = &dept.UpdatedAt.Time
-	}
-
-	name := dept.Name
-	return &model.DepartmentResponse{
-		ID:        dept.ID.String(),
-		Name:      &name,
-		NameI18n:  nameI18nStr,
-		StorageID: storageIDStr,
-		CreatedAt: createdAt,
-		UpdatedAt: updatedAt,
-	}
-}

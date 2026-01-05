@@ -46,7 +46,7 @@ func (h *Handler) CreateStorage(c echo.Context) error {
 		nameI18nUUID = &id
 	}
 
-	storage, err := h.service.Storage().CreateStorage(c.Request().Context(), *req.Name, req.BranchID, nameI18nUUID, req.PictureUrl)
+	storage, err := h.service.Storage().CreateStorage(c.Request().Context(), *req.Name, req.BranchID, nameI18nUUID, req.PictureUrl, req.ColorCode)
 	if err != nil {
 		log.Printf("CreateStorage failed: %v", err)
 		return c.JSON(http.StatusInternalServerError, model.ErrorResponse{Message: "failed to create storage"})
@@ -215,7 +215,7 @@ func (h *Handler) UpdateStorage(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "invalid request format"})
 	}
 
-	storage, err := h.service.Storage().UpdateStorage(c.Request().Context(), storageID, req.Name, req.BranchID, req.NameI18n, req.PictureUrl)
+	storage, err := h.service.Storage().UpdateStorage(c.Request().Context(), storageID, req.Name, req.BranchID, req.NameI18n, req.PictureUrl, req.ColorCode)
 	if err != nil {
 		log.Printf("UpdateStorage failed for id %s: %v", storageID, err)
 		return c.JSON(http.StatusInternalServerError, model.ErrorResponse{Message: "failed to update storage"})

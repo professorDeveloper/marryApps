@@ -10,9 +10,7 @@ import (
 	"github.com/labstack/echo/v4"
 	"gitlab.yurtal.tech/company/maryai/back/internal/repository"
 	"gitlab.yurtal.tech/company/maryai/back/internal/service"
-	"gitlab.yurtal.tech/company/maryai/back/pkg/utils"
 )
-
 
 func TenantMiddleware(repo *repository.Repository) echo.MiddlewareFunc {
 	resolver := service.NewTenantResolver(repo)
@@ -45,20 +43,15 @@ func TenantMiddleware(repo *repository.Repository) echo.MiddlewareFunc {
 				return c.JSON(http.StatusUnauthorized, map[string]interface{}{
 					"message": "Unauthorized: tenant context missing",
 				})
-			} 
-			brandID, err := utils.ParseUUID(brandIDStr)
-			if err != nil {
-				log.Printf("Invalid brand_id: %v", err)
-				return c.JSON(http.StatusBadRequest, map[string]interface{}{
-					"message": "Invalid tenant context",
-				})
 			}
+
+			brandIDStr = strings.TrimSpace(brandIDStr)
 
 			ctx := c.Request().Context()
 
-			tenantCfg, err := resolver.ResolveTenantByBrandID(ctx, brandID)
+			tenantCfg, err := resolver.ResolveTenantByBrandID(ctx, brandIDStr)
 			if err != nil {
-				log.Printf("Failed to resolve tenant %s: %v", brandID.String(), err)
+				log.Printf("Failed to resolve tenant %s: %v", brandIDStr, err)
 				return c.JSON(http.StatusForbidden, map[string]interface{}{
 					"message": "Tenant not found or access denied",
 				})
@@ -72,9 +65,9 @@ func TenantMiddleware(repo *repository.Repository) echo.MiddlewareFunc {
 				})
 			}
 
-			schemaName := fmt.Sprintf("tenant_%s", strings.ReplaceAll(brandID.String(), "-", "_"))
+			schemaName := fmt.Sprintf("tenant_%s", brandIDStr)
 			if _, err := tx.Exec(ctx, fmt.Sprintf("SET LOCAL search_path TO \"%s\", public", schemaName)); err != nil {
-				log.Printf("Tenant schema %s not found for brand %s: %v", schemaName, brandID.String(), err)
+				log.Printf("Tenant schema %s not found for brand %s: %v", schemaName, brandIDStr, err)
 				tx.Rollback(ctx)
 				return c.JSON(http.StatusForbidden, map[string]interface{}{
 					"message": "Tenant schema not initialized",
@@ -84,7 +77,7 @@ func TenantMiddleware(repo *repository.Repository) echo.MiddlewareFunc {
 			tenantQueries := repo.Tenant(ctx).WithTx(tx)
 
 			tenantCtx := repository.WithTenantQueries(ctx, tenantQueries)
-			tenantCtx = context.WithValue(tenantCtx, "brand_id", brandID.String())
+			tenantCtx = context.WithValue(tenantCtx, "brand_id", brandIDStr)
 			tenantCtx = context.WithValue(tenantCtx, "user_id", userIDStr)
 			tenantCtx = context.WithValue(tenantCtx, "tenant_config", tenantCfg)
 

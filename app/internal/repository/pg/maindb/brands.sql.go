@@ -13,20 +13,46 @@ import (
 
 const createBrand = `-- name: CreateBrand :one
 INSERT INTO brands (
-  name
+  name,
+  brand_id
 ) VALUES (
-  $1
+  $1,
+  $2
 )
-RETURNING id, name, brand_db_id, created_at, updated_at
+RETURNING id, name, brand_id, created_at, updated_at
 `
 
-func (q *Queries) CreateBrand(ctx context.Context, name string) (Brand, error) {
-	row := q.db.QueryRow(ctx, createBrand, name)
+type CreateBrandParams struct {
+	Name    string `json:"name"`
+	BrandID string `json:"brand_id"`
+}
+
+func (q *Queries) CreateBrand(ctx context.Context, arg CreateBrandParams) (Brand, error) {
+	row := q.db.QueryRow(ctx, createBrand, arg.Name, arg.BrandID)
 	var i Brand
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
-		&i.BrandDbID,
+		&i.BrandID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const getBrandByBrandID = `-- name: GetBrandByBrandID :one
+SELECT id, name, brand_id, created_at, updated_at
+FROM brands
+WHERE brand_id = $1
+`
+
+func (q *Queries) GetBrandByBrandID(ctx context.Context, brandID string) (Brand, error) {
+	row := q.db.QueryRow(ctx, getBrandByBrandID, brandID)
+	var i Brand
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.BrandID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -34,7 +60,7 @@ func (q *Queries) CreateBrand(ctx context.Context, name string) (Brand, error) {
 }
 
 const getBrandByID = `-- name: GetBrandByID :one
-SELECT id, name, brand_db_id, created_at, updated_at
+SELECT id, name, brand_id, created_at, updated_at
 FROM brands
 WHERE id = $1
 `
@@ -45,7 +71,7 @@ func (q *Queries) GetBrandByID(ctx context.Context, id uuid.UUID) (Brand, error)
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
-		&i.BrandDbID,
+		&i.BrandID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -53,7 +79,7 @@ func (q *Queries) GetBrandByID(ctx context.Context, id uuid.UUID) (Brand, error)
 }
 
 const listBrands = `-- name: ListBrands :many
-SELECT id, name, brand_db_id, created_at, updated_at
+SELECT id, name, brand_id, created_at, updated_at
 FROM brands
 ORDER BY id DESC
 LIMIT $1 OFFSET $2
@@ -76,7 +102,7 @@ func (q *Queries) ListBrands(ctx context.Context, arg ListBrandsParams) ([]Brand
 		if err := rows.Scan(
 			&i.ID,
 			&i.Name,
-			&i.BrandDbID,
+			&i.BrandID,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {

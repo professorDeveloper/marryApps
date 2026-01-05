@@ -6,6 +6,7 @@ import (
 	"log"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -21,6 +22,8 @@ type Postgres struct {
 	host     string
 	port     int
 	database string
+
+	simpleProtocol bool
 
 	maxPoolSize  int32
 	connAttempts int
@@ -43,12 +46,15 @@ func (p *Postgres) Close() {
 	}
 }
 
-func tryToConnectWithAttempts(ctx context.Context, maxAttempts int, maxPoolSize int32, maxDelay time.Duration, dsn string) (pool *pgxpool.Pool, err error) {
+func tryToConnectWithAttempts(ctx context.Context, maxAttempts int, maxPoolSize int32, maxDelay time.Duration, simpleProtocol bool, dsn string) (pool *pgxpool.Pool, err error) {
 	poolConfig, err := pgxpool.ParseConfig(dsn)
 	if err != nil {
 		log.Fatalf("Unable to parse config: %v\n", err)
 	}
 	poolConfig.MaxConns = maxPoolSize
+	if simpleProtocol {
+		poolConfig.ConnConfig.DefaultQueryExecMode = pgx.QueryExecModeSimpleProtocol
+	}
 
 	for maxAttempts > 0 {
 		pool, err = pgxpool.NewWithConfig(ctx, poolConfig)
@@ -86,5 +92,5 @@ func openPoolWithOptions(opts ...Option) (*pgxpool.Pool, error) {
 		pg.host, pg.port, pg.database,
 	)
 
-	return tryToConnectWithAttempts(context.Background(), pg.connAttempts, pg.maxPoolSize, pg.connTimeout, dsn)
+	return tryToConnectWithAttempts(context.Background(), pg.connAttempts, pg.maxPoolSize, pg.connTimeout, pg.simpleProtocol, dsn)
 }
