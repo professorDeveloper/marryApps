@@ -1,5 +1,5 @@
 import type { SWRConfiguration } from 'swr';
-import type { IProductItem, IDepartmentItem, IDepartmentFormData } from 'src/types/departments.tsx';
+import type { IProductItem, IDepartmentItem, IDepartmentFormData, IStorageItem } from 'src/types/departments.tsx';
 
 import useSWR, { mutate } from 'swr';
 import { useMemo, useCallback } from 'react';
@@ -146,6 +146,50 @@ export function useDeleteDepartment() {
   );
 
   return { deleteDepartment };
+}
+
+// ============================================================================
+// STORAGE HOOKS
+// ============================================================================
+
+/**
+ * Get all storages
+ */
+export function useGetStorages() {
+  const url = endpoints.storage.list;
+
+  const { data, isLoading, error, isValidating } = useSWR<IStorageItem[]>(
+    url,
+    fetcher,
+    { ...swrOptions }
+  );
+
+  const memoizedValue = useMemo(
+    () => ({
+      storages: data || [],
+      storagesLoading: isLoading,
+      storagesError: error,
+      storagesValidating: isValidating,
+      storagesEmpty: !isLoading && !isValidating && !data?.length,
+    }),
+    [data, error, isLoading, isValidating]
+  );
+
+  return memoizedValue;
+}
+
+/**
+ * Get storage name by ID
+ */
+export function useGetStorageName(storageId: string) {
+  const { storages } = useGetStorages();
+
+  const storageName = useMemo(() => {
+    const storage = storages.find((s) => s.id === storageId);
+    return storage?.name || storageId;
+  }, [storages, storageId]);
+
+  return storageName;
 }
 
 // ============================================================================

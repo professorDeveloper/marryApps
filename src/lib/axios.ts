@@ -145,4 +145,7 @@ export const endpoints = {
     update: (id: string) => `/api/v1/departments/${id}`,
     delete: (id: string) => `/api/v1/departments/${id}`,
   },
+  storage: {
+    list: '/api/v1/storages',
+  },
 } as const;

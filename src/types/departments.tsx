@@ -88,6 +88,16 @@ export type IDepartmentFormData = {
   storage_id: string;
 };
 
+export type IStorageItem = {
+  id: string;
+  name: string;
+  name_i18n: string;
+  branch_id: string;
+  picture_url: string;
+  created_at: string;
+  updated_at: string;
+};
+
 export type IDepartmentTableFilters = {
   search?: string;
   status?: string[];

@@ -13,7 +13,7 @@ import { useTheme } from '@mui/material/styles';
 import { paths } from 'src/routes/paths';
 import { useRouter } from 'src/routes/hooks';
 
-import { useGetDepartments, useDeleteDepartment } from 'src/actions/departments';
+import { useGetDepartments, useDeleteDepartment, useGetStorages, useGetStorageName } from 'src/actions/departments';
 
 import { Iconify } from 'src/components/iconify';
 import {
@@ -44,13 +44,15 @@ function RenderCellDepartmentName({ params }: { params: any }) {
 }
 
 /**
- * Storage ID renderer
+ * Storage ID renderer - Shows storage name instead of ID
  */
 function RenderCellStorageId({ params }: { params: any }) {
   const storageId = params.row.storage_id || '-';
+  const storageName = useGetStorageName(storageId);
+
   return (
-    <div style={{ fontSize: '0.875rem', fontFamily: 'monospace', opacity: 0.8 }}>
-      {storageId}
+    <div style={{ fontSize: '0.875rem', opacity: 0.8 }}>
+      {storageName}
     </div>
   );
 }
@@ -82,6 +84,9 @@ export function ProductListView() {
 
   // Get departments from API
   const { departments, departmentsLoading, departmentsError } = useGetDepartments();
+
+  // Pre-load storages to ensure data is cached
+  useGetStorages();
 
   // Columns configuration
   const columns = useMemo<GridColDef[]>(
@@ -179,6 +184,9 @@ export function ProductListView() {
 
   // Render specifications for view modal
   const renderDepartmentSpecifications = useCallback((dept: IDepartmentItem) => {
+    // eslint-disable-next-line react-hooks/rules-of-hooks
+    const storageName = useGetStorageName(dept.storage_id);
+
     const specs = [
       {
         label: t('departments.name') || 'Name',
@@ -189,8 +197,8 @@ export function ProductListView() {
         value: dept.name_i18n || '-',
       },
       {
-        label: t('departments.storage') || 'Storage ID',
-        value: dept.storage_id || '-',
+        label: t('departments.storage') || 'Storage',
+        value: storageName || '-',
       },
       {
         label: t('departments.created') || 'Created',
