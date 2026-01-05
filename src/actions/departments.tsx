@@ -9,7 +9,7 @@ import { poster, putter, fetcher, deleter, endpoints } from 'src/lib/axios';
 // ----------------------------------------------------------------------
 
 const swrOptions: SWRConfiguration = {
-  revalidateIfStale: false,
+  revalidateIfStale: true,
   revalidateOnFocus: false,
   revalidateOnReconnect: false,
 };
@@ -190,6 +190,20 @@ export function useGetStorageName(storageId: string) {
   }, [storages, storageId]);
 
   return storageName;
+}
+
+/**
+ * Get department name by ID
+ */
+export function useGetDepartmentName(departmentId: string) {
+  const { departments } = useGetDepartments();
+
+  const departmentName = useMemo(() => {
+    const department = departments.find((d) => d.id === departmentId);
+    return department?.name || departmentId;
+  }, [departments, departmentId]);
+
+  return departmentName;
 }
 
 // ============================================================================

@@ -17,7 +17,6 @@ import { ReportsListView } from 'src/sections/reports/reports-list-view';
 import { ReportsEditView } from 'src/sections/reports/reports-edit-view';
 import { ArchivesListView } from 'src/sections/reports/archives-list-view';
 import { CategoryListView } from 'src/sections/category/category-list-view';
-import { CategoryEditView } from 'src/sections/category/category-edit-view';
 import { SettingsListView } from 'src/sections/settings/settings-list-view';
 import { SettingsEditView } from 'src/sections/settings/settings-edit-view';
 import { HalfMeals } from 'src/sections/semifinished/semifinished-list-view';
@@ -34,6 +33,7 @@ import { SuppliersListView } from 'src/sections/warehouse/suppliers-list-view';
 import { SuppliersEditView } from 'src/sections/warehouse/suppliers-edit-view';
 import { SettingsGeneralListView } from 'src/sections/settings/general-list-view';
 import { SettingsProfileListView } from 'src/sections/settings/profile-list-view';
+import { CategoryEditViewWrapper } from 'src/sections/category/category-edit-view';
 import { InventoryReportsListView } from 'src/sections/reports/inventory-list-view';
 import { SemifinishedEditView } from 'src/sections/semifinished/semifinished-edit-view';
 import { SettingsIntegrationsListView } from 'src/sections/settings/integrations-list-view';
@@ -89,8 +89,8 @@ export const dashboardRoutes: RouteObject[] = [
       { path: 'section/new', element: <ProductEditView isNew /> },
       { path: 'section/:id/edit', element: <ProductEditView /> },
       { path: 'category', element: <CategoryListView /> },
-      { path: 'category/new', element: <CategoryEditView isNew /> },
-      { path: 'category/:id/edit', element: <CategoryEditView /> },
+      { path: 'category/new', element: <CategoryEditViewWrapper isNew /> },
+      { path: 'category/:id/edit', element: <CategoryEditViewWrapper /> },
       { path: 'semifinished', element: <HalfMeals /> },
       { path: 'semifinished/new', element: <SemifinishedEditView /> },
       { path: 'semifinished/:id/edit', element: <SemifinishedEditView /> },

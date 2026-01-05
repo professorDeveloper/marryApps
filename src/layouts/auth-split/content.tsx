@@ -6,6 +6,7 @@ import { mergeClasses } from 'minimal-shared/utils';
 import Box from '@mui/material/Box';
 
 import { layoutClasses } from '../core';
+import authbgimg from '../../../public/assets/background/authbgimg.jpg'
 
 // ----------------------------------------------------------------------
 
@@ -28,7 +29,7 @@ export function AuthSplitContent({
           alignItems: 'center',
           flexDirection: 'column',
           p: theme.spacing(3, 2, 10, 2),
-          backgroundImage: 'url(https://imageproxy.wolt.com/assets/6881eed2494117b965bfa052)',
+          backgroundImage: `url(${authbgimg})`,
           backgroundSize: 'cover',
           backgroundPosition: 'center',
           backgroundAttachment: 'fixed',

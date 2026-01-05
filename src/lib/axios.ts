@@ -124,9 +124,11 @@ export const endpoints = {
     search: '/api/product/search',
   },
   category: {
-    list: '/api/product/list',
-    details: '/api/product/details',
-    search: '/api/product/search',
+    list: '/api/v1/categories',
+    details: (id: string) => `/api/v1/categories/${id}`,
+    create: '/api/v1/categories',
+    update: (id: string) => `/api/v1/categories/${id}`,
+    delete: (id: string) => `/api/v1/categories/${id}`,
   },
   user: {
     list: '/api/user/list',

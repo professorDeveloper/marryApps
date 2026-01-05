@@ -161,7 +161,11 @@
     "inventory": "Ombor",
     "settingsTitle": "Sozlamalar",
     "publish": "Nashr qilish holati",
-    "isFeatured": "Tanlangan"
+    "isFeatured": "Tanlangan",
+    "storage": "Ombor",
+    "department": "Bo'lim",
+    "name_i18n": "Nomi (tarjima)",
+    "storageDepartmentTitle": "Ombor va bo'lim"
   },
   "semifinishedProducts": {
     "title": "Yarim tayyor mahsulotlar",
@@ -173,7 +177,7 @@
     "name": "Nomi",
     "sku": "Bo'lim",
     "unit": "O'lchov birligi",
-    "category": "Guruh",
+    "category": "Kategoriya",
     "originalPrice": "Asl narxi",
     "quantity": "Miqdori",
     "createdAt": "Yaratilgan",

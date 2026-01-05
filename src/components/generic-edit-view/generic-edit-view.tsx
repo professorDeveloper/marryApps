@@ -5,8 +5,8 @@
 import type { FC } from 'react';
 import type { CardSection, GenericEditViewProps } from './types';
 
-import { useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useState, useEffect, useCallback } from 'react';
 
 import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
@@ -42,6 +42,13 @@ export const GenericEditView: FC<GenericEditViewProps> = ({
         data || buildInitialFormData(config)
     );
 
+    // Update formData when data changes
+    useEffect(() => {
+        if (data) {
+            setFormData(data);
+        }
+    }, [data]);
+
     // Handle field changes
     const handleChange = useCallback(
         (field: string, value: any) => {
@@ -63,6 +70,7 @@ export const GenericEditView: FC<GenericEditViewProps> = ({
 
             try {
                 await config.onSubmit(formData);
+                setLoading(false);
             } catch (err) {
                 setError(err instanceof Error ? err.message : `Failed to save ${config.entityName}`);
                 setLoading(false);

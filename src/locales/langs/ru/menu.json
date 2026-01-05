@@ -161,7 +161,11 @@
     "inventory": "Склад",
     "settingsTitle": "Настройки",
     "publish": "Статус публикации",
-    "isFeatured": "Рекомендуемое"
+    "isFeatured": "Рекомендуемое",
+    "storage": "Хранилище",
+    "department": "Отдел",
+    "name_i18n": "Название (перевод)",
+    "storageDepartmentTitle": "Хранилище и отдел"
   },
   "semifinishedProducts": {
     "title": "Полуфабрикаты",

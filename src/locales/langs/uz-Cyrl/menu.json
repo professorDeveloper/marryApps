@@ -161,7 +161,11 @@
     "inventory": "Омбор",
     "settingsTitle": "Созламалар",
     "publish": "Нашр қилиш ҳолати",
-    "isFeatured": "Танланган"
+    "isFeatured": "Танланган",
+    "storage": "Омбор",
+    "department": "Бўлим",
+    "name_i18n": "Номи (таржима)",
+    "storageDepartmentTitle": "Омбор ва бўлим"
   },
   "semifinishedProducts": {
     "title": "Ярим тайёр маҳсулотлар",

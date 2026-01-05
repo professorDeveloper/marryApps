@@ -174,7 +174,11 @@
     "settingsTitle": "Settings",
     "publish": "Publish status",
     "published": "Published",
-    "isFeatured": "Featured"
+    "isFeatured": "Featured",
+    "storage": "Storage",
+    "department": "Department",
+    "name_i18n": "Name (translation)",
+    "storageDepartmentTitle": "Storage and Department"
   },
   "semifinishedProducts": {
     "title": "Semifinished Products",

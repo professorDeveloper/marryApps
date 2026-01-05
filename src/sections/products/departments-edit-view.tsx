@@ -5,13 +5,13 @@
 import type { IDepartmentFormData } from 'src/types/departments.tsx';
 import type { CardSection, GenericEditViewConfig } from 'src/components/generic-edit-view';
 
-import { useCallback } from 'react';
+import { useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { paths } from 'src/routes/paths';
 import { useRouter, useParams } from 'src/routes/hooks';
 
-import { useGetDepartment, useCreateDepartment, useUpdateDepartment, useDeleteDepartment } from 'src/actions/departments';
+import { useGetStorages, useGetDepartment, useCreateDepartment, useUpdateDepartment, useDeleteDepartment } from 'src/actions/departments';
 
 import { GenericEditView } from 'src/components/generic-edit-view';
 
@@ -35,9 +35,19 @@ export function ProductEditView({ isNew = false }: DepartmentEditViewProps) {
     const { createDepartment } = useCreateDepartment();
     const { updateDepartment } = useUpdateDepartment();
     const { deleteDepartment } = useDeleteDepartment();
+    const { storages } = useGetStorages();
 
     // Load department if editing
     const { department, departmentLoading } = useGetDepartment(!isNew && id ? id : '');
+
+    // Build storage options
+    const storageOptions = useMemo(
+        () => storages.map((s) => ({
+            value: s.id,
+            label: s.name || s.id,
+        })),
+        [storages]
+    );
 
     // Create section configs with translations
     const BASIC_INFO_SECTION: CardSection = {
@@ -72,10 +82,10 @@ export function ProductEditView({ isNew = false }: DepartmentEditViewProps) {
             {
                 key: 'storage_id',
                 label: t('departments.storageId'),
-                type: 'text',
+                type: 'select',
                 required: true,
                 defaultValue: '',
-                placeholder: 'e.g., 1234567890',
+                options: storageOptions,
             },
         ],
     };
@@ -96,7 +106,8 @@ export function ProductEditView({ isNew = false }: DepartmentEditViewProps) {
                     await updateDepartment(id, departmentData);
                 }
 
-                // After successful save, redirect to department list
+                // Add small delay to ensure SWR cache is updated before redirect
+                await new Promise(resolve => setTimeout(resolve, 500));
                 router.push(paths.menu.product.root);
             } catch (err) {
                 console.error('Error saving department:', err);
@@ -111,6 +122,8 @@ export function ProductEditView({ isNew = false }: DepartmentEditViewProps) {
         try {
             if (id) {
                 await deleteDepartment(id);
+                // Add small delay to ensure SWR cache is updated before redirect
+                await new Promise(resolve => setTimeout(resolve, 500));
                 router.push(paths.menu.product.root);
             }
         } catch (err) {

@@ -1,7 +1,3 @@
-// ============================================================================
-// DEPARTMENTS LIST VIEW - REAL API INTEGRATION
-// ============================================================================
-
 import type { GridColDef } from '@mui/x-data-grid';
 import type { IDepartmentItem } from 'src/types/departments.tsx';
 
@@ -23,13 +19,6 @@ import {
 import { CustomGridActionsCellItem } from 'src/components/custom-data-grid';
 import { GenericViewModal, SpecificationsTable } from 'src/components/generic-view-view';
 
-// ============================================================================
-// CUSTOM RENDERERS
-// ============================================================================
-
-/**
- * Department name renderer
- */
 function RenderCellDepartmentName({ params }: { params: any }) {
   const { t } = useTranslation('menu');
 
