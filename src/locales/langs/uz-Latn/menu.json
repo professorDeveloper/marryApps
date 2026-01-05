@@ -20,6 +20,8 @@
     "add": "Filial qo'shish"
   },
   "profile": "Profil",
+  "projects": "Loyihalar",
+  "security": "Xavfsizlik",
   "logout": "Chiqish",
   "login": "Kirish",
   "register": "Ro'yxatga olish",
@@ -54,7 +56,9 @@
   "total_results": "Jami natijalar",
   "toolbar": {
     "columns": "Ustunlar",
+    "columnsLabel": "Ustunlarni tanlang",
     "filters": "Filtrlar",
+    "filtersLabel": "Filtrlar",
     "export": "Eksport",
     "exportCsv": "CSV ga eksport",
     "exportPrint": "Chop etish",
@@ -66,6 +70,23 @@
     "filterOperatorIsNotEmpty": "Bo'sh emas",
     "operator": "Operator",
     "value": "Qiymat",
+    "density": "Zichlik",
+    "densityLabel": "Zichlik",
+    "densityCompact": "Kompakt",
+    "densityStandard": "Standart",
+    "densityComfortable": "Qo'lay",
+    "filterPanelAddFilter": "Filtr qo'shish",
+    "filterPanelDeleteIconLabel": "O'chirish",
+    "filterPanelLinkOperator": "Mantiqiy operator",
+    "columnsPanelTextFieldLabel": "Ustunni qidirish",
+    "columnsPanelTextFieldPlaceholder": "Nomni kiriting",
+    "columnsPanelDragIconLabel": "Joylashtrish",
+    "columnsPanelShowAllButton": "Hammasini ko'rsatish",
+    "columnsPanelHideAllButton": "Hammasini yashirish",
+    "noRowsLabel": "Qatorlar yo'q",
+    "noResultsOverlayLabel": "Natijalar topilmadi",
+    "footerRowSelected": "qator tanlandi",
+    "paginationRowsPerPage": "Har bir sahifada qatorlar:",
     "operators": {
       "equals": "teng",
       "notEquals": "teng emas",
@@ -100,8 +121,9 @@
     "category": "Kategoriya",
     "price": "Narxi",
     "specifications": "Xususiyatlari",
-    "storage": "Do'kon"
-    
+    "storage": "Ombor",
+    "created": "Yaratilgan",
+    "updated": "Yangilangan"
   },
   "categories": {
     "title": "Kategoriyalar",

@@ -1,0 +1,1 @@
+const o={lang:"English",description:"The starting point for your next project is based on MUI. Easy customization helps you build apps faster and better."},s={documents:"Documents",projects:"Projects",work:"Work",education:"Education",sports:"Sports",meals:"Meals"},t={demo:o,folders:s};export{t as default,o as demo,s as folders};

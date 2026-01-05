@@ -69,6 +69,7 @@ export function useDataGridLocale(): Partial<GridLocaleText> {
             noRowsLabel: t('toolbar.noRowsLabel'),
             noResultsOverlayLabel: t('toolbar.noResultsOverlayLabel'),
             footerRowSelected: (count) => `${count} ${t('toolbar.footerRowSelected')}`,
+            paginationRowsPerPage: t('toolbar.paginationRowsPerPage'),
         }),
         [t]
     );

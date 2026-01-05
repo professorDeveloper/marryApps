@@ -32,6 +32,8 @@
   },
 
   "profile": "Profile",
+  "projects": "Projects",
+  "security": "Security",
   "logout": "Logout",
   "login": "Login",
   "register": "Register",
@@ -66,7 +68,9 @@
   "total_results": "Total results",
   "toolbar": {
     "columns": "Columns",
+    "columnsLabel": "Select columns",
     "filters": "Filters",
+    "filtersLabel": "Filters",
     "export": "Export",
     "exportCsv": "Export as CSV",
     "exportPrint": "Print",
@@ -78,6 +82,23 @@
     "filterOperatorIsEmpty": "Is empty",
     "filterOperatorIsNotEmpty": "Is not empty",
     "value": "Value",
+    "density": "Density",
+    "densityLabel": "Density",
+    "densityCompact": "Compact",
+    "densityStandard": "Standard",
+    "densityComfortable": "Comfortable",
+    "filterPanelAddFilter": "Add filter",
+    "filterPanelDeleteIconLabel": "Delete",
+    "filterPanelLinkOperator": "Logic operator",
+    "columnsPanelTextFieldLabel": "Search column",
+    "columnsPanelTextFieldPlaceholder": "Enter name",
+    "columnsPanelDragIconLabel": "Move",
+    "columnsPanelShowAllButton": "Show all",
+    "columnsPanelHideAllButton": "Hide all",
+    "noRowsLabel": "No rows",
+    "noResultsOverlayLabel": "No results found",
+    "footerRowSelected": "row(s) selected",
+    "paginationRowsPerPage": "Rows per page:",
     "operators": {
       "equals": "equals",
       "notEquals": "is not",
@@ -93,7 +114,7 @@
       "is": "is"
     }
   },
-  "products": {
+  "departments": {
     "title": "Section",
     "list": "List",
     "add": "Add",
@@ -111,7 +132,10 @@
     "outOfStock": "Out of Stock",
     "category": "Category",
     "price": "Price",
-    "specifications": "Specifications"
+    "specifications": "Specifications",
+    "storage": "Storage",
+    "created": "Created",
+    "updated": "Updated"
   },
   "categories": {
     "title": "Categories",

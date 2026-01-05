@@ -20,6 +20,8 @@
     "add": "Филиал қўшиш"
   },
   "profile": "Профил",
+  "projects": "Лойиҳалар",
+  "security": "Бехотирлик",
   "logout": "Чиқиш",
   "login": "Кириш",
   "register": "Рўйхатга олиш",
@@ -54,7 +56,9 @@
   "total_results": "Жами натижалар",
   "toolbar": {
     "columns": "Устунлар",
+    "columnsLabel": "Устунларни танланг",
     "filters": "Фильтрлар",
+    "filtersLabel": "Фильтрлар",
     "export": "Экспорт",
     "exportCsv": "CSV га экспорт",
     "exportPrint": "Чоп этиш",
@@ -66,6 +70,23 @@
     "filterOperatorIsEmpty": "Бўш",
     "filterOperatorIsNotEmpty": "Бўш эмас",
     "value": "Қиймат",
+    "density": "Зичлик",
+    "densityLabel": "Зичлик",
+    "densityCompact": "Компактан",
+    "densityStandard": "Стандартан",
+    "densityComfortable": "Қўлай",
+    "filterPanelAddFilter": "Фильтр қўшиш",
+    "filterPanelDeleteIconLabel": "Ўчириш",
+    "filterPanelLinkOperator": "Мантиқий оператор",
+    "columnsPanelTextFieldLabel": "Устунни қидириш",
+    "columnsPanelTextFieldPlaceholder": "Номни киритинг",
+    "columnsPanelDragIconLabel": "Жойлаштириш",
+    "columnsPanelShowAllButton": "Ҳаммасини кўрсатиш",
+    "columnsPanelHideAllButton": "Ҳаммасини ёшириш",
+    "noRowsLabel": "Қаторлар йўқ",
+    "noResultsOverlayLabel": "Натижалар топилмади",
+    "footerRowSelected": "қатор танланди",
+    "paginationRowsPerPage": "Ҳар бир саҳифада қаторлар:",
     "operators": {
       "equals": "тенг",
       "notEquals": "тенг эмас",
@@ -81,7 +102,7 @@
       "is": "бу"
     }
   },
-  "products": {
+  "departments": {
     "title": "Бўлим",
     "list": "Рўйхат",
     "add": "Қўшиш",
@@ -99,7 +120,10 @@
     "outOfStock": "Зохира туғаган",
     "category": "Категория",
     "price": "Нархи",
-    "specifications": "Хусусиятлари"
+    "specifications": "Хусусиятлари",
+    "storage": "Омбор",
+    "created": "Яратилган",
+    "updated": "Янгиланган"
   },
   "categories": {
     "title": "Категориялар",

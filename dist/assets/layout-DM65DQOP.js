@@ -1,0 +1,1 @@
+const n="Bu ma'lumotnoma ogohlantirishidir.",o="Yordam kerakmi?",t={en:"English","uz-Latn":"O'zbek (Lotin)","uz-Cyrl":"Ўзбек (Кирил)",ru:"Русский"},a={infoAlert:n,needHelp:o,languages:t};export{a as default,n as infoAlert,t as languages,o as needHelp};

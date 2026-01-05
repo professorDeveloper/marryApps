@@ -1,0 +1,1 @@
+const o={lang:"Ўзбек",description:"Кейинги лойиҳангизнинг бошланғич нуқтаси MUI асосида яратилган. Осон созлаш қўлланмалари тезрок ва яхширок қуриш учун ёрдам беради."},s={documents:"Ҳужжатлар",projects:"Лойаҳалар",work:"Иш",education:"Ўқитиш",sports:"Спорт",meals:"Таомлар"},t={demo:o,folders:s};export{t as default,o as demo,s as folders};
