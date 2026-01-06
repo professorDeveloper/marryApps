@@ -23,7 +23,11 @@ import (
 func (h *Handler) CreateCafeTable(c echo.Context) error {
 	var req model.CreateCafeTableRequest
 	if err := c.Bind(&req); err != nil {
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "Invalid request"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"Invalid request",
+			err.Error(),
+			http.StatusBadRequest,
+		))
 	}
 
 	status := req.Status
@@ -33,10 +37,18 @@ func (h *Handler) CreateCafeTable(c echo.Context) error {
 
 	table, err := h.service.CafeTable().CreateCafeTable(c.Request().Context(), req.HallID, req.Number, req.Capacity, &status)
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: err.Error()})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"Operation failed",
+			err.Error(),
+			http.StatusBadRequest,
+		))
 	}
 
-	return c.JSON(http.StatusCreated, table)
+	return c.JSON(http.StatusCreated, model.NewSuccessResponse(
+		"Cafe table created successfully",
+		table,
+		http.StatusCreated,
+	))
 }
 
 // GetCafeTableByID
@@ -53,15 +65,27 @@ func (h *Handler) CreateCafeTable(c echo.Context) error {
 func (h *Handler) GetCafeTableByID(c echo.Context) error {
 	tableID := c.Param("id")
 	if tableID == "" {
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "Table ID is required"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"Table ID is required",
+			"missing path parameter: id",
+			http.StatusBadRequest,
+		))
 	}
 
 	table, err := h.service.CafeTable().GetCafeTableByID(c.Request().Context(), tableID)
 	if err != nil {
-		return c.JSON(http.StatusNotFound, model.ErrorResponse{Message: err.Error()})
+		return c.JSON(http.StatusNotFound, model.NewErrorResponse(
+			"Cafe table not found",
+			err.Error(),
+			http.StatusNotFound,
+		))
 	}
 
-	return c.JSON(http.StatusOK, table)
+	return c.JSON(http.StatusOK, model.NewSuccessResponse(
+		"Cafe table retrieved successfully",
+		table,
+		http.StatusOK,
+	))
 }
 
 // GetAllCafeTables
@@ -93,10 +117,18 @@ func (h *Handler) GetAllCafeTables(c echo.Context) error {
 
 	tables, err := h.service.CafeTable().GetAllCafeTables(c.Request().Context(), limit, offset)
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: err.Error()})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"Operation failed",
+			err.Error(),
+			http.StatusBadRequest,
+		))
 	}
 
-	return c.JSON(http.StatusOK, tables)
+	return c.JSON(http.StatusOK, model.NewSuccessResponse(
+		"Cafe tables retrieved successfully",
+		tables,
+		http.StatusOK,
+	))
 }
 
 // GetCafeTablesByHallID
@@ -115,7 +147,11 @@ func (h *Handler) GetAllCafeTables(c echo.Context) error {
 func (h *Handler) GetCafeTablesByHallID(c echo.Context) error {
 	hallID := c.Param("hall_id")
 	if hallID == "" {
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "Hall ID is required"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"Hall ID is required",
+			"missing path parameter: hall_id",
+			http.StatusBadRequest,
+		))
 	}
 
 	limit := int32(10)
@@ -134,10 +170,18 @@ func (h *Handler) GetCafeTablesByHallID(c echo.Context) error {
 
 	tables, err := h.service.CafeTable().GetCafeTablesByHallID(c.Request().Context(), hallID, limit, offset)
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: err.Error()})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"Operation failed",
+			err.Error(),
+			http.StatusBadRequest,
+		))
 	}
 
-	return c.JSON(http.StatusOK, tables)
+	return c.JSON(http.StatusOK, model.NewSuccessResponse(
+		"Cafe tables retrieved successfully",
+		tables,
+		http.StatusOK,
+	))
 }
 
 // GetCafeTablesByStatus
@@ -156,7 +200,11 @@ func (h *Handler) GetCafeTablesByHallID(c echo.Context) error {
 func (h *Handler) GetCafeTablesByStatus(c echo.Context) error {
 	status := c.Param("status")
 	if status == "" {
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "Status is required"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"Status is required",
+			"missing path parameter: status",
+			http.StatusBadRequest,
+		))
 	}
 
 	limit := int32(10)
@@ -175,10 +223,18 @@ func (h *Handler) GetCafeTablesByStatus(c echo.Context) error {
 
 	tables, err := h.service.CafeTable().GetCafeTablesByStatus(c.Request().Context(), status, limit, offset)
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: err.Error()})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"Operation failed",
+			err.Error(),
+			http.StatusBadRequest,
+		))
 	}
 
-	return c.JSON(http.StatusOK, tables)
+	return c.JSON(http.StatusOK, model.NewSuccessResponse(
+		"Cafe tables retrieved successfully",
+		tables,
+		http.StatusOK,
+	))
 }
 
 // UpdateCafeTable
@@ -198,20 +254,36 @@ func (h *Handler) GetCafeTablesByStatus(c echo.Context) error {
 func (h *Handler) UpdateCafeTable(c echo.Context) error {
 	tableID := c.Param("id")
 	if tableID == "" {
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "Table ID is required"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"Table ID is required",
+			"missing path parameter: id",
+			http.StatusBadRequest,
+		))
 	}
 
 	var req model.UpdateCafeTableRequest
 	if err := c.Bind(&req); err != nil {
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "Invalid request"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"Invalid request",
+			err.Error(),
+			http.StatusBadRequest,
+		))
 	}
 
 	table, err := h.service.CafeTable().UpdateCafeTable(c.Request().Context(), tableID, req.HallID, req.Number, req.Capacity, req.Status)
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: err.Error()})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"Operation failed",
+			err.Error(),
+			http.StatusBadRequest,
+		))
 	}
 
-	return c.JSON(http.StatusOK, table)
+	return c.JSON(http.StatusOK, model.NewSuccessResponse(
+		"Cafe table updated successfully",
+		table,
+		http.StatusOK,
+	))
 }
 
 // UpdateCafeTableStatus
@@ -231,20 +303,36 @@ func (h *Handler) UpdateCafeTable(c echo.Context) error {
 func (h *Handler) UpdateCafeTableStatus(c echo.Context) error {
 	tableID := c.Param("id")
 	if tableID == "" {
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "Table ID is required"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"Table ID is required",
+			"missing path parameter: id",
+			http.StatusBadRequest,
+		))
 	}
 
 	var req model.UpdateCafeTableStatusRequest
 	if err := c.Bind(&req); err != nil {
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "Invalid request"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"Invalid request",
+			err.Error(),
+			http.StatusBadRequest,
+		))
 	}
 
 	table, err := h.service.CafeTable().UpdateCafeTableStatus(c.Request().Context(), tableID, req.Status)
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: err.Error()})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"Operation failed",
+			err.Error(),
+			http.StatusBadRequest,
+		))
 	}
 
-	return c.JSON(http.StatusOK, table)
+	return c.JSON(http.StatusOK, model.NewSuccessResponse(
+		"Cafe table status updated successfully",
+		table,
+		http.StatusOK,
+	))
 }
 
 // DeleteCafeTable
@@ -263,11 +351,19 @@ func (h *Handler) UpdateCafeTableStatus(c echo.Context) error {
 func (h *Handler) DeleteCafeTable(c echo.Context) error {
 	tableID := c.Param("id")
 	if tableID == "" {
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "Table ID is required"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"Table ID is required",
+			"missing path parameter: id",
+			http.StatusBadRequest,
+		))
 	}
 
 	if err := h.service.CafeTable().DeleteCafeTable(c.Request().Context(), tableID); err != nil {
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: err.Error()})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"Operation failed",
+			err.Error(),
+			http.StatusBadRequest,
+		))
 	}
 
 	return c.NoContent(http.StatusNoContent)
@@ -288,11 +384,19 @@ func (h *Handler) DeleteCafeTable(c echo.Context) error {
 func (h *Handler) RestoreCafeTable(c echo.Context) error {
 	tableID := c.Param("id")
 	if tableID == "" {
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "Table ID is required"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"Table ID is required",
+			"missing path parameter: id",
+			http.StatusBadRequest,
+		))
 	}
 
 	if err := h.service.CafeTable().RestoreCafeTable(c.Request().Context(), tableID); err != nil {
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: err.Error()})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"Operation failed",
+			err.Error(),
+			http.StatusBadRequest,
+		))
 	}
 
 	return c.NoContent(http.StatusNoContent)
@@ -314,7 +418,11 @@ func (h *Handler) RestoreCafeTable(c echo.Context) error {
 func (h *Handler) SearchCafeTables(c echo.Context) error {
 	query := c.QueryParam("query")
 	if query == "" {
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "Query is required"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"Query is required",
+			"missing query parameter: query",
+			http.StatusBadRequest,
+		))
 	}
 
 	limit := int32(10)
@@ -333,10 +441,18 @@ func (h *Handler) SearchCafeTables(c echo.Context) error {
 
 	tables, err := h.service.CafeTable().SearchCafeTables(c.Request().Context(), query, limit, offset)
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: err.Error()})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"Operation failed",
+			err.Error(),
+			http.StatusBadRequest,
+		))
 	}
 
-	return c.JSON(http.StatusOK, tables)
+	return c.JSON(http.StatusOK, model.NewSuccessResponse(
+		"Cafe tables retrieved successfully",
+		tables,
+		http.StatusOK,
+	))
 }
 
 // GetCafeTablesByHallAndStatus
@@ -356,15 +472,27 @@ func (h *Handler) GetCafeTablesByHallAndStatus(c echo.Context) error {
 	status := c.QueryParam("status")
 
 	if hallID == "" || status == "" {
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "Hall ID and status are required"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"Hall ID and status are required",
+			"missing query parameters: hall_id, status",
+			http.StatusBadRequest,
+		))
 	}
 
 	tables, err := h.service.CafeTable().GetCafeTablesByHallAndStatus(c.Request().Context(), hallID, status)
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: err.Error()})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"Operation failed",
+			err.Error(),
+			http.StatusBadRequest,
+		))
 	}
 
-	return c.JSON(http.StatusOK, tables)
+	return c.JSON(http.StatusOK, model.NewSuccessResponse(
+		"Cafe tables retrieved successfully",
+		tables,
+		http.StatusOK,
+	))
 }
 
 // GetAvailableTablesByHall
@@ -381,15 +509,27 @@ func (h *Handler) GetCafeTablesByHallAndStatus(c echo.Context) error {
 func (h *Handler) GetAvailableTablesByHall(c echo.Context) error {
 	hallID := c.Param("hall_id")
 	if hallID == "" {
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "Hall ID is required"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"Hall ID is required",
+			"missing path parameter: hall_id",
+			http.StatusBadRequest,
+		))
 	}
 
 	tables, err := h.service.CafeTable().GetAvailableTablesByHall(c.Request().Context(), hallID)
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: err.Error()})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"Operation failed",
+			err.Error(),
+			http.StatusBadRequest,
+		))
 	}
 
-	return c.JSON(http.StatusOK, tables)
+	return c.JSON(http.StatusOK, model.NewSuccessResponse(
+		"Cafe tables retrieved successfully",
+		tables,
+		http.StatusOK,
+	))
 }
 
 // GetAvailableTablesByCapacity
@@ -408,14 +548,22 @@ func (h *Handler) GetAvailableTablesByHall(c echo.Context) error {
 func (h *Handler) GetAvailableTablesByCapacity(c echo.Context) error {
 	capacityStr := c.QueryParam("capacity")
 	if capacityStr == "" {
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "Capacity is required"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"Capacity is required",
+			"missing query parameter: capacity",
+			http.StatusBadRequest,
+		))
 	}
 
 	capacity := int32(0)
 	if val, err := strconv.Atoi(capacityStr); err == nil {
 		capacity = int32(val)
 	} else {
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "Invalid capacity"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"Invalid capacity",
+			err.Error(),
+			http.StatusBadRequest,
+		))
 	}
 
 	limit := int32(10)
@@ -434,10 +582,18 @@ func (h *Handler) GetAvailableTablesByCapacity(c echo.Context) error {
 
 	tables, err := h.service.CafeTable().GetAvailableTablesByCapacity(c.Request().Context(), capacity, limit, offset)
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: err.Error()})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"Operation failed",
+			err.Error(),
+			http.StatusBadRequest,
+		))
 	}
 
-	return c.JSON(http.StatusOK, tables)
+	return c.JSON(http.StatusOK, model.NewSuccessResponse(
+		"Cafe tables retrieved successfully",
+		tables,
+		http.StatusOK,
+	))
 }
 
 // GetAvailableTablesByHallAndCapacity
@@ -455,27 +611,47 @@ func (h *Handler) GetAvailableTablesByCapacity(c echo.Context) error {
 func (h *Handler) GetAvailableTablesByHallAndCapacity(c echo.Context) error {
 	hallID := c.Param("hall_id")
 	if hallID == "" {
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "Hall ID is required"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"Hall ID is required",
+			"missing path parameter: hall_id",
+			http.StatusBadRequest,
+		))
 	}
 
 	capacityStr := c.QueryParam("capacity")
 	if capacityStr == "" {
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "Capacity is required"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"Capacity is required",
+			"missing query parameter: capacity",
+			http.StatusBadRequest,
+		))
 	}
 
 	capacity := int32(0)
 	if val, err := strconv.Atoi(capacityStr); err == nil {
 		capacity = int32(val)
 	} else {
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "Invalid capacity"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"Invalid capacity",
+			err.Error(),
+			http.StatusBadRequest,
+		))
 	}
 
 	tables, err := h.service.CafeTable().GetAvailableTablesByHallAndCapacity(c.Request().Context(), hallID, capacity)
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: err.Error()})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"Operation failed",
+			err.Error(),
+			http.StatusBadRequest,
+		))
 	}
 
-	return c.JSON(http.StatusOK, tables)
+	return c.JSON(http.StatusOK, model.NewSuccessResponse(
+		"Cafe tables retrieved successfully",
+		tables,
+		http.StatusOK,
+	))
 }
 
 // SetTableFree
@@ -493,15 +669,27 @@ func (h *Handler) GetAvailableTablesByHallAndCapacity(c echo.Context) error {
 func (h *Handler) SetTableFree(c echo.Context) error {
 	tableID := c.Param("id")
 	if tableID == "" {
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "Table ID is required"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"Table ID is required",
+			"missing path parameter: id",
+			http.StatusBadRequest,
+		))
 	}
 
 	table, err := h.service.CafeTable().SetTableFree(c.Request().Context(), tableID)
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: err.Error()})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"Operation failed",
+			err.Error(),
+			http.StatusBadRequest,
+		))
 	}
 
-	return c.JSON(http.StatusOK, table)
+	return c.JSON(http.StatusOK, model.NewSuccessResponse(
+		"Cafe table updated successfully",
+		table,
+		http.StatusOK,
+	))
 }
 
 // SetTableBusy
@@ -519,15 +707,27 @@ func (h *Handler) SetTableFree(c echo.Context) error {
 func (h *Handler) SetTableBusy(c echo.Context) error {
 	tableID := c.Param("id")
 	if tableID == "" {
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "Table ID is required"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"Table ID is required",
+			"missing path parameter: id",
+			http.StatusBadRequest,
+		))
 	}
 
 	table, err := h.service.CafeTable().SetTableBusy(c.Request().Context(), tableID)
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: err.Error()})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"Operation failed",
+			err.Error(),
+			http.StatusBadRequest,
+		))
 	}
 
-	return c.JSON(http.StatusOK, table)
+	return c.JSON(http.StatusOK, model.NewSuccessResponse(
+		"Cafe table updated successfully",
+		table,
+		http.StatusOK,
+	))
 }
 
 // GetTableOccupancyStats
@@ -543,8 +743,16 @@ func (h *Handler) SetTableBusy(c echo.Context) error {
 func (h *Handler) GetTableOccupancyStats(c echo.Context) error {
 	stats, err := h.service.CafeTable().GetTableOccupancyStats(c.Request().Context())
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: err.Error()})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"Operation failed",
+			err.Error(),
+			http.StatusBadRequest,
+		))
 	}
 
-	return c.JSON(http.StatusOK, stats)
+	return c.JSON(http.StatusOK, model.NewSuccessResponse(
+		"Table occupancy statistics retrieved successfully",
+		stats,
+		http.StatusOK,
+	))
 }

@@ -26,20 +26,36 @@ func (h *Handler) CreateCategory(c echo.Context) error {
 	var req model.CreateCategoryRequest
 	if err := c.Bind(&req); err != nil {
 		log.Printf("Failed to bind create category request: %v", err)
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "invalid request format"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"Invalid request format",
+			err.Error(),
+			http.StatusBadRequest,
+		))
 	}
 
 	if req.Name == "" {
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "name is required"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"Name is required",
+			"missing required field: name",
+			http.StatusBadRequest,
+		))
 	}
 
 	category, err := h.service.Category().CreateCategory(c.Request().Context(), req.Name, req.NameI18n, req.DepartmentID, req.StorageID, req.Parent, req.PictureUrl, req.ColorCode)
 	if err != nil {
 		log.Printf("CreateCategory failed: %v", err)
-		return c.JSON(http.StatusInternalServerError, model.ErrorResponse{Message: "failed to create category"})
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse(
+			"Failed to create category",
+			err.Error(),
+			http.StatusInternalServerError,
+		))
 	}
 
-	return c.JSON(http.StatusCreated, category)
+	return c.JSON(http.StatusCreated, model.NewSuccessResponse(
+		"Category created successfully",
+		category,
+		http.StatusCreated,
+	))
 }
 
 // GetCategoryByID retrieves a category by ID
@@ -59,16 +75,28 @@ func (h *Handler) CreateCategory(c echo.Context) error {
 func (h *Handler) GetCategoryByID(c echo.Context) error {
 	categoryID := c.Param("id")
 	if categoryID == "" {
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "category id is required"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"Category ID is required",
+			"missing path parameter: id",
+			http.StatusBadRequest,
+		))
 	}
 
 	category, err := h.service.Category().GetCategoryByID(c.Request().Context(), categoryID)
 	if err != nil {
 		log.Printf("GetCategoryByID failed for ID %s: %v", categoryID, err)
-		return c.JSON(http.StatusNotFound, model.ErrorResponse{Message: "category not found"})
+		return c.JSON(http.StatusNotFound, model.NewErrorResponse(
+			"Category not found",
+			err.Error(),
+			http.StatusNotFound,
+		))
 	}
 
-	return c.JSON(http.StatusOK, category)
+	return c.JSON(http.StatusOK, model.NewSuccessResponse(
+		"Category retrieved successfully",
+		category,
+		http.StatusOK,
+	))
 }
 
 // GetAllCategories retrieves all categories
@@ -103,10 +131,18 @@ func (h *Handler) GetAllCategories(c echo.Context) error {
 	categories, err := h.service.Category().GetAllCategories(c.Request().Context(), limit, offset)
 	if err != nil {
 		log.Printf("GetAllCategories failed: %v", err)
-		return c.JSON(http.StatusInternalServerError, model.ErrorResponse{Message: "failed to retrieve categories"})
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse(
+			"Failed to retrieve categories",
+			err.Error(),
+			http.StatusInternalServerError,
+		))
 	}
 
-	return c.JSON(http.StatusOK, categories)
+	return c.JSON(http.StatusOK, model.NewSuccessResponse(
+		"Categories retrieved successfully",
+		categories,
+		http.StatusOK,
+	))
 }
 
 // GetCategoriesByDepartmentID retrieves categories by department ID
@@ -127,7 +163,7 @@ func (h *Handler) GetAllCategories(c echo.Context) error {
 func (h *Handler) GetCategoriesByDepartmentID(c echo.Context) error {
 	departmentID := c.Param("departmentId")
 	if departmentID == "" {
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "department id is required"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("department id is required", "see logs for details", http.StatusBadRequest))
 	}
 
 	var limit int32 = 20
@@ -148,10 +184,10 @@ func (h *Handler) GetCategoriesByDepartmentID(c echo.Context) error {
 	categories, err := h.service.Category().GetCategoriesByDepartmentID(c.Request().Context(), departmentID, limit, offset)
 	if err != nil {
 		log.Printf("GetCategoriesByDepartmentID failed: %v", err)
-		return c.JSON(http.StatusInternalServerError, model.ErrorResponse{Message: "failed to retrieve categories"})
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("failed to retrieve categories", "see logs for details", http.StatusInternalServerError))
 	}
 
-	return c.JSON(http.StatusOK, categories)
+	return c.JSON(http.StatusOK, model.NewSuccessResponse("Data retrieved successfully", categories, http.StatusOK))
 }
 
 // GetCategoriesByStorageID retrieves categories by storage ID
@@ -172,7 +208,7 @@ func (h *Handler) GetCategoriesByDepartmentID(c echo.Context) error {
 func (h *Handler) GetCategoriesByStorageID(c echo.Context) error {
 	storageID := c.Param("storageId")
 	if storageID == "" {
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "storage id is required"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("storage id is required", "see logs for details", http.StatusBadRequest))
 	}
 
 	var limit int32 = 20
@@ -193,10 +229,10 @@ func (h *Handler) GetCategoriesByStorageID(c echo.Context) error {
 	categories, err := h.service.Category().GetCategoriesByStorageID(c.Request().Context(), storageID, limit, offset)
 	if err != nil {
 		log.Printf("GetCategoriesByStorageID failed: %v", err)
-		return c.JSON(http.StatusInternalServerError, model.ErrorResponse{Message: "failed to retrieve categories"})
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("failed to retrieve categories", "see logs for details", http.StatusInternalServerError))
 	}
 
-	return c.JSON(http.StatusOK, categories)
+	return c.JSON(http.StatusOK, model.NewSuccessResponse("Data retrieved successfully", categories, http.StatusOK))
 }
 
 // GetCategoriesByParentID retrieves subcategories by parent ID
@@ -217,7 +253,7 @@ func (h *Handler) GetCategoriesByStorageID(c echo.Context) error {
 func (h *Handler) GetCategoriesByParentID(c echo.Context) error {
 	parentID := c.Param("parentId")
 	if parentID == "" {
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "parent id is required"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("parent id is required", "see logs for details", http.StatusBadRequest))
 	}
 
 	var limit int32 = 20
@@ -238,10 +274,10 @@ func (h *Handler) GetCategoriesByParentID(c echo.Context) error {
 	categories, err := h.service.Category().GetCategoriesByParentID(c.Request().Context(), parentID, limit, offset)
 	if err != nil {
 		log.Printf("GetCategoriesByParentID failed: %v", err)
-		return c.JSON(http.StatusInternalServerError, model.ErrorResponse{Message: "failed to retrieve subcategories"})
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("failed to retrieve subcategories", "see logs for details", http.StatusInternalServerError))
 	}
 
-	return c.JSON(http.StatusOK, categories)
+	return c.JSON(http.StatusOK, model.NewSuccessResponse("Data retrieved successfully", categories, http.StatusOK))
 }
 
 // GetRootCategories retrieves root categories (no parent)
@@ -276,10 +312,10 @@ func (h *Handler) GetRootCategories(c echo.Context) error {
 	categories, err := h.service.Category().GetRootCategories(c.Request().Context(), limit, offset)
 	if err != nil {
 		log.Printf("GetRootCategories failed: %v", err)
-		return c.JSON(http.StatusInternalServerError, model.ErrorResponse{Message: "failed to retrieve root categories"})
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("failed to retrieve root categories", "see logs for details", http.StatusInternalServerError))
 	}
 
-	return c.JSON(http.StatusOK, categories)
+	return c.JSON(http.StatusOK, model.NewSuccessResponse("Data retrieved successfully", categories, http.StatusOK))
 }
 
 // UpdateCategory updates a category
@@ -300,22 +336,22 @@ func (h *Handler) GetRootCategories(c echo.Context) error {
 func (h *Handler) UpdateCategory(c echo.Context) error {
 	categoryID := c.Param("id")
 	if categoryID == "" {
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "category id is required"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("Category ID is required", "missing path parameter: id", http.StatusBadRequest))
 	}
 
 	var req model.UpdateCategoryRequest
 	if err := c.Bind(&req); err != nil {
 		log.Printf("Failed to bind update category request: %v", err)
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "invalid request format"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("Invalid request format", "malformed JSON", http.StatusBadRequest))
 	}
 
 	category, err := h.service.Category().UpdateCategory(c.Request().Context(), categoryID, req.Name, req.NameI18n, req.DepartmentID, req.StorageID, req.Parent, req.PictureUrl, req.ColorCode)
 	if err != nil {
 		log.Printf("UpdateCategory failed for ID %s: %v", categoryID, err)
-		return c.JSON(http.StatusInternalServerError, model.ErrorResponse{Message: "failed to update category"})
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("Failed to update category", "see logs for details", http.StatusInternalServerError))
 	}
 
-	return c.JSON(http.StatusOK, category)
+	return c.JSON(http.StatusOK, model.NewSuccessResponse("Category updated successfully", category, http.StatusOK))
 }
 
 // DeleteCategory soft deletes a category
@@ -335,12 +371,12 @@ func (h *Handler) UpdateCategory(c echo.Context) error {
 func (h *Handler) DeleteCategory(c echo.Context) error {
 	categoryID := c.Param("id")
 	if categoryID == "" {
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "category id is required"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("Category ID is required", "missing path parameter: id", http.StatusBadRequest))
 	}
 
 	if err := h.service.Category().DeleteCategory(c.Request().Context(), categoryID); err != nil {
 		log.Printf("DeleteCategory failed for ID %s: %v", categoryID, err)
-		return c.JSON(http.StatusInternalServerError, model.ErrorResponse{Message: "failed to delete category"})
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("failed to delete category", "see logs for details", http.StatusInternalServerError))
 	}
 
 	return c.NoContent(http.StatusNoContent)
@@ -363,16 +399,16 @@ func (h *Handler) DeleteCategory(c echo.Context) error {
 func (h *Handler) RestoreCategory(c echo.Context) error {
 	categoryID := c.Param("id")
 	if categoryID == "" {
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "category id is required"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("Category ID is required", "missing path parameter: id", http.StatusBadRequest))
 	}
 
 	category, err := h.service.Category().RestoreCategory(c.Request().Context(), categoryID)
 	if err != nil {
 		log.Printf("RestoreCategory failed for ID %s: %v", categoryID, err)
-		return c.JSON(http.StatusInternalServerError, model.ErrorResponse{Message: "failed to restore category"})
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("failed to restore category", "see logs for details", http.StatusInternalServerError))
 	}
 
-	return c.JSON(http.StatusOK, category)
+	return c.JSON(http.StatusOK, model.NewSuccessResponse("Category updated successfully", category, http.StatusOK))
 }
 
 // SearchCategories searches for categories by name
@@ -393,7 +429,7 @@ func (h *Handler) RestoreCategory(c echo.Context) error {
 func (h *Handler) SearchCategories(c echo.Context) error {
 	query := c.QueryParam("q")
 	if query == "" {
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "search query is required"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("search query is required", "see logs for details", http.StatusBadRequest))
 	}
 
 	var limit int32 = 20
@@ -414,8 +450,8 @@ func (h *Handler) SearchCategories(c echo.Context) error {
 	categories, err := h.service.Category().SearchCategories(c.Request().Context(), query, limit, offset)
 	if err != nil {
 		log.Printf("SearchCategories failed for query %s: %v", query, err)
-		return c.JSON(http.StatusInternalServerError, model.ErrorResponse{Message: "failed to search categories"})
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("failed to search categories", "see logs for details", http.StatusInternalServerError))
 	}
 
-	return c.JSON(http.StatusOK, categories)
+	return c.JSON(http.StatusOK, model.NewSuccessResponse("Data retrieved successfully", categories, http.StatusOK))
 }

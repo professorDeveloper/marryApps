@@ -25,15 +25,15 @@ import (
 func (h *Handler) CreateGoodDetail(c echo.Context) error {
 	var req model.CreateGoodDetailRequest
 	if err := c.Bind(&req); err != nil {
-		return c.JSON(http.StatusBadRequest, echo.Map{"error": "invalid request"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("invalid request", "see logs for details", http.StatusInternalServerError))
 	}
 
 	resp, err := h.service.Goods().CreateGoodDetail(c.Request().Context(), req.GoodID, req.IngredientID, req.CompoundID, req.Measurement, req.Quantity)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, echo.Map{"error": err.Error()})
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("Operation failed", err.Error(), http.StatusInternalServerError))
 	}
 
-	return c.JSON(http.StatusCreated, resp)
+	return c.JSON(http.StatusCreated, model.NewSuccessResponse("Good detail created successfully", resp, http.StatusCreated))
 }
 
 // GetGoodDetail retrieves a good detail by ID
@@ -53,15 +53,15 @@ func (h *Handler) CreateGoodDetail(c echo.Context) error {
 func (h *Handler) GetGoodDetail(c echo.Context) error {
 	id := c.Param("id")
 	if id == "" {
-		return c.JSON(http.StatusBadRequest, echo.Map{"error": "id is required"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("id is required", "see logs for details", http.StatusInternalServerError))
 	}
 
 	resp, err := h.service.Goods().GetGoodDetailByID(c.Request().Context(), id)
 	if err != nil {
-		return c.JSON(http.StatusNotFound, echo.Map{"error": err.Error()})
+		return c.JSON(http.StatusNotFound, model.NewErrorResponse("Operation failed", err.Error(), http.StatusInternalServerError))
 	}
 
-	return c.JSON(http.StatusOK, resp)
+	return c.JSON(http.StatusOK, model.NewSuccessResponse("Good detail retrieved successfully", resp, http.StatusOK))
 }
 
 // GetGoodDetailsByGood retrieves all details for a good
@@ -80,15 +80,15 @@ func (h *Handler) GetGoodDetail(c echo.Context) error {
 func (h *Handler) GetGoodDetailsByGood(c echo.Context) error {
 	goodID := c.Param("good_id")
 	if goodID == "" {
-		return c.JSON(http.StatusBadRequest, echo.Map{"error": "good_id is required"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("good_id is required", "see logs for details", http.StatusInternalServerError))
 	}
 
 	resp, err := h.service.Goods().GetGoodDetailsByGood(c.Request().Context(), goodID)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, echo.Map{"error": err.Error()})
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("Operation failed", err.Error(), http.StatusInternalServerError))
 	}
 
-	return c.JSON(http.StatusOK, resp)
+	return c.JSON(http.StatusOK, model.NewSuccessResponse("Good details retrieved successfully", resp, http.StatusOK))
 }
 
 // GetGoodDetailsByIngredient retrieves all good details for an ingredient
@@ -109,7 +109,7 @@ func (h *Handler) GetGoodDetailsByGood(c echo.Context) error {
 func (h *Handler) GetGoodDetailsByIngredient(c echo.Context) error {
 	ingredientID := c.Param("ingredient_id")
 	if ingredientID == "" {
-		return c.JSON(http.StatusBadRequest, echo.Map{"error": "ingredient_id is required"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("ingredient_id is required", "see logs for details", http.StatusInternalServerError))
 	}
 
 	limit := int32(20)
@@ -128,10 +128,10 @@ func (h *Handler) GetGoodDetailsByIngredient(c echo.Context) error {
 
 	resp, err := h.service.Goods().GetGoodDetailsByIngredient(c.Request().Context(), ingredientID, limit, offset)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, echo.Map{"error": err.Error()})
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("Operation failed", err.Error(), http.StatusInternalServerError))
 	}
 
-	return c.JSON(http.StatusOK, resp)
+	return c.JSON(http.StatusOK, model.NewSuccessResponse("Good details retrieved successfully", resp, http.StatusOK))
 }
 
 // GetGoodDetailsByCompound retrieves all good details for a compound
@@ -152,7 +152,7 @@ func (h *Handler) GetGoodDetailsByIngredient(c echo.Context) error {
 func (h *Handler) GetGoodDetailsByCompound(c echo.Context) error {
 	compoundID := c.Param("compound_id")
 	if compoundID == "" {
-		return c.JSON(http.StatusBadRequest, echo.Map{"error": "compound_id is required"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("compound_id is required", "see logs for details", http.StatusInternalServerError))
 	}
 
 	limit := int32(20)
@@ -171,10 +171,10 @@ func (h *Handler) GetGoodDetailsByCompound(c echo.Context) error {
 
 	resp, err := h.service.Goods().GetGoodDetailsByCompound(c.Request().Context(), compoundID, limit, offset)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, echo.Map{"error": err.Error()})
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("Operation failed", err.Error(), http.StatusInternalServerError))
 	}
 
-	return c.JSON(http.StatusOK, resp)
+	return c.JSON(http.StatusOK, model.NewSuccessResponse("Good details retrieved successfully", resp, http.StatusOK))
 }
 
 // UpdateGoodDetail updates a good detail
@@ -196,20 +196,20 @@ func (h *Handler) GetGoodDetailsByCompound(c echo.Context) error {
 func (h *Handler) UpdateGoodDetail(c echo.Context) error {
 	id := c.Param("id")
 	if id == "" {
-		return c.JSON(http.StatusBadRequest, echo.Map{"error": "id is required"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("id is required", "see logs for details", http.StatusInternalServerError))
 	}
 
 	var req model.UpdateGoodDetailRequest
 	if err := c.Bind(&req); err != nil {
-		return c.JSON(http.StatusBadRequest, echo.Map{"error": "invalid request"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("invalid request", "see logs for details", http.StatusInternalServerError))
 	}
 
 	resp, err := h.service.Goods().UpdateGoodDetail(c.Request().Context(), id, req.GoodID, req.IngredientID, req.CompoundID, req.Measurement, req.Quantity)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, echo.Map{"error": err.Error()})
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("Operation failed", err.Error(), http.StatusInternalServerError))
 	}
 
-	return c.JSON(http.StatusOK, resp)
+	return c.JSON(http.StatusOK, model.NewSuccessResponse("Good detail updated successfully", resp, http.StatusOK))
 }
 
 // UpdateGoodDetailQuantity updates good detail quantity
@@ -231,20 +231,20 @@ func (h *Handler) UpdateGoodDetail(c echo.Context) error {
 func (h *Handler) UpdateGoodDetailQuantity(c echo.Context) error {
 	id := c.Param("id")
 	if id == "" {
-		return c.JSON(http.StatusBadRequest, echo.Map{"error": "id is required"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("id is required", "see logs for details", http.StatusInternalServerError))
 	}
 
 	var req model.UpdateGoodDetailQuantityRequest
 	if err := c.Bind(&req); err != nil {
-		return c.JSON(http.StatusBadRequest, echo.Map{"error": "invalid request"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("invalid request", "see logs for details", http.StatusInternalServerError))
 	}
 
 	resp, err := h.service.Goods().UpdateGoodDetailQuantity(c.Request().Context(), id, req.Quantity)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, echo.Map{"error": err.Error()})
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("Operation failed", err.Error(), http.StatusInternalServerError))
 	}
 
-	return c.JSON(http.StatusOK, resp)
+	return c.JSON(http.StatusOK, model.NewSuccessResponse("Good detail quantity updated successfully", resp, http.StatusOK))
 }
 
 // DeleteGoodDetail deletes a good detail
@@ -263,14 +263,14 @@ func (h *Handler) UpdateGoodDetailQuantity(c echo.Context) error {
 func (h *Handler) DeleteGoodDetail(c echo.Context) error {
 	id := c.Param("id")
 	if id == "" {
-		return c.JSON(http.StatusBadRequest, echo.Map{"error": "id is required"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("id is required", "see logs for details", http.StatusInternalServerError))
 	}
 
 	if err := h.service.Goods().DeleteGoodDetail(c.Request().Context(), id); err != nil {
-		return c.JSON(http.StatusInternalServerError, echo.Map{"error": err.Error()})
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("Operation failed", err.Error(), http.StatusInternalServerError))
 	}
 
-	return c.NoContent(http.StatusNoContent)
+	return c.JSON(http.StatusNoContent, model.NewSuccessResponse("Good detail deleted successfully", map[string]interface{}{}, http.StatusNoContent))
 }
 
 // RestoreGoodDetail restores a deleted good detail
@@ -290,13 +290,13 @@ func (h *Handler) DeleteGoodDetail(c echo.Context) error {
 func (h *Handler) RestoreGoodDetail(c echo.Context) error {
 	id := c.Param("id")
 	if id == "" {
-		return c.JSON(http.StatusBadRequest, echo.Map{"error": "id is required"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("id is required", "see logs for details", http.StatusInternalServerError))
 	}
 
 	resp, err := h.service.Goods().RestoreGoodDetail(c.Request().Context(), id)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, echo.Map{"error": err.Error()})
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("Operation failed", err.Error(), http.StatusInternalServerError))
 	}
 
-	return c.JSON(http.StatusOK, resp)
+	return c.JSON(http.StatusOK, model.NewSuccessResponse("Good detail restored successfully", resp, http.StatusOK))
 }

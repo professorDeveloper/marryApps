@@ -26,20 +26,32 @@ func (h *Handler) CreateDepartment(c echo.Context) error {
 	var req model.CreateDepartmentRequest
 	if err := c.Bind(&req); err != nil {
 		log.Printf("Failed to bind create department request: %v", err)
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "invalid request format"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"invalid request format",
+			err.Error(),
+			http.StatusBadRequest,
+		))
 	}
 
 	if req.Name == nil || *req.Name == "" {
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "name is required"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"name is required",
+			"missing required field: name",
+			http.StatusBadRequest,
+		))
 	}
 
 	department, err := h.service.Department().CreateDepartment(c.Request().Context(), *req.Name, req.NameI18n, req.ColorCode, &req.StorageID)
 	if err != nil {
 		log.Printf("CreateDepartment failed: %v", err)
-		return c.JSON(http.StatusInternalServerError, model.ErrorResponse{Message: "failed to create department"})
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse(
+			"failed to create department",
+			err.Error(),
+			http.StatusInternalServerError,
+		))
 	}
 
-	return c.JSON(http.StatusCreated, department)
+	return c.JSON(http.StatusCreated, model.NewSuccessResponse("Department created successfully", department, http.StatusCreated))
 }
 
 // GetDepartmentByID retrieves a department by ID
@@ -59,16 +71,24 @@ func (h *Handler) CreateDepartment(c echo.Context) error {
 func (h *Handler) GetDepartmentByID(c echo.Context) error {
 	departmentID := c.Param("id")
 	if departmentID == "" {
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "department id is required"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"department id is required",
+			"missing path parameter: id",
+			http.StatusBadRequest,
+		))
 	}
 
 	department, err := h.service.Department().GetDepartmentByID(c.Request().Context(), departmentID)
 	if err != nil {
 		log.Printf("GetDepartmentByID failed for ID %s: %v", departmentID, err)
-		return c.JSON(http.StatusNotFound, model.ErrorResponse{Message: "department not found"})
+		return c.JSON(http.StatusNotFound, model.NewErrorResponse(
+			"department not found",
+			err.Error(),
+			http.StatusNotFound,
+		))
 	}
 
-	return c.JSON(http.StatusOK, department)
+	return c.JSON(http.StatusOK, model.NewSuccessResponse("Department retrieved successfully", department, http.StatusOK))
 }
 
 // GetAllDepartments retrieves all departments
@@ -103,10 +123,14 @@ func (h *Handler) GetAllDepartments(c echo.Context) error {
 	departments, err := h.service.Department().GetAllDepartments(c.Request().Context(), limit, offset)
 	if err != nil {
 		log.Printf("GetAllDepartments failed: %v", err)
-		return c.JSON(http.StatusInternalServerError, model.ErrorResponse{Message: "failed to retrieve departments"})
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse(
+			"failed to retrieve departments",
+			err.Error(),
+			http.StatusInternalServerError,
+		))
 	}
 
-	return c.JSON(http.StatusOK, departments)
+	return c.JSON(http.StatusOK, model.NewSuccessResponse("Data retrieved successfully", departments, http.StatusOK))
 }
 
 // GetDepartmentsByStorageID retrieves departments by storage ID
@@ -127,7 +151,11 @@ func (h *Handler) GetAllDepartments(c echo.Context) error {
 func (h *Handler) GetDepartmentsByStorageID(c echo.Context) error {
 	storageID := c.Param("storageId")
 	if storageID == "" {
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "storage id is required"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"storage id is required",
+			"missing path parameter: storageId",
+			http.StatusBadRequest,
+		))
 	}
 
 	var limit int32 = 20
@@ -148,10 +176,14 @@ func (h *Handler) GetDepartmentsByStorageID(c echo.Context) error {
 	departments, err := h.service.Department().GetDepartmentsByStorageID(c.Request().Context(), storageID, limit, offset)
 	if err != nil {
 		log.Printf("GetDepartmentsByStorageID failed for storage ID %s: %v", storageID, err)
-		return c.JSON(http.StatusInternalServerError, model.ErrorResponse{Message: "failed to retrieve departments for storage"})
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse(
+			"failed to retrieve departments for storage",
+			err.Error(),
+			http.StatusInternalServerError,
+		))
 	}
 
-	return c.JSON(http.StatusOK, departments)
+	return c.JSON(http.StatusOK, model.NewSuccessResponse("Data retrieved successfully", departments, http.StatusOK))
 }
 
 // UpdateDepartment updates a department
@@ -172,22 +204,34 @@ func (h *Handler) GetDepartmentsByStorageID(c echo.Context) error {
 func (h *Handler) UpdateDepartment(c echo.Context) error {
 	departmentID := c.Param("id")
 	if departmentID == "" {
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "department id is required"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"department id is required",
+			"missing path parameter: id",
+			http.StatusBadRequest,
+		))
 	}
 
 	var req model.UpdateDepartmentRequest
 	if err := c.Bind(&req); err != nil {
 		log.Printf("Failed to bind update department request: %v", err)
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "invalid request format"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"invalid request format",
+			err.Error(),
+			http.StatusBadRequest,
+		))
 	}
 
 	department, err := h.service.Department().UpdateDepartment(c.Request().Context(), departmentID, req.Name, req.NameI18n, req.ColorCode, req.StorageID)
 	if err != nil {
 		log.Printf("UpdateDepartment failed for ID %s: %v", departmentID, err)
-		return c.JSON(http.StatusInternalServerError, model.ErrorResponse{Message: "failed to update department"})
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse(
+			"failed to update department",
+			err.Error(),
+			http.StatusInternalServerError,
+		))
 	}
 
-	return c.JSON(http.StatusOK, department)
+	return c.JSON(http.StatusOK, model.NewSuccessResponse("Department retrieved successfully", department, http.StatusOK))
 }
 
 // DeleteDepartment soft deletes a department
@@ -207,12 +251,20 @@ func (h *Handler) UpdateDepartment(c echo.Context) error {
 func (h *Handler) DeleteDepartment(c echo.Context) error {
 	departmentID := c.Param("id")
 	if departmentID == "" {
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "department id is required"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"department id is required",
+			"missing path parameter: id",
+			http.StatusBadRequest,
+		))
 	}
 
 	if err := h.service.Department().DeleteDepartment(c.Request().Context(), departmentID); err != nil {
 		log.Printf("DeleteDepartment failed for ID %s: %v", departmentID, err)
-		return c.JSON(http.StatusInternalServerError, model.ErrorResponse{Message: "failed to delete department"})
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse(
+			"failed to delete department",
+			err.Error(),
+			http.StatusInternalServerError,
+		))
 	}
 
 	return c.NoContent(http.StatusNoContent)
@@ -235,16 +287,24 @@ func (h *Handler) DeleteDepartment(c echo.Context) error {
 func (h *Handler) RestoreDepartment(c echo.Context) error {
 	departmentID := c.Param("id")
 	if departmentID == "" {
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "department id is required"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"department id is required",
+			"missing path parameter: id",
+			http.StatusBadRequest,
+		))
 	}
 
 	department, err := h.service.Department().RestoreDepartment(c.Request().Context(), departmentID)
 	if err != nil {
 		log.Printf("RestoreDepartment failed for ID %s: %v", departmentID, err)
-		return c.JSON(http.StatusInternalServerError, model.ErrorResponse{Message: "failed to restore department"})
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse(
+			"failed to restore department",
+			err.Error(),
+			http.StatusInternalServerError,
+		))
 	}
 
-	return c.JSON(http.StatusOK, department)
+	return c.JSON(http.StatusOK, model.NewSuccessResponse("Department retrieved successfully", department, http.StatusOK))
 }
 
 // SearchDepartments searches for departments by name
@@ -265,7 +325,11 @@ func (h *Handler) RestoreDepartment(c echo.Context) error {
 func (h *Handler) SearchDepartments(c echo.Context) error {
 	query := c.QueryParam("q")
 	if query == "" {
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "search query is required"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"search query is required",
+			"missing query parameter: q",
+			http.StatusBadRequest,
+		))
 	}
 
 	var limit int32 = 20
@@ -286,8 +350,12 @@ func (h *Handler) SearchDepartments(c echo.Context) error {
 	departments, err := h.service.Department().SearchDepartments(c.Request().Context(), query, limit, offset)
 	if err != nil {
 		log.Printf("SearchDepartments failed for query %s: %v", query, err)
-		return c.JSON(http.StatusInternalServerError, model.ErrorResponse{Message: "failed to search departments"})
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse(
+			"failed to search departments",
+			err.Error(),
+			http.StatusInternalServerError,
+		))
 	}
 
-	return c.JSON(http.StatusOK, departments)
+	return c.JSON(http.StatusOK, model.NewSuccessResponse("Data retrieved successfully", departments, http.StatusOK))
 }

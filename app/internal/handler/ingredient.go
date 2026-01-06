@@ -27,18 +27,18 @@ func (h *Handler) CreateIngredientGroup(c echo.Context) error {
 	var req model.CreateIngredientGroupRequest
 	if err := c.Bind(&req); err != nil {
 		log.Printf("Failed to bind create ingredient group request: %v", err)
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "invalid request format"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("invalid request format", "see logs for details", http.StatusBadRequest))
 	}
 
 	if req.Name == nil || *req.Name == "" {
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "name is required"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("name is required", "see logs for details", http.StatusBadRequest))
 	}
 
 	var nameI18nUUID *uuid.UUID
 	if req.NameI18n != nil && *req.NameI18n != "" {
 		id, err := uuid.Parse(*req.NameI18n)
 		if err != nil {
-			return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "invalid name_i18n UUID format"})
+			return c.JSON(http.StatusBadRequest, model.NewErrorResponse("invalid name_i18n UUID format", "see logs for details", http.StatusBadRequest))
 		}
 		nameI18nUUID = &id
 	}
@@ -46,10 +46,10 @@ func (h *Handler) CreateIngredientGroup(c echo.Context) error {
 	group, err := h.service.Ingredient().CreateIngredientGroup(c.Request().Context(), *req.Name, nameI18nUUID, req.PictureUrl, req.ColorCode)
 	if err != nil {
 		log.Printf("CreateIngredientGroup failed: %v", err)
-		return c.JSON(http.StatusInternalServerError, model.ErrorResponse{Message: "failed to create ingredient group"})
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("failed to create ingredient group", "see logs for details", http.StatusInternalServerError))
 	}
 
-	return c.JSON(http.StatusCreated, group)
+	return c.JSON(http.StatusCreated, model.NewSuccessResponse("Ingredient group created successfully", group, http.StatusCreated))
 }
 
 // GetIngredientGroupByID retrieves an ingredient group by ID
@@ -69,22 +69,22 @@ func (h *Handler) CreateIngredientGroup(c echo.Context) error {
 func (h *Handler) GetIngredientGroupByID(c echo.Context) error {
 	groupID := c.Param("id")
 	if groupID == "" {
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "group id is required"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("group id is required", "see logs for details", http.StatusBadRequest))
 	}
 	if _, err := uuid.Parse(groupID); err != nil {
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "invalid group id format"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("invalid group id format", "see logs for details", http.StatusBadRequest))
 	}
 
 	group, err := h.service.Ingredient().GetIngredientGroupByID(c.Request().Context(), groupID)
 	if err != nil {
 		log.Printf("GetIngredientGroupByID failed for id %s: %v", groupID, err)
-		return c.JSON(http.StatusInternalServerError, model.ErrorResponse{Message: "failed to fetch ingredient group"})
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("failed to fetch ingredient group", "see logs for details", http.StatusInternalServerError))
 	}
 	if group == nil {
-		return c.JSON(http.StatusNotFound, model.ErrorResponse{Message: "ingredient group not found"})
+		return c.JSON(http.StatusNotFound, model.NewErrorResponse("ingredient group not found", "see logs for details", http.StatusNotFound))
 	}
 
-	return c.JSON(http.StatusOK, group)
+	return c.JSON(http.StatusOK, model.NewSuccessResponse("Ingredient group retrieved successfully", group, http.StatusOK))
 }
 
 // GetAllIngredientGroups retrieves all ingredient groups
@@ -121,10 +121,10 @@ func (h *Handler) GetAllIngredientGroups(c echo.Context) error {
 	groups, err := h.service.Ingredient().GetAllIngredientGroups(c.Request().Context(), limit, offset)
 	if err != nil {
 		log.Printf("GetAllIngredientGroups failed: %v", err)
-		return c.JSON(http.StatusInternalServerError, model.ErrorResponse{Message: "failed to fetch ingredient groups"})
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("failed to fetch ingredient groups", "see logs for details", http.StatusInternalServerError))
 	}
 
-	return c.JSON(http.StatusOK, groups)
+	return c.JSON(http.StatusOK, model.NewSuccessResponse("Data retrieved successfully", groups, http.StatusOK))
 }
 
 // UpdateIngredientGroup updates an existing ingredient group
@@ -145,28 +145,28 @@ func (h *Handler) GetAllIngredientGroups(c echo.Context) error {
 func (h *Handler) UpdateIngredientGroup(c echo.Context) error {
 	groupID := c.Param("id")
 	if groupID == "" {
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "group id is required"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("group id is required", "see logs for details", http.StatusBadRequest))
 	}
 	if _, err := uuid.Parse(groupID); err != nil {
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "invalid group id format"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("invalid group id format", "see logs for details", http.StatusBadRequest))
 	}
 
 	var req model.UpdateIngredientGroupRequest
 	if err := c.Bind(&req); err != nil {
 		log.Printf("Failed to bind update ingredient group request: %v", err)
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "invalid request format"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("invalid request format", "see logs for details", http.StatusBadRequest))
 	}
 
 	group, err := h.service.Ingredient().UpdateIngredientGroup(c.Request().Context(), groupID, req.Name, req.NameI18n, req.PictureUrl, req.ColorCode)
 	if err != nil {
-		log.Printf("UpdateIngredientGroup failed for id %s: %v", groupID, err)
-		return c.JSON(http.StatusInternalServerError, model.ErrorResponse{Message: "failed to update ingredient group"})
+		log.Printf("UpdateIngredientGroup failed: %v", err)
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("failed to update ingredient group", "see logs for details", http.StatusInternalServerError))
 	}
 	if group == nil {
-		return c.JSON(http.StatusNotFound, model.ErrorResponse{Message: "ingredient group not found"})
+		return c.JSON(http.StatusNotFound, model.NewErrorResponse("ingredient group not found", "see logs for details", http.StatusNotFound))
 	}
 
-	return c.JSON(http.StatusOK, group)
+	return c.JSON(http.StatusOK, model.NewSuccessResponse("Ingredient group updated successfully", group, http.StatusOK))
 }
 
 // DeleteIngredientGroup deletes an ingredient group
@@ -185,18 +185,18 @@ func (h *Handler) UpdateIngredientGroup(c echo.Context) error {
 func (h *Handler) DeleteIngredientGroup(c echo.Context) error {
 	groupID := c.Param("id")
 	if groupID == "" {
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "group id is required"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("group id is required", "see logs for details", http.StatusBadRequest))
 	}
 	if _, err := uuid.Parse(groupID); err != nil {
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "invalid group id format"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("invalid group id format", "see logs for details", http.StatusBadRequest))
 	}
 
 	if err := h.service.Ingredient().DeleteIngredientGroup(c.Request().Context(), groupID); err != nil {
 		log.Printf("DeleteIngredientGroup failed for id %s: %v", groupID, err)
-		return c.JSON(http.StatusInternalServerError, model.ErrorResponse{Message: "failed to delete ingredient group"})
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("failed to delete ingredient group", "see logs for details", http.StatusInternalServerError))
 	}
 
-	return c.JSON(http.StatusOK, model.SuccessResponse{Message: "Ingredient group deleted successfully"})
+	return c.JSON(http.StatusOK, model.NewSuccessResponse("Ingredient group deleted successfully", map[string]interface{}{}, http.StatusOK))
 }
 
 // RestoreIngredientGroup restores a deleted ingredient group
@@ -215,18 +215,18 @@ func (h *Handler) DeleteIngredientGroup(c echo.Context) error {
 func (h *Handler) RestoreIngredientGroup(c echo.Context) error {
 	groupID := c.Param("id")
 	if groupID == "" {
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "group id is required"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("group id is required", "see logs for details", http.StatusBadRequest))
 	}
 	if _, err := uuid.Parse(groupID); err != nil {
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "invalid group id format"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("invalid group id format", "see logs for details", http.StatusBadRequest))
 	}
 
 	if err := h.service.Ingredient().RestoreIngredientGroup(c.Request().Context(), groupID); err != nil {
 		log.Printf("RestoreIngredientGroup failed for id %s: %v", groupID, err)
-		return c.JSON(http.StatusInternalServerError, model.ErrorResponse{Message: "failed to restore ingredient group"})
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("failed to restore ingredient group", "see logs for details", http.StatusInternalServerError))
 	}
 
-	return c.JSON(http.StatusOK, model.SuccessResponse{Message: "Ingredient group restored successfully"})
+	return c.JSON(http.StatusOK, model.NewSuccessResponse("Ingredient group restored successfully", map[string]interface{}{}, http.StatusOK))
 }
 
 // ==================== INGREDIENTS ====================
@@ -248,18 +248,18 @@ func (h *Handler) CreateIngredient(c echo.Context) error {
 	var req model.CreateIngredientRequest
 	if err := c.Bind(&req); err != nil {
 		log.Printf("Failed to bind create ingredient request: %v", err)
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "invalid request format"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("invalid request format", "see logs for details", http.StatusBadRequest))
 	}
 
 	if req.Name == nil || *req.Name == "" {
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "name is required"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("name is required", "see logs for details", http.StatusBadRequest))
 	}
 
 	var nameI18nUUID *uuid.UUID
 	if req.NameI18n != nil && *req.NameI18n != "" {
 		id, err := uuid.Parse(*req.NameI18n)
 		if err != nil {
-			return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "invalid name_i18n UUID format"})
+			return c.JSON(http.StatusBadRequest, model.NewErrorResponse("invalid name_i18n UUID format", "see logs for details", http.StatusBadRequest))
 		}
 		nameI18nUUID = &id
 	}
@@ -267,10 +267,10 @@ func (h *Handler) CreateIngredient(c echo.Context) error {
 	ingredient, err := h.service.Ingredient().CreateIngredient(c.Request().Context(), *req.Name, nameI18nUUID, req.GroupID, req.Measurement, req.PictureUrl, req.BrandID, req.ColorCode)
 	if err != nil {
 		log.Printf("CreateIngredient failed: %v", err)
-		return c.JSON(http.StatusInternalServerError, model.ErrorResponse{Message: "failed to create ingredient"})
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("failed to create ingredient", "see logs for details", http.StatusInternalServerError))
 	}
 
-	return c.JSON(http.StatusCreated, ingredient)
+	return c.JSON(http.StatusCreated, model.NewSuccessResponse("Ingredient created successfully", ingredient, http.StatusCreated))
 }
 
 // GetIngredientByID retrieves an ingredient by ID
@@ -290,22 +290,22 @@ func (h *Handler) CreateIngredient(c echo.Context) error {
 func (h *Handler) GetIngredientByID(c echo.Context) error {
 	ingredientID := c.Param("id")
 	if ingredientID == "" {
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "ingredient id is required"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("ingredient id is required", "see logs for details", http.StatusBadRequest))
 	}
 	if _, err := uuid.Parse(ingredientID); err != nil {
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "invalid ingredient id format"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("invalid ingredient id format", "see logs for details", http.StatusBadRequest))
 	}
 
 	ingredient, err := h.service.Ingredient().GetIngredientByID(c.Request().Context(), ingredientID)
 	if err != nil {
 		log.Printf("GetIngredientByID failed for id %s: %v", ingredientID, err)
-		return c.JSON(http.StatusInternalServerError, model.ErrorResponse{Message: "failed to fetch ingredient"})
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("failed to fetch ingredient", "see logs for details", http.StatusInternalServerError))
 	}
 	if ingredient == nil {
-		return c.JSON(http.StatusNotFound, model.ErrorResponse{Message: "ingredient not found"})
+		return c.JSON(http.StatusNotFound, model.NewErrorResponse("ingredient not found", "see logs for details", http.StatusNotFound))
 	}
 
-	return c.JSON(http.StatusOK, ingredient)
+	return c.JSON(http.StatusOK, model.NewSuccessResponse("Ingredient retrieved successfully", ingredient, http.StatusOK))
 }
 
 // GetAllIngredients retrieves all ingredients
@@ -342,10 +342,10 @@ func (h *Handler) GetAllIngredients(c echo.Context) error {
 	ingredients, err := h.service.Ingredient().GetAllIngredients(c.Request().Context(), limit, offset)
 	if err != nil {
 		log.Printf("GetAllIngredients failed: %v", err)
-		return c.JSON(http.StatusInternalServerError, model.ErrorResponse{Message: "failed to fetch ingredients"})
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("failed to fetch ingredients", "see logs for details", http.StatusInternalServerError))
 	}
 
-	return c.JSON(http.StatusOK, ingredients)
+	return c.JSON(http.StatusOK, model.NewSuccessResponse("Data retrieved successfully", ingredients, http.StatusOK))
 }
 
 // GetIngredientsByGroupID retrieves ingredients by group ID
@@ -366,10 +366,10 @@ func (h *Handler) GetAllIngredients(c echo.Context) error {
 func (h *Handler) GetIngredientsByGroupID(c echo.Context) error {
 	groupID := c.Param("groupId")
 	if groupID == "" {
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "group_id is required"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("group_id is required", "see logs for details", http.StatusBadRequest))
 	}
 	if _, err := uuid.Parse(groupID); err != nil {
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "invalid group_id format"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("invalid group_id format", "see logs for details", http.StatusBadRequest))
 	}
 
 	limitStr := c.QueryParam("limit")
@@ -392,10 +392,10 @@ func (h *Handler) GetIngredientsByGroupID(c echo.Context) error {
 	ingredients, err := h.service.Ingredient().GetIngredientsByGroupID(c.Request().Context(), groupID, limit, offset)
 	if err != nil {
 		log.Printf("GetIngredientsByGroupID failed for group_id %s: %v", groupID, err)
-		return c.JSON(http.StatusInternalServerError, model.ErrorResponse{Message: "failed to fetch ingredients"})
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("failed to fetch ingredients", "see logs for details", http.StatusInternalServerError))
 	}
 
-	return c.JSON(http.StatusOK, ingredients)
+	return c.JSON(http.StatusOK, model.NewSuccessResponse("Data retrieved successfully", ingredients, http.StatusOK))
 }
 
 // UpdateIngredient updates an existing ingredient
@@ -416,28 +416,28 @@ func (h *Handler) GetIngredientsByGroupID(c echo.Context) error {
 func (h *Handler) UpdateIngredient(c echo.Context) error {
 	ingredientID := c.Param("id")
 	if ingredientID == "" {
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "ingredient id is required"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("ingredient id is required", "see logs for details", http.StatusBadRequest))
 	}
 	if _, err := uuid.Parse(ingredientID); err != nil {
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "invalid ingredient id format"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("invalid ingredient id format", "see logs for details", http.StatusBadRequest))
 	}
 
 	var req model.UpdateIngredientRequest
 	if err := c.Bind(&req); err != nil {
 		log.Printf("Failed to bind update ingredient request: %v", err)
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "invalid request format"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("invalid request format", "see logs for details", http.StatusBadRequest))
 	}
 
 	ingredient, err := h.service.Ingredient().UpdateIngredient(c.Request().Context(), ingredientID, req.Name, req.NameI18n, req.GroupID, req.Measurement, req.PictureUrl, req.BrandID, req.ColorCode)
 	if err != nil {
 		log.Printf("UpdateIngredient failed for id %s: %v", ingredientID, err)
-		return c.JSON(http.StatusInternalServerError, model.ErrorResponse{Message: "failed to update ingredient"})
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("failed to update ingredient", "see logs for details", http.StatusInternalServerError))
 	}
 	if ingredient == nil {
-		return c.JSON(http.StatusNotFound, model.ErrorResponse{Message: "ingredient not found"})
+		return c.JSON(http.StatusNotFound, model.NewErrorResponse("ingredient not found", "see logs for details", http.StatusNotFound))
 	}
 
-	return c.JSON(http.StatusOK, ingredient)
+	return c.JSON(http.StatusOK, model.NewSuccessResponse("Ingredient updated successfully", ingredient, http.StatusOK))
 }
 
 // DeleteIngredient deletes an ingredient
@@ -456,18 +456,18 @@ func (h *Handler) UpdateIngredient(c echo.Context) error {
 func (h *Handler) DeleteIngredient(c echo.Context) error {
 	ingredientID := c.Param("id")
 	if ingredientID == "" {
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "ingredient id is required"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("ingredient id is required", "see logs for details", http.StatusBadRequest))
 	}
 	if _, err := uuid.Parse(ingredientID); err != nil {
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "invalid ingredient id format"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("invalid ingredient id format", "see logs for details", http.StatusBadRequest))
 	}
 
 	if err := h.service.Ingredient().DeleteIngredient(c.Request().Context(), ingredientID); err != nil {
 		log.Printf("DeleteIngredient failed for id %s: %v", ingredientID, err)
-		return c.JSON(http.StatusInternalServerError, model.ErrorResponse{Message: "failed to delete ingredient"})
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("failed to delete ingredient", "see logs for details", http.StatusInternalServerError))
 	}
 
-	return c.JSON(http.StatusOK, model.SuccessResponse{Message: "Ingredient deleted successfully"})
+	return c.JSON(http.StatusOK, model.NewSuccessResponse("Ingredient deleted successfully", map[string]interface{}{}, http.StatusOK))
 }
 
 // RestoreIngredient restores a deleted ingredient
@@ -486,18 +486,18 @@ func (h *Handler) DeleteIngredient(c echo.Context) error {
 func (h *Handler) RestoreIngredient(c echo.Context) error {
 	ingredientID := c.Param("id")
 	if ingredientID == "" {
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "ingredient id is required"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("ingredient id is required", "see logs for details", http.StatusBadRequest))
 	}
 	if _, err := uuid.Parse(ingredientID); err != nil {
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "invalid ingredient id format"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("invalid ingredient id format", "see logs for details", http.StatusBadRequest))
 	}
 
 	if err := h.service.Ingredient().RestoreIngredient(c.Request().Context(), ingredientID); err != nil {
 		log.Printf("RestoreIngredient failed for id %s: %v", ingredientID, err)
-		return c.JSON(http.StatusInternalServerError, model.ErrorResponse{Message: "failed to restore ingredient"})
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("failed to restore ingredient", "see logs for details", http.StatusInternalServerError))
 	}
 
-	return c.JSON(http.StatusOK, model.SuccessResponse{Message: "Ingredient restored successfully"})
+	return c.JSON(http.StatusOK, model.NewSuccessResponse("Ingredient restored successfully", map[string]interface{}{}, http.StatusOK))
 }
 
 // ==================== INGREDIENT STOCK ====================
@@ -519,26 +519,26 @@ func (h *Handler) CreateIngredientStock(c echo.Context) error {
 	var req model.CreateIngredientStockRequest
 	if err := c.Bind(&req); err != nil {
 		log.Printf("Failed to bind create ingredient stock request: %v", err)
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "invalid request format"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("invalid request format", "see logs for details", http.StatusBadRequest))
 	}
 
 	if req.IngredientID == nil || *req.IngredientID == "" {
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "ingredient_id is required"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("ingredient_id is required", "see logs for details", http.StatusBadRequest))
 	}
 	if req.BranchID == nil || *req.BranchID == "" {
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "branch_id is required"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("branch_id is required", "see logs for details", http.StatusBadRequest))
 	}
 	if req.Quantity == nil {
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "quantity is required"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("quantity is required", "see logs for details", http.StatusBadRequest))
 	}
 
 	stock, err := h.service.Ingredient().CreateIngredientStock(c.Request().Context(), *req.IngredientID, *req.Quantity, *req.BranchID)
 	if err != nil {
 		log.Printf("CreateIngredientStock failed: %v", err)
-		return c.JSON(http.StatusInternalServerError, model.ErrorResponse{Message: "failed to create ingredient stock"})
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("failed to create ingredient stock", "see logs for details", http.StatusInternalServerError))
 	}
 
-	return c.JSON(http.StatusCreated, stock)
+	return c.JSON(http.StatusCreated, model.NewSuccessResponse("Ingredient stock created successfully", stock, http.StatusCreated))
 }
 
 // GetIngredientStockByID retrieves ingredient stock by ID
@@ -558,22 +558,22 @@ func (h *Handler) CreateIngredientStock(c echo.Context) error {
 func (h *Handler) GetIngredientStockByID(c echo.Context) error {
 	stockID := c.Param("id")
 	if stockID == "" {
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "stock id is required"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("stock id is required", "see logs for details", http.StatusBadRequest))
 	}
 	if _, err := uuid.Parse(stockID); err != nil {
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "invalid stock id format"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("invalid stock id format", "see logs for details", http.StatusBadRequest))
 	}
 
 	stock, err := h.service.Ingredient().GetIngredientStockByID(c.Request().Context(), stockID)
 	if err != nil {
 		log.Printf("GetIngredientStockByID failed for id %s: %v", stockID, err)
-		return c.JSON(http.StatusInternalServerError, model.ErrorResponse{Message: "failed to fetch ingredient stock"})
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("failed to fetch ingredient stock", "see logs for details", http.StatusInternalServerError))
 	}
 	if stock == nil {
-		return c.JSON(http.StatusNotFound, model.ErrorResponse{Message: "ingredient stock not found"})
+		return c.JSON(http.StatusNotFound, model.NewErrorResponse("ingredient stock not found", "see logs for details", http.StatusNotFound))
 	}
 
-	return c.JSON(http.StatusOK, stock)
+	return c.JSON(http.StatusOK, model.NewSuccessResponse("Ingredient stock retrieved successfully", stock, http.StatusOK))
 }
 
 // GetStockByIngredientAndBranch retrieves stock by ingredient and branch
@@ -595,28 +595,28 @@ func (h *Handler) GetStockByIngredientAndBranch(c echo.Context) error {
 	ingredientID := c.QueryParam("ingredient_id")
 	branchID := c.QueryParam("branch_id")
 	if ingredientID == "" {
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "ingredient_id is required"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("ingredient_id is required", "see logs for details", http.StatusBadRequest))
 	}
 	if branchID == "" {
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "branch_id is required"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("branch_id is required", "see logs for details", http.StatusBadRequest))
 	}
 	if _, err := uuid.Parse(ingredientID); err != nil {
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "invalid ingredient_id format"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("invalid ingredient_id format", "see logs for details", http.StatusBadRequest))
 	}
 	if _, err := uuid.Parse(branchID); err != nil {
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "invalid branch_id format"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("invalid branch_id format", "see logs for details", http.StatusBadRequest))
 	}
 
 	stock, err := h.service.Ingredient().GetStockByIngredientAndBranch(c.Request().Context(), ingredientID, branchID)
 	if err != nil {
 		log.Printf("GetStockByIngredientAndBranch failed: %v", err)
-		return c.JSON(http.StatusInternalServerError, model.ErrorResponse{Message: "failed to fetch ingredient stock"})
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("failed to fetch ingredient stock", "see logs for details", http.StatusInternalServerError))
 	}
 	if stock == nil {
-		return c.JSON(http.StatusNotFound, model.ErrorResponse{Message: "ingredient stock not found"})
+		return c.JSON(http.StatusNotFound, model.NewErrorResponse("ingredient stock not found", "see logs for details", http.StatusNotFound))
 	}
 
-	return c.JSON(http.StatusOK, stock)
+	return c.JSON(http.StatusOK, model.NewSuccessResponse("Ingredient stock retrieved successfully", stock, http.StatusOK))
 }
 
 // GetAllIngredientStock retrieves all ingredient stock
@@ -653,10 +653,10 @@ func (h *Handler) GetAllIngredientStock(c echo.Context) error {
 	stocks, err := h.service.Ingredient().GetAllIngredientStock(c.Request().Context(), limit, offset)
 	if err != nil {
 		log.Printf("GetAllIngredientStock failed: %v", err)
-		return c.JSON(http.StatusInternalServerError, model.ErrorResponse{Message: "failed to fetch ingredient stock"})
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("failed to fetch ingredient stock", "see logs for details", http.StatusInternalServerError))
 	}
 
-	return c.JSON(http.StatusOK, stocks)
+	return c.JSON(http.StatusOK, model.NewSuccessResponse("Data retrieved successfully", stocks, http.StatusOK))
 }
 
 // GetStockByBranchID retrieves stock by branch ID
@@ -677,10 +677,10 @@ func (h *Handler) GetAllIngredientStock(c echo.Context) error {
 func (h *Handler) GetStockByBranchID(c echo.Context) error {
 	branchID := c.Param("branchId")
 	if branchID == "" {
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "branch_id is required"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("branch_id is required", "see logs for details", http.StatusBadRequest))
 	}
 	if _, err := uuid.Parse(branchID); err != nil {
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "invalid branch_id format"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("invalid branch_id format", "see logs for details", http.StatusBadRequest))
 	}
 
 	limitStr := c.QueryParam("limit")
@@ -703,10 +703,10 @@ func (h *Handler) GetStockByBranchID(c echo.Context) error {
 	stocks, err := h.service.Ingredient().GetStockByBranchID(c.Request().Context(), branchID, limit, offset)
 	if err != nil {
 		log.Printf("GetStockByBranchID failed for branch_id %s: %v", branchID, err)
-		return c.JSON(http.StatusInternalServerError, model.ErrorResponse{Message: "failed to fetch ingredient stock"})
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("failed to fetch ingredient stock", "see logs for details", http.StatusInternalServerError))
 	}
 
-	return c.JSON(http.StatusOK, stocks)
+	return c.JSON(http.StatusOK, model.NewSuccessResponse("Data retrieved successfully", stocks, http.StatusOK))
 }
 
 // GetStockByIngredientID retrieves stock by ingredient ID
@@ -727,10 +727,10 @@ func (h *Handler) GetStockByBranchID(c echo.Context) error {
 func (h *Handler) GetStockByIngredientID(c echo.Context) error {
 	ingredientID := c.Param("ingredientId")
 	if ingredientID == "" {
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "ingredient_id is required"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("ingredient_id is required", "see logs for details", http.StatusBadRequest))
 	}
 	if _, err := uuid.Parse(ingredientID); err != nil {
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "invalid ingredient_id format"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("invalid ingredient_id format", "see logs for details", http.StatusBadRequest))
 	}
 
 	limitStr := c.QueryParam("limit")
@@ -753,10 +753,10 @@ func (h *Handler) GetStockByIngredientID(c echo.Context) error {
 	stocks, err := h.service.Ingredient().GetStockByIngredientID(c.Request().Context(), ingredientID, limit, offset)
 	if err != nil {
 		log.Printf("GetStockByIngredientID failed for ingredient_id %s: %v", ingredientID, err)
-		return c.JSON(http.StatusInternalServerError, model.ErrorResponse{Message: "failed to fetch ingredient stock"})
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("failed to fetch ingredient stock", "see logs for details", http.StatusInternalServerError))
 	}
 
-	return c.JSON(http.StatusOK, stocks)
+	return c.JSON(http.StatusOK, model.NewSuccessResponse("Data retrieved successfully", stocks, http.StatusOK))
 }
 
 // UpdateIngredientStock updates ingredient stock quantity
@@ -777,31 +777,31 @@ func (h *Handler) GetStockByIngredientID(c echo.Context) error {
 func (h *Handler) UpdateIngredientStock(c echo.Context) error {
 	stockID := c.Param("id")
 	if stockID == "" {
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "stock id is required"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("stock id is required", "see logs for details", http.StatusBadRequest))
 	}
 	if _, err := uuid.Parse(stockID); err != nil {
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "invalid stock id format"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("invalid stock id format", "see logs for details", http.StatusBadRequest))
 	}
 
 	var req model.UpdateIngredientStockRequest
 	if err := c.Bind(&req); err != nil {
 		log.Printf("Failed to bind update ingredient stock request: %v", err)
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "invalid request format"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("invalid request format", "see logs for details", http.StatusBadRequest))
 	}
 	if req.Quantity == nil {
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "quantity is required"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("quantity is required", "see logs for details", http.StatusBadRequest))
 	}
 
 	stock, err := h.service.Ingredient().UpdateIngredientStock(c.Request().Context(), stockID, *req.Quantity)
 	if err != nil {
 		log.Printf("UpdateIngredientStock failed for id %s: %v", stockID, err)
-		return c.JSON(http.StatusInternalServerError, model.ErrorResponse{Message: "failed to update ingredient stock"})
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("failed to update ingredient stock", "see logs for details", http.StatusInternalServerError))
 	}
 	if stock == nil {
-		return c.JSON(http.StatusNotFound, model.ErrorResponse{Message: "ingredient stock not found"})
+		return c.JSON(http.StatusNotFound, model.NewErrorResponse("ingredient stock not found", "see logs for details", http.StatusNotFound))
 	}
 
-	return c.JSON(http.StatusOK, stock)
+	return c.JSON(http.StatusOK, model.NewSuccessResponse("Ingredient stock updated successfully", stock, http.StatusOK))
 }
 
 type stockAdjustRequest struct {
@@ -825,28 +825,28 @@ type stockAdjustRequest struct {
 func (h *Handler) AddToIngredientStock(c echo.Context) error {
 	stockID := c.Param("id")
 	if stockID == "" {
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "stock id is required"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("stock id is required", "see logs for details", http.StatusBadRequest))
 	}
 	if _, err := uuid.Parse(stockID); err != nil {
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "invalid stock id format"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("invalid stock id format", "see logs for details", http.StatusBadRequest))
 	}
 
 	var req stockAdjustRequest
 	if err := c.Bind(&req); err != nil {
 		log.Printf("Failed to bind add-to-stock request: %v", err)
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "invalid request format"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("invalid request format", "see logs for details", http.StatusBadRequest))
 	}
 	if req.Quantity == nil {
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "quantity is required"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("quantity is required", "see logs for details", http.StatusBadRequest))
 	}
 
 	stock, err := h.service.Ingredient().AddToIngredientStock(c.Request().Context(), stockID, *req.Quantity)
 	if err != nil {
 		log.Printf("AddToIngredientStock failed for id %s: %v", stockID, err)
-		return c.JSON(http.StatusInternalServerError, model.ErrorResponse{Message: "failed to add to ingredient stock"})
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("failed to add to ingredient stock", "see logs for details", http.StatusInternalServerError))
 	}
 
-	return c.JSON(http.StatusOK, stock)
+	return c.JSON(http.StatusOK, model.NewSuccessResponse("Quantity added to ingredient stock successfully", stock, http.StatusOK))
 }
 
 // RemoveFromIngredientStock removes quantity from ingredient stock
@@ -866,28 +866,28 @@ func (h *Handler) AddToIngredientStock(c echo.Context) error {
 func (h *Handler) RemoveFromIngredientStock(c echo.Context) error {
 	stockID := c.Param("id")
 	if stockID == "" {
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "stock id is required"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("stock id is required", "see logs for details", http.StatusBadRequest))
 	}
 	if _, err := uuid.Parse(stockID); err != nil {
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "invalid stock id format"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("invalid stock id format", "see logs for details", http.StatusBadRequest))
 	}
 
 	var req stockAdjustRequest
 	if err := c.Bind(&req); err != nil {
 		log.Printf("Failed to bind remove-from-stock request: %v", err)
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "invalid request format"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("invalid request format", "see logs for details", http.StatusBadRequest))
 	}
 	if req.Quantity == nil {
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "quantity is required"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("quantity is required", "see logs for details", http.StatusBadRequest))
 	}
 
 	stock, err := h.service.Ingredient().RemoveFromIngredientStock(c.Request().Context(), stockID, *req.Quantity)
 	if err != nil {
 		log.Printf("RemoveFromIngredientStock failed for id %s: %v", stockID, err)
-		return c.JSON(http.StatusInternalServerError, model.ErrorResponse{Message: "failed to remove from ingredient stock"})
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("failed to remove from ingredient stock", "see logs for details", http.StatusInternalServerError))
 	}
 
-	return c.JSON(http.StatusOK, stock)
+	return c.JSON(http.StatusOK, model.NewSuccessResponse("Quantity removed from ingredient stock successfully", stock, http.StatusOK))
 }
 
 // DeleteIngredientStock deletes ingredient stock
@@ -906,18 +906,18 @@ func (h *Handler) RemoveFromIngredientStock(c echo.Context) error {
 func (h *Handler) DeleteIngredientStock(c echo.Context) error {
 	stockID := c.Param("id")
 	if stockID == "" {
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "stock id is required"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("stock id is required", "see logs for details", http.StatusBadRequest))
 	}
 	if _, err := uuid.Parse(stockID); err != nil {
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "invalid stock id format"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("invalid stock id format", "see logs for details", http.StatusBadRequest))
 	}
 
 	if err := h.service.Ingredient().DeleteIngredientStock(c.Request().Context(), stockID); err != nil {
 		log.Printf("DeleteIngredientStock failed for id %s: %v", stockID, err)
-		return c.JSON(http.StatusInternalServerError, model.ErrorResponse{Message: "failed to delete ingredient stock"})
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("failed to delete ingredient stock", "see logs for details", http.StatusInternalServerError))
 	}
 
-	return c.JSON(http.StatusOK, model.SuccessResponse{Message: "Ingredient stock deleted successfully"})
+	return c.JSON(http.StatusOK, model.NewSuccessResponse("Ingredient stock deleted successfully", map[string]interface{}{}, http.StatusOK))
 }
 
 // RestoreIngredientStock restores a deleted ingredient stock
@@ -936,16 +936,16 @@ func (h *Handler) DeleteIngredientStock(c echo.Context) error {
 func (h *Handler) RestoreIngredientStock(c echo.Context) error {
 	stockID := c.Param("id")
 	if stockID == "" {
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "stock id is required"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("stock id is required", "see logs for details", http.StatusBadRequest))
 	}
 	if _, err := uuid.Parse(stockID); err != nil {
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "invalid stock id format"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("invalid stock id format", "see logs for details", http.StatusBadRequest))
 	}
 
 	if err := h.service.Ingredient().RestoreIngredientStock(c.Request().Context(), stockID); err != nil {
 		log.Printf("RestoreIngredientStock failed for id %s: %v", stockID, err)
-		return c.JSON(http.StatusInternalServerError, model.ErrorResponse{Message: "failed to restore ingredient stock"})
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("failed to restore ingredient stock", "see logs for details", http.StatusInternalServerError))
 	}
 
-	return c.JSON(http.StatusOK, model.SuccessResponse{Message: "Ingredient stock restored successfully"})
+	return c.JSON(http.StatusOK, model.NewSuccessResponse("Ingredient stock restored successfully", map[string]interface{}{}, http.StatusOK))
 }

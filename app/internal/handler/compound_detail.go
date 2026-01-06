@@ -25,15 +25,23 @@ import (
 func (h *Handler) CreateCompoundDetail(c echo.Context) error {
 	var req model.CreateCompoundDetailRequest
 	if err := c.Bind(&req); err != nil {
-		return c.JSON(http.StatusBadRequest, echo.Map{"error": "invalid request"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"invalid request",
+			err.Error(),
+			http.StatusBadRequest,
+		))
 	}
 
 	resp, err := h.service.Compound().CreateCompoundDetail(c.Request().Context(), req.CompoundID, req.IngredientID, req.Quantity)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, echo.Map{"error": err.Error()})
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("Operation failed", err.Error(), http.StatusInternalServerError))
 	}
 
-	return c.JSON(http.StatusCreated, resp)
+	return c.JSON(http.StatusCreated, model.NewSuccessResponse(
+		"Compound detail created successfully",
+		resp,
+		http.StatusCreated,
+	))
 }
 
 // GetCompoundDetail retrieves a compound detail by ID
@@ -53,15 +61,27 @@ func (h *Handler) CreateCompoundDetail(c echo.Context) error {
 func (h *Handler) GetCompoundDetail(c echo.Context) error {
 	id := c.Param("id")
 	if id == "" {
-		return c.JSON(http.StatusBadRequest, echo.Map{"error": "id is required"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"id is required",
+			"missing path parameter: id",
+			http.StatusBadRequest,
+		))
 	}
 
 	resp, err := h.service.Compound().GetCompoundDetailByID(c.Request().Context(), id)
 	if err != nil {
-		return c.JSON(http.StatusNotFound, echo.Map{"error": err.Error()})
+		return c.JSON(http.StatusNotFound, model.NewErrorResponse(
+			"Operation failed",
+			err.Error(),
+			http.StatusNotFound,
+		))
 	}
 
-	return c.JSON(http.StatusOK, resp)
+	return c.JSON(http.StatusOK, model.NewSuccessResponse(
+		"Compound detail retrieved successfully",
+		resp,
+		http.StatusOK,
+	))
 }
 
 // GetCompoundDetailsByCompound retrieves all details for a compound
@@ -80,15 +100,23 @@ func (h *Handler) GetCompoundDetail(c echo.Context) error {
 func (h *Handler) GetCompoundDetailsByCompound(c echo.Context) error {
 	compoundID := c.Param("compound_id")
 	if compoundID == "" {
-		return c.JSON(http.StatusBadRequest, echo.Map{"error": "compound_id is required"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"compound_id is required",
+			"missing path parameter: compound_id",
+			http.StatusBadRequest,
+		))
 	}
 
 	resp, err := h.service.Compound().GetCompoundDetailsByCompoundID(c.Request().Context(), compoundID)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, echo.Map{"error": err.Error()})
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("Operation failed", err.Error(), http.StatusInternalServerError))
 	}
 
-	return c.JSON(http.StatusOK, resp)
+	return c.JSON(http.StatusOK, model.NewSuccessResponse(
+		"Compound details retrieved successfully",
+		resp,
+		http.StatusOK,
+	))
 }
 
 // GetCompoundDetailsByIngredient retrieves all compound details for an ingredient
@@ -109,7 +137,11 @@ func (h *Handler) GetCompoundDetailsByCompound(c echo.Context) error {
 func (h *Handler) GetCompoundDetailsByIngredient(c echo.Context) error {
 	ingredientID := c.Param("ingredient_id")
 	if ingredientID == "" {
-		return c.JSON(http.StatusBadRequest, echo.Map{"error": "ingredient_id is required"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"ingredient_id is required",
+			"missing path parameter: ingredient_id",
+			http.StatusBadRequest,
+		))
 	}
 
 	limit := int32(20)
@@ -128,10 +160,14 @@ func (h *Handler) GetCompoundDetailsByIngredient(c echo.Context) error {
 
 	resp, err := h.service.Compound().GetCompoundDetailsByIngredientID(c.Request().Context(), ingredientID, limit, offset)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, echo.Map{"error": err.Error()})
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("Operation failed", err.Error(), http.StatusInternalServerError))
 	}
 
-	return c.JSON(http.StatusOK, resp)
+	return c.JSON(http.StatusOK, model.NewSuccessResponse(
+		"Compound details retrieved successfully",
+		resp,
+		http.StatusOK,
+	))
 }
 
 // UpdateCompoundDetail updates a compound detail
@@ -153,20 +189,32 @@ func (h *Handler) GetCompoundDetailsByIngredient(c echo.Context) error {
 func (h *Handler) UpdateCompoundDetail(c echo.Context) error {
 	id := c.Param("id")
 	if id == "" {
-		return c.JSON(http.StatusBadRequest, echo.Map{"error": "id is required"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"id is required",
+			"missing path parameter: id",
+			http.StatusBadRequest,
+		))
 	}
 
 	var req model.UpdateCompoundDetailRequest
 	if err := c.Bind(&req); err != nil {
-		return c.JSON(http.StatusBadRequest, echo.Map{"error": "invalid request"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"invalid request",
+			err.Error(),
+			http.StatusBadRequest,
+		))
 	}
 
 	resp, err := h.service.Compound().UpdateCompoundDetail(c.Request().Context(), id, req.CompoundID, req.IngredientID, req.Quantity)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, echo.Map{"error": err.Error()})
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("Operation failed", err.Error(), http.StatusInternalServerError))
 	}
 
-	return c.JSON(http.StatusOK, resp)
+	return c.JSON(http.StatusOK, model.NewSuccessResponse(
+		"Compound detail updated successfully",
+		resp,
+		http.StatusOK,
+	))
 }
 
 // DeleteCompoundDetail deletes a compound detail
@@ -185,11 +233,15 @@ func (h *Handler) UpdateCompoundDetail(c echo.Context) error {
 func (h *Handler) DeleteCompoundDetail(c echo.Context) error {
 	id := c.Param("id")
 	if id == "" {
-		return c.JSON(http.StatusBadRequest, echo.Map{"error": "id is required"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"id is required",
+			"missing path parameter: id",
+			http.StatusBadRequest,
+		))
 	}
 
 	if err := h.service.Compound().DeleteCompoundDetail(c.Request().Context(), id); err != nil {
-		return c.JSON(http.StatusInternalServerError, echo.Map{"error": err.Error()})
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("Operation failed", err.Error(), http.StatusInternalServerError))
 	}
 
 	return c.NoContent(http.StatusNoContent)
@@ -212,13 +264,21 @@ func (h *Handler) DeleteCompoundDetail(c echo.Context) error {
 func (h *Handler) RestoreCompoundDetail(c echo.Context) error {
 	id := c.Param("id")
 	if id == "" {
-		return c.JSON(http.StatusBadRequest, echo.Map{"error": "id is required"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"id is required",
+			"missing path parameter: id",
+			http.StatusBadRequest,
+		))
 	}
 
 	resp, err := h.service.Compound().RestoreCompoundDetail(c.Request().Context(), id)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, echo.Map{"error": err.Error()})
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("Operation failed", err.Error(), http.StatusInternalServerError))
 	}
 
-	return c.JSON(http.StatusOK, resp)
+	return c.JSON(http.StatusOK, model.NewSuccessResponse(
+		"Compound detail restored successfully",
+		resp,
+		http.StatusOK,
+	))
 }

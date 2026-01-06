@@ -1230,7 +1230,10 @@ definitions:
   model.SuccessResponse:
     properties:
       message:
-        example: Password updated successfully
+        example: Operation completed successfully
+        type: string
+      status:
+        example: success
         type: string
     type: object
   model.TableOccupancyStats:

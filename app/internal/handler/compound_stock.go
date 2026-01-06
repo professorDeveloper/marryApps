@@ -25,15 +25,23 @@ import (
 func (h *Handler) CreateCompoundStock(c echo.Context) error {
 	var req model.CreateCompoundStockRequest
 	if err := c.Bind(&req); err != nil {
-		return c.JSON(http.StatusBadRequest, echo.Map{"error": "invalid request"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"invalid request",
+			err.Error(),
+			http.StatusBadRequest,
+		))
 	}
 
 	resp, err := h.service.Compound().CreateCompoundStock(c.Request().Context(), req.CompoundID, req.BranchID, req.Quantity)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, echo.Map{"error": err.Error()})
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("Operation failed", err.Error(), http.StatusInternalServerError))
 	}
 
-	return c.JSON(http.StatusCreated, resp)
+	return c.JSON(http.StatusCreated, model.NewSuccessResponse(
+		"Compound stock created successfully",
+		resp,
+		http.StatusCreated,
+	))
 }
 
 // GetCompoundStock retrieves compound stock by ID
@@ -53,15 +61,27 @@ func (h *Handler) CreateCompoundStock(c echo.Context) error {
 func (h *Handler) GetCompoundStock(c echo.Context) error {
 	id := c.Param("id")
 	if id == "" {
-		return c.JSON(http.StatusBadRequest, echo.Map{"error": "id is required"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"id is required",
+			"missing path parameter: id",
+			http.StatusBadRequest,
+		))
 	}
 
 	resp, err := h.service.Compound().GetCompoundStockByID(c.Request().Context(), id)
 	if err != nil {
-		return c.JSON(http.StatusNotFound, echo.Map{"error": err.Error()})
+		return c.JSON(http.StatusNotFound, model.NewErrorResponse(
+			"Operation failed",
+			err.Error(),
+			http.StatusNotFound,
+		))
 	}
 
-	return c.JSON(http.StatusOK, resp)
+	return c.JSON(http.StatusOK, model.NewSuccessResponse(
+		"Compound stock retrieved successfully",
+		resp,
+		http.StatusOK,
+	))
 }
 
 // GetCompoundStockByBranchAndCompound retrieves stock for a specific compound and branch
@@ -84,15 +104,27 @@ func (h *Handler) GetCompoundStockByBranchAndCompound(c echo.Context) error {
 	branchID := c.QueryParam("branch_id")
 
 	if compoundID == "" || branchID == "" {
-		return c.JSON(http.StatusBadRequest, echo.Map{"error": "compound_id and branch_id are required"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"compound_id and branch_id are required",
+			"missing query parameters: compound_id, branch_id",
+			http.StatusBadRequest,
+		))
 	}
 
 	resp, err := h.service.Compound().GetStockByCompoundAndBranch(c.Request().Context(), compoundID, branchID)
 	if err != nil {
-		return c.JSON(http.StatusNotFound, echo.Map{"error": err.Error()})
+		return c.JSON(http.StatusNotFound, model.NewErrorResponse(
+			"Operation failed",
+			err.Error(),
+			http.StatusNotFound,
+		))
 	}
 
-	return c.JSON(http.StatusOK, resp)
+	return c.JSON(http.StatusOK, model.NewSuccessResponse(
+		"Compound stock retrieved successfully",
+		resp,
+		http.StatusOK,
+	))
 }
 
 // GetAllCompoundStock retrieves all compound stocks with pagination
@@ -126,10 +158,14 @@ func (h *Handler) GetAllCompoundStock(c echo.Context) error {
 
 	resp, err := h.service.Compound().GetAllCompoundStock(c.Request().Context(), limit, offset)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, echo.Map{"error": err.Error()})
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("Operation failed", err.Error(), http.StatusInternalServerError))
 	}
 
-	return c.JSON(http.StatusOK, resp)
+	return c.JSON(http.StatusOK, model.NewSuccessResponse(
+		"Compound stock retrieved successfully",
+		resp,
+		http.StatusOK,
+	))
 }
 
 // GetCompoundStockByBranch retrieves all compound stocks for a branch
@@ -150,7 +186,11 @@ func (h *Handler) GetAllCompoundStock(c echo.Context) error {
 func (h *Handler) GetCompoundStockByBranch(c echo.Context) error {
 	branchID := c.Param("branch_id")
 	if branchID == "" {
-		return c.JSON(http.StatusBadRequest, echo.Map{"error": "branch_id is required"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"branch_id is required",
+			"missing path parameter: branch_id",
+			http.StatusBadRequest,
+		))
 	}
 
 	limit := int32(20)
@@ -169,10 +209,14 @@ func (h *Handler) GetCompoundStockByBranch(c echo.Context) error {
 
 	resp, err := h.service.Compound().GetCompoundStockByBranchID(c.Request().Context(), branchID, limit, offset)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, echo.Map{"error": err.Error()})
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("Operation failed", err.Error(), http.StatusInternalServerError))
 	}
 
-	return c.JSON(http.StatusOK, resp)
+	return c.JSON(http.StatusOK, model.NewSuccessResponse(
+		"Compound stock retrieved successfully",
+		resp,
+		http.StatusOK,
+	))
 }
 
 // GetCompoundStockByCompound retrieves all stock entries for a compound
@@ -193,7 +237,11 @@ func (h *Handler) GetCompoundStockByBranch(c echo.Context) error {
 func (h *Handler) GetCompoundStockByCompound(c echo.Context) error {
 	compoundID := c.Param("compound_id")
 	if compoundID == "" {
-		return c.JSON(http.StatusBadRequest, echo.Map{"error": "compound_id is required"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"compound_id is required",
+			"missing path parameter: compound_id",
+			http.StatusBadRequest,
+		))
 	}
 
 	limit := int32(20)
@@ -212,10 +260,14 @@ func (h *Handler) GetCompoundStockByCompound(c echo.Context) error {
 
 	resp, err := h.service.Compound().GetCompoundStockByCompoundID(c.Request().Context(), compoundID, limit, offset)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, echo.Map{"error": err.Error()})
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("Operation failed", err.Error(), http.StatusInternalServerError))
 	}
 
-	return c.JSON(http.StatusOK, resp)
+	return c.JSON(http.StatusOK, model.NewSuccessResponse(
+		"Compound stock retrieved successfully",
+		resp,
+		http.StatusOK,
+	))
 }
 
 // UpdateCompoundStock updates compound stock quantity
@@ -237,24 +289,40 @@ func (h *Handler) GetCompoundStockByCompound(c echo.Context) error {
 func (h *Handler) UpdateCompoundStock(c echo.Context) error {
 	id := c.Param("id")
 	if id == "" {
-		return c.JSON(http.StatusBadRequest, echo.Map{"error": "id is required"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"id is required",
+			"missing path parameter: id",
+			http.StatusBadRequest,
+		))
 	}
 
 	var req model.UpdateCompoundStockRequest
 	if err := c.Bind(&req); err != nil {
-		return c.JSON(http.StatusBadRequest, echo.Map{"error": "invalid request"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"invalid request",
+			err.Error(),
+			http.StatusBadRequest,
+		))
 	}
 
 	if req.Quantity == nil {
-		return c.JSON(http.StatusBadRequest, echo.Map{"error": "quantity is required"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"quantity is required",
+			"missing required field: quantity",
+			http.StatusBadRequest,
+		))
 	}
 
 	resp, err := h.service.Compound().UpdateCompoundStock(c.Request().Context(), id, *req.Quantity)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, echo.Map{"error": err.Error()})
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("Operation failed", err.Error(), http.StatusInternalServerError))
 	}
 
-	return c.JSON(http.StatusOK, resp)
+	return c.JSON(http.StatusOK, model.NewSuccessResponse(
+		"Compound stock updated successfully",
+		resp,
+		http.StatusOK,
+	))
 }
 
 // AddToCompoundStock adds quantity to compound stock
@@ -276,20 +344,32 @@ func (h *Handler) UpdateCompoundStock(c echo.Context) error {
 func (h *Handler) AddToCompoundStock(c echo.Context) error {
 	id := c.Param("id")
 	if id == "" {
-		return c.JSON(http.StatusBadRequest, echo.Map{"error": "id is required"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"id is required",
+			"missing path parameter: id",
+			http.StatusBadRequest,
+		))
 	}
 
 	var req model.AddToCompoundStockRequest
 	if err := c.Bind(&req); err != nil {
-		return c.JSON(http.StatusBadRequest, echo.Map{"error": "invalid request"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"invalid request",
+			err.Error(),
+			http.StatusBadRequest,
+		))
 	}
 
 	resp, err := h.service.Compound().AddToCompoundStock(c.Request().Context(), id, req.Quantity)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, echo.Map{"error": err.Error()})
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("Operation failed", err.Error(), http.StatusInternalServerError))
 	}
 
-	return c.JSON(http.StatusOK, resp)
+	return c.JSON(http.StatusOK, model.NewSuccessResponse(
+		"Compound stock updated successfully",
+		resp,
+		http.StatusOK,
+	))
 }
 
 // RemoveFromCompoundStock removes quantity from compound stock
@@ -311,20 +391,32 @@ func (h *Handler) AddToCompoundStock(c echo.Context) error {
 func (h *Handler) RemoveFromCompoundStock(c echo.Context) error {
 	id := c.Param("id")
 	if id == "" {
-		return c.JSON(http.StatusBadRequest, echo.Map{"error": "id is required"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"id is required",
+			"missing path parameter: id",
+			http.StatusBadRequest,
+		))
 	}
 
 	var req model.RemoveFromCompoundStockRequest
 	if err := c.Bind(&req); err != nil {
-		return c.JSON(http.StatusBadRequest, echo.Map{"error": "invalid request"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"invalid request",
+			err.Error(),
+			http.StatusBadRequest,
+		))
 	}
 
 	resp, err := h.service.Compound().RemoveFromCompoundStock(c.Request().Context(), id, req.Quantity)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, echo.Map{"error": err.Error()})
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("Operation failed", err.Error(), http.StatusInternalServerError))
 	}
 
-	return c.JSON(http.StatusOK, resp)
+	return c.JSON(http.StatusOK, model.NewSuccessResponse(
+		"Compound stock updated successfully",
+		resp,
+		http.StatusOK,
+	))
 }
 
 // DeleteCompoundStock deletes compound stock
@@ -343,11 +435,15 @@ func (h *Handler) RemoveFromCompoundStock(c echo.Context) error {
 func (h *Handler) DeleteCompoundStock(c echo.Context) error {
 	id := c.Param("id")
 	if id == "" {
-		return c.JSON(http.StatusBadRequest, echo.Map{"error": "id is required"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"id is required",
+			"missing path parameter: id",
+			http.StatusBadRequest,
+		))
 	}
 
 	if err := h.service.Compound().DeleteCompoundStock(c.Request().Context(), id); err != nil {
-		return c.JSON(http.StatusInternalServerError, echo.Map{"error": err.Error()})
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("Operation failed", err.Error(), http.StatusInternalServerError))
 	}
 
 	return c.NoContent(http.StatusNoContent)
@@ -370,13 +466,21 @@ func (h *Handler) DeleteCompoundStock(c echo.Context) error {
 func (h *Handler) RestoreCompoundStock(c echo.Context) error {
 	id := c.Param("id")
 	if id == "" {
-		return c.JSON(http.StatusBadRequest, echo.Map{"error": "id is required"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"id is required",
+			"missing path parameter: id",
+			http.StatusBadRequest,
+		))
 	}
 
 	resp, err := h.service.Compound().RestoreCompoundStock(c.Request().Context(), id)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, echo.Map{"error": err.Error()})
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("Operation failed", err.Error(), http.StatusInternalServerError))
 	}
 
-	return c.JSON(http.StatusOK, resp)
+	return c.JSON(http.StatusOK, model.NewSuccessResponse(
+		"Compound stock restored successfully",
+		resp,
+		http.StatusOK,
+	))
 }

@@ -26,27 +26,31 @@ func (h *Handler) Login(c echo.Context) error {
 		if r, ok := v.(model.LoginRequest); ok {
 			req = r
 		} else {
-			return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "invalid request body"})
+			return c.JSON(http.StatusBadRequest, model.NewErrorResponse("invalid request body", "see logs for details", http.StatusBadRequest))
 		}
 	} else {
 		if err := c.Bind(&req); err != nil {
 			log.Printf("Failed to bind login request: %v", err)
-			return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "invalid request body"})
+			return c.JSON(http.StatusBadRequest, model.NewErrorResponse("invalid request body", "see logs for details", http.StatusBadRequest))
 		}
 	}
-	lang := c.Get("language").(string)
+	// lang := c.Get("language").(string)
 
 	resp, err := h.service.Auth().Login(c.Request().Context(), req, &h.cfg.Jwt)
 	if err != nil {
 		log.Printf("Login failed: %v", err)
-
-		if lang == "ru" {
-			return c.JSON(http.StatusUnauthorized, model.ErrorResponse{Message: "Ungültige Anmeldeinformationen"})
-		}
-		return c.JSON(http.StatusUnauthorized, model.ErrorResponse{Message: "ru: Xatolik login qilishda"})
+		return c.JSON(http.StatusUnauthorized, model.NewErrorResponse(
+			"Login failed",
+			err.Error(),
+			http.StatusUnauthorized,
+		))
 	}
 
-	return c.JSON(http.StatusOK, resp)
+	return c.JSON(http.StatusOK, model.NewSuccessResponse(
+		"Successfully logged in",
+		resp,
+		http.StatusOK,
+	))
 }
 
 // LoginWithPincode handles user login via pincode (for kitchen, terminals, cashiers)
@@ -64,22 +68,26 @@ func (h *Handler) LoginWithPincode(c echo.Context) error {
 	var req model.PincodeLoginRequest
 	if err := c.Bind(&req); err != nil {
 		log.Printf("Failed to bind pincode login request: %v", err)
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "invalid request body"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("invalid request body", "see logs for details", http.StatusBadRequest))
 	}
 
-	lang := c.Get("language").(string)
+	// lang := c.Get("language").(string)
 
 	resp, err := h.service.Auth().LoginWithPincode(c.Request().Context(), req, &h.cfg.Jwt)
 	if err != nil {
 		log.Printf("Pincode login failed: %v", err)
-
-		if lang == "ru" {
-			return c.JSON(http.StatusUnauthorized, model.ErrorResponse{Message: "Ungültige Anmeldeinformationen"})
-		}
-		return c.JSON(http.StatusUnauthorized, model.ErrorResponse{Message: "ru: Xatolik login qilishda"})
+		return c.JSON(http.StatusUnauthorized, model.NewErrorResponse(
+			"Pincode login failed",
+			err.Error(),
+			http.StatusUnauthorized,
+		))
 	}
 
-	return c.JSON(http.StatusOK, resp)
+	return c.JSON(http.StatusOK, model.NewSuccessResponse(
+		"Successfully logged in with pincode",
+		resp,
+		http.StatusOK,
+	))
 }
 
 // LoginGlobal handles global (main DB) superadmin login
@@ -99,26 +107,31 @@ func (h *Handler) LoginGlobal(c echo.Context) error {
 		if r, ok := v.(model.LoginRequest); ok {
 			req = r
 		} else {
-			return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "invalid request body"})
+			return c.JSON(http.StatusBadRequest, model.NewErrorResponse("invalid request body", "see logs for details", http.StatusBadRequest))
 		}
 	} else {
 		if err := c.Bind(&req); err != nil {
 			log.Printf("Failed to bind login request: %v", err)
-			return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "invalid request body"})
+			return c.JSON(http.StatusBadRequest, model.NewErrorResponse("invalid request body", "see logs for details", http.StatusBadRequest))
 		}
 	}
-	lang := c.Get("language").(string)
+	// lang := c.Get("language").(string)
 
 	resp, err := h.service.Auth().LoginGlobal(c.Request().Context(), req, &h.cfg.Jwt)
 	if err != nil {
 		log.Printf("Global login failed: %v", err)
-		if lang == "ru" {
-			return c.JSON(http.StatusUnauthorized, model.ErrorResponse{Message: "Ungültige Anmeldeinformationen"})
-		}
-		return c.JSON(http.StatusUnauthorized, model.ErrorResponse{Message: "ru: Xatolik login qilishda"})
+		return c.JSON(http.StatusUnauthorized, model.NewErrorResponse(
+			"Global login failed",
+			err.Error(),
+			http.StatusUnauthorized,
+		))
 	}
 
-	return c.JSON(http.StatusOK, resp)
+	return c.JSON(http.StatusOK, model.NewSuccessResponse(
+		"Successfully logged in as superadmin",
+		resp,
+		http.StatusOK,
+	))
 }
 
 // RegisterUser handles user registration
@@ -200,11 +213,11 @@ func (h *Handler) Refresh(c echo.Context) error {
 		if r, ok := v.(model.RefreshRequest); ok {
 			req = r
 		} else {
-			return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "invalid request body"})
+			return c.JSON(http.StatusBadRequest, model.NewErrorResponse("invalid request body", "see logs for details", http.StatusBadRequest))
 		}
 	} else {
 		if err := c.Bind(&req); err != nil {
-			return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "invalid request body"})
+			return c.JSON(http.StatusBadRequest, model.NewErrorResponse("invalid request body", "see logs for details", http.StatusBadRequest))
 		}
 	}
 	lang := c.Get("language").(string)
@@ -212,9 +225,9 @@ func (h *Handler) Refresh(c echo.Context) error {
 	if err != nil {
 		fmt.Println(err)
 		if lang == "ru" {
-			return c.JSON(http.StatusUnauthorized, model.ErrorResponse{Message: "ru: Xatolik login qilishda"})
+			return c.JSON(http.StatusUnauthorized, model.NewErrorResponse("ru: Xatolik login qilishda", "see logs for details", http.StatusInternalServerError))
 		}
-		return c.JSON(http.StatusUnauthorized, model.ErrorResponse{Message: "Login qilishda xatolik"})
+		return c.JSON(http.StatusUnauthorized, model.NewErrorResponse("Login qilishda xatolik", "see logs for details", http.StatusInternalServerError))
 	}
 
 	return c.JSON(http.StatusOK, resp)
@@ -235,16 +248,16 @@ func (h *Handler) Refresh(c echo.Context) error {
 func (h *Handler) GetUsersByRole(c echo.Context) error {
 	role := c.QueryParam("role")
 	if role == "" {
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "role parameter is required"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("role parameter is required", "see logs for details", http.StatusBadRequest))
 	}
 
 	users, err := h.service.Auth().GetUsersByRole(c.Request().Context(), role)
 	if err != nil {
 		log.Printf("GetUsersByRole failed: %v", err)
-		return c.JSON(http.StatusInternalServerError, model.ErrorResponse{Message: "failed to fetch users"})
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("failed to fetch users", "see logs for details", http.StatusInternalServerError))
 	}
 
-	return c.JSON(http.StatusOK, users)
+	return c.JSON(http.StatusOK, model.NewSuccessResponse("Data retrieved successfully", users, http.StatusOK))
 }
 
 // GetAllStaff retrieves all staff members
@@ -262,7 +275,7 @@ func (h *Handler) GetAllStaff(c echo.Context) error {
 	staff, err := h.service.Auth().GetAllStaff(c.Request().Context())
 	if err != nil {
 		log.Printf("GetAllStaff failed: %v", err)
-		return c.JSON(http.StatusInternalServerError, model.ErrorResponse{Message: "failed to fetch staff"})
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("failed to fetch staff", "see logs for details", http.StatusInternalServerError))
 	}
 
 	return c.JSON(http.StatusOK, staff)
@@ -283,7 +296,7 @@ func (h *Handler) GetKitchenStaff(c echo.Context) error {
 	staff, err := h.service.Auth().GetKitchenStaff(c.Request().Context())
 	if err != nil {
 		log.Printf("GetKitchenStaff failed: %v", err)
-		return c.JSON(http.StatusInternalServerError, model.ErrorResponse{Message: "failed to fetch kitchen staff"})
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("failed to fetch kitchen staff", "see logs for details", http.StatusInternalServerError))
 	}
 
 	return c.JSON(http.StatusOK, staff)
@@ -304,10 +317,10 @@ func (h *Handler) GetWaiters(c echo.Context) error {
 	waiters, err := h.service.Auth().GetWaiters(c.Request().Context())
 	if err != nil {
 		log.Printf("GetWaiters failed: %v", err)
-		return c.JSON(http.StatusInternalServerError, model.ErrorResponse{Message: "failed to fetch waiters"})
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("failed to fetch waiters", "see logs for details", http.StatusInternalServerError))
 	}
 
-	return c.JSON(http.StatusOK, waiters)
+	return c.JSON(http.StatusOK, model.NewSuccessResponse("Data retrieved successfully", waiters, http.StatusOK))
 }
 
 // GetCashiers retrieves cashier staff
@@ -325,10 +338,10 @@ func (h *Handler) GetCashiers(c echo.Context) error {
 	cashiers, err := h.service.Auth().GetCashiers(c.Request().Context())
 	if err != nil {
 		log.Printf("GetCashiers failed: %v", err)
-		return c.JSON(http.StatusInternalServerError, model.ErrorResponse{Message: "failed to fetch cashiers"})
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("failed to fetch cashiers", "see logs for details", http.StatusInternalServerError))
 	}
 
-	return c.JSON(http.StatusOK, cashiers)
+	return c.JSON(http.StatusOK, model.NewSuccessResponse("Data retrieved successfully", cashiers, http.StatusOK))
 }
 
 // SearchUsers searches users by query
@@ -349,7 +362,7 @@ func (h *Handler) GetCashiers(c echo.Context) error {
 func (h *Handler) SearchUsers(c echo.Context) error {
 	query := c.QueryParam("query")
 	if query == "" {
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "query parameter is required"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("query parameter is required", "see logs for details", http.StatusBadRequest))
 	}
 
 	limitStr := c.QueryParam("limit")
@@ -375,10 +388,10 @@ func (h *Handler) SearchUsers(c echo.Context) error {
 	users, err := h.service.Auth().SearchUsers(c.Request().Context(), query, limit, offset)
 	if err != nil {
 		log.Printf("SearchUsers failed: %v", err)
-		return c.JSON(http.StatusInternalServerError, model.ErrorResponse{Message: "failed to search users"})
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("failed to search users", "see logs for details", http.StatusInternalServerError))
 	}
 
-	return c.JSON(http.StatusOK, users)
+	return c.JSON(http.StatusOK, model.NewSuccessResponse("Data retrieved successfully", users, http.StatusOK))
 }
 
 // DeleteUser soft deletes a user
@@ -397,15 +410,23 @@ func (h *Handler) SearchUsers(c echo.Context) error {
 func (h *Handler) DeleteUser(c echo.Context) error {
 	userID := c.Param("id")
 	if userID == "" {
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "user id is required"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("user id is required", "see logs for details", http.StatusBadRequest))
 	}
 
 	if err := h.service.Auth().DeleteUser(c.Request().Context(), userID); err != nil {
 		log.Printf("DeleteUser failed for id %s: %v", userID, err)
-		return c.JSON(http.StatusInternalServerError, model.ErrorResponse{Message: "failed to delete user"})
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse(
+			"Failed to delete user",
+			err.Error(),
+			http.StatusInternalServerError,
+		))
 	}
 
-	return c.JSON(http.StatusOK, model.SuccessResponse{Message: "User deleted successfully"})
+	return c.JSON(http.StatusOK, model.NewSuccessResponse(
+		"User deleted successfully",
+		map[string]interface{}{},
+		http.StatusOK,
+	))
 }
 
 // RestoreUser restores a soft-deleted user
@@ -424,13 +445,21 @@ func (h *Handler) DeleteUser(c echo.Context) error {
 func (h *Handler) RestoreUser(c echo.Context) error {
 	userID := c.Param("id")
 	if userID == "" {
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "user id is required"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("user id is required", "see logs for details", http.StatusBadRequest))
 	}
 
 	if err := h.service.Auth().RestoreUser(c.Request().Context(), userID); err != nil {
 		log.Printf("RestoreUser failed for id %s: %v", userID, err)
-		return c.JSON(http.StatusInternalServerError, model.ErrorResponse{Message: "failed to restore user"})
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse(
+			"Failed to restore user",
+			err.Error(),
+			http.StatusInternalServerError,
+		))
 	}
 
-	return c.JSON(http.StatusOK, model.SuccessResponse{Message: "User restored successfully"})
+	return c.JSON(http.StatusOK, model.NewSuccessResponse(
+		"User restored successfully",
+		map[string]interface{}{},
+		http.StatusOK,
+	))
 }

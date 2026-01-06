@@ -27,21 +27,21 @@ func (h *Handler) CreateStorage(c echo.Context) error {
 	var req model.CreateStorageRequest
 	if err := c.Bind(&req); err != nil {
 		log.Printf("Failed to bind create storage request: %v", err)
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "invalid request format"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("invalid request format", "see logs for details", http.StatusBadRequest))
 	}
 
 	if req.Name == nil || *req.Name == "" {
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "name is required"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("name is required", "see logs for details", http.StatusBadRequest))
 	}
 	if req.BranchID == "" {
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "branch_id is required"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("branch_id is required", "see logs for details", http.StatusBadRequest))
 	}
 
 	var nameI18nUUID *uuid.UUID
 	if req.NameI18n != nil && *req.NameI18n != "" {
 		id, err := uuid.Parse(*req.NameI18n)
 		if err != nil {
-			return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "invalid name_i18n UUID format"})
+			return c.JSON(http.StatusBadRequest, model.NewErrorResponse("invalid name_i18n UUID format", "see logs for details", http.StatusBadRequest))
 		}
 		nameI18nUUID = &id
 	}
@@ -49,10 +49,10 @@ func (h *Handler) CreateStorage(c echo.Context) error {
 	storage, err := h.service.Storage().CreateStorage(c.Request().Context(), *req.Name, req.BranchID, nameI18nUUID, req.PictureUrl, req.ColorCode)
 	if err != nil {
 		log.Printf("CreateStorage failed: %v", err)
-		return c.JSON(http.StatusInternalServerError, model.ErrorResponse{Message: "failed to create storage"})
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("failed to create storage", "see logs for details", http.StatusInternalServerError))
 	}
 
-	return c.JSON(http.StatusCreated, storage)
+	return c.JSON(http.StatusCreated, model.NewSuccessResponse("Storage created successfully", storage, http.StatusCreated))
 }
 
 // GetStorageByID retrieves a storage by ID
@@ -72,24 +72,24 @@ func (h *Handler) CreateStorage(c echo.Context) error {
 func (h *Handler) GetStorageByID(c echo.Context) error {
 	storageID := c.Param("id")
 	if storageID == "" {
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "storage id is required"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("storage id is required", "see logs for details", http.StatusBadRequest))
 	}
 
 	if _, err := uuid.Parse(storageID); err != nil {
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "invalid storage id format"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("invalid storage id format", "see logs for details", http.StatusBadRequest))
 	}
 
 	storage, err := h.service.Storage().GetStorageByID(c.Request().Context(), storageID)
 	if err != nil {
 		log.Printf("GetStorageByID failed for id %s: %v", storageID, err)
-		return c.JSON(http.StatusInternalServerError, model.ErrorResponse{Message: "failed to fetch storage"})
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("failed to fetch storage", "see logs for details", http.StatusInternalServerError))
 	}
 
 	if storage == nil {
-		return c.JSON(http.StatusNotFound, model.ErrorResponse{Message: "storage not found"})
+		return c.JSON(http.StatusNotFound, model.NewErrorResponse("storage not found", "see logs for details", http.StatusNotFound))
 	}
 
-	return c.JSON(http.StatusOK, storage)
+	return c.JSON(http.StatusOK, model.NewSuccessResponse("Storage retrieved successfully", storage, http.StatusOK))
 }
 
 // GetAllStorages retrieves all storages
@@ -127,10 +127,10 @@ func (h *Handler) GetAllStorages(c echo.Context) error {
 	storages, err := h.service.Storage().GetAllStorages(c.Request().Context(), limit, offset)
 	if err != nil {
 		log.Printf("GetAllStorages failed: %v", err)
-		return c.JSON(http.StatusInternalServerError, model.ErrorResponse{Message: "failed to fetch storages"})
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("failed to fetch storages", "see logs for details", http.StatusInternalServerError))
 	}
 
-	return c.JSON(http.StatusOK, storages)
+	return c.JSON(http.StatusOK, model.NewSuccessResponse("Data retrieved successfully", storages, http.StatusOK))
 }
 
 // GetStoragesByBranchID retrieves storages by branch ID
@@ -151,11 +151,11 @@ func (h *Handler) GetAllStorages(c echo.Context) error {
 func (h *Handler) GetStoragesByBranchID(c echo.Context) error {
 	branchID := c.Param("branchId")
 	if branchID == "" {
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "branch id is required"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("branch id is required", "see logs for details", http.StatusBadRequest))
 	}
 
 	if _, err := uuid.Parse(branchID); err != nil {
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "invalid branch id format"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("invalid branch id format", "see logs for details", http.StatusBadRequest))
 	}
 
 	limitStr := c.QueryParam("limit")
@@ -179,10 +179,10 @@ func (h *Handler) GetStoragesByBranchID(c echo.Context) error {
 	storages, err := h.service.Storage().GetStoragesByBranchID(c.Request().Context(), branchID, limit, offset)
 	if err != nil {
 		log.Printf("GetStoragesByBranchID failed for branch %s: %v", branchID, err)
-		return c.JSON(http.StatusInternalServerError, model.ErrorResponse{Message: "failed to fetch storages by branch"})
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("failed to fetch storages by branch", "see logs for details", http.StatusInternalServerError))
 	}
 
-	return c.JSON(http.StatusOK, storages)
+	return c.JSON(http.StatusOK, model.NewSuccessResponse("Data retrieved successfully", storages, http.StatusOK))
 }
 
 // UpdateStorage updates a storage
@@ -202,26 +202,26 @@ func (h *Handler) GetStoragesByBranchID(c echo.Context) error {
 func (h *Handler) UpdateStorage(c echo.Context) error {
 	storageID := c.Param("id")
 	if storageID == "" {
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "storage id is required"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("storage id is required", "see logs for details", http.StatusBadRequest))
 	}
 
 	if _, err := uuid.Parse(storageID); err != nil {
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "invalid storage id format"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("invalid storage id format", "see logs for details", http.StatusBadRequest))
 	}
 
 	var req model.UpdateStorageRequest
 	if err := c.Bind(&req); err != nil {
 		log.Printf("Failed to bind update storage request: %v", err)
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "invalid request format"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("invalid request format", "see logs for details", http.StatusBadRequest))
 	}
 
 	storage, err := h.service.Storage().UpdateStorage(c.Request().Context(), storageID, req.Name, req.BranchID, req.NameI18n, req.PictureUrl, req.ColorCode)
 	if err != nil {
 		log.Printf("UpdateStorage failed for id %s: %v", storageID, err)
-		return c.JSON(http.StatusInternalServerError, model.ErrorResponse{Message: "failed to update storage"})
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("failed to update storage", "see logs for details", http.StatusInternalServerError))
 	}
 
-	return c.JSON(http.StatusOK, storage)
+	return c.JSON(http.StatusOK, model.NewSuccessResponse("Storage updated successfully", storage, http.StatusOK))
 }
 
 // DeleteStorage deletes a storage
@@ -240,19 +240,19 @@ func (h *Handler) UpdateStorage(c echo.Context) error {
 func (h *Handler) DeleteStorage(c echo.Context) error {
 	storageID := c.Param("id")
 	if storageID == "" {
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "storage id is required"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("storage id is required", "see logs for details", http.StatusBadRequest))
 	}
 
 	if _, err := uuid.Parse(storageID); err != nil {
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "invalid storage id format"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("invalid storage id format", "see logs for details", http.StatusBadRequest))
 	}
 
 	if err := h.service.Storage().DeleteStorage(c.Request().Context(), storageID); err != nil {
 		log.Printf("DeleteStorage failed for id %s: %v", storageID, err)
-		return c.JSON(http.StatusInternalServerError, model.ErrorResponse{Message: "failed to delete storage"})
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("failed to delete storage", "see logs for details", http.StatusInternalServerError))
 	}
 
-	return c.JSON(http.StatusOK, model.SuccessResponse{Message: "Storage deleted successfully"})
+	return c.JSON(http.StatusOK, model.NewSuccessResponse("Storage deleted successfully", map[string]interface{}{}, http.StatusOK))
 }
 
 // RestoreStorage restores a deleted storage
@@ -271,19 +271,19 @@ func (h *Handler) DeleteStorage(c echo.Context) error {
 func (h *Handler) RestoreStorage(c echo.Context) error {
 	storageID := c.Param("id")
 	if storageID == "" {
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "storage id is required"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("storage id is required", "see logs for details", http.StatusBadRequest))
 	}
 
 	if _, err := uuid.Parse(storageID); err != nil {
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "invalid storage id format"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("invalid storage id format", "see logs for details", http.StatusBadRequest))
 	}
 
 	if err := h.service.Storage().RestoreStorage(c.Request().Context(), storageID); err != nil {
 		log.Printf("RestoreStorage failed for id %s: %v", storageID, err)
-		return c.JSON(http.StatusInternalServerError, model.ErrorResponse{Message: "failed to restore storage"})
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("failed to restore storage", "see logs for details", http.StatusInternalServerError))
 	}
 
-	return c.JSON(http.StatusOK, model.SuccessResponse{Message: "Storage restored successfully"})
+	return c.JSON(http.StatusOK, model.NewSuccessResponse("Storage restored successfully", map[string]interface{}{}, http.StatusOK))
 }
 
 // SearchStorages searches storages by name
@@ -304,7 +304,7 @@ func (h *Handler) RestoreStorage(c echo.Context) error {
 func (h *Handler) SearchStorages(c echo.Context) error {
 	query := c.QueryParam("q")
 	if query == "" {
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "search query is required"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("search query is required", "see logs for details", http.StatusBadRequest))
 	}
 
 	limitStr := c.QueryParam("limit")
@@ -328,8 +328,8 @@ func (h *Handler) SearchStorages(c echo.Context) error {
 	storages, err := h.service.Storage().SearchStorages(c.Request().Context(), query, limit, offset)
 	if err != nil {
 		log.Printf("SearchStorages failed for query %s: %v", query, err)
-		return c.JSON(http.StatusInternalServerError, model.ErrorResponse{Message: "failed to search storages"})
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("failed to search storages", "see logs for details", http.StatusInternalServerError))
 	}
 
-	return c.JSON(http.StatusOK, storages)
+	return c.JSON(http.StatusOK, model.NewSuccessResponse("Data retrieved successfully", storages, http.StatusOK))
 }

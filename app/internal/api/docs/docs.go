@@ -15417,7 +15417,11 @@ const docTemplate = `{
             "properties": {
                 "message": {
                     "type": "string",
-                    "example": "Password updated successfully"
+                    "example": "Operation completed successfully"
+                },
+                "status": {
+                    "type": "string",
+                    "example": "success"
                 }
             }
         },

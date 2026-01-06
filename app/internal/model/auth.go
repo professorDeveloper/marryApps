@@ -91,8 +91,17 @@ type UpdatePasswordRequest struct {
 	NewPassword     string `json:"newPassword" example:"newPassword123"`
 }
 
+// Simple SuccessResponse for basic operations
 type SuccessResponse struct {
-	Message string `json:"message" example:"Password updated successfully"`
+	Status  string `json:"status" example:"success"`
+	Message string `json:"message" example:"Operation completed successfully"`
+}
+
+// Generic SuccessResponse with data
+type SuccessResponseWithData[T any] struct {
+	Status  string `json:"status" example:"success"`
+	Message string `json:"message,omitempty" example:"Operation completed successfully"`
+	Data    T      `json:"data"`
 }
 
 type RefreshRequest struct {

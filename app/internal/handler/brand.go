@@ -27,27 +27,37 @@ func (h *Handler) CreateBrand(c echo.Context) error {
 	req := &model.CreateBrandRequest{}
 	if err := c.Bind(req); err != nil {
 		log.Printf("Failed to bind brand creation request: %v", err)
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{
-			Message: "Invalid request body",
-		})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"Invalid request format",
+			err.Error(),
+			http.StatusBadRequest,
+		))
 	}
 
 	if req.Name == "" {
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{
-			Message: "Brand name is required",
-		})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"Brand name is required",
+			"missing required field: name",
+			http.StatusBadRequest,
+		))
 	}
 
 	ctx := c.Request().Context()
 	resp, err := h.service.Brand().CreateBrand(ctx, req.Name)
 	if err != nil {
 		log.Printf("Failed to create brand: %v", err)
-		return c.JSON(http.StatusInternalServerError, model.ErrorResponse{
-			Message: "Failed to create brand",
-		})
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse(
+			"Failed to create brand",
+			err.Error(),
+			http.StatusInternalServerError,
+		))
 	}
 
-	return c.JSON(http.StatusCreated, resp)
+	return c.JSON(http.StatusCreated, model.NewSuccessResponse(
+		"Brand created successfully",
+		resp,
+		http.StatusCreated,
+	))
 }
 
 // GetBrand retrieves a brand by ID
@@ -67,20 +77,28 @@ func (h *Handler) GetBrand(c echo.Context) error {
 	brandIDStr := c.Param("id")
 	brandID, err := uuid.Parse(brandIDStr)
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{
-			Message: "Invalid brand ID format",
-		})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"Invalid brand ID format",
+			err.Error(),
+			http.StatusBadRequest,
+		))
 	}
 
 	ctx := c.Request().Context()
 	resp, err := h.service.Brand().GetBrand(ctx, brandID)
 	if err != nil {
-		return c.JSON(http.StatusNotFound, model.ErrorResponse{
-			Message: "Brand not found",
-		})
+		return c.JSON(http.StatusNotFound, model.NewErrorResponse(
+			"Brand not found",
+			err.Error(),
+			http.StatusNotFound,
+		))
 	}
 
-	return c.JSON(http.StatusOK, resp)
+	return c.JSON(http.StatusOK, model.NewSuccessResponse(
+		"Brand retrieved successfully",
+		resp,
+		http.StatusOK,
+	))
 }
 
 // ListBrands retrieves all brands
@@ -106,9 +124,11 @@ func (h *Handler) ListBrands(c echo.Context) error {
 	if limitStr != "" {
 		l, err := strconv.Atoi(limitStr)
 		if err != nil || l <= 0 {
-			return c.JSON(http.StatusBadRequest, model.ErrorResponse{
-				Message: "Invalid limit parameter",
-			})
+			return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+				"Invalid limit parameter",
+				"limit must be a positive integer",
+				http.StatusBadRequest,
+			))
 		}
 		if l > 100 {
 			l = 100
@@ -119,9 +139,11 @@ func (h *Handler) ListBrands(c echo.Context) error {
 	if offsetStr != "" {
 		o, err := strconv.Atoi(offsetStr)
 		if err != nil || o < 0 {
-			return c.JSON(http.StatusBadRequest, model.ErrorResponse{
-				Message: "Invalid offset parameter",
-			})
+			return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+				"Invalid offset parameter",
+				"offset must be a non-negative integer",
+				http.StatusBadRequest,
+			))
 		}
 		offset = int32(o)
 	}
@@ -130,12 +152,14 @@ func (h *Handler) ListBrands(c echo.Context) error {
 	brands, err := h.service.Brand().ListBrands(ctx, limit, offset)
 	if err != nil {
 		log.Printf("Failed to list brands: %v", err)
-		return c.JSON(http.StatusInternalServerError, model.ErrorResponse{
-			Message: "Failed to list brands",
-		})
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse(
+			"Failed to list brands",
+			err.Error(),
+			http.StatusInternalServerError,
+		))
 	}
 
-	return c.JSON(http.StatusOK, brands)
+	return c.JSON(http.StatusOK, model.NewSuccessResponse("Data retrieved successfully", brands, http.StatusOK))
 }
 
 // UpdateBrand updates a brand
@@ -156,35 +180,47 @@ func (h *Handler) UpdateBrand(c echo.Context) error {
 	brandIDStr := c.Param("id")
 	brandID, err := uuid.Parse(brandIDStr)
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{
-			Message: "Invalid brand ID format",
-		})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"Invalid brand ID format",
+			"missing or malformed path parameter: id",
+			http.StatusBadRequest,
+		))
 	}
 
 	req := &model.UpdateBrandRequest{}
 	if err := c.Bind(req); err != nil {
 		log.Printf("Failed to bind brand update request: %v", err)
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{
-			Message: "Invalid request body",
-		})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"Invalid request body",
+			err.Error(),
+			http.StatusBadRequest,
+		))
 	}
 
 	if req.Name == nil || *req.Name == "" {
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{
-			Message: "Brand name is required",
-		})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"Brand name is required",
+			"name field cannot be empty",
+			http.StatusBadRequest,
+		))
 	}
 
 	ctx := c.Request().Context()
 	resp, err := h.service.Brand().UpdateBrand(ctx, brandID, req.Name)
 	if err != nil {
 		log.Printf("Failed to update brand: %v", err)
-		return c.JSON(http.StatusInternalServerError, model.ErrorResponse{
-			Message: "Failed to update brand",
-		})
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse(
+			"Failed to update brand",
+			err.Error(),
+			http.StatusInternalServerError,
+		))
 	}
 
-	return c.JSON(http.StatusOK, resp)
+	return c.JSON(http.StatusOK, model.NewSuccessResponse(
+		"Brand updated successfully",
+		resp,
+		http.StatusOK,
+	))
 }
 
 // DeleteBrand deletes a brand
@@ -204,20 +240,28 @@ func (h *Handler) DeleteBrand(c echo.Context) error {
 	brandIDStr := c.Param("id")
 	brandID, err := uuid.Parse(brandIDStr)
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{
-			Message: "Invalid brand ID format",
-		})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"Invalid brand ID format",
+			"missing or malformed path parameter: id",
+			http.StatusBadRequest,
+		))
 	}
 
 	ctx := c.Request().Context()
 	if err := h.service.Brand().DeleteBrand(ctx, brandID); err != nil {
 		log.Printf("Failed to delete brand: %v", err)
-		return c.JSON(http.StatusInternalServerError, model.ErrorResponse{
-			Message: "Failed to delete brand",
-		})
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse(
+			"Failed to delete brand",
+			err.Error(),
+			http.StatusInternalServerError,
+		))
 	}
 
-	return c.NoContent(http.StatusNoContent)
+	return c.JSON(http.StatusNoContent, model.NewSuccessResponse(
+		"Brand deleted successfully",
+		map[string]interface{}{},
+		http.StatusNoContent,
+	))
 }
 
 // // InitializeTenantSchema initializes a tenant schema for a brand

@@ -25,20 +25,32 @@ import (
 func (h *Handler) CreateInvoiceDetail(c echo.Context) error {
 	var req model.CreateInvoiceDetailRequest
 	if err := c.Bind(&req); err != nil {
-		return c.JSON(http.StatusBadRequest, echo.Map{"error": "invalid request"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"invalid request",
+			err.Error(),
+			http.StatusBadRequest,
+		))
 	}
 
 	invoiceID := req.InvoiceID
 	if invoiceID == "" {
-		return c.JSON(http.StatusBadRequest, echo.Map{"error": "invoice_id is required"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"invoice_id is required",
+			"missing required field: invoice_id",
+			http.StatusBadRequest,
+		))
 	}
 
 	resp, err := h.service.Invoice().CreateInvoiceDetail(c.Request().Context(), invoiceID, &req)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, echo.Map{"error": err.Error()})
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("Operation failed", err.Error(), http.StatusInternalServerError))
 	}
 
-	return c.JSON(http.StatusCreated, resp)
+	return c.JSON(http.StatusCreated, model.NewSuccessResponse(
+		"Invoice detail created successfully",
+		resp,
+		http.StatusCreated,
+	))
 }
 
 // GetAllInvoiceDetails retrieves all invoice details with pagination
@@ -72,33 +84,45 @@ func (h *Handler) GetAllInvoiceDetails(c echo.Context) error {
 
 	resp, err := h.service.Invoice().GetAllInvoiceDetails(c.Request().Context(), limit, offset)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, echo.Map{"error": err.Error()})
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("Operation failed", err.Error(), http.StatusInternalServerError))
 	}
 
-	return c.JSON(http.StatusOK, resp)
+	return c.JSON(http.StatusOK, model.NewSuccessResponse(
+		"Invoice details retrieved successfully",
+		resp,
+		http.StatusOK,
+	))
 }
 
 func (h *Handler) GetInvoiceDetailsWithIngredients(c echo.Context) error {
 	invoiceID := c.QueryParam("invoice_id")
 	if invoiceID == "" {
-		return c.JSON(http.StatusBadRequest, echo.Map{"error": "invoice_id is required"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"invoice_id is required",
+			"missing query parameter: invoice_id",
+			http.StatusBadRequest,
+		))
 	}
 
 	details, err := h.service.Invoice().GetInvoiceDetailsByInvoiceID(c.Request().Context(), invoiceID)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, echo.Map{"error": err.Error()})
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("Operation failed", err.Error(), http.StatusInternalServerError))
 	}
 
 	resp := make([]*model.InvoiceDetailWithIngredientResponse, 0, len(details))
 	for _, d := range details {
 		row, err := h.service.Invoice().GetInvoiceDetailWithIngredient(c.Request().Context(), d.ID)
 		if err != nil {
-			return c.JSON(http.StatusInternalServerError, echo.Map{"error": err.Error()})
+			return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("Operation failed", err.Error(), http.StatusInternalServerError))
 		}
 		resp = append(resp, row)
 	}
 
-	return c.JSON(http.StatusOK, resp)
+	return c.JSON(http.StatusOK, model.NewSuccessResponse(
+		"Invoice details retrieved successfully",
+		resp,
+		http.StatusOK,
+	))
 }
 
 // GetInvoiceDetail retrieves a single invoice detail by ID
@@ -118,15 +142,27 @@ func (h *Handler) GetInvoiceDetailsWithIngredients(c echo.Context) error {
 func (h *Handler) GetInvoiceDetail(c echo.Context) error {
 	id := c.Param("id")
 	if id == "" {
-		return c.JSON(http.StatusBadRequest, echo.Map{"error": "id is required"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"id is required",
+			"missing path parameter: id",
+			http.StatusBadRequest,
+		))
 	}
 
 	resp, err := h.service.Invoice().GetInvoiceDetailByID(c.Request().Context(), id)
 	if err != nil {
-		return c.JSON(http.StatusNotFound, echo.Map{"error": err.Error()})
+		return c.JSON(http.StatusNotFound, model.NewErrorResponse(
+			"Operation failed",
+			err.Error(),
+			http.StatusNotFound,
+		))
 	}
 
-	return c.JSON(http.StatusOK, resp)
+	return c.JSON(http.StatusOK, model.NewSuccessResponse(
+		"Invoice detail retrieved successfully",
+		resp,
+		http.StatusOK,
+	))
 }
 
 // GetInvoiceDetailsByInvoice retrieves all details for a specific invoice
@@ -147,15 +183,23 @@ func (h *Handler) GetInvoiceDetail(c echo.Context) error {
 func (h *Handler) GetInvoiceDetailsByInvoice(c echo.Context) error {
 	invoiceID := c.Param("invoice_id")
 	if invoiceID == "" {
-		return c.JSON(http.StatusBadRequest, echo.Map{"error": "invoice_id is required"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"invoice_id is required",
+			"missing path parameter: invoice_id",
+			http.StatusBadRequest,
+		))
 	}
 
 	resp, err := h.service.Invoice().GetInvoiceDetailsByInvoiceID(c.Request().Context(), invoiceID)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, echo.Map{"error": err.Error()})
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("Operation failed", err.Error(), http.StatusInternalServerError))
 	}
 
-	return c.JSON(http.StatusOK, resp)
+	return c.JSON(http.StatusOK, model.NewSuccessResponse(
+		"Invoice details retrieved successfully",
+		resp,
+		http.StatusOK,
+	))
 }
 
 // GetInvoiceDetailsByIngredient retrieves invoice details for a specific ingredient
@@ -176,7 +220,11 @@ func (h *Handler) GetInvoiceDetailsByInvoice(c echo.Context) error {
 func (h *Handler) GetInvoiceDetailsByIngredient(c echo.Context) error {
 	ingredientID := c.Param("ingredient_id")
 	if ingredientID == "" {
-		return c.JSON(http.StatusBadRequest, echo.Map{"error": "ingredient_id is required"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"ingredient_id is required",
+			"missing path parameter: ingredient_id",
+			http.StatusBadRequest,
+		))
 	}
 
 	limit := int32(20)
@@ -195,10 +243,14 @@ func (h *Handler) GetInvoiceDetailsByIngredient(c echo.Context) error {
 
 	resp, err := h.service.Invoice().GetInvoiceDetailsByIngredientID(c.Request().Context(), ingredientID, limit, offset)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, echo.Map{"error": err.Error()})
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("Operation failed", err.Error(), http.StatusInternalServerError))
 	}
 
-	return c.JSON(http.StatusOK, resp)
+	return c.JSON(http.StatusOK, model.NewSuccessResponse(
+		"Invoice details retrieved successfully",
+		resp,
+		http.StatusOK,
+	))
 }
 
 // UpdateInvoiceDetail updates an existing invoice detail
@@ -220,20 +272,32 @@ func (h *Handler) GetInvoiceDetailsByIngredient(c echo.Context) error {
 func (h *Handler) UpdateInvoiceDetail(c echo.Context) error {
 	id := c.Param("id")
 	if id == "" {
-		return c.JSON(http.StatusBadRequest, echo.Map{"error": "id is required"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"id is required",
+			"missing path parameter: id",
+			http.StatusBadRequest,
+		))
 	}
 
 	var req model.UpdateInvoiceDetailRequest
 	if err := c.Bind(&req); err != nil {
-		return c.JSON(http.StatusBadRequest, echo.Map{"error": "invalid request"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"invalid request",
+			err.Error(),
+			http.StatusBadRequest,
+		))
 	}
 
 	resp, err := h.service.Invoice().UpdateInvoiceDetail(c.Request().Context(), id, &req)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, echo.Map{"error": err.Error()})
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("Operation failed", err.Error(), http.StatusInternalServerError))
 	}
 
-	return c.JSON(http.StatusOK, resp)
+	return c.JSON(http.StatusOK, model.NewSuccessResponse(
+		"Invoice detail updated successfully",
+		resp,
+		http.StatusOK,
+	))
 }
 
 // UpdateInvoiceDetailQuantity updates the quantity of an invoice detail
@@ -255,20 +319,32 @@ func (h *Handler) UpdateInvoiceDetail(c echo.Context) error {
 func (h *Handler) UpdateInvoiceDetailQuantity(c echo.Context) error {
 	id := c.Param("id")
 	if id == "" {
-		return c.JSON(http.StatusBadRequest, echo.Map{"error": "id is required"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"id is required",
+			"missing path parameter: id",
+			http.StatusBadRequest,
+		))
 	}
 
 	var req model.UpdateInvoiceDetailQuantityRequest
 	if err := c.Bind(&req); err != nil {
-		return c.JSON(http.StatusBadRequest, echo.Map{"error": "invalid request"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"invalid request",
+			err.Error(),
+			http.StatusBadRequest,
+		))
 	}
 
 	resp, err := h.service.Invoice().UpdateInvoiceDetailQuantity(c.Request().Context(), id, req.Quantity)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, echo.Map{"error": err.Error()})
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("Operation failed", err.Error(), http.StatusInternalServerError))
 	}
 
-	return c.JSON(http.StatusOK, resp)
+	return c.JSON(http.StatusOK, model.NewSuccessResponse(
+		"Invoice detail quantity updated successfully",
+		resp,
+		http.StatusOK,
+	))
 }
 
 // DeleteInvoiceDetail deletes an invoice detail (soft delete)
@@ -288,12 +364,16 @@ func (h *Handler) UpdateInvoiceDetailQuantity(c echo.Context) error {
 func (h *Handler) DeleteInvoiceDetail(c echo.Context) error {
 	id := c.Param("id")
 	if id == "" {
-		return c.JSON(http.StatusBadRequest, echo.Map{"error": "id is required"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"id is required",
+			"missing path parameter: id",
+			http.StatusBadRequest,
+		))
 	}
 
 	err := h.service.Invoice().DeleteInvoiceDetail(c.Request().Context(), id)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, echo.Map{"error": err.Error()})
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("Operation failed", err.Error(), http.StatusInternalServerError))
 	}
 
 	return c.NoContent(http.StatusNoContent)
@@ -316,15 +396,23 @@ func (h *Handler) DeleteInvoiceDetail(c echo.Context) error {
 func (h *Handler) RestoreInvoiceDetail(c echo.Context) error {
 	id := c.Param("id")
 	if id == "" {
-		return c.JSON(http.StatusBadRequest, echo.Map{"error": "id is required"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"id is required",
+			"missing path parameter: id",
+			http.StatusBadRequest,
+		))
 	}
 
 	err := h.service.Invoice().RestoreInvoiceDetail(c.Request().Context(), id)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, echo.Map{"error": err.Error()})
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("Operation failed", err.Error(), http.StatusInternalServerError))
 	}
 
-	return c.NoContent(http.StatusNoContent)
+	return c.JSON(http.StatusOK, model.NewSuccessResponse(
+		"Invoice detail restored successfully",
+		struct{}{},
+		http.StatusOK,
+	))
 }
 
 // GetInvoiceDetailWithIngredient retrieves invoice detail with ingredient information
@@ -344,13 +432,25 @@ func (h *Handler) RestoreInvoiceDetail(c echo.Context) error {
 func (h *Handler) GetInvoiceDetailWithIngredient(c echo.Context) error {
 	id := c.Param("id")
 	if id == "" {
-		return c.JSON(http.StatusBadRequest, echo.Map{"error": "id is required"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"id is required",
+			"missing path parameter: id",
+			http.StatusBadRequest,
+		))
 	}
 
 	resp, err := h.service.Invoice().GetInvoiceDetailWithIngredient(c.Request().Context(), id)
 	if err != nil {
-		return c.JSON(http.StatusNotFound, echo.Map{"error": err.Error()})
+		return c.JSON(http.StatusNotFound, model.NewErrorResponse(
+			"Operation failed",
+			err.Error(),
+			http.StatusNotFound,
+		))
 	}
 
-	return c.JSON(http.StatusOK, resp)
+	return c.JSON(http.StatusOK, model.NewSuccessResponse(
+		"Invoice detail retrieved successfully",
+		resp,
+		http.StatusOK,
+	))
 }

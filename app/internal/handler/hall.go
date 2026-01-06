@@ -27,32 +27,56 @@ func (h *Handler) CreateHall(c echo.Context) error {
 	var req model.CreateHallRequest
 	if err := c.Bind(&req); err != nil {
 		log.Printf("Failed to bind create hall request: %v", err)
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "invalid request format"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"invalid request format",
+			err.Error(),
+			http.StatusBadRequest,
+		))
 	}
 
 	var nameI18nUUID *uuid.UUID
 	if req.NameI18n != nil && *req.NameI18n != "" {
 		id, err := uuid.Parse(*req.NameI18n)
 		if err != nil {
-			return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "invalid name_i18n UUID format"})
+			return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+				"invalid name_i18n UUID format",
+				err.Error(),
+				http.StatusBadRequest,
+			))
 		}
 		nameI18nUUID = &id
 	}
 
 	if req.Name == nil || *req.Name == "" {
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "name is required"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"name is required",
+			"missing required field: name",
+			http.StatusBadRequest,
+		))
 	}
 	if req.BranchID == "" {
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "branch_id is required"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"branch_id is required",
+			"missing required field: branch_id",
+			http.StatusBadRequest,
+		))
 	}
 
 	hall, err := h.service.Hall().CreateHall(c.Request().Context(), *req.Name, req.BranchID, nameI18nUUID)
 	if err != nil {
 		log.Printf("CreateHall failed: %v", err)
-		return c.JSON(http.StatusInternalServerError, model.ErrorResponse{Message: "failed to create hall"})
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse(
+			"failed to create hall",
+			err.Error(),
+			http.StatusInternalServerError,
+		))
 	}
 
-	return c.JSON(http.StatusCreated, hall)
+	return c.JSON(http.StatusCreated, model.NewSuccessResponse(
+		"Hall created successfully",
+		hall,
+		http.StatusCreated,
+	))
 }
 
 // GetHallByID retrieves a hall by ID
@@ -72,16 +96,28 @@ func (h *Handler) CreateHall(c echo.Context) error {
 func (h *Handler) GetHallByID(c echo.Context) error {
 	hallID := c.Param("id")
 	if hallID == "" {
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "hall id is required"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"hall id is required",
+			"missing path parameter: id",
+			http.StatusBadRequest,
+		))
 	}
 
 	hall, err := h.service.Hall().GetHallByID(c.Request().Context(), hallID)
 	if err != nil {
 		log.Printf("GetHallByID failed for ID %s: %v", hallID, err)
-		return c.JSON(http.StatusNotFound, model.ErrorResponse{Message: "hall not found"})
+		return c.JSON(http.StatusNotFound, model.NewErrorResponse(
+			"hall not found",
+			err.Error(),
+			http.StatusNotFound,
+		))
 	}
 
-	return c.JSON(http.StatusOK, hall)
+	return c.JSON(http.StatusOK, model.NewSuccessResponse(
+		"Hall retrieved successfully",
+		hall,
+		http.StatusOK,
+	))
 }
 
 // GetAllHalls retrieves all halls
@@ -116,10 +152,18 @@ func (h *Handler) GetAllHalls(c echo.Context) error {
 	halls, err := h.service.Hall().GetAllHalls(c.Request().Context(), limit, offset)
 	if err != nil {
 		log.Printf("GetAllHalls failed: %v", err)
-		return c.JSON(http.StatusInternalServerError, model.ErrorResponse{Message: "failed to retrieve halls"})
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse(
+			"failed to retrieve halls",
+			err.Error(),
+			http.StatusInternalServerError,
+		))
 	}
 
-	return c.JSON(http.StatusOK, halls)
+	return c.JSON(http.StatusOK, model.NewSuccessResponse(
+		"Halls retrieved successfully",
+		halls,
+		http.StatusOK,
+	))
 }
 
 // GetHallsByBranchID retrieves halls by branch ID
@@ -140,7 +184,11 @@ func (h *Handler) GetAllHalls(c echo.Context) error {
 func (h *Handler) GetHallsByBranchID(c echo.Context) error {
 	branchID := c.Param("branchId")
 	if branchID == "" {
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "branch id is required"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"branch id is required",
+			"missing path parameter: branchId",
+			http.StatusBadRequest,
+		))
 	}
 
 	var limit int32 = 20
@@ -161,10 +209,18 @@ func (h *Handler) GetHallsByBranchID(c echo.Context) error {
 	halls, err := h.service.Hall().GetHallsByBranchID(c.Request().Context(), branchID, limit, offset)
 	if err != nil {
 		log.Printf("GetHallsByBranchID failed for branch ID %s: %v", branchID, err)
-		return c.JSON(http.StatusInternalServerError, model.ErrorResponse{Message: "failed to retrieve halls for branch"})
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse(
+			"failed to retrieve halls for branch",
+			err.Error(),
+			http.StatusInternalServerError,
+		))
 	}
 
-	return c.JSON(http.StatusOK, halls)
+	return c.JSON(http.StatusOK, model.NewSuccessResponse(
+		"Halls retrieved successfully",
+		halls,
+		http.StatusOK,
+	))
 }
 
 // UpdateHall updates a hall
@@ -185,22 +241,38 @@ func (h *Handler) GetHallsByBranchID(c echo.Context) error {
 func (h *Handler) UpdateHall(c echo.Context) error {
 	hallID := c.Param("id")
 	if hallID == "" {
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "hall id is required"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"hall id is required",
+			"missing path parameter: id",
+			http.StatusBadRequest,
+		))
 	}
 
 	var req model.UpdateHallRequest
 	if err := c.Bind(&req); err != nil {
 		log.Printf("Failed to bind update hall request: %v", err)
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "invalid request format"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"invalid request format",
+			err.Error(),
+			http.StatusBadRequest,
+		))
 	}
 
 	hall, err := h.service.Hall().UpdateHall(c.Request().Context(), hallID, req.Name, req.BranchID, req.NameI18n)
 	if err != nil {
 		log.Printf("UpdateHall failed for ID %s: %v", hallID, err)
-		return c.JSON(http.StatusInternalServerError, model.ErrorResponse{Message: "failed to update hall"})
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse(
+			"failed to update hall",
+			err.Error(),
+			http.StatusInternalServerError,
+		))
 	}
 
-	return c.JSON(http.StatusOK, hall)
+	return c.JSON(http.StatusOK, model.NewSuccessResponse(
+		"Hall updated successfully",
+		hall,
+		http.StatusOK,
+	))
 }
 
 // DeleteHall soft deletes a hall
@@ -220,12 +292,20 @@ func (h *Handler) UpdateHall(c echo.Context) error {
 func (h *Handler) DeleteHall(c echo.Context) error {
 	hallID := c.Param("id")
 	if hallID == "" {
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "hall id is required"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"hall id is required",
+			"missing path parameter: id",
+			http.StatusBadRequest,
+		))
 	}
 
 	if err := h.service.Hall().DeleteHall(c.Request().Context(), hallID); err != nil {
 		log.Printf("DeleteHall failed for ID %s: %v", hallID, err)
-		return c.JSON(http.StatusInternalServerError, model.ErrorResponse{Message: "failed to delete hall"})
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse(
+			"failed to delete hall",
+			err.Error(),
+			http.StatusInternalServerError,
+		))
 	}
 
 	return c.NoContent(http.StatusNoContent)
@@ -248,16 +328,28 @@ func (h *Handler) DeleteHall(c echo.Context) error {
 func (h *Handler) RestoreHall(c echo.Context) error {
 	hallID := c.Param("id")
 	if hallID == "" {
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "hall id is required"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"hall id is required",
+			"missing path parameter: id",
+			http.StatusBadRequest,
+		))
 	}
 
 	hall, err := h.service.Hall().RestoreHall(c.Request().Context(), hallID)
 	if err != nil {
 		log.Printf("RestoreHall failed for ID %s: %v", hallID, err)
-		return c.JSON(http.StatusInternalServerError, model.ErrorResponse{Message: "failed to restore hall"})
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse(
+			"failed to restore hall",
+			err.Error(),
+			http.StatusInternalServerError,
+		))
 	}
 
-	return c.JSON(http.StatusOK, hall)
+	return c.JSON(http.StatusOK, model.NewSuccessResponse(
+		"Hall restored successfully",
+		hall,
+		http.StatusOK,
+	))
 }
 
 // SearchHalls searches for halls by name
@@ -278,7 +370,11 @@ func (h *Handler) RestoreHall(c echo.Context) error {
 func (h *Handler) SearchHalls(c echo.Context) error {
 	query := c.QueryParam("q")
 	if query == "" {
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "search query is required"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"search query is required",
+			"missing query parameter: q",
+			http.StatusBadRequest,
+		))
 	}
 
 	var limit int32 = 20
@@ -299,8 +395,16 @@ func (h *Handler) SearchHalls(c echo.Context) error {
 	halls, err := h.service.Hall().SearchHalls(c.Request().Context(), query, limit, offset)
 	if err != nil {
 		log.Printf("SearchHalls failed for query %s: %v", query, err)
-		return c.JSON(http.StatusInternalServerError, model.ErrorResponse{Message: "failed to search halls"})
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse(
+			"failed to search halls",
+			err.Error(),
+			http.StatusInternalServerError,
+		))
 	}
 
-	return c.JSON(http.StatusOK, halls)
+	return c.JSON(http.StatusOK, model.NewSuccessResponse(
+		"Halls retrieved successfully",
+		halls,
+		http.StatusOK,
+	))
 }

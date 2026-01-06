@@ -26,21 +26,37 @@ func (h *Handler) CreateCompound(c echo.Context) error {
 	var req model.CreateCompoundRequest
 	if err := c.Bind(&req); err != nil {
 		log.Printf("Failed to bind create compound request: %v", err)
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "invalid request format"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"Invalid request format",
+			err.Error(),
+			http.StatusBadRequest,
+		))
 	}
 
 	if req.Name == "" {
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "name is required"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"Name is required",
+			"missing required field: name",
+			http.StatusBadRequest,
+		))
 	}
 
 	quantity := int32(req.Quantity)
 	compound, err := h.service.Compound().CreateCompound(c.Request().Context(), req.Name, req.NameI18n, req.Description, req.DescriptionI18n, req.Measurement, req.DepartmentID, quantity, req.Price, req.PictureUrl, req.ColorCode)
 	if err != nil {
 		log.Printf("CreateCompound failed: %v", err)
-		return c.JSON(http.StatusInternalServerError, model.ErrorResponse{Message: "failed to create compound"})
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse(
+			"Failed to create compound",
+			err.Error(),
+			http.StatusInternalServerError,
+		))
 	}
 
-	return c.JSON(http.StatusCreated, compound)
+	return c.JSON(http.StatusCreated, model.NewSuccessResponse(
+		"Compound created successfully",
+		compound,
+		http.StatusCreated,
+	))
 }
 
 // GetCompoundByID retrieves a compound by ID
@@ -60,16 +76,28 @@ func (h *Handler) CreateCompound(c echo.Context) error {
 func (h *Handler) GetCompoundByID(c echo.Context) error {
 	compoundID := c.Param("id")
 	if compoundID == "" {
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "compound id is required"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"Compound ID is required",
+			"missing path parameter: id",
+			http.StatusBadRequest,
+		))
 	}
 
 	compound, err := h.service.Compound().GetCompoundByID(c.Request().Context(), compoundID)
 	if err != nil {
 		log.Printf("GetCompoundByID failed for ID %s: %v", compoundID, err)
-		return c.JSON(http.StatusNotFound, model.ErrorResponse{Message: "compound not found"})
+		return c.JSON(http.StatusNotFound, model.NewErrorResponse(
+			"Compound not found",
+			err.Error(),
+			http.StatusNotFound,
+		))
 	}
 
-	return c.JSON(http.StatusOK, compound)
+	return c.JSON(http.StatusOK, model.NewSuccessResponse(
+		"Compound retrieved successfully",
+		compound,
+		http.StatusOK,
+	))
 }
 
 // GetAllCompounds retrieves all compounds
@@ -104,10 +132,10 @@ func (h *Handler) GetAllCompounds(c echo.Context) error {
 	compounds, err := h.service.Compound().GetAllCompounds(c.Request().Context(), limit, offset)
 	if err != nil {
 		log.Printf("GetAllCompounds failed: %v", err)
-		return c.JSON(http.StatusInternalServerError, model.ErrorResponse{Message: "failed to retrieve compounds"})
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("failed to retrieve compounds", err.Error(), http.StatusInternalServerError))
 	}
 
-	return c.JSON(http.StatusOK, compounds)
+	return c.JSON(http.StatusOK, model.NewSuccessResponse("Data retrieved successfully", compounds, http.StatusOK))
 }
 
 // GetCompoundsByDepartmentID retrieves compounds by department ID
@@ -128,7 +156,7 @@ func (h *Handler) GetAllCompounds(c echo.Context) error {
 func (h *Handler) GetCompoundsByDepartmentID(c echo.Context) error {
 	departmentID := c.Param("departmentId")
 	if departmentID == "" {
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "department id is required"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("department id is required", "missing path parameter: departmentId", http.StatusBadRequest))
 	}
 
 	var limit int32 = 20
@@ -149,10 +177,10 @@ func (h *Handler) GetCompoundsByDepartmentID(c echo.Context) error {
 	compounds, err := h.service.Compound().GetCompoundsByDepartmentID(c.Request().Context(), departmentID, limit, offset)
 	if err != nil {
 		log.Printf("GetCompoundsByDepartmentID failed: %v", err)
-		return c.JSON(http.StatusInternalServerError, model.ErrorResponse{Message: "failed to retrieve compounds"})
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("failed to retrieve compounds", err.Error(), http.StatusInternalServerError))
 	}
 
-	return c.JSON(http.StatusOK, compounds)
+	return c.JSON(http.StatusOK, model.NewSuccessResponse("Data retrieved successfully", compounds, http.StatusOK))
 }
 
 // UpdateCompound updates a compound
@@ -173,13 +201,13 @@ func (h *Handler) GetCompoundsByDepartmentID(c echo.Context) error {
 func (h *Handler) UpdateCompound(c echo.Context) error {
 	compoundID := c.Param("id")
 	if compoundID == "" {
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "compound id is required"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("compound id is required", "missing path parameter: id", http.StatusBadRequest))
 	}
 
 	var req model.UpdateCompoundRequest
 	if err := c.Bind(&req); err != nil {
 		log.Printf("Failed to bind update compound request: %v", err)
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "invalid request format"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("invalid request format", err.Error(), http.StatusBadRequest))
 	}
 
 	var quantity *int32
@@ -188,13 +216,13 @@ func (h *Handler) UpdateCompound(c echo.Context) error {
 		quantity = &q
 	}
 
-	compound, err := h.service.Compound().UpdateCompound(c.Request().Context(), compoundID, req.Name, req.NameI18n, req.Description, req.DescriptionI18n, req.Measurement, req.DepartmentID, quantity, req.Price, req.PictureUrl,  req.ColorCode)
+	compound, err := h.service.Compound().UpdateCompound(c.Request().Context(), compoundID, req.Name, req.NameI18n, req.Description, req.DescriptionI18n, req.Measurement, req.DepartmentID, quantity, req.Price, req.PictureUrl, req.ColorCode)
 	if err != nil {
 		log.Printf("UpdateCompound failed for ID %s: %v", compoundID, err)
-		return c.JSON(http.StatusInternalServerError, model.ErrorResponse{Message: "failed to update compound"})
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("failed to update compound", err.Error(), http.StatusInternalServerError))
 	}
 
-	return c.JSON(http.StatusOK, compound)
+	return c.JSON(http.StatusOK, model.NewSuccessResponse("Compound updated successfully", compound, http.StatusOK))
 }
 
 // DeleteCompound soft deletes a compound
@@ -214,12 +242,12 @@ func (h *Handler) UpdateCompound(c echo.Context) error {
 func (h *Handler) DeleteCompound(c echo.Context) error {
 	compoundID := c.Param("id")
 	if compoundID == "" {
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "compound id is required"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("compound id is required", "missing path parameter: id", http.StatusBadRequest))
 	}
 
 	if err := h.service.Compound().DeleteCompound(c.Request().Context(), compoundID); err != nil {
 		log.Printf("DeleteCompound failed for ID %s: %v", compoundID, err)
-		return c.JSON(http.StatusInternalServerError, model.ErrorResponse{Message: "failed to delete compound"})
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("failed to delete compound", err.Error(), http.StatusInternalServerError))
 	}
 
 	return c.NoContent(http.StatusNoContent)
@@ -242,16 +270,16 @@ func (h *Handler) DeleteCompound(c echo.Context) error {
 func (h *Handler) RestoreCompound(c echo.Context) error {
 	compoundID := c.Param("id")
 	if compoundID == "" {
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "compound id is required"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("compound id is required", "missing path parameter: id", http.StatusBadRequest))
 	}
 
 	compound, err := h.service.Compound().RestoreCompound(c.Request().Context(), compoundID)
 	if err != nil {
 		log.Printf("RestoreCompound failed for ID %s: %v", compoundID, err)
-		return c.JSON(http.StatusInternalServerError, model.ErrorResponse{Message: "failed to restore compound"})
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("failed to restore compound", err.Error(), http.StatusInternalServerError))
 	}
 
-	return c.JSON(http.StatusOK, compound)
+	return c.JSON(http.StatusOK, model.NewSuccessResponse("Compound restored successfully", compound, http.StatusOK))
 }
 
 // SearchCompounds searches for compounds by name or description
@@ -272,7 +300,7 @@ func (h *Handler) RestoreCompound(c echo.Context) error {
 func (h *Handler) SearchCompounds(c echo.Context) error {
 	query := c.QueryParam("q")
 	if query == "" {
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "search query is required"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("search query is required", "missing query parameter: q", http.StatusBadRequest))
 	}
 
 	var limit int32 = 20
@@ -293,8 +321,8 @@ func (h *Handler) SearchCompounds(c echo.Context) error {
 	compounds, err := h.service.Compound().SearchCompounds(c.Request().Context(), query, limit, offset)
 	if err != nil {
 		log.Printf("SearchCompounds failed for query %s: %v", query, err)
-		return c.JSON(http.StatusInternalServerError, model.ErrorResponse{Message: "failed to search compounds"})
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("failed to search compounds", err.Error(), http.StatusInternalServerError))
 	}
 
-	return c.JSON(http.StatusOK, compounds)
+	return c.JSON(http.StatusOK, model.NewSuccessResponse("Data retrieved successfully", compounds, http.StatusOK))
 }

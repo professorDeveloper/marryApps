@@ -29,18 +29,18 @@ func (h *Handler) CreateBranch(c echo.Context) error {
 	var req model.CreateBranchRequest
 	if err := c.Bind(&req); err != nil {
 		log.Printf("Failed to bind create branch request: %v", err)
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "invalid request format"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("invalid request format", "see logs for details", http.StatusBadRequest))
 	}
 
 	if req.Name == nil || *req.Name == "" {
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "name is required"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("name is required", "see logs for details", http.StatusBadRequest))
 	}
 
 	var nameI18nUUID *uuid.UUID
 	if req.NameI18n != nil && *req.NameI18n != "" {
 		id, err := uuid.Parse(*req.NameI18n)
 		if err != nil {
-			return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "invalid name_i18n UUID format"})
+			return c.JSON(http.StatusBadRequest, model.NewErrorResponse("invalid name_i18n UUID format", "see logs for details", http.StatusBadRequest))
 		}
 		nameI18nUUID = &id
 	}
@@ -48,10 +48,10 @@ func (h *Handler) CreateBranch(c echo.Context) error {
 	branch, err := h.service.Organization().CreateBranch(c.Request().Context(), *req.Name, nameI18nUUID, req.Address, req.Phone)
 	if err != nil {
 		log.Printf("CreateBranch failed: %v", err)
-		return c.JSON(http.StatusInternalServerError, model.ErrorResponse{Message: "failed to create branch"})
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("failed to create branch", "see logs for details", http.StatusInternalServerError))
 	}
 
-	return c.JSON(http.StatusCreated, branch)
+	return c.JSON(http.StatusCreated, model.NewSuccessResponse("Branch created successfully", branch, http.StatusCreated))
 }
 
 // GetBranchByID retrieves a branch by ID
@@ -71,24 +71,24 @@ func (h *Handler) CreateBranch(c echo.Context) error {
 func (h *Handler) GetBranchByID(c echo.Context) error {
 	branchID := c.Param("id")
 	if branchID == "" {
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "branch id is required"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("branch id is required", "see logs for details", http.StatusBadRequest))
 	}
 
 	if _, err := uuid.Parse(branchID); err != nil {
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "invalid branch id format"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("invalid branch id format", "see logs for details", http.StatusBadRequest))
 	}
 
 	branch, err := h.service.Organization().GetBranchByID(c.Request().Context(), branchID)
 	if err != nil {
 		log.Printf("GetBranchByID failed for id %s: %v", branchID, err)
-		return c.JSON(http.StatusInternalServerError, model.ErrorResponse{Message: "failed to fetch branch"})
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("failed to fetch branch", "see logs for details", http.StatusInternalServerError))
 	}
 
 	if branch == nil {
-		return c.JSON(http.StatusNotFound, model.ErrorResponse{Message: "branch not found"})
+		return c.JSON(http.StatusNotFound, model.NewErrorResponse("branch not found", "see logs for details", http.StatusNotFound))
 	}
 
-	return c.JSON(http.StatusOK, branch)
+	return c.JSON(http.StatusOK, model.NewSuccessResponse("Branch retrieved successfully", branch, http.StatusOK))
 }
 
 // GetAllBranches retrieves all branches
@@ -126,10 +126,10 @@ func (h *Handler) GetAllBranches(c echo.Context) error {
 	branches, err := h.service.Organization().GetAllBranches(c.Request().Context(), limit, offset)
 	if err != nil {
 		log.Printf("GetAllBranches failed: %v", err)
-		return c.JSON(http.StatusInternalServerError, model.ErrorResponse{Message: "failed to fetch branches"})
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("failed to fetch branches", "see logs for details", http.StatusInternalServerError))
 	}
 
-	return c.JSON(http.StatusOK, branches)
+	return c.JSON(http.StatusOK, model.NewSuccessResponse("Data retrieved successfully", branches, http.StatusOK))
 }
 
 // DeleteBranch deletes a branch
@@ -148,19 +148,19 @@ func (h *Handler) GetAllBranches(c echo.Context) error {
 func (h *Handler) DeleteBranch(c echo.Context) error {
 	branchID := c.Param("id")
 	if branchID == "" {
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "branch id is required"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("branch id is required", "see logs for details", http.StatusBadRequest))
 	}
 
 	if _, err := uuid.Parse(branchID); err != nil {
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "invalid branch id format"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("invalid branch id format", "see logs for details", http.StatusBadRequest))
 	}
 
 	if err := h.service.Organization().DeleteBranch(c.Request().Context(), branchID); err != nil {
 		log.Printf("DeleteBranch failed for id %s: %v", branchID, err)
-		return c.JSON(http.StatusInternalServerError, model.ErrorResponse{Message: "failed to delete branch"})
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("failed to delete branch", "see logs for details", http.StatusInternalServerError))
 	}
 
-	return c.JSON(http.StatusOK, model.SuccessResponse{Message: "Branch deleted successfully"})
+	return c.JSON(http.StatusOK, model.NewSuccessResponse("Branch deleted successfully", map[string]interface{}{}, http.StatusOK))
 }
 
 // RestoreBranch restores a deleted branch
@@ -179,19 +179,19 @@ func (h *Handler) DeleteBranch(c echo.Context) error {
 func (h *Handler) RestoreBranch(c echo.Context) error {
 	branchID := c.Param("id")
 	if branchID == "" {
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "branch id is required"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("branch id is required", "see logs for details", http.StatusBadRequest))
 	}
 
 	if _, err := uuid.Parse(branchID); err != nil {
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "invalid branch id format"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("invalid branch id format", "see logs for details", http.StatusBadRequest))
 	}
 
 	if err := h.service.Organization().RestoreBranch(c.Request().Context(), branchID); err != nil {
 		log.Printf("RestoreBranch failed for id %s: %v", branchID, err)
-		return c.JSON(http.StatusInternalServerError, model.ErrorResponse{Message: "failed to restore branch"})
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("failed to restore branch", "see logs for details", http.StatusInternalServerError))
 	}
 
-	return c.JSON(http.StatusOK, model.SuccessResponse{Message: "Branch restored successfully"})
+	return c.JSON(http.StatusOK, model.NewSuccessResponse("Branch restored successfully", map[string]interface{}{}, http.StatusOK))
 }
 
 // ==================== TRANSLATION HANDLERS ====================
@@ -213,16 +213,16 @@ func (h *Handler) CreateTranslation(c echo.Context) error {
 	var req model.CreateTranslationRequest
 	if err := c.Bind(&req); err != nil {
 		log.Printf("Failed to bind create translation request: %v", err)
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "invalid request format"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("invalid request format", "see logs for details", http.StatusBadRequest))
 	}
 
 	translation, err := h.service.Organization().CreateTranslation(c.Request().Context(), req.Uz, req.Ru, req.En)
 	if err != nil {
 		log.Printf("CreateTranslation failed: %v", err)
-		return c.JSON(http.StatusInternalServerError, model.ErrorResponse{Message: "failed to create translation"})
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("failed to create translation", "see logs for details", http.StatusInternalServerError))
 	}
 
-	return c.JSON(http.StatusCreated, translation)
+	return c.JSON(http.StatusCreated, model.NewSuccessResponse("Translation created successfully", translation, http.StatusCreated))
 }
 
 // GetTranslationByID retrieves a translation by ID
@@ -242,24 +242,24 @@ func (h *Handler) CreateTranslation(c echo.Context) error {
 func (h *Handler) GetTranslationByID(c echo.Context) error {
 	translationID := c.Param("id")
 	if translationID == "" {
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "translation id is required"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("translation id is required", "see logs for details", http.StatusBadRequest))
 	}
 
 	if _, err := uuid.Parse(translationID); err != nil {
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "invalid translation id format"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("invalid translation id format", "see logs for details", http.StatusBadRequest))
 	}
 
 	translation, err := h.service.Organization().GetTranslationByID(c.Request().Context(), translationID)
 	if err != nil {
 		log.Printf("GetTranslationByID failed for id %s: %v", translationID, err)
-		return c.JSON(http.StatusInternalServerError, model.ErrorResponse{Message: "failed to fetch translation"})
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("failed to fetch translation", "see logs for details", http.StatusInternalServerError))
 	}
 
 	if translation == nil {
-		return c.JSON(http.StatusNotFound, model.ErrorResponse{Message: "translation not found"})
+		return c.JSON(http.StatusNotFound, model.NewErrorResponse("translation not found", "see logs for details", http.StatusNotFound))
 	}
 
-	return c.JSON(http.StatusOK, translation)
+	return c.JSON(http.StatusOK, model.NewSuccessResponse("Translation retrieved successfully", translation, http.StatusOK))
 }
 
 // GetAllTranslations retrieves all translations
@@ -297,10 +297,10 @@ func (h *Handler) GetAllTranslations(c echo.Context) error {
 	translations, err := h.service.Organization().GetAllTranslations(c.Request().Context(), limit, offset)
 	if err != nil {
 		log.Printf("GetAllTranslations failed: %v", err)
-		return c.JSON(http.StatusInternalServerError, model.ErrorResponse{Message: "failed to fetch translations"})
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("failed to fetch translations", "see logs for details", http.StatusInternalServerError))
 	}
 
-	return c.JSON(http.StatusOK, translations)
+	return c.JSON(http.StatusOK, model.NewSuccessResponse("Data retrieved successfully", translations, http.StatusOK))
 }
 
 // DeleteTranslation deletes a translation
@@ -319,19 +319,19 @@ func (h *Handler) GetAllTranslations(c echo.Context) error {
 func (h *Handler) DeleteTranslation(c echo.Context) error {
 	translationID := c.Param("id")
 	if translationID == "" {
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "translation id is required"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("translation id is required", "see logs for details", http.StatusBadRequest))
 	}
 
 	if _, err := uuid.Parse(translationID); err != nil {
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "invalid translation id format"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("invalid translation id format", "see logs for details", http.StatusBadRequest))
 	}
 
 	if err := h.service.Organization().DeleteTranslation(c.Request().Context(), translationID); err != nil {
 		log.Printf("DeleteTranslation failed for id %s: %v", translationID, err)
-		return c.JSON(http.StatusInternalServerError, model.ErrorResponse{Message: "failed to delete translation"})
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("failed to delete translation", "see logs for details", http.StatusInternalServerError))
 	}
 
-	return c.JSON(http.StatusOK, model.SuccessResponse{Message: "Translation deleted successfully"})
+	return c.JSON(http.StatusOK, model.NewSuccessResponse("Translation deleted successfully", map[string]interface{}{}, http.StatusOK))
 }
 
 // RestoreTranslation restores a deleted translation
@@ -350,17 +350,17 @@ func (h *Handler) DeleteTranslation(c echo.Context) error {
 func (h *Handler) RestoreTranslation(c echo.Context) error {
 	translationID := c.Param("id")
 	if translationID == "" {
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "translation id is required"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("translation id is required", "see logs for details", http.StatusBadRequest))
 	}
 
 	if _, err := uuid.Parse(translationID); err != nil {
-		return c.JSON(http.StatusBadRequest, model.ErrorResponse{Message: "invalid translation id format"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("invalid translation id format", "see logs for details", http.StatusBadRequest))
 	}
 
 	if err := h.service.Organization().RestoreTranslation(c.Request().Context(), translationID); err != nil {
 		log.Printf("RestoreTranslation failed for id %s: %v", translationID, err)
-		return c.JSON(http.StatusInternalServerError, model.ErrorResponse{Message: "failed to restore translation"})
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("failed to restore translation", "see logs for details", http.StatusInternalServerError))
 	}
 
-	return c.JSON(http.StatusOK, model.SuccessResponse{Message: "Translation restored successfully"})
+	return c.JSON(http.StatusOK, model.NewSuccessResponse("Translation restored successfully", map[string]interface{}{}, http.StatusOK))
 }

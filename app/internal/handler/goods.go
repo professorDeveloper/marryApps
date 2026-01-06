@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"log"
 	"net/http"
 	"strconv"
 
@@ -25,15 +26,29 @@ import (
 func (h *Handler) CreateGood(c echo.Context) error {
 	var req model.CreateGoodRequest
 	if err := c.Bind(&req); err != nil {
-		return c.JSON(http.StatusBadRequest, echo.Map{"error": "invalid request"})
+		log.Printf("Failed to bind create good request: %v", err)
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"Invalid request format",
+			err.Error(),
+			http.StatusBadRequest,
+		))
 	}
 
 	resp, err := h.service.Goods().CreateGood(c.Request().Context(), req.Name, req.Description, req.NameI18n, req.DescriptionI18n, req.CategoryID, req.DepartmentID, req.Price, req.CookTime, req.PictureUrl, req.ColorCode)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, echo.Map{"error": err.Error()})
+		log.Printf("CreateGood failed: %v", err)
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse(
+			"Failed to create good",
+			err.Error(),
+			http.StatusInternalServerError,
+		))
 	}
 
-	return c.JSON(http.StatusCreated, resp)
+	return c.JSON(http.StatusCreated, model.NewSuccessResponse(
+		"Good created successfully",
+		resp,
+		http.StatusCreated,
+	))
 }
 
 // GetGood retrieves a good by ID
@@ -53,15 +68,28 @@ func (h *Handler) CreateGood(c echo.Context) error {
 func (h *Handler) GetGood(c echo.Context) error {
 	id := c.Param("id")
 	if id == "" {
-		return c.JSON(http.StatusBadRequest, echo.Map{"error": "id is required"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"Good ID is required",
+			"missing path parameter: id",
+			http.StatusBadRequest,
+		))
 	}
 
 	resp, err := h.service.Goods().GetGoodByID(c.Request().Context(), id)
 	if err != nil {
-		return c.JSON(http.StatusNotFound, echo.Map{"error": err.Error()})
+		log.Printf("GetGood failed for ID %s: %v", id, err)
+		return c.JSON(http.StatusNotFound, model.NewErrorResponse(
+			"Good not found",
+			err.Error(),
+			http.StatusNotFound,
+		))
 	}
 
-	return c.JSON(http.StatusOK, resp)
+	return c.JSON(http.StatusOK, model.NewSuccessResponse(
+		"Good retrieved successfully",
+		resp,
+		http.StatusOK,
+	))
 }
 
 // GetAllGoods retrieves all goods with pagination
@@ -95,10 +123,19 @@ func (h *Handler) GetAllGoods(c echo.Context) error {
 
 	resp, err := h.service.Goods().GetAllGoods(c.Request().Context(), limit, offset)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, echo.Map{"error": err.Error()})
+		log.Printf("GetAllGoods failed: %v", err)
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse(
+			"Failed to retrieve goods",
+			err.Error(),
+			http.StatusInternalServerError,
+		))
 	}
 
-	return c.JSON(http.StatusOK, resp)
+	return c.JSON(http.StatusOK, model.NewSuccessResponse(
+		"Goods retrieved successfully",
+		resp,
+		http.StatusOK,
+	))
 }
 
 // GetGoodsByCategory retrieves goods by category
@@ -119,7 +156,7 @@ func (h *Handler) GetAllGoods(c echo.Context) error {
 func (h *Handler) GetGoodsByCategory(c echo.Context) error {
 	categoryID := c.Param("category_id")
 	if categoryID == "" {
-		return c.JSON(http.StatusBadRequest, echo.Map{"error": "category_id is required"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("category_id is required", "see logs for details", http.StatusInternalServerError))
 	}
 
 	limit := int32(20)
@@ -138,7 +175,7 @@ func (h *Handler) GetGoodsByCategory(c echo.Context) error {
 
 	resp, err := h.service.Goods().GetGoodsByCategory(c.Request().Context(), categoryID, limit, offset)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, echo.Map{"error": err.Error()})
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("Operation failed", err.Error(), http.StatusInternalServerError))
 	}
 
 	return c.JSON(http.StatusOK, resp)
@@ -162,7 +199,7 @@ func (h *Handler) GetGoodsByCategory(c echo.Context) error {
 func (h *Handler) GetGoodsByDepartment(c echo.Context) error {
 	departmentID := c.Param("department_id")
 	if departmentID == "" {
-		return c.JSON(http.StatusBadRequest, echo.Map{"error": "department_id is required"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("department_id is required", "see logs for details", http.StatusInternalServerError))
 	}
 
 	limit := int32(20)
@@ -181,7 +218,7 @@ func (h *Handler) GetGoodsByDepartment(c echo.Context) error {
 
 	resp, err := h.service.Goods().GetGoodsByDepartment(c.Request().Context(), departmentID, limit, offset)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, echo.Map{"error": err.Error()})
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("Operation failed", err.Error(), http.StatusInternalServerError))
 	}
 
 	return c.JSON(http.StatusOK, resp)
@@ -208,7 +245,7 @@ func (h *Handler) GetGoodsByPriceRange(c echo.Context) error {
 	maxPrice := c.QueryParam("max_price")
 
 	if minPrice == "" || maxPrice == "" {
-		return c.JSON(http.StatusBadRequest, echo.Map{"error": "min_price and max_price are required"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("min_price and max_price are required", "see logs for details", http.StatusInternalServerError))
 	}
 
 	limit := int32(20)
@@ -227,7 +264,7 @@ func (h *Handler) GetGoodsByPriceRange(c echo.Context) error {
 
 	resp, err := h.service.Goods().GetGoodsByPriceRange(c.Request().Context(), minPrice, maxPrice, limit, offset)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, echo.Map{"error": err.Error()})
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("Operation failed", err.Error(), http.StatusInternalServerError))
 	}
 
 	return c.JSON(http.StatusOK, resp)
@@ -252,17 +289,17 @@ func (h *Handler) GetGoodsByPriceRange(c echo.Context) error {
 func (h *Handler) UpdateGood(c echo.Context) error {
 	id := c.Param("id")
 	if id == "" {
-		return c.JSON(http.StatusBadRequest, echo.Map{"error": "id is required"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("id is required", "see logs for details", http.StatusInternalServerError))
 	}
 
 	var req model.UpdateGoodRequest
 	if err := c.Bind(&req); err != nil {
-		return c.JSON(http.StatusBadRequest, echo.Map{"error": "invalid request"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("invalid request", "see logs for details", http.StatusInternalServerError))
 	}
 
 	resp, err := h.service.Goods().UpdateGood(c.Request().Context(), id, req.Name, req.Description, req.NameI18n, req.DescriptionI18n, req.CategoryID, req.DepartmentID, req.Price, req.CookTime, req.PictureUrl, req.ColorCode)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, echo.Map{"error": err.Error()})
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("Operation failed", err.Error(), http.StatusInternalServerError))
 	}
 
 	return c.JSON(http.StatusOK, resp)
@@ -287,17 +324,17 @@ func (h *Handler) UpdateGood(c echo.Context) error {
 func (h *Handler) UpdateGoodPrice(c echo.Context) error {
 	id := c.Param("id")
 	if id == "" {
-		return c.JSON(http.StatusBadRequest, echo.Map{"error": "id is required"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("id is required", "see logs for details", http.StatusInternalServerError))
 	}
 
 	var req model.UpdateGoodPriceRequest
 	if err := c.Bind(&req); err != nil {
-		return c.JSON(http.StatusBadRequest, echo.Map{"error": "invalid request"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("invalid request", "see logs for details", http.StatusInternalServerError))
 	}
 
 	resp, err := h.service.Goods().UpdateGoodPrice(c.Request().Context(), id, req.Price)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, echo.Map{"error": err.Error()})
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("Operation failed", err.Error(), http.StatusInternalServerError))
 	}
 
 	return c.JSON(http.StatusOK, resp)
@@ -319,11 +356,11 @@ func (h *Handler) UpdateGoodPrice(c echo.Context) error {
 func (h *Handler) DeleteGood(c echo.Context) error {
 	id := c.Param("id")
 	if id == "" {
-		return c.JSON(http.StatusBadRequest, echo.Map{"error": "id is required"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("id is required", "see logs for details", http.StatusInternalServerError))
 	}
 
 	if err := h.service.Goods().DeleteGood(c.Request().Context(), id); err != nil {
-		return c.JSON(http.StatusInternalServerError, echo.Map{"error": err.Error()})
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("Operation failed", err.Error(), http.StatusInternalServerError))
 	}
 
 	return c.NoContent(http.StatusNoContent)
@@ -346,12 +383,12 @@ func (h *Handler) DeleteGood(c echo.Context) error {
 func (h *Handler) RestoreGood(c echo.Context) error {
 	id := c.Param("id")
 	if id == "" {
-		return c.JSON(http.StatusBadRequest, echo.Map{"error": "id is required"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("id is required", "see logs for details", http.StatusInternalServerError))
 	}
 
 	resp, err := h.service.Goods().RestoreGood(c.Request().Context(), id)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, echo.Map{"error": err.Error()})
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("Operation failed", err.Error(), http.StatusInternalServerError))
 	}
 
 	return c.JSON(http.StatusOK, resp)
@@ -375,7 +412,7 @@ func (h *Handler) RestoreGood(c echo.Context) error {
 func (h *Handler) SearchGoods(c echo.Context) error {
 	query := c.QueryParam("query")
 	if query == "" {
-		return c.JSON(http.StatusBadRequest, echo.Map{"error": "query is required"})
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("query is required", "see logs for details", http.StatusInternalServerError))
 	}
 
 	limit := int32(20)
@@ -394,7 +431,7 @@ func (h *Handler) SearchGoods(c echo.Context) error {
 
 	resp, err := h.service.Goods().SearchGoods(c.Request().Context(), query, limit, offset)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, echo.Map{"error": err.Error()})
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("Operation failed", err.Error(), http.StatusInternalServerError))
 	}
 
 	return c.JSON(http.StatusOK, resp)
