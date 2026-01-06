@@ -2,7 +2,6 @@ package model
 
 import "time"
 
-// ==================== COMPOUNDS ====================
 
 type CreateCompoundRequest struct {
 	Name            string  `json:"name" binding:"required" example:"Pizza Dough"`
@@ -46,7 +45,6 @@ type CompoundResponse struct {
 	UpdatedAt       *time.Time `json:"updated_at,omitempty" example:"2022-01-01T00:00:00Z"`
 }
 
-// ==================== COMPOUND DETAILS ====================
 
 type CreateCompoundDetailRequest struct {
 	CompoundID   string `json:"compound_id" binding:"required" example:"123e4567-e89b-12d3-a456-426614174000"`

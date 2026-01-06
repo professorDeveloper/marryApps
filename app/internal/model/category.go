@@ -2,7 +2,6 @@ package model
 
 import "time"
 
-// ==================== CATEGORIES ====================
 
 type CreateCategoryRequest struct {
 	Name         string  `json:"name" example:"Appetizers"`

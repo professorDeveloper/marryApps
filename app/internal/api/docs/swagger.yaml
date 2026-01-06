@@ -1727,7 +1727,7 @@ definitions:
         example: admin
         type: string
     type: object
-host: localhost:8080
+host: back.staging.maryai.yurtal.tech
 info:
   contact: {}
   description: MaryAI API server with multi-language support (uz, ru, en)
@@ -10560,7 +10560,7 @@ paths:
       tags:
       - users
 schemes:
-- http
+- https
 securityDefinitions:
   BearerAuth:
     description: Type "Bearer" followed by a space and your JWT token

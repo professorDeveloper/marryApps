@@ -77,7 +77,6 @@ type DepartmentResponse struct {
 	UpdatedAt *time.Time `json:"updated_at"`
 }
 
-// ==================== HALLS ====================
 
 type CreateHallRequest struct {
 	Name     *string `json:"name"`
@@ -100,7 +99,6 @@ type HallResponse struct {
 	UpdatedAt *time.Time `json:"updated_at"`
 }
 
-// Translation-related models
 type CreateTranslationRequest struct {
 	Uz *string `json:"uz" example:"Salom"`
 	Ru *string `json:"ru" example:"Привет"`
@@ -122,7 +120,6 @@ type TranslationResponse struct {
 	UpdatedAt *time.Time `json:"updated_at,omitempty" example:"2022-01-01T00:00:00Z"`
 }
 
-// ==================== INGREDIENT GROUPS ====================
 
 type CreateIngredientGroupRequest struct {
 	Name       *string `json:"name" example:"Vegetables"`
@@ -148,7 +145,6 @@ type IngredientGroupResponse struct {
 	UpdatedAt  *time.Time `json:"updated_at,omitempty" example:"2022-01-01T00:00:00Z"`
 }
 
-// ==================== INGREDIENTS ====================
 
 type CreateIngredientRequest struct {
 	Name        *string `json:"name" example:"Tomato"`
@@ -183,7 +179,6 @@ type IngredientResponse struct {
 	UpdatedAt   *time.Time `json:"updated_at,omitempty" example:"2022-01-01T00:00:00Z"`
 }
 
-// ==================== INGREDIENT STOCK ====================
 
 type CreateIngredientStockRequest struct {
 	IngredientID *string `json:"ingredient_id" example:"123e4567-e89b-12d3-a456-426614174000"`

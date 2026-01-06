@@ -2,7 +2,6 @@ package model
 
 import "time"
 
-// ==================== GOODS ====================
 
 type CreateGoodRequest struct {
 	Name            string  `json:"name" binding:"required" example:"Pizza Margherita"`
@@ -50,7 +49,6 @@ type GoodResponse struct {
 	UpdatedAt       *time.Time `json:"updated_at,omitempty" example:"2022-01-01T00:00:00Z"`
 }
 
-// ==================== GOODS DETAILS ====================
 
 type CreateGoodDetailRequest struct {
 	GoodID       string  `json:"good_id" binding:"required" example:"123e4567-e89b-12d3-a456-426614174000"`

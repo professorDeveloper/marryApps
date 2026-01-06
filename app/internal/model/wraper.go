@@ -1,10 +1,5 @@
 package model
 
-
-
-
-
-
 type DownloadSuccessResponse struct {
     SuccessResponses[DownloadResponse]
 }

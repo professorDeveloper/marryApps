@@ -32,10 +32,10 @@ import (
 // @title MaryAI API
 // @version 1.0
 // @description MaryAI API server with multi-language support (uz, ru, en)
-// host back.staging.maryai.yurtal.tech
-// @host localhost:8080
+// host localhost:8080
+// @host back.staging.maryai.yurtal.tech
 // @BasePath /
-// @schemes http
+// @schemes https
 
 // @securityDefinitions.apikey BearerAuth
 // @in header
