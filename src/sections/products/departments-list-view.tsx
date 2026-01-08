@@ -4,8 +4,8 @@ import type { IDepartmentItem } from 'src/types/departments.tsx';
 import { useTranslation } from 'react-i18next';
 import { useMemo, useState, useCallback } from 'react';
 
-import { Avatar, Button, Dialog, DialogTitle, DialogActions, DialogContent } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
+import { Avatar, Button, Dialog, DialogTitle, DialogActions, DialogContent } from '@mui/material';
 
 import { paths } from 'src/routes/paths';
 import { useRouter } from 'src/routes/hooks';

@@ -1,11 +1,7 @@
-// ============================================================================
-// DEPARTMENTS EDIT VIEW - REAL API INTEGRATION
-// ============================================================================
-
 import type { IDepartmentFormData } from 'src/types/departments.tsx';
 import type { CardSection, GenericEditViewConfig } from 'src/components/generic-edit-view';
 
-import { useMemo, useCallback, useState } from 'react';
+import { useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { paths } from 'src/routes/paths';
@@ -15,17 +11,9 @@ import { useGetStorages, useGetDepartment, useCreateDepartment, useUpdateDepartm
 
 import { GenericEditView } from 'src/components/generic-edit-view';
 
-// ============================================================================
-// TYPES
-// ============================================================================
-
 export interface DepartmentEditViewProps {
     isNew?: boolean;
 }
-
-// ============================================================================
-// COMPONENT
-// ============================================================================
 
 export function ProductEditView({ isNew = false }: DepartmentEditViewProps) {
     const router = useRouter();

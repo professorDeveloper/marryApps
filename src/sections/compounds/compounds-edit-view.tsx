@@ -69,7 +69,6 @@ const BASIC_INFO_SECTION: CardSection = {
             label: 'semifinishedProducts.department',
             type: 'text',
             required: true,
-            defaultValue: '',
         },
     ],
 };
