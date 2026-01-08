@@ -15,6 +15,8 @@ export interface UseMealsAPIReturn {
     createMeal: (data: Partial<IMealsItem>) => Promise<IMealsItem>;
     updateMeal: (id: string, data: Partial<IMealsItem>) => Promise<IMealsItem>;
     deleteMeal: (id: string) => Promise<void>;
+    getCategories: () => Promise<any[]>;
+    getDepartments: () => Promise<any[]>;
 }
 
 // ============================================================================
@@ -203,11 +205,39 @@ export function useMealsAPI(): UseMealsAPIReturn {
         []
     );
 
+    /**
+     * Barcha categoriesni oladi
+     */
+    const getCategories = useCallback(async (): Promise<any[]> => {
+        try {
+            const data = await fetcher<any[]>(endpoints.category.list);
+            return data || [];
+        } catch (error) {
+            console.error('Failed to fetch categories:', error);
+            return [];
+        }
+    }, []);
+
+    /**
+     * Barcha departmentsni oladi
+     */
+    const getDepartments = useCallback(async (): Promise<any[]> => {
+        try {
+            const data = await fetcher<any[]>(endpoints.department.list);
+            return data || [];
+        } catch (error) {
+            console.error('Failed to fetch departments:', error);
+            return [];
+        }
+    }, []);
+
     return {
         getMeals,
         getMealById,
         createMeal,
         updateMeal,
         deleteMeal,
+        getCategories,
+        getDepartments,
     };
 }

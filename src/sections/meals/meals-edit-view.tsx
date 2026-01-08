@@ -65,12 +65,7 @@ const BASIC_INFO_SECTION: CardSection = {
             key: 'category_id',
             label: 'mealsProducts.category',
             type: 'select',
-            options: [
-                { value: 'breakfast', label: 'mealsProducts.breakfast' },
-                { value: 'lunch', label: 'mealsProducts.lunch' },
-                { value: 'dinner', label: 'mealsProducts.dinner' },
-                { value: 'snack', label: 'mealsProducts.snack' },
-            ],
+            options: [], // Will be populated dynamically
             required: true,
             defaultValue: '',
         },
@@ -78,7 +73,7 @@ const BASIC_INFO_SECTION: CardSection = {
             key: 'department_id',
             label: 'mealsProducts.department',
             type: 'select',
-            options: [], // Will be populated from API
+            options: [], // Will be populated dynamically
             required: true,
             defaultValue: '',
         },
@@ -87,14 +82,12 @@ const BASIC_INFO_SECTION: CardSection = {
             label: 'mealsProducts.price',
             type: 'number',
             required: true,
-            defaultValue: 0,
         },
         {
             key: 'cook_time',
             label: 'mealsProducts.cookingTime',
             type: 'number',
             required: false,
-            defaultValue: 0,
         },
     ],
 };
@@ -109,11 +102,13 @@ export function MealEditView({ isNew = false }: MealEditViewProps) {
     const { t } = useTranslation('menu');
 
     // API hooks
-    const { getMealById, createMeal, updateMeal } = useMealsAPI();
+    const { getMealById, createMeal, updateMeal, getCategories, getDepartments } = useMealsAPI();
 
     // State
     const [meal, setMeal] = useState<Partial<IMealsItem> | null>(null);
     const [loading, setLoading] = useState(!isNew);
+    const [categories, setCategories] = useState<any[]>([]);
+    const [departments, setDepartments] = useState<any[]>([]);
 
     const loadMeal = useCallback(async () => {
         if (!mealId) return;
@@ -135,6 +130,20 @@ export function MealEditView({ isNew = false }: MealEditViewProps) {
         }
     }, [mealId, isNew, loadMeal]);
 
+    // Load categories and departments
+    useEffect(() => {
+        const loadSelectOptions = async () => {
+            const [catsData, deptsData] = await Promise.all([
+                getCategories(),
+                getDepartments(),
+            ]);
+            setCategories(catsData);
+            setDepartments(deptsData);
+        };
+
+        loadSelectOptions();
+    }, [getCategories, getDepartments]);
+
     // Create translated copies of sections
     const IMAGE_SECTION_T: CardSection = {
         ...IMAGE_SECTION,
@@ -149,13 +158,49 @@ export function MealEditView({ isNew = false }: MealEditViewProps) {
     const BASIC_INFO_SECTION_T: CardSection = {
         ...BASIC_INFO_SECTION,
         title: t(BASIC_INFO_SECTION.title),
-        fields: BASIC_INFO_SECTION.fields.map((f) => ({
-            ...f,
-            label: t(f.label),
-            options: Array.isArray(f.options)
-                ? f.options.map((opt) => ({ ...opt, label: t(opt.label) }))
-                : f.options,
-        })),
+        fields: BASIC_INFO_SECTION.fields.map((f) => {
+            // Map categories to options
+            if (f.key === 'category_id') {
+                return {
+                    ...f,
+                    label: t(f.label),
+                    options: categories.map((cat) => ({
+                        value: cat.id,
+                        label: cat.name,
+                    })),
+                };
+            }
+
+            // Map departments to options
+            if (f.key === 'department_id') {
+                return {
+                    ...f,
+                    label: t(f.label),
+                    options: departments.map((dept) => ({
+                        value: dept.id,
+                        label: dept.name,
+                    })),
+                };
+            }
+
+            // Translate other options
+            if (Array.isArray(f.options) && f.options.length > 0) {
+                return {
+                    ...f,
+                    label: t(f.label),
+                    options: f.options.map((opt) => ({
+                        ...opt,
+                        label: t(opt.label),
+                    })),
+                };
+            }
+
+            return {
+                ...f,
+                label: t(f.label),
+                placeholder: f.placeholder ? t(f.placeholder) : undefined,
+            };
+        }),
     };
 
     // Handle form submission

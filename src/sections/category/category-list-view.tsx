@@ -1,12 +1,13 @@
 import type { GridColDef } from '@mui/x-data-grid';
 import type { ICategory } from 'src/types/category';
 
-import { useMemo, useCallback } from 'react';
+import { useMemo, useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import Box from '@mui/material/Box';
 import Avatar from '@mui/material/Avatar';
 import { useTheme } from '@mui/material/styles';
+import { Button, Dialog, DialogTitle, DialogActions, DialogContent } from '@mui/material';
 
 import { paths } from 'src/routes/paths';
 
@@ -17,6 +18,7 @@ import { getInitials, getAvatarUrl, getAvatarColor } from 'src/utils/avatar';
 import { useGetCategories, useDeleteCategory } from 'src/actions/categories';
 import { useGetStorageName, useGetDepartmentName } from 'src/actions/departments';
 
+import { toast } from 'src/components/snackbar';
 import { Iconify } from 'src/components/iconify';
 import { GenericTableView } from 'src/components/generic-table-view';
 import { CustomGridActionsCellItem } from 'src/components/custom-data-grid';
@@ -113,6 +115,10 @@ export function CategoryListView() {
   const { categories, categoriesLoading } = useGetCategories();
   const { deleteCategory } = useDeleteCategory();
 
+  // State
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [categoryToDelete, setCategoryToDelete] = useState<string | null>(null);
+
   // View modal hook
   const { isOpen, selectedData, openModal, closeModal } = useGenericViewModal<ICategory>();
 
@@ -165,10 +171,14 @@ export function CategoryListView() {
             onClick={() => openModal(params.row)}
           />,
           <CustomGridActionsCellItem
+            key="delete"
             showInMenu
             label={t('categories.delete')}
             icon={<Iconify icon="solar:trash-bin-trash-bold" />}
-            onClick={() => handleDelete(params.row.id)}
+            onClick={() => {
+              setCategoryToDelete(params.row.id);
+              setDeleteDialogOpen(true);
+            }}
             style={{ color: theme.vars.palette.error.main }}
           />,
         ],
@@ -177,21 +187,37 @@ export function CategoryListView() {
     [theme.vars.palette.error.main, t]
   );
 
-  const handleDelete = useCallback((id: string) => {
-    if (window.confirm(t('categories.deleteConfirm', 'Are you sure?'))) {
-      deleteCategory(id).catch((err) => {
-        console.error('Error deleting category:', err);
-      });
+  // Handle delete confirmation
+  const handleConfirmDelete = useCallback(async () => {
+    if (categoryToDelete) {
+      try {
+        await deleteCategory(categoryToDelete);
+        toast.success(t('success.deleteSuccess'));
+      } catch (error) {
+        console.error('Error deleting category:', error);
+        toast.error(t('error.deleteFailed'));
+      } finally {
+        setDeleteDialogOpen(false);
+        setCategoryToDelete(null);
+      }
     }
-  }, [deleteCategory, t]);
+  }, [categoryToDelete, deleteCategory, t]);
+
+  const handleDelete = useCallback((id: string) => {
+    setCategoryToDelete(id);
+    setDeleteDialogOpen(true);
+  }, []);
 
   const handleDeleteMultiple = useCallback((ids: string[]) => {
     if (window.confirm(t('categories.deleteConfirmMultiple', 'Are you sure?'))) {
-      ids.forEach((id) => {
-        deleteCategory(id).catch((err) => {
-          console.error('Error deleting category:', err);
+      Promise.all(ids.map(id => deleteCategory(id)))
+        .then(() => {
+          toast.success(t('success.deleteSuccess'));
+        })
+        .catch((error) => {
+          console.error('Error deleting categories:', error);
+          toast.error(t('error.deleteFailed'));
         });
-      });
     }
   }, [deleteCategory, t]);
 
@@ -235,6 +261,36 @@ export function CategoryListView() {
         slideDirection="left"
         position="right"
       />
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog
+        open={deleteDialogOpen}
+        onClose={() => setDeleteDialogOpen(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>{t('categories.deleteConfirm')}</DialogTitle>
+        <DialogContent>
+          {t('categories.deleteMessage')}
+        </DialogContent>
+        <DialogActions>
+          <Button
+            variant="outlined"
+            color="inherit"
+            onClick={() => setDeleteDialogOpen(false)}
+          >
+            {t('categories.cancel')}
+          </Button>
+          <Button
+            variant="contained"
+            color="error"
+            onClick={handleConfirmDelete}
+            autoFocus
+          >
+            {t('categories.delete')}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </>
   );
 }

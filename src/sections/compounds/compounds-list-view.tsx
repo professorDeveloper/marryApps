@@ -1,7 +1,3 @@
-// ============================================================================
-// COMPOUNDS LIST VIEW - COMPLETE CRUD INTEGRATION
-// ============================================================================
-
 import type { GridColDef } from '@mui/x-data-grid';
 import type { ICompound } from 'src/types/compounds';
 
@@ -12,6 +8,7 @@ import Box from '@mui/material/Box';
 import Avatar from '@mui/material/Avatar';
 import { useTheme } from '@mui/material/styles';
 import ListItemText from '@mui/material/ListItemText';
+import { Button, Dialog, DialogTitle, DialogActions, DialogContent } from '@mui/material';
 
 import { paths } from 'src/routes/paths';
 
@@ -28,9 +25,6 @@ import { CustomGridActionsCellItem } from 'src/components/custom-data-grid';
 import { GenericViewModal, SpecificationsTable } from 'src/components/generic-view-view';
 import { formatDate, formatPrice } from 'src/components/generic-view-view/modal-formatters';
 
-// ============================================================================
-// CUSTOM RENDERERS
-// ============================================================================
 
 /**
  * Compound item renderer with avatar and name
@@ -133,6 +127,8 @@ export function HalfMeals() {
     const [data, setData] = useState<ICompound[]>([]);
     const [loading, setLoading] = useState(true);
     const [departments, setDepartments] = useState<Record<string, string>>({});
+    const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+    const [compoundToDelete, setCompoundToDelete] = useState<string | null>(null);
 
     // View modal
     const { isOpen, selectedData, openModal, closeModal } = useGenericViewModal<ICompound>();
@@ -283,10 +279,14 @@ export function HalfMeals() {
                         onClick={() => openModal(params.row)}
                     />,
                     <CustomGridActionsCellItem
+                        key="delete"
                         showInMenu
                         label={t('semifinishedProducts.delete')}
                         icon={<Iconify icon="solar:trash-bin-trash-bold" />}
-                        onClick={() => handleDelete(params.row.id)}
+                        onClick={() => {
+                            setCompoundToDelete(params.row.id);
+                            setDeleteDialogOpen(true);
+                        }}
                         style={{ color: theme.vars.palette.error.main }}
                     />,
                 ],
@@ -295,19 +295,30 @@ export function HalfMeals() {
         [t, theme.vars.palette.error.main]
     );
 
-    // Handle delete single
-    const handleDelete = useCallback(
-        async (id: string) => {
+    // Handle delete confirmation
+    const handleConfirmDelete = useCallback(async () => {
+        if (compoundToDelete) {
             try {
-                await deleter(endpoints.compound.delete(id));
-                setData((prev) => prev.filter((item) => item.id !== id));
+                await deleter(endpoints.compound.delete(compoundToDelete));
+                setData((prev) => prev.filter((item) => item.id !== compoundToDelete));
                 toast.success(t('success.deleteSuccess'));
             } catch (error) {
                 console.error('Error deleting compound:', error);
                 toast.error(t('error.deleteFailed'));
+            } finally {
+                setDeleteDialogOpen(false);
+                setCompoundToDelete(null);
             }
+        }
+    }, [compoundToDelete, t]);
+
+    // Handle delete single
+    const handleDelete = useCallback(
+        async (id: string) => {
+            setCompoundToDelete(id);
+            setDeleteDialogOpen(true);
         },
-        [t]
+        []
     );
 
     // Handle delete multiple
@@ -367,6 +378,36 @@ export function HalfMeals() {
                 slideDirection="left"
                 position="right"
             />
+
+            {/* Delete Confirmation Dialog */}
+            <Dialog
+                open={deleteDialogOpen}
+                onClose={() => setDeleteDialogOpen(false)}
+                maxWidth="sm"
+                fullWidth
+            >
+                <DialogTitle>{t('semifinishedProducts.deleteConfirm')}</DialogTitle>
+                <DialogContent>
+                    {t('semifinishedProducts.deleteMessage')}
+                </DialogContent>
+                <DialogActions>
+                    <Button
+                        variant="outlined"
+                        color="inherit"
+                        onClick={() => setDeleteDialogOpen(false)}
+                    >
+                        {t('semifinishedProducts.cancel')}
+                    </Button>
+                    <Button
+                        variant="contained"
+                        color="error"
+                        onClick={handleConfirmDelete}
+                        autoFocus
+                    >
+                        {t('semifinishedProducts.delete')}
+                    </Button>
+                </DialogActions>
+            </Dialog>
         </>
     );
 }

@@ -5,7 +5,7 @@
 import type { IDepartmentFormData } from 'src/types/departments.tsx';
 import type { CardSection, GenericEditViewConfig } from 'src/components/generic-edit-view';
 
-import { useMemo, useCallback } from 'react';
+import { useMemo, useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { paths } from 'src/routes/paths';
@@ -49,7 +49,7 @@ export function ProductEditView({ isNew = false }: DepartmentEditViewProps) {
         [storages]
     );
 
-    
+
     // Create section configs with translations
     const BASIC_INFO_SECTION: CardSection = {
         id: 'basic',
@@ -112,6 +112,7 @@ export function ProductEditView({ isNew = false }: DepartmentEditViewProps) {
                 router.push(paths.menu.product.root);
             } catch (err) {
                 console.error('Error saving department:', err);
+                // Re-throw the error to be handled by the form
                 throw err;
             }
         },

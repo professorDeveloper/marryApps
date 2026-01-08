@@ -4,7 +4,7 @@ import type { IDepartmentItem } from 'src/types/departments.tsx';
 import { useTranslation } from 'react-i18next';
 import { useMemo, useState, useCallback } from 'react';
 
-import { Avatar } from '@mui/material';
+import { Avatar, Button, Dialog, DialogTitle, DialogActions, DialogContent } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
 
 import { paths } from 'src/routes/paths';
@@ -12,6 +12,7 @@ import { useRouter } from 'src/routes/hooks';
 
 import { useGetStorages, useGetDepartments, useGetStorageName, useDeleteDepartment } from 'src/actions/departments';
 
+import { toast } from 'src/components/snackbar';
 import { Iconify } from 'src/components/iconify';
 import {
   GenericTableView,
@@ -90,6 +91,8 @@ export function ProductListView() {
 
   const [viewModalOpen, setViewModalOpen] = useState(false);
   const [selectedDepartment, setSelectedDepartment] = useState<IDepartmentItem | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [departmentToDelete, setDepartmentToDelete] = useState<string | null>(null);
 
   // Get departments from API
   const { departments, departmentsLoading, departmentsError } = useGetDepartments();
@@ -152,10 +155,14 @@ export function ProductListView() {
             onClick={() => handleViewDepartment(params.row)}
           />,
           <CustomGridActionsCellItem
+            key="delete"
             showInMenu
             label={t('departments.delete')}
             icon={<Iconify icon="solar:trash-bin-trash-bold" />}
-            onClick={() => handleDeleteDepartment(params.row.id)}
+            onClick={() => {
+              setDepartmentToDelete(params.row.id);
+              setDeleteDialogOpen(true);
+            }}
             style={{ color: theme.vars.palette.error.main }}
           />,
         ],
@@ -168,18 +175,26 @@ export function ProductListView() {
     router.push(paths.menu.product.edit(id));
   }, [router]);
 
-  const handleDeleteDepartment = useCallback(
-    async (id: string) => {
+  // Handle delete confirmation
+  const handleConfirmDelete = useCallback(async () => {
+    if (departmentToDelete) {
       try {
-        await deleteDepartment(id);
-        // Success notification can be added here
+        await deleteDepartment(departmentToDelete);
+        toast.success(t('success.deleteSuccess'));
       } catch (error) {
         console.error('Failed to delete:', error);
-        // Error notification can be added here
+        toast.error(t('error.deleteFailed'));
+      } finally {
+        setDeleteDialogOpen(false);
+        setDepartmentToDelete(null);
       }
-    },
-    [deleteDepartment]
-  );
+    }
+  }, [departmentToDelete, deleteDepartment, t]);
+
+  const handleDeleteDepartment = useCallback((id: string) => {
+    setDepartmentToDelete(id);
+    setDeleteDialogOpen(true);
+  }, []);
 
   const handleViewDepartment = useCallback((department: IDepartmentItem) => {
     setSelectedDepartment(department);
@@ -265,6 +280,36 @@ export function ProductListView() {
         slideDirection="left"
         position="right"
       />
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog
+        open={deleteDialogOpen}
+        onClose={() => setDeleteDialogOpen(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>{t('departments.deleteConfirm')}</DialogTitle>
+        <DialogContent>
+          {t('departments.deleteMessage')}
+        </DialogContent>
+        <DialogActions>
+          <Button
+            variant="outlined"
+            color="inherit"
+            onClick={() => setDeleteDialogOpen(false)}
+          >
+            {t('departments.cancel')}
+          </Button>
+          <Button
+            variant="contained"
+            color="error"
+            onClick={handleConfirmDelete}
+            autoFocus
+          >
+            {t('departments.delete')}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </>
   );
 }

@@ -127,7 +127,10 @@
     "created": "Yaratilgan",
     "updated": "Yangilangan",
     "basicInfo": "Asosiy ma'lumotlar",
-    "storageSection": "Ombor"
+    "storageSection": "Ombor",
+    "deleteConfirm": "Fayllar o'chirilsinmi?",
+    "deleteMessage": "Tanlangan fayllar tizimdan butunlay o‘chiriladi va ushbu amalni bekor qilish yoki fayllarni tiklash mumkin emas.",
+    "cancel": "Bekor qilish"
   },
   "categories": {
     "title": "Kategoriyalar",
@@ -165,7 +168,10 @@
     "storage": "Ombor",
     "department": "Bo'lim",
     "name_i18n": "Nomi (tarjima)",
-    "storageDepartmentTitle": "Ombor va bo'lim"
+    "storageDepartmentTitle": "Ombor va bo'lim",
+    "deleteConfirm": "Fayllar o'chirilsinmi?",
+    "deleteMessage": "Tanlangan fayllar tizimdan butunlay o‘chiriladi va ushbu amalni bekor qilish yoki fayllarni tiklash mumkin emas.",
+    "cancel": "Bekor qilish"
   },
   "semifinishedProducts": {
     "title": "Yarim tayyor mahsulotlar",
@@ -209,7 +215,10 @@
     "measurement": "O'lchov",
     "department": "Bo'lim",
     "description": "Tavsif",
-    "newTitle": "Yarim tayyor mahsulot qo'shish"
+    "newTitle": "Yarim tayyor mahsulot qo'shish",
+    "deleteConfirm": "Fayllar o'chirilsinmi?",
+    "deleteMessage": "Tanlangan fayllar tizimdan butunlay o‘chiriladi va ushbu amalni bekor qilish yoki fayllarni tiklash mumkin emas.",
+    "cancel":"Bekor qilish"
   },
   "mealsProducts": {
     "title": "Taomlar",
@@ -269,7 +278,10 @@
     "file_types": "JPG, PNG, GIF - maksimal 5MB",
     "upload_another": "Boshqa rasm yuklash",
     "alert_select_image": "Iltimos, rasm faylini tanlang",
-    "alert_max_size": "Fayl hajmi 5MB dan kichik bo'lishi kerak"
+    "alert_max_size": "Fayl hajmi 5MB dan kichik bo'lishi kerak",
+    "deleteConfirm": "Fayllar o'chirilsinmi?",
+    "deleteMessage": "Tanlangan fayllar tizimdan butunlay o‘chiriladi va ushbu amalni bekor qilish yoki fayllarni tiklash mumkin emas.",
+    "cancel":"Bekor qilish"
   },
   "overview": {
     "subheader": "Umumiy",
