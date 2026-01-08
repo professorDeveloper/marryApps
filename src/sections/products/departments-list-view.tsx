@@ -46,7 +46,7 @@ function RenderCellDepartmentName({ params }: { params: any }) {
       </Avatar>
       <div>
         <div style={{ fontWeight: 500 }}>{params.row.name}</div>
-        <div style={{ fontSize: '0.75rem', opacity: 0.6 }}>{params.row.name_i18n}</div>
+        {/* <div style={{ fontSize: '0.75rem', opacity: 0.6 }}>{params.row.name_i18n}</div> */}
       </div>
     </div>
   );
@@ -121,13 +121,13 @@ export function ProductListView() {
         sortable: true,
         renderCell: (params) => <RenderCellDate params={params} dateField="created_at" />,
       },
-      {
-        field: 'updated_at',
-        headerName: t('departments.updated'),
-        width: 200,
-        sortable: true,
-        renderCell: (params) => <RenderCellDate params={params} dateField="updated_at" />,
-      },
+      // {
+      //   field: 'updated_at',
+      //   headerName: t('departments.updated'),
+      //   width: 200,
+      //   sortable: true,
+      //   renderCell: (params) => <RenderCellDate params={params} dateField="updated_at" />,
+      // },
       {
         type: 'actions',
         field: 'actions',

@@ -1,7 +1,3 @@
-// ============================================================================
-// GENERIC EDIT VIEW - MAIN COMPONENT
-// ============================================================================
-
 import type { FC } from 'react';
 import type { CardSection, GenericEditViewProps } from './types';
 

@@ -1,75 +1,50 @@
-import type { IDateValue } from './common';
-
 // ============================================================================
-// ORDER TYPES
+// MEALS TYPES
 // ============================================================================
 
 export type IMealsTableFilters = {
-    status: string[];
+    status?: string[];
 };
 
+/**
+ * Backend API response uchun type
+ */
+export type IMealAPIResponse = {
+    id: string;
+    name: string;
+    description: string;
+    category_id: string;
+    department_id: string;
+    picture_url: string | null;
+    price: string;
+    cook_time: number;
+    created_at: string;
+    updated_at: string;
+};
+
+/**
+ * Frontend'da ishlatiladigan enriched meal type
+ */
 export type IMealsItem = {
     id: string;
-    sku: string;
-    orderNumber: string;
     name: string;
-    section?: string;
-    stock?: string;
-    unit: string;
-    category: string;
-    originalPrice: number;
-    price?: number;
-    profit?: number;
-    profitnumber?: number;
-    quantity: number;
-    coverUrl: string;
-    createdAt: IDateValue;
-    customer: {
+    description: string;
+    category_id: string;
+    category?: {
         id: string;
         name: string;
-        email: string;
-        avatarUrl: string;
-        ipAddress: string;
     };
-    items: Array<{
+    department_id: string;
+    department?: {
         id: string;
-        sku: string;
         name: string;
-        unit: string;
-        category: string;
-        originalPrice: number;
-        quantity: number;
-        price: number;
-        coverUrl: string;
-    }>;
-    delivery: {
-        shipBy: string;
-        speedy: string;
-        trackingNumber: string;
     };
-    shippingAddress: {
-        fullAddress: string;
-        phoneNumber: string;
-    };
-    payment: {
-        cardType: string;
-        cardNumber: string;
-    };
-    history: {
-        orderTime: IDateValue;
-        paymentTime: IDateValue;
-        deliveryTime: IDateValue;
-        completionTime: IDateValue;
-        timeline: Array<{
-            title: string;
-            time: IDateValue;
-        }>;
-    };
-    subtotal: number;
-    shipping: number;
-    discount: number;
-    taxes: number;
-    totalAmount: number;
-    totalQuantity: number;
-    status: 'pending' | 'completed' | 'cancelled' | 'refunded';
+    picture_url: string | null;
+    price: number;
+    cook_time: number;
+    created_at: string;
+    updated_at: string;
+    // UI uchun qo'shimcha fieldlar
+    coverUrl?: string;
+    avatar?: string; // Agar rasm bo'lmasa harflar
 };

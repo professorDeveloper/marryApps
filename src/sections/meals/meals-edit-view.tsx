@@ -1,14 +1,18 @@
 // ============================================================================
-// MEALS EDIT VIEW - USING GENERIC EDIT COMPONENT
+// MEALS EDIT VIEW - USING GENERIC EDIT COMPONENT WITH BACKEND
 // ============================================================================
 
+import type { IMealsItem } from 'src/types/meals';
 import type { CardSection, GenericEditViewConfig } from 'src/components/generic-edit-view';
 
-import { useCallback } from 'react';
+import { useParams } from 'react-router';
 import { useTranslation } from 'react-i18next';
+import { useState, useEffect, useCallback } from 'react';
 
 import { paths } from 'src/routes/paths';
 import { useRouter } from 'src/routes/hooks';
+
+import { useMealsAPI } from 'src/hooks/use-meals-api';
 
 import { GenericEditView } from 'src/components/generic-edit-view';
 
@@ -17,7 +21,6 @@ import { GenericEditView } from 'src/components/generic-edit-view';
 // ============================================================================
 
 export interface MealEditViewProps {
-    meal?: Record<string, any>;
     isNew?: boolean;
 }
 
@@ -30,7 +33,7 @@ const IMAGE_SECTION: CardSection = {
     title: 'mealsProducts.imageTitle',
     fields: [
         {
-            key: 'image',
+            key: 'picture_url',
             label: 'mealsProducts.imageUrl',
             type: 'url',
             placeholder: 'https://example.com/image.jpg',
@@ -52,137 +55,46 @@ const BASIC_INFO_SECTION: CardSection = {
             defaultValue: '',
         },
         {
-            key: 'section',
+            key: 'description',
+            label: 'mealsProducts.description',
+            type: 'textarea',
+            required: false,
+            defaultValue: '',
+        },
+        {
+            key: 'category_id',
             label: 'mealsProducts.category',
             type: 'select',
             options: [
-                { value: 'breakfast', label: 'mealsProducts.tushlik' },
-                { value: 'lunch', label: 'mealsProducts.tushlik' },
-                { value: 'dinner', label: 'mealsProducts.kechki' },
+                { value: 'breakfast', label: 'mealsProducts.breakfast' },
+                { value: 'lunch', label: 'mealsProducts.lunch' },
+                { value: 'dinner', label: 'mealsProducts.dinner' },
                 { value: 'snack', label: 'mealsProducts.snack' },
             ],
+            required: true,
             defaultValue: '',
         },
         {
-            key: 'inventory',
-            label: 'mealsProducts.inventory',
+            key: 'department_id',
+            label: 'mealsProducts.department',
             type: 'select',
-            options: [
-                { value: 'breakfast', label: 'mealsProducts.tushlik' },
-                { value: 'lunch', label: 'mealsProducts.tushlik' },
-                { value: 'dinner', label: 'mealsProducts.kechki' },
-                { value: 'snack', label: 'mealsProducts.snack' },
-            ],
-            defaultValue: '',
-        },
-   {
-            key: 'name',
-            label: 'mealsProducts.price',
-            type: 'text',
+            options: [], // Will be populated from API
             required: true,
             defaultValue: '',
         },
-         {
-            key: 'name',
-            label: 'mealsProducts.cookingTime',
-            type: 'text',
-            required: true,
-            defaultValue: '',
-        },
-         {
-            key: 'name',
-            label: 'mealsProducts.barcode',
-            type: 'text',
-            required: true,
-            defaultValue: '',
-        },
-    ],
-};
-
-const NUTRITION_SECTION: CardSection = {
-    id: 'nutrition',
-    title: 'mealsProducts.nutritionTitle',
-    columns: 2,
-    fields: [
-        {
-            key: 'calories',
-            label: 'mealsProducts.calories',
-            type: 'number',
-            defaultValue: 0,
-        },
-        {
-            key: 'protein',
-            label: 'mealsProducts.protein',
-            type: 'number',
-            defaultValue: 0,
-        },
-        {
-            key: 'carbs',
-            label: 'mealsProducts.carbs',
-            type: 'number',
-            defaultValue: 0,
-        },
-        {
-            key: 'fat',
-            label: 'mealsProducts.fat',
-            type: 'number',
-            defaultValue: 0,
-        },
-    ],
-};
-
-const PRICE_SECTION: CardSection = {
-    id: 'price',
-    title: 'mealsProducts.priceTitle',
-    columns: 2,
-    fields: [
         {
             key: 'price',
             label: 'mealsProducts.price',
             type: 'number',
+            required: true,
             defaultValue: 0,
         },
         {
-            key: 'discount',
-            label: 'mealsProducts.discount',
+            key: 'cook_time',
+            label: 'mealsProducts.cookingTime',
             type: 'number',
+            required: false,
             defaultValue: 0,
-        },
-    ],
-};
-
-const SETTINGS_SECTION: CardSection = {
-    id: 'settings',
-    title: 'mealsProducts.settingsTitle',
-    columns: 2,
-    fields: [
-        {
-            key: 'publish',
-            label: 'mealsProducts.publish',
-            type: 'select',
-            options: [
-                { value: 'published', label: 'mealsProducts.published' },
-                { value: 'draft', label: 'mealsProducts.draft' },
-            ],
-            defaultValue: 'draft',
-        },
-        {
-            key: 'isSpicy',
-            label: 'mealsProducts.isSpicy',
-            type: 'switch',
-            defaultValue: false,
-        },
-        {
-            key: 'isVegetarian',
-            label: 'mealsProducts.isVegetarian',
-            type: 'switch',
-            defaultValue: false,
-        },
-        {
-            key: 'isPopular',
-            label: 'mealsProducts.isPopular',
-            type: 'switch',
-            defaultValue: false,
         },
     ],
 };
@@ -191,59 +103,57 @@ const SETTINGS_SECTION: CardSection = {
 // COMPONENT
 // ============================================================================
 
-export function MealEditView({ meal, isNew = false }: MealEditViewProps) {
+export function MealEditView({ isNew = false }: MealEditViewProps) {
+    const { id: mealId } = useParams<{ id: string }>();
     const router = useRouter();
     const { t } = useTranslation('menu');
 
-    // Create translated copies of sections so UI gets actual strings instead of raw keys
+    // API hooks
+    const { getMealById, createMeal, updateMeal } = useMealsAPI();
+
+    // State
+    const [meal, setMeal] = useState<Partial<IMealsItem> | null>(null);
+    const [loading, setLoading] = useState(!isNew);
+
+    const loadMeal = useCallback(async () => {
+        if (!mealId) return;
+        setLoading(true);
+        try {
+            const data = await getMealById(mealId);
+            setMeal(data);
+        } finally {
+            setLoading(false);
+        }
+    }, [mealId, getMealById]);
+
+    // Load meal if editing
+    useEffect(() => {
+        if (!isNew && mealId) {
+            loadMeal();
+        } else if (isNew) {
+            setLoading(false);
+        }
+    }, [mealId, isNew, loadMeal]);
+
+    // Create translated copies of sections
     const IMAGE_SECTION_T: CardSection = {
         ...IMAGE_SECTION,
-        title: typeof IMAGE_SECTION.title === 'string' ? t(IMAGE_SECTION.title) : IMAGE_SECTION.title,
+        title: t(IMAGE_SECTION.title),
         fields: IMAGE_SECTION.fields.map((f) => ({
             ...f,
-            label: typeof f.label === 'string' && f.label.startsWith('mealsProducts.') ? t(f.label) : f.label,
-            placeholder: typeof f.placeholder === 'string' && f.placeholder.startsWith('mealsProducts.') ? t(f.placeholder) : f.placeholder,
+            label: t(f.label),
+            placeholder: f.placeholder ? t(f.placeholder) : undefined,
         })),
     };
 
     const BASIC_INFO_SECTION_T: CardSection = {
         ...BASIC_INFO_SECTION,
-        title: typeof BASIC_INFO_SECTION.title === 'string' ? t(BASIC_INFO_SECTION.title) : BASIC_INFO_SECTION.title,
+        title: t(BASIC_INFO_SECTION.title),
         fields: BASIC_INFO_SECTION.fields.map((f) => ({
             ...f,
-            label: typeof f.label === 'string' && f.label.startsWith('mealsProducts.') ? t(f.label) : f.label,
+            label: t(f.label),
             options: Array.isArray(f.options)
-                ? f.options.map((opt: any) => ({ ...opt, label: typeof opt.label === 'string' && opt.label.startsWith('mealsProducts.') ? t(opt.label) : opt.label }))
-                : f.options,
-        })),
-    };
-
-    const NUTRITION_SECTION_T: CardSection = {
-        ...NUTRITION_SECTION,
-        title: typeof NUTRITION_SECTION.title === 'string' ? t(NUTRITION_SECTION.title) : NUTRITION_SECTION.title,
-        fields: NUTRITION_SECTION.fields.map((f) => ({
-            ...f,
-            label: typeof f.label === 'string' && f.label.startsWith('mealsProducts.') ? t(f.label) : f.label,
-        })),
-    };
-
-    const PRICE_SECTION_T: CardSection = {
-        ...PRICE_SECTION,
-        title: typeof PRICE_SECTION.title === 'string' ? t(PRICE_SECTION.title) : PRICE_SECTION.title,
-        fields: PRICE_SECTION.fields.map((f) => ({
-            ...f,
-            label: typeof f.label === 'string' && f.label.startsWith('mealsProducts.') ? t(f.label) : f.label,
-        })),
-    };
-
-    const SETTINGS_SECTION_T: CardSection = {
-        ...SETTINGS_SECTION,
-        title: typeof SETTINGS_SECTION.title === 'string' ? t(SETTINGS_SECTION.title) : SETTINGS_SECTION.title,
-        fields: SETTINGS_SECTION.fields.map((f) => ({
-            ...f,
-            label: typeof f.label === 'string' && f.label.startsWith('mealsProducts.') ? t(f.label) : f.label,
-            options: Array.isArray(f.options)
-                ? f.options.map((opt: any) => ({ ...opt, label: typeof opt.label === 'string' && opt.label.startsWith('mealsProducts.') ? t(opt.label) : opt.label }))
+                ? f.options.map((opt) => ({ ...opt, label: t(opt.label) }))
                 : f.options,
         })),
     };
@@ -252,32 +162,33 @@ export function MealEditView({ meal, isNew = false }: MealEditViewProps) {
     const handleSubmit = useCallback(
         async (formData: Record<string, any>) => {
             try {
-                // TODO: Implement API call to save meal
-                console.log('Saving meal:', formData);
+                if (isNew) {
+                    await createMeal(formData);
+                } else if (mealId) {
+                    await updateMeal(mealId, formData);
+                }
 
-                // After successful save, redirect to meal list
                 router.push(paths.menu.meals.root);
             } catch (err) {
                 console.log("Error saving meal:", err);
             }
         },
-        [router]
+        [isNew, mealId, createMeal, updateMeal, router]
     );
 
     // Handle delete
     const handleDelete = useCallback(async () => {
         try {
-            // TODO: Implement API call to delete meal
-            console.log('Deleting meal:', meal?.id);
-
+            // Note: Delete functionality should be in useMealsAPI
+            // This will be called if the user clicks delete button
             router.push(paths.menu.meals.root);
         } catch (err) {
             console.log("Error deleting meal:", err);
         }
-    }, [meal?.id, router]);
+    }, [router]);
 
     const config: GenericEditViewConfig = {
-        title: t('mealsProducts.title'),
+        title: isNew ? t('mealsProducts.new') : t('mealsProducts.edit'),
         entityName: 'meal',
         breadcrumbs: [
             { name: t('app'), href: paths.menu.root },
@@ -285,21 +196,20 @@ export function MealEditView({ meal, isNew = false }: MealEditViewProps) {
             { name: isNew ? t('mealsProducts.new') : t('mealsProducts.edit'), href: '' },
         ],
         leftSidecard: IMAGE_SECTION_T,
-        sections: [
-            BASIC_INFO_SECTION_T,
-            // NUTRITION_SECTION_T,
-            // PRICE_SECTION_T,
-            // SETTINGS_SECTION_T,
-        ],
+        sections: [BASIC_INFO_SECTION_T],
         onSubmit: handleSubmit,
         onDelete: !isNew ? handleDelete : undefined,
         showDeleteButton: !isNew,
     };
 
+    if (loading) {
+        return <div>{t('mealsProducts.loading')}</div>;
+    }
+
     return (
         <GenericEditView
             config={config}
-            data={meal}
+            data={meal || undefined}
             isNew={isNew}
         />
     );

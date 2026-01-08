@@ -147,7 +147,21 @@ export const endpoints = {
     update: (id: string) => `/api/v1/departments/${id}`,
     delete: (id: string) => `/api/v1/departments/${id}`,
   },
+  compound: {
+    list: '/api/v1/compounds',
+    details: (id: string) => `/api/v1/compounds/${id}`,
+    create: '/api/v1/compounds',
+    update: (id: string) => `/api/v1/compounds/${id}`,
+    delete: (id: string) => `/api/v1/compounds/${id}`,
+  },
   storage: {
     list: '/api/v1/storages',
+  },
+  meals: {
+    list: '/api/v1/goods',
+    details: (id: string) => `/api/v1/goods/${id}`,
+    create: '/api/v1/goods',
+    update: (id: string) => `/api/v1/goods/${id}`,
+    delete: (id: string) => `/api/v1/goods/${id}`,
   },
 } as const;

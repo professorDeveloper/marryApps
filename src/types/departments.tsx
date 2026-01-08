@@ -78,6 +78,7 @@ export type IDepartmentItem = {
   name: string;
   name_i18n: string;
   storage_id: string;
+  picture_url?: string;
   created_at: string;
   updated_at: string;
 };
@@ -86,6 +87,7 @@ export type IDepartmentFormData = {
   name: string;
   name_i18n: string;
   storage_id: string;
+  picture_url?: string;
 };
 
 export type IStorageItem = {

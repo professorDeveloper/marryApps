@@ -1,23 +1,16 @@
-// ============================================================================
-// ORDER LIST VIEW - SINGLE FILE IMPLEMENTATION
-// ============================================================================
-// Faqat BITTA fayl - hamma logic, filters va renderers shu yerda
-
 import type { GridColDef } from '@mui/x-data-grid';
 import type { IMealsItem } from 'src/types/meals';
 
-import { useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useMemo, useState, useEffect, useCallback } from 'react';
 
 import { useTheme } from '@mui/material/styles';
+import { Button, Dialog, DialogTitle, DialogActions, DialogContent } from '@mui/material';
 
 import { paths } from 'src/routes/paths';
 
-import { useGenericDataTable } from 'src/hooks/use-generic-data-table';
+import { useMealsAPI } from 'src/hooks/use-meals-api';
 import { useGenericViewModal } from 'src/hooks/use-generic-view-modal';
-
-import { endpoints } from 'src/lib/axios';
-import { mockMeals } from 'src/_mock/_meals';
 
 import { Iconify } from 'src/components/iconify';
 import { CustomGridActionsCellItem } from 'src/components/custom-data-grid';
@@ -26,29 +19,21 @@ import {
     RenderCellItem,
     GenericTableView,
 } from 'src/components/generic-table-view';
-import { formatDate, formatPrice, formatQuantity } from 'src/components/generic-view-view/modal-formatters';
 
 // ============================================================================
 // CONSTANTS
 // ============================================================================
 
-const STATUS_COLOR_MAP = {
-    pending: 'warning',
-    completed: 'success',
-    cancelled: 'error',
-    refunded: 'info',
-} as const;
+// Empty - no predefined constants needed
 
 // ============================================================================
 // CUSTOM RENDERERS
 // ============================================================================
 
 /**
- * Order number renderer
+ * Meal name and avatar renderer
  */
-function RenderCellOrderNumber({ params }: { params: any }) {
-    const { row } = params;
-
+function RenderCellMealName({ params }: { params: any }) {
     return (
         <RenderCellItem
             params={params}
@@ -57,7 +42,6 @@ function RenderCellOrderNumber({ params }: { params: any }) {
         />
     );
 }
-
 
 // ============================================================================
 // SPECIFICATIONS RENDERING
@@ -68,13 +52,26 @@ function RenderCellOrderNumber({ params }: { params: any }) {
  */
 function renderMealsSpecifications(item: IMealsItem, t: any) {
     const specs = [
-        { label: t('mealsProducts.name'), value: item.name || '-' },
-        { label: t('mealsProducts.sku'), value: item.sku || '-' },
-        { label: t('mealsProducts.unit'), value: item.unit || '-' },
-        { label: t('mealsProducts.category'), value: item.category || '-' },
-        { label: t('mealsProducts.originalPrice'), value: formatPrice(item.originalPrice) },
-        { label: t('mealsProducts.quantity'), value: formatQuantity(item.quantity) },
-        { label: t('mealsProducts.createdAt'), value: formatDate(item.createdAt) },
+        { label: t('mealsProducts.name'), value: item.name },
+        { label: t('mealsProducts.description'), value: item.description },
+        {
+            label: t('mealsProducts.category'),
+            value: item.category?.name || item.category_id || '-',
+        },
+        {
+            label: t('mealsProducts.department'),
+            value: item.department?.name || item.department_id || '-',
+        },
+        { label: t('mealsProducts.price'), value: `${item.price?.toLocaleString()} so'm` },
+        { label: t('mealsProducts.cookingTime'), value: `${item.cook_time} min` },
+        {
+            label: t('mealsProducts.createdAt'),
+            value: item.created_at ? new Date(item.created_at).toLocaleDateString() : '-',
+        },
+        {
+            label: t('mealsProducts.updatedAt'),
+            value: item.updated_at ? new Date(item.updated_at).toLocaleDateString() : '-',
+        },
     ];
 
     return <SpecificationsTable rows={specs} />;
@@ -87,75 +84,59 @@ function renderMealsSpecifications(item: IMealsItem, t: any) {
 export function Meals() {
     const theme = useTheme();
     const { t } = useTranslation('menu');
-    // Generic hook ishlatamiz - product API'dan data olamiz (mock uchun)
-    const { data: orders, loading } = useGenericDataTable<IMealsItem>({
-        endpoint: endpoints.product.list, // Product API'dan data (mock)
-        dataKey: 'products',
-    });
+
+    // API hook'i
+    const { getMeals, deleteMeal } = useMealsAPI();
+
+    // State
+    const [meals, setMeals] = useState<IMealsItem[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+    const [mealToDelete, setMealToDelete] = useState<string | null>(null);
 
     // View modal hook'i
     const { isOpen, selectedData, openModal, closeModal } = useGenericViewModal<IMealsItem>();
 
-    // Update options with translations
-    const statusOptions = useMemo(
-        () => [
-            { value: 'pending', label: t('mealsProducts.pending') },
-            { value: 'completed', label: t('mealsProducts.completed') },
-            { value: 'cancelled', label: t('mealsProducts.cancelled') },
-            { value: 'refunded', label: t('mealsProducts.refunded') },
-        ],
-        [t]
-    );
+    // Load meals on mount
+    useEffect(() => {
+        loadMeals();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
-    const unitOptions = useMemo(
-        () => [
-            { value: 'kg', label: t('mealsProducts.kg') },
-            { value: 'g', label: t('mealsProducts.g') },
-            { value: 'l', label: t('mealsProducts.l') },
-            { value: 'ml', label: t('mealsProducts.ml') },
-            { value: 'm', label: t('mealsProducts.m') },
-            { value: 'cm', label: t('mealsProducts.cm') },
-            { value: 'dona', label: t('mealsProducts.dona') },
-            { value: 'paket', label: t('mealsProducts.paket') },
-        ],
-        [t]
-    );
+    const loadMeals = useCallback(async () => {
+        setLoading(true);
+        try {
+            const data = await getMeals();
+            setMeals(data);
+        } finally {
+            setLoading(false);
+        }
+    }, [getMeals]);
 
-    // Columns config - Product page'si kabi
+    // Columns config
     const columns = useMemo<GridColDef[]>(
         () => [
             {
                 field: 'name',
                 headerName: t('mealsProducts.name'),
                 flex: 1,
-                minWidth: 200,
+                minWidth: 250,
                 hideable: false,
-                renderCell: (params) => <RenderCellOrderNumber params={params} />,
+                renderCell: (params) => <RenderCellMealName params={params} />,
             },
             {
-                field: 'category',
+                field: 'category_id',
                 headerName: t('mealsProducts.category'),
-                width: 140,
+                width: 150,
                 type: 'string',
+                renderCell: (params) => params.row.category?.name || params.value || '-',
             },
             {
-                field: 'section',
-                headerName: t('mealsProducts.section'),
-                width: 140,
+                field: 'department_id',
+                headerName: t('mealsProducts.department'),
+                width: 150,
                 type: 'string',
-            },
-            {
-                field: 'stock',
-                headerName: t('mealsProducts.stock'),
-                width: 140,
-                type: 'string',
-            },
-            {
-                field: 'originalPrice',
-                headerName: t('mealsProducts.originalPrice'),
-                width: 120,
-                type: 'number',
-                renderCell: (params) => `${params.value?.toLocaleString()} so'm`,
+                renderCell: (params) => params.row.department?.name || params.value || '-',
             },
             {
                 field: 'price',
@@ -165,16 +146,11 @@ export function Meals() {
                 renderCell: (params) => `${params.value?.toLocaleString()} so'm`,
             },
             {
-                field: 'profitnumber',
-                headerName: t('mealsProducts.profitnumber'),
-                width: 100,
+                field: 'cook_time',
+                headerName: t('mealsProducts.cookingTime'),
+                width: 120,
                 type: 'number',
-            },
-            {
-                field: 'profit',
-                headerName: `${t('mealsProducts.profit')}`,
-                width: 100,
-                type: 'number',
+                renderCell: (params) => `${params.value} min`,
             },
             {
                 type: 'actions',
@@ -188,44 +164,53 @@ export function Meals() {
                 disableColumnMenu: true,
                 getActions: (params) => [
                     <CustomGridActionsCellItem
+                        key="edit"
                         showInMenu
                         label={t('mealsProducts.edit')}
                         icon={<Iconify icon="solar:pen-bold" />}
                         href={paths.menu.meals.edit(params.row.id)}
                     />,
                     <CustomGridActionsCellItem
+                        key="view"
                         showInMenu
                         label={t('mealsProducts.view')}
                         icon={<Iconify icon="solar:eye-bold" />}
                         onClick={() => openModal(params.row)}
                     />,
                     <CustomGridActionsCellItem
+                        key="delete"
                         showInMenu
                         label={t('mealsProducts.delete')}
                         icon={<Iconify icon="solar:trash-bin-trash-bold" />}
-                        onClick={() => handleDelete(params.row.id)}
+                        onClick={() => {
+                            setMealToDelete(params.row.id);
+                            setDeleteDialogOpen(true);
+                        }}
                         style={{ color: theme.vars.palette.error.main }}
                     />,
                 ],
             },
         ],
-        [theme.vars.palette.error.main, t, unitOptions, statusOptions]
+        [theme.vars.palette.error.main, t, openModal]
     );
 
-    const handleDelete = useCallback((id: string) => {
-        console.log('Delete order:', id);
-        // Bu yerda API delete request qiling
-    }, []);
-
-    const handleDeleteMultiple = useCallback((ids: string[]) => {
-        console.log('Delete multiple orders:', ids);
-        // Bu yerda API delete request qiling
-    }, []);
+    const handleConfirmDelete = useCallback(async () => {
+        if (mealToDelete) {
+            try {
+                await deleteMeal(mealToDelete);
+                setMeals((prev) => prev.filter((m) => m.id !== mealToDelete));
+                setDeleteDialogOpen(false);
+                setMealToDelete(null);
+            } catch (error) {
+                console.error('Failed to delete meal:', error);
+            }
+        }
+    }, [mealToDelete, deleteMeal]);
 
     return (
         <>
             <GenericTableView<IMealsItem>
-                data={mockMeals}
+                data={meals}
                 loading={loading}
                 columns={columns}
                 breadcrumbs={{
@@ -240,16 +225,10 @@ export function Meals() {
                     label: t('mealsProducts.add'),
                     href: paths.menu.meals.new,
                 }}
-                filterOptions={{
-                    status: statusOptions,
-                }}
-                initialFilters={{
-                    status: [],
-                }}
+                filterOptions={{}}
+                initialFilters={{}}
                 hideColumns={{}}
                 hideColumnsTogglable={['actions']}
-                onDeleteRow={handleDelete}
-                onDeleteRows={handleDeleteMultiple}
             />
 
             {/* Meals Item View Modal */}
@@ -263,6 +242,37 @@ export function Meals() {
                 slideDirection="left"
                 position="right"
             />
+
+            {/* Delete Confirmation Dialog */}
+            <Dialog
+                open={deleteDialogOpen}
+                onClose={() => {
+                    setDeleteDialogOpen(false);
+                    setMealToDelete(null);
+                }}
+            >
+                <DialogTitle>{t('mealsProducts.deleteConfirm')}</DialogTitle>
+                <DialogContent>
+                    {t('mealsProducts.deleteMessage')}
+                </DialogContent>
+                <DialogActions>
+                    <Button
+                        onClick={() => {
+                            setDeleteDialogOpen(false);
+                            setMealToDelete(null);
+                        }}
+                    >
+                        {t('mealsProducts.cancel')}
+                    </Button>
+                    <Button
+                        onClick={handleConfirmDelete}
+                        color="error"
+                        variant="contained"
+                    >
+                        {t('mealsProducts.delete')}
+                    </Button>
+                </DialogActions>
+            </Dialog>
         </>
     );
 }

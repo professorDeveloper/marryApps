@@ -11,31 +11,31 @@ import { LoadingScreen } from 'src/components/loading-screen';
 import { Meals } from 'src/sections/meals/meals-list-view';
 import { MealEditView } from 'src/sections/meals/meals-edit-view';
 import { SalesListView } from 'src/sections/reports/sales-list-view';
-import { StocksListView } from 'src/sections/warehouse/stocks-list-view';
-import { StocksEditView } from 'src/sections/warehouse/stocks-edit-view';
-import { ReportsListView } from 'src/sections/reports/reports-list-view';
+import { HalfMeals } from 'src/sections/compounds/compounds-list-view';
 import { ReportsEditView } from 'src/sections/reports/reports-edit-view';
+import { ReportsListView } from 'src/sections/reports/reports-list-view';
+import { StocksEditView } from 'src/sections/warehouse/stocks-edit-view';
+import { StocksListView } from 'src/sections/warehouse/stocks-list-view';
 import { ArchivesListView } from 'src/sections/reports/archives-list-view';
 import { CategoryListView } from 'src/sections/category/category-list-view';
-import { SettingsListView } from 'src/sections/settings/settings-list-view';
 import { SettingsEditView } from 'src/sections/settings/settings-edit-view';
-import { HalfMeals } from 'src/sections/semifinished/semifinished-list-view';
-import { ProductListView } from 'src/sections/products/departments-list-view';
-import { ProductEditView } from 'src/sections/products/departments-edit-view';
+import { SettingsListView } from 'src/sections/settings/settings-list-view';
 import { CustomReportsListView } from 'src/sections/reports/custom-list-view';
-import { WarehouseListView } from 'src/sections/warehouse/warehouse-list-view';
-import { WarehouseEditView } from 'src/sections/warehouse/warehouse-edit-view';
-import { TransfersListView } from 'src/sections/warehouse/transfers-list-view';
-import { TransfersEditView } from 'src/sections/warehouse/transfers-edit-view';
-import { LocationsListView } from 'src/sections/warehouse/locations-list-view';
+import { ProductEditView } from 'src/sections/products/departments-edit-view';
+import { ProductListView } from 'src/sections/products/departments-list-view';
 import { LocationsEditView } from 'src/sections/warehouse/locations-edit-view';
-import { SuppliersListView } from 'src/sections/warehouse/suppliers-list-view';
+import { LocationsListView } from 'src/sections/warehouse/locations-list-view';
 import { SuppliersEditView } from 'src/sections/warehouse/suppliers-edit-view';
+import { SuppliersListView } from 'src/sections/warehouse/suppliers-list-view';
+import { TransfersEditView } from 'src/sections/warehouse/transfers-edit-view';
+import { TransfersListView } from 'src/sections/warehouse/transfers-list-view';
+import { WarehouseEditView } from 'src/sections/warehouse/warehouse-edit-view';
+import { WarehouseListView } from 'src/sections/warehouse/warehouse-list-view';
 import { SettingsGeneralListView } from 'src/sections/settings/general-list-view';
 import { SettingsProfileListView } from 'src/sections/settings/profile-list-view';
 import { CategoryEditViewWrapper } from 'src/sections/category/category-edit-view';
 import { InventoryReportsListView } from 'src/sections/reports/inventory-list-view';
-import { SemifinishedEditView } from 'src/sections/semifinished/semifinished-edit-view';
+import { CompoundEditViewWrapper } from 'src/sections/compounds/compounds-edit-view';
 import { SettingsIntegrationsListView } from 'src/sections/settings/integrations-list-view';
 import { SettingsNotificationsListView } from 'src/sections/settings/notifications-list-view';
 
@@ -92,8 +92,8 @@ export const dashboardRoutes: RouteObject[] = [
       { path: 'category/new', element: <CategoryEditViewWrapper isNew /> },
       { path: 'category/:id/edit', element: <CategoryEditViewWrapper /> },
       { path: 'semifinished', element: <HalfMeals /> },
-      { path: 'semifinished/new', element: <SemifinishedEditView /> },
-      { path: 'semifinished/:id/edit', element: <SemifinishedEditView /> },
+      { path: 'semifinished/new', element: <CompoundEditViewWrapper isNew /> },
+      { path: 'semifinished/:id/edit', element: <CompoundEditViewWrapper /> },
       { path: 'meals', element: <Meals /> },
       { path: 'meals/new', element: <MealEditView isNew /> },
       { path: 'meals/:id/edit', element: <MealEditView /> },

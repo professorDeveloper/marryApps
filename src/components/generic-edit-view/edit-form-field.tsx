@@ -24,7 +24,9 @@ export const EditFormField: FC<EditFormFieldProps> = ({ field, value, onChange }
     const handleChange = (e: any) => {
         const val = e.target.value;
         if (field.type === 'number') {
-            onChange(val === '' ? 0 : parseFloat(val));
+            // Convert to number, handle empty input
+            const numValue = val === '' ? '' : Number(val);
+            onChange(numValue === '' ? numValue : numValue);
         } else {
             onChange(val);
         }
@@ -37,14 +39,14 @@ export const EditFormField: FC<EditFormFieldProps> = ({ field, value, onChange }
                 fullWidth={field.fullWidth !== false}
                 type={field.type === 'textarea' ? 'text' : field.type}
                 label={field.label}
-                value={value ?? ''}
+                value={value === undefined || value === null ? '' : value}
                 onChange={handleChange}
                 placeholder={field.placeholder}
                 multiline={field.multiline || field.type === 'textarea'}
                 rows={field.rows || (field.type === 'textarea' ? 4 : 1)}
                 required={field.required}
                 helperText={field.helperText}
-                inputProps={field.type === 'number' ? { step: '0.01' } : undefined}
+                inputProps={field.type === 'number' ? { step: '1', min: '0' } : undefined}
             />
         );
     }

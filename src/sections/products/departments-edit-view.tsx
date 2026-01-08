@@ -49,6 +49,7 @@ export function ProductEditView({ isNew = false }: DepartmentEditViewProps) {
         [storages]
     );
 
+    
     // Create section configs with translations
     const BASIC_INFO_SECTION: CardSection = {
         id: 'basic',

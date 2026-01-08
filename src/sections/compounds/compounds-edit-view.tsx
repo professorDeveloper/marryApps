@@ -1,0 +1,343 @@
+// ============================================================================
+// COMPOUNDS EDIT VIEW - COMPLETE CRUD IMPLEMENTATION
+// ============================================================================
+
+import type { TFunction } from 'i18next';
+import type { ICompound } from 'src/types/compounds';
+import type { CardSection, GenericEditViewConfig } from 'src/components/generic-edit-view';
+
+import { useParams } from 'react-router';
+import { useTranslation } from 'react-i18next';
+import { useState, useEffect, useCallback } from 'react';
+
+import { paths } from 'src/routes/paths';
+import { useRouter } from 'src/routes/hooks';
+
+import { poster, putter, deleter, fetcher, endpoints } from 'src/lib/axios';
+
+import { toast } from 'src/components/snackbar';
+import { GenericEditView } from 'src/components/generic-edit-view';
+
+// ============================================================================
+// TYPES
+// ============================================================================
+
+export interface CompoundEditViewProps {
+    compoundId?: string;
+    isNew?: boolean;
+}
+
+// ============================================================================
+// FIELD CONFIGS
+// ============================================================================
+
+const IMAGE_SECTION: CardSection = {
+    id: 'image',
+    title: 'semifinishedProducts.imageTitle',
+    fields: [
+        {
+            key: 'picture_url',
+            label: 'semifinishedProducts.imageUrl',
+            type: 'url',
+            placeholder: 'https://example.com/image.jpg',
+            defaultValue: '',
+        },
+    ],
+};
+
+const BASIC_INFO_SECTION: CardSection = {
+    id: 'basic',
+    title: 'semifinishedProducts.basicTitle',
+    columns: 1,
+    fields: [
+        {
+            key: 'name',
+            label: 'semifinishedProducts.name',
+            type: 'text',
+            required: true,
+            defaultValue: '',
+        },
+        {
+            key: 'description',
+            label: 'semifinishedProducts.description',
+            type: 'textarea',
+            rows: 3,
+            defaultValue: '',
+        },
+        {
+            key: 'department_id',
+            label: 'semifinishedProducts.department',
+            type: 'text',
+            required: true,
+            defaultValue: '',
+        },
+    ],
+};
+
+const PRICING_SECTION: CardSection = {
+    id: 'pricing',
+    title: 'semifinishedProducts.pricingTitle',
+    columns: 2,
+    fields: [
+        {
+            key: 'price',
+            label: 'semifinishedProducts.price',
+            type: 'text',
+            required: true,
+            placeholder: '0',
+        },
+        {
+            key: 'quantity',
+            label: 'semifinishedProducts.quantity',
+            type: 'number',
+            required: true,
+            placeholder: '0',
+        },
+        {
+            key: 'measurement',
+            label: 'semifinishedProducts.measurement',
+            type: 'text',
+            required: true,
+            defaultValue: 'kg',
+        },
+    ],
+};
+
+// ============================================================================
+// COMPONENT
+// ============================================================================
+
+export function CompoundEditView({ compoundId, isNew = false }: CompoundEditViewProps) {
+    const router = useRouter();
+    const { t } = useTranslation('menu');
+    const [compound, setCompound] = useState<ICompound | undefined>();
+    const [departments, setDepartments] = useState<Array<{ id: string; name: string }>>([]);
+    const [loading, setLoading] = useState(!isNew);
+
+    // Fetch departments on mount
+    useEffect(() => {
+        const fetchDepartments = async () => {
+            try {
+                const response = await fetcher<any>(endpoints.department.list);
+                let depts: Array<{ id: string; name: string }> = [];
+
+                if (Array.isArray(response)) {
+                    depts = response;
+                } else if (response?.data && Array.isArray(response.data)) {
+                    depts = response.data;
+                }
+
+                setDepartments(depts);
+            } catch (error) {
+                console.error('Error fetching departments:', error);
+                toast.error(t('error.loadFailed'));
+            }
+        };
+
+        fetchDepartments();
+    }, [t]);
+
+    // Fetch compound data if editing
+    useEffect(() => {
+        if (!isNew && compoundId) {
+            const fetchCompound = async () => {
+                try {
+                    setLoading(true);
+                    const response = await fetcher<ICompound>(
+                        endpoints.compound.details(compoundId)
+                    );
+                    setCompound(response);
+                } catch (error) {
+                    console.error('Error fetching compound:', error);
+                    toast.error(t('error.loadFailed'));
+                } finally {
+                    setLoading(false);
+                }
+            };
+
+            fetchCompound();
+        } else {
+            setLoading(false);
+        }
+    }, [isNew, compoundId, t]);
+
+    // Handle form submission
+    const handleSubmit = useCallback(
+        async (formData: Record<string, any>) => {
+            try {
+                setLoading(true);
+
+                // Prepare payload
+                const payload = {
+                    name: formData.name,
+                    description: formData.description || '',
+                    price: String(formData.price),
+                    quantity: Number(formData.quantity),
+                    measurement: formData.measurement,
+                    department_id: formData.department_id,
+                    picture_url: formData.picture_url || null,
+                };
+
+                if (isNew) {
+                    // Create new compound
+                    await poster(endpoints.compound.create, payload);
+                    toast.success(t('success.createSuccess'));
+                } else {
+                    // Update existing compound
+                    if (!compound) {
+                        toast.error(t('error.loadFailed'));
+                        return;
+                    }
+                    await putter(endpoints.compound.update(compound.id), payload);
+                    toast.success(t('success.updateSuccess'));
+                }
+
+                // Redirect to list
+                router.push(paths.menu.semifinished.root);
+            } catch (err) {
+                console.error('Error saving compound:', err);
+                toast.error(
+                    isNew ? t('error.createFailed') : t('error.updateFailed')
+                );
+            } finally {
+                setLoading(false);
+            }
+        },
+        [router, isNew, compound, t]
+    );
+
+    // Handle delete
+    const handleDelete = useCallback(async () => {
+        if (!compound) return;
+
+        try {
+            setLoading(true);
+            await deleter(endpoints.compound.delete(compound.id));
+            toast.success(t('success.deleteSuccess'));
+            router.push(paths.menu.semifinished.root);
+        } catch (err) {
+            console.error('Error deleting compound:', err);
+            toast.error(t('error.deleteFailed'));
+        } finally {
+            setLoading(false);
+        }
+    }, [compound, router, t]);
+
+    const IMAGE_SECTION_T = translateSection(IMAGE_SECTION, t);
+    const BASIC_INFO_SECTION_T = translateSection(BASIC_INFO_SECTION, t);
+    const PRICING_SECTION_T = translateSection(PRICING_SECTION, t);
+
+    // Add department options dynamically
+    const BASIC_INFO_WITH_DEPS = {
+        ...BASIC_INFO_SECTION_T,
+        fields: BASIC_INFO_SECTION_T.fields?.map((field) => {
+            if (field.key === 'department_id') {
+                return {
+                    ...field,
+                    type: 'select' as const,
+                    options: departments.map((dept) => ({
+                        value: dept.id,
+                        label: dept.name,
+                    })),
+                };
+            }
+            return field;
+        }),
+    };
+
+    const MEASUREMENT_OPTIONS = ['kg', 'piece', 'l'];
+
+    const PRICING_WITH_MEASUREMENTS = {
+        ...PRICING_SECTION_T,
+        fields: PRICING_SECTION_T.fields?.map((field) => {
+            if (field.key === 'measurement') {
+                return {
+                    ...field,
+                    type: 'select' as const,
+                    options: MEASUREMENT_OPTIONS.map((m) => ({
+                        value: m,
+                        label: t(`semifinishedProducts.${m}`),
+                    })),
+                };
+            }
+            return field;
+        }),
+    };
+
+    const config: GenericEditViewConfig = {
+        title: isNew ? t('semifinishedProducts.newTitle') : t('semifinishedProducts.editTitle'),
+        entityName: 'compound',
+        breadcrumbs: [
+            { name: t('overview.menu.title', 'Menu'), href: paths.menu.root },
+            { name: t('semifinishedProducts.title'), href: paths.menu.semifinished.root },
+            {
+                name: isNew ? t('new', 'New') : compound?.name || t('edit', 'Edit'),
+                href: '',
+            },
+        ],
+        leftSidecard: IMAGE_SECTION_T,
+        sections: [BASIC_INFO_WITH_DEPS, PRICING_WITH_MEASUREMENTS],
+        onSubmit: handleSubmit,
+        onDelete: !isNew ? handleDelete : undefined,
+        showDeleteButton: !isNew,
+    };
+
+    return (
+        <GenericEditView
+            config={config}
+            data={compound}
+            isNew={isNew}
+        />
+    );
+}
+
+// ============================================================================
+// WRAPPER COMPONENT - EXTRACTS :id FROM ROUTE PARAMS
+// ============================================================================
+
+export function CompoundEditViewWrapper({ isNew = false }: { isNew?: boolean }) {
+    const { id } = useParams<{ id?: string }>();
+
+    return (
+        <CompoundEditView
+            compoundId={id}
+            isNew={isNew}
+        />
+    );
+}
+
+// ============================================================================
+// HELPER FUNCTIONS
+// ============================================================================
+
+/**
+ * Runtime helper: translate CardSection objects that may contain translation keys
+ */
+function translateSection(section: CardSection, t: TFunction): CardSection {
+    const mapped = { ...section } as CardSection;
+
+    // translate title if it looks like a key
+    if (typeof mapped.title === 'string' && mapped.title.includes('.')) {
+        mapped.title = t(mapped.title as string, mapped.title as string);
+    }
+
+    if (Array.isArray(mapped.fields)) {
+        mapped.fields = mapped.fields.map((f) => {
+            const nf = { ...f };
+            if (typeof nf.label === 'string' && nf.label.includes('.')) {
+                nf.label = t(nf.label as string, nf.label as string);
+            }
+            if (nf.options && Array.isArray(nf.options)) {
+                nf.options = nf.options.map((opt) => ({
+                    ...opt,
+                    label:
+                        typeof opt.label === 'string' && opt.label.includes('.')
+                            ? t(opt.label as string, opt.label as string)
+                            : opt.label,
+                }));
+            }
+            return nf;
+        });
+    }
+    return mapped;
+}
