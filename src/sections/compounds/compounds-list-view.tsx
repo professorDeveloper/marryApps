@@ -362,7 +362,7 @@ export function HalfMeals() {
                 onClose={closeModal}
                 title={selectedData?.name || t('semifinishedProducts.title')}
                 data={selectedData}
-                renderContent={(data) => renderCompoundSpecifications(data, t)}
+                renderContent={(item) => renderCompoundSpecifications(item, t)}
                 maxWidth="sm"
                 slideDirection="left"
                 position="right"
