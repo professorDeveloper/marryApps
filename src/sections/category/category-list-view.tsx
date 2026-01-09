@@ -13,7 +13,8 @@ import { paths } from 'src/routes/paths';
 
 import { useGenericViewModal } from 'src/hooks/use-generic-view-modal';
 
-import { getInitials, getAvatarUrl, getAvatarColor } from 'src/utils/avatar';
+import { getInitials, getAvatarColor } from 'src/utils/avatar';
+import { getFullImageUrl } from 'src/utils/image-url';
 
 import { useGetCategories, useDeleteCategory } from 'src/actions/categories';
 import { useGetStorageName, useGetDepartmentName } from 'src/actions/departments';
@@ -33,7 +34,7 @@ import { GenericViewModal, SpecificationsTable } from 'src/components/generic-vi
  */
 function RenderCellCategory({ params }: { params: any }) {
   const category = params.row as ICategory;
-  const avatarUrl = getAvatarUrl(category.name, category.picture_url);
+  const avatarUrl = category.picture_url ? getFullImageUrl(category.picture_url) : null;
   const initials = getInitials(category.name);
 
   return (
@@ -47,7 +48,7 @@ function RenderCellCategory({ params }: { params: any }) {
       }}
     >
       <Avatar
-        src={avatarUrl}
+        src={avatarUrl || undefined}
         sx={{
           width: 60,
           height: 60,
@@ -203,21 +204,13 @@ export function CategoryListView() {
     }
   }, [categoryToDelete, deleteCategory, t]);
 
-  const handleDelete = useCallback((id: string) => {
-    setCategoryToDelete(id);
-    setDeleteDialogOpen(true);
-  }, []);
-
-  const handleDeleteMultiple = useCallback((ids: string[]) => {
-    if (window.confirm(t('categories.deleteConfirmMultiple', 'Are you sure?'))) {
-      Promise.all(ids.map(id => deleteCategory(id)))
-        .then(() => {
-          toast.success(t('success.deleteSuccess'));
-        })
-        .catch((error) => {
-          console.error('Error deleting categories:', error);
-          toast.error(t('error.deleteFailed'));
-        });
+  const handleDeleteMultiple = useCallback(async (ids: string[]) => {
+    try {
+      await Promise.all(ids.map(id => deleteCategory(id)));
+      toast.success(t('success.deleteSuccess'));
+    } catch (error) {
+      console.error('Error deleting categories:', error);
+      toast.error(t('error.deleteFailed'));
     }
   }, [deleteCategory, t]);
 
@@ -246,7 +239,6 @@ export function CategoryListView() {
           status: [],
         }}
         hideColumnsTogglable={['actions']}
-        onDeleteRow={handleDelete}
         onDeleteRows={handleDeleteMultiple}
       />
 

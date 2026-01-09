@@ -16,6 +16,8 @@ import Typography from '@mui/material/Typography';
 import CircularProgress from '@mui/material/CircularProgress';
 
 import { Iconify } from 'src/components/iconify';
+import { uploadImage, getImageUrl } from 'src/lib/image-upload';
+import { toast } from 'src/components/snackbar';
 
 interface ImageUploadFieldProps {
     label: string;
@@ -34,42 +36,52 @@ export const ImageUploadField: FC<ImageUploadFieldProps> = ({
 }) => {
     const { t } = useTranslation('menu');
     const inputRef = useRef<HTMLInputElement>(null);
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
 
-    const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
 
-        // Check file type
-        if (!file.type.startsWith('image/')) {
-            alert(t('mealsProducts.alert_select_image'));
-            return;
-        }
+        setLoading(true);
+        setError(null);
 
-        // Check file size (max 5MB)
-        if (file.size > 5 * 1024 * 1024) {
-            alert(t('mealsProducts.alert_max_size'));
-            return;
-        }
+        try {
+            // Upload file to backend
+            const objectName = await uploadImage(file);
 
-        // Convert to base64 or upload
-        const reader = new FileReader();
-        reader.onload = (event) => {
-            const result = event.target?.result as string;
-            onChange(result);
-        };
-        reader.readAsDataURL(file);
+            // Get full URL from object name
+            const imageUrl = getImageUrl(objectName);
+
+            // Update form data with the image URL
+            onChange(imageUrl);
+
+            toast.success(t('mealsProducts.upload_success') || 'Image uploaded successfully');
+        } catch (err) {
+            const errorMessage = err instanceof Error ? err.message : 'Failed to upload image';
+            setError(errorMessage);
+            toast.error(errorMessage);
+            console.error('Image upload error:', err);
+        } finally {
+            setLoading(false);
+            // Reset input
+            if (inputRef.current) {
+                inputRef.current.value = '';
+            }
+        }
     };
 
     const handleClick = () => {
-        inputRef.current?.click();
+        if (!loading) {
+            inputRef.current?.click();
+        }
     };
 
     const handleRemove = () => {
         if (inputRef.current) {
             inputRef.current.value = '';
         }
+        setError(null);
         onRemove?.();
     };
 
@@ -78,17 +90,25 @@ export const ImageUploadField: FC<ImageUploadFieldProps> = ({
             <Stack spacing={2} alignItems="center">
                 <Typography variant="h6">{label}</Typography>
 
+                {error && (
+                    <Box sx={{ width: '100%' }}>
+                        <Typography variant="body2" color="error" align="center">
+                            {error}
+                        </Typography>
+                    </Box>
+                )}
+
                 <input
                     ref={inputRef}
                     type="file"
                     accept="image/*"
                     onChange={handleFileSelect}
                     style={{ display: 'none' }}
+                    disabled={loading}
                 />
 
                 <Box
                     sx={{
-
                         width: 250,
                         height: 250,
                         bgcolor: value ? 'transparent' : 'action.hover',
@@ -98,19 +118,20 @@ export const ImageUploadField: FC<ImageUploadFieldProps> = ({
                         justifyContent: 'center',
                         overflow: 'hidden',
                         border: '2px dashed',
-                        borderColor: 'divider',
+                        borderColor: error ? 'error.main' : 'divider',
                         transition: 'all 0.3s',
+                        cursor: loading ? 'wait' : 'pointer',
                         '&:hover': {
-                            borderColor: 'primary.main',
+                            borderColor: error ? 'error.main' : 'primary.main',
                             bgcolor: value ? 'transparent' : 'action.selected',
                         },
                     }}
                     onClick={handleClick}
                     role="button"
-                    tabIndex={0}
+                    tabIndex={loading ? -1 : 0}
                     onKeyDown={(e) => {
                         if (e.key === 'Enter' || e.key === ' ') {
-                            handleClick();
+                            if (!loading) handleClick();
                         }
                     }}
                 >
@@ -143,13 +164,19 @@ export const ImageUploadField: FC<ImageUploadFieldProps> = ({
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
+                                zIndex: 10,
                             }}
                         >
-                            <CircularProgress />
+                            <Stack alignItems="center" spacing={1}>
+                                <CircularProgress sx={{ color: 'white' }} />
+                                <Typography variant="caption" sx={{ color: 'white' }}>
+                                    {t('mealsProducts.uploading') || 'Uploading...'}
+                                </Typography>
+                            </Stack>
                         </Box>
                     )}
 
-                    {value && (
+                    {value && !loading && (
                         <IconButton
                             onClick={(e) => {
                                 e.stopPropagation();
@@ -171,12 +198,13 @@ export const ImageUploadField: FC<ImageUploadFieldProps> = ({
                     )}
                 </Box>
 
-                {value && (
+                {value && !loading && (
                     <Button
                         fullWidth
                         variant="outlined"
                         startIcon={<Iconify icon="eva:cloud-upload-fill" />}
                         onClick={handleClick}
+                        disabled={loading}
                     >
                         {t('mealsProducts.upload_another')}
                     </Button>

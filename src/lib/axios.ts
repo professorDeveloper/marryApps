@@ -164,4 +164,15 @@ export const endpoints = {
     update: (id: string) => `/api/v1/goods/${id}`,
     delete: (id: string) => `/api/v1/goods/${id}`,
   },
+  media: {
+    uploadImage: '/api/v1/media/image',
+    getImage: (objectName: string) => `/api/v1/media/image/${objectName}`,
+  },
+  ingredient: {
+    list: '/api/v1/ingredients',
+    details: (id: string) => `/api/v1/ingredients/${id}`,
+  },
+  invoice: {
+    details: '/api/v1/invoice-details',
+  },
 } as const;

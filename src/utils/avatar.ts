@@ -4,18 +4,7 @@
  */
 export function getAvatarColor(name: string): string {
     const colors = [
-        '#FF6B6B',
-        '#4ECDC4',
-        '#45B7D1',
-        '#FFA07A',
-        '#98D8C8',
-        '#F7DC6F',
-        '#BB8FCE',
-        '#85C1E2',
-        '#F8B88B',
-        '#85E1A0',
-        '#E59866',
-        '#F1948A',
+        '#FF6B00'
     ];
 
     let hash = 0;

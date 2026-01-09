@@ -12,6 +12,8 @@ import { paths } from 'src/routes/paths';
 import { useMealsAPI } from 'src/hooks/use-meals-api';
 import { useGenericViewModal } from 'src/hooks/use-generic-view-modal';
 
+import { getFullImageUrl } from 'src/utils/image-url';
+
 import { Iconify } from 'src/components/iconify';
 import { CustomGridActionsCellItem } from 'src/components/custom-data-grid';
 import { GenericViewModal, SpecificationsTable } from 'src/components/generic-view-view';
@@ -20,32 +22,20 @@ import {
     GenericTableView,
 } from 'src/components/generic-table-view';
 
-// ============================================================================
-// CONSTANTS
-// ============================================================================
-
-// Empty - no predefined constants needed
-
-// ============================================================================
-// CUSTOM RENDERERS
-// ============================================================================
 
 /**
  * Meal name and avatar renderer
  */
 function RenderCellMealName({ params }: { params: any }) {
+    const imageUrl = params.row.picture_url ? getFullImageUrl(params.row.picture_url) : null;
     return (
         <RenderCellItem
-            params={params}
+            params={{ ...params, row: { ...params.row, coverUrl: imageUrl } }}
             imageField="coverUrl"
             nameField="name"
         />
     );
 }
-
-// ============================================================================
-// SPECIFICATIONS RENDERING
-// ============================================================================
 
 /**
  * Meals item'uchun modal render function
@@ -86,7 +76,7 @@ export function Meals() {
     const { t } = useTranslation('menu');
 
     // API hook'i
-    const { getMeals, deleteMeal } = useMealsAPI();
+    const { getMeals, deleteMeal, deleteMeals } = useMealsAPI();
 
     // State
     const [meals, setMeals] = useState<IMealsItem[]>([]);
@@ -207,6 +197,18 @@ export function Meals() {
         }
     }, [mealToDelete, deleteMeal]);
 
+    const handleDeleteRows = useCallback(
+        async (ids: string[]) => {
+            try {
+                await deleteMeals(ids);
+                setMeals((prev) => prev.filter((m) => !ids.includes(m.id)));
+            } catch (error) {
+                console.error('Failed to delete meals:', error);
+            }
+        },
+        [deleteMeals]
+    );
+
     return (
         <>
             <GenericTableView<IMealsItem>
@@ -229,6 +231,7 @@ export function Meals() {
                 initialFilters={{}}
                 hideColumns={{}}
                 hideColumnsTogglable={['actions']}
+                onDeleteRows={handleDeleteRows}
             />
 
             {/* Meals Item View Modal */}

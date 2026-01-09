@@ -56,7 +56,7 @@ export function ProductEditView({ isNew = false }: DepartmentEditViewProps) {
                 key: 'name_i18n',
                 label: t('departments.name_i18n'),
                 type: 'text',
-                required: true,
+                required: false,
                 defaultValue: '',
                 placeholder: 'e.g., ошхона (Uzbek)',
             },

@@ -39,6 +39,9 @@ export interface GenericEditViewConfig {
     breadcrumbs: { name: string; href: string }[];
     leftSidecard?: CardSection;
     sections: CardSection[];
+    // Controls rendering of the internal header/breadcrumbs block.
+    // Defaults to true to keep backwards compatibility.
+    showBreadcrumbs?: boolean;
     onSubmit: (formData: Record<string, any>) => Promise<void>;
     onDelete?: () => Promise<void>;
     deleteConfirmMessage?: string;

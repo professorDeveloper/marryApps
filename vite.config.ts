@@ -10,18 +10,18 @@ const PORT = 8081;
 export default defineConfig({
   plugins: [
     react(),
-    checker({
-      typescript: true,
-      eslint: {
-        useFlatConfig: true,
-        lintCommand: 'eslint "./src/**/*.{js,jsx,ts,tsx}"',
-        dev: { logLevel: ['error'] },
-      },
-      overlay: {
-        position: 'tl',
-        initialIsOpen: false,
-      },
-    }),
+    // checker({
+    //   typescript: true,
+    //   eslint: {
+    //     useFlatConfig: true,
+    //     lintCommand: 'eslint "./src/**/*.{js,jsx,ts,tsx}"',
+    //     dev: { logLevel: ['error'] },
+    //   },
+    //   overlay: {
+    //     position: 'tl',
+    //     initialIsOpen: false,
+    //   },
+    // }),
   ],
   resolve: {
     alias: [

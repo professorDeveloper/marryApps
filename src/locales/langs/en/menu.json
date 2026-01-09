@@ -222,7 +222,21 @@
     "measurement": "Measurement",
     "department": "Department",
     "description": "Description",
-    "newTitle": "Add New Semifinished Product"
+    "newTitle": "Add New Semifinished Product",
+    "new": "New",
+    "editTitle": "Edit Semifinished Product",
+    "deleteConfirm": "Are you sure you want to delete this semifinished product?",
+    "deleteMessage": "This action cannot be undone and cannot be reversed.",
+    "cancel": "Cancel",
+    "basicInfo": "Basic Information",
+    "composition": "Composition",
+    "calculation": "Calculation",
+    "modifiers": "Modifiers",
+    "relatedProducts": "Related Products",
+    "relatedProductsTitle": "Related Products",
+    "relatedProductsDescription": "Related Products",
+    "relatedProductsDeleteConfirm": "Are you sure you want to delete this related product?",
+    "relatedProductsDeleteMessage": "This action cannot be undone and cannot be reversed."
   },
   "mealsProducts": {
     "title": "Meals",
@@ -283,7 +297,10 @@
     "file_types": "JPG, PNG, GIF - maximum 5MB",
     "upload_another": "Upload another image",
     "alert_select_image": "Please select an image file",
-    "alert_max_size": "File size must be less than 5MB"
+    "alert_max_size": "File size must be less than 5MB",
+    "department": "Department",
+    "storage": "Storage",
+    "storageDepartmentTitle": "Storage and Department"
   },
   "overview": {
     "subheader": "Overview",
@@ -310,9 +327,9 @@
     },
     "settings": {
       "title": "Settings",
-      "general": "General",
-      "profile": "Profile",
-      "notifications": "Notifications",
+      "connecteddevices": "Connected mobile devices",
+      "deviceManagement": "Device management",
+      "restaurantInfo": "Restaurant information",
       "integrations": "Integrations"
     },
     "mock": {
@@ -337,5 +354,32 @@
       "five": "Five",
       "six": "Six"
     }
+  },
+  "calculation": {
+    "content": "Content",
+    "semifinishedProducts": "Semi-finished products",
+    "import": "Import",
+    "search": "Search...",
+    "selectGroup": "Select group",
+    "selectWarehouse": "Select warehouse",
+    "mainWarehouse": "Main Warehouse",
+    "productName": "Name",
+    "unit": "Unit",
+    "group": "Group",
+    "price": "Price",
+    "calculateProductPrice": "Calculate product price",
+    "calculate": "Calculate",
+    "noProductsSelected": "No products selected",
+    "unitOfMeasurement": "Unit of measurement",
+    "quantity": "Quantity",
+    "selectedProductsTransfer": "Transfer selected products",
+    "returnAllProducts": "Return all products",
+    "noProducts": "No products",
+    "number": "No.",
+    "totalPrice": "Total Price",
+    "selectProductsForCalculation": "Select products for calculation",
+    "total": "Total",
+    "markup": "Markup",
+    "markupPercent": "Markup %"
   }
 }

@@ -1,5 +1,5 @@
 // ============================================================================
-// COMPOUNDS EDIT VIEW - COMPLETE CRUD IMPLEMENTATION
+// COMPOUNDS EDIT VIEW - COMPLETE CRUD IMPLEMENTATION WITH TABS
 // ============================================================================
 
 import type { TFunction } from 'i18next';
@@ -10,13 +10,17 @@ import { useParams } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import { useState, useEffect, useCallback } from 'react';
 
+import { Box, Tabs, Tab, Card, Stack } from '@mui/material';
+
 import { paths } from 'src/routes/paths';
 import { useRouter } from 'src/routes/hooks';
 
 import { poster, putter, deleter, fetcher, endpoints } from 'src/lib/axios';
 
 import { toast } from 'src/components/snackbar';
+import { CustomBreadcrumbs } from 'src/components/custom-breadcrumbs';
 import { GenericEditView } from 'src/components/generic-edit-view';
+import ProductCalculator from 'src/components/generic-edit-view/edit-calculation';
 
 // ============================================================================
 // TYPES
@@ -106,12 +110,37 @@ const PRICING_SECTION: CardSection = {
 // COMPONENT
 // ============================================================================
 
+interface TabPanelProps {
+    children?: React.ReactNode;
+    index: number;
+    value: number;
+}
+
+function TabPanel(props: TabPanelProps) {
+    const { children, value, index, ...other } = props;
+
+    return (
+        <div
+            role="tabpanel"
+            hidden={value !== index}
+            id={`compound-tabpanel-${index}`}
+            aria-labelledby={`compound-tab-${index}`}
+            {...other}
+        >
+            <Box sx={{ pt: 3, display: value === index ? 'block' : 'none' }}>
+                {children}
+            </Box>
+        </div>
+    );
+}
+
 export function CompoundEditView({ compoundId, isNew = false }: CompoundEditViewProps) {
     const router = useRouter();
     const { t } = useTranslation('menu');
     const [compound, setCompound] = useState<ICompound | undefined>();
     const [departments, setDepartments] = useState<Array<{ id: string; name: string }>>([]);
     const [loading, setLoading] = useState(!isNew);
+    const [activeTab, setActiveTab] = useState(0);
 
     // Fetch departments on mount
     useEffect(() => {
@@ -266,11 +295,12 @@ export function CompoundEditView({ compoundId, isNew = false }: CompoundEditView
     const config: GenericEditViewConfig = {
         title: isNew ? t('semifinishedProducts.newTitle') : t('semifinishedProducts.editTitle'),
         entityName: 'compound',
+        showBreadcrumbs: false,
         breadcrumbs: [
             { name: t('overview.menu.title', 'Menu'), href: paths.menu.root },
             { name: t('semifinishedProducts.title'), href: paths.menu.semifinished.root },
             {
-                name: isNew ? t('new', 'New') : compound?.name || t('edit', 'Edit'),
+                name: isNew ? t('semifinishedProducts.new', 'New') : compound?.name || t('.semifinishedProducts.edit', 'Edit'),
                 href: '',
             },
         ],
@@ -282,11 +312,54 @@ export function CompoundEditView({ compoundId, isNew = false }: CompoundEditView
     };
 
     return (
-        <GenericEditView
-            config={config}
-            data={compound}
-            isNew={isNew}
-        />
+        <Box sx={{ p: 3 }}>
+            <Box sx={{ maxWidth: 1400, mx: 'auto' }}>
+                {/* BREADCRUMBS AND TITLE */}
+                <CustomBreadcrumbs
+                    heading={config.title}
+                    links={config.breadcrumbs}
+                    sx={{ mb: 3 }}
+                />
+
+                {/* TABS */}
+                <Box sx={{}}>
+                    <Tabs
+                        value={activeTab}
+                        onChange={(e, newValue) => setActiveTab(newValue)}
+                        sx={{ px: 0 }}
+                    >
+                        <Tab
+                            sx={{ width: '600px', minWidth: '600px' }}
+                            label={t('semifinishedProducts.basicInfo', 'Basic Info')}
+                            id="compound-tab-0"
+                            aria-controls="compound-tabpanel-0"
+                        />
+                        <Tab
+                            sx={{ width: '600px', minWidth: '600px' }}
+                            label={t('semifinishedProducts.composition', 'Composition')}
+                            id="compound-tab-1"
+                            aria-controls="compound-tabpanel-1"
+                        />
+                    </Tabs>
+                </Box>
+
+                {/* Tab 0: Basic Edit Form */}
+                <TabPanel value={activeTab} index={0}>
+                    <GenericEditView
+                        config={config}
+                        data={compound}
+                        isNew={isNew}
+                    />
+                </TabPanel>
+
+                {/* Tab 1: Calculation/Composition */}
+                <TabPanel value={activeTab} index={1}>
+                    <Stack spacing={3}>
+                        <ProductCalculator />
+                    </Stack>
+                </TabPanel>
+            </Box>
+        </Box>
     );
 }
 

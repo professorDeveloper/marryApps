@@ -24,6 +24,7 @@ import { GenericTableView } from 'src/components/generic-table-view';
 import { CustomGridActionsCellItem } from 'src/components/custom-data-grid';
 import { GenericViewModal, SpecificationsTable } from 'src/components/generic-view-view';
 import { formatDate, formatPrice } from 'src/components/generic-view-view/modal-formatters';
+import { getFullImageUrl } from 'src/utils/image-url';
 
 
 /**
@@ -31,7 +32,7 @@ import { formatDate, formatPrice } from 'src/components/generic-view-view/modal-
  */
 function RenderCellCompound({ params }: { params: any }) {
     const { row } = params;
-    const imageUrl = row.picture_url;
+    const imageUrl = row.picture_url ? getFullImageUrl(row.picture_url) : null;
     const name = row.name || '-';
 
     // If no image, show avatar with initials

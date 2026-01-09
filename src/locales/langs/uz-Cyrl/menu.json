@@ -254,7 +254,7 @@
     "fat": "Ёғ (g)",
     "priceTitle": "Нарҳлаш",
     "sellingPrice": "Сотув нархи",
-    "measurement":"Ўлчов",
+    "measurement": "Ўлчов",
     "department": "Бўлим",
     "description": "Тавсиф",
     "newTitle": "Ярим тайёр маҳсулот қўшиш",
@@ -266,7 +266,12 @@
     "file_types": "JPG, PNG, GIF - максимал 5MB",
     "upload_another": "Бошқа расм юклаш",
     "alert_select_image": "Илтимос, расм файлни танланг",
-    "alert_max_size": "Файл ҳажми 5MB дан кам бўлиши керак"
+    "alert_max_size": "Файл ҳажми 5MB дан кам бўлиши керак",
+    "storageDepartmentTitle": "Омбор ва бўлим",
+    "storage": "Омбор",
+    "deleteConfirm": "Файлларни там оlishni xohlaysizmi?",
+    "deleteMessage": "Танланган файллар тарихидан аллакайсиз тайёрганади ва буланма экинланган эмас.",
+    "cancel": "Бекор қилиш"
   },
   "overview": {
     "subheader": "Умумий",
@@ -293,9 +298,9 @@
     },
     "settings": {
       "title": "Созламалар",
-      "general": "Умумий",
-      "profile": "Профил",
-      "notifications": "Билдиришномалар",
+      "connecteddevices": "Уланган мобил қурилмалар",
+      "deviceManagement": "Қурилмаларни бошқариш",
+      "restaurantInfo": "Ресторан ма’лумотлари",
       "integrations": "Интеграциялар"
     }
   },
@@ -307,5 +312,32 @@
       "five": "Беш",
       "six": "Олти"
     }
+  },
+  "calculation": {
+    "content": "Таркиби",
+    "semifinishedProducts": "Ярим тайёрланган маҳсулотлар",
+    "import": "Импорт",
+    "search": "Қидириш...",
+    "selectGroup": "Гуруҳ танланг",
+    "selectWarehouse": "Омборни танлаш",
+    "mainWarehouse": "Асосий Ombor",
+    "productName": "Номи",
+    "unit": "Ўлчов",
+    "group": "Гуруҳ",
+    "price": "Нарх",
+    "calculateProductPrice": "Маҳсулотларни нархини ҳисоблаш",
+    "calculate": "Ҳисоблаш",
+    "noProductsSelected": "Маҳсулот танланмаган",
+    "unitOfMeasurement": "Ўлчов бирликлари",
+    "quantity": "Миқдори",
+    "selectedProductsTransfer": "Танланган маҳсулотларни ўтказиш",
+    "returnAllProducts": "Барча маҳсулотларни қайтариш",
+    "noProducts": "Маҳсулот йўқ",
+    "number": "№",
+    "totalPrice": "Жами нарх",
+    "selectProductsForCalculation": "Ҳисоблаш учун маҳсулот танланг",
+    "total": "Жами",
+    "markup": "Белгилаш",
+    "markupPercent": "Белгилаш %"
   }
 }

@@ -1,13 +1,12 @@
-// ============================================================================
-// MEALS EDIT VIEW - USING GENERIC EDIT COMPONENT WITH BACKEND
-// ============================================================================
-
 import type { IMealsItem } from 'src/types/meals';
 import type { CardSection, GenericEditViewConfig } from 'src/components/generic-edit-view';
 
 import { useParams } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import { useState, useEffect, useCallback } from 'react';
+import { Box, Tabs, Tab, Typography } from '@mui/material';
+
+import { CustomBreadcrumbs } from 'src/components/custom-breadcrumbs';
 
 import { paths } from 'src/routes/paths';
 import { useRouter } from 'src/routes/hooks';
@@ -15,6 +14,8 @@ import { useRouter } from 'src/routes/hooks';
 import { useMealsAPI } from 'src/hooks/use-meals-api';
 
 import { GenericEditView } from 'src/components/generic-edit-view';
+import ProductCalculator from 'src/components/generic-edit-view/edit-calculation';
+import { setCustomIconsLoader } from '@iconify/react';
 
 // ============================================================================
 // TYPES
@@ -92,9 +93,30 @@ const BASIC_INFO_SECTION: CardSection = {
     ],
 };
 
-// ============================================================================
-// COMPONENT
-// ============================================================================
+
+interface TabPanelProps {
+    children?: React.ReactNode;
+    index: number;
+    value: number;
+}
+
+function TabPanel(props: TabPanelProps) {
+    const { children, value, index, ...other } = props;
+
+    return (
+        <div
+            role="tabpanel"
+            hidden={value !== index}
+            id={`meal-tabpanel-${index}`}
+            aria-labelledby={`meal-tab-${index}`}
+            {...other}
+        >
+            <Box sx={{ pt: 3, display: value === index ? 'block' : 'none' }}>
+                {children}
+            </Box>
+        </div>
+    );
+}
 
 export function MealEditView({ isNew = false }: MealEditViewProps) {
     const { id: mealId } = useParams<{ id: string }>();
@@ -109,6 +131,7 @@ export function MealEditView({ isNew = false }: MealEditViewProps) {
     const [loading, setLoading] = useState(!isNew);
     const [categories, setCategories] = useState<any[]>([]);
     const [departments, setDepartments] = useState<any[]>([]);
+    const [activeTab, setActiveTab] = useState(0);
 
     const loadMeal = useCallback(async () => {
         if (!mealId) return;
@@ -235,6 +258,7 @@ export function MealEditView({ isNew = false }: MealEditViewProps) {
     const config: GenericEditViewConfig = {
         title: isNew ? t('mealsProducts.new') : t('mealsProducts.edit'),
         entityName: 'meal',
+        showBreadcrumbs: false,
         breadcrumbs: [
             { name: t('app'), href: paths.menu.root },
             { name: t('mealsProducts.title'), href: paths.menu.meals.root },
@@ -247,15 +271,77 @@ export function MealEditView({ isNew = false }: MealEditViewProps) {
         showDeleteButton: !isNew,
     };
 
-    if (loading) {
-        return <div>{t('mealsProducts.loading')}</div>;
-    }
+
 
     return (
-        <GenericEditView
-            config={config}
-            data={meal || undefined}
-            isNew={isNew}
-        />
+        <Box sx={{ p: 3 }}>
+            <Box sx={{ maxWidth: 1400, mx: 'auto' }}>
+                {/* BREADCRUMBS AND TITLE */}
+                <CustomBreadcrumbs
+                    heading={isNew ? t('mealsProducts.new') : t('mealsProducts.edit')}
+                    links={config.breadcrumbs}
+                    sx={{ mb: 3 }}
+                />
+
+                {/* TABS */}
+                <Box sx={{ display: 'flex', justifyContent: 'center', mb: 3, width: '100%' }}>
+                    <Tabs
+                        value={activeTab}
+                        onChange={(e, newValue) => setActiveTab(newValue)}
+                        sx={{ px: 0 }}
+                    >
+                        <Tab
+                            sx={{ width: '310px' }}
+                            label={t('mealsProducts.edit') || 'Asosiy'}
+                            id="meal-tab-0"
+                            aria-controls="meal-tabpanel-0"
+                        />
+                        <Tab
+                            sx={{ width: '310px' }}
+                            label="Hisoblash"
+                            id="meal-tab-1"
+                            aria-controls="meal-tabpanel-1"
+                        />
+                        <Tab
+                            sx={{ width: '310px' }}
+                            label="Modifikatorlar"
+                            id="meal-tab-2"
+                            aria-controls="meal-tabpanel-2"
+                        />
+                        <Tab
+                            sx={{ width: '310px' }}
+                            label="Tegishli taomlar"
+                            id="meal-tab-3"
+                            aria-controls="meal-tabpanel-3"
+                        />
+                    </Tabs>
+                </Box>
+
+                {/* TAB CONTENT */}
+                <TabPanel value={activeTab} index={0}>
+                    <GenericEditView
+                        config={config}
+                        data={meal || undefined}
+                        isNew={isNew}
+                    />
+                </TabPanel>
+
+                <TabPanel value={activeTab} index={1}>
+                    <ProductCalculator />
+                </TabPanel>
+
+                <TabPanel value={activeTab} index={2}>
+                    <Box sx={{ p: 3, textAlign: 'center', color: 'text.secondary' }}>
+                        Modifikatorlar bo'limi (hali qo'shilmagan)
+                    </Box>
+                </TabPanel>
+
+                <TabPanel value={activeTab} index={3}>
+                    <Box sx={{ p: 3, textAlign: 'center', color: 'text.secondary' }}>
+                        Tegishli taomlar bo'limi (hali qo'shilmagan)
+                    </Box>
+                </TabPanel>
+            </Box>
+        </Box>
     );
 }

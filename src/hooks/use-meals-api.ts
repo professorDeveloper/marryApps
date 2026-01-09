@@ -15,6 +15,7 @@ export interface UseMealsAPIReturn {
     createMeal: (data: Partial<IMealsItem>) => Promise<IMealsItem>;
     updateMeal: (id: string, data: Partial<IMealsItem>) => Promise<IMealsItem>;
     deleteMeal: (id: string) => Promise<void>;
+    deleteMeals: (ids: string[]) => Promise<void>;
     getCategories: () => Promise<any[]>;
     getDepartments: () => Promise<any[]>;
 }
@@ -206,6 +207,23 @@ export function useMealsAPI(): UseMealsAPIReturn {
     );
 
     /**
+     * Ko'p meals'ni delete qiladi
+     */
+    const deleteMeals = useCallback(
+        async (ids: string[]): Promise<void> => {
+            try {
+                await Promise.all(ids.map((id) => deleter(endpoints.meals.delete(id))));
+                toast.success('Meals deleted successfully');
+            } catch (error) {
+                toast.error('Failed to delete meals');
+                console.error('Failed to delete meals:', error);
+                throw error;
+            }
+        },
+        []
+    );
+
+    /**
      * Barcha categoriesni oladi
      */
     const getCategories = useCallback(async (): Promise<any[]> => {
@@ -237,6 +255,7 @@ export function useMealsAPI(): UseMealsAPIReturn {
         createMeal,
         updateMeal,
         deleteMeal,
+        deleteMeals,
         getCategories,
         getDepartments,
     };

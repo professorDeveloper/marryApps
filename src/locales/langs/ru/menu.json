@@ -271,7 +271,12 @@
     "file_types": "JPG, PNG, GIF - максимум 5МБ",
     "upload_another": "Загрузить другое изображение",
     "alert_select_image": "Пожалуйста, выберите файл изображения",
-    "alert_max_size": "Размер файла должен быть меньше 5МБ"
+    "alert_max_size": "Размер файла должен быть меньше 5МБ",
+    "storageDepartmentTitle": "Хранилище и отдел",
+    "storage": "Хранилище",
+    "deleteConfirm": "Вы уверены, что хотите удалить файл?",
+    "deleteMessage": "Выбранные файлы будут навсегда удалены из системы и не могут быть отменены.",
+    "cancel": "Отменить"
   },
   "overview": {
     "subheader": "Обзор",
@@ -298,9 +303,9 @@
     },
     "settings": {
       "title": "Настройки",
-      "general": "Основные",
-      "profile": "Профиль",
-      "notifications": "Уведомления",
+      "connecteddevices": "Подключенные мобильные устройства",
+      "deviceManagement": "Управление устройствами",
+      "restaurantInfo": "Информация о ресторане",
       "integrations": "Интеграции"
     }
   },
@@ -312,5 +317,32 @@
       "five": "Пять",
       "six": "Шесть"
     }
+  },
+  "calculation": {
+    "content": "Содержание",
+    "semifinishedProducts": "Полуфабрикаты",
+    "import": "Импорт",
+    "search": "Поиск...",
+    "selectGroup": "Выбрать группу",
+    "selectWarehouse": "Выбрать склад",
+    "mainWarehouse": "Основной склад",
+    "productName": "Название",
+    "unit": "Единица",
+    "group": "Группа",
+    "price": "Цена",
+    "calculateProductPrice": "Рассчитать цену продукта",
+    "calculate": "Рассчитать",
+    "noProductsSelected": "Продукты не выбраны",
+    "unitOfMeasurement": "Единицы измерения",
+    "quantity": "Количество",
+    "selectedProductsTransfer": "Передача выбранных продуктов",
+    "returnAllProducts": "Вернуть все продукты",
+    "noProducts": "Нет продуктов",
+    "number": "№",
+    "totalPrice": "Итоговая цена",
+    "selectProductsForCalculation": "Выберите продукты для расчета",
+    "total": "Итого",
+    "markup": "Наценка",
+    "markupPercent": "Наценка %"
   }
 }

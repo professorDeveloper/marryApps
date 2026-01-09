@@ -112,10 +112,9 @@ export const getNavData = (t: TFunction): NavSectionProps['data'] => [
         path: paths.menu.settings.root,
         icon: ICONS.blog,
         children: [
-          { title: t('overview.settings.general', 'General'), path: paths.menu.settings.general.root },
-          { title: t('overview.settings.profile', 'Profile'), path: paths.menu.settings.profile.root },
-          { title: t('overview.settings.notifications', 'Notifications'), path: paths.menu.settings.notifications.root },
-          { title: t('overview.settings.integrations', 'Integrations'), path: paths.menu.settings.integrations.root },
+          { title: t('overview.settings.connecteddevices', 'Connected devices'), path: paths.menu.settings.general.root },
+          { title: t('overview.settings.deviceManagement', 'Device management'), path: paths.menu.settings.profile.root },
+          { title: t('overview.settings.restaurantInfo', 'Restaurant information'), path: paths.menu.settings.notifications.root },
         ],
       },
     ],

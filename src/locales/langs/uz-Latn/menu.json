@@ -178,6 +178,7 @@
     "list": "Ro'yxat",
     "add": "Qo'shish",
     "edit": "Tahrirlash",
+    "editTitle": "Yarim tayyor mahsulot tahrirlash",
     "view": "Ko'rish",
     "delete": "O'chirish",
     "name": "Nomi",
@@ -216,9 +217,20 @@
     "department": "Bo'lim",
     "description": "Tavsif",
     "newTitle": "Yarim tayyor mahsulot qo'shish",
+    "new": "Yangi",
     "deleteConfirm": "Fayllar o'chirilsinmi?",
     "deleteMessage": "Tanlangan fayllar tizimdan butunlay o‘chiriladi va ushbu amalni bekor qilish yoki fayllarni tiklash mumkin emas.",
-    "cancel":"Bekor qilish"
+    "cancel": "Bekor qilish",
+    "basicInfo": "Asosiy ma'lumotlar",
+    "composition": "Tarkibi",
+    "calculation": "Hisoblash",
+    "modifiers": "Modifikatorlar",
+    "relatedProducts": "Tegishli taomlar",
+    "relatedProductsTitle": "Tegishli taomlar",
+    "relatedProductsDescription": "Tegishli taomlar tahrirlash",
+    "relatedProductsDeleteConfirm": "Fayllar o'chirilsinmi?",
+    "relatedProductsDeleteMessage": "Tanlangan fayllar tizimdan butunlay o‘chiriladi va ushbu amalni bekor qilish yoki fayllarni tiklash mumkin emas.",
+    "relatedProductsCancel": "Bekor qilish"
   },
   "mealsProducts": {
     "title": "Taomlar",
@@ -281,7 +293,7 @@
     "alert_max_size": "Fayl hajmi 5MB dan kichik bo'lishi kerak",
     "deleteConfirm": "Fayllar o'chirilsinmi?",
     "deleteMessage": "Tanlangan fayllar tizimdan butunlay o‘chiriladi va ushbu amalni bekor qilish yoki fayllarni tiklash mumkin emas.",
-    "cancel":"Bekor qilish"
+    "cancel": "Bekor qilish"
   },
   "overview": {
     "subheader": "Umumiy",
@@ -308,9 +320,9 @@
     },
     "settings": {
       "title": "Sozlamalar",
-      "general": "Umumiy",
-      "profile": "Profil",
-      "notifications": "Bildirishnomalar",
+      "connecteddevices": "Ulangan mobil qurilmalar",
+      "deviceManagement": "Qurilmalarni boshqarish",
+      "restaurantInfo": "Restoran ma’lumotlari",
       "integrations": "Integratsiyalar"
     },
     "mock": {
@@ -335,5 +347,32 @@
       "five": "Besh",
       "six": "Olti"
     }
+  },
+  "calculation": {
+    "content": "Tarkibi",
+    "semifinishedProducts": "Yarim tayyor mahsulotlar",
+    "import": "Import",
+    "search": "Qidiruv...",
+    "selectGroup": "Gruppa tanlang",
+    "selectWarehouse": "Omborni tanlash",
+    "mainWarehouse": "Asosiy Ombor",
+    "productName": "Nomi",
+    "unit": "O'lchov",
+    "group": "Gruppa",
+    "price": "Narx",
+    "calculateProductPrice": "Maxsulotlarni narxini hisoblash",
+    "calculate": "Hisoblash",
+    "noProductsSelected": "Mahsulot tanlanmagan",
+    "unitOfMeasurement": "O'lchov birliklari",
+    "quantity": "Miqdori",
+    "selectedProductsTransfer": "Tanlangan mahsulotlarni o'tkazish",
+    "returnAllProducts": "Barcha mahsulotlarni qaytarish",
+    "noProducts": "Mahsulot yo'q",
+    "number": "№",
+    "totalPrice": "Jami narx",
+    "selectProductsForCalculation": "Hisoblash uchun mahsulot tanlang",
+    "total": "Jami",
+    "markup": "Belgilash",
+    "markupPercent": "Belgilash %"
   }
 }

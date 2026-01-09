@@ -92,12 +92,14 @@ export const GenericEditView: FC<GenericEditViewProps> = ({
     }, [config]);
 
     return (
-        <Box sx={{ p: 3 }}>
+        <Box>
             {/* Breadcrumbs */}
-            <CustomBreadcrumbs
-                heading={isNew ? `${config.title}` : `${config.title}`}
-                links={config.breadcrumbs}
-            />
+            {config.showBreadcrumbs !== false && (
+                <CustomBreadcrumbs
+                    heading={isNew ? `${config.title}` : `${config.title}`}
+                    links={config.breadcrumbs}
+                />
+            )}
 
             <form onSubmit={handleSubmit}>
                 <Box

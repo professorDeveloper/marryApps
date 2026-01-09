@@ -10,6 +10,9 @@
 node_modules
 *.md
 !README.md
+.dist
+.vscode
+.DS_Store
 # .pnp
 # .pnp.js
 
