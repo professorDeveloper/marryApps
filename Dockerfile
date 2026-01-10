@@ -13,12 +13,10 @@ RUN \
 # ---------- BUILD STAGE ----------
 FROM node:22-alpine3.22 AS builder
 WORKDIR /app
-# Copy dependencies from deps stage
 COPY --from=deps /app/node_modules ./node_modules
 COPY package.json yarn.lock* package-lock.json* pnpm-lock.yaml* ./
-# Copy the rest of the files
 COPY . .
-# Build the app
+COPY .env.prod .env
 RUN npm run build
 
 # ---------- RUNNER STAGE ----------
