@@ -39,6 +39,7 @@ interface GenericTableToolbarProps<T extends GenericTableFilters = any>
     filters: T,
     resetFilters: () => void
   ) => React.ReactNode;
+  hideFilters?: boolean;
 }
 
 export function GenericTableToolbar<T extends GenericTableFilters = any>({
@@ -52,6 +53,7 @@ export function GenericTableToolbar<T extends GenericTableFilters = any>({
   onRenderFiltersResult,
   settings,
   onChangeSettings,
+  hideFilters = false,
 }: GenericTableToolbarProps<T>) {
   const { state: currentFilters, resetState: resetFilters } = filters;
 
@@ -75,7 +77,7 @@ export function GenericTableToolbar<T extends GenericTableFilters = any>({
         </Button>
       )}
 
-      <CustomToolbarFilterButton />
+      {!hideFilters && <CustomToolbarFilterButton />}
       <CustomToolbarExportButton />
     </>
   );

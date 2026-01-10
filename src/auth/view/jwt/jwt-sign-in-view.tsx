@@ -34,11 +34,6 @@ export const SignInSchema = z.object({
     .string()
     .min(1, { message: 'Parol kerak!' })
     .min(6, { message: 'Parol kamida 6 ta belgi bo\'lishi kerak!' }),
-  pincode: z
-    .string()
-    .min(4, { message: 'PIN kod kamida 4 ta raqam bo\'lishi kerak!' })
-    .max(4, { message: 'PIN kod 4 ta raqam bo\'lishi kerak!' })
-    .regex(/^\d+$/, { message: 'PIN kod faqat raqamlardan iborat bo\'lishi kerak!' }),
 });
 
 // ----------------------------------------------------------------------
@@ -53,9 +48,8 @@ export function JwtSignInView() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const defaultValues: SignInSchemaType = {
-    username: 'sami',
-    password: 'Sami1010',
-    pincode: '1111',
+    username: 'admin',
+    password: 'Password:Javohir',
   };
 
   const methods = useForm({
@@ -71,9 +65,9 @@ export function JwtSignInView() {
   const onSubmit = handleSubmit(async (data) => {
     try {
       await signInWithPassword({
+        brand_id: 'my_restaurant',
         username: data.username,
         password: data.password,
-        pincode: data.pincode
       });
       await checkUserSession?.();
 
@@ -117,22 +111,6 @@ export function JwtSignInView() {
           }}
         />
       </Stack>
-
-      <Field.Text
-        name="pincode"
-        label="PIN kod"
-        placeholder="XXXX"
-        type="password"
-        slotProps={{
-          inputLabel: { shrink: true },
-          input: {
-            inputProps: {
-              maxLength: 4,
-            }
-          }
-        }}
-      />
-
 
       <Button
         fullWidth

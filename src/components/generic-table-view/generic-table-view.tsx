@@ -81,6 +81,12 @@ export interface GenericTableConfig<T = any> {
 
   // Identifikator field nomi (default: 'id')
   idField?: string;
+
+  // Hide filters (only search will remain)
+  hideFilters?: boolean;
+
+  // Hide checkboxes (will show row numbers instead)
+  hideCheckboxes?: boolean;
 }
 
 export function GenericTableView<T extends Record<string, any>>({
@@ -97,6 +103,8 @@ export function GenericTableView<T extends Record<string, any>>({
   hideColumnsTogglable = [],
   renderToolbar,
   idField = 'id',
+  hideFilters = false,
+  hideCheckboxes = false,
 }: GenericTableConfig<T>) {
   const confirmDialog = useBoolean();
   const toolbarOptions = useToolbarSettings();
@@ -133,6 +141,30 @@ export function GenericTableView<T extends Record<string, any>>({
 
     return filtered;
   }, [tableData, filters.state]);
+
+  // Add row number column when checkboxes are hidden
+  const columnsWithRowNumber = useMemo(() => {
+    if (hideCheckboxes) {
+      const rowNumberColumn: GridColDef = {
+        field: '__rowNumber__',
+        headerName: 'N',
+        width: 60,
+        align: 'center',
+        headerAlign: 'center',
+        sortable: false,
+        filterable: false,
+        disableColumnMenu: true,
+        renderCell: (params) => {
+          const rowIndex = dataFiltered.findIndex(
+            (row) => row[idField] === params.row[idField]
+          );
+          return rowIndex + 1;
+        },
+      };
+      return [rowNumberColumn, ...columns];
+    }
+    return columns;
+  }, [hideCheckboxes, columns, dataFiltered, idField]);
 
   const handleDeleteRow = useCallback(
     (id: string) => {
@@ -220,10 +252,10 @@ export function GenericTableView<T extends Record<string, any>>({
             // use fully localized locale text from hook
             localeText={dataGridLocale}
             {...toolbarOptions.settings}
-            checkboxSelection
+            checkboxSelection={!hideCheckboxes}
             disableRowSelectionOnClick
             rows={dataFiltered}
-            columns={columns}
+            columns={columnsWithRowNumber}
             loading={loading}
             getRowHeight={() => 'auto'}
             getRowId={(row) => row[idField]}
@@ -245,6 +277,7 @@ export function GenericTableView<T extends Record<string, any>>({
                   filterOptions={filterOptions}
                   settings={toolbarOptions.settings}
                   onChangeSettings={toolbarOptions.onChangeSettings}
+                  hideFilters={hideFilters}
                 />
               )),
             }}

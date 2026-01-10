@@ -18,8 +18,6 @@ import { StocksEditView } from 'src/sections/warehouse/stocks-edit-view';
 import { StocksListView } from 'src/sections/warehouse/stocks-list-view';
 import { ArchivesListView } from 'src/sections/reports/archives-list-view';
 import { CategoryListView } from 'src/sections/category/category-list-view';
-import { SettingsEditView } from 'src/sections/settings/settings-edit-view';
-import { SettingsListView } from 'src/sections/settings/settings-list-view';
 import { CustomReportsListView } from 'src/sections/reports/custom-list-view';
 import { ProductEditView } from 'src/sections/products/departments-edit-view';
 import { ProductListView } from 'src/sections/products/departments-list-view';
@@ -31,13 +29,12 @@ import { TransfersEditView } from 'src/sections/warehouse/transfers-edit-view';
 import { TransfersListView } from 'src/sections/warehouse/transfers-list-view';
 import { WarehouseEditView } from 'src/sections/warehouse/warehouse-edit-view';
 import { WarehouseListView } from 'src/sections/warehouse/warehouse-list-view';
-import { SettingsGeneralListView } from 'src/sections/settings/general-list-view';
-import { SettingsProfileListView } from 'src/sections/settings/profile-list-view';
+import { ConnectedDeviceListView } from 'src/sections/settings/connected-Device-list-view';
+import { ManagementListView } from 'src/sections/settings/manegment-list-view';
 import { CategoryEditViewWrapper } from 'src/sections/category/category-edit-view';
 import { InventoryReportsListView } from 'src/sections/reports/inventory-list-view';
 import { CompoundEditViewWrapper } from 'src/sections/compounds/compounds-edit-view';
-import { SettingsIntegrationsListView } from 'src/sections/settings/integrations-list-view';
-import { SettingsNotificationsListView } from 'src/sections/settings/notifications-list-view';
+import { RestaurantInfoListView } from 'src/sections/settings/restaurant-info';
 
 import { AuthGuard } from 'src/auth/guard';
 
@@ -119,13 +116,9 @@ export const dashboardRoutes: RouteObject[] = [
       { path: 'reports/inventory', element: <InventoryReportsListView /> },
       { path: 'reports/custom', element: <CustomReportsListView /> },
       { path: 'reports/archives', element: <ArchivesListView /> },
-      { path: 'settings', element: <SettingsListView /> },
-      { path: 'settings/new', element: <SettingsEditView isNew /> },
-      { path: 'settings/:id/edit', element: <SettingsEditView /> },
-      { path: 'settings/general', element: <SettingsGeneralListView /> },
-      { path: 'settings/profile', element: <SettingsProfileListView /> },
-      { path: 'settings/notifications', element: <SettingsNotificationsListView /> },
-      { path: 'settings/integrations', element: <SettingsIntegrationsListView /> },
+      { path: 'settings/connected-device', element: <ConnectedDeviceListView /> },
+      { path: 'settings/management', element: <ManagementListView /> },
+      { path: 'settings/restaurant-info', element: <RestaurantInfoListView /> },
     ],
 
   },

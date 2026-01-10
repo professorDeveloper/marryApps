@@ -150,28 +150,16 @@ export const paths = {
       details: (id: string) => `${ROOTS.MENU}/settings/${id}`,
       edit: (id: string) => `${ROOTS.MENU}/settings/${id}/edit`,
       general: {
-        root: `${ROOTS.MENU}/settings/general`,
-        new: `${ROOTS.MENU}/settings/general/new`,
-        details: (id: string) => `${ROOTS.MENU}/settings/general/${id}`,
-        edit: (id: string) => `${ROOTS.MENU}/settings/general/${id}/edit`,
+        root: `${ROOTS.MENU}/settings/connected-device`,
       },
       profile: {
-        root: `${ROOTS.MENU}/settings/profile`,
-        new: `${ROOTS.MENU}/settings/profile/new`,
-        details: (id: string) => `${ROOTS.MENU}/settings/profile/${id}`,
-        edit: (id: string) => `${ROOTS.MENU}/settings/profile/${id}/edit`,
+        root: `${ROOTS.MENU}/settings/management`,
       },
       notifications: {
-        root: `${ROOTS.MENU}/settings/notifications`,
-        new: `${ROOTS.MENU}/settings/notifications/new`,
-        details: (id: string) => `${ROOTS.MENU}/settings/notifications/${id}`,
-        edit: (id: string) => `${ROOTS.MENU}/settings/notifications/${id}/edit`,
+        root: `${ROOTS.MENU}/settings/restaurant-info`,
       },
       integrations: {
         root: `${ROOTS.MENU}/settings/integrations`,
-        new: `${ROOTS.MENU}/settings/integrations/new`,
-        details: (id: string) => `${ROOTS.MENU}/settings/integrations/${id}`,
-        edit: (id: string) => `${ROOTS.MENU}/settings/integrations/${id}/edit`,
       },
     },
 
