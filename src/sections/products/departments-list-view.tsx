@@ -253,6 +253,7 @@ export function ProductListView() {
     // eslint-disable-next-line react-hooks/rules-of-hooks
     const storageName = useGetStorageName(dept.storage_id);
 
+    
     const specs: SpecificationRow[] = [
       {
         label: t('departments.name'),
