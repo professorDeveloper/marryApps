@@ -4,6 +4,7 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
@@ -718,6 +719,21 @@ func (h *Handler) CancelOrder(c echo.Context) error {
 			http.StatusInternalServerError,
 		))
 	}
+
+	// Send notification to kitchen staff using saved tokens
+	if h.fcmClient != nil {
+		// Get all kitchen staff users with role='kitchen'
+		kitchenStaff, err := h.repo.Tenant(c.Request().Context()).GetUsersByRole(c.Request().Context(), "kitchen")
+		if err == nil {
+			for _, staff := range kitchenStaff {
+				if staff.FcmToken != nil && strings.TrimSpace(*staff.FcmToken) != "" {
+					// Send cancellation notification to each kitchen staff
+					_ = h.service.Order().SendNotificationByStatus(c.Request().Context(), h.fcmClient, *staff.FcmToken, order.ID, "cancelled", "")
+				}
+			}
+		}
+	}
+
 	return c.JSON(http.StatusOK, model.NewSuccessResponse(
 		"Order cancelled successfully",
 		order,
@@ -1490,6 +1506,21 @@ func (h *Handler) CancelOrderItem(c echo.Context) error {
 			http.StatusInternalServerError,
 		))
 	}
+
+	// Send notification to kitchen staff using saved tokens
+	if h.fcmClient != nil {
+		// Get all kitchen staff users with role='kitchen'
+		kitchenStaff, err := h.repo.Tenant(c.Request().Context()).GetUsersByRole(c.Request().Context(), "kitchen")
+		if err == nil {
+			for _, staff := range kitchenStaff {
+				if staff.FcmToken != nil && strings.TrimSpace(*staff.FcmToken) != "" {
+					// Send cancellation notification to each kitchen staff
+					_ = h.service.Order().SendNotificationByStatus(c.Request().Context(), h.fcmClient, *staff.FcmToken, item.OrderID, "cancelled", "")
+				}
+			}
+		}
+	}
+
 	return c.JSON(http.StatusOK, model.NewSuccessResponse(
 		"Order item cancelled successfully",
 		item,
@@ -1582,6 +1613,24 @@ func (h *Handler) MarkOrderItemReady(c echo.Context) error {
 			http.StatusInternalServerError,
 		))
 	}
+
+	// Send notification to waiter using saved token
+	if h.fcmClient != nil {
+		// Get order to find waiter_id
+		order, err := h.service.Order().GetOrderByID(c.Request().Context(), item.OrderID)
+		if err == nil && order != nil && order.WaiterID != nil {
+			// Get waiter's saved FCM token from database
+			waiterUUID, err := uuid.Parse(*order.WaiterID)
+			if err == nil {
+				waiter, err := h.repo.Tenant(c.Request().Context()).GetUserByID(c.Request().Context(), waiterUUID)
+				if err == nil && waiter.FcmToken != nil && strings.TrimSpace(*waiter.FcmToken) != "" {
+					// Send notification with waiter's saved token
+					_ = h.service.Order().SendNotificationByStatus(c.Request().Context(), h.fcmClient, *waiter.FcmToken, item.OrderID, "ready", "")
+				}
+			}
+		}
+	}
+
 	return c.JSON(http.StatusOK, model.NewSuccessResponse(
 		"Order item marked as ready successfully",
 		item,

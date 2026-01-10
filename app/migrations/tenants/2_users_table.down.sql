@@ -19,3 +19,7 @@ DROP TABLE IF EXISTS attendances CASCADE;
 DROP TABLE IF EXISTS shifts CASCADE;
 
 DROP INDEX IF EXISTS idx_shifts_branch;
+
+
+DROP INDEX IF EXISTS idx_users_fcm_token;
+

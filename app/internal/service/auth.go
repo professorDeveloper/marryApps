@@ -275,6 +275,18 @@ func (s *AuthS) Login(ctx context.Context, req model.LoginRequest, jwtCfg *confi
 		return model.LoginResponse{}, errors.New(http.StatusText(http.StatusUnauthorized))
 	}
 
+	// Save FCM token if provided
+	if req.FCMToken != nil && strings.TrimSpace(*req.FCMToken) != "" {
+		_, err := q.UpdateUserFCMToken(ctx, pg.UpdateUserFCMTokenParams{
+			ID:       user.ID,
+			FcmToken: req.FCMToken,
+		})
+		if err != nil {
+			log.Printf("Failed to save FCM token: %v", err)
+			// Don't fail login if FCM token save fails
+		}
+	}
+
 	brandID := &brandIDSlug
 
 	role := "user"
@@ -342,6 +354,18 @@ func (s *AuthS) LoginWithPincode(ctx context.Context, req model.PincodeLoginRequ
 	if user.Pincode == nil || strings.TrimSpace(*user.Pincode) != req.Pincode {
 		log.Printf("LoginWithPincode: Pincode verification failed for user: %s", user.ID)
 		return model.LoginResponse{}, errors.New(http.StatusText(http.StatusUnauthorized))
+	}
+
+	// Save FCM token if provided
+	if req.FCMToken != nil && strings.TrimSpace(*req.FCMToken) != "" {
+		_, err := q.UpdateUserFCMToken(ctx, pg.UpdateUserFCMTokenParams{
+			ID:       user.ID,
+			FcmToken: req.FCMToken,
+		})
+		if err != nil {
+			log.Printf("Failed to save FCM token: %v", err)
+			// Don't fail login if FCM token save fails
+		}
 	}
 
 	brandID := &brandIDSlug

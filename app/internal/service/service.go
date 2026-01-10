@@ -12,6 +12,7 @@ import (
 	"gitlab.yurtal.tech/company/maryai/back/internal/model"
 	"gitlab.yurtal.tech/company/maryai/back/internal/repository"
 	"gitlab.yurtal.tech/company/maryai/back/pkg/minio"
+	"gitlab.yurtal.tech/company/maryai/back/pkg/notification"
 	"gitlab.yurtal.tech/company/maryai/back/pkg/paymentClick"
 	"gitlab.yurtal.tech/company/maryai/back/pkg/paymentPayme"
 )
@@ -80,11 +81,11 @@ type StorageI interface {
 }
 
 type DepartmentI interface {
-	CreateDepartment(ctx context.Context, name string, nameI18n *string, colorCode *string, storageID *string) (*model.DepartmentResponse, error)
+	CreateDepartment(ctx context.Context, name string, nameI18n *string, colorCode *string, pictureUrl *string, storageID *string) (*model.DepartmentResponse, error)
 	GetDepartmentByID(ctx context.Context, departmentID string) (*model.DepartmentResponse, error)
 	GetAllDepartments(ctx context.Context, limit, offset int32) ([]*model.DepartmentResponse, error)
 	GetDepartmentsByStorageID(ctx context.Context, storageID string, limit, offset int32) ([]*model.DepartmentResponse, error)
-	UpdateDepartment(ctx context.Context, departmentID string, name *string, nameI18n *string, colorCode *string, storageID *string) (*model.DepartmentResponse, error)
+	UpdateDepartment(ctx context.Context, departmentID string, name *string, nameI18n *string, colorCode *string, pictureUrl *string, storageID *string) (*model.DepartmentResponse, error)
 	DeleteDepartment(ctx context.Context, departmentID string) error
 	RestoreDepartment(ctx context.Context, departmentID string) (*model.DepartmentResponse, error)
 	SearchDepartments(ctx context.Context, query string, limit, offset int32) ([]*model.DepartmentResponse, error)
@@ -295,6 +296,9 @@ type OrderI interface {
 	RestoreOrderItem(ctx context.Context, itemID string) error
 
 	GetKitchenQueue(ctx context.Context) ([]KitchenQueueItem, error)
+
+	// SendNotificationByStatus sends a status-based notification to an arbitrary device token
+	SendNotificationByStatus(ctx context.Context, fcmClient *notification.FCMClient, deviceToken string, orderID string, status string, tableNumber string) error
 }
 
 type I interface {

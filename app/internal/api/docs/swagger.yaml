@@ -327,6 +327,8 @@ definitions:
         type: string
       name_i18n:
         type: string
+      picture_url:
+        type: string
       storage_id:
         type: string
     type: object
@@ -617,6 +619,8 @@ definitions:
       name:
         type: string
       name_i18n:
+        type: string
+      picture_url:
         type: string
       storage_id:
         type: string
@@ -1004,6 +1008,9 @@ definitions:
       brand_id:
         example: my_restaurant
         type: string
+      fcm_token:
+        example: eP8...firebase...token
+        type: string
       password:
         example: Password:Javohir
         type: string
@@ -1121,6 +1128,9 @@ definitions:
     properties:
       brand_id:
         example: my_restaurant
+        type: string
+      fcm_token:
+        example: eP8...firebase...token
         type: string
       pincode:
         example: "1234"
@@ -1402,6 +1412,8 @@ definitions:
       name:
         type: string
       name_i18n:
+        type: string
+      picture_url:
         type: string
       storage_id:
         type: string

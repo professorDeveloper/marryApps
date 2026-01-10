@@ -26,6 +26,7 @@ type (
 		Payme        PaymeConfig            `yaml:"payme"`
 		Click        ClickConfig            `yaml:"click"`
 		OTP          OTPConfig              `yaml:"otp"`
+		Firebase     FirebaseConfig         `yaml:"firebase"`
 	}
 
 	ClickConfig struct {
@@ -36,6 +37,12 @@ type (
 		MerchantUserID string `env:"CLICK_MERCHANT_USER_ID" env-default:""`
 		ReturnUrl      string `env:"CLICK_RETURN_URL" env-default:""`
 	}
+
+	FirebaseConfig struct {
+		CredentialsPath string `yaml:"credentials-path" env:"FIREBASE_CREDENTIALS_PATH" env-default:"./mana-notification-service.json"`
+		Enabled         bool   `yaml:"enabled" env:"FIREBASE_ENABLED" env-default:"false"`
+	}
+
 	OTPConfig struct {
 		Username string `env:"OTP_USERNAME" env-default:""`
 		Secret   string `env:"OTP_SECRET_KEY" env-default:""`

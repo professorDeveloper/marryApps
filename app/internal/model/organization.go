@@ -54,29 +54,31 @@ type StorageResponse struct {
 }
 
 type CreateDepartmentRequest struct {
-	Name      *string `json:"name"`
-	NameI18n  *string `json:"name_i18n"`
-	ColorCode *string `json:"color_code"`
-	StorageID string  `json:"storage_id"`
+	Name       *string `json:"name"`
+	NameI18n   *string `json:"name_i18n"`
+	ColorCode  *string `json:"color_code"`
+	PictureUrl *string `json:"picture_url"`
+	StorageID  string  `json:"storage_id"`
 }
 
 type UpdateDepartmentRequest struct {
-	Name      *string `json:"name"`
-	NameI18n  *string `json:"name_i18n"`
-	ColorCode *string `json:"color_code"`
-	StorageID *string `json:"storage_id"`
+	Name       *string `json:"name"`
+	NameI18n   *string `json:"name_i18n"`
+	ColorCode  *string `json:"color_code"`
+	PictureUrl *string `json:"picture_url"`
+	StorageID  *string `json:"storage_id"`
 }
 
 type DepartmentResponse struct {
-	ID        string     `json:"id"`
-	Name      *string    `json:"name"`
-	NameI18n  *string    `json:"name_i18n"`
-	ColorCode *string    `json:"color_code"`
-	StorageID string     `json:"storage_id"`
-	CreatedAt *time.Time `json:"created_at"`
-	UpdatedAt *time.Time `json:"updated_at"`
+	ID         string     `json:"id"`
+	Name       *string    `json:"name"`
+	NameI18n   *string    `json:"name_i18n"`
+	ColorCode  *string    `json:"color_code"`
+	PictureUrl *string    `json:"picture_url"`
+	StorageID  string     `json:"storage_id"`
+	CreatedAt  *time.Time `json:"created_at"`
+	UpdatedAt  *time.Time `json:"updated_at"`
 }
-
 
 type CreateHallRequest struct {
 	Name     *string `json:"name"`
@@ -120,7 +122,6 @@ type TranslationResponse struct {
 	UpdatedAt *time.Time `json:"updated_at,omitempty" example:"2022-01-01T00:00:00Z"`
 }
 
-
 type CreateIngredientGroupRequest struct {
 	Name       *string `json:"name" example:"Vegetables"`
 	NameI18n   *string `json:"name_i18n,omitempty" example:"123e4567-e89b-12d3-a456-426614174000"`
@@ -144,7 +145,6 @@ type IngredientGroupResponse struct {
 	CreatedAt  *time.Time `json:"created_at,omitempty" example:"2022-01-01T00:00:00Z"`
 	UpdatedAt  *time.Time `json:"updated_at,omitempty" example:"2022-01-01T00:00:00Z"`
 }
-
 
 type CreateIngredientRequest struct {
 	Name        *string `json:"name" example:"Tomato"`
@@ -178,7 +178,6 @@ type IngredientResponse struct {
 	CreatedAt   *time.Time `json:"created_at,omitempty" example:"2022-01-01T00:00:00Z"`
 	UpdatedAt   *time.Time `json:"updated_at,omitempty" example:"2022-01-01T00:00:00Z"`
 }
-
 
 type CreateIngredientStockRequest struct {
 	IngredientID *string `json:"ingredient_id" example:"123e4567-e89b-12d3-a456-426614174000"`

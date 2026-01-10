@@ -20,11 +20,13 @@ type LoginRequest struct {
 	Username string  `json:"username" example:"admin"`
 	Password string  `json:"password,omitempty" example:"Password:Javohir"`
 	BrandID  *string `json:"brand_id,omitempty" example:"my_restaurant"`
+	FCMToken *string `json:"fcm_token,omitempty" example:"eP8...firebase...token"`
 }
 
 type PincodeLoginRequest struct {
-	Pincode string `json:"pincode" example:"1234"`
-	BrandID string `json:"brand_id" example:"my_restaurant"`
+	Pincode  string  `json:"pincode" example:"1234"`
+	BrandID  string  `json:"brand_id" example:"my_restaurant"`
+	FCMToken *string `json:"fcm_token,omitempty" example:"eP8...firebase...token"`
 }
 
 type GlobalLoginRequest struct {

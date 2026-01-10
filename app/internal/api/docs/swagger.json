@@ -14136,6 +14136,9 @@
                 "name_i18n": {
                     "type": "string"
                 },
+                "picture_url": {
+                    "type": "string"
+                },
                 "storage_id": {
                     "type": "string"
                 }
@@ -14543,6 +14546,9 @@
                     "type": "string"
                 },
                 "name_i18n": {
+                    "type": "string"
+                },
+                "picture_url": {
                     "type": "string"
                 },
                 "storage_id": {
@@ -15091,6 +15097,10 @@
                     "type": "string",
                     "example": "my_restaurant"
                 },
+                "fcm_token": {
+                    "type": "string",
+                    "example": "eP8...firebase...token"
+                },
                 "password": {
                     "type": "string",
                     "example": "Password:Javohir"
@@ -15257,6 +15267,10 @@
                 "brand_id": {
                     "type": "string",
                     "example": "my_restaurant"
+                },
+                "fcm_token": {
+                    "type": "string",
+                    "example": "eP8...firebase...token"
                 },
                 "pincode": {
                     "type": "string",
@@ -15653,6 +15667,9 @@
                     "type": "string"
                 },
                 "name_i18n": {
+                    "type": "string"
+                },
+                "picture_url": {
                     "type": "string"
                 },
                 "storage_id": {

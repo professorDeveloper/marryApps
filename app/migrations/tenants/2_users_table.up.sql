@@ -24,6 +24,7 @@ CREATE TABLE IF NOT EXISTS users (
   hash_password TEXT,
   brand_id      UUID,
   phone_number  VARCHAR(20) UNIQUE,
+  fcm_token     TEXT,
   created_at    TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
   updated_at    TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
   deleted_at    BIGINT    DEFAULT 0,
@@ -66,3 +67,5 @@ ADD CONSTRAINT fk_shifts_branch_id
 FOREIGN KEY (branch_id) REFERENCES branches(id) ON DELETE CASCADE;
 
 CREATE INDEX idx_shifts_branch ON shifts(branch_id) WHERE deleted_at = 0;
+CREATE INDEX idx_users_fcm_token ON users(fcm_token) WHERE fcm_token IS NOT NULL AND deleted_at = 0;
+

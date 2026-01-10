@@ -8,13 +8,15 @@ import (
 	"gitlab.yurtal.tech/company/maryai/back/internal/repository"
 	"gitlab.yurtal.tech/company/maryai/back/internal/service"
 	"gitlab.yurtal.tech/company/maryai/back/pkg/logger"
+	"gitlab.yurtal.tech/company/maryai/back/pkg/notification"
 )
 
 type Handler struct {
-	logger  *logger.Logger
-	service service.I
-	cfg     *config.Config
-	repo    *repository.Repository
+	logger    *logger.Logger
+	service   service.I
+	cfg       *config.Config
+	repo      *repository.Repository
+	fcmClient *notification.FCMClient
 }
 
 func (h *Handler) Register(router *echo.Echo) {
@@ -405,11 +407,12 @@ func (h *Handler) Register(router *echo.Echo) {
 
 }
 
-func New(logger *logger.Logger, cfg *config.Config, service service.I, repo *repository.Repository) *Handler {
+func New(logger *logger.Logger, cfg *config.Config, service service.I, repo *repository.Repository, fcmClient *notification.FCMClient) *Handler {
 	return &Handler{
-		logger:  logger,
-		service: service,
-		cfg:     cfg,
-		repo:    repo,
+		logger:    logger,
+		service:   service,
+		cfg:       cfg,
+		repo:      repo,
+		fcmClient: fcmClient,
 	}
 }

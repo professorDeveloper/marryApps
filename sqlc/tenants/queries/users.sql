@@ -42,6 +42,12 @@ UPDATE users SET
 WHERE id = $1 AND deleted_at = 0
 RETURNING *;
 
+-- name: UpdateUserFCMToken :one
+UPDATE users SET
+    fcm_token = $2
+WHERE id = $1 AND deleted_at = 0
+RETURNING *;
+
 -- name: SoftDeleteUser :one
 UPDATE users SET
     deleted_at = EXTRACT(EPOCH FROM CURRENT_TIMESTAMP)::bigint

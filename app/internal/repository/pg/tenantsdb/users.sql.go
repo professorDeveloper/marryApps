@@ -202,7 +202,7 @@ INSERT INTO users (
 VALUES (
     $1, $2, $3, $4, $5, $6, $7, $8, $9, $10
 )
-RETURNING id, full_name, username, role, email, shift_id, pincode, hash_password, brand_id, phone_number, created_at, updated_at, deleted_at
+RETURNING id, full_name, username, role, email, shift_id, pincode, hash_password, brand_id, phone_number, fcm_token, created_at, updated_at, deleted_at
 `
 
 type CreateUserParams struct {
@@ -243,6 +243,7 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 		&i.HashPassword,
 		&i.BrandID,
 		&i.PhoneNumber,
+		&i.FcmToken,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
@@ -288,7 +289,7 @@ func (q *Queries) GetAllShifts(ctx context.Context) ([]Shift, error) {
 }
 
 const getAllUsers = `-- name: GetAllUsers :many
-SELECT id, full_name, username, role, email, shift_id, pincode, hash_password, brand_id, phone_number, created_at, updated_at, deleted_at FROM users 
+SELECT id, full_name, username, role, email, shift_id, pincode, hash_password, brand_id, phone_number, fcm_token, created_at, updated_at, deleted_at FROM users 
 WHERE deleted_at = 0
 ORDER BY created_at DESC
 `
@@ -313,6 +314,7 @@ func (q *Queries) GetAllUsers(ctx context.Context) ([]User, error) {
 			&i.HashPassword,
 			&i.BrandID,
 			&i.PhoneNumber,
+			&i.FcmToken,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.DeletedAt,
@@ -328,7 +330,7 @@ func (q *Queries) GetAllUsers(ctx context.Context) ([]User, error) {
 }
 
 const getAllUsersPaginated = `-- name: GetAllUsersPaginated :many
-SELECT id, full_name, username, role, email, shift_id, pincode, hash_password, brand_id, phone_number, created_at, updated_at, deleted_at FROM users 
+SELECT id, full_name, username, role, email, shift_id, pincode, hash_password, brand_id, phone_number, fcm_token, created_at, updated_at, deleted_at FROM users 
 WHERE deleted_at = 0
 ORDER BY created_at DESC
 LIMIT $1 OFFSET $2
@@ -359,6 +361,7 @@ func (q *Queries) GetAllUsersPaginated(ctx context.Context, arg GetAllUsersPagin
 			&i.HashPassword,
 			&i.BrandID,
 			&i.PhoneNumber,
+			&i.FcmToken,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.DeletedAt,
@@ -1008,7 +1011,7 @@ func (q *Queries) GetUserAttendanceStatsByDateRange(ctx context.Context, arg Get
 }
 
 const getUserByEmail = `-- name: GetUserByEmail :one
-SELECT id, full_name, username, role, email, shift_id, pincode, hash_password, brand_id, phone_number, created_at, updated_at, deleted_at FROM users 
+SELECT id, full_name, username, role, email, shift_id, pincode, hash_password, brand_id, phone_number, fcm_token, created_at, updated_at, deleted_at FROM users 
 WHERE email = $1 AND deleted_at = 0
 `
 
@@ -1026,6 +1029,7 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email *string) (User, erro
 		&i.HashPassword,
 		&i.BrandID,
 		&i.PhoneNumber,
+		&i.FcmToken,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
@@ -1034,7 +1038,7 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email *string) (User, erro
 }
 
 const getUserByID = `-- name: GetUserByID :one
-SELECT id, full_name, username, role, email, shift_id, pincode, hash_password, brand_id, phone_number, created_at, updated_at, deleted_at FROM users 
+SELECT id, full_name, username, role, email, shift_id, pincode, hash_password, brand_id, phone_number, fcm_token, created_at, updated_at, deleted_at FROM users 
 WHERE id = $1 AND deleted_at = 0
 `
 
@@ -1052,6 +1056,7 @@ func (q *Queries) GetUserByID(ctx context.Context, id uuid.UUID) (User, error) {
 		&i.HashPassword,
 		&i.BrandID,
 		&i.PhoneNumber,
+		&i.FcmToken,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
@@ -1060,7 +1065,7 @@ func (q *Queries) GetUserByID(ctx context.Context, id uuid.UUID) (User, error) {
 }
 
 const getUserByPhoneNumber = `-- name: GetUserByPhoneNumber :one
-SELECT id, full_name, username, role, email, shift_id, pincode, hash_password, brand_id, phone_number, created_at, updated_at, deleted_at FROM users 
+SELECT id, full_name, username, role, email, shift_id, pincode, hash_password, brand_id, phone_number, fcm_token, created_at, updated_at, deleted_at FROM users 
 WHERE phone_number = $1 AND deleted_at = 0
 `
 
@@ -1078,6 +1083,7 @@ func (q *Queries) GetUserByPhoneNumber(ctx context.Context, phoneNumber *string)
 		&i.HashPassword,
 		&i.BrandID,
 		&i.PhoneNumber,
+		&i.FcmToken,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
@@ -1086,7 +1092,7 @@ func (q *Queries) GetUserByPhoneNumber(ctx context.Context, phoneNumber *string)
 }
 
 const getUserByPincode = `-- name: GetUserByPincode :one
-SELECT id, full_name, username, role, email, shift_id, pincode, hash_password, brand_id, phone_number, created_at, updated_at, deleted_at FROM users 
+SELECT id, full_name, username, role, email, shift_id, pincode, hash_password, brand_id, phone_number, fcm_token, created_at, updated_at, deleted_at FROM users 
 WHERE pincode = $1 AND deleted_at = 0
 `
 
@@ -1104,6 +1110,7 @@ func (q *Queries) GetUserByPincode(ctx context.Context, pincode *string) (User, 
 		&i.HashPassword,
 		&i.BrandID,
 		&i.PhoneNumber,
+		&i.FcmToken,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
@@ -1112,7 +1119,7 @@ func (q *Queries) GetUserByPincode(ctx context.Context, pincode *string) (User, 
 }
 
 const getUserByUsername = `-- name: GetUserByUsername :one
-SELECT id, full_name, username, role, email, shift_id, pincode, hash_password, brand_id, phone_number, created_at, updated_at, deleted_at FROM users 
+SELECT id, full_name, username, role, email, shift_id, pincode, hash_password, brand_id, phone_number, fcm_token, created_at, updated_at, deleted_at FROM users 
 WHERE username = $1 AND deleted_at = 0
 `
 
@@ -1130,6 +1137,7 @@ func (q *Queries) GetUserByUsername(ctx context.Context, username *string) (User
 		&i.HashPassword,
 		&i.BrandID,
 		&i.PhoneNumber,
+		&i.FcmToken,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
@@ -1139,7 +1147,7 @@ func (q *Queries) GetUserByUsername(ctx context.Context, username *string) (User
 
 const getUserWithAttendanceStats = `-- name: GetUserWithAttendanceStats :one
 SELECT 
-    u.id, u.full_name, u.username, u.role, u.email, u.shift_id, u.pincode, u.hash_password, u.brand_id, u.phone_number, u.created_at, u.updated_at, u.deleted_at,
+    u.id, u.full_name, u.username, u.role, u.email, u.shift_id, u.pincode, u.hash_password, u.brand_id, u.phone_number, u.fcm_token, u.created_at, u.updated_at, u.deleted_at,
     COUNT(a.id) as total_attendances,
     SUM(a.working_hours) as total_hours_worked,
     AVG(a.working_hours) as avg_hours_per_day,
@@ -1161,6 +1169,7 @@ type GetUserWithAttendanceStatsRow struct {
 	HashPassword       *string            `json:"hash_password"`
 	BrandID            pgtype.UUID        `json:"brand_id"`
 	PhoneNumber        *string            `json:"phone_number"`
+	FcmToken           *string            `json:"fcm_token"`
 	CreatedAt          pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt          pgtype.Timestamptz `json:"updated_at"`
 	DeletedAt          *int64             `json:"deleted_at"`
@@ -1184,6 +1193,7 @@ func (q *Queries) GetUserWithAttendanceStats(ctx context.Context, id uuid.UUID) 
 		&i.HashPassword,
 		&i.BrandID,
 		&i.PhoneNumber,
+		&i.FcmToken,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
@@ -1344,7 +1354,7 @@ func (q *Queries) GetUserWithShiftAndBranch(ctx context.Context, id uuid.UUID) (
 }
 
 const getUsersByBrandID = `-- name: GetUsersByBrandID :many
-SELECT id, full_name, username, role, email, shift_id, pincode, hash_password, brand_id, phone_number, created_at, updated_at, deleted_at FROM users 
+SELECT id, full_name, username, role, email, shift_id, pincode, hash_password, brand_id, phone_number, fcm_token, created_at, updated_at, deleted_at FROM users 
 WHERE brand_id = $1 AND deleted_at = 0
 ORDER BY full_name ASC
 `
@@ -1369,6 +1379,7 @@ func (q *Queries) GetUsersByBrandID(ctx context.Context, brandID pgtype.UUID) ([
 			&i.HashPassword,
 			&i.BrandID,
 			&i.PhoneNumber,
+			&i.FcmToken,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.DeletedAt,
@@ -1384,7 +1395,7 @@ func (q *Queries) GetUsersByBrandID(ctx context.Context, brandID pgtype.UUID) ([
 }
 
 const getUsersByRole = `-- name: GetUsersByRole :many
-SELECT id, full_name, username, role, email, shift_id, pincode, hash_password, brand_id, phone_number, created_at, updated_at, deleted_at FROM users 
+SELECT id, full_name, username, role, email, shift_id, pincode, hash_password, brand_id, phone_number, fcm_token, created_at, updated_at, deleted_at FROM users 
 WHERE role = $1 AND deleted_at = 0
 ORDER BY full_name ASC
 `
@@ -1409,6 +1420,7 @@ func (q *Queries) GetUsersByRole(ctx context.Context, role string) ([]User, erro
 			&i.HashPassword,
 			&i.BrandID,
 			&i.PhoneNumber,
+			&i.FcmToken,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.DeletedAt,
@@ -1424,7 +1436,7 @@ func (q *Queries) GetUsersByRole(ctx context.Context, role string) ([]User, erro
 }
 
 const getUsersByRolePaginated = `-- name: GetUsersByRolePaginated :many
-SELECT id, full_name, username, role, email, shift_id, pincode, hash_password, brand_id, phone_number, created_at, updated_at, deleted_at FROM users 
+SELECT id, full_name, username, role, email, shift_id, pincode, hash_password, brand_id, phone_number, fcm_token, created_at, updated_at, deleted_at FROM users 
 WHERE role = $1 AND deleted_at = 0
 ORDER BY full_name ASC
 LIMIT $2 OFFSET $3
@@ -1456,6 +1468,7 @@ func (q *Queries) GetUsersByRolePaginated(ctx context.Context, arg GetUsersByRol
 			&i.HashPassword,
 			&i.BrandID,
 			&i.PhoneNumber,
+			&i.FcmToken,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.DeletedAt,
@@ -1471,7 +1484,7 @@ func (q *Queries) GetUsersByRolePaginated(ctx context.Context, arg GetUsersByRol
 }
 
 const getUsersByShiftID = `-- name: GetUsersByShiftID :many
-SELECT u.id, u.full_name, u.username, u.role, u.email, u.shift_id, u.pincode, u.hash_password, u.brand_id, u.phone_number, u.created_at, u.updated_at, u.deleted_at
+SELECT u.id, u.full_name, u.username, u.role, u.email, u.shift_id, u.pincode, u.hash_password, u.brand_id, u.phone_number, u.fcm_token, u.created_at, u.updated_at, u.deleted_at
 FROM users u
 WHERE u.shift_id = $1 AND u.deleted_at = 0
 ORDER BY u.full_name ASC
@@ -1497,6 +1510,7 @@ func (q *Queries) GetUsersByShiftID(ctx context.Context, shiftID pgtype.UUID) ([
 			&i.HashPassword,
 			&i.BrandID,
 			&i.PhoneNumber,
+			&i.FcmToken,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.DeletedAt,
@@ -1550,7 +1564,7 @@ const restoreUser = `-- name: RestoreUser :one
 UPDATE users SET
     deleted_at = 0
 WHERE id = $1 AND deleted_at != 0
-RETURNING id, full_name, username, role, email, shift_id, pincode, hash_password, brand_id, phone_number, created_at, updated_at, deleted_at
+RETURNING id, full_name, username, role, email, shift_id, pincode, hash_password, brand_id, phone_number, fcm_token, created_at, updated_at, deleted_at
 `
 
 func (q *Queries) RestoreUser(ctx context.Context, id uuid.UUID) (User, error) {
@@ -1567,6 +1581,7 @@ func (q *Queries) RestoreUser(ctx context.Context, id uuid.UUID) (User, error) {
 		&i.HashPassword,
 		&i.BrandID,
 		&i.PhoneNumber,
+		&i.FcmToken,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
@@ -1575,7 +1590,7 @@ func (q *Queries) RestoreUser(ctx context.Context, id uuid.UUID) (User, error) {
 }
 
 const searchUsers = `-- name: SearchUsers :many
-SELECT id, full_name, username, role, email, shift_id, pincode, hash_password, brand_id, phone_number, created_at, updated_at, deleted_at FROM users 
+SELECT id, full_name, username, role, email, shift_id, pincode, hash_password, brand_id, phone_number, fcm_token, created_at, updated_at, deleted_at FROM users 
 WHERE deleted_at = 0
 AND (
     full_name ILIKE '%' || $1 || '%' OR
@@ -1613,6 +1628,7 @@ func (q *Queries) SearchUsers(ctx context.Context, arg SearchUsersParams) ([]Use
 			&i.HashPassword,
 			&i.BrandID,
 			&i.PhoneNumber,
+			&i.FcmToken,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.DeletedAt,
@@ -1628,7 +1644,7 @@ func (q *Queries) SearchUsers(ctx context.Context, arg SearchUsersParams) ([]Use
 }
 
 const searchUsersByRole = `-- name: SearchUsersByRole :many
-SELECT id, full_name, username, role, email, shift_id, pincode, hash_password, brand_id, phone_number, created_at, updated_at, deleted_at FROM users 
+SELECT id, full_name, username, role, email, shift_id, pincode, hash_password, brand_id, phone_number, fcm_token, created_at, updated_at, deleted_at FROM users 
 WHERE role = $1 AND deleted_at = 0
 AND (
     full_name ILIKE '%' || $2 || '%' OR
@@ -1671,6 +1687,7 @@ func (q *Queries) SearchUsersByRole(ctx context.Context, arg SearchUsersByRolePa
 			&i.HashPassword,
 			&i.BrandID,
 			&i.PhoneNumber,
+			&i.FcmToken,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.DeletedAt,
@@ -1738,7 +1755,7 @@ const softDeleteUser = `-- name: SoftDeleteUser :one
 UPDATE users SET
     deleted_at = EXTRACT(EPOCH FROM CURRENT_TIMESTAMP)::bigint
 WHERE id = $1 AND deleted_at = 0
-RETURNING id, full_name, username, role, email, shift_id, pincode, hash_password, brand_id, phone_number, created_at, updated_at, deleted_at
+RETURNING id, full_name, username, role, email, shift_id, pincode, hash_password, brand_id, phone_number, fcm_token, created_at, updated_at, deleted_at
 `
 
 func (q *Queries) SoftDeleteUser(ctx context.Context, id uuid.UUID) (User, error) {
@@ -1755,6 +1772,7 @@ func (q *Queries) SoftDeleteUser(ctx context.Context, id uuid.UUID) (User, error
 		&i.HashPassword,
 		&i.BrandID,
 		&i.PhoneNumber,
+		&i.FcmToken,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
@@ -1863,7 +1881,7 @@ UPDATE users SET
     brand_id = COALESCE($9, brand_id),
     phone_number = COALESCE($10, phone_number)
 WHERE id = $1 AND deleted_at = 0
-RETURNING id, full_name, username, role, email, shift_id, pincode, hash_password, brand_id, phone_number, created_at, updated_at, deleted_at
+RETURNING id, full_name, username, role, email, shift_id, pincode, hash_password, brand_id, phone_number, fcm_token, created_at, updated_at, deleted_at
 `
 
 type UpdateUserParams struct {
@@ -1904,6 +1922,41 @@ func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (User, e
 		&i.HashPassword,
 		&i.BrandID,
 		&i.PhoneNumber,
+		&i.FcmToken,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
+	)
+	return i, err
+}
+
+const updateUserFCMToken = `-- name: UpdateUserFCMToken :one
+UPDATE users SET
+    fcm_token = $2
+WHERE id = $1 AND deleted_at = 0
+RETURNING id, full_name, username, role, email, shift_id, pincode, hash_password, brand_id, phone_number, fcm_token, created_at, updated_at, deleted_at
+`
+
+type UpdateUserFCMTokenParams struct {
+	ID       uuid.UUID `json:"id"`
+	FcmToken *string   `json:"fcm_token"`
+}
+
+func (q *Queries) UpdateUserFCMToken(ctx context.Context, arg UpdateUserFCMTokenParams) (User, error) {
+	row := q.db.QueryRow(ctx, updateUserFCMToken, arg.ID, arg.FcmToken)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.FullName,
+		&i.Username,
+		&i.Role,
+		&i.Email,
+		&i.ShiftID,
+		&i.Pincode,
+		&i.HashPassword,
+		&i.BrandID,
+		&i.PhoneNumber,
+		&i.FcmToken,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
@@ -1915,7 +1968,7 @@ const updateUserPassword = `-- name: UpdateUserPassword :one
 UPDATE users SET
     hash_password = $2
 WHERE id = $1 AND deleted_at = 0
-RETURNING id, full_name, username, role, email, shift_id, pincode, hash_password, brand_id, phone_number, created_at, updated_at, deleted_at
+RETURNING id, full_name, username, role, email, shift_id, pincode, hash_password, brand_id, phone_number, fcm_token, created_at, updated_at, deleted_at
 `
 
 type UpdateUserPasswordParams struct {
@@ -1937,6 +1990,7 @@ func (q *Queries) UpdateUserPassword(ctx context.Context, arg UpdateUserPassword
 		&i.HashPassword,
 		&i.BrandID,
 		&i.PhoneNumber,
+		&i.FcmToken,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
@@ -1948,7 +2002,7 @@ const updateUserShift = `-- name: UpdateUserShift :one
 UPDATE users SET
     shift_id = $2
 WHERE id = $1 AND deleted_at = 0
-RETURNING id, full_name, username, role, email, shift_id, pincode, hash_password, brand_id, phone_number, created_at, updated_at, deleted_at
+RETURNING id, full_name, username, role, email, shift_id, pincode, hash_password, brand_id, phone_number, fcm_token, created_at, updated_at, deleted_at
 `
 
 type UpdateUserShiftParams struct {
@@ -1970,6 +2024,7 @@ func (q *Queries) UpdateUserShift(ctx context.Context, arg UpdateUserShiftParams
 		&i.HashPassword,
 		&i.BrandID,
 		&i.PhoneNumber,
+		&i.FcmToken,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,

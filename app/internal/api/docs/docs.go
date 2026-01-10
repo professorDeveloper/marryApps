@@ -14139,6 +14139,9 @@ const docTemplate = `{
                 "name_i18n": {
                     "type": "string"
                 },
+                "picture_url": {
+                    "type": "string"
+                },
                 "storage_id": {
                     "type": "string"
                 }
@@ -14546,6 +14549,9 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "name_i18n": {
+                    "type": "string"
+                },
+                "picture_url": {
                     "type": "string"
                 },
                 "storage_id": {
@@ -15094,6 +15100,10 @@ const docTemplate = `{
                     "type": "string",
                     "example": "my_restaurant"
                 },
+                "fcm_token": {
+                    "type": "string",
+                    "example": "eP8...firebase...token"
+                },
                 "password": {
                     "type": "string",
                     "example": "Password:Javohir"
@@ -15260,6 +15270,10 @@ const docTemplate = `{
                 "brand_id": {
                     "type": "string",
                     "example": "my_restaurant"
+                },
+                "fcm_token": {
+                    "type": "string",
+                    "example": "eP8...firebase...token"
                 },
                 "pincode": {
                     "type": "string",
@@ -15656,6 +15670,9 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "name_i18n": {
+                    "type": "string"
+                },
+                "picture_url": {
                     "type": "string"
                 },
                 "storage_id": {

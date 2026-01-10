@@ -13,16 +13,16 @@ import (
 	pg "gitlab.yurtal.tech/company/maryai/back/internal/repository/pg/tenantsdb"
 )
 
-// Generic function to map any department row to response
-func mapDepartmentToResponse(id uuid.UUID, name string, nameI18n, storageID pgtype.UUID, colorCode *string, createdAt, updatedAt pgtype.Timestamptz) *model.DepartmentResponse {
+func mapDepartmentToResponse(id uuid.UUID, name string, nameI18n, storageID pgtype.UUID, colorCode, pictureUrl *string, createdAt, updatedAt pgtype.Timestamptz) *model.DepartmentResponse {
 	return &model.DepartmentResponse{
-		ID:        id.String(),
-		Name:      &name,
-		NameI18n:  uuidToStr(nameI18n),
-		ColorCode: colorCode,
-		StorageID: storageID.String(),
-		CreatedAt: timestampToTime(createdAt),
-		UpdatedAt: timestampToTime(updatedAt),
+		ID:         id.String(),
+		Name:       &name,
+		NameI18n:   uuidToStr(nameI18n),
+		ColorCode:  colorCode,
+		PictureUrl: pictureUrl,
+		StorageID:  storageID.String(),
+		CreatedAt:  timestampToTime(createdAt),
+		UpdatedAt:  timestampToTime(updatedAt),
 	}
 }
 
@@ -34,7 +34,7 @@ func NewDepartmentS(repo *repository.Repository) *DepartmentS {
 	return &DepartmentS{repo: repo}
 }
 
-func (d *DepartmentS) CreateDepartment(ctx context.Context, name string, nameI18n, colorCode *string, storageID *string) (*model.DepartmentResponse, error) {
+func (d *DepartmentS) CreateDepartment(ctx context.Context, name string, nameI18n, colorCode, pictureUrl *string, storageID *string) (*model.DepartmentResponse, error) {
 	if name == "" {
 		return nil, fmt.Errorf("department name is required")
 	}
@@ -58,18 +58,19 @@ func (d *DepartmentS) CreateDepartment(ctx context.Context, name string, nameI18
 	}
 
 	department, err := d.repo.Tenant(ctx).CreateDepartment(ctx, pg.CreateDepartmentParams{
-		ID:        uuid.New(),
-		Name:      name,
-		NameI18n:  nameI18nUUID,
-		ColorCode: colorCode,
-		StorageID: storageUUID,
+		ID:         uuid.New(),
+		Name:       name,
+		NameI18n:   nameI18nUUID,
+		ColorCode:  colorCode,
+		PictureUrl: pictureUrl,
+		StorageID:  storageUUID,
 	})
 	if err != nil {
 		log.Printf("CreateDepartment failed: %v", err)
 		return nil, fmt.Errorf("failed to create department: %w", err)
 	}
 
-	return mapDepartmentToResponse(department.ID, department.Name, department.NameI18n, department.StorageID, department.ColorCode, department.CreatedAt, department.UpdatedAt), nil
+	return mapDepartmentToResponse(department.ID, department.Name, department.NameI18n, department.StorageID, department.ColorCode, department.PictureUrl, department.CreatedAt, department.UpdatedAt), nil
 }
 
 // GetDepartmentByID retrieves a department by ID
@@ -88,7 +89,7 @@ func (d *DepartmentS) GetDepartmentByID(ctx context.Context, departmentID string
 		return nil, fmt.Errorf("failed to retrieve department: %w", err)
 	}
 
-	return mapDepartmentToResponse(department.ID, department.Name, department.NameI18n, department.StorageID, department.ColorCode, department.CreatedAt, department.UpdatedAt), nil
+	return mapDepartmentToResponse(department.ID, department.Name, department.NameI18n, department.StorageID, department.ColorCode, department.PictureUrl, department.CreatedAt, department.UpdatedAt), nil
 }
 
 // GetAllDepartments retrieves all departments with pagination
@@ -104,7 +105,7 @@ func (d *DepartmentS) GetAllDepartments(ctx context.Context, limit, offset int32
 
 	var responses []*model.DepartmentResponse
 	for _, dept := range departments {
-		responses = append(responses, mapDepartmentToResponse(dept.ID, dept.Name, dept.NameI18n, dept.StorageID, dept.ColorCode, dept.CreatedAt, dept.UpdatedAt))
+		responses = append(responses, mapDepartmentToResponse(dept.ID, dept.Name, dept.NameI18n, dept.StorageID, dept.ColorCode, dept.PictureUrl, dept.CreatedAt, dept.UpdatedAt))
 	}
 	return responses, nil
 }
@@ -128,13 +129,13 @@ func (d *DepartmentS) GetDepartmentsByStorageID(ctx context.Context, storageID s
 
 	var responses []*model.DepartmentResponse
 	for _, dept := range departments {
-		responses = append(responses, mapDepartmentToResponse(dept.ID, dept.Name, dept.NameI18n, dept.StorageID, dept.ColorCode, dept.CreatedAt, dept.UpdatedAt))
+		responses = append(responses, mapDepartmentToResponse(dept.ID, dept.Name, dept.NameI18n, dept.StorageID, dept.ColorCode, dept.PictureUrl, dept.CreatedAt, dept.UpdatedAt))
 	}
 	return responses, nil
 }
 
 // UpdateDepartment updates a department
-func (d *DepartmentS) UpdateDepartment(ctx context.Context, departmentID string, name *string, nameI18n *string, colorCode *string, storageID *string) (*model.DepartmentResponse, error) {
+func (d *DepartmentS) UpdateDepartment(ctx context.Context, departmentID string, name *string, nameI18n *string, colorCode *string, pictureUrl *string, storageID *string) (*model.DepartmentResponse, error) {
 	id, err := uuid.Parse(departmentID)
 	if err != nil {
 		return nil, fmt.Errorf("invalid department ID: %w", err)
@@ -168,6 +169,11 @@ func (d *DepartmentS) UpdateDepartment(ctx context.Context, departmentID string,
 		finalColorCode = colorCode
 	}
 
+	finalPictureUrl := existing.PictureUrl
+	if pictureUrl != nil {
+		finalPictureUrl = pictureUrl
+	}
+
 	finalStorageID := existing.StorageID
 	if storageID != nil && *storageID != "" {
 		storageUUID, err := uuid.Parse(*storageID)
@@ -178,18 +184,19 @@ func (d *DepartmentS) UpdateDepartment(ctx context.Context, departmentID string,
 	}
 
 	department, err := d.repo.Tenant(ctx).UpdateDepartment(ctx, pg.UpdateDepartmentParams{
-		ID:        id,
-		Name:      finalName,
-		NameI18n:  finalNameI18n,
-		ColorCode: finalColorCode,
-		StorageID: finalStorageID,
+		ID:         id,
+		Name:       finalName,
+		NameI18n:   finalNameI18n,
+		ColorCode:  finalColorCode,
+		PictureUrl: finalPictureUrl,
+		StorageID:  finalStorageID,
 	})
 	if err != nil {
 		log.Printf("UpdateDepartment failed: %v", err)
 		return nil, fmt.Errorf("failed to update department: %w", err)
 	}
 
-	return mapDepartmentToResponse(department.ID, department.Name, department.NameI18n, department.StorageID, department.ColorCode, department.CreatedAt, department.UpdatedAt), nil
+	return mapDepartmentToResponse(department.ID, department.Name, department.NameI18n, department.StorageID, department.ColorCode, department.PictureUrl, department.CreatedAt, department.UpdatedAt), nil
 }
 
 // DeleteDepartment soft deletes a department
@@ -240,7 +247,7 @@ func (d *DepartmentS) SearchDepartments(ctx context.Context, query string, limit
 
 	var responses []*model.DepartmentResponse
 	for _, dept := range departments {
-		responses = append(responses, mapDepartmentToResponse(dept.ID, dept.Name, dept.NameI18n, dept.StorageID, dept.ColorCode, dept.CreatedAt, dept.UpdatedAt))
+		responses = append(responses, mapDepartmentToResponse(dept.ID, dept.Name, dept.NameI18n, dept.StorageID, dept.ColorCode, dept.PictureUrl, dept.CreatedAt, dept.UpdatedAt))
 	}
 	return responses, nil
 }

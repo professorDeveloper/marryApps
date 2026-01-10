@@ -3,13 +3,16 @@ package service
 import (
 	"context"
 	"fmt"
+	"log"
 	"time"
 
+	"firebase.google.com/go/v4/messaging"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 	"gitlab.yurtal.tech/company/maryai/back/internal/model"
 	"gitlab.yurtal.tech/company/maryai/back/internal/repository"
 	pg "gitlab.yurtal.tech/company/maryai/back/internal/repository/pg/tenantsdb"
+	"gitlab.yurtal.tech/company/maryai/back/pkg/notification"
 )
 
 type OrderS struct {
@@ -790,4 +793,57 @@ func toKitchenQueueItem(r pg.GetKitchenQueueRow) *KitchenQueueItem {
 		GuestCount:      r.GuestCount,
 		WaitTimeMinutes: r.WaitTimeMinutes,
 	}
+}
+
+// SendNotificationByStatus sends notification based on order or order_item status
+// Status can be: 'open', 'cooking', 'ready', 'served', 'paid', 'cancelled' (order)
+// or: 'pending', 'cooking', 'ready', 'cancelled' (order_item)
+func (s *OrderS) SendNotificationByStatus(ctx context.Context, fcmClient *notification.FCMClient, customerToken string, orderID string, status string, tableNumber string) error {
+	if fcmClient == nil || fcmClient.Client == nil || customerToken == "" {
+		return nil
+	}
+
+	var title, body string
+
+	switch status {
+	case "ready":
+		title = "🍽️ Your Food is Ready!"
+		body = fmt.Sprintf("Your order is ready - Table %s", tableNumber)
+	case "cooking":
+		title = "👨‍🍳 Preparing Your Order"
+		body = fmt.Sprintf("Your order is being prepared - Table %s", tableNumber)
+	case "served":
+		title = "✅ Your Order is Served"
+		body = fmt.Sprintf("Please enjoy your meal - Table %s", tableNumber)
+	case "paid":
+		title = "💳 Payment Received"
+		body = "Thank you for your purchase!"
+	case "cancelled":
+		title = "❌ Order Cancelled"
+		body = "Your order has been cancelled"
+	default:
+		return nil
+	}
+
+	msg := &messaging.Message{
+		Notification: &messaging.Notification{
+			Title: title,
+			Body:  body,
+		},
+		Data: map[string]string{
+			"order_id": orderID,
+			"status":   status,
+			"table":    tableNumber,
+		},
+		Token: customerToken,
+	}
+
+	_, err := fcmClient.Client.Send(ctx, msg)
+	if err != nil {
+		log.Printf("Failed to send notification for status %s: %v", status, err)
+		return err
+	}
+
+	log.Printf("Notification sent for order %s with status %s", orderID, status)
+	return nil
 }

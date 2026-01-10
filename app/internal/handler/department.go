@@ -41,7 +41,7 @@ func (h *Handler) CreateDepartment(c echo.Context) error {
 		))
 	}
 
-	department, err := h.service.Department().CreateDepartment(c.Request().Context(), *req.Name, req.NameI18n, req.ColorCode, &req.StorageID)
+	department, err := h.service.Department().CreateDepartment(c.Request().Context(), *req.Name, req.NameI18n, req.ColorCode, req.PictureUrl, &req.StorageID)
 	if err != nil {
 		log.Printf("CreateDepartment failed: %v", err)
 		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse(
@@ -221,7 +221,7 @@ func (h *Handler) UpdateDepartment(c echo.Context) error {
 		))
 	}
 
-	department, err := h.service.Department().UpdateDepartment(c.Request().Context(), departmentID, req.Name, req.NameI18n, req.ColorCode, req.StorageID)
+	department, err := h.service.Department().UpdateDepartment(c.Request().Context(), departmentID, req.Name, req.NameI18n, req.ColorCode, req.PictureUrl, req.StorageID)
 	if err != nil {
 		log.Printf("UpdateDepartment failed for ID %s: %v", departmentID, err)
 		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse(

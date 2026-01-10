@@ -317,14 +317,15 @@ type CompoundsDetail struct {
 }
 
 type Department struct {
-	ID        uuid.UUID          `json:"id"`
-	Name      string             `json:"name"`
-	ColorCode *string            `json:"color_code"`
-	NameI18n  pgtype.UUID        `json:"name_i18n"`
-	StorageID pgtype.UUID        `json:"storage_id"`
-	CreatedAt pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
-	DeletedAt *int64             `json:"deleted_at"`
+	ID         uuid.UUID          `json:"id"`
+	Name       string             `json:"name"`
+	ColorCode  *string            `json:"color_code"`
+	PictureUrl *string            `json:"picture_url"`
+	NameI18n   pgtype.UUID        `json:"name_i18n"`
+	StorageID  pgtype.UUID        `json:"storage_id"`
+	CreatedAt  pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt  pgtype.Timestamptz `json:"updated_at"`
+	DeletedAt  *int64             `json:"deleted_at"`
 }
 
 type Good struct {
@@ -519,6 +520,7 @@ type User struct {
 	HashPassword *string            `json:"hash_password"`
 	BrandID      pgtype.UUID        `json:"brand_id"`
 	PhoneNumber  *string            `json:"phone_number"`
+	FcmToken     *string            `json:"fcm_token"`
 	CreatedAt    pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
 	DeletedAt    *int64             `json:"deleted_at"`

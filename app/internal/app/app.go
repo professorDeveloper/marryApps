@@ -21,6 +21,7 @@ import (
 	"gitlab.yurtal.tech/company/maryai/back/internal/service"
 	"gitlab.yurtal.tech/company/maryai/back/pkg/logger"
 	"gitlab.yurtal.tech/company/maryai/back/pkg/minio"
+	"gitlab.yurtal.tech/company/maryai/back/pkg/notification"
 	"gitlab.yurtal.tech/company/maryai/back/pkg/paymentClick"
 	"gitlab.yurtal.tech/company/maryai/back/pkg/paymentPayme"
 	pg "gitlab.yurtal.tech/company/maryai/back/pkg/postgres"
@@ -90,7 +91,18 @@ func Run(cfg *config.Config) {
 
 	service := service.New(cfg, repos, clickClient, paymeClient, minioClient)
 
-	handler := handler.New(l, cfg, service, repos)
+	var fcmClient *notification.FCMClient
+	if cfg.Firebase.Enabled {
+		var err error
+		fcmClient, err = notification.NewFCMClient(ctx, &cfg.Firebase.CredentialsPath)
+		if err != nil {
+			l.Warn("app - Run - notification.NewFCMClient failed (notifications disabled): %v", err)
+		} else {
+			l.Infof("Firebase Cloud Messaging client initialized successfully")
+		}
+	}
+
+	handler := handler.New(l, cfg, service, repos, fcmClient)
 	handler.Register(e)
 
 	e.GET("/swagger/*", echoSwagger.WrapHandler)
