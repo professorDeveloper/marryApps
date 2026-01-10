@@ -7,7 +7,7 @@
 # yarn-error.log*
 
 # dependencies
-.env
+#.env
 node_modules
 *.md
 !README.md

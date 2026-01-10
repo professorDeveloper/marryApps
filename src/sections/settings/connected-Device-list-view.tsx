@@ -45,6 +45,62 @@ export function ConnectedDeviceListView() {
       phone_type: 'iOS',
       active: true,
     },
+        {
+      id: '5',
+      connection_date: '2024-01-15T10:30:00',
+      name: 'John Doe',
+      phone_type: 'Android',
+      active: true,
+    },
+    {
+      id: '6',
+      connection_date: '2024-01-20T14:45:00',
+      name: 'Jane Smith',
+      phone_type: 'iOS',
+      active: false,
+    },
+    {
+      id: '7',
+      connection_date: '2024-01-25T09:15:00',
+      name: 'Bob Johnson',
+      phone_type: 'Android',
+      active: true,
+    },
+    {
+      id: '8',
+      connection_date: '2024-02-01T16:20:00',
+      name: 'Alice Williams',
+      phone_type: 'iOS',
+      active: true,
+    },
+           {
+      id: '9',
+      connection_date: '2024-01-15T10:30:00',
+      name: 'John Doe',
+      phone_type: 'Android',
+      active: true,
+    },
+    {
+      id: '10',
+      connection_date: '2024-01-20T14:45:00',
+      name: 'Jane Smith',
+      phone_type: 'iOS',
+      active: false,
+    },
+    {
+      id: '11',
+      connection_date: '2024-01-25T09:15:00',
+      name: 'Bob Johnson',
+      phone_type: 'Android',
+      active: true,
+    },
+    {
+      id: '12',
+      connection_date: '2024-02-01T16:20:00',
+      name: 'Alice Williams',
+      phone_type: 'iOS',
+      active: true,
+    },
   ];
 
   const handleToggle = useCallback((id: string, currentStatus: boolean) => {
