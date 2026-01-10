@@ -107,6 +107,7 @@
     "list": "Рўйхат",
     "add": "Бўлим қўшиш",
     "edit": "Таҳрирлаш",
+    "new": "Янги",
     "view": "Кўриш",
     "delete": "Ўчириш",
     "name": "Номи",
@@ -127,13 +128,16 @@
     "created": "Яратилган",
     "updated": "Янгиланган",
     "basicInfo": "Асосий маълумотлар",
-    "storageSection": "Омбор"
+    "storageSection": "Омбор",
+    "imageTitle": "Бўлим расми",
+    "imageUrl": "Расм URL'si"
   },
   "categories": {
     "title": "Категориялар",
     "list": "Рўйхат",
     "add": "Қўшиш",
     "edit": "Таҳрирлаш",
+    "new": "Янги",
     "view": "Кўриш",
     "delete": "Ўчириш",
     "name": "Номи",

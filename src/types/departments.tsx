@@ -76,7 +76,7 @@ export type IProductItem = {
 export type IDepartmentItem = {
   id: string;
   name: string;
-  name_i18n: string;
+  color_code: string;
   storage_id: string;
   picture_url?: string;
   created_at: string;
@@ -85,7 +85,7 @@ export type IDepartmentItem = {
 
 export type IDepartmentFormData = {
   name: string;
-  name_i18n: string;
+  color_code: string;
   storage_id: string;
   picture_url?: string;
 };

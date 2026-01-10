@@ -17,6 +17,20 @@ const swrOptions: SWRConfiguration = {
 };
 
 // ============================================================================
+// TYPES
+// ============================================================================
+
+/**
+ * Backend response structure
+ */
+interface BackendResponse<T> {
+  status: string;
+  message: string;
+  data: T;
+  code: number;
+}
+
+// ============================================================================
 // CATEGORIES HOOKS
 // ============================================================================
 
@@ -26,7 +40,7 @@ const swrOptions: SWRConfiguration = {
 export function useGetCategories() {
     const url = endpoints.category.list;
 
-    const { data, isLoading, error, isValidating } = useSWR<ICategory[]>(
+    const { data, isLoading, error, isValidating } = useSWR<BackendResponse<ICategory[]>>(
         url,
         fetcher,
         { ...swrOptions }
@@ -34,11 +48,11 @@ export function useGetCategories() {
 
     const memoizedValue = useMemo(
         () => ({
-            categories: data || [],
+            categories: data?.data || [],
             categoriesLoading: isLoading,
             categoriesError: error,
             categoriesValidating: isValidating,
-            categoriesEmpty: !isLoading && !isValidating && !data?.length,
+            categoriesEmpty: !isLoading && !isValidating && !data?.data?.length,
         }),
         [data, error, isLoading, isValidating]
     );
@@ -52,7 +66,7 @@ export function useGetCategories() {
 export function useGetCategory(categoryId: string) {
     const url = categoryId ? endpoints.category.details(categoryId) : '';
 
-    const { data, isLoading, error, isValidating } = useSWR<ICategory>(
+    const { data, isLoading, error, isValidating } = useSWR<BackendResponse<ICategory>>(
         url,
         fetcher,
         { ...swrOptions }
@@ -60,7 +74,7 @@ export function useGetCategory(categoryId: string) {
 
     const memoizedValue = useMemo(
         () => ({
-            category: data,
+            category: data?.data,
             categoryLoading: isLoading,
             categoryError: error,
             categoryValidating: isValidating,

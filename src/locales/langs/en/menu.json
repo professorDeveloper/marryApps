@@ -119,6 +119,7 @@
     "list": "List",
     "add": "Add Department",
     "edit": "Edit",
+    "new": "New",
     "view": "View",
     "delete": "Delete",
     "name": "Name",
@@ -139,13 +140,16 @@
     "created": "Created",
     "updated": "Updated",
     "basicInfo": "Basic Information",
-    "storageSection": "Storage"
+    "storageSection": "Storage",
+    "imageTitle": "Department Image",
+    "imageUrl": "Image URL"
   },
   "categories": {
     "title": "Categories",
     "list": "List",
     "add": "Add",
     "edit": "Edit",
+    "new": "New",
     "view": "View",
     "delete": "Delete",
     "name": "Name",

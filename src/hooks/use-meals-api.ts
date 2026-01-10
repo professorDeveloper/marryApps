@@ -9,6 +9,13 @@ import { poster, putter, deleter, fetcher, endpoints } from 'src/lib/axios';
 // TYPES
 // ============================================================================
 
+interface BackendResponse<T> {
+    status: string;
+    message: string;
+    data: T;
+    code: number;
+}
+
 export interface UseMealsAPIReturn {
     getMeals: () => Promise<IMealsItem[]>;
     getMealById: (id: string) => Promise<IMealsItem | null>;
@@ -34,11 +41,37 @@ export function useMealsAPI(): UseMealsAPIReturn {
     const getMeals = useCallback(async (): Promise<IMealsItem[]> => {
         try {
             // Parallel'da meals, categories va departments'ni oladi
-            const [mealsData, categoriesData, departmentsData] = await Promise.all([
-                fetcher<IMealAPIResponse[]>(endpoints.meals.list),
-                fetcher<any[]>(endpoints.category.list).catch(() => []),
-                fetcher<any[]>(endpoints.department.list).catch(() => []),
+            const [mealsResponse, categoriesResponse, departmentsResponse] = await Promise.all([
+                fetcher<BackendResponse<IMealAPIResponse[]>>(endpoints.meals.list),
+                fetcher<BackendResponse<any[]>>(endpoints.category.list).catch(() => null),
+                fetcher<BackendResponse<any[]>>(endpoints.department.list).catch(() => null),
             ]);
+
+            // Extract data from wrapped response
+            let mealsData: IMealAPIResponse[] = [];
+            if (Array.isArray(mealsResponse)) {
+                mealsData = mealsResponse;
+            } else if (mealsResponse?.data && Array.isArray(mealsResponse.data)) {
+                mealsData = mealsResponse.data;
+            }
+
+            let categoriesData: any[] = [];
+            if (categoriesResponse) {
+                if (Array.isArray(categoriesResponse)) {
+                    categoriesData = categoriesResponse;
+                } else if (categoriesResponse?.data && Array.isArray(categoriesResponse.data)) {
+                    categoriesData = categoriesResponse.data;
+                }
+            }
+
+            let departmentsData: any[] = [];
+            if (departmentsResponse) {
+                if (Array.isArray(departmentsResponse)) {
+                    departmentsData = departmentsResponse;
+                } else if (departmentsResponse?.data && Array.isArray(departmentsResponse.data)) {
+                    departmentsData = departmentsResponse.data;
+                }
+            }
 
             // ID -> Name mapping
             const categoryMap = new Map(categoriesData?.map((cat: any) => [cat.id, cat.name]) || []);
@@ -47,19 +80,30 @@ export function useMealsAPI(): UseMealsAPIReturn {
             );
 
             // Meals'ni enrich qiladi
-            const enrichedMeals: IMealsItem[] = mealsData.map((meal) => ({
-                ...meal,
-                price: typeof meal.price === 'string' ? parseFloat(meal.price) : meal.price,
-                coverUrl: meal.picture_url || '',
-                category: meal.category_id ? {
-                    id: meal.category_id,
-                    name: categoryMap.get(meal.category_id) || meal.category_id,
-                } : undefined,
-                department: meal.department_id ? {
-                    id: meal.department_id,
-                    name: departmentMap.get(meal.department_id) || meal.department_id,
-                } : undefined,
-            }));
+            const enrichedMeals: IMealsItem[] = mealsData.map((meal) => {
+                // Parse price safely
+                let parsedPrice: number = 0;
+                if (typeof meal.price === 'string') {
+                    const num = parseFloat(meal.price);
+                    parsedPrice = isNaN(num) ? 0 : num;
+                } else if (typeof meal.price === 'number') {
+                    parsedPrice = meal.price;
+                }
+
+                return {
+                    ...meal,
+                    price: parsedPrice,
+                    coverUrl: meal.picture_url || '',
+                    category: meal.category_id ? {
+                        id: meal.category_id,
+                        name: categoryMap.get(meal.category_id) || meal.category_id,
+                    } : undefined,
+                    department: meal.department_id ? {
+                        id: meal.department_id,
+                        name: departmentMap.get(meal.department_id) || meal.department_id,
+                    } : undefined,
+                };
+            });
 
             return enrichedMeals;
         } catch (error) {
@@ -76,11 +120,44 @@ export function useMealsAPI(): UseMealsAPIReturn {
         async (id: string): Promise<IMealsItem | null> => {
             try {
                 // Parallel'da meal, category va department ma'lumotlarini oladi
-                const [mealData, categoriesData, departmentsData] = await Promise.all([
-                    fetcher<IMealAPIResponse>(endpoints.meals.details(id)),
-                    fetcher<any[]>(endpoints.category.list).catch(() => []),
-                    fetcher<any[]>(endpoints.department.list).catch(() => []),
+                const [mealResponse, categoriesResponse, departmentsResponse] = await Promise.all([
+                    fetcher<BackendResponse<IMealAPIResponse>>(endpoints.meals.details(id)),
+                    fetcher<BackendResponse<any[]>>(endpoints.category.list).catch(() => null),
+                    fetcher<BackendResponse<any[]>>(endpoints.department.list).catch(() => null),
                 ]);
+
+                // Extract data from wrapped response
+                let mealData: IMealAPIResponse | null = null;
+                if (mealResponse) {
+                    if ('id' in mealResponse && 'name' in mealResponse) {
+                        // Direct meal object
+                        mealData = mealResponse as IMealAPIResponse;
+                    } else if (mealResponse?.data) {
+                        mealData = mealResponse.data as IMealAPIResponse;
+                    }
+                }
+
+                if (!mealData) {
+                    return null;
+                }
+
+                let categoriesData: any[] = [];
+                if (categoriesResponse) {
+                    if (Array.isArray(categoriesResponse)) {
+                        categoriesData = categoriesResponse;
+                    } else if (categoriesResponse?.data && Array.isArray(categoriesResponse.data)) {
+                        categoriesData = categoriesResponse.data;
+                    }
+                }
+
+                let departmentsData: any[] = [];
+                if (departmentsResponse) {
+                    if (Array.isArray(departmentsResponse)) {
+                        departmentsData = departmentsResponse;
+                    } else if (departmentsResponse?.data && Array.isArray(departmentsResponse.data)) {
+                        departmentsData = departmentsResponse.data;
+                    }
+                }
 
                 // ID -> Name mapping
                 const categoryMap = new Map(
@@ -129,15 +206,25 @@ export function useMealsAPI(): UseMealsAPIReturn {
                     cook_time: data.cook_time || 0,
                 };
 
-                const response = await poster<IMealAPIResponse>(
+                const response = await poster<BackendResponse<IMealAPIResponse>>(
                     endpoints.meals.create,
                     payload
                 );
 
+                // Extract data from wrapped response
+                let mealData: IMealAPIResponse;
+                if ('id' in response && 'name' in response) {
+                    mealData = response as IMealAPIResponse;
+                } else if (response?.data) {
+                    mealData = response.data as IMealAPIResponse;
+                } else {
+                    throw new Error('Invalid response format');
+                }
+
                 const enriched: IMealsItem = {
-                    ...response,
-                    price: typeof response.price === 'string' ? parseFloat(response.price) : response.price,
-                    coverUrl: response.picture_url || '',
+                    ...mealData,
+                    price: typeof mealData.price === 'string' ? parseFloat(mealData.price) : mealData.price,
+                    coverUrl: mealData.picture_url || '',
                 };
 
                 toast.success('Meal created successfully');
@@ -167,15 +254,25 @@ export function useMealsAPI(): UseMealsAPIReturn {
                     cook_time: data.cook_time || 0,
                 };
 
-                const response = await putter<IMealAPIResponse>(
+                const response = await putter<BackendResponse<IMealAPIResponse>>(
                     endpoints.meals.update(id),
                     payload
                 );
 
+                // Extract data from wrapped response
+                let mealData: IMealAPIResponse;
+                if ('id' in response && 'name' in response) {
+                    mealData = response as IMealAPIResponse;
+                } else if (response?.data) {
+                    mealData = response.data as IMealAPIResponse;
+                } else {
+                    throw new Error('Invalid response format');
+                }
+
                 const enriched: IMealsItem = {
-                    ...response,
-                    price: typeof response.price === 'string' ? parseFloat(response.price) : response.price,
-                    coverUrl: response.picture_url || '',
+                    ...mealData,
+                    price: typeof mealData.price === 'string' ? parseFloat(mealData.price) : mealData.price,
+                    coverUrl: mealData.picture_url || '',
                 };
 
                 toast.success('Meal updated successfully');
@@ -228,8 +325,13 @@ export function useMealsAPI(): UseMealsAPIReturn {
      */
     const getCategories = useCallback(async (): Promise<any[]> => {
         try {
-            const data = await fetcher<any[]>(endpoints.category.list);
-            return data || [];
+            const response = await fetcher<BackendResponse<any[]>>(endpoints.category.list);
+            if (Array.isArray(response)) {
+                return response;
+            } else if (response?.data && Array.isArray(response.data)) {
+                return response.data;
+            }
+            return [];
         } catch (error) {
             console.error('Failed to fetch categories:', error);
             return [];
@@ -241,8 +343,13 @@ export function useMealsAPI(): UseMealsAPIReturn {
      */
     const getDepartments = useCallback(async (): Promise<any[]> => {
         try {
-            const data = await fetcher<any[]>(endpoints.department.list);
-            return data || [];
+            const response = await fetcher<BackendResponse<any[]>>(endpoints.department.list);
+            if (Array.isArray(response)) {
+                return response;
+            } else if (response?.data && Array.isArray(response.data)) {
+                return response.data;
+            }
+            return [];
         } catch (error) {
             console.error('Failed to fetch departments:', error);
             return [];

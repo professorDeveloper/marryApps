@@ -23,7 +23,7 @@ import { toast } from 'src/components/snackbar';
 import { Iconify } from 'src/components/iconify';
 import { GenericTableView } from 'src/components/generic-table-view';
 import { CustomGridActionsCellItem } from 'src/components/custom-data-grid';
-import { GenericViewModal, SpecificationsTable } from 'src/components/generic-view-view';
+import { GenericViewModal, SpecificationsTable, type SpecificationRow } from 'src/components/generic-view-view';
 
 // ============================================================================
 // CUSTOM RENDERERS
@@ -86,6 +86,41 @@ function RenderCellDepartment({ params }: { params: any }) {
   return <span>{departmentName || '-'}</span>;
 }
 
+/**
+ * Color renderer - Shows color code with visual color box
+ */
+function RenderCellColor({ params }: { params: any }) {
+  const category = params.row as ICategory;
+  const colorCode = category.color_code;
+
+  if (!colorCode) {
+    return <div style={{ fontSize: '0.875rem', opacity: 0.8 }}>-</div>;
+  }
+
+  return (
+    <Box
+      sx={{
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        width: '100%',
+        height: '100%',
+      }}
+    >
+      <Box
+        sx={{
+          width: 36,
+          height: 36,
+          borderRadius: 1,
+          bgcolor: colorCode,
+          border: '1px solid',
+          borderColor: 'divider',
+        }}
+      />
+    </Box>
+  );
+}
+
 // ============================================================================
 // SPECIFICATIONS RENDERING
 // ============================================================================
@@ -94,8 +129,33 @@ function CategorySpecifications({ category, t }: { category: ICategory; t: any }
   const storageName = useGetStorageName(category.storage_id || '');
   const departmentName = useGetDepartmentName(category.department_id || '');
 
-  const specs = [
+  const specs: SpecificationRow[] = [
     { label: t('categories.name'), value: category.name || '-' },
+    {
+      label: t('departments.color'),
+      value: category.color_code ? (
+        <Box
+          component="span"
+          sx={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 1,
+          }}
+        >
+          <Box
+            sx={{
+              width: 24,
+              height: 24,
+              borderRadius: 1,
+              bgcolor: category.color_code,
+              border: '1px solid',
+              borderColor: 'divider',
+            }}
+          />
+          {category.color_code}
+        </Box>
+      ) : '-',
+    },
     { label: t('categories.storage'), value: storageName || '-' },
     { label: t('categories.department'), value: departmentName || '-' },
   ];
@@ -147,6 +207,12 @@ export function CategoryListView() {
         headerName: t('categories.department'),
         width: 180,
         renderCell: (params) => <RenderCellDepartment params={params} />,
+      },
+      {
+        field: 'color_code',
+        headerName: t('departments.color'),
+        width: 150,
+        renderCell: (params) => <RenderCellColor params={params} />,
       },
       {
         type: 'actions',

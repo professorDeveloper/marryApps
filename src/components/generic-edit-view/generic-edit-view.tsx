@@ -2,7 +2,7 @@ import type { FC } from 'react';
 import type { CardSection, GenericEditViewProps } from './types';
 
 import { useTranslation } from 'react-i18next';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 
 import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
@@ -37,6 +37,14 @@ export const GenericEditView: FC<GenericEditViewProps> = ({
     const [formData, setFormData] = useState<Record<string, any>>(
         data || buildInitialFormData(config)
     );
+    const isSubmittingRef = useRef(false);
+
+    // Update loading state when externalLoading changes (only if not submitting)
+    useEffect(() => {
+        if (!isSubmittingRef.current) {
+            setLoading(externalLoading);
+        }
+    }, [externalLoading]);
 
     // Update formData when data changes
     useEffect(() => {
@@ -61,18 +69,23 @@ export const GenericEditView: FC<GenericEditViewProps> = ({
     const handleSubmit = useCallback(
         async (e: React.FormEvent) => {
             e.preventDefault();
+            isSubmittingRef.current = true;
             setLoading(true);
             setError(null);
 
             try {
                 await config.onSubmit(formData);
+                // Reset loading state - redirect will happen in onSubmit if needed
                 setLoading(false);
+                isSubmittingRef.current = false;
             } catch (err) {
                 setError(err instanceof Error ? err.message : `Failed to save ${config.entityName}`);
+                // Always reset loading on error so button is not stuck
                 setLoading(false);
+                isSubmittingRef.current = false;
             }
         },
-        [formData, config]
+        [formData, config.onSubmit, config.entityName]
     );
 
     // Handle delete
@@ -80,14 +93,19 @@ export const GenericEditView: FC<GenericEditViewProps> = ({
         const message = config.deleteConfirmMessage || `Are you sure you want to delete this ${config.entityName}?`;
         if (!window.confirm(message)) return;
 
+        isSubmittingRef.current = true;
         setLoading(true);
         try {
             if (config.onDelete) {
                 await config.onDelete();
             }
+            // Reset loading state - redirect will happen in onDelete if needed
+            setLoading(false);
+            isSubmittingRef.current = false;
         } catch (err) {
             setError(err instanceof Error ? err.message : `Failed to delete ${config.entityName}`);
             setLoading(false);
+            isSubmittingRef.current = false;
         }
     }, [config]);
 

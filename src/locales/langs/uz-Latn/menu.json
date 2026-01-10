@@ -107,6 +107,7 @@
     "list": "Ro'yxat",
     "add": "Bo'lim qo'shish",
     "edit": "Tahrirlash",
+    "new": "Yangi",
     "view": "Ko'rish",
     "delete": "O'chirish",
     "name": "Nomi",
@@ -128,8 +129,10 @@
     "updated": "Yangilangan",
     "basicInfo": "Asosiy ma'lumotlar",
     "storageSection": "Ombor",
+    "imageTitle": "Bo'lim rasmi",
+    "imageUrl": "Rasm URL'si",
     "deleteConfirm": "Fayllar o'chirilsinmi?",
-    "deleteMessage": "Tanlangan fayllar tizimdan butunlay o‘chiriladi va ushbu amalni bekor qilish yoki fayllarni tiklash mumkin emas.",
+    "deleteMessage": "Tanlangan fayllar tizimdan butunlay o'chiriladi va ushbu amalni bekor qilish yoki fayllarni tiklash mumkin emas.",
     "cancel": "Bekor qilish"
   },
   "categories": {
@@ -137,6 +140,7 @@
     "list": "Ro'yxat",
     "add": "Qo'shish",
     "edit": "Tahrirlash",
+    "new": "Yangi",
     "view": "Ko'rish",
     "delete": "O'chirish",
     "name": "Nomi",

@@ -19,12 +19,22 @@ const swrOptions: SWRConfiguration = {
 // ============================================================================
 
 /**
+ * Backend response structure
+ */
+interface BackendResponse<T> {
+  status: string;
+  message: string;
+  data: T;
+  code: number;
+}
+
+/**
  * Get all departments
  */
 export function useGetDepartments() {
   const url = endpoints.department.list;
 
-  const { data, isLoading, error, isValidating } = useSWR<IDepartmentItem[]>(
+  const { data, isLoading, error, isValidating } = useSWR<BackendResponse<IDepartmentItem[]>>(
     url,
     fetcher,
     { ...swrOptions }
@@ -32,11 +42,11 @@ export function useGetDepartments() {
 
   const memoizedValue = useMemo(
     () => ({
-      departments: data || [],
+      departments: data?.data || [],
       departmentsLoading: isLoading,
       departmentsError: error,
       departmentsValidating: isValidating,
-      departmentsEmpty: !isLoading && !isValidating && !data?.length,
+      departmentsEmpty: !isLoading && !isValidating && !data?.data?.length,
     }),
     [data, error, isLoading, isValidating]
   );
@@ -50,7 +60,7 @@ export function useGetDepartments() {
 export function useGetDepartment(departmentId: string) {
   const url = departmentId ? endpoints.department.details(departmentId) : '';
 
-  const { data, isLoading, error, isValidating } = useSWR<IDepartmentItem>(
+  const { data, isLoading, error, isValidating } = useSWR<BackendResponse<IDepartmentItem>>(
     url,
     fetcher,
     { ...swrOptions }
@@ -58,7 +68,7 @@ export function useGetDepartment(departmentId: string) {
 
   const memoizedValue = useMemo(
     () => ({
-      department: data,
+      department: data?.data,
       departmentLoading: isLoading,
       departmentError: error,
       departmentValidating: isValidating,
@@ -76,7 +86,7 @@ export function useCreateDepartment() {
   const createDepartment = useCallback(
     async (formData: IDepartmentFormData) => {
       try {
-        const response = await poster<IDepartmentItem>(
+        const response = await poster<BackendResponse<IDepartmentItem>>(
           endpoints.department.create,
           formData
         );
@@ -84,7 +94,7 @@ export function useCreateDepartment() {
         // Revalidate departments list
         await mutate(endpoints.department.list);
 
-        return response;
+        return response.data;
       } catch (error) {
         console.error('Failed to create department:', error);
         throw error;
@@ -103,7 +113,7 @@ export function useUpdateDepartment() {
   const updateDepartment = useCallback(
     async (departmentId: string, formData: IDepartmentFormData) => {
       try {
-        const response = await putter<IDepartmentItem>(
+        const response = await putter<BackendResponse<IDepartmentItem>>(
           endpoints.department.update(departmentId),
           formData
         );
@@ -112,7 +122,7 @@ export function useUpdateDepartment() {
         await mutate(endpoints.department.list);
         await mutate(endpoints.department.details(departmentId));
 
-        return response;
+        return response.data;
       } catch (error) {
         console.error('Failed to update department:', error);
         throw error;
@@ -158,7 +168,7 @@ export function useDeleteDepartment() {
 export function useGetStorages() {
   const url = endpoints.storage.list;
 
-  const { data, isLoading, error, isValidating } = useSWR<IStorageItem[]>(
+  const { data, isLoading, error, isValidating } = useSWR<BackendResponse<IStorageItem[]>>(
     url,
     fetcher,
     { ...swrOptions }
@@ -166,11 +176,11 @@ export function useGetStorages() {
 
   const memoizedValue = useMemo(
     () => ({
-      storages: data || [],
+      storages: Array.isArray(data?.data) ? data.data : [],
       storagesLoading: isLoading,
       storagesError: error,
       storagesValidating: isValidating,
-      storagesEmpty: !isLoading && !isValidating && !data?.length,
+      storagesEmpty: !isLoading && !isValidating && !data?.data?.length,
     }),
     [data, error, isLoading, isValidating]
   );
@@ -185,6 +195,9 @@ export function useGetStorageName(storageId: string) {
   const { storages } = useGetStorages();
 
   const storageName = useMemo(() => {
+    if (!storageId || !Array.isArray(storages) || storages.length === 0) {
+      return storageId || '-';
+    }
     const storage = storages.find((s) => s.id === storageId);
     return storage?.name || storageId;
   }, [storages, storageId]);
@@ -199,6 +212,9 @@ export function useGetDepartmentName(departmentId: string) {
   const { departments } = useGetDepartments();
 
   const departmentName = useMemo(() => {
+    if (!departmentId || !Array.isArray(departments) || departments.length === 0) {
+      return departmentId || '-';
+    }
     const department = departments.find((d) => d.id === departmentId);
     return department?.name || departmentId;
   }, [departments, departmentId]);

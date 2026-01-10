@@ -171,13 +171,28 @@ export function CompoundEditView({ compoundId, isNew = false }: CompoundEditView
             const fetchCompound = async () => {
                 try {
                     setLoading(true);
-                    const response = await fetcher<ICompound>(
+                    const response = await fetcher<any>(
                         endpoints.compound.details(compoundId)
                     );
-                    setCompound(response);
+                    console.log('Compound API response:', response);
+
+                    // Handle response structure (might be wrapped in 'data' property)
+                    let compoundData: ICompound;
+                    if (response?.data && typeof response.data === 'object' && !Array.isArray(response.data)) {
+                        compoundData = response.data as ICompound;
+                    } else if (response && typeof response === 'object' && !Array.isArray(response)) {
+                        compoundData = response as ICompound;
+                    } else {
+                        console.error('Invalid response format:', response);
+                        throw new Error('Invalid response format');
+                    }
+
+                    console.log('Processed compound data:', compoundData);
+                    setCompound(compoundData);
                 } catch (error) {
                     console.error('Error fetching compound:', error);
                     toast.error(t('error.loadFailed'));
+                    setCompound(undefined);
                 } finally {
                     setLoading(false);
                 }
@@ -322,20 +337,28 @@ export function CompoundEditView({ compoundId, isNew = false }: CompoundEditView
                 />
 
                 {/* TABS */}
-                <Box sx={{}}>
+                <Box sx={{ display: 'flex', justifyContent: 'center', mb: 3, width: '100%' }}>
                     <Tabs
                         value={activeTab}
                         onChange={(e, newValue) => setActiveTab(newValue)}
-                        sx={{ px: 0 }}
+                        sx={{
+                            px: 0,
+                            width: '100%',
+                            minHeight: 48,
+                            '.MuiTabs-flexContainer': {
+                                width: '100%'
+                            }
+                        }}
+                        variant="fullWidth"
                     >
                         <Tab
-                            sx={{ width: '600px', minWidth: '600px' }}
+                            sx={{ minWidth: 0, flex: 1 }}
                             label={t('semifinishedProducts.basicInfo', 'Basic Info')}
                             id="compound-tab-0"
                             aria-controls="compound-tabpanel-0"
                         />
                         <Tab
-                            sx={{ width: '600px', minWidth: '600px' }}
+                            sx={{ minWidth: 0, flex: 1 }}
                             label={t('semifinishedProducts.composition', 'Composition')}
                             id="compound-tab-1"
                             aria-controls="compound-tabpanel-1"
@@ -349,6 +372,7 @@ export function CompoundEditView({ compoundId, isNew = false }: CompoundEditView
                         config={config}
                         data={compound}
                         isNew={isNew}
+                        loading={loading}
                     />
                 </TabPanel>
 

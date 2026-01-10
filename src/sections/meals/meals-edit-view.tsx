@@ -187,10 +187,10 @@ export function MealEditView({ isNew = false }: MealEditViewProps) {
                 return {
                     ...f,
                     label: t(f.label),
-                    options: categories.map((cat) => ({
+                    options: Array.isArray(categories) ? categories.map((cat) => ({
                         value: cat.id,
                         label: cat.name,
-                    })),
+                    })) : [],
                 };
             }
 
@@ -199,10 +199,10 @@ export function MealEditView({ isNew = false }: MealEditViewProps) {
                 return {
                     ...f,
                     label: t(f.label),
-                    options: departments.map((dept) => ({
+                    options: Array.isArray(departments) ? departments.map((dept) => ({
                         value: dept.id,
                         label: dept.name,
-                    })),
+                    })) : [],
                 };
             }
 
@@ -288,28 +288,36 @@ export function MealEditView({ isNew = false }: MealEditViewProps) {
                     <Tabs
                         value={activeTab}
                         onChange={(e, newValue) => setActiveTab(newValue)}
-                        sx={{ px: 0 }}
+                        sx={{
+                            px: 0,
+                            width: '100%',
+                            minHeight: 48,
+                            '.MuiTabs-flexContainer': {
+                                width: '100%'
+                            }
+                        }}
+                        variant="fullWidth"
                     >
                         <Tab
-                            sx={{ width: '310px' }}
+                            sx={{ minWidth: 0, flex: 1 }}
                             label={t('mealsProducts.edit') || 'Asosiy'}
                             id="meal-tab-0"
                             aria-controls="meal-tabpanel-0"
                         />
                         <Tab
-                            sx={{ width: '310px' }}
+                            sx={{ minWidth: 0, flex: 1 }}
                             label="Hisoblash"
                             id="meal-tab-1"
                             aria-controls="meal-tabpanel-1"
                         />
                         <Tab
-                            sx={{ width: '310px' }}
+                            sx={{ minWidth: 0, flex: 1 }}
                             label="Modifikatorlar"
                             id="meal-tab-2"
                             aria-controls="meal-tabpanel-2"
                         />
                         <Tab
-                            sx={{ width: '310px' }}
+                            sx={{ minWidth: 0, flex: 1 }}
                             label="Tegishli taomlar"
                             id="meal-tab-3"
                             aria-controls="meal-tabpanel-3"

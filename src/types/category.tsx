@@ -9,6 +9,7 @@ export type ICategory = {
     picture_url?: string;
     storage_id?: string;
     department_id?: string;
+    color_code?: string;
     created_at: string;
     updated_at: string;
     avatar?: string; // Avatar rasm URL yoki birinchi harf
@@ -20,6 +21,7 @@ export type ICategoryFormData = {
     picture_url?: string;
     storage_id?: string;
     department_id?: string;
+    color_code?: string;
 };
 
 export type ICategoryTableFilters = {

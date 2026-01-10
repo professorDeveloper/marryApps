@@ -9,6 +9,7 @@ import type { CardSection, GenericEditViewConfig } from 'src/components/generic-
 import { useParams } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import { useMemo, useState, useCallback } from 'react';
+import { Box } from '@mui/material';
 
 import { paths } from 'src/routes/paths';
 import { useRouter } from 'src/routes/hooks';
@@ -17,6 +18,7 @@ import { useGetStorages, useGetDepartments } from 'src/actions/departments';
 import { useGetCategory, useCreateCategory, useUpdateCategory, useDeleteCategory } from 'src/actions/categories';
 
 import { GenericEditView } from 'src/components/generic-edit-view';
+import { CustomBreadcrumbs } from 'src/components/custom-breadcrumbs';
 
 // ============================================================================
 // TYPES
@@ -26,6 +28,25 @@ export interface CategoryEditViewProps {
     categoryId?: string;
     isNew?: boolean;
 }
+
+// ============================================================================
+// COLOR CODES - MOCK DATA
+// ============================================================================
+
+const COLOR_CODES = [
+    '#FF4842', // Red
+    '#1890FF', // Blue
+    '#00AB55', // Green
+    '#FFC107', // Yellow
+    '#7F00FF', // Violet
+    '#FF6B35', // Orange
+    '#FF1493', // Deep Pink
+    '#00CED1', // Dark Turquoise
+    '#FFD700', // Gold
+    '#8B4513', // Saddle Brown
+    '#000000', // Black
+    '#FFFFFF', // White
+];
 
 // ============================================================================
 // FIELD CONFIGS
@@ -65,6 +86,13 @@ function buildBasicInfoSection(): CardSection {
                 label: 'categories.name_i18n',
                 type: 'text',
                 defaultValue: '',
+            },
+            {
+                key: 'color_code',
+                label: 'departments.color',
+                type: 'color',
+                defaultValue: '',
+                colors: COLOR_CODES,
             },
         ],
     };
@@ -118,19 +146,19 @@ export function CategoryEditView({ categoryId, isNew = false }: CategoryEditView
 
     // Build storage options
     const storageOptions = useMemo(
-        () => storages.map((s) => ({
+        () => (Array.isArray(storages) ? storages.map((s) => ({
             value: s.id,
             label: s.name || s.id,
-        })),
+        })) : []),
         [storages]
     );
 
     // Build department options
     const departmentOptions = useMemo(
-        () => departments.map((d) => ({
+        () => (Array.isArray(departments) ? departments.map((d) => ({
             value: d.id,
             label: d.name || d.id,
-        })),
+        })) : []),
         [departments]
     );
 
@@ -146,6 +174,7 @@ export function CategoryEditView({ categoryId, isNew = false }: CategoryEditView
                     picture_url: formData.picture_url,
                     storage_id: formData.storage_id,
                     department_id: formData.department_id,
+                    color_code: formData.color_code || '',
                 };
 
                 if (isNew) {
@@ -191,12 +220,13 @@ export function CategoryEditView({ categoryId, isNew = false }: CategoryEditView
     );
 
     const config: GenericEditViewConfig = {
-        title: isNew ? t('categories.addTitle', 'Add Category') : category?.name || t('categories.editTitle', 'Edit Category'),
+        title: isNew ? t('categories.new') : t('categories.edit'),
         entityName: 'category',
+        showBreadcrumbs: false,
         breadcrumbs: [
-            { name: t('overview.menu.title', 'Menu'), href: paths.menu.root },
-            { name: t('categories.title', 'Category'), href: paths.menu.category.root },
-            { name: isNew ? t('add', 'Add') : t('edit', 'Edit'), href: '' },
+            { name: t('app'), href: paths.menu.root },
+            { name: t('categories.title'), href: paths.menu.category.root },
+            { name: isNew ? t('categories.new') : t('categories.edit'), href: '' },
         ],
         leftSidecard: IMAGE_SECTION_T,
         sections: [
@@ -209,11 +239,22 @@ export function CategoryEditView({ categoryId, isNew = false }: CategoryEditView
     };
 
     return (
-        <GenericEditView
-            config={config}
-            data={category}
-            isNew={isNew}
-        />
+        <Box sx={{ p: 3 }}>
+            <Box sx={{ maxWidth: 1400, mx: 'auto' }}>
+                {/* BREADCRUMBS AND TITLE */}
+                <CustomBreadcrumbs
+                    heading={isNew ? t('categories.new') : t('categories.edit')}
+                    links={config.breadcrumbs}
+                    sx={{ mb: 3 }}
+                />
+
+                <GenericEditView
+                    config={config}
+                    data={category}
+                    isNew={isNew}
+                />
+            </Box>
+        </Box>
     );
 }
 
@@ -235,6 +276,9 @@ function translateSection(section: CardSection, t: TFunction): CardSection {
                         ? t(opt.label as string, opt.label as string)
                         : opt.label
                 }));
+            }
+            if (nf.colors && Array.isArray(nf.colors)) {
+                // Colors array doesn't need translation
             }
             return nf;
         });

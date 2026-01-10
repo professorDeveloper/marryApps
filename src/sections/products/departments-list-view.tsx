@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { useMemo, useState, useCallback } from 'react';
 
 import { useTheme } from '@mui/material/styles';
-import { Avatar, Button, Dialog, DialogTitle, DialogActions, DialogContent } from '@mui/material';
+import { Avatar, Button, Dialog, DialogTitle, DialogActions, DialogContent, Box } from '@mui/material';
 
 import { paths } from 'src/routes/paths';
 import { useRouter } from 'src/routes/hooks';
@@ -18,18 +18,20 @@ import {
   GenericTableView,
 } from 'src/components/generic-table-view';
 import { CustomGridActionsCellItem } from 'src/components/custom-data-grid';
-import { GenericViewModal, SpecificationsTable } from 'src/components/generic-view-view';
+import { GenericViewModal, SpecificationsTable, type SpecificationRow } from 'src/components/generic-view-view';
 
 function RenderCellDepartmentName({ params }: { params: any }) {
   const { t } = useTranslation('menu');
 
   // Get initials from department name
   const getInitials = (name: string) => name
-      .split(' ')
-      .map(word => word[0])
-      .join('')
-      .toUpperCase()
-      .slice(0, 2);
+    .split(' ')
+    .map(word => word[0])
+    .join('')
+    .toUpperCase()
+    .slice(0, 2);
+
+  const colorCode = params.row.color_code || '#CCCCCC';
 
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 8, paddingTop: 20, paddingBottom: 20 }}>
@@ -41,13 +43,13 @@ function RenderCellDepartmentName({ params }: { params: any }) {
           fontWeight: 'bold',
           color: '#000000',
           borderRadius: '15%',
+          bgcolor: colorCode,
         }}
       >
         {getInitials(params.row.name)}
       </Avatar>
       <div>
         <div style={{ fontWeight: 500 }}>{params.row.name}</div>
-        {/* <div style={{ fontSize: '0.75rem', opacity: 0.6 }}>{params.row.name_i18n}</div> */}
       </div>
     </div>
   );
@@ -64,6 +66,40 @@ function RenderCellStorageId({ params }: { params: any }) {
     <div style={{ fontSize: '0.875rem', opacity: 0.8 }}>
       {storageName}
     </div>
+  );
+}
+
+/**
+ * Color renderer - Shows color code with visual color box
+ */
+function RenderCellColor({ params }: { params: any }) {
+  const colorCode = params.row.color_code;
+
+  if (!colorCode) {
+    return <div style={{ fontSize: '0.875rem', opacity: 0.8 }}>-</div>;
+  }
+
+  return (
+    <Box
+      sx={{
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        width: '100%',
+        height: '100%',
+      }}
+    >
+      <Box
+        sx={{
+          width: 36,
+          height: 36,
+          borderRadius: 1,
+          bgcolor: colorCode,
+          border: '1px solid',
+          borderColor: 'divider',
+        }}
+      />
+    </Box>
   );
 }
 
@@ -118,14 +154,20 @@ export function ProductListView() {
         renderCell: (params) => <RenderCellStorageId params={params} />,
       },
       {
-        field: 'created_at',
-        headerName: t('departments.created'),
-        width: 200,
-        sortable: true,
-        renderCell: (params) => <RenderCellDate params={params} dateField="created_at" />,
+        field: 'color_code',
+        headerName: t('departments.color'),
+        width: 150,
+        renderCell: (params) => <RenderCellColor params={params} />,
       },
       // {
-      //   field: 'updated_at',
+      //   field: 'created_at',
+      //   headerName: t('departments.created'),
+      //   width: 200,
+      //   sortable: true,
+      //   renderCell: (params) => <RenderCellDate params={params} dateField="created_at" />,
+      // },
+      // {
+    //   field: 'updated_at',de
       //   headerName: t('departments.updated'),
       //   width: 200,
       //   sortable: true,
@@ -211,14 +253,35 @@ export function ProductListView() {
     // eslint-disable-next-line react-hooks/rules-of-hooks
     const storageName = useGetStorageName(dept.storage_id);
 
-    const specs = [
+    const specs: SpecificationRow[] = [
       {
         label: t('departments.name'),
         value: dept.name || '-',
       },
       {
-        label: t('departments.name_i18n'),
-        value: dept.name_i18n || '-',
+        label: t('departments.color'),
+        value: dept.color_code ? (
+          <Box
+            component="span"
+            sx={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 1,
+            }}
+          >
+            <Box
+              sx={{
+                width: 24,
+                height: 24,
+                borderRadius: 1,
+                bgcolor: dept.color_code,
+                border: '1px solid',
+                borderColor: 'divider',
+              }}
+            />
+            {dept.color_code}
+          </Box>
+        ) : '-',
       },
       {
         label: t('departments.storage'),
@@ -240,7 +303,7 @@ export function ProductListView() {
   return (
     <>
       <GenericTableView<IDepartmentItem>
-        data={departments}
+        data={Array.isArray(departments) ? departments : []}
         loading={departmentsLoading}
         columns={columns}
         breadcrumbs={{
