@@ -131,7 +131,7 @@ export function useMealsAPI(): UseMealsAPIReturn {
                 if (mealResponse) {
                     if ('id' in mealResponse && 'name' in mealResponse) {
                         // Direct meal object
-                        mealData = mealResponse as IMealAPIResponse;
+                        mealData = mealResponse as unknown as IMealAPIResponse;
                     } else if (mealResponse?.data) {
                         mealData = mealResponse.data as IMealAPIResponse;
                     }
@@ -214,7 +214,7 @@ export function useMealsAPI(): UseMealsAPIReturn {
                 // Extract data from wrapped response
                 let mealData: IMealAPIResponse;
                 if ('id' in response && 'name' in response) {
-                    mealData = response as IMealAPIResponse;
+                    mealData = response as unknown as IMealAPIResponse;
                 } else if (response?.data) {
                     mealData = response.data as IMealAPIResponse;
                 } else {
@@ -262,7 +262,7 @@ export function useMealsAPI(): UseMealsAPIReturn {
                 // Extract data from wrapped response
                 let mealData: IMealAPIResponse;
                 if ('id' in response && 'name' in response) {
-                    mealData = response as IMealAPIResponse;
+                    mealData = response as unknown as IMealAPIResponse;
                 } else if (response?.data) {
                     mealData = response.data as IMealAPIResponse;
                 } else {
