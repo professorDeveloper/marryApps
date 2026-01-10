@@ -147,6 +147,7 @@ func (h *Handler) LoginGlobal(c echo.Context) error {
 // @Router /api/v1/auth/register [post]
 func (h *Handler) RegisterUser(c echo.Context) error {
 	var req model.RegisterRequest
+	fmt.Println("came to register api ------------")
 
 	if v := c.Get("register_request"); v != nil {
 		if r, ok := v.(*model.RegisterRequest); ok {
