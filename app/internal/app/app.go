@@ -26,7 +26,6 @@ import (
 	"gitlab.yurtal.tech/company/maryai/back/pkg/paymentPayme"
 	pg "gitlab.yurtal.tech/company/maryai/back/pkg/postgres"
 	"gitlab.yurtal.tech/company/maryai/back/pkg/validate"
-	"gitlab.yurtal.tech/company/maryai/back/internal/middleware"
 
 	_ "gitlab.yurtal.tech/company/maryai/back/internal/api/docs"
 )
