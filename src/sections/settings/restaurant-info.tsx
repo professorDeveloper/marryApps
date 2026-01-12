@@ -187,7 +187,7 @@ export function RestaurantInfoListView() {
                 referrerPolicy="no-referrer-when-downgrade"
               />
               {/* Location Pin Overlay */}
-              <Box
+              {/* <Box
                 sx={{
                   position: 'absolute',
                   top: '50%',
@@ -201,7 +201,7 @@ export function RestaurantInfoListView() {
                   width={40}
                   sx={{ color: 'error.main' }}
                 />
-              </Box>
+              </Box> */}
             </Box>
           </CardContent>
         </Card>
