@@ -31,7 +31,7 @@
     "add": "Add workspace"
   },
 
-  "profile": "Profile",
+  "profile": "Setting",
   "projects": "Projects",
   "security": "Security",
   "logout": "Logout",
@@ -142,7 +142,10 @@
     "basicInfo": "Basic Information",
     "storageSection": "Storage",
     "imageTitle": "Department Image",
-    "imageUrl": "Image URL"
+    "imageUrl": "Image URL",
+    "nameRequired": "Department name is required",
+    "colorRequired": "Department color is required",
+    "storageRequired": "Storage selection is required"
   },
   "categories": {
     "title": "Categories",
@@ -182,7 +185,10 @@
     "storage": "Storage",
     "department": "Department",
     "name_i18n": "Name (translation)",
-    "storageDepartmentTitle": "Storage and Department"
+    "storageDepartmentTitle": "Storage and Department",
+    "nameRequired": "Category name is required",
+    "storageRequired": "Storage selection is required",
+    "departmentRequired": "Department selection is required"
   },
   "semifinishedProducts": {
     "title": "Semifinished Products",

@@ -7,6 +7,7 @@ const MOCK_TITLE = _postTitles[2];
 const ROOTS = {
   AUTH: '/auth',
   MENU: '/menu',
+  SETTING: '/setting'
 };
 
 // ----------------------------------------------------------------------
@@ -144,26 +145,23 @@ export const paths = {
         edit: (id: string) => `${ROOTS.MENU}/reports/archives/${id}/edit`,
       },
     },
-    settings: {
-      root: `${ROOTS.MENU}/settings`,
-      new: `${ROOTS.MENU}/settings/new`,
-      details: (id: string) => `${ROOTS.MENU}/settings/${id}`,
-      edit: (id: string) => `${ROOTS.MENU}/settings/${id}/edit`,
+  },
+
+      settings: {
+      root: `${ROOTS.SETTING}`,
       general: {
-        root: `${ROOTS.MENU}/settings/connected-device`,
+        root: `${ROOTS.SETTING}/connected-device`,
       },
       profile: {
-        root: `${ROOTS.MENU}/settings/management`,
+        root: `${ROOTS.SETTING}/management`,
       },
       notifications: {
-        root: `${ROOTS.MENU}/settings/restaurant-info`,
+        root: `${ROOTS.SETTING}/restaurant-info`,
       },
       integrations: {
-        root: `${ROOTS.MENU}/settings/integrations`,
+        root: `${ROOTS.SETTING}/integrations`,
       },
     },
-
-  },
   // DASHBOARD
   dashboard: {
     root: '/',

@@ -91,7 +91,7 @@ function buildBasicInfoSection(): CardSection {
                 key: 'color_code',
                 label: 'departments.color',
                 type: 'color',
-                defaultValue: '',
+                defaultValue: '#FF4842',
                 colors: COLOR_CODES,
             },
         ],
@@ -111,6 +111,7 @@ function buildStorageAndDepartmentSection(
                 key: 'storage_id',
                 label: 'categories.storage',
                 type: 'select',
+                required: true,
                 options: storageOptions,
                 defaultValue: '',
             },
@@ -118,6 +119,7 @@ function buildStorageAndDepartmentSection(
                 key: 'department_id',
                 label: 'categories.department',
                 type: 'select',
+                required: true,
                 options: departmentOptions,
                 defaultValue: '',
             },
@@ -168,6 +170,17 @@ export function CategoryEditView({ categoryId, isNew = false }: CategoryEditView
             try {
                 setIsSaving(true);
 
+                // Validate required fields
+                if (!formData.name || !formData.name.trim()) {
+                    throw new Error(t('categories.nameRequired'));
+                }
+                if (!formData.storage_id) {
+                    throw new Error(t('categories.storageRequired'));
+                }
+                if (!formData.department_id) {
+                    throw new Error(t('categories.departmentRequired'));
+                }
+
                 const categoryData: ICategoryFormData = {
                     name: formData.name,
                     name_i18n: formData.name_i18n,
@@ -189,9 +202,10 @@ export function CategoryEditView({ categoryId, isNew = false }: CategoryEditView
             } catch (err) {
                 console.error('Error saving category:', err);
                 setIsSaving(false);
+                throw err;
             }
         },
-        [isNew, categoryId, createCategory, updateCategory, router]
+        [isNew, categoryId, createCategory, updateCategory, router, t]
     );
 
     // Handle delete

@@ -130,7 +130,10 @@
     "basicInfo": "Асосий маълумотлар",
     "storageSection": "Омбор",
     "imageTitle": "Бўлим расми",
-    "imageUrl": "Расм URL'si"
+    "imageUrl": "Расм URL'si",
+    "nameRequired": "Бўлим номи мажбурийдир",
+    "colorRequired": "Бўлим ранги мажбурийдир",
+    "storageRequired": "Омбор танлаш мажбурийдир"
   },
   "categories": {
     "title": "Категориялар",
@@ -169,7 +172,10 @@
     "storage": "Омбор",
     "department": "Бўлим",
     "name_i18n": "Номи (таржима)",
-    "storageDepartmentTitle": "Омбор ва бўлим"
+    "storageDepartmentTitle": "Омбор ва бўлим",
+    "nameRequired": "Категория номи мажбурийдир",
+    "storageRequired": "Омбор танлаш мажбурийдир",
+    "departmentRequired": "Бўлим танлаш мажбурийдир"
   },
   "semifinishedProducts": {
     "title": "Ярим тайёр маҳсулотлар",

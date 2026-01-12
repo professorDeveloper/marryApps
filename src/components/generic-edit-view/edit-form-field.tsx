@@ -54,12 +54,13 @@ export const EditFormField: FC<EditFormFieldProps> = ({ field, value, onChange }
     // Select field
     if (field.type === 'select') {
         return (
-            <FormControl fullWidth={field.fullWidth !== false} size="small">
+            <FormControl fullWidth={field.fullWidth !== false} size="small" required={field.required}>
                 <InputLabel>{field.label}</InputLabel>
                 <Select
                     value={value ?? ''}
                     label={field.label}
                     onChange={handleChange}
+                    required={field.required}
                 >
                     <MenuItem value="">
                         <em>None</em>

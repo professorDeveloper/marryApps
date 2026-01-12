@@ -82,7 +82,10 @@
     "basicInfo": "Основная информация",
     "storageSection": "Хранилище",
     "imageTitle": "Изображение отдела",
-    "imageUrl": "URL изображения"
+    "imageUrl": "URL изображения",
+    "nameRequired": "Название отдела обязательно",
+    "colorRequired": "Цвет отдела обязателен",
+    "storageRequired": "Выбор хранилища обязателен"
   },
   "toolbar": {
     "columns": "Колонки",
@@ -169,7 +172,10 @@
     "storage": "Хранилище",
     "department": "Отдел",
     "name_i18n": "Название (перевод)",
-    "storageDepartmentTitle": "Хранилище и отдел"
+    "storageDepartmentTitle": "Хранилище и отдел",
+    "nameRequired": "Название категории обязательно",
+    "storageRequired": "Выбор хранилища обязателен",
+    "departmentRequired": "Выбор отдела обязателен"
   },
   "semifinishedProducts": {
     "title": "Полуфабрикаты",

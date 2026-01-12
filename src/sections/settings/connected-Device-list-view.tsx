@@ -124,13 +124,13 @@ export function ConnectedDeviceListView() {
       loading={false}
       columns={columns}
       breadcrumbs={{
-        heading: t('overview.settings.profile', 'Profile'),
+        heading: t('overview.settings.title', 'Settings'),
         links: [
           { name: t('app'), href: paths.menu.root },
-          { name: t('overview.settings.title', 'Sozlamalar'), href: paths.menu.settings.root },  
+          { name: t('overview.settings.title', 'Sozlamalar'), href: paths.settings.root },
         ],
       }}
-      // addButton={{ label: t('add'), href: paths.menu.settings.profile.new }}
+      // addButton={{ label: t('add'), href: paths.settings.profile.new }}
       hideFilters={true}
       hideCheckboxes={true}
     />

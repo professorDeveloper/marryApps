@@ -60,66 +60,80 @@ function SuspenseOutlet() {
   );
 }
 
-const dashboardLayout = () => (
+const dashboardLayoutElement = CONFIG.auth.skip ? (
   <DashboardLayout>
     <SuspenseOutlet />
   </DashboardLayout>
+) : (
+  <AuthGuard>
+    <DashboardLayout>
+      <SuspenseOutlet />
+    </DashboardLayout>
+  </AuthGuard>
 );
 
 export const dashboardRoutes: RouteObject[] = [
   {
-    path: 'menu',
-    element: CONFIG.auth.skip ? dashboardLayout() : <AuthGuard>{dashboardLayout()}</AuthGuard>,
+    element: dashboardLayoutElement,
     children: [
-      { element: <Navigate to="section" replace />, index: true },
-      { path: 'two', element: <PageTwo /> },
-      { path: 'three', element: <PageThree /> },
       {
-        path: 'group',
+        path: 'menu',
         children: [
-          { element: <PageFour />, index: true },
-          { path: 'five', element: <PageFive /> },
-          { path: 'six', element: <PageSix /> },
+          { element: <Navigate to="section" replace />, index: true },
+          { path: 'two', element: <PageTwo /> },
+          { path: 'three', element: <PageThree /> },
+          {
+            path: 'group',
+            children: [
+              { element: <PageFour />, index: true },
+              { path: 'five', element: <PageFive /> },
+              { path: 'six', element: <PageSix /> },
+            ],
+          },
+          { path: 'section', element: <ProductListView /> },
+          { path: 'section/new', element: <ProductEditView isNew /> },
+          { path: 'section/:id/edit', element: <ProductEditView /> },
+          { path: 'category', element: <CategoryListView /> },
+          { path: 'category/new', element: <CategoryEditViewWrapper isNew /> },
+          { path: 'category/:id/edit', element: <CategoryEditViewWrapper /> },
+          { path: 'semifinished', element: <HalfMeals /> },
+          { path: 'semifinished/new', element: <CompoundEditViewWrapper isNew /> },
+          { path: 'semifinished/:id/edit', element: <CompoundEditViewWrapper /> },
+          { path: 'meals', element: <Meals /> },
+          { path: 'meals/new', element: <MealEditView isNew /> },
+          { path: 'meals/:id/edit', element: <MealEditView /> },
+          { path: 'warehouse', element: <WarehouseListView /> },
+          { path: 'warehouse/new', element: <WarehouseEditView isNew /> },
+          { path: 'warehouse/:id/edit', element: <WarehouseEditView /> },
+          { path: 'warehouse/stocks', element: <StocksListView /> },
+          { path: 'warehouse/stocks/new', element: <StocksEditView isNew /> },
+          { path: 'warehouse/stocks/:id/edit', element: <StocksEditView /> },
+          { path: 'warehouse/transfers', element: <TransfersListView /> },
+          { path: 'warehouse/transfers/new', element: <TransfersEditView isNew /> },
+          { path: 'warehouse/transfers/:id/edit', element: <TransfersEditView /> },
+          { path: 'warehouse/locations', element: <LocationsListView /> },
+          { path: 'warehouse/locations/new', element: <LocationsEditView isNew /> },
+          { path: 'warehouse/locations/:id/edit', element: <LocationsEditView /> },
+          { path: 'warehouse/suppliers', element: <SuppliersListView /> },
+          { path: 'warehouse/suppliers/new', element: <SuppliersEditView isNew /> },
+          { path: 'warehouse/suppliers/:id/edit', element: <SuppliersEditView /> },
+          { path: 'reports', element: <ReportsListView /> },
+          { path: 'reports/new', element: <ReportsEditView isNew /> },
+          { path: 'reports/:id/edit', element: <ReportsEditView /> },
+          { path: 'reports/sales', element: <SalesListView /> },
+          { path: 'reports/inventory', element: <InventoryReportsListView /> },
+          { path: 'reports/custom', element: <CustomReportsListView /> },
+          { path: 'reports/archives', element: <ArchivesListView /> },
         ],
       },
-      { path: 'section', element: <ProductListView /> },
-      { path: 'section/new', element: <ProductEditView isNew /> },
-      { path: 'section/:id/edit', element: <ProductEditView /> },
-      { path: 'category', element: <CategoryListView /> },
-      { path: 'category/new', element: <CategoryEditViewWrapper isNew /> },
-      { path: 'category/:id/edit', element: <CategoryEditViewWrapper /> },
-      { path: 'semifinished', element: <HalfMeals /> },
-      { path: 'semifinished/new', element: <CompoundEditViewWrapper isNew /> },
-      { path: 'semifinished/:id/edit', element: <CompoundEditViewWrapper /> },
-      { path: 'meals', element: <Meals /> },
-      { path: 'meals/new', element: <MealEditView isNew /> },
-      { path: 'meals/:id/edit', element: <MealEditView /> },
-      { path: 'warehouse', element: <WarehouseListView /> },
-      { path: 'warehouse/new', element: <WarehouseEditView isNew /> },
-      { path: 'warehouse/:id/edit', element: <WarehouseEditView /> },
-      { path: 'warehouse/stocks', element: <StocksListView /> },
-      { path: 'warehouse/stocks/new', element: <StocksEditView isNew /> },
-      { path: 'warehouse/stocks/:id/edit', element: <StocksEditView /> },
-      { path: 'warehouse/transfers', element: <TransfersListView /> },
-      { path: 'warehouse/transfers/new', element: <TransfersEditView isNew /> },
-      { path: 'warehouse/transfers/:id/edit', element: <TransfersEditView /> },
-      { path: 'warehouse/locations', element: <LocationsListView /> },
-      { path: 'warehouse/locations/new', element: <LocationsEditView isNew /> },
-      { path: 'warehouse/locations/:id/edit', element: <LocationsEditView /> },
-      { path: 'warehouse/suppliers', element: <SuppliersListView /> },
-      { path: 'warehouse/suppliers/new', element: <SuppliersEditView isNew /> },
-      { path: 'warehouse/suppliers/:id/edit', element: <SuppliersEditView /> },
-      { path: 'reports', element: <ReportsListView /> },
-      { path: 'reports/new', element: <ReportsEditView isNew /> },
-      { path: 'reports/:id/edit', element: <ReportsEditView /> },
-      { path: 'reports/sales', element: <SalesListView /> },
-      { path: 'reports/inventory', element: <InventoryReportsListView /> },
-      { path: 'reports/custom', element: <CustomReportsListView /> },
-      { path: 'reports/archives', element: <ArchivesListView /> },
-      { path: 'settings/connected-device', element: <ConnectedDeviceListView /> },
-      { path: 'settings/management', element: <ManagementListView /> },
-      { path: 'settings/restaurant-info', element: <RestaurantInfoListView /> },
+      {
+        path: 'setting',
+        children: [
+          { path: 'connected-device', element: <ConnectedDeviceListView /> },
+          { path: 'management', element: <ManagementListView /> },
+          { path: 'restaurant-info', element: <RestaurantInfoListView /> },
+        ],
+      },
     ],
-
   },
 ];

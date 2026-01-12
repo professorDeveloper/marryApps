@@ -71,6 +71,17 @@ export function ProductEditView({ isNew = false }: DepartmentEditViewProps) {
     const handleSubmit = useCallback(
         async (formData: Record<string, any>) => {
             try {
+                // Validate required fields
+                if (!formData.name || !formData.name.trim()) {
+                    throw new Error(t('departments.nameRequired'));
+                }
+                if (!formData.color_code) {
+                    throw new Error(t('departments.colorRequired'));
+                }
+                if (!formData.storage_id) {
+                    throw new Error(t('departments.storageRequired'));
+                }
+
                 const departmentData: IDepartmentFormData = {
                     name: formData.name,
                     color_code: formData.color_code || '',
@@ -96,7 +107,7 @@ export function ProductEditView({ isNew = false }: DepartmentEditViewProps) {
                 throw err;
             }
         },
-        [isNew, id, createDepartment, updateDepartment, router]
+        [isNew, id, createDepartment, updateDepartment, router, t]
     );
 
     // Handle delete
@@ -192,7 +203,7 @@ function buildBasicInfoSection(): CardSection {
                 label: 'departments.color',
                 type: 'color',
                 required: true,
-                defaultValue: '',
+                defaultValue:  '#FF4842',
                 colors: COLOR_CODES,
             },
         ],

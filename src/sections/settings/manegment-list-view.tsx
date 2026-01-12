@@ -65,7 +65,7 @@ export function ManagementListView() {
         renderCell: (params) => {
           return fDateTime(params.row.connection_date, 'DD/MM/YYYY HH:mm');
         },
-      }, 
+      },
       {
         field: 'phone_type',
         headerName: 'Hisob indikatori',
@@ -140,13 +140,13 @@ export function ManagementListView() {
       loading={false}
       columns={columns}
       breadcrumbs={{
-        heading: t('overview.settings.profile', 'Profile'),
+        heading: t('overview.settings.title', 'Profile'),
         links: [
           { name: t('app'), href: paths.menu.root },
-          { name: t('overview.settings.title', 'Sozlamalar'), href: paths.menu.settings.root },
+          { name: t('overview.settings.title', 'Sozlamalar'), href: paths.settings.root },
         ],
       }}
-      // addButton={{ label: t('add'), href: paths.menu.settings.profile.new }}
+      // addButton={{ label: t('add'), href: paths.settings.profile.new }}
       hideFilters={true}
       hideCheckboxes={true}
     />
