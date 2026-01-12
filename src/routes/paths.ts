@@ -72,6 +72,9 @@ export const paths = {
       new: `${ROOTS.MENU}/user/new`,
       details: (id: string) => `${ROOTS.MENU}/user/${id}`,
       edit: (id: string) => `${ROOTS.MENU}/user/${id}/edit`,
+      restaurantStaff: `${ROOTS.MENU}/user/restaurant-staff`,
+      restaurantStaffNew: `${ROOTS.MENU}/user/restaurant-staff/new`,
+      restaurantStaffEdit: (id: string) => `${ROOTS.MENU}/user/restaurant-staff/${id}/edit`,
     },
     semifinished: {
       root: `${ROOTS.MENU}/semifinished`,
@@ -147,21 +150,21 @@ export const paths = {
     },
   },
 
-      settings: {
-      root: `${ROOTS.SETTING}`,
-      general: {
-        root: `${ROOTS.SETTING}/connected-device`,
-      },
-      profile: {
-        root: `${ROOTS.SETTING}/management`,
-      },
-      notifications: {
-        root: `${ROOTS.SETTING}/restaurant-info`,
-      },
-      integrations: {
-        root: `${ROOTS.SETTING}/integrations`,
-      },
+  settings: {
+    root: `${ROOTS.SETTING}`,
+    general: {
+      root: `${ROOTS.SETTING}/connected-device`,
     },
+    profile: {
+      root: `${ROOTS.SETTING}/management`,
+    },
+    notifications: {
+      root: `${ROOTS.SETTING}/restaurant-info`,
+    },
+    integrations: {
+      root: `${ROOTS.SETTING}/integrations`,
+    },
+  },
   // DASHBOARD
   dashboard: {
     root: '/',

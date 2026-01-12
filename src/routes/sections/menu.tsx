@@ -39,6 +39,12 @@ import { RestaurantInfoListView } from 'src/sections/settings/restaurant-info';
 import { AuthGuard } from 'src/auth/guard';
 
 import { usePathname } from '../hooks';
+import { EmployeesPage } from 'src/pages/dashboard/user/employees';
+import { RestaurantStaffPage } from 'src/pages/dashboard/user/restaurant-staff';
+import { EmployeeNewPage } from 'src/pages/dashboard/user/new';
+import { EmployeeEditPage } from 'src/pages/dashboard/user/edit';
+import { RestaurantStaffNewPage } from 'src/pages/dashboard/user/restaurant-staff-new';
+import { RestaurantStaffEditPage } from 'src/pages/dashboard/user/restaurant-staff-edit';
 
 // ----------------------------------------------------------------------
 
@@ -96,6 +102,12 @@ export const dashboardRoutes: RouteObject[] = [
           { path: 'category', element: <CategoryListView /> },
           { path: 'category/new', element: <CategoryEditViewWrapper isNew /> },
           { path: 'category/:id/edit', element: <CategoryEditViewWrapper /> },
+          { path: 'user', element: <EmployeesPage /> },
+          { path: 'user/restaurant-staff', element: <RestaurantStaffPage /> },
+          { path: 'user/new', element: <EmployeeNewPage /> },
+          { path: 'user/:id/edit', element: <EmployeeEditPage /> },
+          { path: 'user/restaurant-staff/new', element: <RestaurantStaffNewPage /> },
+          { path: 'user/restaurant-staff/:id/edit', element: <RestaurantStaffEditPage /> },
           { path: 'semifinished', element: <HalfMeals /> },
           { path: 'semifinished/new', element: <CompoundEditViewWrapper isNew /> },
           { path: 'semifinished/:id/edit', element: <CompoundEditViewWrapper /> },

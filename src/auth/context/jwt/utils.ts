@@ -69,7 +69,7 @@ export function tokenExpired(exp: number) {
 
 // ----------------------------------------------------------------------
 
-export async function setSession(accessToken: string | null) {
+export async function setSession(accessToken: string | null, brandId?: string) {
   try {
     if (accessToken) {
       sessionStorage.setItem(JWT_STORAGE_KEY, accessToken);
@@ -83,8 +83,16 @@ export async function setSession(accessToken: string | null) {
       } else {
         throw new Error('Invalid access token!');
       }
+
+      // brand_id ni localStorage ga saqlab qolamiz
+      if (brandId) {
+        localStorage.setItem('brand_id', brandId);
+      } else if (decodedToken && decodedToken.brand_id) {
+        localStorage.setItem('brand_id', decodedToken.brand_id);
+      }
     } else {
       sessionStorage.removeItem(JWT_STORAGE_KEY);
+      localStorage.removeItem('brand_id');
       delete axios.defaults.headers.common.Authorization;
     }
   } catch (error) {

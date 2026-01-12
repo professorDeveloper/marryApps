@@ -108,6 +108,16 @@ export const getNavData = (t: TFunction): NavSectionProps['data'] => [
       //   ],
       // },
       {
+        title: t('overview.employe.title', 'Xodimlar'),
+        path: paths.menu.user.root,
+        icon: ICONS.user,
+        deepMatch: true,
+        children: [
+          { title: t('overview.employe.admin', 'Admin Xodimlar'), path: paths.menu.user.root },
+          { title: t('overview.employe.staff', 'Restoran Xodimlari'), path: paths.menu.user.restaurantStaff },
+        ],
+      },
+      {
         title: t('overview.settings.title', 'Sozlamalar'),
         path: paths.settings.root,
         icon: ICONS.blog,

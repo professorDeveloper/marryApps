@@ -27,6 +27,9 @@ import { signInWithPassword } from '../../context/jwt';
 export type SignInSchemaType = z.infer<typeof SignInSchema>;
 
 export const SignInSchema = z.object({
+  brand_id: z
+    .string()
+    .min(1, { message: 'Brand ID kerak!' }),
   username: z
     .string()
     .min(1, { message: 'Foydalanuvchi nomi kerak!' }),
@@ -48,8 +51,9 @@ export function JwtSignInView() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const defaultValues: SignInSchemaType = {
-    username: 'admin',
-    password: 'Password:Javohir',
+    brand_id: 'my_restaurant2',
+    username: 'qwerty',
+    password: 'Javohir11',
   };
 
   const methods = useForm({
@@ -65,7 +69,7 @@ export function JwtSignInView() {
   const onSubmit = handleSubmit(async (data) => {
     try {
       await signInWithPassword({
-        brand_id: 'my_restaurant',
+        brand_id: data.brand_id,
         username: data.username,
         password: data.password,
       });
@@ -81,6 +85,13 @@ export function JwtSignInView() {
 
   const renderForm = () => (
     <Stack spacing={3}>
+      <Field.Text
+        name="brand_id"
+        label="Brand ID"
+        placeholder="my_restaurant2"
+        slotProps={{ inputLabel: { shrink: true } }}
+      />
+
       <Field.Text
         name="username"
         label="Foydalanuvchi nomi"

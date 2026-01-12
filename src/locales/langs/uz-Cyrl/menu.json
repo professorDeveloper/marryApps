@@ -310,8 +310,13 @@
       "title": "Созламалар",
       "connecteddevices": "Уланган мобил қурилмалар",
       "deviceManagement": "Қурилмаларни бошқариш",
-      "restaurantInfo": "Ресторан ма’лумотлари",
+      "restaurantInfo": "Ресторан ма'лумотлари",
       "integrations": "Интеграциялар"
+    },
+    "employe": {
+      "title": "Ходимлар",
+      "admin": "Admin ходимлар",
+      "staff": "Ресторан ходимлари"
     }
   },
   "management": {
@@ -349,5 +354,44 @@
     "total": "Жами",
     "markup": "Белгилаш",
     "markupPercent": "Белгилаш %"
+  },
+  "users": {
+    "title": "Ходимлар",
+    "list": "Рўйхат",
+    "add": "Ходим қўшиш",
+    "edit": "Ходимни таҳрирлаш",
+    "new": "Янги ходим",
+    "view": "Кўриш",
+    "delete": "Ўчириш",
+    "fullName": "Тўлиқ исми",
+    "username": "Фойдаланувчи номи",
+    "password": "Пароль",
+    "role": "Рол",
+    "status": "Ҳолати",
+    "phoneNumber": "Телефон рақами",
+    "pincode": "PIN код",
+    "terminal": "Терминал",
+    "createdAt": "Яратилган",
+    "updatedAt": "Янгиланган",
+    "basicTitle": "Асосий маълумот",
+    "statusTitle": "PIN код ва Терминал",
+    "fullNameRequired": "Ходимнинг тўлиқ исми мажбурийдир",
+    "usernameRequired": "Фойдаланувчи номи мажбурийдир",
+    "passwordRequired": "Пароль мажбурийдир",
+    "roleRequired": "Рол танлаш мажбурийдир",
+    "pincodeRequired": "PIN код мажбурийдир",
+    "statusRequired": "Ҳолат танлаш мажбурийдир",
+    "statusActive": "Фаол",
+    "statusInactive": "Нофаол",
+    "deleteConfirm": "Ушбу ходимни ўчирмоқчисиз?",
+    "deleteMessage": "Бу амални бекор қилиш ёки ходимни тиклаш мумкин емас.",
+    "cancel": "Бекор қилиш",
+    "deleteSuccess": "Муваффақиятли ўчирилди",
+    "deleteFailed": "Ўчиришда хато"
+  },
+  "employe": {
+    "title": "Ходимлар",
+    "admin": "Admin ходимлар",
+    "staff": "Ресторан ходимлари"
   }
 }

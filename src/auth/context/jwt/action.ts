@@ -39,11 +39,11 @@ export const signInWithPassword = async ({
 
     // Check if access token is in res.data.data or res.data
     // Support multiple field names and structures
-    const accessToken = 
-      res.data.data?.accessToken || 
-      res.data.data?.access_token || 
+    const accessToken =
+      res.data.data?.accessToken ||
+      res.data.data?.access_token ||
       res.data.data?.token ||
-      res.data.accessToken || 
+      res.data.accessToken ||
       res.data.access_token ||
       res.data.token;
 
@@ -52,7 +52,7 @@ export const signInWithPassword = async ({
       throw new Error('Access token not found in response');
     }
 
-    setSession(accessToken);
+    setSession(accessToken, brand_id);
   } catch (error) {
     console.error('Error during sign in:', error);
     throw error;

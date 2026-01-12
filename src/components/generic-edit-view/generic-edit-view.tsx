@@ -48,10 +48,13 @@ export const GenericEditView: FC<GenericEditViewProps> = ({
 
     // Update formData when data changes
     useEffect(() => {
-        if (data) {
+        if (data && Object.keys(data).length > 0) {
             setFormData(data);
+        } else if (isNew) {
+            // For new items, use initial form data
+            setFormData(buildInitialFormData(config));
         }
-    }, [data]);
+    }, [data, isNew, config]);
 
     // Handle field changes
     const handleChange = useCallback(

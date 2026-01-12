@@ -175,4 +175,13 @@ export const endpoints = {
   invoice: {
     details: '/api/v1/invoice-details',
   },
+  users: {
+    list: '/api/v1/users',
+    byRole: (role: string) => `/api/v1/users/by-role?role=${role}`,
+    details: (id: string) => `/api/v1/users/${id}`,
+    create: '/api/v1/users',
+    update: (id: string) => `/api/v1/user/update/${id}`,
+    delete: (id: string) => `/api/v1/users/${id}`,
+    register: '/api/v1/auth/register',
+  },
 } as const;
