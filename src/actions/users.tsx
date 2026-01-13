@@ -165,8 +165,18 @@ export function useDeleteUser() {
     const callback = useCallback(
         async (userId: string) => {
             await deleter(endpoints.users.delete(userId));
-            // Revalidate list
-            mutate(endpoints.users.list);
+
+            // Revalidate list and all role-based lists
+            // This ensures the data is refreshed immediately after deletion
+            await mutate(endpoints.users.list);
+
+            // Also revalidate role-based endpoints if they exist
+            // This catches cases where users are deleted from filtered views
+            const roles = ['admin', 'manager', 'cashier', 'waiter', 'kitchen', 'user'];
+            roles.forEach(role => {
+                const roleUrl = endpoints.users.byRole(role);
+                mutate(roleUrl, undefined, { revalidate: true });
+            });
         },
         []
     );

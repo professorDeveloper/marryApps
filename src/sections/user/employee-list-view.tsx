@@ -17,6 +17,7 @@ import { useGenericViewModal } from 'src/hooks/use-generic-view-modal';
 import { getInitials, getAvatarColor } from 'src/utils/avatar';
 
 import { useGetUsersByRole, useDeleteUser } from 'src/actions/users';
+import { getErrorMessageKey } from 'src/auth/utils';
 
 import { toast } from 'src/components/snackbar';
 import { Iconify } from 'src/components/iconify';
@@ -203,7 +204,7 @@ export function EmployeeListView({ role, title }: EmployeeListViewProps) {
                         showInMenu
                         label={t('users.edit')}
                         icon={<Iconify icon="solar:pen-bold" />}
-                        href={role === 'user' 
+                        href={role === 'user'
                             ? paths.menu.user.restaurantStaffEdit(params.row.id)
                             : paths.menu.user.edit(params.row.id)
                         }
@@ -239,7 +240,10 @@ export function EmployeeListView({ role, title }: EmployeeListViewProps) {
                 toast.success(t('success.deleteSuccess'));
             } catch (error) {
                 console.error('Error deleting user:', error);
-                toast.error(t('error.deleteFailed'));
+                // Use translated error message if available
+                const { key, fallback } = getErrorMessageKey(error);
+                const errorMessage = t(key, fallback);
+                toast.error(errorMessage);
             } finally {
                 setDeleteDialogOpen(false);
                 setUserToDelete(null);
@@ -253,7 +257,10 @@ export function EmployeeListView({ role, title }: EmployeeListViewProps) {
             toast.success(t('success.deleteSuccess'));
         } catch (error) {
             console.error('Error deleting users:', error);
-            toast.error(t('error.deleteFailed'));
+            // Use translated error message if available
+            const { key, fallback } = getErrorMessageKey(error);
+            const errorMessage = t(key, fallback);
+            toast.error(errorMessage);
         }
     }, [deleteUser, t]);
 
@@ -273,7 +280,7 @@ export function EmployeeListView({ role, title }: EmployeeListViewProps) {
                 }}
                 addButton={{
                     label: t('users.add'),
-                    href: role === 'user' 
+                    href: role === 'user'
                         ? paths.menu.user.restaurantStaffNew
                         : paths.menu.user.new,
                 }}

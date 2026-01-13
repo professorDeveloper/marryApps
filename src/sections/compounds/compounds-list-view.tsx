@@ -2,7 +2,7 @@ import type { GridColDef } from '@mui/x-data-grid';
 import type { ICompound } from 'src/types/compounds';
 
 import { useTranslation } from 'react-i18next';
-import { useMemo, useState, useEffect, useCallback } from 'react';
+import { useMemo, useState, useEffect, useCallback, useRef } from 'react';
 
 import Box from '@mui/material/Box';
 import Avatar from '@mui/material/Avatar';
@@ -130,6 +130,7 @@ export function HalfMeals() {
     const [departments, setDepartments] = useState<Record<string, string>>({});
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [compoundToDelete, setCompoundToDelete] = useState<string | null>(null);
+    const compoundsLoadedRef = useRef(false);
 
     // View modal
     const { isOpen, selectedData, openModal, closeModal } = useGenericViewModal<ICompound>();
@@ -160,8 +161,10 @@ export function HalfMeals() {
         fetchDepartments();
     }, []);
 
-    // Fetch compounds data
+    // Fetch compounds data (only once)
     useEffect(() => {
+        if (compoundsLoadedRef.current) return;
+
         const fetchCompounds = async () => {
             try {
                 setLoading(true);
@@ -175,25 +178,51 @@ export function HalfMeals() {
                     compounds = response.data;
                 }
 
-                // Map department_id to department_name
+                // Map department_id to department_name if departments are available
                 const enrichedCompounds = compounds.map((compound) => ({
                     ...compound,
                     department_name: departments[compound.department_id] || 'Unknown',
                 }));
 
                 setData(enrichedCompounds);
+                compoundsLoadedRef.current = true;
+                setLoading(false);
             } catch (error) {
                 console.error('Error fetching compounds:', error);
                 toast.error(t('error.loadFailed'));
-            } finally {
                 setLoading(false);
             }
         };
 
-        if (Object.keys(departments).length > 0) {
-            fetchCompounds();
+        fetchCompounds();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [t]);
+
+    // Enrich compounds with department names when departments are loaded
+    useEffect(() => {
+        if (Object.keys(departments).length > 0 && data.length > 0) {
+            setData((prevData) => {
+                const hasChanges = prevData.some(
+                    (compound) => compound.department_name !== (departments[compound.department_id] || 'Unknown')
+                );
+
+                if (!hasChanges) {
+                    return prevData;
+                }
+
+                return prevData.map((compound) => {
+                    const newDeptName = departments[compound.department_id] || 'Unknown';
+                    if (compound.department_name === newDeptName) {
+                        return compound;
+                    }
+                    return {
+                        ...compound,
+                        department_name: newDeptName,
+                    };
+                });
+            });
         }
-    }, [departments, t]);
+    }, [departments, data.length]);
 
     // Measurement options with translations
     const _measurementOptions = useMemo(

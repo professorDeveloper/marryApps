@@ -1,6 +1,7 @@
 import * as z from 'zod';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
+import { useTranslation } from 'react-i18next';
 import { useBoolean } from 'minimal-shared/hooks';
 import { zodResolver } from '@hookform/resolvers/zod';
 
@@ -22,7 +23,7 @@ import { Form, Field } from 'src/components/hook-form';
 
 import { signUp } from '../../context/jwt';
 import { useAuthContext } from '../../hooks';
-import { getErrorMessage } from '../../utils';
+import { getErrorMessageKey } from '../../utils';
 import { SignUpTerms } from '../../components/sign-up-terms';
 
 // ----------------------------------------------------------------------
@@ -48,6 +49,7 @@ export const SignUpSchema = z.object({
 
 export function JwtSignUpView() {
   const router = useRouter();
+  const { t } = useTranslation('messages');
 
   const showPassword = useBoolean();
 
@@ -75,6 +77,7 @@ export function JwtSignUpView() {
 
   const onSubmit = handleSubmit(async (data) => {
     try {
+      setErrorMessage(null);
       await signUp({
         fullName: data.fullName,
         username: data.username,
@@ -88,8 +91,10 @@ export function JwtSignUpView() {
       router.push(paths.menu.root);
     } catch (error) {
       console.error(error);
-      const feedbackMessage = getErrorMessage(error);
-      setErrorMessage(feedbackMessage);
+      const { key, fallback } = getErrorMessageKey(error);
+      // Try to get translated message, fallback to default message if translation not available
+      const translatedMessage = t(key, fallback);
+      setErrorMessage(translatedMessage);
     }
   });
 
@@ -163,7 +168,7 @@ export function JwtSignUpView() {
 
       <Button
         fullWidth
-        color="inherit"
+        color="primary"
         size="large"
         type="submit"
         variant="contained"
@@ -174,8 +179,6 @@ export function JwtSignUpView() {
           fontSize: '1rem',
           fontWeight: 600,
           textTransform: 'none',
-          bgcolor: '#1a202c',
-          '&:hover': { bgcolor: '#0f172a' },
         }}
       >
         Hisob yaratish

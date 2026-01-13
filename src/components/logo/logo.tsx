@@ -15,6 +15,7 @@ import { logoClasses } from './classes';
 export type LogoProps = LinkProps & {
   isSingle?: boolean;
   disabled?: boolean;
+  isNavMini?: boolean;
 };
 
 export function Logo({
@@ -23,6 +24,7 @@ export function Logo({
   className,
   href = '/',
   isSingle = true,
+  isNavMini = false,
   ...other
 }: LogoProps) {
   const theme = useTheme();
@@ -40,7 +42,7 @@ export function Logo({
   const singleLogo = (
     <img
       alt="Single logo"
-      src={isDarkMode ? "/logo/header-logo-light.svg" : "/logo/header-logo-night.svg"}
+      src={isNavMini ? "/logo/header-mobile.svg" : (isDarkMode ? "/logo/header-logo-light.svg" : "/logo/header-logo-night.svg")}
       width="100%"
       height="100%"
     />
@@ -49,7 +51,7 @@ export function Logo({
   const fullLogo = (
     <img
       alt="Full logo"
-      src="/logo/header-logo2.svg"
+      src={isNavMini ? "/logo/header-mobile.svg" : "/logo/header-logo2.svg"}
       width="100%"
       height="100%"
     />

@@ -58,7 +58,7 @@ export function AuthSplitContent({
           display: 'flex',
           flexDirection: 'column',
           position: 'relative',
-          backgroundColor: 'white',
+          backgroundColor: 'background.paper',
           padding: 3,
           borderRadius: 4,
           zIndex: 1,

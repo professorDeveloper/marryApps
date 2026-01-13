@@ -1,6 +1,7 @@
 import * as z from 'zod';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
+import { useTranslation } from 'react-i18next';
 import { useBoolean } from 'minimal-shared/hooks';
 import { zodResolver } from '@hookform/resolvers/zod';
 
@@ -19,7 +20,7 @@ import { Iconify } from 'src/components/iconify';
 import { Form, Field } from 'src/components/hook-form';
 
 import { useAuthContext } from '../../hooks';
-import { getErrorMessage } from '../../utils';
+import { getErrorMessageKey } from '../../utils';
 import { signInWithPassword } from '../../context/jwt';
 
 // ----------------------------------------------------------------------
@@ -43,6 +44,7 @@ export const SignInSchema = z.object({
 
 export function JwtSignInView() {
   const router = useRouter();
+  const { t } = useTranslation('messages');
 
   const showPassword = useBoolean();
 
@@ -68,6 +70,7 @@ export function JwtSignInView() {
 
   const onSubmit = handleSubmit(async (data) => {
     try {
+      setErrorMessage(null);
       await signInWithPassword({
         brand_id: data.brand_id,
         username: data.username,
@@ -78,8 +81,10 @@ export function JwtSignInView() {
       router.push(paths.menu.root);
     } catch (error) {
       console.error(error);
-      const feedbackMessage = getErrorMessage(error);
-      setErrorMessage(feedbackMessage);
+      const { key, fallback } = getErrorMessageKey(error);
+      // Try to get translated message, fallback to default message if translation not available
+      const translatedMessage = t(key, fallback);
+      setErrorMessage(translatedMessage);
     }
   });
 
@@ -125,7 +130,7 @@ export function JwtSignInView() {
 
       <Button
         fullWidth
-        color="inherit"
+        color="primary"
         size="large"
         type="submit"
         variant="contained"
@@ -136,8 +141,6 @@ export function JwtSignInView() {
           fontSize: '1rem',
           fontWeight: 600,
           textTransform: 'none',
-          bgcolor: '#1a202c',
-          '&:hover': { bgcolor: '#0f172a' },
         }}
       >
         Kirish

@@ -4,7 +4,7 @@ import type { CardSection, GenericEditViewConfig } from 'src/components/generic-
 
 import { useParams } from 'react-router';
 import { useTranslation } from 'react-i18next';
-import { useMemo, useState, useCallback } from 'react';
+import { useMemo, useCallback } from 'react';
 import { Box } from '@mui/material';
 
 import { paths } from 'src/routes/paths';
@@ -14,6 +14,7 @@ import { useGetUser, useCreateUser, useUpdateUser, useDeleteUser } from 'src/act
 
 import { GenericEditView } from 'src/components/generic-edit-view';
 import { CustomBreadcrumbs } from 'src/components/custom-breadcrumbs';
+import { getErrorMessageKey } from 'src/auth/utils';
 
 // ============================================================================
 // TYPES
@@ -109,42 +110,37 @@ export function EmployeeEditViewUser({ userId, isNew = false }: EmployeeEditView
     const updateUser = useUpdateUser();
     const deleteUser = useDeleteUser();
 
-    const [isSaving, setIsSaving] = useState(false);
-    const [isDeleting, setIsDeleting] = useState(false);
-
     // Handle form submission
     const handleSubmit = useCallback(
         async (formData: Record<string, any>) => {
+            // Validate required fields
+            if (!formData.full_name || !formData.full_name.trim()) {
+                throw new Error(t('users.fullNameRequired'));
+            }
+            if (!formData.username || !formData.username.trim()) {
+                throw new Error(t('users.usernameRequired'));
+            }
+            if (!formData.role) {
+                throw new Error(t('users.roleRequired'));
+            }
+
+            if (!formData.pincode) {
+                throw new Error(t('users.pincodeRequired'));
+            }
+
+            const userData: IUserFormData = {
+                full_name: formData.full_name,
+                username: formData.username,
+                password: formData.password,
+                role: formData.role,
+                phone_number: formData.phone_number,
+                pincode: formData.pincode,
+                terminal: formData.terminal,
+                // Login qilgan vaqtda saqlangan brand_id ni olamiz
+                brand_id: localStorage.getItem('brand_id') || 'default_brand',
+            };
+
             try {
-                setIsSaving(true);
-
-                // Validate required fields
-                if (!formData.full_name || !formData.full_name.trim()) {
-                    throw new Error(t('users.fullNameRequired'));
-                }
-                if (!formData.username || !formData.username.trim()) {
-                    throw new Error(t('users.usernameRequired'));
-                }
-                if (!formData.role) {
-                    throw new Error(t('users.roleRequired'));
-                }
-
-                if (!formData.pincode) {
-                    throw new Error(t('users.pincodeRequired'));
-                }
-
-                const userData: IUserFormData = {
-                    full_name: formData.full_name,
-                    username: formData.username,
-                    password: formData.password,
-                    role: formData.role,
-                    phone_number: formData.phone_number,
-                    pincode: formData.pincode,
-                    terminal: formData.terminal,
-                    // Login qilgan vaqtda saqlangan brand_id ni olamiz
-                    brand_id: localStorage.getItem('brand_id') || 'default_brand',
-                };
-
                 if (isNew) {
                     await createUser(userData);
                 } else if (userId) {
@@ -156,8 +152,10 @@ export function EmployeeEditViewUser({ userId, isNew = false }: EmployeeEditView
                 router.push(paths.menu.user.restaurantStaff);
             } catch (err) {
                 console.error('Error saving user:', err);
-                setIsSaving(false);
-                throw err;
+                // Get translated error message
+                const { key, fallback } = getErrorMessageKey(err);
+                const translatedMessage = t(key, fallback);
+                throw new Error(translatedMessage);
             }
         },
         [isNew, userId, createUser, updateUser, router, t]
@@ -166,8 +164,6 @@ export function EmployeeEditViewUser({ userId, isNew = false }: EmployeeEditView
     // Handle delete
     const handleDelete = useCallback(async () => {
         try {
-            setIsDeleting(true);
-
             if (userId) {
                 await deleteUser(userId);
                 // Add small delay to ensure SWR cache is updated before redirect
@@ -176,9 +172,11 @@ export function EmployeeEditViewUser({ userId, isNew = false }: EmployeeEditView
             }
         } catch (err) {
             console.error('Error deleting user:', err);
-            setIsDeleting(false);
+            const { key, fallback } = getErrorMessageKey(err);
+            const translatedMessage = t(key, fallback);
+            throw new Error(translatedMessage);
         }
-    }, [userId, deleteUser, router]);
+    }, [userId, deleteUser, router, t]);
 
     // Build sections
     const BASIC_INFO_SECTION_T = translateSection(buildBasicInfoSection(), t);

@@ -3,5 +3,16 @@
     "success": "Til muvaffaqiyatli o'zgartirildi!",
     "error": "Til o'zgartirilayotganda xato!",
     "loading": "Yuklanmoqda..."
+  },
+  "errors": {
+    "registrationFailed": "Ro'yxatdan o'tish muvaffaq bo'lmadi. Iltimos, qayta urinib ko'ring.",
+    "duplicatePincode": "Bu PIN kod allaqachon ishlatilmoqda. Iltimos, boshqa PIN kod kiriting.",
+    "duplicateUsername": "Bu foydalanuvchi nomi allaqachon olingan. Iltimos, boshqa foydalanuvchi nomi tanlang.",
+    "duplicateEmail": "Bu elektron pochta manzili allaqachon ro'yxatdan o'tgan. Iltimos, boshqa manzildan foydalaning.",
+    "duplicateField": "Bu qiymat allaqachon ishlatilmoqda. Iltimos, boshqa qiymat kiriting.",
+    "invalidUsername": "Noto'g'ri foydalanuvchi nomi. Iltimos, tekshiring va qayta urinib ko'ring.",
+    "invalidPassword": "Noto'g'ri parol. Iltimos, tekshiring va qayta urinib ko'ring.",
+    "invalidPhone": "Noto'g'ri telefon raqami. Iltimos, tekshiring va qayta urinib ko'ring.",
+    "invalidEmail": "Noto'g'ri elektron pochta manzili. Iltimos, tekshiring va qayta urinib ko'ring."
   }
 }

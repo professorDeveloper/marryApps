@@ -126,6 +126,7 @@ export function DashboardLayout({
           {/** @slot Logo */}
           {isNavHorizontal && (
             <Logo
+              isNavMini={isNavMini}
               sx={{
                 display: 'none',
                 [theme.breakpoints.up(layoutQuery)]: { display: 'inline-flex' },
