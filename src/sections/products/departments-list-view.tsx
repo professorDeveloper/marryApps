@@ -2,10 +2,10 @@ import type { GridColDef } from '@mui/x-data-grid';
 import type { IDepartmentItem } from 'src/types/departments.tsx';
 
 import { useTranslation } from 'react-i18next';
-import { useMemo, useState, useCallback } from 'react';
+import { useMemo, useState, useCallback, useEffect } from 'react';
 
 import { useTheme } from '@mui/material/styles';
-import { Avatar, Button, Dialog, DialogTitle, DialogActions, DialogContent, Box } from '@mui/material';
+import { Avatar, Button, Dialog, DialogTitle, DialogActions, DialogContent, Box, ListItemText } from '@mui/material';
 
 import { paths } from 'src/routes/paths';
 import { useRouter } from 'src/routes/hooks';
@@ -19,39 +19,70 @@ import {
 } from 'src/components/generic-table-view';
 import { CustomGridActionsCellItem } from 'src/components/custom-data-grid';
 import { GenericViewModal, SpecificationsTable, type SpecificationRow } from 'src/components/generic-view-view';
+import { getFullImageUrl } from 'src/utils/image-url';
+import { getInitials, getAvatarColor } from 'src/utils/avatar';
 
 function RenderCellDepartmentName({ params }: { params: any }) {
-  const { t } = useTranslation('menu');
+  const { row } = params;
+  const name = row.name || '-';
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
-  // Get initials from department name
-  const getInitials = (name: string) => name
-    .split(' ')
-    .map(word => word[0])
-    .join('')
-    .toUpperCase()
-    .slice(0, 2);
+  // Load image asynchronously if picture_url exists
+  useEffect(() => {
+    if (row.picture_url) {
+      const loadImage = async () => {
+        try {
+          setLoading(true);
+          const url = await getFullImageUrl(row.picture_url);
+          setImageUrl(url);
+        } catch (error) {
+          console.error('Failed to load image:', error);
+          setImageUrl(null);
+        } finally {
+          setLoading(false);
+        }
+      };
+      loadImage();
+    } else {
+      setImageUrl(null);
+    }
+  }, [row.picture_url]);
 
-  const colorCode = params.row.color_code || '#CCCCCC';
+  // If no image, show avatar with initials
+  const initials = getInitials(name);
+  const bgColor = imageUrl ? undefined : (row.color_code || getAvatarColor(name));
 
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 8, paddingTop: 20, paddingBottom: 20 }}>
+    <Box
+      sx={{
+        py: 2,
+        gap: 2,
+        width: 1,
+        display: 'flex',
+        alignItems: 'center',
+      }}
+    >
       <Avatar
+        alt={name}
+        src={imageUrl || undefined}
+        variant="rounded"
         sx={{
-          width: 60,
-          height: 60,
-          fontSize: '3',
+          width: 64,
+          height: 64,
+          bgcolor: bgColor,
+          color: '#fff',
           fontWeight: 'bold',
-          color: '#000000',
+          fontSize: '20px',
           borderRadius: '15%',
-          bgcolor: colorCode,
         }}
       >
-        {getInitials(params.row.name)}
+        {!imageUrl && !loading && initials}
+        {loading && '...'}
       </Avatar>
-      <div>
-        <div style={{ fontWeight: 500 }}>{params.row.name}</div>
-      </div>
-    </div>
+
+      <ListItemText primary={<span>{name}</span>} />
+    </Box>
   );
 }
 
@@ -167,7 +198,7 @@ export function ProductListView() {
       //   renderCell: (params) => <RenderCellDate params={params} dateField="created_at" />,
       // },
       // {
-    //   field: 'updated_at',de
+      //   field: 'updated_at',de
       //   headerName: t('departments.updated'),
       //   width: 200,
       //   sortable: true,
@@ -253,7 +284,7 @@ export function ProductListView() {
     // eslint-disable-next-line react-hooks/rules-of-hooks
     const storageName = useGetStorageName(dept.storage_id);
 
-    
+
     const specs: SpecificationRow[] = [
       {
         label: t('departments.name'),

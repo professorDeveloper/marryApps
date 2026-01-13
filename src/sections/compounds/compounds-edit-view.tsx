@@ -8,14 +8,15 @@ import type { CardSection, GenericEditViewConfig } from 'src/components/generic-
 
 import { useParams } from 'react-router';
 import { useTranslation } from 'react-i18next';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 
 import { Box, Tabs, Tab, Card, Stack } from '@mui/material';
 
 import { paths } from 'src/routes/paths';
 import { useRouter } from 'src/routes/hooks';
 
-import { poster, putter, deleter, fetcher, endpoints } from 'src/lib/axios';
+import { useGetCompound, useCreateCompound, useUpdateCompound, useDeleteCompound } from 'src/hooks/use-compounds';
+import { useGetDepartments } from 'src/actions/departments';
 
 import { toast } from 'src/components/snackbar';
 import { CustomBreadcrumbs } from 'src/components/custom-breadcrumbs';
@@ -137,79 +138,21 @@ function TabPanel(props: TabPanelProps) {
 export function CompoundEditView({ compoundId, isNew = false }: CompoundEditViewProps) {
     const router = useRouter();
     const { t } = useTranslation('menu');
-    const [compound, setCompound] = useState<ICompound | undefined>();
-    const [departments, setDepartments] = useState<Array<{ id: string; name: string }>>([]);
-    const [loading, setLoading] = useState(!isNew);
     const [activeTab, setActiveTab] = useState(0);
 
-    // Fetch departments on mount
-    useEffect(() => {
-        const fetchDepartments = async () => {
-            try {
-                const response = await fetcher<any>(endpoints.department.list);
-                let depts: Array<{ id: string; name: string }> = [];
+    // SWR hooks
+    const { compound, compoundLoading } = useGetCompound(isNew ? '' : compoundId || '');
+    const { departments } = useGetDepartments();
+    const { createCompound } = useCreateCompound();
+    const { updateCompound } = useUpdateCompound();
+    const { deleteCompound } = useDeleteCompound();
 
-                if (Array.isArray(response)) {
-                    depts = response;
-                } else if (response?.data && Array.isArray(response.data)) {
-                    depts = response.data;
-                }
-
-                setDepartments(depts);
-            } catch (error) {
-                console.error('Error fetching departments:', error);
-                toast.error(t('error.loadFailed'));
-            }
-        };
-
-        fetchDepartments();
-    }, [t]);
-
-    // Fetch compound data if editing
-    useEffect(() => {
-        if (!isNew && compoundId) {
-            const fetchCompound = async () => {
-                try {
-                    setLoading(true);
-                    const response = await fetcher<any>(
-                        endpoints.compound.details(compoundId)
-                    );
-                    console.log('Compound API response:', response);
-
-                    // Handle response structure (might be wrapped in 'data' property)
-                    let compoundData: ICompound;
-                    if (response?.data && typeof response.data === 'object' && !Array.isArray(response.data)) {
-                        compoundData = response.data as ICompound;
-                    } else if (response && typeof response === 'object' && !Array.isArray(response)) {
-                        compoundData = response as ICompound;
-                    } else {
-                        console.error('Invalid response format:', response);
-                        throw new Error('Invalid response format');
-                    }
-
-                    console.log('Processed compound data:', compoundData);
-                    setCompound(compoundData);
-                } catch (error) {
-                    console.error('Error fetching compound:', error);
-                    toast.error(t('error.loadFailed'));
-                    setCompound(undefined);
-                } finally {
-                    setLoading(false);
-                }
-            };
-
-            fetchCompound();
-        } else {
-            setLoading(false);
-        }
-    }, [isNew, compoundId, t]);
+    const loading = !isNew && compoundLoading;
 
     // Handle form submission
     const handleSubmit = useCallback(
         async (formData: Record<string, any>) => {
             try {
-                setLoading(true);
-
                 // Prepare payload
                 const payload = {
                     name: formData.name,
@@ -223,16 +166,14 @@ export function CompoundEditView({ compoundId, isNew = false }: CompoundEditView
 
                 if (isNew) {
                     // Create new compound
-                    await poster(endpoints.compound.create, payload);
-                    toast.success(t('success.createSuccess'));
+                    await createCompound(payload);
                 } else {
                     // Update existing compound
                     if (!compound) {
                         toast.error(t('error.loadFailed'));
                         return;
                     }
-                    await putter(endpoints.compound.update(compound.id), payload);
-                    toast.success(t('success.updateSuccess'));
+                    await updateCompound(compound.id, payload);
                 }
 
                 // Redirect to list
@@ -242,11 +183,9 @@ export function CompoundEditView({ compoundId, isNew = false }: CompoundEditView
                 toast.error(
                     isNew ? t('error.createFailed') : t('error.updateFailed')
                 );
-            } finally {
-                setLoading(false);
             }
         },
-        [router, isNew, compound, t]
+        [router, isNew, compound, createCompound, updateCompound, t]
     );
 
     // Handle delete
@@ -254,17 +193,13 @@ export function CompoundEditView({ compoundId, isNew = false }: CompoundEditView
         if (!compound) return;
 
         try {
-            setLoading(true);
-            await deleter(endpoints.compound.delete(compound.id));
-            toast.success(t('success.deleteSuccess'));
+            await deleteCompound(compound.id);
             router.push(paths.menu.semifinished.root);
         } catch (err) {
             console.error('Error deleting compound:', err);
             toast.error(t('error.deleteFailed'));
-        } finally {
-            setLoading(false);
         }
-    }, [compound, router, t]);
+    }, [compound, deleteCompound, router, t]);
 
     const IMAGE_SECTION_T = translateSection(IMAGE_SECTION, t);
     const BASIC_INFO_SECTION_T = translateSection(BASIC_INFO_SECTION, t);
@@ -278,7 +213,7 @@ export function CompoundEditView({ compoundId, isNew = false }: CompoundEditView
                 return {
                     ...field,
                     type: 'select' as const,
-                    options: departments.map((dept) => ({
+                    options: departments.map((dept: any) => ({
                         value: dept.id,
                         label: dept.name,
                     })),

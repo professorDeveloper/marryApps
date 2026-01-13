@@ -1,1 +1,0 @@
-import{j as t,f as a}from"./index-DGNiLB19.js";import{B as e}from"./view-BuaRYnrc.js";const i={title:`Page six | Dashboard - ${a.appName}`};function n(){return t.jsxs(t.Fragment,{children:[t.jsx("title",{children:i.title}),t.jsx(e,{title:"Sahifa oltinchi"})]})}export{n as default};

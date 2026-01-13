@@ -112,6 +112,9 @@ export const GenericEditView: FC<GenericEditViewProps> = ({
         }
     }, [config]);
 
+    // Get the image field key from leftSidecard
+    const imageFieldKey = config.leftSidecard?.fields?.[0]?.key || 'picture_url';
+
     return (
         <Box>
             {/* Breadcrumbs */}
@@ -138,10 +141,9 @@ export const GenericEditView: FC<GenericEditViewProps> = ({
                         <Box>
                             <ImageUploadField
                                 label=""
-                                value={formData.coverUrl}
-                                onChange={(value) => handleChange('coverUrl', value)}
+                                value={formData[imageFieldKey]}
+                                onChange={(value) => handleChange(imageFieldKey, value)}
                             />
-                            {/* <EditFormSection section={config.leftSidecard} formData={formData} onChange={handleChange} /> */}
 
                             {/* Action Buttons */}
                             <Stack direction="column" spacing={2} sx={{ mt: 3 }}>

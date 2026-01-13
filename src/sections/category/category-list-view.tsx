@@ -2,12 +2,12 @@ import type { GridColDef } from '@mui/x-data-grid';
 import type { ICategory } from 'src/types/category';
 
 import { useTranslation } from 'react-i18next';
-import { useMemo, useState, useCallback } from 'react';
+import { useMemo, useState, useCallback, useEffect } from 'react';
 
 import Box from '@mui/material/Box';
 import Avatar from '@mui/material/Avatar';
 import { useTheme } from '@mui/material/styles';
-import { Button, Dialog, DialogTitle, DialogActions, DialogContent } from '@mui/material';
+import { Button, Dialog, DialogTitle, DialogActions, DialogContent, ListItemText } from '@mui/material';
 
 import { paths } from 'src/routes/paths';
 
@@ -34,36 +34,64 @@ import { GenericViewModal, SpecificationsTable, type SpecificationRow } from 'sr
  */
 function RenderCellCategory({ params }: { params: any }) {
   const category = params.row as ICategory;
-  const avatarUrl = category.picture_url ? getFullImageUrl(category.picture_url) : null;
-  const initials = getInitials(category.name);
+  const name = category.name || '-';
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  // Load image asynchronously if picture_url exists
+  useEffect(() => {
+    if (category.picture_url) {
+      const loadImage = async () => {
+        try {
+          setLoading(true);
+          const url = await getFullImageUrl(category.picture_url);
+          setImageUrl(url);
+        } catch (error) {
+          console.error('Failed to load image:', error);
+          setImageUrl(null);
+        } finally {
+          setLoading(false);
+        }
+      };
+      loadImage();
+    } else {
+      setImageUrl(null);
+    }
+  }, [category.picture_url]);
+
+  // If no image, show avatar with initials
+  const initials = getInitials(name);
+  const bgColor = imageUrl ? undefined : getAvatarColor(name);
 
   return (
     <Box
       sx={{
+        py: 2,
+        gap: 2,
+        width: 1,
         display: 'flex',
         alignItems: 'center',
-        gap: 1.5,
-        paddingTop: '15px',
-        paddingBottom: '15px',
       }}
     >
       <Avatar
-        src={avatarUrl || undefined}
+        alt={name}
+        src={imageUrl || undefined}
+        variant="rounded"
         sx={{
-          width: 60,
-          height: 60,
-          backgroundColor: getAvatarColor(category.name),
-          fontSize: '2',
-          fontWeight: 600,
-          borderRadius: '20%',
+          width: 64,
+          height: 64,
+          bgcolor: bgColor,
           color: '#fff',
+          fontWeight: 'bold',
+          fontSize: '20px',
+          borderRadius: '15%',
         }}
       >
-        {initials}
+        {!imageUrl && !loading && initials}
+        {loading && '...'}
       </Avatar>
-      <Box>
-        <Box sx={{ fontWeight: 600 }}>{category.name}</Box>
-      </Box>
+
+      <ListItemText primary={<span>{name}</span>} />
     </Box>
   );
 }

@@ -13,6 +13,7 @@ import TextField from '@mui/material/TextField';
 import InputLabel from '@mui/material/InputLabel';
 import FormControl from '@mui/material/FormControl';
 import FormControlLabel from '@mui/material/FormControlLabel';
+import { ImageUploadField } from './image-upload-field';
 
 interface EditFormFieldProps {
     field: FieldConfig;
@@ -147,6 +148,18 @@ export const EditFormField: FC<EditFormFieldProps> = ({ field, value, onChange }
                     />
                 }
                 label={field.label}
+            />
+        );
+    }
+
+    // Image field
+    if (field.type === 'image') {
+        return (
+            <ImageUploadField
+                label={field.label}
+                value={value}
+                onChange={onChange}
+                height={field.height || 200}
             />
         );
     }

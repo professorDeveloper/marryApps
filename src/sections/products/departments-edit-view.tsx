@@ -14,10 +14,6 @@ import { useGetStorages, useGetDepartment, useCreateDepartment, useUpdateDepartm
 import { GenericEditView } from 'src/components/generic-edit-view';
 import { CustomBreadcrumbs } from 'src/components/custom-breadcrumbs';
 
-// ============================================================================
-// COLOR CODES - MOCK DATA
-// ============================================================================
-
 const COLOR_CODES = [
     '#FF4842', // Red
     '#1890FF', // Blue
@@ -165,10 +161,6 @@ export function ProductEditView({ isNew = false }: DepartmentEditViewProps) {
     );
 }
 
-// ============================================================================
-// FIELD CONFIGS
-// ============================================================================
-
 function buildImageSection(): CardSection {
     return {
         id: 'image',
@@ -177,9 +169,9 @@ function buildImageSection(): CardSection {
             {
                 key: 'picture_url',
                 label: 'departments.imageUrl',
-                type: 'url',
-                placeholder: 'https://example.com/image.jpg',
-                defaultValue: '',
+                type: 'image',
+                defaultValue: null,
+                height: 250,
             },
         ],
     };
@@ -203,7 +195,7 @@ function buildBasicInfoSection(): CardSection {
                 label: 'departments.color',
                 type: 'color',
                 required: true,
-                defaultValue:  '#FF4842',
+                defaultValue: '#FF4842',
                 colors: COLOR_CODES,
             },
         ],

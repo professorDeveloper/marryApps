@@ -344,7 +344,7 @@
     },
     "employe": {
       "title": "Employees",
-      "admin": "Admin Employees",
+      "admin": "Employees",
       "staff": "Restaurant Staff"
     },
     "mock": {

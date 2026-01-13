@@ -1,7 +1,3 @@
-// ============================================================================
-// IMAGE UPLOAD FIELD - COMPONENT
-// ============================================================================
-
 import type { FC } from 'react';
 
 import { useRef, useState } from 'react';
@@ -16,7 +12,8 @@ import Typography from '@mui/material/Typography';
 import CircularProgress from '@mui/material/CircularProgress';
 
 import { Iconify } from 'src/components/iconify';
-import { uploadImage, getImageUrl } from 'src/lib/image-upload';
+import { uploadImage } from 'src/lib/image-upload';
+import { useImageUrl } from 'src/hooks/use-image-url';
 import { toast } from 'src/components/snackbar';
 
 interface ImageUploadFieldProps {
@@ -36,25 +33,26 @@ export const ImageUploadField: FC<ImageUploadFieldProps> = ({
 }) => {
     const { t } = useTranslation('menu');
     const inputRef = useRef<HTMLInputElement>(null);
-    const [loading, setLoading] = useState(false);
+    const [uploadLoading, setUploadLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+
+    // Use SWR hook for image URL
+    const { imageUrl: displayUrl, loading: imageLoading } = useImageUrl(value);
+    const loading = uploadLoading || imageLoading;
 
     const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
 
-        setLoading(true);
+        setUploadLoading(true);
         setError(null);
 
         try {
             // Upload file to backend
             const objectName = await uploadImage(file);
 
-            // Get full URL from object name
-            const imageUrl = getImageUrl(objectName);
-
-            // Update form data with the image URL
-            onChange(imageUrl);
+            // Update form data with the object name (not blob URL)
+            onChange(objectName);
 
             toast.success(t('mealsProducts.upload_success') || 'Image uploaded successfully');
         } catch (err) {
@@ -63,7 +61,7 @@ export const ImageUploadField: FC<ImageUploadFieldProps> = ({
             toast.error(errorMessage);
             console.error('Image upload error:', err);
         } finally {
-            setLoading(false);
+            setUploadLoading(false);
             // Reset input
             if (inputRef.current) {
                 inputRef.current.value = '';
@@ -111,7 +109,7 @@ export const ImageUploadField: FC<ImageUploadFieldProps> = ({
                     sx={{
                         width: 250,
                         height: 250,
-                        bgcolor: value ? 'transparent' : 'action.hover',
+                        bgcolor: displayUrl ? 'transparent' : 'action.hover',
                         borderRadius: '100%',
                         display: 'flex',
                         alignItems: 'center',
@@ -123,7 +121,7 @@ export const ImageUploadField: FC<ImageUploadFieldProps> = ({
                         cursor: loading ? 'wait' : 'pointer',
                         '&:hover': {
                             borderColor: error ? 'error.main' : 'primary.main',
-                            bgcolor: value ? 'transparent' : 'action.selected',
+                            bgcolor: displayUrl ? 'transparent' : 'action.selected',
                         },
                     }}
                     onClick={handleClick}
@@ -135,10 +133,10 @@ export const ImageUploadField: FC<ImageUploadFieldProps> = ({
                         }
                     }}
                 >
-                    {value ? (
+                    {displayUrl ? (
                         <Box
                             component="img"
-                            src={value}
+                            src={displayUrl}
                             alt="Preview"
                             sx={{
                                 width: '100%',
@@ -176,7 +174,7 @@ export const ImageUploadField: FC<ImageUploadFieldProps> = ({
                         </Box>
                     )}
 
-                    {value && !loading && (
+                    {displayUrl && !loading && (
                         <IconButton
                             onClick={(e) => {
                                 e.stopPropagation();
@@ -198,7 +196,7 @@ export const ImageUploadField: FC<ImageUploadFieldProps> = ({
                     )}
                 </Box>
 
-                {value && !loading && (
+                {displayUrl && !loading && (
                     <Button
                         fullWidth
                         variant="outlined"

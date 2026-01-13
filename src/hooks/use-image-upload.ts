@@ -11,7 +11,7 @@ export interface UseImageUploadReturn {
     error: string | null;
     uploadFile: (file: File) => Promise<string>;
     uploadAndGetUrl: (file: File) => Promise<string>;
-    getUrl: (objectName: string) => string;
+    getUrl: (objectName: string) => Promise<string>;
     getObjectNameFromUrl: (url: string) => string;
     reset: () => void;
 }
@@ -46,7 +46,7 @@ export const useImageUpload = (): UseImageUploadReturn => {
             setLoading(true);
             setError(null);
             const objectName = await uploadImage(file);
-            const url = getImageUrl(objectName);
+            const url = await getImageUrl(objectName);
             return url;
         } catch (err) {
             const errorMessage = err instanceof Error ? err.message : 'Failed to upload image';
@@ -67,7 +67,7 @@ export const useImageUpload = (): UseImageUploadReturn => {
         error,
         uploadFile,
         uploadAndGetUrl,
-        getUrl: getFullImageUrl,
+        getUrl: (objectName: string) => getFullImageUrl(objectName),
         getObjectNameFromUrl: getObjectName,
         reset,
     };

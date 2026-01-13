@@ -2,23 +2,23 @@ import type { GridColDef } from '@mui/x-data-grid';
 import type { IMealsItem } from 'src/types/meals';
 
 import { useTranslation } from 'react-i18next';
-import { useMemo, useState, useEffect, useCallback } from 'react';
+import { useMemo, useState, useCallback } from 'react';
 
 import { useTheme } from '@mui/material/styles';
-import { Button, Dialog, DialogTitle, DialogActions, DialogContent } from '@mui/material';
+import { Button, Dialog, DialogTitle, DialogActions, DialogContent, Box, Avatar, ListItemText } from '@mui/material';
 
 import { paths } from 'src/routes/paths';
 
-import { useMealsAPI } from 'src/hooks/use-meals-api';
+import { useGetMeals, useDeleteMeal, useDeleteMeals } from 'src/hooks/use-meals';
 import { useGenericViewModal } from 'src/hooks/use-generic-view-modal';
+import { useImageUrl } from 'src/hooks/use-image-url';
 
-import { getFullImageUrl } from 'src/utils/image-url';
+import { getInitials, getAvatarColor } from 'src/utils/avatar';
 
 import { Iconify } from 'src/components/iconify';
 import { CustomGridActionsCellItem } from 'src/components/custom-data-grid';
 import { GenericViewModal, SpecificationsTable } from 'src/components/generic-view-view';
 import {
-    RenderCellItem,
     GenericTableView,
 } from 'src/components/generic-table-view';
 
@@ -27,13 +27,44 @@ import {
  * Meal name and avatar renderer
  */
 function RenderCellMealName({ params }: { params: any }) {
-    const imageUrl = params.row.picture_url ? getFullImageUrl(params.row.picture_url) : null;
+    const { row } = params;
+    const name = row.name || '-';
+    const { imageUrl, loading } = useImageUrl(row.picture_url);
+
+    // If no image, show avatar with initials
+    const initials = getInitials(name);
+    const bgColor = imageUrl ? undefined : getAvatarColor(name);
+
     return (
-        <RenderCellItem
-            params={{ ...params, row: { ...params.row, coverUrl: imageUrl } }}
-            imageField="coverUrl"
-            nameField="name"
-        />
+        <Box
+            sx={{
+                py: 2,
+                gap: 2,
+                width: 1,
+                display: 'flex',
+                alignItems: 'center',
+            }}
+        >
+            <Avatar
+                alt={name}
+                src={imageUrl || undefined}
+                variant="rounded"
+                sx={{
+                    width: 64,
+                    height: 64,
+                    bgcolor: bgColor,
+                    color: '#fff',
+                    fontWeight: 'bold',
+                    fontSize: '20px',
+                    borderRadius: '15%',
+                }}
+            >
+                {!imageUrl && !loading && initials}
+                {loading && '...'}
+            </Avatar>
+
+            <ListItemText primary={<span>{name}</span>} />
+        </Box>
     );
 }
 
@@ -75,33 +106,17 @@ export function Meals() {
     const theme = useTheme();
     const { t } = useTranslation('menu');
 
-    // API hook'i
-    const { getMeals, deleteMeal, deleteMeals } = useMealsAPI();
+    // SWR hooks
+    const { meals, mealsLoading, mutate } = useGetMeals();
+    const { deleteMeal } = useDeleteMeal();
+    const { deleteMeals } = useDeleteMeals();
 
     // State
-    const [meals, setMeals] = useState<IMealsItem[]>([]);
-    const [loading, setLoading] = useState(true);
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [mealToDelete, setMealToDelete] = useState<string | null>(null);
 
     // View modal hook'i
     const { isOpen, selectedData, openModal, closeModal } = useGenericViewModal<IMealsItem>();
-
-    // Load meals on mount
-    useEffect(() => {
-        loadMeals();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
-
-    const loadMeals = useCallback(async () => {
-        setLoading(true);
-        try {
-            const data = await getMeals();
-            setMeals(data);
-        } finally {
-            setLoading(false);
-        }
-    }, [getMeals]);
 
     // Columns config
     const columns = useMemo<GridColDef[]>(
@@ -188,32 +203,34 @@ export function Meals() {
         if (mealToDelete) {
             try {
                 await deleteMeal(mealToDelete);
-                setMeals((prev) => prev.filter((m) => m.id !== mealToDelete));
+                // SWR will automatically revalidate
+                mutate();
                 setDeleteDialogOpen(false);
                 setMealToDelete(null);
             } catch (error) {
                 console.error('Failed to delete meal:', error);
             }
         }
-    }, [mealToDelete, deleteMeal]);
+    }, [mealToDelete, deleteMeal, mutate]);
 
     const handleDeleteRows = useCallback(
         async (ids: string[]) => {
             try {
                 await deleteMeals(ids);
-                setMeals((prev) => prev.filter((m) => !ids.includes(m.id)));
+                // SWR will automatically revalidate
+                mutate();
             } catch (error) {
                 console.error('Failed to delete meals:', error);
             }
         },
-        [deleteMeals]
+        [deleteMeals, mutate]
     );
 
     return (
         <>
             <GenericTableView<IMealsItem>
                 data={meals}
-                loading={loading}
+                loading={mealsLoading}
                 columns={columns}
                 breadcrumbs={{
                     heading: t('mealsProducts.title'),

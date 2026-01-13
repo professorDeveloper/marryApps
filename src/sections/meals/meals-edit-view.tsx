@@ -3,7 +3,7 @@ import type { CardSection, GenericEditViewConfig } from 'src/components/generic-
 
 import { useParams } from 'react-router';
 import { useTranslation } from 'react-i18next';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { Box, Tabs, Tab, Typography } from '@mui/material';
 
 import { CustomBreadcrumbs } from 'src/components/custom-breadcrumbs';
@@ -11,7 +11,9 @@ import { CustomBreadcrumbs } from 'src/components/custom-breadcrumbs';
 import { paths } from 'src/routes/paths';
 import { useRouter } from 'src/routes/hooks';
 
-import { useMealsAPI } from 'src/hooks/use-meals-api';
+import { useGetMeal, useCreateMeal, useUpdateMeal, useDeleteMeal } from 'src/hooks/use-meals';
+import { useGetCategories } from 'src/actions/categories';
+import { useGetDepartments } from 'src/actions/departments';
 
 import { GenericEditView } from 'src/components/generic-edit-view';
 import ProductCalculator from 'src/components/generic-edit-view/edit-calculation';
@@ -123,49 +125,17 @@ export function MealEditView({ isNew = false }: MealEditViewProps) {
     const router = useRouter();
     const { t } = useTranslation('menu');
 
-    // API hooks
-    const { getMealById, createMeal, updateMeal, getCategories, getDepartments } = useMealsAPI();
+    // SWR hooks
+    const { meal, mealLoading } = useGetMeal(isNew ? '' : mealId || '');
+    const { categories } = useGetCategories();
+    const { departments } = useGetDepartments();
+    const { createMeal } = useCreateMeal();
+    const { updateMeal } = useUpdateMeal();
+    const { deleteMeal } = useDeleteMeal();
 
-    // State
-    const [meal, setMeal] = useState<Partial<IMealsItem> | null>(null);
-    const [loading, setLoading] = useState(!isNew);
-    const [categories, setCategories] = useState<any[]>([]);
-    const [departments, setDepartments] = useState<any[]>([]);
     const [activeTab, setActiveTab] = useState(0);
 
-    const loadMeal = useCallback(async () => {
-        if (!mealId) return;
-        setLoading(true);
-        try {
-            const data = await getMealById(mealId);
-            setMeal(data);
-        } finally {
-            setLoading(false);
-        }
-    }, [mealId, getMealById]);
-
-    // Load meal if editing
-    useEffect(() => {
-        if (!isNew && mealId) {
-            loadMeal();
-        } else if (isNew) {
-            setLoading(false);
-        }
-    }, [mealId, isNew, loadMeal]);
-
-    // Load categories and departments
-    useEffect(() => {
-        const loadSelectOptions = async () => {
-            const [catsData, deptsData] = await Promise.all([
-                getCategories(),
-                getDepartments(),
-            ]);
-            setCategories(catsData);
-            setDepartments(deptsData);
-        };
-
-        loadSelectOptions();
-    }, [getCategories, getDepartments]);
+    const loading = !isNew && mealLoading;
 
     // Create translated copies of sections
     const IMAGE_SECTION_T: CardSection = {
@@ -178,7 +148,7 @@ export function MealEditView({ isNew = false }: MealEditViewProps) {
         })),
     };
 
-    const BASIC_INFO_SECTION_T: CardSection = {
+    const BASIC_INFO_SECTION_T: CardSection = useMemo(() => ({
         ...BASIC_INFO_SECTION,
         title: t(BASIC_INFO_SECTION.title),
         fields: BASIC_INFO_SECTION.fields.map((f) => {
@@ -187,7 +157,7 @@ export function MealEditView({ isNew = false }: MealEditViewProps) {
                 return {
                     ...f,
                     label: t(f.label),
-                    options: Array.isArray(categories) ? categories.map((cat) => ({
+                    options: Array.isArray(categories) ? categories.map((cat: any) => ({
                         value: cat.id,
                         label: cat.name,
                     })) : [],
@@ -199,7 +169,7 @@ export function MealEditView({ isNew = false }: MealEditViewProps) {
                 return {
                     ...f,
                     label: t(f.label),
-                    options: Array.isArray(departments) ? departments.map((dept) => ({
+                    options: Array.isArray(departments) ? departments.map((dept: any) => ({
                         value: dept.id,
                         label: dept.name,
                     })) : [],
@@ -224,7 +194,7 @@ export function MealEditView({ isNew = false }: MealEditViewProps) {
                 placeholder: f.placeholder ? t(f.placeholder) : undefined,
             };
         }),
-    };
+    }), [t, categories, departments]);
 
     // Handle form submission
     const handleSubmit = useCallback(
@@ -246,14 +216,14 @@ export function MealEditView({ isNew = false }: MealEditViewProps) {
 
     // Handle delete
     const handleDelete = useCallback(async () => {
+        if (!mealId) return;
         try {
-            // Note: Delete functionality should be in useMealsAPI
-            // This will be called if the user clicks delete button
+            await deleteMeal(mealId);
             router.push(paths.menu.meals.root);
         } catch (err) {
             console.log("Error deleting meal:", err);
         }
-    }, [router]);
+    }, [mealId, deleteMeal, router]);
 
     const config: GenericEditViewConfig = {
         title: isNew ? t('mealsProducts.new') : t('mealsProducts.edit'),
@@ -331,6 +301,7 @@ export function MealEditView({ isNew = false }: MealEditViewProps) {
                         config={config}
                         data={meal || undefined}
                         isNew={isNew}
+                        loading={loading}
                     />
                 </TabPanel>
 

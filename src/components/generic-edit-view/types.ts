@@ -2,7 +2,7 @@
 // GENERIC EDIT VIEW - TYPES
 // ============================================================================
 
-export type FieldType = 'text' | 'number' | 'textarea' | 'select' | 'checkbox' | 'switch' | 'color' | 'email' | 'url';
+export type FieldType = 'text' | 'number' | 'textarea' | 'select' | 'checkbox' | 'switch' | 'color' | 'email' | 'url' | 'image';
 
 export interface FieldOption {
     value: string | number;
@@ -24,6 +24,7 @@ export interface FieldConfig {
     fullWidth?: boolean;
     grid?: number; // 1-12 for grid layout
     colors?: string[]; // For color picker type
+    height?: number; // For image field height
 }
 
 export interface CardSection {
