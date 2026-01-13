@@ -53,8 +53,8 @@ export function JwtSignInView() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const defaultValues: SignInSchemaType = {
-    brand_id: 'my_restaurant2',
-    username: 'qwerty',
+    brand_id: 'my_restaurant',
+    username: 'qwerty1',
     password: 'Javohir11',
   };
 
