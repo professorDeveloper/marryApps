@@ -142,6 +142,13 @@ WHERE ingredient_id = $1 AND deleted_at = 0
 ORDER BY created_at DESC
 LIMIT $2 OFFSET $3;
 
+-- name: GetLatestInvoiceDetailByIngredientID :one
+SELECT id, invoice_id, ingredient_id, quantity, price, price_per_unit, created_at, updated_at, deleted_at
+FROM invoice_detailed
+WHERE ingredient_id = $1 AND deleted_at = 0
+ORDER BY created_at DESC
+LIMIT 1;
+
 -- name: UpdateInvoiceDetail :one
 UPDATE invoice_detailed
 SET invoice_id = COALESCE($2, invoice_id),

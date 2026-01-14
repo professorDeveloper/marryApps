@@ -85,19 +85,31 @@ func TenantMiddleware(repo *repository.Repository) echo.MiddlewareFunc {
 
 			err = next(c)
 
-			if err == nil {
-				if commitErr := tx.Commit(ctx); commitErr != nil {
-					log.Printf("Failed to commit transaction: %v", commitErr)
-					tx.Rollback(ctx)
-					return c.JSON(http.StatusInternalServerError, map[string]interface{}{
-						"message": "Internal server error",
-					})
-				}
-			} else {
+			// If handler returned an error, rollback and propagate the error.
+			if err != nil {
 				tx.Rollback(ctx)
+				return err
 			}
 
-			return err
+			// If handler already wrote an error response (>=400), do NOT commit.
+			// This avoids a second JSON write when a DB statement failed inside the tx.
+			if c.Response().Status >= http.StatusBadRequest {
+				tx.Rollback(ctx)
+				return nil
+			}
+
+			if commitErr := tx.Commit(ctx); commitErr != nil {
+				log.Printf("Failed to commit transaction: %v", commitErr)
+				tx.Rollback(ctx)
+				if c.Response().Committed {
+					return nil
+				}
+				return c.JSON(http.StatusInternalServerError, map[string]interface{}{
+					"message": "Internal server error",
+				})
+			}
+
+			return nil
 		}
 	}
 }

@@ -240,8 +240,10 @@ func (h *Handler) Register(router *echo.Echo) {
 		{
 			compounds.POST("", h.CreateCompound, mw.CheckLanguage())
 			compounds.GET("", h.GetAllCompounds, mw.CheckLanguage())
+			compounds.GET("/:id/with-calculations", h.GetCompoundWithCalculations, mw.CheckLanguage())
 			compounds.GET("/:id", h.GetCompoundByID, mw.CheckLanguage())
 			compounds.GET("/department/:departmentId", h.GetCompoundsByDepartmentID, mw.CheckLanguage())
+			compounds.POST("/:id/recalculate-price", h.RecalculateCompoundPrice, mw.CheckLanguage())
 			compounds.PUT("/:id", h.UpdateCompound, mw.CheckLanguage())
 			compounds.DELETE("/:id", h.DeleteCompound, mw.CheckLanguage())
 			compounds.POST("/:id/restore", h.RestoreCompound, mw.CheckLanguage())
@@ -287,6 +289,7 @@ func (h *Handler) Register(router *echo.Echo) {
 		{
 			goods.POST("", h.CreateGood, mw.CheckLanguage())
 			goods.GET("", h.GetAllGoods, mw.CheckLanguage())
+			goods.GET("/:id/with-calculations", h.GetGoodWithCalculations, mw.CheckLanguage())
 			goods.GET("/:id", h.GetGood, mw.CheckLanguage())
 			goods.GET("/search/by-price", h.GetGoodsByPriceRange, mw.CheckLanguage())
 			goods.GET("/search", h.SearchGoods, mw.CheckLanguage())
@@ -307,6 +310,26 @@ func (h *Handler) Register(router *echo.Echo) {
 			goodDetails.PUT("/:id/quantity", h.UpdateGoodDetailQuantity, mw.CheckLanguage())
 			goodDetails.DELETE("/:id", h.DeleteGoodDetail, mw.CheckLanguage())
 			goodDetails.POST("/:id/restore", h.RestoreGoodDetail, mw.CheckLanguage())
+		}
+
+		// Good calculations endpoints
+		goodCalcs := api.Group("/goods/calculations", mw.CheckAuth(h.cfg), mw.TenantMiddleware(h.repo))
+		{
+			goodCalcs.POST("", h.CreateGoodCalculation, mw.CheckLanguage())   // Create: good_id + ingredient_id/compound_to_add_id in body
+			goodCalcs.GET("", h.GetGoodCalculations, mw.CheckLanguage())      // Get: good_id in body
+			goodCalcs.GET("/:id", h.GetCalculation, mw.CheckLanguage())       // Get by calculation ID
+			goodCalcs.PUT("/:id", h.UpdateCalculation, mw.CheckLanguage())    // Update by calculation ID
+			goodCalcs.DELETE("/:id", h.DeleteCalculation, mw.CheckLanguage()) // Delete by calculation ID
+		}
+
+		// Compound calculations endpoints
+		compoundCalcs := api.Group("/compounds/calculations", mw.CheckAuth(h.cfg), mw.TenantMiddleware(h.repo))
+		{
+			compoundCalcs.POST("", h.CreateCompoundCalculation, mw.CheckLanguage()) // Create: compound_id + ingredient_id/compound_to_add_id in body
+			compoundCalcs.GET("", h.GetCompoundCalculations, mw.CheckLanguage())    // Get: compound_id as query parameter
+			compoundCalcs.GET("/:id", h.GetCalculation, mw.CheckLanguage())         // Get by calculation ID
+			compoundCalcs.PUT("/:id", h.UpdateCalculation, mw.CheckLanguage())      // Update by calculation ID
+			compoundCalcs.DELETE("/:id", h.DeleteCalculation, mw.CheckLanguage())   // Delete by calculation ID
 		}
 
 		// Category goods endpoints

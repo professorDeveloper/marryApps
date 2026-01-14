@@ -3661,6 +3661,302 @@
                 }
             }
         },
+        "/api/v1/compounds/calculations": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Retrieve all calculations (ingredients and child compounds) for a specific compound",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Calculations"
+                ],
+                "summary": "Get calculations by compound ID",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Compound ID",
+                        "name": "compound_id",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "List of calculations",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/model.CalculationResponse"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorData"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorData"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorData"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Add ingredient or child compound to a compound and create a calculation record",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Calculations"
+                ],
+                "summary": "Create compound calculation",
+                "parameters": [
+                    {
+                        "description": "Compound ID, ingredient ID or compound ID to add, and quantity",
+                        "name": "req",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.CreateCompoundCalculationRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/model.CalculationResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorData"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorData"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorData"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/compounds/calculations/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Retrieve a single calculation record by ID",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Calculations"
+                ],
+                "summary": "Get calculation by ID",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Calculation ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.CalculationResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorData"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorData"
+                        }
+                    },
+                    "404": {
+                        "description": "Not found",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorData"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorData"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Update only the quantity of a calculation. Total cost is automatically recalculated as: total_cost = quantity × price_per_unit. To change ingredient/compound, delete and create a new calculation.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Calculations"
+                ],
+                "summary": "Update calculation quantity",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Calculation ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Update request (quantity only)",
+                        "name": "req",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.UpdateCalculationRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.CalculationResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorData"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorData"
+                        }
+                    },
+                    "404": {
+                        "description": "Not found",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorData"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorData"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Delete a calculation record",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Calculations"
+                ],
+                "summary": "Delete calculation",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Calculation ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorData"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorData"
+                        }
+                    },
+                    "404": {
+                        "description": "Not found",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorData"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorData"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/compounds/department/{departmentId}": {
             "get": {
                 "security": [
@@ -4200,6 +4496,67 @@
                 }
             }
         },
+        "/api/v1/compounds/{id}/recalculate-price": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Manually recalculate the price of a compound based on all ingredient calculations",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "compounds"
+                ],
+                "summary": "Recalculate compound price",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Compound ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Price recalculated successfully",
+                        "schema": {
+                            "$ref": "#/definitions/model.CompoundResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid ID format",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Compound not found",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/compounds/{id}/restore": {
             "post": {
                 "security": [
@@ -4256,6 +4613,64 @@
                         "description": "Internal server error",
                         "schema": {
                             "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/compounds/{id}/with-calculations": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Retrieve a compound with all its calculations and profit information",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Calculations"
+                ],
+                "summary": "Get compound with calculations",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Compound ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.CompoundCalculationResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorData"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorData"
+                        }
+                    },
+                    "404": {
+                        "description": "Not found",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorData"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorData"
                         }
                     }
                 }
@@ -5369,6 +5784,302 @@
                 }
             }
         },
+        "/api/v1/goods/calculations": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Retrieve all calculations (ingredients and compounds) for a specific good",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Calculations"
+                ],
+                "summary": "Get calculations by good ID",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Good ID",
+                        "name": "good_id",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "List of calculations",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/model.CalculationResponse"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorData"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorData"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorData"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Add ingredient or compound to a good and create a calculation record",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Calculations"
+                ],
+                "summary": "Create good calculation",
+                "parameters": [
+                    {
+                        "description": "Good ID, ingredient ID or compound ID to add, and quantity",
+                        "name": "req",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.CreateGoodCalculationRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/model.CalculationResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorData"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorData"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorData"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/goods/calculations/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Retrieve a single calculation record by ID. Used by both /goods/calculations/{id} and /compounds/calculations/{id}",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Calculations"
+                ],
+                "summary": "Get calculation by ID",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Calculation ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.CalculationResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorData"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorData"
+                        }
+                    },
+                    "404": {
+                        "description": "Not found",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorData"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorData"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Update only the quantity of a calculation. Total cost is automatically recalculated as: total_cost = quantity × price_per_unit. To change ingredient/compound, delete and create a new calculation. Used by both /goods/calculations/{id} and /compounds/calculations/{id}",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Calculations"
+                ],
+                "summary": "Update calculation quantity (auto-recalculates total_cost)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Calculation ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Update request (quantity only)",
+                        "name": "req",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.UpdateCalculationRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.CalculationResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorData"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorData"
+                        }
+                    },
+                    "404": {
+                        "description": "Not found",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorData"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorData"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Delete a calculation record. Used by both /goods/calculations/{id} and /compounds/calculations/{id}",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Calculations"
+                ],
+                "summary": "Delete calculation",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Calculation ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorData"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorData"
+                        }
+                    },
+                    "404": {
+                        "description": "Not found",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorData"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorData"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/goods/search": {
             "get": {
                 "security": [
@@ -5924,6 +6635,64 @@
                         "description": "Internal Server Error",
                         "schema": {
                             "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/goods/{id}/with-calculations": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Retrieve a good with all its ingredient calculations and profit information",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Calculations"
+                ],
+                "summary": "Get good with calculations",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Good ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.GoodCalculationResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorData"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorData"
+                        }
+                    },
+                    "404": {
+                        "description": "Not found",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorData"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorData"
                         }
                     }
                 }
@@ -13782,6 +14551,55 @@
                 }
             }
         },
+        "model.CalculationResponse": {
+            "type": "object",
+            "properties": {
+                "component_compound_id": {
+                    "type": "string",
+                    "example": "123e4567-e89b-12d3-a456-426614174000"
+                },
+                "compound_id": {
+                    "type": "string",
+                    "example": "123e4567-e89b-12d3-a456-426614174000"
+                },
+                "created_at": {
+                    "type": "string",
+                    "example": "2022-01-01T00:00:00Z"
+                },
+                "good_id": {
+                    "type": "string",
+                    "example": "123e4567-e89b-12d3-a456-426614174000"
+                },
+                "id": {
+                    "type": "string",
+                    "example": "123e4567-e89b-12d3-a456-426614174000"
+                },
+                "ingredient_id": {
+                    "type": "string",
+                    "example": "123e4567-e89b-12d3-a456-426614174000"
+                },
+                "measurement_unit": {
+                    "type": "string",
+                    "example": "kg"
+                },
+                "price_per_unit": {
+                    "type": "string",
+                    "example": "20000"
+                },
+                "quantity": {
+                    "type": "string",
+                    "example": "0.2"
+                },
+                "total_cost": {
+                    "type": "string",
+                    "example": "4000"
+                },
+                "updated_at": {
+                    "type": "string",
+                    "example": "2022-01-01T00:00:00Z"
+                }
+            }
+        },
         "model.CategoryResponse": {
             "type": "object",
             "properties": {
@@ -13824,6 +14642,41 @@
                 "updated_at": {
                     "type": "string",
                     "example": "2022-01-01T00:00:00Z"
+                }
+            }
+        },
+        "model.CompoundCalculationResponse": {
+            "type": "object",
+            "properties": {
+                "calculations": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.CalculationResponse"
+                    }
+                },
+                "id": {
+                    "type": "string",
+                    "example": "123e4567-e89b-12d3-a456-426614174000"
+                },
+                "name": {
+                    "type": "string",
+                    "example": "Tomato Sauce"
+                },
+                "price": {
+                    "type": "string",
+                    "example": "5000.00"
+                },
+                "profit": {
+                    "type": "string",
+                    "example": "2000"
+                },
+                "profit_margin": {
+                    "type": "string",
+                    "example": "40%"
+                },
+                "total_cost": {
+                    "type": "string",
+                    "example": "3000"
                 }
             }
         },
@@ -14034,6 +14887,31 @@
                 }
             }
         },
+        "model.CreateCompoundCalculationRequest": {
+            "type": "object",
+            "required": [
+                "compound_id",
+                "quantity"
+            ],
+            "properties": {
+                "compound_id": {
+                    "type": "string",
+                    "example": "123e4567-e89b-12d3-a456-426614174000"
+                },
+                "compound_to_add_id": {
+                    "type": "string",
+                    "example": "123e4567-e89b-12d3-a456-426614174000"
+                },
+                "ingredient_id": {
+                    "type": "string",
+                    "example": "123e4567-e89b-12d3-a456-426614174000"
+                },
+                "quantity": {
+                    "type": "string",
+                    "example": "900"
+                }
+            }
+        },
         "model.CreateCompoundDetailRequest": {
             "type": "object",
             "required": [
@@ -14093,10 +14971,6 @@
                     "type": "string",
                     "example": "https://example.com/pizza-dough.jpg"
                 },
-                "price": {
-                    "type": "string",
-                    "example": "500.50"
-                },
                 "quantity": {
                     "type": "integer",
                     "example": 10
@@ -14141,6 +15015,31 @@
                 },
                 "storage_id": {
                     "type": "string"
+                }
+            }
+        },
+        "model.CreateGoodCalculationRequest": {
+            "type": "object",
+            "required": [
+                "good_id",
+                "quantity"
+            ],
+            "properties": {
+                "compound_to_add_id": {
+                    "type": "string",
+                    "example": "123e4567-e89b-12d3-a456-426614174000"
+                },
+                "good_id": {
+                    "type": "string",
+                    "example": "123e4567-e89b-12d3-a456-426614174000"
+                },
+                "ingredient_id": {
+                    "type": "string",
+                    "example": "123e4567-e89b-12d3-a456-426614174000"
+                },
+                "quantity": {
+                    "type": "string",
+                    "example": "900"
                 }
             }
         },
@@ -14589,6 +15488,27 @@
                 }
             }
         },
+        "model.ErrorData": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "integer",
+                    "example": 400
+                },
+                "error": {
+                    "type": "string",
+                    "example": "detailed error message"
+                },
+                "message": {
+                    "type": "string",
+                    "example": "An error occurred"
+                },
+                "status": {
+                    "type": "string",
+                    "example": "error"
+                }
+            }
+        },
         "model.ErrorResponse": {
             "type": "object",
             "properties": {
@@ -14608,6 +15528,41 @@
                 "username": {
                     "type": "string",
                     "example": "superadmin"
+                }
+            }
+        },
+        "model.GoodCalculationResponse": {
+            "type": "object",
+            "properties": {
+                "calculations": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.CalculationResponse"
+                    }
+                },
+                "id": {
+                    "type": "string",
+                    "example": "123e4567-e89b-12d3-a456-426614174000"
+                },
+                "name": {
+                    "type": "string",
+                    "example": "Pizza Margherita"
+                },
+                "price": {
+                    "type": "string",
+                    "example": "15000.00"
+                },
+                "profit": {
+                    "type": "string",
+                    "example": "4500"
+                },
+                "profit_margin": {
+                    "type": "string",
+                    "example": "30%"
+                },
+                "total_cost": {
+                    "type": "string",
+                    "example": "10500"
                 }
             }
         },
@@ -15553,6 +16508,18 @@
                 }
             }
         },
+        "model.UpdateCalculationRequest": {
+            "type": "object",
+            "required": [
+                "quantity"
+            ],
+            "properties": {
+                "quantity": {
+                    "type": "string",
+                    "example": "2.5"
+                }
+            }
+        },
         "model.UpdateCategoryRequest": {
             "type": "object",
             "properties": {
@@ -15637,10 +16604,6 @@
                 "picture_url": {
                     "type": "string",
                     "example": "https://example.com/pizza-dough.jpg"
-                },
-                "price": {
-                    "type": "string",
-                    "example": "500.50"
                 },
                 "quantity": {
                     "type": "integer",

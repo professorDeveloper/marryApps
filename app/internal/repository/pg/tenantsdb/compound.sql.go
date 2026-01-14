@@ -1442,6 +1442,41 @@ func (q *Queries) UpdateCompoundDetail(ctx context.Context, arg UpdateCompoundDe
 	return i, err
 }
 
+const updateCompoundPrice = `-- name: UpdateCompoundPrice :one
+UPDATE compounds
+SET price = $2,
+    updated_at = NOW()
+WHERE id = $1 AND deleted_at = 0
+RETURNING id, name, name_i18n, description, description_i18n, quantity, picture_url, color_code, measurement, price, department_id, created_at, updated_at, deleted_at
+`
+
+type UpdateCompoundPriceParams struct {
+	ID    uuid.UUID      `json:"id"`
+	Price pgtype.Numeric `json:"price"`
+}
+
+func (q *Queries) UpdateCompoundPrice(ctx context.Context, arg UpdateCompoundPriceParams) (Compound, error) {
+	row := q.db.QueryRow(ctx, updateCompoundPrice, arg.ID, arg.Price)
+	var i Compound
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.NameI18n,
+		&i.Description,
+		&i.DescriptionI18n,
+		&i.Quantity,
+		&i.PictureUrl,
+		&i.ColorCode,
+		&i.Measurement,
+		&i.Price,
+		&i.DepartmentID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
+	)
+	return i, err
+}
+
 const updateCompoundStock = `-- name: UpdateCompoundStock :one
 UPDATE compound_stock
 SET quantity = COALESCE($2, quantity),

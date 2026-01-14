@@ -38,6 +38,13 @@ SET name = COALESCE($2, name),
 WHERE id = $1 AND deleted_at = 0
 RETURNING id, name, name_i18n, description, description_i18n, quantity, picture_url, color_code, measurement, price, department_id, created_at, updated_at, deleted_at;
 
+-- name: UpdateCompoundPrice :one
+UPDATE compounds
+SET price = $2,
+    updated_at = NOW()
+WHERE id = $1 AND deleted_at = 0
+RETURNING id, name, name_i18n, description, description_i18n, quantity, picture_url, color_code, measurement, price, department_id, created_at, updated_at, deleted_at;
+
 -- name: DeleteCompound :exec
 UPDATE compounds
 SET deleted_at = EXTRACT(EPOCH FROM NOW())::BIGINT

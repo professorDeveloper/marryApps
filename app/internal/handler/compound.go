@@ -42,7 +42,7 @@ func (h *Handler) CreateCompound(c echo.Context) error {
 	}
 
 	quantity := int32(req.Quantity)
-	compound, err := h.service.Compound().CreateCompound(c.Request().Context(), req.Name, req.NameI18n, req.Description, req.DescriptionI18n, req.Measurement, req.DepartmentID, quantity, req.Price, req.PictureUrl, req.ColorCode)
+	compound, err := h.service.Compound().CreateCompound(c.Request().Context(), req.Name, req.NameI18n, req.Description, req.DescriptionI18n, req.Measurement, req.DepartmentID, quantity, nil, req.PictureUrl, req.ColorCode)
 	if err != nil {
 		log.Printf("CreateCompound failed: %v", err)
 		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse(
@@ -216,7 +216,7 @@ func (h *Handler) UpdateCompound(c echo.Context) error {
 		quantity = &q
 	}
 
-	compound, err := h.service.Compound().UpdateCompound(c.Request().Context(), compoundID, req.Name, req.NameI18n, req.Description, req.DescriptionI18n, req.Measurement, req.DepartmentID, quantity, req.Price, req.PictureUrl, req.ColorCode)
+	compound, err := h.service.Compound().UpdateCompound(c.Request().Context(), compoundID, req.Name, req.NameI18n, req.Description, req.DescriptionI18n, req.Measurement, req.DepartmentID, quantity, nil, req.PictureUrl, req.ColorCode)
 	if err != nil {
 		log.Printf("UpdateCompound failed for ID %s: %v", compoundID, err)
 		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("failed to update compound", err.Error(), http.StatusInternalServerError))
@@ -325,4 +325,33 @@ func (h *Handler) SearchCompounds(c echo.Context) error {
 	}
 
 	return c.JSON(http.StatusOK, model.NewSuccessResponse("Data retrieved successfully", compounds, http.StatusOK))
+}
+
+// RecalculateCompoundPrice recalculates the price of a compound based on its ingredient calculations
+// @Summary Recalculate compound price
+// @Description Manually recalculate the price of a compound based on all ingredient calculations
+// @Tags compounds
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path string true "Compound ID"
+// @Success 200 {object} model.CompoundResponse "Price recalculated successfully"
+// @Failure 400 {object} model.ErrorResponse "Invalid ID format"
+// @Failure 401 {object} model.ErrorResponse "Unauthorized"
+// @Failure 404 {object} model.ErrorResponse "Compound not found"
+// @Failure 500 {object} model.ErrorResponse "Internal server error"
+// @Router /api/v1/compounds/{id}/recalculate-price [post]
+func (h *Handler) RecalculateCompoundPrice(c echo.Context) error {
+	compoundID := c.Param("id")
+	if compoundID == "" {
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("compound id is required", "missing path parameter: id", http.StatusBadRequest))
+	}
+
+	compound, err := h.service.Compound().RecalculateCompoundPrice(c.Request().Context(), compoundID)
+	if err != nil {
+		log.Printf("RecalculateCompoundPrice failed for ID %s: %v", compoundID, err)
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("failed to recalculate compound price", err.Error(), http.StatusInternalServerError))
+	}
+
+	return c.JSON(http.StatusOK, model.NewSuccessResponse("Compound price recalculated successfully", compound, http.StatusOK))
 }

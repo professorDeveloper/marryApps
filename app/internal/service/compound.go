@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -49,14 +51,43 @@ func toMeasurementString(measurement pg.NullMeasurementType) *string {
 
 func toPriceString(price pgtype.Numeric) *string {
 	if price.Valid {
-		// Convert Numeric to string via Float64Value
-		f64, err := price.Float64Value()
-		if err == nil && f64.Valid {
-			str := fmt.Sprintf("%v", f64.Float64)
+		// Convert to Decimal string representation
+		if price.NaN {
+			str := "NaN"
 			return &str
 		}
-		// Fallback: return zero string
-		str := "0"
+		if price.InfinityModifier > 0 {
+			str := "Infinity"
+			return &str
+		}
+		if price.InfinityModifier < 0 {
+			str := "-Infinity"
+			return &str
+		}
+
+		// If Int is nil, return 0
+		if price.Int == nil {
+			str := "0"
+			return &str
+		}
+
+		// Apply exponent to format the number
+		str := price.Int.String()
+		if price.Exp < 0 {
+			// Need to add decimal point
+			exp := -int(price.Exp)
+			if exp >= len(str) {
+				// Add leading zeros and decimal
+				str = "0." + strings.Repeat("0", exp-len(str)) + str
+			} else {
+				// Insert decimal point
+				str = str[:len(str)-exp] + "." + str[len(str)-exp:]
+			}
+		} else if price.Exp > 0 {
+			// Add trailing zeros
+			str = str + strings.Repeat("0", int(price.Exp))
+		}
+
 		return &str
 	}
 	return nil
@@ -802,4 +833,54 @@ func toCompoundStockResponse(stock pg.CompoundStock) *model.CompoundStockRespons
 		CreatedAt:  createdAt,
 		UpdatedAt:  updatedAt,
 	}
+}
+
+// RecalculateCompoundPrice manually recalculates the price of a compound based on its ingredient calculations
+func (c *CompoundS) RecalculateCompoundPrice(ctx context.Context, compoundID string) (*model.CompoundResponse, error) {
+	id, err := uuid.Parse(compoundID)
+	if err != nil {
+		return nil, fmt.Errorf("invalid compound_id: %w", err)
+	}
+
+	// Get all ingredient calculations for this compound (excluding compound-to-compound)
+	calculations, err := c.repo.Tenant(ctx).GetCalculationsByCompoundID(ctx, pgtype.UUID{Bytes: id, Valid: true})
+	if err != nil && err != pgx.ErrNoRows {
+		log.Printf("RecalculateCompoundPrice: failed to fetch calculations: %v", err)
+		return nil, fmt.Errorf("failed to fetch calculations: %w", err)
+	}
+
+	// Sum all total_cost values from calculations with ingredient_id (not compound_id components)
+	totalPrice := 0.0
+	log.Printf("RecalculateCompoundPrice: Found %d calculations", len(calculations))
+	if calculations != nil {
+		for _, calc := range calculations {
+			log.Printf("RecalculateCompoundPrice: Calc ID=%s, IngredientID=%s, TotalCost=%v", calc.ID, calc.IngredientID, calc.TotalCost)
+			// Only sum if it's an ingredient calculation (ingredient_id is not nil/empty)
+			if calc.IngredientID.Valid {
+				// Convert pgtype.Numeric to float
+				costStr := numericToStr(calc.TotalCost)
+				log.Printf("RecalculateCompoundPrice: Adding cost %s (from %v)", costStr, calc.TotalCost)
+				if costFloat, err := strconv.ParseFloat(costStr, 64); err == nil {
+					totalPrice += costFloat
+				} else {
+					log.Printf("RecalculateCompoundPrice: Error parsing cost: %v", err)
+				}
+			}
+		}
+	}
+	log.Printf("RecalculateCompoundPrice: Total price calculated = %.2f", totalPrice)
+
+	// Update the compound price
+	updateParams := pg.UpdateCompoundParams{
+		ID:    id,
+		Price: stringToNumeric(fmt.Sprintf("%.2f", totalPrice)),
+	}
+
+	updated, err := c.repo.Tenant(ctx).UpdateCompound(ctx, updateParams)
+	if err != nil {
+		log.Printf("RecalculateCompoundPrice: failed to update compound: %v", err)
+		return nil, fmt.Errorf("failed to update compound: %w", err)
+	}
+
+	return compoundToResponse(updated), nil
 }

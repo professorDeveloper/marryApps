@@ -755,6 +755,31 @@ func (q *Queries) GetInvoicesBySupplier(ctx context.Context, arg GetInvoicesBySu
 	return items, nil
 }
 
+const getLatestInvoiceDetailByIngredientID = `-- name: GetLatestInvoiceDetailByIngredientID :one
+SELECT id, invoice_id, ingredient_id, quantity, price, price_per_unit, created_at, updated_at, deleted_at
+FROM invoice_detailed
+WHERE ingredient_id = $1 AND deleted_at = 0
+ORDER BY created_at DESC
+LIMIT 1
+`
+
+func (q *Queries) GetLatestInvoiceDetailByIngredientID(ctx context.Context, ingredientID uuid.UUID) (InvoiceDetailed, error) {
+	row := q.db.QueryRow(ctx, getLatestInvoiceDetailByIngredientID, ingredientID)
+	var i InvoiceDetailed
+	err := row.Scan(
+		&i.ID,
+		&i.InvoiceID,
+		&i.IngredientID,
+		&i.Quantity,
+		&i.Price,
+		&i.PricePerUnit,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
+	)
+	return i, err
+}
+
 const markInvoiceArrived = `-- name: MarkInvoiceArrived :one
 UPDATE invoices
 SET status = 'arrived',

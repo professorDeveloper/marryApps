@@ -82,6 +82,14 @@ func Run(cfg *config.Config) {
 		l.Fatalf("app - Run - RunMigrations(tenants): %v", err)
 	}
 
+	// Seed test data (only if debug mode is enabled)
+	if cfg.App.IsDebug {
+		l.Infof("Debug mode enabled - seeding test data...")
+		if err := migrate.SeedData(ctx, mainPgClient.Pool, tenantPgClient.Pool); err != nil {
+			l.Warn("Failed to seed test data (this is non-fatal): %v", err)
+		}
+	}
+
 	minioClient, err := minio.New(minio.Endpoint(cfg.Minio.Endpoint), minio.AccessKeyID(cfg.Minio.AccessKey), minio.SecretAccessKey(cfg.Minio.SecretKey), minio.UseSSL(cfg.Minio.UseSSL))
 	if err != nil {
 		l.Fatalf("app - Run - minio.New: %v", err)

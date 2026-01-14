@@ -265,6 +265,21 @@ type CafeTable struct {
 	DeletedAt *int64             `json:"deleted_at"`
 }
 
+type Calculation struct {
+	ID                  uuid.UUID          `json:"id"`
+	GoodID              pgtype.UUID        `json:"good_id"`
+	CompoundID          pgtype.UUID        `json:"compound_id"`
+	IngredientID        pgtype.UUID        `json:"ingredient_id"`
+	Quantity            pgtype.Numeric     `json:"quantity"`
+	MeasurementUnit     string             `json:"measurement_unit"`
+	PricePerUnit        pgtype.Numeric     `json:"price_per_unit"`
+	TotalCost           pgtype.Numeric     `json:"total_cost"`
+	CreatedAt           pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt           pgtype.Timestamptz `json:"updated_at"`
+	DeletedAt           *int64             `json:"deleted_at"`
+	ComponentCompoundID pgtype.UUID        `json:"component_compound_id"`
+}
+
 type Category struct {
 	ID           uuid.UUID          `json:"id"`
 	Name         string             `json:"name"`

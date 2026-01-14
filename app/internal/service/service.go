@@ -155,6 +155,7 @@ type CompoundI interface {
 	DeleteCompound(ctx context.Context, compoundID string) error
 	RestoreCompound(ctx context.Context, compoundID string) (*model.CompoundResponse, error)
 	SearchCompounds(ctx context.Context, query string, limit, offset int32) ([]*model.CompoundResponse, error)
+	RecalculateCompoundPrice(ctx context.Context, compoundID string) (*model.CompoundResponse, error)
 
 	// CompoundDetail methods
 	CreateCompoundDetail(ctx context.Context, compoundID, ingredientID string, quantity int64) (*model.CompoundDetailResponse, error)
@@ -301,6 +302,24 @@ type OrderI interface {
 	SendNotificationByStatus(ctx context.Context, fcmClient *notification.FCMClient, deviceToken string, orderID string, status string, tableNumber string) error
 }
 
+type CalculationI interface {
+	CreateCalculation(ctx context.Context, goodID, ingredientID, quantity string) (*model.CalculationResponse, error)
+	CreateCalculationForCompound(ctx context.Context, compoundID, ingredientID, quantity string) (*model.CalculationResponse, error)
+	CreateCalculationWithCompound(ctx context.Context, goodID, compoundID, quantity string) (*model.CalculationResponse, error)
+	CreateCalculationCompoundToCompound(ctx context.Context, parentCompoundID, childCompoundID, quantity string) (*model.CalculationResponse, error)
+	GetCalculationByID(ctx context.Context, calculationID string) (*model.CalculationResponse, error)
+	GetCalculationsByGoodID(ctx context.Context, goodID string) ([]*model.CalculationResponse, error)
+	GetCalculationsByCompoundID(ctx context.Context, compoundID string) ([]*model.CalculationResponse, error)
+	GetTotalCostByGoodID(ctx context.Context, goodID string) (string, error)
+	GetTotalCostByCompoundID(ctx context.Context, compoundID string) (string, error)
+	UpdateCalculation(ctx context.Context, calculationID string, quantity *string) (*model.CalculationResponse, error)
+	DeleteCalculation(ctx context.Context, calculationID string) error
+	DeleteCalculationsByGoodID(ctx context.Context, goodID string) error
+	DeleteCalculationsByCompoundID(ctx context.Context, compoundID string) error
+	GetGoodWithCalculations(ctx context.Context, goodID string) (*model.GoodCalculationResponse, error)
+	GetCompoundWithCalculations(ctx context.Context, compoundID string) (*model.CompoundCalculationResponse, error)
+}
+
 type I interface {
 	Auth() AuthI
 	Payment() PaymentI
@@ -319,6 +338,7 @@ type I interface {
 	Invoice() InvoiceI
 	Order() OrderI
 	Brand() BrandI
+	Calculation() CalculationI
 }
 
 type Service struct {
@@ -339,6 +359,7 @@ type Service struct {
 	invoice      InvoiceI
 	order        OrderI
 	brand        BrandI
+	calculation  CalculationI
 }
 
 func New(cfg *config.Config, repo *repository.Repository, clickClient *paymentClick.Client, paymeClient *paymentPayme.Client, minioClient *minio.Minio) *Service {
@@ -360,6 +381,7 @@ func New(cfg *config.Config, repo *repository.Repository, clickClient *paymentCl
 		invoice:      NewInvoiceS(repo),
 		order:        NewOrderS(repo),
 		brand:        NewBrandS(repo),
+		calculation:  NewCalculationS(repo),
 	}
 }
 
@@ -428,4 +450,8 @@ func (s *Service) Order() OrderI {
 
 func (s *Service) Brand() BrandI {
 	return s.brand
+}
+
+func (s *Service) Calculation() CalculationI {
+	return s.calculation
 }

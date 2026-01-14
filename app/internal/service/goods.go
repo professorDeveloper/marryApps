@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -24,7 +25,7 @@ func goodToResponse(g pg.Good) *model.GoodResponse {
 		DescriptionI18n: uuidToStr(g.DescriptionI18n),
 		CategoryID:      uuidToStr(g.CategoryID),
 		DepartmentID:    uuidToStr(g.DepartmentID),
-		Price:           fmt.Sprintf("%v", g.Price),
+		Price:           numericToStringGoods(g.Price),
 		CookTime:        g.CookTime,
 		PictureUrl:      g.PictureUrl,
 		ColorCode:       g.ColorCode,
@@ -690,4 +691,45 @@ func toGoodDetailResponse(detail pg.GoodsDetail) *model.GoodDetailResponse {
 		CreatedAt:    createdAt,
 		UpdatedAt:    updatedAt,
 	}
+}
+
+// Helper function to convert pgtype.Numeric to string
+func numericToStringGoods(n pgtype.Numeric) string {
+	if !n.Valid {
+		return "0"
+	}
+	// Convert to Decimal string representation
+	if n.NaN {
+		return "NaN"
+	}
+	if n.InfinityModifier > 0 {
+		return "Infinity"
+	}
+	if n.InfinityModifier < 0 {
+		return "-Infinity"
+	}
+
+	// If Int is nil, return 0
+	if n.Int == nil {
+		return "0"
+	}
+
+	// Apply exponent to format the number
+	str := n.Int.String()
+	if n.Exp < 0 {
+		// Need to add decimal point
+		exp := -int(n.Exp)
+		if exp >= len(str) {
+			// Add leading zeros and decimal
+			str = "0." + strings.Repeat("0", exp-len(str)) + str
+		} else {
+			// Insert decimal point
+			str = str[:len(str)-exp] + "." + str[len(str)-exp:]
+		}
+	} else if n.Exp > 0 {
+		// Add trailing zeros
+		str = str + strings.Repeat("0", int(n.Exp))
+	}
+
+	return str
 }
