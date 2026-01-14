@@ -25,10 +25,6 @@ import { GenericTableView } from 'src/components/generic-table-view';
 import { CustomGridActionsCellItem } from 'src/components/custom-data-grid';
 import { GenericViewModal, SpecificationsTable, type SpecificationRow } from 'src/components/generic-view-view';
 
-// ============================================================================
-// CUSTOM RENDERERS
-// ============================================================================
-
 /**
  * User avatar renderer
  */
@@ -60,7 +56,7 @@ function RenderCellUser({ params }: { params: any }) {
             </Avatar>
             <Box>
                 <Box sx={{ fontWeight: 600 }}>{user.full_name}</Box>
-                <Box sx={{ fontSize: '0.875rem', opacity: 0.6 }}>{user.username}</Box>
+                <Box sx={{ fontSize: '0.875rem', opacity: 0.5 }}>{user.username}</Box>
             </Box>
         </Box>
     );
@@ -110,10 +106,6 @@ function RenderCellStatus({ params }: { params: any }) {
     );
 }
 
-// ============================================================================
-// SPECIFICATIONS RENDERING
-// ============================================================================
-
 function UserSpecifications({ user, t }: { user: IUser; t: any }) {
     const specs: SpecificationRow[] = [
         { label: t('users.fullName'), value: user.full_name || '-' },
@@ -128,10 +120,6 @@ function UserSpecifications({ user, t }: { user: IUser; t: any }) {
 
     return <SpecificationsTable rows={specs} />;
 }
-
-// ============================================================================
-// COMPONENT
-// ============================================================================
 
 interface EmployeeListViewProps {
     role: string;
@@ -183,12 +171,12 @@ export function EmployeeListView({ role, title }: EmployeeListViewProps) {
                 headerName: t('users.phoneNumber'),
                 width: 150,
             },
-            // {
-            //     field: 'status',
-            //     headerName: t('users.status'),
-            //     width: 120,
-            //     renderCell: (params) => <RenderCellStatus params={params} />,
-            // },
+                // {
+                //     field: 'status',
+                //     headerName: t('users.status'),
+                //     width: 120,
+                //     renderCell: (params) => <RenderCellStatus params={params} />,
+                // },
             {
                 type: 'actions',
                 field: 'actions',

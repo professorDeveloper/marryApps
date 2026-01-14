@@ -95,9 +95,17 @@ export type IStorageItem = {
   name: string;
   name_i18n: string;
   branch_id: string;
+  color_code?: string;
   picture_url: string;
   created_at: string;
   updated_at: string;
+};
+
+export type IStorageFormData = {
+  name: string;
+  branch_id: string;
+  color_code?: string;
+  picture_url?: string;
 };
 
 export type IDepartmentTableFilters = {

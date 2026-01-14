@@ -114,6 +114,24 @@
       "is": "is"
     }
   },
+  "warehouse": {
+    "title": "Warehouse",
+    "list": "List",
+    "add": "Add Warehouse",
+    "edit": "Edit Warehouse",
+    "new": "New Warehouse",
+    "view": "View",
+    "delete": "Delete",
+    "name": "Name",
+    "branch": "Branch",
+    "color": "Color",
+    "picture": "Picture",
+    "created": "Created",
+    "basicInfo": "Basic Information",
+    "imageTitle": "Warehouse Image",
+    "newStorage": "New storage",
+    "editStorage": "Edit storage"
+  },
   "departments": {
     "title": "Departments",
     "list": "List",
@@ -310,12 +328,14 @@
     "alert_max_size": "File size must be less than 5MB",
     "department": "Department",
     "storage": "Storage",
-    "storageDepartmentTitle": "Storage and Department"
+    "storageDepartmentTitle": "Storage and Department",
+    "uploading": "Uploading..."
   },
   "overview": {
     "subheader": "Overview",
     "menu": {
       "title": "Menu",
+      "storage": "Storage",
       "sections": "Sections",
       "categories": "Categories",
       "semifinished": "Semifinished",

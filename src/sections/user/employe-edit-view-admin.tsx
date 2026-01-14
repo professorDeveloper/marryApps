@@ -1,7 +1,3 @@
-// ============================================================================
-// EMPLOYEE EDIT VIEW - ADMIN - REAL API INTEGRATION
-// ============================================================================
-
 import type { TFunction } from 'i18next';
 import type { IUserFormData } from 'src/types/user';
 import type { CardSection, GenericEditViewConfig } from 'src/components/generic-edit-view';
@@ -19,18 +15,10 @@ import { useGetUser, useCreateUser, useUpdateUser, useDeleteUser } from 'src/act
 import { GenericEditView } from 'src/components/generic-edit-view';
 import { CustomBreadcrumbs } from 'src/components/custom-breadcrumbs';
 
-// ============================================================================
-// TYPES
-// ============================================================================
-
 export interface EmployeeEditViewAdminProps {
     userId?: string;
     isNew?: boolean;
 }
-
-// ============================================================================
-// FIELD CONFIGS
-// ============================================================================
 
 function buildBasicInfoSection(): CardSection {
     return {
@@ -68,12 +56,6 @@ function buildBasicInfoSection(): CardSection {
         ],
     };
 }
-
-
-
-// ============================================================================
-// COMPONENT
-// ============================================================================
 
 export function EmployeeEditViewAdmin({ userId, isNew = false }: EmployeeEditViewAdminProps) {
     const router = useRouter();

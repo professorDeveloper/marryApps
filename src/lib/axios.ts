@@ -156,6 +156,10 @@ export const endpoints = {
   },
   storage: {
     list: '/api/v1/storages',
+    details: (id: string) => `/api/v1/storages/${id}`,
+    create: '/api/v1/storages',
+    update: (id: string) => `/api/v1/storages/${id}`,
+    delete: (id: string) => `/api/v1/storages/${id}`,
   },
   meals: {
     list: '/api/v1/goods',
@@ -171,6 +175,13 @@ export const endpoints = {
   ingredient: {
     list: '/api/v1/ingredients',
     details: (id: string) => `/api/v1/ingredients/${id}`,
+  },
+  branches: {
+    list: '/api/v1/branches',
+    details: (id: string) => `/api/v1/branches/${id}`,
+    create: '/api/v1/branches',
+    update: (id: string) => `/api/v1/branches/${id}`,
+    delete: (id: string) => `/api/v1/branches/${id}`,
   },
   invoice: {
     details: '/api/v1/invoice-details',

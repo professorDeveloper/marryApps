@@ -30,6 +30,13 @@ import { fetcher, endpoints } from 'src/lib/axios';
 import { toast } from 'src/components/snackbar';
 
 // --- TYPES ---
+interface BackendResponse<T> {
+    status: string;
+    message: string;
+    data: T;
+    code: number;
+}
+
 interface Ingredient {
     id: string;
     name: string;
@@ -76,18 +83,31 @@ const ProductCalculator = () => {
                 setLoading(true);
 
                 // Ingredients va Invoice details'ni parallel olish
-                const [ingredientsData, invoiceDetailsData] = await Promise.all([
-                    fetcher<Ingredient[]>(endpoints.ingredient.list),
-                    fetcher<InvoiceDetail[]>(endpoints.invoice.details),
+                const [ingredientsResponse, invoiceDetailsResponse] = await Promise.all([
+                    fetcher<BackendResponse<Ingredient[]> | Ingredient[]>(endpoints.ingredient.list),
+                    fetcher<BackendResponse<InvoiceDetail[]> | InvoiceDetail[]>(endpoints.invoice.details),
                 ]);
 
-                // Invoice details'dan price_per_unit map'i yaratish
-                const priceMap = new Map<string, number>();
-                if (Array.isArray(invoiceDetailsData)) {
-                    invoiceDetailsData.forEach(detail => {
-                        priceMap.set(detail.ingredient_id, parseFloat(detail.price_per_unit));
-                    });
+                // Ingredients response'dan real arrayni ajratib olish
+                let ingredientsData: Ingredient[] = [];
+                if (Array.isArray(ingredientsResponse)) {
+                    ingredientsData = ingredientsResponse;
+                } else if (ingredientsResponse?.data && Array.isArray(ingredientsResponse.data)) {
+                    ingredientsData = ingredientsResponse.data;
                 }
+
+                // Invoice details'dan price_per_unit map'i yaratish
+                let invoiceDetailsData: InvoiceDetail[] = [];
+                if (Array.isArray(invoiceDetailsResponse)) {
+                    invoiceDetailsData = invoiceDetailsResponse;
+                } else if (invoiceDetailsResponse?.data && Array.isArray(invoiceDetailsResponse.data)) {
+                    invoiceDetailsData = invoiceDetailsResponse.data;
+                }
+
+                const priceMap = new Map<string, number>();
+                invoiceDetailsData.forEach(detail => {
+                    priceMap.set(detail.ingredient_id, parseFloat(detail.price_per_unit));
+                });
 
                 // Ingredients va narxlarni merge qilish
                 const enrichedIngredients = (Array.isArray(ingredientsData) ? ingredientsData : [])

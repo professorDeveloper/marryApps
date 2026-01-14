@@ -1,5 +1,11 @@
 import type { SWRConfiguration } from 'swr';
-import type { IProductItem, IStorageItem, IDepartmentItem, IDepartmentFormData } from 'src/types/departments.tsx';
+import type {
+  IProductItem,
+  IStorageItem,
+  IDepartmentItem,
+  IDepartmentFormData,
+  IStorageFormData,
+} from 'src/types/departments.tsx';
 
 import useSWR, { mutate } from 'swr';
 import { useMemo, useCallback } from 'react';
@@ -168,24 +174,116 @@ export function useDeleteDepartment() {
 export function useGetStorages() {
   const url = endpoints.storage.list;
 
-  const { data, isLoading, error, isValidating } = useSWR<BackendResponse<IStorageItem[]>>(
+  const { data, isLoading, error, isValidating } = useSWR<BackendResponse<IStorageItem[]> | IStorageItem[]>(
     url,
     fetcher,
     { ...swrOptions }
   );
 
+  const storages = useMemo(() => {
+    if (!data) return [];
+    if (Array.isArray(data)) return data;
+    if (Array.isArray((data as BackendResponse<IStorageItem[]>).data)) {
+      return (data as BackendResponse<IStorageItem[]>).data;
+    }
+    return [];
+  }, [data]);
+
   const memoizedValue = useMemo(
     () => ({
-      storages: Array.isArray(data?.data) ? data.data : [],
+      storages,
       storagesLoading: isLoading,
       storagesError: error,
       storagesValidating: isValidating,
-      storagesEmpty: !isLoading && !isValidating && !data?.data?.length,
+      storagesEmpty: !isLoading && !isValidating && !storages.length,
     }),
-    [data, error, isLoading, isValidating]
+    [storages, error, isLoading, isValidating]
   );
 
   return memoizedValue;
+}
+
+/**
+ * Get single storage by ID
+ */
+export function useGetStorage(storageId: string) {
+  const url = storageId ? endpoints.storage.details(storageId) : '';
+
+  const { data, isLoading, error, isValidating } = useSWR<
+    BackendResponse<IStorageItem> | IStorageItem
+  >(url, fetcher, { ...swrOptions });
+
+  const storage = useMemo(() => {
+    if (!data) return undefined;
+    if ('data' in (data as any)) {
+      return (data as BackendResponse<IStorageItem>).data;
+    }
+    return data as IStorageItem;
+  }, [data]);
+
+  const memoizedValue = useMemo(
+    () => ({
+      storage,
+      storageLoading: isLoading,
+      storageError: error,
+      storageValidating: isValidating,
+    }),
+    [storage, error, isLoading, isValidating]
+  );
+
+  return memoizedValue;
+}
+
+/**
+ * Create new storage
+ */
+export function useCreateStorage() {
+  const createStorage = useCallback(
+    async (formData: IStorageFormData) => {
+      const response = await poster<BackendResponse<IStorageItem>>(endpoints.storage.create, formData);
+      await mutate(endpoints.storage.list);
+      return response.data;
+    },
+    []
+  );
+
+  return { createStorage };
+}
+
+/**
+ * Update storage
+ */
+export function useUpdateStorage() {
+  const updateStorage = useCallback(
+    async (storageId: string, formData: IStorageFormData) => {
+      const response = await putter<BackendResponse<IStorageItem>>(
+        endpoints.storage.update(storageId),
+        formData
+      );
+      await mutate(endpoints.storage.list);
+      await mutate(endpoints.storage.details(storageId));
+      return response.data;
+    },
+    []
+  );
+
+  return { updateStorage };
+}
+
+/**
+ * Delete storage
+ */
+export function useDeleteStorage() {
+  const deleteStorage = useCallback(
+    async (storageId: string) => {
+      await deleter(endpoints.storage.delete(storageId));
+      await mutate(endpoints.storage.list);
+      return true;
+    },
+    []
+  );
+
+  return { deleteStorage };
 }
 
 /**

@@ -102,6 +102,24 @@
       "is": "бу"
     }
   },
+  "warehouse": {
+    "title": "Омбор",
+    "list": "Рўйхат",
+    "add": "Омбор қўшиш",
+    "edit": "Омборни таҳрирлаш",
+    "new": "Янги омбор",
+    "view": "Кўриш",
+    "delete": "Ўчириш",
+    "name": "Номи",
+    "branch": "Филиал",
+    "color": "Ранг",
+    "picture": "Расм",
+    "created": "Яратилган",
+    "basicInfo": "Асосий маълумотлар",
+    "imageTitle": "Омбор расми",
+    "newStorage": "Янги омбор",
+    "editStorage": "Омборни таҳрирлаш"
+  },
   "departments": {
     "title": "Бўлимлар",
     "list": "Рўйхат",
@@ -281,12 +299,14 @@
     "storage": "Омбор",
     "deleteConfirm": "Файлларни там оlishni xohlaysizmi?",
     "deleteMessage": "Танланган файллар тарихидан аллакайсиз тайёрганади ва буланма экинланган эмас.",
-    "cancel": "Бекор қилиш"
+    "cancel": "Бекор қилиш",
+    "uploading": "Юкланмоқда..."
   },
   "overview": {
     "subheader": "Умумий",
     "menu": {
       "title": "Меню",
+      "storage": "Омбор",
       "sections": "Бўлимлар",
       "categories": "Категориялар",
       "semifinished": "Ярим тайёр маҳсулотлар",

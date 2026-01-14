@@ -113,7 +113,7 @@ function TabPanel(props: TabPanelProps) {
             aria-labelledby={`meal-tab-${index}`}
             {...other}
         >
-            <Box sx={{ pt: 3, display: value === index ? 'block' : 'none' }}>
+            <Box sx={{ pt: 0, display: value === index ? 'block' : 'none' }}>
                 {children}
             </Box>
         </div>
@@ -254,7 +254,7 @@ export function MealEditView({ isNew = false }: MealEditViewProps) {
                 />
 
                 {/* TABS */}
-                <Box sx={{ display: 'flex', justifyContent: 'center', mb: 3, width: '100%' }}>
+                <Box sx={{ display: 'flex', justifyContent: 'center', mb: 0, width: '100%' }}>
                     <Tabs
                         value={activeTab}
                         onChange={(e, newValue) => setActiveTab(newValue)}

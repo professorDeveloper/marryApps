@@ -15,7 +15,7 @@ const ROOTS = {
 export const paths = {
   faqs: '/faqs',
   minimalStore: 'https://mui.com/store/items/minimal-dashboard/',
-  // AUTH
+
   auth: {
     amplify: {
       signIn: `${ROOTS.AUTH}/amplify/sign-in`,
@@ -55,6 +55,12 @@ export const paths = {
       five: `${ROOTS.MENU}/group/five`,
       six: `${ROOTS.MENU}/group/six`,
     },
+    inventory: {
+      root: `${ROOTS.MENU}/inventory`,
+      new: `${ROOTS.MENU}/inventory/new`,
+      details: (id: string) => `${ROOTS.MENU}/inventory/${id}`,
+      edit: (id: string) => `${ROOTS.MENU}/inventory/${id}/edit`,
+    },
     product: {
       root: `${ROOTS.MENU}/section`,
       new: `${ROOTS.MENU}/section/new`,
@@ -90,9 +96,9 @@ export const paths = {
     },
     warehouse: {
       root: `${ROOTS.MENU}/warehouse`,
-      new: `${ROOTS.MENU}/warehouse/new`,
-      details: (id: string) => `${ROOTS.MENU}/warehouse/${id}`,
-      edit: (id: string) => `${ROOTS.MENU}/warehouse/${id}/edit`,
+      new: `${ROOTS.MENU}/inventory/new`,
+      details: (id: string) => `${ROOTS.MENU}/inventory/${id}`,
+      edit: (id: string) => `${ROOTS.MENU}/inventory/${id}/edit`,
       stocks: {
         root: `${ROOTS.MENU}/warehouse/stocks`,
         new: `${ROOTS.MENU}/warehouse/stocks/new`,
@@ -165,7 +171,7 @@ export const paths = {
       root: `${ROOTS.SETTING}/integrations`,
     },
   },
-  // DASHBOARD
+  
   dashboard: {
     root: '/',
   },

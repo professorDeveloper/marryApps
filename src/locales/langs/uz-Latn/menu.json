@@ -110,6 +110,24 @@
       "is": "bu"
     }
   },
+  "warehouse": {
+    "title": "Ombor",
+    "list": "Ro'yxat",
+    "add": "Ombor qo'shish",
+    "edit": "Omborni tahrirlash",
+    "new": "Yangi ombor",
+    "view": "Ko'rish",
+    "delete": "O'chirish",
+    "name": "Nomi",
+    "branch": "Filial",
+    "color": "Rang",
+    "picture": "Rasm",
+    "created": "Yaratilgan",
+    "basicInfo": "Asosiy ma'lumotlar",
+    "imageTitle": "Ombor rasmi",
+    "newStorage": "Yangi ombor",
+    "editStorage": "Omborni tahrirlash"
+  },
   "departments": {
     "title": "Bo'limlar",
     "list": "Ro'yxat",
@@ -308,12 +326,14 @@
     "alert_max_size": "Fayl hajmi 5MB dan kichik bo'lishi kerak",
     "deleteConfirm": "Fayllar o'chirilsinmi?",
     "deleteMessage": "Tanlangan fayllar tizimdan butunlay o‘chiriladi va ushbu amalni bekor qilish yoki fayllarni tiklash mumkin emas.",
-    "cancel": "Bekor qilish"
+    "cancel": "Bekor qilish",
+    "uploading": "Yuklanmoqda..."
   },
   "overview": {
     "subheader": "Umumiy",
     "menu": {
       "title": "Menyu",
+      "storage": "Ombor",
       "sections": "Bo'limlar",
       "categories": "Kategoriyalar",
       "semifinished": "Yarim tayyor mahsulotlar",
@@ -321,6 +341,7 @@
     },
     "warehouse": {
       "title": "Ombor",
+      "basicTitle": "Asosiy ma'lumotlar",
       "stocks": "Stoklar",
       "transfers": "O'tkazmalar",
       "locations": "Joylashuvlar",

@@ -1,7 +1,3 @@
-// ============================================================================
-// COMPOUNDS EDIT VIEW - COMPLETE CRUD IMPLEMENTATION WITH TABS
-// ============================================================================
-
 import type { TFunction } from 'i18next';
 import type { ICompound } from 'src/types/compounds';
 import type { CardSection, GenericEditViewConfig } from 'src/components/generic-edit-view';
@@ -23,18 +19,10 @@ import { CustomBreadcrumbs } from 'src/components/custom-breadcrumbs';
 import { GenericEditView } from 'src/components/generic-edit-view';
 import ProductCalculator from 'src/components/generic-edit-view/edit-calculation';
 
-// ============================================================================
-// TYPES
-// ============================================================================
-
 export interface CompoundEditViewProps {
     compoundId?: string;
     isNew?: boolean;
 }
-
-// ============================================================================
-// FIELD CONFIGS
-// ============================================================================
 
 const IMAGE_SECTION: CardSection = {
     id: 'image',
@@ -128,7 +116,7 @@ function TabPanel(props: TabPanelProps) {
             aria-labelledby={`compound-tab-${index}`}
             {...other}
         >
-            <Box sx={{ pt: 3, display: value === index ? 'block' : 'none' }}>
+            <Box sx={{ pt: 0, display: value === index ? 'block' : 'none' }}>
                 {children}
             </Box>
         </div>
@@ -272,7 +260,7 @@ export function CompoundEditView({ compoundId, isNew = false }: CompoundEditView
                 />
 
                 {/* TABS */}
-                <Box sx={{ display: 'flex', justifyContent: 'center', mb: 3, width: '100%' }}>
+                <Box sx={{ display: 'flex', justifyContent: 'center', mb: 0, width: '100%' }}>
                     <Tabs
                         value={activeTab}
                         onChange={(e, newValue) => setActiveTab(newValue)}

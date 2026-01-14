@@ -174,7 +174,7 @@ export const ImageUploadField: FC<ImageUploadFieldProps> = ({
                         </Box>
                     )}
 
-                    {displayUrl && !loading && (
+                    {/* {displayUrl && !loading && (
                         <IconButton
                             onClick={(e) => {
                                 e.stopPropagation();
@@ -193,11 +193,11 @@ export const ImageUploadField: FC<ImageUploadFieldProps> = ({
                         >
                             <Iconify icon="solar:close-circle-bold" />
                         </IconButton>
-                    )}
+                    )} */}
                 </Box>
 
                 {displayUrl && !loading && (
-                    <Button
+                    <Button 
                         fullWidth
                         variant="outlined"
                         startIcon={<Iconify icon="eva:cloud-upload-fill" />}

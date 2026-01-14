@@ -15,19 +15,11 @@ import { useGetUser, useCreateUser, useUpdateUser, useDeleteUser } from 'src/act
 import { GenericEditView } from 'src/components/generic-edit-view';
 import { CustomBreadcrumbs } from 'src/components/custom-breadcrumbs';
 
-// ============================================================================
-// TYPES
-// ============================================================================
-
 export interface EmployeeEditViewProps {
     userId?: string;
     isNew?: boolean;
     role?: string;
 }
-
-// ============================================================================
-// FIELD CONFIGS
-// ============================================================================
 
 function buildBasicInfoSection(): CardSection {
     return {

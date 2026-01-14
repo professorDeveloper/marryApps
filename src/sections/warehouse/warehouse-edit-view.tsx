@@ -1,48 +1,149 @@
 import type { CardSection, GenericEditViewConfig } from 'src/components/generic-edit-view';
 
-import { useCallback } from 'react';
+import type { IStorageFormData } from 'src/types/departments.tsx';
+
+import { Box } from '@mui/material';
+import { useCallback, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { paths } from 'src/routes/paths';
-import { useRouter } from 'src/routes/hooks';
+import { useParams, useRouter } from 'src/routes/hooks';
 
 import { GenericEditView } from 'src/components/generic-edit-view';
+import { CustomBreadcrumbs } from 'src/components/custom-breadcrumbs';
+
+import { useCreateStorage, useDeleteStorage, useGetStorage, useUpdateStorage } from 'src/actions/departments';
+import { useGetBranches } from 'src/actions/branches';
+
+const COLOR_CODES = [
+  '#FF4842', // Red
+  '#1890FF', // Blue
+  '#00AB55', // Green
+  '#FFC107', // Yellow
+  '#7F00FF', // Violet
+  '#FF6B35', // Orange
+  '#FF1493', // Deep Pink
+  '#00CED1', // Dark Turquoise
+  '#FFD700', // Gold
+  '#8B4513', // Saddle Brown
+  '#000000', // Black
+  '#FFFFFF', // White
+];
 
 export function WarehouseEditView({ isNew = false }: { isNew?: boolean }) {
+  const { t } = useTranslation('menu');
   const router = useRouter();
+  const params = useParams();
+  const id = params.id as string | undefined;
 
-  const handleSubmit = useCallback(async (formData: Record<string, any>) => {
-    console.log('Saving warehouse', formData);
-    router.push(paths.menu.warehouse.root);
-  }, [router]);
+  const { createStorage } = useCreateStorage();
+  const { updateStorage } = useUpdateStorage();
+  const { deleteStorage } = useDeleteStorage();
+
+  const { storage, storageLoading } = useGetStorage(!isNew && id ? id : '');
+  const { branches } = useGetBranches();
+
+  const branchOptions = useMemo(
+    () =>
+      (branches || []).map((b) => ({
+        value: b.id,
+        label: b.name || b.id,
+      })),
+    [branches]
+  );
+
+  const handleSubmit = useCallback(
+    async (formData: Record<string, any>) => {
+      if (!formData.name || !String(formData.name).trim()) {
+        throw new Error('Name is required');
+      }
+      if (!formData.branch_id) {
+        throw new Error('Branch is required');
+      }
+
+      const payload: IStorageFormData = {
+        name: String(formData.name).trim(),
+        branch_id: formData.branch_id,
+        picture_url: formData.picture_url ?? undefined,
+        color_code: formData.color_code ?? undefined,
+      };
+
+      if (isNew) {
+        await createStorage(payload);
+      } else if (id) {
+        await updateStorage(id, payload);
+      }
+
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      router.push(paths.menu.inventory.root);
+    },
+    [createStorage, id, isNew, router, updateStorage]
+  );
 
   const handleDelete = useCallback(async () => {
-    // placeholder
-    router.push(paths.menu.warehouse.root);
-  }, [router]);
+    if (!id) return;
+    await deleteStorage(id);
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    router.push(paths.menu.inventory.root);
+  }, [deleteStorage, id, router]);
+
+  const IMAGE: CardSection = {
+    id: 'image',
+    title: t('warehouse.imageTitle', 'Warehouse Image'),
+    fields: [{ key: 'picture_url', label: t('warehouse.picture', 'Picture'), type: 'image', defaultValue: null, height: 250 }],
+  };
 
   const BASIC: CardSection = {
     id: 'basic',
-    title: 'Basic information',
+    title: t('warehouse.basicInfo', 'Basic Information'),
+    columns: 1,
     fields: [
-      { key: 'name', label: 'Name', type: 'text', required: true, defaultValue: '' },
-      { key: 'code', label: 'Code', type: 'text', defaultValue: '' },
-      { key: 'location', label: 'Location', type: 'text', defaultValue: '' },
+      { key: 'name', label: t('warehouse.name', 'Name'), type: 'text', required: true, defaultValue: '' },
+      {
+        key: 'branch_id',
+        label: t('warehouse.branch', 'Branch'),
+        type: 'select',
+        required: true,
+        defaultValue: '',
+        options: branchOptions,
+      },
+      {
+        key: 'color_code',
+        label: t('warehouse.color', 'Color'),
+        type: 'color',
+        defaultValue: '#FF4842',
+        colors: COLOR_CODES,
+      },
     ],
   };
 
   const config: GenericEditViewConfig = {
-    title: 'Warehouse',
-    entityName: 'warehouse',
+    title: isNew ? t('warehouse.newStorage', 'New storage') : t('warehouse.editStorage', 'Edit storage'),
+    entityName: 'storage',
+    showBreadcrumbs: false,
     breadcrumbs: [
-      { name: 'Menu', href: paths.menu.root },
-      { name: 'Warehouse', href: paths.menu.warehouse.root },
-      { name: isNew ? 'New' : 'Edit', href: '' },
+      { name: t('app', 'Menu'), href: paths.menu.root },
+      { name: t('warehouse.title', 'Warehouse'), href: paths.menu.inventory.root },
+      { name: isNew ? t('warehouse.new', 'New') : t('warehouse.edit', 'Edit'), href: '' },
     ],
+    leftSidecard: IMAGE,
     sections: [BASIC],
     onSubmit: handleSubmit,
     onDelete: !isNew ? handleDelete : undefined,
     showDeleteButton: !isNew,
   };
 
-  return <GenericEditView config={config} isNew={isNew} />;
+  return (
+    <Box sx={{ p: 3 }}>
+      <Box sx={{ maxWidth: 1400, mx: 'auto' }}>
+        <CustomBreadcrumbs heading={config.title} links={config.breadcrumbs} sx={{ mb: 3 }} />
+        <GenericEditView
+          config={config}
+          isNew={isNew}
+          data={storage}
+          loading={!isNew && storageLoading}
+        />
+      </Box>
+    </Box>
+  );
 }

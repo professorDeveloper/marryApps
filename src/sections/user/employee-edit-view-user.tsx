@@ -16,18 +16,10 @@ import { GenericEditView } from 'src/components/generic-edit-view';
 import { CustomBreadcrumbs } from 'src/components/custom-breadcrumbs';
 import { getErrorMessageKey } from 'src/auth/utils';
 
-// ============================================================================
-// TYPES
-// ============================================================================
-
 export interface EmployeeEditViewUserProps {
     userId?: string;
     isNew?: boolean;
 }
-
-// ============================================================================
-// FIELD CONFIGS
-// ============================================================================
 
 function buildBasicInfoSection(): CardSection {
     return {
