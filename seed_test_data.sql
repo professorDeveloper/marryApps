@@ -36,10 +36,10 @@ INSERT INTO goods (id, name, price, category_id, department_id) VALUES
 ON CONFLICT DO NOTHING;
 
 -- Compounds (3)
-INSERT INTO compounds (id, name, price) VALUES
-  (gen_random_uuid(), 'Pizza Base', '2.00'),
-  (gen_random_uuid(), 'Caesar Dressing', '1.50'),
-  (gen_random_uuid(), 'Chocolate Ganache', '3.00')
+INSERT INTO compounds (id, name) VALUES
+  (gen_random_uuid(), 'Pizza Base'),
+  (gen_random_uuid(), 'Caesar Dressing'),
+  (gen_random_uuid(), 'Chocolate Ganache')
 ON CONFLICT DO NOTHING;
 
 -- Invoices (3)
