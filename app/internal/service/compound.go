@@ -868,6 +868,7 @@ func (c *CompoundS) RecalculateCompoundPrice(ctx context.Context, compoundID str
 			}
 		}
 	}
+	
 	log.Printf("RecalculateCompoundPrice: Total price calculated = %.2f", totalPrice)
 
 	// Update the compound price

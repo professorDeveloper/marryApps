@@ -270,6 +270,7 @@ type Calculation struct {
 	GoodID              pgtype.UUID        `json:"good_id"`
 	CompoundID          pgtype.UUID        `json:"compound_id"`
 	IngredientID        pgtype.UUID        `json:"ingredient_id"`
+	ComponentCompoundID pgtype.UUID        `json:"component_compound_id"`
 	Quantity            pgtype.Numeric     `json:"quantity"`
 	MeasurementUnit     string             `json:"measurement_unit"`
 	PricePerUnit        pgtype.Numeric     `json:"price_per_unit"`
@@ -277,7 +278,6 @@ type Calculation struct {
 	CreatedAt           pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt           pgtype.Timestamptz `json:"updated_at"`
 	DeletedAt           *int64             `json:"deleted_at"`
-	ComponentCompoundID pgtype.UUID        `json:"component_compound_id"`
 }
 
 type Category struct {

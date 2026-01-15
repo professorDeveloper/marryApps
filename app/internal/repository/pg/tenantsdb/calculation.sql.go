@@ -30,22 +30,7 @@ type CreateCalculationParams struct {
 	TotalCost           pgtype.Numeric `json:"total_cost"`
 }
 
-type CreateCalculationRow struct {
-	ID                  uuid.UUID          `json:"id"`
-	GoodID              pgtype.UUID        `json:"good_id"`
-	CompoundID          pgtype.UUID        `json:"compound_id"`
-	IngredientID        pgtype.UUID        `json:"ingredient_id"`
-	ComponentCompoundID pgtype.UUID        `json:"component_compound_id"`
-	Quantity            pgtype.Numeric     `json:"quantity"`
-	MeasurementUnit     string             `json:"measurement_unit"`
-	PricePerUnit        pgtype.Numeric     `json:"price_per_unit"`
-	TotalCost           pgtype.Numeric     `json:"total_cost"`
-	CreatedAt           pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt           pgtype.Timestamptz `json:"updated_at"`
-	DeletedAt           *int64             `json:"deleted_at"`
-}
-
-func (q *Queries) CreateCalculation(ctx context.Context, arg CreateCalculationParams) (CreateCalculationRow, error) {
+func (q *Queries) CreateCalculation(ctx context.Context, arg CreateCalculationParams) (Calculation, error) {
 	row := q.db.QueryRow(ctx, createCalculation,
 		arg.ID,
 		arg.GoodID,
@@ -57,7 +42,7 @@ func (q *Queries) CreateCalculation(ctx context.Context, arg CreateCalculationPa
 		arg.PricePerUnit,
 		arg.TotalCost,
 	)
-	var i CreateCalculationRow
+	var i Calculation
 	err := row.Scan(
 		&i.ID,
 		&i.GoodID,
@@ -121,30 +106,15 @@ type GetAllCalculationsParams struct {
 	Offset int32 `json:"offset"`
 }
 
-type GetAllCalculationsRow struct {
-	ID                  uuid.UUID          `json:"id"`
-	GoodID              pgtype.UUID        `json:"good_id"`
-	CompoundID          pgtype.UUID        `json:"compound_id"`
-	IngredientID        pgtype.UUID        `json:"ingredient_id"`
-	ComponentCompoundID pgtype.UUID        `json:"component_compound_id"`
-	Quantity            pgtype.Numeric     `json:"quantity"`
-	MeasurementUnit     string             `json:"measurement_unit"`
-	PricePerUnit        pgtype.Numeric     `json:"price_per_unit"`
-	TotalCost           pgtype.Numeric     `json:"total_cost"`
-	CreatedAt           pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt           pgtype.Timestamptz `json:"updated_at"`
-	DeletedAt           *int64             `json:"deleted_at"`
-}
-
-func (q *Queries) GetAllCalculations(ctx context.Context, arg GetAllCalculationsParams) ([]GetAllCalculationsRow, error) {
+func (q *Queries) GetAllCalculations(ctx context.Context, arg GetAllCalculationsParams) ([]Calculation, error) {
 	rows, err := q.db.Query(ctx, getAllCalculations, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []GetAllCalculationsRow
+	var items []Calculation
 	for rows.Next() {
-		var i GetAllCalculationsRow
+		var i Calculation
 		if err := rows.Scan(
 			&i.ID,
 			&i.GoodID,
@@ -175,24 +145,9 @@ FROM calculation
 WHERE id = $1 AND deleted_at = 0
 `
 
-type GetCalculationByIDRow struct {
-	ID                  uuid.UUID          `json:"id"`
-	GoodID              pgtype.UUID        `json:"good_id"`
-	CompoundID          pgtype.UUID        `json:"compound_id"`
-	IngredientID        pgtype.UUID        `json:"ingredient_id"`
-	ComponentCompoundID pgtype.UUID        `json:"component_compound_id"`
-	Quantity            pgtype.Numeric     `json:"quantity"`
-	MeasurementUnit     string             `json:"measurement_unit"`
-	PricePerUnit        pgtype.Numeric     `json:"price_per_unit"`
-	TotalCost           pgtype.Numeric     `json:"total_cost"`
-	CreatedAt           pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt           pgtype.Timestamptz `json:"updated_at"`
-	DeletedAt           *int64             `json:"deleted_at"`
-}
-
-func (q *Queries) GetCalculationByID(ctx context.Context, id uuid.UUID) (GetCalculationByIDRow, error) {
+func (q *Queries) GetCalculationByID(ctx context.Context, id uuid.UUID) (Calculation, error) {
 	row := q.db.QueryRow(ctx, getCalculationByID, id)
-	var i GetCalculationByIDRow
+	var i Calculation
 	err := row.Scan(
 		&i.ID,
 		&i.GoodID,
@@ -217,30 +172,15 @@ WHERE compound_id = $1 AND deleted_at = 0
 ORDER BY created_at DESC
 `
 
-type GetCalculationsByCompoundIDRow struct {
-	ID                  uuid.UUID          `json:"id"`
-	GoodID              pgtype.UUID        `json:"good_id"`
-	CompoundID          pgtype.UUID        `json:"compound_id"`
-	IngredientID        pgtype.UUID        `json:"ingredient_id"`
-	ComponentCompoundID pgtype.UUID        `json:"component_compound_id"`
-	Quantity            pgtype.Numeric     `json:"quantity"`
-	MeasurementUnit     string             `json:"measurement_unit"`
-	PricePerUnit        pgtype.Numeric     `json:"price_per_unit"`
-	TotalCost           pgtype.Numeric     `json:"total_cost"`
-	CreatedAt           pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt           pgtype.Timestamptz `json:"updated_at"`
-	DeletedAt           *int64             `json:"deleted_at"`
-}
-
-func (q *Queries) GetCalculationsByCompoundID(ctx context.Context, compoundID pgtype.UUID) ([]GetCalculationsByCompoundIDRow, error) {
+func (q *Queries) GetCalculationsByCompoundID(ctx context.Context, compoundID pgtype.UUID) ([]Calculation, error) {
 	rows, err := q.db.Query(ctx, getCalculationsByCompoundID, compoundID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []GetCalculationsByCompoundIDRow
+	var items []Calculation
 	for rows.Next() {
-		var i GetCalculationsByCompoundIDRow
+		var i Calculation
 		if err := rows.Scan(
 			&i.ID,
 			&i.GoodID,
@@ -272,30 +212,15 @@ WHERE good_id = $1 AND deleted_at = 0
 ORDER BY created_at DESC
 `
 
-type GetCalculationsByGoodIDRow struct {
-	ID                  uuid.UUID          `json:"id"`
-	GoodID              pgtype.UUID        `json:"good_id"`
-	CompoundID          pgtype.UUID        `json:"compound_id"`
-	IngredientID        pgtype.UUID        `json:"ingredient_id"`
-	ComponentCompoundID pgtype.UUID        `json:"component_compound_id"`
-	Quantity            pgtype.Numeric     `json:"quantity"`
-	MeasurementUnit     string             `json:"measurement_unit"`
-	PricePerUnit        pgtype.Numeric     `json:"price_per_unit"`
-	TotalCost           pgtype.Numeric     `json:"total_cost"`
-	CreatedAt           pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt           pgtype.Timestamptz `json:"updated_at"`
-	DeletedAt           *int64             `json:"deleted_at"`
-}
-
-func (q *Queries) GetCalculationsByGoodID(ctx context.Context, goodID pgtype.UUID) ([]GetCalculationsByGoodIDRow, error) {
+func (q *Queries) GetCalculationsByGoodID(ctx context.Context, goodID pgtype.UUID) ([]Calculation, error) {
 	rows, err := q.db.Query(ctx, getCalculationsByGoodID, goodID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []GetCalculationsByGoodIDRow
+	var items []Calculation
 	for rows.Next() {
-		var i GetCalculationsByGoodIDRow
+		var i Calculation
 		if err := rows.Scan(
 			&i.ID,
 			&i.GoodID,
@@ -327,30 +252,15 @@ WHERE ingredient_id = $1 AND deleted_at = 0
 ORDER BY created_at DESC
 `
 
-type GetCalculationsByIngredientIDRow struct {
-	ID                  uuid.UUID          `json:"id"`
-	GoodID              pgtype.UUID        `json:"good_id"`
-	CompoundID          pgtype.UUID        `json:"compound_id"`
-	IngredientID        pgtype.UUID        `json:"ingredient_id"`
-	ComponentCompoundID pgtype.UUID        `json:"component_compound_id"`
-	Quantity            pgtype.Numeric     `json:"quantity"`
-	MeasurementUnit     string             `json:"measurement_unit"`
-	PricePerUnit        pgtype.Numeric     `json:"price_per_unit"`
-	TotalCost           pgtype.Numeric     `json:"total_cost"`
-	CreatedAt           pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt           pgtype.Timestamptz `json:"updated_at"`
-	DeletedAt           *int64             `json:"deleted_at"`
-}
-
-func (q *Queries) GetCalculationsByIngredientID(ctx context.Context, ingredientID pgtype.UUID) ([]GetCalculationsByIngredientIDRow, error) {
+func (q *Queries) GetCalculationsByIngredientID(ctx context.Context, ingredientID pgtype.UUID) ([]Calculation, error) {
 	rows, err := q.db.Query(ctx, getCalculationsByIngredientID, ingredientID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []GetCalculationsByIngredientIDRow
+	var items []Calculation
 	for rows.Next() {
-		var i GetCalculationsByIngredientIDRow
+		var i Calculation
 		if err := rows.Scan(
 			&i.ID,
 			&i.GoodID,
@@ -431,22 +341,7 @@ type UpdateCalculationParams struct {
 	TotalCost       pgtype.Numeric `json:"total_cost"`
 }
 
-type UpdateCalculationRow struct {
-	ID                  uuid.UUID          `json:"id"`
-	GoodID              pgtype.UUID        `json:"good_id"`
-	CompoundID          pgtype.UUID        `json:"compound_id"`
-	IngredientID        pgtype.UUID        `json:"ingredient_id"`
-	ComponentCompoundID pgtype.UUID        `json:"component_compound_id"`
-	Quantity            pgtype.Numeric     `json:"quantity"`
-	MeasurementUnit     string             `json:"measurement_unit"`
-	PricePerUnit        pgtype.Numeric     `json:"price_per_unit"`
-	TotalCost           pgtype.Numeric     `json:"total_cost"`
-	CreatedAt           pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt           pgtype.Timestamptz `json:"updated_at"`
-	DeletedAt           *int64             `json:"deleted_at"`
-}
-
-func (q *Queries) UpdateCalculation(ctx context.Context, arg UpdateCalculationParams) (UpdateCalculationRow, error) {
+func (q *Queries) UpdateCalculation(ctx context.Context, arg UpdateCalculationParams) (Calculation, error) {
 	row := q.db.QueryRow(ctx, updateCalculation,
 		arg.ID,
 		arg.Quantity,
@@ -454,7 +349,7 @@ func (q *Queries) UpdateCalculation(ctx context.Context, arg UpdateCalculationPa
 		arg.PricePerUnit,
 		arg.TotalCost,
 	)
-	var i UpdateCalculationRow
+	var i Calculation
 	err := row.Scan(
 		&i.ID,
 		&i.GoodID,
