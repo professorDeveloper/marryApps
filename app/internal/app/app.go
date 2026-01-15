@@ -82,6 +82,11 @@ func Run(cfg *config.Config) {
 		l.Fatalf("app - Run - RunMigrations(tenants): %v", err)
 	}
 
+	err = migrate.RunMigrationsForAllTenantSchemas(ctx, mainPgClient.Pool, tenantPgClient.Pool)
+	if err != nil {
+		l.Fatalf("app - Run - RunMigrationsForAllTenantSchemas: %v", err)
+	}
+
 	// Seed test data (only if debug mode is enabled)
 	if cfg.App.IsDebug {
 		l.Infof("Debug mode enabled - seeding test data...")

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strings"
 
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
@@ -156,10 +157,17 @@ func (h *Handler) CreateGoodCalculation(c echo.Context) error {
 
 	if err != nil {
 		log.Printf("CreateGoodCalculation: failed to create calculation: %v", err)
-		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse(
+		status := http.StatusInternalServerError
+		errMsg := err.Error()
+		if strings.Contains(errMsg, "not found") {
+			status = http.StatusNotFound
+		} else if strings.Contains(errMsg, "no invoice found") || strings.Contains(errMsg, "has no price") {
+			status = http.StatusBadRequest
+		}
+		return c.JSON(status, model.NewErrorResponse(
 			"Failed to create calculation",
-			err.Error(),
-			http.StatusInternalServerError,
+			errMsg,
+			status,
 		))
 	}
 
@@ -233,10 +241,17 @@ func (h *Handler) CreateCompoundCalculation(c echo.Context) error {
 
 	if err != nil {
 		log.Printf("CreateCompoundCalculation: failed to create calculation: %v", err)
-		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse(
+		status := http.StatusInternalServerError
+		errMsg := err.Error()
+		if strings.Contains(errMsg, "not found") {
+			status = http.StatusNotFound
+		} else if strings.Contains(errMsg, "no invoice found") || strings.Contains(errMsg, "has no price") {
+			status = http.StatusBadRequest
+		}
+		return c.JSON(status, model.NewErrorResponse(
 			"Failed to create calculation",
-			err.Error(),
-			http.StatusInternalServerError,
+			errMsg,
+			status,
 		))
 	}
 

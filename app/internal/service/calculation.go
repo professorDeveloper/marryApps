@@ -144,6 +144,14 @@ func (c *CalculationS) CreateCalculationWithCompound(ctx context.Context, goodID
 		return nil, fmt.Errorf("invalid good_id: %w", err)
 	}
 
+	// Validate parent good exists (avoid FK violation)
+	if _, err := c.repo.Tenant(ctx).GetGoodByID(ctx, goodUUID); err != nil {
+		if err == pgx.ErrNoRows {
+			return nil, fmt.Errorf("good not found")
+		}
+		return nil, fmt.Errorf("failed to fetch good: %w", err)
+	}
+
 	compoundUUID, err := uuid.Parse(compoundID)
 	if err != nil {
 		return nil, fmt.Errorf("invalid compound_id: %w", err)
@@ -206,6 +214,14 @@ func (c *CalculationS) CreateCalculationCompoundToCompound(ctx context.Context, 
 	parentUUID, err := uuid.Parse(parentCompoundID)
 	if err != nil {
 		return nil, fmt.Errorf("invalid parent compound_id: %w", err)
+	}
+
+	// Validate parent compound exists (avoid FK violation)
+	if _, err := c.repo.Tenant(ctx).GetCompoundByID(ctx, parentUUID); err != nil {
+		if err == pgx.ErrNoRows {
+			return nil, fmt.Errorf("parent compound not found")
+		}
+		return nil, fmt.Errorf("failed to fetch parent compound: %w", err)
 	}
 
 	childUUID, err := uuid.Parse(childCompoundID)
@@ -282,6 +298,14 @@ func (c *CalculationS) createCalculationInternal(ctx context.Context, goodID, co
 			return nil, fmt.Errorf("invalid good_id: %w", err)
 		}
 		goodUUID = &id
+
+		// Validate parent good exists (avoid FK violation)
+		if _, err := c.repo.Tenant(ctx).GetGoodByID(ctx, id); err != nil {
+			if err == pgx.ErrNoRows {
+				return nil, fmt.Errorf("good not found")
+			}
+			return nil, fmt.Errorf("failed to fetch good: %w", err)
+		}
 	}
 
 	if compoundID != nil && *compoundID != "" {
@@ -290,6 +314,14 @@ func (c *CalculationS) createCalculationInternal(ctx context.Context, goodID, co
 			return nil, fmt.Errorf("invalid compound_id: %w", err)
 		}
 		compoundUUID = &id
+
+		// Validate parent compound exists (avoid FK violation)
+		if _, err := c.repo.Tenant(ctx).GetCompoundByID(ctx, id); err != nil {
+			if err == pgx.ErrNoRows {
+				return nil, fmt.Errorf("compound not found")
+			}
+			return nil, fmt.Errorf("failed to fetch compound: %w", err)
+		}
 	}
 
 	ingredientUUID, err := uuid.Parse(ingredientID)

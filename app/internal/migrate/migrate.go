@@ -108,6 +108,35 @@ func RunMigrationsInSchema(ctx context.Context, pool *pgxpool.Pool, schemaName s
 	return nil
 }
 
+func RunMigrationsForAllTenantSchemas(ctx context.Context, mainPool *pgxpool.Pool, tenantPool *pgxpool.Pool) error {
+	rows, err := mainPool.Query(ctx, "SELECT brand_id FROM brands")
+	if err != nil {
+		return fmt.Errorf("failed to list brands: %w", err)
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var brandID string
+		if err := rows.Scan(&brandID); err != nil {
+			return fmt.Errorf("failed to scan brand_id: %w", err)
+		}
+
+		schemaName := fmt.Sprintf("tenant_%s", brandID)
+		if err := CreateTenantSchema(ctx, tenantPool, schemaName); err != nil {
+			return err
+		}
+		if err := RunMigrationsInSchema(ctx, tenantPool, schemaName); err != nil {
+			return err
+		}
+	}
+
+	if err := rows.Err(); err != nil {
+		return fmt.Errorf("failed to iterate brands: %w", err)
+	}
+
+	return nil
+}
+
 // getMigrationsFolderPath gets absolute migration folder path
 func getMigrationsFolderPath(migrationsSubdir string) string {
 	basePath, err := os.Getwd()
