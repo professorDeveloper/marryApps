@@ -150,9 +150,13 @@ export const endpoints = {
   compound: {
     list: '/api/v1/compounds',
     details: (id: string) => `/api/v1/compounds/${id}`,
+    withCalculations: (id: string) => `/api/v1/compounds/${id}/with-calculations`,
     create: '/api/v1/compounds',
     update: (id: string) => `/api/v1/compounds/${id}`,
     delete: (id: string) => `/api/v1/compounds/${id}`,
+    calculations: (compoundId: string) => `/api/v1/compounds/calculations?compound_id=${compoundId}`,
+    createCalculation: '/api/v1/compounds/calculations',
+    deleteCalculation: (calculationId: string) => `/api/v1/compounds/calculations/${calculationId}`,
   },
   storage: {
     list: '/api/v1/storages',
@@ -164,9 +168,13 @@ export const endpoints = {
   meals: {
     list: '/api/v1/goods',
     details: (id: string) => `/api/v1/goods/${id}`,
+    withCalculations: (id: string) => `/api/v1/goods/${id}/with-calculations`,
     create: '/api/v1/goods',
     update: (id: string) => `/api/v1/goods/${id}`,
     delete: (id: string) => `/api/v1/goods/${id}`,
+    calculations: (goodId: string) => `/api/v1/goods/calculations?good_id=${goodId}`,
+    createCalculation: '/api/v1/goods/calculations',
+    deleteCalculation: (calculationId: string) => `/api/v1/goods/calculations/${calculationId}`,
   },
   media: {
     uploadImage: '/api/v1/media/image',
@@ -175,6 +183,10 @@ export const endpoints = {
   ingredient: {
     list: '/api/v1/ingredients',
     details: (id: string) => `/api/v1/ingredients/${id}`,
+  },
+  ingredientGroups: {
+    list: '/api/v1/ingredient-groups',
+    details: (id: string) => `/api/v1/ingredient-groups/${id}`,
   },
   branches: {
     list: '/api/v1/branches',

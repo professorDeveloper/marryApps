@@ -26,18 +26,26 @@ export const GenericEditView: FC<GenericEditViewProps> = ({
     data,
     isNew = false,
     loading: externalLoading = false,
+    formData: controlledFormData,
+    onFormDataChange,
 }) => {
     const router = useRouter();
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('md'));
     const { t } = useTranslation('menu');
 
+    // Check if form is controlled externally
+    const isControlled = controlledFormData !== undefined && onFormDataChange !== undefined;
+
     const [loading, setLoading] = useState(externalLoading);
     const [error, setError] = useState<string | null>(null);
-    const [formData, setFormData] = useState<Record<string, any>>(
+    const [internalFormData, setInternalFormData] = useState<Record<string, any>>(
         data || buildInitialFormData(config)
     );
     const isSubmittingRef = useRef(false);
+
+    // Use controlled or internal form data
+    const formData = isControlled ? controlledFormData : internalFormData;
 
     // Update loading state when externalLoading changes (only if not submitting)
     useEffect(() => {
@@ -46,26 +54,37 @@ export const GenericEditView: FC<GenericEditViewProps> = ({
         }
     }, [externalLoading]);
 
-    // Update formData when data changes
+    // Update formData when data changes (only for uncontrolled mode)
     useEffect(() => {
+        if (isControlled) return; // Skip for controlled mode
+
         if (data && Object.keys(data).length > 0) {
-            setFormData(data);
+            setInternalFormData(data);
         } else if (isNew) {
             // For new items, use initial form data
-            setFormData(buildInitialFormData(config));
+            setInternalFormData(buildInitialFormData(config));
         }
-    }, [data, isNew, config]);
+    }, [data, isNew, config, isControlled]);
 
     // Handle field changes
     const handleChange = useCallback(
         (field: string, value: any) => {
-            setFormData((prev) => ({
-                ...prev,
-                [field]: value,
-            }));
+            if (isControlled && onFormDataChange) {
+                // Controlled mode: notify parent
+                onFormDataChange({
+                    ...formData,
+                    [field]: value,
+                });
+            } else {
+                // Uncontrolled mode: update internal state
+                setInternalFormData((prev) => ({
+                    ...prev,
+                    [field]: value,
+                }));
+            }
             setError(null);
         },
-        []
+        [isControlled, onFormDataChange, formData]
     );
 
     // Handle form submission

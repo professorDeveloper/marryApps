@@ -54,4 +54,7 @@ export interface GenericEditViewProps {
     data?: Record<string, any>;
     isNew?: boolean;
     loading?: boolean;
+    // Controlled form props - if provided, form will be controlled externally
+    formData?: Record<string, any>;
+    onFormDataChange?: (formData: Record<string, any>) => void;
 }

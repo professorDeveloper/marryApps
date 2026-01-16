@@ -4,7 +4,7 @@ import type { CardSection, GenericEditViewConfig } from 'src/components/generic-
 
 import { useParams } from 'react-router';
 import { useTranslation } from 'react-i18next';
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 
 import { Box, Tabs, Tab, Card, Stack } from '@mui/material';
 
@@ -71,13 +71,13 @@ const PRICING_SECTION: CardSection = {
     title: 'semifinishedProducts.pricingTitle',
     columns: 2,
     fields: [
-        {
-            key: 'price',
-            label: 'semifinishedProducts.price',
-            type: 'text',
-            required: true,
-            placeholder: '0',
-        },
+        // {
+        //     key: 'price',
+        //     label: 'semifinishedProducts.price',
+        //     type: 'text',
+        //     required: false,
+        //     placeholder: '0',
+        // },
         {
             key: 'quantity',
             label: 'semifinishedProducts.quantity',
@@ -127,6 +127,8 @@ export function CompoundEditView({ compoundId, isNew = false }: CompoundEditView
     const router = useRouter();
     const { t } = useTranslation('menu');
     const [activeTab, setActiveTab] = useState(0);
+    // Store form data at parent level to preserve across tab changes
+    const [formData, setFormData] = useState<Record<string, any>>({});
 
     // SWR hooks
     const { compound, compoundLoading } = useGetCompound(isNew ? '' : compoundId || '');
@@ -137,19 +139,39 @@ export function CompoundEditView({ compoundId, isNew = false }: CompoundEditView
 
     const loading = !isNew && compoundLoading;
 
+    // Initialize form data when compound is loaded
+    useEffect(() => {
+        if (compound && Object.keys(compound).length > 0) {
+            setFormData(compound);
+        } else if (isNew && (!formData || Object.keys(formData).length === 0)) {
+            // Initialize empty form for new compound
+            const initialData: Record<string, any> = {
+                name: '',
+                description: '',
+                department_id: '',
+                price: '',
+                quantity: '',
+                measurement: 'kg',
+                picture_url: '',
+            };
+            setFormData(initialData);
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [compound, isNew]);
+
     // Handle form submission
     const handleSubmit = useCallback(
-        async (formData: Record<string, any>) => {
+        async (submitFormData: Record<string, any>) => {
             try {
                 // Prepare payload
                 const payload = {
-                    name: formData.name,
-                    description: formData.description || '',
-                    price: String(formData.price),
-                    quantity: Number(formData.quantity),
-                    measurement: formData.measurement,
-                    department_id: formData.department_id,
-                    picture_url: formData.picture_url || null,
+                    name: submitFormData.name,
+                    description: submitFormData.description || '',
+                    price: String(submitFormData.price),
+                    quantity: Number(submitFormData.quantity),
+                    measurement: submitFormData.measurement,
+                    department_id: submitFormData.department_id,
+                    picture_url: submitFormData.picture_url || null,
                 };
 
                 if (isNew) {
@@ -294,6 +316,8 @@ export function CompoundEditView({ compoundId, isNew = false }: CompoundEditView
                     <GenericEditView
                         config={config}
                         data={compound}
+                        formData={formData}
+                        onFormDataChange={setFormData}
                         isNew={isNew}
                         loading={loading}
                     />
@@ -302,7 +326,7 @@ export function CompoundEditView({ compoundId, isNew = false }: CompoundEditView
                 {/* Tab 1: Calculation/Composition */}
                 <TabPanel value={activeTab} index={1}>
                     <Stack spacing={3}>
-                        <ProductCalculator />
+                        <ProductCalculator compoundId={compound?.id || compoundId} />
                     </Stack>
                 </TabPanel>
             </Box>

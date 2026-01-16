@@ -3,7 +3,7 @@ import type { CardSection, GenericEditViewConfig } from 'src/components/generic-
 
 import { useParams } from 'react-router';
 import { useTranslation } from 'react-i18next';
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 import { Box, Tabs, Tab, Typography } from '@mui/material';
 
 import { CustomBreadcrumbs } from 'src/components/custom-breadcrumbs';
@@ -134,8 +134,30 @@ export function MealEditView({ isNew = false }: MealEditViewProps) {
     const { deleteMeal } = useDeleteMeal();
 
     const [activeTab, setActiveTab] = useState(0);
+    // Store form data at parent level to preserve across tab changes
+    const [formData, setFormData] = useState<Record<string, any>>({});
 
     const loading = !isNew && mealLoading;
+
+    // Initialize form data when meal is loaded
+    useEffect(() => {
+        if (meal && Object.keys(meal).length > 0) {
+            setFormData(meal);
+        } else if (isNew && (!formData || Object.keys(formData).length === 0)) {
+            // Initialize empty form for new meal
+            const initialData: Record<string, any> = {
+                name: '',
+                description: '',
+                category_id: '',
+                department_id: '',
+                price: '',
+                cook_time: '',
+                picture_url: '',
+            };
+            setFormData(initialData);
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [meal, isNew]);
 
     // Create translated copies of sections
     const IMAGE_SECTION_T: CardSection = {
@@ -198,12 +220,13 @@ export function MealEditView({ isNew = false }: MealEditViewProps) {
 
     // Handle form submission
     const handleSubmit = useCallback(
-        async (formData: Record<string, any>) => {
+        async (submitFormData: Record<string, any>) => {
             try {
+                // Use the submitted form data (which should match our state)
                 if (isNew) {
-                    await createMeal(formData);
+                    await createMeal(submitFormData);
                 } else if (mealId) {
-                    await updateMeal(mealId, formData);
+                    await updateMeal(mealId, submitFormData);
                 }
 
                 router.push(paths.menu.meals.root);
@@ -300,13 +323,15 @@ export function MealEditView({ isNew = false }: MealEditViewProps) {
                     <GenericEditView
                         config={config}
                         data={meal || undefined}
+                        formData={formData}
+                        onFormDataChange={setFormData}
                         isNew={isNew}
                         loading={loading}
                     />
                 </TabPanel>
 
                 <TabPanel value={activeTab} index={1}>
-                    <ProductCalculator />
+                    <ProductCalculator mealId={meal?.id || mealId} />
                 </TabPanel>
 
                 <TabPanel value={activeTab} index={2}>

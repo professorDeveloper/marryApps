@@ -30,6 +30,28 @@ interface BackendResponse<T> {
     code: number;
 }
 
+export interface ICompoundCalculation {
+    id: string;
+    compound_id: string;
+    ingredient_id: string;
+    quantity: string;
+    measurement_unit: string;
+    price_per_unit: string;
+    total_cost: string;
+    created_at: string;
+    updated_at: string;
+}
+
+export interface ICompoundWithCalculations {
+    id: string;
+    name: string;
+    price: string;
+    calculations: ICompoundCalculation[];
+    total_cost: string;
+    profit: string;
+    profit_margin: string;
+}
+
 // ============================================================================
 // HELPER FUNCTIONS
 // ============================================================================
@@ -280,5 +302,143 @@ export function useDeleteCompounds() {
     );
 
     return { deleteCompounds };
+}
+
+// ============================================================================
+// COMPOUND CALCULATIONS HOOKS
+// ============================================================================
+
+/**
+ * Get compound calculations by compound_id
+ */
+export function useGetCompoundCalculations(compoundId: string | undefined) {
+    const url = compoundId ? endpoints.compound.calculations(compoundId) : null;
+
+    const { data, isLoading, error, isValidating, mutate: mutateCalculations } = useSWR<
+        BackendResponse<ICompoundCalculation[]> | ICompoundCalculation[]
+    >(url, fetcher, { ...swrOptions });
+
+    const calculations = useMemo(() => {
+        if (!data) return [];
+
+        if (Array.isArray(data)) {
+            return data;
+        } else if (data?.data && Array.isArray(data.data)) {
+            return data.data;
+        }
+
+        return [];
+    }, [data]);
+
+    const memoizedValue = useMemo(
+        () => ({
+            calculations,
+            calculationsLoading: isLoading,
+            calculationsError: error,
+            calculationsValidating: isValidating,
+            mutate: mutateCalculations,
+        }),
+        [calculations, error, isLoading, isValidating, mutateCalculations]
+    );
+
+    return memoizedValue;
+}
+
+/**
+ * Create compound calculation
+ */
+export function useCreateCompoundCalculation() {
+    const createCalculation = useCallback(
+        async (payload: {
+            compound_id: string;
+            ingredient_id: string;
+            quantity: string;
+        }): Promise<ICompoundCalculation> => {
+            try {
+                const response = await poster<BackendResponse<ICompoundCalculation>>(
+                    endpoints.compound.createCalculation,
+                    payload
+                );
+
+                // Revalidate calculations for the compound
+                if (payload.compound_id) {
+                    await mutate(endpoints.compound.calculations(payload.compound_id));
+                }
+
+                toast.success('Calculation created successfully');
+                return response.data || (response as unknown as ICompoundCalculation);
+            } catch (error) {
+                console.error('Error creating calculation:', error);
+                toast.error('Failed to create calculation');
+                throw error;
+            }
+        },
+        []
+    );
+
+    return { createCalculation };
+}
+
+/**
+ * Delete compound calculation
+ */
+export function useDeleteCompoundCalculation() {
+    const deleteCalculation = useCallback(
+        async (calculationId: string, compoundId: string): Promise<void> => {
+            try {
+                await deleter(endpoints.compound.deleteCalculation(calculationId));
+
+                // Revalidate calculations for the compound
+                if (compoundId) {
+                    await mutate(endpoints.compound.calculations(compoundId));
+                }
+
+                toast.success('Calculation deleted successfully');
+            } catch (error) {
+                console.error('Error deleting calculation:', error);
+                toast.error('Failed to delete calculation');
+                throw error;
+            }
+        },
+        []
+    );
+
+    return { deleteCalculation };
+}
+
+/**
+ * Get compound with calculations (includes total_cost, profit, profit_margin)
+ */
+export function useGetCompoundWithCalculations(compoundId: string | undefined) {
+    const url = compoundId ? endpoints.compound.withCalculations(compoundId) : null;
+
+    const { data, isLoading, error, isValidating, mutate: mutateCompound } = useSWR<
+        BackendResponse<ICompoundWithCalculations> | ICompoundWithCalculations
+    >(url, fetcher, { ...swrOptions });
+
+    const compoundWithCalculations = useMemo(() => {
+        if (!data) return undefined;
+
+        if ('id' in data && 'calculations' in data) {
+            return data as ICompoundWithCalculations;
+        } else if (data?.data && 'calculations' in data.data) {
+            return data.data as ICompoundWithCalculations;
+        }
+
+        return undefined;
+    }, [data]);
+
+    const memoizedValue = useMemo(
+        () => ({
+            compoundWithCalculations,
+            loading: isLoading,
+            error,
+            isValidating,
+            mutate: mutateCompound,
+        }),
+        [compoundWithCalculations, error, isLoading, isValidating, mutateCompound]
+    );
+
+    return memoizedValue;
 }
 

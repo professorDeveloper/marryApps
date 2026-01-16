@@ -90,7 +90,7 @@ function RenderCellMeasurement({ params }: { params: any }) {
 function RenderCellPrice({ params }: { params: any }) {
     const { value } = params;
     const numPrice = typeof value === 'string' ? parseFloat(value) : value;
-    return <span>{numPrice.toLocaleString()} so&apos;m</span>;
+    return <span>{numPrice} so&apos;m</span>;
 }
 
 // ============================================================================

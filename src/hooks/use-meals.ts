@@ -31,6 +31,28 @@ interface BackendResponse<T> {
     code: number;
 }
 
+export interface IMealCalculation {
+    id: string;
+    good_id: string;
+    ingredient_id: string;
+    quantity: string;
+    measurement_unit: string;
+    price_per_unit: string;
+    total_cost: string;
+    created_at: string;
+    updated_at: string;
+}
+
+export interface IMealWithCalculations {
+    id: string;
+    name: string;
+    price: string;
+    calculations: IMealCalculation[];
+    total_cost: string;
+    profit: string;
+    profit_margin: string;
+}
+
 // ============================================================================
 // HELPER FUNCTIONS
 // ============================================================================
@@ -359,5 +381,144 @@ export function useDeleteMeals() {
     );
 
     return { deleteMeals };
+}
+
+// ============================================================================
+// MEAL CALCULATIONS HOOKS
+// ============================================================================
+
+/**
+ * Get meal calculations by meal_id
+ */
+export function useGetMealCalculations(mealId: string | undefined) {
+    const url = mealId ? endpoints.meals.calculations(mealId) : null;
+
+    const { data, isLoading, error, isValidating, mutate: mutateCalculations } = useSWR<
+        BackendResponse<IMealCalculation[]> | IMealCalculation[]
+    >(url, fetcher, { ...swrOptions });
+
+    const calculations = useMemo(() => {
+        if (!data) return [];
+
+        if (Array.isArray(data)) {
+            return data;
+        } else if (data?.data && Array.isArray(data.data)) {
+            return data.data;
+        }
+
+        return [];
+    }, [data]);
+
+    const memoizedValue = useMemo(
+        () => ({
+            calculations,
+            calculationsLoading: isLoading,
+            calculationsError: error,
+            calculationsValidating: isValidating,
+            mutate: mutateCalculations,
+        }),
+        [calculations, error, isLoading, isValidating, mutateCalculations]
+    );
+
+    return memoizedValue;
+}
+
+/**
+ * Create meal calculation
+ */
+export function useCreateMealCalculation() {
+    const createCalculation = useCallback(
+        async (payload: {
+            good_id: string;
+            ingredient_id: string;
+            quantity: string;
+        }): Promise<IMealCalculation> => {
+            try {
+                const response = await poster<BackendResponse<IMealCalculation>>(
+                    endpoints.meals.createCalculation,
+                    payload
+                );
+
+                // Revalidate calculations for the meal
+                if (payload.good_id) {
+                    await mutate(endpoints.meals.calculations(payload.good_id));
+                }
+
+                toast.success('Calculation created successfully');
+                return response.data || (response as unknown as IMealCalculation);
+            } catch (error) {
+                console.error('Error creating calculation:', error);
+                toast.error('Failed to create calculation');
+                throw error;
+            }
+        },
+        []
+    );
+
+    return { createCalculation };
+}
+
+/**
+ * Delete meal calculation
+ */
+export function useDeleteMealCalculation() {
+    const deleteCalculation = useCallback(
+        async (calculationId: string, mealId: string): Promise<void> => {
+            try {
+                await deleter(endpoints.meals.deleteCalculation(calculationId));
+
+                // Revalidate calculations for the meal
+                if (mealId) {
+                    await mutate(endpoints.meals.calculations(mealId));
+                }
+
+                toast.success('Calculation deleted successfully');
+            } catch (error) {
+                console.error('Error deleting calculation:', error);
+                toast.error('Failed to delete calculation');
+                throw error;
+            }
+        },
+        []
+    );
+
+    return { deleteCalculation };
+}
+
+
+/**
+ * Get meal with calculations (includes total_cost, profit, profit_margin)
+ */
+export function useGetMealWithCalculations(mealId: string | undefined) {
+    const url = mealId ? endpoints.meals.withCalculations(mealId) : null;
+
+    const { data, isLoading, error, isValidating, mutate: mutateMeal } = useSWR<
+        BackendResponse<IMealWithCalculations> | IMealWithCalculations
+    >(url, fetcher, { ...swrOptions });
+
+    const mealWithCalculations = useMemo(() => {
+        if (!data) return undefined;
+
+        if ('id' in data && 'calculations' in data) {
+            return data as IMealWithCalculations;
+        } else if (data?.data && 'calculations' in data.data) {
+            return data.data as IMealWithCalculations;
+        }
+
+        return undefined;
+    }, [data]);
+
+    const memoizedValue = useMemo(
+        () => ({
+            mealWithCalculations,
+            loading: isLoading,
+            error,
+            isValidating,
+            mutate: mutateMeal,
+        }),
+        [mealWithCalculations, error, isLoading, isValidating, mutateMeal]
+    );
+
+    return memoizedValue;
 }
 

@@ -2,16 +2,7 @@ import type { GridColDef } from '@mui/x-data-grid';
 
 import { useMemo, useCallback, useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import {
-  Avatar,
-  Box,
-  Button,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
-  ListItemText,
-} from '@mui/material';
+import { Avatar, Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, ListItemText } from '@mui/material';
 
 import { paths } from 'src/routes/paths';
 import { useRouter } from 'src/routes/hooks';
