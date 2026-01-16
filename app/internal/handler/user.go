@@ -36,6 +36,7 @@ func (h *Handler) GetUser(c echo.Context) error {
 		message := model.GetLocalizedMessage(lang, "user_not_found")
 		return c.JSON(http.StatusNotFound, model.NewErrorResponse(message, err.Error(), http.StatusNotFound))
 	}
+	log.Printf("GetUser: responseType=%T userID=%s is_active=%v", user, user.ID, user.IsActive)
 	return c.JSON(http.StatusOK, model.NewSuccessResponse("User profile retrieved successfully", user, http.StatusOK))
 }
 

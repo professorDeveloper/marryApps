@@ -1843,6 +1843,8 @@ definitions:
         type: string
       full_name:
         type: string
+      is_active:
+        type: boolean
       phone_number:
         type: string
       username:
@@ -1851,10 +1853,10 @@ definitions:
   model.UserResponse:
     properties:
       brand_id:
-        example: 550e8400-e29b-41d4-a716-446655440000
+        example: 123e4567-e89b-12d3-a456-426614174000
         type: string
       created_at:
-        example: "2022-01-01T00:00:00Z"
+        example: "2021-01-01T00:00:00Z"
         type: string
       email:
         example: user@example.com
@@ -1865,6 +1867,9 @@ definitions:
       id:
         example: 123e4567-e89b-12d3-a456-426614174000
         type: string
+      is_active:
+        example: true
+        type: boolean
       phone_number:
         example: "+998901234567"
         type: string
@@ -1875,13 +1880,13 @@ definitions:
         example: 123e4567-e89b-12d3-a456-426614174000
         type: string
       updated_at:
-        example: "2022-01-01T00:00:00Z"
+        example: "2021-01-01T00:00:00Z"
         type: string
       username:
         example: admin
         type: string
     type: object
-host: back.maryai.yurtal.tech
+host: localhost:8080
 info:
   contact: {}
   description: MaryAI API server with multi-language support (uz, ru, en)
@@ -11219,7 +11224,7 @@ paths:
       tags:
       - users
 schemes:
-- https
+- http
 securityDefinitions:
   BearerAuth:
     description: Type "Bearer" followed by a space and your JWT token

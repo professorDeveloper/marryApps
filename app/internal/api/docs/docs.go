@@ -17051,6 +17051,9 @@ const docTemplate = `{
                 "full_name": {
                     "type": "string"
                 },
+                "is_active": {
+                    "type": "boolean"
+                },
                 "phone_number": {
                     "type": "string"
                 },
@@ -17064,11 +17067,11 @@ const docTemplate = `{
             "properties": {
                 "brand_id": {
                     "type": "string",
-                    "example": "550e8400-e29b-41d4-a716-446655440000"
+                    "example": "123e4567-e89b-12d3-a456-426614174000"
                 },
                 "created_at": {
                     "type": "string",
-                    "example": "2022-01-01T00:00:00Z"
+                    "example": "2021-01-01T00:00:00Z"
                 },
                 "email": {
                     "type": "string",
@@ -17081,6 +17084,10 @@ const docTemplate = `{
                 "id": {
                     "type": "string",
                     "example": "123e4567-e89b-12d3-a456-426614174000"
+                },
+                "is_active": {
+                    "type": "boolean",
+                    "example": true
                 },
                 "phone_number": {
                     "type": "string",
@@ -17096,7 +17103,7 @@ const docTemplate = `{
                 },
                 "updated_at": {
                     "type": "string",
-                    "example": "2022-01-01T00:00:00Z"
+                    "example": "2021-01-01T00:00:00Z"
                 },
                 "username": {
                     "type": "string",
@@ -17118,9 +17125,9 @@ const docTemplate = `{
 // SwaggerInfo holds exported Swagger Info so clients can modify it
 var SwaggerInfo = &swag.Spec{
 	Version:          "1.0",
-	Host:             "back.maryai.yurtal.tech",
+	Host:             "localhost:8080",
 	BasePath:         "/",
-	Schemes:          []string{"https"},
+	Schemes:          []string{"http"},
 	Title:            "MaryAI API",
 	Description:      "MaryAI API server with multi-language support (uz, ru, en)",
 	InfoInstanceName: "swagger",

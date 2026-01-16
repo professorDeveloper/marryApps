@@ -9,10 +9,11 @@ INSERT INTO users (
     pincode,
     hash_password,
     brand_id,
-    phone_number
+    phone_number,
+    is_active
 )
 VALUES (
-    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10
+    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11
 )
 RETURNING *;
 
@@ -26,7 +27,14 @@ UPDATE users SET
     pincode = COALESCE($7, pincode),
     hash_password = COALESCE($8, hash_password),
     brand_id = COALESCE($9, brand_id),
-    phone_number = COALESCE($10, phone_number)
+    phone_number = COALESCE($10, phone_number),
+    is_active = COALESCE($11, is_active)
+WHERE id = $1 AND deleted_at = 0
+RETURNING *;
+
+-- name: UpdateUserIsActive :one
+UPDATE users SET
+    is_active = $2
 WHERE id = $1 AND deleted_at = 0
 RETURNING *;
 
@@ -59,10 +67,6 @@ UPDATE users SET
     deleted_at = 0
 WHERE id = $1 AND deleted_at != 0
 RETURNING *;
-
--- name: HardDeleteUser :exec
-DELETE FROM users 
-WHERE id = $1;
 
 
 

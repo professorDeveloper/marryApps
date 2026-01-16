@@ -683,6 +683,17 @@ func (s *AuthS) UpdateUser(ctx context.Context, req model.UpdateUserRequest, use
 		return model.UserResponse{}, fmt.Errorf("failed to update user: %w", err)
 	}
 
+	if req.IsActive != nil {
+		user, err = s.repo.Tenant(ctx).UpdateUserIsActive(ctx, pg.UpdateUserIsActiveParams{
+			ID:       existingUser.ID,
+			IsActive: *req.IsActive,
+		})
+		if err != nil {
+			log.Printf("Failed to update user is_active: %v", err)
+			return model.UserResponse{}, fmt.Errorf("failed to update user is_active: %w", err)
+		}
+	}
+
 	return toUserResponse(user), nil
 }
 
@@ -731,6 +742,7 @@ func toUserResponse(u pg.User) model.UserResponse {
 		FullName:    fullName,
 		Username:    username,
 		Role:        role,
+		IsActive:    u.IsActive,
 		Email:       email,
 		PhoneNumber: u.PhoneNumber,
 		ShiftID:     shiftID,

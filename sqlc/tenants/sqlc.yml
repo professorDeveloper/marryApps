@@ -3,7 +3,18 @@ sql:
   - engine: "postgresql"
     queries: "./queries"
     schema:
-      - "../../app/migrations/tenants/*.up.sql"
+      - "../../app/migrations/tenants/1_branches_translations.up.sql"
+      - "../../app/migrations/tenants/2_users_table.up.sql"
+      - "../../app/migrations/tenants/3_users_payment.up.sql"
+      - "../../app/migrations/tenants/4_branch_related_tables.up.sql"
+      - "../../app/migrations/tenants/5_cafe_tables_qr.up.sql"
+      - "../../app/migrations/tenants/6_Ingredients.up.sql"
+      - "../../app/migrations/tenants/7_invoices_supplier.up.sql"
+      - "../../app/migrations/tenants/8_compound.up.sql"
+      - "../../app/migrations/tenants/9_goods.up.sql"
+      - "../../app/migrations/tenants/10_orders.up.sql"
+      - "../../app/migrations/tenants/11_create_calculation_table.up.sql"
+      - "../../app/migrations/tenants/12_add_users_is_active.up.sql"
     gen:
       go:
         emit_json_tags: true

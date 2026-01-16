@@ -73,12 +73,13 @@ type UserResponse struct {
 	FullName    *string    `json:"full_name,omitempty" example:"John Doe"`
 	Username    *string    `json:"username,omitempty" example:"admin"`
 	Role        *string    `json:"role,omitempty" example:"user"`
+	IsActive    bool       `json:"is_active" example:"true"`
 	Email       *string    `json:"email,omitempty" example:"user@example.com"`
 	PhoneNumber *string    `json:"phone_number,omitempty" example:"+998901234567"`
 	ShiftID     *string    `json:"shift_id,omitempty" example:"123e4567-e89b-12d3-a456-426614174000"`
-	BrandID     *string    `json:"brand_id,omitempty" example:"550e8400-e29b-41d4-a716-446655440000"`
-	CreatedAt   *time.Time `json:"created_at,omitempty" example:"2022-01-01T00:00:00Z"`
-	UpdatedAt   *time.Time `json:"updated_at,omitempty" example:"2022-01-01T00:00:00Z"`
+	BrandID     *string    `json:"brand_id,omitempty" example:"123e4567-e89b-12d3-a456-426614174000"`
+	CreatedAt   *time.Time `json:"created_at,omitempty" example:"2021-01-01T00:00:00Z"`
+	UpdatedAt   *time.Time `json:"updated_at,omitempty" example:"2021-01-01T00:00:00Z"`
 }
 
 type UpdateUserRequest struct {
@@ -86,6 +87,7 @@ type UpdateUserRequest struct {
 	Username    *string `json:"username"`
 	Email       *string `json:"email"`
 	PhoneNumber *string `json:"phone_number"`
+	IsActive    *bool   `json:"is_active,omitempty"`
 }
 
 type UpdatePasswordRequest struct {

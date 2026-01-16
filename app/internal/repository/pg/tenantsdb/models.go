@@ -539,6 +539,7 @@ type User struct {
 	CreatedAt    pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
 	DeletedAt    *int64             `json:"deleted_at"`
+	IsActive     bool               `json:"is_active"`
 }
 
 type UserPayment struct {
