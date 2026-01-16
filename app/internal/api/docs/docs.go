@@ -17127,7 +17127,7 @@ var SwaggerInfo = &swag.Spec{
 	Version:          "1.0",
 	Host:             "back.maryai.yurtal.tech",
 	BasePath:         "/",
-	Schemes:          []string{"http", "https"},
+	Schemes:          []string{"https"},
 	Title:            "MaryAI API",
 	Description:      "MaryAI API server with multi-language support (uz, ru, en)",
 	InfoInstanceName: "swagger",

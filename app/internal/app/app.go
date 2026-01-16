@@ -36,7 +36,7 @@ import (
 // host localhost:8080
 // @host back.maryai.yurtal.tech
 // @BasePath /
-// @schemes http https
+// @schemes https
 
 // @securityDefinitions.apikey BearerAuth
 // @in header
