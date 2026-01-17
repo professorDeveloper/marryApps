@@ -81,6 +81,7 @@ export type IDepartmentItem = {
   picture_url?: string;
   created_at: string;
   updated_at: string;
+  storage_name?: string; // Enriched from storage
 };
 
 export type IDepartmentFormData = {

@@ -34,6 +34,7 @@ export interface ICompoundCalculation {
     id: string;
     compound_id: string;
     ingredient_id: string;
+    component_compound_id?: string;
     quantity: string;
     measurement_unit: string;
     price_per_unit: string;
@@ -351,7 +352,8 @@ export function useCreateCompoundCalculation() {
     const createCalculation = useCallback(
         async (payload: {
             compound_id: string;
-            ingredient_id: string;
+            ingredient_id?: string;
+            compound_to_add_id?: string;
             quantity: string;
         }): Promise<ICompoundCalculation> => {
             try {

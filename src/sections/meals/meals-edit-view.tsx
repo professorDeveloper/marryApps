@@ -19,17 +19,10 @@ import { GenericEditView } from 'src/components/generic-edit-view';
 import ProductCalculator from 'src/components/generic-edit-view/edit-calculation';
 import { setCustomIconsLoader } from '@iconify/react';
 
-// ============================================================================
-// TYPES
-// ============================================================================
 
 export interface MealEditViewProps {
     isNew?: boolean;
 }
-
-// ============================================================================
-// FIELD CONFIGS
-// ============================================================================
 
 const IMAGE_SECTION: CardSection = {
     id: 'image',
@@ -136,8 +129,13 @@ export function MealEditView({ isNew = false }: MealEditViewProps) {
     const [activeTab, setActiveTab] = useState(0);
     // Store form data at parent level to preserve across tab changes
     const [formData, setFormData] = useState<Record<string, any>>({});
+    // Track the created meal ID for new items
+    const [createdMealId, setCreatedMealId] = useState<string | undefined>(undefined);
 
     const loading = !isNew && mealLoading;
+
+    // Effective meal ID - either from URL params, fetched meal, or newly created
+    const effectiveMealId = mealId || meal?.id || createdMealId;
 
     // Initialize form data when meal is loaded
     useEffect(() => {
@@ -223,18 +221,26 @@ export function MealEditView({ isNew = false }: MealEditViewProps) {
         async (submitFormData: Record<string, any>) => {
             try {
                 // Use the submitted form data (which should match our state)
-                if (isNew) {
-                    await createMeal(submitFormData);
-                } else if (mealId) {
-                    await updateMeal(mealId, submitFormData);
+                if (isNew && !createdMealId) {
+                    const result = await createMeal(submitFormData) as any;
+                    // Extract created meal ID from response
+                    const newMealId = result?.id || result?.data?.id;
+                    if (newMealId) {
+                        setCreatedMealId(newMealId);
+                        // Navigate to calculation tab after successful creation
+                        setActiveTab(1);
+                    } else {
+                        router.push(paths.menu.meals.root);
+                    }
+                } else if (mealId || createdMealId) {
+                    await updateMeal(mealId || createdMealId!, submitFormData);
+                    router.push(paths.menu.meals.root);
                 }
-
-                router.push(paths.menu.meals.root);
             } catch (err) {
                 console.log("Error saving meal:", err);
             }
         },
-        [isNew, mealId, createMeal, updateMeal, router]
+        [isNew, mealId, createdMealId, createMeal, updateMeal, router]
     );
 
     // Handle delete
@@ -331,7 +337,7 @@ export function MealEditView({ isNew = false }: MealEditViewProps) {
                 </TabPanel>
 
                 <TabPanel value={activeTab} index={1}>
-                    <ProductCalculator mealId={meal?.id || mealId} />
+                    <ProductCalculator mealId={effectiveMealId} />
                 </TabPanel>
 
                 <TabPanel value={activeTab} index={2}>

@@ -35,6 +35,7 @@ export interface IMealCalculation {
     id: string;
     good_id: string;
     ingredient_id: string;
+    component_compound_id?: string;
     quantity: string;
     measurement_unit: string;
     price_per_unit: string;
@@ -430,7 +431,8 @@ export function useCreateMealCalculation() {
     const createCalculation = useCallback(
         async (payload: {
             good_id: string;
-            ingredient_id: string;
+            ingredient_id?: string;
+            compound_to_add_id?: string;
             quantity: string;
         }): Promise<IMealCalculation> => {
             try {

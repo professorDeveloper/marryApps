@@ -10,7 +10,7 @@ import { Avatar, Button, Dialog, DialogTitle, DialogActions, DialogContent, Box,
 import { paths } from 'src/routes/paths';
 import { useRouter } from 'src/routes/hooks';
 
-import { useGetStorages, useGetDepartments, useGetStorageName, useDeleteDepartment } from 'src/actions/departments';
+import { useGetStorages, useGetDepartments, useDeleteDepartment } from 'src/actions/departments';
 
 import { toast } from 'src/components/snackbar';
 import { Iconify } from 'src/components/iconify';
@@ -90,8 +90,7 @@ function RenderCellDepartmentName({ params }: { params: any }) {
  * Storage ID renderer - Shows storage name instead of ID
  */
 function RenderCellStorageId({ params }: { params: any }) {
-  const storageId = params.row.storage_id || '-';
-  const storageName = useGetStorageName(storageId);
+  const storageName = params.row.storage_name || '-';
 
   return (
     <div style={{ fontSize: '0.875rem', opacity: 0.8 }}>
@@ -281,8 +280,7 @@ export function ProductListView() {
 
   // Render specifications for view modal
   const renderDepartmentSpecifications = useCallback((dept: IDepartmentItem) => {
-    // eslint-disable-next-line react-hooks/rules-of-hooks
-    const storageName = useGetStorageName(dept.storage_id);
+    const storageName = dept.storage_name || '-';
 
 
     const specs: SpecificationRow[] = [

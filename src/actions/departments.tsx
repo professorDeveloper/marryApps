@@ -35,10 +35,30 @@ interface BackendResponse<T> {
 }
 
 /**
+ * Helper function to enrich departments with storage names
+ */
+function enrichDepartments(
+  departmentsData: IDepartmentItem[],
+  storages: IStorageItem[]
+): IDepartmentItem[] {
+  const storageMap = new Map(
+    storages?.map((storage: IStorageItem) => [storage.id, storage.name]) || []
+  );
+
+  return departmentsData.map((dept) => ({
+    ...dept,
+    storage_name: storageMap.get(dept.storage_id) || dept.storage_id || '-',
+  }));
+}
+
+/**
  * Get all departments
  */
 export function useGetDepartments() {
   const url = endpoints.department.list;
+
+  // Get storages for enrichment
+  const { storages } = useGetStorages();
 
   const { data, isLoading, error, isValidating } = useSWR<BackendResponse<IDepartmentItem[]>>(
     url,
@@ -46,15 +66,20 @@ export function useGetDepartments() {
     { ...swrOptions }
   );
 
+  const enrichedDepartments = useMemo(() => {
+    const departments = data?.data || [];
+    return enrichDepartments(departments, storages);
+  }, [data?.data, storages]);
+
   const memoizedValue = useMemo(
     () => ({
-      departments: data?.data || [],
+      departments: enrichedDepartments,
       departmentsLoading: isLoading,
       departmentsError: error,
       departmentsValidating: isValidating,
-      departmentsEmpty: !isLoading && !isValidating && !data?.data?.length,
+      departmentsEmpty: !isLoading && !isValidating && !enrichedDepartments.length,
     }),
-    [data, error, isLoading, isValidating]
+    [enrichedDepartments, error, isLoading, isValidating]
   );
 
   return memoizedValue;

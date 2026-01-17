@@ -255,7 +255,7 @@
     "price": "Нархи",
     "profitnumber": "Фойда",
     "inventory": "Омбор",
-    "cookingTime": "Пишириш вақти",
+    "cookingTime": "Пишириш вақти (мин)",
     "barcode": "Штрих-код",
     "originalPrice": "Асл нархи",
     "costPrice": "Тан нархи",
@@ -314,6 +314,7 @@
     },
     "warehouse": {
       "title": "Омбор",
+      "storage": "Омбор",
       "stocks": "Стокlar",
       "transfers": "Ўтказмалар",
       "locations": "Жойлашувлар",
@@ -373,7 +374,9 @@
     "selectProductsForCalculation": "Ҳисоблаш учун маҳсулот танланг",
     "total": "Жами",
     "markup": "Белгилаш",
-    "markupPercent": "Белгилаш %"
+    "markupPercent": "Белгилаш %",
+    "saveProductFirst": "Аввал маҳсулотни сақланг!",
+    "saveEntityFirst": "Илтимос, аввал элементни сақланг, шунда ҳисоблашни сақлаш имконияти очилади. Танловларингиз сақланади."
   },
   "users": {
     "title": "Ходимлар",

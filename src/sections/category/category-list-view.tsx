@@ -17,7 +17,6 @@ import { getInitials, getAvatarColor } from 'src/utils/avatar';
 import { getFullImageUrl } from 'src/utils/image-url';
 
 import { useGetCategories, useDeleteCategory } from 'src/actions/categories';
-import { useGetStorageName, useGetDepartmentName } from 'src/actions/departments';
 
 import { toast } from 'src/components/snackbar';
 import { Iconify } from 'src/components/iconify';
@@ -101,8 +100,8 @@ function RenderCellCategory({ params }: { params: any }) {
  */
 function RenderCellStorage({ params }: { params: any }) {
   const category = params.row as ICategory;
-  const storageName = useGetStorageName(category.storage_id || '');
-  return <span>{storageName || '-'}</span>;
+  const storageName = category.storage_name || '-';
+  return <span>{storageName}</span>;
 }
 
 /**
@@ -110,8 +109,8 @@ function RenderCellStorage({ params }: { params: any }) {
  */
 function RenderCellDepartment({ params }: { params: any }) {
   const category = params.row as ICategory;
-  const departmentName = useGetDepartmentName(category.department_id || '');
-  return <span>{departmentName || '-'}</span>;
+  const departmentName = category.department_name || '-';
+  return <span>{departmentName}</span>;
 }
 
 /**
@@ -154,8 +153,8 @@ function RenderCellColor({ params }: { params: any }) {
 // ============================================================================
 
 function CategorySpecifications({ category, t }: { category: ICategory; t: any }) {
-  const storageName = useGetStorageName(category.storage_id || '');
-  const departmentName = useGetDepartmentName(category.department_id || '');
+  const storageName = category.storage_name || '-';
+  const departmentName = category.department_name || '-';
 
   const specs: SpecificationRow[] = [
     { label: t('categories.name'), value: category.name || '-' },

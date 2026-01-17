@@ -5,6 +5,7 @@ import useSWR, { mutate } from 'swr';
 import { useMemo, useCallback } from 'react';
 
 import { poster, putter, fetcher, deleter, endpoints } from 'src/lib/axios';
+import { useGetStorages, useGetDepartments } from 'src/actions/departments';
 
 // ============================================================================
 // CONFIGURATION
@@ -24,10 +25,32 @@ const swrOptions: SWRConfiguration = {
  * Backend response structure
  */
 interface BackendResponse<T> {
-  status: string;
-  message: string;
-  data: T;
-  code: number;
+    status: string;
+    message: string;
+    data: T;
+    code: number;
+}
+
+/**
+ * Helper function to enrich categories with storage and department names
+ */
+function enrichCategories(
+    categoriesData: ICategory[],
+    storages: any[],
+    departments: any[]
+): ICategory[] {
+    const storageMap = new Map(
+        storages?.map((storage: any) => [storage.id, storage.name]) || []
+    );
+    const departmentMap = new Map(
+        departments?.map((dept: any) => [dept.id, dept.name]) || []
+    );
+
+    return categoriesData.map((cat) => ({
+        ...cat,
+        storage_name: storageMap.get(cat.storage_id) || cat.storage_id || '-',
+        department_name: departmentMap.get(cat.department_id) || cat.department_id || '-',
+    }));
 }
 
 // ============================================================================
@@ -40,21 +63,30 @@ interface BackendResponse<T> {
 export function useGetCategories() {
     const url = endpoints.category.list;
 
+    // Get storages and departments for enrichment
+    const { storages } = useGetStorages();
+    const { departments } = useGetDepartments();
+
     const { data, isLoading, error, isValidating } = useSWR<BackendResponse<ICategory[]>>(
         url,
         fetcher,
         { ...swrOptions }
     );
 
+    const enrichedCategories = useMemo(() => {
+        const categories = data?.data || [];
+        return enrichCategories(categories, storages, departments);
+    }, [data?.data, storages, departments]);
+
     const memoizedValue = useMemo(
         () => ({
-            categories: data?.data || [],
+            categories: enrichedCategories,
             categoriesLoading: isLoading,
             categoriesError: error,
             categoriesValidating: isValidating,
-            categoriesEmpty: !isLoading && !isValidating && !data?.data?.length,
+            categoriesEmpty: !isLoading && !isValidating && !enrichedCategories.length,
         }),
-        [data, error, isLoading, isValidating]
+        [enrichedCategories, error, isLoading, isValidating]
     );
 
     return memoizedValue;

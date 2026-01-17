@@ -129,6 +129,8 @@ export function CompoundEditView({ compoundId, isNew = false }: CompoundEditView
     const [activeTab, setActiveTab] = useState(0);
     // Store form data at parent level to preserve across tab changes
     const [formData, setFormData] = useState<Record<string, any>>({});
+    // Track the created compound ID for new items
+    const [createdCompoundId, setCreatedCompoundId] = useState<string | undefined>(undefined);
 
     // SWR hooks
     const { compound, compoundLoading } = useGetCompound(isNew ? '' : compoundId || '');
@@ -138,6 +140,9 @@ export function CompoundEditView({ compoundId, isNew = false }: CompoundEditView
     const { deleteCompound } = useDeleteCompound();
 
     const loading = !isNew && compoundLoading;
+
+    // Effective compound ID - either from props, fetched compound, or newly created
+    const effectiveCompoundId = compoundId || compound?.id || createdCompoundId;
 
     // Initialize form data when compound is loaded
     useEffect(() => {
@@ -174,20 +179,29 @@ export function CompoundEditView({ compoundId, isNew = false }: CompoundEditView
                     picture_url: submitFormData.picture_url || null,
                 };
 
-                if (isNew) {
+                if (isNew && !createdCompoundId) {
                     // Create new compound
-                    await createCompound(payload);
+                    const result = await createCompound(payload) as any;
+                    // Extract created compound ID from response
+                    const newCompoundId = result?.id || result?.data?.id;
+                    if (newCompoundId) {
+                        setCreatedCompoundId(newCompoundId);
+                        // Navigate to calculation tab after successful creation
+                        setActiveTab(1);
+                    } else {
+                        router.push(paths.menu.semifinished.root);
+                    }
                 } else {
                     // Update existing compound
-                    if (!compound) {
+                    const idToUpdate = compound?.id || createdCompoundId;
+                    if (!idToUpdate) {
                         toast.error(t('error.loadFailed'));
                         return;
                     }
-                    await updateCompound(compound.id, payload);
+                    await updateCompound(idToUpdate, payload);
+                    // Redirect to list
+                    router.push(paths.menu.semifinished.root);
                 }
-
-                // Redirect to list
-                router.push(paths.menu.semifinished.root);
             } catch (err) {
                 console.error('Error saving compound:', err);
                 toast.error(
@@ -195,7 +209,7 @@ export function CompoundEditView({ compoundId, isNew = false }: CompoundEditView
                 );
             }
         },
-        [router, isNew, compound, createCompound, updateCompound, t]
+        [router, isNew, compound, createdCompoundId, createCompound, updateCompound, t]
     );
 
     // Handle delete
@@ -326,7 +340,7 @@ export function CompoundEditView({ compoundId, isNew = false }: CompoundEditView
                 {/* Tab 1: Calculation/Composition */}
                 <TabPanel value={activeTab} index={1}>
                     <Stack spacing={3}>
-                        <ProductCalculator compoundId={compound?.id || compoundId} />
+                        <ProductCalculator compoundId={effectiveCompoundId} />
                     </Stack>
                 </TabPanel>
             </Box>

@@ -64,7 +64,6 @@ export const getNavData = (t: TFunction): NavSectionProps['data'] => [
         icon: ICONS.menuItem,
         deepMatch: true,
         children: [
-          { title: t('overview.menu.storage', 'Storage'), path: paths.menu.inventory.root },
           { title: t('overview.menu.sections', 'Sections'), path: paths.menu.product.root },
           { title: t('overview.menu.categories', 'Categories'), path: paths.menu.category.root },
           { title: t('overview.menu.semifinished', 'Semifinished'), path: paths.menu.semifinished.root },
@@ -76,6 +75,7 @@ export const getNavData = (t: TFunction): NavSectionProps['data'] => [
         path: paths.menu.warehouse.root,
         icon: ICONS.banking,
         children: [
+          { title: t('overview.warehouse.storage', 'Storage'), path: paths.menu.inventory.root },
           { title: t('overview.warehouse.stocks', 'Stocks'), path: paths.menu.warehouse.stocks.root },
           { title: t('overview.warehouse.transfers', 'Transfers'), path: paths.menu.warehouse.transfers.root },
           { title: t('overview.warehouse.locations', 'Locations'), path: paths.menu.warehouse.locations.root },
@@ -113,7 +113,7 @@ export const getNavData = (t: TFunction): NavSectionProps['data'] => [
         path: paths.menu.user.root,
         icon: ICONS.user,
         deepMatch: true,
- 
+
         children: [
           { title: t('overview.employe.admin', 'Admin Xodimlar'), path: paths.menu.user.root },
           { title: t('overview.employe.staff', 'Restoran Xodimlari'), path: paths.menu.user.restaurantStaff },
@@ -160,6 +160,7 @@ export const navData: NavSectionProps['data'] = [
         path: paths.menu.warehouse.root,
         icon: ICONS.folder,
         children: [
+          { title: 'Storage', path: paths.menu.inventory.root },
           { title: 'Stocks', path: paths.menu.warehouse.stocks.root },
           { title: 'Transfers', path: paths.menu.warehouse.transfers.root },
           { title: 'Locations', path: paths.menu.warehouse.locations.root },

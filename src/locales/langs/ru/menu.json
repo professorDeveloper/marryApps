@@ -252,7 +252,7 @@
     "section": "Раздел",
     "profitnumber": "Прибыль",
     "inventory": "Инвентарь",
-    "cookingTime": "Время приготовления",
+    "cookingTime": "Время приготовления (мин)",
     "barcode": "Штрих-код",
     "originalPrice": "Исходная цена",
     "costPrice": "Себестоимость",
@@ -319,6 +319,7 @@
     },
     "warehouse": {
       "title": "Склад",
+      "storage": "Хранилище",
       "stocks": "Запасы",
       "transfers": "Передачи",
       "locations": "Местоположения",
@@ -378,7 +379,9 @@
     "selectProductsForCalculation": "Выберите продукты для расчета",
     "total": "Итого",
     "markup": "Наценка",
-    "markupPercent": "Наценка %"
+    "markupPercent": "Наценка %",
+    "saveProductFirst": "Сначала сохраните продукт!",
+    "saveEntityFirst": "Пожалуйста, сохраните элемент сначала, чтобы включить сохранение расчета. Ваши выборы будут сохранены."
   },
   "users": {
     "title": "Сотрудники",
