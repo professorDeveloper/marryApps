@@ -48,11 +48,8 @@ export function GenericTableToolbar<T extends GenericTableFilters = any>({
   filteredResults,
   selectedRowCount,
   onOpenConfirmDeleteRows,
-  filterOptions,
   filterKeys,
   onRenderFiltersResult,
-  settings,
-  onChangeSettings,
   hideFilters = false,
 }: GenericTableToolbarProps<T>) {
   const { state: currentFilters, resetState: resetFilters } = filters;

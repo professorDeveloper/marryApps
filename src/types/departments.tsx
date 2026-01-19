@@ -113,3 +113,26 @@ export type IDepartmentTableFilters = {
   search?: string;
   status?: string[];
 };
+
+// ============================================================================
+// CATEGORY TYPES
+// ============================================================================
+
+export type ICategoryItem = {
+  id: string;
+  name: string;
+  picture_url: string;
+  color_code: string;
+  department_id: string;
+  storage_id: string;
+  created_at: string;
+  updated_at: string;
+};
+
+export type ICategoryFormData = {
+  name: string;
+  picture_url?: string;
+  color_code: string;
+  department_id: string;
+};
+

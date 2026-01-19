@@ -1,27 +1,20 @@
 import type { GridColDef } from '@mui/x-data-grid';
 import type { IDepartmentItem } from 'src/types/departments.tsx';
-
 import { useTranslation } from 'react-i18next';
 import { useMemo, useState, useCallback, useEffect } from 'react';
-
 import { useTheme } from '@mui/material/styles';
 import { Avatar, Button, Dialog, DialogTitle, DialogActions, DialogContent, Box, ListItemText } from '@mui/material';
-
 import { paths } from 'src/routes/paths';
 import { useRouter } from 'src/routes/hooks';
-
-import { useGetStorages, useGetDepartments, useDeleteDepartment } from 'src/actions/departments';
-
+import { useGetStorages, useGetDepartments, useDeleteDepartment, useGetCategoriesByDepartment } from 'src/actions/departments';
 import { toast } from 'src/components/snackbar';
 import { Iconify } from 'src/components/iconify';
-import {
-  GenericTableView,
-} from 'src/components/generic-table-view';
+import { GenericTableView } from 'src/components/generic-table-view';
 import { CustomGridActionsCellItem } from 'src/components/custom-data-grid';
 import { GenericViewModal, SpecificationsTable, type SpecificationRow } from 'src/components/generic-view-view';
 import { getFullImageUrl } from 'src/utils/image-url';
 import { getInitials, getAvatarColor } from 'src/utils/avatar';
-
+import { Typography } from '@mui/material'; // agar yo'q bo'lsa
 function RenderCellDepartmentName({ params }: { params: any }) {
   const { row } = params;
   const name = row.name || '-';
@@ -147,6 +140,178 @@ function RenderCellDate({ params, dateField }: { params: any; dateField: string 
     hour: '2-digit',
     minute: '2-digit',
   });
+}
+
+/**
+ * Categories table component for department view modal
+ */
+/**
+ * Categories table component for department view modal
+ */
+function CategoriesTable({ departmentId }: { departmentId: string }) {
+  const { t } = useTranslation('menu');
+  const theme = useTheme();
+  const { categories, categoriesLoading } = useGetCategoriesByDepartment(departmentId);
+  const { storages } = useGetStorages();
+  const [imageUrls, setImageUrls] = useState<{ [key: string]: string | null }>({});
+
+  // Create storage map for quick lookup
+  const storageMap = useMemo(() => {
+    const map = new Map();
+    storages.forEach((storage) => {
+      map.set(storage.id, storage.name);
+    });
+    return map;
+  }, [storages]);
+
+  // Load images for categories
+  useEffect(() => {
+    const loadImages = async () => {
+      const urls: { [key: string]: string | null } = {};
+      for (const category of categories) {
+        if (category.picture_url) {
+          try {
+            const url = await getFullImageUrl(category.picture_url);
+            urls[category.id] = url;
+          } catch (error) {
+            console.error('Failed to load category image:', error);
+            urls[category.id] = null;
+          }
+        } else {
+          urls[category.id] = null;
+        }
+      }
+      setImageUrls(urls);
+    };
+
+    if (categories.length > 0) {
+      loadImages();
+    }
+  }, [categories]);
+
+  if (categoriesLoading) {
+    return (
+      <Typography sx={{ color: 'text.primary' }}>
+        {t('common.loading')}
+      </Typography>
+    );
+  }
+
+  if (!categories || categories.length === 0) {
+    return (
+      <Typography sx={{ color: 'text.primary' }}>
+        {t('common.noData')}
+      </Typography>
+    );
+  }
+
+  return (
+    <Box sx={{ width: '100%', overflowX: 'auto' }}>
+      <Box
+        component="table"
+        sx={{
+          width: '100%',
+          borderCollapse: 'collapse',
+          '& th': {
+            padding: '12px',
+            textAlign: 'left',
+            fontWeight: 600,
+            color: 'text.primary',
+            borderBottom: `2px solid`,
+            borderColor: 'divider',
+          },
+          '& td': {
+            padding: '12px',
+            color: 'text.primary',
+            borderBottom: `1px solid`,
+            borderColor: 'divider',
+          },
+        }}
+      >
+        <thead>
+          <tr>
+            <th>{t('categories.name')}</th>
+            <th>{t('categories.color')}</th>
+            <th>{t('departments.storage')}</th>
+            <th>{t('categories.created')}</th>
+            <th>{t('categories.updated')}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {categories.map((category) => (
+            <tr key={category.id}>
+              <td>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Avatar
+                    alt={category.name}
+                    src={imageUrls[category.id] || undefined}
+                    variant="rounded"
+                    sx={{
+                      width: 40,
+                      height: 40,
+                      bgcolor: imageUrls[category.id] ? undefined : (category.color_code || '#ccc'),
+                      color: '#fff',
+                      fontWeight: 'bold',
+                      borderRadius: '8px',
+                    }}
+                  >
+                    {!imageUrls[category.id] && getInitials(category.name)}
+                  </Avatar>
+                  <Typography sx={{ color: 'text.primary' }}>
+                    {category.name}
+                  </Typography>
+                </Box>
+              </td>
+              <td>
+                {category.color_code ? (
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Box
+                      sx={{
+                        width: 24,
+                        height: 24,
+                        borderRadius: '4px',
+                        bgcolor: category.color_code,
+                        border: '1px solid',
+                        borderColor: 'divider',
+                      }}
+                    />
+                    <Typography sx={{ color: 'text.primary' }}>
+                      {category.color_code}
+                    </Typography>
+                  </Box>
+                ) : (
+                  <Typography sx={{ color: 'text.secondary' }}>-</Typography>
+                )}
+              </td>
+              <td>
+                <Typography sx={{ color: 'text.primary' }}>
+                  {storageMap.get(category.storage_id) || category.storage_id || '-'}
+                </Typography>
+              </td>
+              <td>
+                <Typography sx={{ color: 'text.primary' }}>
+                  {new Date(category.created_at).toLocaleDateString(undefined, {
+                    year: 'numeric',
+                    month: 'short',
+                    day: 'numeric',
+                  })}
+                </Typography>
+              </td>
+              <td>
+                <Typography sx={{ color: 'text.primary' }}>
+                  {new Date(category.updated_at).toLocaleDateString(undefined, {
+                    year: 'numeric',
+                    month: 'short',
+                    day: 'numeric',
+                  })}
+                </Typography>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </Box>
+    </Box>
+  );
 }
 
 export function ProductListView() {
@@ -280,54 +445,11 @@ export function ProductListView() {
 
   // Render specifications for view modal
   const renderDepartmentSpecifications = useCallback((dept: IDepartmentItem) => {
-    const storageName = dept.storage_name || '-';
-
-
-    const specs: SpecificationRow[] = [
-      {
-        label: t('departments.name'),
-        value: dept.name || '-',
-      },
-      {
-        label: t('departments.color'),
-        value: dept.color_code ? (
-          <Box
-            component="span"
-            sx={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 1,
-            }}
-          >
-            <Box
-              sx={{
-                width: 24,
-                height: 24,
-                borderRadius: 1,
-                bgcolor: dept.color_code,
-                border: '1px solid',
-                borderColor: 'divider',
-              }}
-            />
-            {dept.color_code}
-          </Box>
-        ) : '-',
-      },
-      {
-        label: t('departments.storage'),
-        value: storageName || '-',
-      },
-      {
-        label: t('departments.created'),
-        value: new Date(dept.created_at).toLocaleString(),
-      },
-      {
-        label: t('departments.updated'),
-        value: new Date(dept.updated_at).toLocaleString(),
-      },
-    ];
-
-    return <SpecificationsTable rows={specs} />;
+    return (
+      <Box>
+        <CategoriesTable departmentId={dept.id} />
+      </Box>
+    );
   }, [t]);
 
   return (

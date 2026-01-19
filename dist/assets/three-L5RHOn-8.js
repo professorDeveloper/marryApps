@@ -1,1 +1,0 @@
-import{j as t,f as a}from"./index-Dcgtokk2.js";import{B as e}from"./view-SHLcntgN.js";const i={title:`Page three | Dashboard - ${a.appName}`};function n(){return t.jsxs(t.Fragment,{children:[t.jsx("title",{children:i.title}),t.jsx(e,{title:"Sahifa uchinchi"})]})}export{n as default};

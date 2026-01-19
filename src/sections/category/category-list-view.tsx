@@ -1,32 +1,148 @@
 import type { GridColDef } from '@mui/x-data-grid';
 import type { ICategory } from 'src/types/category';
-
 import { useTranslation } from 'react-i18next';
 import { useMemo, useState, useCallback, useEffect } from 'react';
-
 import Box from '@mui/material/Box';
 import Avatar from '@mui/material/Avatar';
 import { useTheme } from '@mui/material/styles';
 import { Button, Dialog, DialogTitle, DialogActions, DialogContent, ListItemText } from '@mui/material';
-
 import { paths } from 'src/routes/paths';
-
 import { useGenericViewModal } from 'src/hooks/use-generic-view-modal';
-
 import { getInitials, getAvatarColor } from 'src/utils/avatar';
 import { getFullImageUrl } from 'src/utils/image-url';
-
-import { useGetCategories, useDeleteCategory } from 'src/actions/categories';
-
+import { useGetCategories, useDeleteCategory, useGetGoodsByCategory } from 'src/actions/categories';
 import { toast } from 'src/components/snackbar';
 import { Iconify } from 'src/components/iconify';
 import { GenericTableView } from 'src/components/generic-table-view';
 import { CustomGridActionsCellItem } from 'src/components/custom-data-grid';
 import { GenericViewModal, SpecificationsTable, type SpecificationRow } from 'src/components/generic-view-view';
 
-// ============================================================================
-// CUSTOM RENDERERS
-// ============================================================================
+/**
+ * Goods table component
+ */
+function GoodsTable({ categoryId }: { categoryId: string }) {
+  const { t } = useTranslation('menu');
+  const { goods, goodsLoading } = useGetGoodsByCategory(categoryId);
+  const [imageUrls, setImageUrls] = useState<{ [key: string]: string | null }>({});
+
+  // Debug log
+  useEffect(() => {
+    console.log('GoodsTable - categoryId:', categoryId);
+    console.log('GoodsTable - goods:', goods);
+    console.log('GoodsTable - goodsLoading:', goodsLoading);
+  }, [categoryId, goods, goodsLoading]);
+
+  // Load images for goods
+  useEffect(() => {
+    const loadImages = async () => {
+      const urls: { [key: string]: string | null } = {};
+      for (const item of goods) {
+        if (item.picture_url) {
+          try {
+            const url = await getFullImageUrl(item.picture_url);
+            urls[item.id] = url;
+          } catch (error) {
+            console.error('Failed to load goods image:', error);
+            urls[item.id] = null;
+          }
+        } else {
+          urls[item.id] = null;
+        }
+      }
+      setImageUrls(urls);
+    };
+
+    if (goods.length > 0) {
+      loadImages();
+    }
+  }, [goods]);
+
+  if (goodsLoading) {
+    return <div>{t('common.loading')}</div>;
+  }
+
+  if (!goods || goods.length === 0) {
+    return <div>{t('common.noData')}</div>;
+  }
+
+  return (
+    <Box sx={{ width: '100%', overflowX: 'auto' }}>
+      <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+        <thead>
+          <tr style={{ borderBottom: '2px solid #f0f0f0' }}>
+            <th style={{ padding: '12px', textAlign: 'left', fontWeight: 600 }}>{t('mealsProducts.name')}</th>
+            <th style={{ padding: '12px', textAlign: 'left', fontWeight: 600 }}>{t('mealsProducts.description')}</th>
+            <th style={{ padding: '12px', textAlign: 'left', fontWeight: 600 }}>{t('mealsProducts.price')}</th>
+            {/* <th style={{ padding: '12px', textAlign: 'left', fontWeight: 600 }}>{t('departments.color')}</th> */}
+            <th style={{ padding: '12px', textAlign: 'left', fontWeight: 600 }}>{t('mealsProducts.cookingTime')}</th>
+            <th style={{ padding: '12px', textAlign: 'left', fontWeight: 600 }}>{t('mealsProducts.createdAt')}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {goods.map((item) => (
+            <tr key={item.id} style={{ borderBottom: '1px solid #f0f0f0' }}>
+              <td style={{ padding: '12px' }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Avatar
+                    alt={item.name}
+                    src={imageUrls[item.id] || undefined}
+                    variant="rounded"
+                    sx={{
+                      width: 40,
+                      height: 40,
+                      bgcolor: imageUrls[item.id] ? undefined : '#ccc',
+                      color: '#fff',
+                      fontWeight: 'bold',
+                      borderRadius: '8px',
+                    }}
+                  >
+                    {!imageUrls[item.id] && getInitials(item.name)}
+                  </Avatar>
+                  <span>{item.name}</span>
+                </Box>
+              </td>
+              <td style={{ padding: '12px', fontSize: '0.875rem', maxWidth: '200px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                {item.description || '-'}
+              </td>
+              <td style={{ padding: '12px' }}>
+                {parseFloat(item.price).toLocaleString()} so'm
+              </td>
+              {/* <td style={{ padding: '12px' }}>
+                {item.color_code ? (
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Box
+                      sx={{
+                        width: 24,
+                        height: 24,
+                        borderRadius: '4px',
+                        bgcolor: item.color_code,
+                        border: '1px solid',
+                        borderColor: 'divider',
+                      }}
+                    />
+                    <span>{item.color_code}</span>
+                  </Box>
+                ) : (
+                  '-'
+                )}
+              </td> */}
+              <td style={{ padding: '12px' }}>
+                {item.cook_time} min
+              </td>
+              <td style={{ padding: '12px' }}>
+                {new Date(item.created_at).toLocaleDateString(undefined, {
+                  year: 'numeric',
+                  month: 'short',
+                  day: 'numeric',
+                })}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </Box>
+  );
+}
 
 /**
  * Category image/avatar renderer
@@ -148,51 +264,13 @@ function RenderCellColor({ params }: { params: any }) {
   );
 }
 
-// ============================================================================
-// SPECIFICATIONS RENDERING
-// ============================================================================
-
 function CategorySpecifications({ category, t }: { category: ICategory; t: any }) {
-  const storageName = category.storage_name || '-';
-  const departmentName = category.department_name || '-';
-
-  const specs: SpecificationRow[] = [
-    { label: t('categories.name'), value: category.name || '-' },
-    {
-      label: t('departments.color'),
-      value: category.color_code ? (
-        <Box
-          component="span"
-          sx={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: 1,
-          }}
-        >
-          <Box
-            sx={{
-              width: 24,
-              height: 24,
-              borderRadius: 1,
-              bgcolor: category.color_code,
-              border: '1px solid',
-              borderColor: 'divider',
-            }}
-          />
-          {category.color_code}
-        </Box>
-      ) : '-',
-    },
-    { label: t('categories.storage'), value: storageName || '-' },
-    { label: t('categories.department'), value: departmentName || '-' },
-  ];
-
-  return <SpecificationsTable rows={specs} />;
+  return (
+    <Box>
+      <GoodsTable categoryId={category.id} />
+    </Box>
+  );
 }
-
-// ============================================================================
-// COMPONENT
-// ============================================================================
 
 export function CategoryListView() {
   console.log('CategoryListView rendered');

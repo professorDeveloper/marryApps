@@ -1,5 +1,5 @@
 import type { SWRConfiguration } from 'swr';
-import type { ICategory, ICategoryFormData } from 'src/types/category';
+import type { ICategory, ICategoryFormData, IGoodsItem } from 'src/types/category';
 
 import useSWR, { mutate } from 'swr';
 import { useMemo, useCallback } from 'react';
@@ -195,3 +195,59 @@ export function useDeleteCategory() {
 
     return { deleteCategory };
 }
+
+// ============================================================================
+// GOODS BY CATEGORY HOOKS
+// ============================================================================
+
+/**
+ * Get goods by category ID
+ */
+export function useGetGoodsByCategory(categoryId: string) {
+    const url = categoryId ? endpoints.category.goods(categoryId) : '';
+
+    const { data, isLoading, error, isValidating } = useSWR<BackendResponse<IGoodsItem[]> | IGoodsItem[]>(
+        url,
+        fetcher,
+        { ...swrOptions }
+    );
+
+    // Debug logging
+    useMemo(() => {
+        console.log('useGetGoodsByCategory - categoryId:', categoryId);
+        console.log('useGetGoodsByCategory - url:', url);
+        console.log('useGetGoodsByCategory - data:', data);
+        console.log('useGetGoodsByCategory - isLoading:', isLoading);
+        console.log('useGetGoodsByCategory - error:', error);
+    }, [categoryId, url, data, isLoading, error]);
+
+    // Handle both response formats
+    const goods = useMemo(() => {
+        if (!data) return [];
+        if (Array.isArray(data)) {
+            // Direct array response
+            console.log('Direct array response:', data);
+            return data;
+        }
+        if ('data' in data) {
+            // Wrapped response
+            console.log('Wrapped response:', (data as BackendResponse<IGoodsItem[]>).data);
+            return (data as BackendResponse<IGoodsItem[]>).data || [];
+        }
+        return [];
+    }, [data]);
+
+    const memoizedValue = useMemo(
+        () => ({
+            goods,
+            goodsLoading: isLoading,
+            goodsError: error,
+            goodsValidating: isValidating,
+            goodsEmpty: !isLoading && !isValidating && !goods?.length,
+        }),
+        [goods, error, isLoading, isValidating]
+    );
+
+    return memoizedValue;
+}
+

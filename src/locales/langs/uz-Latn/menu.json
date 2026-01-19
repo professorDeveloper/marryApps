@@ -462,6 +462,9 @@
       "title": "Kechirasiz, sahifa topilmadi!",
       "description": "Kechirasiz, siz qidirayotgan sahifani topa olmadik. Ehtimol, siz URL'ni noto'g'ri kiritdingiz? Yozuvingizni tekshirib ko'ring.",
       "goHome": "Bosh sahifaga o'tish"
-    }
+    },
+  "common": {
+    "loading": "Yuklanmoqda...",
+    "noData": "Ma'lumot yo'q"
   }
-
+}

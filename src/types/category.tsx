@@ -29,3 +29,22 @@ export type ICategoryFormData = {
 export type ICategoryTableFilters = {
     status: string[];
 };
+
+// ============================================================================
+// GOODS TYPES
+// ============================================================================
+
+export type IGoodsItem = {
+    id: string;
+    name: string;
+    description: string;
+    category_id: string;
+    department_id: string;
+    picture_url: string;
+    price: string;
+    cook_time: number;
+    color_code?: string;
+    created_at: string;
+    updated_at: string;
+};
+

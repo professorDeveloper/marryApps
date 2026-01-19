@@ -5,6 +5,7 @@ import type {
   IDepartmentItem,
   IDepartmentFormData,
   IStorageFormData,
+  ICategoryItem,
 } from 'src/types/departments.tsx';
 
 import useSWR, { mutate } from 'swr';
@@ -187,6 +188,32 @@ export function useDeleteDepartment() {
   );
 
   return { deleteDepartment };
+}
+
+/**
+ * Get categories by department
+ */
+export function useGetCategoriesByDepartment(departmentId: string) {
+  const url = departmentId ? endpoints.department.categories(departmentId) : '';
+
+  const { data, isLoading, error, isValidating } = useSWR<BackendResponse<ICategoryItem[]>>(
+    url,
+    fetcher,
+    { ...swrOptions }
+  );
+
+  const memoizedValue = useMemo(
+    () => ({
+      categories: data?.data || [],
+      categoriesLoading: isLoading,
+      categoriesError: error,
+      categoriesValidating: isValidating,
+      categoriesEmpty: !isLoading && !isValidating && !data?.data?.length,
+    }),
+    [data?.data, error, isLoading, isValidating]
+  );
+
+  return memoizedValue;
 }
 
 // ============================================================================

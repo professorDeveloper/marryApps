@@ -753,7 +753,7 @@ const ProductCalculator = ({ compoundId, mealId, onEntityCreated }: ProductCalcu
                                     }}
                                 />
                             </Box>
-                            <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', flexGrow: 1 }}>
+                            {/* <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', flexGrow: 1 }}>
                                 <Box sx={{ flex: { xs: '1 1 100%', sm: '1 1 auto' }, minWidth: '200px' }}>
                                     <Select
                                         fullWidth
@@ -781,7 +781,7 @@ const ProductCalculator = ({ compoundId, mealId, onEntityCreated }: ProductCalcu
                                         <MenuItem value="asosiy">{t('calculation.mainWarehouse')}</MenuItem>
                                     </Select>
                                 </Box>
-                            </Box>
+                            </Box> */}
                         </Box>
                         <Paper sx={{ borderRadius: 2, overflow: 'hidden' }} elevation={1}>
                             <Box sx={{

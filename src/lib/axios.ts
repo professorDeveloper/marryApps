@@ -129,6 +129,7 @@ export const endpoints = {
     create: '/api/v1/categories',
     update: (id: string) => `/api/v1/categories/${id}`,
     delete: (id: string) => `/api/v1/categories/${id}`,
+    goods: (categoryId: string) => `/api/v1/categories/${categoryId}/goods`,
   },
   user: {
     list: '/api/user/list',
@@ -146,6 +147,7 @@ export const endpoints = {
     create: '/api/v1/departments',
     update: (id: string) => `/api/v1/departments/${id}`,
     delete: (id: string) => `/api/v1/departments/${id}`,
+    categories: (departmentId: string) => `/api/v1/categories/department/${departmentId}`,
   },
   compound: {
     list: '/api/v1/compounds',
