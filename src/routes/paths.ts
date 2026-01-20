@@ -129,6 +129,18 @@ export const paths = {
         details: (id: string) => `${ROOTS.MENU}/warehouse/ingredients/${id}`,
         edit: (id: string) => `${ROOTS.MENU}/warehouse/ingredients/${id}/edit`,
       },
+      invoices: {
+        root: `${ROOTS.MENU}/warehouse/invoices`,
+        new: `${ROOTS.MENU}/warehouse/invoices/new`,
+        details: (id: string) => `${ROOTS.MENU}/warehouse/invoices/${id}`,
+        edit: (id: string) => `${ROOTS.MENU}/warehouse/invoices/${id}/edit`,
+      },
+      invoiceDetails: {
+        root: `${ROOTS.MENU}/warehouse/invoice-details`,
+        new: `${ROOTS.MENU}/warehouse/invoice-details/new`,
+        details: (id: string) => `${ROOTS.MENU}/warehouse/invoice-details/${id}`,
+        edit: (id: string) => `${ROOTS.MENU}/warehouse/invoice-details/${id}/edit`,
+      },
     },
     reports: {
       root: `${ROOTS.MENU}/reports`,

@@ -147,11 +147,11 @@ export function useCreateIngredient() {
         async (formData: IIngredientFormData) => {
             try {
                 // Get brand_id from localStorage (saved from auth)
-                const brandId = localStorage.getItem('brand_id');
+                // const brandId = localStorage.getItem('brand_id');
 
                 const payload = {
                     ...formData,
-                    brand_id: brandId || formData.brand_id,
+                    
                 };
 
                 const response = await poster<IIngredientResponse>(

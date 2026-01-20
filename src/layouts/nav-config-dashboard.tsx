@@ -77,10 +77,12 @@ export const getNavData = (t: TFunction): NavSectionProps['data'] => [
         children: [
           { title: t('overview.warehouse.storage', 'Storage'), path: paths.menu.inventory.root },
           { title: t('overview.warehouse.ingredients', 'Ingredients'), path: paths.menu.warehouse.ingredients.root },
-          { title: t('overview.warehouse.stocks', 'Stocks'), path: paths.menu.warehouse.stocks.root },
-          { title: t('overview.warehouse.transfers', 'Transfers'), path: paths.menu.warehouse.transfers.root },
-          { title: t('overview.warehouse.locations', 'Locations'), path: paths.menu.warehouse.locations.root },
-          { title: t('overview.warehouse.suppliers', 'Suppliers'), path: paths.menu.warehouse.suppliers.root },
+          { title: t('overview.warehouse.invoiceDetails', 'Kirimlar'), path: paths.menu.warehouse.invoiceDetails.root },
+          { title: t('overview.warehouse.invoices', 'Invoices'), path: paths.menu.warehouse.invoices.root },
+          // { title: t('overview.warehouse.stocks', 'Stocks'), path: paths.menu.warehouse.stocks.root },
+          // { title: t('overview.warehouse.transfers', 'Transfers'), path: paths.menu.warehouse.transfers.root },
+          // { title: t('overview.warehouse.locations', 'Locations'), path: paths.menu.warehouse.locations.root },
+          // { title: t('overview.warehouse.suppliers', 'Suppliers'), path: paths.menu.warehouse.suppliers.root },
         ],
       },
       {

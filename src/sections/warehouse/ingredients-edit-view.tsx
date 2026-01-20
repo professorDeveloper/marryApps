@@ -213,7 +213,7 @@ export function IngredientEditView({ isNew = false }: IngredientEditViewProps) {
                 // Small delay to ensure SWR cache is updated
                 await new Promise((resolve) => setTimeout(resolve, 500));
 
-                router.push(paths.menu.warehouse.suppliers.root);
+                router.push(paths.menu.warehouse.ingredients.root);
             } catch (err) {
                 console.error('Error saving ingredient:', err);
                 throw err;
@@ -229,7 +229,7 @@ export function IngredientEditView({ isNew = false }: IngredientEditViewProps) {
                 if (id) {
                     await deleteIngredient(id);
                     await new Promise((resolve) => setTimeout(resolve, 500));
-                    router.push(paths.menu.warehouse.suppliers.root);
+                    router.push(paths.menu.warehouse.ingredients.root);
                 }
             } catch (err) {
                 console.error('Error deleting ingredient:', err);
@@ -247,7 +247,7 @@ export function IngredientEditView({ isNew = false }: IngredientEditViewProps) {
             showBreadcrumbs: false,
             breadcrumbs: [
                 { name: t('app'), href: paths.menu.root },
-                { name: t('ingredients.title'), href: paths.menu.warehouse.suppliers.root },
+                { name: t('ingredients.title'), href: paths.menu.warehouse.ingredients.root },
                 { name: isNew ? t('ingredients.new') : t('ingredients.edit'), href: '' },
             ],
             leftSidecard: IMAGE_SECTION_T,

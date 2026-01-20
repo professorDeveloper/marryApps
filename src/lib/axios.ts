@@ -4,8 +4,6 @@ import axios from 'axios';
 
 import { CONFIG } from 'src/global-config';
 
-// ----------------------------------------------------------------------
-
 const axiosInstance = axios.create({
   baseURL: CONFIG.serverUrl,
   headers: {
@@ -201,7 +199,15 @@ export const endpoints = {
     delete: (id: string) => `/api/v1/branches/${id}`,
   },
   invoice: {
+    list: '/api/v1/invoices',
     details: '/api/v1/invoice-details',
+    create: '/api/v1/invoices',
+    update: (id: string) => `/api/v1/invoices/${id}`,
+    delete: (id: string) => `/api/v1/invoices/${id}`,
+    detailsList: '/api/v1/invoice-details',
+    detailsCreate: '/api/v1/invoice-details',
+    detailsUpdate: (id: string) => `/api/v1/invoice-details/${id}`,
+    detailsDelete: (id: string) => `/api/v1/invoice-details/${id}`,
   },
   users: {
     list: '/api/v1/users',
