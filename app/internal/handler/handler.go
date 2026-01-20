@@ -239,6 +239,7 @@ func (h *Handler) Register(router *echo.Echo) {
 		compounds := api.Group("/compounds", mw.CheckAuth(h.cfg), mw.TenantMiddleware(h.repo))
 		{
 			compounds.POST("", h.CreateCompound, mw.CheckLanguage())
+			compounds.POST("/with-calculations", h.CreateCompoundWithCalculations, mw.CheckLanguage())
 			compounds.GET("", h.GetAllCompounds, mw.CheckLanguage())
 			compounds.GET("/:id/with-calculations", h.GetCompoundWithCalculations, mw.CheckLanguage())
 			compounds.GET("/:id", h.GetCompoundByID, mw.CheckLanguage())
@@ -288,6 +289,7 @@ func (h *Handler) Register(router *echo.Echo) {
 		goods := api.Group("/goods", mw.CheckAuth(h.cfg), mw.TenantMiddleware(h.repo))
 		{
 			goods.POST("", h.CreateGood, mw.CheckLanguage())
+			goods.POST("/with-calculations", h.CreateGoodWithCalculations, mw.CheckLanguage())
 			goods.GET("", h.GetAllGoods, mw.CheckLanguage())
 			goods.GET("/:id/with-calculations", h.GetGoodWithCalculations, mw.CheckLanguage())
 			goods.GET("/:id", h.GetGood, mw.CheckLanguage())

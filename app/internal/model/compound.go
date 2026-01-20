@@ -27,19 +27,20 @@ type UpdateCompoundRequest struct {
 }
 
 type CompoundResponse struct {
-	ID              string     `json:"id" example:"123e4567-e89b-12d3-a456-426614174000"`
-	Name            string     `json:"name" example:"Pizza Dough"`
-	NameI18n        *string    `json:"name_i18n,omitempty" example:"123e4567-e89b-12d3-a456-426614174000"`
-	Description     *string    `json:"description,omitempty" example:"Base dough for all pizzas"`
-	DescriptionI18n *string    `json:"description_i18n,omitempty" example:"123e4567-e89b-12d3-a456-426614174000"`
-	Quantity        int64      `json:"quantity" example:"10"`
-	Measurement     *string    `json:"measurement,omitempty" example:"kg"`
-	PictureUrl      *string    `json:"picture_url,omitempty" example:"https://example.com/pizza-dough.jpg"`
-	ColorCode       *string    `json:"color_code,omitempty" example:"#FF5733"`
-	Price           *string    `json:"price,omitempty" example:"500.50"`
-	DepartmentID    *string    `json:"department_id,omitempty" example:"123e4567-e89b-12d3-a456-426614174000"`
-	CreatedAt       *time.Time `json:"created_at,omitempty" example:"2022-01-01T00:00:00Z"`
-	UpdatedAt       *time.Time `json:"updated_at,omitempty" example:"2022-01-01T00:00:00Z"`
+	ID              string  `json:"id" example:"123e4567-e89b-12d3-a456-426614174000"`
+	Name            string  `json:"name" example:"Pizza Dough"`
+	NameI18n        *string `json:"name_i18n,omitempty" example:"123e4567-e89b-12d3-a456-426614174000"`
+	Description     *string `json:"description,omitempty" example:"Base dough for all pizzas"`
+	DescriptionI18n *string `json:"description_i18n,omitempty" example:"123e4567-e89b-12d3-a456-426614174000"`
+	Quantity        int64   `json:"quantity" example:"10"`
+	Measurement     *string `json:"measurement,omitempty" example:"kg"`
+	PictureUrl      *string `json:"picture_url,omitempty" example:"https://example.com/pizza-dough.jpg"`
+	ColorCode       *string `json:"color_code,omitempty" example:"#FF5733"`
+	// Price - total component cost (auto-calculated from calculations)
+	Price        *string    `json:"price,omitempty" example:"500.50"`
+	DepartmentID *string    `json:"department_id,omitempty" example:"123e4567-e89b-12d3-a456-426614174000"`
+	CreatedAt    *time.Time `json:"created_at,omitempty" example:"2022-01-01T00:00:00Z"`
+	UpdatedAt    *time.Time `json:"updated_at,omitempty" example:"2022-01-01T00:00:00Z"`
 }
 
 type CreateCompoundDetailRequest struct {

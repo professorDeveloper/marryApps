@@ -15,22 +15,140 @@ import (
 	pg "gitlab.yurtal.tech/company/maryai/back/internal/repository/pg/tenantsdb"
 )
 
-// Helper function to convert good response
-func goodToResponse(g pg.Good) *model.GoodResponse {
+// Good row fields interface for converting different row types to response
+type goodRowFields struct {
+	ID              uuid.UUID
+	Name            string
+	Description     *string
+	NameI18n        pgtype.UUID
+	DescriptionI18n pgtype.UUID
+	CategoryID      pgtype.UUID
+	DepartmentID    pgtype.UUID
+	Price           pgtype.Numeric
+	CookTime        *int32
+	PictureUrl      *string
+	ColorCode       *string
+	CostPrice       pgtype.Numeric
+	Profit          pgtype.Numeric
+	ProfitMargin    pgtype.Numeric
+	CreatedAt       pgtype.Timestamptz
+	UpdatedAt       pgtype.Timestamptz
+}
+
+// Helper function to convert any good row type to response
+func goodToResponseAny(row any) *model.GoodResponse {
+	var f goodRowFields
+
+	switch v := row.(type) {
+	case pg.Good:
+		f = goodRowFields{
+			ID: v.ID, Name: v.Name, Description: v.Description, NameI18n: v.NameI18n,
+			DescriptionI18n: v.DescriptionI18n, CategoryID: v.CategoryID, DepartmentID: v.DepartmentID,
+			Price: v.Price, CookTime: v.CookTime, PictureUrl: v.PictureUrl, ColorCode: v.ColorCode,
+			CostPrice: v.CostPrice, Profit: v.Profit, ProfitMargin: v.ProfitMargin,
+			CreatedAt: v.CreatedAt, UpdatedAt: v.UpdatedAt,
+		}
+	case pg.CreateGoodRow:
+		f = goodRowFields{
+			ID: v.ID, Name: v.Name, Description: v.Description, NameI18n: v.NameI18n,
+			DescriptionI18n: v.DescriptionI18n, CategoryID: v.CategoryID, DepartmentID: v.DepartmentID,
+			Price: v.Price, CookTime: v.CookTime, PictureUrl: v.PictureUrl, ColorCode: v.ColorCode,
+			CostPrice: v.CostPrice, Profit: v.Profit, ProfitMargin: v.ProfitMargin,
+			CreatedAt: v.CreatedAt, UpdatedAt: v.UpdatedAt,
+		}
+	case pg.GetGoodByIDRow:
+		f = goodRowFields{
+			ID: v.ID, Name: v.Name, Description: v.Description, NameI18n: v.NameI18n,
+			DescriptionI18n: v.DescriptionI18n, CategoryID: v.CategoryID, DepartmentID: v.DepartmentID,
+			Price: v.Price, CookTime: v.CookTime, PictureUrl: v.PictureUrl, ColorCode: v.ColorCode,
+			CostPrice: v.CostPrice, Profit: v.Profit, ProfitMargin: v.ProfitMargin,
+			CreatedAt: v.CreatedAt, UpdatedAt: v.UpdatedAt,
+		}
+	case pg.GetAllGoodsRow:
+		f = goodRowFields{
+			ID: v.ID, Name: v.Name, Description: v.Description, NameI18n: v.NameI18n,
+			DescriptionI18n: v.DescriptionI18n, CategoryID: v.CategoryID, DepartmentID: v.DepartmentID,
+			Price: v.Price, CookTime: v.CookTime, PictureUrl: v.PictureUrl, ColorCode: v.ColorCode,
+			CostPrice: v.CostPrice, Profit: v.Profit, ProfitMargin: v.ProfitMargin,
+			CreatedAt: v.CreatedAt, UpdatedAt: v.UpdatedAt,
+		}
+	case pg.GetGoodsByCategoryIDRow:
+		f = goodRowFields{
+			ID: v.ID, Name: v.Name, Description: v.Description, NameI18n: v.NameI18n,
+			DescriptionI18n: v.DescriptionI18n, CategoryID: v.CategoryID, DepartmentID: v.DepartmentID,
+			Price: v.Price, CookTime: v.CookTime, PictureUrl: v.PictureUrl, ColorCode: v.ColorCode,
+			CostPrice: v.CostPrice, Profit: v.Profit, ProfitMargin: v.ProfitMargin,
+			CreatedAt: v.CreatedAt, UpdatedAt: v.UpdatedAt,
+		}
+	case pg.GetGoodsByDepartmentIDRow:
+		f = goodRowFields{
+			ID: v.ID, Name: v.Name, Description: v.Description, NameI18n: v.NameI18n,
+			DescriptionI18n: v.DescriptionI18n, CategoryID: v.CategoryID, DepartmentID: v.DepartmentID,
+			Price: v.Price, CookTime: v.CookTime, PictureUrl: v.PictureUrl, ColorCode: v.ColorCode,
+			CostPrice: v.CostPrice, Profit: v.Profit, ProfitMargin: v.ProfitMargin,
+			CreatedAt: v.CreatedAt, UpdatedAt: v.UpdatedAt,
+		}
+	case pg.GetGoodsByPriceRangeRow:
+		f = goodRowFields{
+			ID: v.ID, Name: v.Name, Description: v.Description, NameI18n: v.NameI18n,
+			DescriptionI18n: v.DescriptionI18n, CategoryID: v.CategoryID, DepartmentID: v.DepartmentID,
+			Price: v.Price, CookTime: v.CookTime, PictureUrl: v.PictureUrl, ColorCode: v.ColorCode,
+			CostPrice: v.CostPrice, Profit: v.Profit, ProfitMargin: v.ProfitMargin,
+			CreatedAt: v.CreatedAt, UpdatedAt: v.UpdatedAt,
+		}
+	case pg.UpdateGoodRow:
+		f = goodRowFields{
+			ID: v.ID, Name: v.Name, Description: v.Description, NameI18n: v.NameI18n,
+			DescriptionI18n: v.DescriptionI18n, CategoryID: v.CategoryID, DepartmentID: v.DepartmentID,
+			Price: v.Price, CookTime: v.CookTime, PictureUrl: v.PictureUrl, ColorCode: v.ColorCode,
+			CostPrice: v.CostPrice, Profit: v.Profit, ProfitMargin: v.ProfitMargin,
+			CreatedAt: v.CreatedAt, UpdatedAt: v.UpdatedAt,
+		}
+	case pg.UpdateGoodPriceRow:
+		f = goodRowFields{
+			ID: v.ID, Name: v.Name, Description: v.Description, NameI18n: v.NameI18n,
+			DescriptionI18n: v.DescriptionI18n, CategoryID: v.CategoryID, DepartmentID: v.DepartmentID,
+			Price: v.Price, CookTime: v.CookTime, PictureUrl: v.PictureUrl, ColorCode: v.ColorCode,
+			CostPrice: v.CostPrice, Profit: v.Profit, ProfitMargin: v.ProfitMargin,
+			CreatedAt: v.CreatedAt, UpdatedAt: v.UpdatedAt,
+		}
+	case pg.UpdateGoodCostFieldsRow:
+		f = goodRowFields{
+			ID: v.ID, Name: v.Name, Description: v.Description, NameI18n: v.NameI18n,
+			DescriptionI18n: v.DescriptionI18n, CategoryID: v.CategoryID, DepartmentID: v.DepartmentID,
+			Price: v.Price, CookTime: v.CookTime, PictureUrl: v.PictureUrl, ColorCode: v.ColorCode,
+			CostPrice: v.CostPrice, Profit: v.Profit, ProfitMargin: v.ProfitMargin,
+			CreatedAt: v.CreatedAt, UpdatedAt: v.UpdatedAt,
+		}
+	case pg.SearchGoodsRow:
+		f = goodRowFields{
+			ID: v.ID, Name: v.Name, Description: v.Description, NameI18n: v.NameI18n,
+			DescriptionI18n: v.DescriptionI18n, CategoryID: v.CategoryID, DepartmentID: v.DepartmentID,
+			Price: v.Price, CookTime: v.CookTime, PictureUrl: v.PictureUrl,
+			CostPrice: v.CostPrice, Profit: v.Profit, ProfitMargin: v.ProfitMargin,
+			CreatedAt: v.CreatedAt, UpdatedAt: v.UpdatedAt,
+		}
+	default:
+		return nil
+	}
+
 	return &model.GoodResponse{
-		ID:              g.ID.String(),
-		Name:            g.Name,
-		Description:     g.Description,
-		NameI18n:        uuidToStr(g.NameI18n),
-		DescriptionI18n: uuidToStr(g.DescriptionI18n),
-		CategoryID:      uuidToStr(g.CategoryID),
-		DepartmentID:    uuidToStr(g.DepartmentID),
-		Price:           numericToStringGoods(g.Price),
-		CookTime:        g.CookTime,
-		PictureUrl:      g.PictureUrl,
-		ColorCode:       g.ColorCode,
-		CreatedAt:       timestampToTime(g.CreatedAt),
-		UpdatedAt:       timestampToTime(g.UpdatedAt),
+		ID:              f.ID.String(),
+		Name:            f.Name,
+		Description:     f.Description,
+		NameI18n:        uuidToStr(f.NameI18n),
+		DescriptionI18n: uuidToStr(f.DescriptionI18n),
+		CategoryID:      uuidToStr(f.CategoryID),
+		DepartmentID:    uuidToStr(f.DepartmentID),
+		Price:           numericToStringGoods(f.Price),
+		CookTime:        f.CookTime,
+		PictureUrl:      f.PictureUrl,
+		ColorCode:       f.ColorCode,
+		CostPrice:       numericToStringGoods(f.CostPrice),
+		Profit:          numericToStringGoods(f.Profit),
+		ProfitMargin:    numericToStringGoods(f.ProfitMargin),
+		CreatedAt:       timestampToTime(f.CreatedAt),
+		UpdatedAt:       timestampToTime(f.UpdatedAt),
 	}
 }
 
@@ -110,7 +228,7 @@ func (g *GoodsS) CreateGood(ctx context.Context, name string, description *strin
 		return nil, fmt.Errorf("failed to create good: %w", err)
 	}
 
-	return goodToResponse(good), nil
+	return goodToResponseAny(good), nil
 }
 
 // GetGoodByID retrieves a good by ID
@@ -129,7 +247,7 @@ func (g *GoodsS) GetGoodByID(ctx context.Context, goodID string) (*model.GoodRes
 		return nil, fmt.Errorf("failed to retrieve good: %w", err)
 	}
 
-	return goodToResponse(good), nil
+	return goodToResponseAny(good), nil
 }
 
 // GetAllGoods retrieves all goods with pagination
@@ -145,7 +263,7 @@ func (g *GoodsS) GetAllGoods(ctx context.Context, limit, offset int32) ([]*model
 
 	var responses []*model.GoodResponse
 	for _, good := range goods {
-		responses = append(responses, goodToResponse(good))
+		responses = append(responses, goodToResponseAny(good))
 	}
 	return responses, nil
 }
@@ -169,7 +287,7 @@ func (g *GoodsS) GetGoodsByCategory(ctx context.Context, categoryID string, limi
 
 	var responses []*model.GoodResponse
 	for _, good := range goods {
-		responses = append(responses, goodToResponse(good))
+		responses = append(responses, goodToResponseAny(good))
 	}
 	return responses, nil
 }
@@ -193,7 +311,7 @@ func (g *GoodsS) GetGoodsByDepartment(ctx context.Context, departmentID string, 
 
 	var responses []*model.GoodResponse
 	for _, good := range goods {
-		responses = append(responses, goodToResponse(good))
+		responses = append(responses, goodToResponseAny(good))
 	}
 	return responses, nil
 }
@@ -218,7 +336,7 @@ func (g *GoodsS) GetGoodsByPriceRange(ctx context.Context, minPrice, maxPrice st
 
 	var responses []*model.GoodResponse
 	for _, good := range goods {
-		responses = append(responses, goodToResponse(good))
+		responses = append(responses, goodToResponseAny(good))
 	}
 	return responses, nil
 }
@@ -299,7 +417,7 @@ func (g *GoodsS) UpdateGood(ctx context.Context, goodID string, name, descriptio
 		return nil, fmt.Errorf("failed to update good: %w", err)
 	}
 
-	return goodToResponse(good), nil
+	return goodToResponseAny(good), nil
 }
 
 // UpdateGoodPrice updates the price of a good
@@ -321,7 +439,7 @@ func (g *GoodsS) UpdateGoodPrice(ctx context.Context, goodID, price string) (*mo
 		return nil, fmt.Errorf("failed to update good price: %w", err)
 	}
 
-	return goodToResponse(good), nil
+	return goodToResponseAny(good), nil
 }
 
 // DeleteGood deletes a good
@@ -371,21 +489,7 @@ func (g *GoodsS) SearchGoods(ctx context.Context, query string, limit, offset in
 
 	var responses []*model.GoodResponse
 	for _, good := range goods {
-		responses = append(responses, &model.GoodResponse{
-			ID:              good.ID.String(),
-			Name:            good.Name,
-			Description:     good.Description,
-			NameI18n:        uuidToStr(good.NameI18n),
-			DescriptionI18n: uuidToStr(good.DescriptionI18n),
-			CategoryID:      uuidToStr(good.CategoryID),
-			DepartmentID:    uuidToStr(good.DepartmentID),
-			Price:           fmt.Sprintf("%v", good.Price),
-			CookTime:        good.CookTime,
-			PictureUrl:      good.PictureUrl,
-			ColorCode:       nil, // SearchGoods doesn't include color_code
-			CreatedAt:       timestampToTime(good.CreatedAt),
-			UpdatedAt:       timestampToTime(good.UpdatedAt),
-		})
+		responses = append(responses, goodToResponseAny(good))
 	}
 	return responses, nil
 }

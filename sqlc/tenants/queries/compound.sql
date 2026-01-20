@@ -1,22 +1,22 @@
 -- name: CreateCompound :one
 INSERT INTO compounds (id, name, name_i18n, description, description_i18n, quantity, picture_url, color_code, measurement, price, department_id)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-RETURNING id, name, name_i18n, description, description_i18n, quantity, picture_url, color_code, measurement, price, department_id, created_at, updated_at, deleted_at;
+RETURNING id, name, name_i18n, description, description_i18n, quantity, picture_url, color_code, measurement, price, department_id, cost_price, profit, profit_margin, created_at, updated_at, deleted_at;
 
 -- name: GetCompoundByID :one
-SELECT id, name, name_i18n, description, description_i18n, quantity, picture_url, color_code, measurement, price, department_id, created_at, updated_at, deleted_at
+SELECT id, name, name_i18n, description, description_i18n, quantity, picture_url, color_code, measurement, price, department_id, cost_price, profit, profit_margin, created_at, updated_at, deleted_at
 FROM compounds
 WHERE id = $1 AND deleted_at = 0;
 
 -- name: GetAllCompounds :many
-SELECT id, name, name_i18n, description, description_i18n, quantity, picture_url, color_code, measurement, price, department_id, created_at, updated_at, deleted_at
+SELECT id, name, name_i18n, description, description_i18n, quantity, picture_url, color_code, measurement, price, department_id, cost_price, profit, profit_margin, created_at, updated_at, deleted_at
 FROM compounds
 WHERE deleted_at = 0
 ORDER BY created_at DESC
 LIMIT $1 OFFSET $2;
 
 -- name: GetCompoundsByDepartmentID :many
-SELECT id, name, name_i18n, description, description_i18n, quantity, picture_url, color_code, measurement, price, department_id, created_at, updated_at, deleted_at
+SELECT id, name, name_i18n, description, description_i18n, quantity, picture_url, color_code, measurement, price, department_id, cost_price, profit, profit_margin, created_at, updated_at, deleted_at
 FROM compounds
 WHERE department_id = $1 AND deleted_at = 0
 ORDER BY created_at DESC
@@ -36,14 +36,23 @@ SET name = COALESCE($2, name),
     department_id = COALESCE($11, department_id),
     updated_at = NOW()
 WHERE id = $1 AND deleted_at = 0
-RETURNING id, name, name_i18n, description, description_i18n, quantity, picture_url, color_code, measurement, price, department_id, created_at, updated_at, deleted_at;
+RETURNING id, name, name_i18n, description, description_i18n, quantity, picture_url, color_code, measurement, price, department_id, cost_price, profit, profit_margin, created_at, updated_at, deleted_at;
 
 -- name: UpdateCompoundPrice :one
 UPDATE compounds
 SET price = $2,
     updated_at = NOW()
 WHERE id = $1 AND deleted_at = 0
-RETURNING id, name, name_i18n, description, description_i18n, quantity, picture_url, color_code, measurement, price, department_id, created_at, updated_at, deleted_at;
+RETURNING id, name, name_i18n, description, description_i18n, quantity, picture_url, color_code, measurement, price, department_id, cost_price, profit, profit_margin, created_at, updated_at, deleted_at;
+
+-- name: UpdateCompoundCostFields :one
+UPDATE compounds
+SET cost_price = $2,
+    profit = $3,
+    profit_margin = $4,
+    updated_at = NOW()
+WHERE id = $1 AND deleted_at = 0
+RETURNING id, name, name_i18n, description, description_i18n, quantity, picture_url, color_code, measurement, price, department_id, cost_price, profit, profit_margin, created_at, updated_at, deleted_at;
 
 -- name: DeleteCompound :exec
 UPDATE compounds
@@ -56,7 +65,7 @@ SET deleted_at = 0
 WHERE id = $1 AND deleted_at != 0;
 
 -- name: SearchCompounds :many
-SELECT id, name, name_i18n, description, description_i18n, quantity, picture_url, color_code, measurement, price, department_id, created_at, updated_at, deleted_at
+SELECT id, name, name_i18n, description, description_i18n, quantity, picture_url, color_code, measurement, price, department_id, cost_price, profit, profit_margin, created_at, updated_at, deleted_at
 FROM compounds
 WHERE deleted_at = 0 
 AND (name ILIKE '%' || $1 || '%' OR description ILIKE '%' || $1 || '%')
@@ -81,6 +90,9 @@ SELECT
     c.measurement,
     c.price,
     c.department_id,
+    c.cost_price,
+    c.profit,
+    c.profit_margin,
     c.created_at,
     c.updated_at,
     d.name as department_name

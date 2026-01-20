@@ -16,27 +16,115 @@ import (
 	pg "gitlab.yurtal.tech/company/maryai/back/internal/repository/pg/tenantsdb"
 )
 
-// Helper function to create a compound response
-func compoundToResponse(c pg.Compound) *model.CompoundResponse {
+// Compound row fields for converting different row types to response
+// Note: Compounds don't have cost_price, profit, profit_margin - they're intermediate products
+type compoundRowFields struct {
+	ID              uuid.UUID
+	Name            string
+	NameI18n        pgtype.UUID
+	Description     *string
+	DescriptionI18n pgtype.UUID
+	Quantity        *int32
+	Measurement     pg.NullMeasurementType
+	Price           pgtype.Numeric
+	DepartmentID    pgtype.UUID
+	PictureUrl      *string
+	ColorCode       *string
+	CreatedAt       pgtype.Timestamptz
+	UpdatedAt       pgtype.Timestamptz
+}
+
+// Helper function to convert any compound row type to response
+func compoundToResponseAny(row any) *model.CompoundResponse {
+	var f compoundRowFields
+
+	switch v := row.(type) {
+	case pg.Compound:
+		f = compoundRowFields{
+			ID: v.ID, Name: v.Name, NameI18n: v.NameI18n, Description: v.Description,
+			DescriptionI18n: v.DescriptionI18n, Quantity: v.Quantity, Measurement: v.Measurement,
+			Price: v.Price, DepartmentID: v.DepartmentID, PictureUrl: v.PictureUrl, ColorCode: v.ColorCode,
+			CreatedAt: v.CreatedAt, UpdatedAt: v.UpdatedAt,
+		}
+	case pg.CreateCompoundRow:
+		f = compoundRowFields{
+			ID: v.ID, Name: v.Name, NameI18n: v.NameI18n, Description: v.Description,
+			DescriptionI18n: v.DescriptionI18n, Quantity: v.Quantity, Measurement: v.Measurement,
+			Price: v.Price, DepartmentID: v.DepartmentID, PictureUrl: v.PictureUrl, ColorCode: v.ColorCode,
+			CreatedAt: v.CreatedAt, UpdatedAt: v.UpdatedAt,
+		}
+	case pg.GetCompoundByIDRow:
+		f = compoundRowFields{
+			ID: v.ID, Name: v.Name, NameI18n: v.NameI18n, Description: v.Description,
+			DescriptionI18n: v.DescriptionI18n, Quantity: v.Quantity, Measurement: v.Measurement,
+			Price: v.Price, DepartmentID: v.DepartmentID, PictureUrl: v.PictureUrl, ColorCode: v.ColorCode,
+			CreatedAt: v.CreatedAt, UpdatedAt: v.UpdatedAt,
+		}
+	case pg.GetAllCompoundsRow:
+		f = compoundRowFields{
+			ID: v.ID, Name: v.Name, NameI18n: v.NameI18n, Description: v.Description,
+			DescriptionI18n: v.DescriptionI18n, Quantity: v.Quantity, Measurement: v.Measurement,
+			Price: v.Price, DepartmentID: v.DepartmentID, PictureUrl: v.PictureUrl, ColorCode: v.ColorCode,
+			CreatedAt: v.CreatedAt, UpdatedAt: v.UpdatedAt,
+		}
+	case pg.GetCompoundsByDepartmentIDRow:
+		f = compoundRowFields{
+			ID: v.ID, Name: v.Name, NameI18n: v.NameI18n, Description: v.Description,
+			DescriptionI18n: v.DescriptionI18n, Quantity: v.Quantity, Measurement: v.Measurement,
+			Price: v.Price, DepartmentID: v.DepartmentID, PictureUrl: v.PictureUrl, ColorCode: v.ColorCode,
+			CreatedAt: v.CreatedAt, UpdatedAt: v.UpdatedAt,
+		}
+	case pg.UpdateCompoundRow:
+		f = compoundRowFields{
+			ID: v.ID, Name: v.Name, NameI18n: v.NameI18n, Description: v.Description,
+			DescriptionI18n: v.DescriptionI18n, Quantity: v.Quantity, Measurement: v.Measurement,
+			Price: v.Price, DepartmentID: v.DepartmentID, PictureUrl: v.PictureUrl, ColorCode: v.ColorCode,
+			CreatedAt: v.CreatedAt, UpdatedAt: v.UpdatedAt,
+		}
+	case pg.UpdateCompoundPriceRow:
+		f = compoundRowFields{
+			ID: v.ID, Name: v.Name, NameI18n: v.NameI18n, Description: v.Description,
+			DescriptionI18n: v.DescriptionI18n, Quantity: v.Quantity, Measurement: v.Measurement,
+			Price: v.Price, DepartmentID: v.DepartmentID, PictureUrl: v.PictureUrl, ColorCode: v.ColorCode,
+			CreatedAt: v.CreatedAt, UpdatedAt: v.UpdatedAt,
+		}
+	case pg.UpdateCompoundCostFieldsRow:
+		f = compoundRowFields{
+			ID: v.ID, Name: v.Name, NameI18n: v.NameI18n, Description: v.Description,
+			DescriptionI18n: v.DescriptionI18n, Quantity: v.Quantity, Measurement: v.Measurement,
+			Price: v.Price, DepartmentID: v.DepartmentID, PictureUrl: v.PictureUrl, ColorCode: v.ColorCode,
+			CreatedAt: v.CreatedAt, UpdatedAt: v.UpdatedAt,
+		}
+	case pg.SearchCompoundsRow:
+		f = compoundRowFields{
+			ID: v.ID, Name: v.Name, NameI18n: v.NameI18n, Description: v.Description,
+			DescriptionI18n: v.DescriptionI18n, Quantity: v.Quantity, Measurement: v.Measurement,
+			Price: v.Price, DepartmentID: v.DepartmentID, PictureUrl: v.PictureUrl, ColorCode: v.ColorCode,
+			CreatedAt: v.CreatedAt, UpdatedAt: v.UpdatedAt,
+		}
+	default:
+		return nil
+	}
+
 	qty := int64(0)
-	if c.Quantity != nil {
-		qty = int64(*c.Quantity)
+	if f.Quantity != nil {
+		qty = int64(*f.Quantity)
 	}
 
 	return &model.CompoundResponse{
-		ID:              c.ID.String(),
-		Name:            c.Name,
-		NameI18n:        uuidToStr(c.NameI18n),
-		Description:     c.Description,
-		DescriptionI18n: uuidToStr(c.DescriptionI18n),
+		ID:              f.ID.String(),
+		Name:            f.Name,
+		NameI18n:        uuidToStr(f.NameI18n),
+		Description:     f.Description,
+		DescriptionI18n: uuidToStr(f.DescriptionI18n),
 		Quantity:        qty,
-		Measurement:     toMeasurementString(c.Measurement),
-		Price:           toPriceString(c.Price),
-		DepartmentID:    uuidToStr(c.DepartmentID),
-		PictureUrl:      c.PictureUrl,
-		ColorCode:       c.ColorCode,
-		CreatedAt:       timestampToTime(c.CreatedAt),
-		UpdatedAt:       timestampToTime(c.UpdatedAt),
+		Measurement:     toMeasurementString(f.Measurement),
+		Price:           toPriceString(f.Price),
+		DepartmentID:    uuidToStr(f.DepartmentID),
+		PictureUrl:      f.PictureUrl,
+		ColorCode:       f.ColorCode,
+		CreatedAt:       timestampToTime(f.CreatedAt),
+		UpdatedAt:       timestampToTime(f.UpdatedAt),
 	}
 }
 
@@ -163,27 +251,7 @@ func (c *CompoundS) CreateCompound(ctx context.Context, name string, nameI18n, d
 		return nil, fmt.Errorf("failed to create compound: %w", err)
 	}
 
-	// Convert int32 to int64 for response
-	var qty int64
-	if compound.Quantity != nil {
-		qty = int64(*compound.Quantity)
-	}
-
-	return &model.CompoundResponse{
-		ID:              compound.ID.String(),
-		Name:            compound.Name,
-		NameI18n:        uuidToStr(compound.NameI18n),
-		Description:     compound.Description,
-		DescriptionI18n: uuidToStr(compound.DescriptionI18n),
-		Quantity:        qty,
-		Measurement:     toMeasurementString(compound.Measurement),
-		Price:           toPriceString(compound.Price),
-		DepartmentID:    uuidToStr(compound.DepartmentID),
-		PictureUrl:      compound.PictureUrl,
-		ColorCode:       compound.ColorCode,
-		CreatedAt:       timestampToTime(compound.CreatedAt),
-		UpdatedAt:       timestampToTime(compound.UpdatedAt),
-	}, nil
+	return compoundToResponseAny(compound), nil
 }
 
 func (c *CompoundS) GetCompoundByID(ctx context.Context, compoundID string) (*model.CompoundResponse, error) {
@@ -201,7 +269,7 @@ func (c *CompoundS) GetCompoundByID(ctx context.Context, compoundID string) (*mo
 		return nil, fmt.Errorf("failed to retrieve compound: %w", err)
 	}
 
-	return compoundToResponse(compound), nil
+	return compoundToResponseAny(compound), nil
 }
 
 func (c *CompoundS) GetAllCompounds(ctx context.Context, limit, offset int32) ([]*model.CompoundResponse, error) {
@@ -216,7 +284,7 @@ func (c *CompoundS) GetAllCompounds(ctx context.Context, limit, offset int32) ([
 
 	var responses []*model.CompoundResponse
 	for _, comp := range compounds {
-		responses = append(responses, compoundToResponse(comp))
+		responses = append(responses, compoundToResponseAny(comp))
 	}
 	return responses, nil
 }
@@ -239,7 +307,7 @@ func (c *CompoundS) GetCompoundsByDepartmentID(ctx context.Context, departmentID
 
 	var responses []*model.CompoundResponse
 	for _, comp := range compounds {
-		responses = append(responses, compoundToResponse(comp))
+		responses = append(responses, compoundToResponseAny(comp))
 	}
 	return responses, nil
 }
@@ -341,7 +409,7 @@ func (c *CompoundS) UpdateCompound(ctx context.Context, compoundID string, name,
 		return nil, fmt.Errorf("failed to update compound: %w", err)
 	}
 
-	return compoundToResponse(compound), nil
+	return compoundToResponseAny(compound), nil
 }
 
 // DeleteCompound soft deletes a compound
@@ -391,7 +459,7 @@ func (c *CompoundS) SearchCompounds(ctx context.Context, query string, limit, of
 
 	var responses []*model.CompoundResponse
 	for _, comp := range compounds {
-		responses = append(responses, compoundToResponse(comp))
+		responses = append(responses, compoundToResponseAny(comp))
 	}
 	return responses, nil
 }
@@ -868,7 +936,7 @@ func (c *CompoundS) RecalculateCompoundPrice(ctx context.Context, compoundID str
 			}
 		}
 	}
-	
+
 	log.Printf("RecalculateCompoundPrice: Total price calculated = %.2f", totalPrice)
 
 	// Update the compound price
@@ -883,5 +951,5 @@ func (c *CompoundS) RecalculateCompoundPrice(ctx context.Context, compoundID str
 		return nil, fmt.Errorf("failed to update compound: %w", err)
 	}
 
-	return compoundToResponse(updated), nil
+	return compoundToResponseAny(updated), nil
 }

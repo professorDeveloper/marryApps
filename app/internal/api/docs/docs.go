@@ -4100,6 +4100,70 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/compounds/with-calculations": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Create a new compound with its ingredient/child compound calculations in one atomic transaction.\n\n**How it works:**\n- Create the compound first\n- Then create all ingredient calculations (price from invoice_detail)\n- Then create all child compound calculations (price from child compound's price)\n- If any calculation fails, everything is rolled back (compound won't be created)\n- Compound price is auto-calculated as sum of all calculation total_costs\n\n**Example Request:**\n` + "`" + `` + "`" + `` + "`" + `json\n{\n\"compound\": { \"name\": \"Pizza Dough\", \"quantity\": 1, \"measurement\": \"kg\" },\n\"ingredient_calculations\": [\n{ \"ingredient_id\": \"flour-uuid\", \"quantity\": \"0.5\" },\n{ \"ingredient_id\": \"water-uuid\", \"quantity\": \"0.3\" }\n],\n\"compound_calculations\": [\n{ \"compound_id\": \"yeast-mix-uuid\", \"quantity\": \"1\" }\n]\n}\n` + "`" + `` + "`" + `` + "`" + `",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "compounds"
+                ],
+                "summary": "Create compound with multiple ingredients and child compounds (One Save)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "default": "uz",
+                        "description": "Language (uz, ru, en)",
+                        "name": "lang",
+                        "in": "query"
+                    },
+                    {
+                        "description": "Compound + ingredients + child compounds",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.CreateCompoundWithCalculationsRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Compound and all calculations created successfully",
+                        "schema": {
+                            "$ref": "#/definitions/model.CompoundWithCalculationsResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request (missing fields, invalid UUIDs, etc.)",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal error (ingredient not found, no invoice, etc.)",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/compounds/{compound_id}/details": {
             "get": {
                 "security": [
@@ -6235,6 +6299,70 @@ const docTemplate = `{
                     },
                     "500": {
                         "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/goods/with-calculations": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Create a new good/menu item with its ingredient/compound calculations in one atomic transaction.\n\n**How it works:**\n- Create the good first\n- Then create all ingredient calculations (price from invoice_detail)\n- Then create all compound calculations (price from compound.price)\n- If any calculation fails, everything is rolled back (good won't be created)\n\n**Example Request:**\n` + "`" + `` + "`" + `` + "`" + `json\n{\n\"good\": { \"name\": \"Osh\", \"price\": \"85000.00\" },\n\"ingredient_calculations\": [\n{ \"ingredient_id\": \"sabzi-uuid\", \"quantity\": \"2.5\" },\n{ \"ingredient_id\": \"guruch-uuid\", \"quantity\": \"0.5\" }\n],\n\"compound_calculations\": [\n{ \"compound_id\": \"salad-uuid\", \"quantity\": \"3\" },\n{ \"compound_id\": \"xamir-uuid\", \"quantity\": \"1\" }\n]\n}\n` + "`" + `` + "`" + `` + "`" + `",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Goods"
+                ],
+                "summary": "Create good with multiple ingredients and compounds (One Save)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "default": "uz",
+                        "description": "Language (uz, ru, en)",
+                        "name": "lang",
+                        "in": "query"
+                    },
+                    {
+                        "description": "Good + ingredients + compounds",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.CreateGoodWithCalculationsRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Good and all calculations created successfully",
+                        "schema": {
+                            "$ref": "#/definitions/model.GoodWithCalculationsResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request (missing fields, invalid UUIDs, etc.)",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal error (ingredient not found, no invoice for ingredient, etc.)",
                         "schema": {
                             "$ref": "#/definitions/model.ErrorResponse"
                         }
@@ -14648,6 +14776,25 @@ const docTemplate = `{
                 }
             }
         },
+        "model.CompoundCalculationItem": {
+            "type": "object",
+            "required": [
+                "compound_id",
+                "quantity"
+            ],
+            "properties": {
+                "compound_id": {
+                    "description": "CompoundID - UUID of the compound to add",
+                    "type": "string",
+                    "example": "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+                },
+                "quantity": {
+                    "description": "Quantity - amount to add (e.g., \"3\" for 3 units)",
+                    "type": "string",
+                    "example": "3"
+                }
+            }
+        },
         "model.CompoundCalculationResponse": {
             "type": "object",
             "properties": {
@@ -14756,6 +14903,7 @@ const docTemplate = `{
                     "example": "https://example.com/pizza-dough.jpg"
                 },
                 "price": {
+                    "description": "Price - total component cost (auto-calculated from calculations)",
                     "type": "string",
                     "example": "500.50"
                 },
@@ -14795,6 +14943,26 @@ const docTemplate = `{
                 "updated_at": {
                     "type": "string",
                     "example": "2022-01-01T00:00:00Z"
+                }
+            }
+        },
+        "model.CompoundWithCalculationsResponse": {
+            "type": "object",
+            "properties": {
+                "calculations": {
+                    "description": "Calculations - all calculation records created for this compound",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.CalculationResponse"
+                    }
+                },
+                "compound": {
+                    "description": "Compound - the created compound (price will be auto-calculated)",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/model.CompoundResponse"
+                        }
+                    ]
                 }
             }
         },
@@ -15001,6 +15169,36 @@ const docTemplate = `{
                 }
             }
         },
+        "model.CreateCompoundWithCalculationsRequest": {
+            "type": "object",
+            "required": [
+                "compound"
+            ],
+            "properties": {
+                "compound": {
+                    "description": "Compound - the compound to create",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/model.CreateCompoundRequest"
+                        }
+                    ]
+                },
+                "compound_calculations": {
+                    "description": "CompoundCalculations - array of child compounds to add (price from compound.price)",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.CompoundCalculationItem"
+                    }
+                },
+                "ingredient_calculations": {
+                    "description": "IngredientCalculations - array of ingredients to add (price from invoice_detail)",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.IngredientCalculationItem"
+                    }
+                }
+            }
+        },
         "model.CreateDepartmentRequest": {
             "type": "object",
             "properties": {
@@ -15121,6 +15319,36 @@ const docTemplate = `{
                 "price": {
                     "type": "string",
                     "example": "15000.00"
+                }
+            }
+        },
+        "model.CreateGoodWithCalculationsRequest": {
+            "type": "object",
+            "required": [
+                "good"
+            ],
+            "properties": {
+                "compound_calculations": {
+                    "description": "CompoundCalculations - array of compounds to add (price from compound.price)",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.CompoundCalculationItem"
+                    }
+                },
+                "good": {
+                    "description": "Good - the good/menu item to create",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/model.CreateGoodRequest"
+                        }
+                    ]
+                },
+                "ingredient_calculations": {
+                    "description": "IngredientCalculations - array of ingredients to add (price from invoice_detail)",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.IngredientCalculationItem"
+                    }
                 }
             }
         },
@@ -15621,6 +15849,11 @@ const docTemplate = `{
                     "type": "integer",
                     "example": 30
                 },
+                "cost_price": {
+                    "description": "CostPrice - total preparation cost (auto-calculated from calculations)",
+                    "type": "string",
+                    "example": "10500.00"
+                },
                 "created_at": {
                     "type": "string",
                     "example": "2022-01-01T00:00:00Z"
@@ -15657,9 +15890,39 @@ const docTemplate = `{
                     "type": "string",
                     "example": "15000.00"
                 },
+                "profit": {
+                    "description": "Profit - selling price minus cost (auto-calculated)",
+                    "type": "string",
+                    "example": "4500.00"
+                },
+                "profit_margin": {
+                    "description": "ProfitMargin - profit percentage relative to cost (auto-calculated) = (profit/cost)*100",
+                    "type": "string",
+                    "example": "42.86"
+                },
                 "updated_at": {
                     "type": "string",
                     "example": "2022-01-01T00:00:00Z"
+                }
+            }
+        },
+        "model.GoodWithCalculationsResponse": {
+            "type": "object",
+            "properties": {
+                "calculations": {
+                    "description": "Calculations - all calculation records created for this good",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.CalculationResponse"
+                    }
+                },
+                "good": {
+                    "description": "Good - the created good/menu item",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/model.GoodResponse"
+                        }
+                    ]
                 }
             }
         },
@@ -15694,6 +15957,25 @@ const docTemplate = `{
                 },
                 "provider": {
                     "type": "string"
+                }
+            }
+        },
+        "model.IngredientCalculationItem": {
+            "type": "object",
+            "required": [
+                "ingredient_id",
+                "quantity"
+            ],
+            "properties": {
+                "ingredient_id": {
+                    "description": "IngredientID - UUID of the ingredient to add",
+                    "type": "string",
+                    "example": "522e5a6a-f5c2-4280-b33b-6f466adabe23"
+                },
+                "quantity": {
+                    "description": "Quantity - amount to add (e.g., \"2.5\" for 2.5 kg)",
+                    "type": "string",
+                    "example": "2.5"
                 }
             }
         },
@@ -17125,9 +17407,9 @@ const docTemplate = `{
 // SwaggerInfo holds exported Swagger Info so clients can modify it
 var SwaggerInfo = &swag.Spec{
 	Version:          "1.0",
-	Host:             "back.maryai.yurtal.tech",
+	Host:             "localhost:8080",
 	BasePath:         "/",
-	Schemes:          []string{"https"},
+	Schemes:          []string{"http"},
 	Title:            "MaryAI API",
 	Description:      "MaryAI API server with multi-language support (uz, ru, en)",
 	InfoInstanceName: "swagger",

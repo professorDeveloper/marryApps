@@ -309,6 +309,12 @@ type Compound struct {
 	CreatedAt       pgtype.Timestamptz  `json:"created_at"`
 	UpdatedAt       pgtype.Timestamptz  `json:"updated_at"`
 	DeletedAt       *int64              `json:"deleted_at"`
+	// Total preparation cost (sum of all calculations total_cost)
+	CostPrice pgtype.Numeric `json:"cost_price"`
+	// Profit = price - cost_price
+	Profit pgtype.Numeric `json:"profit"`
+	// Profit margin percentage = (profit / cost_price) * 100
+	ProfitMargin pgtype.Numeric `json:"profit_margin"`
 }
 
 type CompoundStock struct {
@@ -358,6 +364,12 @@ type Good struct {
 	CreatedAt       pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
 	DeletedAt       *int64             `json:"deleted_at"`
+	// Total preparation cost (sum of all calculations total_cost)
+	CostPrice pgtype.Numeric `json:"cost_price"`
+	// Profit = price - cost_price
+	Profit pgtype.Numeric `json:"profit"`
+	// Profit margin percentage = (profit / cost_price) * 100
+	ProfitMargin pgtype.Numeric `json:"profit_margin"`
 }
 
 type GoodsDetail struct {

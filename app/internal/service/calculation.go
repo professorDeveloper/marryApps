@@ -120,6 +120,88 @@ func (c *CalculationS) updateCompoundPriceFromCalculations(ctx context.Context, 
 		return fmt.Errorf("failed to update compound price: %w", err)
 	}
 
+	// Also update the compound's cost_price, profit, profit_margin fields
+	return c.UpdateCompoundCostFields(ctx, compoundID)
+}
+
+// UpdateGoodCostFields recalculates and stores cost_price, profit, profit_margin for a good
+// Should be called after any calculation is created/updated/deleted for a good
+func (c *CalculationS) UpdateGoodCostFields(ctx context.Context, goodID string) error {
+	goodUUID, err := uuid.Parse(goodID)
+	if err != nil {
+		return fmt.Errorf("invalid good_id: %w", err)
+	}
+
+	// Get the good to get its selling price
+	good, err := c.repo.Tenant(ctx).GetGoodByID(ctx, goodUUID)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return nil // Good doesn't exist, nothing to update
+		}
+		return fmt.Errorf("failed to fetch good: %w", err)
+	}
+
+	// Calculate total cost from calculations
+	totalCostStr, err := c.GetTotalCostByGoodID(ctx, goodID)
+	if err != nil {
+		return fmt.Errorf("failed to get total cost: %w", err)
+	}
+
+	sellingPrice, _ := strconv.ParseFloat(numericToStr(good.Price), 64)
+	totalCost, _ := strconv.ParseFloat(totalCostStr, 64)
+
+	// Calculate profit and profit margin
+	profit := sellingPrice - totalCost
+	var profitMargin float64
+	if totalCost > 0 {
+		profitMargin = (profit / totalCost) * 100
+	}
+
+	// Update the good's cost fields in DB
+	_, err = c.repo.Tenant(ctx).UpdateGoodCostFields(ctx, pg.UpdateGoodCostFieldsParams{
+		ID:           goodUUID,
+		CostPrice:    stringToNumeric(fmt.Sprintf("%.2f", totalCost)),
+		Profit:       stringToNumeric(fmt.Sprintf("%.2f", profit)),
+		ProfitMargin: stringToNumeric(fmt.Sprintf("%.4f", profitMargin)),
+	})
+	if err != nil {
+		log.Printf("UpdateGoodCostFields failed: %v", err)
+		return fmt.Errorf("failed to update good cost fields: %w", err)
+	}
+
+	return nil
+}
+
+// UpdateCompoundCostFields recalculates and stores cost_price for a compound
+// For compounds: price = total_cost (auto-calculated), no profit/profit_margin
+// Compounds are intermediate products, not sold directly to customers
+func (c *CalculationS) UpdateCompoundCostFields(ctx context.Context, compoundID string) error {
+	compoundUUID, err := uuid.Parse(compoundID)
+	if err != nil {
+		return fmt.Errorf("invalid compound_id: %w", err)
+	}
+
+	// Calculate total cost from calculations
+	totalCostStr, err := c.GetTotalCostByCompoundID(ctx, compoundID)
+	if err != nil {
+		return fmt.Errorf("failed to get total cost: %w", err)
+	}
+
+	totalCost, _ := strconv.ParseFloat(totalCostStr, 64)
+
+	// For compounds: price = cost_price = total_cost, profit = 0, profit_margin = 0
+	// Compounds are intermediate products, they don't have a separate selling price
+	_, err = c.repo.Tenant(ctx).UpdateCompoundCostFields(ctx, pg.UpdateCompoundCostFieldsParams{
+		ID:           compoundUUID,
+		CostPrice:    stringToNumeric(fmt.Sprintf("%.2f", totalCost)),
+		Profit:       stringToNumeric("0"),
+		ProfitMargin: stringToNumeric("0"),
+	})
+	if err != nil {
+		log.Printf("UpdateCompoundCostFields failed: %v", err)
+		return fmt.Errorf("failed to update compound cost fields: %w", err)
+	}
+
 	return nil
 }
 
@@ -202,6 +284,11 @@ func (c *CalculationS) CreateCalculationWithCompound(ctx context.Context, goodID
 	if err != nil {
 		log.Printf("CreateCalculationWithCompound failed: %v", err)
 		return nil, fmt.Errorf("failed to create calculation: %w", err)
+	}
+
+	// Update good's cost fields (cost_price, profit, profit_margin)
+	if err := c.UpdateGoodCostFields(ctx, goodID); err != nil {
+		log.Printf("CreateCalculationWithCompound: failed to update good cost fields: %v", err)
 	}
 
 	return toCalculationResponseAny(calculation), nil
@@ -395,6 +482,13 @@ func (c *CalculationS) createCalculationInternal(ctx context.Context, goodID, co
 		}
 	}
 
+	// If this calculation is for a good, update its cost fields (cost_price, profit, profit_margin)
+	if goodID != nil && *goodID != "" {
+		if err := c.UpdateGoodCostFields(ctx, *goodID); err != nil {
+			log.Printf("CreateCalculation: failed to update good cost fields: %v", err)
+		}
+	}
+
 	return toCalculationResponseAny(calculation), nil
 }
 
@@ -551,6 +645,13 @@ func (c *CalculationS) UpdateCalculation(ctx context.Context, calculationID stri
 		}
 	}
 
+	// Update good's cost fields if this calculation is for a good
+	if calculation.GoodID.Valid {
+		if err := c.UpdateGoodCostFields(ctx, calculation.GoodID.String()); err != nil {
+			log.Printf("UpdateCalculation: failed to update good cost fields: %v", err)
+		}
+	}
+
 	return toCalculationResponseAny(calculation), nil
 }
 
@@ -581,6 +682,13 @@ func (c *CalculationS) DeleteCalculation(ctx context.Context, calculationID stri
 		}
 	}
 
+	// Update good's cost fields if this calculation was for a good
+	if calc.GoodID.Valid {
+		if err := c.UpdateGoodCostFields(ctx, calc.GoodID.String()); err != nil {
+			log.Printf("DeleteCalculation: failed to update good cost fields: %v", err)
+		}
+	}
+
 	return nil
 }
 
@@ -594,6 +702,11 @@ func (c *CalculationS) DeleteCalculationsByGoodID(ctx context.Context, goodID st
 	if err := c.repo.Tenant(ctx).DeleteCalculationsByGoodID(ctx, uuidToPgType(&id)); err != nil {
 		log.Printf("DeleteCalculationsByGoodID failed: %v", err)
 		return fmt.Errorf("failed to delete calculations: %w", err)
+	}
+
+	// Update good's cost fields (will set to 0 since no calculations)
+	if err := c.UpdateGoodCostFields(ctx, goodID); err != nil {
+		log.Printf("DeleteCalculationsByGoodID: failed to update good cost fields: %v", err)
 	}
 
 	return nil
@@ -658,9 +771,11 @@ func (c *CalculationS) GetGoodWithCalculations(ctx context.Context, goodID strin
 	totalCost, _ := strconv.ParseFloat(totalCostStr, 64)
 	profit := sellingPrice - totalCost
 
+	// Calculate profit margin as: (profit / total_cost) × 100
+	// This shows markup percentage - how much profit relative to cost
 	var profitMargin string
-	if sellingPrice > 0 {
-		margin := (profit / sellingPrice) * 100
+	if totalCost > 0 {
+		margin := (profit / totalCost) * 100
 		profitMargin = fmt.Sprintf("%.2f%%", margin)
 	} else {
 		profitMargin = "0%"
@@ -677,7 +792,9 @@ func (c *CalculationS) GetGoodWithCalculations(ctx context.Context, goodID strin
 	}, nil
 }
 
-// GetCompoundWithCalculations retrieves a compound with all its calculations and profit info
+// GetCompoundWithCalculations retrieves a compound with all its calculations
+// Note: Compounds are intermediate products, so profit = 0 and profit_margin = 0
+// The compound's price = total cost of all components (auto-calculated)
 func (c *CalculationS) GetCompoundWithCalculations(ctx context.Context, compoundID string) (*model.CompoundCalculationResponse, error) {
 	id, err := uuid.Parse(compoundID)
 	if err != nil {
@@ -708,34 +825,23 @@ func (c *CalculationS) GetCompoundWithCalculations(ctx context.Context, compound
 		}
 	}
 
-	// Get total cost
+	// Get total cost (which equals compound's price for intermediate products)
 	totalCostStr, err := c.GetTotalCostByCompoundID(ctx, compoundID)
 	if err != nil {
 		log.Printf("GetTotalCostByCompoundID failed: %v", err)
 		totalCostStr = "0"
 	}
 
-	// Calculate profit and profit margin
-	sellingPrice, _ := strconv.ParseFloat(numericToStr(compound.Price), 64)
-	totalCost, _ := strconv.ParseFloat(totalCostStr, 64)
-	profit := sellingPrice - totalCost
-
-	var profitMargin string
-	if sellingPrice > 0 {
-		margin := (profit / sellingPrice) * 100
-		profitMargin = fmt.Sprintf("%.2f%%", margin)
-	} else {
-		profitMargin = "0%"
-	}
-
+	// Compounds are intermediate products - no profit margin
+	// Price = TotalCost, Profit = 0, ProfitMargin = 0
 	return &model.CompoundCalculationResponse{
 		ID:           compound.ID.String(),
 		Name:         compound.Name,
 		Price:        numericToStr(compound.Price),
 		Calculations: calculations,
 		TotalCost:    totalCostStr,
-		Profit:       fmt.Sprintf("%.2f", profit),
-		ProfitMargin: profitMargin,
+		Profit:       "0",
+		ProfitMargin: "0%",
 	}, nil
 }
 

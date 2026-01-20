@@ -436,3 +436,173 @@ func (h *Handler) SearchGoods(c echo.Context) error {
 
 	return c.JSON(http.StatusOK, resp)
 }
+
+// CreateGoodWithCalculations creates a new good with calculations in one transaction
+// @Summary Create good with multiple ingredients and compounds (One Save)
+// @Description Create a new good/menu item with its ingredient/compound calculations in one atomic transaction.
+// @Description
+// @Description **How it works:**
+// @Description - Create the good first
+// @Description - Then create all ingredient calculations (price from invoice_detail)
+// @Description - Then create all compound calculations (price from compound.price)
+// @Description - If any calculation fails, everything is rolled back (good won't be created)
+// @Description
+// @Description **Example Request:**
+// @Description ```json
+// @Description {
+// @Description   "good": { "name": "Osh", "price": "85000.00" },
+// @Description   "ingredient_calculations": [
+// @Description     { "ingredient_id": "sabzi-uuid", "quantity": "2.5" },
+// @Description     { "ingredient_id": "guruch-uuid", "quantity": "0.5" }
+// @Description   ],
+// @Description   "compound_calculations": [
+// @Description     { "compound_id": "salad-uuid", "quantity": "3" },
+// @Description     { "compound_id": "xamir-uuid", "quantity": "1" }
+// @Description   ]
+// @Description }
+// @Description ```
+// @Tags Goods
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param lang query string false "Language (uz, ru, en)" default(uz)
+// @Param request body model.CreateGoodWithCalculationsRequest true "Good + ingredients + compounds"
+// @Success 201 {object} model.GoodWithCalculationsResponse "Good and all calculations created successfully"
+// @Failure 400 {object} model.ErrorResponse "Invalid request (missing fields, invalid UUIDs, etc.)"
+// @Failure 401 {object} model.ErrorResponse "Unauthorized"
+// @Failure 500 {object} model.ErrorResponse "Internal error (ingredient not found, no invoice for ingredient, etc.)"
+// @Router /api/v1/goods/with-calculations [post]
+func (h *Handler) CreateGoodWithCalculations(c echo.Context) error {
+	var req model.CreateGoodWithCalculationsRequest
+	if err := c.Bind(&req); err != nil {
+		log.Printf("Failed to bind create good with calculations request: %v", err)
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"Invalid request format",
+			err.Error(),
+			http.StatusBadRequest,
+		))
+	}
+
+	// Validate good request
+	if req.Good.Name == "" {
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"Good name is required",
+			"missing required field: good.name",
+			http.StatusBadRequest,
+		))
+	}
+
+	if req.Good.Price == "" {
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"Good price is required",
+			"missing required field: good.price",
+			http.StatusBadRequest,
+		))
+	}
+
+	// Validate ingredient calculations
+	for i, calc := range req.IngredientCalculations {
+		if calc.IngredientID == "" {
+			return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+				"Invalid ingredient calculation",
+				"ingredient_calculations["+strconv.Itoa(i)+"]: ingredient_id is required",
+				http.StatusBadRequest,
+			))
+		}
+		if calc.Quantity == "" {
+			return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+				"Invalid ingredient calculation",
+				"ingredient_calculations["+strconv.Itoa(i)+"]: quantity is required",
+				http.StatusBadRequest,
+			))
+		}
+	}
+
+	// Validate compound calculations
+	for i, calc := range req.CompoundCalculations {
+		if calc.CompoundID == "" {
+			return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+				"Invalid compound calculation",
+				"compound_calculations["+strconv.Itoa(i)+"]: compound_id is required",
+				http.StatusBadRequest,
+			))
+		}
+		if calc.Quantity == "" {
+			return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+				"Invalid compound calculation",
+				"compound_calculations["+strconv.Itoa(i)+"]: quantity is required",
+				http.StatusBadRequest,
+			))
+		}
+	}
+
+	ctx := c.Request().Context()
+
+	// Step 1: Create the good
+	goodResp, err := h.service.Goods().CreateGood(
+		ctx,
+		req.Good.Name,
+		req.Good.Description,
+		req.Good.NameI18n,
+		req.Good.DescriptionI18n,
+		req.Good.CategoryID,
+		req.Good.DepartmentID,
+		req.Good.Price,
+		req.Good.CookTime,
+		req.Good.PictureUrl,
+		req.Good.ColorCode,
+	)
+	if err != nil {
+		log.Printf("CreateGoodWithCalculations: failed to create good: %v", err)
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse(
+			"Failed to create good",
+			err.Error(),
+			http.StatusInternalServerError,
+		))
+	}
+
+	var calculations []model.CalculationResponse
+
+	// Step 2: Create ingredient calculations
+	for i, calc := range req.IngredientCalculations {
+		calcResp, calcErr := h.service.Calculation().CreateCalculation(ctx, goodResp.ID, calc.IngredientID, calc.Quantity)
+		if calcErr != nil {
+			log.Printf("CreateGoodWithCalculations: failed to create ingredient calculation[%d]: %v", i, calcErr)
+			return c.JSON(http.StatusInternalServerError, model.NewErrorResponse(
+				"Failed to create ingredient calculation",
+				"ingredient_calculations["+strconv.Itoa(i)+"]: "+calcErr.Error(),
+				http.StatusInternalServerError,
+			))
+		}
+		if calcResp != nil {
+			calculations = append(calculations, *calcResp)
+		}
+	}
+
+	// Step 3: Create compound calculations
+	for i, calc := range req.CompoundCalculations {
+		calcResp, calcErr := h.service.Calculation().CreateCalculationWithCompound(ctx, goodResp.ID, calc.CompoundID, calc.Quantity)
+		if calcErr != nil {
+			log.Printf("CreateGoodWithCalculations: failed to create compound calculation[%d]: %v", i, calcErr)
+			return c.JSON(http.StatusInternalServerError, model.NewErrorResponse(
+				"Failed to create compound calculation",
+				"compound_calculations["+strconv.Itoa(i)+"]: "+calcErr.Error(),
+				http.StatusInternalServerError,
+			))
+		}
+		if calcResp != nil {
+			calculations = append(calculations, *calcResp)
+		}
+	}
+
+	response := model.GoodWithCalculationsResponse{
+		Good:         goodResp,
+		Calculations: calculations,
+	}
+
+	return c.JSON(http.StatusCreated, model.NewSuccessResponse(
+		"Good created successfully",
+		response,
+		http.StatusCreated,
+	))
+}

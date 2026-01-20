@@ -120,7 +120,7 @@ func (q *Queries) CountCompoundsByDepartment(ctx context.Context, departmentID p
 const createCompound = `-- name: CreateCompound :one
 INSERT INTO compounds (id, name, name_i18n, description, description_i18n, quantity, picture_url, color_code, measurement, price, department_id)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-RETURNING id, name, name_i18n, description, description_i18n, quantity, picture_url, color_code, measurement, price, department_id, created_at, updated_at, deleted_at
+RETURNING id, name, name_i18n, description, description_i18n, quantity, picture_url, color_code, measurement, price, department_id, cost_price, profit, profit_margin, created_at, updated_at, deleted_at
 `
 
 type CreateCompoundParams struct {
@@ -137,7 +137,27 @@ type CreateCompoundParams struct {
 	DepartmentID    pgtype.UUID         `json:"department_id"`
 }
 
-func (q *Queries) CreateCompound(ctx context.Context, arg CreateCompoundParams) (Compound, error) {
+type CreateCompoundRow struct {
+	ID              uuid.UUID           `json:"id"`
+	Name            string              `json:"name"`
+	NameI18n        pgtype.UUID         `json:"name_i18n"`
+	Description     *string             `json:"description"`
+	DescriptionI18n pgtype.UUID         `json:"description_i18n"`
+	Quantity        *int32              `json:"quantity"`
+	PictureUrl      *string             `json:"picture_url"`
+	ColorCode       *string             `json:"color_code"`
+	Measurement     NullMeasurementType `json:"measurement"`
+	Price           pgtype.Numeric      `json:"price"`
+	DepartmentID    pgtype.UUID         `json:"department_id"`
+	CostPrice       pgtype.Numeric      `json:"cost_price"`
+	Profit          pgtype.Numeric      `json:"profit"`
+	ProfitMargin    pgtype.Numeric      `json:"profit_margin"`
+	CreatedAt       pgtype.Timestamptz  `json:"created_at"`
+	UpdatedAt       pgtype.Timestamptz  `json:"updated_at"`
+	DeletedAt       *int64              `json:"deleted_at"`
+}
+
+func (q *Queries) CreateCompound(ctx context.Context, arg CreateCompoundParams) (CreateCompoundRow, error) {
 	row := q.db.QueryRow(ctx, createCompound,
 		arg.ID,
 		arg.Name,
@@ -151,7 +171,7 @@ func (q *Queries) CreateCompound(ctx context.Context, arg CreateCompoundParams) 
 		arg.Price,
 		arg.DepartmentID,
 	)
-	var i Compound
+	var i CreateCompoundRow
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
@@ -164,6 +184,9 @@ func (q *Queries) CreateCompound(ctx context.Context, arg CreateCompoundParams) 
 		&i.Measurement,
 		&i.Price,
 		&i.DepartmentID,
+		&i.CostPrice,
+		&i.Profit,
+		&i.ProfitMargin,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
@@ -368,7 +391,7 @@ func (q *Queries) GetAllCompoundStock(ctx context.Context, arg GetAllCompoundSto
 }
 
 const getAllCompounds = `-- name: GetAllCompounds :many
-SELECT id, name, name_i18n, description, description_i18n, quantity, picture_url, color_code, measurement, price, department_id, created_at, updated_at, deleted_at
+SELECT id, name, name_i18n, description, description_i18n, quantity, picture_url, color_code, measurement, price, department_id, cost_price, profit, profit_margin, created_at, updated_at, deleted_at
 FROM compounds
 WHERE deleted_at = 0
 ORDER BY created_at DESC
@@ -380,15 +403,35 @@ type GetAllCompoundsParams struct {
 	Offset int32 `json:"offset"`
 }
 
-func (q *Queries) GetAllCompounds(ctx context.Context, arg GetAllCompoundsParams) ([]Compound, error) {
+type GetAllCompoundsRow struct {
+	ID              uuid.UUID           `json:"id"`
+	Name            string              `json:"name"`
+	NameI18n        pgtype.UUID         `json:"name_i18n"`
+	Description     *string             `json:"description"`
+	DescriptionI18n pgtype.UUID         `json:"description_i18n"`
+	Quantity        *int32              `json:"quantity"`
+	PictureUrl      *string             `json:"picture_url"`
+	ColorCode       *string             `json:"color_code"`
+	Measurement     NullMeasurementType `json:"measurement"`
+	Price           pgtype.Numeric      `json:"price"`
+	DepartmentID    pgtype.UUID         `json:"department_id"`
+	CostPrice       pgtype.Numeric      `json:"cost_price"`
+	Profit          pgtype.Numeric      `json:"profit"`
+	ProfitMargin    pgtype.Numeric      `json:"profit_margin"`
+	CreatedAt       pgtype.Timestamptz  `json:"created_at"`
+	UpdatedAt       pgtype.Timestamptz  `json:"updated_at"`
+	DeletedAt       *int64              `json:"deleted_at"`
+}
+
+func (q *Queries) GetAllCompounds(ctx context.Context, arg GetAllCompoundsParams) ([]GetAllCompoundsRow, error) {
 	rows, err := q.db.Query(ctx, getAllCompounds, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []Compound
+	var items []GetAllCompoundsRow
 	for rows.Next() {
-		var i Compound
+		var i GetAllCompoundsRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.Name,
@@ -401,6 +444,9 @@ func (q *Queries) GetAllCompounds(ctx context.Context, arg GetAllCompoundsParams
 			&i.Measurement,
 			&i.Price,
 			&i.DepartmentID,
+			&i.CostPrice,
+			&i.Profit,
+			&i.ProfitMargin,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.DeletedAt,
@@ -416,14 +462,34 @@ func (q *Queries) GetAllCompounds(ctx context.Context, arg GetAllCompoundsParams
 }
 
 const getCompoundByID = `-- name: GetCompoundByID :one
-SELECT id, name, name_i18n, description, description_i18n, quantity, picture_url, color_code, measurement, price, department_id, created_at, updated_at, deleted_at
+SELECT id, name, name_i18n, description, description_i18n, quantity, picture_url, color_code, measurement, price, department_id, cost_price, profit, profit_margin, created_at, updated_at, deleted_at
 FROM compounds
 WHERE id = $1 AND deleted_at = 0
 `
 
-func (q *Queries) GetCompoundByID(ctx context.Context, id uuid.UUID) (Compound, error) {
+type GetCompoundByIDRow struct {
+	ID              uuid.UUID           `json:"id"`
+	Name            string              `json:"name"`
+	NameI18n        pgtype.UUID         `json:"name_i18n"`
+	Description     *string             `json:"description"`
+	DescriptionI18n pgtype.UUID         `json:"description_i18n"`
+	Quantity        *int32              `json:"quantity"`
+	PictureUrl      *string             `json:"picture_url"`
+	ColorCode       *string             `json:"color_code"`
+	Measurement     NullMeasurementType `json:"measurement"`
+	Price           pgtype.Numeric      `json:"price"`
+	DepartmentID    pgtype.UUID         `json:"department_id"`
+	CostPrice       pgtype.Numeric      `json:"cost_price"`
+	Profit          pgtype.Numeric      `json:"profit"`
+	ProfitMargin    pgtype.Numeric      `json:"profit_margin"`
+	CreatedAt       pgtype.Timestamptz  `json:"created_at"`
+	UpdatedAt       pgtype.Timestamptz  `json:"updated_at"`
+	DeletedAt       *int64              `json:"deleted_at"`
+}
+
+func (q *Queries) GetCompoundByID(ctx context.Context, id uuid.UUID) (GetCompoundByIDRow, error) {
 	row := q.db.QueryRow(ctx, getCompoundByID, id)
-	var i Compound
+	var i GetCompoundByIDRow
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
@@ -436,6 +502,9 @@ func (q *Queries) GetCompoundByID(ctx context.Context, id uuid.UUID) (Compound, 
 		&i.Measurement,
 		&i.Price,
 		&i.DepartmentID,
+		&i.CostPrice,
+		&i.Profit,
+		&i.ProfitMargin,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
@@ -1002,6 +1071,9 @@ SELECT
     c.measurement,
     c.price,
     c.department_id,
+    c.cost_price,
+    c.profit,
+    c.profit_margin,
     c.created_at,
     c.updated_at,
     d.name as department_name
@@ -1021,6 +1093,9 @@ type GetCompoundWithDepartmentRow struct {
 	Measurement     NullMeasurementType `json:"measurement"`
 	Price           pgtype.Numeric      `json:"price"`
 	DepartmentID    pgtype.UUID         `json:"department_id"`
+	CostPrice       pgtype.Numeric      `json:"cost_price"`
+	Profit          pgtype.Numeric      `json:"profit"`
+	ProfitMargin    pgtype.Numeric      `json:"profit_margin"`
 	CreatedAt       pgtype.Timestamptz  `json:"created_at"`
 	UpdatedAt       pgtype.Timestamptz  `json:"updated_at"`
 	DepartmentName  *string             `json:"department_name"`
@@ -1040,6 +1115,9 @@ func (q *Queries) GetCompoundWithDepartment(ctx context.Context, id uuid.UUID) (
 		&i.Measurement,
 		&i.Price,
 		&i.DepartmentID,
+		&i.CostPrice,
+		&i.Profit,
+		&i.ProfitMargin,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DepartmentName,
@@ -1091,7 +1169,7 @@ func (q *Queries) GetCompoundWithIngredients(ctx context.Context, id uuid.UUID) 
 }
 
 const getCompoundsByDepartmentID = `-- name: GetCompoundsByDepartmentID :many
-SELECT id, name, name_i18n, description, description_i18n, quantity, picture_url, color_code, measurement, price, department_id, created_at, updated_at, deleted_at
+SELECT id, name, name_i18n, description, description_i18n, quantity, picture_url, color_code, measurement, price, department_id, cost_price, profit, profit_margin, created_at, updated_at, deleted_at
 FROM compounds
 WHERE department_id = $1 AND deleted_at = 0
 ORDER BY created_at DESC
@@ -1104,15 +1182,35 @@ type GetCompoundsByDepartmentIDParams struct {
 	Offset       int32       `json:"offset"`
 }
 
-func (q *Queries) GetCompoundsByDepartmentID(ctx context.Context, arg GetCompoundsByDepartmentIDParams) ([]Compound, error) {
+type GetCompoundsByDepartmentIDRow struct {
+	ID              uuid.UUID           `json:"id"`
+	Name            string              `json:"name"`
+	NameI18n        pgtype.UUID         `json:"name_i18n"`
+	Description     *string             `json:"description"`
+	DescriptionI18n pgtype.UUID         `json:"description_i18n"`
+	Quantity        *int32              `json:"quantity"`
+	PictureUrl      *string             `json:"picture_url"`
+	ColorCode       *string             `json:"color_code"`
+	Measurement     NullMeasurementType `json:"measurement"`
+	Price           pgtype.Numeric      `json:"price"`
+	DepartmentID    pgtype.UUID         `json:"department_id"`
+	CostPrice       pgtype.Numeric      `json:"cost_price"`
+	Profit          pgtype.Numeric      `json:"profit"`
+	ProfitMargin    pgtype.Numeric      `json:"profit_margin"`
+	CreatedAt       pgtype.Timestamptz  `json:"created_at"`
+	UpdatedAt       pgtype.Timestamptz  `json:"updated_at"`
+	DeletedAt       *int64              `json:"deleted_at"`
+}
+
+func (q *Queries) GetCompoundsByDepartmentID(ctx context.Context, arg GetCompoundsByDepartmentIDParams) ([]GetCompoundsByDepartmentIDRow, error) {
 	rows, err := q.db.Query(ctx, getCompoundsByDepartmentID, arg.DepartmentID, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []Compound
+	var items []GetCompoundsByDepartmentIDRow
 	for rows.Next() {
-		var i Compound
+		var i GetCompoundsByDepartmentIDRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.Name,
@@ -1125,6 +1223,9 @@ func (q *Queries) GetCompoundsByDepartmentID(ctx context.Context, arg GetCompoun
 			&i.Measurement,
 			&i.Price,
 			&i.DepartmentID,
+			&i.CostPrice,
+			&i.Profit,
+			&i.ProfitMargin,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.DeletedAt,
@@ -1291,7 +1392,7 @@ func (q *Queries) RestoreCompoundStock(ctx context.Context, id uuid.UUID) error 
 }
 
 const searchCompounds = `-- name: SearchCompounds :many
-SELECT id, name, name_i18n, description, description_i18n, quantity, picture_url, color_code, measurement, price, department_id, created_at, updated_at, deleted_at
+SELECT id, name, name_i18n, description, description_i18n, quantity, picture_url, color_code, measurement, price, department_id, cost_price, profit, profit_margin, created_at, updated_at, deleted_at
 FROM compounds
 WHERE deleted_at = 0 
 AND (name ILIKE '%' || $1 || '%' OR description ILIKE '%' || $1 || '%')
@@ -1305,15 +1406,35 @@ type SearchCompoundsParams struct {
 	Offset  int32   `json:"offset"`
 }
 
-func (q *Queries) SearchCompounds(ctx context.Context, arg SearchCompoundsParams) ([]Compound, error) {
+type SearchCompoundsRow struct {
+	ID              uuid.UUID           `json:"id"`
+	Name            string              `json:"name"`
+	NameI18n        pgtype.UUID         `json:"name_i18n"`
+	Description     *string             `json:"description"`
+	DescriptionI18n pgtype.UUID         `json:"description_i18n"`
+	Quantity        *int32              `json:"quantity"`
+	PictureUrl      *string             `json:"picture_url"`
+	ColorCode       *string             `json:"color_code"`
+	Measurement     NullMeasurementType `json:"measurement"`
+	Price           pgtype.Numeric      `json:"price"`
+	DepartmentID    pgtype.UUID         `json:"department_id"`
+	CostPrice       pgtype.Numeric      `json:"cost_price"`
+	Profit          pgtype.Numeric      `json:"profit"`
+	ProfitMargin    pgtype.Numeric      `json:"profit_margin"`
+	CreatedAt       pgtype.Timestamptz  `json:"created_at"`
+	UpdatedAt       pgtype.Timestamptz  `json:"updated_at"`
+	DeletedAt       *int64              `json:"deleted_at"`
+}
+
+func (q *Queries) SearchCompounds(ctx context.Context, arg SearchCompoundsParams) ([]SearchCompoundsRow, error) {
 	rows, err := q.db.Query(ctx, searchCompounds, arg.Column1, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []Compound
+	var items []SearchCompoundsRow
 	for rows.Next() {
-		var i Compound
+		var i SearchCompoundsRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.Name,
@@ -1326,6 +1447,9 @@ func (q *Queries) SearchCompounds(ctx context.Context, arg SearchCompoundsParams
 			&i.Measurement,
 			&i.Price,
 			&i.DepartmentID,
+			&i.CostPrice,
+			&i.Profit,
+			&i.ProfitMargin,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.DeletedAt,
@@ -1354,7 +1478,7 @@ SET name = COALESCE($2, name),
     department_id = COALESCE($11, department_id),
     updated_at = NOW()
 WHERE id = $1 AND deleted_at = 0
-RETURNING id, name, name_i18n, description, description_i18n, quantity, picture_url, color_code, measurement, price, department_id, created_at, updated_at, deleted_at
+RETURNING id, name, name_i18n, description, description_i18n, quantity, picture_url, color_code, measurement, price, department_id, cost_price, profit, profit_margin, created_at, updated_at, deleted_at
 `
 
 type UpdateCompoundParams struct {
@@ -1371,7 +1495,27 @@ type UpdateCompoundParams struct {
 	DepartmentID    pgtype.UUID         `json:"department_id"`
 }
 
-func (q *Queries) UpdateCompound(ctx context.Context, arg UpdateCompoundParams) (Compound, error) {
+type UpdateCompoundRow struct {
+	ID              uuid.UUID           `json:"id"`
+	Name            string              `json:"name"`
+	NameI18n        pgtype.UUID         `json:"name_i18n"`
+	Description     *string             `json:"description"`
+	DescriptionI18n pgtype.UUID         `json:"description_i18n"`
+	Quantity        *int32              `json:"quantity"`
+	PictureUrl      *string             `json:"picture_url"`
+	ColorCode       *string             `json:"color_code"`
+	Measurement     NullMeasurementType `json:"measurement"`
+	Price           pgtype.Numeric      `json:"price"`
+	DepartmentID    pgtype.UUID         `json:"department_id"`
+	CostPrice       pgtype.Numeric      `json:"cost_price"`
+	Profit          pgtype.Numeric      `json:"profit"`
+	ProfitMargin    pgtype.Numeric      `json:"profit_margin"`
+	CreatedAt       pgtype.Timestamptz  `json:"created_at"`
+	UpdatedAt       pgtype.Timestamptz  `json:"updated_at"`
+	DeletedAt       *int64              `json:"deleted_at"`
+}
+
+func (q *Queries) UpdateCompound(ctx context.Context, arg UpdateCompoundParams) (UpdateCompoundRow, error) {
 	row := q.db.QueryRow(ctx, updateCompound,
 		arg.ID,
 		arg.Name,
@@ -1385,7 +1529,7 @@ func (q *Queries) UpdateCompound(ctx context.Context, arg UpdateCompoundParams) 
 		arg.Price,
 		arg.DepartmentID,
 	)
-	var i Compound
+	var i UpdateCompoundRow
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
@@ -1398,6 +1542,76 @@ func (q *Queries) UpdateCompound(ctx context.Context, arg UpdateCompoundParams) 
 		&i.Measurement,
 		&i.Price,
 		&i.DepartmentID,
+		&i.CostPrice,
+		&i.Profit,
+		&i.ProfitMargin,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
+	)
+	return i, err
+}
+
+const updateCompoundCostFields = `-- name: UpdateCompoundCostFields :one
+UPDATE compounds
+SET cost_price = $2,
+    profit = $3,
+    profit_margin = $4,
+    updated_at = NOW()
+WHERE id = $1 AND deleted_at = 0
+RETURNING id, name, name_i18n, description, description_i18n, quantity, picture_url, color_code, measurement, price, department_id, cost_price, profit, profit_margin, created_at, updated_at, deleted_at
+`
+
+type UpdateCompoundCostFieldsParams struct {
+	ID           uuid.UUID      `json:"id"`
+	CostPrice    pgtype.Numeric `json:"cost_price"`
+	Profit       pgtype.Numeric `json:"profit"`
+	ProfitMargin pgtype.Numeric `json:"profit_margin"`
+}
+
+type UpdateCompoundCostFieldsRow struct {
+	ID              uuid.UUID           `json:"id"`
+	Name            string              `json:"name"`
+	NameI18n        pgtype.UUID         `json:"name_i18n"`
+	Description     *string             `json:"description"`
+	DescriptionI18n pgtype.UUID         `json:"description_i18n"`
+	Quantity        *int32              `json:"quantity"`
+	PictureUrl      *string             `json:"picture_url"`
+	ColorCode       *string             `json:"color_code"`
+	Measurement     NullMeasurementType `json:"measurement"`
+	Price           pgtype.Numeric      `json:"price"`
+	DepartmentID    pgtype.UUID         `json:"department_id"`
+	CostPrice       pgtype.Numeric      `json:"cost_price"`
+	Profit          pgtype.Numeric      `json:"profit"`
+	ProfitMargin    pgtype.Numeric      `json:"profit_margin"`
+	CreatedAt       pgtype.Timestamptz  `json:"created_at"`
+	UpdatedAt       pgtype.Timestamptz  `json:"updated_at"`
+	DeletedAt       *int64              `json:"deleted_at"`
+}
+
+func (q *Queries) UpdateCompoundCostFields(ctx context.Context, arg UpdateCompoundCostFieldsParams) (UpdateCompoundCostFieldsRow, error) {
+	row := q.db.QueryRow(ctx, updateCompoundCostFields,
+		arg.ID,
+		arg.CostPrice,
+		arg.Profit,
+		arg.ProfitMargin,
+	)
+	var i UpdateCompoundCostFieldsRow
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.NameI18n,
+		&i.Description,
+		&i.DescriptionI18n,
+		&i.Quantity,
+		&i.PictureUrl,
+		&i.ColorCode,
+		&i.Measurement,
+		&i.Price,
+		&i.DepartmentID,
+		&i.CostPrice,
+		&i.Profit,
+		&i.ProfitMargin,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
@@ -1447,7 +1661,7 @@ UPDATE compounds
 SET price = $2,
     updated_at = NOW()
 WHERE id = $1 AND deleted_at = 0
-RETURNING id, name, name_i18n, description, description_i18n, quantity, picture_url, color_code, measurement, price, department_id, created_at, updated_at, deleted_at
+RETURNING id, name, name_i18n, description, description_i18n, quantity, picture_url, color_code, measurement, price, department_id, cost_price, profit, profit_margin, created_at, updated_at, deleted_at
 `
 
 type UpdateCompoundPriceParams struct {
@@ -1455,9 +1669,29 @@ type UpdateCompoundPriceParams struct {
 	Price pgtype.Numeric `json:"price"`
 }
 
-func (q *Queries) UpdateCompoundPrice(ctx context.Context, arg UpdateCompoundPriceParams) (Compound, error) {
+type UpdateCompoundPriceRow struct {
+	ID              uuid.UUID           `json:"id"`
+	Name            string              `json:"name"`
+	NameI18n        pgtype.UUID         `json:"name_i18n"`
+	Description     *string             `json:"description"`
+	DescriptionI18n pgtype.UUID         `json:"description_i18n"`
+	Quantity        *int32              `json:"quantity"`
+	PictureUrl      *string             `json:"picture_url"`
+	ColorCode       *string             `json:"color_code"`
+	Measurement     NullMeasurementType `json:"measurement"`
+	Price           pgtype.Numeric      `json:"price"`
+	DepartmentID    pgtype.UUID         `json:"department_id"`
+	CostPrice       pgtype.Numeric      `json:"cost_price"`
+	Profit          pgtype.Numeric      `json:"profit"`
+	ProfitMargin    pgtype.Numeric      `json:"profit_margin"`
+	CreatedAt       pgtype.Timestamptz  `json:"created_at"`
+	UpdatedAt       pgtype.Timestamptz  `json:"updated_at"`
+	DeletedAt       *int64              `json:"deleted_at"`
+}
+
+func (q *Queries) UpdateCompoundPrice(ctx context.Context, arg UpdateCompoundPriceParams) (UpdateCompoundPriceRow, error) {
 	row := q.db.QueryRow(ctx, updateCompoundPrice, arg.ID, arg.Price)
-	var i Compound
+	var i UpdateCompoundPriceRow
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
@@ -1470,6 +1704,9 @@ func (q *Queries) UpdateCompoundPrice(ctx context.Context, arg UpdateCompoundPri
 		&i.Measurement,
 		&i.Price,
 		&i.DepartmentID,
+		&i.CostPrice,
+		&i.Profit,
+		&i.ProfitMargin,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,

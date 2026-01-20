@@ -140,6 +140,20 @@ definitions:
         example: "2022-01-01T00:00:00Z"
         type: string
     type: object
+  model.CompoundCalculationItem:
+    properties:
+      compound_id:
+        description: CompoundID - UUID of the compound to add
+        example: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+        type: string
+      quantity:
+        description: Quantity - amount to add (e.g., "3" for 3 units)
+        example: "3"
+        type: string
+    required:
+    - compound_id
+    - quantity
+    type: object
   model.CompoundCalculationResponse:
     properties:
       calculations:
@@ -219,6 +233,7 @@ definitions:
         example: https://example.com/pizza-dough.jpg
         type: string
       price:
+        description: Price - total component cost (auto-calculated from calculations)
         example: "500.50"
         type: string
       quantity:
@@ -248,6 +263,18 @@ definitions:
       updated_at:
         example: "2022-01-01T00:00:00Z"
         type: string
+    type: object
+  model.CompoundWithCalculationsResponse:
+    properties:
+      calculations:
+        description: Calculations - all calculation records created for this compound
+        items:
+          $ref: '#/definitions/model.CalculationResponse'
+        type: array
+      compound:
+        allOf:
+        - $ref: '#/definitions/model.CompoundResponse'
+        description: Compound - the created compound (price will be auto-calculated)
     type: object
   model.CreateBranchRequest:
     properties:
@@ -395,6 +422,27 @@ definitions:
     - branch_id
     - compound_id
     type: object
+  model.CreateCompoundWithCalculationsRequest:
+    properties:
+      compound:
+        allOf:
+        - $ref: '#/definitions/model.CreateCompoundRequest'
+        description: Compound - the compound to create
+      compound_calculations:
+        description: CompoundCalculations - array of child compounds to add (price
+          from compound.price)
+        items:
+          $ref: '#/definitions/model.CompoundCalculationItem'
+        type: array
+      ingredient_calculations:
+        description: IngredientCalculations - array of ingredients to add (price from
+          invoice_detail)
+        items:
+          $ref: '#/definitions/model.IngredientCalculationItem'
+        type: array
+    required:
+    - compound
+    type: object
   model.CreateDepartmentRequest:
     properties:
       color_code:
@@ -482,6 +530,27 @@ definitions:
     required:
     - name
     - price
+    type: object
+  model.CreateGoodWithCalculationsRequest:
+    properties:
+      compound_calculations:
+        description: CompoundCalculations - array of compounds to add (price from
+          compound.price)
+        items:
+          $ref: '#/definitions/model.CompoundCalculationItem'
+        type: array
+      good:
+        allOf:
+        - $ref: '#/definitions/model.CreateGoodRequest'
+        description: Good - the good/menu item to create
+      ingredient_calculations:
+        description: IngredientCalculations - array of ingredients to add (price from
+          invoice_detail)
+        items:
+          $ref: '#/definitions/model.IngredientCalculationItem'
+        type: array
+    required:
+    - good
     type: object
   model.CreateHallRequest:
     properties:
@@ -834,6 +903,10 @@ definitions:
       cook_time:
         example: 30
         type: integer
+      cost_price:
+        description: CostPrice - total preparation cost (auto-calculated from calculations)
+        example: "10500.00"
+        type: string
       created_at:
         example: "2022-01-01T00:00:00Z"
         type: string
@@ -861,9 +934,30 @@ definitions:
       price:
         example: "15000.00"
         type: string
+      profit:
+        description: Profit - selling price minus cost (auto-calculated)
+        example: "4500.00"
+        type: string
+      profit_margin:
+        description: ProfitMargin - profit percentage relative to cost (auto-calculated)
+          = (profit/cost)*100
+        example: "42.86"
+        type: string
       updated_at:
         example: "2022-01-01T00:00:00Z"
         type: string
+    type: object
+  model.GoodWithCalculationsResponse:
+    properties:
+      calculations:
+        description: Calculations - all calculation records created for this good
+        items:
+          $ref: '#/definitions/model.CalculationResponse'
+        type: array
+      good:
+        allOf:
+        - $ref: '#/definitions/model.GoodResponse'
+        description: Good - the created good/menu item
     type: object
   model.HallResponse:
     properties:
@@ -886,6 +980,20 @@ definitions:
         type: string
       provider:
         type: string
+    type: object
+  model.IngredientCalculationItem:
+    properties:
+      ingredient_id:
+        description: IngredientID - UUID of the ingredient to add
+        example: 522e5a6a-f5c2-4280-b33b-6f466adabe23
+        type: string
+      quantity:
+        description: Quantity - amount to add (e.g., "2.5" for 2.5 kg)
+        example: "2.5"
+        type: string
+    required:
+    - ingredient_id
+    - quantity
     type: object
   model.IngredientGroupResponse:
     properties:
@@ -1886,7 +1994,7 @@ definitions:
         example: admin
         type: string
     type: object
-host: back.maryai.yurtal.tech
+host: localhost:8080
 info:
   contact: {}
   description: MaryAI API server with multi-language support (uz, ru, en)
@@ -4903,6 +5011,70 @@ paths:
       summary: Search compounds
       tags:
       - compounds
+  /api/v1/compounds/with-calculations:
+    post:
+      consumes:
+      - application/json
+      description: |-
+        Create a new compound with its ingredient/child compound calculations in one atomic transaction.
+
+        **How it works:**
+        - Create the compound first
+        - Then create all ingredient calculations (price from invoice_detail)
+        - Then create all child compound calculations (price from child compound's price)
+        - If any calculation fails, everything is rolled back (compound won't be created)
+        - Compound price is auto-calculated as sum of all calculation total_costs
+
+        **Example Request:**
+        ```json
+        {
+        "compound": { "name": "Pizza Dough", "quantity": 1, "measurement": "kg" },
+        "ingredient_calculations": [
+        { "ingredient_id": "flour-uuid", "quantity": "0.5" },
+        { "ingredient_id": "water-uuid", "quantity": "0.3" }
+        ],
+        "compound_calculations": [
+        { "compound_id": "yeast-mix-uuid", "quantity": "1" }
+        ]
+        }
+        ```
+      parameters:
+      - default: uz
+        description: Language (uz, ru, en)
+        in: query
+        name: lang
+        type: string
+      - description: Compound + ingredients + child compounds
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.CreateCompoundWithCalculationsRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Compound and all calculations created successfully
+          schema:
+            $ref: '#/definitions/model.CompoundWithCalculationsResponse'
+        "400":
+          description: Invalid request (missing fields, invalid UUIDs, etc.)
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal error (ingredient not found, no invoice, etc.)
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create compound with multiple ingredients and child compounds (One
+        Save)
+      tags:
+      - compounds
   /api/v1/departments:
     get:
       consumes:
@@ -6216,6 +6388,70 @@ paths:
       security:
       - BearerAuth: []
       summary: Get goods by price range
+      tags:
+      - Goods
+  /api/v1/goods/with-calculations:
+    post:
+      consumes:
+      - application/json
+      description: |-
+        Create a new good/menu item with its ingredient/compound calculations in one atomic transaction.
+
+        **How it works:**
+        - Create the good first
+        - Then create all ingredient calculations (price from invoice_detail)
+        - Then create all compound calculations (price from compound.price)
+        - If any calculation fails, everything is rolled back (good won't be created)
+
+        **Example Request:**
+        ```json
+        {
+        "good": { "name": "Osh", "price": "85000.00" },
+        "ingredient_calculations": [
+        { "ingredient_id": "sabzi-uuid", "quantity": "2.5" },
+        { "ingredient_id": "guruch-uuid", "quantity": "0.5" }
+        ],
+        "compound_calculations": [
+        { "compound_id": "salad-uuid", "quantity": "3" },
+        { "compound_id": "xamir-uuid", "quantity": "1" }
+        ]
+        }
+        ```
+      parameters:
+      - default: uz
+        description: Language (uz, ru, en)
+        in: query
+        name: lang
+        type: string
+      - description: Good + ingredients + compounds
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.CreateGoodWithCalculationsRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Good and all calculations created successfully
+          schema:
+            $ref: '#/definitions/model.GoodWithCalculationsResponse'
+        "400":
+          description: Invalid request (missing fields, invalid UUIDs, etc.)
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal error (ingredient not found, no invoice for ingredient,
+            etc.)
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create good with multiple ingredients and compounds (One Save)
       tags:
       - Goods
   /api/v1/halls:
@@ -11224,7 +11460,7 @@ paths:
       tags:
       - users
 schemes:
-- https
+- http
 securityDefinitions:
   BearerAuth:
     description: Type "Bearer" followed by a space and your JWT token
