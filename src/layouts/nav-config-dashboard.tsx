@@ -76,6 +76,7 @@ export const getNavData = (t: TFunction): NavSectionProps['data'] => [
         icon: ICONS.banking,
         children: [
           { title: t('overview.warehouse.storage', 'Storage'), path: paths.menu.inventory.root },
+          { title: t('overview.warehouse.ingredients', 'Ingredients'), path: paths.menu.warehouse.ingredients.root },
           { title: t('overview.warehouse.stocks', 'Stocks'), path: paths.menu.warehouse.stocks.root },
           { title: t('overview.warehouse.transfers', 'Transfers'), path: paths.menu.warehouse.transfers.root },
           { title: t('overview.warehouse.locations', 'Locations'), path: paths.menu.warehouse.locations.root },
@@ -161,6 +162,7 @@ export const navData: NavSectionProps['data'] = [
         icon: ICONS.folder,
         children: [
           { title: 'Storage', path: paths.menu.inventory.root },
+          { title: 'Ingredients', path: paths.menu.warehouse.ingredients.root },
           { title: 'Stocks', path: paths.menu.warehouse.stocks.root },
           { title: 'Transfers', path: paths.menu.warehouse.transfers.root },
           { title: 'Locations', path: paths.menu.warehouse.locations.root },

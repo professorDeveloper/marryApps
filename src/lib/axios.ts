@@ -185,6 +185,9 @@ export const endpoints = {
   ingredient: {
     list: '/api/v1/ingredients',
     details: (id: string) => `/api/v1/ingredients/${id}`,
+    create: '/api/v1/ingredients',
+    update: (id: string) => `/api/v1/ingredients/${id}`,
+    delete: (id: string) => `/api/v1/ingredients/${id}`,
   },
   ingredientGroups: {
     list: '/api/v1/ingredient-groups',

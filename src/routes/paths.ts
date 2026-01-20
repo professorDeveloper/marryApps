@@ -123,6 +123,12 @@ export const paths = {
         details: (id: string) => `${ROOTS.MENU}/warehouse/suppliers/${id}`,
         edit: (id: string) => `${ROOTS.MENU}/warehouse/suppliers/${id}/edit`,
       },
+      ingredients: {
+        root: `${ROOTS.MENU}/warehouse/ingredients`,
+        new: `${ROOTS.MENU}/warehouse/ingredients/new`,
+        details: (id: string) => `${ROOTS.MENU}/warehouse/ingredients/${id}`,
+        edit: (id: string) => `${ROOTS.MENU}/warehouse/ingredients/${id}/edit`,
+      },
     },
     reports: {
       root: `${ROOTS.MENU}/reports`,
@@ -171,7 +177,7 @@ export const paths = {
       root: `${ROOTS.SETTING}/integrations`,
     },
   },
-  
+
   dashboard: {
     root: '/',
   },

@@ -1,30 +1,35 @@
 import type { GridColDef } from '@mui/x-data-grid';
 import type { ICompound } from 'src/types/compounds';
-
 import { useTranslation } from 'react-i18next';
 import { useMemo, useState, useCallback } from 'react';
-
 import Box from '@mui/material/Box';
 import Avatar from '@mui/material/Avatar';
 import { useTheme } from '@mui/material/styles';
 import ListItemText from '@mui/material/ListItemText';
 import { Button, Dialog, DialogTitle, DialogActions, DialogContent } from '@mui/material';
-
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableContainer,
+    TableHead,
+    TableRow,
+    Paper,
+    CircularProgress,
+} from '@mui/material';
 import { paths } from 'src/routes/paths';
-
 import { useGenericViewModal } from 'src/hooks/use-generic-view-modal';
-import { useGetCompounds, useDeleteCompound, useDeleteCompounds } from 'src/hooks/use-compounds';
+import { useGetCompounds, useDeleteCompound, useDeleteCompounds, useGetCompoundWithCalculations } from 'src/hooks/use-compounds';
 import { useGetDepartments } from 'src/actions/departments';
 import { useImageUrl } from 'src/hooks/use-image-url';
-
 import { getInitials, getAvatarColor } from 'src/utils/avatar';
-
 import { toast } from 'src/components/snackbar';
 import { Iconify } from 'src/components/iconify';
 import { GenericTableView } from 'src/components/generic-table-view';
 import { CustomGridActionsCellItem } from 'src/components/custom-data-grid';
 import { GenericViewModal, SpecificationsTable } from 'src/components/generic-view-view';
 import { formatDate, formatPrice } from 'src/components/generic-view-view/modal-formatters';
+import { useGetIngredients } from 'src/actions/ingredients';
 
 
 /**
@@ -96,6 +101,113 @@ function RenderCellPrice({ params }: { params: any }) {
 // ============================================================================
 // SPECIFICATIONS RENDERING
 // ============================================================================
+
+/**
+ * Compound calculations table renderer
+ */
+function CompoundCalculationsTable({ compoundId }: { compoundId: string }) {
+    const { t } = useTranslation('menu');
+    const { compoundWithCalculations, loading } = useGetCompoundWithCalculations(compoundId);
+    const { ingredients } = useGetIngredients();
+    const { compounds } = useGetCompounds();
+
+    // Create maps for quick name lookup
+    const ingredientMap = useMemo(() => {
+        const map = new Map<string, string>();
+        ingredients.forEach((ing: any) => {
+            map.set(ing.id, ing.name);
+        });
+        return map;
+    }, [ingredients]);
+
+    const compoundMap = useMemo(() => {
+        const map = new Map<string, string>();
+        compounds.forEach((comp: any) => {
+            map.set(comp.id, comp.name);
+        });
+        return map;
+    }, [compounds]);
+
+    if (loading) {
+        return (
+            <Box sx={{ display: 'flex', justifyContent: 'center', py: 3 }}>
+                <CircularProgress />
+            </Box>
+        );
+    }
+
+    if (!compoundWithCalculations || !compoundWithCalculations.calculations) {
+        return <Box sx={{ py: 2 }}>{t('common.noData')}</Box>;
+    }
+
+    const { calculations, total_cost, profit, profit_margin } = compoundWithCalculations;
+
+    return (
+        <Box sx={{ width: '100%' }}>
+            <TableContainer component={Paper} sx={{ mb: 2 }}>
+                <Table size="small">
+                    <TableHead sx={{ bgcolor: '#f5f5f5' }}>
+                        <TableRow>
+                            <TableCell align="left">{t('common.name')}</TableCell>
+                            <TableCell align="center">{t('semifinishedProducts.quantity')}</TableCell>
+                            <TableCell align="center">{t('common.unit')}</TableCell>
+                            <TableCell align="right">{t('semifinishedProducts.price')}</TableCell>
+                            <TableCell align="right">{t('common.total')}</TableCell>
+                        </TableRow>
+                    </TableHead>
+                    <TableBody>
+                        {calculations.map((calc, index) => {
+                            let itemName = '-';
+                            if (calc.ingredient_id) {
+                                itemName = ingredientMap.get(calc.ingredient_id) || calc.ingredient_id;
+                            } else if (calc.component_compound_id) {
+                                itemName = compoundMap.get(calc.component_compound_id) || calc.component_compound_id;
+                            }
+
+                            return (
+                                <TableRow key={calc.id}>
+                                    {/* Number + Name */}
+                                    <TableCell align="left">
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                            <Box sx={{ fontWeight: 600, color: 'text.secondary' }}>
+                                                {index + 1}.
+                                            </Box>
+                                            <Box>{itemName}</Box>
+                                        </Box>
+                                    </TableCell>
+
+                                    <TableCell align="center">{calc.quantity}</TableCell>
+                                    <TableCell align="center">{calc.measurement_unit}</TableCell>
+                                    <TableCell align="right">
+                                        {formatPrice(Number(calc.price_per_unit))}
+                                    </TableCell>
+                                    <TableCell align="right">
+                                        {formatPrice(Number(calc.total_cost))}
+                                    </TableCell>
+                                </TableRow>
+                            );
+                        })}
+                    </TableBody>
+
+                </Table>
+            </TableContainer>
+
+            {/* Summary row */}
+            <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 4, mb: 2 }}>
+                <Box>
+                    <Box sx={{ fontWeight: 600, mb: 1 }}>{t('common.total')}:</Box>
+                    <Box sx={{ fontWeight: 600, mb: 1 }}>Foyda:</Box>
+                    <Box sx={{ fontWeight: 600 }}>Foyda foizi:</Box>
+                </Box>
+                <Box sx={{ textAlign: 'right' }}>
+                    <Box sx={{ fontWeight: 600, mb: 1 }}>{formatPrice(Number(total_cost))}</Box>
+                    <Box sx={{ fontWeight: 600, mb: 1 }}>{formatPrice(Number(profit))}</Box>
+                    <Box sx={{ fontWeight: 600 }}>{profit_margin}</Box>
+                </Box>
+            </Box>
+        </Box>
+    );
+}
 
 /**
  * Render compound specifications for modal
@@ -322,8 +434,18 @@ export function HalfMeals() {
                 onClose={closeModal}
                 title={selectedData?.name || t('semifinishedProducts.title')}
                 data={selectedData}
-                renderContent={(item) => renderCompoundSpecifications(item, t)}
-                maxWidth="sm"
+                renderContent={(item) => (
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                        {/* {renderCompoundSpecifications(item, t)} */}
+                        <Box>
+                            {/* <Box sx={{ mb: 2, fontWeight: 600, fontSize: 16 }}>
+                                {t('common.calculations')}
+                            </Box> */}
+                            <CompoundCalculationsTable compoundId={item.id} />
+                        </Box>
+                    </Box>
+                )}
+                maxWidth="md"
                 slideDirection="left"
                 position="right"
             />

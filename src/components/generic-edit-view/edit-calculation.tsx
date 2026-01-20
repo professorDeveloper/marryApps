@@ -1034,6 +1034,12 @@ const ProductCalculator = ({ compoundId, mealId, onEntityCreated }: ProductCalcu
                                                         value={quantities[id] || ''}
                                                         onChange={(e) => handleQuantityChange(id, e.target.value)}
                                                         fullWidth
+                                                        slotProps={{
+                                                            input: {
+                                                                min: 0,
+                                                                step: 'any'
+                                                            }
+                                                        }}
                                                     />
                                                 </Box>
                                             </Box>
@@ -1308,6 +1314,12 @@ const ProductCalculator = ({ compoundId, mealId, onEntityCreated }: ProductCalcu
                                                         value={sfQuantities[id] || ''}
                                                         onChange={(e) => handleSfQuantityChange(id, e.target.value)}
                                                         fullWidth
+                                                        slotProps={{
+                                                            input: {
+                                                                min: 0,
+                                                                step: 'any'
+                                                            }
+                                                        }}
                                                     />
                                                 </Box>
                                             </Box>

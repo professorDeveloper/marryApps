@@ -6,12 +6,23 @@ import { useMemo, useState, useCallback } from 'react';
 
 import { useTheme } from '@mui/material/styles';
 import { Button, Dialog, DialogTitle, DialogActions, DialogContent, Box, Avatar, ListItemText } from '@mui/material';
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableContainer,
+    TableHead,
+    TableRow,
+    Paper,
+    CircularProgress,
+} from '@mui/material';
 
 import { paths } from 'src/routes/paths';
 
-import { useGetMeals, useDeleteMeal, useDeleteMeals } from 'src/hooks/use-meals';
+import { useGetMeals, useDeleteMeal, useDeleteMeals, useGetMealWithCalculations } from 'src/hooks/use-meals';
 import { useGenericViewModal } from 'src/hooks/use-generic-view-modal';
 import { useImageUrl } from 'src/hooks/use-image-url';
+import { useGetIngredients } from 'src/actions/ingredients';
 
 import { getInitials, getAvatarColor } from 'src/utils/avatar';
 
@@ -21,6 +32,7 @@ import { GenericViewModal, SpecificationsTable } from 'src/components/generic-vi
 import {
     GenericTableView,
 } from 'src/components/generic-table-view';
+import { formatPrice } from 'src/components/generic-view-view/modal-formatters';
 
 
 /**
@@ -64,6 +76,115 @@ function RenderCellMealName({ params }: { params: any }) {
             </Avatar>
 
             <ListItemText primary={<span>{name}</span>} />
+        </Box>
+    );
+}
+
+/**
+ * Meal calculations table renderer
+ */
+function MealCalculationsTable({ mealId }: { mealId: string }) {
+    const { t } = useTranslation('menu');
+    const { mealWithCalculations, loading } = useGetMealWithCalculations(mealId);
+    const { ingredients } = useGetIngredients();
+    const { meals } = useGetMeals();
+
+    // Create maps for quick name lookup
+    const ingredientMap = useMemo(() => {
+        const map = new Map<string, string>();
+        ingredients.forEach((ing: any) => {
+            map.set(ing.id, ing.name);
+        });
+        return map;
+    }, [ingredients]);
+
+    if (loading) {
+        return (
+            <Box sx={{ display: 'flex', justifyContent: 'center', py: 3 }}>
+                <CircularProgress />
+            </Box>
+        );
+    }
+
+    if (!mealWithCalculations || !mealWithCalculations.calculations) {
+        return <Box sx={{ py: 2 }}>{t('common.noData')}</Box>;
+    }
+
+    const { calculations, total_cost, profit, profit_margin } = mealWithCalculations;
+
+    return (
+        <Box sx={{ width: '100%' }}>
+           <TableContainer component={Paper} sx={{ mb: 2 }}>
+    <Table size="small">
+        <TableHead sx={{ bgcolor: '#f5f5f5' }}>
+            <TableRow>
+                <TableCell align="left">
+                    {t('common.name')}
+                </TableCell>
+                <TableCell align="center">
+                    {t('semifinishedProducts.quantity')}
+                </TableCell>
+                <TableCell align="center">
+                    {t('common.unit')}
+                </TableCell>
+                <TableCell align="right">
+                    {t('semifinishedProducts.price')}
+                </TableCell>
+                <TableCell align="right">
+                    {t('common.total')}
+                </TableCell>
+            </TableRow>
+        </TableHead>
+
+        <TableBody>
+            {calculations.map((calc, index) => {
+                const itemName = calc.ingredient_id
+                    ? ingredientMap.get(calc.ingredient_id) || calc.ingredient_id
+                    : '-';
+
+                return (
+                    <TableRow key={calc.id}>
+                        {/* NUMBER + NAME bitta cell */}
+                        <TableCell align="left">
+                            <strong>{index + 1}.</strong> {itemName}
+                        </TableCell>
+
+                        <TableCell align="center">
+                            {calc.quantity}
+                        </TableCell>
+
+                        <TableCell align="center">
+                            {calc.measurement_unit}
+                        </TableCell>
+
+                        <TableCell align="right">
+                            {formatPrice(Number(calc.price_per_unit))}
+                        </TableCell>
+
+                        <TableCell align="right">
+                            {formatPrice(Number(calc.total_cost))}
+                        </TableCell>
+                    </TableRow>
+                );
+            })}
+        </TableBody>
+    </Table>
+</TableContainer>
+
+
+            {/* Summary row */}
+            <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 4, mb: 2 }}>
+                <Box>
+                    <Box sx={{ fontWeight: 600, mb: 1 }}>{t('common.total')}:</Box>
+                    <Box sx={{ fontWeight: 600, mb: 1 }}>Foyda:</Box>
+                    <Box sx={{ fontWeight: 600 }}>Foyda foizi:</Box>
+                </Box>
+                <Box sx={{ textAlign: 'right' }}>
+                    <Box sx={{ fontWeight: 600, mb: 1 }}>{formatPrice(Number(total_cost))}</Box>
+                    <Box sx={{ fontWeight: 600, mb: 1 }}>{formatPrice(Number(profit))}</Box>
+                    <Box sx={{ fontWeight: 600 }}>{profit_margin}</Box>
+                </Box>
+            </Box>
         </Box>
     );
 }
@@ -257,8 +378,18 @@ export function Meals() {
                 onClose={closeModal}
                 title={selectedData?.name || t('mealsProducts.title')}
                 data={selectedData}
-                renderContent={(data) => renderMealsSpecifications(data, t)}
-                maxWidth="sm"
+                renderContent={(data) => (
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                        {/* {renderMealsSpecifications(data, t)} */}
+                        <Box>
+                            {/* <Box sx={{ mb: 2, fontWeight: 600, fontSize: 16 }}>
+                                {t('common.calculations')}
+                            </Box> */}
+                            <MealCalculationsTable mealId={data.id} />
+                        </Box>
+                    </Box>
+                )}
+                maxWidth="md"
                 slideDirection="left"
                 position="right"
             />

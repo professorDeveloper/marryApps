@@ -81,12 +81,12 @@ function buildBasicInfoSection(): CardSection {
                 required: true,
                 defaultValue: '',
             },
-            {
-                key: 'name_i18n',
-                label: 'categories.name_i18n',
-                type: 'text',
-                defaultValue: '',
-            },
+            // {
+            //     key: 'name_i18n',
+            //     label: 'categories.name_i18n',
+            //     type: 'text',
+            //     defaultValue: '',
+            // },
             {
                 key: 'color_code',
                 label: 'departments.color',

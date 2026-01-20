@@ -35,6 +35,8 @@ import { CategoryEditViewWrapper } from 'src/sections/category/category-edit-vie
 import { InventoryReportsListView } from 'src/sections/reports/inventory-list-view';
 import { CompoundEditViewWrapper } from 'src/sections/compounds/compounds-edit-view';
 import { RestaurantInfoListView } from 'src/sections/settings/restaurant-info';
+import { IngredientListView } from 'src/sections/warehouse/ingredients-list-view';
+import { IngredientEditViewWrapper } from 'src/sections/warehouse/ingredients-edit-view';
 
 import { AuthGuard } from 'src/auth/guard';
 
@@ -129,6 +131,9 @@ export const dashboardRoutes: RouteObject[] = [
           { path: 'warehouse/suppliers', element: <SuppliersListView /> },
           { path: 'warehouse/suppliers/new', element: <SuppliersEditView isNew /> },
           { path: 'warehouse/suppliers/:id/edit', element: <SuppliersEditView /> },
+          { path: 'warehouse/ingredients', element: <IngredientListView /> },
+          { path: 'warehouse/ingredients/new', element: <IngredientEditViewWrapper isNew /> },
+          { path: 'warehouse/ingredients/:id/edit', element: <IngredientEditViewWrapper /> },
           { path: 'reports', element: <ReportsListView /> },
           { path: 'reports/new', element: <ReportsEditView isNew /> },
           { path: 'reports/:id/edit', element: <ReportsEditView /> },
