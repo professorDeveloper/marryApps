@@ -50,12 +50,12 @@ export function TransfersListView() {
       breadcrumbs={{
         heading: t('overview.warehouse.transfers', 'Transfers'),
         links: [
-          { name: t('app'), href: paths.menu.root },
-          { name: t('overview.warehouse.title', 'Ombor'), href: paths.menu.warehouse.root },
-          { name: t('overview.warehouse.transfers', 'Transfers'), href: paths.menu.warehouse.transfers.root },
+          { name: t('app'), href: paths.warehouse.root },
+          { name: t('overview.warehouse.title', 'Ombor'), href: paths.warehouse.root },
+          { name: t('overview.warehouse.transfers', 'Transfers'), href: paths.warehouse.transfers.root },
         ],
       }}
-      addButton={{ label: t('add'), href: paths.menu.warehouse.transfers.new }}
+      addButton={{ label: t('add'), href: paths.warehouse.transfers.new }}
     />
   );
 }

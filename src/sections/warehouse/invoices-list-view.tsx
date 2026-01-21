@@ -82,8 +82,10 @@ export function InvoicesListView() {
                             style={{
                                 padding: '4px 12px',
                                 borderRadius: '4px',
-                                fontSize: '12px',
-                                fontWeight: 500,
+                                fontSize: '14px',
+                                fontWeight: 700,
+                                marginTop: '20px',
+                                marginBottom: '20px',
                                 backgroundColor:
                                     color === 'warning'
                                         ? '#FFF3CD'
@@ -134,7 +136,7 @@ export function InvoicesListView() {
                         showInMenu
                         label={t('edit')}
                         icon={<Iconify icon="solar:pen-bold" />}
-                        href={paths.menu.warehouse.invoices.edit(params.row.id)}
+                        href={paths.warehouse.invoices.edit(params.row.id)}
                     />,
                     <CustomGridActionsCellItem
                         showInMenu
@@ -163,11 +165,11 @@ export function InvoicesListView() {
                 heading: t('overview.warehouse.invoices', 'Invoices'),
                 links: [
                     { name: t('app'), href: paths.menu.root },
-                    { name: t('overview.warehouse.title', 'Warehouse'), href: paths.menu.warehouse.root },
-                    { name: t('overview.warehouse.invoices', 'Invoices'), href: paths.menu.warehouse.invoices.root },
+                    { name: t('overview.warehouse.title', 'Warehouse'), href: paths.warehouse.root },
+                    { name: t('overview.warehouse.invoices', 'Invoices'), href: paths.warehouse.invoices.root },
                 ],
             }}
-            addButton={{ label: t('add'), href: paths.menu.warehouse.invoices.new }}
+            addButton={{ label: t('add'), href: paths.warehouse.invoices.new }}
         />
     );
 }

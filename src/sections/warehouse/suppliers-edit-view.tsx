@@ -12,7 +12,7 @@ export function SuppliersEditView({ isNew = false }: { isNew?: boolean }) {
 
   const handleSubmit = useCallback(async (formData: Record<string, any>) => {
     console.log('Saving supplier', formData);
-    router.push(paths.menu.warehouse.suppliers.root);
+    router.push(paths.warehouse.suppliers.root);
   }, [router]);
 
   const BASIC: CardSection = {
@@ -30,9 +30,9 @@ export function SuppliersEditView({ isNew = false }: { isNew?: boolean }) {
     title: 'Supplier',
     entityName: 'supplier',
     breadcrumbs: [
-      { name: 'Menu', href: paths.menu.root },
-      { name: 'Warehouse', href: paths.menu.warehouse.root },
-      { name: 'Suppliers', href: paths.menu.warehouse.suppliers.root },
+      { name: 'Menu', href: paths.warehouse.root },
+      { name: 'Warehouse', href: paths.warehouse.root },
+      { name: 'Suppliers', href: paths.warehouse.suppliers.root },
       { name: isNew ? 'New' : 'Edit', href: '' },
     ],
     sections: [BASIC],

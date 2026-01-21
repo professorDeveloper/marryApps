@@ -35,10 +35,6 @@ const COLOR_CODES = [
     '#FFFFFF', // White
 ];
 
-// ============================================================================
-// HELPER FUNCTIONS
-// ============================================================================
-
 function translateSection(section: CardSection, t: TFunction): CardSection {
     const mapped = { ...section } as CardSection;
     if (typeof mapped.title === 'string' && mapped.title.includes('.')) {
@@ -65,10 +61,6 @@ function translateSection(section: CardSection, t: TFunction): CardSection {
     return mapped;
 }
 
-// ============================================================================
-// SECTION BUILDERS
-// ============================================================================
-
 function buildBasicInfoSection(): CardSection {
     return {
         id: 'basic',
@@ -85,9 +77,14 @@ function buildBasicInfoSection(): CardSection {
             {
                 key: 'measurement',
                 label: 'common.measurement',
-                type: 'text' as const,
+                type: 'select' as const,
                 required: true,
                 defaultValue: '',
+                options: [
+                    { value: 'kg', label: 'ingredients.measurementKg' },
+                    { value: 'l', label: 'ingredients.measurementL' },
+                    { value: 'piece', label: 'ingredients.measurementDona' },
+                ],
             },
         ],
     };
@@ -213,7 +210,7 @@ export function IngredientEditView({ isNew = false }: IngredientEditViewProps) {
                 // Small delay to ensure SWR cache is updated
                 await new Promise((resolve) => setTimeout(resolve, 500));
 
-                router.push(paths.menu.warehouse.ingredients.root);
+                router.push(paths.warehouse.ingredients.root);
             } catch (err) {
                 console.error('Error saving ingredient:', err);
                 throw err;
@@ -229,7 +226,7 @@ export function IngredientEditView({ isNew = false }: IngredientEditViewProps) {
                 if (id) {
                     await deleteIngredient(id);
                     await new Promise((resolve) => setTimeout(resolve, 500));
-                    router.push(paths.menu.warehouse.ingredients.root);
+                    router.push(paths.warehouse.ingredients.root);
                 }
             } catch (err) {
                 console.error('Error deleting ingredient:', err);
@@ -247,7 +244,7 @@ export function IngredientEditView({ isNew = false }: IngredientEditViewProps) {
             showBreadcrumbs: false,
             breadcrumbs: [
                 { name: t('app'), href: paths.menu.root },
-                { name: t('ingredients.title'), href: paths.menu.warehouse.ingredients.root },
+                { name: t('ingredients.title'), href: paths.warehouse.ingredients.root },
                 { name: isNew ? t('ingredients.new') : t('ingredients.edit'), href: '' },
             ],
             leftSidecard: IMAGE_SECTION_T,

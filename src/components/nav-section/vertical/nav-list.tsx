@@ -23,17 +23,26 @@ export function NavList({
   const pathname = usePathname();
   const navItemRef = useRef<HTMLButtonElement>(null);
 
-  const isActive = isActiveLink(pathname, data.path, data.deepMatch ?? !!data.children);
+  // Check if any child path matches the current pathname (for parent items with children)
+  const isChildActive = data.children?.some((child) =>
+    isActiveLink(pathname, child.path, true)
+  ) ?? false;
+
+  // For items with children: active if current path matches OR any child is active
+  // For items without children: use standard deepMatch logic
+  const isActive = data.children
+    ? isActiveLink(pathname, data.path, false) || isChildActive
+    : isActiveLink(pathname, data.path, data.deepMatch ?? false);
 
   const { value: open, onFalse: onClose, onToggle } = useBoolean(isActive);
 
   useEffect(() => {
-    // Only close menu items if they are children (depth > 1)
-    // Keep parent menu items (depth === 1 or undefined) open when navigating within their children
-    if (!isActive && depth !== undefined && depth > 1) {
+    // Close menu items that are not active when pathname changes
+    // This ensures only the active menu stays open when navigating
+    if (!isActive) {
       onClose();
     }
-  }, [isActive, depth, onClose]);
+  }, [isActive, onClose, pathname]);
 
   const handleToggleMenu = useCallback(() => {
     if (data.children) {

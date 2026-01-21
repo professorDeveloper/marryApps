@@ -40,7 +40,7 @@ export function StocksListView() {
             showInMenu
             label={t('edit')}
             icon={<Iconify icon="solar:pen-bold" />}
-            href={paths.menu.warehouse.stocks.edit(params.row.id)}
+            href={paths.warehouse.stocks.edit(params.row.id)}
           />,
         ],
       },
@@ -57,11 +57,11 @@ export function StocksListView() {
         heading: t('overview.warehouse.stocks', 'Stocks'),
         links: [
           { name: t('app'), href: paths.menu.root },
-          { name: t('overview.warehouse.title', 'Ombor'), href: paths.menu.warehouse.root },
-          { name: t('overview.warehouse.stocks', 'Stocks'), href: paths.menu.warehouse.stocks.root },
+          { name: t('overview.warehouse.title', 'Ombor'), href: paths.warehouse.root },
+          { name: t('overview.warehouse.stocks', 'Stocks'), href: paths.warehouse.stocks.root },
         ],
       }}
-      addButton={{ label: t('add'), href: paths.menu.warehouse.stocks.new }}
+      addButton={{ label: t('add'), href: paths.warehouse.stocks.new }}
     />
   );
 }

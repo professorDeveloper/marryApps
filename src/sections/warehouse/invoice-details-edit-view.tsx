@@ -9,8 +9,10 @@ import { paths } from 'src/routes/paths';
 import { useRouter } from 'src/routes/hooks';
 import { useInvoiceDetailsAPI } from 'src/hooks/use-invoice-details-api';
 import { GenericEditView } from 'src/components/generic-edit-view';
+import { useTranslate } from 'src/locales';
 
 export function InvoiceDetailsEditView({ isNew = false }: { isNew?: boolean }) {
+    const { t } = useTranslate('menu');
     const { id } = useParams<{ id?: string }>();
     const router = useRouter();
     const {
@@ -55,22 +57,22 @@ export function InvoiceDetailsEditView({ isNew = false }: { isNew?: boolean }) {
         async (formData: Record<string, any>) => {
             try {
                 if (!formData.invoice_id) {
-                    toast.error('Please select an invoice');
+                    toast.error(t('warehouse.invoiceDetails.selectSupplier'));
                     return;
                 }
 
                 if (!formData.ingredient_id) {
-                    toast.error('Please select an ingredient');
+                    toast.error(t('warehouse.invoiceDetails.selectProduct'));
                     return;
                 }
 
                 if (!formData.quantity || formData.quantity <= 0) {
-                    toast.error('Quantity must be greater than 0');
+                    toast.error(t('warehouse.invoiceDetails.quantityRequired'));
                     return;
                 }
 
                 if (!formData.price_per_unit || formData.price_per_unit <= 0) {
-                    toast.error('Price per unit must be greater than 0');
+                    toast.error(t('warehouse.invoiceDetails.priceRequired'));
                     return;
                 }
 
@@ -87,13 +89,13 @@ export function InvoiceDetailsEditView({ isNew = false }: { isNew?: boolean }) {
 
                 if (isNew) {
                     await createInvoiceDetail(dataToSend);
-                    toast.success('Kirim successfully created');
+                    toast.success(t('warehouse.invoiceDetails.createdSuccess'));
                 } else if (id) {
                     await updateInvoiceDetail(id, dataToSend);
-                    toast.success('Kirim successfully updated');
+                    toast.success(t('warehouse.invoiceDetails.updatedSuccess'));
                 }
 
-                router.push(paths.menu.warehouse.invoiceDetails.root);
+                router.push(paths.warehouse.invoiceDetails.root);
             } catch (error) {
                 console.error('Error saving detail:', error);
             }
@@ -103,33 +105,35 @@ export function InvoiceDetailsEditView({ isNew = false }: { isNew?: boolean }) {
 
     const BASIC: CardSection = {
         id: 'basic',
-        title: 'Kirim ma\'lumotlari',
+        title: t('warehouse.invoiceDetails.title'),
         columns: 2,
         fields: [
             {
                 key: 'invoice_id',
-                label: 'Yetkazib beruvchi',
+                label: t('warehouse.invoiceDetails.supplier'),
                 type: 'select',
                 required: true,
                 options: invoiceOptions,
+                placeholder: t('warehouse.invoiceDetails.selectSupplier'),
             },
             {
                 key: 'ingredient_id',
-                label: 'Mahsulot',
+                label: t('warehouse.invoiceDetails.product'),
                 type: 'select',
                 required: true,
                 options: ingredientOptions,
+                placeholder: t('warehouse.invoiceDetails.selectProduct'),
             },
             {
                 key: 'quantity',
-                label: 'Miqdori',
+                label: t('warehouse.invoiceDetails.quantity'),
                 type: 'number',
                 required: true,
                 defaultValue: 1,
             },
             {
                 key: 'price_per_unit',
-                label: 'Birlik narxi (UZS)',
+                label: t('warehouse.invoiceDetails.unitPrice'),
                 type: 'number',
                 required: true,
                 defaultValue: 0,
@@ -138,13 +142,13 @@ export function InvoiceDetailsEditView({ isNew = false }: { isNew?: boolean }) {
     };
 
     const config: GenericEditViewConfig = {
-        title: isNew ? 'Yangi Kirim qo\'shash' : 'Kirimni tahrirlash',
-        entityName: 'kirim',
+        title: isNew ? t('warehouse.invoiceDetails.addNew') : t('warehouse.invoiceDetails.editEntry'),
+        entityName: t('warehouse.invoiceDetails.title').toLowerCase(),
         breadcrumbs: [
-            { name: 'Menu', href: paths.menu.root },
-            { name: 'Warehouse', href: paths.menu.warehouse.root },
-            { name: 'Kirimlar', href: paths.menu.warehouse.invoiceDetails.root },
-            { name: isNew ? 'Yangi' : 'Tahrirlash', href: '' },
+            { name: t('menu'), href: paths.menu.root },
+            { name: t('warehouse.title'), href: paths.warehouse.root },
+            { name: t('warehouse.invoiceDetails.entries'), href: paths.warehouse.invoiceDetails.root },
+            // { name: isNew ? t('common.new') : t('common.edit'), href: '' },
         ],
         sections: [BASIC],
         onSubmit: handleSubmit,

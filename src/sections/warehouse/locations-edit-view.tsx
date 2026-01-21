@@ -12,7 +12,7 @@ export function LocationsEditView({ isNew = false }: { isNew?: boolean }) {
 
   const handleSubmit = useCallback(async (formData: Record<string, any>) => {
     console.log('Saving location', formData);
-    router.push(paths.menu.warehouse.locations.root);
+    router.push(paths.warehouse.locations.root);
   }, [router]);
 
   const BASIC: CardSection = {
@@ -30,8 +30,8 @@ export function LocationsEditView({ isNew = false }: { isNew?: boolean }) {
     entityName: 'location',
     breadcrumbs: [
       { name: 'Menu', href: paths.menu.root },
-      { name: 'Warehouse', href: paths.menu.warehouse.root },
-      { name: 'Locations', href: paths.menu.warehouse.locations.root },
+      { name: 'Warehouse', href: paths.warehouse.root },
+      { name: 'Locations', href: paths.warehouse.locations.root },
       { name: isNew ? 'New' : 'Edit', href: '' },
     ],
     sections: [BASIC],

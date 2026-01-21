@@ -133,7 +133,7 @@ export function WarehouseListView() {
 
   const handleEdit = useCallback(
     (id: string) => {
-      router.push(paths.menu.warehouse.edit(id));
+      router.push(paths.warehouse.edit(id));
     },
     [router]
   );
@@ -224,13 +224,13 @@ export function WarehouseListView() {
           heading: t('warehouse.title', 'Warehouse'),
           links: [
             { name: t('app'), href: paths.menu.root },
-            { name: t('warehouse.title', 'Warehouse'), href: paths.menu.warehouse.root },
+            { name: t('warehouse.title', 'Warehouse'), href: paths.warehouse.root },
             { name: t('warehouse.list', 'List') },
           ],
         }}
         addButton={{
           label: t('warehouse.add', 'Add Warehouse'),
-          href: paths.menu.warehouse.new,
+          href: paths.warehouse.new,
         }}
         onDeleteRow={(id) => {
           setStorageToDelete(id);

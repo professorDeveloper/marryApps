@@ -1,25 +1,15 @@
 import type { SWRConfiguration } from 'swr';
 import type { ICategory, ICategoryFormData, IGoodsItem } from 'src/types/category';
-
 import useSWR, { mutate } from 'swr';
 import { useMemo, useCallback } from 'react';
-
 import { poster, putter, fetcher, deleter, endpoints } from 'src/lib/axios';
 import { useGetStorages, useGetDepartments } from 'src/actions/departments';
-
-// ============================================================================
-// CONFIGURATION
-// ============================================================================
 
 const swrOptions: SWRConfiguration = {
     revalidateIfStale: true,
     revalidateOnFocus: false,
     revalidateOnReconnect: false,
 };
-
-// ============================================================================
-// TYPES
-// ============================================================================
 
 /**
  * Backend response structure
@@ -52,10 +42,6 @@ function enrichCategories(
         department_name: departmentMap.get(cat.department_id) || cat.department_id || '-',
     }));
 }
-
-// ============================================================================
-// CATEGORIES HOOKS
-// ============================================================================
 
 /**
  * Get all categories
@@ -196,9 +182,6 @@ export function useDeleteCategory() {
     return { deleteCategory };
 }
 
-// ============================================================================
-// GOODS BY CATEGORY HOOKS
-// ============================================================================
 
 /**
  * Get goods by category ID
@@ -212,15 +195,7 @@ export function useGetGoodsByCategory(categoryId: string) {
         { ...swrOptions }
     );
 
-    // Debug logging
-    useMemo(() => {
-        console.log('useGetGoodsByCategory - categoryId:', categoryId);
-        console.log('useGetGoodsByCategory - url:', url);
-        console.log('useGetGoodsByCategory - data:', data);
-        console.log('useGetGoodsByCategory - isLoading:', isLoading);
-        console.log('useGetGoodsByCategory - error:', error);
-    }, [categoryId, url, data, isLoading, error]);
-
+    
     // Handle both response formats
     const goods = useMemo(() => {
         if (!data) return [];

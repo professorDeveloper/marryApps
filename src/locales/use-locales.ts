@@ -76,7 +76,6 @@ export function useLocaleDirectionSync() {
   const handleSync = useCallback(async () => {
     const selectedLang = currentLang.value;
     const i18nDir = i18n.dir(selectedLang);
-
     if (document.dir !== i18nDir) {
       document.dir = i18nDir;
     }

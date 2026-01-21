@@ -33,7 +33,7 @@ export function LocationsListView() {
             showInMenu
             label={t('edit')}
             icon={<Iconify icon="solar:pen-bold" />}
-            href={paths.menu.warehouse.locations.edit(params.row.id)}
+            href={paths.warehouse.locations.edit(params.row.id)}
           />,
         ],
       },
@@ -50,11 +50,11 @@ export function LocationsListView() {
         heading: t('overview.warehouse.locations', 'Locations'),
         links: [
           { name: t('app'), href: paths.menu.root },
-          { name: t('overview.warehouse.title', 'Ombor'), href: paths.menu.warehouse.root },
-          { name: t('overview.warehouse.locations', 'Locations'), href: paths.menu.warehouse.locations.root },
+          { name: t('overview.warehouse.title', 'Ombor'), href: paths.warehouse.root },
+          { name: t('overview.warehouse.locations', 'Locations'), href: paths.warehouse.locations.root },
         ],
       }}
-      addButton={{ label: t('add'), href: paths.menu.warehouse.locations.new }}
+      addButton={{ label: t('add'), href: paths.warehouse.locations.new }}
     />
   );
 }

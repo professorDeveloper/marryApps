@@ -8,12 +8,12 @@ import { useRouter } from 'src/routes/hooks';
 import { GenericEditView } from 'src/components/generic-edit-view';
 
 export function TransfersEditView({ isNew = false }: { isNew?: boolean }) {
-  const router = useRouter();
+  const router = useRouter()
 
   const handleSubmit = useCallback(async (formData: Record<string, any>) => {
-    console.log('Saving transfer', formData);
-    router.push(paths.menu.warehouse.transfers.root);
-  }, [router]);
+    console.log('Saving transfer', formData)
+    router.push(paths.warehouse.transfers.root)
+  }, [router])
 
   const BASIC: CardSection = {
     id: 'basic',
@@ -31,8 +31,8 @@ export function TransfersEditView({ isNew = false }: { isNew?: boolean }) {
     entityName: 'transfer',
     breadcrumbs: [
       { name: 'Menu', href: paths.menu.root },
-      { name: 'Warehouse', href: paths.menu.warehouse.root },
-      { name: 'Transfers', href: paths.menu.warehouse.transfers.root },
+      { name: 'Warehouse', href: paths.warehouse.root },
+      { name: 'Transfers', href: paths.warehouse.transfers.root },
       { name: isNew ? 'New' : 'Edit', href: '' },
     ],
     sections: [BASIC],

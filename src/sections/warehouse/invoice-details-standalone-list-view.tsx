@@ -158,7 +158,7 @@ export function InvoiceDetailsStandaloneListView() {
                         showInMenu
                         label={t('edit')}
                         icon={<Iconify icon="solar:pen-bold" />}
-                        href={paths.menu.warehouse.invoiceDetails.edit(params.row.id)}
+                        href={paths.warehouse.invoiceDetails.edit(params.row.id)}
                     />,
                     <CustomGridActionsCellItem
                         showInMenu
@@ -182,24 +182,24 @@ export function InvoiceDetailsStandaloneListView() {
                     heading: t('overview.warehouse.invoiceDetails', 'Kirimlar'),
                     links: [
                         { name: t('app'), href: paths.menu.root },
-                        { name: t('overview.warehouse.title', 'Warehouse'), href: paths.menu.warehouse.root },
-                        { name: t('overview.warehouse.invoiceDetails', 'Kirimlar'), href: paths.menu.warehouse.invoiceDetails.root },
+                        { name: t('overview.warehouse.title', 'Warehouse'), href: paths.warehouse.root },
+                        { name: t('overview.warehouse.invoiceDetails', 'Kirimlar'), href: paths.warehouse.invoiceDetails.root },
                     ],
                 }}
-                addButton={{ label: t('add'), href: paths.menu.warehouse.invoiceDetails.new }}
+                addButton={{ label: t('add'), href: paths.warehouse.invoiceDetails.new }}
             />
 
             <Dialog open={deleteDialogOpen} onClose={handleDeleteCancel}>
-                <DialogTitle>O'chirishni tasdiqlang</DialogTitle>
+                <DialogTitle>{t('warehouse.invoiceDetails.deleteConfirmation.title')}</DialogTitle>
                 <DialogContent>
-                    <p>Siz bu kirimni o'chirishni istaysiz? Bu amal qaytarilmaydi.</p>
+                    <p>{t('warehouse.invoiceDetails.deleteConfirmation.message')}</p>
                 </DialogContent>
                 <DialogActions>
                     <Button onClick={handleDeleteCancel} variant="outlined">
-                        Bekor qilish
+                        {t('warehouse.invoiceDetails.deleteConfirmation.cancel')}
                     </Button>
                     <Button onClick={handleDeleteConfirm} variant="contained" color="error">
-                        O'chirish
+                        {t('warehouse.invoiceDetails.deleteConfirmation.delete')}
                     </Button>
                 </DialogActions>
             </Dialog>

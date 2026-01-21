@@ -40,7 +40,7 @@ export function SuppliersListView() {
             showInMenu
             label={t('edit')}
             icon={<Iconify icon="solar:pen-bold" />}
-            href={paths.menu.warehouse.suppliers.edit(params.row.id)}
+            href={paths.warehouse.suppliers.edit(params.row.id)}
           />,
         ],
       },
@@ -57,11 +57,11 @@ export function SuppliersListView() {
         heading: t('overview.warehouse.suppliers', 'Suppliers'),
         links: [
           { name: t('app'), href: paths.menu.root },
-          { name: t('overview.warehouse.title', 'Ombor'), href: paths.menu.warehouse.root },
-          { name: t('overview.warehouse.suppliers', 'Suppliers'), href: paths.menu.warehouse.suppliers.root },
+          { name: t('overview.warehouse.title', 'Ombor'), href: paths.warehouse.root },
+          { name: t('overview.warehouse.suppliers', 'Suppliers'), href: paths.warehouse.suppliers.root },
         ],
       }}
-      addButton={{ label: t('add'), href: paths.menu.warehouse.suppliers.new }}
+      addButton={{ label: t('add'), href: paths.warehouse.suppliers.new }}
     />
   );
 }

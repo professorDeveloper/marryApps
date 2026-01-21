@@ -104,14 +104,28 @@ function RenderCellGroupName({ params }: { params: any }) {
 }
 
 /**
- * Measurement renderer
+ * Measurement renderer with translation
  */
-function RenderCellMeasurement({ params }: { params: any }) {
+function RenderCellMeasurement({ params, t }: { params: any; t: (key: string) => string }) {
     const measurement = params.row.measurement || '-';
+
+    // Map backend values to translation keys
+    const getMeasurementLabel = (value: string): string => {
+        switch (value) {
+            case 'kg':
+                return t('ingredients.measurementKg');
+            case 'l':
+                return t('ingredients.measurementL');
+            case 'piece':
+                return t('ingredients.measurementDona');
+            default:
+                return value;
+        }
+    };
 
     return (
         <div style={{ fontSize: '0.875rem', opacity: 0.8 }}>
-            {measurement}
+            {getMeasurementLabel(measurement)}
         </div>
     );
 }
@@ -204,7 +218,7 @@ export function IngredientListView() {
                 field: 'measurement',
                 headerName: t('warehouse.measurement'),
                 width: 150,
-                renderCell: (params) => <RenderCellMeasurement params={params} />,
+                renderCell: (params) => <RenderCellMeasurement params={params} t={t} />,
             },
             {
                 field: 'color_code',
@@ -253,7 +267,7 @@ export function IngredientListView() {
     );
 
     const handleEditIngredient = useCallback((id: string) => {
-        router.push(paths.menu.warehouse.ingredients.edit(id));
+        router.push(paths.warehouse.ingredients.edit(id));
     }, [router]);
 
     // Handle delete confirmation
@@ -367,7 +381,7 @@ export function IngredientListView() {
                 }}
                 addButton={{
                     label: t('warehouse.add'),
-                    href: paths.menu.warehouse.ingredients.new,
+                    href: paths.warehouse.ingredients.new,
                 }}
                 filterOptions={{}}
                 initialFilters={{}}

@@ -56,10 +56,10 @@ export const paths = {
       six: `${ROOTS.MENU}/group/six`,
     },
     inventory: {
-      root: `${ROOTS.MENU}/inventory`,
-      new: `${ROOTS.MENU}/inventory/new`,
-      details: (id: string) => `${ROOTS.MENU}/inventory/${id}`,
-      edit: (id: string) => `${ROOTS.MENU}/inventory/${id}/edit`,
+      root: `${ROOTS.MENU}/warehouse/inventory`,
+      new: `${ROOTS.MENU}/warehouse/inventory/new`,
+      details: (id: string) => `${ROOTS.MENU}/warehouse/inventory/${id}`,
+      edit: (id: string) => `${ROOTS.MENU}/warehouse/inventory/${id}/edit`,
     },
     product: {
       root: `${ROOTS.MENU}/section`,
@@ -94,11 +94,43 @@ export const paths = {
       details: (id: string) => `${ROOTS.MENU}/meals/${id}`,
       edit: (id: string) => `${ROOTS.MENU}/meals/${id}/edit`,
     },
-    warehouse: {
+   
+    reports: {
+      root: `${ROOTS.MENU}/reports`,
+      new: `${ROOTS.MENU}/reports/new`,
+      details: (id: string) => `${ROOTS.MENU}/reports/${id}`,
+      edit: (id: string) => `${ROOTS.MENU}/reports/${id}/edit`,
+      sales: {
+        root: `${ROOTS.MENU}/reports/sales`,
+        new: `${ROOTS.MENU}/reports/sales/new`,
+        details: (id: string) => `${ROOTS.MENU}/reports/sales/${id}`,
+        edit: (id: string) => `${ROOTS.MENU}/reports/sales/${id}/edit`,
+      },
+      inventory: {
+        root: `${ROOTS.MENU}/reports/inventory`,
+        new: `${ROOTS.MENU}/reports/inventory/new`,
+        details: (id: string) => `${ROOTS.MENU}/reports/inventory/${id}`,
+        edit: (id: string) => `${ROOTS.MENU}/reports/inventory/${id}/edit`,
+      },
+      custom: {
+        root: `${ROOTS.MENU}/reports/custom`,
+        new: `${ROOTS.MENU}/reports/custom/new`,
+        details: (id: string) => `${ROOTS.MENU}/reports/custom/${id}`,
+        edit: (id: string) => `${ROOTS.MENU}/reports/custom/${id}/edit`,
+      },
+      archives: {
+        root: `${ROOTS.MENU}/reports/archives`,
+        new: `${ROOTS.MENU}/reports/archives/new`,
+        details: (id: string) => `${ROOTS.MENU}/reports/archives/${id}`,
+        edit: (id: string) => `${ROOTS.MENU}/reports/archives/${id}/edit`,
+      },
+    },
+  },
+   warehouse: {
       root: `${ROOTS.MENU}/warehouse`,
-      new: `${ROOTS.MENU}/inventory/new`,
-      details: (id: string) => `${ROOTS.MENU}/inventory/${id}`,
-      edit: (id: string) => `${ROOTS.MENU}/inventory/${id}/edit`,
+      new: `${ROOTS.MENU}/warehouse/inventory/new`,
+      details: (id: string) => `${ROOTS.MENU}/warehouse/inventory/${id}`,
+      edit: (id: string) => `${ROOTS.MENU}/warehouse/inventory/${id}/edit`,
       stocks: {
         root: `${ROOTS.MENU}/warehouse/stocks`,
         new: `${ROOTS.MENU}/warehouse/stocks/new`,
@@ -142,37 +174,6 @@ export const paths = {
         edit: (id: string) => `${ROOTS.MENU}/warehouse/invoice-details/${id}/edit`,
       },
     },
-    reports: {
-      root: `${ROOTS.MENU}/reports`,
-      new: `${ROOTS.MENU}/reports/new`,
-      details: (id: string) => `${ROOTS.MENU}/reports/${id}`,
-      edit: (id: string) => `${ROOTS.MENU}/reports/${id}/edit`,
-      sales: {
-        root: `${ROOTS.MENU}/reports/sales`,
-        new: `${ROOTS.MENU}/reports/sales/new`,
-        details: (id: string) => `${ROOTS.MENU}/reports/sales/${id}`,
-        edit: (id: string) => `${ROOTS.MENU}/reports/sales/${id}/edit`,
-      },
-      inventory: {
-        root: `${ROOTS.MENU}/reports/inventory`,
-        new: `${ROOTS.MENU}/reports/inventory/new`,
-        details: (id: string) => `${ROOTS.MENU}/reports/inventory/${id}`,
-        edit: (id: string) => `${ROOTS.MENU}/reports/inventory/${id}/edit`,
-      },
-      custom: {
-        root: `${ROOTS.MENU}/reports/custom`,
-        new: `${ROOTS.MENU}/reports/custom/new`,
-        details: (id: string) => `${ROOTS.MENU}/reports/custom/${id}`,
-        edit: (id: string) => `${ROOTS.MENU}/reports/custom/${id}/edit`,
-      },
-      archives: {
-        root: `${ROOTS.MENU}/reports/archives`,
-        new: `${ROOTS.MENU}/reports/archives/new`,
-        details: (id: string) => `${ROOTS.MENU}/reports/archives/${id}`,
-        edit: (id: string) => `${ROOTS.MENU}/reports/archives/${id}/edit`,
-      },
-    },
-  },
 
   settings: {
     root: `${ROOTS.SETTING}`,

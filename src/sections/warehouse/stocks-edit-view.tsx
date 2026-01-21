@@ -12,7 +12,7 @@ export function StocksEditView({ isNew = false }: { isNew?: boolean }) {
 
   const handleSubmit = useCallback(async (formData: Record<string, any>) => {
     console.log('Saving stock', formData);
-    router.push(paths.menu.warehouse.stocks.root);
+    router.push(paths.warehouse.stocks.root);
   }, [router]);
 
   const BASIC: CardSection = {
@@ -31,8 +31,8 @@ export function StocksEditView({ isNew = false }: { isNew?: boolean }) {
     entityName: 'stock',
     breadcrumbs: [
       { name: 'Menu', href: paths.menu.root },
-      { name: 'Warehouse', href: paths.menu.warehouse.root },
-      { name: 'Stocks', href: paths.menu.warehouse.stocks.root },
+      { name: 'Warehouse', href: paths.warehouse.root },
+      { name: 'Stocks', href: paths.warehouse.stocks.root },
       { name: isNew ? 'New' : 'Edit', href: '' },
     ],
     sections: [BASIC],
