@@ -186,7 +186,7 @@ export const GenericEditView: FC<GenericEditViewProps> = ({
                                         disabled={loading}
                                         startIcon={<Iconify icon="solar:trash-bin-trash-bold" />}
                                     >
-                                        Delete {config.title}
+                                        {t('delete')}
                                     </Button>
                                 )}
 
@@ -231,7 +231,7 @@ export const GenericEditView: FC<GenericEditViewProps> = ({
                                     disabled={loading}
                                     startIcon={<Iconify icon="solar:check-circle-bold" />}
                                 >
-                                    {loading ? t('loading') : `${t('save')} ${config.title}`}
+                                    {loading ? t('loading') : `${t('save')} `}
                                 </Button>
 
                                 {!isNew && config.showDeleteButton !== false && (
@@ -243,7 +243,7 @@ export const GenericEditView: FC<GenericEditViewProps> = ({
                                         disabled={loading}
                                         startIcon={<Iconify icon="solar:trash-bin-trash-bold" />}
                                     >
-                                        Delete {config.title}
+                                        {t('delete')} 
                                     </Button>
                                 )}
 

@@ -250,7 +250,7 @@ export function GenericViewModal({
             theme.palette.mode === 'dark'
               ? '0 20px 60px rgba(0, 0, 0, 0.8)'
               : '0 20px 60px rgba(0, 0, 0, 0.08)',
-          border: (theme) => 
+          border: (theme) =>
             theme.palette.mode === 'dark' ? `1px solid ${theme.palette.divider}` : 'none',
         },
       }}
@@ -272,10 +272,10 @@ export function GenericViewModal({
           pb: 2,
           borderBottom: `1px solid`,
           borderColor: 'divider',
-         backgroundColor: (theme) =>
-              theme.palette.mode === 'dark'
-                ? 'rgba(255, 255, 255, 0.05)'
-                : 'rgba(0, 0, 0, 0.04)',
+          backgroundColor: (theme) =>
+            theme.palette.mode === 'dark'
+              ? 'rgba(255, 255, 255, 0.05)'
+              : 'rgba(0, 0, 0, 0.04)',
           backdropFilter: 'blur(10px)',
           position: 'sticky',
           top: 0,

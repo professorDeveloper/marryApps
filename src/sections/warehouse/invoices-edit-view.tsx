@@ -1,13 +1,11 @@
 import type { CardSection, GenericEditViewConfig } from 'src/components/generic-edit-view';
-
 import { useCallback } from 'react';
-
 import { paths } from 'src/routes/paths';
 import { useRouter } from 'src/routes/hooks';
 import { useTranslate } from 'src/locales';
-
 import { GenericEditView } from 'src/components/generic-edit-view';
 import { useInvoiceAPI } from 'src/hooks/use-invoice-api';
+import { Box } from '@mui/material';
 
 export function InvoicesEditView({ isNew = false }: { isNew?: boolean }) {
     const { t } = useTranslate('menu');
@@ -87,7 +85,6 @@ export function InvoicesEditView({ isNew = false }: { isNew?: boolean }) {
                 label: t('warehouse.invoices.totalAmount'),
                 type: 'number',
                 required: true,
-                defaultValue: '0',
             },
         ],
     };
@@ -105,5 +102,9 @@ export function InvoicesEditView({ isNew = false }: { isNew?: boolean }) {
         onSubmit: handleSubmit,
     };
 
-    return <GenericEditView config={config} isNew={isNew} />;
+    return (
+        <Box sx={{ pl: 4, pt: 3 }}>
+            <GenericEditView config={config} isNew={isNew} />
+        </Box>
+    );
 }

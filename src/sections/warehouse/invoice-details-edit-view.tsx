@@ -1,15 +1,14 @@
 import type { CardSection, GenericEditViewConfig } from 'src/components/generic-edit-view';
-
 import { useCallback, useEffect, useState } from 'react';
 import { useParams } from 'react-router';
 import { Box, CircularProgress } from '@mui/material';
 import { toast } from 'sonner';
-
 import { paths } from 'src/routes/paths';
 import { useRouter } from 'src/routes/hooks';
 import { useInvoiceDetailsAPI } from 'src/hooks/use-invoice-details-api';
 import { GenericEditView } from 'src/components/generic-edit-view';
 import { useTranslate } from 'src/locales';
+import { CustomBreadcrumbs } from 'src/components/custom-breadcrumbs';
 
 export function InvoiceDetailsEditView({ isNew = false }: { isNew?: boolean }) {
     const { t } = useTranslate('menu');
@@ -18,7 +17,6 @@ export function InvoiceDetailsEditView({ isNew = false }: { isNew?: boolean }) {
     const {
         createInvoiceDetail,
         updateInvoiceDetail,
-        getInvoiceDetails,
         getInvoices,
         getIngredients,
     } = useInvoiceDetailsAPI();
@@ -136,7 +134,6 @@ export function InvoiceDetailsEditView({ isNew = false }: { isNew?: boolean }) {
                 label: t('warehouse.invoiceDetails.unitPrice'),
                 type: 'number',
                 required: true,
-                defaultValue: 0,
             },
         ],
     };
@@ -144,11 +141,11 @@ export function InvoiceDetailsEditView({ isNew = false }: { isNew?: boolean }) {
     const config: GenericEditViewConfig = {
         title: isNew ? t('warehouse.invoiceDetails.addNew') : t('warehouse.invoiceDetails.editEntry'),
         entityName: t('warehouse.invoiceDetails.title').toLowerCase(),
+        showBreadcrumbs: false,
         breadcrumbs: [
             { name: t('menu'), href: paths.menu.root },
             { name: t('warehouse.title'), href: paths.warehouse.root },
             { name: t('warehouse.invoiceDetails.entries'), href: paths.warehouse.invoiceDetails.root },
-            // { name: isNew ? t('common.new') : t('common.edit'), href: '' },
         ],
         sections: [BASIC],
         onSubmit: handleSubmit,
@@ -162,5 +159,21 @@ export function InvoiceDetailsEditView({ isNew = false }: { isNew?: boolean }) {
         );
     }
 
-    return <GenericEditView config={config} isNew={isNew} />;
+    return (
+        <Box sx={{ pl: 4, pt: 3 }}>
+            <Box sx={{ maxWidth: 1400, mx: 'auto' }}>
+                {/* BREADCRUMBS AND TITLE */}
+                <CustomBreadcrumbs
+                    heading={isNew ? t('warehouse.invoiceDetails.addNew') : t('warehouse.invoiceDetails.editEntry')}
+                    links={config.breadcrumbs}
+                    sx={{ mb: 3 }}
+                />
+
+                <GenericEditView
+                    config={config}
+                    isNew={isNew}
+                />
+            </Box>
+        </Box>
+    );
 }

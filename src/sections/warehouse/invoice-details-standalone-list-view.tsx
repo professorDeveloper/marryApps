@@ -1,15 +1,15 @@
 import type { GridColDef } from '@mui/x-data-grid';
-
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Dialog, DialogTitle, DialogContent, DialogActions, Button } from '@mui/material';
-
+import { Dialog, DialogTitle, DialogContent, DialogActions, Button, Box } from '@mui/material';
 import { paths } from 'src/routes/paths';
 import { useInvoiceDetailsAPI } from 'src/hooks/use-invoice-details-api';
-
+import { useInvoiceAPI } from 'src/hooks/use-invoice-api';
 import { Iconify } from 'src/components/iconify';
 import { CustomGridActionsCellItem } from 'src/components/custom-data-grid';
 import { GenericTableView } from 'src/components/generic-table-view';
+import { GenericViewModal } from 'src/components/generic-view-view';
+import { DataGrid } from '@mui/x-data-grid';
 
 interface InvoiceDetailWithInvoiceInfo {
     id: string;
@@ -28,27 +28,25 @@ interface InvoiceDetailWithInvoiceInfo {
 export function InvoiceDetailsStandaloneListView() {
     const { t } = useTranslation('menu');
     const { getInvoiceDetails, deleteInvoiceDetails, getInvoices, getIngredients } = useInvoiceDetailsAPI();
-    const [rows, setRows] = useState<InvoiceDetailWithInvoiceInfo[]>([]);
+    const { deleteInvoices } = useInvoiceAPI();
+    const [invoices, setInvoices] = useState<any[]>([]);
+    const [allDetails, setAllDetails] = useState<InvoiceDetailWithInvoiceInfo[]>([]);
     const [loading, setLoading] = useState(true);
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [selectedDeleteId, setSelectedDeleteId] = useState<string | null>(null);
+    const [selectedDeleteType, setSelectedDeleteType] = useState<'invoice' | 'detail' | null>(null);
+    const [selectedInvoice, setSelectedInvoice] = useState<any | null>(null);
 
     useEffect(() => {
         const fetchData = async () => {
             setLoading(true);
             try {
-                // Get all invoice details
+                const fetchedInvoices = await getInvoices();
                 const details = await getInvoiceDetails();
-
-                // Get invoices for enriching data
-                const invoices = await getInvoices();
-
-                // Get ingredients for enriching data
                 const ingredients = await getIngredients();
 
-                // Enrich details with invoice and ingredient info
                 const enrichedDetails = details.map((detail) => {
-                    const invoice = invoices.find((inv) => inv.id === detail.invoice_id);
+                    const invoice = fetchedInvoices.find((inv) => inv.id === detail.invoice_id);
                     const ingredient = ingredients.find((ing) => ing.id === detail.ingredient_id);
                     return {
                         ...detail,
@@ -58,7 +56,8 @@ export function InvoiceDetailsStandaloneListView() {
                     };
                 });
 
-                setRows(enrichedDetails);
+                setInvoices(fetchedInvoices);
+                setAllDetails(enrichedDetails);
             } finally {
                 setLoading(false);
             }
@@ -67,41 +66,187 @@ export function InvoiceDetailsStandaloneListView() {
         fetchData();
     }, [getInvoiceDetails, getInvoices, getIngredients]);
 
-    const handleDeleteClick = (id: string) => {
+    const handleDeleteClick = (id: string, type: 'invoice' | 'detail') => {
         setSelectedDeleteId(id);
+        setSelectedDeleteType(type);
         setDeleteDialogOpen(true);
     };
 
     const handleDeleteConfirm = async () => {
-        if (selectedDeleteId) {
-            await deleteInvoiceDetails([selectedDeleteId]);
-            setRows((prev) => prev.filter((row) => row.id !== selectedDeleteId));
+        if (selectedDeleteId && selectedDeleteType) {
+            if (selectedDeleteType === 'invoice') {
+                await deleteInvoices([selectedDeleteId]);
+                setInvoices((prev) => prev.filter((row) => row.id !== selectedDeleteId));
+                setAllDetails((prev) => prev.filter((detail) => detail.invoice_id !== selectedDeleteId));
+            } else if (selectedDeleteType === 'detail') {
+                await deleteInvoiceDetails([selectedDeleteId]);
+                setAllDetails((prev) => prev.filter((row) => row.id !== selectedDeleteId));
+                // Refresh the invoice details to ensure data consistency
+                const details = await getInvoiceDetails();
+                const ingredients = await getIngredients();
+                const enrichedDetails = details.map((detail) => {
+                    const invoice = invoices.find((inv: any) => inv.id === detail.invoice_id);
+                    const ingredient = ingredients.find((ing: any) => ing.id === detail.ingredient_id);
+                    return {
+                        ...detail,
+                        invoice_supplier_name: invoice?.supplier_name || 'Unknown',
+                        invoice_date: invoice?.date || '',
+                        ingredient_name: ingredient?.name || detail.ingredient_id,
+                    };
+                });
+                setAllDetails(enrichedDetails);
+            }
             setDeleteDialogOpen(false);
             setSelectedDeleteId(null);
+            setSelectedDeleteType(null);
         }
     };
 
     const handleDeleteCancel = () => {
         setDeleteDialogOpen(false);
         setSelectedDeleteId(null);
+        setSelectedDeleteType(null);
     };
 
-    const columns = useMemo<GridColDef[]>(
+    const handleViewClick = (invoice: any) => {
+        setSelectedInvoice(invoice);
+    };
+
+    const handleModalClose = () => {
+        setSelectedInvoice(null);
+    };
+
+    const invoiceColumns = useMemo<GridColDef[]>(
         () => [
             {
                 field: 'id',
                 headerName: '№',
                 width: 80,
                 renderCell: (params) => {
-                    const index = rows.findIndex((row) => row.id === params.row.id);
+                    const index = invoices.findIndex((row) => row.id === params.row.id);
                     return index + 1;
                 },
             },
             {
-                field: 'invoice_supplier_name',
-                headerName: t('supplier_name', 'Yetkazib beruvchi'),
+                field: 'supplier_name',
+                headerName: t('invoices.name', 'Supplier Name'),
                 flex: 1,
                 minWidth: 200,
+            },
+            {
+                field: 'supplier_phone',
+                headerName: t('invoices.phone', 'Phone'),
+                width: 160,
+            },
+            {
+                field: 'supplier_email',
+                headerName: t('invoices.email', 'Email'),
+                flex: 1,
+                minWidth: 220,
+            },
+            {
+                field: 'total_amount',
+                headerName: t('invoices.totalAmount', 'Total Amount'),
+                width: 150,
+                renderCell: (params) => {
+                    const amount = parseFloat(params.row.total_amount || 0);
+                    return `${amount.toLocaleString()} UZS`;
+                },
+            },
+            {
+                field: 'status',
+                headerName: t('invoices.status', 'Status'),
+                width: 120,
+                renderCell: (params) => {
+                    const status = params.row.status?.toLowerCase();
+                    let color = 'default';
+                    if (status === 'pending') color = 'warning';
+                    if (status === 'completed') color = 'success';
+                    if (status === 'cancelled') color = 'error';
+                    return (
+                        <span
+                            style={{
+                                padding: '4px 12px',
+                                borderRadius: '4px',
+                                fontSize: '14px',
+                                fontWeight: 700,
+                                marginTop: '20px',
+                                marginBottom: '20px',
+                                backgroundColor:
+                                    color === 'warning'
+                                        ? '#FFF3CD'
+                                        : color === 'success'
+                                            ? '#D4EDDA'
+                                            : color === 'error'
+                                                ? '#F8D7DA'
+                                                : '#E2E3E5',
+                                color:
+                                    color === 'warning'
+                                        ? '#856404'
+                                        : color === 'success'
+                                            ? '#155724'
+                                            : color === 'error'
+                                                ? '#721C24'
+                                                : '#383D41',
+                            }}
+                        >
+                            {status}
+                        </span>
+                    );
+                },
+            },
+            {
+                field: 'date',
+                headerName: t('invoices.date', 'Date'),
+                width: 140,
+                renderCell: (params) => new Date(params.row.date).toLocaleDateString(),
+            },
+            {
+                type: 'actions',
+                field: 'actions',
+                headerName: ' ',
+                width: 100,
+                align: 'right',
+                headerAlign: 'right',
+                sortable: false,
+                filterable: false,
+                disableColumnMenu: true,
+                getActions: (params) => [
+                    <CustomGridActionsCellItem
+                        showInMenu
+                        label={t('view')}
+                        icon={<Iconify icon="solar:eye-bold" />}
+                        onClick={() => handleViewClick(params.row)}
+                    />,
+                    <CustomGridActionsCellItem
+                        showInMenu
+                        label={t('edit')}
+                        icon={<Iconify icon="solar:pen-bold" />}
+                        href={paths.warehouse.invoices.edit(params.row.id)}
+                    />,
+                    <CustomGridActionsCellItem
+                        showInMenu
+                        label={t('delete')}
+                        icon={<Iconify icon="solar:trash-bin-trash-bold" />}
+                        onClick={() => handleDeleteClick(params.row.id, 'invoice')}
+                    />,
+                ],
+            },
+        ],
+        [t, invoices]
+    );
+
+    const detailsColumns = useMemo<GridColDef[]>(
+        () => [
+            {
+                field: 'id',
+                headerName: '№',
+                width: 80,
+                renderCell: (params) => {
+                    const filtered = allDetails.filter((d) => d.invoice_id === selectedInvoice?.id);
+                    const index = filtered.findIndex((row) => row.id === params.row.id);
+                    return index + 1;
+                },
             },
             {
                 field: 'ingredient_id',
@@ -135,15 +280,6 @@ export function InvoiceDetailsStandaloneListView() {
                 },
             },
             {
-                field: 'invoice_date',
-                headerName: t('date', 'Sana'),
-                width: 140,
-                renderCell: (params) => {
-                    if (!params.row.invoice_date) return '-';
-                    return new Date(params.row.invoice_date).toLocaleDateString();
-                },
-            },
-            {
                 type: 'actions',
                 field: 'actions',
                 headerName: ' ',
@@ -164,20 +300,22 @@ export function InvoiceDetailsStandaloneListView() {
                         showInMenu
                         label={t('delete')}
                         icon={<Iconify icon="solar:trash-bin-trash-bold" />}
-                        onClick={() => handleDeleteClick(params.row.id)}
+                        onClick={() => handleDeleteClick(params.row.id, 'detail')}
                     />,
                 ],
             },
         ],
-        [t, rows, deleteInvoiceDetails]
+        [t, selectedInvoice, allDetails]
     );
+
+    const filteredDetails = allDetails.filter((detail) => detail.invoice_id === selectedInvoice?.id);
 
     return (
         <>
             <GenericTableView
-                data={rows}
+                data={invoices}
                 loading={loading}
-                columns={columns}
+                columns={invoiceColumns}
                 breadcrumbs={{
                     heading: t('overview.warehouse.invoiceDetails', 'Kirimlar'),
                     links: [
@@ -186,7 +324,7 @@ export function InvoiceDetailsStandaloneListView() {
                         { name: t('overview.warehouse.invoiceDetails', 'Kirimlar'), href: paths.warehouse.invoiceDetails.root },
                     ],
                 }}
-                addButton={{ label: t('add'), href: paths.warehouse.invoiceDetails.new }}
+                addButton={{ label: t('add'), href: paths.warehouse.invoices.new }}
             />
 
             <Dialog open={deleteDialogOpen} onClose={handleDeleteCancel}>
@@ -203,6 +341,78 @@ export function InvoiceDetailsStandaloneListView() {
                     </Button>
                 </DialogActions>
             </Dialog>
+
+            <GenericViewModal
+                isOpen={!!selectedInvoice}
+                onClose={handleModalClose}
+                title={`Invoice Details for ${selectedInvoice?.supplier_name}`}
+                data={selectedInvoice}
+                maxWidth="sm"
+                slideDirection="left"
+                position="right"
+                // position="center"
+                renderContent={(data) => (
+                    <>
+                        <Box sx={{ display: 'flex', justifyContent: 'flex-end', marginY: '6px' }}>
+                            <Button
+                                variant="contained"
+                                color="primary"
+                                href={`${paths.warehouse.invoiceDetails.new}?invoice_id=${data.id}`}
+                                startIcon={<Iconify icon="solar:add-circle-bold" />}
+                                style={{ marginBottom: '6px' }}
+                            >
+                                {t('add_detail', 'Add Detail')}
+                            </Button>
+                        </Box>
+                        <Box sx={{ width: '100%' }}>
+                            <DataGrid
+                                rows={filteredDetails}
+                                columns={detailsColumns}
+                                autoHeight
+                                disableRowSelectionOnClick
+                                disableColumnFilter
+                                disableColumnMenu
+                                disableColumnSelector
+                                disableDensitySelector
+                                hideFooterSelectedRowCount
+                                pagination
+                                pageSizeOptions={[10, 25, 50, 100]}
+                                initialState={{
+                                    pagination: {
+                                        paginationModel: { page: 0, pageSize: 100 },
+                                    },
+                                }}
+                                sx={{
+                                    // Hide toolbar completely
+                                    '& .MuiDataGrid-toolbarContainer, & .MuiDataGrid-toolbarContainer button': {
+                                        display: 'none !important',
+                                    },
+                                    // Style column headers
+                                    '& .MuiDataGrid-columnHeaders': {
+                                        backgroundColor: 'background.paper',
+                                    },
+                                    // Hide menu icons in column headers
+                                    '& .MuiDataGrid-menuIcon': {
+                                        display: 'none !important',
+                                    },
+                                    // Remove focus outlines
+                                    '& .MuiDataGrid-columnHeader:focus, & .MuiDataGrid-cell:focus': {
+                                        outline: 'none !important',
+                                    },
+                                    // Hide column separators
+                                    '& .MuiDataGrid-columnSeparator': {
+                                        display: 'none',
+                                    },
+                                }}
+                                slots={{
+                                    toolbar: () => null,
+                                    columnMenu: () => null,
+                                }}
+                            />
+                        </Box>
+                    </>
+                )}
+            />
         </>
     );
 }

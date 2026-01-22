@@ -1,11 +1,8 @@
 import type { GridColDef } from '@mui/x-data-grid';
-
 import { useMemo, useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-
 import { paths } from 'src/routes/paths';
 import { useInvoiceAPI } from 'src/hooks/use-invoice-api';
-
 import { Iconify } from 'src/components/iconify';
 import { CustomGridActionsCellItem } from 'src/components/custom-data-grid';
 import { GenericTableView } from 'src/components/generic-table-view';
@@ -43,24 +40,24 @@ export function InvoicesListView() {
             },
             {
                 field: 'supplier_name',
-                headerName: t('supplier_name', 'Supplier Name'),
+                headerName: t('invoices.name', 'Supplier Name'),
                 flex: 1,
                 minWidth: 200,
             },
             {
                 field: 'supplier_phone',
-                headerName: t('phone', 'Phone'),
+                headerName: t('invoices.phone', 'Phone'),
                 width: 160,
             },
             {
                 field: 'supplier_email',
-                headerName: t('email', 'Email'),
+                headerName: t('invoices.email', 'Email'),
                 flex: 1,
                 minWidth: 220,
             },
             {
                 field: 'total_amount',
-                headerName: t('total_amount', 'Total Amount'),
+                headerName: t('invoices.totalAmount', 'Total Amount'),
                 width: 150,
                 renderCell: (params) => {
                     const amount = parseFloat(params.row.total_amount || 0);
@@ -69,7 +66,7 @@ export function InvoicesListView() {
             },
             {
                 field: 'status',
-                headerName: t('status', 'Status'),
+                headerName: t('invoices.status', 'Status'),
                 width: 120,
                 renderCell: (params) => {
                     const status = params.row.status?.toLowerCase();
@@ -111,7 +108,7 @@ export function InvoicesListView() {
             },
             {
                 field: 'date',
-                headerName: t('date', 'Date'),
+                headerName: t('invoices.date', 'Date'),
                 width: 140,
                 renderCell: (params) => new Date(params.row.date).toLocaleDateString(),
             },
@@ -130,7 +127,7 @@ export function InvoicesListView() {
                     //     showInMenu
                     //     label={t('view')}
                     //     icon={<Iconify icon="solar:eye-bold" />}
-                    //     href={paths.menu.warehouse.invoices.details(params.row.id)}
+                    //     href={`${paths.warehouse.invoiceDetails.root}?invoice_id=${params.row.id}`}
                     // />,
                     <CustomGridActionsCellItem
                         showInMenu
@@ -162,11 +159,11 @@ export function InvoicesListView() {
             loading={loading}
             columns={columns}
             breadcrumbs={{
-                heading: t('overview.warehouse.invoices', 'Invoices'),
+                heading: t('invoices.title', 'Invoices'),
                 links: [
-                    { name: t('app'), href: paths.menu.root },
-                    { name: t('overview.warehouse.title', 'Warehouse'), href: paths.warehouse.root },
-                    { name: t('overview.warehouse.invoices', 'Invoices'), href: paths.warehouse.invoices.root },
+                    { name: t('overview.menu.title'), href: paths.menu.root },
+                    { name: t('warehouse.title', 'Warehouse'), href: paths.warehouse.root },
+                    { name: t('invoices.title', 'Invoices'), href: paths.warehouse.invoices.root },
                 ],
             }}
             addButton={{ label: t('add'), href: paths.warehouse.invoices.new }}

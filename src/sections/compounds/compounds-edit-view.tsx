@@ -1,19 +1,14 @@
 import type { TFunction } from 'i18next';
 import type { ICompound } from 'src/types/compounds';
 import type { CardSection, GenericEditViewConfig } from 'src/components/generic-edit-view';
-
 import { useParams } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import { useState, useCallback, useEffect } from 'react';
-
 import { Box, Tabs, Tab, Card, Stack } from '@mui/material';
-
 import { paths } from 'src/routes/paths';
 import { useRouter } from 'src/routes/hooks';
-
 import { useGetCompound, useCreateCompound, useUpdateCompound, useDeleteCompound } from 'src/hooks/use-compounds';
 import { useGetDepartments } from 'src/actions/departments';
-
 import { toast } from 'src/components/snackbar';
 import { CustomBreadcrumbs } from 'src/components/custom-breadcrumbs';
 import { GenericEditView } from 'src/components/generic-edit-view';
@@ -94,10 +89,6 @@ const PRICING_SECTION: CardSection = {
         },
     ],
 };
-
-// ============================================================================
-// COMPONENT
-// ============================================================================
 
 interface TabPanelProps {
     children?: React.ReactNode;
@@ -203,7 +194,7 @@ export function CompoundEditView({ compoundId, isNew = false }: CompoundEditView
                     router.push(paths.menu.semifinished.root);
                 }
             } catch (err) {
-                console.error('Error saving compound:', err);
+                // console.error('Error saving compound:', err);
                 toast.error(
                     isNew ? t('error.createFailed') : t('error.updateFailed')
                 );
@@ -220,7 +211,7 @@ export function CompoundEditView({ compoundId, isNew = false }: CompoundEditView
             await deleteCompound(compound.id);
             router.push(paths.menu.semifinished.root);
         } catch (err) {
-            console.error('Error deleting compound:', err);
+            // console.error('Error deleting compound:', err);
             toast.error(t('error.deleteFailed'));
         }
     }, [compound, deleteCompound, router, t]);
@@ -348,10 +339,6 @@ export function CompoundEditView({ compoundId, isNew = false }: CompoundEditView
     );
 }
 
-// ============================================================================
-// WRAPPER COMPONENT - EXTRACTS :id FROM ROUTE PARAMS
-// ============================================================================
-
 export function CompoundEditViewWrapper({ isNew = false }: { isNew?: boolean }) {
     const { id } = useParams<{ id?: string }>();
 
@@ -362,10 +349,6 @@ export function CompoundEditViewWrapper({ isNew = false }: { isNew?: boolean }) 
         />
     );
 }
-
-// ============================================================================
-// HELPER FUNCTIONS
-// ============================================================================
 
 /**
  * Runtime helper: translate CardSection objects that may contain translation keys

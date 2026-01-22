@@ -581,5 +581,41 @@
     "updateSuccess": "Ingredient updated successfully",
     "deleteFailed": "Failed to delete ingredient",
     "saveFailed": "Failed to save ingredient"
-  }
+  },
+"invoices": {
+  "title": "Suppliers",
+  "new": "New supplier",
+  "edit": "Edit supplier",
+  "basicInfo": "Basic information",
+  "groupInfo": "Group information",
+  "colorInfo": "Color information",
+  "pictureInfo": "Image information",
+  "name": "Name",
+  "phone": "Phone number",
+  "email": "Email",
+  "totalAmount": "Total amount",
+  "status": "Status",
+  "date": "Date",
+  "group": "Group",
+  "measurement": "Measurement",
+  "measurementKg": "Kg",
+  "measurementL": "L",
+  "measurementDona": "Piece",
+  "color": "Color code",
+  "picture": "Image",
+  "nameRequired": "Supplier name is required",
+  "measurementRequired": "Measurement is required",
+  "groupRequired": "Supplier group must be selected",
+  "id": "ID",
+  "createdAt": "Created at",
+  "updatedAt": "Updated at",
+  "noData": "No suppliers found",
+  "confirmDelete": "Are you sure you want to delete this supplier?",
+  "deleteSuccess": "Supplier deleted successfully",
+  "createSuccess": "Supplier created successfully",
+  "updateSuccess": "Supplier updated successfully",
+  "deleteFailed": "Failed to delete supplier",
+  "saveFailed": "Failed to save supplier"
+}
+
 }
