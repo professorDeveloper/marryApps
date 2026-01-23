@@ -395,17 +395,19 @@ type Hall struct {
 }
 
 type Ingredient struct {
-	ID          uuid.UUID           `json:"id"`
-	Name        string              `json:"name"`
-	NameI18n    pgtype.UUID         `json:"name_i18n"`
-	GroupID     pgtype.UUID         `json:"group_id"`
-	Measurement NullMeasurementType `json:"measurement"`
-	PictureUrl  *string             `json:"picture_url"`
-	ColorCode   *string             `json:"color_code"`
-	BrandID     pgtype.UUID         `json:"brand_id"`
-	CreatedAt   pgtype.Timestamptz  `json:"created_at"`
-	UpdatedAt   pgtype.Timestamptz  `json:"updated_at"`
-	DeletedAt   *int64              `json:"deleted_at"`
+	ID           uuid.UUID           `json:"id"`
+	Name         string              `json:"name"`
+	NameI18n     pgtype.UUID         `json:"name_i18n"`
+	GroupID      pgtype.UUID         `json:"group_id"`
+	Measurement  NullMeasurementType `json:"measurement"`
+	PictureUrl   *string             `json:"picture_url"`
+	ColorCode    *string             `json:"color_code"`
+	BrandID      pgtype.UUID         `json:"brand_id"`
+	CreatedAt    pgtype.Timestamptz  `json:"created_at"`
+	UpdatedAt    pgtype.Timestamptz  `json:"updated_at"`
+	DeletedAt    *int64              `json:"deleted_at"`
+	PricePerUnit pgtype.Numeric      `json:"price_per_unit"`
+	Quantity     *int64              `json:"quantity"`
 }
 
 type IngredientGroup struct {

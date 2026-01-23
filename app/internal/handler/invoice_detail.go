@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
 
@@ -48,6 +49,76 @@ func (h *Handler) CreateInvoiceDetail(c echo.Context) error {
 
 	return c.JSON(http.StatusCreated, model.NewSuccessResponse(
 		"Invoice detail created successfully",
+		resp,
+		http.StatusCreated,
+	))
+}
+
+// CreateInvoiceDetailsBatch creates multiple invoice details in a single call
+// @Summary Create multiple invoice details in batch
+// @Description Create multiple line items in an invoice with a single API call
+// @Tags Invoice Details
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param lang query string false "Language (uz, ru, en)" default(uz)
+// @Param request body []model.CreateInvoiceDetailRequest true "Array of invoice detail requests"
+// @Success 201 {object} model.InvoiceDetailBatchResponse
+// @Failure 400 {object} model.ErrorResponse
+// @Failure 401 {object} model.ErrorResponse
+// @Failure 500 {object} model.ErrorResponse
+// @Router /api/v1/invoice-details/batch [post]
+func (h *Handler) CreateInvoiceDetailsBatch(c echo.Context) error {
+	var details []model.CreateInvoiceDetailRequest
+	if err := c.Bind(&details); err != nil {
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"invalid request",
+			err.Error(),
+			http.StatusBadRequest,
+		))
+	}
+
+	if len(details) == 0 {
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"invalid request",
+			"details array cannot be empty",
+			http.StatusBadRequest,
+		))
+	}
+
+	// Extract invoice ID from first detail
+	invoiceID := details[0].InvoiceID
+	if invoiceID == "" {
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"invoice_id is required",
+			"missing required field: invoice_id in first detail",
+			http.StatusBadRequest,
+		))
+	}
+
+	// Verify all details belong to the same invoice
+	for i, detail := range details {
+		if detail.InvoiceID != invoiceID {
+			return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+				"invalid request",
+				fmt.Sprintf("all details must belong to the same invoice. Detail %d has different invoice_id", i+1),
+				http.StatusBadRequest,
+			))
+		}
+	}
+
+	// Create a batch request from the slice
+	req := &model.CreateInvoiceDetailBatchRequest{
+		Details: details,
+	}
+
+	resp, err := h.service.Invoice().CreateInvoiceDetailsBatch(c.Request().Context(), invoiceID, req)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("Operation failed", err.Error(), http.StatusInternalServerError))
+	}
+
+	return c.JSON(http.StatusCreated, model.NewSuccessResponse(
+		"Invoice details batch processed successfully",
 		resp,
 		http.StatusCreated,
 	))

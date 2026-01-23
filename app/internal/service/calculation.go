@@ -431,26 +431,26 @@ func (c *CalculationS) createCalculationInternal(ctx context.Context, goodID, co
 		return nil, fmt.Errorf("failed to fetch ingredient: %w", err)
 	}
 
-	// Fetch latest price from invoice for this ingredient
-	latestInvoiceDetail, err := c.repo.Tenant(ctx).GetLatestInvoiceDetailByIngredientID(ctx, ingredientUUID)
-	if err != nil {
-		if err == pgx.ErrNoRows {
-			return nil, fmt.Errorf("no invoice found for this ingredient - please add ingredient to invoice first")
-		}
-		return nil, fmt.Errorf("failed to fetch invoice price: %w", err)
+	// Get price_per_unit from ingredient (updated when invoices arrive)
+	if !ingredient.PricePerUnit.Valid {
+		return nil, fmt.Errorf("ingredient has no price - please add ingredient to invoice first")
 	}
 
-	// Extract price per unit from invoice
-	invoicePrice := numericToStr(latestInvoiceDetail.PricePerUnit)
-	invoicePriceFloat, err := strconv.ParseFloat(invoicePrice, 64)
+	// Extract price per unit from ingredient
+	ingredientPrice := numericToStr(ingredient.PricePerUnit)
+	ingredientPriceFloat, err := strconv.ParseFloat(ingredientPrice, 64)
 	if err != nil {
-		return nil, fmt.Errorf("invalid invoice price: %w", err)
+		return nil, fmt.Errorf("invalid ingredient price: %w", err)
+	}
+
+	if ingredientPriceFloat == 0 {
+		return nil, fmt.Errorf("ingredient has no price - please add ingredient to invoice first")
 	}
 
 	// Calculate total cost: quantity * price_per_unit
-	// price_per_unit is already normalized to the measurement unit in the invoice
+	// price_per_unit is already normalized to the measurement unit from invoice
 	// (e.g., price per 1 kg, price per 1 L, price per 1 piece, etc.)
-	totalCostCalc := quantityFloat * invoicePriceFloat
+	totalCostCalc := quantityFloat * ingredientPriceFloat
 
 	// Get measurement unit string
 	measurementUnit := ""
@@ -467,7 +467,7 @@ func (c *CalculationS) createCalculationInternal(ctx context.Context, goodID, co
 		ComponentCompoundID: pgtype.UUID{Valid: false},
 		Quantity:            stringToNumeric(quantity),
 		MeasurementUnit:     measurementUnit,
-		PricePerUnit:        stringToNumeric(invoicePrice),
+		PricePerUnit:        stringToNumeric(ingredientPrice),
 		TotalCost:           stringToNumeric(fmt.Sprintf("%.2f", totalCostCalc)),
 	})
 	if err != nil {

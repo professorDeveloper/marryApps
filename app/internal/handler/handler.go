@@ -406,6 +406,7 @@ func (h *Handler) Register(router *echo.Echo) {
 		invoiceDetails := api.Group("/invoice-details", mw.CheckAuth(h.cfg), mw.TenantMiddleware(h.repo))
 		{
 			invoiceDetails.POST("", h.CreateInvoiceDetail, mw.CheckLanguage())
+			invoiceDetails.POST("/batch", h.CreateInvoiceDetailsBatch, mw.CheckLanguage())
 			invoiceDetails.GET("", h.GetAllInvoiceDetails, mw.CheckLanguage())
 			invoiceDetails.GET("/:id", h.GetInvoiceDetail, mw.CheckLanguage())
 			invoiceDetails.GET("/invoice/:invoice_id", h.GetInvoiceDetailsByInvoice, mw.CheckLanguage())

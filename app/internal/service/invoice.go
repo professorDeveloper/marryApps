@@ -451,7 +451,7 @@ func (s *InvoiceS) GetInvoiceStatsByDateRange(ctx context.Context, startDate, en
 
 // ==================== INVOICE DETAIL METHODS ====================
 
-// CreateInvoiceDetail creates a new invoice detail
+// CreateInvoiceDetail creates a new invoice detail and updates ingredient's price_per_unit and quantity
 func (s *InvoiceS) CreateInvoiceDetail(ctx context.Context, invoiceID string, req *model.CreateInvoiceDetailRequest) (*model.InvoiceDetailResponse, error) {
 	id := uuid.New()
 	invoiceUUID, err := uuid.Parse(invoiceID)
@@ -489,7 +489,118 @@ func (s *InvoiceS) CreateInvoiceDetail(ctx context.Context, invoiceID string, re
 		return nil, fmt.Errorf("failed to create invoice detail: %w", err)
 	}
 
+	_, err = s.repo.Tenant(ctx).AddIngredientQuantity(ctx, pg.AddIngredientQuantityParams{
+		ID:           ingredientUUID,
+		PricePerUnit: pricePerUnit,
+		Quantity:     &req.Quantity,
+	})
+	if err != nil {
+		// Log error but don't fail the operation - the invoice detail was created successfully
+		fmt.Printf("Warning: failed to add ingredient quantity: %v\n", err)
+	}
+
 	return toInvoiceDetailResponse(detail), nil
+}
+
+// CreateInvoiceDetailsBatch creates multiple invoice details in a single operation
+func (s *InvoiceS) CreateInvoiceDetailsBatch(ctx context.Context, invoiceID string, req *model.CreateInvoiceDetailBatchRequest) (*model.InvoiceDetailBatchResponse, error) {
+	// Validate invoice ID
+	invoiceUUID, err := uuid.Parse(invoiceID)
+	if err != nil {
+		return nil, fmt.Errorf("invalid invoice id: %w", err)
+	}
+
+	// Validate that invoice exists
+	invoice, err := s.repo.Tenant(ctx).GetInvoiceByID(ctx, invoiceUUID)
+	if err != nil {
+		return nil, fmt.Errorf("invoice not found: %w", err)
+	}
+
+	if invoice.ID == uuid.Nil {
+		return nil, fmt.Errorf("invoice not found")
+	}
+
+	response := &model.InvoiceDetailBatchResponse{
+		Success: 0,
+		Failed:  0,
+		Details: make([]model.InvoiceDetailResponse, 0, len(req.Details)),
+		Errors:  make([]string, 0),
+	}
+
+	// Process each detail
+	for i, detail := range req.Details {
+		// Validate ingredient ID
+		ingredientUUID, err := uuid.Parse(detail.IngredientID)
+		if err != nil {
+			response.Failed++
+			response.Errors = append(response.Errors, fmt.Sprintf("Item %d: invalid ingredient id: %v", i+1, err))
+			continue
+		}
+
+		// Verify ingredient exists
+		ingredient, err := s.repo.Tenant(ctx).GetIngredientByID(ctx, ingredientUUID)
+		if err != nil {
+			response.Failed++
+			response.Errors = append(response.Errors, fmt.Sprintf("Item %d: ingredient not found: %v", i+1, err))
+			continue
+		}
+
+		if ingredient.ID == uuid.Nil {
+			response.Failed++
+			response.Errors = append(response.Errors, fmt.Sprintf("Item %d: ingredient not found", i+1))
+			continue
+		}
+
+		// Parse price
+		price := pgtype.Numeric{}
+		if err := price.Scan(detail.Price); err != nil {
+			response.Failed++
+			response.Errors = append(response.Errors, fmt.Sprintf("Item %d: invalid price: %v", i+1, err))
+			continue
+		}
+
+		// Parse price per unit
+		pricePerUnit := pgtype.Numeric{}
+		if err := pricePerUnit.Scan(detail.PricePerUnit); err != nil {
+			response.Failed++
+			response.Errors = append(response.Errors, fmt.Sprintf("Item %d: invalid price_per_unit: %v", i+1, err))
+			continue
+		}
+
+		// Create invoice detail
+		id := uuid.New()
+		params := pg.CreateInvoiceDetailParams{
+			ID:           id,
+			InvoiceID:    invoiceUUID,
+			IngredientID: ingredientUUID,
+			Quantity:     detail.Quantity,
+			Price:        price,
+			PricePerUnit: pricePerUnit,
+		}
+
+		invoiceDetail, err := s.repo.Tenant(ctx).CreateInvoiceDetail(ctx, params)
+		if err != nil {
+			response.Failed++
+			response.Errors = append(response.Errors, fmt.Sprintf("Item %d: failed to create invoice detail: %v", i+1, err))
+			continue
+		}
+
+		// Update ingredient quantity and price
+		_, err = s.repo.Tenant(ctx).AddIngredientQuantity(ctx, pg.AddIngredientQuantityParams{
+			ID:           ingredientUUID,
+			PricePerUnit: pricePerUnit,
+			Quantity:     &detail.Quantity,
+		})
+		if err != nil {
+			// Log warning but don't fail - the invoice detail was created successfully
+			fmt.Printf("Warning: failed to add ingredient quantity for item %d: %v\n", i+1, err)
+		}
+
+		response.Success++
+		response.Details = append(response.Details, *toInvoiceDetailResponse(invoiceDetail))
+	}
+
+	return response, nil
 }
 
 // GetInvoiceDetailByID retrieves an invoice detail by ID

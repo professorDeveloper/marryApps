@@ -25,6 +25,88 @@ func mapIngredientGroupToResponse(id uuid.UUID, name string, nameI18n pgtype.UUI
 	}
 }
 
+// mapIngredientToResponse converts a database ingredient to response model
+func mapIngredientToResponse(ingredient any) *model.IngredientResponse {
+	// Handle different row types
+	var (
+		id           uuid.UUID
+		name         string
+		nameI18n     pgtype.UUID
+		groupID      pgtype.UUID
+		measurement  pg.NullMeasurementType
+		pictureUrl   *string
+		colorCode    *string
+		brandID      pgtype.UUID
+		pricePerUnit pgtype.Numeric
+		quantity     *int64
+		createdAt    pgtype.Timestamptz
+		updatedAt    pgtype.Timestamptz
+	)
+
+	// Type switch to extract fields from different struct types
+	switch row := ingredient.(type) {
+	case pg.Ingredient:
+		id = row.ID
+		name = row.Name
+		nameI18n = row.NameI18n
+		groupID = row.GroupID
+		measurement = row.Measurement
+		pictureUrl = row.PictureUrl
+		colorCode = row.ColorCode
+		brandID = row.BrandID
+		pricePerUnit = row.PricePerUnit
+		quantity = row.Quantity
+		createdAt = row.CreatedAt
+		updatedAt = row.UpdatedAt
+	case pg.GetIngredientByIDRow:
+		id = row.ID
+		name = row.Name
+		nameI18n = row.NameI18n
+		groupID = row.GroupID
+		measurement = row.Measurement
+		pictureUrl = row.PictureUrl
+		colorCode = row.ColorCode
+		brandID = row.BrandID
+		pricePerUnit = row.PricePerUnit
+		quantity = row.Quantity
+		createdAt = row.CreatedAt
+		updatedAt = row.UpdatedAt
+	default:
+		return nil
+	}
+
+	// Convert measurement to string pointer
+	var measurementStr *string
+	if measurement.Valid {
+		str := string(measurement.MeasurementType)
+		measurementStr = &str
+	}
+
+	// Convert price_per_unit decimal to string pointer
+	var pricePerUnitStr *string
+	if pricePerUnit.Valid {
+		val, _ := pricePerUnit.Value()
+		if str, ok := val.(string); ok {
+			pricePerUnitStr = &str
+		}
+	}
+
+	return &model.IngredientResponse{
+		ID:           id.String(),
+		Name:         &name,
+		NameI18n:     uuidToStr(nameI18n),
+		GroupID:      uuidToStr(groupID),
+		BrandID:      uuidToStr(brandID),
+		Measurement:  measurementStr,
+		PictureUrl:   pictureUrl,
+		ColorCode:    colorCode,
+		PricePerUnit: pricePerUnitStr,
+		Quantity:     quantity,
+		CreatedAt:    timestampToTime(createdAt),
+		UpdatedAt:    timestampToTime(updatedAt),
+	}
+}
+
 type IngredientS struct {
 	repo *repository.Repository
 }
@@ -219,25 +301,7 @@ func (i *IngredientS) CreateIngredient(ctx context.Context, name string, nameI18
 		return nil, fmt.Errorf("failed to create ingredient: %w", err)
 	}
 
-	// Convert measurement to string pointer
-	var measurementStr *string
-	if ingredient.Measurement.Valid {
-		str := string(ingredient.Measurement.MeasurementType)
-		measurementStr = &str
-	}
-
-	return &model.IngredientResponse{
-		ID:          ingredient.ID.String(),
-		Name:        &ingredient.Name,
-		NameI18n:    uuidToStr(ingredient.NameI18n),
-		GroupID:     uuidToStr(ingredient.GroupID),
-		BrandID:     uuidToStr(ingredient.BrandID),
-		Measurement: measurementStr,
-		PictureUrl:  ingredient.PictureUrl,
-		ColorCode:   ingredient.ColorCode,
-		CreatedAt:   timestampToTime(ingredient.CreatedAt),
-		UpdatedAt:   timestampToTime(ingredient.UpdatedAt),
-	}, nil
+	return mapIngredientToResponse(ingredient), nil
 }
 
 // GetIngredientByID retrieves an ingredient by ID
@@ -252,25 +316,7 @@ func (i *IngredientS) GetIngredientByID(ctx context.Context, ingredientID string
 		return nil, fmt.Errorf("failed to get ingredient: %w", err)
 	}
 
-	// Convert measurement to string pointer
-	var measurementStr *string
-	if ingredient.Measurement.Valid {
-		str := string(ingredient.Measurement.MeasurementType)
-		measurementStr = &str
-	}
-
-	return &model.IngredientResponse{
-		ID:          ingredient.ID.String(),
-		Name:        &ingredient.Name,
-		NameI18n:    uuidToStr(ingredient.NameI18n),
-		GroupID:     uuidToStr(ingredient.GroupID),
-		BrandID:     uuidToStr(ingredient.BrandID),
-		Measurement: measurementStr,
-		PictureUrl:  ingredient.PictureUrl,
-		ColorCode:   ingredient.ColorCode,
-		CreatedAt:   timestampToTime(ingredient.CreatedAt),
-		UpdatedAt:   timestampToTime(ingredient.UpdatedAt),
-	}, nil
+	return mapIngredientToResponse(ingredient), nil
 }
 
 // GetAllIngredients retrieves all ingredients
@@ -285,25 +331,10 @@ func (i *IngredientS) GetAllIngredients(ctx context.Context, limit, offset int32
 
 	var responses []model.IngredientResponse
 	for _, ing := range ingredients {
-		// Convert measurement to string pointer
-		var measurementStr *string
-		if ing.Measurement.Valid {
-			str := string(ing.Measurement.MeasurementType)
-			measurementStr = &str
+		resp := mapIngredientToResponse(ing)
+		if resp != nil {
+			responses = append(responses, *resp)
 		}
-
-		responses = append(responses, model.IngredientResponse{
-			ID:          ing.ID.String(),
-			Name:        &ing.Name,
-			NameI18n:    uuidToStr(ing.NameI18n),
-			GroupID:     uuidToStr(ing.GroupID),
-			BrandID:     uuidToStr(ing.BrandID),
-			Measurement: measurementStr,
-			PictureUrl:  ing.PictureUrl,
-			ColorCode:   ing.ColorCode,
-			CreatedAt:   timestampToTime(ing.CreatedAt),
-			UpdatedAt:   timestampToTime(ing.UpdatedAt),
-		})
 	}
 
 	return responses, nil
@@ -327,25 +358,10 @@ func (i *IngredientS) GetIngredientsByGroupID(ctx context.Context, groupID strin
 
 	var responses []model.IngredientResponse
 	for _, ing := range ingredients {
-		// Convert measurement to string pointer
-		var measurementStr *string
-		if ing.Measurement.Valid {
-			str := string(ing.Measurement.MeasurementType)
-			measurementStr = &str
+		resp := mapIngredientToResponse(ing)
+		if resp != nil {
+			responses = append(responses, *resp)
 		}
-
-		responses = append(responses, model.IngredientResponse{
-			ID:          ing.ID.String(),
-			Name:        &ing.Name,
-			NameI18n:    uuidToStr(ing.NameI18n),
-			GroupID:     uuidToStr(ing.GroupID),
-			BrandID:     uuidToStr(ing.BrandID),
-			Measurement: measurementStr,
-			PictureUrl:  ing.PictureUrl,
-			ColorCode:   ing.ColorCode,
-			CreatedAt:   timestampToTime(ing.CreatedAt),
-			UpdatedAt:   timestampToTime(ing.UpdatedAt),
-		})
 	}
 
 	return responses, nil
@@ -419,25 +435,7 @@ func (i *IngredientS) UpdateIngredient(ctx context.Context, ingredientID string,
 		return nil, fmt.Errorf("failed to update ingredient: %w", err)
 	}
 
-	// Convert measurement to string pointer
-	var measurementStr *string
-	if ingredient.Measurement.Valid {
-		str := string(ingredient.Measurement.MeasurementType)
-		measurementStr = &str
-	}
-
-	return &model.IngredientResponse{
-		ID:          ingredient.ID.String(),
-		Name:        &ingredient.Name,
-		NameI18n:    uuidToStr(ingredient.NameI18n),
-		GroupID:     uuidToStr(ingredient.GroupID),
-		BrandID:     uuidToStr(ingredient.BrandID),
-		Measurement: measurementStr,
-		PictureUrl:  ingredient.PictureUrl,
-		ColorCode:   ingredient.ColorCode,
-		CreatedAt:   timestampToTime(ingredient.CreatedAt),
-		UpdatedAt:   timestampToTime(ingredient.UpdatedAt),
-	}, nil
+	return mapIngredientToResponse(ingredient), nil
 }
 
 // DeleteIngredient soft deletes an ingredient

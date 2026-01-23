@@ -1048,6 +1048,12 @@ definitions:
       picture_url:
         example: https://example.com/tomato.jpg
         type: string
+      price_per_unit:
+        example: "100.00"
+        type: string
+      quantity:
+        example: 50
+        type: integer
       updated_at:
         example: "2022-01-01T00:00:00Z"
         type: string
@@ -1072,6 +1078,23 @@ definitions:
       updated_at:
         example: "2022-01-01T00:00:00Z"
         type: string
+    type: object
+  model.InvoiceDetailBatchResponse:
+    properties:
+      details:
+        items:
+          $ref: '#/definitions/model.InvoiceDetailResponse'
+        type: array
+      errors:
+        items:
+          type: string
+        type: array
+      failed:
+        example: 0
+        type: integer
+      success:
+        example: 2
+        type: integer
     type: object
   model.InvoiceDetailResponse:
     properties:
@@ -8121,6 +8144,49 @@ paths:
       security:
       - BearerAuth: []
       summary: Get invoice detail with ingredient
+      tags:
+      - Invoice Details
+  /api/v1/invoice-details/batch:
+    post:
+      consumes:
+      - application/json
+      description: Create multiple line items in an invoice with a single API call
+      parameters:
+      - default: uz
+        description: Language (uz, ru, en)
+        in: query
+        name: lang
+        type: string
+      - description: Array of invoice detail requests
+        in: body
+        name: request
+        required: true
+        schema:
+          items:
+            $ref: '#/definitions/model.CreateInvoiceDetailRequest'
+          type: array
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/model.InvoiceDetailBatchResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create multiple invoice details in batch
       tags:
       - Invoice Details
   /api/v1/invoice-details/ingredient/{ingredient_id}:

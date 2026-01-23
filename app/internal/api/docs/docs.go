@@ -9003,6 +9003,73 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/invoice-details/batch": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Create multiple line items in an invoice with a single API call",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Invoice Details"
+                ],
+                "summary": "Create multiple invoice details in batch",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "default": "uz",
+                        "description": "Language (uz, ru, en)",
+                        "name": "lang",
+                        "in": "query"
+                    },
+                    {
+                        "description": "Array of invoice detail requests",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/model.CreateInvoiceDetailRequest"
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/model.InvoiceDetailBatchResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/invoice-details/ingredient/{ingredient_id}": {
             "get": {
                 "security": [
@@ -16051,6 +16118,14 @@ const docTemplate = `{
                     "type": "string",
                     "example": "https://example.com/tomato.jpg"
                 },
+                "price_per_unit": {
+                    "type": "string",
+                    "example": "100.00"
+                },
+                "quantity": {
+                    "type": "integer",
+                    "example": 50
+                },
                 "updated_at": {
                     "type": "string",
                     "example": "2022-01-01T00:00:00Z"
@@ -16083,6 +16158,31 @@ const docTemplate = `{
                 "updated_at": {
                     "type": "string",
                     "example": "2022-01-01T00:00:00Z"
+                }
+            }
+        },
+        "model.InvoiceDetailBatchResponse": {
+            "type": "object",
+            "properties": {
+                "details": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.InvoiceDetailResponse"
+                    }
+                },
+                "errors": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "failed": {
+                    "type": "integer",
+                    "example": 0
+                },
+                "success": {
+                    "type": "integer",
+                    "example": 2
                 }
             }
         },

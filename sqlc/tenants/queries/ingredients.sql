@@ -57,17 +57,17 @@ SELECT COUNT(*) FROM ingredient_groups WHERE deleted_at = 0;
 -- name: CreateIngredient :one
 INSERT INTO ingredients (id, name, name_i18n, group_id, measurement, picture_url, color_code, brand_id)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-RETURNING id, name, name_i18n, group_id, measurement, picture_url, color_code, brand_id, created_at, updated_at, deleted_at;
+RETURNING id, name, name_i18n, group_id, measurement, picture_url, color_code, brand_id, price_per_unit, quantity, created_at, updated_at, deleted_at;
 
 -- GetIngredientByID retrieves an ingredient by ID
 -- name: GetIngredientByID :one
-SELECT id, name, name_i18n, group_id, measurement, picture_url, color_code, brand_id, created_at, updated_at, deleted_at
+SELECT id, name, name_i18n, group_id, measurement, picture_url, color_code, brand_id, price_per_unit, quantity, created_at, updated_at, deleted_at
 FROM ingredients
 WHERE id = $1 AND deleted_at = 0;
 
 -- GetAllIngredients retrieves all ingredients with pagination
 -- name: GetAllIngredients :many
-SELECT id, name, name_i18n, group_id, measurement, picture_url, color_code, brand_id, created_at, updated_at, deleted_at
+SELECT id, name, name_i18n, group_id, measurement, picture_url, color_code, brand_id, price_per_unit, quantity, created_at, updated_at, deleted_at
 FROM ingredients
 WHERE deleted_at = 0
 ORDER BY created_at DESC
@@ -75,7 +75,7 @@ LIMIT $1 OFFSET $2;
 
 -- GetIngredientsByGroupID retrieves ingredients by group ID
 -- name: GetIngredientsByGroupID :many
-SELECT id, name, name_i18n, group_id, measurement, picture_url, color_code, brand_id, created_at, updated_at, deleted_at
+SELECT id, name, name_i18n, group_id, measurement, picture_url, color_code, brand_id, price_per_unit, quantity, created_at, updated_at, deleted_at
 FROM ingredients
 WHERE group_id = $1 AND deleted_at = 0
 ORDER BY created_at DESC
@@ -93,7 +93,7 @@ SET name = COALESCE($2, name),
     brand_id = COALESCE($8, brand_id),
     updated_at = NOW()
 WHERE id = $1 AND deleted_at = 0
-RETURNING id, name, name_i18n, group_id, measurement, picture_url, color_code, brand_id, created_at, updated_at, deleted_at;
+RETURNING id, name, name_i18n, group_id, measurement, picture_url, color_code, brand_id, price_per_unit, quantity, created_at, updated_at, deleted_at;
 
 -- DeleteIngredient soft deletes an ingredient
 -- name: DeleteIngredient :exec
@@ -109,7 +109,7 @@ WHERE id = $1 AND deleted_at != 0;
 
 -- SearchIngredients searches ingredients by name
 -- name: SearchIngredients :many
-SELECT id, name, name_i18n, group_id, measurement, picture_url, color_code, brand_id, created_at, updated_at, deleted_at
+SELECT id, name, name_i18n, group_id, measurement, picture_url, color_code, brand_id, price_per_unit, quantity, created_at, updated_at, deleted_at
 FROM ingredients
 WHERE deleted_at = 0 AND name ILIKE '%' || $1 || '%'
 ORDER BY created_at DESC
@@ -119,8 +119,32 @@ LIMIT $2 OFFSET $3;
 -- name: CountIngredients :one
 SELECT COUNT(*) FROM ingredients WHERE deleted_at = 0;
 
+-- UpdateIngredientPriceAndQuantity updates price_per_unit and quantity for an ingredient
+-- name: UpdateIngredientPriceAndQuantity :one
+UPDATE ingredients
+SET price_per_unit = COALESCE($2, price_per_unit),
+    quantity = COALESCE($3, quantity),
+    updated_at = NOW()
+WHERE id = $1 AND deleted_at = 0
+RETURNING id, name, name_i18n, group_id, measurement, picture_url, color_code, brand_id, price_per_unit, quantity, created_at, updated_at, deleted_at;
 
--- CreateIngredientStock creates a new ingredient stock entry
+-- AddIngredientQuantity adds/accumulates quantity to an ingredient (for invoice arrivals)
+-- Also updates the price_per_unit to the latest price from invoice
+-- name: AddIngredientQuantity :one
+UPDATE ingredients
+SET price_per_unit = COALESCE($2, price_per_unit),
+    quantity = quantity + $3,
+    updated_at = NOW()
+WHERE id = $1 AND deleted_at = 0
+RETURNING id, name, name_i18n, group_id, measurement, picture_url, color_code, brand_id, price_per_unit, quantity, created_at, updated_at, deleted_at;
+
+-- GetIngredientByIDWithPriceQuantity retrieves ingredient with price and quantity by ID
+-- name: GetIngredientByIDWithPriceQuantity :one
+SELECT id, name, name_i18n, group_id, measurement, picture_url, color_code, brand_id, price_per_unit, quantity, created_at, updated_at, deleted_at
+FROM ingredients
+WHERE id = $1 AND deleted_at = 0;
+
+
 -- name: CreateIngredientStock :one
 INSERT INTO ingredient_stock (id, ingredient_id, quantity, branch_id)
 VALUES ($1, $2, $3, $4)

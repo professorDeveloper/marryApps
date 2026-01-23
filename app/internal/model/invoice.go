@@ -89,6 +89,17 @@ type CreateInvoiceDetailRequest struct {
 	PricePerUnit string `json:"price_per_unit" validate:"required" example:"10000"`
 }
 
+type CreateInvoiceDetailBatchRequest struct {
+	Details []CreateInvoiceDetailRequest `json:"details" validate:"required,min=1,dive" example:"[{\"invoice_id\":\"c0f18a64-7f5c-4425-9414-1b01cddee9d9\",\"ingredient_id\":\"e2g30c86-9h7e-6647-1636-3d23effg1f1\",\"quantity\":50,\"price\":\"500000\",\"price_per_unit\":\"10000\"}]"`
+}
+
+type InvoiceDetailBatchResponse struct {
+	Success int                     `json:"success" example:"2"`
+	Failed  int                     `json:"failed" example:"0"`
+	Details []InvoiceDetailResponse `json:"details"`
+	Errors  []string                `json:"errors,omitempty"`
+}
+
 type UpdateInvoiceDetailRequest struct {
 	IngredientID *string `json:"ingredient_id,omitempty" example:"e2g30c86-9h7e-6647-1636-3d23effg1f1"`
 	Quantity     *int64  `json:"quantity,omitempty" example:"50"`
