@@ -151,11 +151,10 @@ LIMIT 1;
 
 -- name: UpdateInvoiceDetail :one
 UPDATE invoice_detailed
-SET invoice_id = COALESCE($2, invoice_id),
-    ingredient_id = COALESCE($3, ingredient_id),
-    quantity = COALESCE($4, quantity),
-    price = COALESCE($5, price),
-    price_per_unit = COALESCE($6, price_per_unit),
+SET ingredient_id = $2,
+    quantity = $3,
+    price = $4,
+    price_per_unit = $5,
     updated_at = NOW()
 WHERE id = $1 AND deleted_at = 0
 RETURNING id, invoice_id, ingredient_id, quantity, price, price_per_unit, created_at, updated_at, deleted_at;

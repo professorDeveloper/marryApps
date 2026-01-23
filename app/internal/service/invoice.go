@@ -722,13 +722,39 @@ func (s *InvoiceS) UpdateInvoiceDetail(ctx context.Context, id string, req *mode
 		quantity = *req.Quantity
 	}
 
+	// Build the update parameters - we need to get current values for fields we're not updating
+	currentDetail, err := s.repo.Tenant(ctx).GetInvoiceDetailByID(ctx, detailID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get current invoice detail: %w", err)
+	}
+
+	// Use new values if provided, otherwise keep current values
+	updateIngredientID := ingredientID
+	if ingredientID == (uuid.UUID{}) {
+		updateIngredientID = currentDetail.IngredientID
+	}
+
+	updateQuantity := quantity
+	if req.Quantity == nil {
+		updateQuantity = currentDetail.Quantity
+	}
+
+	updatePrice := price
+	if req.Price == nil {
+		updatePrice = currentDetail.Price
+	}
+
+	updatePricePerUnit := pricePerUnit
+	if req.PricePerUnit == nil {
+		updatePricePerUnit = currentDetail.PricePerUnit
+	}
+
 	params := pg.UpdateInvoiceDetailParams{
 		ID:           detailID,
-		InvoiceID:    uuid.UUID{},
-		IngredientID: ingredientID,
-		Quantity:     quantity,
-		Price:        price,
-		PricePerUnit: pricePerUnit,
+		IngredientID: updateIngredientID,
+		Quantity:     updateQuantity,
+		Price:        updatePrice,
+		PricePerUnit: updatePricePerUnit,
 	}
 
 	detail, err := s.repo.Tenant(ctx).UpdateInvoiceDetail(ctx, params)

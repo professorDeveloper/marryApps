@@ -403,11 +403,11 @@ type Ingredient struct {
 	PictureUrl   *string             `json:"picture_url"`
 	ColorCode    *string             `json:"color_code"`
 	BrandID      pgtype.UUID         `json:"brand_id"`
+	PricePerUnit pgtype.Numeric      `json:"price_per_unit"`
+	Quantity     *int64              `json:"quantity"`
 	CreatedAt    pgtype.Timestamptz  `json:"created_at"`
 	UpdatedAt    pgtype.Timestamptz  `json:"updated_at"`
 	DeletedAt    *int64              `json:"deleted_at"`
-	PricePerUnit pgtype.Numeric      `json:"price_per_unit"`
-	Quantity     *int64              `json:"quantity"`
 }
 
 type IngredientGroup struct {

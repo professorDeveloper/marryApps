@@ -27,27 +27,11 @@ type AddIngredientQuantityParams struct {
 	Quantity     *int64         `json:"quantity"`
 }
 
-type AddIngredientQuantityRow struct {
-	ID           uuid.UUID           `json:"id"`
-	Name         string              `json:"name"`
-	NameI18n     pgtype.UUID         `json:"name_i18n"`
-	GroupID      pgtype.UUID         `json:"group_id"`
-	Measurement  NullMeasurementType `json:"measurement"`
-	PictureUrl   *string             `json:"picture_url"`
-	ColorCode    *string             `json:"color_code"`
-	BrandID      pgtype.UUID         `json:"brand_id"`
-	PricePerUnit pgtype.Numeric      `json:"price_per_unit"`
-	Quantity     *int64              `json:"quantity"`
-	CreatedAt    pgtype.Timestamptz  `json:"created_at"`
-	UpdatedAt    pgtype.Timestamptz  `json:"updated_at"`
-	DeletedAt    *int64              `json:"deleted_at"`
-}
-
 // AddIngredientQuantity adds/accumulates quantity to an ingredient (for invoice arrivals)
 // Also updates the price_per_unit to the latest price from invoice
-func (q *Queries) AddIngredientQuantity(ctx context.Context, arg AddIngredientQuantityParams) (AddIngredientQuantityRow, error) {
+func (q *Queries) AddIngredientQuantity(ctx context.Context, arg AddIngredientQuantityParams) (Ingredient, error) {
 	row := q.db.QueryRow(ctx, addIngredientQuantity, arg.ID, arg.PricePerUnit, arg.Quantity)
-	var i AddIngredientQuantityRow
+	var i Ingredient
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
@@ -148,24 +132,8 @@ type CreateIngredientParams struct {
 	BrandID     pgtype.UUID         `json:"brand_id"`
 }
 
-type CreateIngredientRow struct {
-	ID           uuid.UUID           `json:"id"`
-	Name         string              `json:"name"`
-	NameI18n     pgtype.UUID         `json:"name_i18n"`
-	GroupID      pgtype.UUID         `json:"group_id"`
-	Measurement  NullMeasurementType `json:"measurement"`
-	PictureUrl   *string             `json:"picture_url"`
-	ColorCode    *string             `json:"color_code"`
-	BrandID      pgtype.UUID         `json:"brand_id"`
-	PricePerUnit pgtype.Numeric      `json:"price_per_unit"`
-	Quantity     *int64              `json:"quantity"`
-	CreatedAt    pgtype.Timestamptz  `json:"created_at"`
-	UpdatedAt    pgtype.Timestamptz  `json:"updated_at"`
-	DeletedAt    *int64              `json:"deleted_at"`
-}
-
 // CreateIngredient creates a new ingredient
-func (q *Queries) CreateIngredient(ctx context.Context, arg CreateIngredientParams) (CreateIngredientRow, error) {
+func (q *Queries) CreateIngredient(ctx context.Context, arg CreateIngredientParams) (Ingredient, error) {
 	row := q.db.QueryRow(ctx, createIngredient,
 		arg.ID,
 		arg.Name,
@@ -176,7 +144,7 @@ func (q *Queries) CreateIngredient(ctx context.Context, arg CreateIngredientPara
 		arg.ColorCode,
 		arg.BrandID,
 	)
-	var i CreateIngredientRow
+	var i Ingredient
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
@@ -421,32 +389,16 @@ type GetAllIngredientsParams struct {
 	Offset int32 `json:"offset"`
 }
 
-type GetAllIngredientsRow struct {
-	ID           uuid.UUID           `json:"id"`
-	Name         string              `json:"name"`
-	NameI18n     pgtype.UUID         `json:"name_i18n"`
-	GroupID      pgtype.UUID         `json:"group_id"`
-	Measurement  NullMeasurementType `json:"measurement"`
-	PictureUrl   *string             `json:"picture_url"`
-	ColorCode    *string             `json:"color_code"`
-	BrandID      pgtype.UUID         `json:"brand_id"`
-	PricePerUnit pgtype.Numeric      `json:"price_per_unit"`
-	Quantity     *int64              `json:"quantity"`
-	CreatedAt    pgtype.Timestamptz  `json:"created_at"`
-	UpdatedAt    pgtype.Timestamptz  `json:"updated_at"`
-	DeletedAt    *int64              `json:"deleted_at"`
-}
-
 // GetAllIngredients retrieves all ingredients with pagination
-func (q *Queries) GetAllIngredients(ctx context.Context, arg GetAllIngredientsParams) ([]GetAllIngredientsRow, error) {
+func (q *Queries) GetAllIngredients(ctx context.Context, arg GetAllIngredientsParams) ([]Ingredient, error) {
 	rows, err := q.db.Query(ctx, getAllIngredients, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []GetAllIngredientsRow
+	var items []Ingredient
 	for rows.Next() {
-		var i GetAllIngredientsRow
+		var i Ingredient
 		if err := rows.Scan(
 			&i.ID,
 			&i.Name,
@@ -478,26 +430,10 @@ FROM ingredients
 WHERE id = $1 AND deleted_at = 0
 `
 
-type GetIngredientByIDRow struct {
-	ID           uuid.UUID           `json:"id"`
-	Name         string              `json:"name"`
-	NameI18n     pgtype.UUID         `json:"name_i18n"`
-	GroupID      pgtype.UUID         `json:"group_id"`
-	Measurement  NullMeasurementType `json:"measurement"`
-	PictureUrl   *string             `json:"picture_url"`
-	ColorCode    *string             `json:"color_code"`
-	BrandID      pgtype.UUID         `json:"brand_id"`
-	PricePerUnit pgtype.Numeric      `json:"price_per_unit"`
-	Quantity     *int64              `json:"quantity"`
-	CreatedAt    pgtype.Timestamptz  `json:"created_at"`
-	UpdatedAt    pgtype.Timestamptz  `json:"updated_at"`
-	DeletedAt    *int64              `json:"deleted_at"`
-}
-
 // GetIngredientByID retrieves an ingredient by ID
-func (q *Queries) GetIngredientByID(ctx context.Context, id uuid.UUID) (GetIngredientByIDRow, error) {
+func (q *Queries) GetIngredientByID(ctx context.Context, id uuid.UUID) (Ingredient, error) {
 	row := q.db.QueryRow(ctx, getIngredientByID, id)
-	var i GetIngredientByIDRow
+	var i Ingredient
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
@@ -522,26 +458,10 @@ FROM ingredients
 WHERE id = $1 AND deleted_at = 0
 `
 
-type GetIngredientByIDWithPriceQuantityRow struct {
-	ID           uuid.UUID           `json:"id"`
-	Name         string              `json:"name"`
-	NameI18n     pgtype.UUID         `json:"name_i18n"`
-	GroupID      pgtype.UUID         `json:"group_id"`
-	Measurement  NullMeasurementType `json:"measurement"`
-	PictureUrl   *string             `json:"picture_url"`
-	ColorCode    *string             `json:"color_code"`
-	BrandID      pgtype.UUID         `json:"brand_id"`
-	PricePerUnit pgtype.Numeric      `json:"price_per_unit"`
-	Quantity     *int64              `json:"quantity"`
-	CreatedAt    pgtype.Timestamptz  `json:"created_at"`
-	UpdatedAt    pgtype.Timestamptz  `json:"updated_at"`
-	DeletedAt    *int64              `json:"deleted_at"`
-}
-
 // GetIngredientByIDWithPriceQuantity retrieves ingredient with price and quantity by ID
-func (q *Queries) GetIngredientByIDWithPriceQuantity(ctx context.Context, id uuid.UUID) (GetIngredientByIDWithPriceQuantityRow, error) {
+func (q *Queries) GetIngredientByIDWithPriceQuantity(ctx context.Context, id uuid.UUID) (Ingredient, error) {
 	row := q.db.QueryRow(ctx, getIngredientByIDWithPriceQuantity, id)
-	var i GetIngredientByIDWithPriceQuantityRow
+	var i Ingredient
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
@@ -629,32 +549,16 @@ type GetIngredientsByGroupIDParams struct {
 	Offset  int32       `json:"offset"`
 }
 
-type GetIngredientsByGroupIDRow struct {
-	ID           uuid.UUID           `json:"id"`
-	Name         string              `json:"name"`
-	NameI18n     pgtype.UUID         `json:"name_i18n"`
-	GroupID      pgtype.UUID         `json:"group_id"`
-	Measurement  NullMeasurementType `json:"measurement"`
-	PictureUrl   *string             `json:"picture_url"`
-	ColorCode    *string             `json:"color_code"`
-	BrandID      pgtype.UUID         `json:"brand_id"`
-	PricePerUnit pgtype.Numeric      `json:"price_per_unit"`
-	Quantity     *int64              `json:"quantity"`
-	CreatedAt    pgtype.Timestamptz  `json:"created_at"`
-	UpdatedAt    pgtype.Timestamptz  `json:"updated_at"`
-	DeletedAt    *int64              `json:"deleted_at"`
-}
-
 // GetIngredientsByGroupID retrieves ingredients by group ID
-func (q *Queries) GetIngredientsByGroupID(ctx context.Context, arg GetIngredientsByGroupIDParams) ([]GetIngredientsByGroupIDRow, error) {
+func (q *Queries) GetIngredientsByGroupID(ctx context.Context, arg GetIngredientsByGroupIDParams) ([]Ingredient, error) {
 	rows, err := q.db.Query(ctx, getIngredientsByGroupID, arg.GroupID, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []GetIngredientsByGroupIDRow
+	var items []Ingredient
 	for rows.Next() {
-		var i GetIngredientsByGroupIDRow
+		var i Ingredient
 		if err := rows.Scan(
 			&i.ID,
 			&i.Name,
@@ -930,32 +834,16 @@ type SearchIngredientsParams struct {
 	Offset  int32   `json:"offset"`
 }
 
-type SearchIngredientsRow struct {
-	ID           uuid.UUID           `json:"id"`
-	Name         string              `json:"name"`
-	NameI18n     pgtype.UUID         `json:"name_i18n"`
-	GroupID      pgtype.UUID         `json:"group_id"`
-	Measurement  NullMeasurementType `json:"measurement"`
-	PictureUrl   *string             `json:"picture_url"`
-	ColorCode    *string             `json:"color_code"`
-	BrandID      pgtype.UUID         `json:"brand_id"`
-	PricePerUnit pgtype.Numeric      `json:"price_per_unit"`
-	Quantity     *int64              `json:"quantity"`
-	CreatedAt    pgtype.Timestamptz  `json:"created_at"`
-	UpdatedAt    pgtype.Timestamptz  `json:"updated_at"`
-	DeletedAt    *int64              `json:"deleted_at"`
-}
-
 // SearchIngredients searches ingredients by name
-func (q *Queries) SearchIngredients(ctx context.Context, arg SearchIngredientsParams) ([]SearchIngredientsRow, error) {
+func (q *Queries) SearchIngredients(ctx context.Context, arg SearchIngredientsParams) ([]Ingredient, error) {
 	rows, err := q.db.Query(ctx, searchIngredients, arg.Column1, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []SearchIngredientsRow
+	var items []Ingredient
 	for rows.Next() {
-		var i SearchIngredientsRow
+		var i Ingredient
 		if err := rows.Scan(
 			&i.ID,
 			&i.Name,
@@ -1006,24 +894,8 @@ type UpdateIngredientParams struct {
 	BrandID     pgtype.UUID         `json:"brand_id"`
 }
 
-type UpdateIngredientRow struct {
-	ID           uuid.UUID           `json:"id"`
-	Name         string              `json:"name"`
-	NameI18n     pgtype.UUID         `json:"name_i18n"`
-	GroupID      pgtype.UUID         `json:"group_id"`
-	Measurement  NullMeasurementType `json:"measurement"`
-	PictureUrl   *string             `json:"picture_url"`
-	ColorCode    *string             `json:"color_code"`
-	BrandID      pgtype.UUID         `json:"brand_id"`
-	PricePerUnit pgtype.Numeric      `json:"price_per_unit"`
-	Quantity     *int64              `json:"quantity"`
-	CreatedAt    pgtype.Timestamptz  `json:"created_at"`
-	UpdatedAt    pgtype.Timestamptz  `json:"updated_at"`
-	DeletedAt    *int64              `json:"deleted_at"`
-}
-
 // UpdateIngredient updates an ingredient
-func (q *Queries) UpdateIngredient(ctx context.Context, arg UpdateIngredientParams) (UpdateIngredientRow, error) {
+func (q *Queries) UpdateIngredient(ctx context.Context, arg UpdateIngredientParams) (Ingredient, error) {
 	row := q.db.QueryRow(ctx, updateIngredient,
 		arg.ID,
 		arg.Name,
@@ -1034,7 +906,7 @@ func (q *Queries) UpdateIngredient(ctx context.Context, arg UpdateIngredientPara
 		arg.ColorCode,
 		arg.BrandID,
 	)
-	var i UpdateIngredientRow
+	var i Ingredient
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
@@ -1121,26 +993,10 @@ type UpdateIngredientPriceAndQuantityParams struct {
 	Quantity     *int64         `json:"quantity"`
 }
 
-type UpdateIngredientPriceAndQuantityRow struct {
-	ID           uuid.UUID           `json:"id"`
-	Name         string              `json:"name"`
-	NameI18n     pgtype.UUID         `json:"name_i18n"`
-	GroupID      pgtype.UUID         `json:"group_id"`
-	Measurement  NullMeasurementType `json:"measurement"`
-	PictureUrl   *string             `json:"picture_url"`
-	ColorCode    *string             `json:"color_code"`
-	BrandID      pgtype.UUID         `json:"brand_id"`
-	PricePerUnit pgtype.Numeric      `json:"price_per_unit"`
-	Quantity     *int64              `json:"quantity"`
-	CreatedAt    pgtype.Timestamptz  `json:"created_at"`
-	UpdatedAt    pgtype.Timestamptz  `json:"updated_at"`
-	DeletedAt    *int64              `json:"deleted_at"`
-}
-
 // UpdateIngredientPriceAndQuantity updates price_per_unit and quantity for an ingredient
-func (q *Queries) UpdateIngredientPriceAndQuantity(ctx context.Context, arg UpdateIngredientPriceAndQuantityParams) (UpdateIngredientPriceAndQuantityRow, error) {
+func (q *Queries) UpdateIngredientPriceAndQuantity(ctx context.Context, arg UpdateIngredientPriceAndQuantityParams) (Ingredient, error) {
 	row := q.db.QueryRow(ctx, updateIngredientPriceAndQuantity, arg.ID, arg.PricePerUnit, arg.Quantity)
-	var i UpdateIngredientPriceAndQuantityRow
+	var i Ingredient
 	err := row.Scan(
 		&i.ID,
 		&i.Name,

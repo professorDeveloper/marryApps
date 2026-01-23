@@ -20,6 +20,8 @@ CREATE TABLE IF NOT EXISTS ingredients (
   picture_url TEXT,
   color_code TEXT, 
   brand_id    UUID,
+  price_per_unit DECIMAL(15, 2) DEFAULT 0,
+  quantity BIGINT DEFAULT 0,
   created_at  TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
   updated_at  TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
   deleted_at  BIGINT    DEFAULT 0

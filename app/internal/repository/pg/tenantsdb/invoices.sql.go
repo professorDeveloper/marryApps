@@ -955,11 +955,10 @@ func (q *Queries) UpdateInvoice(ctx context.Context, arg UpdateInvoiceParams) (I
 
 const updateInvoiceDetail = `-- name: UpdateInvoiceDetail :one
 UPDATE invoice_detailed
-SET invoice_id = COALESCE($2, invoice_id),
-    ingredient_id = COALESCE($3, ingredient_id),
-    quantity = COALESCE($4, quantity),
-    price = COALESCE($5, price),
-    price_per_unit = COALESCE($6, price_per_unit),
+SET ingredient_id = $2,
+    quantity = $3,
+    price = $4,
+    price_per_unit = $5,
     updated_at = NOW()
 WHERE id = $1 AND deleted_at = 0
 RETURNING id, invoice_id, ingredient_id, quantity, price, price_per_unit, created_at, updated_at, deleted_at
@@ -967,7 +966,6 @@ RETURNING id, invoice_id, ingredient_id, quantity, price, price_per_unit, create
 
 type UpdateInvoiceDetailParams struct {
 	ID           uuid.UUID      `json:"id"`
-	InvoiceID    uuid.UUID      `json:"invoice_id"`
 	IngredientID uuid.UUID      `json:"ingredient_id"`
 	Quantity     int64          `json:"quantity"`
 	Price        pgtype.Numeric `json:"price"`
@@ -977,7 +975,6 @@ type UpdateInvoiceDetailParams struct {
 func (q *Queries) UpdateInvoiceDetail(ctx context.Context, arg UpdateInvoiceDetailParams) (InvoiceDetailed, error) {
 	row := q.db.QueryRow(ctx, updateInvoiceDetail,
 		arg.ID,
-		arg.InvoiceID,
 		arg.IngredientID,
 		arg.Quantity,
 		arg.Price,

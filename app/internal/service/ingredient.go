@@ -58,19 +58,6 @@ func mapIngredientToResponse(ingredient any) *model.IngredientResponse {
 		quantity = row.Quantity
 		createdAt = row.CreatedAt
 		updatedAt = row.UpdatedAt
-	case pg.GetIngredientByIDRow:
-		id = row.ID
-		name = row.Name
-		nameI18n = row.NameI18n
-		groupID = row.GroupID
-		measurement = row.Measurement
-		pictureUrl = row.PictureUrl
-		colorCode = row.ColorCode
-		brandID = row.BrandID
-		pricePerUnit = row.PricePerUnit
-		quantity = row.Quantity
-		createdAt = row.CreatedAt
-		updatedAt = row.UpdatedAt
 	default:
 		return nil
 	}
