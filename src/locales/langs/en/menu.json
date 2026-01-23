@@ -1,5 +1,5 @@
 {
-  "app": "menu",
+  "app": "Menu",
   "job": "Job",
   "user": "User",
   "travel": "Travel",
@@ -327,7 +327,9 @@
       "title": "Warehouse",
       "storage": "Storage",
       "stocks": "Stocks",
+      "invoiceDetails": "Invoice Details",
       "ingredients": "Ingredients",
+      "ingredient-group": "Ingredient groups",
       "transfers": "Transfers",
       "locations": "Locations",
       "suppliers": "Suppliers"
@@ -566,7 +568,7 @@
     "measurementKg": "Kg",
     "measurementL": "L",
     "measurementDona": "Piece",
-    "color": "Color Code",
+    "color": "Color code",
     "picture": "Picture",
     "nameRequired": "Ingredient name is required",
     "measurementRequired": "Measurement is required",
@@ -582,6 +584,16 @@
     "deleteFailed": "Failed to delete ingredient",
     "saveFailed": "Failed to save ingredient"
   },
+  "ingredientGroups": {
+  "title": "Ingredient groups",
+  "name": "Name",
+  "color": "Color",
+  "new": "New ingredient group",
+  "edit": "Edit ingredient group",
+  "basicInfo": "Basic information",
+  "colorInfo": "Color information",
+  "colorCode": "Color code"
+},
 "invoices": {
   "title": "Suppliers",
   "new": "New supplier",

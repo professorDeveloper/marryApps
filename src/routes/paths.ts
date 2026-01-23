@@ -161,6 +161,13 @@ export const paths = {
         details: (id: string) => `${ROOTS.MENU}/warehouse/ingredients/${id}`,
         edit: (id: string) => `${ROOTS.MENU}/warehouse/ingredients/${id}/edit`,
       },
+      ingredients_group: {
+        root: `${ROOTS.MENU}/warehouse/ingredients-group`,
+        new: `${ROOTS.MENU}/warehouse/ingredients-group/new`,
+        details: (id: string) => `${ROOTS.MENU}/warehouse/ingredients-group/${id}`,
+        edit: (id: string) => `${ROOTS.MENU}/warehouse/ingredients-group/${id}/edit`,
+      },
+
       invoices: {
         root: `${ROOTS.MENU}/warehouse/invoices`,
         new: `${ROOTS.MENU}/warehouse/invoices/new`,

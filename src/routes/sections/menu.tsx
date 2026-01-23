@@ -51,6 +51,8 @@ import { EmployeeNewPage } from 'src/pages/dashboard/user/new';
 import { EmployeeEditPage } from 'src/pages/dashboard/user/edit';
 import { RestaurantStaffNewPage } from 'src/pages/dashboard/user/restaurant-staff-new';
 import { RestaurantStaffEditPage } from 'src/pages/dashboard/user/restaurant-staff-edit';
+import { IngredientGroupListView } from 'src/sections/warehouse/ingredient-group-list-view';
+import { IngredientGroupEditViewWrapper } from 'src/sections/warehouse/ingredient-group-edit-view';
 
 // ----------------------------------------------------------------------
 
@@ -135,6 +137,9 @@ export const dashboardRoutes: RouteObject[] = [
           { path: 'warehouse/suppliers', element: <SuppliersListView /> },
           { path: 'warehouse/suppliers/new', element: <SuppliersEditView isNew /> },
           { path: 'warehouse/suppliers/:id/edit', element: <SuppliersEditView /> },
+          { path: 'warehouse/ingredients-group', element: <IngredientGroupListView /> },
+          { path: 'warehouse/ingredients-group/new', element: <IngredientGroupEditViewWrapper isNew /> },
+          { path: 'warehouse/ingredients-group/:id/edit', element: <IngredientGroupEditViewWrapper /> },
           { path: 'warehouse/ingredients', element: <IngredientListView /> },
           { path: 'warehouse/ingredients/new', element: <IngredientEditViewWrapper isNew /> },
           { path: 'warehouse/ingredients/:id/edit', element: <IngredientEditViewWrapper /> },

@@ -18,8 +18,8 @@ function colorVars(theme: Theme, variant?: 'vertical' | 'mini' | 'horizontal') {
     // root
     '--nav-item-root-active-color': palette.common.white,
     '--nav-item-root-active-color-on-dark': palette.common.white,
-    '--nav-item-root-active-bg': palette.warning.dark,
-    '--nav-item-root-active-hover-bg': palette.warning.dark,
+    '--nav-item-root-active-bg': palette.warning.main,
+    '--nav-item-root-active-hover-bg': palette.warning.main,
     '--nav-item-root-open-color': palette.text.primary,
     '--nav-item-root-open-bg': palette.action.hover,
     // sub

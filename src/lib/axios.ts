@@ -190,6 +190,9 @@ export const endpoints = {
   ingredientGroups: {
     list: '/api/v1/ingredient-groups',
     details: (id: string) => `/api/v1/ingredient-groups/${id}`,
+    create: '/api/v1/ingredient-groups',
+    update: (id: string) => `/api/v1/ingredient-groups/${id}`,
+    delete: (id: string) => `/api/v1/ingredient-groups/${id}`,
   },
   branches: {
     list: '/api/v1/branches',

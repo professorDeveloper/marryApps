@@ -6,10 +6,6 @@ import { useMemo, useCallback } from 'react';
 
 import { poster, putter, fetcher, deleter, endpoints } from 'src/lib/axios';
 
-// ============================================================================
-// CONFIGURATION
-// ============================================================================
-
 const swrOptions: SWRConfiguration = {
     revalidateIfStale: true,
     revalidateOnFocus: false,

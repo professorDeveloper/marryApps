@@ -323,10 +323,12 @@
     },
     "warehouse": {
       "title": "Ombor",
+      "invoiceDetails": "Kirimlar",
       "storage": "Ombor",
       "basicTitle": "Asosiy ma'lumotlar",
       "stocks": "Stoklar",
       "ingredients": "Maxsulotlar",
+      "ingredient-group": "Maxsulot guruhlari",
       "transfers": "O'tkazmalar",
       "locations": "Joylashuvlar",
       "suppliers": "Yetkazib beruvchilar"
@@ -526,6 +528,7 @@
     "newStorage": "Yangi saqlash",
     "editStorage": "Saqlash tahrir qilish",
     "ingredients": "Maxsulotlar",
+    "ingredient-group": "Maxsulot guruhlari",
     "ingredient": "Maxsulot",
     "group": "Guruh",
     "measurement": "O'lchov",
@@ -580,6 +583,16 @@
     "updateSuccess": "Maxsulot muvaffaqiyatli yangilandi",
     "deleteFailed": "Maxsulotni o'chirish muvaffaq bo'lmadi",
     "saveFailed": "Maxsulotni saqlash muvaffaq bo'lmadi"
+  },
+  "ingredientGroups": {
+    "title": "Xomashyolar guruhi",
+    "name": "Nomi",
+    "color": "Rang",
+    "new": "Yangi xomashyo guruhi",
+    "edit": "Xomashyo guruhini tahrir qilish",
+    "basicInfo": "Asosiy ma'lumot",
+    "colorInfo": "Rang ma'lumoti",
+    "colorCode": "Rang kodi"
   },
   "invoices": {
     "title": "Yetkazib beruvchilar",

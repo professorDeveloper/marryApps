@@ -76,6 +76,7 @@ export const getNavData = (t: TFunction): NavSectionProps['data'] => [
         icon: ICONS.banking,
         children: [
           { title: t('overview.warehouse.storage', 'Storage'), path: paths.menu.inventory.root },
+          { title: t('overview.warehouse.ingredient-group', ''), path: paths.warehouse.ingredients_group.root },
           { title: t('overview.warehouse.ingredients', 'Ingredients'), path: paths.warehouse.ingredients.root },
           { title: t('overview.warehouse.invoiceDetails', 'Kirimlar'), path: paths.warehouse.invoiceDetails.root },
           { title: t('invoices.title', 'Invoices'), path: paths.warehouse.invoices.root },

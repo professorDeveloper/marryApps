@@ -31,7 +31,7 @@ const swrOptions: SWRConfiguration = {
  * Get all ingredient groups
  */
 export function useGetIngredientGroups() {
-    const url = endpoints.ingredientGroups.list;
+    const url = endpoints.ingredientGroups.list
 
     const { data, isLoading, error, isValidating } = useSWR<IIngredientGroupResponse>(
         url,
