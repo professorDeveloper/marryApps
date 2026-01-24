@@ -8,6 +8,7 @@ CREATE TABLE IF NOT EXISTS shifts (
   open_time    BIGINT,
   close_time   BIGINT,
   branch_id    UUID REFERENCES branches(id) on DELETE CASCADE,
+  is_active BOOLEAN NOT NULL DEFAULT TRUE,
   created_at   TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
   updated_at   TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
   deleted_at   BIGINT    DEFAULT 0
@@ -25,6 +26,7 @@ CREATE TABLE IF NOT EXISTS users (
   brand_id      UUID,
   phone_number  VARCHAR(20) UNIQUE,
   fcm_token     TEXT,
+  is_active     BOOLEAN   NOT NULL DEFAULT TRUE,
   created_at    TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
   updated_at    TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
   deleted_at    BIGINT    DEFAULT 0,

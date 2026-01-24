@@ -310,16 +310,46 @@ func seedTenantDB(ctx context.Context, db pg.DBTX) error {
 		}
 	}
 
+	// ===== SUPPLIERS (3) =====
+	supplierIDs := make([]uuid.UUID, 3)
+	suppliers := []struct {
+		name        string
+		phoneNumber string
+		location    string
+	}{
+		{name: "Fresh Produce Co", phoneNumber: "+1-555-0101", location: "Downtown Market"},
+		{name: "Dairy Supplies Ltd", phoneNumber: "+1-555-0102", location: "Industrial Zone"},
+		{name: "Spice House", phoneNumber: "+1-555-0103", location: "Old City"},
+	}
+
+	for i, sup := range suppliers {
+		supID := uuid.New()
+		supplierIDs[i] = supID
+
+		// Insert supplier
+		_, err := queries.CreateSupplier(ctx, pg.CreateSupplierParams{
+			ID:          supID,
+			Name:        sup.name,
+			PhoneNumber: &sup.phoneNumber,
+			Location:    &sup.location,
+		})
+		if err != nil {
+			log.Printf("  ⚠️  Supplier %s already exists or error: %v", sup.name, err)
+		} else {
+			log.Printf("  ✓ Created supplier: %s (Phone: %s, Location: %s)", sup.name, sup.phoneNumber, sup.location)
+		}
+	}
+
 	// ===== INVOICES (3) =====
 	invoiceIDs := make([]uuid.UUID, 3)
 	invoices := []struct {
-		supplier string
-		amount   string
-		status   string
+		supplierIdx int
+		amount      string
+		status      string
 	}{
-		{supplier: "Fresh Produce Co", amount: "150.00", status: "received"},
-		{supplier: "Dairy Supplies Ltd", amount: "200.00", status: "arrived"},
-		{supplier: "Spice House", amount: "75.50", status: "pending"},
+		{supplierIdx: 0, amount: "150.00", status: "received"},
+		{supplierIdx: 1, amount: "200.00", status: "arrived"},
+		{supplierIdx: 2, amount: "75.50", status: "pending"},
 	}
 
 	for i, inv := range invoices {
@@ -329,22 +359,22 @@ func seedTenantDB(ctx context.Context, db pg.DBTX) error {
 		// Convert amount to pgtype.Numeric
 		var amountNum pgtype.Numeric
 		if err := amountNum.Scan(inv.amount); err != nil {
-			log.Printf("  ⚠️  Error converting amount for %s: %v", inv.supplier, err)
+			log.Printf("  ⚠️  Error converting amount for supplier: %v", err)
 			continue
 		}
 
 		// Insert invoice
 		_, err := queries.CreateInvoice(ctx, pg.CreateInvoiceParams{
-			ID:           invID,
-			SupplierName: &inv.supplier,
-			TotalAmount:  amountNum,
-			Status:       pg.NullInvoiceStatus{InvoiceStatus: pg.InvoiceStatus(inv.status), Valid: true},
-			Date:         pgtype.Timestamp{Time: time.Now(), Valid: true},
+			ID:          invID,
+			SupplierID:  supplierIDs[inv.supplierIdx],
+			TotalAmount: amountNum,
+			Status:      pg.NullInvoiceStatus{InvoiceStatus: pg.InvoiceStatus(inv.status), Valid: true},
+			Date:        pgtype.Timestamp{Time: time.Now(), Valid: true},
 		})
 		if err != nil {
-			log.Printf("  ⚠️  Invoice %s already exists or error: %v", inv.supplier, err)
+			log.Printf("  ⚠️  Invoice for %s already exists or error: %v", suppliers[inv.supplierIdx].name, err)
 		} else {
-			log.Printf("  ✓ Created invoice: %s - %s ($%s)", inv.supplier, inv.status, inv.amount)
+			log.Printf("  ✓ Created invoice: %s - %s ($%s)", suppliers[inv.supplierIdx].name, inv.status, inv.amount)
 		}
 	}
 
@@ -578,6 +608,7 @@ func seedTenantDB(ctx context.Context, db pg.DBTX) error {
 	log.Printf("   Goods: %d", len(goods))
 	log.Printf("   Compounds: %d", len(compounds))
 	log.Printf("   Storages: %d", len(storages))
+	log.Printf("   Suppliers: %d", len(suppliers))
 	log.Printf("   Invoices: %d", len(invoices))
 	log.Printf("   Invoice Details: %d", len(invoiceDetails))
 	log.Printf("   Calculations: %d", len(calculations))

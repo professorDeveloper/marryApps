@@ -380,10 +380,23 @@ func (h *Handler) Register(router *echo.Echo) {
 			cafeTables.GET("/search", h.SearchCafeTables, mw.CheckLanguage())
 		}
 
+		// Supplier management endpoints
+		suppliers := api.Group("/suppliers", mw.CheckAuth(h.cfg), mw.TenantMiddleware(h.repo))
+		{
+			suppliers.POST("", h.CreateSupplier, mw.CheckLanguage())
+			suppliers.GET("", h.GetAllSuppliers, mw.CheckLanguage())
+			suppliers.GET("/:id", h.GetSupplier, mw.CheckLanguage())
+			suppliers.GET("/search", h.SearchSuppliers, mw.CheckLanguage())
+			suppliers.PUT("/:id", h.UpdateSupplier, mw.CheckLanguage())
+			suppliers.DELETE("/:id", h.DeleteSupplier, mw.CheckLanguage())
+			suppliers.POST("/:id/restore", h.RestoreSupplier, mw.CheckLanguage())
+		}
+
 		// Invoice endpoints (supplier invoices)
 		invoices := api.Group("/invoices", mw.CheckAuth(h.cfg), mw.TenantMiddleware(h.repo))
 		{
 			invoices.POST("", h.CreateSupplierInvoice, mw.CheckLanguage())
+			invoices.POST("/batch", h.CreateInvoiceWithDetails, mw.CheckLanguage())
 			invoices.GET("", h.GetAllInvoices, mw.CheckLanguage())
 			invoices.GET("/:id", h.GetInvoice, mw.CheckLanguage())
 			invoices.GET("/status/:status", h.GetInvoicesByStatus, mw.CheckLanguage())

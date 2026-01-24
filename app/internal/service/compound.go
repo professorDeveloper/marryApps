@@ -46,62 +46,6 @@ func compoundToResponseAny(row any) *model.CompoundResponse {
 			Price: v.Price, DepartmentID: v.DepartmentID, PictureUrl: v.PictureUrl, ColorCode: v.ColorCode,
 			CreatedAt: v.CreatedAt, UpdatedAt: v.UpdatedAt,
 		}
-	case pg.CreateCompoundRow:
-		f = compoundRowFields{
-			ID: v.ID, Name: v.Name, NameI18n: v.NameI18n, Description: v.Description,
-			DescriptionI18n: v.DescriptionI18n, Quantity: v.Quantity, Measurement: v.Measurement,
-			Price: v.Price, DepartmentID: v.DepartmentID, PictureUrl: v.PictureUrl, ColorCode: v.ColorCode,
-			CreatedAt: v.CreatedAt, UpdatedAt: v.UpdatedAt,
-		}
-	case pg.GetCompoundByIDRow:
-		f = compoundRowFields{
-			ID: v.ID, Name: v.Name, NameI18n: v.NameI18n, Description: v.Description,
-			DescriptionI18n: v.DescriptionI18n, Quantity: v.Quantity, Measurement: v.Measurement,
-			Price: v.Price, DepartmentID: v.DepartmentID, PictureUrl: v.PictureUrl, ColorCode: v.ColorCode,
-			CreatedAt: v.CreatedAt, UpdatedAt: v.UpdatedAt,
-		}
-	case pg.GetAllCompoundsRow:
-		f = compoundRowFields{
-			ID: v.ID, Name: v.Name, NameI18n: v.NameI18n, Description: v.Description,
-			DescriptionI18n: v.DescriptionI18n, Quantity: v.Quantity, Measurement: v.Measurement,
-			Price: v.Price, DepartmentID: v.DepartmentID, PictureUrl: v.PictureUrl, ColorCode: v.ColorCode,
-			CreatedAt: v.CreatedAt, UpdatedAt: v.UpdatedAt,
-		}
-	case pg.GetCompoundsByDepartmentIDRow:
-		f = compoundRowFields{
-			ID: v.ID, Name: v.Name, NameI18n: v.NameI18n, Description: v.Description,
-			DescriptionI18n: v.DescriptionI18n, Quantity: v.Quantity, Measurement: v.Measurement,
-			Price: v.Price, DepartmentID: v.DepartmentID, PictureUrl: v.PictureUrl, ColorCode: v.ColorCode,
-			CreatedAt: v.CreatedAt, UpdatedAt: v.UpdatedAt,
-		}
-	case pg.UpdateCompoundRow:
-		f = compoundRowFields{
-			ID: v.ID, Name: v.Name, NameI18n: v.NameI18n, Description: v.Description,
-			DescriptionI18n: v.DescriptionI18n, Quantity: v.Quantity, Measurement: v.Measurement,
-			Price: v.Price, DepartmentID: v.DepartmentID, PictureUrl: v.PictureUrl, ColorCode: v.ColorCode,
-			CreatedAt: v.CreatedAt, UpdatedAt: v.UpdatedAt,
-		}
-	case pg.UpdateCompoundPriceRow:
-		f = compoundRowFields{
-			ID: v.ID, Name: v.Name, NameI18n: v.NameI18n, Description: v.Description,
-			DescriptionI18n: v.DescriptionI18n, Quantity: v.Quantity, Measurement: v.Measurement,
-			Price: v.Price, DepartmentID: v.DepartmentID, PictureUrl: v.PictureUrl, ColorCode: v.ColorCode,
-			CreatedAt: v.CreatedAt, UpdatedAt: v.UpdatedAt,
-		}
-	case pg.UpdateCompoundCostFieldsRow:
-		f = compoundRowFields{
-			ID: v.ID, Name: v.Name, NameI18n: v.NameI18n, Description: v.Description,
-			DescriptionI18n: v.DescriptionI18n, Quantity: v.Quantity, Measurement: v.Measurement,
-			Price: v.Price, DepartmentID: v.DepartmentID, PictureUrl: v.PictureUrl, ColorCode: v.ColorCode,
-			CreatedAt: v.CreatedAt, UpdatedAt: v.UpdatedAt,
-		}
-	case pg.SearchCompoundsRow:
-		f = compoundRowFields{
-			ID: v.ID, Name: v.Name, NameI18n: v.NameI18n, Description: v.Description,
-			DescriptionI18n: v.DescriptionI18n, Quantity: v.Quantity, Measurement: v.Measurement,
-			Price: v.Price, DepartmentID: v.DepartmentID, PictureUrl: v.PictureUrl, ColorCode: v.ColorCode,
-			CreatedAt: v.CreatedAt, UpdatedAt: v.UpdatedAt,
-		}
 	default:
 		return nil
 	}

@@ -157,13 +157,15 @@ type CreateIngredientRequest struct {
 }
 
 type UpdateIngredientRequest struct {
-	Name        *string `json:"name,omitempty" example:"Tomato"`
-	NameI18n    *string `json:"name_i18n,omitempty" example:"123e4567-e89b-12d3-a456-426614174000"`
-	GroupID     *string `json:"group_id,omitempty" example:"123e4567-e89b-12d3-a456-426614174000"`
-	Measurement *string `json:"measurement,omitempty" example:"kg"`
-	PictureUrl  *string `json:"picture_url,omitempty" example:"https://example.com/tomato.jpg"`
-	ColorCode   *string `json:"color_code,omitempty" example:"#FF5733"`
-	BrandID     *string `json:"brand_id,omitempty" example:"123e4567-e89b-12d3-a456-426614174000"`
+	Name         *string `json:"name,omitempty" example:"Tomato"`
+	NameI18n     *string `json:"name_i18n,omitempty" example:"123e4567-e89b-12d3-a456-426614174000"`
+	GroupID      *string `json:"group_id,omitempty" example:"123e4567-e89b-12d3-a456-426614174000"`
+	Measurement  *string `json:"measurement,omitempty" example:"kg"`
+	PictureUrl   *string `json:"picture_url,omitempty" example:"https://example.com/tomato.jpg"`
+	ColorCode    *string `json:"color_code,omitempty" example:"#FF5733"`
+	BrandID      *string `json:"brand_id,omitempty" example:"123e4567-e89b-12d3-a456-426614174000"`
+	PricePerUnit *string `json:"price_per_unit,omitempty" example:"100.00"`
+	Quantity     *int64  `json:"quantity,omitempty" example:"50"`
 }
 
 type IngredientResponse struct {

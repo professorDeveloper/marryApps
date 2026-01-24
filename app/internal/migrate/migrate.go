@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/database/postgres"
@@ -25,12 +26,17 @@ func RunMigrationsFromSubdir(ctx context.Context, pool *pgxpool.Pool, migrations
 
 	pgConfig := pool.Config()
 	connString := pgConfig.ConnString()
-	connString += "?sslmode=disable"
+	sep := "?"
+	if strings.Contains(connString, "?") {
+		sep = "&"
+	}
+	connString += sep + "sslmode=disable"
 
 	db, err := sql.Open("postgres", connString)
 	if err != nil {
 		return fmt.Errorf("error creating db, sql.Open: %w", err)
 	}
+	defer db.Close()
 
 	driver, err := postgres.WithInstance(db, &postgres.Config{})
 	if err != nil {
@@ -71,18 +77,17 @@ func RunMigrationsInSchema(ctx context.Context, pool *pgxpool.Pool, schemaName s
 
 	pgConfig := pool.Config()
 	connString := pgConfig.ConnString()
-	connString += "?sslmode=disable"
+	sep := "?"
+	if strings.Contains(connString, "?") {
+		sep = "&"
+	}
+	connString += sep + "sslmode=disable&search_path=" + schemaName
 
 	db, err := sql.Open("postgres", connString)
 	if err != nil {
 		return fmt.Errorf("error creating db, sql.Open: %w", err)
 	}
 	defer db.Close()
-
-	// Set search_path for this connection to use the target schema
-	if _, err := db.Exec(fmt.Sprintf("SET search_path TO %s", schemaName)); err != nil {
-		return fmt.Errorf("failed to set search_path to %s: %w", schemaName, err)
-	}
 
 	driver, err := postgres.WithInstance(db, &postgres.Config{
 		SchemaName: schemaName,

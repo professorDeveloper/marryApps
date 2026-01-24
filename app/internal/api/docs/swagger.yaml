@@ -644,20 +644,14 @@ definitions:
       status:
         example: pending
         type: string
-      supplier_email:
-        example: supplier@example.com
-        type: string
-      supplier_name:
-        example: ABC Supplier
-        type: string
-      supplier_phone:
-        example: "998901234567"
+      supplier_id:
+        example: d1f29b75-8g6d-5536-0525-2c12deeef0e0
         type: string
       total_amount:
         example: "1000000"
         type: string
     required:
-    - supplier_name
+    - supplier_id
     - total_amount
     type: object
   model.CreateInvoiceResponse:
@@ -673,6 +667,33 @@ definitions:
         type: integer
       error_note:
         type: string
+    type: object
+  model.CreateInvoiceWithDetailsRequest:
+    properties:
+      details:
+        description: Details - array of invoice detail items to create
+        items:
+          $ref: '#/definitions/model.CreateInvoiceDetailRequest'
+        minItems: 1
+        type: array
+      invoice:
+        allOf:
+        - $ref: '#/definitions/model.CreateInvoiceRequest'
+        description: Invoice - the invoice header to create
+    required:
+    - details
+    - invoice
+    type: object
+  model.CreateInvoiceWithDetailsResponse:
+    properties:
+      details:
+        items:
+          $ref: '#/definitions/model.InvoiceDetailResponse'
+        type: array
+      invoice:
+        $ref: '#/definitions/model.InvoiceResponse'
+      summary:
+        $ref: '#/definitions/model.InvoiceDetailsBatchSummary'
     type: object
   model.CreateOrderItemRequest:
     properties:
@@ -758,6 +779,20 @@ definitions:
         type: string
       picture_url:
         type: string
+    type: object
+  model.CreateSupplierRequest:
+    properties:
+      location:
+        example: Tashkent, Uzbekistan
+        type: string
+      name:
+        example: ABC Supplier
+        type: string
+      phone_number:
+        example: "998901234567"
+        type: string
+    required:
+    - name
     type: object
   model.CreateTranslationRequest:
     properties:
@@ -1155,6 +1190,46 @@ definitions:
       updated_at:
         type: string
     type: object
+  model.InvoiceDetailsBatchSummary:
+    properties:
+      created_count:
+        example: 5
+        type: integer
+      total_amount:
+        example: "500000"
+        type: string
+      total_details:
+        example: 5
+        type: integer
+    type: object
+  model.InvoiceGetWithDetailsResponse:
+    properties:
+      created_at:
+        type: string
+      date:
+        type: string
+      id:
+        example: c0f18a64-7f5c-4425-9414-1b01cddee9d9
+        type: string
+      item_count:
+        example: 5
+        type: integer
+      status:
+        allOf:
+        - $ref: '#/definitions/model.InvoiceStatus'
+        example: pending
+      supplier_id:
+        example: d1f29b75-8g6d-5536-0525-2c12deeef0e0
+        type: string
+      total_amount:
+        example: "1000000"
+        type: string
+      total_quantity:
+        example: 100
+        type: integer
+      updated_at:
+        type: string
+    type: object
   model.InvoiceResponse:
     properties:
       created_at:
@@ -1168,14 +1243,8 @@ definitions:
         allOf:
         - $ref: '#/definitions/model.InvoiceStatus'
         example: pending
-      supplier_email:
-        example: supplier@example.com
-        type: string
-      supplier_name:
-        example: ABC Supplier
-        type: string
-      supplier_phone:
-        example: "998901234567"
+      supplier_id:
+        example: d1f29b75-8g6d-5536-0525-2c12deeef0e0
         type: string
       total_amount:
         example: "1000000"
@@ -1234,40 +1303,6 @@ definitions:
     - InvoiceStatusPending
     - InvoiceStatusArrived
     - InvoiceStatusReceived
-  model.InvoiceWithDetailsResponse:
-    properties:
-      created_at:
-        type: string
-      date:
-        type: string
-      id:
-        example: c0f18a64-7f5c-4425-9414-1b01cddee9d9
-        type: string
-      item_count:
-        example: 5
-        type: integer
-      status:
-        allOf:
-        - $ref: '#/definitions/model.InvoiceStatus'
-        example: pending
-      supplier_email:
-        example: supplier@example.com
-        type: string
-      supplier_name:
-        example: ABC Supplier
-        type: string
-      supplier_phone:
-        example: "998901234567"
-        type: string
-      total_amount:
-        example: "1000000"
-        type: string
-      total_quantity:
-        example: 100
-        type: integer
-      updated_at:
-        type: string
-    type: object
   model.LoginRequest:
     properties:
       brand_id:
@@ -1509,6 +1544,25 @@ definitions:
         type: string
       status:
         example: success
+        type: string
+    type: object
+  model.SupplierResponse:
+    properties:
+      created_at:
+        type: string
+      id:
+        example: c0f18a64-7f5c-4425-9414-1b01cddee9d9
+        type: string
+      location:
+        example: Tashkent, Uzbekistan
+        type: string
+      name:
+        example: ABC Supplier
+        type: string
+      phone_number:
+        example: "998901234567"
+        type: string
+      updated_at:
         type: string
     type: object
   model.TableOccupancyStats:
@@ -1802,6 +1856,12 @@ definitions:
       picture_url:
         example: https://example.com/tomato.jpg
         type: string
+      price_per_unit:
+        example: "100.00"
+        type: string
+      quantity:
+        example: 50
+        type: integer
     type: object
   model.UpdateIngredientStockRequest:
     properties:
@@ -1840,14 +1900,8 @@ definitions:
       status:
         example: pending
         type: string
-      supplier_email:
-        example: supplier@example.com
-        type: string
-      supplier_name:
-        example: ABC Supplier
-        type: string
-      supplier_phone:
-        example: "998901234567"
+      supplier_id:
+        example: d1f29b75-8g6d-5536-0525-2c12deeef0e0
         type: string
       total_amount:
         example: "1000000"
@@ -1966,6 +2020,18 @@ definitions:
       name_i18n:
         type: string
       picture_url:
+        type: string
+    type: object
+  model.UpdateSupplierRequest:
+    properties:
+      location:
+        example: Tashkent, Uzbekistan
+        type: string
+      name:
+        example: ABC Supplier
+        type: string
+      phone_number:
+        example: "998901234567"
         type: string
     type: object
   model.UpdateUserRequest:
@@ -8567,7 +8633,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/model.InvoiceWithDetailsResponse'
+            $ref: '#/definitions/model.InvoiceGetWithDetailsResponse'
         "400":
           description: Bad Request
           schema:
@@ -8763,6 +8829,47 @@ paths:
       security:
       - BearerAuth: []
       summary: Update invoice status
+      tags:
+      - Invoices
+  /api/v1/invoices/batch:
+    post:
+      consumes:
+      - application/json
+      description: Create a new invoice and all its line items in one atomic call
+      parameters:
+      - default: uz
+        description: Language (uz, ru, en)
+        in: query
+        name: lang
+        type: string
+      - description: Create invoice with details request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.CreateInvoiceWithDetailsRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/model.CreateInvoiceWithDetailsResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create invoice with details in batch
       tags:
       - Invoices
   /api/v1/invoices/date-range:
@@ -10988,6 +11095,313 @@ paths:
       summary: Search storages
       tags:
       - storages
+  /api/v1/suppliers:
+    get:
+      description: Get all suppliers with pagination
+      parameters:
+      - default: uz
+        description: Language (uz, ru, en)
+        in: query
+        name: lang
+        type: string
+      - default: 20
+        description: Limit
+        in: query
+        name: limit
+        type: integer
+      - default: 0
+        description: Offset
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/model.SupplierResponse'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get all suppliers
+      tags:
+      - Suppliers
+    post:
+      consumes:
+      - application/json
+      description: Create a new supplier
+      parameters:
+      - default: uz
+        description: Language (uz, ru, en)
+        in: query
+        name: lang
+        type: string
+      - description: Create supplier request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.CreateSupplierRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/model.SupplierResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create supplier
+      tags:
+      - Suppliers
+  /api/v1/suppliers/{id}:
+    delete:
+      description: Soft delete a supplier
+      parameters:
+      - default: uz
+        description: Language (uz, ru, en)
+        in: query
+        name: lang
+        type: string
+      - description: Supplier ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete supplier
+      tags:
+      - Suppliers
+    get:
+      description: Get a single supplier by its ID
+      parameters:
+      - default: uz
+        description: Language (uz, ru, en)
+        in: query
+        name: lang
+        type: string
+      - description: Supplier ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.SupplierResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get supplier by ID
+      tags:
+      - Suppliers
+    put:
+      consumes:
+      - application/json
+      description: Update a supplier
+      parameters:
+      - default: uz
+        description: Language (uz, ru, en)
+        in: query
+        name: lang
+        type: string
+      - description: Supplier ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Update supplier request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.UpdateSupplierRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.SupplierResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update supplier
+      tags:
+      - Suppliers
+  /api/v1/suppliers/{id}/restore:
+    post:
+      description: Restore a soft-deleted supplier
+      parameters:
+      - default: uz
+        description: Language (uz, ru, en)
+        in: query
+        name: lang
+        type: string
+      - description: Supplier ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.SupplierResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Restore supplier
+      tags:
+      - Suppliers
+  /api/v1/suppliers/search:
+    get:
+      description: Search suppliers by name
+      parameters:
+      - default: uz
+        description: Language (uz, ru, en)
+        in: query
+        name: lang
+        type: string
+      - description: Search query
+        in: query
+        name: q
+        required: true
+        type: string
+      - default: 20
+        description: Limit
+        in: query
+        name: limit
+        type: integer
+      - default: 0
+        description: Offset
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/model.SupplierResponse'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Search suppliers
+      tags:
+      - Suppliers
   /api/v1/translations:
     get:
       consumes:

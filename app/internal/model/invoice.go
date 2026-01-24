@@ -11,56 +11,71 @@ const (
 )
 
 type Invoice struct {
-	ID            string        `json:"id" example:"c0f18a64-7f5c-4425-9414-1b01cddee9d9"`
-	SupplierName  string        `json:"supplier_name" example:"ABC Supplier"`
-	SupplierPhone *string       `json:"supplier_phone,omitempty" example:"998901234567"`
-	SupplierEmail *string       `json:"supplier_email,omitempty" example:"supplier@example.com"`
-	TotalAmount   string        `json:"total_amount" example:"1000000"`
-	Status        InvoiceStatus `json:"status" example:"pending"`
-	Date          *time.Time    `json:"date,omitempty"`
-	CreatedAt     *time.Time    `json:"created_at,omitempty"`
-	UpdatedAt     *time.Time    `json:"updated_at,omitempty"`
+	ID          string        `json:"id" example:"c0f18a64-7f5c-4425-9414-1b01cddee9d9"`
+	SupplierID  string        `json:"supplier_id" example:"d1f29b75-8g6d-5536-0525-2c12deeef0e0"`
+	TotalAmount string        `json:"total_amount" example:"1000000"`
+	Status      InvoiceStatus `json:"status" example:"pending"`
+	Date        *time.Time    `json:"date,omitempty"`
+	CreatedAt   *time.Time    `json:"created_at,omitempty"`
+	UpdatedAt   *time.Time    `json:"updated_at,omitempty"`
 }
 
 type CreateInvoiceRequest struct {
-	SupplierName  string  `json:"supplier_name" validate:"required" example:"ABC Supplier"`
-	SupplierPhone *string `json:"supplier_phone,omitempty" example:"998901234567"`
-	SupplierEmail *string `json:"supplier_email,omitempty" example:"supplier@example.com"`
-	TotalAmount   string  `json:"total_amount" validate:"required" example:"1000000"`
-	Status        string  `json:"status" example:"pending"`
-	Date          *string `json:"date,omitempty" example:"2024-01-01T00:00:00Z"`
+	SupplierID  string  `json:"supplier_id" validate:"required" example:"d1f29b75-8g6d-5536-0525-2c12deeef0e0"`
+	TotalAmount string  `json:"total_amount" validate:"required" example:"1000000"`
+	Status      string  `json:"status" example:"pending"`
+	Date        *string `json:"date,omitempty" example:"2024-01-01T00:00:00Z"`
 }
 
 type UpdateInvoiceRequest struct {
-	SupplierName  *string `json:"supplier_name,omitempty" example:"ABC Supplier"`
-	SupplierPhone *string `json:"supplier_phone,omitempty" example:"998901234567"`
-	SupplierEmail *string `json:"supplier_email,omitempty" example:"supplier@example.com"`
-	TotalAmount   *string `json:"total_amount,omitempty" example:"1000000"`
-	Status        *string `json:"status,omitempty" example:"pending"`
-	Date          *string `json:"date,omitempty" example:"2024-01-01T00:00:00Z"`
+	SupplierID  *string `json:"supplier_id,omitempty" example:"d1f29b75-8g6d-5536-0525-2c12deeef0e0"`
+	TotalAmount *string `json:"total_amount,omitempty" example:"1000000"`
+	Status      *string `json:"status,omitempty" example:"pending"`
+	Date        *string `json:"date,omitempty" example:"2024-01-01T00:00:00Z"`
 }
 
 type UpdateInvoiceStatusRequest struct {
 	Status string `json:"status" validate:"required" example:"arrived"`
 }
 
-type InvoiceResponse struct {
-	ID            string        `json:"id" example:"c0f18a64-7f5c-4425-9414-1b01cddee9d9"`
-	SupplierName  string        `json:"supplier_name" example:"ABC Supplier"`
-	SupplierPhone *string       `json:"supplier_phone,omitempty" example:"998901234567"`
-	SupplierEmail *string       `json:"supplier_email,omitempty" example:"supplier@example.com"`
-	TotalAmount   string        `json:"total_amount" example:"1000000"`
-	Status        InvoiceStatus `json:"status" example:"pending"`
-	Date          *time.Time    `json:"date,omitempty"`
-	CreatedAt     *time.Time    `json:"created_at,omitempty"`
-	UpdatedAt     *time.Time    `json:"updated_at,omitempty"`
+// CreateInvoiceWithDetailsRequest creates an invoice with all its detail items in one atomic transaction
+// First creates the invoice, then creates all invoice_detailed records using the invoice ID
+// If any detail fails, the entire transaction is rolled back
+type CreateInvoiceWithDetailsRequest struct {
+	// Invoice - the invoice header to create
+	Invoice CreateInvoiceRequest `json:"invoice" validate:"required"`
+
+	// Details - array of invoice detail items to create
+	Details []CreateInvoiceDetailRequest `json:"details" validate:"required,min=1,dive"`
 }
 
-type InvoiceWithDetailsResponse struct {
+// CreateInvoiceWithDetailsResponse - response containing created invoice and all its details
+type CreateInvoiceWithDetailsResponse struct {
+	Invoice InvoiceResponse            `json:"invoice"`
+	Details []InvoiceDetailResponse    `json:"details"`
+	Summary InvoiceDetailsBatchSummary `json:"summary"`
+}
+
+// InvoiceDetailsBatchSummary - summary of batch operation
+type InvoiceDetailsBatchSummary struct {
+	TotalDetails int    `json:"total_details" example:"5"`
+	CreatedCount int    `json:"created_count" example:"5"`
+	TotalAmount  string `json:"total_amount" example:"500000"`
+}
+
+type InvoiceResponse struct {
+	ID          string        `json:"id" example:"c0f18a64-7f5c-4425-9414-1b01cddee9d9"`
+	SupplierID  string        `json:"supplier_id" example:"d1f29b75-8g6d-5536-0525-2c12deeef0e0"`
+	TotalAmount string        `json:"total_amount" example:"1000000"`
+	Status      InvoiceStatus `json:"status" example:"pending"`
+	Date        *time.Time    `json:"date,omitempty"`
+	CreatedAt   *time.Time    `json:"created_at,omitempty"`
+	UpdatedAt   *time.Time    `json:"updated_at,omitempty"`
+}
+
+type InvoiceGetWithDetailsResponse struct {
 	ID            string        `json:"id" example:"c0f18a64-7f5c-4425-9414-1b01cddee9d9"`
-	SupplierName  string        `json:"supplier_name" example:"ABC Supplier"`
-	SupplierPhone *string       `json:"supplier_phone,omitempty" example:"998901234567"`
-	SupplierEmail *string       `json:"supplier_email,omitempty" example:"supplier@example.com"`
+	SupplierID    string        `json:"supplier_id" example:"d1f29b75-8g6d-5536-0525-2c12deeef0e0"`
 	TotalAmount   string        `json:"total_amount" example:"1000000"`
 	Status        InvoiceStatus `json:"status" example:"pending"`
 	Date          *time.Time    `json:"date,omitempty"`

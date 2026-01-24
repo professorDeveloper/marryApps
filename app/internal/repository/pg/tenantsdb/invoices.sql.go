@@ -17,7 +17,7 @@ UPDATE invoices
 SET status = 'cancelled',
     updated_at = NOW()
 WHERE id = $1 AND deleted_at = 0
-RETURNING id, supplier_name, supplier_phone, supplier_email, total_amount, status, date, created_at, updated_at, deleted_at
+RETURNING id, supplier_id, total_amount, status, date, created_at, updated_at, deleted_at
 `
 
 func (q *Queries) CancelInvoice(ctx context.Context, id uuid.UUID) (Invoice, error) {
@@ -25,9 +25,7 @@ func (q *Queries) CancelInvoice(ctx context.Context, id uuid.UUID) (Invoice, err
 	var i Invoice
 	err := row.Scan(
 		&i.ID,
-		&i.SupplierName,
-		&i.SupplierPhone,
-		&i.SupplierEmail,
+		&i.SupplierID,
 		&i.TotalAmount,
 		&i.Status,
 		&i.Date,
@@ -84,28 +82,24 @@ func (q *Queries) CountInvoicesByStatus(ctx context.Context, status NullInvoiceS
 
 const createInvoice = `-- name: CreateInvoice :one
 
-INSERT INTO invoices (id, supplier_name, supplier_phone, supplier_email, total_amount, status, date)
-VALUES ($1, $2, $3, $4, $5, $6, $7)
-RETURNING id, supplier_name, supplier_phone, supplier_email, total_amount, status, date, created_at, updated_at, deleted_at
+INSERT INTO invoices (id, supplier_id, total_amount, status, date)
+VALUES ($1, $2, $3, $4, $5)
+RETURNING id, supplier_id, total_amount, status, date, created_at, updated_at, deleted_at
 `
 
 type CreateInvoiceParams struct {
-	ID            uuid.UUID         `json:"id"`
-	SupplierName  *string           `json:"supplier_name"`
-	SupplierPhone *string           `json:"supplier_phone"`
-	SupplierEmail *string           `json:"supplier_email"`
-	TotalAmount   pgtype.Numeric    `json:"total_amount"`
-	Status        NullInvoiceStatus `json:"status"`
-	Date          pgtype.Timestamp  `json:"date"`
+	ID          uuid.UUID         `json:"id"`
+	SupplierID  uuid.UUID         `json:"supplier_id"`
+	TotalAmount pgtype.Numeric    `json:"total_amount"`
+	Status      NullInvoiceStatus `json:"status"`
+	Date        pgtype.Timestamp  `json:"date"`
 }
 
 // ==================== INVOICES QUERIES ====================
 func (q *Queries) CreateInvoice(ctx context.Context, arg CreateInvoiceParams) (Invoice, error) {
 	row := q.db.QueryRow(ctx, createInvoice,
 		arg.ID,
-		arg.SupplierName,
-		arg.SupplierPhone,
-		arg.SupplierEmail,
+		arg.SupplierID,
 		arg.TotalAmount,
 		arg.Status,
 		arg.Date,
@@ -113,9 +107,7 @@ func (q *Queries) CreateInvoice(ctx context.Context, arg CreateInvoiceParams) (I
 	var i Invoice
 	err := row.Scan(
 		&i.ID,
-		&i.SupplierName,
-		&i.SupplierPhone,
-		&i.SupplierEmail,
+		&i.SupplierID,
 		&i.TotalAmount,
 		&i.Status,
 		&i.Date,
@@ -244,7 +236,7 @@ func (q *Queries) GetAllInvoiceDetails(ctx context.Context, arg GetAllInvoiceDet
 }
 
 const getAllInvoices = `-- name: GetAllInvoices :many
-SELECT id, supplier_name, supplier_phone, supplier_email, total_amount, status, date, created_at, updated_at, deleted_at
+SELECT id, supplier_id, total_amount, status, date, created_at, updated_at, deleted_at
 FROM invoices
 WHERE deleted_at = 0
 ORDER BY date DESC
@@ -267,9 +259,7 @@ func (q *Queries) GetAllInvoices(ctx context.Context, arg GetAllInvoicesParams) 
 		var i Invoice
 		if err := rows.Scan(
 			&i.ID,
-			&i.SupplierName,
-			&i.SupplierPhone,
-			&i.SupplierEmail,
+			&i.SupplierID,
 			&i.TotalAmount,
 			&i.Status,
 			&i.Date,
@@ -288,7 +278,7 @@ func (q *Queries) GetAllInvoices(ctx context.Context, arg GetAllInvoicesParams) 
 }
 
 const getInvoiceByID = `-- name: GetInvoiceByID :one
-SELECT id, supplier_name, supplier_phone, supplier_email, total_amount, status, date, created_at, updated_at, deleted_at
+SELECT id, supplier_id, total_amount, status, date, created_at, updated_at, deleted_at
 FROM invoices
 WHERE id = $1 AND deleted_at = 0
 `
@@ -298,9 +288,7 @@ func (q *Queries) GetInvoiceByID(ctx context.Context, id uuid.UUID) (Invoice, er
 	var i Invoice
 	err := row.Scan(
 		&i.ID,
-		&i.SupplierName,
-		&i.SupplierPhone,
-		&i.SupplierEmail,
+		&i.SupplierID,
 		&i.TotalAmount,
 		&i.Status,
 		&i.Date,
@@ -511,14 +499,15 @@ func (q *Queries) GetInvoiceStatsByDateRange(ctx context.Context, arg GetInvoice
 
 const getInvoiceStatsBySupplier = `-- name: GetInvoiceStatsBySupplier :many
 SELECT 
-    supplier_name,
+    s.name as supplier_name,
     COUNT(*) as invoice_count,
-    SUM(total_amount) as total_spent,
-    AVG(total_amount) as avg_invoice_amount,
-    MAX(date) as last_order_date
-FROM invoices
-WHERE deleted_at = 0
-GROUP BY supplier_name
+    SUM(i.total_amount) as total_spent,
+    AVG(i.total_amount) as avg_invoice_amount,
+    MAX(i.date) as last_order_date
+FROM invoices i
+JOIN suppliers s ON i.supplier_id = s.id AND s.deleted_at = 0
+WHERE i.deleted_at = 0
+GROUP BY s.name
 ORDER BY total_spent DESC
 LIMIT $1 OFFSET $2
 `
@@ -529,7 +518,7 @@ type GetInvoiceStatsBySupplierParams struct {
 }
 
 type GetInvoiceStatsBySupplierRow struct {
-	SupplierName     *string     `json:"supplier_name"`
+	SupplierName     string      `json:"supplier_name"`
 	InvoiceCount     int64       `json:"invoice_count"`
 	TotalSpent       int64       `json:"total_spent"`
 	AvgInvoiceAmount float64     `json:"avg_invoice_amount"`
@@ -565,9 +554,7 @@ func (q *Queries) GetInvoiceStatsBySupplier(ctx context.Context, arg GetInvoiceS
 const getInvoiceWithDetails = `-- name: GetInvoiceWithDetails :one
 SELECT 
     i.id,
-    i.supplier_name,
-    i.supplier_phone,
-    i.supplier_email,
+    i.supplier_id,
     i.total_amount,
     i.status,
     i.date,
@@ -578,14 +565,12 @@ SELECT
 FROM invoices i
 LEFT JOIN invoice_detailed id_table ON i.id = id_table.invoice_id AND id_table.deleted_at = 0
 WHERE i.id = $1 AND i.deleted_at = 0
-GROUP BY i.id, i.supplier_name, i.supplier_phone, i.supplier_email, i.total_amount, i.status, i.date, i.created_at, i.updated_at
+GROUP BY i.id, i.supplier_id, i.total_amount, i.status, i.date, i.created_at, i.updated_at
 `
 
 type GetInvoiceWithDetailsRow struct {
 	ID            uuid.UUID          `json:"id"`
-	SupplierName  *string            `json:"supplier_name"`
-	SupplierPhone *string            `json:"supplier_phone"`
-	SupplierEmail *string            `json:"supplier_email"`
+	SupplierID    uuid.UUID          `json:"supplier_id"`
 	TotalAmount   pgtype.Numeric     `json:"total_amount"`
 	Status        NullInvoiceStatus  `json:"status"`
 	Date          pgtype.Timestamp   `json:"date"`
@@ -600,9 +585,7 @@ func (q *Queries) GetInvoiceWithDetails(ctx context.Context, id uuid.UUID) (GetI
 	var i GetInvoiceWithDetailsRow
 	err := row.Scan(
 		&i.ID,
-		&i.SupplierName,
-		&i.SupplierPhone,
-		&i.SupplierEmail,
+		&i.SupplierID,
 		&i.TotalAmount,
 		&i.Status,
 		&i.Date,
@@ -615,7 +598,7 @@ func (q *Queries) GetInvoiceWithDetails(ctx context.Context, id uuid.UUID) (GetI
 }
 
 const getInvoicesByDateRange = `-- name: GetInvoicesByDateRange :many
-SELECT id, supplier_name, supplier_phone, supplier_email, total_amount, status, date, created_at, updated_at, deleted_at
+SELECT id, supplier_id, total_amount, status, date, created_at, updated_at, deleted_at
 FROM invoices
 WHERE date >= $1 AND date <= $2 AND deleted_at = 0
 ORDER BY date DESC
@@ -645,9 +628,7 @@ func (q *Queries) GetInvoicesByDateRange(ctx context.Context, arg GetInvoicesByD
 		var i Invoice
 		if err := rows.Scan(
 			&i.ID,
-			&i.SupplierName,
-			&i.SupplierPhone,
-			&i.SupplierEmail,
+			&i.SupplierID,
 			&i.TotalAmount,
 			&i.Status,
 			&i.Date,
@@ -666,7 +647,7 @@ func (q *Queries) GetInvoicesByDateRange(ctx context.Context, arg GetInvoicesByD
 }
 
 const getInvoicesByStatus = `-- name: GetInvoicesByStatus :many
-SELECT id, supplier_name, supplier_phone, supplier_email, total_amount, status, date, created_at, updated_at, deleted_at
+SELECT id, supplier_id, total_amount, status, date, created_at, updated_at, deleted_at
 FROM invoices
 WHERE status = $1 AND deleted_at = 0
 ORDER BY date DESC
@@ -690,9 +671,7 @@ func (q *Queries) GetInvoicesByStatus(ctx context.Context, arg GetInvoicesByStat
 		var i Invoice
 		if err := rows.Scan(
 			&i.ID,
-			&i.SupplierName,
-			&i.SupplierPhone,
-			&i.SupplierEmail,
+			&i.SupplierID,
 			&i.TotalAmount,
 			&i.Status,
 			&i.Date,
@@ -711,10 +690,11 @@ func (q *Queries) GetInvoicesByStatus(ctx context.Context, arg GetInvoicesByStat
 }
 
 const getInvoicesBySupplier = `-- name: GetInvoicesBySupplier :many
-SELECT id, supplier_name, supplier_phone, supplier_email, total_amount, status, date, created_at, updated_at, deleted_at
-FROM invoices
-WHERE supplier_name ILIKE '%' || $1 || '%' AND deleted_at = 0
-ORDER BY date DESC
+SELECT i.id, i.supplier_id, i.total_amount, i.status, i.date, i.created_at, i.updated_at, i.deleted_at
+FROM invoices i
+JOIN suppliers s ON i.supplier_id = s.id AND s.deleted_at = 0
+WHERE s.name ILIKE '%' || $1 || '%' AND i.deleted_at = 0
+ORDER BY i.date DESC
 LIMIT $2 OFFSET $3
 `
 
@@ -735,9 +715,7 @@ func (q *Queries) GetInvoicesBySupplier(ctx context.Context, arg GetInvoicesBySu
 		var i Invoice
 		if err := rows.Scan(
 			&i.ID,
-			&i.SupplierName,
-			&i.SupplierPhone,
-			&i.SupplierEmail,
+			&i.SupplierID,
 			&i.TotalAmount,
 			&i.Status,
 			&i.Date,
@@ -785,7 +763,7 @@ UPDATE invoices
 SET status = 'arrived',
     updated_at = NOW()
 WHERE id = $1 AND deleted_at = 0
-RETURNING id, supplier_name, supplier_phone, supplier_email, total_amount, status, date, created_at, updated_at, deleted_at
+RETURNING id, supplier_id, total_amount, status, date, created_at, updated_at, deleted_at
 `
 
 func (q *Queries) MarkInvoiceArrived(ctx context.Context, id uuid.UUID) (Invoice, error) {
@@ -793,9 +771,7 @@ func (q *Queries) MarkInvoiceArrived(ctx context.Context, id uuid.UUID) (Invoice
 	var i Invoice
 	err := row.Scan(
 		&i.ID,
-		&i.SupplierName,
-		&i.SupplierPhone,
-		&i.SupplierEmail,
+		&i.SupplierID,
 		&i.TotalAmount,
 		&i.Status,
 		&i.Date,
@@ -811,7 +787,7 @@ UPDATE invoices
 SET status = 'received',
     updated_at = NOW()
 WHERE id = $1 AND deleted_at = 0
-RETURNING id, supplier_name, supplier_phone, supplier_email, total_amount, status, date, created_at, updated_at, deleted_at
+RETURNING id, supplier_id, total_amount, status, date, created_at, updated_at, deleted_at
 `
 
 func (q *Queries) MarkInvoiceReceived(ctx context.Context, id uuid.UUID) (Invoice, error) {
@@ -819,9 +795,7 @@ func (q *Queries) MarkInvoiceReceived(ctx context.Context, id uuid.UUID) (Invoic
 	var i Invoice
 	err := row.Scan(
 		&i.ID,
-		&i.SupplierName,
-		&i.SupplierPhone,
-		&i.SupplierEmail,
+		&i.SupplierID,
 		&i.TotalAmount,
 		&i.Status,
 		&i.Date,
@@ -855,15 +829,15 @@ func (q *Queries) RestoreInvoiceDetail(ctx context.Context, id uuid.UUID) error 
 }
 
 const searchInvoices = `-- name: SearchInvoices :many
-SELECT id, supplier_name, supplier_phone, supplier_email, total_amount, status, date, created_at, updated_at, deleted_at
-FROM invoices
-WHERE deleted_at = 0 
+SELECT i.id, i.supplier_id, i.total_amount, i.status, i.date, i.created_at, i.updated_at, i.deleted_at
+FROM invoices i
+JOIN suppliers s ON i.supplier_id = s.id AND s.deleted_at = 0
+WHERE i.deleted_at = 0 
 AND (
-    supplier_name ILIKE '%' || $1 || '%' OR
-    supplier_phone ILIKE '%' || $1 || '%' OR
-    supplier_email ILIKE '%' || $1 || '%'
+    s.name ILIKE '%' || $1 || '%' OR
+    s.phone_number ILIKE '%' || $1 || '%'
 )
-ORDER BY date DESC
+ORDER BY i.date DESC
 LIMIT $2 OFFSET $3
 `
 
@@ -884,9 +858,7 @@ func (q *Queries) SearchInvoices(ctx context.Context, arg SearchInvoicesParams) 
 		var i Invoice
 		if err := rows.Scan(
 			&i.ID,
-			&i.SupplierName,
-			&i.SupplierPhone,
-			&i.SupplierEmail,
+			&i.SupplierID,
 			&i.TotalAmount,
 			&i.Status,
 			&i.Date,
@@ -906,33 +878,27 @@ func (q *Queries) SearchInvoices(ctx context.Context, arg SearchInvoicesParams) 
 
 const updateInvoice = `-- name: UpdateInvoice :one
 UPDATE invoices
-SET supplier_name = COALESCE($2, supplier_name),
-    supplier_phone = COALESCE($3, supplier_phone),
-    supplier_email = COALESCE($4, supplier_email),
-    total_amount = COALESCE($5, total_amount),
-    status = COALESCE($6, status),
-    date = COALESCE($7, date),
+SET supplier_id = COALESCE($2, supplier_id),
+    total_amount = COALESCE($3, total_amount),
+    status = COALESCE($4, status),
+    date = COALESCE($5, date),
     updated_at = NOW()
 WHERE id = $1 AND deleted_at = 0
-RETURNING id, supplier_name, supplier_phone, supplier_email, total_amount, status, date, created_at, updated_at, deleted_at
+RETURNING id, supplier_id, total_amount, status, date, created_at, updated_at, deleted_at
 `
 
 type UpdateInvoiceParams struct {
-	ID            uuid.UUID         `json:"id"`
-	SupplierName  *string           `json:"supplier_name"`
-	SupplierPhone *string           `json:"supplier_phone"`
-	SupplierEmail *string           `json:"supplier_email"`
-	TotalAmount   pgtype.Numeric    `json:"total_amount"`
-	Status        NullInvoiceStatus `json:"status"`
-	Date          pgtype.Timestamp  `json:"date"`
+	ID          uuid.UUID         `json:"id"`
+	SupplierID  uuid.UUID         `json:"supplier_id"`
+	TotalAmount pgtype.Numeric    `json:"total_amount"`
+	Status      NullInvoiceStatus `json:"status"`
+	Date        pgtype.Timestamp  `json:"date"`
 }
 
 func (q *Queries) UpdateInvoice(ctx context.Context, arg UpdateInvoiceParams) (Invoice, error) {
 	row := q.db.QueryRow(ctx, updateInvoice,
 		arg.ID,
-		arg.SupplierName,
-		arg.SupplierPhone,
-		arg.SupplierEmail,
+		arg.SupplierID,
 		arg.TotalAmount,
 		arg.Status,
 		arg.Date,
@@ -940,9 +906,7 @@ func (q *Queries) UpdateInvoice(ctx context.Context, arg UpdateInvoiceParams) (I
 	var i Invoice
 	err := row.Scan(
 		&i.ID,
-		&i.SupplierName,
-		&i.SupplierPhone,
-		&i.SupplierEmail,
+		&i.SupplierID,
 		&i.TotalAmount,
 		&i.Status,
 		&i.Date,
@@ -1031,7 +995,7 @@ UPDATE invoices
 SET status = $2,
     updated_at = NOW()
 WHERE id = $1 AND deleted_at = 0
-RETURNING id, supplier_name, supplier_phone, supplier_email, total_amount, status, date, created_at, updated_at, deleted_at
+RETURNING id, supplier_id, total_amount, status, date, created_at, updated_at, deleted_at
 `
 
 type UpdateInvoiceStatusParams struct {
@@ -1044,9 +1008,7 @@ func (q *Queries) UpdateInvoiceStatus(ctx context.Context, arg UpdateInvoiceStat
 	var i Invoice
 	err := row.Scan(
 		&i.ID,
-		&i.SupplierName,
-		&i.SupplierPhone,
-		&i.SupplierEmail,
+		&i.SupplierID,
 		&i.TotalAmount,
 		&i.Status,
 		&i.Date,

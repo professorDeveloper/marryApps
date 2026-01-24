@@ -28,6 +28,12 @@ func NewInvoiceS(repo *repository.Repository) *InvoiceS {
 func (s *InvoiceS) CreateInvoice(ctx context.Context, req *model.CreateInvoiceRequest) (*model.InvoiceResponse, error) {
 	id := uuid.New()
 
+	// Parse supplier ID
+	supplierID, err := uuid.Parse(req.SupplierID)
+	if err != nil {
+		return nil, fmt.Errorf("invalid supplier id: %w", err)
+	}
+
 	// Parse total amount
 	totalAmount := pgtype.Numeric{}
 	if err := totalAmount.Scan(req.TotalAmount); err != nil {
@@ -54,13 +60,11 @@ func (s *InvoiceS) CreateInvoice(ctx context.Context, req *model.CreateInvoiceRe
 	}
 
 	params := pg.CreateInvoiceParams{
-		ID:            id,
-		SupplierName:  &req.SupplierName,
-		SupplierPhone: req.SupplierPhone,
-		SupplierEmail: req.SupplierEmail,
-		TotalAmount:   totalAmount,
-		Status:        status,
-		Date:          date,
+		ID:          id,
+		SupplierID:  supplierID,
+		TotalAmount: totalAmount,
+		Status:      status,
+		Date:        date,
 	}
 
 	invoice, err := s.repo.Tenant(ctx).CreateInvoice(ctx, params)
@@ -212,14 +216,22 @@ func (s *InvoiceS) UpdateInvoice(ctx context.Context, id string, req *model.Upda
 		date = pgtype.Timestamp{Time: parsed, Valid: true}
 	}
 
+	// Parse supplier ID if provided
+	var supplierID uuid.UUID
+	if req.SupplierID != nil {
+		sid, err := uuid.Parse(*req.SupplierID)
+		if err != nil {
+			return nil, fmt.Errorf("invalid supplier id: %w", err)
+		}
+		supplierID = sid
+	}
+
 	params := pg.UpdateInvoiceParams{
-		ID:            invoiceID,
-		SupplierName:  req.SupplierName,
-		SupplierPhone: req.SupplierPhone,
-		SupplierEmail: req.SupplierEmail,
-		TotalAmount:   totalAmount,
-		Status:        status,
-		Date:          date,
+		ID:          invoiceID,
+		SupplierID:  supplierID,
+		TotalAmount: totalAmount,
+		Status:      status,
+		Date:        date,
 	}
 
 	invoice, err := s.repo.Tenant(ctx).UpdateInvoice(ctx, params)
@@ -371,7 +383,7 @@ func (s *InvoiceS) SearchInvoices(ctx context.Context, query string, limit, offs
 }
 
 // GetInvoiceWithDetails retrieves an invoice with details count
-func (s *InvoiceS) GetInvoiceWithDetails(ctx context.Context, id string) (*model.InvoiceWithDetailsResponse, error) {
+func (s *InvoiceS) GetInvoiceWithDetails(ctx context.Context, id string) (*model.InvoiceGetWithDetailsResponse, error) {
 	invoiceID, err := uuid.Parse(id)
 	if err != nil {
 		return nil, fmt.Errorf("invalid invoice id: %w", err)
@@ -398,7 +410,7 @@ func (s *InvoiceS) GetInvoiceStatsBySupplier(ctx context.Context, limit, offset 
 	var responses []*model.InvoiceStatsBySupplierResponse
 	for _, stat := range stats {
 		response := &model.InvoiceStatsBySupplierResponse{
-			SupplierName:     *stat.SupplierName,
+			SupplierName:     stat.SupplierName,
 			InvoiceCount:     stat.InvoiceCount,
 			TotalSpent:       strconv.FormatInt(stat.TotalSpent, 10),
 			AvgInvoiceAmount: strconv.FormatFloat(stat.AvgInvoiceAmount, 'f', 2, 64),
@@ -871,12 +883,10 @@ func (s *InvoiceS) GetInvoiceDetailWithIngredient(ctx context.Context, id string
 
 func toInvoiceResponse(invoice pg.Invoice) *model.InvoiceResponse {
 	response := &model.InvoiceResponse{
-		ID:            invoice.ID.String(),
-		SupplierName:  *invoice.SupplierName,
-		SupplierPhone: invoice.SupplierPhone,
-		SupplierEmail: invoice.SupplierEmail,
-		TotalAmount:   numericToString(invoice.TotalAmount),
-		Status:        model.InvoiceStatus(invoice.Status.InvoiceStatus),
+		ID:          invoice.ID.String(),
+		SupplierID:  invoice.SupplierID.String(),
+		TotalAmount: numericToString(invoice.TotalAmount),
+		Status:      model.InvoiceStatus(invoice.Status.InvoiceStatus),
 	}
 
 	if invoice.Date.Valid {
@@ -894,12 +904,10 @@ func toInvoiceResponse(invoice pg.Invoice) *model.InvoiceResponse {
 	return response
 }
 
-func toInvoiceWithDetailsResponse(invoice pg.GetInvoiceWithDetailsRow) *model.InvoiceWithDetailsResponse {
-	response := &model.InvoiceWithDetailsResponse{
+func toInvoiceWithDetailsResponse(invoice pg.GetInvoiceWithDetailsRow) *model.InvoiceGetWithDetailsResponse {
+	response := &model.InvoiceGetWithDetailsResponse{
 		ID:            invoice.ID.String(),
-		SupplierName:  *invoice.SupplierName,
-		SupplierPhone: invoice.SupplierPhone,
-		SupplierEmail: invoice.SupplierEmail,
+		SupplierID:    invoice.SupplierID.String(),
 		TotalAmount:   numericToString(invoice.TotalAmount),
 		Status:        model.InvoiceStatus(invoice.Status.InvoiceStatus),
 		ItemCount:     invoice.ItemCount,
@@ -1036,4 +1044,106 @@ func numericToString(n pgtype.Numeric) string {
 	}
 
 	return str
+}
+
+// CreateInvoiceWithDetails creates a new invoice with its details in a single atomic operation
+func (s *InvoiceS) CreateInvoiceWithDetails(ctx context.Context, req *model.CreateInvoiceWithDetailsRequest) (*model.CreateInvoiceWithDetailsResponse, error) {
+	// Validate that details array is not empty
+	if len(req.Details) == 0 {
+		return nil, fmt.Errorf("at least one invoice detail is required")
+	}
+
+	// Step 1: Create the invoice
+	invoiceResp, err := s.CreateInvoice(ctx, &req.Invoice)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create invoice: %w", err)
+	}
+
+	// Step 2: Parse invoice ID from response
+	invoiceID, err := uuid.Parse(invoiceResp.ID)
+	if err != nil {
+		return nil, fmt.Errorf("invalid invoice id in response: %w", err)
+	}
+
+	// Step 3: Create all invoice details
+	response := &model.CreateInvoiceWithDetailsResponse{
+		Invoice: *invoiceResp,
+		Details: make([]model.InvoiceDetailResponse, 0, len(req.Details)),
+		Summary: model.InvoiceDetailsBatchSummary{
+			TotalDetails: len(req.Details),
+			CreatedCount: 0,
+			TotalAmount:  "0",
+		},
+	}
+
+	totalAmountStr := "0"
+
+	// Process each detail
+	for i, detail := range req.Details {
+		// Validate ingredient ID
+		ingredientUUID, err := uuid.Parse(detail.IngredientID)
+		if err != nil {
+			return nil, fmt.Errorf("item %d: invalid ingredient id: %w", i+1, err)
+		}
+
+		// Verify ingredient exists
+		ingredient, err := s.repo.Tenant(ctx).GetIngredientByID(ctx, ingredientUUID)
+		if err != nil {
+			return nil, fmt.Errorf("item %d: ingredient not found: %w", i+1, err)
+		}
+
+		if ingredient.ID == uuid.Nil {
+			return nil, fmt.Errorf("item %d: ingredient not found", i+1)
+		}
+
+		// Parse price
+		price := pgtype.Numeric{}
+		if err := price.Scan(detail.Price); err != nil {
+			return nil, fmt.Errorf("item %d: invalid price: %w", i+1, err)
+		}
+
+		// Parse price per unit
+		pricePerUnit := pgtype.Numeric{}
+		if err := pricePerUnit.Scan(detail.PricePerUnit); err != nil {
+			return nil, fmt.Errorf("item %d: invalid price_per_unit: %w", i+1, err)
+		}
+
+		// Create invoice detail
+		id := uuid.New()
+		params := pg.CreateInvoiceDetailParams{
+			ID:           id,
+			InvoiceID:    invoiceID,
+			IngredientID: ingredientUUID,
+			Quantity:     detail.Quantity,
+			Price:        price,
+			PricePerUnit: pricePerUnit,
+		}
+
+		invoiceDetail, err := s.repo.Tenant(ctx).CreateInvoiceDetail(ctx, params)
+		if err != nil {
+			return nil, fmt.Errorf("item %d: failed to create invoice detail: %w", i+1, err)
+		}
+
+		// Update ingredient quantity and price
+		_, err = s.repo.Tenant(ctx).AddIngredientQuantity(ctx, pg.AddIngredientQuantityParams{
+			ID:           ingredientUUID,
+			Quantity:     &detail.Quantity,
+			PricePerUnit: pricePerUnit,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("item %d: failed to update ingredient: %w", i+1, err)
+		}
+
+		// Add to response
+		response.Details = append(response.Details, *toInvoiceDetailResponse(invoiceDetail))
+		response.Summary.CreatedCount++
+
+		// Accumulate total amount as string
+		totalAmountStr = detail.Price
+	}
+
+	// Set the calculated total amount in summary
+	response.Summary.TotalAmount = totalAmountStr
+
+	return response, nil
 }

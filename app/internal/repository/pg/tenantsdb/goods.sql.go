@@ -87,27 +87,7 @@ type CreateGoodParams struct {
 	CookTime        *int32         `json:"cook_time"`
 }
 
-type CreateGoodRow struct {
-	ID              uuid.UUID          `json:"id"`
-	Name            string             `json:"name"`
-	Description     *string            `json:"description"`
-	NameI18n        pgtype.UUID        `json:"name_i18n"`
-	DescriptionI18n pgtype.UUID        `json:"description_i18n"`
-	CategoryID      pgtype.UUID        `json:"category_id"`
-	DepartmentID    pgtype.UUID        `json:"department_id"`
-	PictureUrl      *string            `json:"picture_url"`
-	ColorCode       *string            `json:"color_code"`
-	Price           pgtype.Numeric     `json:"price"`
-	CookTime        *int32             `json:"cook_time"`
-	CostPrice       pgtype.Numeric     `json:"cost_price"`
-	Profit          pgtype.Numeric     `json:"profit"`
-	ProfitMargin    pgtype.Numeric     `json:"profit_margin"`
-	CreatedAt       pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
-	DeletedAt       *int64             `json:"deleted_at"`
-}
-
-func (q *Queries) CreateGood(ctx context.Context, arg CreateGoodParams) (CreateGoodRow, error) {
+func (q *Queries) CreateGood(ctx context.Context, arg CreateGoodParams) (Good, error) {
 	row := q.db.QueryRow(ctx, createGood,
 		arg.ID,
 		arg.Name,
@@ -121,7 +101,7 @@ func (q *Queries) CreateGood(ctx context.Context, arg CreateGoodParams) (CreateG
 		arg.Price,
 		arg.CookTime,
 	)
-	var i CreateGoodRow
+	var i Good
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
@@ -272,35 +252,15 @@ type GetAllGoodsParams struct {
 	Offset int32 `json:"offset"`
 }
 
-type GetAllGoodsRow struct {
-	ID              uuid.UUID          `json:"id"`
-	Name            string             `json:"name"`
-	Description     *string            `json:"description"`
-	NameI18n        pgtype.UUID        `json:"name_i18n"`
-	DescriptionI18n pgtype.UUID        `json:"description_i18n"`
-	CategoryID      pgtype.UUID        `json:"category_id"`
-	DepartmentID    pgtype.UUID        `json:"department_id"`
-	PictureUrl      *string            `json:"picture_url"`
-	ColorCode       *string            `json:"color_code"`
-	Price           pgtype.Numeric     `json:"price"`
-	CookTime        *int32             `json:"cook_time"`
-	CostPrice       pgtype.Numeric     `json:"cost_price"`
-	Profit          pgtype.Numeric     `json:"profit"`
-	ProfitMargin    pgtype.Numeric     `json:"profit_margin"`
-	CreatedAt       pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
-	DeletedAt       *int64             `json:"deleted_at"`
-}
-
-func (q *Queries) GetAllGoods(ctx context.Context, arg GetAllGoodsParams) ([]GetAllGoodsRow, error) {
+func (q *Queries) GetAllGoods(ctx context.Context, arg GetAllGoodsParams) ([]Good, error) {
 	rows, err := q.db.Query(ctx, getAllGoods, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []GetAllGoodsRow
+	var items []Good
 	for rows.Next() {
-		var i GetAllGoodsRow
+		var i Good
 		if err := rows.Scan(
 			&i.ID,
 			&i.Name,
@@ -336,29 +296,9 @@ FROM goods
 WHERE id = $1 AND deleted_at = 0
 `
 
-type GetGoodByIDRow struct {
-	ID              uuid.UUID          `json:"id"`
-	Name            string             `json:"name"`
-	Description     *string            `json:"description"`
-	NameI18n        pgtype.UUID        `json:"name_i18n"`
-	DescriptionI18n pgtype.UUID        `json:"description_i18n"`
-	CategoryID      pgtype.UUID        `json:"category_id"`
-	DepartmentID    pgtype.UUID        `json:"department_id"`
-	PictureUrl      *string            `json:"picture_url"`
-	ColorCode       *string            `json:"color_code"`
-	Price           pgtype.Numeric     `json:"price"`
-	CookTime        *int32             `json:"cook_time"`
-	CostPrice       pgtype.Numeric     `json:"cost_price"`
-	Profit          pgtype.Numeric     `json:"profit"`
-	ProfitMargin    pgtype.Numeric     `json:"profit_margin"`
-	CreatedAt       pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
-	DeletedAt       *int64             `json:"deleted_at"`
-}
-
-func (q *Queries) GetGoodByID(ctx context.Context, id uuid.UUID) (GetGoodByIDRow, error) {
+func (q *Queries) GetGoodByID(ctx context.Context, id uuid.UUID) (Good, error) {
 	row := q.db.QueryRow(ctx, getGoodByID, id)
-	var i GetGoodByIDRow
+	var i Good
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
@@ -607,35 +547,15 @@ type GetGoodsByCategoryIDParams struct {
 	Offset     int32       `json:"offset"`
 }
 
-type GetGoodsByCategoryIDRow struct {
-	ID              uuid.UUID          `json:"id"`
-	Name            string             `json:"name"`
-	Description     *string            `json:"description"`
-	NameI18n        pgtype.UUID        `json:"name_i18n"`
-	DescriptionI18n pgtype.UUID        `json:"description_i18n"`
-	CategoryID      pgtype.UUID        `json:"category_id"`
-	DepartmentID    pgtype.UUID        `json:"department_id"`
-	PictureUrl      *string            `json:"picture_url"`
-	ColorCode       *string            `json:"color_code"`
-	Price           pgtype.Numeric     `json:"price"`
-	CookTime        *int32             `json:"cook_time"`
-	CostPrice       pgtype.Numeric     `json:"cost_price"`
-	Profit          pgtype.Numeric     `json:"profit"`
-	ProfitMargin    pgtype.Numeric     `json:"profit_margin"`
-	CreatedAt       pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
-	DeletedAt       *int64             `json:"deleted_at"`
-}
-
-func (q *Queries) GetGoodsByCategoryID(ctx context.Context, arg GetGoodsByCategoryIDParams) ([]GetGoodsByCategoryIDRow, error) {
+func (q *Queries) GetGoodsByCategoryID(ctx context.Context, arg GetGoodsByCategoryIDParams) ([]Good, error) {
 	rows, err := q.db.Query(ctx, getGoodsByCategoryID, arg.CategoryID, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []GetGoodsByCategoryIDRow
+	var items []Good
 	for rows.Next() {
-		var i GetGoodsByCategoryIDRow
+		var i Good
 		if err := rows.Scan(
 			&i.ID,
 			&i.Name,
@@ -679,35 +599,15 @@ type GetGoodsByDepartmentIDParams struct {
 	Offset       int32       `json:"offset"`
 }
 
-type GetGoodsByDepartmentIDRow struct {
-	ID              uuid.UUID          `json:"id"`
-	Name            string             `json:"name"`
-	Description     *string            `json:"description"`
-	NameI18n        pgtype.UUID        `json:"name_i18n"`
-	DescriptionI18n pgtype.UUID        `json:"description_i18n"`
-	CategoryID      pgtype.UUID        `json:"category_id"`
-	DepartmentID    pgtype.UUID        `json:"department_id"`
-	PictureUrl      *string            `json:"picture_url"`
-	ColorCode       *string            `json:"color_code"`
-	Price           pgtype.Numeric     `json:"price"`
-	CookTime        *int32             `json:"cook_time"`
-	CostPrice       pgtype.Numeric     `json:"cost_price"`
-	Profit          pgtype.Numeric     `json:"profit"`
-	ProfitMargin    pgtype.Numeric     `json:"profit_margin"`
-	CreatedAt       pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
-	DeletedAt       *int64             `json:"deleted_at"`
-}
-
-func (q *Queries) GetGoodsByDepartmentID(ctx context.Context, arg GetGoodsByDepartmentIDParams) ([]GetGoodsByDepartmentIDRow, error) {
+func (q *Queries) GetGoodsByDepartmentID(ctx context.Context, arg GetGoodsByDepartmentIDParams) ([]Good, error) {
 	rows, err := q.db.Query(ctx, getGoodsByDepartmentID, arg.DepartmentID, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []GetGoodsByDepartmentIDRow
+	var items []Good
 	for rows.Next() {
-		var i GetGoodsByDepartmentIDRow
+		var i Good
 		if err := rows.Scan(
 			&i.ID,
 			&i.Name,
@@ -752,27 +652,7 @@ type GetGoodsByPriceRangeParams struct {
 	Offset  int32          `json:"offset"`
 }
 
-type GetGoodsByPriceRangeRow struct {
-	ID              uuid.UUID          `json:"id"`
-	Name            string             `json:"name"`
-	Description     *string            `json:"description"`
-	NameI18n        pgtype.UUID        `json:"name_i18n"`
-	DescriptionI18n pgtype.UUID        `json:"description_i18n"`
-	CategoryID      pgtype.UUID        `json:"category_id"`
-	DepartmentID    pgtype.UUID        `json:"department_id"`
-	PictureUrl      *string            `json:"picture_url"`
-	ColorCode       *string            `json:"color_code"`
-	Price           pgtype.Numeric     `json:"price"`
-	CookTime        *int32             `json:"cook_time"`
-	CostPrice       pgtype.Numeric     `json:"cost_price"`
-	Profit          pgtype.Numeric     `json:"profit"`
-	ProfitMargin    pgtype.Numeric     `json:"profit_margin"`
-	CreatedAt       pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
-	DeletedAt       *int64             `json:"deleted_at"`
-}
-
-func (q *Queries) GetGoodsByPriceRange(ctx context.Context, arg GetGoodsByPriceRangeParams) ([]GetGoodsByPriceRangeRow, error) {
+func (q *Queries) GetGoodsByPriceRange(ctx context.Context, arg GetGoodsByPriceRangeParams) ([]Good, error) {
 	rows, err := q.db.Query(ctx, getGoodsByPriceRange,
 		arg.Price,
 		arg.Price_2,
@@ -783,9 +663,9 @@ func (q *Queries) GetGoodsByPriceRange(ctx context.Context, arg GetGoodsByPriceR
 		return nil, err
 	}
 	defer rows.Close()
-	var items []GetGoodsByPriceRangeRow
+	var items []Good
 	for rows.Next() {
-		var i GetGoodsByPriceRangeRow
+		var i Good
 		if err := rows.Scan(
 			&i.ID,
 			&i.Name,
@@ -999,27 +879,7 @@ type UpdateGoodParams struct {
 	CookTime        *int32         `json:"cook_time"`
 }
 
-type UpdateGoodRow struct {
-	ID              uuid.UUID          `json:"id"`
-	Name            string             `json:"name"`
-	Description     *string            `json:"description"`
-	NameI18n        pgtype.UUID        `json:"name_i18n"`
-	DescriptionI18n pgtype.UUID        `json:"description_i18n"`
-	CategoryID      pgtype.UUID        `json:"category_id"`
-	DepartmentID    pgtype.UUID        `json:"department_id"`
-	PictureUrl      *string            `json:"picture_url"`
-	ColorCode       *string            `json:"color_code"`
-	Price           pgtype.Numeric     `json:"price"`
-	CookTime        *int32             `json:"cook_time"`
-	CostPrice       pgtype.Numeric     `json:"cost_price"`
-	Profit          pgtype.Numeric     `json:"profit"`
-	ProfitMargin    pgtype.Numeric     `json:"profit_margin"`
-	CreatedAt       pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
-	DeletedAt       *int64             `json:"deleted_at"`
-}
-
-func (q *Queries) UpdateGood(ctx context.Context, arg UpdateGoodParams) (UpdateGoodRow, error) {
+func (q *Queries) UpdateGood(ctx context.Context, arg UpdateGoodParams) (Good, error) {
 	row := q.db.QueryRow(ctx, updateGood,
 		arg.ID,
 		arg.Name,
@@ -1033,7 +893,7 @@ func (q *Queries) UpdateGood(ctx context.Context, arg UpdateGoodParams) (UpdateG
 		arg.Price,
 		arg.CookTime,
 	)
-	var i UpdateGoodRow
+	var i Good
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
@@ -1073,34 +933,14 @@ type UpdateGoodCostFieldsParams struct {
 	ProfitMargin pgtype.Numeric `json:"profit_margin"`
 }
 
-type UpdateGoodCostFieldsRow struct {
-	ID              uuid.UUID          `json:"id"`
-	Name            string             `json:"name"`
-	Description     *string            `json:"description"`
-	NameI18n        pgtype.UUID        `json:"name_i18n"`
-	DescriptionI18n pgtype.UUID        `json:"description_i18n"`
-	CategoryID      pgtype.UUID        `json:"category_id"`
-	DepartmentID    pgtype.UUID        `json:"department_id"`
-	PictureUrl      *string            `json:"picture_url"`
-	ColorCode       *string            `json:"color_code"`
-	Price           pgtype.Numeric     `json:"price"`
-	CookTime        *int32             `json:"cook_time"`
-	CostPrice       pgtype.Numeric     `json:"cost_price"`
-	Profit          pgtype.Numeric     `json:"profit"`
-	ProfitMargin    pgtype.Numeric     `json:"profit_margin"`
-	CreatedAt       pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
-	DeletedAt       *int64             `json:"deleted_at"`
-}
-
-func (q *Queries) UpdateGoodCostFields(ctx context.Context, arg UpdateGoodCostFieldsParams) (UpdateGoodCostFieldsRow, error) {
+func (q *Queries) UpdateGoodCostFields(ctx context.Context, arg UpdateGoodCostFieldsParams) (Good, error) {
 	row := q.db.QueryRow(ctx, updateGoodCostFields,
 		arg.ID,
 		arg.CostPrice,
 		arg.Profit,
 		arg.ProfitMargin,
 	)
-	var i UpdateGoodCostFieldsRow
+	var i Good
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
@@ -1211,29 +1051,9 @@ type UpdateGoodPriceParams struct {
 	Price pgtype.Numeric `json:"price"`
 }
 
-type UpdateGoodPriceRow struct {
-	ID              uuid.UUID          `json:"id"`
-	Name            string             `json:"name"`
-	Description     *string            `json:"description"`
-	NameI18n        pgtype.UUID        `json:"name_i18n"`
-	DescriptionI18n pgtype.UUID        `json:"description_i18n"`
-	CategoryID      pgtype.UUID        `json:"category_id"`
-	DepartmentID    pgtype.UUID        `json:"department_id"`
-	PictureUrl      *string            `json:"picture_url"`
-	ColorCode       *string            `json:"color_code"`
-	Price           pgtype.Numeric     `json:"price"`
-	CookTime        *int32             `json:"cook_time"`
-	CostPrice       pgtype.Numeric     `json:"cost_price"`
-	Profit          pgtype.Numeric     `json:"profit"`
-	ProfitMargin    pgtype.Numeric     `json:"profit_margin"`
-	CreatedAt       pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
-	DeletedAt       *int64             `json:"deleted_at"`
-}
-
-func (q *Queries) UpdateGoodPrice(ctx context.Context, arg UpdateGoodPriceParams) (UpdateGoodPriceRow, error) {
+func (q *Queries) UpdateGoodPrice(ctx context.Context, arg UpdateGoodPriceParams) (Good, error) {
 	row := q.db.QueryRow(ctx, updateGoodPrice, arg.ID, arg.Price)
-	var i UpdateGoodPriceRow
+	var i Good
 	err := row.Scan(
 		&i.ID,
 		&i.Name,

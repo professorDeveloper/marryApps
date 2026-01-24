@@ -355,7 +355,7 @@ func (i *IngredientS) GetIngredientsByGroupID(ctx context.Context, groupID strin
 }
 
 // UpdateIngredient updates an ingredient
-func (i *IngredientS) UpdateIngredient(ctx context.Context, ingredientID string, name *string, nameI18n *string, groupID *string, measurement *string, pictureUrl *string, brandID *string, colorCode *string) (*model.IngredientResponse, error) {
+func (i *IngredientS) UpdateIngredient(ctx context.Context, ingredientID string, name *string, nameI18n *string, groupID *string, measurement *string, pictureUrl *string, brandID *string, colorCode *string, pricePerUnit *string, quantity *int64) (*model.IngredientResponse, error) {
 	id, err := uuid.Parse(ingredientID)
 	if err != nil {
 		return nil, fmt.Errorf("invalid ingredient ID: %w", err)
@@ -420,6 +420,24 @@ func (i *IngredientS) UpdateIngredient(ctx context.Context, ingredientID string,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to update ingredient: %w", err)
+	}
+
+	if pricePerUnit != nil || quantity != nil {
+		price := pgtype.Numeric{}
+		if pricePerUnit != nil {
+			if err := price.Scan(*pricePerUnit); err != nil {
+				return nil, fmt.Errorf("invalid price_per_unit: %w", err)
+			}
+		}
+
+		ingredient, err = i.repo.Tenant(ctx).UpdateIngredientPriceAndQuantity(ctx, pg.UpdateIngredientPriceAndQuantityParams{
+			ID:           id,
+			PricePerUnit: price,
+			Quantity:     quantity,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("failed to update ingredient price/quantity: %w", err)
+		}
 	}
 
 	return mapIngredientToResponse(ingredient), nil

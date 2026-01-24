@@ -114,7 +114,7 @@ type IngredientI interface {
 	GetIngredientByID(ctx context.Context, ingredientID string) (*model.IngredientResponse, error)
 	GetAllIngredients(ctx context.Context, limit, offset int32) ([]model.IngredientResponse, error)
 	GetIngredientsByGroupID(ctx context.Context, groupID string, limit, offset int32) ([]model.IngredientResponse, error)
-	UpdateIngredient(ctx context.Context, ingredientID string, name *string, nameI18n *string, groupID *string, measurement *string, pictureUrl *string, brandID *string, colorCode *string) (*model.IngredientResponse, error)
+	UpdateIngredient(ctx context.Context, ingredientID string, name *string, nameI18n *string, groupID *string, measurement *string, pictureUrl *string, brandID *string, colorCode *string, pricePerUnit *string, quantity *int64) (*model.IngredientResponse, error)
 	DeleteIngredient(ctx context.Context, ingredientID string) error
 	RestoreIngredient(ctx context.Context, ingredientID string) error
 
@@ -226,9 +226,20 @@ type CafeTableI interface {
 	SearchCafeTables(ctx context.Context, query string, limit, offset int32) ([]model.CafeTableResponse, error)
 }
 
+type SupplierI interface {
+	CreateSupplier(ctx context.Context, req *model.CreateSupplierRequest) (*model.SupplierResponse, error)
+	GetSupplierByID(ctx context.Context, id string) (*model.SupplierResponse, error)
+	GetAllSuppliers(ctx context.Context, limit, offset int32) ([]*model.SupplierResponse, error)
+	UpdateSupplier(ctx context.Context, id string, req *model.UpdateSupplierRequest) (*model.SupplierResponse, error)
+	DeleteSupplier(ctx context.Context, id string) error
+	RestoreSupplier(ctx context.Context, id string) (*model.SupplierResponse, error)
+	SearchSuppliers(ctx context.Context, query string, limit, offset int32) ([]*model.SupplierResponse, error)
+}
+
 type InvoiceI interface {
 	// Invoice methods
 	CreateInvoice(ctx context.Context, req *model.CreateInvoiceRequest) (*model.InvoiceResponse, error)
+	CreateInvoiceWithDetails(ctx context.Context, req *model.CreateInvoiceWithDetailsRequest) (*model.CreateInvoiceWithDetailsResponse, error)
 	GetInvoiceByID(ctx context.Context, id string) (*model.InvoiceResponse, error)
 	GetAllInvoices(ctx context.Context, limit, offset int32) ([]*model.InvoiceResponse, error)
 	GetInvoicesByStatus(ctx context.Context, status string, limit, offset int32) ([]*model.InvoiceResponse, error)
@@ -244,7 +255,7 @@ type InvoiceI interface {
 	CountInvoices(ctx context.Context) (int64, error)
 	CountInvoicesByStatus(ctx context.Context, status string) (int64, error)
 	SearchInvoices(ctx context.Context, query string, limit, offset int32) ([]*model.InvoiceResponse, error)
-	GetInvoiceWithDetails(ctx context.Context, id string) (*model.InvoiceWithDetailsResponse, error)
+	GetInvoiceWithDetails(ctx context.Context, id string) (*model.InvoiceGetWithDetailsResponse, error)
 	GetInvoiceStatsBySupplier(ctx context.Context, limit, offset int32) ([]*model.InvoiceStatsBySupplierResponse, error)
 	GetInvoiceStatsByDateRange(ctx context.Context, startDate, endDate time.Time) (*model.InvoiceStatsByDateRangeResponse, error)
 	// Invoice detail methods
@@ -336,6 +347,7 @@ type I interface {
 	Compound() CompoundI
 	Goods() GoodsI
 	CafeTable() CafeTableI
+	Supplier() SupplierI
 	Invoice() InvoiceI
 	Order() OrderI
 	Brand() BrandI
@@ -357,6 +369,7 @@ type Service struct {
 	compound     CompoundI
 	goods        GoodsI
 	cafeTable    CafeTableI
+	supplier     SupplierI
 	invoice      InvoiceI
 	order        OrderI
 	brand        BrandI
@@ -379,6 +392,7 @@ func New(cfg *config.Config, repo *repository.Repository, clickClient *paymentCl
 		compound:     NewCompoundS(repo),
 		goods:        NewGoodsS(repo),
 		cafeTable:    NewCafeTableS(repo),
+		supplier:     NewSupplierS(repo),
 		invoice:      NewInvoiceS(repo),
 		order:        NewOrderS(repo),
 		brand:        NewBrandS(repo),
@@ -439,6 +453,10 @@ func (s *Service) Goods() GoodsI {
 
 func (s *Service) CafeTable() CafeTableI {
 	return s.cafeTable
+}
+
+func (s *Service) Supplier() SupplierI {
+	return s.supplier
 }
 
 func (s *Service) Invoice() InvoiceI {

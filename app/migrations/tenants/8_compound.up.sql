@@ -10,6 +10,9 @@ CREATE TABLE IF NOT EXISTS compounds (
   measurement      measurement_type,
   price            DECIMAL(15,2),
   department_id    UUID      REFERENCES departments(id) ON DELETE SET NULL,
+  cost_price DECIMAL(15,2) DEFAULT 0,
+  profit DECIMAL(15,2) DEFAULT 0,
+  profit_margin DECIMAL(10,4) DEFAULT 0,
   created_at       TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
   updated_at       TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
   deleted_at       BIGINT    DEFAULT 0

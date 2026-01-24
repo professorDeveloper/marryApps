@@ -48,78 +48,6 @@ func goodToResponseAny(row any) *model.GoodResponse {
 			CostPrice: v.CostPrice, Profit: v.Profit, ProfitMargin: v.ProfitMargin,
 			CreatedAt: v.CreatedAt, UpdatedAt: v.UpdatedAt,
 		}
-	case pg.CreateGoodRow:
-		f = goodRowFields{
-			ID: v.ID, Name: v.Name, Description: v.Description, NameI18n: v.NameI18n,
-			DescriptionI18n: v.DescriptionI18n, CategoryID: v.CategoryID, DepartmentID: v.DepartmentID,
-			Price: v.Price, CookTime: v.CookTime, PictureUrl: v.PictureUrl, ColorCode: v.ColorCode,
-			CostPrice: v.CostPrice, Profit: v.Profit, ProfitMargin: v.ProfitMargin,
-			CreatedAt: v.CreatedAt, UpdatedAt: v.UpdatedAt,
-		}
-	case pg.GetGoodByIDRow:
-		f = goodRowFields{
-			ID: v.ID, Name: v.Name, Description: v.Description, NameI18n: v.NameI18n,
-			DescriptionI18n: v.DescriptionI18n, CategoryID: v.CategoryID, DepartmentID: v.DepartmentID,
-			Price: v.Price, CookTime: v.CookTime, PictureUrl: v.PictureUrl, ColorCode: v.ColorCode,
-			CostPrice: v.CostPrice, Profit: v.Profit, ProfitMargin: v.ProfitMargin,
-			CreatedAt: v.CreatedAt, UpdatedAt: v.UpdatedAt,
-		}
-	case pg.GetAllGoodsRow:
-		f = goodRowFields{
-			ID: v.ID, Name: v.Name, Description: v.Description, NameI18n: v.NameI18n,
-			DescriptionI18n: v.DescriptionI18n, CategoryID: v.CategoryID, DepartmentID: v.DepartmentID,
-			Price: v.Price, CookTime: v.CookTime, PictureUrl: v.PictureUrl, ColorCode: v.ColorCode,
-			CostPrice: v.CostPrice, Profit: v.Profit, ProfitMargin: v.ProfitMargin,
-			CreatedAt: v.CreatedAt, UpdatedAt: v.UpdatedAt,
-		}
-	case pg.GetGoodsByCategoryIDRow:
-		f = goodRowFields{
-			ID: v.ID, Name: v.Name, Description: v.Description, NameI18n: v.NameI18n,
-			DescriptionI18n: v.DescriptionI18n, CategoryID: v.CategoryID, DepartmentID: v.DepartmentID,
-			Price: v.Price, CookTime: v.CookTime, PictureUrl: v.PictureUrl, ColorCode: v.ColorCode,
-			CostPrice: v.CostPrice, Profit: v.Profit, ProfitMargin: v.ProfitMargin,
-			CreatedAt: v.CreatedAt, UpdatedAt: v.UpdatedAt,
-		}
-	case pg.GetGoodsByDepartmentIDRow:
-		f = goodRowFields{
-			ID: v.ID, Name: v.Name, Description: v.Description, NameI18n: v.NameI18n,
-			DescriptionI18n: v.DescriptionI18n, CategoryID: v.CategoryID, DepartmentID: v.DepartmentID,
-			Price: v.Price, CookTime: v.CookTime, PictureUrl: v.PictureUrl, ColorCode: v.ColorCode,
-			CostPrice: v.CostPrice, Profit: v.Profit, ProfitMargin: v.ProfitMargin,
-			CreatedAt: v.CreatedAt, UpdatedAt: v.UpdatedAt,
-		}
-	case pg.GetGoodsByPriceRangeRow:
-		f = goodRowFields{
-			ID: v.ID, Name: v.Name, Description: v.Description, NameI18n: v.NameI18n,
-			DescriptionI18n: v.DescriptionI18n, CategoryID: v.CategoryID, DepartmentID: v.DepartmentID,
-			Price: v.Price, CookTime: v.CookTime, PictureUrl: v.PictureUrl, ColorCode: v.ColorCode,
-			CostPrice: v.CostPrice, Profit: v.Profit, ProfitMargin: v.ProfitMargin,
-			CreatedAt: v.CreatedAt, UpdatedAt: v.UpdatedAt,
-		}
-	case pg.UpdateGoodRow:
-		f = goodRowFields{
-			ID: v.ID, Name: v.Name, Description: v.Description, NameI18n: v.NameI18n,
-			DescriptionI18n: v.DescriptionI18n, CategoryID: v.CategoryID, DepartmentID: v.DepartmentID,
-			Price: v.Price, CookTime: v.CookTime, PictureUrl: v.PictureUrl, ColorCode: v.ColorCode,
-			CostPrice: v.CostPrice, Profit: v.Profit, ProfitMargin: v.ProfitMargin,
-			CreatedAt: v.CreatedAt, UpdatedAt: v.UpdatedAt,
-		}
-	case pg.UpdateGoodPriceRow:
-		f = goodRowFields{
-			ID: v.ID, Name: v.Name, Description: v.Description, NameI18n: v.NameI18n,
-			DescriptionI18n: v.DescriptionI18n, CategoryID: v.CategoryID, DepartmentID: v.DepartmentID,
-			Price: v.Price, CookTime: v.CookTime, PictureUrl: v.PictureUrl, ColorCode: v.ColorCode,
-			CostPrice: v.CostPrice, Profit: v.Profit, ProfitMargin: v.ProfitMargin,
-			CreatedAt: v.CreatedAt, UpdatedAt: v.UpdatedAt,
-		}
-	case pg.UpdateGoodCostFieldsRow:
-		f = goodRowFields{
-			ID: v.ID, Name: v.Name, Description: v.Description, NameI18n: v.NameI18n,
-			DescriptionI18n: v.DescriptionI18n, CategoryID: v.CategoryID, DepartmentID: v.DepartmentID,
-			Price: v.Price, CookTime: v.CookTime, PictureUrl: v.PictureUrl, ColorCode: v.ColorCode,
-			CostPrice: v.CostPrice, Profit: v.Profit, ProfitMargin: v.ProfitMargin,
-			CreatedAt: v.CreatedAt, UpdatedAt: v.UpdatedAt,
-		}
 	case pg.SearchGoodsRow:
 		f = goodRowFields{
 			ID: v.ID, Name: v.Name, Description: v.Description, NameI18n: v.NameI18n,
@@ -129,6 +57,7 @@ func goodToResponseAny(row any) *model.GoodResponse {
 			CreatedAt: v.CreatedAt, UpdatedAt: v.UpdatedAt,
 		}
 	default:
+		log.Printf("Unknown good row type: %T", row)
 		return nil
 	}
 

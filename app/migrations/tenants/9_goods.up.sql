@@ -10,6 +10,9 @@ CREATE TABLE IF NOT EXISTS goods (
   color_code       TEXT,
   price            DECIMAL(15,2) NOT NULL,
   cook_time        INTEGER,
+  cost_price DECIMAL(15,2) DEFAULT 0,
+  profit DECIMAL(15,2) DEFAULT 0,
+  profit_margin DECIMAL(10,4) DEFAULT 0,
   created_at       TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
   updated_at       TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
   deleted_at       BIGINT    DEFAULT 0
@@ -45,3 +48,7 @@ CREATE TRIGGER update_goods_updated_at BEFORE UPDATE ON goods
 
 CREATE TRIGGER update_goods_details_updated_at BEFORE UPDATE ON goods_details
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+COMMENT ON COLUMN goods.cost_price IS 'Total preparation cost (sum of all calculations total_cost)';
+COMMENT ON COLUMN goods.profit IS 'Profit = price - cost_price';
+COMMENT ON COLUMN goods.profit_margin IS 'Profit margin percentage = (profit / cost_price) * 100';

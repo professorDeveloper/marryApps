@@ -1,85 +1,81 @@
 -- ==================== INVOICES QUERIES ====================
 
 -- name: CreateInvoice :one
-INSERT INTO invoices (id, supplier_name, supplier_phone, supplier_email, total_amount, status, date)
-VALUES ($1, $2, $3, $4, $5, $6, $7)
-RETURNING id, supplier_name, supplier_phone, supplier_email, total_amount, status, date, created_at, updated_at, deleted_at;
+INSERT INTO invoices (id, supplier_id, total_amount, status, date)
+VALUES ($1, $2, $3, $4, $5)
+RETURNING id, supplier_id, total_amount, status, date, created_at, updated_at, deleted_at;
 
 -- name: GetInvoiceByID :one
-SELECT id, supplier_name, supplier_phone, supplier_email, total_amount, status, date, created_at, updated_at, deleted_at
+SELECT id, supplier_id, total_amount, status, date, created_at, updated_at, deleted_at
 FROM invoices
 WHERE id = $1 AND deleted_at = 0;
 
 -- name: GetAllInvoices :many
-SELECT id, supplier_name, supplier_phone, supplier_email, total_amount, status, date, created_at, updated_at, deleted_at
+SELECT id, supplier_id, total_amount, status, date, created_at, updated_at, deleted_at
 FROM invoices
 WHERE deleted_at = 0
 ORDER BY date DESC
 LIMIT $1 OFFSET $2;
 
 -- name: GetInvoicesByStatus :many
-SELECT id, supplier_name, supplier_phone, supplier_email, total_amount, status, date, created_at, updated_at, deleted_at
+SELECT id, supplier_id, total_amount, status, date, created_at, updated_at, deleted_at
 FROM invoices
 WHERE status = $1 AND deleted_at = 0
 ORDER BY date DESC
 LIMIT $2 OFFSET $3;
 
 -- name: GetInvoicesBySupplier :many
-SELECT id, supplier_name, supplier_phone, supplier_email, total_amount, status, date, created_at, updated_at, deleted_at
-FROM invoices
-WHERE supplier_name ILIKE '%' || $1 || '%' AND deleted_at = 0
-ORDER BY date DESC
+SELECT i.id, i.supplier_id, i.total_amount, i.status, i.date, i.created_at, i.updated_at, i.deleted_at
+FROM invoices i
+JOIN suppliers s ON i.supplier_id = s.id AND s.deleted_at = 0
+WHERE s.name ILIKE '%' || $1 || '%' AND i.deleted_at = 0
+ORDER BY i.date DESC
 LIMIT $2 OFFSET $3;
 
 -- name: GetInvoicesByDateRange :many
-SELECT id, supplier_name, supplier_phone, supplier_email, total_amount, status, date, created_at, updated_at, deleted_at
+SELECT id, supplier_id, total_amount, status, date, created_at, updated_at, deleted_at
 FROM invoices
 WHERE date >= $1 AND date <= $2 AND deleted_at = 0
 ORDER BY date DESC
 LIMIT $3 OFFSET $4;
 
-
-
 -- name: UpdateInvoice :one
 UPDATE invoices
-SET supplier_name = COALESCE($2, supplier_name),
-    supplier_phone = COALESCE($3, supplier_phone),
-    supplier_email = COALESCE($4, supplier_email),
-    total_amount = COALESCE($5, total_amount),
-    status = COALESCE($6, status),
-    date = COALESCE($7, date),
+SET supplier_id = COALESCE($2, supplier_id),
+    total_amount = COALESCE($3, total_amount),
+    status = COALESCE($4, status),
+    date = COALESCE($5, date),
     updated_at = NOW()
 WHERE id = $1 AND deleted_at = 0
-RETURNING id, supplier_name, supplier_phone, supplier_email, total_amount, status, date, created_at, updated_at, deleted_at;
+RETURNING id, supplier_id, total_amount, status, date, created_at, updated_at, deleted_at;
 
 -- name: UpdateInvoiceStatus :one
 UPDATE invoices
 SET status = $2,
     updated_at = NOW()
 WHERE id = $1 AND deleted_at = 0
-RETURNING id, supplier_name, supplier_phone, supplier_email, total_amount, status, date, created_at, updated_at, deleted_at;
-
+RETURNING id, supplier_id, total_amount, status, date, created_at, updated_at, deleted_at;
 
 -- name: MarkInvoiceArrived :one
 UPDATE invoices
 SET status = 'arrived',
     updated_at = NOW()
 WHERE id = $1 AND deleted_at = 0
-RETURNING id, supplier_name, supplier_phone, supplier_email, total_amount, status, date, created_at, updated_at, deleted_at;
+RETURNING id, supplier_id, total_amount, status, date, created_at, updated_at, deleted_at;
 
 -- name: MarkInvoiceReceived :one
 UPDATE invoices
 SET status = 'received',
     updated_at = NOW()
 WHERE id = $1 AND deleted_at = 0
-RETURNING id, supplier_name, supplier_phone, supplier_email, total_amount, status, date, created_at, updated_at, deleted_at;
+RETURNING id, supplier_id, total_amount, status, date, created_at, updated_at, deleted_at;
 
 -- name: CancelInvoice :one
 UPDATE invoices
 SET status = 'cancelled',
     updated_at = NOW()
 WHERE id = $1 AND deleted_at = 0
-RETURNING id, supplier_name, supplier_phone, supplier_email, total_amount, status, date, created_at, updated_at, deleted_at;
+RETURNING id, supplier_id, total_amount, status, date, created_at, updated_at, deleted_at;
 
 -- name: DeleteInvoice :exec
 UPDATE invoices
@@ -98,15 +94,15 @@ SELECT COUNT(*) FROM invoices WHERE deleted_at = 0;
 SELECT COUNT(*) FROM invoices WHERE status = $1 AND deleted_at = 0;
 
 -- name: SearchInvoices :many
-SELECT id, supplier_name, supplier_phone, supplier_email, total_amount, status, date, created_at, updated_at, deleted_at
-FROM invoices
-WHERE deleted_at = 0 
+SELECT i.id, i.supplier_id, i.total_amount, i.status, i.date, i.created_at, i.updated_at, i.deleted_at
+FROM invoices i
+JOIN suppliers s ON i.supplier_id = s.id AND s.deleted_at = 0
+WHERE i.deleted_at = 0 
 AND (
-    supplier_name ILIKE '%' || $1 || '%' OR
-    supplier_phone ILIKE '%' || $1 || '%' OR
-    supplier_email ILIKE '%' || $1 || '%'
+    s.name ILIKE '%' || $1 || '%' OR
+    s.phone_number ILIKE '%' || $1 || '%'
 )
-ORDER BY date DESC
+ORDER BY i.date DESC
 LIMIT $2 OFFSET $3;
 
 
@@ -194,9 +190,7 @@ SELECT COUNT(*) FROM invoice_detailed WHERE invoice_id = $1 AND deleted_at = 0;
 -- name: GetInvoiceWithDetails :one
 SELECT 
     i.id,
-    i.supplier_name,
-    i.supplier_phone,
-    i.supplier_email,
+    i.supplier_id,
     i.total_amount,
     i.status,
     i.date,
@@ -207,7 +201,33 @@ SELECT
 FROM invoices i
 LEFT JOIN invoice_detailed id_table ON i.id = id_table.invoice_id AND id_table.deleted_at = 0
 WHERE i.id = $1 AND i.deleted_at = 0
-GROUP BY i.id, i.supplier_name, i.supplier_phone, i.supplier_email, i.total_amount, i.status, i.date, i.created_at, i.updated_at;
+GROUP BY i.id, i.supplier_id, i.total_amount, i.status, i.date, i.created_at, i.updated_at;
+
+-- name: GetInvoiceStatsBySupplier :many
+SELECT 
+    s.name as supplier_name,
+    COUNT(*) as invoice_count,
+    SUM(i.total_amount) as total_spent,
+    AVG(i.total_amount) as avg_invoice_amount,
+    MAX(i.date) as last_order_date
+FROM invoices i
+JOIN suppliers s ON i.supplier_id = s.id AND s.deleted_at = 0
+WHERE i.deleted_at = 0
+GROUP BY s.name
+ORDER BY total_spent DESC
+LIMIT $1 OFFSET $2;
+
+-- name: GetInvoiceStatsByDateRange :one
+SELECT 
+    COUNT(*) as invoice_count,
+    SUM(total_amount) as total_spent,
+    AVG(total_amount) as avg_invoice_amount,
+    COUNT(CASE WHEN status = 'pending' THEN 1 END) as pending_count,
+    COUNT(CASE WHEN status = 'arrived' THEN 1 END) as arrived_count,
+    COUNT(CASE WHEN status = 'received' THEN 1 END) as received_count,
+    COUNT(CASE WHEN status = 'cancelled' THEN 1 END) as cancelled_count
+FROM invoices
+WHERE date >= $1 AND date <= $2 AND deleted_at = 0;
 
 -- name: GetInvoiceDetailWithIngredient :one
 SELECT 
@@ -225,30 +245,3 @@ SELECT
 FROM invoice_detailed id_table
 LEFT JOIN ingredients ing ON id_table.ingredient_id = ing.id AND ing.deleted_at = 0
 WHERE id_table.id = $1 AND id_table.deleted_at = 0;
-
-
--- name: GetInvoiceStatsBySupplier :many
-SELECT 
-    supplier_name,
-    COUNT(*) as invoice_count,
-    SUM(total_amount) as total_spent,
-    AVG(total_amount) as avg_invoice_amount,
-    MAX(date) as last_order_date
-FROM invoices
-WHERE deleted_at = 0
-GROUP BY supplier_name
-ORDER BY total_spent DESC
-LIMIT $1 OFFSET $2;
-
--- name: GetInvoiceStatsByDateRange :one
-SELECT 
-    COUNT(*) as invoice_count,
-    SUM(total_amount) as total_spent,
-    AVG(total_amount) as avg_invoice_amount,
-    COUNT(CASE WHEN status = 'pending' THEN 1 END) as pending_count,
-    COUNT(CASE WHEN status = 'arrived' THEN 1 END) as arrived_count,
-    COUNT(CASE WHEN status = 'received' THEN 1 END) as received_count,
-    COUNT(CASE WHEN status = 'cancelled' THEN 1 END) as cancelled_count
-FROM invoices
-WHERE date >= $1 AND date <= $2 AND deleted_at = 0;
-

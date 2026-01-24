@@ -629,7 +629,7 @@ func (h *Handler) RestoreInvoice(c echo.Context) error {
 // @Security BearerAuth
 // @Param lang query string false "Language (uz, ru, en)" default(uz)
 // @Param id path string true "Invoice ID"
-// @Success 200 {object} model.InvoiceWithDetailsResponse
+// @Success 200 {object} model.InvoiceGetWithDetailsResponse
 // @Failure 400 {object} model.ErrorResponse
 // @Failure 401 {object} model.ErrorResponse
 // @Failure 404 {object} model.ErrorResponse
@@ -698,6 +698,51 @@ func (h *Handler) GetInvoiceStatsBySupplier(c echo.Context) error {
 		"Invoice statistics retrieved successfully",
 		resp,
 		http.StatusOK,
+	))
+}
+
+// CreateInvoiceWithDetails creates a new invoice with all its details in a single atomic transaction
+// @Summary Create invoice with details in batch
+// @Description Create a new invoice and all its line items in one atomic call
+// @Tags Invoices
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param lang query string false "Language (uz, ru, en)" default(uz)
+// @Param request body model.CreateInvoiceWithDetailsRequest true "Create invoice with details request"
+// @Success 201 {object} model.CreateInvoiceWithDetailsResponse
+// @Failure 400 {object} model.ErrorResponse
+// @Failure 401 {object} model.ErrorResponse
+// @Failure 500 {object} model.ErrorResponse
+// @Router /api/v1/invoices/batch [post]
+func (h *Handler) CreateInvoiceWithDetails(c echo.Context) error {
+	var req model.CreateInvoiceWithDetailsRequest
+	if err := c.Bind(&req); err != nil {
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"invalid request",
+			err.Error(),
+			http.StatusBadRequest,
+		))
+	}
+
+	// Validate that details array is not empty
+	if len(req.Details) == 0 {
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"invalid request",
+			"details array cannot be empty",
+			http.StatusBadRequest,
+		))
+	}
+
+	resp, err := h.service.Invoice().CreateInvoiceWithDetails(c.Request().Context(), &req)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("Operation failed", err.Error(), http.StatusInternalServerError))
+	}
+
+	return c.JSON(http.StatusCreated, model.NewSuccessResponse(
+		"Invoice with details created successfully",
+		resp,
+		http.StatusCreated,
 	))
 }
 

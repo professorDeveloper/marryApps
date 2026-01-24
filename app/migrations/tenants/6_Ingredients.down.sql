@@ -11,3 +11,7 @@ DROP TABLE IF EXISTS ingredient_groups CASCADE;
 DROP INDEX IF EXISTS idx_ingredient_stock_branch;
 DROP INDEX IF EXISTS idx_ingredient_stock_ingredient;
 DROP INDEX IF EXISTS idx_ingredients_group;
+
+DROP INDEX IF EXISTS idx_ingredients_price_per_unit;
+DROP INDEX IF EXISTS idx_ingredients_quantity;
+

@@ -306,15 +306,12 @@ type Compound struct {
 	Measurement     NullMeasurementType `json:"measurement"`
 	Price           pgtype.Numeric      `json:"price"`
 	DepartmentID    pgtype.UUID         `json:"department_id"`
+	CostPrice       pgtype.Numeric      `json:"cost_price"`
+	Profit          pgtype.Numeric      `json:"profit"`
+	ProfitMargin    pgtype.Numeric      `json:"profit_margin"`
 	CreatedAt       pgtype.Timestamptz  `json:"created_at"`
 	UpdatedAt       pgtype.Timestamptz  `json:"updated_at"`
 	DeletedAt       *int64              `json:"deleted_at"`
-	// Total preparation cost (sum of all calculations total_cost)
-	CostPrice pgtype.Numeric `json:"cost_price"`
-	// Profit = price - cost_price
-	Profit pgtype.Numeric `json:"profit"`
-	// Profit margin percentage = (profit / cost_price) * 100
-	ProfitMargin pgtype.Numeric `json:"profit_margin"`
 }
 
 type CompoundStock struct {
@@ -350,26 +347,26 @@ type Department struct {
 }
 
 type Good struct {
-	ID              uuid.UUID          `json:"id"`
-	Name            string             `json:"name"`
-	Description     *string            `json:"description"`
-	NameI18n        pgtype.UUID        `json:"name_i18n"`
-	DescriptionI18n pgtype.UUID        `json:"description_i18n"`
-	CategoryID      pgtype.UUID        `json:"category_id"`
-	DepartmentID    pgtype.UUID        `json:"department_id"`
-	PictureUrl      *string            `json:"picture_url"`
-	ColorCode       *string            `json:"color_code"`
-	Price           pgtype.Numeric     `json:"price"`
-	CookTime        *int32             `json:"cook_time"`
-	CreatedAt       pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
-	DeletedAt       *int64             `json:"deleted_at"`
+	ID              uuid.UUID      `json:"id"`
+	Name            string         `json:"name"`
+	Description     *string        `json:"description"`
+	NameI18n        pgtype.UUID    `json:"name_i18n"`
+	DescriptionI18n pgtype.UUID    `json:"description_i18n"`
+	CategoryID      pgtype.UUID    `json:"category_id"`
+	DepartmentID    pgtype.UUID    `json:"department_id"`
+	PictureUrl      *string        `json:"picture_url"`
+	ColorCode       *string        `json:"color_code"`
+	Price           pgtype.Numeric `json:"price"`
+	CookTime        *int32         `json:"cook_time"`
 	// Total preparation cost (sum of all calculations total_cost)
 	CostPrice pgtype.Numeric `json:"cost_price"`
 	// Profit = price - cost_price
 	Profit pgtype.Numeric `json:"profit"`
 	// Profit margin percentage = (profit / cost_price) * 100
-	ProfitMargin pgtype.Numeric `json:"profit_margin"`
+	ProfitMargin pgtype.Numeric     `json:"profit_margin"`
+	CreatedAt    pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
+	DeletedAt    *int64             `json:"deleted_at"`
 }
 
 type GoodsDetail struct {
@@ -432,16 +429,14 @@ type IngredientStock struct {
 }
 
 type Invoice struct {
-	ID            uuid.UUID          `json:"id"`
-	SupplierName  *string            `json:"supplier_name"`
-	SupplierPhone *string            `json:"supplier_phone"`
-	SupplierEmail *string            `json:"supplier_email"`
-	TotalAmount   pgtype.Numeric     `json:"total_amount"`
-	Status        NullInvoiceStatus  `json:"status"`
-	Date          pgtype.Timestamp   `json:"date"`
-	CreatedAt     pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt     pgtype.Timestamptz `json:"updated_at"`
-	DeletedAt     *int64             `json:"deleted_at"`
+	ID          uuid.UUID          `json:"id"`
+	SupplierID  uuid.UUID          `json:"supplier_id"`
+	TotalAmount pgtype.Numeric     `json:"total_amount"`
+	Status      NullInvoiceStatus  `json:"status"`
+	Date        pgtype.Timestamp   `json:"date"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
+	DeletedAt   *int64             `json:"deleted_at"`
 }
 
 type InvoiceDetailed struct {
@@ -511,6 +506,7 @@ type Shift struct {
 	OpenTime    *int64             `json:"open_time"`
 	CloseTime   *int64             `json:"close_time"`
 	BranchID    pgtype.UUID        `json:"branch_id"`
+	IsActive    bool               `json:"is_active"`
 	CreatedAt   pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
 	DeletedAt   *int64             `json:"deleted_at"`
@@ -526,6 +522,16 @@ type Storage struct {
 	CreatedAt  pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt  pgtype.Timestamptz `json:"updated_at"`
 	DeletedAt  *int64             `json:"deleted_at"`
+}
+
+type Supplier struct {
+	ID          uuid.UUID          `json:"id"`
+	Name        string             `json:"name"`
+	PhoneNumber *string            `json:"phone_number"`
+	Location    *string            `json:"location"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
+	DeletedAt   *int64             `json:"deleted_at"`
 }
 
 type Translation struct {
@@ -550,10 +556,10 @@ type User struct {
 	BrandID      pgtype.UUID        `json:"brand_id"`
 	PhoneNumber  *string            `json:"phone_number"`
 	FcmToken     *string            `json:"fcm_token"`
+	IsActive     bool               `json:"is_active"`
 	CreatedAt    pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
 	DeletedAt    *int64             `json:"deleted_at"`
-	IsActive     bool               `json:"is_active"`
 }
 
 type UserPayment struct {

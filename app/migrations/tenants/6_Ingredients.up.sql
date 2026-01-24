@@ -58,3 +58,7 @@ CREATE TRIGGER update_ingredients_updated_at BEFORE UPDATE ON ingredients
 
 CREATE TRIGGER update_ingredient_stock_updated_at BEFORE UPDATE ON ingredient_stock
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE INDEX IF NOT EXISTS idx_ingredients_price_per_unit ON ingredients(price_per_unit) WHERE deleted_at = 0;
+CREATE INDEX IF NOT EXISTS idx_ingredients_quantity ON ingredients(quantity) WHERE deleted_at = 0;
+
