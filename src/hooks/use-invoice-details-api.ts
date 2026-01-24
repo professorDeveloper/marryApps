@@ -34,6 +34,7 @@ export interface UseInvoiceDetailsAPIReturn {
     updateInvoiceDetail: (id: string, data: Partial<InvoiceDetail>) => Promise<InvoiceDetail>;
     deleteInvoiceDetail: (id: string) => Promise<void>;
     deleteInvoiceDetails: (ids: string[]) => Promise<void>;
+    createInvoiceDetailsBatch: (data: Array<Partial<InvoiceDetail>>) => Promise<InvoiceDetail[]>;
     getIngredients: () => Promise<any[]>;
     getInvoices: () => Promise<any[]>;
 }
@@ -148,6 +149,28 @@ export function useInvoiceDetailsAPI(): UseInvoiceDetailsAPIReturn {
     }, []);
 
     /**
+     * Batch shaklida invoice details'ni yaratadi
+     */
+    const createInvoiceDetailsBatch = useCallback(
+        async (data: Array<Partial<InvoiceDetail>>): Promise<InvoiceDetail[]> => {
+            try {
+                const response = await poster<BackendResponse<InvoiceDetail[]>>(
+                    endpoints.invoice.detailsBatch,
+                    data
+                );
+                toast.success('Invoice details batch created successfully');
+                return response.data;
+            } catch (error) {
+                const axiosError = error as AxiosError<any>;
+                const message = axiosError?.response?.data?.message || 'Failed to create invoice details batch';
+                toast.error(message);
+                throw error;
+            }
+        },
+        []
+    );
+
+    /**
      * Barcha ingredients'ni oladi
      */
     const getIngredients = useCallback(async (): Promise<any[]> => {
@@ -184,6 +207,7 @@ export function useInvoiceDetailsAPI(): UseInvoiceDetailsAPIReturn {
         updateInvoiceDetail,
         deleteInvoiceDetail,
         deleteInvoiceDetails,
+        createInvoiceDetailsBatch,
         getIngredients,
         getInvoices,
     };

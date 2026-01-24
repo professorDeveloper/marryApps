@@ -94,8 +94,6 @@ export const deleter = async <T = unknown>(
   }
 };
 
-// ----------------------------------------------------------------------
-
 export const endpoints = {
   chat: '/api/chat',
   kanban: '/api/kanban',
@@ -203,7 +201,7 @@ export const endpoints = {
   },
   invoice: {
     list: '/api/v1/invoices',
-    details: '/api/v1/invoice-details',
+    details: (id: string) => `/api/v1/invoices/${id}`,
     create: '/api/v1/invoices',
     update: (id: string) => `/api/v1/invoices/${id}`,
     delete: (id: string) => `/api/v1/invoices/${id}`,
@@ -211,6 +209,7 @@ export const endpoints = {
     detailsCreate: '/api/v1/invoice-details',
     detailsUpdate: (id: string) => `/api/v1/invoice-details/${id}`,
     detailsDelete: (id: string) => `/api/v1/invoice-details/${id}`,
+    detailsBatch: '/api/v1/invoice-details/batch',
   },
   users: {
     list: '/api/v1/users',

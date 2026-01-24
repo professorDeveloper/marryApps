@@ -19,12 +19,15 @@ export function InvoiceDetailsEditView({ isNew = false }: { isNew?: boolean }) {
         updateInvoiceDetail,
         getInvoices,
         getIngredients,
+        getInvoiceDetailById,
     } = useInvoiceDetailsAPI();
 
     const [invoiceOptions, setInvoiceOptions] = useState<Array<{ value: string; label: string }>>([]);
     const [ingredientOptions, setIngredientOptions] = useState<Array<{ value: string; label: string }>>([]);
+    const [detailData, setDetailData] = useState<Record<string, any> | null>(null);
     const [loading, setLoading] = useState(true);
 
+    // Load options (invoices & ingredients) - always needed
     useEffect(() => {
         const loadOptions = async () => {
             try {
@@ -43,13 +46,34 @@ export function InvoiceDetailsEditView({ isNew = false }: { isNew?: boolean }) {
                         label: ing.name,
                     }))
                 );
-            } finally {
-                setLoading(false);
+            } catch (error) {
+                console.error('Error loading options:', error);
             }
         };
 
         loadOptions();
     }, [getInvoices, getIngredients]);
+
+    // Load detail data when editing
+    useEffect(() => {
+        const loadDetailData = async () => {
+            try {
+                if (!isNew && id && getInvoiceDetailById) {
+                    const data = await getInvoiceDetailById(id);
+                    if (data) {
+                        setDetailData(data);
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading detail data:', error);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        loadDetailData();
+    }, [isNew, id, getInvoiceDetailById]);
+
 
     const handleSubmit = useCallback(
         async (formData: Record<string, any>) => {
@@ -74,7 +98,6 @@ export function InvoiceDetailsEditView({ isNew = false }: { isNew?: boolean }) {
                     return;
                 }
 
-                // Calculate total price: quantity * price_per_unit
                 const totalPrice = (formData.quantity * formData.price_per_unit).toString();
 
                 const dataToSend = {
@@ -172,6 +195,7 @@ export function InvoiceDetailsEditView({ isNew = false }: { isNew?: boolean }) {
                 <GenericEditView
                     config={config}
                     isNew={isNew}
+                    data={detailData || undefined}
                 />
             </Box>
         </Box>

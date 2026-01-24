@@ -88,10 +88,6 @@ function buildStatusSection(): CardSection {
     };
 }
 
-// ============================================================================
-// COMPONENT
-// ============================================================================
-
 export function EmployeeEditViewUser({ userId, isNew = false }: EmployeeEditViewUserProps) {
     const router = useRouter();
     const { t } = useTranslation('menu');

@@ -1,16 +1,54 @@
 import type { CardSection, GenericEditViewConfig } from 'src/components/generic-edit-view';
-import { useCallback } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+import { useParams } from 'react-router';
 import { paths } from 'src/routes/paths';
 import { useRouter } from 'src/routes/hooks';
 import { useTranslate } from 'src/locales';
 import { GenericEditView } from 'src/components/generic-edit-view';
 import { useInvoiceAPI } from 'src/hooks/use-invoice-api';
-import { Box } from '@mui/material';
+import { Box, CircularProgress } from '@mui/material';
 
-export function InvoicesEditView({ isNew = false }: { isNew?: boolean }) {
+interface InvoicesEditViewProps {
+    isNew?: boolean;
+    onInvoiceCreated?: (invoiceId: string) => void;
+    currentInvoiceId?: string | null;
+    skipRedirect?: boolean;
+}
+
+export function InvoicesEditView({
+    isNew = false,
+    onInvoiceCreated,
+    currentInvoiceId,
+    skipRedirect = false,
+}: InvoicesEditViewProps) {
     const { t } = useTranslate('menu');
     const router = useRouter();
-    const { createInvoice, updateInvoice } = useInvoiceAPI();
+    const { id: urlId } = useParams<{ id?: string }>();
+    const { createInvoice, updateInvoice, getInvoiceById } = useInvoiceAPI();
+    const [invoiceData, setInvoiceData] = useState<Record<string, any> | null>(null);
+    const [loading, setLoading] = useState(!isNew);
+
+    // Load invoice data when editing
+    useEffect(() => {
+        const loadInvoiceData = async () => {
+            try {
+                const invoiceId = currentInvoiceId || urlId;
+                if (!isNew && invoiceId && getInvoiceById) {
+                    const data = await getInvoiceById(invoiceId);
+                    setInvoiceData(data);
+                } else {
+                    setLoading(false);
+                }
+            } catch (error) {
+                console.error('Error loading invoice data:', error);
+                setLoading(false);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        loadInvoiceData();
+    }, [isNew, urlId, currentInvoiceId, getInvoiceById]);
 
     const handleSubmit = useCallback(
         async (formData: Record<string, any>) => {
@@ -21,20 +59,33 @@ export function InvoicesEditView({ isNew = false }: { isNew?: boolean }) {
 
                 if (isNew) {
                     const newInvoice = await createInvoice(formData);
-                    router.push(paths.warehouse.invoices.edit(newInvoice.id));
+                    // Call callback if provided (for tab component)
+                    if (onInvoiceCreated) {
+                        onInvoiceCreated(newInvoice.id);
+                    }
+                    // Only redirect if not in tab mode
+                    if (!skipRedirect && !onInvoiceCreated) {
+                        router.push(paths.warehouse.invoices.edit(newInvoice.id));
+                    }
                 } else {
-                    // For edit, we need to get the ID from somewhere
-                    // This is handled by GenericEditView through the page wrapper
-                    await updateInvoice(formData.id, formData);
+                    const invoiceIdToUpdate = currentInvoiceId || urlId;
+                    if (invoiceIdToUpdate) {
+                        await updateInvoice(invoiceIdToUpdate, formData);
+                    }
+                    if (!skipRedirect) {
+                        router.push(paths.warehouse.invoices.root);
+                    }
                 }
 
-                router.push(paths.warehouse.invoices.root);
+                if (!onInvoiceCreated && !skipRedirect) {
+                    router.push(paths.warehouse.invoices.root);
+                }
             } catch (error) {
                 console.error('Error saving invoice:', error);
                 throw error;
             }
         },
-        [isNew, createInvoice, updateInvoice, router]
+        [isNew, createInvoice, updateInvoice, router, onInvoiceCreated, skipRedirect, currentInvoiceId, urlId, t]
     );
 
     const BASIC: CardSection = {
@@ -83,7 +134,7 @@ export function InvoicesEditView({ isNew = false }: { isNew?: boolean }) {
             {
                 key: 'total_amount',
                 label: t('warehouse.invoices.totalAmount'),
-                type: 'number',
+                type: 'text',
                 required: true,
             },
         ],
@@ -104,7 +155,13 @@ export function InvoicesEditView({ isNew = false }: { isNew?: boolean }) {
 
     return (
         <Box sx={{ pl: 4, pt: 3 }}>
-            <GenericEditView config={config} isNew={isNew} />
+            {loading ? (
+                <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 400 }}>
+                    <CircularProgress />
+                </Box>
+            ) : (
+                <GenericEditView config={config} isNew={isNew} data={invoiceData || undefined} />
+            )}
         </Box>
     );
 }

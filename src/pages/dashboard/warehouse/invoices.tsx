@@ -1,6 +1,6 @@
 import { CONFIG } from 'src/global-config';
 
-import { InvoicesListView } from 'src/sections/warehouse/invoices-list-view';
+import { InvoicesListView } from 'src/sections/warehouse/supplier-list-view';
 
 // ============================================================================
 

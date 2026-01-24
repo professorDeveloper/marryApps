@@ -148,9 +148,10 @@ function buildPictureSection(): CardSection {
 
 export interface IngredientEditViewProps {
     isNew?: boolean;
+    onSuccess?: () => void | Promise<void>;
 }
 
-export function IngredientEditView({ isNew = false }: IngredientEditViewProps) {
+export function IngredientEditView({ isNew = false, onSuccess }: IngredientEditViewProps) {
     const router = useRouter();
     const params = useParams();
     const id = params.id as string | undefined;
@@ -210,13 +211,18 @@ export function IngredientEditView({ isNew = false }: IngredientEditViewProps) {
                 // Small delay to ensure SWR cache is updated
                 await new Promise((resolve) => setTimeout(resolve, 500));
 
-                router.push(paths.warehouse.ingredients.root);
+                // If onSuccess callback provided, call it instead of routing
+                if (onSuccess) {
+                    await onSuccess();
+                } else {
+                    router.push(paths.warehouse.ingredients.root);
+                }
             } catch (err) {
                 console.error('Error saving ingredient:', err);
                 throw err;
             }
         },
-        [isNew, id, t, createIngredient, updateIngredient, router]
+        [isNew, id, t, createIngredient, updateIngredient, router, onSuccess]
     );
 
     // Handle delete

@@ -78,7 +78,7 @@ export function useInvoiceAPI(): UseInvoiceAPIReturn {
      */
     const getInvoiceById = useCallback(async (id: string): Promise<Invoice | null> => {
         try {
-            const response = await fetcher<BackendResponse<Invoice>>(endpoints.invoice.details);
+            const response = await fetcher<BackendResponse<Invoice>>(endpoints.invoice.details(id));
             return response.data || null;
         } catch (error) {
             const axiosError = error as AxiosError<any>;
