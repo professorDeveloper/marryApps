@@ -9,6 +9,7 @@
         "contact": {},
         "version": "1.0"
     },
+    "host": "back.maryai.yurtal.tech",
     "basePath": "/",
     "paths": {
         "/api/v1/admin/brands": {
