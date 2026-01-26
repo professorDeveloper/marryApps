@@ -53,10 +53,14 @@ export function JwtSignInView() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const defaultValues: SignInSchemaType = {
-    brand_id: 'my_restaurant',
-    username: 'qwerty1',
-    password: 'Javohir11',
+    brand_id: '',
+    username: '',
+    password: '',
   };
+
+    // brand_id: 'my_restaurant',
+    // username: 'qwerty1',
+    // password: 'Javohir11',
 
   const methods = useForm({
     resolver: zodResolver(SignInSchema),
@@ -93,14 +97,14 @@ export function JwtSignInView() {
       <Field.Text
         name="brand_id"
         label="Brand ID"
-        placeholder="my_restaurant2"
+        placeholder=""
         slotProps={{ inputLabel: { shrink: true } }}
       />
 
       <Field.Text
         name="username"
         label="Foydalanuvchi nomi"
-        placeholder="sami"
+        placeholder=""
         slotProps={{ inputLabel: { shrink: true } }}
       />
 
