@@ -1,6 +1,6 @@
 import { CONFIG } from 'src/global-config';
 
-import { InvoicesEditView } from 'src/sections/warehouse/supplier-edit-view';
+import { SupplierEditView } from 'src/sections/warehouse/supplier-edit-view';
 
 // ============================================================================
 
@@ -11,7 +11,7 @@ export default function Page() {
         <>
             <title>{metadata.title}</title>
 
-            <InvoicesEditView />
+            <SupplierEditView />
         </>
     );
 }
