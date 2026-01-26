@@ -238,7 +238,7 @@ const ProductCalculator = ({ compoundId, mealId, onEntityCreated }: ProductCalcu
 
                 const [ingredientsResponse, invoiceDetailsResponse, ingredientGroupsResponse] = await Promise.all([
                     fetcher<BackendResponse<Ingredient[]> | Ingredient[]>(endpoints.ingredient.list),
-                    fetcher<BackendResponse<InvoiceDetail[]> | InvoiceDetail[]>(endpoints.invoice.details),
+                    fetcher<BackendResponse<InvoiceDetail[]> | InvoiceDetail[]>(endpoints.invoice.detailsList),
                     fetcher<BackendResponse<IngredientGroup[]> | IngredientGroup[]>(endpoints.ingredientGroups.list),
                 ]);
 
@@ -934,7 +934,7 @@ const ProductCalculator = ({ compoundId, mealId, onEntityCreated }: ProductCalcu
                                         }
                                     }
                                 }}
-                                disabled={transferredIds.length === 0 || !entityId}
+                                // disabled={transferredIds.length === 0 || !entityId}
                                 sx={{
                                     bgcolor: (transferredIds.length === 0 || !entityId) ? '#ccc' : '#ff9800',
                                     textTransform: 'none',

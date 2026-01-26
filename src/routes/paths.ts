@@ -94,7 +94,7 @@ export const paths = {
       details: (id: string) => `${ROOTS.MENU}/meals/${id}`,
       edit: (id: string) => `${ROOTS.MENU}/meals/${id}/edit`,
     },
-   
+
     reports: {
       root: `${ROOTS.MENU}/reports`,
       new: `${ROOTS.MENU}/reports/new`,
@@ -126,61 +126,61 @@ export const paths = {
       },
     },
   },
-   warehouse: {
-      root: `${ROOTS.MENU}/warehouse`,
-      new: `${ROOTS.MENU}/warehouse/inventory/new`,
-      details: (id: string) => `${ROOTS.MENU}/warehouse/inventory/${id}`,
-      edit: (id: string) => `${ROOTS.MENU}/warehouse/inventory/${id}/edit`,
-      stocks: {
-        root: `${ROOTS.MENU}/warehouse/stocks`,
-        new: `${ROOTS.MENU}/warehouse/stocks/new`,
-        details: (id: string) => `${ROOTS.MENU}/warehouse/stocks/${id}`,
-        edit: (id: string) => `${ROOTS.MENU}/warehouse/stocks/${id}/edit`,
-      },
-      transfers: {
-        root: `${ROOTS.MENU}/warehouse/transfers`,
-        new: `${ROOTS.MENU}/warehouse/transfers/new`,
-        details: (id: string) => `${ROOTS.MENU}/warehouse/transfers/${id}`,
-        edit: (id: string) => `${ROOTS.MENU}/warehouse/transfers/${id}/edit`,
-      },
-      locations: {
-        root: `${ROOTS.MENU}/warehouse/locations`,
-        new: `${ROOTS.MENU}/warehouse/locations/new`,
-        details: (id: string) => `${ROOTS.MENU}/warehouse/locations/${id}`,
-        edit: (id: string) => `${ROOTS.MENU}/warehouse/locations/${id}/edit`,
-      },
-      suppliers: {
-        root: `${ROOTS.MENU}/warehouse/suppliers`,
-        new: `${ROOTS.MENU}/warehouse/suppliers/new`,
-        details: (id: string) => `${ROOTS.MENU}/warehouse/suppliers/${id}`,
-        edit: (id: string) => `${ROOTS.MENU}/warehouse/suppliers/${id}/edit`,
-      },
-      ingredients: {
-        root: `${ROOTS.MENU}/warehouse/ingredients`,
-        new: `${ROOTS.MENU}/warehouse/ingredients/new`,
-        details: (id: string) => `${ROOTS.MENU}/warehouse/ingredients/${id}`,
-        edit: (id: string) => `${ROOTS.MENU}/warehouse/ingredients/${id}/edit`,
-      },
-      ingredients_group: {
-        root: `${ROOTS.MENU}/warehouse/ingredients-group`,
-        new: `${ROOTS.MENU}/warehouse/ingredients-group/new`,
-        details: (id: string) => `${ROOTS.MENU}/warehouse/ingredients-group/${id}`,
-        edit: (id: string) => `${ROOTS.MENU}/warehouse/ingredients-group/${id}/edit`,
-      },
-
-      invoices: {
-        root: `${ROOTS.MENU}/warehouse/invoices`,
-        new: `${ROOTS.MENU}/warehouse/invoices/new`,
-        details: (id: string) => `${ROOTS.MENU}/warehouse/invoices/${id}`,
-        edit: (id: string) => `${ROOTS.MENU}/warehouse/invoices/${id}/edit`,
-      },
-      invoiceDetails: {
-        root: `${ROOTS.MENU}/warehouse/invoice-details`,
-        new: `${ROOTS.MENU}/warehouse/invoice-details/new`,
-        details: (id: string) => `${ROOTS.MENU}/warehouse/invoice-details/${id}`,
-        edit: (id: string) => `${ROOTS.MENU}/warehouse/invoice-details/${id}/edit`,
-      },
+  warehouse: {
+    root: `${ROOTS.MENU}/warehouse`,
+    new: `${ROOTS.MENU}/warehouse/inventory/new`,
+    details: (id: string) => `${ROOTS.MENU}/warehouse/inventory/${id}`,
+    edit: (id: string) => `${ROOTS.MENU}/warehouse/inventory/${id}/edit`,
+    stocks: {
+      root: `${ROOTS.MENU}/warehouse/stocks`,
+      new: `${ROOTS.MENU}/warehouse/stocks/new`,
+      details: (id: string) => `${ROOTS.MENU}/warehouse/stocks/${id}`,
+      edit: (id: string) => `${ROOTS.MENU}/warehouse/stocks/${id}/edit`,
     },
+    transfers: {
+      root: `${ROOTS.MENU}/warehouse/transfers`,
+      new: `${ROOTS.MENU}/warehouse/transfers/new`,
+      details: (id: string) => `${ROOTS.MENU}/warehouse/transfers/${id}`,
+      edit: (id: string) => `${ROOTS.MENU}/warehouse/transfers/${id}/edit`,
+    },
+    locations: {
+      root: `${ROOTS.MENU}/warehouse/locations`,
+      new: `${ROOTS.MENU}/warehouse/locations/new`,
+      details: (id: string) => `${ROOTS.MENU}/warehouse/locations/${id}`,
+      edit: (id: string) => `${ROOTS.MENU}/warehouse/locations/${id}/edit`,
+    },
+    suppliers: {
+      root: `${ROOTS.MENU}/warehouse/suppliers`,
+      new: `${ROOTS.MENU}/warehouse/suppliers/new`,
+      details: (id: string) => `${ROOTS.MENU}/warehouse/suppliers/${id}`,
+      edit: (id: string) => `${ROOTS.MENU}/warehouse/suppliers/${id}/edit`,
+    },
+    ingredients: {
+      root: `${ROOTS.MENU}/warehouse/ingredients`,
+      new: `${ROOTS.MENU}/warehouse/ingredients/new`,
+      details: (id: string) => `${ROOTS.MENU}/warehouse/ingredients/${id}`,
+      edit: (id: string) => `${ROOTS.MENU}/warehouse/ingredients/${id}/edit`,
+    },
+    ingredients_group: {
+      root: `${ROOTS.MENU}/warehouse/ingredients-group`,
+      new: `${ROOTS.MENU}/warehouse/ingredients-group/new`,
+      details: (id: string) => `${ROOTS.MENU}/warehouse/ingredients-group/${id}`,
+      edit: (id: string) => `${ROOTS.MENU}/warehouse/ingredients-group/${id}/edit`,
+    },
+
+    invoices: {
+      root: `${ROOTS.MENU}/warehouse/invoices`,
+      new: `${ROOTS.MENU}/warehouse/invoices/new`,
+      details: (id: string) => `${ROOTS.MENU}/warehouse/invoices/${id}`,
+      edit: (id: string) => `${ROOTS.MENU}/warehouse/invoices/${id}/edit`,
+    },
+    invoiceDetails: {
+      root: `${ROOTS.MENU}/warehouse/invoice-details`,
+      new: `${ROOTS.MENU}/warehouse/invoice-details/new`,
+      details: (id: string) => `${ROOTS.MENU}/warehouse/invoice-details/${id}`,
+      edit: (id: string) => `${ROOTS.MENU}/warehouse/invoice-details/${id}/edit`,
+    },
+  },
 
   settings: {
     root: `${ROOTS.SETTING}`,

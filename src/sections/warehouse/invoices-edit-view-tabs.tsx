@@ -4,8 +4,10 @@ import { Box, Tabs, Tab, CircularProgress } from '@mui/material';
 import { useTranslation } from 'react-i18next';
 import { useRouter } from 'src/routes/hooks';
 import { paths } from 'src/routes/paths';
-import { InvoicesEditView } from './supplier-edit-view';
+import { InvoiceInfoEditView } from './invoice-info-edit-view';
 import { InvoiceDetailsCalculation } from 'src/components/invoice-details-calculation/invoice-details-calculation';
+import { useInvoiceAPI } from 'src/hooks/use-invoice-api';
+import { fetcher, endpoints } from 'src/lib/axios';
 
 interface TabPanelProps {
     children?: React.ReactNode;
@@ -33,26 +35,117 @@ export function InvoicesEditViewTabs() {
     const { t } = useTranslation('menu');
     const { id } = useParams<{ id?: string }>();
     const router = useRouter();
-    const [currentTab, setCurrentTab] = useState(0);
-    const [invoiceId, setInvoiceId] = useState<string | null>(id || null);
-    const [isLoading, setIsLoading] = useState(false);
+    const { createInvoiceBatch, getInvoiceById } = useInvoiceAPI(); // ✅ Hook at component level
+    const [currentTab, setCurrentTab] = useState(id ? 0 : 1); // Tab 0 for edit, Tab 1 for new
+    const [invoiceData, setInvoiceData] = useState<Record<string, any> | null>(null);
+    const [detailsData, setDetailsData] = useState<any[]>([]); // Store invoice details
+    const [isLoading, setIsLoading] = useState(!!id); // Loading if editing
+    const [formData, setFormData] = useState<Record<string, any>>({
+        supplier_id: '',
+        date: new Date().toISOString(),
+        status: 'pending',
+        total_amount: '',
+    }); // Persist form data across tab switches
+    const isCreatingNew = !id;
 
-    // If creating new invoice, user can't go to batch tab until invoice is saved
-    const canAccessBatchTab = !!invoiceId;
+    // Load invoice data when editing
+    useEffect(() => {
+        if (id) {
+            const loadInvoice = async () => {
+                try {
+                    setIsLoading(true);
+                    // Get invoice info
+                    const invoice = await getInvoiceById(id);
+                    if (invoice) {
+                        setInvoiceData(invoice);
+                        setFormData({
+                            supplier_id: invoice.supplier_id,
+                            date: invoice.date,
+                            status: invoice.status,
+                            total_amount: invoice.total_amount?.toString() || '',
+                        });
+                    }
+
+                    // Get invoice details from /api/v1/invoice-details/invoice/{invoice_id}
+                    const response = await fetcher<any>(`/api/v1/invoice-details/invoice/${id}`);
+                    if (response.data) {
+                        const details = Array.isArray(response.data) ? response.data : [response.data];
+                        setDetailsData(details);
+                    }
+                } catch (error) {
+                    console.error('Error loading invoice:', error);
+                } finally {
+                    setIsLoading(false);
+                }
+            };
+
+            loadInvoice();
+        }
+    }, [id, getInvoiceById]);
 
     const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
-        if (newValue === 1 && !canAccessBatchTab) {
-            return; // Prevent tab change if no invoice ID
-        }
         setCurrentTab(newValue);
     };
 
-    const handleInvoiceCreated = (newInvoiceId: string) => {
-        setInvoiceId(newInvoiceId);
-        // Automatically move to batch tab after creating invoice
-        setTimeout(() => {
-            setCurrentTab(1);
-        }, 500);
+    // Called when form data changes in Tab 1 - stores data for persistence
+    const handleFormDataChange = (newFormData: Record<string, any>) => {
+        setFormData(newFormData);
+    };
+
+    // Called when user adds details in Tab 2
+    const handleDetailsChange = (details: any[]) => {
+        setDetailsData(details);
+    };
+
+    // Called when user submits invoice info in Tab 1 - this is where batch API is called
+    const handleInvoiceSubmit = async (formData: Record<string, any>, details?: any[]) => {
+        try {
+            if (!formData.supplier_id) {
+                throw new Error(t('warehouse.invoices.supplierRequired'));
+            }
+            if (!formData.total_amount) {
+                throw new Error(t('warehouse.invoices.amountRequired'));
+            }
+
+            setIsLoading(true);
+
+            // If creating new invoice with details, use batch API
+            if (isCreatingNew && details && details.length > 0) {
+                const batchPayload = {
+                    invoice: {
+                        supplier_id: formData.supplier_id,
+                        total_amount: formData.total_amount.toString(),
+                        status: formData.status || 'pending',
+                        date: formData.date || new Date().toISOString(),
+                    },
+                    details: details.map((item) => ({
+                        ingredient_id: item.ingredient_id || item.id,
+                        quantity: item.quantity,
+                        price_per_unit: item.price_per_unit?.toString() || '0',
+                        price: item.price?.toString() || '0',
+                    })),
+                };
+
+                await createInvoiceBatch(batchPayload);
+                // Clear form and details data after successful submission
+                setFormData({
+                    supplier_id: '',
+                    date: new Date().toISOString(),
+                    status: 'pending',
+                    total_amount: '',
+                });
+                setDetailsData([]);
+                router.push(paths.warehouse.invoiceDetails.root);
+            } else if (isCreatingNew && (!details || details.length === 0)) {
+                // If no details added, show error
+                throw new Error(t('warehouse.invoiceDetails.addAtLeastOneItem'));
+            }
+        } catch (error) {
+            console.error('Error saving invoice:', error);
+            throw error;
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     const handleBatchSuccess = () => {
@@ -82,31 +175,39 @@ export function InvoicesEditViewTabs() {
                         label={t('warehouse.invoiceDetails.addItems')}
                         id="invoice-tab-1"
                         aria-controls="invoice-tabpanel-1"
-                        disabled={!canAccessBatchTab}
                     />
                 </Tabs>
 
                 {/* TAB 1: Invoice Information */}
                 <TabPanel value={currentTab} index={0}>
-                    <InvoicesEditView
+                    <InvoiceInfoEditView
                         isNew={!id}
-                        onInvoiceCreated={handleInvoiceCreated}
-                        currentInvoiceId={invoiceId}
+                        onInvoiceSubmit={handleInvoiceSubmit}
+                        detailsData={detailsData}
+                        currentInvoiceId={id}
                         skipRedirect={true}
+                        useBatchFlow={isCreatingNew}
+                        onFormDataChange={handleFormDataChange}
+                        persistedFormData={formData}
                     />
                 </TabPanel>
 
                 {/* TAB 2: Batch Add Items */}
                 <TabPanel value={currentTab} index={1}>
-                    {invoiceId && (
+                    {true ? (
                         <InvoiceDetailsCalculation
-                            invoiceId={invoiceId}
+                            invoiceId={id || 'new'}
+                            invoiceData={invoiceData || undefined}
+                            isNewInvoice={isCreatingNew}
+                            onDetailsChange={handleDetailsChange}
                             onSuccess={handleBatchSuccess}
+                            persistedDetails={detailsData}
+                            formData={formData}
+                            onSaveInvoice={handleInvoiceSubmit}
                         />
-                    )}
-                    {!invoiceId && (
-                        <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
-                            <CircularProgress />
+                    ) : (
+                        <Box sx={{ p: 4, textAlign: 'center' }}>
+                            <p>{t('warehouse.invoices.fillInfoFirst', 'Please fill invoice information in Tab 1 first')}</p>
                         </Box>
                     )}
                 </TabPanel>

@@ -5,6 +5,7 @@ import { Dialog, DialogTitle, DialogContent, DialogActions, Button, Box } from '
 import { paths } from 'src/routes/paths';
 import { useInvoiceDetailsAPI } from 'src/hooks/use-invoice-details-api';
 import { useInvoiceAPI } from 'src/hooks/use-invoice-api';
+import { useSupplierAPI } from 'src/hooks/use-supplier-api';
 import { Iconify } from 'src/components/iconify';
 import { CustomGridActionsCellItem } from 'src/components/custom-data-grid';
 import { GenericTableView } from 'src/components/generic-table-view';
@@ -29,6 +30,7 @@ export function InvoiceDetailsStandaloneListView() {
     const { t } = useTranslation('menu');
     const { getInvoiceDetails, deleteInvoiceDetails, getInvoices, getIngredients } = useInvoiceDetailsAPI();
     const { deleteInvoices } = useInvoiceAPI();
+    const { getSuppliers } = useSupplierAPI();
     const [invoices, setInvoices] = useState<any[]>([]);
     const [allDetails, setAllDetails] = useState<InvoiceDetailWithInvoiceInfo[]>([]);
     const [loading, setLoading] = useState(true);
@@ -42,11 +44,23 @@ export function InvoiceDetailsStandaloneListView() {
             setLoading(true);
             try {
                 const fetchedInvoices = await getInvoices();
+                const suppliers = await getSuppliers();
                 const details = await getInvoiceDetails();
                 const ingredients = await getIngredients();
 
+                // Enrich invoices with supplier information
+                const enrichedInvoices = fetchedInvoices.map((invoice: any) => {
+                    const supplier = suppliers.find((s: any) => s.id === invoice.supplier_id);
+                    return {
+                        ...invoice,
+                        supplier_name: supplier?.name || 'Unknown',
+                        supplier_phone: supplier?.phone_number || '',
+                    };
+                });
+
+                // Enrich details with invoice and ingredient information
                 const enrichedDetails = details.map((detail) => {
-                    const invoice = fetchedInvoices.find((inv) => inv.id === detail.invoice_id);
+                    const invoice = enrichedInvoices.find((inv) => inv.id === detail.invoice_id);
                     const ingredient = ingredients.find((ing) => ing.id === detail.ingredient_id);
                     return {
                         ...detail,
@@ -56,7 +70,7 @@ export function InvoiceDetailsStandaloneListView() {
                     };
                 });
 
-                setInvoices(fetchedInvoices);
+                setInvoices(enrichedInvoices);
                 setAllDetails(enrichedDetails);
             } finally {
                 setLoading(false);
@@ -64,7 +78,7 @@ export function InvoiceDetailsStandaloneListView() {
         };
 
         fetchData();
-    }, [getInvoiceDetails, getInvoices, getIngredients]);
+    }, [getInvoiceDetails, getInvoices, getIngredients, getSuppliers]);
 
     const handleDeleteClick = (id: string, type: 'invoice' | 'detail') => {
         setSelectedDeleteId(id);
@@ -83,7 +97,9 @@ export function InvoiceDetailsStandaloneListView() {
                 setAllDetails((prev) => prev.filter((row) => row.id !== selectedDeleteId));
                 // Refresh the invoice details to ensure data consistency
                 const details = await getInvoiceDetails();
+                const suppliers = await getSuppliers();
                 const ingredients = await getIngredients();
+
                 const enrichedDetails = details.map((detail) => {
                     const invoice = invoices.find((inv: any) => inv.id === detail.invoice_id);
                     const ingredient = ingredients.find((ing: any) => ing.id === detail.ingredient_id);
@@ -137,12 +153,6 @@ export function InvoiceDetailsStandaloneListView() {
                 field: 'supplier_phone',
                 headerName: t('invoices.phone', 'Phone'),
                 width: 160,
-            },
-            {
-                field: 'supplier_email',
-                headerName: t('invoices.email', 'Email'),
-                flex: 1,
-                minWidth: 220,
             },
             {
                 field: 'total_amount',

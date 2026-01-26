@@ -11,26 +11,29 @@ import { poster, putter, deleter, fetcher, endpoints } from 'src/lib/axios';
 
 export interface Invoice {
     id: string;
-    supplier_name: string;
-    supplier_phone: string;
-    supplier_email: string;
+    supplier_id: string;
     total_amount: string;
     status: string;
     date: string;
-    created_at: string;
-    updated_at: string;
+    created_at?: string;
+    updated_at?: string;
 }
 
 export interface InvoiceDetail {
-    id: string;
+    id?: string;
     invoice_id: string;
     ingredient_id: string;
     quantity: number;
     price: string;
     price_per_unit: string;
-    created_at: string;
-    updated_at: string;
+    created_at?: string;
+    updated_at?: string;
     ingredient_name?: string; // Enriched field
+}
+
+export interface InvoiceBatchPayload {
+    invoice: Partial<Invoice>;
+    details: Partial<InvoiceDetail>[];
 }
 
 export interface BackendResponse<T> {
@@ -50,6 +53,7 @@ export interface UseInvoiceAPIReturn {
     createInvoiceDetail: (data: Partial<InvoiceDetail>) => Promise<InvoiceDetail>;
     updateInvoiceDetail: (id: string, data: Partial<InvoiceDetail>) => Promise<InvoiceDetail>;
     deleteInvoiceDetail: (id: string) => Promise<void>;
+    createInvoiceBatch: (payload: InvoiceBatchPayload) => Promise<Invoice>;
     getIngredients: () => Promise<any[]>;
 }
 
@@ -224,6 +228,22 @@ export function useInvoiceAPI(): UseInvoiceAPIReturn {
         }
     }, []);
 
+    /**
+     * Invoice va details'ni batch qilib yaratadi
+     */
+    const createInvoiceBatch = useCallback(async (payload: InvoiceBatchPayload): Promise<Invoice> => {
+        try {
+            const response = await poster<BackendResponse<Invoice>>(endpoints.invoice.batch, payload);
+            toast.success('Invoice created successfully');
+            return response.data;
+        } catch (error) {
+            const axiosError = error as AxiosError<any>;
+            const message = axiosError?.response?.data?.message || 'Failed to create invoice batch';
+            toast.error(message);
+            throw error;
+        }
+    }, []);
+
     return {
         getInvoices,
         getInvoiceById,
@@ -234,6 +254,7 @@ export function useInvoiceAPI(): UseInvoiceAPIReturn {
         createInvoiceDetail,
         updateInvoiceDetail,
         deleteInvoiceDetail,
+        createInvoiceBatch,
         getIngredients,
     };
 }

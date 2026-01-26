@@ -31,6 +31,7 @@ import { fetcher, endpoints } from 'src/lib/axios';
 import { toast } from 'sonner';
 import { Iconify } from 'src/components/iconify';
 import { useInvoiceDetailsAPI } from 'src/hooks/use-invoice-details-api';
+import { useInvoiceAPI } from 'src/hooks/use-invoice-api';
 import { IngredientEditView } from 'src/sections/warehouse/ingredients-edit-view';
 
 // --- TYPES ---
@@ -60,7 +61,13 @@ interface InvoiceDetailItem {
 
 interface InvoiceDetailsCalculationProps {
     invoiceId: string;
+    invoiceData?: Record<string, any>; // Invoice data for batch creation
     onSuccess?: () => void;
+    onDetailsChange?: (details: any[]) => void; // Callback to pass details to parent
+    isNewInvoice?: boolean; // Flag to indicate if we're creating new invoice
+    persistedDetails?: any[]; // Details data from parent to restore
+    formData?: Record<string, any>; // Invoice form data from Tab 1
+    onSaveInvoice?: (formData: Record<string, any>, details?: any[]) => Promise<void>; // Callback to save invoice
 }
 
 const formatPrice = (price: number) => {
@@ -76,10 +83,11 @@ const formatNumber = (num: number): number => {
     return Math.round(num * 100) / 100;
 };
 
-export function InvoiceDetailsCalculation({ invoiceId, onSuccess }: InvoiceDetailsCalculationProps) {
+export function InvoiceDetailsCalculation({ invoiceId, invoiceData, onSuccess, onDetailsChange, isNewInvoice, persistedDetails, formData, onSaveInvoice }: InvoiceDetailsCalculationProps) {
     const { t } = useTranslation('menu');
     const theme = useTheme();
     const { getIngredients, createInvoiceDetailsBatch } = useInvoiceDetailsAPI();
+    const { createInvoiceBatch } = useInvoiceAPI();
 
     // Tab state
     const [currentTab, setCurrentTab] = useState(0);
@@ -121,6 +129,57 @@ export function InvoiceDetailsCalculation({ invoiceId, onSuccess }: InvoiceDetai
 
         loadData();
     }, [getIngredients, t]);
+
+    // Restore persisted details when component mounts
+    useEffect(() => {
+        if (persistedDetails && persistedDetails.length > 0) {
+            const newTransferredIds: string[] = [];
+            const newQuantities: Record<string, number> = {};
+            const newPricesPerUnit: Record<string, number> = {};
+            const newPrices: Record<string, number> = {};
+
+            persistedDetails.forEach((detail) => {
+                const ingredientId = detail.ingredient_id || detail.id;
+                newTransferredIds.push(ingredientId);
+                newQuantities[ingredientId] = detail.quantity;
+                newPricesPerUnit[ingredientId] = detail.price_per_unit;
+                newPrices[ingredientId] = detail.price;
+            });
+
+            setTransferredIds(newTransferredIds);
+            setQuantities(newQuantities);
+            setPricesPerUnit(newPricesPerUnit);
+            setPrices(newPrices);
+            setShowCalculation(true);
+        } else if (persistedDetails && persistedDetails.length === 0) {
+            // Clear details if persistedDetails is empty (after successful batch submission)
+            setTransferredIds([]);
+            setQuantities({});
+            setPricesPerUnit({});
+            setPrices({});
+            setShowCalculation(false);
+        }
+    }, [persistedDetails]);
+
+    // Update parent whenever details change (for persistence)
+    useEffect(() => {
+        if (isNewInvoice && onDetailsChange && transferredIds.length > 0) {
+            const batchData = transferredIds.map((id) => ({
+                ingredient_id: id,
+                quantity: quantities[id] || 0,
+                price_per_unit: pricesPerUnit[id] || 0,
+                price: prices[id] || 0,
+            }));
+
+            // Only call if data actually changed (prevent infinite loops)
+            const lastCall = prevCalculationsRef.current;
+            const currentCall = JSON.stringify(batchData);
+            if (lastCall !== currentCall) {
+                prevCalculationsRef.current = currentCall;
+                onDetailsChange(batchData);
+            }
+        }
+    }, [transferredIds, quantities, prices, pricesPerUnit, isNewInvoice, onDetailsChange]);
 
     // Handle toggle checkbox in left panel
     const handleToggle = (id: string) => {
@@ -342,21 +401,44 @@ export function InvoiceDetailsCalculation({ invoiceId, onSuccess }: InvoiceDetai
             setLoading(true);
             const batchData = transferredItems.map((item) => ({
                 ingredient_id: item.id,
-                invoice_id: invoiceId,
+                invoice_id: invoiceId !== 'new' ? invoiceId : undefined,
                 quantity: item.quantity,
                 price_per_unit: item.price_per_unit.toString(),
                 price: item.price.toString(),
             }));
 
-            await createInvoiceDetailsBatch(batchData);
-            setTransferredIds([]);
-            setQuantities({});
-            setPrices({});
-            setPricesPerUnit({});
-            setShowCalculation(false);
-            toast.success(t('warehouse.invoiceDetails.batchCreatedSuccess'));
-            if (onSuccess) {
-                onSuccess();
+            // If this is a new invoice, validate and save with invoice info
+            if (isNewInvoice && onSaveInvoice) {
+                // Check if form data is filled
+                if (!formData?.supplier_id || !formData?.total_amount) {
+                    toast.error(t('warehouse.invoices.fillInvoiceInfoFirst', 'Please fill invoice information in Tab 1 first'));
+                    return;
+                }
+
+                // Call parent function to save invoice + details together
+                await onSaveInvoice(formData, batchData);
+                return;
+            }
+
+            // If this is a new invoice but no onSaveInvoice, pass details to parent
+            if (isNewInvoice && onDetailsChange) {
+                onDetailsChange(batchData);
+                toast.success(t('warehouse.invoiceDetails.detailsReady', 'Details ready. Now save invoice info in Tab 1'));
+                return;
+            }
+
+            // If this is an existing invoice, use the batch endpoint that creates details
+            if (!isNewInvoice) {
+                await createInvoiceDetailsBatch(batchData);
+                setTransferredIds([]);
+                setQuantities({});
+                setPrices({});
+                setPricesPerUnit({});
+                setShowCalculation(false);
+                toast.success(t('warehouse.invoiceDetails.batchCreatedSuccess'));
+                if (onSuccess) {
+                    onSuccess();
+                }
             }
         } catch (error) {
             console.error('Error submitting batch:', error);
@@ -399,7 +481,7 @@ export function InvoiceDetailsCalculation({ invoiceId, onSuccess }: InvoiceDetai
                     iconPosition="start"
                 />
                 <Tab
-                    label={t('warehouse.ingredients.add')}
+                    label={t('warehouse.add')}
                     icon={<Iconify icon="solar:add-circle-bold" />}
                     iconPosition="start"
                 />
@@ -681,7 +763,7 @@ export function InvoiceDetailsCalculation({ invoiceId, onSuccess }: InvoiceDetai
                                     disabled={loading || transferredItems.length === 0}
                                     startIcon={<Iconify icon="solar:check-circle-bold" />}
                                 >
-                                    {t('warehouse.invoiceDetails.submitBatch')}
+                                    {isNewInvoice ? t('save') : t('warehouse.invoiceDetails.submitBatch')}
                                 </Button>
                             </Box>
                         </Box>
@@ -690,6 +772,12 @@ export function InvoiceDetailsCalculation({ invoiceId, onSuccess }: InvoiceDetai
                     {!showCalculation && transferredIds.length === 0 && (
                         <Alert severity="warning" sx={{ mt: 3 }}>
                             {t('warehouse.invoiceDetails.selectIngredientsFirst', 'Select ingredients from left panel and click Add to continue')}
+                        </Alert>
+                    )}
+
+                    {isNewInvoice && showCalculation && (
+                        <Alert severity="info" sx={{ mt: 3 }}>
+                            {t('warehouse.invoiceDetails.fillInvoiceInfoInTab1', 'Please fill invoice information (Supplier, Date, Amount) in Tab 1 before saving')}
                         </Alert>
                     )}
                 </Box>

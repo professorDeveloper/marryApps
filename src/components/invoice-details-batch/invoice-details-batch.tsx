@@ -56,7 +56,6 @@ export function InvoiceDetailsBatch({ invoiceId, onSuccess }: InvoiceDetailsBatc
     const { t } = useTranslation('menu');
     const theme = useTheme();
     const { getIngredients, createInvoiceDetailsBatch } = useInvoiceDetailsAPI();
-
     // Tab state
     const [currentTab, setCurrentTab] = useState(0);
 

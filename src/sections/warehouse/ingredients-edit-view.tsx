@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import type { TFunction } from 'i18next';
 import type { IIngredientFormData } from 'src/types/ingredients';
 import type { CardSection, GenericEditViewConfig } from 'src/components/generic-edit-view';
@@ -161,6 +161,15 @@ export function IngredientEditView({ isNew = false, onSuccess }: IngredientEditV
     const { deleteIngredient } = useDeleteIngredient();
     const { ingredientGroups } = useGetIngredientGroups();
 
+    // Form state for controlled mode
+    const [formData, setFormData] = useState<Record<string, any>>({
+        name: '',
+        measurement: '',
+        group_id: '',
+        color: '#FF4842',
+        image: null,
+    });
+
     // Load ingredient if editing
     const { ingredient, ingredientLoading } = useGetIngredient(!isNew && id ? id : '');
 
@@ -178,6 +187,14 @@ export function IngredientEditView({ isNew = false, onSuccess }: IngredientEditV
     const GROUP_SECTION_T = useMemo(() => translateSection(buildGroupSection(groupOptions), t), [t, groupOptions]);
     const COLOR_SECTION_T = useMemo(() => translateSection(buildColorSection(), t), [t]);
     const IMAGE_SECTION_T = useMemo(() => translateSection(buildPictureSection(), t), [t]);
+
+    // Handle form data changes (for controlled mode)
+    const handleFormDataChange = useCallback(
+        (newFormData: Record<string, any>) => {
+            setFormData(newFormData);
+        },
+        []
+    );
 
     // Handle form submission
     const handleSubmit = useCallback(
@@ -210,6 +227,17 @@ export function IngredientEditView({ isNew = false, onSuccess }: IngredientEditV
 
                 // Small delay to ensure SWR cache is updated
                 await new Promise((resolve) => setTimeout(resolve, 500));
+
+                // Clear form after successful creation
+                if (isNew) {
+                    setFormData({
+                        name: '',
+                        measurement: '',
+                        group_id: '',
+                        color: '#FF4842',
+                        image: null,
+                    });
+                }
 
                 // If onSuccess callback provided, call it instead of routing
                 if (onSuccess) {
@@ -272,7 +300,14 @@ export function IngredientEditView({ isNew = false, onSuccess }: IngredientEditV
                     sx={{ mb: 3 }}
                 />
 
-                <GenericEditView config={config} data={ingredient || undefined} isNew={isNew} loading={!isNew && ingredientLoading} />
+                <GenericEditView
+                    config={config}
+                    data={ingredient || undefined}
+                    isNew={isNew}
+                    loading={!isNew && ingredientLoading}
+                    formData={formData}
+                    onFormDataChange={handleFormDataChange}
+                />
             </Box>
         </Box>
     );

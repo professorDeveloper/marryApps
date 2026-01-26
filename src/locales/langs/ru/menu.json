@@ -495,7 +495,8 @@
       "selectedItems": "Выбранные элементы",
       "selectIngredientsFirst": "Выберите ингредиенты из левой панели и нажмите Добавить",
       "summary": "Сводка счета",
-      "batchOperations": "Пакетные операции"
+      "batchOperations": "Пакетные операции",
+      "root": "Детали накладной"
     },
     "delete": "Удалить",
     "cancel": "Отмена",

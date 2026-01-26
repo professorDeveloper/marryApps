@@ -464,6 +464,9 @@
       "totalAmount": "Total amount (UZS)",
       "addNew": "Add new invoice",
       "edit": "Edit invoice",
+      "information": "Information",
+      "supplier": "Supplier",
+      "info":"Information",
       "statuses": {
         "pending": "Pending",
         "completed": "Completed",
@@ -504,7 +507,7 @@
       "added": "Item added successfully",
       "updated": "Item updated successfully",
       "removed": "Item removed successfully",
-      "addItems": "Add Items (Batch)",
+      "addItems": "Add Items",
       "information": "Information",
       "submitBatch": "Submit Batch",
       "addAtLeastOneItem": "Please add at least one item",
@@ -515,7 +518,8 @@
       "selectedItems": "Selected Items",
       "selectIngredientsFirst": "Select ingredients from left panel and click Add to continue",
       "summary": "Invoice Summary",
-      "batchOperations": "Batch Operations"
+      "batchOperations": "Batch Operations",
+      "root": "Invoice Details"
     },
     "cancel": "Cancel",
     "confirm": "Confirm",
@@ -552,6 +556,26 @@
       "measurementRequired": "Measurement is required",
       "groupRequired": "Ingredient group is required",
       "saveFailed": "Failed to save ingredient"
+    },
+    "suppliers": {
+      "title": "Suppliers",
+      "list": "List",
+      "addNew": "Add supplier",
+      "edit": "Edit supplier",
+      "view": "View supplier",
+      "delete": "Delete supplier",
+      "name": "Name",
+      "contact": "Contact",
+      "email": "Email",
+      "phone": "Phone",
+      "address": "Address",
+      "createdAt": "Created",
+      "updatedAt": "Updated",
+      "deleteConfirm": "Are you sure you want to delete this supplier?",
+      "deleteMessage": "This action cannot be undone and cannot be reversed.",
+      "cancel": "Cancel",
+      "info": "Information",
+      "phoneNumber": "Phone number"
     }
   },
   "common": {

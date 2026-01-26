@@ -185,6 +185,11 @@ export const endpoints = {
     update: (id: string) => `/api/v1/ingredients/${id}`,
     delete: (id: string) => `/api/v1/ingredients/${id}`,
   },
+  supplier: {
+    list: '/api/v1/suppliers',
+    create: '/api/v1/suppliers',
+    delete: (id: string) => `/api/v1/suppliers/${id}`,
+  },
   ingredientGroups: {
     list: '/api/v1/ingredient-groups',
     details: (id: string) => `/api/v1/ingredient-groups/${id}`,
@@ -210,6 +215,7 @@ export const endpoints = {
     detailsUpdate: (id: string) => `/api/v1/invoice-details/${id}`,
     detailsDelete: (id: string) => `/api/v1/invoice-details/${id}`,
     detailsBatch: '/api/v1/invoice-details/batch',
+    batch: '/api/v1/invoices/batch',
   },
   users: {
     list: '/api/v1/users',

@@ -1,0 +1,230 @@
+import type { CardSection, GenericEditViewConfig } from 'src/components/generic-edit-view';
+import { useCallback, useEffect, useState } from 'react';
+import { useParams } from 'react-router';
+import { paths } from 'src/routes/paths';
+import { useRouter } from 'src/routes/hooks';
+import { useTranslate } from 'src/locales';
+import { GenericEditView } from 'src/components/generic-edit-view';
+import { useInvoiceAPI } from 'src/hooks/use-invoice-api';
+import { useSupplierAPI } from 'src/hooks/use-supplier-api';
+import { Box, CircularProgress } from '@mui/material';
+
+interface InvoiceInfoEditViewProps {
+    isNew?: boolean;
+    onInvoiceSubmit?: (formData: Record<string, any>, detailsData?: any[]) => void; // For batch flow
+    onInvoiceCreated?: (invoiceId: string) => void;
+    onInvoiceDataChange?: (formData: Record<string, any>) => void; // For batch flow
+    detailsData?: any[]; // Details to include in batch
+    currentInvoiceId?: string | null;
+    skipRedirect?: boolean;
+    useBatchFlow?: boolean; // If true, don't create invoice, just collect data
+    onFormDataChange?: (formData: Record<string, any>) => void; // Callback to persist form data in parent
+    persistedFormData?: Record<string, any>; // Form data from parent to restore
+}
+
+export function InvoiceInfoEditView({
+    isNew = false,
+    onInvoiceCreated,
+    onInvoiceDataChange,
+    onInvoiceSubmit,
+    detailsData,
+    currentInvoiceId,
+    skipRedirect = false,
+    useBatchFlow = false,
+    onFormDataChange,
+    persistedFormData,
+}: InvoiceInfoEditViewProps) {
+    const { t } = useTranslate('menu');
+    const router = useRouter();
+    const { id: urlId } = useParams<{ id?: string }>();
+    const { createInvoice } = useInvoiceAPI();
+    const { getSuppliers } = useSupplierAPI();
+    const [invoiceData, setInvoiceData] = useState<Record<string, any> | null>(null);
+    const [loading, setLoading] = useState(true);
+    const [suppliers, setSuppliers] = useState<any[]>([]);
+    const [internalFormData, setInternalFormData] = useState<Record<string, any>>(persistedFormData || {
+        supplier_id: '',
+        date: new Date().toISOString(),
+        status: 'pending',
+        total_amount: '',
+    });
+
+    // Load suppliers for dropdown
+    useEffect(() => {
+        const loadSuppliers = async () => {
+            try {
+                const data = await getSuppliers();
+                setSuppliers(data || []);
+            } catch (error) {
+                console.error('Error loading suppliers:', error);
+            }
+        };
+
+        loadSuppliers();
+    }, [getSuppliers]);
+
+    // Update internal form data when persisted data changes
+    useEffect(() => {
+        if (persistedFormData && Object.keys(persistedFormData).length > 0) {
+            setInternalFormData(persistedFormData);
+        }
+    }, [persistedFormData]);
+
+    useEffect(() => {
+        setLoading(false);
+    }, [isNew, urlId, currentInvoiceId]);
+
+    const handleSubmit = useCallback(
+        async (formData: Record<string, any>) => {
+            try {
+                if (!formData.supplier_id) {
+                    throw new Error(t('warehouse.invoices.supplierRequired'));
+                }
+                if (!formData.total_amount) {
+                    throw new Error(t('warehouse.invoices.amountRequired'));
+                }
+
+                // If using batch flow with details, call the batch submit handler
+                if (onInvoiceSubmit && detailsData && detailsData.length > 0) {
+                    await onInvoiceSubmit({
+                        supplier_id: formData.supplier_id,
+                        total_amount: formData.total_amount.toString(),
+                        status: formData.status || 'pending',
+                        date: formData.date || new Date().toISOString(),
+                    }, detailsData);
+                    return;
+                }
+
+                // If using batch flow but no details, show error
+                if (useBatchFlow && (!detailsData || detailsData.length === 0)) {
+                    throw new Error(t('warehouse.invoiceDetails.addAtLeastOneItem'));
+                }
+
+                // If using batch flow, just pass data up to parent without creating invoice
+                if (useBatchFlow && onInvoiceDataChange) {
+                    onInvoiceDataChange({
+                        supplier_id: formData.supplier_id,
+                        total_amount: formData.total_amount.toString(),
+                        status: formData.status || 'pending',
+                        date: formData.date || new Date().toISOString(),
+                    });
+                    return;
+                }
+
+                // Otherwise, create invoice normally
+                if (isNew) {
+                    const newInvoice = await createInvoice({
+                        supplier_id: formData.supplier_id,
+                        total_amount: formData.total_amount.toString(),
+                        status: formData.status || 'pending',
+                        date: formData.date || new Date().toISOString(),
+                    });
+                    // Call callback if provided (for tab component)
+                    if (onInvoiceCreated) {
+                        onInvoiceCreated(newInvoice.id);
+                    }
+                    // Only redirect if not in tab mode
+                    if (!skipRedirect && !onInvoiceCreated) {
+                        router.push(paths.warehouse.invoices.root);
+                    }
+                }
+
+                if (!onInvoiceCreated && !skipRedirect) {
+                    router.push(paths.warehouse.invoices.root);
+                }
+            } catch (error) {
+                console.error('Error saving invoice:', error);
+                throw error;
+            }
+        },
+        [isNew, useBatchFlow, createInvoice, router, onInvoiceCreated, onInvoiceDataChange, onInvoiceSubmit, detailsData, skipRedirect, currentInvoiceId, urlId, t]
+    );
+
+    const BASIC: CardSection = {
+        id: 'basic',
+        title: t('warehouse.invoices.info'),
+        columns: 2,
+        fields: [
+            {
+                key: 'supplier_id',
+                label: t('warehouse.invoices.supplier'),
+                type: 'select',
+                required: true,
+                defaultValue: '',
+                options: suppliers.map((s) => ({ value: s.id, label: s.name })),
+            },
+            {
+                key: 'date',
+                label: t('warehouse.invoices.date'),
+                type: 'text',
+                required: true,
+                defaultValue: new Date().toISOString()
+            },
+            {
+                key: 'status',
+                label: t('warehouse.invoices.status'),
+                type: 'select',
+                required: true,
+                defaultValue: 'pending',
+                options: [
+                    { value: 'pending', label: t('warehouse.invoices.statuses.pending') },
+                    { value: 'completed', label: t('warehouse.invoices.statuses.completed') },
+                    { value: 'cancelled', label: t('warehouse.invoices.statuses.cancelled') },
+                ],
+            },
+            {
+                key: 'total_amount',
+                label: t('warehouse.invoices.totalAmount'),
+                type: 'text',
+                required: true,
+                defaultValue: '',
+            },
+        ],
+    };
+
+    const config: GenericEditViewConfig = {
+        title: isNew ? t('warehouse.invoices.addNew') : t('warehouse.invoices.edit'),
+        entityName: t('warehouse.invoices.title').toLowerCase(),
+        breadcrumbs: [
+            { name: t('menu'), href: paths.menu.root },
+            { name: t('warehouse.title'), href: paths.warehouse.root },
+            { name: t('warehouse.invoices.title'), href: paths.warehouse.invoices.root },
+        ],
+        sections: [BASIC],
+        onSubmit: handleSubmit,
+    };
+
+    // Use persisted form data if available, otherwise use invoice data
+    const dataToPass = useBatchFlow && persistedFormData && Object.keys(persistedFormData).some(k => persistedFormData[k])
+        ? persistedFormData
+        : (invoiceData || undefined);
+
+    // Handler for form data changes from GenericEditView
+    const handleFormChange = useCallback(
+        (newFormData: Record<string, any>) => {
+            setInternalFormData(newFormData);
+            if (onFormDataChange) {
+                onFormDataChange(newFormData);
+            }
+        },
+        [onFormDataChange]
+    );
+
+    return (
+        <Box sx={{ pl: 4, pt: 3 }}>
+            {loading ? (
+                <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 400 }}>
+                    <CircularProgress />
+                </Box>
+            ) : (
+                <GenericEditView
+                    config={config}
+                    isNew={isNew}
+                    data={dataToPass || internalFormData}
+                    formData={internalFormData}
+                    onFormDataChange={handleFormChange}
+                />
+            )}
+        </Box>
+    );
+}

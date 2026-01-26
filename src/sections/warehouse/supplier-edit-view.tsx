@@ -5,149 +5,93 @@ import { paths } from 'src/routes/paths';
 import { useRouter } from 'src/routes/hooks';
 import { useTranslate } from 'src/locales';
 import { GenericEditView } from 'src/components/generic-edit-view';
-import { useInvoiceAPI } from 'src/hooks/use-invoice-api';
+import { useSupplierAPI } from 'src/hooks/use-supplier-api';
 import { Box, CircularProgress } from '@mui/material';
 
-interface InvoicesEditViewProps {
+interface SupplierEditViewProps {
     isNew?: boolean;
-    onInvoiceCreated?: (invoiceId: string) => void;
-    currentInvoiceId?: string | null;
+    onSupplierCreated?: (supplierId: string) => void;
+    currentSupplierId?: string | null;
     skipRedirect?: boolean;
 }
 
-export function InvoicesEditView({
+export function SupplierEditView({
     isNew = false,
-    onInvoiceCreated,
-    currentInvoiceId,
+    onSupplierCreated,
+    currentSupplierId,
     skipRedirect = false,
-}: InvoicesEditViewProps) {
+}: SupplierEditViewProps) {
     const { t } = useTranslate('menu');
     const router = useRouter();
     const { id: urlId } = useParams<{ id?: string }>();
-    const { createInvoice, updateInvoice, getInvoiceById } = useInvoiceAPI();
-    const [invoiceData, setInvoiceData] = useState<Record<string, any> | null>(null);
-    const [loading, setLoading] = useState(!isNew);
+    const { createSupplier } = useSupplierAPI();
+    const [supplierData, setSupplierData] = useState<Record<string, any> | null>(null);
+    const [loading, setLoading] = useState(false);
 
-    // Load invoice data when editing
+    // Load supplier data when editing (currently not supported by API)
     useEffect(() => {
-        const loadInvoiceData = async () => {
-            try {
-                const invoiceId = currentInvoiceId || urlId;
-                if (!isNew && invoiceId && getInvoiceById) {
-                    const data = await getInvoiceById(invoiceId);
-                    setInvoiceData(data);
-                } else {
-                    setLoading(false);
-                }
-            } catch (error) {
-                console.error('Error loading invoice data:', error);
-                setLoading(false);
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        loadInvoiceData();
-    }, [isNew, urlId, currentInvoiceId, getInvoiceById]);
+        // Suppliers API doesn't provide GET by ID endpoint yet
+        setLoading(false);
+    }, [isNew, urlId, currentSupplierId]);
 
     const handleSubmit = useCallback(
         async (formData: Record<string, any>) => {
             try {
-                if (!formData.supplier_name) {
-                    throw new Error(t('warehouse.invoices.supplierNameRequired'));
+                if (!formData.name) {
+                    throw new Error(t('warehouse.suppliers.nameRequired'));
                 }
 
                 if (isNew) {
-                    const newInvoice = await createInvoice(formData);
+                    const newSupplier = await createSupplier(formData);
                     // Call callback if provided (for tab component)
-                    if (onInvoiceCreated) {
-                        onInvoiceCreated(newInvoice.id);
+                    if (onSupplierCreated) {
+                        onSupplierCreated(newSupplier.id);
                     }
                     // Only redirect if not in tab mode
-                    if (!skipRedirect && !onInvoiceCreated) {
-                        router.push(paths.warehouse.invoices.edit(newInvoice.id));
-                    }
-                } else {
-                    const invoiceIdToUpdate = currentInvoiceId || urlId;
-                    if (invoiceIdToUpdate) {
-                        await updateInvoice(invoiceIdToUpdate, formData);
-                    }
-                    if (!skipRedirect) {
-                        router.push(paths.warehouse.invoices.root);
+                    if (!skipRedirect && !onSupplierCreated) {
+                        router.push(paths.warehouse.suppliers.root);
                     }
                 }
 
-                if (!onInvoiceCreated && !skipRedirect) {
-                    router.push(paths.warehouse.invoices.root);
+                if (!onSupplierCreated && !skipRedirect) {
+                    router.push(paths.warehouse.suppliers.root);
                 }
             } catch (error) {
-                console.error('Error saving invoice:', error);
+                console.error('Error saving supplier:', error);
                 throw error;
             }
         },
-        [isNew, createInvoice, updateInvoice, router, onInvoiceCreated, skipRedirect, currentInvoiceId, urlId, t]
+        [isNew, createSupplier, router, onSupplierCreated, skipRedirect, currentSupplierId, urlId, t]
     );
 
     const BASIC: CardSection = {
         id: 'basic',
-        title: t('warehouse.invoices.supplierInfo'),
-        columns: 2,
+        title: t('warehouse.suppliers.info'),
+        columns: 1,
         fields: [
             {
-                key: 'supplier_name',
-                label: t('warehouse.invoices.supplierName'),
+                key: 'name',
+                label: t('warehouse.suppliers.name'),
                 type: 'text',
                 required: true,
                 defaultValue: '',
             },
             {
-                key: 'supplier_phone',
-                label: t('warehouse.invoices.phoneNumber'),
+                key: 'phone_number',
+                label: t('warehouse.suppliers.phoneNumber'),
                 type: 'text',
                 defaultValue: '',
-            },
-            {
-                key: 'supplier_email',
-                label: t('warehouse.invoices.email'),
-                type: 'text',
-                defaultValue: '',
-            },
-            {
-                key: 'date',
-                label: t('warehouse.invoices.date'),
-                type: 'text',
-                required: true,
-                defaultValue: new Date().toISOString()
-            },
-            {
-                key: 'status',
-                label: t('warehouse.invoices.status'),
-                type: 'select',
-                required: true,
-                defaultValue: 'pending',
-                options: [
-                    { value: 'pending', label: t('warehouse.invoices.statuses.pending') },
-                    { value: 'completed', label: t('warehouse.invoices.statuses.completed') },
-                    { value: 'cancelled', label: t('warehouse.invoices.statuses.cancelled') },
-                ],
-            },
-            {
-                key: 'total_amount',
-                label: t('warehouse.invoices.totalAmount'),
-                type: 'text',
-                required: true,
             },
         ],
     };
 
     const config: GenericEditViewConfig = {
-        title: isNew ? t('warehouse.invoices.addNew') : t('warehouse.invoices.edit'),
-        entityName: t('warehouse.invoices.title').toLowerCase(),
+        title: isNew ? t('warehouse.suppliers.addNew') : t('warehouse.suppliers.edit'),
+        entityName: t('warehouse.suppliers.title').toLowerCase(),
         breadcrumbs: [
             { name: t('menu'), href: paths.menu.root },
             { name: t('warehouse.title'), href: paths.warehouse.root },
-            { name: t('warehouse.invoices.title'), href: paths.warehouse.invoices.root },
-            // { name: isNew ? t('common.new') : t('common.edit'), href: '' },
+            { name: t('warehouse.suppliers.title'), href: paths.warehouse.suppliers.root },
         ],
         sections: [BASIC],
         onSubmit: handleSubmit,
@@ -160,7 +104,7 @@ export function InvoicesEditView({
                     <CircularProgress />
                 </Box>
             ) : (
-                <GenericEditView config={config} isNew={isNew} data={invoiceData || undefined} />
+                <GenericEditView config={config} isNew={isNew} data={supplierData || undefined} />
             )}
         </Box>
     );

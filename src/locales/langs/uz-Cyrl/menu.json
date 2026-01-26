@@ -126,7 +126,8 @@
       "selectedItems": "Танланган Элементлар",
       "selectIngredientsFirst": "Чап панелдан маҳсулотларни танланг ва Қўшиш тугмасини босинг",
       "summary": "Киримнинг Хулосаси",
-      "batchOperations": "Batch Операциялари"
+      "batchOperations": "Batch Операциялари",
+      "root": "Кирим маълумотлари"
     }
   },
   "ingredients": {

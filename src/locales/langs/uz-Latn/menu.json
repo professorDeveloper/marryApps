@@ -533,7 +533,8 @@
       "selectedItems": "Tanlangan Elementlar",
       "selectIngredientsFirst": "Chap paneldan mahsulotlarni tanlang va Qo'shish tugmasini bosing",
       "summary": "Kirim Xulosasi",
-      "batchOperations": "Batch Operatsiyalari"
+      "batchOperations": "Batch Operatsiyalari",
+      "root": "Kirim ma'lumotlari"
     },
     "cancel": "Bekor qilish",
     "confirm": "Tasdiqlash",
