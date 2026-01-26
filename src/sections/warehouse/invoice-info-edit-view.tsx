@@ -168,7 +168,7 @@ export function InvoiceInfoEditView({
                 defaultValue: 'pending',
                 options: [
                     { value: 'pending', label: t('warehouse.invoices.statuses.pending') },
-                    { value: 'completed', label: t('warehouse.invoices.statuses.completed') },
+                    // { value: 'completed', label: t('warehouse.invoices.statuses.completed') },
                     { value: 'cancelled', label: t('warehouse.invoices.statuses.cancelled') },
                 ],
             },
