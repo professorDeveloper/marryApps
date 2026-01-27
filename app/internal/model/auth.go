@@ -24,7 +24,8 @@ type LoginRequest struct {
 }
 
 type PincodeLoginRequest struct {
-	Pincode  string  `json:"pincode" example:"1234"`
+	Password string  `json:"password" example:"Password:Javohir"`
+	Pincode  *string `json:"pincode,omitempty" example:"1234"`
 	BrandID  string  `json:"brand_id" example:"my_restaurant"`
 	FCMToken *string `json:"fcm_token,omitempty" example:"eP8...firebase...token"`
 }

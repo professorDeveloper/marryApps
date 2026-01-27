@@ -55,11 +55,14 @@ func (h *Handler) Login(c echo.Context) error {
 
 // LoginWithPincode handles user login via pincode (for kitchen, terminals, cashiers)
 // @Summary User login with pincode
-// @Description Authenticate user using pincode and brand_id (slug). Used for kitchen staff, terminals, and cashiers
+// @Description Authenticate user using password and optional pincode, with brand_id (slug).
+// First login: password + brand_id (pincode not needed yet).
+// Subsequent logins: password + brand_id + pincode.
+// Used for kitchen staff, terminals, and cashiers
 // @Tags auth
 // @Accept json
 // @Produce json
-// @Param request body model.PincodeLoginRequest true "Pincode login credentials"
+// @Param request body model.PincodeLoginRequest true "Login credentials (password and brand_id required, pincode optional)"
 // @Success 200 {object} model.LoginResponse "Successfully logged in"
 // @Failure 400 {object} model.ErrorResponse "Invalid request format"
 // @Failure 401 {object} model.ErrorResponse "Unauthorized"
@@ -69,6 +72,15 @@ func (h *Handler) LoginWithPincode(c echo.Context) error {
 	if err := c.Bind(&req); err != nil {
 		log.Printf("Failed to bind pincode login request: %v", err)
 		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("invalid request body", "see logs for details", http.StatusBadRequest))
+	}
+
+	// Validate required fields
+	if req.Password == "" {
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("password is required", "see logs for details", http.StatusBadRequest))
+	}
+
+	if req.BrandID == "" {
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("brand_id is required", "see logs for details", http.StatusBadRequest))
 	}
 
 	// lang := c.Get("language").(string)

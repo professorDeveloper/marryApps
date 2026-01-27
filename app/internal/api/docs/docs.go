@@ -385,7 +385,7 @@ const docTemplate = `{
         },
         "/api/v1/auth/login-pincode": {
             "post": {
-                "description": "Authenticate user using pincode and brand_id (slug). Used for kitchen staff, terminals, and cashiers",
+                "description": "Authenticate user using password and optional pincode, with brand_id (slug).",
                 "consumes": [
                     "application/json"
                 ],
@@ -398,7 +398,7 @@ const docTemplate = `{
                 "summary": "User login with pincode",
                 "parameters": [
                     {
-                        "description": "Pincode login credentials",
+                        "description": "Login credentials (password and brand_id required, pincode optional)",
                         "name": "request",
                         "in": "body",
                         "required": true,
@@ -17202,6 +17202,10 @@ const docTemplate = `{
                 "fcm_token": {
                     "type": "string",
                     "example": "eP8...firebase...token"
+                },
+                "password": {
+                    "type": "string",
+                    "example": "Password:Javohir"
                 },
                 "pincode": {
                     "type": "string",

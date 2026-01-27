@@ -325,12 +325,19 @@ func (s *AuthS) Login(ctx context.Context, req model.LoginRequest, jwtCfg *confi
 }
 
 func (s *AuthS) LoginWithPincode(ctx context.Context, req model.PincodeLoginRequest, jwtCfg *config.JwtConfig) (model.LoginResponse, error) {
-	if strings.TrimSpace(req.Pincode) == "" {
-		return model.LoginResponse{}, errors.New(http.StatusText(http.StatusBadRequest))
+	// Validate required fields
+	if strings.TrimSpace(req.Password) == "" {
+		return model.LoginResponse{}, errors.New("password is required")
 	}
 	if strings.TrimSpace(req.BrandID) == "" {
 		return model.LoginResponse{}, errors.New(http.StatusText(http.StatusBadRequest))
 	}
+
+	// Pincode is optional - treat empty string as nil
+	if req.Pincode != nil && strings.TrimSpace(*req.Pincode) == "" {
+		req.Pincode = nil
+	}
+
 	brandIDSlug := strings.TrimSpace(req.BrandID)
 	schemaName := fmt.Sprintf("tenant_%s", brandIDSlug)
 	tx, err := s.repo.PgRepo.TenantPool.Begin(ctx)
@@ -345,14 +352,50 @@ func (s *AuthS) LoginWithPincode(ctx context.Context, req model.PincodeLoginRequ
 
 	q := s.repo.Tenant(ctx).WithTx(tx)
 
-	user, err := q.GetUserByPincode(ctx, &req.Pincode)
-	if err != nil {
-		log.Printf("LoginWithPincode: User not found with pincode: %s, error: %v", req.Pincode, err)
-		return model.LoginResponse{}, errors.New(http.StatusText(http.StatusUnauthorized))
+	var user pg.User
+
+	// Try to find user by pincode if provided
+	if req.Pincode != nil {
+		foundUser, err := q.GetUserByPincode(ctx, req.Pincode)
+		if err != nil {
+			log.Printf("LoginWithPincode: User not found with pincode: %s, error: %v", *req.Pincode, err)
+			return model.LoginResponse{}, errors.New(http.StatusText(http.StatusUnauthorized))
+		}
+		user = foundUser
+	} else {
+		// No pincode provided - get all users and try to verify password with each
+		// This is for first login without pincode
+		allUsers, err := q.GetAllUsers(ctx)
+		if err != nil {
+			log.Printf("LoginWithPincode: Failed to get all users: %v", err)
+			return model.LoginResponse{}, errors.New(http.StatusText(http.StatusUnauthorized))
+		}
+
+		// Try to find user by password verification
+		foundUser := false
+		for _, u := range allUsers {
+			if u.HashPassword != nil && *u.HashPassword != "" {
+				if err := utils.VerifyPassword(*u.HashPassword, req.Password); err == nil {
+					// Password matches
+					user = u
+					foundUser = true
+					break
+				}
+			}
+		}
+
+		if !foundUser {
+			log.Printf("LoginWithPincode: No user found with matching password")
+			return model.LoginResponse{}, errors.New(http.StatusText(http.StatusUnauthorized))
+		}
 	}
 
-	if user.Pincode == nil || strings.TrimSpace(*user.Pincode) != req.Pincode {
-		log.Printf("LoginWithPincode: Pincode verification failed for user: %s", user.ID)
+	// Verify password matches (double check if found by pincode)
+	if user.HashPassword == nil || *user.HashPassword == "" {
+		return model.LoginResponse{}, errors.New(http.StatusText(http.StatusUnauthorized))
+	}
+	if err := utils.VerifyPassword(*user.HashPassword, req.Password); err != nil {
+		log.Printf("LoginWithPincode: Password verification failed for user: %s", user.ID)
 		return model.LoginResponse{}, errors.New(http.StatusText(http.StatusUnauthorized))
 	}
 

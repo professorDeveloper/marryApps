@@ -1432,6 +1432,9 @@ definitions:
       fcm_token:
         example: eP8...firebase...token
         type: string
+      password:
+        example: Password:Javohir
+        type: string
       pincode:
         example: "1234"
         type: string
@@ -2333,10 +2336,10 @@ paths:
     post:
       consumes:
       - application/json
-      description: Authenticate user using pincode and brand_id (slug). Used for kitchen
-        staff, terminals, and cashiers
+      description: Authenticate user using password and optional pincode, with brand_id
+        (slug).
       parameters:
-      - description: Pincode login credentials
+      - description: Login credentials (password and brand_id required, pincode optional)
         in: body
         name: request
         required: true
