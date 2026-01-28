@@ -367,3 +367,41 @@ func (c *CategoryS) SearchCategories(ctx context.Context, query string, limit, o
 	}
 	return responses, nil
 }
+
+// GetCategoryByIDWithLang retrieves category by ID with language support
+func (c *CategoryS) GetCategoryByIDWithLang(ctx context.Context, categoryID string, lang string) (*model.CategoryResponse, error) {
+	id, err := uuid.Parse(categoryID)
+	if err != nil {
+		return nil, fmt.Errorf("invalid category ID: %w", err)
+	}
+
+	category, err := c.repo.Tenant(ctx).GetCategoryByIDWithLanguage(ctx, pg.GetCategoryByIDWithLanguageParams{
+		ID:      id,
+		Column2: lang,
+	})
+	if err != nil {
+		log.Printf("GetCategoryByIDWithLang failed: %v", err)
+		return nil, fmt.Errorf("failed to get category: %w", err)
+	}
+
+	return mapCategoryToResponse(category.ID, category.Name, category.NameI18n, category.DepartmentID, category.StorageID, category.Parent, category.PictureUrl, category.ColorCode, category.CreatedAt, category.UpdatedAt), nil
+}
+
+// GetAllCategoriesWithLang retrieves all categories with language support
+func (c *CategoryS) GetAllCategoriesWithLang(ctx context.Context, lang string, limit, offset int32) ([]*model.CategoryResponse, error) {
+	categories, err := c.repo.Tenant(ctx).GetAllCategoriesWithLanguage(ctx, pg.GetAllCategoriesWithLanguageParams{
+		Column1: lang,
+		Limit:   limit,
+		Offset:  offset,
+	})
+	if err != nil {
+		log.Printf("GetAllCategoriesWithLang failed: %v", err)
+		return nil, fmt.Errorf("failed to get categories: %w", err)
+	}
+
+	var responses []*model.CategoryResponse
+	for _, cat := range categories {
+		responses = append(responses, mapCategoryToResponse(cat.ID, cat.Name, cat.NameI18n, cat.DepartmentID, cat.StorageID, cat.Parent, cat.PictureUrl, cat.ColorCode, cat.CreatedAt, cat.UpdatedAt))
+	}
+	return responses, nil
+}

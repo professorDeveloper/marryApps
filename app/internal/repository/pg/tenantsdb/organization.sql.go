@@ -182,6 +182,63 @@ func (q *Queries) GetAllBranches(ctx context.Context, arg GetAllBranchesParams) 
 	return items, nil
 }
 
+const getAllBranchesWithLanguage = `-- name: GetAllBranchesWithLanguage :many
+SELECT 
+    b.id,
+    COALESCE(CASE 
+        WHEN $1::text = 'uz' THEN t.uz
+        WHEN $1::text = 'ru' THEN t.ru
+        WHEN $1::text = 'en' THEN t.en
+        ELSE b.name
+    END, b.name) as name,
+    b.name_i18n,
+    b.address,
+    b.phone,
+    b.created_at,
+    b.updated_at,
+    b.deleted_at
+FROM branches b
+LEFT JOIN translations t ON b.name_i18n = t.id AND t.deleted_at = 0
+WHERE b.deleted_at = 0
+ORDER BY b.created_at DESC
+LIMIT $2 OFFSET $3
+`
+
+type GetAllBranchesWithLanguageParams struct {
+	Column1 string `json:"column_1"`
+	Limit   int32  `json:"limit"`
+	Offset  int32  `json:"offset"`
+}
+
+func (q *Queries) GetAllBranchesWithLanguage(ctx context.Context, arg GetAllBranchesWithLanguageParams) ([]Branch, error) {
+	rows, err := q.db.Query(ctx, getAllBranchesWithLanguage, arg.Column1, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Branch
+	for rows.Next() {
+		var i Branch
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.NameI18n,
+			&i.Address,
+			&i.Phone,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.DeletedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getAllTranslations = `-- name: GetAllTranslations :many
 SELECT id, uz, ru, en, created_at, updated_at, deleted_at
 FROM translations
@@ -233,6 +290,47 @@ WHERE id = $1 AND deleted_at = 0
 // GetBranchByID retrieves a branch by its ID
 func (q *Queries) GetBranchByID(ctx context.Context, id uuid.UUID) (Branch, error) {
 	row := q.db.QueryRow(ctx, getBranchByID, id)
+	var i Branch
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.NameI18n,
+		&i.Address,
+		&i.Phone,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
+	)
+	return i, err
+}
+
+const getBranchByIDWithLanguage = `-- name: GetBranchByIDWithLanguage :one
+SELECT 
+    b.id,
+    COALESCE(CASE 
+        WHEN $2::text = 'uz' THEN t.uz
+        WHEN $2::text = 'ru' THEN t.ru
+        WHEN $2::text = 'en' THEN t.en
+        ELSE b.name
+    END, b.name) as name,
+    b.name_i18n,
+    b.address,
+    b.phone,
+    b.created_at,
+    b.updated_at,
+    b.deleted_at
+FROM branches b
+LEFT JOIN translations t ON b.name_i18n = t.id AND t.deleted_at = 0
+WHERE b.id = $1 AND b.deleted_at = 0
+`
+
+type GetBranchByIDWithLanguageParams struct {
+	ID      uuid.UUID `json:"id"`
+	Column2 string    `json:"column_2"`
+}
+
+func (q *Queries) GetBranchByIDWithLanguage(ctx context.Context, arg GetBranchByIDWithLanguageParams) (Branch, error) {
+	row := q.db.QueryRow(ctx, getBranchByIDWithLanguage, arg.ID, arg.Column2)
 	var i Branch
 	err := row.Scan(
 		&i.ID,

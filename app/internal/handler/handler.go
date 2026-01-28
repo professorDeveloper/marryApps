@@ -82,12 +82,20 @@ func (h *Handler) Register(router *echo.Echo) {
 			branches.POST("/:id/restore", h.RestoreBranch, mw.CheckLanguage())
 		}
 
+		// Branch endpoints with language support
+		branchesLang := api.Group("/branches-lang", mw.CheckAuth(h.cfg), mw.TenantMiddleware(h.repo))
+		{
+			branchesLang.GET("/:id", h.GetBranchByIDWithLang, mw.CheckLanguage())
+			branchesLang.GET("", h.GetAllBranchesWithLang, mw.CheckLanguage())
+		}
+
 		// Translation management endpoints
 		translations := api.Group("/translations", mw.CheckAuth(h.cfg), mw.TenantMiddleware(h.repo))
 		{
 			translations.POST("", h.CreateTranslation, mw.CheckLanguage())
 			translations.GET("", h.GetAllTranslations, mw.CheckLanguage())
 			translations.GET("/:id", h.GetTranslationByID, mw.CheckLanguage())
+			translations.PUT("/:id", h.UpdateTranslation, mw.CheckLanguage())
 			translations.DELETE("/:id", h.DeleteTranslation, mw.CheckLanguage())
 			translations.POST("/:id/restore", h.RestoreTranslation, mw.CheckLanguage())
 		}
@@ -105,6 +113,13 @@ func (h *Handler) Register(router *echo.Echo) {
 			storages.GET("/search", h.SearchStorages, mw.CheckLanguage())
 		}
 
+		// Storage endpoints with language support
+		storagesLang := api.Group("/storages-lang", mw.CheckAuth(h.cfg), mw.TenantMiddleware(h.repo))
+		{
+			storagesLang.GET("/:id", h.GetStorageByIDWithLang, mw.CheckLanguage())
+			storagesLang.GET("", h.GetAllStoragesWithLang, mw.CheckLanguage())
+		}
+
 		// Department management endpoints
 		departments := api.Group("/departments", mw.CheckAuth(h.cfg), mw.TenantMiddleware(h.repo))
 		{
@@ -118,17 +133,33 @@ func (h *Handler) Register(router *echo.Echo) {
 			departments.GET("/search", h.SearchDepartments, mw.CheckLanguage())
 		}
 
+		// Department endpoints with language support
+		departmentsLang := api.Group("/departments-lang", mw.CheckAuth(h.cfg), mw.TenantMiddleware(h.repo))
+		{
+			departmentsLang.GET("/:id", h.GetDepartmentByIDWithLang, mw.CheckLanguage())
+			departmentsLang.GET("", h.GetAllDepartmentsWithLang, mw.CheckLanguage())
+		}
+
 		// Hall management endpoints
 		halls := api.Group("/halls", mw.CheckAuth(h.cfg), mw.TenantMiddleware(h.repo))
 		{
 			halls.POST("", h.CreateHall, mw.CheckLanguage())
-			halls.GET("", h.GetAllHalls, mw.CheckLanguage())
-			halls.GET("/:id", h.GetHallByID, mw.CheckLanguage())
+			halls.GET("/search", h.SearchHalls, mw.CheckLanguage()) // Must come before /:id
 			halls.GET("/branch/:branchId", h.GetHallsByBranchID, mw.CheckLanguage())
+			halls.GET("/:id", h.GetHallByID, mw.CheckLanguage())
+			halls.GET("", h.GetAllHalls, mw.CheckLanguage())
+			halls.GET("/halls-lang", h.GetAllHallsWithLang, mw.CheckLanguage())
 			halls.PUT("/:id", h.UpdateHall, mw.CheckLanguage())
 			halls.DELETE("/:id", h.DeleteHall, mw.CheckLanguage())
 			halls.POST("/:id/restore", h.RestoreHall, mw.CheckLanguage())
-			halls.GET("/search", h.SearchHalls, mw.CheckLanguage())
+			halls.GET("halls-lang/branch/:id", h.GetHallsByBranchID, mw.CheckLanguage())
+		}
+
+		// Hall endpoints with language support
+		hallsLang := api.Group("/halls-lang", mw.CheckAuth(h.cfg), mw.TenantMiddleware(h.repo))
+		{
+			hallsLang.GET("/branch/:branchId", h.GetHallsByBranchIDWithLang, mw.CheckLanguage())
+			hallsLang.GET("", h.GetAllHallsWithLang, mw.CheckLanguage())
 		}
 
 		media := api.Group("/media", mw.CheckAuth(h.cfg), mw.TenantMiddleware(h.repo))
@@ -149,6 +180,13 @@ func (h *Handler) Register(router *echo.Echo) {
 			ingredientGroups.POST("/:id/restore", h.RestoreIngredientGroup, mw.CheckLanguage())
 		}
 
+		// Ingredient groups endpoints with language support
+		ingredientGroupsLang := api.Group("/ingredient-groups-lang", mw.CheckAuth(h.cfg), mw.TenantMiddleware(h.repo))
+		{
+			ingredientGroupsLang.GET("/:id", h.GetIngredientGroupByIDWithLang, mw.CheckLanguage())
+			ingredientGroupsLang.GET("", h.GetAllIngredientGroupsWithLang, mw.CheckLanguage())
+		}
+
 		ingredients := api.Group("/ingredients", mw.CheckAuth(h.cfg), mw.TenantMiddleware(h.repo))
 		{
 			ingredients.POST("", h.CreateIngredient, mw.CheckLanguage())
@@ -158,6 +196,13 @@ func (h *Handler) Register(router *echo.Echo) {
 			ingredients.PUT("/:id", h.UpdateIngredient, mw.CheckLanguage())
 			ingredients.DELETE("/:id", h.DeleteIngredient, mw.CheckLanguage())
 			ingredients.POST("/:id/restore", h.RestoreIngredient, mw.CheckLanguage())
+		}
+
+		// Ingredients endpoints with language support
+		ingredientsLang := api.Group("/ingredients-lang", mw.CheckAuth(h.cfg), mw.TenantMiddleware(h.repo))
+		{
+			ingredientsLang.GET("/:id", h.GetIngredientByIDWithLang, mw.CheckLanguage())
+			ingredientsLang.GET("", h.GetAllIngredientsWithLang, mw.CheckLanguage())
 		}
 
 		ingredientStock := api.Group("/ingredient-stock", mw.CheckAuth(h.cfg), mw.TenantMiddleware(h.repo))
@@ -236,6 +281,13 @@ func (h *Handler) Register(router *echo.Echo) {
 			categories.POST("/:id/restore", h.RestoreCategory, mw.CheckLanguage())
 		}
 
+		// Categories endpoints with language support
+		categoriesLang := api.Group("/categories-lang", mw.CheckAuth(h.cfg), mw.TenantMiddleware(h.repo))
+		{
+			categoriesLang.GET("/:id", h.GetCategoryByIDWithLang, mw.CheckLanguage())
+			categoriesLang.GET("", h.GetAllCategoriesWithLang, mw.CheckLanguage())
+		}
+
 		compounds := api.Group("/compounds", mw.CheckAuth(h.cfg), mw.TenantMiddleware(h.repo))
 		{
 			compounds.POST("", h.CreateCompound, mw.CheckLanguage())
@@ -251,6 +303,13 @@ func (h *Handler) Register(router *echo.Echo) {
 			compounds.GET("/search", h.SearchCompounds, mw.CheckLanguage())
 			compounds.GET("/:compound_id/details", h.GetCompoundDetailsByCompound, mw.CheckLanguage())
 			compounds.GET("/:compound_id/stock", h.GetCompoundStockByCompound, mw.CheckLanguage())
+		}
+
+		// Compounds endpoints with language support
+		compoundsLang := api.Group("/compounds-lang", mw.CheckAuth(h.cfg), mw.TenantMiddleware(h.repo))
+		{
+			compoundsLang.GET("/:id", h.GetCompoundByIDWithLang, mw.CheckLanguage())
+			compoundsLang.GET("", h.GetAllCompoundsWithLang, mw.CheckLanguage())
 		}
 
 		compoundDetails := api.Group("/compound-details", mw.CheckAuth(h.cfg), mw.TenantMiddleware(h.repo))
@@ -301,6 +360,13 @@ func (h *Handler) Register(router *echo.Echo) {
 			goods.POST("/:id/restore", h.RestoreGood, mw.CheckLanguage())
 			// Good details endpoints
 			goods.GET("/:good_id/details", h.GetGoodDetailsByGood, mw.CheckLanguage())
+		}
+
+		// Goods endpoints with language support
+		goodsLang := api.Group("/goods-lang", mw.CheckAuth(h.cfg), mw.TenantMiddleware(h.repo))
+		{
+			goodsLang.GET("/:id", h.GetGoodByIDWithLang, mw.CheckLanguage())
+			goodsLang.GET("", h.GetAllGoodsWithLang, mw.CheckLanguage())
 		}
 
 		// Good details endpoints

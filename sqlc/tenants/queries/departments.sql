@@ -84,3 +84,45 @@ LEFT JOIN categories c ON d.id = c.department_id AND c.deleted_at = 0
 WHERE d.id = $1 AND d.deleted_at = 0
 GROUP BY d.id, d.name;
 
+-- name: GetDepartmentByIDWithLanguage :one
+SELECT 
+    d.id,
+    COALESCE(CASE 
+        WHEN $2::text = 'uz' THEN t.uz
+        WHEN $2::text = 'ru' THEN t.ru
+        WHEN $2::text = 'en' THEN t.en
+        ELSE d.name
+    END, d.name) as name,
+    d.name_i18n,
+    d.storage_id,
+    d.color_code,
+    d.picture_url,
+    d.created_at,
+    d.updated_at,
+    d.deleted_at
+FROM departments d
+LEFT JOIN translations t ON d.name_i18n = t.id AND t.deleted_at = 0
+WHERE d.id = $1 AND d.deleted_at = 0;
+
+-- name: GetAllDepartmentsWithLanguage :many
+SELECT 
+    d.id,
+    COALESCE(CASE 
+        WHEN $1::text = 'uz' THEN t.uz
+        WHEN $1::text = 'ru' THEN t.ru
+        WHEN $1::text = 'en' THEN t.en
+        ELSE d.name
+    END, d.name) as name,
+    d.name_i18n,
+    d.storage_id,
+    d.color_code,
+    d.picture_url,
+    d.created_at,
+    d.updated_at,
+    d.deleted_at
+FROM departments d
+LEFT JOIN translations t ON d.name_i18n = t.id AND t.deleted_at = 0
+WHERE d.deleted_at = 0
+ORDER BY d.created_at DESC
+LIMIT $2 OFFSET $3;
+

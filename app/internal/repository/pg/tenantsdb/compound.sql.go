@@ -421,6 +421,87 @@ func (q *Queries) GetAllCompounds(ctx context.Context, arg GetAllCompoundsParams
 	return items, nil
 }
 
+const getAllCompoundsWithLanguage = `-- name: GetAllCompoundsWithLanguage :many
+SELECT 
+    c.id,
+    COALESCE(CASE 
+        WHEN $1::text = 'uz' THEN t_name.uz
+        WHEN $1::text = 'ru' THEN t_name.ru
+        WHEN $1::text = 'en' THEN t_name.en
+        ELSE c.name
+    END, c.name) as name,
+    c.name_i18n,
+    COALESCE(CASE 
+        WHEN $1::text = 'uz' THEN t_desc.uz
+        WHEN $1::text = 'ru' THEN t_desc.ru
+        WHEN $1::text = 'en' THEN t_desc.en
+        ELSE c.description
+    END, c.description) as description,
+    c.description_i18n,
+    c.quantity,
+    c.picture_url,
+    c.color_code,
+    c.measurement,
+    c.price,
+    c.department_id,
+    c.cost_price,
+    c.profit,
+    c.profit_margin,
+    c.created_at,
+    c.updated_at,
+    c.deleted_at
+FROM compounds c
+LEFT JOIN translations t_name ON c.name_i18n = t_name.id AND t_name.deleted_at = 0
+LEFT JOIN translations t_desc ON c.description_i18n = t_desc.id AND t_desc.deleted_at = 0
+WHERE c.deleted_at = 0
+ORDER BY c.created_at DESC
+LIMIT $2 OFFSET $3
+`
+
+type GetAllCompoundsWithLanguageParams struct {
+	Column1 string `json:"column_1"`
+	Limit   int32  `json:"limit"`
+	Offset  int32  `json:"offset"`
+}
+
+func (q *Queries) GetAllCompoundsWithLanguage(ctx context.Context, arg GetAllCompoundsWithLanguageParams) ([]Compound, error) {
+	rows, err := q.db.Query(ctx, getAllCompoundsWithLanguage, arg.Column1, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Compound
+	for rows.Next() {
+		var i Compound
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.NameI18n,
+			&i.Description,
+			&i.DescriptionI18n,
+			&i.Quantity,
+			&i.PictureUrl,
+			&i.ColorCode,
+			&i.Measurement,
+			&i.Price,
+			&i.DepartmentID,
+			&i.CostPrice,
+			&i.Profit,
+			&i.ProfitMargin,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.DeletedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getCompoundByID = `-- name: GetCompoundByID :one
 SELECT id, name, name_i18n, description, description_i18n, quantity, picture_url, color_code, measurement, price, department_id, cost_price, profit, profit_margin, created_at, updated_at, deleted_at
 FROM compounds
@@ -429,6 +510,71 @@ WHERE id = $1 AND deleted_at = 0
 
 func (q *Queries) GetCompoundByID(ctx context.Context, id uuid.UUID) (Compound, error) {
 	row := q.db.QueryRow(ctx, getCompoundByID, id)
+	var i Compound
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.NameI18n,
+		&i.Description,
+		&i.DescriptionI18n,
+		&i.Quantity,
+		&i.PictureUrl,
+		&i.ColorCode,
+		&i.Measurement,
+		&i.Price,
+		&i.DepartmentID,
+		&i.CostPrice,
+		&i.Profit,
+		&i.ProfitMargin,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
+	)
+	return i, err
+}
+
+const getCompoundByIDWithLanguage = `-- name: GetCompoundByIDWithLanguage :one
+SELECT 
+    c.id,
+    COALESCE(CASE 
+        WHEN $2::text = 'uz' THEN t_name.uz
+        WHEN $2::text = 'ru' THEN t_name.ru
+        WHEN $2::text = 'en' THEN t_name.en
+        ELSE c.name
+    END, c.name) as name,
+    c.name_i18n,
+    COALESCE(CASE 
+        WHEN $2::text = 'uz' THEN t_desc.uz
+        WHEN $2::text = 'ru' THEN t_desc.ru
+        WHEN $2::text = 'en' THEN t_desc.en
+        ELSE c.description
+    END, c.description) as description,
+    c.description_i18n,
+    c.quantity,
+    c.picture_url,
+    c.color_code,
+    c.measurement,
+    c.price,
+    c.department_id,
+    c.cost_price,
+    c.profit,
+    c.profit_margin,
+    c.created_at,
+    c.updated_at,
+    c.deleted_at
+FROM compounds c
+LEFT JOIN translations t_name ON c.name_i18n = t_name.id AND t_name.deleted_at = 0
+LEFT JOIN translations t_desc ON c.description_i18n = t_desc.id AND t_desc.deleted_at = 0
+WHERE c.id = $1 AND c.deleted_at = 0
+`
+
+type GetCompoundByIDWithLanguageParams struct {
+	ID      uuid.UUID `json:"id"`
+	Column2 string    `json:"column_2"`
+}
+
+func (q *Queries) GetCompoundByIDWithLanguage(ctx context.Context, arg GetCompoundByIDWithLanguageParams) (Compound, error) {
+	row := q.db.QueryRow(ctx, getCompoundByIDWithLanguage, arg.ID, arg.Column2)
 	var i Compound
 	err := row.Scan(
 		&i.ID,

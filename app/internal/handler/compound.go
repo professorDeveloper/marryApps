@@ -526,3 +526,95 @@ func (h *Handler) CreateCompoundWithCalculations(c echo.Context) error {
 		http.StatusCreated,
 	))
 }
+
+// ==================== COMPOUNDS WITH LANGUAGE HANDLERS ====================
+
+// GetCompoundByIDWithLang retrieves a compound by ID with language support
+// @Summary Get compound by ID with language support
+// @Description Retrieve a specific compound by its ID with names and descriptions translated to specified language
+// @Tags compounds
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path string true "Compound ID"
+// @Param lang query string false "Language code (uz, ru, en - default: uz)"
+// @Success 200 {object} model.CompoundResponse "Compound details"
+// @Failure 400 {object} model.ErrorResponse "Invalid request parameters"
+// @Failure 401 {object} model.ErrorResponse "Unauthorized"
+// @Failure 404 {object} model.ErrorResponse "Compound not found"
+// @Failure 500 {object} model.ErrorResponse "Internal server error"
+// @Router /api/v1/compounds-lang/{id} [get]
+func (h *Handler) GetCompoundByIDWithLang(c echo.Context) error {
+	compoundID := c.Param("id")
+	if compoundID == "" {
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("compound id is required", "see logs for details", http.StatusBadRequest))
+	}
+
+	lang := c.QueryParam("lang")
+	if lang == "" {
+		lang = "uz"
+	}
+
+	validLangs := map[string]bool{"uz": true, "ru": true, "en": true}
+	if !validLangs[lang] {
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("invalid language code", "valid values: uz, ru, en", http.StatusBadRequest))
+	}
+
+	compound, err := h.service.Compound().GetCompoundByIDWithLang(c.Request().Context(), compoundID, lang)
+	if err != nil {
+		log.Printf("GetCompoundByIDWithLang failed: %v", err)
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("failed to get compound", "see logs for details", http.StatusInternalServerError))
+	}
+
+	return c.JSON(http.StatusOK, model.NewSuccessResponse("Compound retrieved successfully", compound, http.StatusOK))
+}
+
+// GetAllCompoundsWithLang retrieves all compounds with language support
+// @Summary Get all compounds with language support
+// @Description Retrieve all compounds with names and descriptions translated to specified language
+// @Tags compounds
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param lang query string false "Language code (uz, ru, en - default: uz)"
+// @Param limit query int false "Limit (default: 20)"
+// @Param offset query int false "Offset (default: 0)"
+// @Success 200 {array} model.CompoundResponse "Compounds retrieved successfully"
+// @Failure 400 {object} model.ErrorResponse "Invalid request parameters"
+// @Failure 401 {object} model.ErrorResponse "Unauthorized"
+// @Failure 500 {object} model.ErrorResponse "Internal server error"
+// @Router /api/v1/compounds-lang [get]
+func (h *Handler) GetAllCompoundsWithLang(c echo.Context) error {
+	var limit int32 = 20
+	var offset int32 = 0
+
+	if limitStr := c.QueryParam("limit"); limitStr != "" {
+		if l, err := strconv.ParseInt(limitStr, 10, 32); err == nil && l > 0 {
+			limit = int32(l)
+		}
+	}
+
+	if offsetStr := c.QueryParam("offset"); offsetStr != "" {
+		if o, err := strconv.ParseInt(offsetStr, 10, 32); err == nil && o >= 0 {
+			offset = int32(o)
+		}
+	}
+
+	lang := c.QueryParam("lang")
+	if lang == "" {
+		lang = "uz"
+	}
+
+	validLangs := map[string]bool{"uz": true, "ru": true, "en": true}
+	if !validLangs[lang] {
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("invalid language code", "valid values: uz, ru, en", http.StatusBadRequest))
+	}
+
+	compounds, err := h.service.Compound().GetAllCompoundsWithLang(c.Request().Context(), lang, limit, offset)
+	if err != nil {
+		log.Printf("GetAllCompoundsWithLang failed: %v", err)
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("failed to get compounds", "see logs for details", http.StatusInternalServerError))
+	}
+
+	return c.JSON(http.StatusOK, model.NewSuccessResponse("Compounds retrieved successfully", compounds, http.StatusOK))
+}

@@ -106,3 +106,49 @@ LEFT JOIN storages s ON c.storage_id = s.id AND s.deleted_at = 0
 LEFT JOIN categories pc ON c.parent = pc.id AND pc.deleted_at = 0
 WHERE c.id = $1 AND c.deleted_at = 0;
 
+-- name: GetCategoryByIDWithLanguage :one
+SELECT 
+    c.id,
+    COALESCE(CASE 
+        WHEN $2::text = 'uz' THEN t.uz
+        WHEN $2::text = 'ru' THEN t.ru
+        WHEN $2::text = 'en' THEN t.en
+        ELSE c.name
+    END, c.name) as name,
+    c.picture_url,
+    c.name_i18n,
+    c.department_id,
+    c.storage_id,
+    c.parent,
+    c.color_code,
+    c.created_at,
+    c.updated_at,
+    c.deleted_at
+FROM categories c
+LEFT JOIN translations t ON c.name_i18n = t.id AND t.deleted_at = 0
+WHERE c.id = $1 AND c.deleted_at = 0;
+
+-- name: GetAllCategoriesWithLanguage :many
+SELECT 
+    c.id,
+    COALESCE(CASE 
+        WHEN $1::text = 'uz' THEN t.uz
+        WHEN $1::text = 'ru' THEN t.ru
+        WHEN $1::text = 'en' THEN t.en
+        ELSE c.name
+    END, c.name) as name,
+    c.picture_url,
+    c.name_i18n,
+    c.department_id,
+    c.storage_id,
+    c.parent,
+    c.color_code,
+    c.created_at,
+    c.updated_at,
+    c.deleted_at
+FROM categories c
+LEFT JOIN translations t ON c.name_i18n = t.id AND t.deleted_at = 0
+WHERE c.deleted_at = 0
+ORDER BY c.created_at DESC
+LIMIT $2 OFFSET $3;
+

@@ -121,3 +121,44 @@ WHERE deleted_at = 0
        OR LOWER(en) LIKE LOWER('%' || $1 || '%'))
 ORDER BY created_at DESC
 LIMIT $2 OFFSET $3;
+
+-- name: GetBranchByIDWithLanguage :one
+SELECT 
+    b.id,
+    COALESCE(CASE 
+        WHEN $2::text = 'uz' THEN t.uz
+        WHEN $2::text = 'ru' THEN t.ru
+        WHEN $2::text = 'en' THEN t.en
+        ELSE b.name
+    END, b.name) as name,
+    b.name_i18n,
+    b.address,
+    b.phone,
+    b.created_at,
+    b.updated_at,
+    b.deleted_at
+FROM branches b
+LEFT JOIN translations t ON b.name_i18n = t.id AND t.deleted_at = 0
+WHERE b.id = $1 AND b.deleted_at = 0;
+
+-- name: GetAllBranchesWithLanguage :many
+SELECT 
+    b.id,
+    COALESCE(CASE 
+        WHEN $1::text = 'uz' THEN t.uz
+        WHEN $1::text = 'ru' THEN t.ru
+        WHEN $1::text = 'en' THEN t.en
+        ELSE b.name
+    END, b.name) as name,
+    b.name_i18n,
+    b.address,
+    b.phone,
+    b.created_at,
+    b.updated_at,
+    b.deleted_at
+FROM branches b
+LEFT JOIN translations t ON b.name_i18n = t.id AND t.deleted_at = 0
+WHERE b.deleted_at = 0
+ORDER BY b.created_at DESC
+LIMIT $2 OFFSET $3;
+

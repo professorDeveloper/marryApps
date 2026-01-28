@@ -359,3 +359,113 @@ func (h *Handler) SearchDepartments(c echo.Context) error {
 
 	return c.JSON(http.StatusOK, model.NewSuccessResponse("Data retrieved successfully", departments, http.StatusOK))
 }
+
+// GetDepartmentByIDWithLang retrieves a department by ID with language support
+// @Summary Get department by ID with language support
+// @Description Retrieve a specific department by its ID with names translated to specified language
+// @Tags departments
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path string true "Department ID"
+// @Param lang query string false "Language code (uz, ru, en - default: uz)"
+// @Success 200 {object} model.DepartmentResponse "Department details"
+// @Failure 400 {object} model.ErrorResponse "Invalid request parameters"
+// @Failure 401 {object} model.ErrorResponse "Unauthorized"
+// @Failure 404 {object} model.ErrorResponse "Department not found"
+// @Failure 500 {object} model.ErrorResponse "Internal server error"
+// @Router /api/v1/departments-lang/{id} [get]
+func (h *Handler) GetDepartmentByIDWithLang(c echo.Context) error {
+	departmentID := c.Param("id")
+	if departmentID == "" {
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"department id is required",
+			"missing path parameter: id",
+			http.StatusBadRequest,
+		))
+	}
+
+	lang := c.QueryParam("lang")
+	if lang == "" {
+		lang = "uz"
+	}
+
+	validLangs := map[string]bool{"uz": true, "ru": true, "en": true}
+	if !validLangs[lang] {
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"invalid language code",
+			"valid values: uz, ru, en",
+			http.StatusBadRequest,
+		))
+	}
+
+	department, err := h.service.Department().GetDepartmentByIDWithLang(c.Request().Context(), departmentID, lang)
+	if err != nil {
+		log.Printf("GetDepartmentByIDWithLang failed for id %s: %v", departmentID, err)
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse(
+			"failed to get department",
+			err.Error(),
+			http.StatusInternalServerError,
+		))
+	}
+
+	return c.JSON(http.StatusOK, model.NewSuccessResponse("Department retrieved successfully", department, http.StatusOK))
+}
+
+// GetAllDepartmentsWithLang retrieves all departments with language support
+// @Summary Get all departments with language support
+// @Description Retrieve all departments with names translated to specified language
+// @Tags departments
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param lang query string false "Language code (uz, ru, en - default: uz)"
+// @Param limit query int false "Limit (default: 20)"
+// @Param offset query int false "Offset (default: 0)"
+// @Success 200 {array} model.DepartmentResponse "Departments retrieved successfully"
+// @Failure 400 {object} model.ErrorResponse "Invalid request parameters"
+// @Failure 401 {object} model.ErrorResponse "Unauthorized"
+// @Failure 500 {object} model.ErrorResponse "Internal server error"
+// @Router /api/v1/departments-lang [get]
+func (h *Handler) GetAllDepartmentsWithLang(c echo.Context) error {
+	var limit int32 = 20
+	var offset int32 = 0
+
+	if limitStr := c.QueryParam("limit"); limitStr != "" {
+		if l, err := strconv.ParseInt(limitStr, 10, 32); err == nil && l > 0 {
+			limit = int32(l)
+		}
+	}
+
+	if offsetStr := c.QueryParam("offset"); offsetStr != "" {
+		if o, err := strconv.ParseInt(offsetStr, 10, 32); err == nil && o >= 0 {
+			offset = int32(o)
+		}
+	}
+
+	lang := c.QueryParam("lang")
+	if lang == "" {
+		lang = "uz"
+	}
+
+	validLangs := map[string]bool{"uz": true, "ru": true, "en": true}
+	if !validLangs[lang] {
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"invalid language code",
+			"valid values: uz, ru, en",
+			http.StatusBadRequest,
+		))
+	}
+
+	departments, err := h.service.Department().GetAllDepartmentsWithLang(c.Request().Context(), lang, limit, offset)
+	if err != nil {
+		log.Printf("GetAllDepartmentsWithLang failed: %v", err)
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse(
+			"failed to get departments",
+			err.Error(),
+			http.StatusInternalServerError,
+		))
+	}
+
+	return c.JSON(http.StatusOK, model.NewSuccessResponse("Departments retrieved successfully", departments, http.StatusOK))
+}

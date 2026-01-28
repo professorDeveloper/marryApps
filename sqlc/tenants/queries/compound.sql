@@ -379,3 +379,73 @@ LEFT JOIN ingredient_stock iss ON cd.ingredient_id = iss.ingredient_id
     AND iss.deleted_at = 0
 WHERE cd.compound_id = $1 AND cd.deleted_at = 0
 ORDER BY cd.created_at ASC;
+
+-- name: GetCompoundByIDWithLanguage :one
+SELECT 
+    c.id,
+    COALESCE(CASE 
+        WHEN $2::text = 'uz' THEN t_name.uz
+        WHEN $2::text = 'ru' THEN t_name.ru
+        WHEN $2::text = 'en' THEN t_name.en
+        ELSE c.name
+    END, c.name) as name,
+    c.name_i18n,
+    COALESCE(CASE 
+        WHEN $2::text = 'uz' THEN t_desc.uz
+        WHEN $2::text = 'ru' THEN t_desc.ru
+        WHEN $2::text = 'en' THEN t_desc.en
+        ELSE c.description
+    END, c.description) as description,
+    c.description_i18n,
+    c.quantity,
+    c.picture_url,
+    c.color_code,
+    c.measurement,
+    c.price,
+    c.department_id,
+    c.cost_price,
+    c.profit,
+    c.profit_margin,
+    c.created_at,
+    c.updated_at,
+    c.deleted_at
+FROM compounds c
+LEFT JOIN translations t_name ON c.name_i18n = t_name.id AND t_name.deleted_at = 0
+LEFT JOIN translations t_desc ON c.description_i18n = t_desc.id AND t_desc.deleted_at = 0
+WHERE c.id = $1 AND c.deleted_at = 0;
+
+-- name: GetAllCompoundsWithLanguage :many
+SELECT 
+    c.id,
+    COALESCE(CASE 
+        WHEN $1::text = 'uz' THEN t_name.uz
+        WHEN $1::text = 'ru' THEN t_name.ru
+        WHEN $1::text = 'en' THEN t_name.en
+        ELSE c.name
+    END, c.name) as name,
+    c.name_i18n,
+    COALESCE(CASE 
+        WHEN $1::text = 'uz' THEN t_desc.uz
+        WHEN $1::text = 'ru' THEN t_desc.ru
+        WHEN $1::text = 'en' THEN t_desc.en
+        ELSE c.description
+    END, c.description) as description,
+    c.description_i18n,
+    c.quantity,
+    c.picture_url,
+    c.color_code,
+    c.measurement,
+    c.price,
+    c.department_id,
+    c.cost_price,
+    c.profit,
+    c.profit_margin,
+    c.created_at,
+    c.updated_at,
+    c.deleted_at
+FROM compounds c
+LEFT JOIN translations t_name ON c.name_i18n = t_name.id AND t_name.deleted_at = 0
+LEFT JOIN translations t_desc ON c.description_i18n = t_desc.id AND t_desc.deleted_at = 0
+WHERE c.deleted_at = 0
+ORDER BY c.created_at DESC
+LIMIT $2 OFFSET $3;

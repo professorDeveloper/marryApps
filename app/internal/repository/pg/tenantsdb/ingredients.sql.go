@@ -334,6 +334,74 @@ func (q *Queries) GetAllIngredientGroups(ctx context.Context, arg GetAllIngredie
 	return items, nil
 }
 
+const getAllIngredientGroupsWithLanguage = `-- name: GetAllIngredientGroupsWithLanguage :many
+SELECT 
+    ig.id,
+    COALESCE(CASE 
+        WHEN $1::text = 'uz' THEN t.uz
+        WHEN $1::text = 'ru' THEN t.ru
+        WHEN $1::text = 'en' THEN t.en
+        ELSE ig.name
+    END, ig.name) as name,
+    ig.picture_url,
+    ig.name_i18n,
+    ig.color_code,
+    ig.created_at,
+    ig.updated_at,
+    ig.deleted_at
+FROM ingredient_groups ig
+LEFT JOIN translations t ON ig.name_i18n = t.id AND t.deleted_at = 0
+WHERE ig.deleted_at = 0
+ORDER BY ig.created_at DESC
+LIMIT $2 OFFSET $3
+`
+
+type GetAllIngredientGroupsWithLanguageParams struct {
+	Column1 string `json:"column_1"`
+	Limit   int32  `json:"limit"`
+	Offset  int32  `json:"offset"`
+}
+
+type GetAllIngredientGroupsWithLanguageRow struct {
+	ID         uuid.UUID          `json:"id"`
+	Name       string             `json:"name"`
+	PictureUrl *string            `json:"picture_url"`
+	NameI18n   pgtype.UUID        `json:"name_i18n"`
+	ColorCode  *string            `json:"color_code"`
+	CreatedAt  pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt  pgtype.Timestamptz `json:"updated_at"`
+	DeletedAt  *int64             `json:"deleted_at"`
+}
+
+func (q *Queries) GetAllIngredientGroupsWithLanguage(ctx context.Context, arg GetAllIngredientGroupsWithLanguageParams) ([]GetAllIngredientGroupsWithLanguageRow, error) {
+	rows, err := q.db.Query(ctx, getAllIngredientGroupsWithLanguage, arg.Column1, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetAllIngredientGroupsWithLanguageRow
+	for rows.Next() {
+		var i GetAllIngredientGroupsWithLanguageRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.PictureUrl,
+			&i.NameI18n,
+			&i.ColorCode,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.DeletedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getAllIngredientStock = `-- name: GetAllIngredientStock :many
 SELECT id, ingredient_id, quantity, branch_id, created_at, updated_at, deleted_at
 FROM ingredient_stock
@@ -424,6 +492,73 @@ func (q *Queries) GetAllIngredients(ctx context.Context, arg GetAllIngredientsPa
 	return items, nil
 }
 
+const getAllIngredientsWithLanguage = `-- name: GetAllIngredientsWithLanguage :many
+SELECT 
+    i.id,
+    COALESCE(CASE 
+        WHEN $1::text = 'uz' THEN t.uz
+        WHEN $1::text = 'ru' THEN t.ru
+        WHEN $1::text = 'en' THEN t.en
+        ELSE i.name
+    END, i.name) as name,
+    i.name_i18n,
+    i.group_id,
+    i.measurement,
+    i.picture_url,
+    i.color_code,
+    i.brand_id,
+    i.price_per_unit,
+    i.quantity,
+    i.created_at,
+    i.updated_at,
+    i.deleted_at
+FROM ingredients i
+LEFT JOIN translations t ON i.name_i18n = t.id AND t.deleted_at = 0
+WHERE i.deleted_at = 0
+ORDER BY i.created_at DESC
+LIMIT $2 OFFSET $3
+`
+
+type GetAllIngredientsWithLanguageParams struct {
+	Column1 string `json:"column_1"`
+	Limit   int32  `json:"limit"`
+	Offset  int32  `json:"offset"`
+}
+
+func (q *Queries) GetAllIngredientsWithLanguage(ctx context.Context, arg GetAllIngredientsWithLanguageParams) ([]Ingredient, error) {
+	rows, err := q.db.Query(ctx, getAllIngredientsWithLanguage, arg.Column1, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Ingredient
+	for rows.Next() {
+		var i Ingredient
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.NameI18n,
+			&i.GroupID,
+			&i.Measurement,
+			&i.PictureUrl,
+			&i.ColorCode,
+			&i.BrandID,
+			&i.PricePerUnit,
+			&i.Quantity,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.DeletedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getIngredientByID = `-- name: GetIngredientByID :one
 SELECT id, name, name_i18n, group_id, measurement, picture_url, color_code, brand_id, price_per_unit, quantity, created_at, updated_at, deleted_at
 FROM ingredients
@@ -433,6 +568,57 @@ WHERE id = $1 AND deleted_at = 0
 // GetIngredientByID retrieves an ingredient by ID
 func (q *Queries) GetIngredientByID(ctx context.Context, id uuid.UUID) (Ingredient, error) {
 	row := q.db.QueryRow(ctx, getIngredientByID, id)
+	var i Ingredient
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.NameI18n,
+		&i.GroupID,
+		&i.Measurement,
+		&i.PictureUrl,
+		&i.ColorCode,
+		&i.BrandID,
+		&i.PricePerUnit,
+		&i.Quantity,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
+	)
+	return i, err
+}
+
+const getIngredientByIDWithLanguage = `-- name: GetIngredientByIDWithLanguage :one
+SELECT 
+    i.id,
+    COALESCE(CASE 
+        WHEN $2::text = 'uz' THEN t.uz
+        WHEN $2::text = 'ru' THEN t.ru
+        WHEN $2::text = 'en' THEN t.en
+        ELSE i.name
+    END, i.name) as name,
+    i.name_i18n,
+    i.group_id,
+    i.measurement,
+    i.picture_url,
+    i.color_code,
+    i.brand_id,
+    i.price_per_unit,
+    i.quantity,
+    i.created_at,
+    i.updated_at,
+    i.deleted_at
+FROM ingredients i
+LEFT JOIN translations t ON i.name_i18n = t.id AND t.deleted_at = 0
+WHERE i.id = $1 AND i.deleted_at = 0
+`
+
+type GetIngredientByIDWithLanguageParams struct {
+	ID      uuid.UUID `json:"id"`
+	Column2 string    `json:"column_2"`
+}
+
+func (q *Queries) GetIngredientByIDWithLanguage(ctx context.Context, arg GetIngredientByIDWithLanguageParams) (Ingredient, error) {
+	row := q.db.QueryRow(ctx, getIngredientByIDWithLanguage, arg.ID, arg.Column2)
 	var i Ingredient
 	err := row.Scan(
 		&i.ID,
@@ -500,6 +686,58 @@ type GetIngredientGroupByIDRow struct {
 func (q *Queries) GetIngredientGroupByID(ctx context.Context, id uuid.UUID) (GetIngredientGroupByIDRow, error) {
 	row := q.db.QueryRow(ctx, getIngredientGroupByID, id)
 	var i GetIngredientGroupByIDRow
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.PictureUrl,
+		&i.NameI18n,
+		&i.ColorCode,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
+	)
+	return i, err
+}
+
+const getIngredientGroupByIDWithLanguage = `-- name: GetIngredientGroupByIDWithLanguage :one
+SELECT 
+    ig.id,
+    COALESCE(CASE 
+        WHEN $2::text = 'uz' THEN t.uz
+        WHEN $2::text = 'ru' THEN t.ru
+        WHEN $2::text = 'en' THEN t.en
+        ELSE ig.name
+    END, ig.name) as name,
+    ig.picture_url,
+    ig.name_i18n,
+    ig.color_code,
+    ig.created_at,
+    ig.updated_at,
+    ig.deleted_at
+FROM ingredient_groups ig
+LEFT JOIN translations t ON ig.name_i18n = t.id AND t.deleted_at = 0
+WHERE ig.id = $1 AND ig.deleted_at = 0
+`
+
+type GetIngredientGroupByIDWithLanguageParams struct {
+	ID      uuid.UUID `json:"id"`
+	Column2 string    `json:"column_2"`
+}
+
+type GetIngredientGroupByIDWithLanguageRow struct {
+	ID         uuid.UUID          `json:"id"`
+	Name       string             `json:"name"`
+	PictureUrl *string            `json:"picture_url"`
+	NameI18n   pgtype.UUID        `json:"name_i18n"`
+	ColorCode  *string            `json:"color_code"`
+	CreatedAt  pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt  pgtype.Timestamptz `json:"updated_at"`
+	DeletedAt  *int64             `json:"deleted_at"`
+}
+
+func (q *Queries) GetIngredientGroupByIDWithLanguage(ctx context.Context, arg GetIngredientGroupByIDWithLanguageParams) (GetIngredientGroupByIDWithLanguageRow, error) {
+	row := q.db.QueryRow(ctx, getIngredientGroupByIDWithLanguage, arg.ID, arg.Column2)
+	var i GetIngredientGroupByIDWithLanguageRow
 	err := row.Scan(
 		&i.ID,
 		&i.Name,

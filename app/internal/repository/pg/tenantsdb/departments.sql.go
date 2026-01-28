@@ -151,6 +151,77 @@ func (q *Queries) GetAllDepartments(ctx context.Context, arg GetAllDepartmentsPa
 	return items, nil
 }
 
+const getAllDepartmentsWithLanguage = `-- name: GetAllDepartmentsWithLanguage :many
+SELECT 
+    d.id,
+    COALESCE(CASE 
+        WHEN $1::text = 'uz' THEN t.uz
+        WHEN $1::text = 'ru' THEN t.ru
+        WHEN $1::text = 'en' THEN t.en
+        ELSE d.name
+    END, d.name) as name,
+    d.name_i18n,
+    d.storage_id,
+    d.color_code,
+    d.picture_url,
+    d.created_at,
+    d.updated_at,
+    d.deleted_at
+FROM departments d
+LEFT JOIN translations t ON d.name_i18n = t.id AND t.deleted_at = 0
+WHERE d.deleted_at = 0
+ORDER BY d.created_at DESC
+LIMIT $2 OFFSET $3
+`
+
+type GetAllDepartmentsWithLanguageParams struct {
+	Column1 string `json:"column_1"`
+	Limit   int32  `json:"limit"`
+	Offset  int32  `json:"offset"`
+}
+
+type GetAllDepartmentsWithLanguageRow struct {
+	ID         uuid.UUID          `json:"id"`
+	Name       string             `json:"name"`
+	NameI18n   pgtype.UUID        `json:"name_i18n"`
+	StorageID  pgtype.UUID        `json:"storage_id"`
+	ColorCode  *string            `json:"color_code"`
+	PictureUrl *string            `json:"picture_url"`
+	CreatedAt  pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt  pgtype.Timestamptz `json:"updated_at"`
+	DeletedAt  *int64             `json:"deleted_at"`
+}
+
+func (q *Queries) GetAllDepartmentsWithLanguage(ctx context.Context, arg GetAllDepartmentsWithLanguageParams) ([]GetAllDepartmentsWithLanguageRow, error) {
+	rows, err := q.db.Query(ctx, getAllDepartmentsWithLanguage, arg.Column1, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetAllDepartmentsWithLanguageRow
+	for rows.Next() {
+		var i GetAllDepartmentsWithLanguageRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.NameI18n,
+			&i.StorageID,
+			&i.ColorCode,
+			&i.PictureUrl,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.DeletedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getDepartmentByID = `-- name: GetDepartmentByID :one
 SELECT id, name, name_i18n, storage_id, color_code, picture_url, created_at, updated_at, deleted_at
 FROM departments
@@ -172,6 +243,61 @@ type GetDepartmentByIDRow struct {
 func (q *Queries) GetDepartmentByID(ctx context.Context, id uuid.UUID) (GetDepartmentByIDRow, error) {
 	row := q.db.QueryRow(ctx, getDepartmentByID, id)
 	var i GetDepartmentByIDRow
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.NameI18n,
+		&i.StorageID,
+		&i.ColorCode,
+		&i.PictureUrl,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
+	)
+	return i, err
+}
+
+const getDepartmentByIDWithLanguage = `-- name: GetDepartmentByIDWithLanguage :one
+SELECT 
+    d.id,
+    COALESCE(CASE 
+        WHEN $2::text = 'uz' THEN t.uz
+        WHEN $2::text = 'ru' THEN t.ru
+        WHEN $2::text = 'en' THEN t.en
+        ELSE d.name
+    END, d.name) as name,
+    d.name_i18n,
+    d.storage_id,
+    d.color_code,
+    d.picture_url,
+    d.created_at,
+    d.updated_at,
+    d.deleted_at
+FROM departments d
+LEFT JOIN translations t ON d.name_i18n = t.id AND t.deleted_at = 0
+WHERE d.id = $1 AND d.deleted_at = 0
+`
+
+type GetDepartmentByIDWithLanguageParams struct {
+	ID      uuid.UUID `json:"id"`
+	Column2 string    `json:"column_2"`
+}
+
+type GetDepartmentByIDWithLanguageRow struct {
+	ID         uuid.UUID          `json:"id"`
+	Name       string             `json:"name"`
+	NameI18n   pgtype.UUID        `json:"name_i18n"`
+	StorageID  pgtype.UUID        `json:"storage_id"`
+	ColorCode  *string            `json:"color_code"`
+	PictureUrl *string            `json:"picture_url"`
+	CreatedAt  pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt  pgtype.Timestamptz `json:"updated_at"`
+	DeletedAt  *int64             `json:"deleted_at"`
+}
+
+func (q *Queries) GetDepartmentByIDWithLanguage(ctx context.Context, arg GetDepartmentByIDWithLanguageParams) (GetDepartmentByIDWithLanguageRow, error) {
+	row := q.db.QueryRow(ctx, getDepartmentByIDWithLanguage, arg.ID, arg.Column2)
+	var i GetDepartmentByIDWithLanguageRow
 	err := row.Scan(
 		&i.ID,
 		&i.Name,

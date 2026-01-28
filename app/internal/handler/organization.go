@@ -4,6 +4,7 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
@@ -303,6 +304,53 @@ func (h *Handler) GetAllTranslations(c echo.Context) error {
 	return c.JSON(http.StatusOK, model.NewSuccessResponse("Data retrieved successfully", translations, http.StatusOK))
 }
 
+// UpdateTranslation updates a translation
+// @Summary Update translation
+// @Description Update an existing translation by ID (partial update of uz/ru/en)
+// @Tags translations
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path string true "Translation ID"
+// @Param input body model.UpdateTranslationRequest true "Translation update data"
+// @Success 200 {object} model.TranslationResponse "Translation updated successfully"
+// @Failure 400 {object} model.ErrorResponse "Invalid request data"
+// @Failure 401 {object} model.ErrorResponse "Unauthorized"
+// @Failure 404 {object} model.ErrorResponse "Translation not found"
+// @Failure 500 {object} model.ErrorResponse "Internal server error"
+// @Router /api/v1/translations/{id} [put]
+func (h *Handler) UpdateTranslation(c echo.Context) error {
+	translationID := c.Param("id")
+	if translationID == "" {
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("translation id is required", "see logs for details", http.StatusBadRequest))
+	}
+
+	if _, err := uuid.Parse(translationID); err != nil {
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("invalid translation id format", "see logs for details", http.StatusBadRequest))
+	}
+
+	var req model.UpdateTranslationRequest
+	if err := c.Bind(&req); err != nil {
+		log.Printf("Failed to bind update translation request: %v", err)
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("invalid request format", "see logs for details", http.StatusBadRequest))
+	}
+
+	if req.Uz == nil && req.Ru == nil && req.En == nil {
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("invalid request", "at least one of uz, ru, en must be provided", http.StatusBadRequest))
+	}
+
+	translation, err := h.service.Organization().UpdateTranslation(c.Request().Context(), translationID, req.Uz, req.Ru, req.En)
+	if err != nil {
+		log.Printf("UpdateTranslation failed for id %s: %v", translationID, err)
+		if strings.Contains(err.Error(), "no rows") || strings.Contains(err.Error(), "not found") {
+			return c.JSON(http.StatusNotFound, model.NewErrorResponse("translation not found", "see logs for details", http.StatusNotFound))
+		}
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("failed to update translation", "see logs for details", http.StatusInternalServerError))
+	}
+
+	return c.JSON(http.StatusOK, model.NewSuccessResponse("Translation updated successfully", translation, http.StatusOK))
+}
+
 // DeleteTranslation deletes a translation
 // @Summary Delete translation
 // @Description Soft delete a translation (mark as deleted without removing from database)
@@ -363,4 +411,104 @@ func (h *Handler) RestoreTranslation(c echo.Context) error {
 	}
 
 	return c.JSON(http.StatusOK, model.NewSuccessResponse("Translation restored successfully", map[string]interface{}{}, http.StatusOK))
+}
+
+// ==================== BRANCH WITH LANGUAGE HANDLERS ====================
+
+// GetBranchByIDWithLang retrieves a branch by ID with language support
+// @Summary Get branch by ID with language support
+// @Description Retrieve a specific branch by its ID with names translated to specified language
+// @Tags branches
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path string true "Branch ID"
+// @Param lang query string false "Language code (uz, ru, en - default: uz)"
+// @Success 200 {object} model.BranchResponse "Branch details"
+// @Failure 400 {object} model.ErrorResponse "Invalid request parameters"
+// @Failure 401 {object} model.ErrorResponse "Unauthorized"
+// @Failure 404 {object} model.ErrorResponse "Branch not found"
+// @Failure 500 {object} model.ErrorResponse "Internal server error"
+// @Router /api/v1/branches-lang/{id} [get]
+func (h *Handler) GetBranchByIDWithLang(c echo.Context) error {
+	branchID := c.Param("id")
+	if branchID == "" {
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("branch id is required", "see logs for details", http.StatusBadRequest))
+	}
+
+	if _, err := uuid.Parse(branchID); err != nil {
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("invalid branch id format", "see logs for details", http.StatusBadRequest))
+	}
+
+	lang := c.QueryParam("lang")
+	if lang == "" {
+		lang = "uz"
+	}
+
+	validLangs := map[string]bool{"uz": true, "ru": true, "en": true}
+	if !validLangs[lang] {
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("invalid language code", "valid values: uz, ru, en", http.StatusBadRequest))
+	}
+
+	branch, err := h.service.Organization().GetBranchByIDWithLang(c.Request().Context(), branchID, lang)
+	if err != nil {
+		log.Printf("GetBranchByIDWithLang failed for id %s: %v", branchID, err)
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("failed to fetch branch", "see logs for details", http.StatusInternalServerError))
+	}
+
+	if branch == nil {
+		return c.JSON(http.StatusNotFound, model.NewErrorResponse("branch not found", "see logs for details", http.StatusNotFound))
+	}
+
+	return c.JSON(http.StatusOK, model.NewSuccessResponse("Branch retrieved successfully", branch, http.StatusOK))
+}
+
+// GetAllBranchesWithLang retrieves all branches with language support
+// @Summary Get all branches with language support
+// @Description Retrieve all branches with names translated to specified language
+// @Tags branches
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param lang query string false "Language code (uz, ru, en - default: uz)"
+// @Param limit query int false "Limit (default: 20)"
+// @Param offset query int false "Offset (default: 0)"
+// @Success 200 {array} model.BranchResponse "Branches retrieved successfully"
+// @Failure 400 {object} model.ErrorResponse "Invalid request parameters"
+// @Failure 401 {object} model.ErrorResponse "Unauthorized"
+// @Failure 500 {object} model.ErrorResponse "Internal server error"
+// @Router /api/v1/branches-lang [get]
+func (h *Handler) GetAllBranchesWithLang(c echo.Context) error {
+	var limit int32 = 20
+	var offset int32 = 0
+
+	if limitStr := c.QueryParam("limit"); limitStr != "" {
+		if l, err := strconv.ParseInt(limitStr, 10, 32); err == nil && l > 0 {
+			limit = int32(l)
+		}
+	}
+
+	if offsetStr := c.QueryParam("offset"); offsetStr != "" {
+		if o, err := strconv.ParseInt(offsetStr, 10, 32); err == nil && o >= 0 {
+			offset = int32(o)
+		}
+	}
+
+	lang := c.QueryParam("lang")
+	if lang == "" {
+		lang = "uz"
+	}
+
+	validLangs := map[string]bool{"uz": true, "ru": true, "en": true}
+	if !validLangs[lang] {
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("invalid language code", "valid values: uz, ru, en", http.StatusBadRequest))
+	}
+
+	branches, err := h.service.Organization().GetAllBranchesWithLang(c.Request().Context(), lang, limit, offset)
+	if err != nil {
+		log.Printf("GetAllBranchesWithLang failed: %v", err)
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("failed to fetch branches", "see logs for details", http.StatusInternalServerError))
+	}
+
+	return c.JSON(http.StatusOK, model.NewSuccessResponse("Branches retrieved successfully", branches, http.StatusOK))
 }

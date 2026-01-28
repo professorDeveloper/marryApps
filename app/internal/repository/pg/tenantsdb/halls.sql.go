@@ -119,6 +119,61 @@ func (q *Queries) GetAllHalls(ctx context.Context, arg GetAllHallsParams) ([]Hal
 	return items, nil
 }
 
+const getAllHallsWithLanguage = `-- name: GetAllHallsWithLanguage :many
+SELECT 
+    h.id,
+    h.branch_id,
+    COALESCE(CASE 
+        WHEN $1::text = 'uz' THEN t.uz
+        WHEN $1::text = 'ru' THEN t.ru
+        WHEN $1::text = 'en' THEN t.en
+        ELSE h.name
+    END, h.name) as name,
+    h.name_i18n,
+    h.created_at,
+    h.updated_at,
+    h.deleted_at
+FROM halls h
+LEFT JOIN translations t ON h.name_i18n = t.id AND t.deleted_at = 0
+WHERE h.deleted_at = 0
+ORDER BY h.created_at DESC
+LIMIT $2 OFFSET $3
+`
+
+type GetAllHallsWithLanguageParams struct {
+	Column1 string `json:"column_1"`
+	Limit   int32  `json:"limit"`
+	Offset  int32  `json:"offset"`
+}
+
+func (q *Queries) GetAllHallsWithLanguage(ctx context.Context, arg GetAllHallsWithLanguageParams) ([]Hall, error) {
+	rows, err := q.db.Query(ctx, getAllHallsWithLanguage, arg.Column1, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Hall
+	for rows.Next() {
+		var i Hall
+		if err := rows.Scan(
+			&i.ID,
+			&i.BranchID,
+			&i.Name,
+			&i.NameI18n,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.DeletedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getHallByID = `-- name: GetHallByID :one
 SELECT id, branch_id, name, name_i18n, created_at, updated_at, deleted_at
 FROM halls
@@ -198,6 +253,67 @@ type GetHallsByBranchIDParams struct {
 
 func (q *Queries) GetHallsByBranchID(ctx context.Context, arg GetHallsByBranchIDParams) ([]Hall, error) {
 	rows, err := q.db.Query(ctx, getHallsByBranchID, arg.BranchID, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Hall
+	for rows.Next() {
+		var i Hall
+		if err := rows.Scan(
+			&i.ID,
+			&i.BranchID,
+			&i.Name,
+			&i.NameI18n,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.DeletedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getHallsByBranchIDWithLanguage = `-- name: GetHallsByBranchIDWithLanguage :many
+SELECT 
+    h.id,
+    h.branch_id,
+    COALESCE(CASE 
+        WHEN $2::text = 'uz' THEN t.uz
+        WHEN $2::text = 'ru' THEN t.ru
+        WHEN $2::text = 'en' THEN t.en
+        ELSE h.name
+    END, h.name) as name,
+    h.name_i18n,
+    h.created_at,
+    h.updated_at,
+    h.deleted_at
+FROM halls h
+LEFT JOIN translations t ON h.name_i18n = t.id AND t.deleted_at = 0
+WHERE h.branch_id = $1 AND h.deleted_at = 0
+ORDER BY h.created_at DESC
+LIMIT $3 OFFSET $4
+`
+
+type GetHallsByBranchIDWithLanguageParams struct {
+	BranchID uuid.UUID `json:"branch_id"`
+	Column2  string    `json:"column_2"`
+	Limit    int32     `json:"limit"`
+	Offset   int32     `json:"offset"`
+}
+
+func (q *Queries) GetHallsByBranchIDWithLanguage(ctx context.Context, arg GetHallsByBranchIDWithLanguageParams) ([]Hall, error) {
+	rows, err := q.db.Query(ctx, getHallsByBranchIDWithLanguage,
+		arg.BranchID,
+		arg.Column2,
+		arg.Limit,
+		arg.Offset,
+	)
 	if err != nil {
 		return nil, err
 	}

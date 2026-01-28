@@ -426,3 +426,73 @@ SELECT COUNT(*) FROM goods_details WHERE good_id = $1 AND deleted_at = 0;
 -- GROUP BY g.id, g.name, g.description, g.price, g.cook_time, g.category_id
 -- ORDER BY g.name ASC
 -- LIMIT $1 OFFSET $2;
+
+-- name: GetGoodByIDWithLanguage :one
+SELECT 
+    g.id,
+    COALESCE(CASE 
+        WHEN $2::text = 'uz' THEN t_name.uz
+        WHEN $2::text = 'ru' THEN t_name.ru
+        WHEN $2::text = 'en' THEN t_name.en
+        ELSE g.name
+    END, g.name) as name,
+    COALESCE(CASE 
+        WHEN $2::text = 'uz' THEN t_desc.uz
+        WHEN $2::text = 'ru' THEN t_desc.ru
+        WHEN $2::text = 'en' THEN t_desc.en
+        ELSE g.description
+    END, g.description) as description,
+    g.name_i18n,
+    g.description_i18n,
+    g.category_id,
+    g.department_id,
+    g.picture_url,
+    g.color_code,
+    g.price,
+    g.cook_time,
+    g.cost_price,
+    g.profit,
+    g.profit_margin,
+    g.created_at,
+    g.updated_at,
+    g.deleted_at
+FROM goods g
+LEFT JOIN translations t_name ON g.name_i18n = t_name.id AND t_name.deleted_at = 0
+LEFT JOIN translations t_desc ON g.description_i18n = t_desc.id AND t_desc.deleted_at = 0
+WHERE g.id = $1 AND g.deleted_at = 0;
+
+-- name: GetAllGoodsWithLanguage :many
+SELECT 
+    g.id,
+    COALESCE(CASE 
+        WHEN $1::text = 'uz' THEN t_name.uz
+        WHEN $1::text = 'ru' THEN t_name.ru
+        WHEN $1::text = 'en' THEN t_name.en
+        ELSE g.name
+    END, g.name) as name,
+    COALESCE(CASE 
+        WHEN $1::text = 'uz' THEN t_desc.uz
+        WHEN $1::text = 'ru' THEN t_desc.ru
+        WHEN $1::text = 'en' THEN t_desc.en
+        ELSE g.description
+    END, g.description) as description,
+    g.name_i18n,
+    g.description_i18n,
+    g.category_id,
+    g.department_id,
+    g.picture_url,
+    g.color_code,
+    g.price,
+    g.cook_time,
+    g.cost_price,
+    g.profit,
+    g.profit_margin,
+    g.created_at,
+    g.updated_at,
+    g.deleted_at
+FROM goods g
+LEFT JOIN translations t_name ON g.name_i18n = t_name.id AND t_name.deleted_at = 0
+LEFT JOIN translations t_desc ON g.description_i18n = t_desc.id AND t_desc.deleted_at = 0
+WHERE g.deleted_at = 0
+ORDER BY g.created_at DESC
+LIMIT $2 OFFSET $3;

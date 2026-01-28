@@ -127,6 +127,25 @@ func (o *OrganizationS) GetAllTranslations(ctx context.Context, limit, offset in
 	return responses, nil
 }
 
+func (o *OrganizationS) UpdateTranslation(ctx context.Context, translationID string, uz, ru, en *string) (*model.TranslationResponse, error) {
+	id, err := uuid.Parse(translationID)
+	if err != nil {
+		return nil, fmt.Errorf("invalid translation ID: %w", err)
+	}
+
+	translation, err := o.repo.Tenant(ctx).UpdateTranslation(ctx, pg.UpdateTranslationParams{
+		ID: id,
+		Uz: uz,
+		Ru: ru,
+		En: en,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to update translation: %w", err)
+	}
+
+	return toTranslationResponse(translation), nil
+}
+
 // DeleteTranslation soft deletes a translation
 func (o *OrganizationS) DeleteTranslation(ctx context.Context, translationID string) error {
 	id, err := uuid.Parse(translationID)
@@ -182,6 +201,39 @@ func toBranchResponse(b pg.Branch) *model.BranchResponse {
 		CreatedAt: createdAt,
 		UpdatedAt: updatedAt,
 	}
+}
+
+// GetBranchByIDWithLang retrieves a branch by ID with language support
+func (o *OrganizationS) GetBranchByIDWithLang(ctx context.Context, branchID string, lang string) (*model.BranchResponse, error) {
+	id, err := uuid.Parse(branchID)
+	if err != nil {
+		return nil, fmt.Errorf("invalid branch ID: %w", err)
+	}
+	branch, err := o.repo.Tenant(ctx).GetBranchByIDWithLanguage(ctx, pg.GetBranchByIDWithLanguageParams{
+		ID:      id,
+		Column2: lang,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to get branch: %w", err)
+	}
+	return toBranchResponse(branch), nil
+}
+
+// GetAllBranchesWithLang retrieves all branches with language support
+func (o *OrganizationS) GetAllBranchesWithLang(ctx context.Context, lang string, limit, offset int32) ([]model.BranchResponse, error) {
+	branches, err := o.repo.Tenant(ctx).GetAllBranchesWithLanguage(ctx, pg.GetAllBranchesWithLanguageParams{
+		Column1: lang,
+		Limit:   limit,
+		Offset:  offset,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to get branches: %w", err)
+	}
+	var responses []model.BranchResponse
+	for _, b := range branches {
+		responses = append(responses, *toBranchResponse(b))
+	}
+	return responses, nil
 }
 
 func toTranslationResponse(t pg.Translation) *model.TranslationResponse {

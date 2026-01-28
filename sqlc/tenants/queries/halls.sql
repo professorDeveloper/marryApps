@@ -69,4 +69,43 @@ FROM halls h
 LEFT JOIN branches b ON h.branch_id = b.id AND b.deleted_at = 0
 WHERE h.id = $1 AND h.deleted_at = 0;
 
+-- name: GetAllHallsWithLanguage :many
+SELECT 
+    h.id,
+    h.branch_id,
+    COALESCE(CASE 
+        WHEN $1::text = 'uz' THEN t.uz
+        WHEN $1::text = 'ru' THEN t.ru
+        WHEN $1::text = 'en' THEN t.en
+        ELSE h.name
+    END, h.name) as name,
+    h.name_i18n,
+    h.created_at,
+    h.updated_at,
+    h.deleted_at
+FROM halls h
+LEFT JOIN translations t ON h.name_i18n = t.id AND t.deleted_at = 0
+WHERE h.deleted_at = 0
+ORDER BY h.created_at DESC
+LIMIT $2 OFFSET $3;
+
+-- name: GetHallsByBranchIDWithLanguage :many
+SELECT 
+    h.id,
+    h.branch_id,
+    COALESCE(CASE 
+        WHEN $2::text = 'uz' THEN t.uz
+        WHEN $2::text = 'ru' THEN t.ru
+        WHEN $2::text = 'en' THEN t.en
+        ELSE h.name
+    END, h.name) as name,
+    h.name_i18n,
+    h.created_at,
+    h.updated_at,
+    h.deleted_at
+FROM halls h
+LEFT JOIN translations t ON h.name_i18n = t.id AND t.deleted_at = 0
+WHERE h.branch_id = $1 AND h.deleted_at = 0
+ORDER BY h.created_at DESC
+LIMIT $3 OFFSET $4;
 

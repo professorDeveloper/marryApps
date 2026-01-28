@@ -228,3 +228,94 @@ WHERE id = $1 AND deleted_at != 0;
 -- CountIngredientStock counts total ingredient stock entries
 -- name: CountIngredientStock :one
 SELECT COUNT(*) FROM ingredient_stock WHERE deleted_at = 0;
+
+-- name: GetIngredientGroupByIDWithLanguage :one
+SELECT 
+    ig.id,
+    COALESCE(CASE 
+        WHEN $2::text = 'uz' THEN t.uz
+        WHEN $2::text = 'ru' THEN t.ru
+        WHEN $2::text = 'en' THEN t.en
+        ELSE ig.name
+    END, ig.name) as name,
+    ig.picture_url,
+    ig.name_i18n,
+    ig.color_code,
+    ig.created_at,
+    ig.updated_at,
+    ig.deleted_at
+FROM ingredient_groups ig
+LEFT JOIN translations t ON ig.name_i18n = t.id AND t.deleted_at = 0
+WHERE ig.id = $1 AND ig.deleted_at = 0;
+
+-- name: GetAllIngredientGroupsWithLanguage :many
+SELECT 
+    ig.id,
+    COALESCE(CASE 
+        WHEN $1::text = 'uz' THEN t.uz
+        WHEN $1::text = 'ru' THEN t.ru
+        WHEN $1::text = 'en' THEN t.en
+        ELSE ig.name
+    END, ig.name) as name,
+    ig.picture_url,
+    ig.name_i18n,
+    ig.color_code,
+    ig.created_at,
+    ig.updated_at,
+    ig.deleted_at
+FROM ingredient_groups ig
+LEFT JOIN translations t ON ig.name_i18n = t.id AND t.deleted_at = 0
+WHERE ig.deleted_at = 0
+ORDER BY ig.created_at DESC
+LIMIT $2 OFFSET $3;
+
+-- name: GetIngredientByIDWithLanguage :one
+SELECT 
+    i.id,
+    COALESCE(CASE 
+        WHEN $2::text = 'uz' THEN t.uz
+        WHEN $2::text = 'ru' THEN t.ru
+        WHEN $2::text = 'en' THEN t.en
+        ELSE i.name
+    END, i.name) as name,
+    i.name_i18n,
+    i.group_id,
+    i.measurement,
+    i.picture_url,
+    i.color_code,
+    i.brand_id,
+    i.price_per_unit,
+    i.quantity,
+    i.created_at,
+    i.updated_at,
+    i.deleted_at
+FROM ingredients i
+LEFT JOIN translations t ON i.name_i18n = t.id AND t.deleted_at = 0
+WHERE i.id = $1 AND i.deleted_at = 0;
+
+-- name: GetAllIngredientsWithLanguage :many
+SELECT 
+    i.id,
+    COALESCE(CASE 
+        WHEN $1::text = 'uz' THEN t.uz
+        WHEN $1::text = 'ru' THEN t.ru
+        WHEN $1::text = 'en' THEN t.en
+        ELSE i.name
+    END, i.name) as name,
+    i.name_i18n,
+    i.group_id,
+    i.measurement,
+    i.picture_url,
+    i.color_code,
+    i.brand_id,
+    i.price_per_unit,
+    i.quantity,
+    i.created_at,
+    i.updated_at,
+    i.deleted_at
+FROM ingredients i
+LEFT JOIN translations t ON i.name_i18n = t.id AND t.deleted_at = 0
+WHERE i.deleted_at = 0
+ORDER BY i.created_at DESC
+LIMIT $2 OFFSET $3;
+

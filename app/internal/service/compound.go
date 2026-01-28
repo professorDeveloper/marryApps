@@ -897,3 +897,41 @@ func (c *CompoundS) RecalculateCompoundPrice(ctx context.Context, compoundID str
 
 	return compoundToResponseAny(updated), nil
 }
+
+// GetCompoundByIDWithLang retrieves compound by ID with language support
+func (c *CompoundS) GetCompoundByIDWithLang(ctx context.Context, compoundID string, lang string) (*model.CompoundResponse, error) {
+	id, err := uuid.Parse(compoundID)
+	if err != nil {
+		return nil, fmt.Errorf("invalid compound ID: %w", err)
+	}
+
+	compound, err := c.repo.Tenant(ctx).GetCompoundByIDWithLanguage(ctx, pg.GetCompoundByIDWithLanguageParams{
+		ID:      id,
+		Column2: lang,
+	})
+	if err != nil {
+		log.Printf("GetCompoundByIDWithLang failed: %v", err)
+		return nil, fmt.Errorf("failed to get compound: %w", err)
+	}
+
+	return compoundToResponseAny(compound), nil
+}
+
+// GetAllCompoundsWithLang retrieves all compounds with language support
+func (c *CompoundS) GetAllCompoundsWithLang(ctx context.Context, lang string, limit, offset int32) ([]*model.CompoundResponse, error) {
+	compounds, err := c.repo.Tenant(ctx).GetAllCompoundsWithLanguage(ctx, pg.GetAllCompoundsWithLanguageParams{
+		Column1: lang,
+		Limit:   limit,
+		Offset:  offset,
+	})
+	if err != nil {
+		log.Printf("GetAllCompoundsWithLang failed: %v", err)
+		return nil, fmt.Errorf("failed to get compounds: %w", err)
+	}
+
+	var responses []*model.CompoundResponse
+	for _, compound := range compounds {
+		responses = append(responses, compoundToResponseAny(compound))
+	}
+	return responses, nil
+}

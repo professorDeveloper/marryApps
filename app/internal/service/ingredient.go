@@ -715,3 +715,75 @@ func toIngredientStockResponse(s pg.IngredientStock) *model.IngredientStockRespo
 		UpdatedAt:    updatedAt,
 	}
 }
+
+// GetIngredientGroupByIDWithLang retrieves ingredient group by ID with language support
+func (i *IngredientS) GetIngredientGroupByIDWithLang(ctx context.Context, groupID string, lang string) (*model.IngredientGroupResponse, error) {
+	id, err := uuid.Parse(groupID)
+	if err != nil {
+		return nil, fmt.Errorf("invalid group ID: %w", err)
+	}
+
+	group, err := i.repo.Tenant(ctx).GetIngredientGroupByIDWithLanguage(ctx, pg.GetIngredientGroupByIDWithLanguageParams{
+		ID:      id,
+		Column2: lang,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to get ingredient group: %w", err)
+	}
+
+	return mapIngredientGroupToResponse(group.ID, group.Name, group.NameI18n, group.PictureUrl, group.ColorCode, group.CreatedAt, group.UpdatedAt), nil
+}
+
+// GetAllIngredientGroupsWithLang retrieves all ingredient groups with language support
+func (i *IngredientS) GetAllIngredientGroupsWithLang(ctx context.Context, lang string, limit, offset int32) ([]model.IngredientGroupResponse, error) {
+	groups, err := i.repo.Tenant(ctx).GetAllIngredientGroupsWithLanguage(ctx, pg.GetAllIngredientGroupsWithLanguageParams{
+		Column1: lang,
+		Limit:   limit,
+		Offset:  offset,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to get ingredient groups: %w", err)
+	}
+
+	var responses []model.IngredientGroupResponse
+	for _, group := range groups {
+		responses = append(responses, *mapIngredientGroupToResponse(group.ID, group.Name, group.NameI18n, group.PictureUrl, group.ColorCode, group.CreatedAt, group.UpdatedAt))
+	}
+	return responses, nil
+}
+
+// GetIngredientByIDWithLang retrieves ingredient by ID with language support
+func (i *IngredientS) GetIngredientByIDWithLang(ctx context.Context, ingredientID string, lang string) (*model.IngredientResponse, error) {
+	id, err := uuid.Parse(ingredientID)
+	if err != nil {
+		return nil, fmt.Errorf("invalid ingredient ID: %w", err)
+	}
+
+	ingredient, err := i.repo.Tenant(ctx).GetIngredientByIDWithLanguage(ctx, pg.GetIngredientByIDWithLanguageParams{
+		ID:      id,
+		Column2: lang,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to get ingredient: %w", err)
+	}
+
+	return mapIngredientToResponse(ingredient), nil
+}
+
+// GetAllIngredientsWithLang retrieves all ingredients with language support
+func (i *IngredientS) GetAllIngredientsWithLang(ctx context.Context, lang string, limit, offset int32) ([]model.IngredientResponse, error) {
+	ingredients, err := i.repo.Tenant(ctx).GetAllIngredientsWithLanguage(ctx, pg.GetAllIngredientsWithLanguageParams{
+		Column1: lang,
+		Limit:   limit,
+		Offset:  offset,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to get ingredients: %w", err)
+	}
+
+	var responses []model.IngredientResponse
+	for _, ingredient := range ingredients {
+		responses = append(responses, *mapIngredientToResponse(ingredient))
+	}
+	return responses, nil
+}

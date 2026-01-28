@@ -333,3 +333,97 @@ func (h *Handler) SearchStorages(c echo.Context) error {
 
 	return c.JSON(http.StatusOK, model.NewSuccessResponse("Data retrieved successfully", storages, http.StatusOK))
 }
+
+// GetStorageByIDWithLang retrieves a storage by ID with language support
+// @Summary Get storage by ID with language support
+// @Description Retrieve a specific storage by its ID with names translated to specified language
+// @Tags storages
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path string true "Storage ID"
+// @Param lang query string false "Language code (uz, ru, en - default: uz)"
+// @Success 200 {object} model.StorageResponse "Storage details"
+// @Failure 400 {object} model.ErrorResponse "Invalid request parameters"
+// @Failure 401 {object} model.ErrorResponse "Unauthorized"
+// @Failure 404 {object} model.ErrorResponse "Storage not found"
+// @Failure 500 {object} model.ErrorResponse "Internal server error"
+// @Router /api/v1/storages-lang/{id} [get]
+func (h *Handler) GetStorageByIDWithLang(c echo.Context) error {
+	storageID := c.Param("id")
+	if storageID == "" {
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("storage id is required", "see logs for details", http.StatusBadRequest))
+	}
+
+	if _, err := uuid.Parse(storageID); err != nil {
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("invalid storage id format", "see logs for details", http.StatusBadRequest))
+	}
+
+	lang := c.QueryParam("lang")
+	if lang == "" {
+		lang = "uz"
+	}
+
+	validLangs := map[string]bool{"uz": true, "ru": true, "en": true}
+	if !validLangs[lang] {
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("invalid language code", "valid values: uz, ru, en", http.StatusBadRequest))
+	}
+
+	storage, err := h.service.Storage().GetStorageByIDWithLang(c.Request().Context(), storageID, lang)
+	if err != nil {
+		log.Printf("GetStorageByIDWithLang failed for id %s: %v", storageID, err)
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("failed to fetch storage", "see logs for details", http.StatusInternalServerError))
+	}
+
+	return c.JSON(http.StatusOK, model.NewSuccessResponse("Storage retrieved successfully", storage, http.StatusOK))
+}
+
+// GetAllStoragesWithLang retrieves all storages with language support
+// @Summary Get all storages with language support
+// @Description Retrieve all storages with names translated to specified language
+// @Tags storages
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param lang query string false "Language code (uz, ru, en - default: uz)"
+// @Param limit query int false "Limit (default: 20)"
+// @Param offset query int false "Offset (default: 0)"
+// @Success 200 {array} model.StorageResponse "Storages retrieved successfully"
+// @Failure 400 {object} model.ErrorResponse "Invalid request parameters"
+// @Failure 401 {object} model.ErrorResponse "Unauthorized"
+// @Failure 500 {object} model.ErrorResponse "Internal server error"
+// @Router /api/v1/storages-lang [get]
+func (h *Handler) GetAllStoragesWithLang(c echo.Context) error {
+	var limit int32 = 20
+	var offset int32 = 0
+
+	if limitStr := c.QueryParam("limit"); limitStr != "" {
+		if l, err := strconv.ParseInt(limitStr, 10, 32); err == nil && l > 0 {
+			limit = int32(l)
+		}
+	}
+
+	if offsetStr := c.QueryParam("offset"); offsetStr != "" {
+		if o, err := strconv.ParseInt(offsetStr, 10, 32); err == nil && o >= 0 {
+			offset = int32(o)
+		}
+	}
+
+	lang := c.QueryParam("lang")
+	if lang == "" {
+		lang = "uz"
+	}
+
+	validLangs := map[string]bool{"uz": true, "ru": true, "en": true}
+	if !validLangs[lang] {
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("invalid language code", "valid values: uz, ru, en", http.StatusBadRequest))
+	}
+
+	storages, err := h.service.Storage().GetAllStoragesWithLang(c.Request().Context(), lang, limit, offset)
+	if err != nil {
+		log.Printf("GetAllStoragesWithLang failed: %v", err)
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("failed to fetch storages", "see logs for details", http.StatusInternalServerError))
+	}
+
+	return c.JSON(http.StatusOK, model.NewSuccessResponse("Storages retrieved successfully", storages, http.StatusOK))
+}

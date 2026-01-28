@@ -232,4 +232,41 @@ func (s *StorageS) SearchStorages(ctx context.Context, query string, limit, offs
 	return responses, nil
 }
 
+// GetStorageByIDWithLang retrieves storage by ID with language support
+func (s *StorageS) GetStorageByIDWithLang(ctx context.Context, storageID string, lang string) (*model.StorageResponse, error) {
+	id, err := uuid.Parse(storageID)
+	if err != nil {
+		return nil, fmt.Errorf("invalid storage ID: %w", err)
+	}
+
+	storage, err := s.repo.Tenant(ctx).GetStorageByIDWithLanguage(ctx, pg.GetStorageByIDWithLanguageParams{
+		ID:      id,
+		Column2: lang,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to get storage: %w", err)
+	}
+
+	return mapStorageToResponse(storage.ID, storage.Name, storage.BranchID, storage.NameI18n, storage.PictureUrl, storage.ColorCode, storage.CreatedAt, storage.UpdatedAt), nil
+}
+
+// GetAllStoragesWithLang retrieves all storages with language support
+func (s *StorageS) GetAllStoragesWithLang(ctx context.Context, lang string, limit, offset int32) ([]model.StorageResponse, error) {
+	storages, err := s.repo.Tenant(ctx).GetAllStoragesWithLanguage(ctx, pg.GetAllStoragesWithLanguageParams{
+		Column1: lang,
+		Limit:   limit,
+		Offset:  offset,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to get storages: %w", err)
+	}
+
+	var responses []model.StorageResponse
+	for _, str := range storages {
+		responses = append(responses, *mapStorageToResponse(str.ID, str.Name, str.BranchID, str.NameI18n, str.PictureUrl, str.ColorCode, str.CreatedAt, str.UpdatedAt))
+	}
+
+	return responses, nil
+}
+
 // Helper function

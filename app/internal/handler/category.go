@@ -455,3 +455,93 @@ func (h *Handler) SearchCategories(c echo.Context) error {
 
 	return c.JSON(http.StatusOK, model.NewSuccessResponse("Data retrieved successfully", categories, http.StatusOK))
 }
+
+// GetCategoryByIDWithLang retrieves a category by ID with language support
+// @Summary Get category by ID with language support
+// @Description Retrieve a specific category by its ID with names translated to specified language
+// @Tags categories
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path string true "Category ID"
+// @Param lang query string false "Language code (uz, ru, en - default: uz)"
+// @Success 200 {object} model.CategoryResponse "Category details"
+// @Failure 400 {object} model.ErrorResponse "Invalid request parameters"
+// @Failure 401 {object} model.ErrorResponse "Unauthorized"
+// @Failure 404 {object} model.ErrorResponse "Category not found"
+// @Failure 500 {object} model.ErrorResponse "Internal server error"
+// @Router /api/v1/categories-lang/{id} [get]
+func (h *Handler) GetCategoryByIDWithLang(c echo.Context) error {
+	categoryID := c.Param("id")
+	if categoryID == "" {
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("category id is required", "see logs for details", http.StatusBadRequest))
+	}
+
+	lang := c.QueryParam("lang")
+	if lang == "" {
+		lang = "uz"
+	}
+
+	validLangs := map[string]bool{"uz": true, "ru": true, "en": true}
+	if !validLangs[lang] {
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("invalid language code", "valid values: uz, ru, en", http.StatusBadRequest))
+	}
+
+	category, err := h.service.Category().GetCategoryByIDWithLang(c.Request().Context(), categoryID, lang)
+	if err != nil {
+		log.Printf("GetCategoryByIDWithLang failed for id %s: %v", categoryID, err)
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("failed to get category", err.Error(), http.StatusInternalServerError))
+	}
+
+	return c.JSON(http.StatusOK, model.NewSuccessResponse("Category retrieved successfully", category, http.StatusOK))
+}
+
+// GetAllCategoriesWithLang retrieves all categories with language support
+// @Summary Get all categories with language support
+// @Description Retrieve all categories with names translated to specified language
+// @Tags categories
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param lang query string false "Language code (uz, ru, en - default: uz)"
+// @Param limit query int false "Limit (default: 20)"
+// @Param offset query int false "Offset (default: 0)"
+// @Success 200 {array} model.CategoryResponse "Categories retrieved successfully"
+// @Failure 400 {object} model.ErrorResponse "Invalid request parameters"
+// @Failure 401 {object} model.ErrorResponse "Unauthorized"
+// @Failure 500 {object} model.ErrorResponse "Internal server error"
+// @Router /api/v1/categories-lang [get]
+func (h *Handler) GetAllCategoriesWithLang(c echo.Context) error {
+	var limit int32 = 20
+	var offset int32 = 0
+
+	if limitStr := c.QueryParam("limit"); limitStr != "" {
+		if l, err := strconv.ParseInt(limitStr, 10, 32); err == nil && l > 0 {
+			limit = int32(l)
+		}
+	}
+
+	if offsetStr := c.QueryParam("offset"); offsetStr != "" {
+		if o, err := strconv.ParseInt(offsetStr, 10, 32); err == nil && o >= 0 {
+			offset = int32(o)
+		}
+	}
+
+	lang := c.QueryParam("lang")
+	if lang == "" {
+		lang = "uz"
+	}
+
+	validLangs := map[string]bool{"uz": true, "ru": true, "en": true}
+	if !validLangs[lang] {
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("invalid language code", "valid values: uz, ru, en", http.StatusBadRequest))
+	}
+
+	categories, err := h.service.Category().GetAllCategoriesWithLang(c.Request().Context(), lang, limit, offset)
+	if err != nil {
+		log.Printf("GetAllCategoriesWithLang failed: %v", err)
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("failed to get categories", err.Error(), http.StatusInternalServerError))
+	}
+
+	return c.JSON(http.StatusOK, model.NewSuccessResponse("Categories retrieved successfully", categories, http.StatusOK))
+}

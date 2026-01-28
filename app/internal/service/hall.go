@@ -116,6 +116,50 @@ func (h *HallS) GetHallsByBranchID(ctx context.Context, branchID string, limit, 
 	return responses, nil
 }
 
+// GetAllHallsWithLang retrieves all halls with language support
+func (h *HallS) GetAllHallsWithLang(ctx context.Context, lang string, limit, offset int32) ([]*model.HallResponse, error) {
+	halls, err := h.repo.Tenant(ctx).GetAllHallsWithLanguage(ctx, pg.GetAllHallsWithLanguageParams{
+		Column1: lang,
+		Limit:   limit,
+		Offset:  offset,
+	})
+	if err != nil {
+		log.Printf("GetAllHallsWithLang failed: %v", err)
+		return nil, fmt.Errorf("failed to retrieve halls: %w", err)
+	}
+
+	var responses []*model.HallResponse
+	for _, hall := range halls {
+		responses = append(responses, toHallResponse(hall))
+	}
+	return responses, nil
+}
+
+// GetHallsByBranchIDWithLang retrieves halls by branch ID with language support
+func (h *HallS) GetHallsByBranchIDWithLang(ctx context.Context, branchID string, lang string, limit, offset int32) ([]*model.HallResponse, error) {
+	id, err := uuid.Parse(branchID)
+	if err != nil {
+		return nil, fmt.Errorf("invalid branch ID: %w", err)
+	}
+
+	halls, err := h.repo.Tenant(ctx).GetHallsByBranchIDWithLanguage(ctx, pg.GetHallsByBranchIDWithLanguageParams{
+		BranchID: id,
+		Column2:  lang,
+		Limit:    limit,
+		Offset:   offset,
+	})
+	if err != nil {
+		log.Printf("GetHallsByBranchIDWithLang failed: %v", err)
+		return nil, fmt.Errorf("failed to retrieve halls: %w", err)
+	}
+
+	var responses []*model.HallResponse
+	for _, hall := range halls {
+		responses = append(responses, toHallResponse(hall))
+	}
+	return responses, nil
+}
+
 // UpdateHall updates a hall
 func (h *HallS) UpdateHall(ctx context.Context, hallID string, name *string, branchID *string, nameI18n *string) (*model.HallResponse, error) {
 	id, err := uuid.Parse(hallID)

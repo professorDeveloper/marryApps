@@ -949,3 +949,187 @@ func (h *Handler) RestoreIngredientStock(c echo.Context) error {
 
 	return c.JSON(http.StatusOK, model.NewSuccessResponse("Ingredient stock restored successfully", map[string]interface{}{}, http.StatusOK))
 }
+
+// ==================== INGREDIENT GROUPS WITH LANGUAGE HANDLERS ====================
+
+// GetIngredientGroupByIDWithLang retrieves an ingredient group by ID with language support
+// @Summary Get ingredient group by ID with language support
+// @Description Retrieve a specific ingredient group by its ID with names translated to specified language
+// @Tags ingredient-groups
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path string true "Ingredient Group ID"
+// @Param lang query string false "Language code (uz, ru, en - default: uz)"
+// @Success 200 {object} model.IngredientGroupResponse "Ingredient group details"
+// @Failure 400 {object} model.ErrorResponse "Invalid request parameters"
+// @Failure 401 {object} model.ErrorResponse "Unauthorized"
+// @Failure 404 {object} model.ErrorResponse "Ingredient group not found"
+// @Failure 500 {object} model.ErrorResponse "Internal server error"
+// @Router /api/v1/ingredient-groups-lang/{id} [get]
+func (h *Handler) GetIngredientGroupByIDWithLang(c echo.Context) error {
+	groupID := c.Param("id")
+	if groupID == "" {
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("group id is required", "see logs for details", http.StatusBadRequest))
+	}
+
+	lang := c.QueryParam("lang")
+	if lang == "" {
+		lang = "uz"
+	}
+
+	validLangs := map[string]bool{"uz": true, "ru": true, "en": true}
+	if !validLangs[lang] {
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("invalid language code", "valid values: uz, ru, en", http.StatusBadRequest))
+	}
+
+	group, err := h.service.Ingredient().GetIngredientGroupByIDWithLang(c.Request().Context(), groupID, lang)
+	if err != nil {
+		log.Printf("GetIngredientGroupByIDWithLang failed: %v", err)
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("failed to get ingredient group", "see logs for details", http.StatusInternalServerError))
+	}
+
+	return c.JSON(http.StatusOK, model.NewSuccessResponse("Ingredient group retrieved successfully", group, http.StatusOK))
+}
+
+// GetAllIngredientGroupsWithLang retrieves all ingredient groups with language support
+// @Summary Get all ingredient groups with language support
+// @Description Retrieve all ingredient groups with names translated to specified language
+// @Tags ingredient-groups
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param lang query string false "Language code (uz, ru, en - default: uz)"
+// @Param limit query int false "Limit (default: 20)"
+// @Param offset query int false "Offset (default: 0)"
+// @Success 200 {array} model.IngredientGroupResponse "Ingredient groups retrieved successfully"
+// @Failure 400 {object} model.ErrorResponse "Invalid request parameters"
+// @Failure 401 {object} model.ErrorResponse "Unauthorized"
+// @Failure 500 {object} model.ErrorResponse "Internal server error"
+// @Router /api/v1/ingredient-groups-lang [get]
+func (h *Handler) GetAllIngredientGroupsWithLang(c echo.Context) error {
+	var limit int32 = 20
+	var offset int32 = 0
+
+	if limitStr := c.QueryParam("limit"); limitStr != "" {
+		if l, err := strconv.ParseInt(limitStr, 10, 32); err == nil && l > 0 {
+			limit = int32(l)
+		}
+	}
+
+	if offsetStr := c.QueryParam("offset"); offsetStr != "" {
+		if o, err := strconv.ParseInt(offsetStr, 10, 32); err == nil && o >= 0 {
+			offset = int32(o)
+		}
+	}
+
+	lang := c.QueryParam("lang")
+	if lang == "" {
+		lang = "uz"
+	}
+
+	validLangs := map[string]bool{"uz": true, "ru": true, "en": true}
+	if !validLangs[lang] {
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("invalid language code", "valid values: uz, ru, en", http.StatusBadRequest))
+	}
+
+	groups, err := h.service.Ingredient().GetAllIngredientGroupsWithLang(c.Request().Context(), lang, limit, offset)
+	if err != nil {
+		log.Printf("GetAllIngredientGroupsWithLang failed: %v", err)
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("failed to get ingredient groups", "see logs for details", http.StatusInternalServerError))
+	}
+
+	return c.JSON(http.StatusOK, model.NewSuccessResponse("Ingredient groups retrieved successfully", groups, http.StatusOK))
+}
+
+// ==================== INGREDIENTS WITH LANGUAGE HANDLERS ====================
+
+// GetIngredientByIDWithLang retrieves an ingredient by ID with language support
+// @Summary Get ingredient by ID with language support
+// @Description Retrieve a specific ingredient by its ID with names translated to specified language
+// @Tags ingredients
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path string true "Ingredient ID"
+// @Param lang query string false "Language code (uz, ru, en - default: uz)"
+// @Success 200 {object} model.IngredientResponse "Ingredient details"
+// @Failure 400 {object} model.ErrorResponse "Invalid request parameters"
+// @Failure 401 {object} model.ErrorResponse "Unauthorized"
+// @Failure 404 {object} model.ErrorResponse "Ingredient not found"
+// @Failure 500 {object} model.ErrorResponse "Internal server error"
+// @Router /api/v1/ingredients-lang/{id} [get]
+func (h *Handler) GetIngredientByIDWithLang(c echo.Context) error {
+	ingredientID := c.Param("id")
+	if ingredientID == "" {
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("ingredient id is required", "see logs for details", http.StatusBadRequest))
+	}
+
+	lang := c.QueryParam("lang")
+	if lang == "" {
+		lang = "uz"
+	}
+
+	validLangs := map[string]bool{"uz": true, "ru": true, "en": true}
+	if !validLangs[lang] {
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("invalid language code", "valid values: uz, ru, en", http.StatusBadRequest))
+	}
+
+	ingredient, err := h.service.Ingredient().GetIngredientByIDWithLang(c.Request().Context(), ingredientID, lang)
+	if err != nil {
+		log.Printf("GetIngredientByIDWithLang failed: %v", err)
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("failed to get ingredient", "see logs for details", http.StatusInternalServerError))
+	}
+
+	return c.JSON(http.StatusOK, model.NewSuccessResponse("Ingredient retrieved successfully", ingredient, http.StatusOK))
+}
+
+// GetAllIngredientsWithLang retrieves all ingredients with language support
+// @Summary Get all ingredients with language support
+// @Description Retrieve all ingredients with names translated to specified language
+// @Tags ingredients
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param lang query string false "Language code (uz, ru, en - default: uz)"
+// @Param limit query int false "Limit (default: 20)"
+// @Param offset query int false "Offset (default: 0)"
+// @Success 200 {array} model.IngredientResponse "Ingredients retrieved successfully"
+// @Failure 400 {object} model.ErrorResponse "Invalid request parameters"
+// @Failure 401 {object} model.ErrorResponse "Unauthorized"
+// @Failure 500 {object} model.ErrorResponse "Internal server error"
+// @Router /api/v1/ingredients-lang [get]
+func (h *Handler) GetAllIngredientsWithLang(c echo.Context) error {
+	var limit int32 = 20
+	var offset int32 = 0
+
+	if limitStr := c.QueryParam("limit"); limitStr != "" {
+		if l, err := strconv.ParseInt(limitStr, 10, 32); err == nil && l > 0 {
+			limit = int32(l)
+		}
+	}
+
+	if offsetStr := c.QueryParam("offset"); offsetStr != "" {
+		if o, err := strconv.ParseInt(offsetStr, 10, 32); err == nil && o >= 0 {
+			offset = int32(o)
+		}
+	}
+
+	lang := c.QueryParam("lang")
+	if lang == "" {
+		lang = "uz"
+	}
+
+	validLangs := map[string]bool{"uz": true, "ru": true, "en": true}
+	if !validLangs[lang] {
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("invalid language code", "valid values: uz, ru, en", http.StatusBadRequest))
+	}
+
+	ingredients, err := h.service.Ingredient().GetAllIngredientsWithLang(c.Request().Context(), lang, limit, offset)
+	if err != nil {
+		log.Printf("GetAllIngredientsWithLang failed: %v", err)
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("failed to get ingredients", "see logs for details", http.StatusInternalServerError))
+	}
+
+	return c.JSON(http.StatusOK, model.NewSuccessResponse("Ingredients retrieved successfully", ingredients, http.StatusOK))
+}

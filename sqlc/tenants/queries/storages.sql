@@ -85,4 +85,46 @@ LEFT JOIN categories c ON s.id = c.storage_id AND c.deleted_at = 0
 WHERE s.id = $1 AND s.deleted_at = 0
 GROUP BY s.id, s.name, s.picture_url;
 
+-- name: GetStorageByIDWithLanguage :one
+SELECT 
+    s.id,
+    COALESCE(CASE 
+        WHEN $2::text = 'uz' THEN t.uz
+        WHEN $2::text = 'ru' THEN t.ru
+        WHEN $2::text = 'en' THEN t.en
+        ELSE s.name
+    END, s.name) as name,
+    s.branch_id,
+    s.name_i18n,
+    s.picture_url,
+    s.color_code,
+    s.created_at,
+    s.updated_at,
+    s.deleted_at
+FROM storages s
+LEFT JOIN translations t ON s.name_i18n = t.id AND t.deleted_at = 0
+WHERE s.id = $1 AND s.deleted_at = 0;
+
+-- name: GetAllStoragesWithLanguage :many
+SELECT 
+    s.id,
+    COALESCE(CASE 
+        WHEN $1::text = 'uz' THEN t.uz
+        WHEN $1::text = 'ru' THEN t.ru
+        WHEN $1::text = 'en' THEN t.en
+        ELSE s.name
+    END, s.name) as name,
+    s.branch_id,
+    s.name_i18n,
+    s.picture_url,
+    s.color_code,
+    s.created_at,
+    s.updated_at,
+    s.deleted_at
+FROM storages s
+LEFT JOIN translations t ON s.name_i18n = t.id AND t.deleted_at = 0
+WHERE s.deleted_at = 0
+ORDER BY s.created_at DESC
+LIMIT $2 OFFSET $3;
+
 

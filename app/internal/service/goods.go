@@ -766,3 +766,41 @@ func numericToStringGoods(n pgtype.Numeric) string {
 
 	return str
 }
+
+// GetGoodByIDWithLang retrieves good by ID with language support
+func (g *GoodsS) GetGoodByIDWithLang(ctx context.Context, goodID string, lang string) (*model.GoodResponse, error) {
+	id, err := uuid.Parse(goodID)
+	if err != nil {
+		return nil, fmt.Errorf("invalid good ID: %w", err)
+	}
+
+	good, err := g.repo.Tenant(ctx).GetGoodByIDWithLanguage(ctx, pg.GetGoodByIDWithLanguageParams{
+		ID:      id,
+		Column2: lang,
+	})
+	if err != nil {
+		log.Printf("GetGoodByIDWithLang failed: %v", err)
+		return nil, fmt.Errorf("failed to get good: %w", err)
+	}
+
+	return goodToResponseAny(good), nil
+}
+
+// GetAllGoodsWithLang retrieves all goods with language support
+func (g *GoodsS) GetAllGoodsWithLang(ctx context.Context, lang string, limit, offset int32) ([]*model.GoodResponse, error) {
+	goods, err := g.repo.Tenant(ctx).GetAllGoodsWithLanguage(ctx, pg.GetAllGoodsWithLanguageParams{
+		Column1: lang,
+		Limit:   limit,
+		Offset:  offset,
+	})
+	if err != nil {
+		log.Printf("GetAllGoodsWithLang failed: %v", err)
+		return nil, fmt.Errorf("failed to get goods: %w", err)
+	}
+
+	var responses []*model.GoodResponse
+	for _, good := range goods {
+		responses = append(responses, goodToResponseAny(good))
+	}
+	return responses, nil
+}

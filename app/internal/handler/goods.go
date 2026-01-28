@@ -606,3 +606,95 @@ func (h *Handler) CreateGoodWithCalculations(c echo.Context) error {
 		http.StatusCreated,
 	))
 }
+
+// ==================== GOODS WITH LANGUAGE HANDLERS ====================
+
+// GetGoodByIDWithLang retrieves a good/menu item by ID with language support
+// @Summary Get good by ID with language support
+// @Description Retrieve a specific good/menu item by its ID with names and descriptions translated to specified language
+// @Tags Goods
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path string true "Good ID"
+// @Param lang query string false "Language code (uz, ru, en - default: uz)"
+// @Success 200 {object} model.GoodResponse "Good details"
+// @Failure 400 {object} model.ErrorResponse "Invalid request parameters"
+// @Failure 401 {object} model.ErrorResponse "Unauthorized"
+// @Failure 404 {object} model.ErrorResponse "Good not found"
+// @Failure 500 {object} model.ErrorResponse "Internal server error"
+// @Router /api/v1/goods-lang/{id} [get]
+func (h *Handler) GetGoodByIDWithLang(c echo.Context) error {
+	goodID := c.Param("id")
+	if goodID == "" {
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("good id is required", "see logs for details", http.StatusBadRequest))
+	}
+
+	lang := c.QueryParam("lang")
+	if lang == "" {
+		lang = "uz"
+	}
+
+	validLangs := map[string]bool{"uz": true, "ru": true, "en": true}
+	if !validLangs[lang] {
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("invalid language code", "valid values: uz, ru, en", http.StatusBadRequest))
+	}
+
+	good, err := h.service.Goods().GetGoodByIDWithLang(c.Request().Context(), goodID, lang)
+	if err != nil {
+		log.Printf("GetGoodByIDWithLang failed: %v", err)
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("failed to get good", "see logs for details", http.StatusInternalServerError))
+	}
+
+	return c.JSON(http.StatusOK, model.NewSuccessResponse("Good retrieved successfully", good, http.StatusOK))
+}
+
+// GetAllGoodsWithLang retrieves all goods/menu items with language support
+// @Summary Get all goods with language support
+// @Description Retrieve all goods/menu items with names and descriptions translated to specified language
+// @Tags Goods
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param lang query string false "Language code (uz, ru, en - default: uz)"
+// @Param limit query int false "Limit (default: 20)"
+// @Param offset query int false "Offset (default: 0)"
+// @Success 200 {array} model.GoodResponse "Goods retrieved successfully"
+// @Failure 400 {object} model.ErrorResponse "Invalid request parameters"
+// @Failure 401 {object} model.ErrorResponse "Unauthorized"
+// @Failure 500 {object} model.ErrorResponse "Internal server error"
+// @Router /api/v1/goods-lang [get]
+func (h *Handler) GetAllGoodsWithLang(c echo.Context) error {
+	var limit int32 = 20
+	var offset int32 = 0
+
+	if limitStr := c.QueryParam("limit"); limitStr != "" {
+		if l, err := strconv.ParseInt(limitStr, 10, 32); err == nil && l > 0 {
+			limit = int32(l)
+		}
+	}
+
+	if offsetStr := c.QueryParam("offset"); offsetStr != "" {
+		if o, err := strconv.ParseInt(offsetStr, 10, 32); err == nil && o >= 0 {
+			offset = int32(o)
+		}
+	}
+
+	lang := c.QueryParam("lang")
+	if lang == "" {
+		lang = "uz"
+	}
+
+	validLangs := map[string]bool{"uz": true, "ru": true, "en": true}
+	if !validLangs[lang] {
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("invalid language code", "valid values: uz, ru, en", http.StatusBadRequest))
+	}
+
+	goods, err := h.service.Goods().GetAllGoodsWithLang(c.Request().Context(), lang, limit, offset)
+	if err != nil {
+		log.Printf("GetAllGoodsWithLang failed: %v", err)
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("failed to get goods", "see logs for details", http.StatusInternalServerError))
+	}
+
+	return c.JSON(http.StatusOK, model.NewSuccessResponse("Goods retrieved successfully", goods, http.StatusOK))
+}

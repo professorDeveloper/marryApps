@@ -127,6 +127,65 @@ func (q *Queries) GetAllStorages(ctx context.Context, arg GetAllStoragesParams) 
 	return items, nil
 }
 
+const getAllStoragesWithLanguage = `-- name: GetAllStoragesWithLanguage :many
+SELECT 
+    s.id,
+    COALESCE(CASE 
+        WHEN $1::text = 'uz' THEN t.uz
+        WHEN $1::text = 'ru' THEN t.ru
+        WHEN $1::text = 'en' THEN t.en
+        ELSE s.name
+    END, s.name) as name,
+    s.branch_id,
+    s.name_i18n,
+    s.picture_url,
+    s.color_code,
+    s.created_at,
+    s.updated_at,
+    s.deleted_at
+FROM storages s
+LEFT JOIN translations t ON s.name_i18n = t.id AND t.deleted_at = 0
+WHERE s.deleted_at = 0
+ORDER BY s.created_at DESC
+LIMIT $2 OFFSET $3
+`
+
+type GetAllStoragesWithLanguageParams struct {
+	Column1 string `json:"column_1"`
+	Limit   int32  `json:"limit"`
+	Offset  int32  `json:"offset"`
+}
+
+func (q *Queries) GetAllStoragesWithLanguage(ctx context.Context, arg GetAllStoragesWithLanguageParams) ([]Storage, error) {
+	rows, err := q.db.Query(ctx, getAllStoragesWithLanguage, arg.Column1, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Storage
+	for rows.Next() {
+		var i Storage
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.BranchID,
+			&i.NameI18n,
+			&i.PictureUrl,
+			&i.ColorCode,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.DeletedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getStorageByID = `-- name: GetStorageByID :one
 SELECT id, name, branch_id, name_i18n, picture_url, color_code, created_at, updated_at, deleted_at
 FROM storages
@@ -135,6 +194,49 @@ WHERE id = $1 AND deleted_at = 0
 
 func (q *Queries) GetStorageByID(ctx context.Context, id uuid.UUID) (Storage, error) {
 	row := q.db.QueryRow(ctx, getStorageByID, id)
+	var i Storage
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.BranchID,
+		&i.NameI18n,
+		&i.PictureUrl,
+		&i.ColorCode,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
+	)
+	return i, err
+}
+
+const getStorageByIDWithLanguage = `-- name: GetStorageByIDWithLanguage :one
+SELECT 
+    s.id,
+    COALESCE(CASE 
+        WHEN $2::text = 'uz' THEN t.uz
+        WHEN $2::text = 'ru' THEN t.ru
+        WHEN $2::text = 'en' THEN t.en
+        ELSE s.name
+    END, s.name) as name,
+    s.branch_id,
+    s.name_i18n,
+    s.picture_url,
+    s.color_code,
+    s.created_at,
+    s.updated_at,
+    s.deleted_at
+FROM storages s
+LEFT JOIN translations t ON s.name_i18n = t.id AND t.deleted_at = 0
+WHERE s.id = $1 AND s.deleted_at = 0
+`
+
+type GetStorageByIDWithLanguageParams struct {
+	ID      uuid.UUID `json:"id"`
+	Column2 string    `json:"column_2"`
+}
+
+func (q *Queries) GetStorageByIDWithLanguage(ctx context.Context, arg GetStorageByIDWithLanguageParams) (Storage, error) {
+	row := q.db.QueryRow(ctx, getStorageByIDWithLanguage, arg.ID, arg.Column2)
 	var i Storage
 	err := row.Scan(
 		&i.ID,

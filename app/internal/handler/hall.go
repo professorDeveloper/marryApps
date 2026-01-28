@@ -166,18 +166,78 @@ func (h *Handler) GetAllHalls(c echo.Context) error {
 	))
 }
 
-// GetHallsByBranchID retrieves halls by branch ID
-// @Summary Get halls by branch ID
-// @Description Retrieve all halls for a specific branch
+// GetAllHallsWithLang retrieves all halls with language support
+// @Summary Get all halls with language support
+// @Description Retrieve all halls with names translated to specified language (uz, ru, en)
 // @Tags halls
 // @Accept json
 // @Produce json
 // @Security BearerAuth
-// @Param branchId path string true "Branch ID"
+// @Param lang query string false "Language code (uz, ru, en - default: uz)"
 // @Param limit query int false "Limit (default: 20)"
 // @Param offset query int false "Offset (default: 0)"
-// @Success 200 {array} model.HallResponse "Halls found"
-// @Failure 400 {object} model.ErrorResponse "Invalid ID format"
+// @Success 200 {array} model.HallResponse "Halls retrieved successfully"
+// @Failure 400 {object} model.ErrorResponse "Invalid request parameters"
+// @Failure 401 {object} model.ErrorResponse "Unauthorized"
+// @Failure 500 {object} model.ErrorResponse "Internal server error"
+// @Router /api/v1/halls-lang [get]
+func (h *Handler) GetAllHallsWithLang(c echo.Context) error {
+	var limit int32 = 20
+	var offset int32 = 0
+	lang := c.QueryParam("lang")
+	if lang == "" {
+		lang = "uz" // default language is Uzbek
+	}
+
+	// Validate language code
+	validLangs := map[string]bool{"uz": true, "ru": true, "en": true}
+	if !validLangs[lang] {
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"invalid language code",
+			"valid values: uz, ru, en",
+			http.StatusBadRequest,
+		))
+	}
+
+	if limitStr := c.QueryParam("limit"); limitStr != "" {
+		if l, err := strconv.ParseInt(limitStr, 10, 32); err == nil && l > 0 {
+			limit = int32(l)
+		}
+	}
+
+	if offsetStr := c.QueryParam("offset"); offsetStr != "" {
+		if o, err := strconv.ParseInt(offsetStr, 10, 32); err == nil && o >= 0 {
+			offset = int32(o)
+		}
+	}
+
+	halls, err := h.service.Hall().GetAllHallsWithLang(c.Request().Context(), lang, limit, offset)
+	if err != nil {
+		log.Printf("GetAllHallsWithLang failed: %v", err)
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse(
+			"failed to retrieve halls",
+			err.Error(),
+			http.StatusInternalServerError,
+		))
+	}
+
+	return c.JSON(http.StatusOK, model.NewSuccessResponse(
+		"Halls retrieved successfully",
+		halls,
+		http.StatusOK,
+	))
+}
+
+// GetAllHallsByBranchId retrieves all halls with braches - language support
+// @Summary Get all halls with branch  ID -  language support
+// @Description Retrieve all halls with names translated to specified language (uz, ru, en)
+// @Tags halls
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param lang query string false "Language code (uz, ru, en - default: uz)"
+// @Param limit query int false "Limit (default: 20)"
+// @Param offset query int false "Offset (default: 0)"
 // @Failure 401 {object} model.ErrorResponse "Unauthorized"
 // @Failure 500 {object} model.ErrorResponse "Internal server error"
 // @Router /api/v1/halls/branch/{branchId} [get]
@@ -209,6 +269,78 @@ func (h *Handler) GetHallsByBranchID(c echo.Context) error {
 	halls, err := h.service.Hall().GetHallsByBranchID(c.Request().Context(), branchID, limit, offset)
 	if err != nil {
 		log.Printf("GetHallsByBranchID failed for branch ID %s: %v", branchID, err)
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse(
+			"failed to retrieve halls for branch",
+			err.Error(),
+			http.StatusInternalServerError,
+		))
+	}
+
+	return c.JSON(http.StatusOK, model.NewSuccessResponse(
+		"Halls retrieved successfully",
+		halls,
+		http.StatusOK,
+	))
+}
+
+// GetHallsByBranchIDWithLang retrieves halls by branch ID with language support
+// @Summary Get halls by branch ID with language support
+// @Description Retrieve all halls for a specific branch with names translated to specified language
+// @Tags halls
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param branchId path string true "Branch ID"
+// @Param lang query string false "Language code (uz, ru, en - default: uz)"
+// @Param limit query int false "Limit (default: 20)"
+// @Param offset query int false "Offset (default: 0)"
+// @Success 200 {array} model.HallResponse "Halls retrieved successfully"
+// @Failure 400 {object} model.ErrorResponse "Invalid request parameters"
+// @Failure 401 {object} model.ErrorResponse "Unauthorized"
+// @Failure 500 {object} model.ErrorResponse "Internal server error"
+// @Router /api/v1/halls-lang/branch/{branchId} [get]
+func (h *Handler) GetHallsByBranchIDWithLang(c echo.Context) error {
+	branchID := c.Param("branchId")
+	if branchID == "" {
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"missing path parameter: branchId",
+			"branch ID is required",
+			http.StatusBadRequest,
+		))
+	}
+
+	var limit int32 = 20
+	var offset int32 = 0
+	lang := c.QueryParam("lang")
+	if lang == "" {
+		lang = "uz" // default language is Uzbek
+	}
+
+	// Validate language code
+	validLangs := map[string]bool{"uz": true, "ru": true, "en": true}
+	if !validLangs[lang] {
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"invalid language code",
+			"valid values: uz, ru, en",
+			http.StatusBadRequest,
+		))
+	}
+
+	if limitStr := c.QueryParam("limit"); limitStr != "" {
+		if l, err := strconv.ParseInt(limitStr, 10, 32); err == nil && l > 0 {
+			limit = int32(l)
+		}
+	}
+
+	if offsetStr := c.QueryParam("offset"); offsetStr != "" {
+		if o, err := strconv.ParseInt(offsetStr, 10, 32); err == nil && o >= 0 {
+			offset = int32(o)
+		}
+	}
+
+	halls, err := h.service.Hall().GetHallsByBranchIDWithLang(c.Request().Context(), branchID, lang, limit, offset)
+	if err != nil {
+		log.Printf("GetHallsByBranchIDWithLang failed for branch ID %s: %v", branchID, err)
 		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse(
 			"failed to retrieve halls for branch",
 			err.Error(),

@@ -290,6 +290,87 @@ func (q *Queries) GetAllGoods(ctx context.Context, arg GetAllGoodsParams) ([]Goo
 	return items, nil
 }
 
+const getAllGoodsWithLanguage = `-- name: GetAllGoodsWithLanguage :many
+SELECT 
+    g.id,
+    COALESCE(CASE 
+        WHEN $1::text = 'uz' THEN t_name.uz
+        WHEN $1::text = 'ru' THEN t_name.ru
+        WHEN $1::text = 'en' THEN t_name.en
+        ELSE g.name
+    END, g.name) as name,
+    COALESCE(CASE 
+        WHEN $1::text = 'uz' THEN t_desc.uz
+        WHEN $1::text = 'ru' THEN t_desc.ru
+        WHEN $1::text = 'en' THEN t_desc.en
+        ELSE g.description
+    END, g.description) as description,
+    g.name_i18n,
+    g.description_i18n,
+    g.category_id,
+    g.department_id,
+    g.picture_url,
+    g.color_code,
+    g.price,
+    g.cook_time,
+    g.cost_price,
+    g.profit,
+    g.profit_margin,
+    g.created_at,
+    g.updated_at,
+    g.deleted_at
+FROM goods g
+LEFT JOIN translations t_name ON g.name_i18n = t_name.id AND t_name.deleted_at = 0
+LEFT JOIN translations t_desc ON g.description_i18n = t_desc.id AND t_desc.deleted_at = 0
+WHERE g.deleted_at = 0
+ORDER BY g.created_at DESC
+LIMIT $2 OFFSET $3
+`
+
+type GetAllGoodsWithLanguageParams struct {
+	Column1 string `json:"column_1"`
+	Limit   int32  `json:"limit"`
+	Offset  int32  `json:"offset"`
+}
+
+func (q *Queries) GetAllGoodsWithLanguage(ctx context.Context, arg GetAllGoodsWithLanguageParams) ([]Good, error) {
+	rows, err := q.db.Query(ctx, getAllGoodsWithLanguage, arg.Column1, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Good
+	for rows.Next() {
+		var i Good
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Description,
+			&i.NameI18n,
+			&i.DescriptionI18n,
+			&i.CategoryID,
+			&i.DepartmentID,
+			&i.PictureUrl,
+			&i.ColorCode,
+			&i.Price,
+			&i.CookTime,
+			&i.CostPrice,
+			&i.Profit,
+			&i.ProfitMargin,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.DeletedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getGoodByID = `-- name: GetGoodByID :one
 SELECT id, name, description, name_i18n, description_i18n, category_id, department_id, picture_url, color_code, price, cook_time, cost_price, profit, profit_margin, created_at, updated_at, deleted_at
 FROM goods
@@ -298,6 +379,304 @@ WHERE id = $1 AND deleted_at = 0
 
 func (q *Queries) GetGoodByID(ctx context.Context, id uuid.UUID) (Good, error) {
 	row := q.db.QueryRow(ctx, getGoodByID, id)
+	var i Good
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Description,
+		&i.NameI18n,
+		&i.DescriptionI18n,
+		&i.CategoryID,
+		&i.DepartmentID,
+		&i.PictureUrl,
+		&i.ColorCode,
+		&i.Price,
+		&i.CookTime,
+		&i.CostPrice,
+		&i.Profit,
+		&i.ProfitMargin,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
+	)
+	return i, err
+}
+
+const getGoodByIDWithLanguage = `-- name: GetGoodByIDWithLanguage :one
+
+
+
+
+
+
+
+SELECT 
+    g.id,
+    COALESCE(CASE 
+        WHEN $2::text = 'uz' THEN t_name.uz
+        WHEN $2::text = 'ru' THEN t_name.ru
+        WHEN $2::text = 'en' THEN t_name.en
+        ELSE g.name
+    END, g.name) as name,
+    COALESCE(CASE 
+        WHEN $2::text = 'uz' THEN t_desc.uz
+        WHEN $2::text = 'ru' THEN t_desc.ru
+        WHEN $2::text = 'en' THEN t_desc.en
+        ELSE g.description
+    END, g.description) as description,
+    g.name_i18n,
+    g.description_i18n,
+    g.category_id,
+    g.department_id,
+    g.picture_url,
+    g.color_code,
+    g.price,
+    g.cook_time,
+    g.cost_price,
+    g.profit,
+    g.profit_margin,
+    g.created_at,
+    g.updated_at,
+    g.deleted_at
+FROM goods g
+LEFT JOIN translations t_name ON g.name_i18n = t_name.id AND t_name.deleted_at = 0
+LEFT JOIN translations t_desc ON g.description_i18n = t_desc.id AND t_desc.deleted_at = 0
+WHERE g.id = $1 AND g.deleted_at = 0
+`
+
+type GetGoodByIDWithLanguageParams struct {
+	ID      uuid.UUID `json:"id"`
+	Column2 string    `json:"column_2"`
+}
+
+// -- ==================== RECIPE & INGREDIENT TRACKING ====================
+// -- name: GetGoodRecipeWithIngredients :many
+// SELECT
+//
+//	gd.id,
+//	gd.good_id,
+//	gd.ingredient_id,
+//	gd.compound_id,
+//	gd.quantity,
+//	gd.measurement,
+//	CASE
+//	    WHEN gd.ingredient_id IS NOT NULL THEN i.name
+//	    WHEN gd.compound_id IS NOT NULL THEN c.name
+//	END as item_name,
+//	CASE
+//	    WHEN gd.ingredient_id IS NOT NULL THEN 'ingredient'
+//	    WHEN gd.compound_id IS NOT NULL THEN 'compound'
+//	END as item_type,
+//	i.picture_url as ingredient_picture,
+//	c.price as compound_price
+//
+// FROM goods_details gd
+// LEFT JOIN ingredients i ON gd.ingredient_id = i.id AND i.deleted_at = 0
+// LEFT JOIN compounds c ON gd.compound_id = c.id AND c.deleted_at = 0
+// WHERE gd.good_id = $1 AND gd.deleted_at = 0
+// ORDER BY gd.created_at ASC;
+// -- name: GetGoodAvailabilityByBranch :one
+// WITH recipe_items AS (
+//
+//	SELECT
+//	    gd.id as detail_id,
+//	    gd.ingredient_id,
+//	    gd.compound_id,
+//	    gd.quantity as required_quantity,
+//	    CASE
+//	        WHEN gd.ingredient_id IS NOT NULL THEN
+//	            COALESCE((SELECT quantity FROM ingredient_stock
+//	                     WHERE ingredient_id = gd.ingredient_id
+//	                     AND branch_id = $2
+//	                     AND deleted_at = 0
+//	                     LIMIT 1), 0)
+//	        WHEN gd.compound_id IS NOT NULL THEN
+//	            COALESCE((SELECT quantity FROM compound_stock
+//	                     WHERE compound_id = gd.compound_id
+//	                     AND branch_id = $2
+//	                     AND deleted_at = 0
+//	                     LIMIT 1), 0)
+//	    END as available_quantity
+//	FROM goods_details gd
+//	WHERE gd.good_id = $1 AND gd.deleted_at = 0
+//
+// )
+// SELECT
+//
+//	COUNT(*) as total_items,
+//	SUM(CASE WHEN available_quantity >= required_quantity THEN 1 ELSE 0 END) as available_items,
+//	MIN(CASE WHEN required_quantity > 0 THEN available_quantity / required_quantity ELSE 0 END) as max_servings,
+//	CASE
+//	    WHEN COUNT(*) = SUM(CASE WHEN available_quantity >= required_quantity THEN 1 ELSE 0 END)
+//	    THEN true
+//	    ELSE false
+//	END as is_available
+//
+// FROM recipe_items;
+// -- name: GetGoodMissingIngredients :many
+// SELECT
+//
+//	gd.id,
+//	gd.good_id,
+//	gd.ingredient_id,
+//	gd.compound_id,
+//	gd.quantity as required_quantity,
+//	gd.measurement,
+//	CASE
+//	    WHEN gd.ingredient_id IS NOT NULL THEN i.name
+//	    WHEN gd.compound_id IS NOT NULL THEN c.name
+//	END as item_name,
+//	CASE
+//	    WHEN gd.ingredient_id IS NOT NULL THEN
+//	        COALESCE((SELECT quantity FROM ingredient_stock
+//	                 WHERE ingredient_id = gd.ingredient_id
+//	                 AND branch_id = $2
+//	                 AND deleted_at = 0
+//	                 LIMIT 1), 0)
+//	    WHEN gd.compound_id IS NOT NULL THEN
+//	        COALESCE((SELECT quantity FROM compound_stock
+//	                 WHERE compound_id = gd.compound_id
+//	                 AND branch_id = $2
+//	                 AND deleted_at = 0
+//	                 LIMIT 1), 0)
+//	END as available_quantity,
+//	CASE
+//	    WHEN gd.ingredient_id IS NOT NULL THEN
+//	        gd.quantity - COALESCE((SELECT quantity FROM ingredient_stock
+//	                               WHERE ingredient_id = gd.ingredient_id
+//	                               AND branch_id = $2
+//	                               AND deleted_at = 0
+//	                               LIMIT 1), 0)
+//	    WHEN gd.compound_id IS NOT NULL THEN
+//	        gd.quantity - COALESCE((SELECT quantity FROM compound_stock
+//	                               WHERE compound_id = gd.compound_id
+//	                               AND branch_id = $2
+//	                               AND deleted_at = 0
+//	                               LIMIT 1), 0)
+//	END as shortage
+//
+// FROM goods_details gd
+// LEFT JOIN ingredients i ON gd.ingredient_id = i.id AND i.deleted_at = 0
+// LEFT JOIN compounds c ON gd.compound_id = c.id AND c.deleted_at = 0
+// WHERE gd.good_id = $1
+// AND gd.deleted_at = 0
+// AND (
+//
+//	(gd.ingredient_id IS NOT NULL AND
+//	 gd.quantity > COALESCE((SELECT quantity FROM ingredient_stock
+//	                        WHERE ingredient_id = gd.ingredient_id
+//	                        AND branch_id = $2
+//	                        AND deleted_at = 0
+//	                        LIMIT 1), 0))
+//	OR
+//	(gd.compound_id IS NOT NULL AND
+//	 gd.quantity > COALESCE((SELECT quantity FROM compound_stock
+//	                        WHERE compound_id = gd.compound_id
+//	                        AND branch_id = $2
+//	                        AND deleted_at = 0
+//	                        LIMIT 1), 0))
+//
+// )
+// ORDER BY shortage DESC;
+// -- name: GetAvailableGoodsByBranch :many
+// WITH good_availability AS (
+//
+//	SELECT
+//	    g.id,
+//	    g.name,
+//	    g.description,
+//	    g.price,
+//	    g.cook_time,
+//	    g.category_id,
+//	    COUNT(gd.id) as recipe_item_count,
+//	    SUM(
+//	        CASE
+//	            WHEN gd.ingredient_id IS NOT NULL THEN
+//	                CASE WHEN COALESCE((SELECT quantity FROM ingredient_stock
+//	                                   WHERE ingredient_id = gd.ingredient_id
+//	                                   AND branch_id = $1
+//	                                   AND deleted_at = 0
+//	                                   LIMIT 1), 0) >= gd.quantity
+//	                THEN 1 ELSE 0 END
+//	            WHEN gd.compound_id IS NOT NULL THEN
+//	                CASE WHEN COALESCE((SELECT quantity FROM compound_stock
+//	                                   WHERE compound_id = gd.compound_id
+//	                                   AND branch_id = $1
+//	                                   AND deleted_at = 0
+//	                                   LIMIT 1), 0) >= gd.quantity
+//	                THEN 1 ELSE 0 END
+//	        END
+//	    ) as available_item_count
+//	FROM goods g
+//	LEFT JOIN goods_details gd ON g.id = gd.good_id AND gd.deleted_at = 0
+//	WHERE g.deleted_at = 0
+//	GROUP BY g.id, g.name, g.description, g.price, g.cook_time, g.category_id
+//
+// )
+// SELECT
+//
+//	id,
+//	name,
+//	description,
+//	price,
+//	cook_time,
+//	category_id,
+//	recipe_item_count,
+//	available_item_count
+//
+// FROM good_availability
+// WHERE recipe_item_count = available_item_count OR recipe_item_count = 0
+// ORDER BY name ASC
+// LIMIT $2 OFFSET $3;
+// -- name: GetGoodCostAnalysis :one
+// SELECT
+//
+//	g.id,
+//	g.name,
+//	g.price as selling_price,
+//	SUM(
+//	    CASE
+//	        WHEN gd.ingredient_id IS NOT NULL THEN 0
+//	        WHEN gd.compound_id IS NOT NULL THEN COALESCE(c.price, 0) * gd.quantity
+//	    END
+//	) as ingredient_cost,
+//	g.price - SUM(
+//	    CASE
+//	        WHEN gd.ingredient_id IS NOT NULL THEN 0
+//	        WHEN gd.compound_id IS NOT NULL THEN COALESCE(c.price, 0) * gd.quantity
+//	    END
+//	) as profit_margin,
+//	(g.price - SUM(
+//	    CASE
+//	        WHEN gd.ingredient_id IS NOT NULL THEN 0
+//	        WHEN gd.compound_id IS NOT NULL THEN COALESCE(c.price, 0) * gd.quantity
+//	    END
+//	)) / NULLIF(g.price, 0) * 100 as profit_percentage
+//
+// FROM goods g
+// LEFT JOIN goods_details gd ON g.id = gd.good_id AND gd.deleted_at = 0
+// LEFT JOIN compounds c ON gd.compound_id = c.id AND c.deleted_at = 0
+// WHERE g.id = $1 AND g.deleted_at = 0
+// GROUP BY g.id, g.name, g.price;
+// -- name: GetGoodsWithRecipeCount :many
+// SELECT
+//
+//	g.id,
+//	g.name,
+//	g.description,
+//	g.price,
+//	g.cook_time,
+//	g.category_id,
+//	COUNT(gd.id) as ingredient_count
+//
+// FROM goods g
+// LEFT JOIN goods_details gd ON g.id = gd.good_id AND gd.deleted_at = 0
+// WHERE g.deleted_at = 0
+// GROUP BY g.id, g.name, g.description, g.price, g.cook_time, g.category_id
+// ORDER BY g.name ASC
+// LIMIT $1 OFFSET $2;
+func (q *Queries) GetGoodByIDWithLanguage(ctx context.Context, arg GetGoodByIDWithLanguageParams) (Good, error) {
+	row := q.db.QueryRow(ctx, getGoodByIDWithLanguage, arg.ID, arg.Column2)
 	var i Good
 	err := row.Scan(
 		&i.ID,

@@ -185,6 +185,83 @@ func (q *Queries) GetAllCategories(ctx context.Context, arg GetAllCategoriesPara
 	return items, nil
 }
 
+const getAllCategoriesWithLanguage = `-- name: GetAllCategoriesWithLanguage :many
+SELECT 
+    c.id,
+    COALESCE(CASE 
+        WHEN $1::text = 'uz' THEN t.uz
+        WHEN $1::text = 'ru' THEN t.ru
+        WHEN $1::text = 'en' THEN t.en
+        ELSE c.name
+    END, c.name) as name,
+    c.picture_url,
+    c.name_i18n,
+    c.department_id,
+    c.storage_id,
+    c.parent,
+    c.color_code,
+    c.created_at,
+    c.updated_at,
+    c.deleted_at
+FROM categories c
+LEFT JOIN translations t ON c.name_i18n = t.id AND t.deleted_at = 0
+WHERE c.deleted_at = 0
+ORDER BY c.created_at DESC
+LIMIT $2 OFFSET $3
+`
+
+type GetAllCategoriesWithLanguageParams struct {
+	Column1 string `json:"column_1"`
+	Limit   int32  `json:"limit"`
+	Offset  int32  `json:"offset"`
+}
+
+type GetAllCategoriesWithLanguageRow struct {
+	ID           uuid.UUID          `json:"id"`
+	Name         string             `json:"name"`
+	PictureUrl   *string            `json:"picture_url"`
+	NameI18n     pgtype.UUID        `json:"name_i18n"`
+	DepartmentID pgtype.UUID        `json:"department_id"`
+	StorageID    pgtype.UUID        `json:"storage_id"`
+	Parent       pgtype.UUID        `json:"parent"`
+	ColorCode    *string            `json:"color_code"`
+	CreatedAt    pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
+	DeletedAt    *int64             `json:"deleted_at"`
+}
+
+func (q *Queries) GetAllCategoriesWithLanguage(ctx context.Context, arg GetAllCategoriesWithLanguageParams) ([]GetAllCategoriesWithLanguageRow, error) {
+	rows, err := q.db.Query(ctx, getAllCategoriesWithLanguage, arg.Column1, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetAllCategoriesWithLanguageRow
+	for rows.Next() {
+		var i GetAllCategoriesWithLanguageRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.PictureUrl,
+			&i.NameI18n,
+			&i.DepartmentID,
+			&i.StorageID,
+			&i.Parent,
+			&i.ColorCode,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.DeletedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getCategoriesByDepartmentID = `-- name: GetCategoriesByDepartmentID :many
 SELECT id, name, picture_url, name_i18n, department_id, storage_id, parent, color_code, created_at, updated_at, deleted_at
 FROM categories
@@ -388,6 +465,67 @@ type GetCategoryByIDRow struct {
 func (q *Queries) GetCategoryByID(ctx context.Context, id uuid.UUID) (GetCategoryByIDRow, error) {
 	row := q.db.QueryRow(ctx, getCategoryByID, id)
 	var i GetCategoryByIDRow
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.PictureUrl,
+		&i.NameI18n,
+		&i.DepartmentID,
+		&i.StorageID,
+		&i.Parent,
+		&i.ColorCode,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
+	)
+	return i, err
+}
+
+const getCategoryByIDWithLanguage = `-- name: GetCategoryByIDWithLanguage :one
+SELECT 
+    c.id,
+    COALESCE(CASE 
+        WHEN $2::text = 'uz' THEN t.uz
+        WHEN $2::text = 'ru' THEN t.ru
+        WHEN $2::text = 'en' THEN t.en
+        ELSE c.name
+    END, c.name) as name,
+    c.picture_url,
+    c.name_i18n,
+    c.department_id,
+    c.storage_id,
+    c.parent,
+    c.color_code,
+    c.created_at,
+    c.updated_at,
+    c.deleted_at
+FROM categories c
+LEFT JOIN translations t ON c.name_i18n = t.id AND t.deleted_at = 0
+WHERE c.id = $1 AND c.deleted_at = 0
+`
+
+type GetCategoryByIDWithLanguageParams struct {
+	ID      uuid.UUID `json:"id"`
+	Column2 string    `json:"column_2"`
+}
+
+type GetCategoryByIDWithLanguageRow struct {
+	ID           uuid.UUID          `json:"id"`
+	Name         string             `json:"name"`
+	PictureUrl   *string            `json:"picture_url"`
+	NameI18n     pgtype.UUID        `json:"name_i18n"`
+	DepartmentID pgtype.UUID        `json:"department_id"`
+	StorageID    pgtype.UUID        `json:"storage_id"`
+	Parent       pgtype.UUID        `json:"parent"`
+	ColorCode    *string            `json:"color_code"`
+	CreatedAt    pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
+	DeletedAt    *int64             `json:"deleted_at"`
+}
+
+func (q *Queries) GetCategoryByIDWithLanguage(ctx context.Context, arg GetCategoryByIDWithLanguageParams) (GetCategoryByIDWithLanguageRow, error) {
+	row := q.db.QueryRow(ctx, getCategoryByIDWithLanguage, arg.ID, arg.Column2)
+	var i GetCategoryByIDWithLanguageRow
 	err := row.Scan(
 		&i.ID,
 		&i.Name,

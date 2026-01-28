@@ -252,4 +252,42 @@ func (d *DepartmentS) SearchDepartments(ctx context.Context, query string, limit
 	return responses, nil
 }
 
+// GetDepartmentByIDWithLang retrieves department by ID with language support
+func (d *DepartmentS) GetDepartmentByIDWithLang(ctx context.Context, departmentID string, lang string) (*model.DepartmentResponse, error) {
+	id, err := uuid.Parse(departmentID)
+	if err != nil {
+		return nil, fmt.Errorf("invalid department ID: %w", err)
+	}
+
+	department, err := d.repo.Tenant(ctx).GetDepartmentByIDWithLanguage(ctx, pg.GetDepartmentByIDWithLanguageParams{
+		ID:      id,
+		Column2: lang,
+	})
+	if err != nil {
+		log.Printf("GetDepartmentByIDWithLang failed: %v", err)
+		return nil, fmt.Errorf("failed to get department: %w", err)
+	}
+
+	return mapDepartmentToResponse(department.ID, department.Name, department.NameI18n, department.StorageID, department.ColorCode, department.PictureUrl, department.CreatedAt, department.UpdatedAt), nil
+}
+
+// GetAllDepartmentsWithLang retrieves all departments with language support
+func (d *DepartmentS) GetAllDepartmentsWithLang(ctx context.Context, lang string, limit, offset int32) ([]*model.DepartmentResponse, error) {
+	departments, err := d.repo.Tenant(ctx).GetAllDepartmentsWithLanguage(ctx, pg.GetAllDepartmentsWithLanguageParams{
+		Column1: lang,
+		Limit:   limit,
+		Offset:  offset,
+	})
+	if err != nil {
+		log.Printf("GetAllDepartmentsWithLang failed: %v", err)
+		return nil, fmt.Errorf("failed to get departments: %w", err)
+	}
+
+	var responses []*model.DepartmentResponse
+	for _, dept := range departments {
+		responses = append(responses, mapDepartmentToResponse(dept.ID, dept.Name, dept.NameI18n, dept.StorageID, dept.ColorCode, dept.PictureUrl, dept.CreatedAt, dept.UpdatedAt))
+	}
+	return responses, nil
+}
+
 // Helper function to convert database department to response model
