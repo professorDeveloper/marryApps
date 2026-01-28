@@ -62,7 +62,7 @@ func (h *Handler) CreateHall(c echo.Context) error {
 		))
 	}
 
-	hall, err := h.service.Hall().CreateHall(c.Request().Context(), *req.Name, req.BranchID, nameI18nUUID)
+	hall, err := h.service.Hall().CreateHall(c.Request().Context(), *req.Name, req.BranchID, nameI18nUUID, req.Width, req.Height)
 	if err != nil {
 		log.Printf("CreateHall failed: %v", err)
 		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse(
@@ -390,7 +390,7 @@ func (h *Handler) UpdateHall(c echo.Context) error {
 		))
 	}
 
-	hall, err := h.service.Hall().UpdateHall(c.Request().Context(), hallID, req.Name, req.BranchID, req.NameI18n)
+	hall, err := h.service.Hall().UpdateHall(c.Request().Context(), hallID, req.Name, req.BranchID, req.NameI18n, req.Width, req.Height)
 	if err != nil {
 		log.Printf("UpdateHall failed for ID %s: %v", hallID, err)
 		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse(

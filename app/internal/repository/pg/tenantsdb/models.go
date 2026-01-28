@@ -263,6 +263,11 @@ type CafeTable struct {
 	CreatedAt pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
 	DeletedAt *int64             `json:"deleted_at"`
+	PosX      int32              `json:"pos_x"`
+	PosY      int32              `json:"pos_y"`
+	Width     int32              `json:"width"`
+	Height    int32              `json:"height"`
+	Rotation  int32              `json:"rotation"`
 }
 
 type Calculation struct {
@@ -389,6 +394,8 @@ type Hall struct {
 	CreatedAt pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
 	DeletedAt *int64             `json:"deleted_at"`
+	Width     int32              `json:"width"`
+	Height    int32              `json:"height"`
 }
 
 type Ingredient struct {

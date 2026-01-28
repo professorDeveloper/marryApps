@@ -84,12 +84,16 @@ type CreateHallRequest struct {
 	Name     *string `json:"name"`
 	BranchID string  `json:"branch_id"`
 	NameI18n *string `json:"name_i18n"`
+	Width    *int32  `json:"width,omitempty"`
+	Height   *int32  `json:"height,omitempty"`
 }
 
 type UpdateHallRequest struct {
 	Name     *string `json:"name"`
 	BranchID *string `json:"branch_id"`
 	NameI18n *string `json:"name_i18n"`
+	Width    *int32  `json:"width,omitempty"`
+	Height   *int32  `json:"height,omitempty"`
 }
 
 type HallResponse struct {
@@ -97,6 +101,8 @@ type HallResponse struct {
 	BranchID  string     `json:"branch_id"`
 	Name      *string    `json:"name"`
 	NameI18n  *string    `json:"name_i18n"`
+	Width     int32      `json:"width"`
+	Height    int32      `json:"height"`
 	CreatedAt *time.Time `json:"created_at"`
 	UpdatedAt *time.Time `json:"updated_at"`
 }

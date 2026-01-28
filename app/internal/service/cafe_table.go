@@ -19,7 +19,7 @@ func NewCafeTableS(repo *repository.Repository) *CafeTableS {
 	return &CafeTableS{repo: repo}
 }
 
-func (s *CafeTableS) CreateCafeTable(ctx context.Context, hallID string, number int32, capacity int32, status *string) (*model.CafeTableResponse, error) {
+func (s *CafeTableS) CreateCafeTable(ctx context.Context, hallID string, number int32, capacity int32, status *string, posX, posY, width, height, rotation *int32) (*model.CafeTableResponse, error) {
 	if hallID == "" {
 		return nil, fmt.Errorf("hall_id is required")
 	}
@@ -45,12 +45,38 @@ func (s *CafeTableS) CreateCafeTable(ctx context.Context, hallID string, number 
 		Valid:       true,
 	}
 
+	finalPosX := int32(0)
+	if posX != nil {
+		finalPosX = *posX
+	}
+	finalPosY := int32(0)
+	if posY != nil {
+		finalPosY = *posY
+	}
+	finalWidth := int32(0)
+	if width != nil {
+		finalWidth = *width
+	}
+	finalHeight := int32(0)
+	if height != nil {
+		finalHeight = *height
+	}
+	finalRotation := int32(0)
+	if rotation != nil {
+		finalRotation = *rotation
+	}
+
 	table, err := s.repo.Tenant(ctx).CreateCafeTable(ctx, pg.CreateCafeTableParams{
 		ID:       uuid.New(),
 		HallID:   hID,
 		Number:   number,
 		Capacity: capacity,
 		Status:   nullStatus,
+		PosX:     finalPosX,
+		PosY:     finalPosY,
+		Width:    finalWidth,
+		Height:   finalHeight,
+		Rotation: finalRotation,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to create cafe table: %w", err)
@@ -242,7 +268,7 @@ func (s *CafeTableS) GetAvailableTablesByHallAndCapacity(ctx context.Context, ha
 }
 
 // UpdateCafeTable updates a cafe table
-func (s *CafeTableS) UpdateCafeTable(ctx context.Context, tableID string, hallID *string, number *int32, capacity *int32, status *string) (*model.CafeTableResponse, error) {
+func (s *CafeTableS) UpdateCafeTable(ctx context.Context, tableID string, hallID *string, number *int32, capacity *int32, status *string, posX, posY, width, height, rotation *int32) (*model.CafeTableResponse, error) {
 	id, err := uuid.Parse(tableID)
 	if err != nil {
 		return nil, fmt.Errorf("invalid table ID: %w", err)
@@ -281,12 +307,38 @@ func (s *CafeTableS) UpdateCafeTable(ctx context.Context, tableID string, hallID
 		}
 	}
 
+	updatedPosX := currentTable.PosX
+	if posX != nil {
+		updatedPosX = *posX
+	}
+	updatedPosY := currentTable.PosY
+	if posY != nil {
+		updatedPosY = *posY
+	}
+	updatedWidth := currentTable.Width
+	if width != nil {
+		updatedWidth = *width
+	}
+	updatedHeight := currentTable.Height
+	if height != nil {
+		updatedHeight = *height
+	}
+	updatedRotation := currentTable.Rotation
+	if rotation != nil {
+		updatedRotation = *rotation
+	}
+
 	table, err := s.repo.Tenant(ctx).UpdateCafeTable(ctx, pg.UpdateCafeTableParams{
 		ID:       id,
 		HallID:   updatedHallID,
 		Number:   updatedNumber,
 		Capacity: updatedCapacity,
 		Status:   updatedStatus,
+		PosX:     updatedPosX,
+		PosY:     updatedPosY,
+		Width:    updatedWidth,
+		Height:   updatedHeight,
+		Rotation: updatedRotation,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to update cafe table: %w", err)
@@ -459,6 +511,11 @@ func toCafeTableResponse(table pg.CafeTable) *model.CafeTableResponse {
 		Number:    table.Number,
 		Capacity:  table.Capacity,
 		Status:    status,
+		PosX:      table.PosX,
+		PosY:      table.PosY,
+		Width:     table.Width,
+		Height:    table.Height,
+		Rotation:  table.Rotation,
 		CreatedAt: createdAt,
 		UpdatedAt: updatedAt,
 	}

@@ -400,6 +400,11 @@ func (h *Handler) Register(router *echo.Echo) {
 			compoundCalcs.DELETE("/:id", h.DeleteCalculation, mw.CheckLanguage())   // Delete by calculation ID
 		}
 
+		calculations := api.Group("/calculations", mw.CheckAuth(h.cfg), mw.TenantMiddleware(h.repo))
+		{
+			calculations.POST("/preview", h.PreviewCalculations, mw.CheckLanguage())
+		}
+
 		// Category goods endpoints
 		categoryGoods := api.Group("/categories/:category_id/goods", mw.CheckAuth(h.cfg), mw.TenantMiddleware(h.repo))
 		{

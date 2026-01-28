@@ -1972,6 +1972,63 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/calculations/preview": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Calculate ingredient + compound costs for UI preview. Does not create any DB records.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Calculations"
+                ],
+                "summary": "Preview calculations (no DB writes)",
+                "parameters": [
+                    {
+                        "description": "Preview calculations request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.PreviewCalculationsRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Preview generated successfully",
+                        "schema": {
+                            "$ref": "#/definitions/model.PreviewCalculationsResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/categories": {
             "get": {
                 "security": [
@@ -16549,6 +16606,10 @@ const docTemplate = `{
                     "type": "string",
                     "example": "a1b2c3d4-e5f6-4a5b-8c9d-e0f1a2b3c4d5"
                 },
+                "height": {
+                    "type": "integer",
+                    "example": 0
+                },
                 "id": {
                     "type": "string",
                     "example": "c0f18a64-7f5c-4425-9414-1b01cddee9d9"
@@ -16556,6 +16617,18 @@ const docTemplate = `{
                 "number": {
                     "type": "integer",
                     "example": 5
+                },
+                "pos_x": {
+                    "type": "integer",
+                    "example": 0
+                },
+                "pos_y": {
+                    "type": "integer",
+                    "example": 0
+                },
+                "rotation": {
+                    "type": "integer",
+                    "example": 0
                 },
                 "status": {
                     "allOf": [
@@ -16566,6 +16639,36 @@ const docTemplate = `{
                     "example": "free"
                 },
                 "updated_at": {
+                    "type": "string"
+                },
+                "width": {
+                    "type": "integer",
+                    "example": 0
+                }
+            }
+        },
+        "model.CalculationPreviewItem": {
+            "type": "object",
+            "properties": {
+                "component_compound_id": {
+                    "type": "string"
+                },
+                "ingredient_id": {
+                    "type": "string"
+                },
+                "measurement_unit": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "price_per_unit": {
+                    "type": "string"
+                },
+                "quantity": {
+                    "type": "string"
+                },
+                "total_cost": {
                     "type": "string"
                 }
             }
@@ -16902,14 +17005,34 @@ const docTemplate = `{
                     "type": "string",
                     "example": "a1b2c3d4-e5f6-4a5b-8c9d-e0f1a2b3c4d5"
                 },
+                "height": {
+                    "type": "integer",
+                    "example": 0
+                },
                 "number": {
                     "type": "integer",
                     "minimum": 1,
                     "example": 5
                 },
+                "pos_x": {
+                    "type": "integer",
+                    "example": 0
+                },
+                "pos_y": {
+                    "type": "integer",
+                    "example": 0
+                },
+                "rotation": {
+                    "type": "integer",
+                    "example": 0
+                },
                 "status": {
                     "type": "string",
                     "example": "free"
+                },
+                "width": {
+                    "type": "integer",
+                    "example": 0
                 }
             }
         },
@@ -17246,11 +17369,17 @@ const docTemplate = `{
                 "branch_id": {
                     "type": "string"
                 },
+                "height": {
+                    "type": "integer"
+                },
                 "name": {
                     "type": "string"
                 },
                 "name_i18n": {
                     "type": "string"
+                },
+                "width": {
+                    "type": "integer"
                 }
             }
         },
@@ -17877,6 +18006,9 @@ const docTemplate = `{
                 "created_at": {
                     "type": "string"
                 },
+                "height": {
+                    "type": "integer"
+                },
                 "id": {
                     "type": "string"
                 },
@@ -17888,6 +18020,9 @@ const docTemplate = `{
                 },
                 "updated_at": {
                     "type": "string"
+                },
+                "width": {
+                    "type": "integer"
                 }
             }
         },
@@ -18498,6 +18633,34 @@ const docTemplate = `{
                 }
             }
         },
+        "model.PreviewCalculationsRequest": {
+            "type": "object",
+            "properties": {
+                "compound_calculations": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.CompoundCalculationItem"
+                    }
+                },
+                "ingredient_calculations": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.IngredientCalculationItem"
+                    }
+                }
+            }
+        },
+        "model.PreviewCalculationsResponse": {
+            "type": "object",
+            "properties": {
+                "calculations": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.CalculationPreviewItem"
+                    }
+                }
+            }
+        },
         "model.RefreshRequest": {
             "type": "object",
             "properties": {
@@ -18778,13 +18941,33 @@ const docTemplate = `{
                     "type": "string",
                     "example": "a1b2c3d4-e5f6-4a5b-8c9d-e0f1a2b3c4d5"
                 },
+                "height": {
+                    "type": "integer",
+                    "example": 0
+                },
                 "number": {
                     "type": "integer",
                     "example": 5
                 },
+                "pos_x": {
+                    "type": "integer",
+                    "example": 0
+                },
+                "pos_y": {
+                    "type": "integer",
+                    "example": 0
+                },
+                "rotation": {
+                    "type": "integer",
+                    "example": 0
+                },
                 "status": {
                     "type": "string",
                     "example": "available"
+                },
+                "width": {
+                    "type": "integer",
+                    "example": 0
                 }
             }
         },
@@ -19032,11 +19215,17 @@ const docTemplate = `{
                 "branch_id": {
                     "type": "string"
                 },
+                "height": {
+                    "type": "integer"
+                },
                 "name": {
                     "type": "string"
                 },
                 "name_i18n": {
                     "type": "string"
+                },
+                "width": {
+                    "type": "integer"
                 }
             }
         },

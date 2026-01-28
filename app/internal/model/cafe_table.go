@@ -15,6 +15,11 @@ type CafeTable struct {
 	Number    int32       `json:"number" example:"5"`
 	Capacity  int32       `json:"capacity" example:"4"`
 	Status    TableStatus `json:"status" example:"free"`
+	PosX      int32       `json:"pos_x" example:"0"`
+	PosY      int32       `json:"pos_y" example:"0"`
+	Width     int32       `json:"width" example:"0"`
+	Height    int32       `json:"height" example:"0"`
+	Rotation  int32       `json:"rotation" example:"0"`
 	CreatedAt *time.Time  `json:"created_at,omitempty"`
 	UpdatedAt *time.Time  `json:"updated_at,omitempty"`
 }
@@ -24,6 +29,11 @@ type CreateCafeTableRequest struct {
 	Number   int32  `json:"number" validate:"required,min=1" example:"5"`
 	Capacity int32  `json:"capacity" validate:"required,min=1" example:"4"`
 	Status   string `json:"status" example:"free"`
+	PosX     *int32 `json:"pos_x,omitempty" example:"0"`
+	PosY     *int32 `json:"pos_y,omitempty" example:"0"`
+	Width    *int32 `json:"width,omitempty" example:"0"`
+	Height   *int32 `json:"height,omitempty" example:"0"`
+	Rotation *int32 `json:"rotation,omitempty" example:"0"`
 }
 
 type UpdateCafeTableRequest struct {
@@ -31,6 +41,11 @@ type UpdateCafeTableRequest struct {
 	Number   *int32  `json:"number,omitempty" example:"5"`
 	Capacity *int32  `json:"capacity,omitempty" example:"4"`
 	Status   *string `json:"status,omitempty" example:"available"`
+	PosX     *int32  `json:"pos_x,omitempty" example:"0"`
+	PosY     *int32  `json:"pos_y,omitempty" example:"0"`
+	Width    *int32  `json:"width,omitempty" example:"0"`
+	Height   *int32  `json:"height,omitempty" example:"0"`
+	Rotation *int32  `json:"rotation,omitempty" example:"0"`
 }
 
 type UpdateCafeTableStatusRequest struct {
@@ -43,6 +58,11 @@ type CafeTableResponse struct {
 	Number    int32       `json:"number" example:"5"`
 	Capacity  int32       `json:"capacity" example:"4"`
 	Status    TableStatus `json:"status" example:"free"`
+	PosX      int32       `json:"pos_x" example:"0"`
+	PosY      int32       `json:"pos_y" example:"0"`
+	Width     int32       `json:"width" example:"0"`
+	Height    int32       `json:"height" example:"0"`
+	Rotation  int32       `json:"rotation" example:"0"`
 	CreatedAt *time.Time  `json:"created_at,omitempty"`
 	UpdatedAt *time.Time  `json:"updated_at,omitempty"`
 }

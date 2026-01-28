@@ -853,3 +853,45 @@ func (h *Handler) GetCompoundWithCalculations(c echo.Context) error {
 		http.StatusOK,
 	))
 }
+
+// PreviewCalculations returns calculated ingredient/compound cost rows without saving anything
+// @Summary Preview calculations (no DB writes)
+// @Description Calculate ingredient + compound costs for UI preview. Does not create any DB records.
+// @Tags Calculations
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param request body model.PreviewCalculationsRequest true "Preview calculations request"
+// @Success 200 {object} model.PreviewCalculationsResponse "Preview generated successfully"
+// @Failure 400 {object} model.ErrorResponse "Invalid request"
+// @Failure 401 {object} model.ErrorResponse "Unauthorized"
+// @Failure 500 {object} model.ErrorResponse "Internal server error"
+// @Router /api/v1/calculations/preview [post]
+func (h *Handler) PreviewCalculations(c echo.Context) error {
+	var req model.PreviewCalculationsRequest
+	if err := c.Bind(&req); err != nil {
+		log.Printf("PreviewCalculations: invalid request: %v", err)
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"Invalid request",
+			err.Error(),
+			http.StatusBadRequest,
+		))
+	}
+
+	ctx := c.Request().Context()
+	resp, err := h.service.Calculation().PreviewCalculations(ctx, &req)
+	if err != nil {
+		log.Printf("PreviewCalculations: failed: %v", err)
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"Failed to preview calculations",
+			err.Error(),
+			http.StatusBadRequest,
+		))
+	}
+
+	return c.JSON(http.StatusOK, model.NewSuccessResponse(
+		"Calculations preview generated successfully",
+		resp,
+		http.StatusOK,
+	))
+}

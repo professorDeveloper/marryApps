@@ -370,6 +370,113 @@ func (c *CalculationS) CreateCalculationCompoundToCompound(ctx context.Context, 
 	return toCalculationResponseAny(calculation), nil
 }
 
+func (c *CalculationS) PreviewCalculations(ctx context.Context, req *model.PreviewCalculationsRequest) (*model.PreviewCalculationsResponse, error) {
+	if req == nil {
+		return nil, fmt.Errorf("request is required")
+	}
+
+	var items []model.CalculationPreviewItem
+	var totalCost float64
+
+	for _, calc := range req.IngredientCalculations {
+		ingredientUUID, err := uuid.Parse(calc.IngredientID)
+		if err != nil {
+			return nil, fmt.Errorf("invalid ingredient_id: %w", err)
+		}
+
+		qtyFloat, err := strconv.ParseFloat(calc.Quantity, 64)
+		if err != nil {
+			return nil, fmt.Errorf("invalid quantity: %w", err)
+		}
+
+		ingredient, err := c.repo.Tenant(ctx).GetIngredientByID(ctx, ingredientUUID)
+		if err != nil {
+			if err == pgx.ErrNoRows {
+				return nil, fmt.Errorf("ingredient not found")
+			}
+			return nil, fmt.Errorf("failed to fetch ingredient: %w", err)
+		}
+
+		if !ingredient.PricePerUnit.Valid {
+			return nil, fmt.Errorf("ingredient has no price - please add ingredient to invoice first")
+		}
+
+		priceStr := numericToStr(ingredient.PricePerUnit)
+		priceFloat, err := strconv.ParseFloat(priceStr, 64)
+		if err != nil {
+			return nil, fmt.Errorf("invalid ingredient price: %w", err)
+		}
+		if priceFloat == 0 {
+			return nil, fmt.Errorf("ingredient has no price - please add ingredient to invoice first")
+		}
+
+		lineTotal := qtyFloat * priceFloat
+		totalCost += lineTotal
+
+		measurementUnit := ""
+		if ingredient.Measurement.Valid {
+			measurementUnit = string(ingredient.Measurement.MeasurementType)
+		}
+
+		idStr := calc.IngredientID
+		items = append(items, model.CalculationPreviewItem{
+			Name:                ingredient.Name,
+			IngredientID:        &idStr,
+			ComponentCompoundID: nil,
+			Quantity:            calc.Quantity,
+			MeasurementUnit:     measurementUnit,
+			PricePerUnit:        fmt.Sprintf("%.2f", priceFloat),
+			TotalCost:           fmt.Sprintf("%.2f", lineTotal),
+		})
+	}
+
+	for _, calc := range req.CompoundCalculations {
+		compoundUUID, err := uuid.Parse(calc.CompoundID)
+		if err != nil {
+			return nil, fmt.Errorf("invalid compound_id: %w", err)
+		}
+
+		qtyFloat, err := strconv.ParseFloat(calc.Quantity, 64)
+		if err != nil {
+			return nil, fmt.Errorf("invalid quantity: %w", err)
+		}
+
+		compound, err := c.repo.Tenant(ctx).GetCompoundByID(ctx, compoundUUID)
+		if err != nil {
+			if err == pgx.ErrNoRows {
+				return nil, fmt.Errorf("compound not found")
+			}
+			return nil, fmt.Errorf("failed to fetch compound: %w", err)
+		}
+
+		priceStr := numericToStr(compound.Price)
+		priceFloat, err := strconv.ParseFloat(priceStr, 64)
+		if err != nil {
+			return nil, fmt.Errorf("invalid compound price: %w", err)
+		}
+		if priceFloat == 0 {
+			return nil, fmt.Errorf("compound has no price - please add ingredients first")
+		}
+
+		lineTotal := qtyFloat * priceFloat
+		totalCost += lineTotal
+
+		idStr := calc.CompoundID
+		items = append(items, model.CalculationPreviewItem{
+			Name:                compound.Name,
+			IngredientID:        nil,
+			ComponentCompoundID: &idStr,
+			Quantity:            calc.Quantity,
+			MeasurementUnit:     "compound",
+			PricePerUnit:        fmt.Sprintf("%.2f", priceFloat),
+			TotalCost:           fmt.Sprintf("%.2f", lineTotal),
+		})
+	}
+
+	_ = totalCost
+	return &model.PreviewCalculationsResponse{Calculations: items}, nil
+}
+
 func (c *CalculationS) createCalculationInternal(ctx context.Context, goodID, compoundID *string, ingredientID, quantity string) (*model.CalculationResponse, error) {
 	// Validate that at least one of goodID or compoundID is provided
 	if (goodID == nil || *goodID == "") && (compoundID == nil || *compoundID == "") {

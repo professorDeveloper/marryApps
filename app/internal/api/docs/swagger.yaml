@@ -58,17 +58,49 @@ definitions:
       hall_id:
         example: a1b2c3d4-e5f6-4a5b-8c9d-e0f1a2b3c4d5
         type: string
+      height:
+        example: 0
+        type: integer
       id:
         example: c0f18a64-7f5c-4425-9414-1b01cddee9d9
         type: string
       number:
         example: 5
         type: integer
+      pos_x:
+        example: 0
+        type: integer
+      pos_y:
+        example: 0
+        type: integer
+      rotation:
+        example: 0
+        type: integer
       status:
         allOf:
         - $ref: '#/definitions/model.TableStatus'
         example: free
       updated_at:
+        type: string
+      width:
+        example: 0
+        type: integer
+    type: object
+  model.CalculationPreviewItem:
+    properties:
+      component_compound_id:
+        type: string
+      ingredient_id:
+        type: string
+      measurement_unit:
+        type: string
+      name:
+        type: string
+      price_per_unit:
+        type: string
+      quantity:
+        type: string
+      total_cost:
         type: string
     type: object
   model.CalculationResponse:
@@ -306,13 +338,28 @@ definitions:
       hall_id:
         example: a1b2c3d4-e5f6-4a5b-8c9d-e0f1a2b3c4d5
         type: string
+      height:
+        example: 0
+        type: integer
       number:
         example: 5
         minimum: 1
         type: integer
+      pos_x:
+        example: 0
+        type: integer
+      pos_y:
+        example: 0
+        type: integer
+      rotation:
+        example: 0
+        type: integer
       status:
         example: free
         type: string
+      width:
+        example: 0
+        type: integer
     required:
     - capacity
     - hall_id
@@ -556,10 +603,14 @@ definitions:
     properties:
       branch_id:
         type: string
+      height:
+        type: integer
       name:
         type: string
       name_i18n:
         type: string
+      width:
+        type: integer
     type: object
   model.CreateIngredientGroupRequest:
     properties:
@@ -1000,6 +1051,8 @@ definitions:
         type: string
       created_at:
         type: string
+      height:
+        type: integer
       id:
         type: string
       name:
@@ -1008,6 +1061,8 @@ definitions:
         type: string
       updated_at:
         type: string
+      width:
+        type: integer
     type: object
   model.IndexCreation:
     properties:
@@ -1439,6 +1494,24 @@ definitions:
         example: "1234"
         type: string
     type: object
+  model.PreviewCalculationsRequest:
+    properties:
+      compound_calculations:
+        items:
+          $ref: '#/definitions/model.CompoundCalculationItem'
+        type: array
+      ingredient_calculations:
+        items:
+          $ref: '#/definitions/model.IngredientCalculationItem'
+        type: array
+    type: object
+  model.PreviewCalculationsResponse:
+    properties:
+      calculations:
+        items:
+          $ref: '#/definitions/model.CalculationPreviewItem'
+        type: array
+    type: object
   model.RefreshRequest:
     properties:
       refreshToken:
@@ -1637,12 +1710,27 @@ definitions:
       hall_id:
         example: a1b2c3d4-e5f6-4a5b-8c9d-e0f1a2b3c4d5
         type: string
+      height:
+        example: 0
+        type: integer
       number:
         example: 5
+        type: integer
+      pos_x:
+        example: 0
+        type: integer
+      pos_y:
+        example: 0
+        type: integer
+      rotation:
+        example: 0
         type: integer
       status:
         example: available
         type: string
+      width:
+        example: 0
+        type: integer
     type: object
   model.UpdateCafeTableStatusRequest:
     properties:
@@ -1816,10 +1904,14 @@ definitions:
     properties:
       branch_id:
         type: string
+      height:
+        type: integer
       name:
         type: string
       name_i18n:
         type: string
+      width:
+        type: integer
     type: object
   model.UpdateIngredientGroupRequest:
     properties:
@@ -3363,6 +3455,43 @@ paths:
       summary: Get cafe tables by status
       tags:
       - cafe-tables
+  /api/v1/calculations/preview:
+    post:
+      consumes:
+      - application/json
+      description: Calculate ingredient + compound costs for UI preview. Does not
+        create any DB records.
+      parameters:
+      - description: Preview calculations request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.PreviewCalculationsRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Preview generated successfully
+          schema:
+            $ref: '#/definitions/model.PreviewCalculationsResponse'
+        "400":
+          description: Invalid request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Preview calculations (no DB writes)
+      tags:
+      - Calculations
   /api/v1/categories:
     get:
       consumes:

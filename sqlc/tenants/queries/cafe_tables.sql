@@ -1,46 +1,46 @@
 -- name: CreateCafeTable :one
-INSERT INTO cafe_tables (id, hall_id, number, capacity, status)
-VALUES ($1, $2, $3, $4, $5)
-RETURNING id, hall_id, number, capacity, status, created_at, updated_at, deleted_at;
+INSERT INTO cafe_tables (id, hall_id, number, capacity, status, pos_x, pos_y, width, height, rotation)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+RETURNING id, hall_id, number, capacity, status, created_at, updated_at, deleted_at, pos_x, pos_y, width, height, rotation;
 
 -- name: GetCafeTableByID :one
-SELECT id, hall_id, number, capacity, status, created_at, updated_at, deleted_at
+SELECT id, hall_id, number, capacity, status, created_at, updated_at, deleted_at, pos_x, pos_y, width, height, rotation
 FROM cafe_tables
 WHERE id = $1 AND deleted_at = 0;
 
 -- name: GetCafeTableByNumber :one
-SELECT id, hall_id, number, capacity, status, created_at, updated_at, deleted_at
+SELECT id, hall_id, number, capacity, status, created_at, updated_at, deleted_at, pos_x, pos_y, width, height, rotation
 FROM cafe_tables
 WHERE hall_id = $1 AND number = $2 AND deleted_at = 0;
 
 -- name: GetAllCafeTables :many
-SELECT id, hall_id, number, capacity, status, created_at, updated_at, deleted_at
+SELECT id, hall_id, number, capacity, status, created_at, updated_at, deleted_at, pos_x, pos_y, width, height, rotation
 FROM cafe_tables
 WHERE deleted_at = 0
 ORDER BY hall_id ASC, number ASC
 LIMIT $1 OFFSET $2;
 
 -- name: GetCafeTablesByHallID :many
-SELECT id, hall_id, number, capacity, status, created_at, updated_at, deleted_at
+SELECT id, hall_id, number, capacity, status, created_at, updated_at, deleted_at, pos_x, pos_y, width, height, rotation
 FROM cafe_tables
 WHERE hall_id = $1 AND deleted_at = 0
 ORDER BY number ASC;
 
 -- name: GetCafeTablesByStatus :many
-SELECT id, hall_id, number, capacity, status, created_at, updated_at, deleted_at
+SELECT id, hall_id, number, capacity, status, created_at, updated_at, deleted_at, pos_x, pos_y, width, height, rotation
 FROM cafe_tables
 WHERE status = $1 AND deleted_at = 0
 ORDER BY hall_id ASC, number ASC
 LIMIT $2 OFFSET $3;
 
 -- name: GetCafeTablesByHallAndStatus :many
-SELECT id, hall_id, number, capacity, status, created_at, updated_at, deleted_at
+SELECT id, hall_id, number, capacity, status, created_at, updated_at, deleted_at, pos_x, pos_y, width, height, rotation
 FROM cafe_tables
 WHERE hall_id = $1 AND status = $2 AND deleted_at = 0
 ORDER BY number ASC;
 
 -- name: GetCafeTablesByCapacity :many
-SELECT id, hall_id, number, capacity, status, created_at, updated_at, deleted_at
+SELECT id, hall_id, number, capacity, status, created_at, updated_at, deleted_at, pos_x, pos_y, width, height, rotation
 FROM cafe_tables
 WHERE capacity >= $1 AND deleted_at = 0
 ORDER BY capacity ASC, number ASC
@@ -52,30 +52,35 @@ SET hall_id = COALESCE($2, hall_id),
     number = COALESCE($3, number),
     capacity = COALESCE($4, capacity),
     status = COALESCE($5, status),
+    pos_x = COALESCE($6, pos_x),
+    pos_y = COALESCE($7, pos_y),
+    width = COALESCE($8, width),
+    height = COALESCE($9, height),
+    rotation = COALESCE($10, rotation),
     updated_at = NOW()
 WHERE id = $1 AND deleted_at = 0
-RETURNING id, hall_id, number, capacity, status, created_at, updated_at, deleted_at;
+RETURNING id, hall_id, number, capacity, status, created_at, updated_at, deleted_at, pos_x, pos_y, width, height, rotation;
 
 -- name: UpdateCafeTableStatus :one
 UPDATE cafe_tables
 SET status = $2,
     updated_at = NOW()
 WHERE id = $1 AND deleted_at = 0
-RETURNING id, hall_id, number, capacity, status, created_at, updated_at, deleted_at;
+RETURNING id, hall_id, number, capacity, status, created_at, updated_at, deleted_at, pos_x, pos_y, width, height, rotation;
 
 -- name: SetTableFree :one
 UPDATE cafe_tables
 SET status = 'free',
     updated_at = NOW()
 WHERE id = $1 AND deleted_at = 0
-RETURNING id, hall_id, number, capacity, status, created_at, updated_at, deleted_at;
+RETURNING id, hall_id, number, capacity, status, created_at, updated_at, deleted_at, pos_x, pos_y, width, height, rotation;
 
 -- name: SetTableBusy :one
 UPDATE cafe_tables
 SET status = 'busy',
     updated_at = NOW()
 WHERE id = $1 AND deleted_at = 0
-RETURNING id, hall_id, number, capacity, status, created_at, updated_at, deleted_at;
+RETURNING id, hall_id, number, capacity, status, created_at, updated_at, deleted_at, pos_x, pos_y, width, height, rotation;
 
 -- name: DeleteCafeTable :exec
 UPDATE cafe_tables
@@ -108,6 +113,11 @@ SELECT
     ct.number,
     ct.capacity,
     ct.status,
+    ct.pos_x,
+    ct.pos_y,
+    ct.width,
+    ct.height,
+    ct.rotation,
     ct.created_at,
     ct.updated_at,
     h.name as hall_name,
@@ -121,7 +131,7 @@ WHERE ct.id = $1 AND ct.deleted_at = 0;
 
 
 -- name: GetAvailableTablesByHall :many
-SELECT id, hall_id, number, capacity, status, created_at, updated_at, deleted_at
+SELECT id, hall_id, number, capacity, status, created_at, updated_at, deleted_at, pos_x, pos_y, width, height, rotation
 FROM cafe_tables
 WHERE hall_id = $1 
 AND status = 'free' 
@@ -129,7 +139,7 @@ AND deleted_at = 0
 ORDER BY number ASC;
 
 -- name: GetAvailableTablesByCapacity :many
-SELECT id, hall_id, number, capacity, status, created_at, updated_at, deleted_at
+SELECT id, hall_id, number, capacity, status, created_at, updated_at, deleted_at, pos_x, pos_y, width, height, rotation
 FROM cafe_tables
 WHERE capacity >= $1 
 AND status = 'free' 
@@ -138,7 +148,7 @@ ORDER BY capacity ASC, number ASC
 LIMIT $2 OFFSET $3;
 
 -- name: GetAvailableTablesByHallAndCapacity :many
-SELECT id, hall_id, number, capacity, status, created_at, updated_at, deleted_at
+SELECT id, hall_id, number, capacity, status, created_at, updated_at, deleted_at, pos_x, pos_y, width, height, rotation
 FROM cafe_tables
 WHERE hall_id = $1 
 AND capacity >= $2 

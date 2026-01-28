@@ -99,13 +99,13 @@ type DepartmentI interface {
 }
 
 type HallI interface {
-	CreateHall(ctx context.Context, name string, branchID string, nameI18n *uuid.UUID) (*model.HallResponse, error)
+	CreateHall(ctx context.Context, name string, branchID string, nameI18n *uuid.UUID, width, height *int32) (*model.HallResponse, error)
 	GetHallByID(ctx context.Context, hallID string) (*model.HallResponse, error)
 	GetAllHalls(ctx context.Context, limit, offset int32) ([]*model.HallResponse, error)
 	GetAllHallsWithLang(ctx context.Context, lang string, limit, offset int32) ([]*model.HallResponse, error)
 	GetHallsByBranchID(ctx context.Context, branchID string, limit, offset int32) ([]*model.HallResponse, error)
 	GetHallsByBranchIDWithLang(ctx context.Context, branchID string, lang string, limit, offset int32) ([]*model.HallResponse, error)
-	UpdateHall(ctx context.Context, hallID string, name *string, branchID *string, nameI18n *string) (*model.HallResponse, error)
+	UpdateHall(ctx context.Context, hallID string, name *string, branchID *string, nameI18n *string, width, height *int32) (*model.HallResponse, error)
 	DeleteHall(ctx context.Context, hallID string) error
 	RestoreHall(ctx context.Context, hallID string) (*model.HallResponse, error)
 	SearchHalls(ctx context.Context, query string, limit, offset int32) ([]*model.HallResponse, error)
@@ -226,7 +226,7 @@ type GoodsI interface {
 }
 
 type CafeTableI interface {
-	CreateCafeTable(ctx context.Context, hallID string, number int32, capacity int32, status *string) (*model.CafeTableResponse, error)
+	CreateCafeTable(ctx context.Context, hallID string, number int32, capacity int32, status *string, posX, posY, width, height, rotation *int32) (*model.CafeTableResponse, error)
 	GetCafeTableByID(ctx context.Context, tableID string) (*model.CafeTableResponse, error)
 	GetAllCafeTables(ctx context.Context, limit, offset int32) ([]model.CafeTableResponse, error)
 	GetCafeTablesByHallID(ctx context.Context, hallID string, limit, offset int32) ([]model.CafeTableResponse, error)
@@ -235,7 +235,7 @@ type CafeTableI interface {
 	GetAvailableTablesByHall(ctx context.Context, hallID string) ([]model.CafeTableResponse, error)
 	GetAvailableTablesByCapacity(ctx context.Context, capacity, limit, offset int32) ([]model.CafeTableResponse, error)
 	GetAvailableTablesByHallAndCapacity(ctx context.Context, hallID string, capacity int32) ([]model.CafeTableResponse, error)
-	UpdateCafeTable(ctx context.Context, tableID string, hallID *string, number *int32, capacity *int32, status *string) (*model.CafeTableResponse, error)
+	UpdateCafeTable(ctx context.Context, tableID string, hallID *string, number *int32, capacity *int32, status *string, posX, posY, width, height, rotation *int32) (*model.CafeTableResponse, error)
 	UpdateCafeTableStatus(ctx context.Context, tableID string, status string) (*model.CafeTableResponse, error)
 	SetTableFree(ctx context.Context, tableID string) (*model.CafeTableResponse, error)
 	SetTableBusy(ctx context.Context, tableID string) (*model.CafeTableResponse, error)
@@ -338,6 +338,7 @@ type CalculationI interface {
 	CreateCalculationForCompound(ctx context.Context, compoundID, ingredientID, quantity string) (*model.CalculationResponse, error)
 	CreateCalculationWithCompound(ctx context.Context, goodID, compoundID, quantity string) (*model.CalculationResponse, error)
 	CreateCalculationCompoundToCompound(ctx context.Context, parentCompoundID, childCompoundID, quantity string) (*model.CalculationResponse, error)
+	PreviewCalculations(ctx context.Context, req *model.PreviewCalculationsRequest) (*model.PreviewCalculationsResponse, error)
 	GetCalculationByID(ctx context.Context, calculationID string) (*model.CalculationResponse, error)
 	GetCalculationsByGoodID(ctx context.Context, goodID string) ([]*model.CalculationResponse, error)
 	GetCalculationsByCompoundID(ctx context.Context, compoundID string) ([]*model.CalculationResponse, error)

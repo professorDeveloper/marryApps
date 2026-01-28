@@ -35,9 +35,9 @@ func (q *Queries) CountHallsByBranch(ctx context.Context, branchID uuid.UUID) (i
 }
 
 const createHall = `-- name: CreateHall :one
-INSERT INTO halls (id, branch_id, name, name_i18n)
-VALUES ($1, $2, $3, $4)
-RETURNING id, branch_id, name, name_i18n, created_at, updated_at, deleted_at
+INSERT INTO halls (id, branch_id, name, name_i18n, width, height)
+VALUES ($1, $2, $3, $4, $5, $6)
+RETURNING id, branch_id, name, name_i18n, created_at, updated_at, deleted_at, width, height
 `
 
 type CreateHallParams struct {
@@ -45,6 +45,8 @@ type CreateHallParams struct {
 	BranchID uuid.UUID   `json:"branch_id"`
 	Name     string      `json:"name"`
 	NameI18n pgtype.UUID `json:"name_i18n"`
+	Width    int32       `json:"width"`
+	Height   int32       `json:"height"`
 }
 
 func (q *Queries) CreateHall(ctx context.Context, arg CreateHallParams) (Hall, error) {
@@ -53,6 +55,8 @@ func (q *Queries) CreateHall(ctx context.Context, arg CreateHallParams) (Hall, e
 		arg.BranchID,
 		arg.Name,
 		arg.NameI18n,
+		arg.Width,
+		arg.Height,
 	)
 	var i Hall
 	err := row.Scan(
@@ -63,6 +67,8 @@ func (q *Queries) CreateHall(ctx context.Context, arg CreateHallParams) (Hall, e
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
+		&i.Width,
+		&i.Height,
 	)
 	return i, err
 }
@@ -79,7 +85,7 @@ func (q *Queries) DeleteHall(ctx context.Context, id uuid.UUID) error {
 }
 
 const getAllHalls = `-- name: GetAllHalls :many
-SELECT id, branch_id, name, name_i18n, created_at, updated_at, deleted_at
+SELECT id, branch_id, name, name_i18n, created_at, updated_at, deleted_at, width, height
 FROM halls
 WHERE deleted_at = 0
 ORDER BY created_at DESC
@@ -108,6 +114,8 @@ func (q *Queries) GetAllHalls(ctx context.Context, arg GetAllHallsParams) ([]Hal
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.DeletedAt,
+			&i.Width,
+			&i.Height,
 		); err != nil {
 			return nil, err
 		}
@@ -132,7 +140,9 @@ SELECT
     h.name_i18n,
     h.created_at,
     h.updated_at,
-    h.deleted_at
+    h.deleted_at,
+    h.width,
+    h.height
 FROM halls h
 LEFT JOIN translations t ON h.name_i18n = t.id AND t.deleted_at = 0
 WHERE h.deleted_at = 0
@@ -163,6 +173,8 @@ func (q *Queries) GetAllHallsWithLanguage(ctx context.Context, arg GetAllHallsWi
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.DeletedAt,
+			&i.Width,
+			&i.Height,
 		); err != nil {
 			return nil, err
 		}
@@ -175,7 +187,7 @@ func (q *Queries) GetAllHallsWithLanguage(ctx context.Context, arg GetAllHallsWi
 }
 
 const getHallByID = `-- name: GetHallByID :one
-SELECT id, branch_id, name, name_i18n, created_at, updated_at, deleted_at
+SELECT id, branch_id, name, name_i18n, created_at, updated_at, deleted_at, width, height
 FROM halls
 WHERE id = $1 AND deleted_at = 0
 `
@@ -191,6 +203,8 @@ func (q *Queries) GetHallByID(ctx context.Context, id uuid.UUID) (Hall, error) {
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
+		&i.Width,
+		&i.Height,
 	)
 	return i, err
 }
@@ -203,6 +217,8 @@ SELECT
     h.name_i18n,
     h.created_at,
     h.updated_at,
+    h.width,
+    h.height,
     b.name as branch_name,
     b.address as branch_address
 FROM halls h
@@ -217,6 +233,8 @@ type GetHallWithBranchRow struct {
 	NameI18n      pgtype.UUID        `json:"name_i18n"`
 	CreatedAt     pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt     pgtype.Timestamptz `json:"updated_at"`
+	Width         int32              `json:"width"`
+	Height        int32              `json:"height"`
 	BranchName    *string            `json:"branch_name"`
 	BranchAddress *string            `json:"branch_address"`
 }
@@ -231,6 +249,8 @@ func (q *Queries) GetHallWithBranch(ctx context.Context, id uuid.UUID) (GetHallW
 		&i.NameI18n,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Width,
+		&i.Height,
 		&i.BranchName,
 		&i.BranchAddress,
 	)
@@ -238,7 +258,7 @@ func (q *Queries) GetHallWithBranch(ctx context.Context, id uuid.UUID) (GetHallW
 }
 
 const getHallsByBranchID = `-- name: GetHallsByBranchID :many
-SELECT id, branch_id, name, name_i18n, created_at, updated_at, deleted_at
+SELECT id, branch_id, name, name_i18n, created_at, updated_at, deleted_at, width, height
 FROM halls
 WHERE branch_id = $1 AND deleted_at = 0
 ORDER BY created_at DESC
@@ -268,6 +288,8 @@ func (q *Queries) GetHallsByBranchID(ctx context.Context, arg GetHallsByBranchID
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.DeletedAt,
+			&i.Width,
+			&i.Height,
 		); err != nil {
 			return nil, err
 		}
@@ -292,7 +314,9 @@ SELECT
     h.name_i18n,
     h.created_at,
     h.updated_at,
-    h.deleted_at
+    h.deleted_at,
+    h.width,
+    h.height
 FROM halls h
 LEFT JOIN translations t ON h.name_i18n = t.id AND t.deleted_at = 0
 WHERE h.branch_id = $1 AND h.deleted_at = 0
@@ -329,6 +353,8 @@ func (q *Queries) GetHallsByBranchIDWithLanguage(ctx context.Context, arg GetHal
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.DeletedAt,
+			&i.Width,
+			&i.Height,
 		); err != nil {
 			return nil, err
 		}
@@ -352,7 +378,7 @@ func (q *Queries) RestoreHall(ctx context.Context, id uuid.UUID) error {
 }
 
 const searchHalls = `-- name: SearchHalls :many
-SELECT id, branch_id, name, name_i18n, created_at, updated_at, deleted_at
+SELECT id, branch_id, name, name_i18n, created_at, updated_at, deleted_at, width, height
 FROM halls
 WHERE deleted_at = 0 AND name ILIKE '%' || $1 || '%'
 ORDER BY created_at DESC
@@ -382,6 +408,8 @@ func (q *Queries) SearchHalls(ctx context.Context, arg SearchHallsParams) ([]Hal
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.DeletedAt,
+			&i.Width,
+			&i.Height,
 		); err != nil {
 			return nil, err
 		}
@@ -398,9 +426,11 @@ UPDATE halls
 SET branch_id = COALESCE($2, branch_id),
     name = COALESCE($3, name),
     name_i18n = COALESCE($4, name_i18n),
+    width = COALESCE($5, width),
+    height = COALESCE($6, height),
     updated_at = NOW()
 WHERE id = $1 AND deleted_at = 0
-RETURNING id, branch_id, name, name_i18n, created_at, updated_at, deleted_at
+RETURNING id, branch_id, name, name_i18n, created_at, updated_at, deleted_at, width, height
 `
 
 type UpdateHallParams struct {
@@ -408,6 +438,8 @@ type UpdateHallParams struct {
 	BranchID uuid.UUID   `json:"branch_id"`
 	Name     string      `json:"name"`
 	NameI18n pgtype.UUID `json:"name_i18n"`
+	Width    int32       `json:"width"`
+	Height   int32       `json:"height"`
 }
 
 func (q *Queries) UpdateHall(ctx context.Context, arg UpdateHallParams) (Hall, error) {
@@ -416,6 +448,8 @@ func (q *Queries) UpdateHall(ctx context.Context, arg UpdateHallParams) (Hall, e
 		arg.BranchID,
 		arg.Name,
 		arg.NameI18n,
+		arg.Width,
+		arg.Height,
 	)
 	var i Hall
 	err := row.Scan(
@@ -426,6 +460,8 @@ func (q *Queries) UpdateHall(ctx context.Context, arg UpdateHallParams) (Hall, e
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
+		&i.Width,
+		&i.Height,
 	)
 	return i, err
 }

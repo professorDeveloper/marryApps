@@ -23,7 +23,7 @@ func NewHallS(repo *repository.Repository) *HallS {
 }
 
 // CreateHall creates a new hall
-func (h *HallS) CreateHall(ctx context.Context, name string, branchID string, nameI18n *uuid.UUID) (*model.HallResponse, error) {
+func (h *HallS) CreateHall(ctx context.Context, name string, branchID string, nameI18n *uuid.UUID, width, height *int32) (*model.HallResponse, error) {
 	if name == "" {
 		return nil, fmt.Errorf("hall name is required")
 	}
@@ -41,11 +41,22 @@ func (h *HallS) CreateHall(ctx context.Context, name string, branchID string, na
 		nameI18nUUID = pgtype.UUID{Bytes: *nameI18n, Valid: true}
 	}
 
+	finalWidth := int32(0)
+	if width != nil {
+		finalWidth = *width
+	}
+	finalHeight := int32(0)
+	if height != nil {
+		finalHeight = *height
+	}
+
 	hall, err := h.repo.Tenant(ctx).CreateHall(ctx, pg.CreateHallParams{
 		ID:       uuid.New(),
 		BranchID: bID,
 		Name:     name,
 		NameI18n: nameI18nUUID,
+		Width:    finalWidth,
+		Height:   finalHeight,
 	})
 	if err != nil {
 		log.Printf("CreateHall failed: %v", err)
@@ -161,7 +172,7 @@ func (h *HallS) GetHallsByBranchIDWithLang(ctx context.Context, branchID string,
 }
 
 // UpdateHall updates a hall
-func (h *HallS) UpdateHall(ctx context.Context, hallID string, name *string, branchID *string, nameI18n *string) (*model.HallResponse, error) {
+func (h *HallS) UpdateHall(ctx context.Context, hallID string, name *string, branchID *string, nameI18n *string, width, height *int32) (*model.HallResponse, error) {
 	id, err := uuid.Parse(hallID)
 	if err != nil {
 		return nil, fmt.Errorf("invalid hall ID: %w", err)
@@ -199,11 +210,22 @@ func (h *HallS) UpdateHall(ctx context.Context, hallID string, name *string, bra
 		finalNameI18n = pgtype.UUID{Bytes: nameI18nUUID, Valid: true}
 	}
 
+	finalWidth := existing.Width
+	if width != nil {
+		finalWidth = *width
+	}
+	finalHeight := existing.Height
+	if height != nil {
+		finalHeight = *height
+	}
+
 	hall, err := h.repo.Tenant(ctx).UpdateHall(ctx, pg.UpdateHallParams{
 		ID:       id,
 		BranchID: finalBranchID,
 		Name:     finalName,
 		NameI18n: finalNameI18n,
+		Width:    finalWidth,
+		Height:   finalHeight,
 	})
 	if err != nil {
 		log.Printf("UpdateHall failed: %v", err)
@@ -291,6 +313,8 @@ func toHallResponse(hall pg.Hall) *model.HallResponse {
 		BranchID:  branchID,
 		Name:      &name,
 		NameI18n:  nameI18nStr,
+		Width:     hall.Width,
+		Height:    hall.Height,
 		CreatedAt: createdAt,
 		UpdatedAt: updatedAt,
 	}
