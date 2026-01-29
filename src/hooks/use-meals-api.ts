@@ -20,6 +20,7 @@ export interface UseMealsAPIReturn {
     getMeals: () => Promise<IMealsItem[]>;
     getMealById: (id: string) => Promise<IMealsItem | null>;
     createMeal: (data: Partial<IMealsItem>) => Promise<IMealsItem>;
+    createMealWithCalculations: (data: any) => Promise<any>;
     updateMeal: (id: string, data: Partial<IMealsItem>) => Promise<IMealsItem>;
     deleteMeal: (id: string) => Promise<void>;
     deleteMeals: (ids: string[]) => Promise<void>;
@@ -356,10 +357,69 @@ export function useMealsAPI(): UseMealsAPIReturn {
         }
     }, []);
 
+    /**
+     * Meal'ni calculations bilan birga yaratadi (yangi qulayroq API)
+     * 
+     * Payload example:
+     * {
+     *   "compound_calculations": [{ "compound_id": "...", "quantity": "3" }],
+     *   "good": { "category_id": "...", "color_code": "#...", "cook_time": 30, ... },
+     *   "ingredient_calculations": [{ "ingredient_id": "...", "quantity": "2.5" }]
+     * }
+     */
+    const createMealWithCalculations = useCallback(
+        async (payload: {
+            good: any;
+            ingredient_calculations?: Array<{ ingredient_id: string; quantity: string }>;
+            compound_calculations?: Array<{ compound_id: string; quantity: string }>;
+        }): Promise<any> => {
+            try {
+                const payloadToSend = {
+                    good: {
+                        name: payload.good.name,
+                        description: payload.good.description,
+                        category_id: payload.good.category_id,
+                        department_id: payload.good.department_id,
+                        picture_url: payload.good.picture_url || null,
+                        price: String(payload.good.price || 0),
+                        cook_time: payload.good.cook_time || 0,
+                        color_code: payload.good.color_code || null,
+                    },
+                    ingredient_calculations: payload.ingredient_calculations || [],
+                    compound_calculations: payload.compound_calculations || [],
+                };
+
+                const response = await poster<BackendResponse<any>>(
+                    endpoints.meals.createWithCalculations,
+                    payloadToSend
+                );
+
+                // Extract data from wrapped response
+                let data: any;
+                if ('good' in response && 'calculations' in response) {
+                    data = response;
+                } else if (response?.data) {
+                    data = response.data;
+                } else {
+                    throw new Error('Invalid response format');
+                }
+
+                toast.success('Meal with calculations created successfully');
+                return data;
+            } catch (error) {
+                toast.error('Failed to create meal with calculations');
+                console.error('Failed to create meal with calculations:', error);
+                throw error;
+            }
+        },
+        []
+    );
+
     return {
         getMeals,
         getMealById,
         createMeal,
+        createMealWithCalculations,
         updateMeal,
         deleteMeal,
         deleteMeals,

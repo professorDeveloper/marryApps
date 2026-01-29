@@ -11,10 +11,11 @@ import { toast } from 'src/components/snackbar';
 import { Iconify } from 'src/components/iconify';
 import { GenericTableView } from 'src/components/generic-table-view';
 import { CustomGridActionsCellItem } from 'src/components/custom-data-grid';
-import { GenericViewModal, SpecificationsTable, type SpecificationRow } from 'src/components/generic-view-view';
+import { GenericViewModal } from 'src/components/generic-view-view';
 import { getFullImageUrl } from 'src/utils/image-url';
 import { getInitials, getAvatarColor } from 'src/utils/avatar';
-import { Typography } from '@mui/material'; // agar yo'q bo'lsa
+import { Typography } from '@mui/material'; 
+
 function RenderCellDepartmentName({ params }: { params: any }) {
   const { row } = params;
   const name = row.name || '-';

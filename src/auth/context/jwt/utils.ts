@@ -87,12 +87,15 @@ export async function setSession(accessToken: string | null, brandId?: string) {
       // brand_id ni localStorage ga saqlab qolamiz
       if (brandId) {
         localStorage.setItem('brand_id', brandId);
+        localStorage.setItem('branch_id', brandId); // Also save as branch_id for API
       } else if (decodedToken && decodedToken.brand_id) {
         localStorage.setItem('brand_id', decodedToken.brand_id);
+        localStorage.setItem('branch_id', decodedToken.brand_id); // Also save as branch_id for API
       }
     } else {
       sessionStorage.removeItem(JWT_STORAGE_KEY);
       localStorage.removeItem('brand_id');
+      localStorage.removeItem('branch_id');
       delete axios.defaults.headers.common.Authorization;
     }
   } catch (error) {

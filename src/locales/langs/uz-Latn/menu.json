@@ -144,7 +144,10 @@
     "storageRequired": "Ombor tanlash majburiydir",
     "deleteConfirm": "Fayllar o'chirilsinmi?",
     "deleteMessage": "Tanlangan fayllar tizimdan butunlay o'chiriladi va ushbu amalni bekor qilish yoki fayllarni tiklash mumkin emas.",
-    "cancel": "Bekor qilish"
+    "cancel": "Bekor qilish",
+    "nameUz": "Nomi (uzbekcha)",
+    "nameRu": "Nomi (ruscha)",
+    "nameEn": "Nomi (inglizcha)"
   },
   "categories": {
     "title": "Kategoriyalar",
@@ -560,6 +563,9 @@
     "new": "Yangi maxsulot",
     "deleteConfirm": "Maxsulotni o'chirish",
     "deleteMessage": "Siz ushbu maxsulotni o'chirmokchimisiz? Bu amalni orqaga qaytarib bo'lmaydi.",
+    "nameUz": "Nomi (uzbekcha)",
+    "nameRu": "Nomi (ruscha)",
+    "nameEn": "Nomi (inglizcha)",
     "success": {
       "deleteSuccess": "Maxsulot muvaffaqiyatli o'chirildi",
       "createSuccess": "Maxsulot muvaffaqiyatli yaratildi",

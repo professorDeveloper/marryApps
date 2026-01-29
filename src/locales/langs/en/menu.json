@@ -144,7 +144,11 @@
     "imageUrl": "Image URL",
     "nameRequired": "Department name is required",
     "colorRequired": "Department color is required",
-    "storageRequired": "Storage selection is required"
+    "storageRequired": "Storage selection is required",
+    "nameEn": "Name (English)",
+    "nameUz": "Name (Uzbek)",
+    "nameRu": "Name (Russian)",
+    "translationHelp": "Provide translations for the department name in different languages."
   },
   "categories": {
     "title": "Categories",
@@ -544,6 +548,9 @@
     "new": "New ingredient",
     "deleteConfirm": "Delete ingredient",
     "deleteMessage": "Are you sure you want to delete this ingredient? This action cannot be undone.",
+    "nameUz": "Name (Uzbek)",
+    "nameRu": "Name (Russian)",
+    "nameEn": "Name (English)",
     "success": {
       "deleteSuccess": "Ingredient deleted successfully",
       "createSuccess": "Ingredient created successfully",

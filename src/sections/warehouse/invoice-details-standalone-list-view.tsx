@@ -28,6 +28,15 @@ interface InvoiceDetailWithInvoiceInfo {
 
 export function InvoiceDetailsStandaloneListView() {
     const { t } = useTranslation('menu');
+    const theme = {
+        vars: {
+            palette: {
+                error: {
+                    main: '#f44336',
+                },
+            },
+        },
+    };
     const { getInvoiceDetails, deleteInvoiceDetails, getInvoices, getIngredients } = useInvoiceDetailsAPI();
     const { deleteInvoices } = useInvoiceAPI();
     const { getSuppliers } = useSupplierAPI();
@@ -239,6 +248,7 @@ export function InvoiceDetailsStandaloneListView() {
                         label={t('delete')}
                         icon={<Iconify icon="solar:trash-bin-trash-bold" />}
                         onClick={() => handleDeleteClick(params.row.id, 'invoice')}
+                        style={{ color: theme.vars.palette.error.main }}
                     />,
                 ],
             },

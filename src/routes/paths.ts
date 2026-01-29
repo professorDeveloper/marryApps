@@ -196,9 +196,12 @@ export const paths = {
     integrations: {
       root: `${ROOTS.SETTING}/integrations`,
     },
+    floorPlan: `${ROOTS.SETTING}/floor-plan`,
   },
 
   dashboard: {
     root: '/',
+    floorPlan: `${ROOTS.MENU}/floor-plan`,
+    halls: `${ROOTS.MENU}/halls`,
   },
 };

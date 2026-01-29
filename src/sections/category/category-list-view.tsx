@@ -301,12 +301,12 @@ export function CategoryListView() {
           <RenderCellCategory params={params} />
         ),
       },
-      {
-        field: 'storage_id',
-        headerName: t('categories.storage'),
-        width: 180,
-        renderCell: (params) => <RenderCellStorage params={params} />,
-      },
+      // {
+      //   field: 'storage_id',
+      //   headerName: t('categories.storage'),
+      //   width: 180,
+      //   renderCell: (params) => <RenderCellStorage params={params} />,
+      // },
       {
         field: 'department_id',
         headerName: t('categories.department'),

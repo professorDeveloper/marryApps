@@ -2,16 +2,19 @@ import type { SWRConfiguration } from 'swr';
 import type {
   IProductItem,
   IStorageItem,
-  IDepartmentItem,
-  IDepartmentFormData,
-  IStorageFormData,
   ICategoryItem,
+  IDepartmentItem,
+  IStorageFormData,
+  ITranslationItem,
+  IDepartmentFormData,
+  ITranslationFormData,
 } from 'src/types/departments.tsx';
 
 import useSWR, { mutate } from 'swr';
 import { useMemo, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 
-import { poster, putter, fetcher, deleter, endpoints } from 'src/lib/axios';
+import { poster, putter, deleter, fetcher, endpoints } from 'src/lib/axios';
 
 // ----------------------------------------------------------------------
 
@@ -36,20 +39,65 @@ interface BackendResponse<T> {
 }
 
 /**
- * Helper function to enrich departments with storage names
+ * Helper function to enrich departments with storage names and translations
  */
 function enrichDepartments(
   departmentsData: IDepartmentItem[],
-  storages: IStorageItem[]
+  storages: IStorageItem[],
+  translations: ITranslationItem[],
+  currentLang: string
 ): IDepartmentItem[] {
   const storageMap = new Map(
     storages?.map((storage: IStorageItem) => [storage.id, storage.name]) || []
   );
 
-  return departmentsData.map((dept) => ({
-    ...dept,
-    storage_name: storageMap.get(dept.storage_id) || dept.storage_id || '-',
-  }));
+  const translationMap = new Map(
+    translations?.map((translation: ITranslationItem) => [translation.id, translation]) || []
+  );
+
+  // Language mapping for translation keys
+  // i18n language codes -> translation field keys
+  const getLangKey = (lang: string): keyof ITranslationItem => {
+    switch (lang) {
+      case 'uz-Latn': // Uzbek Latin
+        return 'uz-Latn' as keyof ITranslationItem;
+      case 'uz-Cyrl': // Uzbek Cyrillic
+        return 'uz-Cyrl' as keyof ITranslationItem;
+      case 'uz': // Default Uzbek
+        return 'uz' as keyof ITranslationItem;
+      case 'ru': // Russian
+        return 'ru' as keyof ITranslationItem;
+      case 'en': // English
+        return 'en' as keyof ITranslationItem;
+      default:
+        return 'en' as keyof ITranslationItem;
+    }
+  };
+
+  return departmentsData.map((dept) => {
+    const translation = dept.name_i18n ? translationMap.get(dept.name_i18n) : null;
+
+    // Get translated name based on current language
+    let displayName = dept.name;
+    if (translation) {
+      const langKey = getLangKey(currentLang);
+      if (langKey in translation && translation[langKey]) {
+        displayName = translation[langKey] as string;
+      } else if (currentLang.startsWith('uz') && translation.uz) {
+        // Fallback to default uz if uz-Latn or uz-Cyrl not available
+        displayName = translation.uz;
+      } else if (translation.en) {
+        // Fallback to English as last resort
+        displayName = translation.en;
+      }
+    }
+
+    return {
+      ...dept,
+      name: displayName,
+      storage_name: storageMap.get(dept.storage_id) || dept.storage_id || '-',
+    };
+  });
 }
 
 /**
@@ -57,9 +105,23 @@ function enrichDepartments(
  */
 export function useGetDepartments() {
   const url = endpoints.department.list;
+  const { i18n } = useTranslation();
 
   // Get storages for enrichment
   const { storages } = useGetStorages();
+
+  // Get translations
+  const { data: translationsData } = useSWR<BackendResponse<ITranslationItem[]>>(
+    endpoints.translations.list,
+    fetcher,
+    { ...swrOptions }
+  );
+
+  const translations = useMemo(() => {
+    if (!translationsData) return [];
+    if (Array.isArray(translationsData)) return translationsData;
+    return translationsData.data || [];
+  }, [translationsData]);
 
   const { data, isLoading, error, isValidating } = useSWR<BackendResponse<IDepartmentItem[]>>(
     url,
@@ -69,8 +131,9 @@ export function useGetDepartments() {
 
   const enrichedDepartments = useMemo(() => {
     const departments = data?.data || [];
-    return enrichDepartments(departments, storages);
-  }, [data?.data, storages]);
+    const currentLang = i18n.resolvedLanguage || 'en';
+    return enrichDepartments(departments, storages, translations, currentLang);
+  }, [data?.data, storages, translations, i18n.resolvedLanguage]);
 
   const memoizedValue = useMemo(
     () => ({
@@ -91,6 +154,20 @@ export function useGetDepartments() {
  */
 export function useGetDepartment(departmentId: string) {
   const url = departmentId ? endpoints.department.details(departmentId) : '';
+  const { i18n } = useTranslation();
+
+  // Get translations
+  const { data: translationsData } = useSWR<BackendResponse<ITranslationItem[]>>(
+    endpoints.translations.list,
+    fetcher,
+    { ...swrOptions }
+  );
+
+  const translations = useMemo(() => {
+    if (!translationsData) return [];
+    if (Array.isArray(translationsData)) return translationsData;
+    return translationsData.data || [];
+  }, [translationsData]);
 
   const { data, isLoading, error, isValidating } = useSWR<BackendResponse<IDepartmentItem>>(
     url,
@@ -98,14 +175,66 @@ export function useGetDepartment(departmentId: string) {
     { ...swrOptions }
   );
 
+  const department = useMemo(() => {
+    if (!data?.data) return undefined;
+    const dept = data.data;
+    const currentLang = i18n.resolvedLanguage || 'en';
+
+    // Language mapping for translation keys
+    const getLangKey = (lang: string): keyof ITranslationItem => {
+      switch (lang) {
+        case 'uz-Latn': // Uzbek Latin
+          return 'uz-Latn' as keyof ITranslationItem;
+        case 'uz-Cyrl': // Uzbek Cyrillic
+          return 'uz-Cyrl' as keyof ITranslationItem;
+        case 'uz': // Default Uzbek
+          return 'uz' as keyof ITranslationItem;
+        case 'ru': // Russian
+          return 'ru' as keyof ITranslationItem;
+        case 'en': // English
+          return 'en' as keyof ITranslationItem;
+        default:
+          return 'en' as keyof ITranslationItem;
+      }
+    };
+
+    // Apply translation if available
+    if (dept.name_i18n) {
+      const translation = translations.find((t) => t.id === dept.name_i18n);
+      if (translation) {
+        const langKey = getLangKey(currentLang);
+        if (langKey in translation && translation[langKey]) {
+          return {
+            ...dept,
+            name: translation[langKey] as string,
+          };
+        } else if (currentLang.startsWith('uz') && translation.uz) {
+          // Fallback to default uz if uz-Latn or uz-Cyrl not available
+          return {
+            ...dept,
+            name: translation.uz,
+          };
+        } else if (translation.en) {
+          // Fallback to English as last resort
+          return {
+            ...dept,
+            name: translation.en,
+          };
+        }
+      }
+    }
+
+    return dept;
+  }, [data?.data, translations, i18n.resolvedLanguage]);
+
   const memoizedValue = useMemo(
     () => ({
-      department: data?.data,
+      department,
       departmentLoading: isLoading,
       departmentError: error,
       departmentValidating: isValidating,
     }),
-    [data, error, isLoading, isValidating]
+    [department, error, isLoading, isValidating]
   );
 
   return memoizedValue;
@@ -118,9 +247,42 @@ export function useCreateDepartment() {
   const createDepartment = useCallback(
     async (formData: IDepartmentFormData) => {
       try {
+        let name_i18n = formData.name_i18n;
+
+        // If name_i18n is not provided, create a translation
+        if (!name_i18n) {
+          // Extract language-specific names from formData if available
+          // Default: use the name as English, and name as fallback for other languages
+          const translationData: ITranslationFormData = {
+            en: formData.name || '',
+            ru: formData.name || '',
+            uz: formData.name || '',
+          };
+
+          try {
+            const translationResponse = await poster<any>(
+              endpoints.translations.create,
+              translationData
+            );
+            // Extract ID from response
+            name_i18n = translationResponse?.data?.id || translationResponse?.id;
+          } catch (error) {
+            console.error('Failed to create translation:', error);
+            throw new Error('Failed to create translation for department');
+          }
+        }
+
+        const departmentPayload = {
+          name: formData.name,
+          name_i18n,
+          color_code: formData.color_code,
+          storage_id: formData.storage_id,
+          picture_url: formData.picture_url,
+        };
+
         const response = await poster<BackendResponse<IDepartmentItem>>(
           endpoints.department.create,
-          formData
+          departmentPayload
         );
 
         // Revalidate departments list
@@ -145,9 +307,39 @@ export function useUpdateDepartment() {
   const updateDepartment = useCallback(
     async (departmentId: string, formData: IDepartmentFormData) => {
       try {
+        let name_i18n = formData.name_i18n;
+
+        // If name_i18n is not provided and name changed, create or update translation
+        if (!name_i18n) {
+          const translationData: ITranslationFormData = {
+            en: formData.name || '',
+            ru: formData.name || '',
+            uz: formData.name || '',
+          };
+
+          try {
+            const translationResponse = await poster<any>(
+              endpoints.translations.create,
+              translationData
+            );
+            name_i18n = translationResponse?.data?.id || translationResponse?.id;
+          } catch (error) {
+            console.error('Failed to create translation:', error);
+            throw new Error('Failed to create translation for department');
+          }
+        }
+
+        const departmentPayload = {
+          name: formData.name,
+          name_i18n,
+          color_code: formData.color_code,
+          storage_id: formData.storage_id,
+          picture_url: formData.picture_url,
+        };
+
         const response = await putter<BackendResponse<IDepartmentItem>>(
           endpoints.department.update(departmentId),
-          formData
+          departmentPayload
         );
 
         // Revalidate departments list and single department
@@ -225,6 +417,20 @@ export function useGetCategoriesByDepartment(departmentId: string) {
  */
 export function useGetStorages() {
   const url = endpoints.storage.list;
+  const { i18n } = useTranslation();
+
+  // Get translations
+  const { data: translationsData } = useSWR<BackendResponse<ITranslationItem[]>>(
+    endpoints.translations.list,
+    fetcher,
+    { ...swrOptions }
+  );
+
+  const translations = useMemo(() => {
+    if (!translationsData) return [];
+    if (Array.isArray(translationsData)) return translationsData;
+    return translationsData.data || [];
+  }, [translationsData]);
 
   const { data, isLoading, error, isValidating } = useSWR<BackendResponse<IStorageItem[]> | IStorageItem[]>(
     url,
@@ -234,12 +440,56 @@ export function useGetStorages() {
 
   const storages = useMemo(() => {
     if (!data) return [];
-    if (Array.isArray(data)) return data;
-    if (Array.isArray((data as BackendResponse<IStorageItem[]>).data)) {
-      return (data as BackendResponse<IStorageItem[]>).data;
+
+    let storageList: IStorageItem[] = [];
+    if (Array.isArray(data)) {
+      storageList = data;
+    } else if (Array.isArray((data as BackendResponse<IStorageItem[]>).data)) {
+      storageList = (data as BackendResponse<IStorageItem[]>).data;
     }
-    return [];
-  }, [data]);
+
+    const currentLang = i18n.resolvedLanguage || 'en';
+
+    // Language mapping for translation keys
+    const getLangKey = (lang: string): keyof ITranslationItem => {
+      switch (lang) {
+        case 'uz-Latn': // Uzbek Latin
+          return 'uz-Latn' as keyof ITranslationItem;
+        case 'uz-Cyrl': // Uzbek Cyrillic
+          return 'uz-Cyrl' as keyof ITranslationItem;
+        case 'uz': // Default Uzbek
+          return 'uz' as keyof ITranslationItem;
+        case 'ru': // Russian
+          return 'ru' as keyof ITranslationItem;
+        case 'en': // English
+          return 'en' as keyof ITranslationItem;
+        default:
+          return 'en' as keyof ITranslationItem;
+      }
+    };
+
+    // Enrich storages with translations
+    return storageList.map((storage) => {
+      const translation = storage.name_i18n ? translations.find((t) => t.id === storage.name_i18n) : null;
+
+      let displayName = storage.name;
+      if (translation) {
+        const langKey = getLangKey(currentLang);
+        if (langKey in translation && translation[langKey]) {
+          displayName = translation[langKey] as string;
+        } else if (currentLang.startsWith('uz') && translation.uz) {
+          displayName = translation.uz;
+        } else if (translation.en) {
+          displayName = translation.en;
+        }
+      }
+
+      return {
+        ...storage,
+        name: displayName,
+      };
+    });
+  }, [data, translations, i18n.resolvedLanguage]);
 
   const memoizedValue = useMemo(
     () => ({
@@ -260,6 +510,20 @@ export function useGetStorages() {
  */
 export function useGetStorage(storageId: string) {
   const url = storageId ? endpoints.storage.details(storageId) : '';
+  const { i18n } = useTranslation();
+
+  // Get translations
+  const { data: translationsData } = useSWR<BackendResponse<ITranslationItem[]>>(
+    endpoints.translations.list,
+    fetcher,
+    { ...swrOptions }
+  );
+
+  const translations = useMemo(() => {
+    if (!translationsData) return [];
+    if (Array.isArray(translationsData)) return translationsData;
+    return translationsData.data || [];
+  }, [translationsData]);
 
   const { data, isLoading, error, isValidating } = useSWR<
     BackendResponse<IStorageItem> | IStorageItem
@@ -267,11 +531,60 @@ export function useGetStorage(storageId: string) {
 
   const storage = useMemo(() => {
     if (!data) return undefined;
+
+    let storageData: IStorageItem;
     if ('data' in (data as any)) {
-      return (data as BackendResponse<IStorageItem>).data;
+      storageData = (data as BackendResponse<IStorageItem>).data;
+    } else {
+      storageData = data as IStorageItem;
     }
-    return data as IStorageItem;
-  }, [data]);
+
+    const currentLang = i18n.resolvedLanguage || 'en';
+
+    // Language mapping for translation keys
+    const getLangKey = (lang: string): keyof ITranslationItem => {
+      switch (lang) {
+        case 'uz-Latn': // Uzbek Latin
+          return 'uz-Latn' as keyof ITranslationItem;
+        case 'uz-Cyrl': // Uzbek Cyrillic
+          return 'uz-Cyrl' as keyof ITranslationItem;
+        case 'uz': // Default Uzbek
+          return 'uz' as keyof ITranslationItem;
+        case 'ru': // Russian
+          return 'ru' as keyof ITranslationItem;
+        case 'en': // English
+          return 'en' as keyof ITranslationItem;
+        default:
+          return 'en' as keyof ITranslationItem;
+      }
+    };
+
+    // Apply translation if available
+    if (storageData.name_i18n) {
+      const translation = translations.find((t) => t.id === storageData.name_i18n);
+      if (translation) {
+        const langKey = getLangKey(currentLang);
+        if (langKey in translation && translation[langKey]) {
+          return {
+            ...storageData,
+            name: translation[langKey] as string,
+          };
+        } else if (currentLang.startsWith('uz') && translation.uz) {
+          return {
+            ...storageData,
+            name: translation.uz,
+          };
+        } else if (translation.en) {
+          return {
+            ...storageData,
+            name: translation.en,
+          };
+        }
+      }
+    }
+
+    return storageData;
+  }, [data, translations, i18n.resolvedLanguage]);
 
   const memoizedValue = useMemo(
     () => ({
@@ -292,9 +605,47 @@ export function useGetStorage(storageId: string) {
 export function useCreateStorage() {
   const createStorage = useCallback(
     async (formData: IStorageFormData) => {
-      const response = await poster<BackendResponse<IStorageItem>>(endpoints.storage.create, formData);
-      await mutate(endpoints.storage.list);
-      return response.data;
+      try {
+        let name_i18n = formData.name_i18n;
+
+        // If name_i18n is not provided, create a translation
+        if (!name_i18n) {
+          const translationData: ITranslationFormData = {
+            en: formData.name || '',
+            ru: formData.name || '',
+            uz: formData.name || '',
+          };
+
+          try {
+            const translationResponse = await poster<any>(
+              endpoints.translations.create,
+              translationData
+            );
+            name_i18n = translationResponse?.data?.id || translationResponse?.id;
+          } catch (error) {
+            console.error('Failed to create translation:', error);
+            throw new Error('Failed to create translation for storage');
+          }
+        }
+
+        const storagePayload = {
+          name: formData.name,
+          name_i18n,
+          branch_id: formData.branch_id,
+          color_code: formData.color_code,
+          picture_url: formData.picture_url,
+        };
+
+        const response = await poster<BackendResponse<IStorageItem>>(
+          endpoints.storage.create,
+          storagePayload
+        );
+        await mutate(endpoints.storage.list);
+        return response.data;
+      } catch (error) {
+        console.error('Failed to create storage:', error);
+        throw error;
+      }
     },
     []
   );
@@ -308,13 +659,48 @@ export function useCreateStorage() {
 export function useUpdateStorage() {
   const updateStorage = useCallback(
     async (storageId: string, formData: IStorageFormData) => {
-      const response = await putter<BackendResponse<IStorageItem>>(
-        endpoints.storage.update(storageId),
-        formData
-      );
-      await mutate(endpoints.storage.list);
-      await mutate(endpoints.storage.details(storageId));
-      return response.data;
+      try {
+        let name_i18n = formData.name_i18n;
+
+        // If name_i18n is not provided, create a translation
+        if (!name_i18n) {
+          const translationData: ITranslationFormData = {
+            en: formData.name || '',
+            ru: formData.name || '',
+            uz: formData.name || '',
+          };
+
+          try {
+            const translationResponse = await poster<any>(
+              endpoints.translations.create,
+              translationData
+            );
+            name_i18n = translationResponse?.data?.id || translationResponse?.id;
+          } catch (error) {
+            console.error('Failed to create translation:', error);
+            throw new Error('Failed to create translation for storage');
+          }
+        }
+
+        const storagePayload = {
+          name: formData.name,
+          name_i18n,
+          branch_id: formData.branch_id,
+          color_code: formData.color_code,
+          picture_url: formData.picture_url,
+        };
+
+        const response = await putter<BackendResponse<IStorageItem>>(
+          endpoints.storage.update(storageId),
+          storagePayload
+        );
+        await mutate(endpoints.storage.list);
+        await mutate(endpoints.storage.details(storageId));
+        return response.data;
+      } catch (error) {
+        console.error('Failed to update storage:', error);
+        throw error;
+      }
     },
     []
   );

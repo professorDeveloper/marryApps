@@ -1,17 +1,13 @@
 import type { GridColDef } from '@mui/x-data-grid';
-
 import { useMemo, useCallback, useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Avatar, Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, ListItemText } from '@mui/material';
-
 import { paths } from 'src/routes/paths';
 import { useRouter } from 'src/routes/hooks';
-
 import { Iconify } from 'src/components/iconify';
 import { CustomGridActionsCellItem } from 'src/components/custom-data-grid';
 import { GenericTableView } from 'src/components/generic-table-view';
 import { toast } from 'src/components/snackbar';
-
 import { useDeleteStorage, useGetStorages } from 'src/actions/departments';
 import { useGetBranches } from 'src/actions/branches';
 import { getFullImageUrl } from 'src/utils/image-url';
@@ -113,6 +109,15 @@ function RenderCellColor({ params }: { params: any }) {
 
 export function WarehouseListView() {
   const { t } = useTranslation('menu');
+  const theme = {
+    vars: {
+      palette: {
+        error: {
+          main: '#f44336',
+        },
+      },
+    },
+  };
   const router = useRouter();
   const { storages, storagesLoading } = useGetStorages();
   const { branches } = useGetBranches();
@@ -203,6 +208,7 @@ export function WarehouseListView() {
             showInMenu
             label={t('warehouse.delete', 'Delete')}
             icon={<Iconify icon="solar:trash-bin-trash-bold" />}
+            style={{ color: theme.vars.palette.error.main }}
             onClick={() => {
               setStorageToDelete(params.row.id);
               setDeleteDialogOpen(true);

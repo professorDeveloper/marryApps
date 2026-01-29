@@ -9,6 +9,15 @@ import { GenericTableView } from 'src/components/generic-table-view';
 
 export function InvoicesListView() {
     const { t } = useTranslation('menu');
+    const theme = {
+        vars: {
+            palette: {
+                error: {
+                    main: '#f44336',
+                },
+            },
+        },
+    };
     const { getSuppliers, deleteSuppliers } = useSupplierAPI();
     const [rows, setRows] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
@@ -70,6 +79,7 @@ export function InvoicesListView() {
                         showInMenu
                         label={t('delete')}
                         icon={<Iconify icon="solar:trash-bin-trash-bold" />}
+                        style={{ color: theme.vars.palette.error.main }}
                         onClick={() => {
                             if (confirm('Are you sure you want to delete this supplier?')) {
                                 deleteSuppliers([params.row.id]).then(() => {

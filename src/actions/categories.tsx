@@ -1,9 +1,14 @@
 import type { SWRConfiguration } from 'swr';
-import type { ICategory, ICategoryFormData, IGoodsItem } from 'src/types/category';
+
+import type { ICategoryFormData, IGoodsItem, ICategory } from 'src/types/category';
+import type { ITranslationItem } from 'src/types/departments.tsx';
+
+import { useTranslation } from 'react-i18next';
 import useSWR, { mutate } from 'swr';
-import { useMemo, useCallback } from 'react';
-import { poster, putter, fetcher, deleter, endpoints } from 'src/lib/axios';
-import { useGetStorages, useGetDepartments } from 'src/actions/departments';
+import { useCallback, useMemo } from 'react';
+
+import { deleter, endpoints, fetcher, poster, putter } from 'src/lib/axios';
+import { useGetDepartments, useGetStorages } from 'src/actions/departments';
 
 const swrOptions: SWRConfiguration = {
     revalidateIfStale: true,
@@ -22,12 +27,14 @@ interface BackendResponse<T> {
 }
 
 /**
- * Helper function to enrich categories with storage and department names
+ * Helper function to enrich categories with storage, department names and translations
  */
 function enrichCategories(
     categoriesData: ICategory[],
     storages: any[],
-    departments: any[]
+    departments: any[],
+    translations: ITranslationItem[] = [],
+    currentLanguage: string = 'uz'
 ): ICategory[] {
     const storageMap = new Map(
         storages?.map((storage: any) => [storage.id, storage.name]) || []
@@ -36,11 +43,51 @@ function enrichCategories(
         departments?.map((dept: any) => [dept.id, dept.name]) || []
     );
 
-    return categoriesData.map((cat) => ({
-        ...cat,
-        storage_name: storageMap.get(cat.storage_id) || cat.storage_id || '-',
-        department_name: departmentMap.get(cat.department_id) || cat.department_id || '-',
-    }));
+    // Create translations map for quick lookup
+    const translationMap = new Map(
+        translations?.map((t: ITranslationItem) => [t.id, t]) || []
+    );
+
+    // Helper function to map i18n language codes to translation fields
+    const getLangKey = (lang: string): keyof ITranslationItem => {
+        const langMap: Record<string, keyof ITranslationItem> = {
+            'uz': 'uz',
+            'uz-Latn': 'uz-Latn',
+            'uz-Cyrl': 'uz-Cyrl',
+            'ru': 'ru',
+            'en': 'en',
+        };
+        return (langMap[lang] || 'uz') as keyof ITranslationItem;
+    };
+
+    return categoriesData.map((cat) => {
+        // Get localized name from translation
+        let localizedName = cat.name;
+
+        if (cat.name_i18n) {
+            const translation = translationMap.get(cat.name_i18n);
+            if (translation) {
+                // Try to get exact language match
+                const langKey = getLangKey(currentLanguage);
+                if (translation[langKey]) {
+                    localizedName = translation[langKey] as string;
+                } else if (translation.uz) {
+                    // Fallback to uz
+                    localizedName = translation.uz as string;
+                } else if (translation.en) {
+                    // Final fallback to English
+                    localizedName = translation.en as string;
+                }
+            }
+        }
+
+        return {
+            ...cat,
+            name: localizedName,
+            storage_name: storageMap.get(cat.storage_id) || cat.storage_id || '-',
+            department_name: departmentMap.get(cat.department_id) || cat.department_id || '-',
+        };
+    });
 }
 
 /**
@@ -48,10 +95,18 @@ function enrichCategories(
  */
 export function useGetCategories() {
     const url = endpoints.category.list;
+    const { i18n } = useTranslation();
 
     // Get storages and departments for enrichment
     const { storages } = useGetStorages();
     const { departments } = useGetDepartments();
+
+    // Fetch translations
+    const { data: translationsData } = useSWR<BackendResponse<ITranslationItem[]>>(
+        endpoints.translations.list,
+        fetcher,
+        { ...swrOptions }
+    );
 
     const { data, isLoading, error, isValidating } = useSWR<BackendResponse<ICategory[]>>(
         url,
@@ -59,10 +114,16 @@ export function useGetCategories() {
         { ...swrOptions }
     );
 
+    const translations = useMemo(() => {
+        if (!translationsData) return [];
+        if (Array.isArray(translationsData)) return translationsData;
+        return translationsData?.data || [];
+    }, [translationsData]);
+
     const enrichedCategories = useMemo(() => {
         const categories = data?.data || [];
-        return enrichCategories(categories, storages, departments);
-    }, [data?.data, storages, departments]);
+        return enrichCategories(categories, storages, departments, translations, i18n.resolvedLanguage);
+    }, [data?.data, storages, departments, translations, i18n.resolvedLanguage]);
 
     const memoizedValue = useMemo(
         () => ({
@@ -83,6 +144,14 @@ export function useGetCategories() {
  */
 export function useGetCategory(categoryId: string) {
     const url = categoryId ? endpoints.category.details(categoryId) : '';
+    const { i18n } = useTranslation();
+
+    // Fetch translations
+    const { data: translationsData } = useSWR<BackendResponse<ITranslationItem[]>>(
+        endpoints.translations.list,
+        fetcher,
+        { ...swrOptions }
+    );
 
     const { data, isLoading, error, isValidating } = useSWR<BackendResponse<ICategory>>(
         url,
@@ -90,14 +159,27 @@ export function useGetCategory(categoryId: string) {
         { ...swrOptions }
     );
 
+    const translations = useMemo(() => {
+        if (!translationsData) return [];
+        if (Array.isArray(translationsData)) return translationsData;
+        return translationsData?.data || [];
+    }, [translationsData]);
+
+    // Enrich single category
+    const enrichedCategory = useMemo(() => {
+        if (!data?.data) return undefined;
+        const enriched = enrichCategories([data.data], [], [], translations, i18n.resolvedLanguage);
+        return enriched[0];
+    }, [data?.data, translations, i18n.resolvedLanguage]);
+
     const memoizedValue = useMemo(
         () => ({
-            category: data?.data,
+            category: enrichedCategory,
             categoryLoading: isLoading,
             categoryError: error,
             categoryValidating: isValidating,
         }),
-        [data, error, isLoading, isValidating]
+        [enrichedCategory, error, isLoading, isValidating]
     );
 
     return memoizedValue;
@@ -195,7 +277,7 @@ export function useGetGoodsByCategory(categoryId: string) {
         { ...swrOptions }
     );
 
-    
+
     // Handle both response formats
     const goods = useMemo(() => {
         if (!data) return [];

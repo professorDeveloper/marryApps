@@ -1,16 +1,13 @@
 import type { TFunction } from 'i18next';
 import type { IDepartmentFormData } from 'src/types/departments.tsx';
 import type { CardSection, GenericEditViewConfig } from 'src/components/generic-edit-view';
-
 import { useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Box } from '@mui/material';
-
 import { paths } from 'src/routes/paths';
 import { useRouter, useParams } from 'src/routes/hooks';
-
+import { useTranslationsAPI } from 'src/hooks/use-translations-api';
 import { useGetStorages, useGetDepartment, useCreateDepartment, useUpdateDepartment, useDeleteDepartment } from 'src/actions/departments';
-
 import { GenericEditView } from 'src/components/generic-edit-view';
 import { CustomBreadcrumbs } from 'src/components/custom-breadcrumbs';
 
@@ -41,12 +38,10 @@ export function ProductEditView({ isNew = false }: DepartmentEditViewProps) {
     const { createDepartment } = useCreateDepartment();
     const { updateDepartment } = useUpdateDepartment();
     const { deleteDepartment } = useDeleteDepartment();
+    const { createTranslation } = useTranslationsAPI();
     const { storages } = useGetStorages();
-
-    // Load department if editing
     const { department, departmentLoading } = useGetDepartment(!isNew && id ? id : '');
 
-    // Build storage options
     const storageOptions = useMemo(
         () => (Array.isArray(storages) ? storages.map((s) => ({
             value: s.id,
@@ -55,7 +50,6 @@ export function ProductEditView({ isNew = false }: DepartmentEditViewProps) {
         [storages]
     );
 
-    // Build sections
     const IMAGE_SECTION_T = translateSection(buildImageSection(), t);
     const BASIC_INFO_SECTION_T = translateSection(buildBasicInfoSection(), t);
     const COLOR_AND_STORAGE_SECTION_T = translateSection(
@@ -78,8 +72,24 @@ export function ProductEditView({ isNew = false }: DepartmentEditViewProps) {
                     throw new Error(t('departments.storageRequired'));
                 }
 
+                // Create translation if translations are provided
+                let name_i18n = formData.name_i18n;
+                if (!name_i18n && (formData.name_en || formData.name_ru)) {
+                    // Create translation with provided language-specific names
+                    // name field is always Uzbek (uz), so use it as uz translation
+                    const translationData: any = {
+                        en: formData.name_en || formData.name || '',
+                        ru: formData.name_ru || formData.name || '',
+                        uz: formData.name || '', // Primary name is always Uzbek
+                    };
+
+                    const translationResult = await createTranslation(translationData);
+                    name_i18n = translationResult.id;
+                }
+
                 const departmentData: IDepartmentFormData = {
                     name: formData.name,
+                    name_i18n,
                     color_code: formData.color_code || '',
                     picture_url: formData.picture_url || '',
                     storage_id: formData.storage_id,
@@ -103,7 +113,7 @@ export function ProductEditView({ isNew = false }: DepartmentEditViewProps) {
                 throw err;
             }
         },
-        [isNew, id, createDepartment, updateDepartment, router, t]
+        [isNew, id, createDepartment, updateDepartment, router, t, createTranslation]
     );
 
     // Handle delete
@@ -188,6 +198,21 @@ function buildBasicInfoSection(): CardSection {
                 label: 'departments.name',
                 type: 'text',
                 required: true,
+                defaultValue: '',
+                // helperText: 'Asosiy nomi Uzbek tilida kiritiladi va translation uz fieldiga avtomatik yuboriladi',
+            },
+            {
+                key: 'name_en',
+                label: 'departments.nameEn',
+                type: 'text',
+                required: false,
+                defaultValue: '',
+            },
+            {
+                key: 'name_ru',
+                label: 'departments.nameRu',
+                type: 'text',
+                required: false,
                 defaultValue: '',
             },
             {

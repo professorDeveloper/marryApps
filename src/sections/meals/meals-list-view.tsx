@@ -36,51 +36,6 @@ import { formatPrice } from 'src/components/generic-view-view/modal-formatters';
 
 
 /**
- * Meal name and avatar renderer
- */
-function RenderCellMealName({ params }: { params: any }) {
-    const { row } = params;
-    const name = row.name || '-';
-    const { imageUrl, loading } = useImageUrl(row.picture_url);
-
-    // If no image, show avatar with initials
-    const initials = getInitials(name);
-    const bgColor = imageUrl ? undefined : getAvatarColor(name);
-
-    return (
-        <Box
-            sx={{
-                py: 2,
-                gap: 2,
-                width: 1,
-                display: 'flex',
-                alignItems: 'center',
-            }}
-        >
-            <Avatar
-                alt={name}
-                src={imageUrl || undefined}
-                variant="rounded"
-                sx={{
-                    width: 64,
-                    height: 64,
-                    bgcolor: bgColor,
-                    color: '#fff',
-                    fontWeight: 'bold',
-                    fontSize: '20px',
-                    borderRadius: '15%',
-                }}
-            >
-                {!imageUrl && !loading && initials}
-                {loading && '...'}
-            </Avatar>
-
-            <ListItemText primary={<span>{name}</span>} />
-        </Box>
-    );
-}
-
-/**
  * Meal calculations table renderer
  */
 function MealCalculationsTable({ mealId }: { mealId: string }) {
@@ -114,62 +69,62 @@ function MealCalculationsTable({ mealId }: { mealId: string }) {
 
     return (
         <Box sx={{ width: '100%' }}>
-           <TableContainer component={Paper} sx={{ mb: 2 }}>
-    <Table size="small">
-        <TableHead sx={{ bgcolor: '#f5f5f5' }}>
-            <TableRow>
-                <TableCell align="left">
-                    {t('common.name')}
-                </TableCell>
-                <TableCell align="center">
-                    {t('semifinishedProducts.quantity')}
-                </TableCell>
-                <TableCell align="center">
-                    {t('common.unit')}
-                </TableCell>
-                <TableCell align="right">
-                    {t('semifinishedProducts.price')}
-                </TableCell>
-                <TableCell align="right">
-                    {t('common.total')}
-                </TableCell>
-            </TableRow>
-        </TableHead>
+            <TableContainer component={Paper} sx={{ mb: 2 }}>
+                <Table size="small">
+                    <TableHead sx={{ bgcolor: '#f5f5f5' }}>
+                        <TableRow>
+                            <TableCell align="left">
+                                {t('common.name')}
+                            </TableCell>
+                            <TableCell align="center">
+                                {t('semifinishedProducts.quantity')}
+                            </TableCell>
+                            <TableCell align="center">
+                                {t('common.unit')}
+                            </TableCell>
+                            <TableCell align="right">
+                                {t('semifinishedProducts.price')}
+                            </TableCell>
+                            <TableCell align="right">
+                                {t('common.total')}
+                            </TableCell>
+                        </TableRow>
+                    </TableHead>
 
-        <TableBody>
-            {calculations.map((calc, index) => {
-                const itemName = calc.ingredient_id
-                    ? ingredientMap.get(calc.ingredient_id) || calc.ingredient_id
-                    : '-';
+                    <TableBody>
+                        {calculations.map((calc, index) => {
+                            const itemName = calc.ingredient_id
+                                ? ingredientMap.get(calc.ingredient_id) || calc.ingredient_id
+                                : '-';
 
-                return (
-                    <TableRow key={calc.id}>
-                        {/* NUMBER + NAME bitta cell */}
-                        <TableCell align="left">
-                            <strong>{index + 1}.</strong> {itemName}
-                        </TableCell>
+                            return (
+                                <TableRow key={calc.id}>
+                                    {/* NUMBER + NAME bitta cell */}
+                                    <TableCell align="left">
+                                        <strong>{index + 1}.</strong> {itemName}
+                                    </TableCell>
 
-                        <TableCell align="center">
-                            {calc.quantity}
-                        </TableCell>
+                                    <TableCell align="center">
+                                        {calc.quantity}
+                                    </TableCell>
 
-                        <TableCell align="center">
-                            {calc.measurement_unit}
-                        </TableCell>
+                                    <TableCell align="center">
+                                        {calc.measurement_unit}
+                                    </TableCell>
 
-                        <TableCell align="right">
-                            {formatPrice(Number(calc.price_per_unit))}
-                        </TableCell>
+                                    <TableCell align="right">
+                                        {formatPrice(Number(calc.price_per_unit))}
+                                    </TableCell>
 
-                        <TableCell align="right">
-                            {formatPrice(Number(calc.total_cost))}
-                        </TableCell>
-                    </TableRow>
-                );
-            })}
-        </TableBody>
-    </Table>
-</TableContainer>
+                                    <TableCell align="right">
+                                        {formatPrice(Number(calc.total_cost))}
+                                    </TableCell>
+                                </TableRow>
+                            );
+                        })}
+                    </TableBody>
+                </Table>
+            </TableContainer>
 
 
             {/* Summary row */}
@@ -225,7 +180,7 @@ function renderMealsSpecifications(item: IMealsItem, t: any) {
 
 export function Meals() {
     const theme = useTheme();
-    const { t } = useTranslation('menu');
+    const { t, i18n } = useTranslation('menu');
 
     // SWR hooks
     const { meals, mealsLoading, mutate } = useGetMeals();
@@ -235,6 +190,18 @@ export function Meals() {
     // State
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [mealToDelete, setMealToDelete] = useState<string | null>(null);
+
+    // Debug logs
+    // console.log('📊 Meals data:', meals);
+    // console.log('📊 Current language:', i18n.language);
+    // if (meals.length > 0) {
+    //     console.log('📊 First meal translation fields:', {
+    //         name: meals[0].name,
+    //         name_en: meals[0].name_en,
+    //         name_ru: meals[0].name_ru,
+    //         name_uz: meals[0].name_uz,
+    //     });
+    // }
 
     // View modal hook'i
     const { isOpen, selectedData, openModal, closeModal } = useGenericViewModal<IMealsItem>();
@@ -248,7 +215,65 @@ export function Meals() {
                 flex: 1,
                 minWidth: 250,
                 hideable: false,
-                renderCell: (params) => <RenderCellMealName params={params} />,
+                renderCell: (params) => {
+                    const { row } = params;
+                    // Get translation based on current language
+                    const currentLang = i18n.language || 'uz';
+                    let displayName = row.name || '-';
+
+                    // console.log(`🍽️ Rendering meal: ${row.name}, lang: ${currentLang}`, {
+                    //     name: row.name,
+                    //     name_en: row.name_en,
+                    //     name_ru: row.name_ru,
+                    //     name_uz: row.name_uz,
+                    // });
+
+                    if (currentLang === 'en' && row.name_en) {
+                        displayName = row.name_en;
+                    } else if (currentLang === 'ru' && row.name_ru) {
+                        displayName = row.name_ru;
+                    } else if ((currentLang === 'uz' || currentLang === 'uz-Latn' || currentLang === 'uz-Cyrl') && row.name_uz) {
+                        displayName = row.name_uz;
+                    }
+
+                    // console.log(`🎯 Final displayName: ${displayName}`);
+
+                    const { imageUrl, loading } = useImageUrl(row.picture_url);
+                    const initials = getInitials(displayName);
+                    const bgColor = imageUrl ? undefined : getAvatarColor(displayName);
+
+                    return (
+                        <Box
+                            sx={{
+                                py: 2,
+                                gap: 2,
+                                width: 1,
+                                display: 'flex',
+                                alignItems: 'center',
+                            }}
+                        >
+                            <Avatar
+                                alt={displayName}
+                                src={imageUrl || undefined}
+                                variant="rounded"
+                                sx={{
+                                    width: 64,
+                                    height: 64,
+                                    bgcolor: bgColor,
+                                    color: '#fff',
+                                    fontWeight: 'bold',
+                                    fontSize: '20px',
+                                    borderRadius: '15%',
+                                }}
+                            >
+                                {!imageUrl && !loading && initials}
+                                {loading && '...'}
+                            </Avatar>
+
+                            <ListItemText primary={<span>{displayName}</span>} />
+                        </Box>
+                    );
+                },
             },
             {
                 field: 'category_id',
@@ -317,7 +342,7 @@ export function Meals() {
                 ],
             },
         ],
-        [theme.vars.palette.error.main, t, openModal]
+        [theme.vars.palette.error.main, t, i18n.language, openModal]
     );
 
     const handleConfirmDelete = useCallback(async () => {

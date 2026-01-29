@@ -6,16 +6,18 @@ import type { TFunction } from 'i18next';
 import type { ICategoryFormData } from 'src/types/category';
 import type { CardSection, GenericEditViewConfig } from 'src/components/generic-edit-view';
 
+import { useCallback, useMemo, useState } from 'react';
 import { useParams } from 'react-router';
 import { useTranslation } from 'react-i18next';
-import { useMemo, useState, useCallback } from 'react';
+
 import { Box } from '@mui/material';
 
 import { paths } from 'src/routes/paths';
 import { useRouter } from 'src/routes/hooks';
 
-import { useGetStorages, useGetDepartments } from 'src/actions/departments';
-import { useGetCategory, useCreateCategory, useUpdateCategory, useDeleteCategory } from 'src/actions/categories';
+import { useDeleteCategory, useGetCategory, useCreateCategory, useUpdateCategory } from 'src/actions/categories';
+import { useGetDepartments, useGetStorages } from 'src/actions/departments';
+import { useTranslationsAPI } from 'src/hooks/use-translations-api';
 
 import { GenericEditView } from 'src/components/generic-edit-view';
 import { CustomBreadcrumbs } from 'src/components/custom-breadcrumbs';
@@ -80,13 +82,22 @@ function buildBasicInfoSection(): CardSection {
                 type: 'text',
                 required: true,
                 defaultValue: '',
+                // helperText: 'Asosiy nomi Uzbek tilida kiritiladi va translation uz fieldiga avtomatik yuboriladi',
             },
-            // {
-            //     key: 'name_i18n',
-            //     label: 'categories.name_i18n',
-            //     type: 'text',
-            //     defaultValue: '',
-            // },
+            {
+                key: 'name_en',
+                label: 'categories.nameEn',
+                type: 'text',
+                required: false,
+                defaultValue: '',
+            },
+            {
+                key: 'name_ru',
+                label: 'categories.nameRu',
+                type: 'text',
+                required: false,
+                defaultValue: '',
+            },
             {
                 key: 'color_code',
                 label: 'departments.color',
@@ -107,14 +118,14 @@ function buildStorageAndDepartmentSection(
         title: 'categories.storageDepartmentTitle',
         columns: 2,
         fields: [
-            {
-                key: 'storage_id',
-                label: 'categories.storage',
-                type: 'select',
-                required: true,
-                options: storageOptions,
-                defaultValue: '',
-            },
+            // {
+            //     key: 'storage_id',
+            //     label: 'categories.storage',
+            //     type: 'select',
+            //     required: true,
+            //     options: storageOptions,
+            //     defaultValue: '',
+            // },
             {
                 key: 'department_id',
                 label: 'categories.department',
@@ -136,15 +147,15 @@ export function CategoryEditView({ categoryId, isNew = false }: CategoryEditView
     const { t } = useTranslation('menu');
 
     // API hooks
-    const { category, categoryLoading } = useGetCategory(categoryId || '');
+    const { category } = useGetCategory(categoryId || '');
     const { createCategory } = useCreateCategory();
     const { updateCategory } = useUpdateCategory();
     const { deleteCategory } = useDeleteCategory();
+    const { createTranslation } = useTranslationsAPI();
     const { departments } = useGetDepartments();
     const { storages } = useGetStorages();
 
     const [isSaving, setIsSaving] = useState(false);
-    const [isDeleting, setIsDeleting] = useState(false);
 
     // Build storage options
     const storageOptions = useMemo(
@@ -174,16 +185,31 @@ export function CategoryEditView({ categoryId, isNew = false }: CategoryEditView
                 if (!formData.name || !formData.name.trim()) {
                     throw new Error(t('categories.nameRequired'));
                 }
-                if (!formData.storage_id) {
-                    throw new Error(t('categories.storageRequired'));
-                }
+                // if (!formData.storage_id) {
+                //     throw new Error(t('categories.storageRequired'));
+                // }
                 if (!formData.department_id) {
                     throw new Error(t('categories.departmentRequired'));
                 }
 
+                // Create translation if translations are provided
+                let name_i18n = formData.name_i18n;
+                if (!name_i18n && (formData.name_en || formData.name_ru)) {
+                    // Create translation with provided language-specific names
+                    // name field is always Uzbek (uz), so use it as uz translation
+                    const translationData: any = {
+                        en: formData.name_en || formData.name || '',
+                        ru: formData.name_ru || formData.name || '',
+                        uz: formData.name || '', // Primary name is always Uzbek
+                    };
+
+                    const translationResult = await createTranslation(translationData);
+                    name_i18n = translationResult.id;
+                }
+
                 const categoryData: ICategoryFormData = {
                     name: formData.name,
-                    name_i18n: formData.name_i18n,
+                    name_i18n,
                     picture_url: formData.picture_url,
                     storage_id: formData.storage_id,
                     department_id: formData.department_id,
@@ -205,14 +231,12 @@ export function CategoryEditView({ categoryId, isNew = false }: CategoryEditView
                 throw err;
             }
         },
-        [isNew, categoryId, createCategory, updateCategory, router, t]
+        [isNew, categoryId, createCategory, updateCategory, router, t, createTranslation]
     );
 
     // Handle delete
     const handleDelete = useCallback(async () => {
         try {
-            setIsDeleting(true);
-
             if (categoryId) {
                 await deleteCategory(categoryId);
                 // Add small delay to ensure SWR cache is updated before redirect
@@ -221,7 +245,6 @@ export function CategoryEditView({ categoryId, isNew = false }: CategoryEditView
             }
         } catch (err) {
             console.error('Error deleting category:', err);
-            setIsDeleting(false);
         }
     }, [categoryId, deleteCategory, router]);
 

@@ -3,6 +3,7 @@ import type { NavItemProps, NavSectionProps } from 'src/components/nav-section';
 import type { MainSectionProps, HeaderSectionProps, LayoutSectionProps } from '../core';
 
 import { merge } from 'es-toolkit';
+import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useBoolean } from 'minimal-shared/hooks';
 
@@ -75,6 +76,22 @@ export function DashboardLayout({
   const isNavMini = settings.state.navLayout === 'mini';
   const isNavHorizontal = settings.state.navLayout === 'horizontal';
   const isNavVertical = isNavMini || settings.state.navLayout === 'vertical';
+
+  // Ctrl + B shortcut uchun listener
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if ((event.ctrlKey || event.metaKey) && event.key === 'b') {
+        event.preventDefault();
+        settings.setField(
+          'navLayout',
+          settings.state.navLayout === 'vertical' ? 'mini' : 'vertical'
+        );
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [settings]);
 
   const canDisplayItemByRole = (allowedRoles: NavItemProps['allowedRoles']): boolean =>
     !allowedRoles?.includes(user?.role);

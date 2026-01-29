@@ -1,1 +1,0 @@
-import{j as t,f as a}from"./index-D2jiqoeT.js";import{B as e}from"./view-wtsLu5_O.js";const i={title:`Page one | Dashboard - ${a.appName}`};function n(){return t.jsxs(t.Fragment,{children:[t.jsx("title",{children:i.title}),t.jsx(e,{title:"Sahifa birinchi"})]})}export{n as default};

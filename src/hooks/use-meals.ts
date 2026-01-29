@@ -1,8 +1,10 @@
 import type { SWRConfiguration } from 'swr';
 import type { IMealsItem, IMealAPIResponse } from 'src/types/meals';
+import type { ITranslationItem } from 'src/types/departments.tsx';
 
 import useSWR, { mutate } from 'swr';
 import { useMemo, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { poster, putter, deleter, fetcher, endpoints } from 'src/lib/axios';
 import { useGetCategories } from 'src/actions/categories';
@@ -59,15 +61,34 @@ export interface IMealWithCalculations {
 // ============================================================================
 
 /**
- * Enrich meals with category and department names
+ * Enrich meals with category, department names and translations
  */
 function enrichMeals(
     mealsData: IMealAPIResponse[],
     categories: any[],
-    departments: any[]
+    departments: any[],
+    translations: ITranslationItem[] = [],
+    currentLanguage: string = 'uz'
 ): IMealsItem[] {
     const categoryMap = new Map(categories?.map((cat: any) => [cat.id, cat.name]) || []);
     const departmentMap = new Map(departments?.map((dept: any) => [dept.id, dept.name]) || []);
+
+    // Create translations map for quick lookup by ID
+    const translationMap = new Map(
+        translations?.map((t: ITranslationItem) => [t.id, t]) || []
+    );
+
+    // Helper function to get translation field based on language
+    const getLangKey = (lang: string): keyof ITranslationItem => {
+        const langMap: Record<string, keyof ITranslationItem> = {
+            'uz': 'uz',
+            'uz-Latn': 'uz-Latn',
+            'uz-Cyrl': 'uz-Cyrl',
+            'ru': 'ru',
+            'en': 'en',
+        };
+        return (langMap[lang] || 'uz') as keyof ITranslationItem;
+    };
 
     return mealsData.map((meal) => {
         let parsedPrice: number = 0;
@@ -78,10 +99,28 @@ function enrichMeals(
             parsedPrice = meal.price;
         }
 
+        // Get localized names from translation
+        let name_en = meal.name;
+        let name_ru = meal.name;
+        let name_uz = meal.name;
+
+        if (meal.name_i18n) {
+            const translation = translationMap.get(meal.name_i18n);
+            if (translation) {
+                // Extract all language variants
+                name_en = (translation.en || meal.name) as string;
+                name_ru = (translation.ru || meal.name) as string;
+                name_uz = (translation.uz || meal.name) as string;
+            }
+        }
+
         return {
             ...meal,
             price: parsedPrice,
             coverUrl: meal.picture_url || '',
+            name_en,
+            name_ru,
+            name_uz,
             category: meal.category_id
                 ? {
                     id: meal.category_id,
@@ -99,15 +138,37 @@ function enrichMeals(
 }
 
 /**
- * Enrich single meal with category and department names
+ * Enrich single meal with category, department names and translations
  */
 function enrichMeal(
     mealData: IMealAPIResponse,
     categories: any[],
-    departments: any[]
+    departments: any[],
+    translations: ITranslationItem[] = [],
+    currentLanguage: string = 'uz'
 ): IMealsItem {
     const categoryMap = new Map(categories?.map((cat: any) => [cat.id, cat.name]) || []);
     const departmentMap = new Map(departments?.map((dept: any) => [dept.id, dept.name]) || []);
+
+    // Create translations map for quick lookup by ID
+    const translationMap = new Map(
+        translations?.map((t: ITranslationItem) => [t.id, t]) || []
+    );
+
+    // Get localized names from translation
+    let name_en = mealData.name;
+    let name_ru = mealData.name;
+    let name_uz = mealData.name;
+
+    if (mealData.name_i18n) {
+        const translation = translationMap.get(mealData.name_i18n);
+        if (translation) {
+            // Extract all language variants
+            name_en = (translation.en || mealData.name) as string;
+            name_ru = (translation.ru || mealData.name) as string;
+            name_uz = (translation.uz || mealData.name) as string;
+        }
+    }
 
     return {
         ...mealData,
@@ -116,6 +177,9 @@ function enrichMeal(
                 ? parseFloat(mealData.price)
                 : mealData.price,
         coverUrl: mealData.picture_url || '',
+        name_en,
+        name_ru,
+        name_uz,
         category: mealData.category_id
             ? {
                 id: mealData.category_id,
@@ -136,18 +200,32 @@ function enrichMeal(
 // ============================================================================
 
 /**
- * Get all meals with enriched category and department names
+ * Get all meals with enriched category, department names and translations
  */
 export function useGetMeals() {
     const url = endpoints.meals.list;
+    const { i18n } = useTranslation();
 
     // Get categories and departments for enrichment
     const { categories } = useGetCategories();
     const { departments } = useGetDepartments();
 
+    // Fetch translations
+    const { data: translationsData } = useSWR<BackendResponse<ITranslationItem[]>>(
+        endpoints.translations.list,
+        fetcher,
+        { ...swrOptions }
+    );
+
     const { data, isLoading, error, isValidating, mutate: mutateMeals } = useSWR<
         BackendResponse<IMealAPIResponse[]> | IMealAPIResponse[]
     >(url, fetcher, { ...swrOptions });
+
+    const translations = useMemo(() => {
+        if (!translationsData) return [];
+        if (Array.isArray(translationsData)) return translationsData;
+        return translationsData?.data || [];
+    }, [translationsData]);
 
     const enrichedMeals = useMemo(() => {
         let mealsData: IMealAPIResponse[] = [];
@@ -158,8 +236,8 @@ export function useGetMeals() {
             mealsData = data.data;
         }
 
-        return enrichMeals(mealsData, categories, departments);
-    }, [data, categories, departments]);
+        return enrichMeals(mealsData, categories, departments, translations, i18n.resolvedLanguage);
+    }, [data, categories, departments, translations, i18n.resolvedLanguage]);
 
     const memoizedValue = useMemo(
         () => ({
@@ -177,18 +255,32 @@ export function useGetMeals() {
 }
 
 /**
- * Get single meal by ID with enriched category and department names
+ * Get single meal by ID with enriched category, department names and translations
  */
 export function useGetMeal(mealId: string) {
     const url = mealId ? endpoints.meals.details(mealId) : null;
+    const { i18n } = useTranslation();
 
     // Get categories and departments for enrichment
     const { categories } = useGetCategories();
     const { departments } = useGetDepartments();
 
+    // Fetch translations
+    const { data: translationsData } = useSWR<BackendResponse<ITranslationItem[]>>(
+        endpoints.translations.list,
+        fetcher,
+        { ...swrOptions }
+    );
+
     const { data, isLoading, error, isValidating, mutate: mutateMeal } = useSWR<
         BackendResponse<IMealAPIResponse> | IMealAPIResponse
     >(url, fetcher, { ...swrOptions });
+
+    const translations = useMemo(() => {
+        if (!translationsData) return [];
+        if (Array.isArray(translationsData)) return translationsData;
+        return translationsData?.data || [];
+    }, [translationsData]);
 
     const enrichedMeal = useMemo(() => {
         if (!data) return null;
@@ -202,8 +294,8 @@ export function useGetMeal(mealId: string) {
 
         if (!mealData) return null;
 
-        return enrichMeal(mealData, categories, departments);
-    }, [data, categories, departments]);
+        return enrichMeal(mealData, categories, departments, translations, i18n.resolvedLanguage);
+    }, [data, categories, departments, translations, i18n.resolvedLanguage]);
 
     const memoizedValue = useMemo(
         () => ({
@@ -522,5 +614,64 @@ export function useGetMealWithCalculations(mealId: string | undefined) {
     );
 
     return memoizedValue;
+}
+
+/**
+ * Create meal with calculations (yangi qulayroq API - bitta request orqali)
+ */
+export function useCreateMealWithCalculations() {
+    const createMealWithCalculations = useCallback(
+        async (payload: {
+            good: any;
+            ingredient_calculations?: Array<{ ingredient_id: string; quantity: string }>;
+            compound_calculations?: Array<{ compound_id: string; quantity: string }>;
+        }): Promise<any> => {
+            try {
+                const payloadToSend = {
+                    good: {
+                        name: payload.good.name,
+                        name_i18n: payload.good.name_i18n || undefined,
+                        description: payload.good.description,
+                        category_id: payload.good.category_id,
+                        department_id: payload.good.department_id,
+                        picture_url: payload.good.picture_url || null,
+                        price: String(payload.good.price || 0),
+                        cook_time: payload.good.cook_time || 0,
+                        color_code: payload.good.color_code || null,
+                    },
+                    ingredient_calculations: payload.ingredient_calculations || [],
+                    compound_calculations: payload.compound_calculations || [],
+                };
+
+                const response = await poster<BackendResponse<any>>(
+                    endpoints.meals.createWithCalculations,
+                    payloadToSend
+                );
+
+                // Extract data from wrapped response
+                let data: any;
+                if ('good' in response && 'calculations' in response) {
+                    data = response;
+                } else if (response?.data) {
+                    data = response.data;
+                } else {
+                    throw new Error('Invalid response format');
+                }
+
+                // Revalidate meals list
+                await mutate(endpoints.meals.list);
+
+                toast.success('Meal with calculations created successfully');
+                return data;
+            } catch (error) {
+                toast.error('Failed to create meal with calculations');
+                console.error('Failed to create meal with calculations:', error);
+                throw error;
+            }
+        },
+        []
+    );
+
+    return { createMealWithCalculations };
 }
 

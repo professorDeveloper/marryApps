@@ -3,7 +3,7 @@ import type { CardSection, GenericEditViewConfig } from 'src/components/generic-
 
 import { useParams } from 'react-router';
 import { useTranslation } from 'react-i18next';
-import { useState, useCallback, useMemo, useEffect } from 'react';
+import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { Box, Tabs, Tab, Typography } from '@mui/material';
 
 import { CustomBreadcrumbs } from 'src/components/custom-breadcrumbs';
@@ -11,9 +11,10 @@ import { CustomBreadcrumbs } from 'src/components/custom-breadcrumbs';
 import { paths } from 'src/routes/paths';
 import { useRouter } from 'src/routes/hooks';
 
-import { useGetMeal, useCreateMeal, useUpdateMeal, useDeleteMeal } from 'src/hooks/use-meals';
+import { useGetMeal, useCreateMeal, useUpdateMeal, useDeleteMeal, useCreateMealWithCalculations } from 'src/hooks/use-meals';
 import { useGetCategories } from 'src/actions/categories';
 import { useGetDepartments } from 'src/actions/departments';
+import { useTranslationsAPI } from 'src/hooks/use-translations-api';
 
 import { GenericEditView } from 'src/components/generic-edit-view';
 import ProductCalculator from 'src/components/generic-edit-view/edit-calculation';
@@ -48,6 +49,21 @@ const BASIC_INFO_SECTION: CardSection = {
             label: 'mealsProducts.name',
             type: 'text',
             required: true,
+            defaultValue: '',
+            // helperText: 'Asosiy nomi Uzbek tilida kiritiladi va translation uz fieldiga avtomatik yuboriladi',
+        },
+        {
+            key: 'name_en',
+            label: 'mealsProducts.nameEn',
+            type: 'text',
+            required: false,
+            defaultValue: '',
+        },
+        {
+            key: 'name_ru',
+            label: 'mealsProducts.nameRu',
+            type: 'text',
+            required: false,
             defaultValue: '',
         },
         {
@@ -123,14 +139,21 @@ export function MealEditView({ isNew = false }: MealEditViewProps) {
     const { categories } = useGetCategories();
     const { departments } = useGetDepartments();
     const { createMeal } = useCreateMeal();
+    const { createMealWithCalculations } = useCreateMealWithCalculations();
     const { updateMeal } = useUpdateMeal();
     const { deleteMeal } = useDeleteMeal();
+    const { createTranslation } = useTranslationsAPI();
 
     const [activeTab, setActiveTab] = useState(0);
     // Store form data at parent level to preserve across tab changes
     const [formData, setFormData] = useState<Record<string, any>>({});
     // Track the created meal ID for new items
     const [createdMealId, setCreatedMealId] = useState<string | undefined>(undefined);
+    // Track pending calculations when entity is created
+    const pendingCalculationsRef = useRef<{
+        ingredient_calculations?: Array<{ ingredient_id: string; quantity: string }>;
+        compound_calculations?: Array<{ compound_id: string; quantity: string }>;
+    } | null>(null);
 
     const loading = !isNew && mealLoading;
 
@@ -220,27 +243,21 @@ export function MealEditView({ isNew = false }: MealEditViewProps) {
     const handleSubmit = useCallback(
         async (submitFormData: Record<string, any>) => {
             try {
-                // Use the submitted form data (which should match our state)
                 if (isNew && !createdMealId) {
-                    const result = await createMeal(submitFormData) as any;
-                    // Extract created meal ID from response
-                    const newMealId = result?.id || result?.data?.id;
-                    if (newMealId) {
-                        setCreatedMealId(newMealId);
-                        // Navigate to calculation tab after successful creation
-                        setActiveTab(1);
-                    } else {
-                        router.push(paths.menu.meals.root);
-                    }
-                } else if (mealId || createdMealId) {
-                    await updateMeal(mealId || createdMealId!, submitFormData);
+                    // YANGI FLOW: For new meals, store form data and move to calculations tab
+                    // Do NOT create meal yet - wait for calculations
+                    setFormData(submitFormData);
+                    setActiveTab(1);
+                } else if (mealId) {
+                    // Update existing meal
+                    await updateMeal(mealId, submitFormData);
                     router.push(paths.menu.meals.root);
                 }
             } catch (err) {
                 console.log("Error saving meal:", err);
             }
         },
-        [isNew, mealId, createdMealId, createMeal, updateMeal, router]
+        [isNew, mealId, createdMealId, createMeal, updateMeal, router, setActiveTab]
     );
 
     // Handle delete
@@ -337,7 +354,49 @@ export function MealEditView({ isNew = false }: MealEditViewProps) {
                 </TabPanel>
 
                 <TabPanel value={activeTab} index={1}>
-                    <ProductCalculator mealId={effectiveMealId} />
+                    <ProductCalculator
+                        mealId={effectiveMealId}
+                        onCalculationsReady={(calculations) => {
+                            // Store calculations for when save is clicked
+                            pendingCalculationsRef.current = calculations;
+                        }}
+                        onSaveWithGood={async (calculationsData) => {
+                            try {
+                                // Always create translation for new meals
+                                const translationData: any = {
+                                    en: formData.name_en || formData.name || '',
+                                    ru: formData.name_ru || formData.name || '',
+                                    uz: formData.name || '', // Primary name is always Uzbek
+                                };
+
+                                const translationResult = await createTranslation(translationData);
+                                const name_i18n = translationResult.id;
+
+                                // Save meal with calculations using new API
+                                const result = await createMealWithCalculations({
+                                    good: {
+                                        ...formData,
+                                        name_i18n,
+                                    },
+                                    ingredient_calculations: calculationsData.ingredient_calculations,
+                                    compound_calculations: calculationsData.compound_calculations,
+                                }) as any;
+
+                                const newMealId = result?.good?.id || result?.data?.good?.id;
+                                if (newMealId) {
+                                    setCreatedMealId(newMealId);
+                                    pendingCalculationsRef.current = null;
+                                    // Redirect to meals list
+                                    router.push(paths.menu.meals.root);
+                                } else {
+                                    router.push(paths.menu.meals.root);
+                                }
+                            } catch (err) {
+                                console.error("Error saving meal with calculations:", err);
+                                throw err;
+                            }
+                        }}
+                    />
                 </TabPanel>
 
                 <TabPanel value={activeTab} index={2}>

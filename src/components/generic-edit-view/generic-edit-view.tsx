@@ -168,8 +168,9 @@ export const GenericEditView: FC<GenericEditViewProps> = ({
                             <Stack direction="column" spacing={2} sx={{ mt: 3 }}>
                                 <Button
                                     fullWidth
-                                    variant="contained"
-                                    color="primary"
+                                    // variant="contained"
+                                    // color="primary"
+                                    sx={{ backgroundColor: '#FB6633', color: '#FFFFFF' }    }
                                     type="submit"
                                     disabled={loading}
                                     startIcon={<Iconify icon="solar:check-circle-bold" />}
@@ -225,8 +226,8 @@ export const GenericEditView: FC<GenericEditViewProps> = ({
                             <Stack direction="column" spacing={2} sx={{ mt: 3 }}>
                                 <Button
                                     fullWidth
-                                    variant="contained"
-                                    color="primary"
+                                    // variant="contained"
+                                    sx={{ backgroundColor: '#FB6633', color: '#FFFFFF' }}
                                     type="submit"
                                     disabled={loading}
                                     startIcon={<Iconify icon="solar:check-circle-bold" />}

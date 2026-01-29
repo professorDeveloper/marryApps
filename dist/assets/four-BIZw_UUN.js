@@ -1,0 +1,1 @@
+import{j as t,f as a}from"./index-D6DHi8f3.js";import{B as e}from"./view-DfFUuR31.js";const i={title:`Page four | Dashboard - ${a.appName}`};function o(){return t.jsxs(t.Fragment,{children:[t.jsx("title",{children:i.title}),t.jsx(e,{title:"Sahifa to'rtinchi"})]})}export{o as default};

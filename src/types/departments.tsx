@@ -76,6 +76,7 @@ export type IProductItem = {
 export type IDepartmentItem = {
   id: string;
   name: string;
+  name_i18n?: string; // Translation ID
   color_code: string;
   storage_id: string;
   picture_url?: string;
@@ -86,15 +87,35 @@ export type IDepartmentItem = {
 
 export type IDepartmentFormData = {
   name: string;
+  name_i18n?: string; // Translation ID
   color_code: string;
   storage_id: string;
   picture_url?: string;
 };
 
+export type ITranslationItem = {
+  id: string;
+  en: string;
+  ru: string;
+  uz?: string; // Uzbek (default)
+  'uz-Latn'?: string; // Uzbek Latin
+  'uz-Cyrl'?: string; // Uzbek Cyrillic
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type ITranslationFormData = {
+  en: string;
+  ru: string;
+  uz?: string; // Uzbek (default)
+  'uz-Latn'?: string; // Uzbek Latin
+  'uz-Cyrl'?: string; // Uzbek Cyrillic
+};
+
 export type IStorageItem = {
   id: string;
   name: string;
-  name_i18n: string;
+  name_i18n?: string; // Translation ID (optional)
   branch_id: string;
   color_code?: string;
   picture_url: string;
@@ -104,6 +125,7 @@ export type IStorageItem = {
 
 export type IStorageFormData = {
   name: string;
+  name_i18n?: string; // Translation ID (optional)
   branch_id: string;
   color_code?: string;
   picture_url?: string;

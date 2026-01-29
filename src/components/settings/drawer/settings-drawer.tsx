@@ -9,6 +9,7 @@ import Tooltip from '@mui/material/Tooltip';
 import IconButton from '@mui/material/IconButton';
 import Typography from '@mui/material/Typography';
 import { useColorScheme } from '@mui/material/styles';
+import { useTheme } from '@mui/material/styles';
 import { themeConfig } from 'src/theme/theme-config';
 import { useTranslate } from 'src/locales/use-locales';
 import { primaryColorPresets } from 'src/theme/with-settings';
@@ -23,10 +24,12 @@ import { FullScreenButton } from './fullscreen-button';
 import { FontSizeOptions, FontFamilyOptions } from './font-options';
 import { useSettingsContext } from '../context/use-settings-context';
 import { NavColorOptions, NavLayoutOptions } from './nav-layout-option';
+import { FloorPlanSettings } from '../../floor-plan-editor/floor-plan-settings';
 
 // ----------------------------------------------------------------------
 
 export function SettingsDrawer({ sx, defaultSettings }: SettingsDrawerProps) {
+  const theme = useTheme();
   const settings = useSettingsContext();
   const { mode, setMode, colorScheme } = useColorScheme();
   const { t } = useTranslate('menu');
@@ -313,6 +316,11 @@ export function SettingsDrawer({ sx, defaultSettings }: SettingsDrawerProps) {
             {/* Right-to-left option temporarily disabled per request */}
             {/* {visibility.direction && renderDirection()} */}
             {/* {visibility.compactLayout && renderCompactLayout()} */}
+          </Box>
+
+          {/* Floor Plan Settings Section */}
+          <Box sx={{ borderTop: `1px solid ${theme.palette.divider}`, pt: 3, transition: theme.transitions.create(['border-color'], { duration: theme.transitions.duration.shorter }) }}>
+            <FloorPlanSettings hallWidth={1000} hallHeight={400} />
           </Box>
 
           {(visibility.navColor || visibility.navLayout) && renderNav()}

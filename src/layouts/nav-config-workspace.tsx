@@ -15,7 +15,7 @@ export const _workspaces: WorkspacesPopoverProps['data'] = [
     id: 'team-2',
     name: 'Friends Sebzor',
     // plan: 'Pro',
-    logo: `${CONFIG.assetsDir}/assets/icons/workspaces/logo-.webp`,
+    logo: `${CONFIG.assetsDir}/assets/icons/workspaces/logo-5.webp`,
   },
   {
     id: 'team-3',

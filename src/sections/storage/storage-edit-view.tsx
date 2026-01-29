@@ -1,19 +1,15 @@
 import type { CardSection, GenericEditViewConfig } from 'src/components/generic-edit-view';
-
 import type { IStorageFormData } from 'src/types/departments.tsx';
-
 import { Box } from '@mui/material';
 import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-
 import { paths } from 'src/routes/paths';
 import { useParams, useRouter } from 'src/routes/hooks';
-
 import { GenericEditView } from 'src/components/generic-edit-view';
 import { CustomBreadcrumbs } from 'src/components/custom-breadcrumbs';
-
 import { useCreateStorage, useDeleteStorage, useGetStorage, useUpdateStorage } from 'src/actions/departments';
 import { useGetBranches } from 'src/actions/branches';
+import { useTranslationsAPI } from 'src/hooks/use-translations-api';
 
 const COLOR_CODES = [
   '#FF4842', // Red
@@ -39,6 +35,7 @@ export function WarehouseEditView({ isNew = false }: { isNew?: boolean }) {
   const { createStorage } = useCreateStorage();
   const { updateStorage } = useUpdateStorage();
   const { deleteStorage } = useDeleteStorage();
+  const { createTranslation } = useTranslationsAPI();
 
   const { storage, storageLoading } = useGetStorage(!isNew && id ? id : '');
   const { branches } = useGetBranches();
@@ -61,8 +58,23 @@ export function WarehouseEditView({ isNew = false }: { isNew?: boolean }) {
         throw new Error('Branch is required');
       }
 
+      // Create translation if translations are provided
+      let name_i18n = formData.name_i18n;
+      if (!name_i18n && (formData.name_en || formData.name_ru)) {
+        // Create translation with provided language-specific names
+        const translationData: any = {
+          en: formData.name_en || formData.name || '',
+          ru: formData.name_ru || formData.name || '',
+          uz: formData.name || '', // Primary name is always Uzbek
+        };
+
+        const translationResult = await createTranslation(translationData);
+        name_i18n = translationResult.id;
+      }
+
       const payload: IStorageFormData = {
         name: String(formData.name).trim(),
+        name_i18n,
         branch_id: formData.branch_id,
         picture_url: formData.picture_url ?? undefined,
         color_code: formData.color_code ?? undefined,
@@ -77,7 +89,7 @@ export function WarehouseEditView({ isNew = false }: { isNew?: boolean }) {
       await new Promise((resolve) => setTimeout(resolve, 300));
       router.push(paths.menu.inventory.root);
     },
-    [createStorage, id, isNew, router, updateStorage]
+    [createStorage, createTranslation, id, isNew, router, updateStorage]
   );
 
   const handleDelete = useCallback(async () => {
@@ -98,7 +110,28 @@ export function WarehouseEditView({ isNew = false }: { isNew?: boolean }) {
     title: t('warehouse.basicInfo', 'Basic Information'),
     columns: 1,
     fields: [
-      { key: 'name', label: t('warehouse.name', 'Name'), type: 'text', required: true, defaultValue: '' },
+      {
+        key: 'name',
+        label: t('warehouse.name', 'Name'),
+        type: 'text',
+        required: true,
+        defaultValue: '',
+        // helperText: 'Asosiy nomi Uzbek tilida kiritiladi va translation uz fieldiga avtomatik yuboriladi',
+      },
+      {
+        key: 'name_en',
+        label: t('warehouse.nameEn', 'Name (English)'),
+        type: 'text',
+        required: false,
+        defaultValue: '',
+      },
+      {
+        key: 'name_ru',
+        label: t('warehouse.nameRu', 'Name (Russian)'),
+        type: 'text',
+        required: false,
+        defaultValue: '',
+      },
       {
         key: 'branch_id',
         label: t('warehouse.branch', 'Branch'),

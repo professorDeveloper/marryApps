@@ -1,11 +1,13 @@
 import type { SWRConfiguration } from 'swr';
 import type { ICompound } from 'src/types/compounds';
+import type { ITranslationItem } from 'src/types/departments.tsx';
 
 import useSWR, { mutate } from 'swr';
 import { useMemo, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 
-import { poster, putter, deleter, fetcher, endpoints } from 'src/lib/axios';
 import { useGetDepartments } from 'src/actions/departments';
+import { poster, putter, deleter, fetcher, endpoints } from 'src/lib/axios';
 
 import { toast } from 'src/components/snackbar';
 
@@ -58,32 +60,117 @@ export interface ICompoundWithCalculations {
 // ============================================================================
 
 /**
- * Enrich compounds with department names
+ * Enrich compounds with department names and translations
  */
 function enrichCompounds(
     compoundsData: ICompound[],
-    departments: any[]
+    departments: any[],
+    translations: ITranslationItem[] = [],
+    currentLanguage: string = 'uz'
 ): ICompound[] {
     const departmentMap = new Map(
         departments?.map((dept: any) => [dept.id, dept.name]) || []
     );
 
-    return compoundsData.map((compound) => ({
-        ...compound,
-        department_name: departmentMap.get(compound.department_id) || 'Unknown',
-    }));
+    // Create translations map for quick lookup
+    const translationMap = new Map(
+        translations?.map((t: ITranslationItem) => [t.id, t]) || []
+    );
+
+    // Helper function to map i18n language codes to translation fields
+    const getLangKey = (lang: string): keyof ITranslationItem => {
+        const langMap: Record<string, keyof ITranslationItem> = {
+            'uz': 'uz',
+            'uz-Latn': 'uz-Latn',
+            'uz-Cyrl': 'uz-Cyrl',
+            'ru': 'ru',
+            'en': 'en',
+        };
+        return (langMap[lang] || 'uz') as keyof ITranslationItem;
+    };
+
+    return compoundsData.map((compound) => {
+        // Get localized name from translation
+        let localizedName = compound.name;
+
+        if (compound.name_i18n) {
+            const translation = translationMap.get(compound.name_i18n);
+            if (translation) {
+                // Try to get exact language match
+                const langKey = getLangKey(currentLanguage);
+                if (translation[langKey]) {
+                    localizedName = translation[langKey] as string;
+                } else if (translation.uz) {
+                    // Fallback to uz
+                    localizedName = translation.uz as string;
+                } else if (translation.en) {
+                    // Final fallback to English
+                    localizedName = translation.en as string;
+                }
+            }
+        }
+
+        return {
+            ...compound,
+            name: localizedName,
+            department_name: departmentMap.get(compound.department_id) || 'Unknown',
+        };
+    });
 }
 
 /**
- * Enrich single compound with department name
+ * Enrich single compound with department name and translations
  */
-function enrichCompound(compoundData: ICompound, departments: any[]): ICompound {
+function enrichCompound(
+    compoundData: ICompound,
+    departments: any[],
+    translations: ITranslationItem[] = [],
+    currentLanguage: string = 'uz'
+): ICompound {
     const departmentMap = new Map(
         departments?.map((dept: any) => [dept.id, dept.name]) || []
     );
 
+    // Create translations map for quick lookup
+    const translationMap = new Map(
+        translations?.map((t: ITranslationItem) => [t.id, t]) || []
+    );
+
+    // Helper function to map i18n language codes to translation fields
+    const getLangKey = (lang: string): keyof ITranslationItem => {
+        const langMap: Record<string, keyof ITranslationItem> = {
+            'uz': 'uz',
+            'uz-Latn': 'uz-Latn',
+            'uz-Cyrl': 'uz-Cyrl',
+            'ru': 'ru',
+            'en': 'en',
+        };
+        return (langMap[lang] || 'uz') as keyof ITranslationItem;
+    };
+
+    // Get localized name from translation
+    let localizedName = compoundData.name;
+
+    if (compoundData.name_i18n) {
+        const translation = translationMap.get(compoundData.name_i18n);
+        if (translation) {
+            // Try to get exact language match
+            const langKey = getLangKey(currentLanguage);
+            if (translation[langKey]) {
+                localizedName = translation[langKey] as string;
+            } else if (translation.uz) {
+                // Fallback to uz
+                localizedName = translation.uz as string;
+            } else if (translation.en) {
+                // Final fallback to English
+                localizedName = translation.en as string;
+            }
+        }
+    }
+
     return {
         ...compoundData,
+        name: localizedName,
         department_name: departmentMap.get(compoundData.department_id) || 'Unknown',
     };
 }
@@ -93,17 +180,31 @@ function enrichCompound(compoundData: ICompound, departments: any[]): ICompound 
 // ============================================================================
 
 /**
- * Get all compounds with enriched department names
+ * Get all compounds with enriched department names and translations
  */
 export function useGetCompounds() {
     const url = endpoints.compound.list;
+    const { i18n } = useTranslation();
 
     // Get departments for enrichment
     const { departments } = useGetDepartments();
 
+    // Fetch translations
+    const { data: translationsData } = useSWR<BackendResponse<ITranslationItem[]>>(
+        endpoints.translations.list,
+        fetcher,
+        { ...swrOptions }
+    );
+
     const { data, isLoading, error, isValidating, mutate: mutateCompounds } = useSWR<
         BackendResponse<ICompound[]> | ICompound[]
     >(url, fetcher, { ...swrOptions });
+
+    const translations = useMemo(() => {
+        if (!translationsData) return [];
+        if (Array.isArray(translationsData)) return translationsData;
+        return translationsData?.data || [];
+    }, [translationsData]);
 
     const enrichedCompounds = useMemo(() => {
         let compoundsData: ICompound[] = [];
@@ -114,8 +215,8 @@ export function useGetCompounds() {
             compoundsData = data.data;
         }
 
-        return enrichCompounds(compoundsData, departments);
-    }, [data, departments]);
+        return enrichCompounds(compoundsData, departments, translations, i18n.resolvedLanguage);
+    }, [data, departments, translations, i18n.resolvedLanguage]);
 
     const memoizedValue = useMemo(
         () => ({
@@ -133,17 +234,31 @@ export function useGetCompounds() {
 }
 
 /**
- * Get single compound by ID with enriched department name
+ * Get single compound by ID with enriched department name and translations
  */
 export function useGetCompound(compoundId: string) {
     const url = compoundId ? endpoints.compound.details(compoundId) : null;
+    const { i18n } = useTranslation();
 
     // Get departments for enrichment
     const { departments } = useGetDepartments();
 
+    // Fetch translations
+    const { data: translationsData } = useSWR<BackendResponse<ITranslationItem[]>>(
+        endpoints.translations.list,
+        fetcher,
+        { ...swrOptions }
+    );
+
     const { data, isLoading, error, isValidating, mutate: mutateCompound } = useSWR<
         BackendResponse<ICompound> | ICompound
     >(url, fetcher, { ...swrOptions });
+
+    const translations = useMemo(() => {
+        if (!translationsData) return [];
+        if (Array.isArray(translationsData)) return translationsData;
+        return translationsData?.data || [];
+    }, [translationsData]);
 
     const enrichedCompound = useMemo(() => {
         if (!data) return undefined;
@@ -159,8 +274,8 @@ export function useGetCompound(compoundId: string) {
 
         if (!compoundData) return undefined;
 
-        return enrichCompound(compoundData, departments);
-    }, [data, departments]);
+        return enrichCompound(compoundData, departments, translations, i18n.resolvedLanguage);
+    }, [data, departments, translations, i18n.resolvedLanguage]);
 
     const memoizedValue = useMemo(
         () => ({
@@ -442,5 +557,63 @@ export function useGetCompoundWithCalculations(compoundId: string | undefined) {
     );
 
     return memoizedValue;
+}
+
+/**
+ * Create compound with calculations (yangi qulayroq API - bitta request orqali)
+ */
+export function useCreateCompoundWithCalculations() {
+    const createCompoundWithCalculations = useCallback(
+        async (payload: {
+            compound: any;
+            ingredient_calculations?: Array<{ ingredient_id: string; quantity: string }>;
+            compound_calculations?: Array<{ compound_id: string; quantity: string }>;
+        }): Promise<any> => {
+            try {
+                const payloadToSend = {
+                    compound: {
+                        name: payload.compound.name,
+                        name_i18n: payload.compound.name_i18n || undefined,
+                        description: payload.compound.description || '',
+                        price: String(payload.compound.price),
+                        quantity: Number(payload.compound.quantity),
+                        measurement: payload.compound.measurement,
+                        department_id: payload.compound.department_id,
+                        picture_url: payload.compound.picture_url || null,
+                    },
+                    ingredient_calculations: payload.ingredient_calculations || [],
+                    compound_calculations: payload.compound_calculations || [],
+                };
+
+                const response = await poster<BackendResponse<any>>(
+                    endpoints.compound.createWithCalculations,
+                    payloadToSend
+                );
+
+                // Extract data from wrapped response
+                let data: any;
+                if ('compound' in response && 'calculations' in response) {
+                    data = response;
+                } else if (response?.data) {
+                    data = response.data;
+                } else {
+                    throw new Error('Invalid response format');
+                }
+
+                // Revalidate compounds list
+                await mutate(endpoints.compound.list);
+
+                toast.success('Compound with calculations created successfully');
+                return data;
+            } catch (error) {
+                toast.error('Failed to create compound with calculations');
+                console.error('Failed to create compound with calculations:', error);
+                throw error;
+            }
+        },
+        []
+    );
+
+    return { createCompoundWithCalculations };
 }
 

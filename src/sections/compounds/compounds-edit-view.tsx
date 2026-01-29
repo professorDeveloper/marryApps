@@ -1,17 +1,23 @@
 import type { TFunction } from 'i18next';
-import type { ICompound } from 'src/types/compounds';
 import type { CardSection, GenericEditViewConfig } from 'src/components/generic-edit-view';
+
 import { useParams } from 'react-router';
 import { useTranslation } from 'react-i18next';
-import { useState, useCallback, useEffect } from 'react';
-import { Box, Tabs, Tab, Card, Stack } from '@mui/material';
+import { useRef, useState, useEffect, useCallback } from 'react';
+
+import { Box, Tab, Tabs, Stack } from '@mui/material';
+
 import { paths } from 'src/routes/paths';
 import { useRouter } from 'src/routes/hooks';
-import { useGetCompound, useCreateCompound, useUpdateCompound, useDeleteCompound } from 'src/hooks/use-compounds';
+
+import { useTranslationsAPI } from 'src/hooks/use-translations-api';
+import { useGetCompound, useDeleteCompound, useUpdateCompound, useCreateCompoundWithCalculations } from 'src/hooks/use-compounds';
+
 import { useGetDepartments } from 'src/actions/departments';
+
 import { toast } from 'src/components/snackbar';
-import { CustomBreadcrumbs } from 'src/components/custom-breadcrumbs';
 import { GenericEditView } from 'src/components/generic-edit-view';
+import { CustomBreadcrumbs } from 'src/components/custom-breadcrumbs';
 import ProductCalculator from 'src/components/generic-edit-view/edit-calculation';
 
 export interface CompoundEditViewProps {
@@ -43,6 +49,21 @@ const BASIC_INFO_SECTION: CardSection = {
             label: 'semifinishedProducts.name',
             type: 'text',
             required: true,
+            defaultValue: '',
+            // helperText: 'Asosiy nomi Uzbek tilida kiritiladi va translation uz fieldiga avtomatik yuboriladi',
+        },
+        {
+            key: 'name_en',
+            label: 'semifinishedProducts.nameEn',
+            type: 'text',
+            required: false,
+            defaultValue: '',
+        },
+        {
+            key: 'name_ru',
+            label: 'semifinishedProducts.nameRu',
+            type: 'text',
+            required: false,
             defaultValue: '',
         },
         {
@@ -122,13 +143,19 @@ export function CompoundEditView({ compoundId, isNew = false }: CompoundEditView
     const [formData, setFormData] = useState<Record<string, any>>({});
     // Track the created compound ID for new items
     const [createdCompoundId, setCreatedCompoundId] = useState<string | undefined>(undefined);
+    // Track pending calculations when entity is created
+    const pendingCalculationsRef = useRef<{
+        ingredient_calculations?: Array<{ ingredient_id: string; quantity: string }>;
+        compound_calculations?: Array<{ compound_id: string; quantity: string }>;
+    } | null>(null);
 
     // SWR hooks
     const { compound, compoundLoading } = useGetCompound(isNew ? '' : compoundId || '');
     const { departments } = useGetDepartments();
-    const { createCompound } = useCreateCompound();
     const { updateCompound } = useUpdateCompound();
     const { deleteCompound } = useDeleteCompound();
+    const { createTranslation } = useTranslationsAPI();
+    const { createCompoundWithCalculations } = useCreateCompoundWithCalculations();
 
     const loading = !isNew && compoundLoading;
 
@@ -159,48 +186,48 @@ export function CompoundEditView({ compoundId, isNew = false }: CompoundEditView
     const handleSubmit = useCallback(
         async (submitFormData: Record<string, any>) => {
             try {
-                // Prepare payload
-                const payload = {
-                    name: submitFormData.name,
-                    description: submitFormData.description || '',
-                    price: String(submitFormData.price),
-                    quantity: Number(submitFormData.quantity),
-                    measurement: submitFormData.measurement,
-                    department_id: submitFormData.department_id,
-                    picture_url: submitFormData.picture_url || null,
-                };
-
                 if (isNew && !createdCompoundId) {
-                    // Create new compound
-                    const result = await createCompound(payload) as any;
-                    // Extract created compound ID from response
-                    const newCompoundId = result?.id || result?.data?.id;
-                    if (newCompoundId) {
-                        setCreatedCompoundId(newCompoundId);
-                        // Navigate to calculation tab after successful creation
-                        setActiveTab(1);
-                    } else {
-                        router.push(paths.menu.semifinished.root);
+                    // YANGI FLOW: For new compounds, store form data and move to calculations tab
+                    // Do NOT create compound yet - wait for calculations
+                    setFormData(submitFormData);
+                    setActiveTab(1);
+                } else if (compoundId) {
+                    // Update existing compound with translation
+                    let name_i18n = submitFormData.name_i18n;
+                    if (!name_i18n && (submitFormData.name_en || submitFormData.name_ru)) {
+                        // Create translation if provided
+                        const translationData: any = {
+                            en: submitFormData.name_en || submitFormData.name || '',
+                            ru: submitFormData.name_ru || submitFormData.name || '',
+                            uz: submitFormData.name || '', // Primary name is always Uzbek
+                        };
+
+                        const translationResult = await createTranslation(translationData);
+                        name_i18n = translationResult.id;
                     }
-                } else {
-                    // Update existing compound
-                    const idToUpdate = compound?.id || createdCompoundId;
-                    if (!idToUpdate) {
-                        toast.error(t('error.loadFailed'));
-                        return;
-                    }
-                    await updateCompound(idToUpdate, payload);
+
+                    const payload = {
+                        name: submitFormData.name,
+                        name_i18n,
+                        description: submitFormData.description || '',
+                        price: String(submitFormData.price),
+                        quantity: Number(submitFormData.quantity),
+                        measurement: submitFormData.measurement,
+                        department_id: submitFormData.department_id,
+                        picture_url: submitFormData.picture_url || null,
+                    };
+                    await updateCompound(compoundId, payload);
                     // Redirect to list
                     router.push(paths.menu.semifinished.root);
                 }
-            } catch (err) {
+            } catch {
                 // console.error('Error saving compound:', err);
                 toast.error(
                     isNew ? t('error.createFailed') : t('error.updateFailed')
                 );
             }
         },
-        [router, isNew, compound, createdCompoundId, createCompound, updateCompound, t]
+        [router, isNew, compoundId, createdCompoundId, updateCompound, t, createTranslation]
     );
 
     // Handle delete
@@ -210,7 +237,8 @@ export function CompoundEditView({ compoundId, isNew = false }: CompoundEditView
         try {
             await deleteCompound(compound.id);
             router.push(paths.menu.semifinished.root);
-        } catch (err) {
+        } catch {
+
             // console.error('Error deleting compound:', err);
             toast.error(t('error.deleteFailed'));
         }
@@ -331,7 +359,49 @@ export function CompoundEditView({ compoundId, isNew = false }: CompoundEditView
                 {/* Tab 1: Calculation/Composition */}
                 <TabPanel value={activeTab} index={1}>
                     <Stack spacing={3}>
-                        <ProductCalculator compoundId={effectiveCompoundId} />
+                        <ProductCalculator
+                            compoundId={effectiveCompoundId}
+                            onCalculationsReady={(calculations) => {
+                                // Store calculations for when save is clicked
+                                pendingCalculationsRef.current = calculations;
+                            }}
+                            onSaveWithGood={async (calculationsData) => {
+                                try {
+                                    // Always create translation for new compounds
+                                    const translationData: any = {
+                                        en: formData.name_en || formData.name || '',
+                                        ru: formData.name_ru || formData.name || '',
+                                        uz: formData.name || '', // Primary name is always Uzbek
+                                    };
+
+                                    const translationResult = await createTranslation(translationData);
+                                    const name_i18n = translationResult.id;
+
+                                    // Save compound with calculations using new API
+                                    const result = await createCompoundWithCalculations({
+                                        compound: {
+                                            ...formData,
+                                            name_i18n,
+                                        },
+                                        ingredient_calculations: calculationsData.ingredient_calculations,
+                                        compound_calculations: calculationsData.compound_calculations,
+                                    }) as any;
+
+                                    const newCompoundId = result?.compound?.id || result?.data?.compound?.id;
+                                    if (newCompoundId) {
+                                        setCreatedCompoundId(newCompoundId);
+                                        pendingCalculationsRef.current = null;
+                                        // Redirect to compounds list
+                                        router.push(paths.menu.semifinished.root);
+                                    } else {
+                                        router.push(paths.menu.semifinished.root);
+                                    }
+                                } catch (error) {
+                                    console.error("Error saving compound with calculations:", error);
+                                    throw error;
+                                }
+                            }}
+                        />
                     </Stack>
                 </TabPanel>
             </Box>

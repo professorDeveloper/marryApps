@@ -102,12 +102,19 @@ interface ProductCalculatorProps {
     mealId?: string;
     // NEW: Allow parent to notify when entity is created
     onEntityCreated?: (entityId: string) => void;
+    // NEW: Callback to provide pending calculations data
+    onCalculationsReady?: (calculations: {
+        ingredient_calculations?: Array<{ ingredient_id: string; quantity: string }>;
+        compound_calculations?: Array<{ compound_id: string; quantity: string }>;
+    }) => void;
+    // NEW: Callback for save with good data
+    onSaveWithGood?: (goodData: any) => Promise<void>;
 }
 
 // Sub-tab type
 type SubTabType = 'ingredients' | 'semifinished';
 
-const ProductCalculator = ({ compoundId, mealId, onEntityCreated }: ProductCalculatorProps) => {
+const ProductCalculator = ({ compoundId, mealId, onEntityCreated, onCalculationsReady, onSaveWithGood }: ProductCalculatorProps) => {
     const { t } = useTranslation('menu');
     const theme = useTheme();
 
@@ -127,6 +134,7 @@ const ProductCalculator = ({ compoundId, mealId, onEntityCreated }: ProductCalcu
     const [searchTerm, setSearchTerm] = useState('');
     const [showCalculation, setShowCalculation] = useState(false);
     const [selectedGroupId, setSelectedGroupId] = useState<string>('');
+    const [viewModeCalculation, setViewModeCalculation] = useState(false);
 
     // --- SEMIFINISHED TAB STATE ---
     const { compounds, compoundsLoading } = useGetCompounds();
@@ -304,6 +312,21 @@ const ProductCalculator = ({ compoundId, mealId, onEntityCreated }: ProductCalcu
                         quantity: quantities[id] || 0
                     }))
                 ]);
+                // Notify parent about pending calculations
+                if (onCalculationsReady) {
+                    const ingredientCalcs = transferredIds.map(id => ({
+                        ingredient_id: id,
+                        quantity: String(quantities[id] || 0)
+                    }));
+                    const compoundCalcs = sfTransferredIds.map(id => ({
+                        compound_id: id,
+                        quantity: String(sfQuantities[id] || 0)
+                    }));
+                    onCalculationsReady({
+                        ingredient_calculations: ingredientCalcs.length > 0 ? ingredientCalcs : undefined,
+                        compound_calculations: compoundCalcs.length > 0 ? compoundCalcs : undefined,
+                    });
+                }
             }
             prevCalculationsRef.current = '';
             return;
@@ -680,11 +703,11 @@ const ProductCalculator = ({ compoundId, mealId, onEntityCreated }: ProductCalcu
             fontFamily: 'Arial, sans-serif',
         }}>
             {/* Show warning if no entityId */}
-            {!entityId && (
+            {/* {!entityId && (
                 <Alert severity="info" sx={{ mb: 3 }}>
                     {t('calculation.saveEntityFirst', 'Please save the item first to enable calculation saving. Your selections will be preserved.')}
                 </Alert>
-            )}
+            )} */}
 
             {/* SUB-TABS */}
             <Box sx={{
@@ -829,7 +852,7 @@ const ProductCalculator = ({ compoundId, mealId, onEntityCreated }: ProductCalcu
                                                         size="small"
                                                         checked={selectedIds.includes(ingredient.id)}
                                                         onChange={() => handleToggle(ingredient.id)}
-                                                        sx={{ color: '#27ae60', '&.Mui-checked': { color: '#27ae60' } }}
+                                                        sx={{ color: theme.palette.success.main, '&.Mui-checked': { color: theme.palette.success.main } }}
                                                     />
                                                     <Typography variant="body2" color="text.primary">
                                                         {ingredient.name}
@@ -862,10 +885,10 @@ const ProductCalculator = ({ compoundId, mealId, onEntityCreated }: ProductCalcu
                                 onClick={handleMoveRight}
                                 disabled={selectedIds.length === 0}
                                 sx={{
-                                    bgcolor: selectedIds.length === 0 ? '#ccc' : '#ffe0b2',
-                                    color: selectedIds.length === 0 ? '#999' : '#f57c00',
+                                    bgcolor: selectedIds.length === 0 ? theme.palette.action.disabled : theme.palette.action.hover,
+                                    color: selectedIds.length === 0 ? theme.palette.text.disabled : theme.palette.warning.main,
                                     '&:hover': {
-                                        bgcolor: selectedIds.length === 0 ? '#ccc' : '#ffcc80'
+                                        bgcolor: selectedIds.length === 0 ? theme.palette.action.disabled : theme.palette.warning.light
                                     },
                                     borderRadius: '15%',
                                     padding: '10px',
@@ -878,10 +901,10 @@ const ProductCalculator = ({ compoundId, mealId, onEntityCreated }: ProductCalcu
                                 onClick={handleMoveLeft}
                                 disabled={transferredIds.length === 0}
                                 sx={{
-                                    bgcolor: transferredIds.length === 0 ? '#ccc' : '#ffe0b2',
-                                    color: transferredIds.length === 0 ? '#999' : '#f57c00',
+                                    bgcolor: transferredIds.length === 0 ? theme.palette.action.disabled : theme.palette.action.hover,
+                                    color: transferredIds.length === 0 ? theme.palette.text.disabled : theme.palette.warning.main,
                                     '&:hover': {
-                                        bgcolor: transferredIds.length === 0 ? '#ccc' : '#ffcc80'
+                                        bgcolor: transferredIds.length === 0 ? theme.palette.action.disabled : theme.palette.warning.light
                                     },
                                     borderRadius: '15%',
                                     padding: '10px',
@@ -902,13 +925,17 @@ const ProductCalculator = ({ compoundId, mealId, onEntityCreated }: ProductCalcu
                             <Button
                                 variant="contained"
                                 onClick={async () => {
+                                    // Frontend-only calculation (view mode)
+                                    setShowCalculation(true);
+                                    setViewModeCalculation(true);
+
                                     if (!entityId) {
-                                        toast.warning(t('calculation.saveProductFirst', 'Avval mahsulotni saqlang!'));
+                                        // View mode - no API calls needed
+                                        toast.info(t('calculation.calculatedLocally', 'Calculated locally'));
                                         return;
                                     }
 
-                                    setShowCalculation(true);
-
+                                    // If entity exists, also save to backend
                                     if (transferredIds.length > 0) {
                                         try {
                                             for (const ingredientId of transferredIds) {
@@ -934,12 +961,11 @@ const ProductCalculator = ({ compoundId, mealId, onEntityCreated }: ProductCalcu
                                         }
                                     }
                                 }}
-                                // disabled={transferredIds.length === 0 || !entityId}
                                 sx={{
-                                    bgcolor: (transferredIds.length === 0 || !entityId) ? '#ccc' : '#ff9800',
+                                    bgcolor: (transferredIds.length === 0) ? theme.palette.action.disabled : theme.palette.warning.main,
                                     textTransform: 'none',
                                     '&:hover': {
-                                        bgcolor: (transferredIds.length === 0 || !entityId) ? '#ccc' : '#f57c00'
+                                        bgcolor: (transferredIds.length === 0) ? theme.palette.action.disabled : theme.palette.warning.dark
                                     }
                                 }}
                             >
@@ -1113,7 +1139,7 @@ const ProductCalculator = ({ compoundId, mealId, onEntityCreated }: ProductCalcu
                                                     size="small"
                                                     checked={sfSelectedIds.includes(compound.id)}
                                                     onChange={() => handleSfToggle(compound.id)}
-                                                    sx={{ color: '#27ae60', '&.Mui-checked': { color: '#27ae60' } }}
+                                                    sx={{ color: theme.palette.success.main, '&.Mui-checked': { color: theme.palette.success.main } }}
                                                 />
                                                 <Typography variant="body2" color="text.primary">
                                                     {compound.name}
@@ -1141,10 +1167,10 @@ const ProductCalculator = ({ compoundId, mealId, onEntityCreated }: ProductCalcu
                                 onClick={handleSfMoveRight}
                                 disabled={sfSelectedIds.length === 0}
                                 sx={{
-                                    bgcolor: sfSelectedIds.length === 0 ? '#ccc' : '#ffe0b2',
-                                    color: sfSelectedIds.length === 0 ? '#999' : '#f57c00',
+                                    bgcolor: sfSelectedIds.length === 0 ? theme.palette.action.disabled : theme.palette.action.hover,
+                                    color: sfSelectedIds.length === 0 ? theme.palette.text.disabled : theme.palette.warning.main,
                                     '&:hover': {
-                                        bgcolor: sfSelectedIds.length === 0 ? '#ccc' : '#ffcc80'
+                                        bgcolor: sfSelectedIds.length === 0 ? theme.palette.action.disabled : theme.palette.warning.light
                                     },
                                     borderRadius: '15%',
                                     padding: '10px',
@@ -1157,10 +1183,10 @@ const ProductCalculator = ({ compoundId, mealId, onEntityCreated }: ProductCalcu
                                 onClick={handleSfMoveLeft}
                                 disabled={sfTransferredIds.length === 0}
                                 sx={{
-                                    bgcolor: sfTransferredIds.length === 0 ? '#ccc' : '#ffe0b2',
-                                    color: sfTransferredIds.length === 0 ? '#999' : '#f57c00',
+                                    bgcolor: sfTransferredIds.length === 0 ? theme.palette.action.disabled : theme.palette.action.hover,
+                                    color: sfTransferredIds.length === 0 ? theme.palette.text.disabled : theme.palette.warning.main,
                                     '&:hover': {
-                                        bgcolor: sfTransferredIds.length === 0 ? '#ccc' : '#ffcc80'
+                                        bgcolor: sfTransferredIds.length === 0 ? theme.palette.action.disabled : theme.palette.warning.light
                                     },
                                     borderRadius: '15%',
                                     padding: '10px',
@@ -1181,13 +1207,17 @@ const ProductCalculator = ({ compoundId, mealId, onEntityCreated }: ProductCalcu
                             <Button
                                 variant="contained"
                                 onClick={async () => {
+                                    // Frontend-only calculation (view mode)
+                                    setSfShowCalculation(true);
+                                    setViewModeCalculation(true);
+
                                     if (!entityId) {
-                                        toast.warning(t('calculation.saveProductFirst', 'Avval mahsulotni saqlang!'));
+                                        // View mode - no API calls needed
+                                        toast.info(t('calculation.calculatedLocally', 'Calculated locally'));
                                         return;
                                     }
 
-                                    setSfShowCalculation(true);
-
+                                    // If entity exists, also save to backend
                                     if (sfTransferredIds.length > 0) {
                                         try {
                                             for (const compoundToAddId of sfTransferredIds) {
@@ -1215,12 +1245,11 @@ const ProductCalculator = ({ compoundId, mealId, onEntityCreated }: ProductCalcu
                                         }
                                     }
                                 }}
-                                disabled={sfTransferredIds.length === 0 || !entityId}
                                 sx={{
-                                    bgcolor: (sfTransferredIds.length === 0 || !entityId) ? '#ccc' : '#ff9800',
+                                    bgcolor: (sfTransferredIds.length === 0) ? theme.palette.action.disabled : theme.palette.warning.main,
                                     textTransform: 'none',
                                     '&:hover': {
-                                        bgcolor: (sfTransferredIds.length === 0 || !entityId) ? '#ccc' : '#f57c00'
+                                        bgcolor: (sfTransferredIds.length === 0) ? theme.palette.action.disabled : theme.palette.warning.dark
                                     }
                                 }}
                             >
@@ -1329,7 +1358,7 @@ const ProductCalculator = ({ compoundId, mealId, onEntityCreated }: ProductCalcu
             )}
 
             {/* --- BOTTOM CALCULATION TABLE --- */}
-            {(showCalculation || sfShowCalculation) && (
+            {(showCalculation || sfShowCalculation || viewModeCalculation) && (
                 <Box sx={{ mt: 4 }}>
                     <TableContainer
                         component={Paper}
@@ -1379,13 +1408,47 @@ const ProductCalculator = ({ compoundId, mealId, onEntityCreated }: ProductCalcu
 
                     {/* TOTALS FOOTER */}
                     <Box sx={{
-                        mt: 2,
+                        mt: 4,
                         display: 'flex',
                         flexDirection: 'column',
-                        gap: 1,
+                        gap: 2,
                         alignItems: 'flex-end',
                         pr: 2
                     }}>
+                        {/* SAVE BUTTON FOR NEW MEAL/COMPOUND */}
+                        {!entityId && onSaveWithGood && (allCalculatedRows.length > 0 || (transferredIds.length === 0 && sfTransferredIds.length === 0)) && (
+                            <Button
+                                variant="contained"
+                                color="success"
+                                size="large"
+                                onClick={async () => {
+                                    try {
+                                        // Prepare calculations data
+                                        const ingredientCalcs = transferredIds.map(id => ({
+                                            ingredient_id: id,
+                                            quantity: String(quantities[id] || 0)
+                                        }));
+                                        const compoundCalcs = sfTransferredIds.map(id => ({
+                                            compound_id: id,
+                                            quantity: String(sfQuantities[id] || 0)
+                                        }));
+
+                                        // Call parent callback with good data and calculations
+                                        await onSaveWithGood({
+                                            ingredient_calculations: ingredientCalcs.length > 0 ? ingredientCalcs : undefined,
+                                            compound_calculations: compoundCalcs.length > 0 ? compoundCalcs : undefined,
+                                        });
+                                    } catch (error) {
+                                        console.error('Error saving with calculations:', error);
+                                        toast.error(t('error.saveFailed', 'Failed to save'));
+                                    }
+                                }}
+                                sx={{ mb: 2 }}
+                            >
+                                {t('common.save', 'Saqlash')}
+                            </Button>
+                        )}
+
                         <Box sx={{ display: 'flex', justifyContent: 'space-between', width: '300px' }}>
                             <Typography color="text.secondary" fontWeight="bold">
                                 {t('calculation.total')}

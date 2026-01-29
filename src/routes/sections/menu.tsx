@@ -61,6 +61,8 @@ const PageThree = lazy(() => import('src/pages/dashboard/three'));
 const PageFour = lazy(() => import('src/pages/dashboard/four'));
 const PageFive = lazy(() => import('src/pages/dashboard/five'));
 const PageSix = lazy(() => import('src/pages/dashboard/six'));
+const FloorPlanPage = lazy(() => import('src/pages/dashboard/floor-plan'));
+const HallsPage = lazy(() => import('src/pages/dashboard/halls'));
 
 // ----------------------------------------------------------------------
 
@@ -155,6 +157,8 @@ export const dashboardRoutes: RouteObject[] = [
           { path: 'reports/inventory', element: <InventoryReportsListView /> },
           { path: 'reports/custom', element: <CustomReportsListView /> },
           { path: 'reports/archives', element: <ArchivesListView /> },
+          { path: 'floor-plan', element: <FloorPlanPage /> },
+          { path: 'halls', element: <HallsPage /> },
         ],
       },
       {
@@ -163,6 +167,7 @@ export const dashboardRoutes: RouteObject[] = [
           { path: 'connected-device', element: <ConnectedDeviceListView /> },
           { path: 'management', element: <ManagementListView /> },
           { path: 'restaurant-info', element: <RestaurantInfoListView /> },
+          { path: 'floor-plan', element: <FloorPlanPage /> },
         ],
       },
     ],

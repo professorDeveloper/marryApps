@@ -1,16 +1,10 @@
 import type { LinkProps } from '@mui/material/Link';
-
 import { useId } from 'react';
 import { mergeClasses } from 'minimal-shared/utils';
-
 import Link from '@mui/material/Link';
 import { styled, useTheme, useColorScheme } from '@mui/material/styles';
-
 import { RouterLink } from 'src/routes/components';
-
 import { logoClasses } from './classes';
-
-// ----------------------------------------------------------------------
 
 export type LogoProps = LinkProps & {
   isSingle?: boolean;
@@ -31,7 +25,6 @@ export function Logo({
   const { colorScheme } = useColorScheme();
 
   const uniqueId = useId();
-
   const TEXT_PRIMARY = theme.vars.palette.text.primary;
   const PRIMARY_LIGHT = theme.vars.palette.primary.light;
   const PRIMARY_MAIN = theme.vars.palette.primary.main;
@@ -42,7 +35,7 @@ export function Logo({
   const singleLogo = (
     <img
       alt="Single logo"
-      src={isNavMini ? "/logo/header-mobile.svg" : (isDarkMode ? "/logo/header-logo-light.svg" : "/logo/header-logo-night.svg")}
+      src={isNavMini ? "/logo/header-mobil.svg" : (isDarkMode ? "/logo/new-logo-night.svg" : "/logo/new-logo-light.svg")}
       width="100%"
       height="100%"
     />
@@ -51,7 +44,7 @@ export function Logo({
   const fullLogo = (
     <img
       alt="Full logo"
-      src={isNavMini ? "/logo/header-mobile.svg" : "/logo/header-logo2.svg"}
+      src={isNavMini ? "/logo/header-mobil.svg" : "/logo/header-logo2.svg"}
       width="100%"
       height="100%"
     />

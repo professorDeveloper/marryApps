@@ -12,6 +12,10 @@ export type IMealsTableFilters = {
 export type IMealAPIResponse = {
     id: string;
     name: string;
+    name_i18n?: string;
+    name_en?: string;
+    name_ru?: string;
+    name_uz?: string;
     description: string;
     category_id: string;
     department_id: string;
@@ -28,6 +32,10 @@ export type IMealAPIResponse = {
 export type IMealsItem = {
     id: string;
     name: string;
+    name_i18n?: string;
+    name_en?: string;
+    name_ru?: string;
+    name_uz?: string;
     description: string;
     category_id: string;
     category?: {
