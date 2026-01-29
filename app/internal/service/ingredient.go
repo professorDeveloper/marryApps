@@ -470,12 +470,12 @@ func (i *IngredientS) RestoreIngredient(ctx context.Context, ingredientID string
 // ==================== INGREDIENT STOCK ====================
 
 // CreateIngredientStock creates a new ingredient stock entry
-func (i *IngredientS) CreateIngredientStock(ctx context.Context, ingredientID string, quantity int64, branchID string) (*model.IngredientStockResponse, error) {
+func (i *IngredientS) CreateIngredientStock(ctx context.Context, ingredientID string, quantity int64, branchID *string, storageID *string) (*model.IngredientStockResponse, error) {
 	if ingredientID == "" {
 		return nil, fmt.Errorf("ingredient_id is required")
 	}
-	if branchID == "" {
-		return nil, fmt.Errorf("branch_id is required")
+	if (branchID == nil || *branchID == "") && (storageID == nil || *storageID == "") {
+		return nil, fmt.Errorf("branch_id or storage_id is required")
 	}
 
 	ingID, err := uuid.Parse(ingredientID)
@@ -483,17 +483,30 @@ func (i *IngredientS) CreateIngredientStock(ctx context.Context, ingredientID st
 		return nil, fmt.Errorf("invalid ingredient ID: %w", err)
 	}
 
-	bID, err := uuid.Parse(branchID)
-	if err != nil {
-		return nil, fmt.Errorf("invalid branch ID: %w", err)
+	branchUUID := pgtype.UUID{Valid: false}
+	if branchID != nil && *branchID != "" {
+		bID, err := uuid.Parse(*branchID)
+		if err != nil {
+			return nil, fmt.Errorf("invalid branch ID: %w", err)
+		}
+		branchUUID = pgtype.UUID{Bytes: bID, Valid: true}
+	}
+
+	storageUUID := pgtype.UUID{Valid: false}
+	if storageID != nil && *storageID != "" {
+		sID, err := uuid.Parse(*storageID)
+		if err != nil {
+			return nil, fmt.Errorf("invalid storage ID: %w", err)
+		}
+		storageUUID = pgtype.UUID{Bytes: sID, Valid: true}
 	}
 
 	stock, err := i.repo.Tenant(ctx).CreateIngredientStock(ctx, pg.CreateIngredientStockParams{
 		ID:           uuid.New(),
 		IngredientID: ingID,
 		Quantity:     quantity,
-		BranchID:     pgtype.UUID{Bytes: bID, Valid: true},
-		StorageID:    pgtype.UUID{Valid: false},
+		BranchID:     branchUUID,
+		StorageID:    storageUUID,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to create ingredient stock: %w", err)

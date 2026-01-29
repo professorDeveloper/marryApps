@@ -527,6 +527,29 @@ func (h *Handler) CreateCompoundWithCalculations(c echo.Context) error {
 	))
 }
 
+// UpdateCompoundWithCalculations updates a compound and replaces all calculations in one transaction
+// @Summary Update compound with multiple ingredients and child compounds (One Save)
+// @Description Update a compound and replace all its ingredient/child compound calculations in one atomic transaction.
+// @Description
+// @Description **How it works:**
+// @Description - Update the compound first
+// @Description - Delete all existing calculations for this compound
+// @Description - Create the new ingredient calculations (price from invoice_detail)
+// @Description - Create the new child compound calculations (price from child compound's price)
+// @Description - If any step fails, everything is rolled back
+// @Description - Compound price is auto-calculated as sum of all calculation total_costs
+// @Tags compounds
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param lang query string false "Language (uz, ru, en)" default(uz)
+// @Param id path string true "Compound ID"
+// @Param request body model.UpdateCompoundWithCalculationsRequest true "Compound update + ingredients + child compounds"
+// @Success 200 {object} model.CompoundWithCalculationsResponse "Compound and all calculations updated successfully"
+// @Failure 400 {object} model.ErrorResponse "Invalid request (missing fields, invalid UUIDs, etc.)"
+// @Failure 401 {object} model.ErrorResponse "Unauthorized"
+// @Failure 500 {object} model.ErrorResponse "Internal error (ingredient not found, no invoice, etc.)"
+// @Router /api/v1/compounds/{id}/with-calculations [put]
 func (h *Handler) UpdateCompoundWithCalculations(c echo.Context) error {
 	compoundID := c.Param("id")
 	if compoundID == "" {

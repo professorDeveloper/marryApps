@@ -5206,6 +5206,75 @@ const docTemplate = `{
                         }
                     }
                 }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Update a compound and replace all its ingredient/child compound calculations in one atomic transaction.\n\n**How it works:**\n- Update the compound first\n- Delete all existing calculations for this compound\n- Create the new ingredient calculations (price from invoice_detail)\n- Create the new child compound calculations (price from child compound's price)\n- If any step fails, everything is rolled back\n- Compound price is auto-calculated as sum of all calculation total_costs",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "compounds"
+                ],
+                "summary": "Update compound with multiple ingredients and child compounds (One Save)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "default": "uz",
+                        "description": "Language (uz, ru, en)",
+                        "name": "lang",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Compound ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Compound update + ingredients + child compounds",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.UpdateCompoundWithCalculationsRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Compound and all calculations updated successfully",
+                        "schema": {
+                            "$ref": "#/definitions/model.CompoundWithCalculationsResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request (missing fields, invalid UUIDs, etc.)",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal error (ingredient not found, no invoice, etc.)",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    }
+                }
             }
         },
         "/api/v1/departments": {
@@ -19936,6 +20005,36 @@ const docTemplate = `{
                 }
             }
         },
+        "model.UpdateCompoundWithCalculationsRequest": {
+            "type": "object",
+            "required": [
+                "compound"
+            ],
+            "properties": {
+                "compound": {
+                    "description": "Compound - the compound fields to update",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/model.UpdateCompoundRequest"
+                        }
+                    ]
+                },
+                "compound_calculations": {
+                    "description": "CompoundCalculations - replacement array of child compounds to add (price from compound.price)",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.CompoundCalculationItem"
+                    }
+                },
+                "ingredient_calculations": {
+                    "description": "IngredientCalculations - replacement array of ingredients to add (price from invoice_detail)",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.IngredientCalculationItem"
+                    }
+                }
+            }
+        },
         "model.UpdateDepartmentRequest": {
             "type": "object",
             "properties": {
@@ -20564,9 +20663,9 @@ const docTemplate = `{
 // SwaggerInfo holds exported Swagger Info so clients can modify it
 var SwaggerInfo = &swag.Spec{
 	Version:          "1.0",
-	Host:             "back.maryai.yurtal.tech",
+	Host:             "localhost:8080",
 	BasePath:         "/",
-	Schemes:          []string{"https"},
+	Schemes:          []string{"http"},
 	Title:            "MaryAI API",
 	Description:      "MaryAI API server with multi-language support (uz, ru, en)",
 	InfoInstanceName: "swagger",

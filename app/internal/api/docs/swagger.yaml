@@ -1948,6 +1948,27 @@ definitions:
         example: 100
         type: integer
     type: object
+  model.UpdateCompoundWithCalculationsRequest:
+    properties:
+      compound:
+        allOf:
+        - $ref: '#/definitions/model.UpdateCompoundRequest'
+        description: Compound - the compound fields to update
+      compound_calculations:
+        description: CompoundCalculations - replacement array of child compounds to
+          add (price from compound.price)
+        items:
+          $ref: '#/definitions/model.CompoundCalculationItem'
+        type: array
+      ingredient_calculations:
+        description: IngredientCalculations - replacement array of ingredients to
+          add (price from invoice_detail)
+        items:
+          $ref: '#/definitions/model.IngredientCalculationItem'
+        type: array
+    required:
+    - compound
+    type: object
   model.UpdateDepartmentRequest:
     properties:
       color_code:
@@ -2378,7 +2399,7 @@ definitions:
         example: admin
         type: string
     type: object
-host: back.maryai.yurtal.tech
+host: localhost:8080
 info:
   contact: {}
   description: MaryAI API server with multi-language support (uz, ru, en)
@@ -5413,6 +5434,61 @@ paths:
       summary: Get compound with calculations
       tags:
       - Calculations
+    put:
+      consumes:
+      - application/json
+      description: |-
+        Update a compound and replace all its ingredient/child compound calculations in one atomic transaction.
+
+        **How it works:**
+        - Update the compound first
+        - Delete all existing calculations for this compound
+        - Create the new ingredient calculations (price from invoice_detail)
+        - Create the new child compound calculations (price from child compound's price)
+        - If any step fails, everything is rolled back
+        - Compound price is auto-calculated as sum of all calculation total_costs
+      parameters:
+      - default: uz
+        description: Language (uz, ru, en)
+        in: query
+        name: lang
+        type: string
+      - description: Compound ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Compound update + ingredients + child compounds
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.UpdateCompoundWithCalculationsRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Compound and all calculations updated successfully
+          schema:
+            $ref: '#/definitions/model.CompoundWithCalculationsResponse'
+        "400":
+          description: Invalid request (missing fields, invalid UUIDs, etc.)
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal error (ingredient not found, no invoice, etc.)
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update compound with multiple ingredients and child compounds (One
+        Save)
+      tags:
+      - compounds
   /api/v1/compounds/calculations:
     get:
       consumes:
@@ -13548,7 +13624,7 @@ paths:
       tags:
       - users
 schemes:
-- https
+- http
 securityDefinitions:
   BearerAuth:
     description: Type "Bearer" followed by a space and your JWT token

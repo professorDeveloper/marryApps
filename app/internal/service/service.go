@@ -131,7 +131,7 @@ type IngredientI interface {
 	DeleteIngredient(ctx context.Context, ingredientID string) error
 	RestoreIngredient(ctx context.Context, ingredientID string) error
 
-	CreateIngredientStock(ctx context.Context, ingredientID string, quantity int64, branchID string) (*model.IngredientStockResponse, error)
+	CreateIngredientStock(ctx context.Context, ingredientID string, quantity int64, branchID *string, storageID *string) (*model.IngredientStockResponse, error)
 	GetIngredientStockByID(ctx context.Context, stockID string) (*model.IngredientStockResponse, error)
 	GetStockByIngredientAndBranch(ctx context.Context, ingredientID, branchID string) (*model.IngredientStockResponse, error)
 	GetAllIngredientStock(ctx context.Context, limit, offset int32) ([]model.IngredientStockResponse, error)

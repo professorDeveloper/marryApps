@@ -525,14 +525,14 @@ func (h *Handler) CreateIngredientStock(c echo.Context) error {
 	if req.IngredientID == nil || *req.IngredientID == "" {
 		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("ingredient_id is required", "see logs for details", http.StatusBadRequest))
 	}
-	if req.BranchID == nil || *req.BranchID == "" {
-		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("branch_id is required", "see logs for details", http.StatusBadRequest))
+	if (req.BranchID == nil || *req.BranchID == "") && (req.StorageID == nil || *req.StorageID == "") {
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("branch_id or storage_id is required", "see logs for details", http.StatusBadRequest))
 	}
 	if req.Quantity == nil {
 		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("quantity is required", "see logs for details", http.StatusBadRequest))
 	}
 
-	stock, err := h.service.Ingredient().CreateIngredientStock(c.Request().Context(), *req.IngredientID, *req.Quantity, *req.BranchID)
+	stock, err := h.service.Ingredient().CreateIngredientStock(c.Request().Context(), *req.IngredientID, *req.Quantity, req.BranchID, req.StorageID)
 	if err != nil {
 		log.Printf("CreateIngredientStock failed: %v", err)
 		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("failed to create ingredient stock", "see logs for details", http.StatusInternalServerError))
