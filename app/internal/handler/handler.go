@@ -294,6 +294,7 @@ func (h *Handler) Register(router *echo.Echo) {
 			compounds.POST("/with-calculations", h.CreateCompoundWithCalculations, mw.CheckLanguage())
 			compounds.GET("", h.GetAllCompounds, mw.CheckLanguage())
 			compounds.GET("/:id/with-calculations", h.GetCompoundWithCalculations, mw.CheckLanguage())
+			compounds.PUT("/:id/with-calculations", h.UpdateCompoundWithCalculations, mw.CheckLanguage())
 			compounds.GET("/:id", h.GetCompoundByID, mw.CheckLanguage())
 			compounds.GET("/department/:departmentId", h.GetCompoundsByDepartmentID, mw.CheckLanguage())
 			compounds.POST("/:id/recalculate-price", h.RecalculateCompoundPrice, mw.CheckLanguage())
@@ -351,6 +352,7 @@ func (h *Handler) Register(router *echo.Echo) {
 			goods.POST("/with-calculations", h.CreateGoodWithCalculations, mw.CheckLanguage())
 			goods.GET("", h.GetAllGoods, mw.CheckLanguage())
 			goods.GET("/:id/with-calculations", h.GetGoodWithCalculations, mw.CheckLanguage())
+			goods.PUT("/:id/with-calculations", h.UpdateGoodWithCalculations, mw.CheckLanguage())
 			goods.GET("/:id", h.GetGood, mw.CheckLanguage())
 			goods.GET("/search/by-price", h.GetGoodsByPriceRange, mw.CheckLanguage())
 			goods.GET("/search", h.SearchGoods, mw.CheckLanguage())
@@ -461,6 +463,21 @@ func (h *Handler) Register(router *echo.Echo) {
 			suppliers.PUT("/:id", h.UpdateSupplier, mw.CheckLanguage())
 			suppliers.DELETE("/:id", h.DeleteSupplier, mw.CheckLanguage())
 			suppliers.POST("/:id/restore", h.RestoreSupplier, mw.CheckLanguage())
+		}
+
+		// Inventory endpoints
+		inventories := api.Group("/inventories", mw.CheckAuth(h.cfg), mw.TenantMiddleware(h.repo))
+		{
+			inventories.POST("", h.CreateInventory, mw.CheckLanguage())
+			inventories.GET("", h.GetAllInventories, mw.CheckLanguage())
+			inventories.GET("/:id", h.GetInventory, mw.CheckLanguage())
+			inventories.POST("/:id/items", h.UpsertInventoryItems, mw.CheckLanguage())
+			inventories.GET("/:id/items", h.GetInventoryItems, mw.CheckLanguage())
+			inventories.POST("/:id/calculate", h.CalculateInventory, mw.CheckLanguage())
+			inventories.GET("/search", h.SearchInventories, mw.CheckLanguage())
+			inventories.PUT("/:id", h.UpdateInventory, mw.CheckLanguage())
+			inventories.DELETE("/:id", h.DeleteInventory, mw.CheckLanguage())
+			inventories.POST("/:id/restore", h.RestoreInventory, mw.CheckLanguage())
 		}
 
 		// Invoice endpoints (supplier invoices)

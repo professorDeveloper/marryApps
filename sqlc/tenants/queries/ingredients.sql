@@ -57,17 +57,17 @@ SELECT COUNT(*) FROM ingredient_groups WHERE deleted_at = 0;
 -- name: CreateIngredient :one
 INSERT INTO ingredients (id, name, name_i18n, group_id, measurement, picture_url, color_code, brand_id)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-RETURNING id, name, name_i18n, group_id, measurement, picture_url, color_code, brand_id, price_per_unit, quantity, created_at, updated_at, deleted_at;
+RETURNING id, name, name_i18n, group_id, measurement, picture_url, color_code, brand_id, price_per_unit, created_at, updated_at, deleted_at;
 
 -- GetIngredientByID retrieves an ingredient by ID
 -- name: GetIngredientByID :one
-SELECT id, name, name_i18n, group_id, measurement, picture_url, color_code, brand_id, price_per_unit, quantity, created_at, updated_at, deleted_at
+SELECT id, name, name_i18n, group_id, measurement, picture_url, color_code, brand_id, price_per_unit, created_at, updated_at, deleted_at
 FROM ingredients
 WHERE id = $1 AND deleted_at = 0;
 
 -- GetAllIngredients retrieves all ingredients with pagination
 -- name: GetAllIngredients :many
-SELECT id, name, name_i18n, group_id, measurement, picture_url, color_code, brand_id, price_per_unit, quantity, created_at, updated_at, deleted_at
+SELECT id, name, name_i18n, group_id, measurement, picture_url, color_code, brand_id, price_per_unit, created_at, updated_at, deleted_at
 FROM ingredients
 WHERE deleted_at = 0
 ORDER BY created_at DESC
@@ -75,7 +75,7 @@ LIMIT $1 OFFSET $2;
 
 -- GetIngredientsByGroupID retrieves ingredients by group ID
 -- name: GetIngredientsByGroupID :many
-SELECT id, name, name_i18n, group_id, measurement, picture_url, color_code, brand_id, price_per_unit, quantity, created_at, updated_at, deleted_at
+SELECT id, name, name_i18n, group_id, measurement, picture_url, color_code, brand_id, price_per_unit, created_at, updated_at, deleted_at
 FROM ingredients
 WHERE group_id = $1 AND deleted_at = 0
 ORDER BY created_at DESC
@@ -93,7 +93,7 @@ SET name = COALESCE($2, name),
     brand_id = COALESCE($8, brand_id),
     updated_at = NOW()
 WHERE id = $1 AND deleted_at = 0
-RETURNING id, name, name_i18n, group_id, measurement, picture_url, color_code, brand_id, price_per_unit, quantity, created_at, updated_at, deleted_at;
+RETURNING id, name, name_i18n, group_id, measurement, picture_url, color_code, brand_id, price_per_unit, created_at, updated_at, deleted_at;
 
 -- DeleteIngredient soft deletes an ingredient
 -- name: DeleteIngredient :exec
@@ -109,7 +109,7 @@ WHERE id = $1 AND deleted_at != 0;
 
 -- SearchIngredients searches ingredients by name
 -- name: SearchIngredients :many
-SELECT id, name, name_i18n, group_id, measurement, picture_url, color_code, brand_id, price_per_unit, quantity, created_at, updated_at, deleted_at
+SELECT id, name, name_i18n, group_id, measurement, picture_url, color_code, brand_id, price_per_unit, created_at, updated_at, deleted_at
 FROM ingredients
 WHERE deleted_at = 0 AND name ILIKE '%' || $1 || '%'
 ORDER BY created_at DESC
@@ -119,52 +119,50 @@ LIMIT $2 OFFSET $3;
 -- name: CountIngredients :one
 SELECT COUNT(*) FROM ingredients WHERE deleted_at = 0;
 
--- UpdateIngredientPriceAndQuantity updates price_per_unit and quantity for an ingredient
+-- UpdateIngredientPriceAndQuantity updates price_per_unit for an ingredient
 -- name: UpdateIngredientPriceAndQuantity :one
 UPDATE ingredients
 SET price_per_unit = COALESCE($2, price_per_unit),
-    quantity = COALESCE($3, quantity),
     updated_at = NOW()
 WHERE id = $1 AND deleted_at = 0
-RETURNING id, name, name_i18n, group_id, measurement, picture_url, color_code, brand_id, price_per_unit, quantity, created_at, updated_at, deleted_at;
+RETURNING id, name, name_i18n, group_id, measurement, picture_url, color_code, brand_id, price_per_unit, created_at, updated_at, deleted_at;
 
 -- AddIngredientQuantity adds/accumulates quantity to an ingredient (for invoice arrivals)
 -- Also updates the price_per_unit to the latest price from invoice
 -- name: AddIngredientQuantity :one
 UPDATE ingredients
 SET price_per_unit = COALESCE($2, price_per_unit),
-    quantity = quantity + $3,
     updated_at = NOW()
 WHERE id = $1 AND deleted_at = 0
-RETURNING id, name, name_i18n, group_id, measurement, picture_url, color_code, brand_id, price_per_unit, quantity, created_at, updated_at, deleted_at;
+RETURNING id, name, name_i18n, group_id, measurement, picture_url, color_code, brand_id, price_per_unit, created_at, updated_at, deleted_at;
 
 -- GetIngredientByIDWithPriceQuantity retrieves ingredient with price and quantity by ID
 -- name: GetIngredientByIDWithPriceQuantity :one
-SELECT id, name, name_i18n, group_id, measurement, picture_url, color_code, brand_id, price_per_unit, quantity, created_at, updated_at, deleted_at
+SELECT id, name, name_i18n, group_id, measurement, picture_url, color_code, brand_id, price_per_unit, created_at, updated_at, deleted_at
 FROM ingredients
 WHERE id = $1 AND deleted_at = 0;
 
 
 -- name: CreateIngredientStock :one
-INSERT INTO ingredient_stock (id, ingredient_id, quantity, branch_id)
-VALUES ($1, $2, $3, $4)
-RETURNING id, ingredient_id, quantity, branch_id, created_at, updated_at, deleted_at;
+INSERT INTO ingredient_stock (id, ingredient_id, quantity, branch_id, storage_id)
+VALUES ($1, $2, $3, $4, $5)
+RETURNING id, ingredient_id, quantity, branch_id, storage_id, created_at, updated_at, deleted_at;
 
 -- GetIngredientStockByID retrieves ingredient stock by ID
 -- name: GetIngredientStockByID :one
-SELECT id, ingredient_id, quantity, branch_id, created_at, updated_at, deleted_at
+SELECT id, ingredient_id, quantity, branch_id, storage_id, created_at, updated_at, deleted_at
 FROM ingredient_stock
 WHERE id = $1 AND deleted_at = 0;
 
 -- GetStockByIngredientAndBranch retrieves stock for a specific ingredient and branch
 -- name: GetStockByIngredientAndBranch :one
-SELECT id, ingredient_id, quantity, branch_id, created_at, updated_at, deleted_at
+SELECT id, ingredient_id, quantity, branch_id, storage_id, created_at, updated_at, deleted_at
 FROM ingredient_stock
 WHERE ingredient_id = $1 AND branch_id = $2 AND deleted_at = 0;
 
 -- GetAllIngredientStock retrieves all ingredient stock entries with pagination
 -- name: GetAllIngredientStock :many
-SELECT id, ingredient_id, quantity, branch_id, created_at, updated_at, deleted_at
+SELECT id, ingredient_id, quantity, branch_id, storage_id, created_at, updated_at, deleted_at
 FROM ingredient_stock
 WHERE deleted_at = 0
 ORDER BY created_at DESC
@@ -172,7 +170,7 @@ LIMIT $1 OFFSET $2;
 
 -- GetStockByBranchID retrieves all stock for a branch
 -- name: GetStockByBranchID :many
-SELECT id, ingredient_id, quantity, branch_id, created_at, updated_at, deleted_at
+SELECT id, ingredient_id, quantity, branch_id, storage_id, created_at, updated_at, deleted_at
 FROM ingredient_stock
 WHERE branch_id = $1 AND deleted_at = 0
 ORDER BY created_at DESC
@@ -180,7 +178,7 @@ LIMIT $2 OFFSET $3;
 
 -- GetStockByIngredientID retrieves all stock for an ingredient
 -- name: GetStockByIngredientID :many
-SELECT id, ingredient_id, quantity, branch_id, created_at, updated_at, deleted_at
+SELECT id, ingredient_id, quantity, branch_id, storage_id, created_at, updated_at, deleted_at
 FROM ingredient_stock
 WHERE ingredient_id = $1 AND deleted_at = 0
 ORDER BY created_at DESC
@@ -192,7 +190,7 @@ UPDATE ingredient_stock
 SET quantity = COALESCE($2, quantity),
     updated_at = NOW()
 WHERE id = $1 AND deleted_at = 0
-RETURNING id, ingredient_id, quantity, branch_id, created_at, updated_at, deleted_at;
+RETURNING id, ingredient_id, quantity, branch_id, storage_id, created_at, updated_at, deleted_at;
 
 -- AddToIngredientStock increases ingredient stock quantity
 -- name: AddToIngredientStock :one
@@ -200,7 +198,7 @@ UPDATE ingredient_stock
 SET quantity = quantity + $2,
     updated_at = NOW()
 WHERE id = $1 AND deleted_at = 0
-RETURNING id, ingredient_id, quantity, branch_id, created_at, updated_at, deleted_at;
+RETURNING id, ingredient_id, quantity, branch_id, storage_id, created_at, updated_at, deleted_at;
 
 -- RemoveFromIngredientStock decreases ingredient stock quantity
 -- name: RemoveFromIngredientStock :one
@@ -211,7 +209,18 @@ SET quantity = CASE
 END,
     updated_at = NOW()
 WHERE id = $1 AND deleted_at = 0
-RETURNING id, ingredient_id, quantity, branch_id, created_at, updated_at, deleted_at;
+RETURNING id, ingredient_id, quantity, branch_id, storage_id, created_at, updated_at, deleted_at;
+
+-- UpsertAddIngredientStockByStorage increases stock for ingredient in a storage (used for invoice arrivals)
+-- name: UpsertAddIngredientStockByStorage :one
+INSERT INTO ingredient_stock (id, ingredient_id, storage_id, quantity, deleted_at)
+VALUES ($1, $2, $3, $4, 0)
+ON CONFLICT (ingredient_id, storage_id)
+DO UPDATE SET
+  quantity = ingredient_stock.quantity + EXCLUDED.quantity,
+  updated_at = NOW(),
+  deleted_at = 0
+RETURNING id, ingredient_id, quantity, branch_id, storage_id, created_at, updated_at, deleted_at;
 
 -- DeleteIngredientStock soft deletes ingredient stock
 -- name: DeleteIngredientStock :exec
@@ -285,7 +294,6 @@ SELECT
     i.color_code,
     i.brand_id,
     i.price_per_unit,
-    i.quantity,
     i.created_at,
     i.updated_at,
     i.deleted_at
@@ -309,7 +317,6 @@ SELECT
     i.color_code,
     i.brand_id,
     i.price_per_unit,
-    i.quantity,
     i.created_at,
     i.updated_at,
     i.deleted_at

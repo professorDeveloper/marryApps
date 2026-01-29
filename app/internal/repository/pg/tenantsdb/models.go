@@ -408,7 +408,6 @@ type Ingredient struct {
 	ColorCode    *string             `json:"color_code"`
 	BrandID      pgtype.UUID         `json:"brand_id"`
 	PricePerUnit pgtype.Numeric      `json:"price_per_unit"`
-	Quantity     *int64              `json:"quantity"`
 	CreatedAt    pgtype.Timestamptz  `json:"created_at"`
 	UpdatedAt    pgtype.Timestamptz  `json:"updated_at"`
 	DeletedAt    *int64              `json:"deleted_at"`
@@ -429,10 +428,37 @@ type IngredientStock struct {
 	ID           uuid.UUID          `json:"id"`
 	IngredientID uuid.UUID          `json:"ingredient_id"`
 	Quantity     int64              `json:"quantity"`
-	BranchID     uuid.UUID          `json:"branch_id"`
+	BranchID     pgtype.UUID        `json:"branch_id"`
 	CreatedAt    pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
 	DeletedAt    *int64             `json:"deleted_at"`
+	StorageID    pgtype.UUID        `json:"storage_id"`
+}
+
+type Inventory struct {
+	ID              uuid.UUID          `json:"id"`
+	Number          int64              `json:"number"`
+	Date            pgtype.Date        `json:"date"`
+	StorageID       uuid.UUID          `json:"storage_id"`
+	Description     *string            `json:"description"`
+	DescriptionI18n pgtype.UUID        `json:"description_i18n"`
+	Status          string             `json:"status"`
+	SurplusAmount   pgtype.Numeric     `json:"surplus_amount"`
+	ShortageAmount  pgtype.Numeric     `json:"shortage_amount"`
+	RemainingAmount pgtype.Numeric     `json:"remaining_amount"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
+	DeletedAt       int64              `json:"deleted_at"`
+}
+
+type InventoryItem struct {
+	ID              uuid.UUID          `json:"id"`
+	InventoryID     uuid.UUID          `json:"inventory_id"`
+	IngredientID    uuid.UUID          `json:"ingredient_id"`
+	CountedQuantity int64              `json:"counted_quantity"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
+	DeletedAt       int64              `json:"deleted_at"`
 }
 
 type Invoice struct {
@@ -444,6 +470,7 @@ type Invoice struct {
 	CreatedAt   pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
 	DeletedAt   *int64             `json:"deleted_at"`
+	StorageID   pgtype.UUID        `json:"storage_id"`
 }
 
 type InvoiceDetailed struct {

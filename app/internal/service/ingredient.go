@@ -38,7 +38,6 @@ func mapIngredientToResponse(ingredient any) *model.IngredientResponse {
 		colorCode    *string
 		brandID      pgtype.UUID
 		pricePerUnit pgtype.Numeric
-		quantity     *int64
 		createdAt    pgtype.Timestamptz
 		updatedAt    pgtype.Timestamptz
 	)
@@ -55,7 +54,6 @@ func mapIngredientToResponse(ingredient any) *model.IngredientResponse {
 		colorCode = row.ColorCode
 		brandID = row.BrandID
 		pricePerUnit = row.PricePerUnit
-		quantity = row.Quantity
 		createdAt = row.CreatedAt
 		updatedAt = row.UpdatedAt
 	default:
@@ -88,7 +86,6 @@ func mapIngredientToResponse(ingredient any) *model.IngredientResponse {
 		PictureUrl:   pictureUrl,
 		ColorCode:    colorCode,
 		PricePerUnit: pricePerUnitStr,
-		Quantity:     quantity,
 		CreatedAt:    timestampToTime(createdAt),
 		UpdatedAt:    timestampToTime(updatedAt),
 	}
@@ -355,7 +352,7 @@ func (i *IngredientS) GetIngredientsByGroupID(ctx context.Context, groupID strin
 }
 
 // UpdateIngredient updates an ingredient
-func (i *IngredientS) UpdateIngredient(ctx context.Context, ingredientID string, name *string, nameI18n *string, groupID *string, measurement *string, pictureUrl *string, brandID *string, colorCode *string, pricePerUnit *string, quantity *int64) (*model.IngredientResponse, error) {
+func (i *IngredientS) UpdateIngredient(ctx context.Context, ingredientID string, name *string, nameI18n *string, groupID *string, measurement *string, pictureUrl *string, brandID *string, colorCode *string, pricePerUnit *string) (*model.IngredientResponse, error) {
 	id, err := uuid.Parse(ingredientID)
 	if err != nil {
 		return nil, fmt.Errorf("invalid ingredient ID: %w", err)
@@ -422,7 +419,7 @@ func (i *IngredientS) UpdateIngredient(ctx context.Context, ingredientID string,
 		return nil, fmt.Errorf("failed to update ingredient: %w", err)
 	}
 
-	if pricePerUnit != nil || quantity != nil {
+	if pricePerUnit != nil {
 		price := pgtype.Numeric{}
 		if pricePerUnit != nil {
 			if err := price.Scan(*pricePerUnit); err != nil {
@@ -433,7 +430,6 @@ func (i *IngredientS) UpdateIngredient(ctx context.Context, ingredientID string,
 		ingredient, err = i.repo.Tenant(ctx).UpdateIngredientPriceAndQuantity(ctx, pg.UpdateIngredientPriceAndQuantityParams{
 			ID:           id,
 			PricePerUnit: price,
-			Quantity:     quantity,
 		})
 		if err != nil {
 			return nil, fmt.Errorf("failed to update ingredient price/quantity: %w", err)
@@ -496,7 +492,8 @@ func (i *IngredientS) CreateIngredientStock(ctx context.Context, ingredientID st
 		ID:           uuid.New(),
 		IngredientID: ingID,
 		Quantity:     quantity,
-		BranchID:     bID,
+		BranchID:     pgtype.UUID{Bytes: bID, Valid: true},
+		StorageID:    pgtype.UUID{Valid: false},
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to create ingredient stock: %w", err)
@@ -534,7 +531,7 @@ func (i *IngredientS) GetStockByIngredientAndBranch(ctx context.Context, ingredi
 
 	stock, err := i.repo.Tenant(ctx).GetStockByIngredientAndBranch(ctx, pg.GetStockByIngredientAndBranchParams{
 		IngredientID: ingID,
-		BranchID:     bID,
+		BranchID:     pgtype.UUID{Bytes: bID, Valid: true},
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get ingredient stock: %w", err)
@@ -569,7 +566,7 @@ func (i *IngredientS) GetStockByBranchID(ctx context.Context, branchID string, l
 	}
 
 	stocks, err := i.repo.Tenant(ctx).GetStockByBranchID(ctx, pg.GetStockByBranchIDParams{
-		BranchID: bID,
+		BranchID: pgtype.UUID{Bytes: bID, Valid: true},
 		Limit:    limit,
 		Offset:   offset,
 	})
@@ -691,26 +688,72 @@ func (i *IngredientS) RestoreIngredientStock(ctx context.Context, stockID string
 	return nil
 }
 
-func toIngredientStockResponse(s pg.IngredientStock) *model.IngredientStockResponse {
-	if s.ID == uuid.Nil {
+func toIngredientStockResponse(stock any) *model.IngredientStockResponse {
+	var (
+		id           uuid.UUID
+		ingredientID uuid.UUID
+		quantity     int64
+		branchID     pgtype.UUID
+		storageID    pgtype.UUID
+		createdAtDB  pgtype.Timestamptz
+		updatedAtDB  pgtype.Timestamptz
+	)
+
+	switch s := stock.(type) {
+	case pg.CreateIngredientStockRow:
+		id, ingredientID, quantity, branchID, storageID, createdAtDB, updatedAtDB = s.ID, s.IngredientID, s.Quantity, s.BranchID, s.StorageID, s.CreatedAt, s.UpdatedAt
+	case pg.GetIngredientStockByIDRow:
+		id, ingredientID, quantity, branchID, storageID, createdAtDB, updatedAtDB = s.ID, s.IngredientID, s.Quantity, s.BranchID, s.StorageID, s.CreatedAt, s.UpdatedAt
+	case pg.GetStockByIngredientAndBranchRow:
+		id, ingredientID, quantity, branchID, storageID, createdAtDB, updatedAtDB = s.ID, s.IngredientID, s.Quantity, s.BranchID, s.StorageID, s.CreatedAt, s.UpdatedAt
+	case pg.GetAllIngredientStockRow:
+		id, ingredientID, quantity, branchID, storageID, createdAtDB, updatedAtDB = s.ID, s.IngredientID, s.Quantity, s.BranchID, s.StorageID, s.CreatedAt, s.UpdatedAt
+	case pg.GetStockByBranchIDRow:
+		id, ingredientID, quantity, branchID, storageID, createdAtDB, updatedAtDB = s.ID, s.IngredientID, s.Quantity, s.BranchID, s.StorageID, s.CreatedAt, s.UpdatedAt
+	case pg.GetStockByIngredientIDRow:
+		id, ingredientID, quantity, branchID, storageID, createdAtDB, updatedAtDB = s.ID, s.IngredientID, s.Quantity, s.BranchID, s.StorageID, s.CreatedAt, s.UpdatedAt
+	case pg.UpdateIngredientStockRow:
+		id, ingredientID, quantity, branchID, storageID, createdAtDB, updatedAtDB = s.ID, s.IngredientID, s.Quantity, s.BranchID, s.StorageID, s.CreatedAt, s.UpdatedAt
+	case pg.AddToIngredientStockRow:
+		id, ingredientID, quantity, branchID, storageID, createdAtDB, updatedAtDB = s.ID, s.IngredientID, s.Quantity, s.BranchID, s.StorageID, s.CreatedAt, s.UpdatedAt
+	case pg.RemoveFromIngredientStockRow:
+		id, ingredientID, quantity, branchID, storageID, createdAtDB, updatedAtDB = s.ID, s.IngredientID, s.Quantity, s.BranchID, s.StorageID, s.CreatedAt, s.UpdatedAt
+	default:
+		return nil
+	}
+
+	if id == uuid.Nil {
 		return nil
 	}
 
 	var createdAt *time.Time
-	if s.CreatedAt.Valid {
-		createdAt = &s.CreatedAt.Time
+	if createdAtDB.Valid {
+		createdAt = &createdAtDB.Time
 	}
 
 	var updatedAt *time.Time
-	if s.UpdatedAt.Valid {
-		updatedAt = &s.UpdatedAt.Time
+	if updatedAtDB.Valid {
+		updatedAt = &updatedAtDB.Time
+	}
+
+	var branchIDStr *string
+	if branchID.Valid {
+		b := uuid.UUID(branchID.Bytes).String()
+		branchIDStr = &b
+	}
+
+	var storageIDStr *string
+	if storageID.Valid {
+		st := uuid.UUID(storageID.Bytes).String()
+		storageIDStr = &st
 	}
 
 	return &model.IngredientStockResponse{
-		ID:           s.ID.String(),
-		IngredientID: s.IngredientID.String(),
-		Quantity:     s.Quantity,
-		BranchID:     s.BranchID.String(),
+		ID:           id.String(),
+		IngredientID: ingredientID.String(),
+		Quantity:     quantity,
+		BranchID:     branchIDStr,
+		StorageID:    storageIDStr,
 		CreatedAt:    createdAt,
 		UpdatedAt:    updatedAt,
 	}

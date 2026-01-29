@@ -662,6 +662,30 @@ definitions:
       quantity:
         example: 100
         type: integer
+      storage_id:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+    type: object
+  model.CreateInventoryRequest:
+    properties:
+      date:
+        example: "2024-01-01"
+        type: string
+      description:
+        example: Monthly inventory
+        type: string
+      description_i18n:
+        example: c0f18a64-7f5c-4425-9414-1b01cddee9d9
+        type: string
+      status:
+        example: active
+        type: string
+      storage_id:
+        example: d1f29b75-8g6d-5536-0525-2c12deeef0e0
+        type: string
+    required:
+    - date
+    - storage_id
     type: object
   model.CreateInvoiceDetailRequest:
     properties:
@@ -694,6 +718,9 @@ definitions:
         type: string
       status:
         example: pending
+        type: string
+      storage_id:
+        example: a1b2c3d4-e5f6-7890-abcd-ef1234567890
         type: string
       supplier_id:
         example: d1f29b75-8g6d-5536-0525-2c12deeef0e0
@@ -1141,9 +1168,6 @@ definitions:
       price_per_unit:
         example: "100.00"
         type: string
-      quantity:
-        example: 50
-        type: integer
       updated_at:
         example: "2022-01-01T00:00:00Z"
         type: string
@@ -1165,10 +1189,108 @@ definitions:
       quantity:
         example: 100
         type: integer
+      storage_id:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
       updated_at:
         example: "2022-01-01T00:00:00Z"
         type: string
     type: object
+  model.InventoryItemComputedResponse:
+    properties:
+      counted_quantity:
+        example: 3
+        type: integer
+      difference_quantity:
+        example: -3
+        type: integer
+      ingredient_brand_id:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+      ingredient_color_code:
+        example: '#FF5733'
+        type: string
+      ingredient_id:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+      ingredient_measurement:
+        example: kg
+        type: string
+      ingredient_name:
+        example: Tomato
+        type: string
+      ingredient_picture_url:
+        example: https://example.com/tomato.jpg
+        type: string
+      inventory_id:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+      inventory_item_id:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+      price_per_unit:
+        example: "10000"
+        type: string
+      remaining_amount:
+        example: "30000"
+        type: string
+      shortage_amount:
+        example: "30000"
+        type: string
+      surplus_amount:
+        example: "0"
+        type: string
+      system_quantity:
+        example: 6
+        type: integer
+    type: object
+  model.InventoryResponse:
+    properties:
+      created_at:
+        type: string
+      date:
+        type: string
+      description:
+        example: Monthly inventory
+        type: string
+      description_i18n:
+        example: c0f18a64-7f5c-4425-9414-1b01cddee9d9
+        type: string
+      id:
+        example: c0f18a64-7f5c-4425-9414-1b01cddee9d9
+        type: string
+      number:
+        example: 1
+        type: integer
+      remaining_amount:
+        example: "0"
+        type: string
+      shortage_amount:
+        example: "0"
+        type: string
+      status:
+        allOf:
+        - $ref: '#/definitions/model.InventoryStatus'
+        example: active
+      storage_id:
+        example: d1f29b75-8g6d-5536-0525-2c12deeef0e0
+        type: string
+      surplus_amount:
+        example: "0"
+        type: string
+      updated_at:
+        type: string
+    type: object
+  model.InventoryStatus:
+    enum:
+    - active
+    - draft
+    - deleted
+    type: string
+    x-enum-varnames:
+    - InventoryStatusActive
+    - InventoryStatusDraft
+    - InventoryStatusDeleted
   model.InvoiceDetailBatchResponse:
     properties:
       details:
@@ -1273,6 +1395,9 @@ definitions:
         allOf:
         - $ref: '#/definitions/model.InvoiceStatus'
         example: pending
+      storage_id:
+        example: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+        type: string
       supplier_id:
         example: d1f29b75-8g6d-5536-0525-2c12deeef0e0
         type: string
@@ -1298,6 +1423,9 @@ definitions:
         allOf:
         - $ref: '#/definitions/model.InvoiceStatus'
         example: pending
+      storage_id:
+        example: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+        type: string
       supplier_id:
         example: d1f29b75-8g6d-5536-0525-2c12deeef0e0
         type: string
@@ -1900,6 +2028,27 @@ definitions:
         example: "15000.00"
         type: string
     type: object
+  model.UpdateGoodWithCalculationsRequest:
+    properties:
+      compound_calculations:
+        description: CompoundCalculations - replacement array of compounds to add
+          (price from compound.price)
+        items:
+          $ref: '#/definitions/model.CompoundCalculationItem'
+        type: array
+      good:
+        allOf:
+        - $ref: '#/definitions/model.UpdateGoodRequest'
+        description: Good - the good/menu item fields to update
+      ingredient_calculations:
+        description: IngredientCalculations - replacement array of ingredients to
+          add (price from invoice_detail)
+        items:
+          $ref: '#/definitions/model.IngredientCalculationItem'
+        type: array
+    required:
+    - good
+    type: object
   model.UpdateHallRequest:
     properties:
       branch_id:
@@ -1954,15 +2103,30 @@ definitions:
       price_per_unit:
         example: "100.00"
         type: string
-      quantity:
-        example: 50
-        type: integer
     type: object
   model.UpdateIngredientStockRequest:
     properties:
       quantity:
         example: 100
         type: integer
+    type: object
+  model.UpdateInventoryRequest:
+    properties:
+      date:
+        example: "2024-01-01"
+        type: string
+      description:
+        example: Monthly inventory
+        type: string
+      description_i18n:
+        example: c0f18a64-7f5c-4425-9414-1b01cddee9d9
+        type: string
+      status:
+        example: active
+        type: string
+      storage_id:
+        example: d1f29b75-8g6d-5536-0525-2c12deeef0e0
+        type: string
     type: object
   model.UpdateInvoiceDetailQuantityRequest:
     properties:
@@ -1994,6 +2158,9 @@ definitions:
         type: string
       status:
         example: pending
+        type: string
+      storage_id:
+        example: a1b2c3d4-e5f6-7890-abcd-ef1234567890
         type: string
       supplier_id:
         example: d1f29b75-8g6d-5536-0525-2c12deeef0e0
@@ -2153,6 +2320,27 @@ definitions:
         type: string
       username:
         type: string
+    type: object
+  model.UpsertInventoryItemRequest:
+    properties:
+      counted_quantity:
+        example: 10
+        type: integer
+      ingredient_id:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+    required:
+    - ingredient_id
+    type: object
+  model.UpsertInventoryItemsRequest:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/model.UpsertInventoryItemRequest'
+        minItems: 1
+        type: array
+    required:
+    - items
     type: object
   model.UserResponse:
     properties:
@@ -6764,6 +6952,60 @@ paths:
       summary: Get good with calculations
       tags:
       - Calculations
+    put:
+      consumes:
+      - application/json
+      description: |-
+        Update a good/menu item and replace all its ingredient/compound calculations in one atomic transaction.
+
+        **How it works:**
+        - Update the good first
+        - Delete all existing calculations for this good
+        - Create the new ingredient calculations (price from invoice_detail)
+        - Create the new compound calculations (price from compound.price)
+        - If any step fails, everything is rolled back
+      parameters:
+      - default: uz
+        description: Language (uz, ru, en)
+        in: query
+        name: lang
+        type: string
+      - description: Good ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Good update + ingredients + compounds
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.UpdateGoodWithCalculationsRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Good and all calculations updated successfully
+          schema:
+            $ref: '#/definitions/model.GoodWithCalculationsResponse'
+        "400":
+          description: Invalid request (missing fields, invalid UUIDs, etc.)
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal error (ingredient not found, no invoice for ingredient,
+            etc.)
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update good with multiple ingredients and compounds (One Save)
+      tags:
+      - Goods
   /api/v1/goods/calculations:
     get:
       consumes:
@@ -8711,6 +8953,392 @@ paths:
       summary: Get stock by ingredient ID
       tags:
       - ingredient-stock
+  /api/v1/inventories:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve inventories with pagination (limit/offset)
+      parameters:
+      - default: 20
+        description: 'Limit results (default: 20)'
+        in: query
+        name: limit
+        type: integer
+      - default: 0
+        description: 'Offset for pagination (default: 0)'
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Inventories retrieved successfully
+          schema:
+            items:
+              $ref: '#/definitions/model.InventoryResponse'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get inventories
+      tags:
+      - inventories
+    post:
+      consumes:
+      - application/json
+      description: Create a new inventory with date, storage_id, optional description
+        fields and status
+      parameters:
+      - description: Inventory creation data
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/model.CreateInventoryRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Inventory created successfully
+          schema:
+            $ref: '#/definitions/model.InventoryResponse'
+        "400":
+          description: Invalid request data
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create a new inventory
+      tags:
+      - inventories
+  /api/v1/inventories/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Soft delete an inventory
+      parameters:
+      - description: Inventory ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: Inventory deleted successfully
+          schema:
+            $ref: '#/definitions/model.SuccessResponse'
+        "400":
+          description: Invalid inventory ID
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete inventory
+      tags:
+      - inventories
+    get:
+      consumes:
+      - application/json
+      description: Retrieve a specific inventory by its ID
+      parameters:
+      - description: Inventory ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Inventory retrieved successfully
+          schema:
+            $ref: '#/definitions/model.InventoryResponse'
+        "400":
+          description: Invalid inventory ID
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: Inventory not found
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get inventory by ID
+      tags:
+      - inventories
+    put:
+      consumes:
+      - application/json
+      description: Update an inventory fields (date, storage_id, descriptions, status)
+      parameters:
+      - description: Inventory ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Inventory update data
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/model.UpdateInventoryRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Inventory updated successfully
+          schema:
+            $ref: '#/definitions/model.InventoryResponse'
+        "400":
+          description: Invalid request data
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update inventory
+      tags:
+      - inventories
+  /api/v1/inventories/{id}/calculate:
+    post:
+      consumes:
+      - application/json
+      description: Calculate and persist inventory totals (surplus_amount, shortage_amount,
+        remaining_amount) into the inventory
+      parameters:
+      - description: Inventory ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Inventory calculated successfully
+          schema:
+            $ref: '#/definitions/model.InventoryResponse'
+        "400":
+          description: Invalid inventory ID
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Calculate inventory totals
+      tags:
+      - inventories
+  /api/v1/inventories/{id}/items:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve computed inventory items for an inventory (system qty
+        from stock, counted qty, difference, amounts)
+      parameters:
+      - description: Inventory ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Inventory items retrieved successfully
+          schema:
+            items:
+              $ref: '#/definitions/model.InventoryItemComputedResponse'
+            type: array
+        "400":
+          description: Invalid inventory ID
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get inventory items
+      tags:
+      - inventory_items
+    post:
+      consumes:
+      - application/json
+      description: Upsert (create/update) counted quantities for ingredients in an
+        inventory and return computed rows
+      parameters:
+      - description: Inventory ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Inventory items upsert data
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/model.UpsertInventoryItemsRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Inventory items updated successfully
+          schema:
+            items:
+              $ref: '#/definitions/model.InventoryItemComputedResponse'
+            type: array
+        "400":
+          description: Invalid request data
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Upsert inventory items
+      tags:
+      - inventory_items
+  /api/v1/inventories/{id}/restore:
+    post:
+      consumes:
+      - application/json
+      description: Restore a previously deleted inventory
+      parameters:
+      - description: Inventory ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Inventory restored successfully
+          schema:
+            $ref: '#/definitions/model.InventoryResponse'
+        "400":
+          description: Invalid inventory ID
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Restore inventory
+      tags:
+      - inventories
+  /api/v1/inventories/search:
+    get:
+      consumes:
+      - application/json
+      description: Search inventories by description or number
+      parameters:
+      - description: Search query
+        in: query
+        name: q
+        required: true
+        type: string
+      - default: 20
+        description: 'Limit results (default: 20)'
+        in: query
+        name: limit
+        type: integer
+      - default: 0
+        description: 'Offset for pagination (default: 0)'
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Inventories retrieved successfully
+          schema:
+            items:
+              $ref: '#/definitions/model.InventoryResponse'
+            type: array
+        "400":
+          description: Invalid request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Search inventories
+      tags:
+      - inventories
   /api/v1/invoice-details:
     get:
       description: Get all invoice details with pagination

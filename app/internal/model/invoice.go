@@ -13,6 +13,7 @@ const (
 type Invoice struct {
 	ID          string        `json:"id" example:"c0f18a64-7f5c-4425-9414-1b01cddee9d9"`
 	SupplierID  string        `json:"supplier_id" example:"d1f29b75-8g6d-5536-0525-2c12deeef0e0"`
+	StorageID   *string       `json:"storage_id,omitempty" example:"a1b2c3d4-e5f6-7890-abcd-ef1234567890"`
 	TotalAmount string        `json:"total_amount" example:"1000000"`
 	Status      InvoiceStatus `json:"status" example:"pending"`
 	Date        *time.Time    `json:"date,omitempty"`
@@ -22,6 +23,7 @@ type Invoice struct {
 
 type CreateInvoiceRequest struct {
 	SupplierID  string  `json:"supplier_id" validate:"required" example:"d1f29b75-8g6d-5536-0525-2c12deeef0e0"`
+	StorageID   *string `json:"storage_id,omitempty" example:"a1b2c3d4-e5f6-7890-abcd-ef1234567890"`
 	TotalAmount string  `json:"total_amount" validate:"required" example:"1000000"`
 	Status      string  `json:"status" example:"pending"`
 	Date        *string `json:"date,omitempty" example:"2024-01-01T00:00:00Z"`
@@ -29,6 +31,7 @@ type CreateInvoiceRequest struct {
 
 type UpdateInvoiceRequest struct {
 	SupplierID  *string `json:"supplier_id,omitempty" example:"d1f29b75-8g6d-5536-0525-2c12deeef0e0"`
+	StorageID   *string `json:"storage_id,omitempty" example:"a1b2c3d4-e5f6-7890-abcd-ef1234567890"`
 	TotalAmount *string `json:"total_amount,omitempty" example:"1000000"`
 	Status      *string `json:"status,omitempty" example:"pending"`
 	Date        *string `json:"date,omitempty" example:"2024-01-01T00:00:00Z"`
@@ -66,6 +69,7 @@ type InvoiceDetailsBatchSummary struct {
 type InvoiceResponse struct {
 	ID          string        `json:"id" example:"c0f18a64-7f5c-4425-9414-1b01cddee9d9"`
 	SupplierID  string        `json:"supplier_id" example:"d1f29b75-8g6d-5536-0525-2c12deeef0e0"`
+	StorageID   *string       `json:"storage_id,omitempty" example:"a1b2c3d4-e5f6-7890-abcd-ef1234567890"`
 	TotalAmount string        `json:"total_amount" example:"1000000"`
 	Status      InvoiceStatus `json:"status" example:"pending"`
 	Date        *time.Time    `json:"date,omitempty"`
@@ -76,6 +80,7 @@ type InvoiceResponse struct {
 type InvoiceGetWithDetailsResponse struct {
 	ID            string        `json:"id" example:"c0f18a64-7f5c-4425-9414-1b01cddee9d9"`
 	SupplierID    string        `json:"supplier_id" example:"d1f29b75-8g6d-5536-0525-2c12deeef0e0"`
+	StorageID     *string       `json:"storage_id,omitempty" example:"a1b2c3d4-e5f6-7890-abcd-ef1234567890"`
 	TotalAmount   string        `json:"total_amount" example:"1000000"`
 	Status        InvoiceStatus `json:"status" example:"pending"`
 	Date          *time.Time    `json:"date,omitempty"`

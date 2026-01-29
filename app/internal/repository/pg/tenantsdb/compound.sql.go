@@ -817,8 +817,8 @@ ORDER BY cd.created_at ASC
 `
 
 type GetCompoundIngredientBreakdownParams struct {
-	CompoundID uuid.UUID `json:"compound_id"`
-	BranchID   uuid.UUID `json:"branch_id"`
+	CompoundID uuid.UUID   `json:"compound_id"`
+	BranchID   pgtype.UUID `json:"branch_id"`
 }
 
 type GetCompoundIngredientBreakdownRow struct {

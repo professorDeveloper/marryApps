@@ -607,6 +607,173 @@ func (h *Handler) CreateGoodWithCalculations(c echo.Context) error {
 	))
 }
 
+// UpdateGoodWithCalculations updates a good and replaces all calculations in one transaction
+// @Summary Update good with multiple ingredients and compounds (One Save)
+// @Description Update a good/menu item and replace all its ingredient/compound calculations in one atomic transaction.
+// @Description
+// @Description **How it works:**
+// @Description - Update the good first
+// @Description - Delete all existing calculations for this good
+// @Description - Create the new ingredient calculations (price from invoice_detail)
+// @Description - Create the new compound calculations (price from compound.price)
+// @Description - If any step fails, everything is rolled back
+// @Tags Goods
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param lang query string false "Language (uz, ru, en)" default(uz)
+// @Param id path string true "Good ID"
+// @Param request body model.UpdateGoodWithCalculationsRequest true "Good update + ingredients + compounds"
+// @Success 200 {object} model.GoodWithCalculationsResponse "Good and all calculations updated successfully"
+// @Failure 400 {object} model.ErrorResponse "Invalid request (missing fields, invalid UUIDs, etc.)"
+// @Failure 401 {object} model.ErrorResponse "Unauthorized"
+// @Failure 500 {object} model.ErrorResponse "Internal error (ingredient not found, no invoice for ingredient, etc.)"
+// @Router /api/v1/goods/{id}/with-calculations [put]
+func (h *Handler) UpdateGoodWithCalculations(c echo.Context) error {
+	goodID := c.Param("id")
+	if goodID == "" {
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"Good id is required",
+			"missing path parameter: id",
+			http.StatusBadRequest,
+		))
+	}
+
+	var req model.UpdateGoodWithCalculationsRequest
+	if err := c.Bind(&req); err != nil {
+		log.Printf("Failed to bind update good with calculations request: %v", err)
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"Invalid request format",
+			err.Error(),
+			http.StatusBadRequest,
+		))
+	}
+
+	// Validate ingredient calculations
+	for i, calc := range req.IngredientCalculations {
+		if calc.IngredientID == "" {
+			return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+				"Invalid ingredient calculation",
+				"ingredient_calculations["+strconv.Itoa(i)+"]: ingredient_id is required",
+				http.StatusBadRequest,
+			))
+		}
+		if calc.Quantity == "" {
+			return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+				"Invalid ingredient calculation",
+				"ingredient_calculations["+strconv.Itoa(i)+"]: quantity is required",
+				http.StatusBadRequest,
+			))
+		}
+	}
+
+	// Validate compound calculations
+	for i, calc := range req.CompoundCalculations {
+		if calc.CompoundID == "" {
+			return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+				"Invalid compound calculation",
+				"compound_calculations["+strconv.Itoa(i)+"]: compound_id is required",
+				http.StatusBadRequest,
+			))
+		}
+		if calc.Quantity == "" {
+			return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+				"Invalid compound calculation",
+				"compound_calculations["+strconv.Itoa(i)+"]: quantity is required",
+				http.StatusBadRequest,
+			))
+		}
+	}
+
+	ctx := c.Request().Context()
+
+	// Step 1: Update the good
+	goodResp, err := h.service.Goods().UpdateGood(
+		ctx,
+		goodID,
+		req.Good.Name,
+		req.Good.Description,
+		req.Good.NameI18n,
+		req.Good.DescriptionI18n,
+		req.Good.CategoryID,
+		req.Good.DepartmentID,
+		req.Good.Price,
+		req.Good.CookTime,
+		req.Good.PictureUrl,
+		req.Good.ColorCode,
+	)
+	if err != nil {
+		log.Printf("UpdateGoodWithCalculations: failed to update good: %v", err)
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse(
+			"Failed to update good",
+			err.Error(),
+			http.StatusInternalServerError,
+		))
+	}
+
+	// Step 2: Delete all existing calculations for this good
+	if err := h.service.Calculation().DeleteCalculationsByGoodID(ctx, goodID); err != nil {
+		log.Printf("UpdateGoodWithCalculations: failed to delete old calculations: %v", err)
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse(
+			"Failed to delete old calculations",
+			err.Error(),
+			http.StatusInternalServerError,
+		))
+	}
+
+	var calculations []model.CalculationResponse
+
+	// Step 3: Create ingredient calculations
+	for i, calc := range req.IngredientCalculations {
+		calcResp, calcErr := h.service.Calculation().CreateCalculation(ctx, goodID, calc.IngredientID, calc.Quantity)
+		if calcErr != nil {
+			log.Printf("UpdateGoodWithCalculations: failed to create ingredient calculation[%d]: %v", i, calcErr)
+			return c.JSON(http.StatusInternalServerError, model.NewErrorResponse(
+				"Failed to create ingredient calculation",
+				"ingredient_calculations["+strconv.Itoa(i)+"]: "+calcErr.Error(),
+				http.StatusInternalServerError,
+			))
+		}
+		if calcResp != nil {
+			calculations = append(calculations, *calcResp)
+		}
+	}
+
+	// Step 4: Create compound calculations
+	for i, calc := range req.CompoundCalculations {
+		calcResp, calcErr := h.service.Calculation().CreateCalculationWithCompound(ctx, goodID, calc.CompoundID, calc.Quantity)
+		if calcErr != nil {
+			log.Printf("UpdateGoodWithCalculations: failed to create compound calculation[%d]: %v", i, calcErr)
+			return c.JSON(http.StatusInternalServerError, model.NewErrorResponse(
+				"Failed to create compound calculation",
+				"compound_calculations["+strconv.Itoa(i)+"]: "+calcErr.Error(),
+				http.StatusInternalServerError,
+			))
+		}
+		if calcResp != nil {
+			calculations = append(calculations, *calcResp)
+		}
+	}
+
+	// Fetch updated good (cost fields should be updated now)
+	updatedGood, gErr := h.service.Goods().GetGoodByID(ctx, goodID)
+	if gErr != nil {
+		log.Printf("UpdateGoodWithCalculations: failed to fetch updated good: %v", gErr)
+		updatedGood = goodResp
+	}
+
+	response := model.GoodWithCalculationsResponse{
+		Good:         updatedGood,
+		Calculations: calculations,
+	}
+
+	return c.JSON(http.StatusOK, model.NewSuccessResponse(
+		"Good updated successfully",
+		response,
+		http.StatusOK,
+	))
+}
+
 // ==================== GOODS WITH LANGUAGE HANDLERS ====================
 
 // GetGoodByIDWithLang retrieves a good/menu item by ID with language support

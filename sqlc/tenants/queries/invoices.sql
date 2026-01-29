@@ -1,31 +1,31 @@
 -- ==================== INVOICES QUERIES ====================
 
 -- name: CreateInvoice :one
-INSERT INTO invoices (id, supplier_id, total_amount, status, date)
-VALUES ($1, $2, $3, $4, $5)
-RETURNING id, supplier_id, total_amount, status, date, created_at, updated_at, deleted_at;
+INSERT INTO invoices (id, supplier_id, storage_id, total_amount, status, date)
+VALUES ($1, $2, $3, $4, $5, $6)
+RETURNING id, supplier_id, storage_id, total_amount, status, date, created_at, updated_at, deleted_at;
 
 -- name: GetInvoiceByID :one
-SELECT id, supplier_id, total_amount, status, date, created_at, updated_at, deleted_at
+SELECT id, supplier_id, storage_id, total_amount, status, date, created_at, updated_at, deleted_at
 FROM invoices
 WHERE id = $1 AND deleted_at = 0;
 
 -- name: GetAllInvoices :many
-SELECT id, supplier_id, total_amount, status, date, created_at, updated_at, deleted_at
+SELECT id, supplier_id, storage_id, total_amount, status, date, created_at, updated_at, deleted_at
 FROM invoices
 WHERE deleted_at = 0
 ORDER BY date DESC
 LIMIT $1 OFFSET $2;
 
 -- name: GetInvoicesByStatus :many
-SELECT id, supplier_id, total_amount, status, date, created_at, updated_at, deleted_at
+SELECT id, supplier_id, storage_id, total_amount, status, date, created_at, updated_at, deleted_at
 FROM invoices
 WHERE status = $1 AND deleted_at = 0
 ORDER BY date DESC
 LIMIT $2 OFFSET $3;
 
 -- name: GetInvoicesBySupplier :many
-SELECT i.id, i.supplier_id, i.total_amount, i.status, i.date, i.created_at, i.updated_at, i.deleted_at
+SELECT i.id, i.supplier_id, i.storage_id, i.total_amount, i.status, i.date, i.created_at, i.updated_at, i.deleted_at
 FROM invoices i
 JOIN suppliers s ON i.supplier_id = s.id AND s.deleted_at = 0
 WHERE s.name ILIKE '%' || $1 || '%' AND i.deleted_at = 0
@@ -33,7 +33,7 @@ ORDER BY i.date DESC
 LIMIT $2 OFFSET $3;
 
 -- name: GetInvoicesByDateRange :many
-SELECT id, supplier_id, total_amount, status, date, created_at, updated_at, deleted_at
+SELECT id, supplier_id, storage_id, total_amount, status, date, created_at, updated_at, deleted_at
 FROM invoices
 WHERE date >= $1 AND date <= $2 AND deleted_at = 0
 ORDER BY date DESC
@@ -42,40 +42,41 @@ LIMIT $3 OFFSET $4;
 -- name: UpdateInvoice :one
 UPDATE invoices
 SET supplier_id = COALESCE($2, supplier_id),
-    total_amount = COALESCE($3, total_amount),
-    status = COALESCE($4, status),
-    date = COALESCE($5, date),
+    storage_id = COALESCE($3, storage_id),
+    total_amount = COALESCE($4, total_amount),
+    status = COALESCE($5, status),
+    date = COALESCE($6, date),
     updated_at = NOW()
 WHERE id = $1 AND deleted_at = 0
-RETURNING id, supplier_id, total_amount, status, date, created_at, updated_at, deleted_at;
+RETURNING id, supplier_id, storage_id, total_amount, status, date, created_at, updated_at, deleted_at;
 
 -- name: UpdateInvoiceStatus :one
 UPDATE invoices
 SET status = $2,
     updated_at = NOW()
 WHERE id = $1 AND deleted_at = 0
-RETURNING id, supplier_id, total_amount, status, date, created_at, updated_at, deleted_at;
+RETURNING id, supplier_id, storage_id, total_amount, status, date, created_at, updated_at, deleted_at;
 
 -- name: MarkInvoiceArrived :one
 UPDATE invoices
 SET status = 'arrived',
     updated_at = NOW()
 WHERE id = $1 AND deleted_at = 0
-RETURNING id, supplier_id, total_amount, status, date, created_at, updated_at, deleted_at;
+RETURNING id, supplier_id, storage_id, total_amount, status, date, created_at, updated_at, deleted_at;
 
 -- name: MarkInvoiceReceived :one
 UPDATE invoices
 SET status = 'received',
     updated_at = NOW()
 WHERE id = $1 AND deleted_at = 0
-RETURNING id, supplier_id, total_amount, status, date, created_at, updated_at, deleted_at;
+RETURNING id, supplier_id, storage_id, total_amount, status, date, created_at, updated_at, deleted_at;
 
 -- name: CancelInvoice :one
 UPDATE invoices
 SET status = 'cancelled',
     updated_at = NOW()
 WHERE id = $1 AND deleted_at = 0
-RETURNING id, supplier_id, total_amount, status, date, created_at, updated_at, deleted_at;
+RETURNING id, supplier_id, storage_id, total_amount, status, date, created_at, updated_at, deleted_at;
 
 -- name: DeleteInvoice :exec
 UPDATE invoices
@@ -94,7 +95,7 @@ SELECT COUNT(*) FROM invoices WHERE deleted_at = 0;
 SELECT COUNT(*) FROM invoices WHERE status = $1 AND deleted_at = 0;
 
 -- name: SearchInvoices :many
-SELECT i.id, i.supplier_id, i.total_amount, i.status, i.date, i.created_at, i.updated_at, i.deleted_at
+SELECT i.id, i.supplier_id, i.storage_id, i.total_amount, i.status, i.date, i.created_at, i.updated_at, i.deleted_at
 FROM invoices i
 JOIN suppliers s ON i.supplier_id = s.id AND s.deleted_at = 0
 WHERE i.deleted_at = 0 
@@ -191,6 +192,7 @@ SELECT COUNT(*) FROM invoice_detailed WHERE invoice_id = $1 AND deleted_at = 0;
 SELECT 
     i.id,
     i.supplier_id,
+    i.storage_id,
     i.total_amount,
     i.status,
     i.date,
@@ -201,7 +203,7 @@ SELECT
 FROM invoices i
 LEFT JOIN invoice_detailed id_table ON i.id = id_table.invoice_id AND id_table.deleted_at = 0
 WHERE i.id = $1 AND i.deleted_at = 0
-GROUP BY i.id, i.supplier_id, i.total_amount, i.status, i.date, i.created_at, i.updated_at;
+GROUP BY i.id, i.supplier_id, i.storage_id, i.total_amount, i.status, i.date, i.created_at, i.updated_at;
 
 -- name: GetInvoiceStatsBySupplier :many
 SELECT 

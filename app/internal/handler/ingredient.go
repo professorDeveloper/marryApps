@@ -428,7 +428,7 @@ func (h *Handler) UpdateIngredient(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("invalid request format", "see logs for details", http.StatusBadRequest))
 	}
 
-	ingredient, err := h.service.Ingredient().UpdateIngredient(c.Request().Context(), ingredientID, req.Name, req.NameI18n, req.GroupID, req.Measurement, req.PictureUrl, req.BrandID, req.ColorCode, req.PricePerUnit, req.Quantity)
+	ingredient, err := h.service.Ingredient().UpdateIngredient(c.Request().Context(), ingredientID, req.Name, req.NameI18n, req.GroupID, req.Measurement, req.PictureUrl, req.BrandID, req.ColorCode, req.PricePerUnit)
 	if err != nil {
 		log.Printf("UpdateIngredient failed for id %s: %v", ingredientID, err)
 		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("failed to update ingredient", "see logs for details", http.StatusInternalServerError))

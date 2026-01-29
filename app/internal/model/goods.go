@@ -33,17 +33,17 @@ type UpdateGoodPriceRequest struct {
 }
 
 type GoodResponse struct {
-	ID              string     `json:"id" example:"123e4567-e89b-12d3-a456-426614174000"`
-	Name            string     `json:"name" example:"Pizza Margherita"`
-	Description     *string    `json:"description,omitempty" example:"Classic Italian pizza with tomatoes and mozzarella"`
-	NameI18n        *string    `json:"name_i18n,omitempty" example:"123e4567-e89b-12d3-a456-426614174000"`
-	DescriptionI18n *string    `json:"description_i18n,omitempty" example:"123e4567-e89b-12d3-a456-426614174000"`
-	CategoryID      *string    `json:"category_id,omitempty" example:"123e4567-e89b-12d3-a456-426614174000"`
-	DepartmentID    *string    `json:"department_id,omitempty" example:"123e4567-e89b-12d3-a456-426614174000"`
-	PictureUrl      *string    `json:"picture_url,omitempty" example:"https://example.com/pizza-margherita.jpg"`
-	ColorCode       *string    `json:"color_code,omitempty" example:"#FF5733"`
-	Price           string     `json:"price" example:"15000.00"`
-	CookTime        *int32     `json:"cook_time,omitempty" example:"30"`
+	ID              string  `json:"id" example:"123e4567-e89b-12d3-a456-426614174000"`
+	Name            string  `json:"name" example:"Pizza Margherita"`
+	Description     *string `json:"description,omitempty" example:"Classic Italian pizza with tomatoes and mozzarella"`
+	NameI18n        *string `json:"name_i18n,omitempty" example:"123e4567-e89b-12d3-a456-426614174000"`
+	DescriptionI18n *string `json:"description_i18n,omitempty" example:"123e4567-e89b-12d3-a456-426614174000"`
+	CategoryID      *string `json:"category_id,omitempty" example:"123e4567-e89b-12d3-a456-426614174000"`
+	DepartmentID    *string `json:"department_id,omitempty" example:"123e4567-e89b-12d3-a456-426614174000"`
+	PictureUrl      *string `json:"picture_url,omitempty" example:"https://example.com/pizza-margherita.jpg"`
+	ColorCode       *string `json:"color_code,omitempty" example:"#FF5733"`
+	Price           string  `json:"price" example:"15000.00"`
+	CookTime        *int32  `json:"cook_time,omitempty" example:"30"`
 	// CostPrice - total preparation cost (auto-calculated from calculations)
 	CostPrice string `json:"cost_price" example:"10500.00"`
 	// Profit - selling price minus cost (auto-calculated)
@@ -211,6 +211,32 @@ type GoodWithCalculationsResponse struct {
 
 	// Calculations - all calculation records created for this good
 	Calculations []CalculationResponse `json:"calculations"`
+}
+
+// UpdateGoodWithCalculationsRequest updates a good and replaces all its calculations in one atomic operation.
+// If any calculation fails, the entire operation is rolled back.
+type UpdateGoodWithCalculationsRequest struct {
+	// Good - the good/menu item fields to update
+	Good UpdateGoodRequest `json:"good" binding:"required"`
+
+	// IngredientCalculations - replacement array of ingredients to add (price from invoice_detail)
+	IngredientCalculations []IngredientCalculationItem `json:"ingredient_calculations"`
+
+	// CompoundCalculations - replacement array of compounds to add (price from compound.price)
+	CompoundCalculations []CompoundCalculationItem `json:"compound_calculations"`
+}
+
+// UpdateCompoundWithCalculationsRequest updates a compound and replaces all its calculations in one atomic operation.
+// If any calculation fails, the entire operation is rolled back.
+type UpdateCompoundWithCalculationsRequest struct {
+	// Compound - the compound fields to update
+	Compound UpdateCompoundRequest `json:"compound" binding:"required"`
+
+	// IngredientCalculations - replacement array of ingredients to add (price from invoice_detail)
+	IngredientCalculations []IngredientCalculationItem `json:"ingredient_calculations"`
+
+	// CompoundCalculations - replacement array of child compounds to add (price from compound.price)
+	CompoundCalculations []CompoundCalculationItem `json:"compound_calculations"`
 }
 
 // CreateCompoundWithCalculationsRequest creates a compound with multiple ingredients and child compounds in one atomic transaction.

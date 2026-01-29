@@ -127,7 +127,7 @@ type IngredientI interface {
 	GetIngredientByIDWithLang(ctx context.Context, ingredientID string, lang string) (*model.IngredientResponse, error)
 	GetAllIngredientsWithLang(ctx context.Context, lang string, limit, offset int32) ([]model.IngredientResponse, error)
 	GetIngredientsByGroupID(ctx context.Context, groupID string, limit, offset int32) ([]model.IngredientResponse, error)
-	UpdateIngredient(ctx context.Context, ingredientID string, name *string, nameI18n *string, groupID *string, measurement *string, pictureUrl *string, brandID *string, colorCode *string, pricePerUnit *string, quantity *int64) (*model.IngredientResponse, error)
+	UpdateIngredient(ctx context.Context, ingredientID string, name *string, nameI18n *string, groupID *string, measurement *string, pictureUrl *string, brandID *string, colorCode *string, pricePerUnit *string) (*model.IngredientResponse, error)
 	DeleteIngredient(ctx context.Context, ingredientID string) error
 	RestoreIngredient(ctx context.Context, ingredientID string) error
 
@@ -255,6 +255,20 @@ type SupplierI interface {
 	SearchSuppliers(ctx context.Context, query string, limit, offset int32) ([]*model.SupplierResponse, error)
 }
 
+type InventoryI interface {
+	CreateInventory(ctx context.Context, req *model.CreateInventoryRequest) (*model.InventoryResponse, error)
+	GetInventoryByID(ctx context.Context, id string) (*model.InventoryResponse, error)
+	GetAllInventories(ctx context.Context, limit, offset int32) ([]*model.InventoryResponse, error)
+	UpdateInventory(ctx context.Context, id string, req *model.UpdateInventoryRequest) (*model.InventoryResponse, error)
+	DeleteInventory(ctx context.Context, id string) error
+	RestoreInventory(ctx context.Context, id string) (*model.InventoryResponse, error)
+	SearchInventories(ctx context.Context, query string, limit, offset int32) ([]*model.InventoryResponse, error)
+
+	UpsertInventoryItems(ctx context.Context, inventoryID string, req *model.UpsertInventoryItemsRequest) ([]*model.InventoryItemComputedResponse, error)
+	GetInventoryItems(ctx context.Context, inventoryID string) ([]*model.InventoryItemComputedResponse, error)
+	CalculateInventory(ctx context.Context, inventoryID string) (*model.InventoryResponse, error)
+}
+
 type InvoiceI interface {
 	// Invoice methods
 	CreateInvoice(ctx context.Context, req *model.CreateInvoiceRequest) (*model.InvoiceResponse, error)
@@ -368,6 +382,7 @@ type I interface {
 	Goods() GoodsI
 	CafeTable() CafeTableI
 	Supplier() SupplierI
+	Inventory() InventoryI
 	Invoice() InvoiceI
 	Order() OrderI
 	Brand() BrandI
@@ -390,6 +405,7 @@ type Service struct {
 	goods        GoodsI
 	cafeTable    CafeTableI
 	supplier     SupplierI
+	inventory    InventoryI
 	invoice      InvoiceI
 	order        OrderI
 	brand        BrandI
@@ -413,6 +429,7 @@ func New(cfg *config.Config, repo *repository.Repository, clickClient *paymentCl
 		goods:        NewGoodsS(repo),
 		cafeTable:    NewCafeTableS(repo),
 		supplier:     NewSupplierS(repo),
+		inventory:    NewInventoryS(repo),
 		invoice:      NewInvoiceS(repo),
 		order:        NewOrderS(repo),
 		brand:        NewBrandS(repo),
@@ -477,6 +494,10 @@ func (s *Service) CafeTable() CafeTableI {
 
 func (s *Service) Supplier() SupplierI {
 	return s.supplier
+}
+
+func (s *Service) Inventory() InventoryI {
+	return s.inventory
 }
 
 func (s *Service) Invoice() InvoiceI {

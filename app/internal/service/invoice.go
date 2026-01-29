@@ -34,6 +34,16 @@ func (s *InvoiceS) CreateInvoice(ctx context.Context, req *model.CreateInvoiceRe
 		return nil, fmt.Errorf("invalid supplier id: %w", err)
 	}
 
+	// Parse storage ID (optional)
+	storageID := pgtype.UUID{Valid: false}
+	if req.StorageID != nil && *req.StorageID != "" {
+		sid, err := uuid.Parse(*req.StorageID)
+		if err != nil {
+			return nil, fmt.Errorf("invalid storage_id: %w", err)
+		}
+		storageID = pgtype.UUID{Bytes: sid, Valid: true}
+	}
+
 	// Parse total amount
 	totalAmount := pgtype.Numeric{}
 	if err := totalAmount.Scan(req.TotalAmount); err != nil {
@@ -62,6 +72,7 @@ func (s *InvoiceS) CreateInvoice(ctx context.Context, req *model.CreateInvoiceRe
 	params := pg.CreateInvoiceParams{
 		ID:          id,
 		SupplierID:  supplierID,
+		StorageID:   storageID,
 		TotalAmount: totalAmount,
 		Status:      status,
 		Date:        date,
@@ -187,6 +198,18 @@ func (s *InvoiceS) UpdateInvoice(ctx context.Context, id string, req *model.Upda
 		return nil, fmt.Errorf("invalid invoice id: %w", err)
 	}
 
+	// Parse storage ID if provided
+	storageID := pgtype.UUID{Valid: false}
+	if req.StorageID != nil {
+		if *req.StorageID != "" {
+			sid, err := uuid.Parse(*req.StorageID)
+			if err != nil {
+				return nil, fmt.Errorf("invalid storage_id: %w", err)
+			}
+			storageID = pgtype.UUID{Bytes: sid, Valid: true}
+		}
+	}
+
 	// Parse total amount if provided
 	var totalAmount pgtype.Numeric
 	if req.TotalAmount != nil {
@@ -229,6 +252,7 @@ func (s *InvoiceS) UpdateInvoice(ctx context.Context, id string, req *model.Upda
 	params := pg.UpdateInvoiceParams{
 		ID:          invoiceID,
 		SupplierID:  supplierID,
+		StorageID:   storageID,
 		TotalAmount: totalAmount,
 		Status:      status,
 		Date:        date,
@@ -471,6 +495,14 @@ func (s *InvoiceS) CreateInvoiceDetail(ctx context.Context, invoiceID string, re
 		return nil, fmt.Errorf("invalid invoice id: %w", err)
 	}
 
+	invoice, err := s.repo.Tenant(ctx).GetInvoiceByID(ctx, invoiceUUID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get invoice: %w", err)
+	}
+	if !invoice.StorageID.Valid {
+		return nil, fmt.Errorf("invoice storage_id is required to update stock")
+	}
+
 	ingredientUUID, err := uuid.Parse(req.IngredientID)
 	if err != nil {
 		return nil, fmt.Errorf("invalid ingredient id: %w", err)
@@ -501,14 +533,22 @@ func (s *InvoiceS) CreateInvoiceDetail(ctx context.Context, invoiceID string, re
 		return nil, fmt.Errorf("failed to create invoice detail: %w", err)
 	}
 
-	_, err = s.repo.Tenant(ctx).AddIngredientQuantity(ctx, pg.AddIngredientQuantityParams{
+	_, err = s.repo.Tenant(ctx).UpdateIngredientPriceAndQuantity(ctx, pg.UpdateIngredientPriceAndQuantityParams{
 		ID:           ingredientUUID,
 		PricePerUnit: pricePerUnit,
-		Quantity:     &req.Quantity,
 	})
 	if err != nil {
-		// Log error but don't fail the operation - the invoice detail was created successfully
-		fmt.Printf("Warning: failed to add ingredient quantity: %v\n", err)
+		fmt.Printf("Warning: failed to update ingredient price_per_unit: %v\n", err)
+	}
+
+	_, err = s.repo.Tenant(ctx).UpsertAddIngredientStockByStorage(ctx, pg.UpsertAddIngredientStockByStorageParams{
+		ID:           uuid.New(),
+		IngredientID: ingredientUUID,
+		StorageID:    invoice.StorageID,
+		Quantity:     req.Quantity,
+	})
+	if err != nil {
+		fmt.Printf("Warning: failed to update ingredient stock: %v\n", err)
 	}
 
 	return toInvoiceDetailResponse(detail), nil
@@ -530,6 +570,9 @@ func (s *InvoiceS) CreateInvoiceDetailsBatch(ctx context.Context, invoiceID stri
 
 	if invoice.ID == uuid.Nil {
 		return nil, fmt.Errorf("invoice not found")
+	}
+	if !invoice.StorageID.Valid {
+		return nil, fmt.Errorf("invoice storage_id is required to update stock")
 	}
 
 	response := &model.InvoiceDetailBatchResponse{
@@ -597,15 +640,22 @@ func (s *InvoiceS) CreateInvoiceDetailsBatch(ctx context.Context, invoiceID stri
 			continue
 		}
 
-		// Update ingredient quantity and price
-		_, err = s.repo.Tenant(ctx).AddIngredientQuantity(ctx, pg.AddIngredientQuantityParams{
+		_, err = s.repo.Tenant(ctx).UpdateIngredientPriceAndQuantity(ctx, pg.UpdateIngredientPriceAndQuantityParams{
 			ID:           ingredientUUID,
 			PricePerUnit: pricePerUnit,
-			Quantity:     &detail.Quantity,
 		})
 		if err != nil {
-			// Log warning but don't fail - the invoice detail was created successfully
-			fmt.Printf("Warning: failed to add ingredient quantity for item %d: %v\n", i+1, err)
+			fmt.Printf("Warning: failed to update ingredient price_per_unit for item %d: %v\n", i+1, err)
+		}
+
+		_, err = s.repo.Tenant(ctx).UpsertAddIngredientStockByStorage(ctx, pg.UpsertAddIngredientStockByStorageParams{
+			ID:           uuid.New(),
+			IngredientID: ingredientUUID,
+			StorageID:    invoice.StorageID,
+			Quantity:     detail.Quantity,
+		})
+		if err != nil {
+			fmt.Printf("Warning: failed to update ingredient stock for item %d: %v\n", i+1, err)
 		}
 
 		response.Success++
@@ -881,24 +931,69 @@ func (s *InvoiceS) GetInvoiceDetailWithIngredient(ctx context.Context, id string
 
 // ==================== HELPER FUNCTIONS ====================
 
-func toInvoiceResponse(invoice pg.Invoice) *model.InvoiceResponse {
+func toInvoiceResponse(inv any) *model.InvoiceResponse {
+	var (
+		id          uuid.UUID
+		supplierID  uuid.UUID
+		storageID   pgtype.UUID
+		totalAmount pgtype.Numeric
+		status      pg.NullInvoiceStatus
+		date        pgtype.Timestamp
+		createdAt   pgtype.Timestamptz
+		updatedAt   pgtype.Timestamptz
+	)
+
+	switch invoice := inv.(type) {
+	case pg.CreateInvoiceRow:
+		id, supplierID, storageID, totalAmount, status, date, createdAt, updatedAt = invoice.ID, invoice.SupplierID, invoice.StorageID, invoice.TotalAmount, invoice.Status, invoice.Date, invoice.CreatedAt, invoice.UpdatedAt
+	case pg.GetInvoiceByIDRow:
+		id, supplierID, storageID, totalAmount, status, date, createdAt, updatedAt = invoice.ID, invoice.SupplierID, invoice.StorageID, invoice.TotalAmount, invoice.Status, invoice.Date, invoice.CreatedAt, invoice.UpdatedAt
+	case pg.GetAllInvoicesRow:
+		id, supplierID, storageID, totalAmount, status, date, createdAt, updatedAt = invoice.ID, invoice.SupplierID, invoice.StorageID, invoice.TotalAmount, invoice.Status, invoice.Date, invoice.CreatedAt, invoice.UpdatedAt
+	case pg.GetInvoicesByStatusRow:
+		id, supplierID, storageID, totalAmount, status, date, createdAt, updatedAt = invoice.ID, invoice.SupplierID, invoice.StorageID, invoice.TotalAmount, invoice.Status, invoice.Date, invoice.CreatedAt, invoice.UpdatedAt
+	case pg.GetInvoicesBySupplierRow:
+		id, supplierID, storageID, totalAmount, status, date, createdAt, updatedAt = invoice.ID, invoice.SupplierID, invoice.StorageID, invoice.TotalAmount, invoice.Status, invoice.Date, invoice.CreatedAt, invoice.UpdatedAt
+	case pg.GetInvoicesByDateRangeRow:
+		id, supplierID, storageID, totalAmount, status, date, createdAt, updatedAt = invoice.ID, invoice.SupplierID, invoice.StorageID, invoice.TotalAmount, invoice.Status, invoice.Date, invoice.CreatedAt, invoice.UpdatedAt
+	case pg.UpdateInvoiceRow:
+		id, supplierID, storageID, totalAmount, status, date, createdAt, updatedAt = invoice.ID, invoice.SupplierID, invoice.StorageID, invoice.TotalAmount, invoice.Status, invoice.Date, invoice.CreatedAt, invoice.UpdatedAt
+	case pg.UpdateInvoiceStatusRow:
+		id, supplierID, storageID, totalAmount, status, date, createdAt, updatedAt = invoice.ID, invoice.SupplierID, invoice.StorageID, invoice.TotalAmount, invoice.Status, invoice.Date, invoice.CreatedAt, invoice.UpdatedAt
+	case pg.MarkInvoiceArrivedRow:
+		id, supplierID, storageID, totalAmount, status, date, createdAt, updatedAt = invoice.ID, invoice.SupplierID, invoice.StorageID, invoice.TotalAmount, invoice.Status, invoice.Date, invoice.CreatedAt, invoice.UpdatedAt
+	case pg.MarkInvoiceReceivedRow:
+		id, supplierID, storageID, totalAmount, status, date, createdAt, updatedAt = invoice.ID, invoice.SupplierID, invoice.StorageID, invoice.TotalAmount, invoice.Status, invoice.Date, invoice.CreatedAt, invoice.UpdatedAt
+	case pg.CancelInvoiceRow:
+		id, supplierID, storageID, totalAmount, status, date, createdAt, updatedAt = invoice.ID, invoice.SupplierID, invoice.StorageID, invoice.TotalAmount, invoice.Status, invoice.Date, invoice.CreatedAt, invoice.UpdatedAt
+	case pg.SearchInvoicesRow:
+		id, supplierID, storageID, totalAmount, status, date, createdAt, updatedAt = invoice.ID, invoice.SupplierID, invoice.StorageID, invoice.TotalAmount, invoice.Status, invoice.Date, invoice.CreatedAt, invoice.UpdatedAt
+	default:
+		return nil
+	}
+
 	response := &model.InvoiceResponse{
-		ID:          invoice.ID.String(),
-		SupplierID:  invoice.SupplierID.String(),
-		TotalAmount: numericToString(invoice.TotalAmount),
-		Status:      model.InvoiceStatus(invoice.Status.InvoiceStatus),
+		ID:          id.String(),
+		SupplierID:  supplierID.String(),
+		TotalAmount: numericToString(totalAmount),
+		Status:      model.InvoiceStatus(status.InvoiceStatus),
 	}
 
-	if invoice.Date.Valid {
-		response.Date = &invoice.Date.Time
+	if storageID.Valid {
+		sid := uuid.UUID(storageID.Bytes).String()
+		response.StorageID = &sid
 	}
 
-	if invoice.CreatedAt.Valid {
-		response.CreatedAt = &invoice.CreatedAt.Time
+	if date.Valid {
+		response.Date = &date.Time
 	}
 
-	if invoice.UpdatedAt.Valid {
-		response.UpdatedAt = &invoice.UpdatedAt.Time
+	if createdAt.Valid {
+		response.CreatedAt = &createdAt.Time
+	}
+
+	if updatedAt.Valid {
+		response.UpdatedAt = &updatedAt.Time
 	}
 
 	return response
@@ -912,6 +1007,11 @@ func toInvoiceWithDetailsResponse(invoice pg.GetInvoiceWithDetailsRow) *model.In
 		Status:        model.InvoiceStatus(invoice.Status.InvoiceStatus),
 		ItemCount:     invoice.ItemCount,
 		TotalQuantity: invoice.TotalQuantity,
+	}
+
+	if invoice.StorageID.Valid {
+		sid := uuid.UUID(invoice.StorageID.Bytes).String()
+		response.StorageID = &sid
 	}
 
 	if invoice.Date.Valid {
@@ -1065,6 +1165,14 @@ func (s *InvoiceS) CreateInvoiceWithDetails(ctx context.Context, req *model.Crea
 		return nil, fmt.Errorf("invalid invoice id in response: %w", err)
 	}
 
+	if invoiceResp.StorageID == nil || *invoiceResp.StorageID == "" {
+		return nil, fmt.Errorf("invoice storage_id is required to update stock")
+	}
+	invoiceStorageUUID, err := uuid.Parse(*invoiceResp.StorageID)
+	if err != nil {
+		return nil, fmt.Errorf("invalid invoice storage_id: %w", err)
+	}
+
 	// Step 3: Create all invoice details
 	response := &model.CreateInvoiceWithDetailsResponse{
 		Invoice: *invoiceResp,
@@ -1124,14 +1232,22 @@ func (s *InvoiceS) CreateInvoiceWithDetails(ctx context.Context, req *model.Crea
 			return nil, fmt.Errorf("item %d: failed to create invoice detail: %w", i+1, err)
 		}
 
-		// Update ingredient quantity and price
-		_, err = s.repo.Tenant(ctx).AddIngredientQuantity(ctx, pg.AddIngredientQuantityParams{
+		_, err = s.repo.Tenant(ctx).UpdateIngredientPriceAndQuantity(ctx, pg.UpdateIngredientPriceAndQuantityParams{
 			ID:           ingredientUUID,
-			Quantity:     &detail.Quantity,
 			PricePerUnit: pricePerUnit,
 		})
 		if err != nil {
-			return nil, fmt.Errorf("item %d: failed to update ingredient: %w", i+1, err)
+			return nil, fmt.Errorf("item %d: failed to update ingredient price_per_unit: %w", i+1, err)
+		}
+
+		_, err = s.repo.Tenant(ctx).UpsertAddIngredientStockByStorage(ctx, pg.UpsertAddIngredientStockByStorageParams{
+			ID:           uuid.New(),
+			IngredientID: ingredientUUID,
+			StorageID:    pgtype.UUID{Bytes: invoiceStorageUUID, Valid: true},
+			Quantity:     detail.Quantity,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("item %d: failed to update ingredient stock: %w", i+1, err)
 		}
 
 		// Add to response
