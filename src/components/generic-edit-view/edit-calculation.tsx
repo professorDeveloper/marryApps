@@ -25,8 +25,7 @@ import {
 import SearchIcon from '@mui/icons-material/Search';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
-
-import { fetcher, endpoints } from 'src/lib/axios';
+import { fetcher, endpoints, putter } from 'src/lib/axios';
 import { toast } from 'src/components/snackbar';
 import { useGetCompounds, useGetCompoundCalculations, useCreateCompoundCalculation, useDeleteCompoundCalculation, useGetCompoundWithCalculations, type ICompoundCalculation } from 'src/hooks/use-compounds';
 import { useGetMealCalculations, useCreateMealCalculation, useDeleteMealCalculation, useGetMealWithCalculations, type IMealCalculation } from 'src/hooks/use-meals';
@@ -109,12 +108,14 @@ interface ProductCalculatorProps {
     }) => void;
     // NEW: Callback for save with good data
     onSaveWithGood?: (goodData: any) => Promise<void>;
+    // NEW: Callback for update with good data
+    onUpdateWithGood?: (goodData: any) => Promise<void>;
 }
 
 // Sub-tab type
 type SubTabType = 'ingredients' | 'semifinished';
 
-const ProductCalculator = ({ compoundId, mealId, onEntityCreated, onCalculationsReady, onSaveWithGood }: ProductCalculatorProps) => {
+const ProductCalculator = ({ compoundId, mealId, onEntityCreated, onCalculationsReady, onSaveWithGood, onUpdateWithGood }: ProductCalculatorProps) => {
     const { t } = useTranslation('menu');
     const theme = useTheme();
 
@@ -450,6 +451,91 @@ const ProductCalculator = ({ compoundId, mealId, onEntityCreated, onCalculations
         savePendingCalculations();
     }, [entityId, pendingCalculations, createCalculation, mutateCalculations, t]);
 
+    // Auto-save calculations when quantities change for existing meals/compounds
+    const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+    const prevTransferredIdsRef = useRef<string[]>([]);
+    const prevQuantitiesRef = useRef<Record<string, number>>({});
+
+    useEffect(() => {
+        // Only for existing entities (not new ones)
+        if (!entityId || !mealId) return;
+
+        // Check if there are actual changes
+        const idsChanged = JSON.stringify(transferredIds) !== JSON.stringify(prevTransferredIdsRef.current);
+        const quantitiesChanged = JSON.stringify(quantities) !== JSON.stringify(prevQuantitiesRef.current);
+
+        if (!idsChanged && !quantitiesChanged) return;
+
+        prevTransferredIdsRef.current = transferredIds;
+        prevQuantitiesRef.current = quantities;
+
+        // Clear previous timeout
+        if (autoSaveTimeoutRef.current) {
+            clearTimeout(autoSaveTimeoutRef.current);
+        }
+
+        // Set new timeout for auto-save (debounce)
+        autoSaveTimeoutRef.current = setTimeout(async () => {
+            try {
+                // Get current calculations from backend
+                const currentCalcs = ingredientCalculations || [];
+                const currentCalcMap = new Map<string, string>();
+                currentCalcs.forEach(calc => {
+                    currentCalcMap.set(calc.ingredient_id, calc.id);
+                });
+
+                // Find calculations to delete (in backend but not in transferredIds)
+                const toDelete = Array.from(currentCalcMap.keys()).filter(id => !transferredIds.includes(id));
+
+                // Delete removed calculations
+                for (const ingredientId of toDelete) {
+                    const calcId = currentCalcMap.get(ingredientId);
+                    if (calcId) {
+                        await deleteCalculation(calcId);
+                    }
+                }
+
+                // Find calculations to create or update
+                for (const ingredientId of transferredIds) {
+                    const quantity = quantities[ingredientId];
+                    const existingCalc = currentCalcs.find(c => c.ingredient_id === ingredientId);
+
+                    if (quantity > 0) {
+                        if (existingCalc) {
+                            // Update existing calculation via API
+                            try {
+                                await putter(`/api/v1/goods/calculations/${existingCalc.id}`, {
+                                    quantity: String(quantity)
+                                });
+                            } catch (updateError) {
+                                console.error('Error updating calculation:', updateError);
+                            }
+                        } else {
+                            // Create new calculation
+                            await createCalculation({
+                                ingredient_id: ingredientId,
+                                quantity: String(quantity),
+                            });
+                        }
+                    }
+                }
+
+                // Revalidate calculations
+                await mutateCalculations();
+                toast.success(t('calculation.savedSuccessfully', 'Saqlandi'));
+            } catch (error) {
+                console.error('Error auto-saving calculations:', error);
+                // Don't show error toast for auto-save to avoid spam
+            }
+        }, 1500); // Debounce 1.5 seconds
+
+        return () => {
+            if (autoSaveTimeoutRef.current) {
+                clearTimeout(autoSaveTimeoutRef.current);
+            }
+        };
+    }, [entityId, mealId, transferredIds, quantities, ingredientCalculations, deleteCalculation, createCalculation, mutateCalculations, t]);
+
     // --- INGREDIENT HANDLERS ---
     const handleToggle = (id: string) => {
         const currentIndex = selectedIds.indexOf(id);
@@ -478,6 +564,15 @@ const ProductCalculator = ({ compoundId, mealId, onEntityCreated, onCalculations
 
     const handleMoveRight = async () => {
         if (selectedIds.length > 0) {
+            // Update quantities state for all selected IDs to trigger auto-save
+            const newQuantities = { ...quantities };
+            for (const id of selectedIds) {
+                if (!newQuantities[id]) {
+                    newQuantities[id] = 1;
+                }
+            }
+            setQuantities(newQuantities);
+
             if (entityId) {
                 try {
                     for (const ingredientId of selectedIds) {
@@ -487,7 +582,7 @@ const ProductCalculator = ({ compoundId, mealId, onEntityCreated, onCalculations
                             await deleteCalculation(existingCalculation.id);
                         }
 
-                        const quantity = quantities[ingredientId] || 1;
+                        const quantity = newQuantities[ingredientId] || 1;
                         await createCalculation({
                             ingredient_id: ingredientId,
                             quantity: String(quantity),
@@ -500,7 +595,7 @@ const ProductCalculator = ({ compoundId, mealId, onEntityCreated, onCalculations
             } else {
                 const newPending = selectedIds.map(id => ({
                     ingredient_id: id,
-                    quantity: quantities[id] || 1
+                    quantity: newQuantities[id] || 1
                 }));
                 setPendingCalculations(prev => [...prev, ...newPending]);
             }
@@ -918,61 +1013,86 @@ const ProductCalculator = ({ compoundId, mealId, onEntityCreated, onCalculations
 
                     {/* RIGHT SIDE - Selected Ingredients */}
                     <Box>
-                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                            <Typography variant="subtitle2" fontWeight="bold" color="text.primary">
-                                {t('calculation.calculateProductPrice')}
-                            </Typography>
-                            <Button
-                                variant="contained"
-                                onClick={async () => {
-                                    // Frontend-only calculation (view mode)
-                                    setShowCalculation(true);
-                                    setViewModeCalculation(true);
+                       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+    <Typography variant="subtitle2" fontWeight="bold" color="text.primary">
+        {t('calculation.calculateProductPrice')}
+    </Typography>
+    <Button
+        type="button"  // ← BU MUHIM! Forma submitni oldini oladi
+        variant="contained"
+        onClick={async (e) => {  // ← (e) qo'shing va e.preventDefault() ni ishlatish uchun
+            e.preventDefault();  // ← Qo'shimcha himoya: forma submit bo'lishini to'xtatadi
 
-                                    if (!entityId) {
-                                        // View mode - no API calls needed
-                                        toast.info(t('calculation.calculatedLocally', 'Calculated locally'));
-                                        return;
-                                    }
+            // Frontend-only calculation (view mode)
+            setShowCalculation(true);
+            setViewModeCalculation(true);
 
-                                    // If entity exists, also save to backend
-                                    if (transferredIds.length > 0) {
-                                        try {
-                                            for (const ingredientId of transferredIds) {
-                                                const quantity = quantities[ingredientId] || 0;
-                                                if (quantity > 0) {
-                                                    const existingCalculation = ingredientCalculations?.find(calc => calc.ingredient_id === ingredientId);
+            if (!entityId) {
+                // View mode - no API calls needed initially, but now handle save logic if conditions met
+                toast.info(t('calculation.calculatedLocally', 'Calculated locally'));
 
-                                                    if (existingCalculation) {
-                                                        await deleteCalculation(existingCalculation.id);
-                                                    }
+                if (onSaveWithGood && (allCalculatedRows.length > 0 || (transferredIds.length === 0 && sfTransferredIds.length === 0))) {
+                    try {
+                        // Prepare calculations data
+                        const ingredientCalcs = transferredIds.map(id => ({
+                            ingredient_id: id,
+                            quantity: String(quantities[id] || 0)
+                        }));
+                        const compoundCalcs = sfTransferredIds.map(id => ({
+                            compound_id: id,
+                            quantity: String(sfQuantities[id] || 0)
+                        }));
 
-                                                    await createCalculation({
-                                                        ingredient_id: ingredientId,
-                                                        quantity: String(quantity),
-                                                    });
-                                                }
-                                            }
-                                            await mutateCalculations();
-                                            toast.success(t('calculation.calculatedSuccessfully', 'Calculated successfully'));
-                                        } catch (error) {
-                                            console.error('Error saving calculations:', error);
-                                            toast.error(t('error.saveFailed', 'Failed to save calculations'));
-                                        }
-                                    }
-                                }}
-                                sx={{
-                                    bgcolor: (transferredIds.length === 0) ? theme.palette.action.disabled : theme.palette.warning.main,
-                                    textTransform: 'none',
-                                    '&:hover': {
-                                        bgcolor: (transferredIds.length === 0) ? theme.palette.action.disabled : theme.palette.warning.dark
-                                    }
-                                }}
-                            >
-                                {t('calculation.calculate')}
-                            </Button>
-                        </Box>
+                        // Call parent callback with good data and calculations
+                        await onSaveWithGood({
+                            ingredient_calculations: ingredientCalcs.length > 0 ? ingredientCalcs : undefined,
+                            compound_calculations: compoundCalcs.length > 0 ? compoundCalcs : undefined,
+                        });
+                    } catch (error) {
+                        console.error('Error saving with calculations:', error);
+                        toast.error(t('error.saveFailed', 'Failed to save'));
+                    }
+                }
+                return;
+            }
 
+            // If entity exists, also save to backend
+            if (transferredIds.length > 0) {
+                try {
+                    for (const ingredientId of transferredIds) {
+                        const quantity = quantities[ingredientId] || 0;
+                        if (quantity > 0) {
+                            const existingCalculation = ingredientCalculations?.find(calc => calc.ingredient_id === ingredientId);
+
+                            if (existingCalculation) {
+                                await deleteCalculation(existingCalculation.id);
+                            }
+
+                            await createCalculation({
+                                ingredient_id: ingredientId,
+                                quantity: String(quantity),
+                            });
+                        }
+                    }
+                    await mutateCalculations();
+                    toast.success(t('calculation.calculatedSuccessfully', 'Calculated successfully'));
+                } catch (error) {
+                    console.error('Error saving calculations:', error);
+                    toast.error(t('error.saveFailed', 'Failed to save calculations'));
+                }
+            }
+        }}
+        sx={{
+            bgcolor: (transferredIds.length === 0) ? theme.palette.action.disabled : theme.palette.warning.main,
+            textTransform: 'none',
+            '&:hover': {
+                bgcolor: (transferredIds.length === 0) ? theme.palette.action.disabled : theme.palette.warning.dark
+            }
+        }}
+    >
+        {t('calculation.calculate')}
+    </Button>
+</Box>
                         <Paper sx={{ borderRadius: 2, overflow: 'hidden' }} elevation={1}>
                             <Box sx={{
                                 display: 'flex',
@@ -1200,63 +1320,86 @@ const ProductCalculator = ({ compoundId, mealId, onEntityCreated, onCalculations
 
                     {/* RIGHT SIDE - Selected Compounds */}
                     <Box>
-                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                            <Typography variant="subtitle2" fontWeight="bold" color="text.primary">
-                                {t('calculation.calculateProductPrice')}
-                            </Typography>
-                            <Button
-                                variant="contained"
-                                onClick={async () => {
-                                    // Frontend-only calculation (view mode)
-                                    setSfShowCalculation(true);
-                                    setViewModeCalculation(true);
+                       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+    <Typography variant="subtitle2" fontWeight="bold" color="text.primary">
+        {t('calculation.calculateProductPrice')}
+    </Typography>
+    <Button
+        type="button"  // ← BU MUHIM! Forma submitni oldini oladi
+        variant="contained"
+        onClick={async (e) => {  // ← (e) qo'shing va e.preventDefault() ni ishlatish uchun
+            e.preventDefault();  // ← Qo'shimcha himoya: forma submit bo'lishini to'xtatadi
 
-                                    if (!entityId) {
-                                        // View mode - no API calls needed
-                                        toast.info(t('calculation.calculatedLocally', 'Calculated locally'));
-                                        return;
-                                    }
+            // Frontend-only calculation (view mode)
+            setShowCalculation(true);
+            setViewModeCalculation(true);
 
-                                    // If entity exists, also save to backend
-                                    if (sfTransferredIds.length > 0) {
-                                        try {
-                                            for (const compoundToAddId of sfTransferredIds) {
-                                                const quantity = sfQuantities[compoundToAddId] || 0;
-                                                if (quantity > 0) {
-                                                    const existingCalculation = compoundCalculationsList?.find(
-                                                        calc => calc.component_compound_id === compoundToAddId
-                                                    );
+            if (!entityId) {
+                // View mode - no API calls needed initially, but now handle save logic if conditions met
+                toast.info(t('calculation.calculatedLocally', 'Calculated locally'));
 
-                                                    if (existingCalculation) {
-                                                        await deleteCalculation(existingCalculation.id);
-                                                    }
+                if (onSaveWithGood && (allCalculatedRows.length > 0 || (transferredIds.length === 0 && sfTransferredIds.length === 0))) {
+                    try {
+                        // Prepare calculations data
+                        const ingredientCalcs = transferredIds.map(id => ({
+                            ingredient_id: id,
+                            quantity: String(quantities[id] || 0)
+                        }));
+                        const compoundCalcs = sfTransferredIds.map(id => ({
+                            compound_id: id,
+                            quantity: String(sfQuantities[id] || 0)
+                        }));
 
-                                                    await createCalculation({
-                                                        compound_to_add_id: compoundToAddId,
-                                                        quantity: String(quantity),
-                                                    });
-                                                }
-                                            }
-                                            await mutateCalculations();
-                                            toast.success(t('calculation.calculatedSuccessfully', 'Calculated successfully'));
-                                        } catch (error) {
-                                            console.error('Error saving calculations:', error);
-                                            toast.error(t('error.saveFailed', 'Failed to save calculations'));
-                                        }
-                                    }
-                                }}
-                                sx={{
-                                    bgcolor: (sfTransferredIds.length === 0) ? theme.palette.action.disabled : theme.palette.warning.main,
-                                    textTransform: 'none',
-                                    '&:hover': {
-                                        bgcolor: (sfTransferredIds.length === 0) ? theme.palette.action.disabled : theme.palette.warning.dark
-                                    }
-                                }}
-                            >
-                                {t('calculation.calculate')}
-                            </Button>
-                        </Box>
+                        // Call parent callback with good data and calculations
+                        await onSaveWithGood({
+                            ingredient_calculations: ingredientCalcs.length > 0 ? ingredientCalcs : undefined,
+                            compound_calculations: compoundCalcs.length > 0 ? compoundCalcs : undefined,
+                        });
+                    } catch (error) {
+                        console.error('Error saving with calculations:', error);
+                        toast.error(t('error.saveFailed', 'Failed to save'));
+                    }
+                }
+                return;
+            }
 
+            // If entity exists, also save to backend
+            if (transferredIds.length > 0) {
+                try {
+                    for (const ingredientId of transferredIds) {
+                        const quantity = quantities[ingredientId] || 0;
+                        if (quantity > 0) {
+                            const existingCalculation = ingredientCalculations?.find(calc => calc.ingredient_id === ingredientId);
+
+                            if (existingCalculation) {
+                                await deleteCalculation(existingCalculation.id);
+                            }
+
+                            await createCalculation({
+                                ingredient_id: ingredientId,
+                                quantity: String(quantity),
+                            });
+                        }
+                    }
+                    await mutateCalculations();
+                    toast.success(t('calculation.calculatedSuccessfully', 'Calculated successfully'));
+                } catch (error) {
+                    console.error('Error saving calculations:', error);
+                    toast.error(t('error.saveFailed', 'Failed to save calculations'));
+                }
+            }
+        }}
+        sx={{
+            bgcolor: (transferredIds.length === 0) ? theme.palette.action.disabled : theme.palette.warning.main,
+            textTransform: 'none',
+            '&:hover': {
+                bgcolor: (transferredIds.length === 0) ? theme.palette.action.disabled : theme.palette.warning.dark
+            }
+        }}
+    >
+        {t('calculation.calculate')}
+    </Button>
+</Box>
                         <Paper sx={{ borderRadius: 2, overflow: 'hidden' }} elevation={1}>
                             <Box sx={{
                                 display: 'flex',
@@ -1416,7 +1559,7 @@ const ProductCalculator = ({ compoundId, mealId, onEntityCreated, onCalculations
                         pr: 2
                     }}>
                         {/* SAVE BUTTON FOR NEW MEAL/COMPOUND */}
-                        {!entityId && onSaveWithGood && (allCalculatedRows.length > 0 || (transferredIds.length === 0 && sfTransferredIds.length === 0)) && (
+                        {/* {!entityId && onSaveWithGood && (allCalculatedRows.length > 0 || (transferredIds.length === 0 && sfTransferredIds.length === 0)) && (
                             <Button
                                 variant="contained"
                                 color="success"
@@ -1447,7 +1590,10 @@ const ProductCalculator = ({ compoundId, mealId, onEntityCreated, onCalculations
                             >
                                 {t('common.save', 'Saqlash')}
                             </Button>
-                        )}
+                        )} */}
+
+                        {/* UPDATE BUTTON FOR EXISTING MEAL/COMPOUND - REMOVED */}
+                        {/* Button removed - calculations are auto-saved via props */}
 
                         <Box sx={{ display: 'flex', justifyContent: 'space-between', width: '300px' }}>
                             <Typography color="text.secondary" fontWeight="bold">

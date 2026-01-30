@@ -32,9 +32,6 @@ import { formatDate, formatPrice } from 'src/components/generic-view-view/modal-
 import { useGetIngredients } from 'src/actions/ingredients';
 
 
-/**
- * Compound item renderer with avatar and name
- */
 function RenderCellCompound({ params }: { params: any }) {
     const { row } = params;
     const name = row.name || '-';

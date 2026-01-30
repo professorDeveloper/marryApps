@@ -675,3 +675,68 @@ export function useCreateMealWithCalculations() {
     return { createMealWithCalculations };
 }
 
+/**
+ * Update meal with calculations (yangi qulayroq API - PUT request)
+ */
+export function useUpdateMealWithCalculations() {
+    const updateMealWithCalculations = useCallback(
+        async (
+            mealId: string,
+            payload: {
+                good: any;
+                ingredient_calculations?: Array<{ ingredient_id: string; quantity: string }>;
+                compound_calculations?: Array<{ compound_id: string; quantity: string }>;
+            }
+        ): Promise<any> => {
+            try {
+                const payloadToSend = {
+                    good: {
+                        name: payload.good.name,
+                        name_i18n: payload.good.name_i18n || undefined,
+                        description: payload.good.description,
+                        description_i18n: payload.good.description_i18n || undefined,
+                        category_id: payload.good.category_id,
+                        department_id: payload.good.department_id,
+                        picture_url: payload.good.picture_url || null,
+                        price: String(payload.good.price || 0),
+                        cook_time: payload.good.cook_time || 0,
+                        color_code: payload.good.color_code || null,
+                    },
+                    ingredient_calculations: payload.ingredient_calculations || [],
+                    compound_calculations: payload.compound_calculations || [],
+                };
+
+                const response = await putter<BackendResponse<any>>(
+                    endpoints.meals.updateWithCalculations(mealId),
+                    payloadToSend
+                );
+
+                // Extract data from wrapped response
+                let data: any;
+                if ('good' in response && 'calculations' in response) {
+                    data = response;
+                } else if (response?.data) {
+                    data = response.data;
+                } else {
+                    throw new Error('Invalid response format');
+                }
+
+                // Revalidate meals list and specific meal
+                await mutate(endpoints.meals.list);
+                await mutate(endpoints.meals.details(mealId));
+                await mutate(endpoints.meals.withCalculations(mealId));
+
+                toast.success('Meal with calculations updated successfully');
+                return data;
+            } catch (error) {
+                toast.error('Failed to update meal with calculations');
+                console.error('Failed to update meal with calculations:', error);
+                throw error;
+            }
+        },
+        []
+    );
+
+    return { updateMealWithCalculations };
+}
+

@@ -171,6 +171,7 @@ export const endpoints = {
     create: '/api/v1/goods',
     createWithCalculations: '/api/v1/goods/with-calculations',
     update: (id: string) => `/api/v1/goods/${id}`,
+    updateWithCalculations: (id: string) => `/api/v1/goods/${id}/with-calculations`,
     delete: (id: string) => `/api/v1/goods/${id}`,
     calculations: (goodId: string) => `/api/v1/goods/calculations?good_id=${goodId}`,
     createCalculation: '/api/v1/goods/calculations',

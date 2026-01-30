@@ -1,20 +1,14 @@
 import type { TFunction } from 'i18next';
 import type { CardSection, GenericEditViewConfig } from 'src/components/generic-edit-view';
-
 import { useParams } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import { useRef, useState, useEffect, useCallback } from 'react';
-
 import { Box, Tab, Tabs, Stack } from '@mui/material';
-
 import { paths } from 'src/routes/paths';
 import { useRouter } from 'src/routes/hooks';
-
 import { useTranslationsAPI } from 'src/hooks/use-translations-api';
-import { useGetCompound, useDeleteCompound, useUpdateCompound, useCreateCompoundWithCalculations } from 'src/hooks/use-compounds';
-
+import { useGetCompound, useDeleteCompound, useUpdateCompound, useCreateCompoundWithCalculations, useCreateCompound } from 'src/hooks/use-compounds';
 import { useGetDepartments } from 'src/actions/departments';
-
 import { toast } from 'src/components/snackbar';
 import { GenericEditView } from 'src/components/generic-edit-view';
 import { CustomBreadcrumbs } from 'src/components/custom-breadcrumbs';
@@ -156,6 +150,7 @@ export function CompoundEditView({ compoundId, isNew = false }: CompoundEditView
     const { deleteCompound } = useDeleteCompound();
     const { createTranslation } = useTranslationsAPI();
     const { createCompoundWithCalculations } = useCreateCompoundWithCalculations();
+    const { createCompound } = useCreateCompound();
 
     const loading = !isNew && compoundLoading;
 
@@ -187,10 +182,70 @@ export function CompoundEditView({ compoundId, isNew = false }: CompoundEditView
         async (submitFormData: Record<string, any>) => {
             try {
                 if (isNew && !createdCompoundId) {
-                    // YANGI FLOW: For new compounds, store form data and move to calculations tab
-                    // Do NOT create compound yet - wait for calculations
-                    setFormData(submitFormData);
-                    setActiveTab(1);
+                    // For new compounds, create it immediately with basic info
+                    let name_i18n = submitFormData.name_i18n;
+                    if (!name_i18n && (submitFormData.name_en || submitFormData.name_ru)) {
+                        // Create translation if provided
+                        const translationData: any = {
+                            en: submitFormData.name_en || submitFormData.name || '',
+                            ru: submitFormData.name_ru || submitFormData.name || '',
+                            uz: submitFormData.name || '', // Primary name is always Uzbek
+                        };
+
+                        const translationResult = await createTranslation(translationData);
+                        name_i18n = translationResult.id;
+                    }
+
+                    const payload = {
+                        name: submitFormData.name,
+                        name_i18n,
+                        description: submitFormData.description || '',
+                        price: String(submitFormData.price || '0'),
+                        quantity: Number(submitFormData.quantity),
+                        measurement: submitFormData.measurement,
+                        department_id: submitFormData.department_id,
+                        picture_url: submitFormData.picture_url || null,
+                    };
+
+                    const result = await createCompound(payload) as any;
+
+                    if (result?.id) {
+                        setCreatedCompoundId(result.id);
+                        setFormData(submitFormData);
+                        toast.success(t('success.created', 'Successfully created'));
+                        router.push(paths.menu.semifinished.root);
+                    } else {
+                        toast.error(t('error.createFailed'));
+                    }
+                } else if (createdCompoundId) {
+                    // Compound was already created in Tab 2, now update it with form data
+                    let name_i18n = submitFormData.name_i18n;
+                    if (!name_i18n && (submitFormData.name_en || submitFormData.name_ru)) {
+                        // Create translation if provided
+                        const translationData: any = {
+                            en: submitFormData.name_en || submitFormData.name || '',
+                            ru: submitFormData.name_ru || submitFormData.name || '',
+                            uz: submitFormData.name || '', // Primary name is always Uzbek
+                        };
+
+                        const translationResult = await createTranslation(translationData);
+                        name_i18n = translationResult.id;
+                    }
+
+                    const payload = {
+                        name: submitFormData.name,
+                        name_i18n,
+                        description: submitFormData.description || '',
+                        price: String(submitFormData.price),
+                        quantity: Number(submitFormData.quantity),
+                        measurement: submitFormData.measurement,
+                        department_id: submitFormData.department_id,
+                        picture_url: submitFormData.picture_url || null,
+                    };
+                    await updateCompound(createdCompoundId, payload);
+                    toast.success(t('success.updated', 'Successfully updated'));
+                    // Redirect to list
+                    router.push(paths.menu.semifinished.root);
                 } else if (compoundId) {
                     // Update existing compound with translation
                     let name_i18n = submitFormData.name_i18n;
@@ -217,6 +272,7 @@ export function CompoundEditView({ compoundId, isNew = false }: CompoundEditView
                         picture_url: submitFormData.picture_url || null,
                     };
                     await updateCompound(compoundId, payload);
+                    toast.success(t('success.updated', 'Successfully updated'));
                     // Redirect to list
                     router.push(paths.menu.semifinished.root);
                 }
@@ -227,7 +283,7 @@ export function CompoundEditView({ compoundId, isNew = false }: CompoundEditView
                 );
             }
         },
-        [router, isNew, compoundId, createdCompoundId, updateCompound, t, createTranslation]
+        [router, isNew, compoundId, createdCompoundId, updateCompound, t, createTranslation, createCompound]
     );
 
     // Handle delete
@@ -391,13 +447,12 @@ export function CompoundEditView({ compoundId, isNew = false }: CompoundEditView
                                     if (newCompoundId) {
                                         setCreatedCompoundId(newCompoundId);
                                         pendingCalculationsRef.current = null;
-                                        // Redirect to compounds list
-                                        router.push(paths.menu.semifinished.root);
-                                    } else {
-                                        router.push(paths.menu.semifinished.root);
+                                        toast.success(t('success.created', 'Successfully created'));
+                                        // Do NOT redirect - stay on this page so user can continue editing
                                     }
                                 } catch (error) {
                                     console.error("Error saving compound with calculations:", error);
+                                    toast.error(t('error.createFailed'));
                                     throw error;
                                 }
                             }}

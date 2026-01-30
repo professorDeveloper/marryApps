@@ -1,9 +1,7 @@
 import type { GridColDef } from '@mui/x-data-grid';
 import type { IMealsItem } from 'src/types/meals';
-
 import { useTranslation } from 'react-i18next';
 import { useMemo, useState, useCallback } from 'react';
-
 import { useTheme } from '@mui/material/styles';
 import { Button, Dialog, DialogTitle, DialogActions, DialogContent, Box, Avatar, ListItemText } from '@mui/material';
 import {
@@ -16,28 +14,19 @@ import {
     Paper,
     CircularProgress,
 } from '@mui/material';
-
 import { paths } from 'src/routes/paths';
-
 import { useGetMeals, useDeleteMeal, useDeleteMeals, useGetMealWithCalculations } from 'src/hooks/use-meals';
 import { useGenericViewModal } from 'src/hooks/use-generic-view-modal';
 import { useImageUrl } from 'src/hooks/use-image-url';
 import { useGetIngredients } from 'src/actions/ingredients';
-
 import { getInitials, getAvatarColor } from 'src/utils/avatar';
-
 import { Iconify } from 'src/components/iconify';
 import { CustomGridActionsCellItem } from 'src/components/custom-data-grid';
 import { GenericViewModal, SpecificationsTable } from 'src/components/generic-view-view';
-import {
-    GenericTableView,
-} from 'src/components/generic-table-view';
+import { GenericTableView } from 'src/components/generic-table-view';
 import { formatPrice } from 'src/components/generic-view-view/modal-formatters';
 
 
-/**
- * Meal calculations table renderer
- */
 function MealCalculationsTable({ mealId }: { mealId: string }) {
     const { t } = useTranslation('menu');
     const { mealWithCalculations, loading } = useGetMealWithCalculations(mealId);
@@ -53,6 +42,21 @@ function MealCalculationsTable({ mealId }: { mealId: string }) {
         return map;
     }, [ingredients]);
 
+    // Remove duplicate calculations - keep only unique ingredient_id or component_compound_id
+    // HOOKS MUST BE CALLED BEFORE ANY EARLY RETURNS!
+    const uniqueCalculations = useMemo(() => {
+        if (!mealWithCalculations?.calculations) return [];
+        const seen = new Set<string>();
+        return mealWithCalculations.calculations.filter((calc) => {
+            const key = calc.ingredient_id || calc.component_compound_id || calc.id;
+            if (seen.has(key)) {
+                return false;
+            }
+            seen.add(key);
+            return true;
+        });
+    }, [mealWithCalculations?.calculations]);
+
     if (loading) {
         return (
             <Box sx={{ display: 'flex', justifyContent: 'center', py: 3 }}>
@@ -61,11 +65,11 @@ function MealCalculationsTable({ mealId }: { mealId: string }) {
         );
     }
 
-    if (!mealWithCalculations || !mealWithCalculations.calculations) {
+    if (!mealWithCalculations || !mealWithCalculations.calculations || uniqueCalculations.length === 0) {
         return <Box sx={{ py: 2 }}>{t('common.noData')}</Box>;
     }
 
-    const { calculations, total_cost, profit, profit_margin } = mealWithCalculations;
+    const { total_cost, profit, profit_margin } = mealWithCalculations;
 
     return (
         <Box sx={{ width: '100%' }}>
@@ -92,13 +96,13 @@ function MealCalculationsTable({ mealId }: { mealId: string }) {
                     </TableHead>
 
                     <TableBody>
-                        {calculations.map((calc, index) => {
+                        {uniqueCalculations.map((calc, index) => {
                             const itemName = calc.ingredient_id
                                 ? ingredientMap.get(calc.ingredient_id) || calc.ingredient_id
                                 : '-';
 
                             return (
-                                <TableRow key={calc.id}>
+                                <TableRow key={calc.ingredient_id || calc.component_compound_id || calc.id}>
                                     {/* NUMBER + NAME bitta cell */}
                                     <TableCell align="left">
                                         <strong>{index + 1}.</strong> {itemName}
