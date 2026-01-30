@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import {
     Box,
     Button,
@@ -73,6 +74,7 @@ export const FloorPlanSidebar = ({
 }: FloorPlanSidebarProps) => {
     const theme = useTheme();
     const navigate = useNavigate();
+    const { t } = useTranslation('menu');
     const { createHall } = useCreateHall();
     const { branches } = useGetBranches();
     const { createTable } = useCreateCafeTable();
@@ -317,12 +319,12 @@ export const FloorPlanSidebar = ({
                     <IconButton
                         size="small"
                         onClick={() => navigate('/menu/halls')}
-                        sx={{ color: theme.palette.primary.main }}
+                        sx={{ color: '#FB6633' }}
                     >
                         <Iconify icon="eva:arrow-ios-back-fill" width={20} />
                     </IconButton>
                     <Typography variant="h6" sx={{ fontWeight: 'bold', flex: 1 }}>
-                        Floor Plan
+                        {t('floorPlan.title')}
                     </Typography>
                 </Box>
                 <Stack spacing={1}>
@@ -340,20 +342,19 @@ export const FloorPlanSidebar = ({
 
                 {/* Save changes button */}
                 {changedTablesCount > 0 && (
-                    <Box sx={{ mt: 2, p: 1.5, borderRadius: 1, border: `1px solid ${theme.palette.warning.main}` }}>
-                        <Typography variant="caption" sx={{ display: 'block', mb: 1, fontWeight: 'bold', color: theme.palette.warning.main }}>
-                            {changedTablesCount} table{changedTablesCount > 1 ? 's' : ''} changed
+                    <Box sx={{ mt: 2, p: 1.5, borderRadius: 1, border: `1px solid #FB6633` }}>
+                        <Typography variant="caption" sx={{ display: 'block', mb: 1, fontWeight: 'bold', color: '#FB6633' }}>
+                            {changedTablesCount} {changedTablesCount > 1 ? t('floorPlan.tablesChanged') : t('floorPlan.tableChanged')}
                         </Typography>
                         <Button
                             fullWidth
-                            variant="contained"
-                            color="warning"
+                            // variant="contained"
                             size="small"
                             onClick={handleSaveTableChanges}
                             disabled={savingChanges}
-                            sx={{ textTransform: 'none', fontWeight: 'bold' }}
+                            sx={{ textTransform: 'none', fontWeight: 'bold', backgroundColor: '#FB6633', '&:hover': { backgroundColor: '#FB6633', opacity: 0.8 } }}
                         >
-                            {savingChanges ? 'Saving...' : 'Save Changes'}
+                            {savingChanges ? t('floorPlan.savingChanges') : t('floorPlan.saveChanges')}
                         </Button>
                     </Box>
                 )}
@@ -382,26 +383,26 @@ export const FloorPlanSidebar = ({
             {selectedTable && (
                 <Box sx={{ p: 2, borderBottom: `1px solid ${theme.palette.divider}`, }}>
                     <Typography variant="subtitle2" sx={{ mb: 1.5, fontWeight: 'bold', }}>
-                        Selected Table
+                        {t('floorPlan.selectedTable')}
                     </Typography>
                     <Paper variant="outlined" sx={{ p: 1.5, mb: 1.5, backgroundColor: theme.vars.palette.background.paper, transition: theme.transitions.create(['background-color'], { duration: theme.transitions.duration.shorter }) }}>
                         <Stack spacing={1}>
                             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                 <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
-                                    Table {selectedTable.number}
+                                    {`${t('floorPlan.tableInfo.tableLabel')} ${selectedTable.number}`}
                                 </Typography>
                                 <Box>
                                     <IconButton
                                         size="small"
                                         onClick={() => handleEditOpen(selectedTable)}
-                                        sx={{ color: theme.palette.warning.main }}
+                                        sx={{ color: '#FB6633' }}
                                     >
                                         <Iconify icon="solar:pen-bold" width={16} />
                                     </IconButton>
                                     <IconButton
                                         size="small"
                                         onClick={() => handleDeleteTableConfirm(selectedTable.id)}
-                                        sx={{ color: theme.palette.error.main }}
+                                        color='error'
                                         disabled={deletingTable}
                                     >
                                         <Iconify icon="solar:trash-bin-trash-bold" width={16} />
@@ -409,13 +410,13 @@ export const FloorPlanSidebar = ({
                                 </Box>
                             </Box>
                             <Typography variant="caption" sx={{ color: theme.palette.text.secondary }}>
-                                Seats: {selectedTable.seats} • Size: {Math.round(selectedTable.width)} × {Math.round(selectedTable.height)}
+                                {t('floorPlan.tableInfo.seats')}: {selectedTable.seats} • {t('floorPlan.tableInfo.size')}: {Math.round(selectedTable.width)} × {Math.round(selectedTable.height)}
                             </Typography>
                             <Typography variant="caption" sx={{ color: theme.palette.text.secondary }}>
-                                Position: ({Math.round(selectedTable.x)}, {Math.round(selectedTable.y)})
+                                {t('floorPlan.tableInfo.position')}: ({Math.round(selectedTable.x)}, {Math.round(selectedTable.y)})
                             </Typography>
                             <Typography variant="caption" sx={{ color: theme.palette.text.secondary }}>
-                                Rotation: {Math.round(selectedTable.rotation)}°
+                                {t('floorPlan.tableInfo.rotation')}: {Math.round(selectedTable.rotation)}{t('floorPlan.tableInfo.degrees')}
                             </Typography>
                         </Stack>
                     </Paper>
@@ -433,11 +434,11 @@ export const FloorPlanSidebar = ({
                             transition: theme.transitions.create(['color', 'background-color'], { duration: theme.transitions.duration.shorter }),
                         }}
                     >
-                        Tables ({tables.length})
+                        {t('floorPlan.tablesCount')} ({tables.length})
                     </Typography>
                     {hallId && (
-                        <Button size="small" variant="contained" color="primary" onClick={handleCreateTableDialogOpen} disabled={creatingTable}>
-                            + Add
+                        <Button size="small" sx={{ backgroundColor: '#FB6633', color: 'white', ":hover": { backgroundColor: '#FB6633', opacity: 0.8 } }} onClick={handleCreateTableDialogOpen} >
+                            {t('floorPlan.addTable')}
                         </Button>
                     )}
                 </Box>
@@ -445,7 +446,7 @@ export const FloorPlanSidebar = ({
                 {tables.length === 0 ? (
                     <Box sx={{ p: 2, textAlign: 'center' }}>
                         <Typography variant="body2" sx={{ color: theme.palette.text.secondary }}>
-                            No tables yet. Click "+ Add" to get started.
+                            {t('floorPlan.noTables')}
                         </Typography>
                     </Box>
                 ) : (
@@ -470,12 +471,12 @@ export const FloorPlanSidebar = ({
                                     <ListItemText
                                         primary={
                                             <Typography variant="body2" sx={{ fontWeight: table.id === selectedTableId ? 'bold' : 'normal' }}>
-                                                Table {table.number}
+                                                {`${t('floorPlan.tableInfo.tableLabel')} ${table.number}`}
                                             </Typography>
                                         }
                                         secondary={
                                             <Typography variant="caption" sx={{ display: 'block', mt: 0.5 }}>
-                                                {table.seats} seats • {Math.round(table.width)} × {Math.round(table.height)}
+                                                {table.seats} {t('floorPlan.tableInfo.seatLabel')} • {Math.round(table.width)} × {Math.round(table.height)}
                                             </Typography>
                                         }
                                     />
@@ -488,16 +489,16 @@ export const FloorPlanSidebar = ({
 
             {/* Footer */}
             <Box sx={{ p: 2, borderTop: `1px solid ${theme.palette.divider}`, backgroundColor: theme.palette.action.hover, fontSize: '12px', color: theme.palette.text.secondary, transition: theme.transitions.create(['background-color', 'border-color', 'color'], { duration: theme.transitions.duration.shorter }) }}>
-                Total Tables: {tables.length}
+                {t('floorPlan.totalTables')} {tables.length}
             </Box>
 
             {/* Edit Dialog */}
             <Dialog open={editDialogOpen} onClose={handleEditClose} maxWidth="sm" fullWidth>
-                <DialogTitle>Edit Table {selectedTable?.number}</DialogTitle>
+                <DialogTitle>{t('floorPlan.editTableDialog.title')}</DialogTitle>
                 <DialogContent sx={{ pt: 2 }}>
                     <Stack spacing={2}>
                         <TextField
-                            label="Table Number"
+                            label={t('floorPlan.editTableDialog.tableNumber')}
                             type="number"
                             value={editFormData.number || ''}
                             onChange={(e) => handleInputChange('number', parseInt(e.target.value))}
@@ -505,7 +506,7 @@ export const FloorPlanSidebar = ({
                             size="small"
                         />
                         <TextField
-                            label="Seats"
+                            label={t('floorPlan.editTableDialog.seats')}
                             type="number"
                             value={editFormData.seats || DEFAULT_TABLE_SEATS}
                             onChange={(e) => handleInputChange('seats', parseInt(e.target.value))}
@@ -514,7 +515,7 @@ export const FloorPlanSidebar = ({
                             inputProps={{ min: 1, max: 12 }}
                         />
                         <TextField
-                            label="Width"
+                            label={t('floorPlan.editTableDialog.width')}
                             type="number"
                             value={editFormData.width || ''}
                             onChange={(e) => handleInputChange('width', parseFloat(e.target.value))}
@@ -523,7 +524,7 @@ export const FloorPlanSidebar = ({
                             inputProps={{ step: 5 }}
                         />
                         <TextField
-                            label="Height"
+                            label={t('floorPlan.editTableDialog.height')}
                             type="number"
                             value={editFormData.height || ''}
                             onChange={(e) => handleInputChange('height', parseFloat(e.target.value))}
@@ -534,9 +535,9 @@ export const FloorPlanSidebar = ({
                     </Stack>
                 </DialogContent>
                 <DialogActions>
-                    <Button onClick={handleEditClose}>Cancel</Button>
+                    <Button onClick={handleEditClose}>{t('common.cancel')}</Button>
                     <Button onClick={handleEditSave} variant="contained" color="primary">
-                        Save
+                        {t('common.save')}
                     </Button>
                 </DialogActions>
             </Dialog>
@@ -544,13 +545,13 @@ export const FloorPlanSidebar = ({
             {/* Create Hall Dialog - only when no hallId */}
             {!hallId && (
                 <Dialog open={hallDialogOpen} onClose={handleHallDialogClose} maxWidth="sm" fullWidth>
-                    <DialogTitle>Create New Hall</DialogTitle>
+                    <DialogTitle>{t('floorPlan.createHallDialog.title')}</DialogTitle>
                     <DialogContent sx={{ pt: 2 }}>
                         <Stack spacing={2}>
                             <FormControl fullWidth size="small">
-                                <InputLabel>Branch</InputLabel>
+                                <InputLabel>{t('floorPlan.createHallDialog.branch')}</InputLabel>
                                 <Select
-                                    label="Branch"
+                                    label={t('floorPlan.createHallDialog.branch')}
                                     value={hallFormData.branch_id}
                                     onChange={(e) => setHallFormData((prev) => ({ ...prev, branch_id: e.target.value }))}
                                 >
@@ -562,15 +563,15 @@ export const FloorPlanSidebar = ({
                                 </Select>
                             </FormControl>
                             <TextField
-                                label="Hall Name"
+                                label={t('floorPlan.createHallDialog.hallName')}
                                 value={hallFormData.name}
                                 onChange={(e) => setHallFormData((prev) => ({ ...prev, name: e.target.value }))}
                                 fullWidth
                                 size="small"
-                                placeholder="e.g., Main Hall, VIP Hall"
+                                placeholder={t('floorPlan.createHallDialog.hallNamePlaceholder')}
                             />
                             <TextField
-                                label="Width (px)"
+                                label={t('floorPlan.createHallDialog.width')}
                                 type="number"
                                 value={hallFormData.width}
                                 onChange={(e) => setHallFormData((prev) => ({ ...prev, width: parseInt(e.target.value) || 0 }))}
@@ -579,7 +580,7 @@ export const FloorPlanSidebar = ({
                                 inputProps={{ min: 100, step: 50 }}
                             />
                             <TextField
-                                label="Height (px)"
+                                label={t('floorPlan.createHallDialog.height')}
                                 type="number"
                                 value={hallFormData.height}
                                 onChange={(e) => setHallFormData((prev) => ({ ...prev, height: parseInt(e.target.value) || 0 }))}
@@ -590,14 +591,14 @@ export const FloorPlanSidebar = ({
                         </Stack>
                     </DialogContent>
                     <DialogActions>
-                        <Button onClick={handleHallDialogClose}>Cancel</Button>
+                        <Button onClick={handleHallDialogClose}>{t('floorPlan.createHallDialog.cancel')}</Button>
                         <Button
                             onClick={handleHallCreate}
                             variant="contained"
                             color="primary"
                             disabled={hallCreating || !hallFormData.name.trim() || !hallFormData.branch_id}
                         >
-                            {hallCreating ? 'Creating...' : 'Create Hall'}
+                            {hallCreating ? t('floorPlan.createHallDialog.creating') : t('floorPlan.createHallDialog.create')}
                         </Button>
                     </DialogActions>
                 </Dialog>
@@ -605,11 +606,11 @@ export const FloorPlanSidebar = ({
 
             {/* Create Table Dialog */}
             <Dialog open={createTableDialogOpen} onClose={handleCreateTableDialogClose} maxWidth="sm" fullWidth>
-                <DialogTitle>Create New Table</DialogTitle>
+                <DialogTitle>{t('floorPlan.createTableDialog.title')}</DialogTitle>
                 <DialogContent sx={{ pt: 2 }}>
                     <Stack spacing={2} sx={{ pt: 1 }}>
                         <TextField
-                            label="Table Number"
+                            label={t('floorPlan.createTableDialog.tableNumber')}
                             type="number"
                             value={createTableFormData.number}
                             onChange={(e) => setCreateTableFormData((prev) => ({ ...prev, number: parseInt(e.target.value) }))}
@@ -618,7 +619,7 @@ export const FloorPlanSidebar = ({
                             inputProps={{ min: 1 }}
                         />
                         <TextField
-                            label="Capacity (Seats)"
+                            label={t('floorPlan.createTableDialog.capacity')}
                             type="number"
                             value={createTableFormData.capacity}
                             onChange={(e) => setCreateTableFormData((prev) => ({ ...prev, capacity: parseInt(e.target.value) }))}
@@ -627,11 +628,11 @@ export const FloorPlanSidebar = ({
                             inputProps={{ min: 1, max: 20 }}
                         />
                         <Typography variant="caption" sx={{ color: theme.palette.text.secondary, pt: 1 }}>
-                            Table Size
+                            {t('floorPlan.createTableDialog.tableSize')}
                         </Typography>
                         <Stack direction="row" spacing={1}>
                             <TextField
-                                label="Width"
+                                label={t('floorPlan.createTableDialog.width')}
                                 type="number"
                                 value={createTableFormData.width}
                                 onChange={(e) => setCreateTableFormData((prev) => ({ ...prev, width: parseInt(e.target.value) }))}
@@ -640,7 +641,7 @@ export const FloorPlanSidebar = ({
                                 inputProps={{ min: 40, step: 10 }}
                             />
                             <TextField
-                                label="Height"
+                                label={t('floorPlan.createTableDialog.height')}
                                 type="number"
                                 value={createTableFormData.height}
                                 onChange={(e) => setCreateTableFormData((prev) => ({ ...prev, height: parseInt(e.target.value) }))}
@@ -650,7 +651,7 @@ export const FloorPlanSidebar = ({
                             />
                         </Stack>
                         <TextField
-                            label="Rotation (degrees)"
+                            label={t('floorPlan.createTableDialog.rotation')}
                             type="number"
                             value={createTableFormData.rotation}
                             onChange={(e) => setCreateTableFormData((prev) => ({ ...prev, rotation: parseInt(e.target.value) }))}
@@ -659,30 +660,31 @@ export const FloorPlanSidebar = ({
                             inputProps={{ min: 0, max: 360, step: 15 }}
                         />
                         <Typography variant="caption" sx={{ color: theme.palette.text.secondary, pt: 1, fontStyle: 'italic' }}>
-                            ℹ️ Table will be placed at default location. You can drag it to desired position after creation.
+                            {t('floorPlan.createTableDialog.infoText')}
                         </Typography>
                     </Stack>
                 </DialogContent>
                 <DialogActions>
-                    <Button onClick={handleCreateTableDialogClose}>Cancel</Button>
+                    <Button onClick={handleCreateTableDialogClose}>{t('floorPlan.createTableDialog.cancel')}</Button>
                     <Button
                         onClick={handleCreateTableSubmit}
-                        variant="contained"
-                        color="primary"
+                        // variant="contained"
+                        // color="primary"
+                        sx={{ backgroundColor: '#FB6633', color: 'white', ":hover": { backgroundColor: '#FB6633', opacity: 0.8 } }}
                         disabled={creatingTable}
                     >
-                        {creatingTable ? 'Creating...' : 'Create Table'}
+                        {creatingTable ? t('floorPlan.createTableDialog.creating') : t('floorPlan.createTableDialog.create')}
                     </Button>
                 </DialogActions>
             </Dialog>
 
             {/* Edit Table Dialog */}
             <Dialog open={editTableId !== null} onClose={handleEditClose} maxWidth="sm" fullWidth>
-                <DialogTitle>Edit Table</DialogTitle>
+                <DialogTitle>{t('floorPlan.editTableDialog.title')}</DialogTitle>
                 <DialogContent sx={{ pt: 2 }}>
                     <Stack spacing={2} sx={{ pt: 1 }}>
                         <TextField
-                            label="Table Number"
+                            label={t('floorPlan.editTableDialog.tableNumber')}
                             type="number"
                             value={editFormData.number}
                             onChange={(e) => handleInputChange('number', parseInt(e.target.value))}
@@ -691,7 +693,7 @@ export const FloorPlanSidebar = ({
                             inputProps={{ min: 1 }}
                         />
                         <TextField
-                            label="Seats"
+                            label={t('floorPlan.editTableDialog.seats')}
                             type="number"
                             value={editFormData.seats}
                             onChange={(e) => handleInputChange('seats', parseInt(e.target.value))}
@@ -700,11 +702,11 @@ export const FloorPlanSidebar = ({
                             inputProps={{ min: 1, max: 20 }}
                         />
                         <Typography variant="caption" sx={{ color: theme.palette.text.secondary, pt: 1 }}>
-                            Table Dimensions
+                            {t('floorPlan.editTableDialog.tableDimensions')}
                         </Typography>
                         <Stack direction="row" spacing={1}>
                             <TextField
-                                label="Width"
+                                label={t('floorPlan.editTableDialog.width')}
                                 type="number"
                                 value={editFormData.width}
                                 onChange={(e) => handleInputChange('width', parseInt(e.target.value))}
@@ -713,7 +715,7 @@ export const FloorPlanSidebar = ({
                                 inputProps={{ min: 40, step: 10 }}
                             />
                             <TextField
-                                label="Height"
+                                label={t('floorPlan.editTableDialog.height')}
                                 type="number"
                                 value={editFormData.height}
                                 onChange={(e) => handleInputChange('height', parseInt(e.target.value))}
@@ -723,7 +725,7 @@ export const FloorPlanSidebar = ({
                             />
                         </Stack>
                         <TextField
-                            label="Rotation (degrees)"
+                            label={t('floorPlan.editTableDialog.rotation')}
                             type="number"
                             value={editFormData.rotation}
                             onChange={(e) => handleInputChange('rotation', parseInt(e.target.value))}
@@ -732,19 +734,20 @@ export const FloorPlanSidebar = ({
                             inputProps={{ min: 0, max: 360, step: 15 }}
                         />
                         <Typography variant="caption" sx={{ color: theme.palette.text.secondary, pt: 1, fontStyle: 'italic' }}>
-                            ℹ️ To move table, drag it on the canvas.
+                            {t('floorPlan.editTableDialog.infoText')}
                         </Typography>
                     </Stack>
                 </DialogContent>
                 <DialogActions>
-                    <Button onClick={handleEditClose}>Cancel</Button>
+                    <Button onClick={handleEditClose}>{t('floorPlan.editTableDialog.cancel')}</Button>
                     <Button
                         onClick={handleEditSave}
-                        variant="contained"
-                        color="primary"
+                        // variant="contained"
+                        // color="primary"
+                        sx={{ backgroundColor: '#FB6633', color: 'white', ":hover": { backgroundColor: '#FB6633', opacity: 0.8 } }}
                         disabled={updatingTable}
                     >
-                        {updatingTable ? 'Saving...' : 'Save Changes'}
+                        {updatingTable ? t('floorPlan.editTableDialog.saving') : t('floorPlan.editTableDialog.save')}
                     </Button>
                 </DialogActions>
             </Dialog>
@@ -752,16 +755,16 @@ export const FloorPlanSidebar = ({
             {/* Delete Confirmation Dialog */}
             <Dialog open={deleteConfirmDialogOpen} onClose={handleDeleteTableCancel} maxWidth="xs" fullWidth>
                 <DialogTitle sx={{ color: theme.palette.error.main, fontWeight: 'bold' }}>
-                    Delete Table?
+                    {t('floorPlan.deleteDialog.title')}
                 </DialogTitle>
                 <DialogContent sx={{ pt: 2 }}>
                     <Typography>
-                        Are you sure you want to delete Table {selectedTable?.number}? This action cannot be undone.
+                        {t('floorPlan.deleteDialog.message')} {selectedTable?.number}? {t('floorPlan.deleteDialog.cannotUndo')}
                     </Typography>
                 </DialogContent>
                 <DialogActions>
                     <Button onClick={handleDeleteTableCancel} disabled={deletingTable}>
-                        Cancel
+                        {t('floorPlan.deleteDialog.cancel')}
                     </Button>
                     <Button
                         onClick={handleDeleteTableConfirmation}
@@ -769,7 +772,7 @@ export const FloorPlanSidebar = ({
                         color="error"
                         disabled={deletingTable}
                     >
-                        {deletingTable ? 'Deleting...' : 'Delete'}
+                        {deletingTable ? t('floorPlan.deleteDialog.deleting') : t('floorPlan.deleteDialog.delete')}
                     </Button>
                 </DialogActions>
             </Dialog>

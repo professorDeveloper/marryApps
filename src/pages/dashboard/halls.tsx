@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
     Box,
     Button,
@@ -32,6 +33,7 @@ import type { IHallItem } from 'src/types/halls';
 const metadata = { title: `Halls Management | ${CONFIG.appName}` };
 
 export default function HallsPage() {
+    const { t } = useTranslation('menu');
     const router = useRouter();
     const { halls, hallsLoading, hallsError } = useGetHalls();
     const { branches, branchesLoading } = useGetBranches();
@@ -92,12 +94,12 @@ export default function HallsPage() {
 
     const handleCreateHall = async () => {
         if (!formData.name.trim()) {
-            alert('Please enter hall name');
+            alert(t('halls.messages.nameRequired'));
             return;
         }
 
         if (!formData.branch_id) {
-            alert('Please select a branch');
+            alert(t('halls.messages.branchRequired'));
             return;
         }
 
@@ -119,7 +121,7 @@ export default function HallsPage() {
         if (!hallToEdit) return;
 
         if (!formData.name.trim()) {
-            alert('Please enter hall name');
+            alert(t('halls.messages.nameRequired'));
             return;
         }
 
@@ -166,10 +168,10 @@ export default function HallsPage() {
                 <Box sx={{ mb: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <Box>
                         <Typography variant="h3" sx={{ mb: 1 }}>
-                            Halls Management
+                            {t('halls.title')}
                         </Typography>
                         <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                            Create and manage restaurant halls for floor planning
+                            {t('halls.description')}
                         </Typography>
                     </Box>
                     <Button
@@ -178,13 +180,13 @@ export default function HallsPage() {
                         onClick={handleCreateDialogOpen}
                         size="large"
                     >
-                        Create Hall
+                        {t('halls.createNew')}
                     </Button>
                 </Box>
 
                 {hallsError && (
                     <Alert severity="error" sx={{ mb: 3 }}>
-                        Failed to load halls. Please try again.
+                        {t('halls.messages.failedLoad')}
                     </Alert>
                 )}
 
@@ -201,13 +203,13 @@ export default function HallsPage() {
                             />
                         </Box>
                         <Typography variant="h6" sx={{ mb: 1 }}>
-                            No halls yet
+                            {t('halls.noHalls')}
                         </Typography>
                         <Typography variant="body2" sx={{ color: 'text.secondary', mb: 3 }}>
-                            Create your first hall to get started with floor planning
+                            {t('halls.createFirst')}
                         </Typography>
                         <Button variant="contained" onClick={handleCreateDialogOpen}>
-                            Create First Hall
+                            {t('halls.createFirstBtn')}
                         </Button>
                     </Card>
                 ) : (
@@ -257,14 +259,14 @@ export default function HallsPage() {
                                                 width: Math.min(120, (hall.width / hall.height) * 120),
                                                 height: Math.min(120, (hall.height / hall.width) * 120),
                                                 border: '2px dashed',
-                                                borderColor: 'primary.main',
+                                                borderColor: '#FB6633',
                                                 borderRadius: 1,
                                                 opacity: 0.5,
                                             }}
                                         />
                                         <Iconify
                                             icon="solar:copy-bold"
-                                            sx={{ width: 40, height: 40, color: 'primary.main' }}
+                                            sx={{ width: 40, height: 40, color: '#FB6633' }}
                                         />
                                     </Box>
                                 </CardActionArea>
@@ -278,7 +280,8 @@ export default function HallsPage() {
                                     <Stack direction="row" spacing={1} sx={{ mt: 2 }}>
                                         <Button
                                             size="small"
-                                            variant="contained"
+                                            // variant="contained"
+                                            sx={{ backgroundColor: '#FB6633' , color: 'white', ":hover": { backgroundColor: '#FB6633', opacity: 0.8 } }}
                                             startIcon={<Iconify icon="solar:copy-bold" />}
                                             onClick={(e) => {
                                                 e.stopPropagation();
@@ -286,23 +289,22 @@ export default function HallsPage() {
                                             }}
                                             fullWidth
                                         >
-                                            Open
+                                            {t('halls.buttons.open')}
                                         </Button>
                                         <IconButton
                                             size="small"
-                                            color="warning"
                                             onClick={(e) => {
                                                 e.stopPropagation();
                                                 handleEditDialogOpen(hall);
                                             }}
                                             className="edit-btn"
-                                            sx={{ transition: 'opacity 0.2s' }}
+                                            sx={{ transition: 'opacity 0.2s', color: 'white' }}
                                         >
                                             <Iconify icon="solar:pen-bold" width={18} />
                                         </IconButton>
                                         <IconButton
                                             size="small"
-                                            color="error"
+                                            color='error'
                                             onClick={(e) => {
                                                 e.stopPropagation();
                                                 handleDeleteConfirm(hall);
@@ -322,13 +324,13 @@ export default function HallsPage() {
 
             {/* Create Hall Dialog */}
             <Dialog open={createDialogOpen} onClose={handleCreateDialogClose} maxWidth="sm" fullWidth>
-                <DialogTitle>Create New Hall</DialogTitle>
+                <DialogTitle>{t('halls.dialogCreate')}</DialogTitle>
                 <DialogContent sx={{ pt: 2 }}>
                     <Stack spacing={2} sx={{ pt: 2 }}>
                         <FormControl fullWidth>
-                            <InputLabel>Branch</InputLabel>
+                            <InputLabel>{t('halls.form.branch')}</InputLabel>
                             <Select
-                                label="Branch"
+                                label={t('halls.form.branch')}
                                 value={formData.branch_id}
                                 onChange={(e) => setFormData((prev) => ({ ...prev, branch_id: e.target.value }))}
                             >
@@ -340,29 +342,29 @@ export default function HallsPage() {
                             </Select>
                         </FormControl>
                         <TextField
-                            label="Hall Name"
+                            label={t('halls.form.name')}
                             value={formData.name}
                             onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
                             fullWidth
-                            placeholder="e.g., Main Hall, VIP Hall"
+                            placeholder={t('halls.form.namePlaceholder')}
                             autoFocus
                         />
                         <TextField
-                            label="Width (px)"
+                            label={t('halls.form.width')}
                             type="number"
                             value={formData.width}
                             onChange={(e) =>
-                                setFormData((prev) => ({ ...prev, width: parseInt(e.target.value)}))
+                                setFormData((prev) => ({ ...prev, width: parseInt(e.target.value) }))
                             }
                             fullWidth
                             inputProps={{ min: 100, step: 50 }}
                         />
                         <TextField
-                            label="Height (px)"
+                            label={t('halls.form.height')}
                             type="number"
                             value={formData.height}
                             onChange={(e) =>
-                                setFormData((prev) => ({ ...prev, height: parseInt(e.target.value)}))
+                                setFormData((prev) => ({ ...prev, height: parseInt(e.target.value) }))
                             }
                             fullWidth
                             inputProps={{ min: 100, step: 50 }}
@@ -370,26 +372,27 @@ export default function HallsPage() {
                     </Stack>
                 </DialogContent>
                 <DialogActions>
-                    <Button onClick={handleCreateDialogClose}>Cancel</Button>
+                    <Button onClick={handleCreateDialogClose}>{t('halls.buttons.cancel')}</Button>
                     <Button
                         onClick={handleCreateHall}
-                        variant="contained"
+                        // variant="contained"
+                        sx={{ backgroundColor: '#FB6633', '&:hover': { backgroundColor: '#FB6633', opacity: 0.8 } }}
                         disabled={creating || !formData.name.trim() || !formData.branch_id}
                     >
-                        {creating ? 'Creating...' : 'Create Hall'}
+                        {creating ? t('halls.buttons.creating') : t('halls.buttons.create')}
                     </Button>
                 </DialogActions>
             </Dialog>
 
             {/* Edit Hall Dialog */}
             <Dialog open={editDialogOpen} onClose={handleEditDialogClose} maxWidth="sm" fullWidth>
-                <DialogTitle>Edit Hall</DialogTitle>
+                <DialogTitle>{t('halls.dialogEdit')}</DialogTitle>
                 <DialogContent sx={{ pt: 2 }}>
                     <Stack spacing={2} sx={{ pt: 1 }}>
                         <FormControl fullWidth disabled>
-                            <InputLabel>Branch</InputLabel>
+                            <InputLabel>{t('halls.form.branch')}</InputLabel>
                             <Select
-                                label="Branch"
+                                label={t('halls.form.branch')}
                                 value={formData.branch_id}
                             >
                                 {branches.map((branch) => (
@@ -400,14 +403,14 @@ export default function HallsPage() {
                             </Select>
                         </FormControl>
                         <TextField
-                            label="Hall Name"
+                            label={t('halls.form.name')}
                             value={formData.name}
                             onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
                             fullWidth
-                            placeholder="e.g., Main Hall, VIP Hall"
+                            placeholder={t('halls.form.namePlaceholder')}
                         />
                         <TextField
-                            label="Width (px)"
+                            label={t('halls.form.width')}
                             type="number"
                             value={formData.width}
                             onChange={(e) =>
@@ -417,7 +420,7 @@ export default function HallsPage() {
                             inputProps={{ min: 100, step: 50 }}
                         />
                         <TextField
-                            label="Height (px)"
+                            label={t('halls.form.height')}
                             type="number"
                             value={formData.height}
                             onChange={(e) =>
@@ -429,35 +432,35 @@ export default function HallsPage() {
                     </Stack>
                 </DialogContent>
                 <DialogActions>
-                    <Button onClick={handleEditDialogClose}>Cancel</Button>
+                    <Button onClick={handleEditDialogClose}>{t('halls.buttons.cancel')}</Button>
                     <Button
                         onClick={handleUpdateHall}
-                        variant="contained"
+                        // variant="contained"
+                        sx={{ backgroundColor: '#FB6633', '&:hover': { backgroundColor: '#FB6633', opacity: 0.8 } }}
                         disabled={updating || !formData.name.trim()}
                     >
-                        {updating ? 'Updating...' : 'Update Hall'}
+                        {updating ? t('halls.buttons.updating') : t('halls.buttons.update')}
                     </Button>
                 </DialogActions>
             </Dialog>
 
             {/* Delete Confirmation Dialog */}
             <Dialog open={deleteConfirmOpen} onClose={() => setDeleteConfirmOpen(false)}>
-                <DialogTitle>Delete Hall</DialogTitle>
+                <DialogTitle>{t('halls.dialogDelete')}</DialogTitle>
                 <DialogContent>
                     <Typography>
-                        Are you sure you want to delete <strong>{hallToDelete?.name}</strong>? This action cannot
-                        be undone.
+                        {t('halls.messages.deleteConfirm')} <strong>{hallToDelete?.name}</strong>? {t('halls.messages.deleteCannotUndo')}
                     </Typography>
                 </DialogContent>
                 <DialogActions>
-                    <Button onClick={() => setDeleteConfirmOpen(false)}>Cancel</Button>
+                    <Button onClick={() => setDeleteConfirmOpen(false)}>{t('halls.buttons.cancel')}</Button>
                     <Button
                         onClick={handleDeleteHall}
                         color="error"
                         variant="contained"
                         disabled={deleting}
                     >
-                        {deleting ? 'Deleting...' : 'Delete'}
+                        {deleting ? t('halls.buttons.deleting') : t('halls.buttons.delete')}
                     </Button>
                 </DialogActions>
             </Dialog>

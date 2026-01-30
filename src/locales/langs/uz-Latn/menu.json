@@ -657,5 +657,117 @@
     "updateSuccess": "Maxsulot muvaffaqiyatli yangilandi",
     "deleteFailed": "Maxsulotni o'chirish muvaffaq bo'lmadi",
     "saveFailed": "Maxsulotni saqlash muvaffaq bo'lmadi"
+  },
+  "halls": {
+    "Halls": "Zallar",
+    "title": "Zallarni boshqarish",
+    "description": "Restoran zallarni yarating va boshqaring (farsh rezhasi uchun)",
+    "createNew": "Zal yaratish",
+    "noHalls": "Zallar yaratilmadi",
+    "createFirst": "Birinchi zalni yaratib, farsh o'xshashilashini boshlang",
+    "createFirstBtn": "Birinchi zalni yaratish",
+    "dialogCreate": "Yangi zal yaratish",
+    "dialogEdit": "Zalni tahrirlash",
+    "dialogDelete": "Zalni o'chirish",
+    "form": {
+      "branch": "Filial",
+      "name": "Zal nomi",
+      "namePlaceholder": "masalan: Asosiy zal, VIP zal",
+      "width": "Kengligi (px)",
+      "height": "Endligi (px)"
+    },
+    "buttons": {
+      "create": "Zal yaratish",
+      "creating": "Yaratilmoqda...",
+      "update": "Zalni yangilash",
+      "updating": "Yangilanmoqda...",
+      "delete": "O'chirish",
+      "deleting": "O'chirilmoqda...",
+      "cancel": "Bekor qilish",
+      "open": "Ochish"
+    },
+    "messages": {
+      "nameRequired": "Iltimos, zal nomini kiriting",
+      "branchRequired": "Iltimos, filialni tanlang",
+      "deleteConfirm": "Haqiqatan ham",
+      "deleteCannotUndo": "Bu amalni orqaga qaytarib bo'lmaydi.",
+      "failedLoad": "Zallarni yuklash muvaffaq bo'lmadi. Iltimos, qayta urinib ko'ring."
+    }
+  },
+  "floorPlan": {
+    "title": "Farsh rejasi",
+    "backBtn": "Orqaga",
+    "tablesCount": "Stollar",
+    "addTable": "+ Qo'shish",
+    "saveChanges": "O'zgarishlarni saqlash",
+    "savingChanges": "Saqlanmoqda...",
+    "tableChanged": "stol",
+    "tablesChanged": "stollar o'zgartirildi",
+    "selectedTable": "Tanlangan stol",
+    "noTables": "Stollar yaratilmadi. \"+ Qo'shish\" ga bosing.",
+    "totalTables": "Jami stollar:",
+    "tableInfo": {
+      "tableLabel": "Stol",
+      "seatLabel": "mes",
+      "seats": "Mes",
+      "size": "O'lchov",
+      "position": "Joylashuv",
+      "rotation": "Aylantrish",
+      "degrees": "°"
+    },
+    "editDialog": {
+      "title": "Stolni tahrirlash",
+      "tableNumber": "Stol raqami",
+      "seats": "Mes",
+      "width": "Kengligi",
+      "height": "Endligi",
+      "cancel": "Bekor qilish",
+      "save": "Saqlash"
+    },
+    "createHallDialog": {
+      "title": "Yangi zal yaratish",
+      "branch": "Filial",
+      "hallName": "Zal nomi",
+      "hallNamePlaceholder": "masalan: Asosiy zal, VIP zal",
+      "width": "Kengligi (px)",
+      "height": "Endligi (px)",
+      "cancel": "Bekor qilish",
+      "create": "Zal yaratish",
+      "creating": "Yaratilmoqda..."
+    },
+    "createTableDialog": {
+      "title": "Yangi stol yaratish",
+      "tableNumber": "Stol raqami",
+      "capacity": "Sigimi (mes)",
+      "tableSize": "Stol o'lchlovi",
+      "width": "Kengligi",
+      "height": "Endligi",
+      "rotation": "Aylantrish (gradus)",
+      "infoText": "ℹ️ Stol standart joyda joylashtiriladi. Yaratilganidan keyin uni hohlagan joyga sura olamiz.",
+      "cancel": "Bekor qilish",
+      "create": "Stol yaratish",
+      "creating": "Yaratilmoqda..."
+    },
+    "editTableDialog": {
+      "title": "Stolni tahrirlash",
+      "tableNumber": "Stol raqami",
+      "seats": "Mes",
+      "tableDimensions": "Stol o'lchovlari",
+      "width": "Kengligi",
+      "height": "Endligi",
+      "rotation": "Aylantrish (gradus)",
+      "infoText": "ℹ️ Stolni suring uchun uni kanvasda surach.",
+      "cancel": "Bekor qilish",
+      "save": "O'zgarishlarni saqlash",
+      "saving": "Saqlanmoqda..."
+    },
+    "deleteDialog": {
+      "title": "Stolni o'chirish?",
+      "message": "Haqiqatan ham stolni o'chirmoqchimisiz",
+      "cannotUndo": "Bu amalni orqaga qaytarib bo'lmaydi.",
+      "cancel": "Bekor qilish",
+      "delete": "O'chirish",
+      "deleting": "O'chirilmoqda..."
+    }
   }
 }

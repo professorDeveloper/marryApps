@@ -470,7 +470,7 @@
       "edit": "Edit invoice",
       "information": "Information",
       "supplier": "Supplier",
-      "info":"Information",
+      "info": "Information",
       "statuses": {
         "pending": "Pending",
         "completed": "Completed",
@@ -680,5 +680,117 @@
     "updateSuccess": "Supplier updated successfully",
     "deleteFailed": "Failed to delete supplier",
     "saveFailed": "Failed to save supplier"
+  },
+  "halls": {
+    "Halls": "Halls",
+    "title": "Halls Management",
+    "description": "Create and manage restaurant halls for floor planning",
+    "createNew": "Create Hall",
+    "noHalls": "No halls yet",
+    "createFirst": "Create your first hall to get started with floor planning",
+    "createFirstBtn": "Create First Hall",
+    "dialogCreate": "Create New Hall",
+    "dialogEdit": "Edit Hall",
+    "dialogDelete": "Delete Hall",
+    "form": {
+      "branch": "Branch",
+      "name": "Hall Name",
+      "namePlaceholder": "e.g., Main Hall, VIP Hall",
+      "width": "Width (px)",
+      "height": "Height (px)"
+    },
+    "buttons": {
+      "create": "Create Hall",
+      "creating": "Creating...",
+      "update": "Update Hall",
+      "updating": "Updating...",
+      "delete": "Delete",
+      "deleting": "Deleting...",
+      "cancel": "Cancel",
+      "open": "Open"
+    },
+    "messages": {
+      "nameRequired": "Please enter hall name",
+      "branchRequired": "Please select a branch",
+      "deleteConfirm": "Are you sure you want to delete",
+      "deleteCannotUndo": "This action cannot be undone.",
+      "failedLoad": "Failed to load halls. Please try again."
+    }
+  },
+  "floorPlan": {
+    "title": "Floor Plan",
+    "backBtn": "Back",
+    "tablesCount": "Tables",
+    "addTable": "+ Add",
+    "saveChanges": "Save Changes",
+    "savingChanges": "Saving...",
+    "tableChanged": "table",
+    "tablesChanged": "tables changed",
+    "selectedTable": "Selected Table",
+    "noTables": "No tables yet. Click \"+ Add\" to get started.",
+    "totalTables": "Total Tables:",
+    "tableInfo": {
+      "tableLabel": "Table",
+      "seatLabel": "seats",
+      "seats": "Seats",
+      "size": "Size",
+      "position": "Position",
+      "rotation": "Rotation",
+      "degrees": "°"
+    },
+    "editDialog": {
+      "title": "Edit Table",
+      "tableNumber": "Table Number",
+      "seats": "Seats",
+      "width": "Width",
+      "height": "Height",
+      "cancel": "Cancel",
+      "save": "Save"
+    },
+    "createHallDialog": {
+      "title": "Create New Hall",
+      "branch": "Branch",
+      "hallName": "Hall Name",
+      "hallNamePlaceholder": "e.g., Main Hall, VIP Hall",
+      "width": "Width (px)",
+      "height": "Height (px)",
+      "cancel": "Cancel",
+      "create": "Create Hall",
+      "creating": "Creating..."
+    },
+    "createTableDialog": {
+      "title": "Create New Table",
+      "tableNumber": "Table Number",
+      "capacity": "Capacity (Seats)",
+      "tableSize": "Table Size",
+      "width": "Width",
+      "height": "Height",
+      "rotation": "Rotation (degrees)",
+      "infoText": "ℹ️ Table will be placed at default location. You can drag it to desired position after creation.",
+      "cancel": "Cancel",
+      "create": "Create Table",
+      "creating": "Creating..."
+    },
+    "editTableDialog": {
+      "title": "Edit Table",
+      "tableNumber": "Table Number",
+      "seats": "Seats",
+      "tableDimensions": "Table Dimensions",
+      "width": "Width",
+      "height": "Height",
+      "rotation": "Rotation (degrees)",
+      "infoText": "ℹ️ To move table, drag it on the canvas.",
+      "cancel": "Cancel",
+      "save": "Save Changes",
+      "saving": "Saving..."
+    },
+    "deleteDialog": {
+      "title": "Delete Table?",
+      "message": "Are you sure you want to delete Table",
+      "cannotUndo": "This action cannot be undone.",
+      "cancel": "Cancel",
+      "delete": "Delete",
+      "deleting": "Deleting..."
+    }
   }
 }
