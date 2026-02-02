@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState, useEffect } from 'react';
 import type { TFunction } from 'i18next';
 import type { IIngredientFormData } from 'src/types/ingredients';
 import type { CardSection, GenericEditViewConfig } from 'src/components/generic-edit-view';
@@ -172,6 +172,19 @@ export function IngredientEditView({ isNew = false, onSuccess }: IngredientEditV
 
     // Load ingredient if editing
     const { ingredient, ingredientLoading } = useGetIngredient(!isNew && id ? id : '');
+
+    // Initialize form data when ingredient loads
+    useEffect(() => {
+        if (ingredient && !isNew) {
+            setFormData({
+                name: ingredient.name || '',
+                measurement: ingredient.measurement || '',
+                group_id: ingredient.group_id || '',
+                color_code: ingredient.color_code || '#FF4842',
+                picture_url: ingredient.picture_url || null,
+            });
+        }
+    }, [ingredient, isNew]);
 
     // Build group options
     const groupOptions = useMemo(

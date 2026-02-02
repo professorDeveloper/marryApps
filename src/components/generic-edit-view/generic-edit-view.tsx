@@ -59,7 +59,13 @@ export const GenericEditView: FC<GenericEditViewProps> = ({
         if (isControlled) return; // Skip for controlled mode
 
         if (data && Object.keys(data).length > 0) {
-            setInternalFormData(data);
+            // Ensure translation fields are present (set to empty string if not provided)
+            const enrichedData = {
+                name_en: '',
+                name_ru: '',
+                ...data,
+            };
+            setInternalFormData(enrichedData);
         } else if (isNew) {
             // For new items, use initial form data
             setInternalFormData(buildInitialFormData(config));
@@ -170,7 +176,7 @@ export const GenericEditView: FC<GenericEditViewProps> = ({
                                     fullWidth
                                     // variant="contained"
                                     // color="primary"
-                                    sx={{ backgroundColor: '#FB6633', color: '#FFFFFF' }    }
+                                    sx={{ backgroundColor: '#FB6633', color: '#FFFFFF' }}
                                     type="submit"
                                     disabled={loading}
                                     startIcon={<Iconify icon="solar:check-circle-bold" />}
@@ -244,7 +250,7 @@ export const GenericEditView: FC<GenericEditViewProps> = ({
                                         disabled={loading}
                                         startIcon={<Iconify icon="solar:trash-bin-trash-bold" />}
                                     >
-                                        {t('delete')} 
+                                        {t('delete')}
                                     </Button>
                                 )}
 

@@ -158,12 +158,24 @@ export function MealEditView({ isNew = false }: MealEditViewProps) {
     // Initialize form data when meal is loaded
     useEffect(() => {
         if (meal && Object.keys(meal).length > 0) {
-            setFormData(meal);
+            // Ensure translation fields are always present
+            const enrichedMeal = {
+                name_en: '',
+                name_ru: '',
+                description_en: '',
+                description_ru: '',
+                ...meal,
+            };
+            setFormData(enrichedMeal);
         } else if (isNew && (!formData || Object.keys(formData).length === 0)) {
             // Initialize empty form for new meal
             const initialData: Record<string, any> = {
                 name: '',
+                name_en: '',
+                name_ru: '',
                 description: '',
+                description_en: '',
+                description_ru: '',
                 category_id: '',
                 department_id: '',
                 price: '',
@@ -249,10 +261,23 @@ export function MealEditView({ isNew = false }: MealEditViewProps) {
                     const translationResult = await createTranslation(translationData);
                     const name_i18n = translationResult.id;
 
+                    // Create description translation if provided
+                    let description_i18n: string | undefined = submitFormData.description_i18n;
+                    if (!description_i18n && (submitFormData.description_en || submitFormData.description_ru)) {
+                        const descriptionTranslationData: any = {
+                            en: submitFormData.description_en || submitFormData.description || '',
+                            ru: submitFormData.description_ru || submitFormData.description || '',
+                            uz: submitFormData.description || '',
+                        };
+                        const descriptionTranslationResult = await createTranslation(descriptionTranslationData);
+                        description_i18n = descriptionTranslationResult.id;
+                    }
+
                     // Create the meal
                     const result = await createMeal({
                         ...submitFormData,
                         name_i18n,
+                        description_i18n,
                     }) as any;
 
                     const newMealId = result?.id || result?.data?.id;
@@ -267,7 +292,20 @@ export function MealEditView({ isNew = false }: MealEditViewProps) {
                     router.push(paths.menu.meals.root);
                 } else if (mealId) {
                     // Update existing meal
-                    await updateMeal(mealId, submitFormData);
+                    let description_i18n: string | undefined = submitFormData.description_i18n;
+                    if (!description_i18n && (submitFormData.description_en || submitFormData.description_ru)) {
+                        const descriptionTranslationData: any = {
+                            en: submitFormData.description_en || submitFormData.description || '',
+                            ru: submitFormData.description_ru || submitFormData.description || '',
+                            uz: submitFormData.description || '',
+                        };
+                        const descriptionTranslationResult = await createTranslation(descriptionTranslationData);
+                        description_i18n = descriptionTranslationResult.id;
+                    }
+                    await updateMeal(mealId, {
+                        ...submitFormData,
+                        description_i18n,
+                    });
                     router.push(paths.menu.meals.root);
                 }
             } catch (err) {
@@ -391,11 +429,24 @@ export function MealEditView({ isNew = false }: MealEditViewProps) {
                                     const translationResult = await createTranslation(translationData);
                                     const name_i18n = translationResult.id;
 
+                                    // Create description translation if provided
+                                    let description_i18n: string | undefined = formData.description_i18n;
+                                    if (!description_i18n && (formData.description_en || formData.description_ru)) {
+                                        const descriptionTranslationData: any = {
+                                            en: formData.description_en || formData.description || '',
+                                            ru: formData.description_ru || formData.description || '',
+                                            uz: formData.description || '',
+                                        };
+                                        const descriptionTranslationResult = await createTranslation(descriptionTranslationData);
+                                        description_i18n = descriptionTranslationResult.id;
+                                    }
+
                                     // Save meal with calculations using new API
                                     const result = await createMealWithCalculations({
                                         good: {
                                             ...formData,
                                             name_i18n,
+                                            description_i18n,
                                         },
                                         ingredient_calculations: calculationsData.ingredient_calculations,
                                         compound_calculations: calculationsData.compound_calculations,

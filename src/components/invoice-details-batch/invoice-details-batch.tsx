@@ -181,7 +181,7 @@ export function InvoiceDetailsBatch({ invoiceId, storageId, supplierId, onSucces
             const batchData = batchItems.map((item) => ({
                 ingredient_id: item.ingredient_id,
                 invoice_id: invoiceId,
-                quantity: item.quantity,
+                quantity: item.quantity.toString(),
                 price_per_unit: item.price_per_unit.toString(),
                 price: item.price.toString(),
             }));

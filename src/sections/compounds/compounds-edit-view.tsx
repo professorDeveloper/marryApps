@@ -160,12 +160,24 @@ export function CompoundEditView({ compoundId, isNew = false }: CompoundEditView
     // Initialize form data when compound is loaded
     useEffect(() => {
         if (compound && Object.keys(compound).length > 0) {
-            setFormData(compound);
+            // Ensure translation fields are always present
+            const enrichedCompound = {
+                name_en: '',
+                name_ru: '',
+                description_en: '',
+                description_ru: '',
+                ...compound,
+            };
+            setFormData(enrichedCompound);
         } else if (isNew && (!formData || Object.keys(formData).length === 0)) {
             // Initialize empty form for new compound
             const initialData: Record<string, any> = {
                 name: '',
+                name_en: '',
+                name_ru: '',
                 description: '',
+                description_en: '',
+                description_ru: '',
                 department_id: '',
                 price: '',
                 quantity: '',
@@ -196,10 +208,23 @@ export function CompoundEditView({ compoundId, isNew = false }: CompoundEditView
                         name_i18n = translationResult.id;
                     }
 
+                    // Create description translation if provided
+                    let description_i18n: string | undefined = submitFormData.description_i18n;
+                    if (!description_i18n && (submitFormData.description_en || submitFormData.description_ru)) {
+                        const descriptionTranslationData: any = {
+                            en: submitFormData.description_en || submitFormData.description || '',
+                            ru: submitFormData.description_ru || submitFormData.description || '',
+                            uz: submitFormData.description || '',
+                        };
+                        const descriptionTranslationResult = await createTranslation(descriptionTranslationData);
+                        description_i18n = descriptionTranslationResult.id;
+                    }
+
                     const payload = {
                         name: submitFormData.name,
                         name_i18n,
                         description: submitFormData.description || '',
+                        description_i18n,
                         price: String(submitFormData.price || '0'),
                         quantity: Number(submitFormData.quantity),
                         measurement: submitFormData.measurement,
@@ -232,10 +257,23 @@ export function CompoundEditView({ compoundId, isNew = false }: CompoundEditView
                         name_i18n = translationResult.id;
                     }
 
+                    // Create description translation if provided
+                    let description_i18n: string | undefined = submitFormData.description_i18n;
+                    if (!description_i18n && (submitFormData.description_en || submitFormData.description_ru)) {
+                        const descriptionTranslationData: any = {
+                            en: submitFormData.description_en || submitFormData.description || '',
+                            ru: submitFormData.description_ru || submitFormData.description || '',
+                            uz: submitFormData.description || '',
+                        };
+                        const descriptionTranslationResult = await createTranslation(descriptionTranslationData);
+                        description_i18n = descriptionTranslationResult.id;
+                    }
+
                     const payload = {
                         name: submitFormData.name,
                         name_i18n,
                         description: submitFormData.description || '',
+                        description_i18n,
                         price: String(submitFormData.price),
                         quantity: Number(submitFormData.quantity),
                         measurement: submitFormData.measurement,
@@ -261,10 +299,23 @@ export function CompoundEditView({ compoundId, isNew = false }: CompoundEditView
                         name_i18n = translationResult.id;
                     }
 
+                    // Create description translation if provided
+                    let description_i18n: string | undefined = submitFormData.description_i18n;
+                    if (!description_i18n && (submitFormData.description_en || submitFormData.description_ru)) {
+                        const descriptionTranslationData: any = {
+                            en: submitFormData.description_en || submitFormData.description || '',
+                            ru: submitFormData.description_ru || submitFormData.description || '',
+                            uz: submitFormData.description || '',
+                        };
+                        const descriptionTranslationResult = await createTranslation(descriptionTranslationData);
+                        description_i18n = descriptionTranslationResult.id;
+                    }
+
                     const payload = {
                         name: submitFormData.name,
                         name_i18n,
                         description: submitFormData.description || '',
+                        description_i18n,
                         price: String(submitFormData.price),
                         quantity: Number(submitFormData.quantity),
                         measurement: submitFormData.measurement,
@@ -434,11 +485,24 @@ export function CompoundEditView({ compoundId, isNew = false }: CompoundEditView
                                     const translationResult = await createTranslation(translationData);
                                     const name_i18n = translationResult.id;
 
+                                    // Create description translation if provided
+                                    let description_i18n: string | undefined = formData.description_i18n;
+                                    if (!description_i18n && (formData.description_en || formData.description_ru)) {
+                                        const descriptionTranslationData: any = {
+                                            en: formData.description_en || formData.description || '',
+                                            ru: formData.description_ru || formData.description || '',
+                                            uz: formData.description || '',
+                                        };
+                                        const descriptionTranslationResult = await createTranslation(descriptionTranslationData);
+                                        description_i18n = descriptionTranslationResult.id;
+                                    }
+
                                     // Save compound with calculations using new API
                                     const result = await createCompoundWithCalculations({
                                         compound: {
                                             ...formData,
                                             name_i18n,
+                                            description_i18n,
                                         },
                                         ingredient_calculations: calculationsData.ingredient_calculations,
                                         compound_calculations: calculationsData.compound_calculations,

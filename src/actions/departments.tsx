@@ -199,32 +199,28 @@ export function useGetDepartment(departmentId: string) {
     };
 
     // Apply translation if available
+    let enrichedDept: any = { ...dept };
     if (dept.name_i18n) {
       const translation = translations.find((t) => t.id === dept.name_i18n);
       if (translation) {
+        // Add all translation versions for editing
+        enrichedDept.name_en = translation.en || '';
+        enrichedDept.name_ru = translation.ru || '';
+
         const langKey = getLangKey(currentLang);
         if (langKey in translation && translation[langKey]) {
-          return {
-            ...dept,
-            name: translation[langKey] as string,
-          };
+          enrichedDept.name = translation[langKey] as string;
         } else if (currentLang.startsWith('uz') && translation.uz) {
           // Fallback to default uz if uz-Latn or uz-Cyrl not available
-          return {
-            ...dept,
-            name: translation.uz,
-          };
+          enrichedDept.name = translation.uz;
         } else if (translation.en) {
           // Fallback to English as last resort
-          return {
-            ...dept,
-            name: translation.en,
-          };
+          enrichedDept.name = translation.en;
         }
       }
     }
 
-    return dept;
+    return enrichedDept;
   }, [data?.data, translations, i18n.resolvedLanguage]);
 
   const memoizedValue = useMemo(

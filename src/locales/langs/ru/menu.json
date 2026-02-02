@@ -178,7 +178,9 @@
     "storageDepartmentTitle": "Хранилище и отдел",
     "nameRequired": "Название категории обязательно",
     "storageRequired": "Выбор хранилища обязателен",
-    "departmentRequired": "Выбор отдела обязателен"
+    "departmentRequired": "Выбор отдела обязателен",
+    "nameEn": "Название (английский)",
+    "nameRu": "Название (русский)"
   },
   "semifinishedProducts": {
     "title": "Полуфабрикаты",

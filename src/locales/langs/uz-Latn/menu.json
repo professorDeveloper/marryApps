@@ -189,7 +189,9 @@
     "storageDepartmentTitle": "Ombor va bo'lim",
     "deleteConfirm": "Fayllar o'chirilsinmi?",
     "deleteMessage": "Tanlangan fayllar tizimdan butunlay o‘chiriladi va ushbu amalni bekor qilish yoki fayllarni tiklash mumkin emas.",
-    "cancel": "Bekor qilish"
+    "cancel": "Bekor qilish",
+    "nameEn": "Nomi (inglizcha)",
+    "nameRu": "Nomi (ruscha)"
   },
   "semifinishedProducts": {
     "title": "Yarim tayyor mahsulotlar",

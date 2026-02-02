@@ -191,7 +191,9 @@
     "storageDepartmentTitle": "Storage and department",
     "nameRequired": "Category name is required",
     "storageRequired": "Storage selection is required",
-    "departmentRequired": "Department selection is required"
+    "departmentRequired": "Department selection is required",
+    "nameEn": "Name (English)",
+    "nameRu": "Name (Russian)"
   },
   "semifinishedProducts": {
     "title": "Semifinished products",

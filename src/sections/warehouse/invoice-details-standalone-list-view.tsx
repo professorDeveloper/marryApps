@@ -78,6 +78,7 @@ export function InvoiceDetailsStandaloneListView() {
                     const ingredient = ingredients.find((ing) => ing.id === detail.ingredient_id);
                     return {
                         ...detail,
+                        quantity: Number(detail.quantity),
                         invoice_supplier_name: invoice?.supplier_name || 'Unknown',
                         invoice_date: invoice?.date || '',
                         ingredient_name: ingredient?.name || detail.ingredient_id,
@@ -119,6 +120,7 @@ export function InvoiceDetailsStandaloneListView() {
                     const ingredient = ingredients.find((ing: any) => ing.id === detail.ingredient_id);
                     return {
                         ...detail,
+                        quantity: Number(detail.quantity),
                         invoice_supplier_name: invoice?.supplier_name || 'Unknown',
                         invoice_date: invoice?.date || '',
                         ingredient_name: ingredient?.name || detail.ingredient_id,

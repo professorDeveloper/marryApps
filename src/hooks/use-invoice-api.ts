@@ -24,7 +24,7 @@ export interface InvoiceDetail {
     id?: string;
     invoice_id: string;
     ingredient_id: string;
-    quantity: number;
+    quantity: string | number;
     price: string;
     price_per_unit: string;
     created_at?: string;

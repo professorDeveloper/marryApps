@@ -67,7 +67,7 @@ function enrichCompounds(
     departments: any[],
     translations: ITranslationItem[] = [],
     currentLanguage: string = 'uz'
-): ICompound[] {
+): any[] {
     const departmentMap = new Map(
         departments?.map((dept: any) => [dept.id, dept.name]) || []
     );
@@ -92,10 +92,17 @@ function enrichCompounds(
     return compoundsData.map((compound) => {
         // Get localized name from translation
         let localizedName = compound.name;
+        let translationFields: any = {};
 
         if (compound.name_i18n) {
             const translation = translationMap.get(compound.name_i18n);
             if (translation) {
+                // Add translation fields for editing
+                translationFields = {
+                    name_en: translation.en || '',
+                    name_ru: translation.ru || '',
+                };
+
                 // Try to get exact language match
                 const langKey = getLangKey(currentLanguage);
                 if (translation[langKey]) {
@@ -113,6 +120,7 @@ function enrichCompounds(
         return {
             ...compound,
             name: localizedName,
+            ...translationFields,
             department_name: departmentMap.get(compound.department_id) || 'Unknown',
         };
     });
@@ -126,7 +134,7 @@ function enrichCompound(
     departments: any[],
     translations: ITranslationItem[] = [],
     currentLanguage: string = 'uz'
-): ICompound {
+): any {
     const departmentMap = new Map(
         departments?.map((dept: any) => [dept.id, dept.name]) || []
     );
@@ -150,10 +158,17 @@ function enrichCompound(
 
     // Get localized name from translation
     let localizedName = compoundData.name;
+    let translationFields: any = {};
 
     if (compoundData.name_i18n) {
         const translation = translationMap.get(compoundData.name_i18n);
         if (translation) {
+            // Add translation fields for editing
+            translationFields = {
+                name_en: translation.en || '',
+                name_ru: translation.ru || '',
+            };
+
             // Try to get exact language match
             const langKey = getLangKey(currentLanguage);
             if (translation[langKey]) {
@@ -171,6 +186,7 @@ function enrichCompound(
     return {
         ...compoundData,
         name: localizedName,
+        ...translationFields,
         department_name: departmentMap.get(compoundData.department_id) || 'Unknown',
     };
 }
@@ -300,7 +316,9 @@ export function useCreateCompound() {
             try {
                 const payload = {
                     name: formData.name,
+                    name_i18n: (formData as any).name_i18n || undefined,
                     description: formData.description || '',
+                    description_i18n: (formData as any).description_i18n || undefined,
                     price: String(formData.price),
                     quantity: Number(formData.quantity),
                     measurement: formData.measurement,
@@ -339,7 +357,9 @@ export function useUpdateCompound() {
             try {
                 const payload = {
                     name: formData.name,
+                    name_i18n: (formData as any).name_i18n || undefined,
                     description: formData.description || '',
+                    description_i18n: (formData as any).description_i18n || undefined,
                     price: String(formData.price),
                     quantity: Number(formData.quantity),
                     measurement: formData.measurement,
@@ -575,6 +595,7 @@ export function useCreateCompoundWithCalculations() {
                         name: payload.compound.name,
                         name_i18n: payload.compound.name_i18n || undefined,
                         description: payload.compound.description || '',
+                        description_i18n: payload.compound.description_i18n || undefined,
                         price: String(payload.compound.price),
                         quantity: Number(payload.compound.quantity),
                         measurement: payload.compound.measurement,

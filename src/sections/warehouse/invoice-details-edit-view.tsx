@@ -25,7 +25,7 @@ export function InvoiceDetailsEditView({ isNew = false }: { isNew?: boolean }) {
     const [invoiceOptions, setInvoiceOptions] = useState<Array<{ value: string; label: string }>>([]);
     const [ingredientOptions, setIngredientOptions] = useState<Array<{ value: string; label: string }>>([]);
     const [detailData, setDetailData] = useState<Record<string, any> | null>(null);
-    const [loading, setLoading] = useState(true);
+    const [loading, setLoading] = useState(!isNew);
 
     // Load options (invoices & ingredients) - always needed
     useEffect(() => {
@@ -52,7 +52,7 @@ export function InvoiceDetailsEditView({ isNew = false }: { isNew?: boolean }) {
         };
 
         loadOptions();
-    }, [getInvoices, getIngredients]);
+    }, []);
 
     // Load detail data when editing
     useEffect(() => {
@@ -72,7 +72,7 @@ export function InvoiceDetailsEditView({ isNew = false }: { isNew?: boolean }) {
         };
 
         loadDetailData();
-    }, [isNew, id, getInvoiceDetailById]);
+    }, [isNew, id]);
 
 
     const handleSubmit = useCallback(

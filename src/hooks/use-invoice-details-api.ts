@@ -13,7 +13,7 @@ export interface InvoiceDetail {
     id: string;
     invoice_id: string;
     ingredient_id: string;
-    quantity: number;
+    quantity: string | number;
     price: string;
     price_per_unit: string;
     created_at: string;
@@ -65,15 +65,26 @@ export function useInvoiceDetailsAPI(): UseInvoiceDetailsAPIReturn {
      */
     const getInvoiceDetailById = useCallback(async (id: string): Promise<InvoiceDetail | null> => {
         try {
-            const details = await getInvoiceDetails();
-            return details.find((d) => d.id === id) || null;
+            // Agar endpoint bo'lsa uni ishlatamiz
+            const endpoint = `${endpoints.invoice.detailsList}/${id}`;
+            const response = await fetcher<BackendResponse<InvoiceDetail>>(endpoint);
+            return response.data || null;
         } catch (error) {
-            const axiosError = error as AxiosError<any>;
-            const message = axiosError?.response?.data?.message || 'Failed to fetch invoice detail';
-            toast.error(message);
-            return null;
+            // Agar GET /id endpoint bo'lmasa, barcha details'ni olip id'si orqali qidiramiz
+            try {
+                const response = await fetcher<BackendResponse<InvoiceDetail[]>>(
+                    endpoints.invoice.detailsList
+                );
+                const details = response.data || [];
+                return details.find((d) => d.id === id) || null;
+            } catch (fallbackError) {
+                const axiosError = fallbackError as AxiosError<any>;
+                const message = axiosError?.response?.data?.message || 'Failed to fetch invoice detail';
+                toast.error(message);
+                return null;
+            }
         }
-    }, [getInvoiceDetails]);
+    }, []);
 
     /**
      * Yangi invoice detail'ni yaratadi

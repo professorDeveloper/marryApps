@@ -108,9 +108,9 @@ export function InvoicesEditViewTabs() {
             if (!formData.storage_id) {
                 throw new Error(t('warehouse.invoices.storageRequired', 'Storage is required'));
             }
-            if (!formData.total_amount) {
-                throw new Error(t('warehouse.invoices.amountRequired'));
-            }
+            // if (!formData.total_amount) {
+            //     throw new Error(t('warehouse.invoices.amountRequired'));
+            // }
 
             setIsLoading(true);
 
@@ -126,7 +126,7 @@ export function InvoicesEditViewTabs() {
                     },
                     details: details.map((item) => ({
                         ingredient_id: item.ingredient_id || item.id,
-                        quantity: item.quantity,
+                        quantity: typeof item.quantity === 'string' ? item.quantity : item.quantity.toString(),
                         price_per_unit: item.price_per_unit?.toString() || '0',
                         price: item.price?.toString() || '0',
                     })),

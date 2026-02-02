@@ -178,7 +178,9 @@
     "storageDepartmentTitle": "Омбор ва бўлим",
     "nameRequired": "Категория номи мажбурийдир",
     "storageRequired": "Омбор танлаш мажбурийдир",
-    "departmentRequired": "Бўлим танлаш мажбурийдир"
+    "departmentRequired": "Бўлим танлаш мажбурийдир",
+    "nameEn": "Номи (инглизча)",
+    "nameRu": "Номи (русча)"
   },
   "semifinishedProducts": {
     "title": "Ярим тайёр маҳсулотлар",

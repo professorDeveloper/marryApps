@@ -63,10 +63,17 @@ function enrichCategories(
     return categoriesData.map((cat) => {
         // Get localized name from translation
         let localizedName = cat.name;
+        let translationFields: any = {};
 
         if (cat.name_i18n) {
             const translation = translationMap.get(cat.name_i18n);
             if (translation) {
+                // Add translation fields for editing
+                translationFields = {
+                    name_en: translation.en || '',
+                    name_ru: translation.ru || '',
+                };
+
                 // Try to get exact language match
                 const langKey = getLangKey(currentLanguage);
                 if (translation[langKey]) {
@@ -84,6 +91,7 @@ function enrichCategories(
         return {
             ...cat,
             name: localizedName,
+            ...translationFields,
             storage_name: storageMap.get(cat.storage_id) || cat.storage_id || '-',
             department_name: departmentMap.get(cat.department_id) || cat.department_id || '-',
         };

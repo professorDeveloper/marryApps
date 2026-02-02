@@ -320,7 +320,9 @@ export function useCreateMeal() {
             try {
                 const payload = {
                     name: data.name,
+                    name_i18n: (data as any).name_i18n || undefined,
                     description: data.description,
+                    description_i18n: (data as any).description_i18n || undefined,
                     category_id: data.category_id,
                     department_id: data.department_id,
                     picture_url: data.picture_url || null,
@@ -377,7 +379,9 @@ export function useUpdateMeal() {
             try {
                 const payload = {
                     name: data.name,
+                    name_i18n: (data as any).name_i18n || undefined,
                     description: data.description,
+                    description_i18n: (data as any).description_i18n || undefined,
                     category_id: data.category_id,
                     department_id: data.department_id,
                     picture_url: data.picture_url || null,
@@ -632,6 +636,7 @@ export function useCreateMealWithCalculations() {
                         name: payload.good.name,
                         name_i18n: payload.good.name_i18n || undefined,
                         description: payload.good.description,
+                        description_i18n: payload.good.description_i18n || undefined,
                         category_id: payload.good.category_id,
                         department_id: payload.good.department_id,
                         picture_url: payload.good.picture_url || null,

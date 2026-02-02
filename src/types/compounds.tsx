@@ -13,6 +13,10 @@ export type ICompound = {
     name: string;
     name_i18n?: string;
     description?: string;
+    description_i18n?: string;
+    description_en?: string;
+    description_ru?: string;
+    description_uz?: string;
     quantity: number;
     measurement: string;
     picture_url?: string | null;

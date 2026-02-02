@@ -17,6 +17,10 @@ export type IMealAPIResponse = {
     name_ru?: string;
     name_uz?: string;
     description: string;
+    description_i18n?: string;
+    description_en?: string;
+    description_ru?: string;
+    description_uz?: string;
     category_id: string;
     department_id: string;
     picture_url: string | null;
@@ -37,6 +41,10 @@ export type IMealsItem = {
     name_ru?: string;
     name_uz?: string;
     description: string;
+    description_i18n?: string;
+    description_en?: string;
+    description_ru?: string;
+    description_uz?: string;
     category_id: string;
     category?: {
         id: string;

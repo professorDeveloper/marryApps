@@ -101,9 +101,9 @@ export function InvoiceInfoEditView({
                 if (!formData.storage_id) {
                     throw new Error(t('warehouse.invoices.storageRequired', 'Storage is required'));
                 }
-                if (!formData.total_amount) {
-                    throw new Error(t('warehouse.invoices.amountRequired'));
-                }
+                // if (!formData.total_amount) {
+                //     throw new Error(t('warehouse.invoices.amountRequired'));
+                // }
 
                 // If using batch flow with details, call the batch submit handler
                 if (onInvoiceSubmit && detailsData && detailsData.length > 0) {
@@ -204,13 +204,13 @@ export function InvoiceInfoEditView({
                     { value: 'cancelled', label: t('warehouse.invoices.statuses.cancelled') },
                 ],
             },
-            {
-                key: 'total_amount',
-                label: t('warehouse.invoices.totalAmount'),
-                type: 'text',
-                required: true,
-                defaultValue: '',
-            },
+            // {
+            //     key: 'total_amount',
+            //     label: t('warehouse.invoices.totalAmount'),
+            //     type: 'text',
+            //     required: true,
+            //     defaultValue: '',
+            // },
         ],
     };
 
