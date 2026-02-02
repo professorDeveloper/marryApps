@@ -551,6 +551,7 @@
     "pictureUrl": "Picture URL",
     "id": "ID",
     "add": "Add ingredient",
+    "addGroup": "Add ingredient groups",
     "edit": "Edit ingredient",
     "new": "New ingredient",
     "deleteConfirm": "Delete ingredient",

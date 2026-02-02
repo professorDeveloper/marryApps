@@ -298,12 +298,6 @@ export function GenericTableView<T extends Record<string, any>>({
                 display: 'flex',
                 alignItems: 'center',
               },
-              '& .MuiDataGrid-virtualScroller': {
-                overflow: 'visible !important',
-              },
-              '& .MuiDataGrid-main': {
-                overflow: 'visible',
-              },
               '& .MuiDataGrid-cell:focus, & .MuiDataGrid-cell:focus-within': {
                 outline: 'none',
               },

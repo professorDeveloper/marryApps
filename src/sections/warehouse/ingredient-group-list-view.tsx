@@ -270,7 +270,7 @@ export function IngredientGroupListView() {
           ],
         }}
         addButton={{
-          label: t('warehouse.add'),
+          label: t('warehouse.addGroup'),
           href: paths.warehouse.ingredients_group.new,
         }}
         filterOptions={{}}

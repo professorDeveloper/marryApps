@@ -566,6 +566,7 @@
     "pictureUrl": "Surat URL",
     "id": "ID",
     "add": "Maxsulot qo'shish",
+    "addGroup": "Maxsulot guruhlarini qo'shish",
     "edit": "Maxsulot tahrir qilish",
     "new": "Yangi maxsulot",
     "deleteConfirm": "Maxsulotni o'chirish",
