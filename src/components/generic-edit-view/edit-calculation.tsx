@@ -57,6 +57,11 @@ interface Ingredient {
     brand_id: string;
     group_id: string;
     picture_url: string;
+    price_per_unit?: string | number;
+    name_i18n?: string;
+    color_code?: string;
+    created_at?: string;
+    updated_at?: string;
 }
 
 interface IngredientGroup {
@@ -252,9 +257,8 @@ const ProductCalculator = ({ compoundId, mealId, onEntityCreated, onCalculations
             try {
                 setLoading(true);
 
-                const [ingredientsResponse, invoiceDetailsResponse, ingredientGroupsResponse] = await Promise.all([
+                const [ingredientsResponse, ingredientGroupsResponse] = await Promise.all([
                     fetcher<BackendResponse<Ingredient[]> | Ingredient[]>(endpoints.ingredient.list),
-                    fetcher<BackendResponse<InvoiceDetail[]> | InvoiceDetail[]>(endpoints.invoice.detailsList),
                     fetcher<BackendResponse<IngredientGroup[]> | IngredientGroup[]>(endpoints.ingredientGroups.list),
                 ]);
 
@@ -264,18 +268,6 @@ const ProductCalculator = ({ compoundId, mealId, onEntityCreated, onCalculations
                 } else if (ingredientsResponse?.data && Array.isArray(ingredientsResponse.data)) {
                     ingredientsData = ingredientsResponse.data;
                 }
-
-                let invoiceDetailsData: InvoiceDetail[] = [];
-                if (Array.isArray(invoiceDetailsResponse)) {
-                    invoiceDetailsData = invoiceDetailsResponse;
-                } else if (invoiceDetailsResponse?.data && Array.isArray(invoiceDetailsResponse.data)) {
-                    invoiceDetailsData = invoiceDetailsResponse.data;
-                }
-
-                const priceMap = new Map<string, number>();
-                invoiceDetailsData.forEach(detail => {
-                    priceMap.set(detail.ingredient_id, parseFloat(detail.price_per_unit));
-                });
 
                 let ingredientGroupsData: IngredientGroup[] = [];
                 if (Array.isArray(ingredientGroupsResponse)) {
@@ -292,7 +284,7 @@ const ProductCalculator = ({ compoundId, mealId, onEntityCreated, onCalculations
                 const enrichedIngredients = (Array.isArray(ingredientsData) ? ingredientsData : [])
                     .map(ingredient => ({
                         ...ingredient,
-                        price_per_unit: priceMap.get(ingredient.id) || 0,
+                        price_per_unit: parseFloat(ingredient.price_per_unit?.toString() || '0'),
                         group_name: groupNameMap.get(ingredient.group_id) || '',
                     }));
 
