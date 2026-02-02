@@ -19,8 +19,8 @@ SELECT
   COALESCE(SUM(t.remaining_amount), 0)::numeric(15,2) as remaining_amount
 FROM (
   SELECT
-    (GREATEST((ii.counted_quantity - COALESCE(st.quantity, 0)), 0)::numeric * ing.price_per_unit)::numeric(15,2) as surplus_amount,
-    (GREATEST((COALESCE(st.quantity, 0) - ii.counted_quantity), 0)::numeric * ing.price_per_unit)::numeric(15,2) as shortage_amount,
+    (GREATEST((ii.counted_quantity - COALESCE(st.quantity, 0::numeric)), 0::numeric) * ing.price_per_unit)::numeric(15,2) as surplus_amount,
+    (GREATEST((COALESCE(st.quantity, 0::numeric) - ii.counted_quantity), 0::numeric) * ing.price_per_unit)::numeric(15,2) as shortage_amount,
     (ii.counted_quantity::numeric * ing.price_per_unit)::numeric(15,2) as remaining_amount
   FROM inventories inv
   JOIN inventory_items ii
@@ -119,6 +119,18 @@ func (q *Queries) DeleteInventory(ctx context.Context, id uuid.UUID) error {
 	return err
 }
 
+const deleteInventoryItem = `-- name: DeleteInventoryItem :exec
+UPDATE inventory_items
+SET deleted_at = EXTRACT(EPOCH FROM NOW())::BIGINT,
+    updated_at = NOW()
+WHERE id = $1 AND deleted_at = 0
+`
+
+func (q *Queries) DeleteInventoryItem(ctx context.Context, id uuid.UUID) error {
+	_, err := q.db.Exec(ctx, deleteInventoryItem, id)
+	return err
+}
+
 const getAllInventories = `-- name: GetAllInventories :many
 SELECT id, number, date, storage_id, description, description_i18n, status,
        surplus_amount, shortage_amount, remaining_amount,
@@ -154,6 +166,47 @@ func (q *Queries) GetAllInventories(ctx context.Context, arg GetAllInventoriesPa
 			&i.SurplusAmount,
 			&i.ShortageAmount,
 			&i.RemainingAmount,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.DeletedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getAllInventoryItems = `-- name: GetAllInventoryItems :many
+SELECT id, inventory_id, ingredient_id, counted_quantity, created_at, updated_at, deleted_at
+FROM inventory_items
+WHERE deleted_at = 0
+ORDER BY created_at DESC
+LIMIT $1 OFFSET $2
+`
+
+type GetAllInventoryItemsParams struct {
+	Limit  int32 `json:"limit"`
+	Offset int32 `json:"offset"`
+}
+
+func (q *Queries) GetAllInventoryItems(ctx context.Context, arg GetAllInventoryItemsParams) ([]InventoryItem, error) {
+	rows, err := q.db.Query(ctx, getAllInventoryItems, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []InventoryItem
+	for rows.Next() {
+		var i InventoryItem
+		if err := rows.Scan(
+			&i.ID,
+			&i.InventoryID,
+			&i.IngredientID,
+			&i.CountedQuantity,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.DeletedAt,
@@ -297,6 +350,69 @@ func (q *Queries) GetInventoryByID(ctx context.Context, id uuid.UUID) (Inventory
 	return i, err
 }
 
+const getInventoryItemByID = `-- name: GetInventoryItemByID :one
+SELECT id, inventory_id, ingredient_id, counted_quantity, created_at, updated_at, deleted_at
+FROM inventory_items
+WHERE id = $1 AND deleted_at = 0
+`
+
+func (q *Queries) GetInventoryItemByID(ctx context.Context, id uuid.UUID) (InventoryItem, error) {
+	row := q.db.QueryRow(ctx, getInventoryItemByID, id)
+	var i InventoryItem
+	err := row.Scan(
+		&i.ID,
+		&i.InventoryID,
+		&i.IngredientID,
+		&i.CountedQuantity,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
+	)
+	return i, err
+}
+
+const getInventoryItemsByInventoryID = `-- name: GetInventoryItemsByInventoryID :many
+SELECT id, inventory_id, ingredient_id, counted_quantity, created_at, updated_at, deleted_at
+FROM inventory_items
+WHERE inventory_id = $1 AND deleted_at = 0
+ORDER BY created_at DESC
+LIMIT $2 OFFSET $3
+`
+
+type GetInventoryItemsByInventoryIDParams struct {
+	InventoryID uuid.UUID `json:"inventory_id"`
+	Limit       int32     `json:"limit"`
+	Offset      int32     `json:"offset"`
+}
+
+func (q *Queries) GetInventoryItemsByInventoryID(ctx context.Context, arg GetInventoryItemsByInventoryIDParams) ([]InventoryItem, error) {
+	rows, err := q.db.Query(ctx, getInventoryItemsByInventoryID, arg.InventoryID, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []InventoryItem
+	for rows.Next() {
+		var i InventoryItem
+		if err := rows.Scan(
+			&i.ID,
+			&i.InventoryID,
+			&i.IngredientID,
+			&i.CountedQuantity,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.DeletedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getInventoryItemsComputedAll = `-- name: GetInventoryItemsComputedAll :many
 SELECT
   ii.id as inventory_item_id,
@@ -307,12 +423,12 @@ SELECT
   ing.picture_url as ingredient_picture_url,
   ing.color_code as ingredient_color_code,
   ing.brand_id as ingredient_brand_id,
-  COALESCE(st.quantity, 0) as system_quantity,
+  COALESCE(st.quantity, 0::numeric) as system_quantity,
   ii.counted_quantity as counted_quantity,
-  (ii.counted_quantity - COALESCE(st.quantity, 0))::bigint as difference_quantity,
+  (ii.counted_quantity - COALESCE(st.quantity, 0::numeric))::numeric(15,6) as difference_quantity,
   ing.price_per_unit as price_per_unit,
-  (GREATEST((ii.counted_quantity - COALESCE(st.quantity, 0)), 0)::numeric * ing.price_per_unit)::numeric(15,2) as surplus_amount,
-  (GREATEST((COALESCE(st.quantity, 0) - ii.counted_quantity), 0)::numeric * ing.price_per_unit)::numeric(15,2) as shortage_amount,
+  (GREATEST((ii.counted_quantity - COALESCE(st.quantity, 0::numeric)), 0::numeric) * ing.price_per_unit)::numeric(15,2) as surplus_amount,
+  (GREATEST((COALESCE(st.quantity, 0::numeric) - ii.counted_quantity), 0::numeric) * ing.price_per_unit)::numeric(15,2) as shortage_amount,
   (ii.counted_quantity::numeric * ing.price_per_unit)::numeric(15,2) as remaining_amount
 FROM inventories inv
 JOIN inventory_items ii
@@ -338,9 +454,9 @@ type GetInventoryItemsComputedAllRow struct {
 	IngredientPictureUrl  *string             `json:"ingredient_picture_url"`
 	IngredientColorCode   *string             `json:"ingredient_color_code"`
 	IngredientBrandID     pgtype.UUID         `json:"ingredient_brand_id"`
-	SystemQuantity        int64               `json:"system_quantity"`
-	CountedQuantity       int64               `json:"counted_quantity"`
-	DifferenceQuantity    int64               `json:"difference_quantity"`
+	SystemQuantity        pgtype.Numeric      `json:"system_quantity"`
+	CountedQuantity       pgtype.Numeric      `json:"counted_quantity"`
+	DifferenceQuantity    pgtype.Numeric      `json:"difference_quantity"`
 	PricePerUnit          pgtype.Numeric      `json:"price_per_unit"`
 	SurplusAmount         pgtype.Numeric      `json:"surplus_amount"`
 	ShortageAmount        pgtype.Numeric      `json:"shortage_amount"`
@@ -564,6 +680,34 @@ func (q *Queries) UpdateInventoryAmounts(ctx context.Context, arg UpdateInventor
 	return i, err
 }
 
+const updateInventoryItem = `-- name: UpdateInventoryItem :one
+UPDATE inventory_items
+SET counted_quantity = $2,
+    updated_at = NOW()
+WHERE id = $1 AND deleted_at = 0
+RETURNING id, inventory_id, ingredient_id, counted_quantity, created_at, updated_at, deleted_at
+`
+
+type UpdateInventoryItemParams struct {
+	ID              uuid.UUID      `json:"id"`
+	CountedQuantity pgtype.Numeric `json:"counted_quantity"`
+}
+
+func (q *Queries) UpdateInventoryItem(ctx context.Context, arg UpdateInventoryItemParams) (InventoryItem, error) {
+	row := q.db.QueryRow(ctx, updateInventoryItem, arg.ID, arg.CountedQuantity)
+	var i InventoryItem
+	err := row.Scan(
+		&i.ID,
+		&i.InventoryID,
+		&i.IngredientID,
+		&i.CountedQuantity,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
+	)
+	return i, err
+}
+
 const upsertInventoryItem = `-- name: UpsertInventoryItem :one
 
 INSERT INTO inventory_items (id, inventory_id, ingredient_id, counted_quantity)
@@ -577,10 +721,10 @@ RETURNING id, inventory_id, ingredient_id, counted_quantity, created_at, updated
 `
 
 type UpsertInventoryItemParams struct {
-	ID              uuid.UUID `json:"id"`
-	InventoryID     uuid.UUID `json:"inventory_id"`
-	IngredientID    uuid.UUID `json:"ingredient_id"`
-	CountedQuantity int64     `json:"counted_quantity"`
+	ID              uuid.UUID      `json:"id"`
+	InventoryID     uuid.UUID      `json:"inventory_id"`
+	IngredientID    uuid.UUID      `json:"ingredient_id"`
+	CountedQuantity pgtype.Numeric `json:"counted_quantity"`
 }
 
 // ==================== INVENTORY ITEMS ====================

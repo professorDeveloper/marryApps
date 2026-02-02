@@ -828,7 +828,7 @@ type GetCompoundIngredientBreakdownRow struct {
 	IngredientName    *string             `json:"ingredient_name"`
 	RequiredQuantity  int64               `json:"required_quantity"`
 	Measurement       NullMeasurementType `json:"measurement"`
-	AvailableQuantity int64               `json:"available_quantity"`
+	AvailableQuantity pgtype.Numeric      `json:"available_quantity"`
 }
 
 func (q *Queries) GetCompoundIngredientBreakdown(ctx context.Context, arg GetCompoundIngredientBreakdownParams) ([]GetCompoundIngredientBreakdownRow, error) {

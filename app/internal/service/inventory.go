@@ -89,6 +89,107 @@ func (s *InventoryS) GetAllInventories(ctx context.Context, limit, offset int32)
 	return resp, nil
 }
 
+func (s *InventoryS) GetAllInventoryItems(ctx context.Context, inventoryID *string, limit, offset int32) ([]*model.InventoryItemResponse, error) {
+	var (
+		items []pg.InventoryItem
+		err   error
+	)
+
+	if inventoryID != nil && *inventoryID != "" {
+		invID, err := uuid.Parse(*inventoryID)
+		if err != nil {
+			return nil, fmt.Errorf("invalid inventory id: %w", err)
+		}
+		items, err = s.repo.Tenant(ctx).GetInventoryItemsByInventoryID(ctx, pg.GetInventoryItemsByInventoryIDParams{
+			InventoryID: invID,
+			Limit:       limit,
+			Offset:      offset,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("failed to get inventory items: %w", err)
+		}
+	} else {
+		items, err = s.repo.Tenant(ctx).GetAllInventoryItems(ctx, pg.GetAllInventoryItemsParams{Limit: limit, Offset: offset})
+		if err != nil {
+			return nil, fmt.Errorf("failed to get inventory items: %w", err)
+		}
+	}
+
+	resp := make([]*model.InventoryItemResponse, 0, len(items))
+	for _, item := range items {
+		resp = append(resp, toInventoryItemResponse(item))
+	}
+	return resp, nil
+}
+
+func (s *InventoryS) UpdateInventoryItem(ctx context.Context, inventoryItemID string, req *model.UpdateInventoryItemRequest) (*model.InventoryItemResponse, error) {
+	itemID, err := uuid.Parse(inventoryItemID)
+	if err != nil {
+		return nil, fmt.Errorf("invalid inventory item id: %w", err)
+	}
+
+	qty := pgtype.Numeric{}
+	if err := qty.Scan(req.CountedQuantity); err != nil {
+		return nil, fmt.Errorf("invalid counted_quantity: %w", err)
+	}
+
+	updated, err := s.repo.Tenant(ctx).UpdateInventoryItem(ctx, pg.UpdateInventoryItemParams{
+		ID:              itemID,
+		CountedQuantity: qty,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to update inventory item: %w", err)
+	}
+
+	totals, err := s.repo.Tenant(ctx).CalculateInventoryTotals(ctx, updated.InventoryID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to calculate inventory totals: %w", err)
+	}
+
+	if _, err := s.repo.Tenant(ctx).UpdateInventoryAmounts(ctx, pg.UpdateInventoryAmountsParams{
+		ID:              updated.InventoryID,
+		SurplusAmount:   totals.SurplusAmount,
+		ShortageAmount:  totals.ShortageAmount,
+		RemainingAmount: totals.RemainingAmount,
+	}); err != nil {
+		return nil, fmt.Errorf("failed to update inventory amounts: %w", err)
+	}
+
+	return toInventoryItemResponse(updated), nil
+}
+
+func (s *InventoryS) DeleteInventoryItem(ctx context.Context, inventoryItemID string) error {
+	itemID, err := uuid.Parse(inventoryItemID)
+	if err != nil {
+		return fmt.Errorf("invalid inventory item id: %w", err)
+	}
+
+	item, err := s.repo.Tenant(ctx).GetInventoryItemByID(ctx, itemID)
+	if err != nil {
+		return fmt.Errorf("failed to get inventory item: %w", err)
+	}
+
+	if err := s.repo.Tenant(ctx).DeleteInventoryItem(ctx, itemID); err != nil {
+		return fmt.Errorf("failed to delete inventory item: %w", err)
+	}
+
+	totals, err := s.repo.Tenant(ctx).CalculateInventoryTotals(ctx, item.InventoryID)
+	if err != nil {
+		return fmt.Errorf("failed to calculate inventory totals: %w", err)
+	}
+
+	if _, err := s.repo.Tenant(ctx).UpdateInventoryAmounts(ctx, pg.UpdateInventoryAmountsParams{
+		ID:              item.InventoryID,
+		SurplusAmount:   totals.SurplusAmount,
+		ShortageAmount:  totals.ShortageAmount,
+		RemainingAmount: totals.RemainingAmount,
+	}); err != nil {
+		return fmt.Errorf("failed to update inventory amounts: %w", err)
+	}
+
+	return nil
+}
+
 func (s *InventoryS) UpsertInventoryItems(ctx context.Context, inventoryID string, req *model.UpsertInventoryItemsRequest) ([]*model.InventoryItemComputedResponse, error) {
 	invID, err := uuid.Parse(inventoryID)
 	if err != nil {
@@ -106,10 +207,14 @@ func (s *InventoryS) UpsertInventoryItems(ctx context.Context, inventoryID strin
 		}
 
 		_, err = s.repo.Tenant(ctx).UpsertInventoryItem(ctx, pg.UpsertInventoryItemParams{
-			ID:              uuid.New(),
-			InventoryID:     invID,
-			IngredientID:    ingID,
-			CountedQuantity: item.CountedQuantity,
+			ID:           uuid.New(),
+			InventoryID:  invID,
+			IngredientID: ingID,
+			CountedQuantity: func() pgtype.Numeric {
+				n := pgtype.Numeric{}
+				_ = n.Scan(item.CountedQuantity)
+				return n
+			}(),
 		})
 		if err != nil {
 			return nil, fmt.Errorf("failed to upsert inventory item: %w", err)
@@ -119,6 +224,20 @@ func (s *InventoryS) UpsertInventoryItems(ctx context.Context, inventoryID strin
 	rows, err := s.repo.Tenant(ctx).GetInventoryItemsComputedAll(ctx, invID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get inventory items: %w", err)
+	}
+
+	totals, err := s.repo.Tenant(ctx).CalculateInventoryTotals(ctx, invID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to calculate inventory totals: %w", err)
+	}
+
+	if _, err := s.repo.Tenant(ctx).UpdateInventoryAmounts(ctx, pg.UpdateInventoryAmountsParams{
+		ID:              invID,
+		SurplusAmount:   totals.SurplusAmount,
+		ShortageAmount:  totals.ShortageAmount,
+		RemainingAmount: totals.RemainingAmount,
+	}); err != nil {
+		return nil, fmt.Errorf("failed to update inventory amounts: %w", err)
 	}
 
 	resp := make([]*model.InventoryItemComputedResponse, 0, len(rows))
@@ -333,12 +452,26 @@ func toInventoryItemComputedResponse(row pg.GetInventoryItemsComputedAllRow) *mo
 		IngredientPictureUrl:  row.IngredientPictureUrl,
 		IngredientColorCode:   row.IngredientColorCode,
 		IngredientBrandID:     brandID,
-		SystemQuantity:        row.SystemQuantity,
-		CountedQuantity:       row.CountedQuantity,
-		DifferenceQuantity:    row.DifferenceQuantity,
+		SystemQuantity:        anyNumericToStr(row.SystemQuantity),
+		CountedQuantity:       anyNumericToStr(row.CountedQuantity),
+		DifferenceQuantity:    anyNumericToStr(row.DifferenceQuantity),
 		PricePerUnit:          numericToString(row.PricePerUnit),
 		SurplusAmount:         numericToString(row.SurplusAmount),
 		ShortageAmount:        numericToString(row.ShortageAmount),
 		RemainingAmount:       numericToString(row.RemainingAmount),
 	}
+}
+
+func toInventoryItemResponse(item pg.InventoryItem) *model.InventoryItemResponse {
+	resp := &model.InventoryItemResponse{
+		ID:              item.ID.String(),
+		InventoryID:     item.InventoryID.String(),
+		IngredientID:    item.IngredientID.String(),
+		CountedQuantity: numericToString(item.CountedQuantity),
+	}
+
+	resp.CreatedAt = timestampToTime(item.CreatedAt)
+	resp.UpdatedAt = timestampToTime(item.UpdatedAt)
+
+	return resp
 }

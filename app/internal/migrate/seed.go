@@ -411,12 +411,19 @@ func seedTenantDB(ctx context.Context, db pg.DBTX) error {
 			continue
 		}
 
+		// Convert quantity to pgtype.Numeric
+		var quantityNum pgtype.Numeric
+		if err := quantityNum.Scan(detail.quantity); err != nil {
+			log.Printf("  ⚠️  Error converting quantity: %v", err)
+			continue
+		}
+
 		// Insert invoice detail
 		_, err := queries.CreateInvoiceDetail(ctx, pg.CreateInvoiceDetailParams{
 			ID:           detailID,
 			InvoiceID:    invoiceIDs[detail.invoiceIdx],
 			IngredientID: ingredientIDs[detail.ingredientIdx],
-			Quantity:     detail.quantity,
+			Quantity:     quantityNum,
 			Price:        totalPriceNum,
 			PricePerUnit: pricePerUnitNum,
 		})

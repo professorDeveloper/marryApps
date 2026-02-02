@@ -339,6 +339,55 @@ type CompoundsDetail struct {
 	DeletedAt    *int64             `json:"deleted_at"`
 }
 
+type Deduction struct {
+	ID              uuid.UUID          `json:"id"`
+	Number          int64              `json:"number"`
+	Date            pgtype.Date        `json:"date"`
+	ActGroupID      pgtype.UUID        `json:"act_group_id"`
+	StorageID       uuid.UUID          `json:"storage_id"`
+	Description     *string            `json:"description"`
+	DescriptionI18n pgtype.UUID        `json:"description_i18n"`
+	Status          string             `json:"status"`
+	Balance         pgtype.Numeric     `json:"balance"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
+	DeletedAt       int64              `json:"deleted_at"`
+}
+
+type DeductionActGroup struct {
+	ID        uuid.UUID          `json:"id"`
+	Name      string             `json:"name"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
+	DeletedAt int64              `json:"deleted_at"`
+}
+
+type DeductionItem struct {
+	ID           uuid.UUID          `json:"id"`
+	DeductionID  uuid.UUID          `json:"deduction_id"`
+	IngredientID pgtype.UUID        `json:"ingredient_id"`
+	GoodID       pgtype.UUID        `json:"good_id"`
+	CompoundID   pgtype.UUID        `json:"compound_id"`
+	Quantity     pgtype.Numeric     `json:"quantity"`
+	CreatedAt    pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
+	DeletedAt    int64              `json:"deleted_at"`
+}
+
+type DeductionItemIngredient struct {
+	ID              uuid.UUID          `json:"id"`
+	DeductionItemID uuid.UUID          `json:"deduction_item_id"`
+	IngredientID    uuid.UUID          `json:"ingredient_id"`
+	Quantity        pgtype.Numeric     `json:"quantity"`
+	StockBefore     pgtype.Numeric     `json:"stock_before"`
+	StockAfter      pgtype.Numeric     `json:"stock_after"`
+	PricePerUnit    pgtype.Numeric     `json:"price_per_unit"`
+	Amount          pgtype.Numeric     `json:"amount"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
+	DeletedAt       int64              `json:"deleted_at"`
+}
+
 type Department struct {
 	ID         uuid.UUID          `json:"id"`
 	Name       string             `json:"name"`
@@ -427,7 +476,7 @@ type IngredientGroup struct {
 type IngredientStock struct {
 	ID           uuid.UUID          `json:"id"`
 	IngredientID uuid.UUID          `json:"ingredient_id"`
-	Quantity     int64              `json:"quantity"`
+	Quantity     pgtype.Numeric     `json:"quantity"`
 	BranchID     pgtype.UUID        `json:"branch_id"`
 	CreatedAt    pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
@@ -455,7 +504,7 @@ type InventoryItem struct {
 	ID              uuid.UUID          `json:"id"`
 	InventoryID     uuid.UUID          `json:"inventory_id"`
 	IngredientID    uuid.UUID          `json:"ingredient_id"`
-	CountedQuantity int64              `json:"counted_quantity"`
+	CountedQuantity pgtype.Numeric     `json:"counted_quantity"`
 	CreatedAt       pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
 	DeletedAt       int64              `json:"deleted_at"`
@@ -477,7 +526,7 @@ type InvoiceDetailed struct {
 	ID           uuid.UUID          `json:"id"`
 	InvoiceID    uuid.UUID          `json:"invoice_id"`
 	IngredientID uuid.UUID          `json:"ingredient_id"`
-	Quantity     int64              `json:"quantity"`
+	Quantity     pgtype.Numeric     `json:"quantity"`
 	Price        pgtype.Numeric     `json:"price"`
 	PricePerUnit pgtype.Numeric     `json:"price_per_unit"`
 	CreatedAt    pgtype.Timestamptz `json:"created_at"`

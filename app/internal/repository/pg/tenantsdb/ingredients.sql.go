@@ -56,14 +56,14 @@ RETURNING id, ingredient_id, quantity, branch_id, storage_id, created_at, update
 `
 
 type AddToIngredientStockParams struct {
-	ID       uuid.UUID `json:"id"`
-	Quantity int64     `json:"quantity"`
+	ID       uuid.UUID      `json:"id"`
+	Quantity pgtype.Numeric `json:"quantity"`
 }
 
 type AddToIngredientStockRow struct {
 	ID           uuid.UUID          `json:"id"`
 	IngredientID uuid.UUID          `json:"ingredient_id"`
-	Quantity     int64              `json:"quantity"`
+	Quantity     pgtype.Numeric     `json:"quantity"`
 	BranchID     pgtype.UUID        `json:"branch_id"`
 	StorageID    pgtype.UUID        `json:"storage_id"`
 	CreatedAt    pgtype.Timestamptz `json:"created_at"`
@@ -227,17 +227,17 @@ RETURNING id, ingredient_id, quantity, branch_id, storage_id, created_at, update
 `
 
 type CreateIngredientStockParams struct {
-	ID           uuid.UUID   `json:"id"`
-	IngredientID uuid.UUID   `json:"ingredient_id"`
-	Quantity     int64       `json:"quantity"`
-	BranchID     pgtype.UUID `json:"branch_id"`
-	StorageID    pgtype.UUID `json:"storage_id"`
+	ID           uuid.UUID      `json:"id"`
+	IngredientID uuid.UUID      `json:"ingredient_id"`
+	Quantity     pgtype.Numeric `json:"quantity"`
+	BranchID     pgtype.UUID    `json:"branch_id"`
+	StorageID    pgtype.UUID    `json:"storage_id"`
 }
 
 type CreateIngredientStockRow struct {
 	ID           uuid.UUID          `json:"id"`
 	IngredientID uuid.UUID          `json:"ingredient_id"`
-	Quantity     int64              `json:"quantity"`
+	Quantity     pgtype.Numeric     `json:"quantity"`
 	BranchID     pgtype.UUID        `json:"branch_id"`
 	StorageID    pgtype.UUID        `json:"storage_id"`
 	CreatedAt    pgtype.Timestamptz `json:"created_at"`
@@ -301,6 +301,28 @@ WHERE id = $1 AND deleted_at = 0
 func (q *Queries) DeleteIngredientStock(ctx context.Context, id uuid.UUID) error {
 	_, err := q.db.Exec(ctx, deleteIngredientStock, id)
 	return err
+}
+
+const ensureIngredientStockByStorage = `-- name: EnsureIngredientStockByStorage :one
+INSERT INTO ingredient_stock (id, ingredient_id, storage_id, quantity, deleted_at)
+VALUES ($1, $2, $3, 0, 0)
+ON CONFLICT (ingredient_id, storage_id)
+DO UPDATE SET deleted_at = 0, updated_at = NOW()
+RETURNING id
+`
+
+type EnsureIngredientStockByStorageParams struct {
+	ID           uuid.UUID   `json:"id"`
+	IngredientID uuid.UUID   `json:"ingredient_id"`
+	StorageID    pgtype.UUID `json:"storage_id"`
+}
+
+// EnsureIngredientStockByStorage ensures a stock row exists for (ingredient_id, storage_id)
+func (q *Queries) EnsureIngredientStockByStorage(ctx context.Context, arg EnsureIngredientStockByStorageParams) (uuid.UUID, error) {
+	row := q.db.QueryRow(ctx, ensureIngredientStockByStorage, arg.ID, arg.IngredientID, arg.StorageID)
+	var id uuid.UUID
+	err := row.Scan(&id)
+	return id, err
 }
 
 const getAllIngredientGroups = `-- name: GetAllIngredientGroups :many
@@ -440,7 +462,7 @@ type GetAllIngredientStockParams struct {
 type GetAllIngredientStockRow struct {
 	ID           uuid.UUID          `json:"id"`
 	IngredientID uuid.UUID          `json:"ingredient_id"`
-	Quantity     int64              `json:"quantity"`
+	Quantity     pgtype.Numeric     `json:"quantity"`
 	BranchID     pgtype.UUID        `json:"branch_id"`
 	StorageID    pgtype.UUID        `json:"storage_id"`
 	CreatedAt    pgtype.Timestamptz `json:"created_at"`
@@ -787,7 +809,7 @@ WHERE id = $1 AND deleted_at = 0
 type GetIngredientStockByIDRow struct {
 	ID           uuid.UUID          `json:"id"`
 	IngredientID uuid.UUID          `json:"ingredient_id"`
-	Quantity     int64              `json:"quantity"`
+	Quantity     pgtype.Numeric     `json:"quantity"`
 	BranchID     pgtype.UUID        `json:"branch_id"`
 	StorageID    pgtype.UUID        `json:"storage_id"`
 	CreatedAt    pgtype.Timestamptz `json:"created_at"`
@@ -877,7 +899,7 @@ type GetStockByBranchIDParams struct {
 type GetStockByBranchIDRow struct {
 	ID           uuid.UUID          `json:"id"`
 	IngredientID uuid.UUID          `json:"ingredient_id"`
-	Quantity     int64              `json:"quantity"`
+	Quantity     pgtype.Numeric     `json:"quantity"`
 	BranchID     pgtype.UUID        `json:"branch_id"`
 	StorageID    pgtype.UUID        `json:"storage_id"`
 	CreatedAt    pgtype.Timestamptz `json:"created_at"`
@@ -929,7 +951,7 @@ type GetStockByIngredientAndBranchParams struct {
 type GetStockByIngredientAndBranchRow struct {
 	ID           uuid.UUID          `json:"id"`
 	IngredientID uuid.UUID          `json:"ingredient_id"`
-	Quantity     int64              `json:"quantity"`
+	Quantity     pgtype.Numeric     `json:"quantity"`
 	BranchID     pgtype.UUID        `json:"branch_id"`
 	StorageID    pgtype.UUID        `json:"storage_id"`
 	CreatedAt    pgtype.Timestamptz `json:"created_at"`
@@ -941,6 +963,46 @@ type GetStockByIngredientAndBranchRow struct {
 func (q *Queries) GetStockByIngredientAndBranch(ctx context.Context, arg GetStockByIngredientAndBranchParams) (GetStockByIngredientAndBranchRow, error) {
 	row := q.db.QueryRow(ctx, getStockByIngredientAndBranch, arg.IngredientID, arg.BranchID)
 	var i GetStockByIngredientAndBranchRow
+	err := row.Scan(
+		&i.ID,
+		&i.IngredientID,
+		&i.Quantity,
+		&i.BranchID,
+		&i.StorageID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
+	)
+	return i, err
+}
+
+const getStockByIngredientAndStorageForUpdate = `-- name: GetStockByIngredientAndStorageForUpdate :one
+SELECT id, ingredient_id, quantity, branch_id, storage_id, created_at, updated_at, deleted_at
+FROM ingredient_stock
+WHERE ingredient_id = $1 AND storage_id = $2 AND deleted_at = 0
+FOR UPDATE
+`
+
+type GetStockByIngredientAndStorageForUpdateParams struct {
+	IngredientID uuid.UUID   `json:"ingredient_id"`
+	StorageID    pgtype.UUID `json:"storage_id"`
+}
+
+type GetStockByIngredientAndStorageForUpdateRow struct {
+	ID           uuid.UUID          `json:"id"`
+	IngredientID uuid.UUID          `json:"ingredient_id"`
+	Quantity     pgtype.Numeric     `json:"quantity"`
+	BranchID     pgtype.UUID        `json:"branch_id"`
+	StorageID    pgtype.UUID        `json:"storage_id"`
+	CreatedAt    pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
+	DeletedAt    *int64             `json:"deleted_at"`
+}
+
+// GetStockByIngredientAndStorageForUpdate retrieves and locks stock row for an ingredient in a storage
+func (q *Queries) GetStockByIngredientAndStorageForUpdate(ctx context.Context, arg GetStockByIngredientAndStorageForUpdateParams) (GetStockByIngredientAndStorageForUpdateRow, error) {
+	row := q.db.QueryRow(ctx, getStockByIngredientAndStorageForUpdate, arg.IngredientID, arg.StorageID)
+	var i GetStockByIngredientAndStorageForUpdateRow
 	err := row.Scan(
 		&i.ID,
 		&i.IngredientID,
@@ -971,7 +1033,7 @@ type GetStockByIngredientIDParams struct {
 type GetStockByIngredientIDRow struct {
 	ID           uuid.UUID          `json:"id"`
 	IngredientID uuid.UUID          `json:"ingredient_id"`
-	Quantity     int64              `json:"quantity"`
+	Quantity     pgtype.Numeric     `json:"quantity"`
 	BranchID     pgtype.UUID        `json:"branch_id"`
 	StorageID    pgtype.UUID        `json:"storage_id"`
 	CreatedAt    pgtype.Timestamptz `json:"created_at"`
@@ -1012,7 +1074,7 @@ func (q *Queries) GetStockByIngredientID(ctx context.Context, arg GetStockByIngr
 const removeFromIngredientStock = `-- name: RemoveFromIngredientStock :one
 UPDATE ingredient_stock
 SET quantity = CASE 
-    WHEN quantity - $2 < 0 THEN 0 
+    WHEN quantity - $2 < 0 THEN 0::numeric 
     ELSE quantity - $2 
 END,
     updated_at = NOW()
@@ -1021,14 +1083,14 @@ RETURNING id, ingredient_id, quantity, branch_id, storage_id, created_at, update
 `
 
 type RemoveFromIngredientStockParams struct {
-	ID       uuid.UUID `json:"id"`
-	Quantity int64     `json:"quantity"`
+	ID       uuid.UUID      `json:"id"`
+	Quantity pgtype.Numeric `json:"quantity"`
 }
 
 type RemoveFromIngredientStockRow struct {
 	ID           uuid.UUID          `json:"id"`
 	IngredientID uuid.UUID          `json:"ingredient_id"`
-	Quantity     int64              `json:"quantity"`
+	Quantity     pgtype.Numeric     `json:"quantity"`
 	BranchID     pgtype.UUID        `json:"branch_id"`
 	StorageID    pgtype.UUID        `json:"storage_id"`
 	CreatedAt    pgtype.Timestamptz `json:"created_at"`
@@ -1343,14 +1405,14 @@ RETURNING id, ingredient_id, quantity, branch_id, storage_id, created_at, update
 `
 
 type UpdateIngredientStockParams struct {
-	ID       uuid.UUID `json:"id"`
-	Quantity int64     `json:"quantity"`
+	ID       uuid.UUID      `json:"id"`
+	Quantity pgtype.Numeric `json:"quantity"`
 }
 
 type UpdateIngredientStockRow struct {
 	ID           uuid.UUID          `json:"id"`
 	IngredientID uuid.UUID          `json:"ingredient_id"`
-	Quantity     int64              `json:"quantity"`
+	Quantity     pgtype.Numeric     `json:"quantity"`
 	BranchID     pgtype.UUID        `json:"branch_id"`
 	StorageID    pgtype.UUID        `json:"storage_id"`
 	CreatedAt    pgtype.Timestamptz `json:"created_at"`
@@ -1387,16 +1449,16 @@ RETURNING id, ingredient_id, quantity, branch_id, storage_id, created_at, update
 `
 
 type UpsertAddIngredientStockByStorageParams struct {
-	ID           uuid.UUID   `json:"id"`
-	IngredientID uuid.UUID   `json:"ingredient_id"`
-	StorageID    pgtype.UUID `json:"storage_id"`
-	Quantity     int64       `json:"quantity"`
+	ID           uuid.UUID      `json:"id"`
+	IngredientID uuid.UUID      `json:"ingredient_id"`
+	StorageID    pgtype.UUID    `json:"storage_id"`
+	Quantity     pgtype.Numeric `json:"quantity"`
 }
 
 type UpsertAddIngredientStockByStorageRow struct {
 	ID           uuid.UUID          `json:"id"`
 	IngredientID uuid.UUID          `json:"ingredient_id"`
-	Quantity     int64              `json:"quantity"`
+	Quantity     pgtype.Numeric     `json:"quantity"`
 	BranchID     pgtype.UUID        `json:"branch_id"`
 	StorageID    pgtype.UUID        `json:"storage_id"`
 	CreatedAt    pgtype.Timestamptz `json:"created_at"`

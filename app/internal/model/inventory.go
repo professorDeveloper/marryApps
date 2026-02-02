@@ -43,7 +43,7 @@ type UpdateInventoryRequest struct {
 
 type UpsertInventoryItemRequest struct {
 	IngredientID    string `json:"ingredient_id" validate:"required" example:"123e4567-e89b-12d3-a456-426614174000"`
-	CountedQuantity int64  `json:"counted_quantity" example:"10"`
+	CountedQuantity string `json:"counted_quantity" example:"10"`
 }
 
 type UpsertInventoryItemsRequest struct {
@@ -60,12 +60,25 @@ type InventoryItemComputedResponse struct {
 	IngredientColorCode   *string `json:"ingredient_color_code,omitempty" example:"#FF5733"`
 	IngredientBrandID     *string `json:"ingredient_brand_id,omitempty" example:"123e4567-e89b-12d3-a456-426614174000"`
 
-	SystemQuantity     int64 `json:"system_quantity" example:"6"`
-	CountedQuantity    int64 `json:"counted_quantity" example:"3"`
-	DifferenceQuantity int64 `json:"difference_quantity" example:"-3"`
+	SystemQuantity     string `json:"system_quantity" example:"6"`
+	CountedQuantity    string `json:"counted_quantity" example:"3"`
+	DifferenceQuantity string `json:"difference_quantity" example:"-3"`
 
 	PricePerUnit    string `json:"price_per_unit" example:"10000"`
 	SurplusAmount   string `json:"surplus_amount" example:"0"`
 	ShortageAmount  string `json:"shortage_amount" example:"30000"`
 	RemainingAmount string `json:"remaining_amount" example:"30000"`
+}
+
+type InventoryItemResponse struct {
+	ID              string     `json:"id" example:"123e4567-e89b-12d3-a456-426614174000"`
+	InventoryID     string     `json:"inventory_id" example:"123e4567-e89b-12d3-a456-426614174000"`
+	IngredientID    string     `json:"ingredient_id" example:"123e4567-e89b-12d3-a456-426614174000"`
+	CountedQuantity string     `json:"counted_quantity" example:"10"`
+	CreatedAt       *time.Time `json:"created_at,omitempty"`
+	UpdatedAt       *time.Time `json:"updated_at,omitempty"`
+}
+
+type UpdateInventoryItemRequest struct {
+	CountedQuantity string `json:"counted_quantity" validate:"required" example:"10"`
 }

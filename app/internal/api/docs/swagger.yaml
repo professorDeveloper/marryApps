@@ -3,7 +3,7 @@ definitions:
   handler.stockAdjustRequest:
     properties:
       quantity:
-        type: integer
+        type: string
     type: object
   model.AddToCompoundStockRequest:
     properties:
@@ -490,6 +490,61 @@ definitions:
     required:
     - compound
     type: object
+  model.CreateDeductionActGroupRequest:
+    properties:
+      name:
+        example: Spoiled
+        type: string
+    required:
+    - name
+    type: object
+  model.CreateDeductionItemRequest:
+    properties:
+      compound_id:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+      good_id:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+      ingredient_id:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+      quantity:
+        example: "2"
+        type: string
+    required:
+    - quantity
+    type: object
+  model.CreateDeductionRequest:
+    properties:
+      act_group_id:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+      date:
+        example: "2024-01-01"
+        type: string
+      description:
+        example: spoiled items
+        type: string
+      description_i18n:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+      items:
+        items:
+          $ref: '#/definitions/model.CreateDeductionItemRequest'
+        minItems: 1
+        type: array
+      status:
+        example: active
+        type: string
+      storage_id:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+    required:
+    - date
+    - items
+    - storage_id
+    type: object
   model.CreateDepartmentRequest:
     properties:
       color_code:
@@ -660,8 +715,8 @@ definitions:
         example: 123e4567-e89b-12d3-a456-426614174000
         type: string
       quantity:
-        example: 100
-        type: integer
+        example: "100"
+        type: string
       storage_id:
         example: 123e4567-e89b-12d3-a456-426614174000
         type: string
@@ -702,8 +757,8 @@ definitions:
         example: "10000"
         type: string
       quantity:
-        example: 50
-        type: integer
+        example: "50"
+        type: string
     required:
     - ingredient_id
     - invoice_id
@@ -884,6 +939,125 @@ definitions:
         example: Salom
         type: string
     type: object
+  model.DeductionActGroupResponse:
+    properties:
+      created_at:
+        type: string
+      id:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+      name:
+        example: Spoiled
+        type: string
+      updated_at:
+        type: string
+    type: object
+  model.DeductionItemIngredientResponse:
+    properties:
+      amount:
+        example: "7500"
+        type: string
+      created_at:
+        type: string
+      deduction_item_id:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+      id:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+      ingredient_id:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+      price_per_unit:
+        example: "62500"
+        type: string
+      quantity:
+        example: "0.12"
+        type: string
+      stock_after:
+        example: "1.78"
+        type: string
+      stock_before:
+        example: "1.90"
+        type: string
+      updated_at:
+        type: string
+    type: object
+  model.DeductionItemResponse:
+    properties:
+      compound_id:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+      created_at:
+        type: string
+      deduction_id:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+      good_id:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+      id:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+      ingredient_id:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+      ingredients:
+        items:
+          $ref: '#/definitions/model.DeductionItemIngredientResponse'
+        type: array
+      quantity:
+        example: "2"
+        type: string
+      updated_at:
+        type: string
+    type: object
+  model.DeductionResponse:
+    properties:
+      act_group_id:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+      balance:
+        example: "7500"
+        type: string
+      created_at:
+        type: string
+      date:
+        type: string
+      description:
+        type: string
+      description_i18n:
+        type: string
+      id:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+      items:
+        items:
+          $ref: '#/definitions/model.DeductionItemResponse'
+        type: array
+      number:
+        example: 1
+        type: integer
+      status:
+        allOf:
+        - $ref: '#/definitions/model.DeductionStatus'
+        example: active
+      storage_id:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+      updated_at:
+        type: string
+    type: object
+  model.DeductionStatus:
+    enum:
+    - active
+    - draft
+    - deleted
+    type: string
+    x-enum-varnames:
+    - DeductionStatusActive
+    - DeductionStatusDraft
+    - DeductionStatusDeleted
   model.DepartmentResponse:
     properties:
       color_code:
@@ -1187,8 +1361,8 @@ definitions:
         example: 123e4567-e89b-12d3-a456-426614174000
         type: string
       quantity:
-        example: 100
-        type: integer
+        example: "100"
+        type: string
       storage_id:
         example: 123e4567-e89b-12d3-a456-426614174000
         type: string
@@ -1199,11 +1373,11 @@ definitions:
   model.InventoryItemComputedResponse:
     properties:
       counted_quantity:
-        example: 3
-        type: integer
+        example: "3"
+        type: string
       difference_quantity:
-        example: -3
-        type: integer
+        example: "-3"
+        type: string
       ingredient_brand_id:
         example: 123e4567-e89b-12d3-a456-426614174000
         type: string
@@ -1241,8 +1415,27 @@ definitions:
         example: "0"
         type: string
       system_quantity:
-        example: 6
-        type: integer
+        example: "6"
+        type: string
+    type: object
+  model.InventoryItemResponse:
+    properties:
+      counted_quantity:
+        example: "10"
+        type: string
+      created_at:
+        type: string
+      id:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+      ingredient_id:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+      inventory_id:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+      updated_at:
+        type: string
     type: object
   model.InventoryResponse:
     properties:
@@ -1328,8 +1521,8 @@ definitions:
         example: "10000"
         type: string
       quantity:
-        example: 50
-        type: integer
+        example: "50"
+        type: string
       updated_at:
         type: string
     type: object
@@ -1362,8 +1555,8 @@ definitions:
         example: "10000"
         type: string
       quantity:
-        example: 50
-        type: integer
+        example: "50"
+        type: string
       updated_at:
         type: string
     type: object
@@ -1405,8 +1598,8 @@ definitions:
         example: "1000000"
         type: string
       total_quantity:
-        example: 100
-        type: integer
+        example: "100"
+        type: string
       updated_at:
         type: string
     type: object
@@ -1969,6 +2162,33 @@ definitions:
     required:
     - compound
     type: object
+  model.UpdateDeductionActGroupRequest:
+    properties:
+      name:
+        example: Spoiled
+        type: string
+    type: object
+  model.UpdateDeductionRequest:
+    properties:
+      act_group_id:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+      date:
+        example: "2024-01-01"
+        type: string
+      description:
+        example: spoiled items
+        type: string
+      description_i18n:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+      status:
+        example: active
+        type: string
+      storage_id:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+    type: object
   model.UpdateDepartmentRequest:
     properties:
       color_code:
@@ -2128,8 +2348,16 @@ definitions:
   model.UpdateIngredientStockRequest:
     properties:
       quantity:
-        example: 100
-        type: integer
+        example: "100"
+        type: string
+    type: object
+  model.UpdateInventoryItemRequest:
+    properties:
+      counted_quantity:
+        example: "10"
+        type: string
+    required:
+    - counted_quantity
     type: object
   model.UpdateInventoryRequest:
     properties:
@@ -2152,8 +2380,8 @@ definitions:
   model.UpdateInvoiceDetailQuantityRequest:
     properties:
       quantity:
-        example: 50
-        type: integer
+        example: "50"
+        type: string
     required:
     - quantity
     type: object
@@ -2169,8 +2397,8 @@ definitions:
         example: "10000"
         type: string
       quantity:
-        example: 50
-        type: integer
+        example: "50"
+        type: string
     type: object
   model.UpdateInvoiceRequest:
     properties:
@@ -2345,8 +2573,8 @@ definitions:
   model.UpsertInventoryItemRequest:
     properties:
       counted_quantity:
-        example: 10
-        type: integer
+        example: "10"
+        type: string
       ingredient_id:
         example: 123e4567-e89b-12d3-a456-426614174000
         type: string
@@ -2399,7 +2627,7 @@ definitions:
         example: admin
         type: string
     type: object
-host: back.maryai.yurtal.tech
+host: localhost:8080
 info:
   contact: {}
   description: MaryAI API server with multi-language support (uz, ru, en)
@@ -5837,6 +6065,458 @@ paths:
         Save)
       tags:
       - compounds
+  /api/v1/deductions:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve deductions with pagination
+      parameters:
+      - default: 20
+        description: 'Limit results (default: 20)'
+        in: query
+        name: limit
+        type: integer
+      - default: 0
+        description: 'Offset for pagination (default: 0)'
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Deductions
+          schema:
+            items:
+              $ref: '#/definitions/model.DeductionResponse'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get deductions
+      tags:
+      - deductions
+    post:
+      consumes:
+      - application/json
+      description: Create a new deduction with items, expand into ingredient usage,
+        subtract from stock and compute balance
+      parameters:
+      - description: Deduction create data
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/model.CreateDeductionRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/model.DeductionResponse'
+        "400":
+          description: Invalid request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create deduction
+      tags:
+      - deductions
+  /api/v1/deductions/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Soft delete a deduction
+      parameters:
+      - description: Deduction ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Deleted
+          schema:
+            $ref: '#/definitions/model.SuccessResponse'
+        "400":
+          description: Invalid request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete deduction
+      tags:
+      - deductions
+    get:
+      consumes:
+      - application/json
+      description: Retrieve a deduction with items and ingredient breakdown
+      parameters:
+      - description: Deduction ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Deduction
+          schema:
+            $ref: '#/definitions/model.DeductionResponse'
+        "400":
+          description: Invalid ID
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: Not found
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get deduction by ID
+      tags:
+      - deductions
+    put:
+      consumes:
+      - application/json
+      description: Update deduction fields (date, group, storage, descriptions, status).
+        Items are not changed.
+      parameters:
+      - description: Deduction ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Deduction update data
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/model.UpdateDeductionRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Updated
+          schema:
+            $ref: '#/definitions/model.DeductionResponse'
+        "400":
+          description: Invalid request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: Not found
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update deduction
+      tags:
+      - deductions
+  /api/v1/deductions/{id}/restore:
+    post:
+      consumes:
+      - application/json
+      description: Restore a previously deleted deduction
+      parameters:
+      - description: Deduction ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Restored
+          schema:
+            $ref: '#/definitions/model.DeductionResponse'
+        "400":
+          description: Invalid request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Restore deduction
+      tags:
+      - deductions
+  /api/v1/deductions/group:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve deduction act groups with pagination
+      parameters:
+      - default: 20
+        description: 'Limit results (default: 20)'
+        in: query
+        name: limit
+        type: integer
+      - default: 0
+        description: 'Offset for pagination (default: 0)'
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Deduction act groups
+          schema:
+            items:
+              $ref: '#/definitions/model.DeductionActGroupResponse'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get deduction act groups
+      tags:
+      - deductions
+    post:
+      consumes:
+      - application/json
+      description: Create a new deduction act group
+      parameters:
+      - description: Deduction act group data
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/model.CreateDeductionActGroupRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Deduction act group created
+          schema:
+            $ref: '#/definitions/model.DeductionActGroupResponse'
+        "400":
+          description: Invalid request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create deduction act group
+      tags:
+      - deductions
+  /api/v1/deductions/group/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Soft delete a deduction act group
+      parameters:
+      - description: Deduction Act Group ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Deleted
+          schema:
+            $ref: '#/definitions/model.SuccessResponse'
+        "400":
+          description: Invalid request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete deduction act group
+      tags:
+      - deductions
+    get:
+      consumes:
+      - application/json
+      description: Retrieve a specific deduction act group by its ID
+      parameters:
+      - description: Deduction Act Group ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Deduction act group details
+          schema:
+            $ref: '#/definitions/model.DeductionActGroupResponse'
+        "400":
+          description: Invalid ID
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: Not found
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get deduction act group by ID
+      tags:
+      - deductions
+    put:
+      consumes:
+      - application/json
+      description: Update an existing deduction act group's information
+      parameters:
+      - description: Deduction Act Group ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Deduction act group update data
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/model.UpdateDeductionActGroupRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Updated
+          schema:
+            $ref: '#/definitions/model.DeductionActGroupResponse'
+        "400":
+          description: Invalid request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: Not found
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update deduction act group
+      tags:
+      - deductions
+  /api/v1/deductions/group/{id}/restore:
+    post:
+      consumes:
+      - application/json
+      description: Restore a previously deleted deduction act group
+      parameters:
+      - description: Deduction Act Group ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Restored
+          schema:
+            $ref: '#/definitions/model.DeductionActGroupResponse'
+        "400":
+          description: Invalid request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Restore deduction act group
+      tags:
+      - deductions
   /api/v1/departments:
     get:
       consumes:
@@ -9415,6 +10095,128 @@ paths:
       summary: Search inventories
       tags:
       - inventories
+  /api/v1/inventory-items:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve inventory items with pagination (limit/offset). Optionally
+        filter by inventory_id.
+      parameters:
+      - description: Inventory ID to filter items
+        in: query
+        name: inventory_id
+        type: string
+      - default: 20
+        description: 'Limit results (default: 20)'
+        in: query
+        name: limit
+        type: integer
+      - default: 0
+        description: 'Offset for pagination (default: 0)'
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Inventory items retrieved successfully
+          schema:
+            items:
+              $ref: '#/definitions/model.InventoryItemResponse'
+            type: array
+        "400":
+          description: Invalid request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get inventory items
+      tags:
+      - inventory_items
+  /api/v1/inventory-items/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Soft delete an inventory item by inventory item ID
+      parameters:
+      - description: Inventory Item ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: Inventory item deleted successfully
+          schema:
+            $ref: '#/definitions/model.SuccessResponse'
+        "400":
+          description: Invalid request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete inventory item
+      tags:
+      - inventory_items
+    put:
+      consumes:
+      - application/json
+      description: Update inventory item counted_quantity by inventory item ID
+      parameters:
+      - description: Inventory Item ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Inventory item update data
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/model.UpdateInventoryItemRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Inventory item updated successfully
+          schema:
+            $ref: '#/definitions/model.InventoryItemResponse'
+        "400":
+          description: Invalid request data
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update inventory item
+      tags:
+      - inventory_items
   /api/v1/invoice-details:
     get:
       description: Get all invoice details with pagination
@@ -13624,7 +14426,7 @@ paths:
       tags:
       - users
 schemes:
-- https
+- http
 securityDefinitions:
   BearerAuth:
     description: Type "Bearer" followed by a space and your JWT token

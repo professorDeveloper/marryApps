@@ -131,15 +131,15 @@ type IngredientI interface {
 	DeleteIngredient(ctx context.Context, ingredientID string) error
 	RestoreIngredient(ctx context.Context, ingredientID string) error
 
-	CreateIngredientStock(ctx context.Context, ingredientID string, quantity int64, branchID *string, storageID *string) (*model.IngredientStockResponse, error)
+	CreateIngredientStock(ctx context.Context, ingredientID string, quantity string, branchID *string, storageID *string) (*model.IngredientStockResponse, error)
 	GetIngredientStockByID(ctx context.Context, stockID string) (*model.IngredientStockResponse, error)
 	GetStockByIngredientAndBranch(ctx context.Context, ingredientID, branchID string) (*model.IngredientStockResponse, error)
 	GetAllIngredientStock(ctx context.Context, limit, offset int32) ([]model.IngredientStockResponse, error)
 	GetStockByBranchID(ctx context.Context, branchID string, limit, offset int32) ([]model.IngredientStockResponse, error)
 	GetStockByIngredientID(ctx context.Context, ingredientID string, limit, offset int32) ([]model.IngredientStockResponse, error)
-	UpdateIngredientStock(ctx context.Context, stockID string, quantity int64) (*model.IngredientStockResponse, error)
-	AddToIngredientStock(ctx context.Context, stockID string, quantity int64) (*model.IngredientStockResponse, error)
-	RemoveFromIngredientStock(ctx context.Context, stockID string, quantity int64) (*model.IngredientStockResponse, error)
+	UpdateIngredientStock(ctx context.Context, stockID string, quantity string) (*model.IngredientStockResponse, error)
+	AddToIngredientStock(ctx context.Context, stockID string, quantity string) (*model.IngredientStockResponse, error)
+	RemoveFromIngredientStock(ctx context.Context, stockID string, quantity string) (*model.IngredientStockResponse, error)
 	DeleteIngredientStock(ctx context.Context, stockID string) error
 	RestoreIngredientStock(ctx context.Context, stockID string) error
 }
@@ -266,7 +266,26 @@ type InventoryI interface {
 
 	UpsertInventoryItems(ctx context.Context, inventoryID string, req *model.UpsertInventoryItemsRequest) ([]*model.InventoryItemComputedResponse, error)
 	GetInventoryItems(ctx context.Context, inventoryID string) ([]*model.InventoryItemComputedResponse, error)
+	GetAllInventoryItems(ctx context.Context, inventoryID *string, limit, offset int32) ([]*model.InventoryItemResponse, error)
+	UpdateInventoryItem(ctx context.Context, inventoryItemID string, req *model.UpdateInventoryItemRequest) (*model.InventoryItemResponse, error)
+	DeleteInventoryItem(ctx context.Context, inventoryItemID string) error
 	CalculateInventory(ctx context.Context, inventoryID string) (*model.InventoryResponse, error)
+}
+
+type DeductionI interface {
+	CreateDeductionActGroup(ctx context.Context, req *model.CreateDeductionActGroupRequest) (*model.DeductionActGroupResponse, error)
+	GetAllDeductionActGroups(ctx context.Context, limit, offset int32) ([]*model.DeductionActGroupResponse, error)
+	GetDeductionActGroupByID(ctx context.Context, id string) (*model.DeductionActGroupResponse, error)
+	UpdateDeductionActGroup(ctx context.Context, id string, req *model.UpdateDeductionActGroupRequest) (*model.DeductionActGroupResponse, error)
+	DeleteDeductionActGroup(ctx context.Context, id string) error
+	RestoreDeductionActGroup(ctx context.Context, id string) (*model.DeductionActGroupResponse, error)
+
+	CreateDeduction(ctx context.Context, req *model.CreateDeductionRequest) (*model.DeductionResponse, error)
+	GetDeductionByID(ctx context.Context, id string) (*model.DeductionResponse, error)
+	GetAllDeductions(ctx context.Context, limit, offset int32) ([]*model.DeductionResponse, error)
+	UpdateDeduction(ctx context.Context, id string, req *model.UpdateDeductionRequest) (*model.DeductionResponse, error)
+	DeleteDeduction(ctx context.Context, id string) error
+	RestoreDeduction(ctx context.Context, id string) (*model.DeductionResponse, error)
 }
 
 type InvoiceI interface {
@@ -299,7 +318,7 @@ type InvoiceI interface {
 	GetInvoiceDetailsByInvoiceID(ctx context.Context, invoiceID string) ([]*model.InvoiceDetailResponse, error)
 	GetInvoiceDetailsByIngredientID(ctx context.Context, ingredientID string, limit, offset int32) ([]*model.InvoiceDetailResponse, error)
 	UpdateInvoiceDetail(ctx context.Context, id string, req *model.UpdateInvoiceDetailRequest) (*model.InvoiceDetailResponse, error)
-	UpdateInvoiceDetailQuantity(ctx context.Context, id string, quantity int64) (*model.InvoiceDetailResponse, error)
+	UpdateInvoiceDetailQuantity(ctx context.Context, id string, quantity string) (*model.InvoiceDetailResponse, error)
 	DeleteInvoiceDetail(ctx context.Context, id string) error
 	RestoreInvoiceDetail(ctx context.Context, id string) error
 	DeleteInvoiceDetailsByInvoiceID(ctx context.Context, invoiceID string) error
@@ -387,6 +406,7 @@ type I interface {
 	Order() OrderI
 	Brand() BrandI
 	Calculation() CalculationI
+	Deduction() DeductionI
 }
 
 type Service struct {
@@ -410,6 +430,7 @@ type Service struct {
 	order        OrderI
 	brand        BrandI
 	calculation  CalculationI
+	deduction    DeductionI
 }
 
 func New(cfg *config.Config, repo *repository.Repository, clickClient *paymentClick.Client, paymeClient *paymentPayme.Client, minioClient *minio.Minio) *Service {
@@ -434,6 +455,7 @@ func New(cfg *config.Config, repo *repository.Repository, clickClient *paymentCl
 		order:        NewOrderS(repo),
 		brand:        NewBrandS(repo),
 		calculation:  NewCalculationS(repo),
+		deduction:    NewDeductionS(repo),
 	}
 }
 
@@ -514,4 +536,8 @@ func (s *Service) Brand() BrandI {
 
 func (s *Service) Calculation() CalculationI {
 	return s.calculation
+}
+
+func (s *Service) Deduction() DeductionI {
+	return s.deduction
 }

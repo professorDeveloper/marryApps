@@ -98,6 +98,38 @@ DO UPDATE SET
   deleted_at = 0
 RETURNING id, inventory_id, ingredient_id, counted_quantity, created_at, updated_at, deleted_at;
 
+-- name: GetInventoryItemByID :one
+SELECT id, inventory_id, ingredient_id, counted_quantity, created_at, updated_at, deleted_at
+FROM inventory_items
+WHERE id = $1 AND deleted_at = 0;
+
+-- name: GetAllInventoryItems :many
+SELECT id, inventory_id, ingredient_id, counted_quantity, created_at, updated_at, deleted_at
+FROM inventory_items
+WHERE deleted_at = 0
+ORDER BY created_at DESC
+LIMIT $1 OFFSET $2;
+
+-- name: GetInventoryItemsByInventoryID :many
+SELECT id, inventory_id, ingredient_id, counted_quantity, created_at, updated_at, deleted_at
+FROM inventory_items
+WHERE inventory_id = $1 AND deleted_at = 0
+ORDER BY created_at DESC
+LIMIT $2 OFFSET $3;
+
+-- name: UpdateInventoryItem :one
+UPDATE inventory_items
+SET counted_quantity = $2,
+    updated_at = NOW()
+WHERE id = $1 AND deleted_at = 0
+RETURNING id, inventory_id, ingredient_id, counted_quantity, created_at, updated_at, deleted_at;
+
+-- name: DeleteInventoryItem :exec
+UPDATE inventory_items
+SET deleted_at = EXTRACT(EPOCH FROM NOW())::BIGINT,
+    updated_at = NOW()
+WHERE id = $1 AND deleted_at = 0;
+
 -- name: GetInventoryItemsComputedAll :many
 SELECT
   ii.id as inventory_item_id,
@@ -108,12 +140,12 @@ SELECT
   ing.picture_url as ingredient_picture_url,
   ing.color_code as ingredient_color_code,
   ing.brand_id as ingredient_brand_id,
-  COALESCE(st.quantity, 0) as system_quantity,
+  COALESCE(st.quantity, 0::numeric) as system_quantity,
   ii.counted_quantity as counted_quantity,
-  (ii.counted_quantity - COALESCE(st.quantity, 0))::bigint as difference_quantity,
+  (ii.counted_quantity - COALESCE(st.quantity, 0::numeric))::numeric(15,6) as difference_quantity,
   ing.price_per_unit as price_per_unit,
-  (GREATEST((ii.counted_quantity - COALESCE(st.quantity, 0)), 0)::numeric * ing.price_per_unit)::numeric(15,2) as surplus_amount,
-  (GREATEST((COALESCE(st.quantity, 0) - ii.counted_quantity), 0)::numeric * ing.price_per_unit)::numeric(15,2) as shortage_amount,
+  (GREATEST((ii.counted_quantity - COALESCE(st.quantity, 0::numeric)), 0::numeric) * ing.price_per_unit)::numeric(15,2) as surplus_amount,
+  (GREATEST((COALESCE(st.quantity, 0::numeric) - ii.counted_quantity), 0::numeric) * ing.price_per_unit)::numeric(15,2) as shortage_amount,
   (ii.counted_quantity::numeric * ing.price_per_unit)::numeric(15,2) as remaining_amount
 FROM inventories inv
 JOIN inventory_items ii
@@ -136,8 +168,8 @@ SELECT
   COALESCE(SUM(t.remaining_amount), 0)::numeric(15,2) as remaining_amount
 FROM (
   SELECT
-    (GREATEST((ii.counted_quantity - COALESCE(st.quantity, 0)), 0)::numeric * ing.price_per_unit)::numeric(15,2) as surplus_amount,
-    (GREATEST((COALESCE(st.quantity, 0) - ii.counted_quantity), 0)::numeric * ing.price_per_unit)::numeric(15,2) as shortage_amount,
+    (GREATEST((ii.counted_quantity - COALESCE(st.quantity, 0::numeric)), 0::numeric) * ing.price_per_unit)::numeric(15,2) as surplus_amount,
+    (GREATEST((COALESCE(st.quantity, 0::numeric) - ii.counted_quantity), 0::numeric) * ing.price_per_unit)::numeric(15,2) as shortage_amount,
     (ii.counted_quantity::numeric * ing.price_per_unit)::numeric(15,2) as remaining_amount
   FROM inventories inv
   JOIN inventory_items ii

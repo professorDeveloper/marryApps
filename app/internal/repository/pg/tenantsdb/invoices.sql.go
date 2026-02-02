@@ -157,7 +157,7 @@ type CreateInvoiceDetailParams struct {
 	ID           uuid.UUID      `json:"id"`
 	InvoiceID    uuid.UUID      `json:"invoice_id"`
 	IngredientID uuid.UUID      `json:"ingredient_id"`
-	Quantity     int64          `json:"quantity"`
+	Quantity     pgtype.Numeric `json:"quantity"`
 	Price        pgtype.Numeric `json:"price"`
 	PricePerUnit pgtype.Numeric `json:"price_per_unit"`
 }
@@ -398,7 +398,7 @@ type GetInvoiceDetailWithIngredientRow struct {
 	ID                    uuid.UUID           `json:"id"`
 	InvoiceID             uuid.UUID           `json:"invoice_id"`
 	IngredientID          uuid.UUID           `json:"ingredient_id"`
-	Quantity              int64               `json:"quantity"`
+	Quantity              pgtype.Numeric      `json:"quantity"`
 	Price                 pgtype.Numeric      `json:"price"`
 	PricePerUnit          pgtype.Numeric      `json:"price_per_unit"`
 	CreatedAt             pgtype.Timestamptz  `json:"created_at"`
@@ -616,7 +616,7 @@ SELECT
     i.created_at,
     i.updated_at,
     COUNT(id_table.id) as item_count,
-    SUM(id_table.quantity) as total_quantity
+    (COALESCE(SUM(id_table.quantity), 0::numeric))::numeric(18,6) as total_quantity
 FROM invoices i
 LEFT JOIN invoice_detailed id_table ON i.id = id_table.invoice_id AND id_table.deleted_at = 0
 WHERE i.id = $1 AND i.deleted_at = 0
@@ -633,7 +633,7 @@ type GetInvoiceWithDetailsRow struct {
 	CreatedAt     pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt     pgtype.Timestamptz `json:"updated_at"`
 	ItemCount     int64              `json:"item_count"`
-	TotalQuantity int64              `json:"total_quantity"`
+	TotalQuantity pgtype.Numeric     `json:"total_quantity"`
 }
 
 func (q *Queries) GetInvoiceWithDetails(ctx context.Context, id uuid.UUID) (GetInvoiceWithDetailsRow, error) {
@@ -1082,7 +1082,7 @@ RETURNING id, invoice_id, ingredient_id, quantity, price, price_per_unit, create
 type UpdateInvoiceDetailParams struct {
 	ID           uuid.UUID      `json:"id"`
 	IngredientID uuid.UUID      `json:"ingredient_id"`
-	Quantity     int64          `json:"quantity"`
+	Quantity     pgtype.Numeric `json:"quantity"`
 	Price        pgtype.Numeric `json:"price"`
 	PricePerUnit pgtype.Numeric `json:"price_per_unit"`
 }
@@ -1120,8 +1120,8 @@ RETURNING id, invoice_id, ingredient_id, quantity, price, price_per_unit, create
 `
 
 type UpdateInvoiceDetailQuantityParams struct {
-	ID       uuid.UUID `json:"id"`
-	Quantity int64     `json:"quantity"`
+	ID       uuid.UUID      `json:"id"`
+	Quantity pgtype.Numeric `json:"quantity"`
 }
 
 func (q *Queries) UpdateInvoiceDetailQuantity(ctx context.Context, arg UpdateInvoiceDetailQuantityParams) (InvoiceDetailed, error) {

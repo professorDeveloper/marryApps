@@ -470,12 +470,17 @@ func (i *IngredientS) RestoreIngredient(ctx context.Context, ingredientID string
 // ==================== INGREDIENT STOCK ====================
 
 // CreateIngredientStock creates a new ingredient stock entry
-func (i *IngredientS) CreateIngredientStock(ctx context.Context, ingredientID string, quantity int64, branchID *string, storageID *string) (*model.IngredientStockResponse, error) {
+func (i *IngredientS) CreateIngredientStock(ctx context.Context, ingredientID string, quantity string, branchID *string, storageID *string) (*model.IngredientStockResponse, error) {
 	if ingredientID == "" {
 		return nil, fmt.Errorf("ingredient_id is required")
 	}
 	if (branchID == nil || *branchID == "") && (storageID == nil || *storageID == "") {
 		return nil, fmt.Errorf("branch_id or storage_id is required")
+	}
+
+	quantityNum := pgtype.Numeric{}
+	if err := quantityNum.Scan(quantity); err != nil {
+		return nil, fmt.Errorf("invalid quantity: %w", err)
 	}
 
 	ingID, err := uuid.Parse(ingredientID)
@@ -504,7 +509,7 @@ func (i *IngredientS) CreateIngredientStock(ctx context.Context, ingredientID st
 	stock, err := i.repo.Tenant(ctx).CreateIngredientStock(ctx, pg.CreateIngredientStockParams{
 		ID:           uuid.New(),
 		IngredientID: ingID,
-		Quantity:     quantity,
+		Quantity:     quantityNum,
 		BranchID:     branchUUID,
 		StorageID:    storageUUID,
 	})
@@ -620,15 +625,20 @@ func (i *IngredientS) GetStockByIngredientID(ctx context.Context, ingredientID s
 }
 
 // UpdateIngredientStock updates ingredient stock quantity
-func (i *IngredientS) UpdateIngredientStock(ctx context.Context, stockID string, quantity int64) (*model.IngredientStockResponse, error) {
+func (i *IngredientS) UpdateIngredientStock(ctx context.Context, stockID string, quantity string) (*model.IngredientStockResponse, error) {
 	id, err := uuid.Parse(stockID)
 	if err != nil {
 		return nil, fmt.Errorf("invalid stock ID: %w", err)
 	}
 
+	quantityNum := pgtype.Numeric{}
+	if err := quantityNum.Scan(quantity); err != nil {
+		return nil, fmt.Errorf("invalid quantity: %w", err)
+	}
+
 	stock, err := i.repo.Tenant(ctx).UpdateIngredientStock(ctx, pg.UpdateIngredientStockParams{
 		ID:       id,
-		Quantity: quantity,
+		Quantity: quantityNum,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to update ingredient stock: %w", err)
@@ -638,15 +648,20 @@ func (i *IngredientS) UpdateIngredientStock(ctx context.Context, stockID string,
 }
 
 // AddToIngredientStock increases ingredient stock quantity
-func (i *IngredientS) AddToIngredientStock(ctx context.Context, stockID string, quantity int64) (*model.IngredientStockResponse, error) {
+func (i *IngredientS) AddToIngredientStock(ctx context.Context, stockID string, quantity string) (*model.IngredientStockResponse, error) {
 	id, err := uuid.Parse(stockID)
 	if err != nil {
 		return nil, fmt.Errorf("invalid stock ID: %w", err)
 	}
 
+	quantityNum := pgtype.Numeric{}
+	if err := quantityNum.Scan(quantity); err != nil {
+		return nil, fmt.Errorf("invalid quantity: %w", err)
+	}
+
 	stock, err := i.repo.Tenant(ctx).AddToIngredientStock(ctx, pg.AddToIngredientStockParams{
 		ID:       id,
-		Quantity: quantity,
+		Quantity: quantityNum,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to add to ingredient stock: %w", err)
@@ -656,15 +671,20 @@ func (i *IngredientS) AddToIngredientStock(ctx context.Context, stockID string, 
 }
 
 // RemoveFromIngredientStock decreases ingredient stock quantity
-func (i *IngredientS) RemoveFromIngredientStock(ctx context.Context, stockID string, quantity int64) (*model.IngredientStockResponse, error) {
+func (i *IngredientS) RemoveFromIngredientStock(ctx context.Context, stockID string, quantity string) (*model.IngredientStockResponse, error) {
 	id, err := uuid.Parse(stockID)
 	if err != nil {
 		return nil, fmt.Errorf("invalid stock ID: %w", err)
 	}
 
+	quantityNum := pgtype.Numeric{}
+	if err := quantityNum.Scan(quantity); err != nil {
+		return nil, fmt.Errorf("invalid quantity: %w", err)
+	}
+
 	stock, err := i.repo.Tenant(ctx).RemoveFromIngredientStock(ctx, pg.RemoveFromIngredientStockParams{
 		ID:       id,
-		Quantity: quantity,
+		Quantity: quantityNum,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to remove from ingredient stock: %w", err)
@@ -705,7 +725,7 @@ func toIngredientStockResponse(stock any) *model.IngredientStockResponse {
 	var (
 		id           uuid.UUID
 		ingredientID uuid.UUID
-		quantity     int64
+		quantity     pgtype.Numeric
 		branchID     pgtype.UUID
 		storageID    pgtype.UUID
 		createdAtDB  pgtype.Timestamptz
@@ -764,7 +784,7 @@ func toIngredientStockResponse(stock any) *model.IngredientStockResponse {
 	return &model.IngredientStockResponse{
 		ID:           id.String(),
 		IngredientID: ingredientID.String(),
-		Quantity:     quantity,
+		Quantity:     numericToStr(quantity),
 		BranchID:     branchIDStr,
 		StorageID:    storageIDStr,
 		CreatedAt:    createdAt,

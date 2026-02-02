@@ -805,7 +805,7 @@ func (h *Handler) UpdateIngredientStock(c echo.Context) error {
 }
 
 type stockAdjustRequest struct {
-	Quantity *int64 `json:"quantity"`
+	Quantity *string `json:"quantity"`
 }
 
 // AddToIngredientStock adds quantity to ingredient stock

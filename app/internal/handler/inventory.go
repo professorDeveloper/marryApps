@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 	"gitlab.yurtal.tech/company/maryai/back/internal/model"
 )
@@ -81,6 +82,122 @@ func (h *Handler) GetAllInventories(c echo.Context) error {
 		resp,
 		http.StatusOK,
 	))
+}
+
+// GetAllInventoryItems retrieves inventory items with pagination and optional inventory filter
+// @Summary Get inventory items
+// @Description Retrieve inventory items with pagination (limit/offset). Optionally filter by inventory_id.
+// @Tags inventory_items
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param inventory_id query string false "Inventory ID to filter items"
+// @Param limit query int false "Limit results (default: 20)" default(20)
+// @Param offset query int false "Offset for pagination (default: 0)" default(0)
+// @Success 200 {array} model.InventoryItemResponse "Inventory items retrieved successfully"
+// @Failure 400 {object} model.ErrorResponse "Invalid request"
+// @Failure 401 {object} model.ErrorResponse "Unauthorized"
+// @Failure 500 {object} model.ErrorResponse "Internal server error"
+// @Router /api/v1/inventory-items [get]
+func (h *Handler) GetAllInventoryItems(c echo.Context) error {
+	limit := int32(20)
+	if l := c.QueryParam("limit"); l != "" {
+		if val, err := strconv.Atoi(l); err == nil {
+			limit = int32(val)
+		}
+	}
+
+	offset := int32(0)
+	if o := c.QueryParam("offset"); o != "" {
+		if val, err := strconv.Atoi(o); err == nil {
+			offset = int32(val)
+		}
+	}
+
+	var inventoryID *string
+	if invID := c.QueryParam("inventory_id"); invID != "" {
+		inventoryID = &invID
+	}
+
+	resp, err := h.service.Inventory().GetAllInventoryItems(c.Request().Context(), inventoryID, limit, offset)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("Operation failed", err.Error(), http.StatusInternalServerError))
+	}
+
+	return c.JSON(http.StatusOK, model.NewSuccessResponse(
+		"Inventory items retrieved successfully",
+		resp,
+		http.StatusOK,
+	))
+}
+
+// UpdateInventoryItem updates an inventory item counted quantity
+// @Summary Update inventory item
+// @Description Update inventory item counted_quantity by inventory item ID
+// @Tags inventory_items
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path string true "Inventory Item ID"
+// @Param input body model.UpdateInventoryItemRequest true "Inventory item update data"
+// @Success 200 {object} model.InventoryItemResponse "Inventory item updated successfully"
+// @Failure 400 {object} model.ErrorResponse "Invalid request data"
+// @Failure 401 {object} model.ErrorResponse "Unauthorized"
+// @Failure 500 {object} model.ErrorResponse "Internal server error"
+// @Router /api/v1/inventory-items/{id} [put]
+func (h *Handler) UpdateInventoryItem(c echo.Context) error {
+	id := c.Param("id")
+	if id == "" {
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("invalid request", "id is required", http.StatusBadRequest))
+	}
+	if _, err := uuid.Parse(id); err != nil {
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("invalid request", "invalid id", http.StatusBadRequest))
+	}
+
+	var req model.UpdateInventoryItemRequest
+	if err := c.Bind(&req); err != nil {
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("invalid request", err.Error(), http.StatusBadRequest))
+	}
+
+	resp, err := h.service.Inventory().UpdateInventoryItem(c.Request().Context(), id, &req)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("Operation failed", err.Error(), http.StatusInternalServerError))
+	}
+
+	return c.JSON(http.StatusOK, model.NewSuccessResponse(
+		"Inventory item updated successfully",
+		resp,
+		http.StatusOK,
+	))
+}
+
+// DeleteInventoryItem deletes an inventory item
+// @Summary Delete inventory item
+// @Description Soft delete an inventory item by inventory item ID
+// @Tags inventory_items
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path string true "Inventory Item ID"
+// @Success 204 {object} model.SuccessResponse "Inventory item deleted successfully"
+// @Failure 400 {object} model.ErrorResponse "Invalid request"
+// @Failure 401 {object} model.ErrorResponse "Unauthorized"
+// @Failure 500 {object} model.ErrorResponse "Internal server error"
+// @Router /api/v1/inventory-items/{id} [delete]
+func (h *Handler) DeleteInventoryItem(c echo.Context) error {
+	id := c.Param("id")
+	if id == "" {
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("invalid request", "id is required", http.StatusBadRequest))
+	}
+	if _, err := uuid.Parse(id); err != nil {
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("invalid request", "invalid id", http.StatusBadRequest))
+	}
+
+	if err := h.service.Inventory().DeleteInventoryItem(c.Request().Context(), id); err != nil {
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("Operation failed", err.Error(), http.StatusInternalServerError))
+	}
+
+	return c.JSON(http.StatusNoContent, nil)
 }
 
 // UpsertInventoryItems upserts counted quantities for inventory items and returns computed rows

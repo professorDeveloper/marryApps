@@ -87,14 +87,14 @@ type InvoiceGetWithDetailsResponse struct {
 	CreatedAt     *time.Time    `json:"created_at,omitempty"`
 	UpdatedAt     *time.Time    `json:"updated_at,omitempty"`
 	ItemCount     int64         `json:"item_count" example:"5"`
-	TotalQuantity int64         `json:"total_quantity" example:"100"`
+	TotalQuantity string        `json:"total_quantity" example:"100"`
 }
 
 type InvoiceDetail struct {
 	ID           string     `json:"id" example:"d1f29b75-8g6d-5536-0525-2c12deeef0e0"`
 	InvoiceID    string     `json:"invoice_id" example:"c0f18a64-7f5c-4425-9414-1b01cddee9d9"`
 	IngredientID string     `json:"ingredient_id" example:"e2g30c86-9h7e-6647-1636-3d23effg1f1"`
-	Quantity     int64      `json:"quantity" example:"50"`
+	Quantity     string     `json:"quantity" example:"50"`
 	Price        string     `json:"price" example:"500000"`
 	PricePerUnit string     `json:"price_per_unit" example:"10000"`
 	CreatedAt    *time.Time `json:"created_at,omitempty"`
@@ -104,7 +104,7 @@ type InvoiceDetail struct {
 type CreateInvoiceDetailRequest struct {
 	InvoiceID    string `json:"invoice_id" validate:"required" example:"c0f18a64-7f5c-4425-9414-1b01cddee9d9"`
 	IngredientID string `json:"ingredient_id" validate:"required" example:"e2g30c86-9h7e-6647-1636-3d23effg1f1"`
-	Quantity     int64  `json:"quantity" validate:"required" example:"50"`
+	Quantity     string `json:"quantity" validate:"required" example:"50"`
 	Price        string `json:"price" validate:"required" example:"500000"`
 	PricePerUnit string `json:"price_per_unit" validate:"required" example:"10000"`
 }
@@ -122,20 +122,20 @@ type InvoiceDetailBatchResponse struct {
 
 type UpdateInvoiceDetailRequest struct {
 	IngredientID *string `json:"ingredient_id,omitempty" example:"e2g30c86-9h7e-6647-1636-3d23effg1f1"`
-	Quantity     *int64  `json:"quantity,omitempty" example:"50"`
+	Quantity     *string `json:"quantity,omitempty" example:"50"`
 	Price        *string `json:"price,omitempty" example:"500000"`
 	PricePerUnit *string `json:"price_per_unit,omitempty" example:"10000"`
 }
 
 type UpdateInvoiceDetailQuantityRequest struct {
-	Quantity int64 `json:"quantity" validate:"required" example:"50"`
+	Quantity string `json:"quantity" validate:"required" example:"50"`
 }
 
 type InvoiceDetailResponse struct {
 	ID           string     `json:"id" example:"d1f29b75-8g6d-5536-0525-2c12deeef0e0"`
 	InvoiceID    string     `json:"invoice_id" example:"c0f18a64-7f5c-4425-9414-1b01cddee9d9"`
 	IngredientID string     `json:"ingredient_id" example:"e2g30c86-9h7e-6647-1636-3d23effg1f1"`
-	Quantity     int64      `json:"quantity" example:"50"`
+	Quantity     string     `json:"quantity" example:"50"`
 	Price        string     `json:"price" example:"500000"`
 	PricePerUnit string     `json:"price_per_unit" example:"10000"`
 	CreatedAt    *time.Time `json:"created_at,omitempty"`
@@ -146,7 +146,7 @@ type InvoiceDetailWithIngredientResponse struct {
 	ID                string     `json:"id" example:"d1f29b75-8g6d-5536-0525-2c12deeef0e0"`
 	InvoiceID         string     `json:"invoice_id" example:"c0f18a64-7f5c-4425-9414-1b01cddee9d9"`
 	IngredientID      string     `json:"ingredient_id" example:"e2g30c86-9h7e-6647-1636-3d23effg1f1"`
-	Quantity          int64      `json:"quantity" example:"50"`
+	Quantity          string     `json:"quantity" example:"50"`
 	Price             string     `json:"price" example:"500000"`
 	PricePerUnit      string     `json:"price_per_unit" example:"10000"`
 	CreatedAt         *time.Time `json:"created_at,omitempty"`

@@ -480,6 +480,33 @@ func (h *Handler) Register(router *echo.Echo) {
 			inventories.POST("/:id/restore", h.RestoreInventory, mw.CheckLanguage())
 		}
 
+		deductions := api.Group("/deductions", mw.CheckAuth(h.cfg), mw.TenantMiddleware(h.repo))
+		{
+			deductions.POST("", h.CreateDeduction, mw.CheckLanguage())
+			deductions.GET("", h.GetAllDeductions, mw.CheckLanguage())
+			deductions.GET("/:id", h.GetDeductionByID, mw.CheckLanguage())
+			deductions.PUT("/:id", h.UpdateDeduction, mw.CheckLanguage())
+			deductions.DELETE("/:id", h.DeleteDeduction, mw.CheckLanguage())
+			deductions.POST("/:id/restore", h.RestoreDeduction, mw.CheckLanguage())
+
+			deductionGroups := deductions.Group("/group")
+			{
+				deductionGroups.POST("", h.CreateDeductionActGroup, mw.CheckLanguage())
+				deductionGroups.GET("", h.GetAllDeductionActGroups, mw.CheckLanguage())
+				deductionGroups.GET("/:id", h.GetDeductionActGroupByID, mw.CheckLanguage())
+				deductionGroups.PUT("/:id", h.UpdateDeductionActGroup, mw.CheckLanguage())
+				deductionGroups.DELETE("/:id", h.DeleteDeductionActGroup, mw.CheckLanguage())
+				deductionGroups.POST("/:id/restore", h.RestoreDeductionActGroup, mw.CheckLanguage())
+			}
+		}
+
+		inventoryItems := api.Group("/inventory-items", mw.CheckAuth(h.cfg), mw.TenantMiddleware(h.repo))
+		{
+			inventoryItems.GET("", h.GetAllInventoryItems, mw.CheckLanguage())
+			inventoryItems.PUT("/:id", h.UpdateInventoryItem, mw.CheckLanguage())
+			inventoryItems.DELETE("/:id", h.DeleteInventoryItem, mw.CheckLanguage())
+		}
+
 		// Invoice endpoints (supplier invoices)
 		invoices := api.Group("/invoices", mw.CheckAuth(h.cfg), mw.TenantMiddleware(h.repo))
 		{

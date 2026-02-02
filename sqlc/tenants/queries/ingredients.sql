@@ -160,6 +160,21 @@ SELECT id, ingredient_id, quantity, branch_id, storage_id, created_at, updated_a
 FROM ingredient_stock
 WHERE ingredient_id = $1 AND branch_id = $2 AND deleted_at = 0;
 
+-- GetStockByIngredientAndStorageForUpdate retrieves and locks stock row for an ingredient in a storage
+-- name: GetStockByIngredientAndStorageForUpdate :one
+SELECT id, ingredient_id, quantity, branch_id, storage_id, created_at, updated_at, deleted_at
+FROM ingredient_stock
+WHERE ingredient_id = $1 AND storage_id = $2 AND deleted_at = 0
+FOR UPDATE;
+
+-- EnsureIngredientStockByStorage ensures a stock row exists for (ingredient_id, storage_id)
+-- name: EnsureIngredientStockByStorage :one
+INSERT INTO ingredient_stock (id, ingredient_id, storage_id, quantity, deleted_at)
+VALUES ($1, $2, $3, 0, 0)
+ON CONFLICT (ingredient_id, storage_id)
+DO UPDATE SET deleted_at = 0, updated_at = NOW()
+RETURNING id;
+
 -- GetAllIngredientStock retrieves all ingredient stock entries with pagination
 -- name: GetAllIngredientStock :many
 SELECT id, ingredient_id, quantity, branch_id, storage_id, created_at, updated_at, deleted_at
@@ -204,7 +219,7 @@ RETURNING id, ingredient_id, quantity, branch_id, storage_id, created_at, update
 -- name: RemoveFromIngredientStock :one
 UPDATE ingredient_stock
 SET quantity = CASE 
-    WHEN quantity - $2 < 0 THEN 0 
+    WHEN quantity - $2 < 0 THEN 0::numeric 
     ELSE quantity - $2 
 END,
     updated_at = NOW()

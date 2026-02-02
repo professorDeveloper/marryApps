@@ -7,12 +7,16 @@ INTERNAL_DIR=${APP_DIR}/internal
 SQLC_DIR=${CURRENT_DIR}/sqlc
 CMD_DIR=${APP_DIR}/cmd
 MIGRATIONS_DIR=${APP_DIR}/migrations
+# PDB_URL := postgres://$(POSTGRES_USER):$(POSTGRES_PASSWORD)@0.0.0.0:$(POSTGRES_PORT)/$(POSTGRES_DB)?sslmode=disable
 
 DB_EXT=sql
 
 create-migration:
 	@read -p "Enter migration name: " name; \
 	migrate create -ext $(DB_EXT) -dir $(MIGRATIONS_DIR) -seq $$name
+
+# mig-force:
+# 	migrate -path $(MIGRATIONS_DIR) -database $(MIGRATIONS_DIR) -verbose force 1
 
 run-app-watch:
 	cd ${APP_DIR} && nodemon --watch . --ext go --signal SIGINT --exec 'go run ${CMD_DIR}/main.go'

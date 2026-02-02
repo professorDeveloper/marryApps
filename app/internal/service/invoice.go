@@ -519,11 +519,16 @@ func (s *InvoiceS) CreateInvoiceDetail(ctx context.Context, invoiceID string, re
 		return nil, fmt.Errorf("invalid price per unit: %w", err)
 	}
 
+	qty := pgtype.Numeric{}
+	if err := qty.Scan(req.Quantity); err != nil {
+		return nil, fmt.Errorf("invalid quantity: %w", err)
+	}
+
 	params := pg.CreateInvoiceDetailParams{
 		ID:           id,
 		InvoiceID:    invoiceUUID,
 		IngredientID: ingredientUUID,
-		Quantity:     req.Quantity,
+		Quantity:     qty,
 		Price:        price,
 		PricePerUnit: pricePerUnit,
 	}
@@ -545,7 +550,7 @@ func (s *InvoiceS) CreateInvoiceDetail(ctx context.Context, invoiceID string, re
 		ID:           uuid.New(),
 		IngredientID: ingredientUUID,
 		StorageID:    invoice.StorageID,
-		Quantity:     req.Quantity,
+		Quantity:     qty,
 	})
 	if err != nil {
 		fmt.Printf("Warning: failed to update ingredient stock: %v\n", err)
@@ -618,7 +623,14 @@ func (s *InvoiceS) CreateInvoiceDetailsBatch(ctx context.Context, invoiceID stri
 		pricePerUnit := pgtype.Numeric{}
 		if err := pricePerUnit.Scan(detail.PricePerUnit); err != nil {
 			response.Failed++
-			response.Errors = append(response.Errors, fmt.Sprintf("Item %d: invalid price_per_unit: %v", i+1, err))
+			response.Errors = append(response.Errors, fmt.Sprintf("Item %d: invalid price per unit: %v", i+1, err))
+			continue
+		}
+
+		qty := pgtype.Numeric{}
+		if err := qty.Scan(detail.Quantity); err != nil {
+			response.Failed++
+			response.Errors = append(response.Errors, fmt.Sprintf("Item %d: invalid quantity: %v", i+1, err))
 			continue
 		}
 
@@ -628,7 +640,7 @@ func (s *InvoiceS) CreateInvoiceDetailsBatch(ctx context.Context, invoiceID stri
 			ID:           id,
 			InvoiceID:    invoiceUUID,
 			IngredientID: ingredientUUID,
-			Quantity:     detail.Quantity,
+			Quantity:     qty,
 			Price:        price,
 			PricePerUnit: pricePerUnit,
 		}
@@ -652,7 +664,7 @@ func (s *InvoiceS) CreateInvoiceDetailsBatch(ctx context.Context, invoiceID stri
 			ID:           uuid.New(),
 			IngredientID: ingredientUUID,
 			StorageID:    invoice.StorageID,
-			Quantity:     detail.Quantity,
+			Quantity:     qty,
 		})
 		if err != nil {
 			fmt.Printf("Warning: failed to update ingredient stock for item %d: %v\n", i+1, err)
@@ -779,9 +791,13 @@ func (s *InvoiceS) UpdateInvoiceDetail(ctx context.Context, id string, req *mode
 		pricePerUnit.Valid = false
 	}
 
-	var quantity int64
+	var quantity pgtype.Numeric
 	if req.Quantity != nil {
-		quantity = *req.Quantity
+		if err := quantity.Scan(*req.Quantity); err != nil {
+			return nil, fmt.Errorf("invalid quantity: %w", err)
+		}
+	} else {
+		quantity.Valid = false
 	}
 
 	// Build the update parameters - we need to get current values for fields we're not updating
@@ -828,15 +844,20 @@ func (s *InvoiceS) UpdateInvoiceDetail(ctx context.Context, id string, req *mode
 }
 
 // UpdateInvoiceDetailQuantity updates invoice detail quantity and recalculates price
-func (s *InvoiceS) UpdateInvoiceDetailQuantity(ctx context.Context, id string, quantity int64) (*model.InvoiceDetailResponse, error) {
+func (s *InvoiceS) UpdateInvoiceDetailQuantity(ctx context.Context, id string, quantity string) (*model.InvoiceDetailResponse, error) {
 	detailID, err := uuid.Parse(id)
 	if err != nil {
 		return nil, fmt.Errorf("invalid detail id: %w", err)
 	}
 
+	qty := pgtype.Numeric{}
+	if err := qty.Scan(quantity); err != nil {
+		return nil, fmt.Errorf("invalid quantity: %w", err)
+	}
+
 	detail, err := s.repo.Tenant(ctx).UpdateInvoiceDetailQuantity(ctx, pg.UpdateInvoiceDetailQuantityParams{
 		ID:       detailID,
-		Quantity: quantity,
+		Quantity: qty,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to update invoice detail quantity: %w", err)
@@ -1006,7 +1027,7 @@ func toInvoiceWithDetailsResponse(invoice pg.GetInvoiceWithDetailsRow) *model.In
 		TotalAmount:   numericToString(invoice.TotalAmount),
 		Status:        model.InvoiceStatus(invoice.Status.InvoiceStatus),
 		ItemCount:     invoice.ItemCount,
-		TotalQuantity: invoice.TotalQuantity,
+		TotalQuantity: numericToString(invoice.TotalQuantity),
 	}
 
 	if invoice.StorageID.Valid {
@@ -1034,7 +1055,7 @@ func toInvoiceDetailResponse(detail pg.InvoiceDetailed) *model.InvoiceDetailResp
 		ID:           detail.ID.String(),
 		InvoiceID:    detail.InvoiceID.String(),
 		IngredientID: detail.IngredientID.String(),
-		Quantity:     detail.Quantity,
+		Quantity:     numericToString(detail.Quantity),
 		Price:        numericToString(detail.Price),
 		PricePerUnit: numericToString(detail.PricePerUnit),
 	}
@@ -1055,7 +1076,7 @@ func toInvoiceDetailWithIngredientResponse(detail pg.GetInvoiceDetailWithIngredi
 		ID:                detail.ID.String(),
 		InvoiceID:         detail.InvoiceID.String(),
 		IngredientID:      detail.IngredientID.String(),
-		Quantity:          detail.Quantity,
+		Quantity:          numericToString(detail.Quantity),
 		Price:             numericToString(detail.Price),
 		PricePerUnit:      numericToString(detail.PricePerUnit),
 		IngredientName:    detail.IngredientName,
@@ -1142,7 +1163,12 @@ func numericToString(n pgtype.Numeric) string {
 		// Add trailing zeros
 		str = str + strings.Repeat("0", int(n.Exp))
 	}
-
+	if strings.Contains(str, ".") {
+		str = strings.TrimRight(strings.TrimRight(str, "0"), ".")
+	}
+	if str == "" || str == "-0" {
+		return "0"
+	}
 	return str
 }
 
@@ -1216,13 +1242,18 @@ func (s *InvoiceS) CreateInvoiceWithDetails(ctx context.Context, req *model.Crea
 			return nil, fmt.Errorf("item %d: invalid price_per_unit: %w", i+1, err)
 		}
 
+		qty := pgtype.Numeric{}
+		if err := qty.Scan(detail.Quantity); err != nil {
+			return nil, fmt.Errorf("item %d: invalid quantity: %w", i+1, err)
+		}
+
 		// Create invoice detail
 		id := uuid.New()
 		params := pg.CreateInvoiceDetailParams{
 			ID:           id,
 			InvoiceID:    invoiceID,
 			IngredientID: ingredientUUID,
-			Quantity:     detail.Quantity,
+			Quantity:     qty,
 			Price:        price,
 			PricePerUnit: pricePerUnit,
 		}
@@ -1244,7 +1275,7 @@ func (s *InvoiceS) CreateInvoiceWithDetails(ctx context.Context, req *model.Crea
 			ID:           uuid.New(),
 			IngredientID: ingredientUUID,
 			StorageID:    pgtype.UUID{Bytes: invoiceStorageUUID, Valid: true},
-			Quantity:     detail.Quantity,
+			Quantity:     qty,
 		})
 		if err != nil {
 			return nil, fmt.Errorf("item %d: failed to update ingredient stock: %w", i+1, err)

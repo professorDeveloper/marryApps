@@ -5277,6 +5277,708 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/deductions": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Retrieve deductions with pagination",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "deductions"
+                ],
+                "summary": "Get deductions",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "default": 20,
+                        "description": "Limit results (default: 20)",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 0,
+                        "description": "Offset for pagination (default: 0)",
+                        "name": "offset",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Deductions",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/model.DeductionResponse"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Create a new deduction with items, expand into ingredient usage, subtract from stock and compute balance",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "deductions"
+                ],
+                "summary": "Create deduction",
+                "parameters": [
+                    {
+                        "description": "Deduction create data",
+                        "name": "input",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.CreateDeductionRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/model.DeductionResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/deductions/group": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Retrieve deduction act groups with pagination",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "deductions"
+                ],
+                "summary": "Get deduction act groups",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "default": 20,
+                        "description": "Limit results (default: 20)",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 0,
+                        "description": "Offset for pagination (default: 0)",
+                        "name": "offset",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Deduction act groups",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/model.DeductionActGroupResponse"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Create a new deduction act group",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "deductions"
+                ],
+                "summary": "Create deduction act group",
+                "parameters": [
+                    {
+                        "description": "Deduction act group data",
+                        "name": "input",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.CreateDeductionActGroupRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Deduction act group created",
+                        "schema": {
+                            "$ref": "#/definitions/model.DeductionActGroupResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/deductions/group/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Retrieve a specific deduction act group by its ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "deductions"
+                ],
+                "summary": "Get deduction act group by ID",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Deduction Act Group ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Deduction act group details",
+                        "schema": {
+                            "$ref": "#/definitions/model.DeductionActGroupResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid ID",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not found",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Update an existing deduction act group's information",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "deductions"
+                ],
+                "summary": "Update deduction act group",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Deduction Act Group ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Deduction act group update data",
+                        "name": "input",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.UpdateDeductionActGroupRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Updated",
+                        "schema": {
+                            "$ref": "#/definitions/model.DeductionActGroupResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not found",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Soft delete a deduction act group",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "deductions"
+                ],
+                "summary": "Delete deduction act group",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Deduction Act Group ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Deleted",
+                        "schema": {
+                            "$ref": "#/definitions/model.SuccessResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/deductions/group/{id}/restore": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Restore a previously deleted deduction act group",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "deductions"
+                ],
+                "summary": "Restore deduction act group",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Deduction Act Group ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Restored",
+                        "schema": {
+                            "$ref": "#/definitions/model.DeductionActGroupResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/deductions/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Retrieve a deduction with items and ingredient breakdown",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "deductions"
+                ],
+                "summary": "Get deduction by ID",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Deduction ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Deduction",
+                        "schema": {
+                            "$ref": "#/definitions/model.DeductionResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid ID",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not found",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Update deduction fields (date, group, storage, descriptions, status). Items are not changed.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "deductions"
+                ],
+                "summary": "Update deduction",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Deduction ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Deduction update data",
+                        "name": "input",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.UpdateDeductionRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Updated",
+                        "schema": {
+                            "$ref": "#/definitions/model.DeductionResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not found",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Soft delete a deduction",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "deductions"
+                ],
+                "summary": "Delete deduction",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Deduction ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Deleted",
+                        "schema": {
+                            "$ref": "#/definitions/model.SuccessResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/deductions/{id}/restore": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Restore a previously deleted deduction",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "deductions"
+                ],
+                "summary": "Restore deduction",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Deduction ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Restored",
+                        "schema": {
+                            "$ref": "#/definitions/model.DeductionResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/departments": {
             "get": {
                 "security": [
@@ -10724,6 +11426,194 @@ const docTemplate = `{
                     },
                     "400": {
                         "description": "Invalid inventory ID",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/inventory-items": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Retrieve inventory items with pagination (limit/offset). Optionally filter by inventory_id.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "inventory_items"
+                ],
+                "summary": "Get inventory items",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Inventory ID to filter items",
+                        "name": "inventory_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 20,
+                        "description": "Limit results (default: 20)",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 0,
+                        "description": "Offset for pagination (default: 0)",
+                        "name": "offset",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Inventory items retrieved successfully",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/model.InventoryItemResponse"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/inventory-items/{id}": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Update inventory item counted_quantity by inventory item ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "inventory_items"
+                ],
+                "summary": "Update inventory item",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Inventory Item ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Inventory item update data",
+                        "name": "input",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.UpdateInventoryItemRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Inventory item updated successfully",
+                        "schema": {
+                            "$ref": "#/definitions/model.InventoryItemResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request data",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Soft delete an inventory item by inventory item ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "inventory_items"
+                ],
+                "summary": "Delete inventory item",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Inventory Item ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Inventory item deleted successfully",
+                        "schema": {
+                            "$ref": "#/definitions/model.SuccessResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request",
                         "schema": {
                             "$ref": "#/definitions/model.ErrorResponse"
                         }
@@ -17258,7 +18148,7 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "quantity": {
-                    "type": "integer"
+                    "type": "string"
                 }
             }
         },
@@ -17943,6 +18833,83 @@ const docTemplate = `{
                 }
             }
         },
+        "model.CreateDeductionActGroupRequest": {
+            "type": "object",
+            "required": [
+                "name"
+            ],
+            "properties": {
+                "name": {
+                    "type": "string",
+                    "example": "Spoiled"
+                }
+            }
+        },
+        "model.CreateDeductionItemRequest": {
+            "type": "object",
+            "required": [
+                "quantity"
+            ],
+            "properties": {
+                "compound_id": {
+                    "type": "string",
+                    "example": "123e4567-e89b-12d3-a456-426614174000"
+                },
+                "good_id": {
+                    "type": "string",
+                    "example": "123e4567-e89b-12d3-a456-426614174000"
+                },
+                "ingredient_id": {
+                    "type": "string",
+                    "example": "123e4567-e89b-12d3-a456-426614174000"
+                },
+                "quantity": {
+                    "type": "string",
+                    "example": "2"
+                }
+            }
+        },
+        "model.CreateDeductionRequest": {
+            "type": "object",
+            "required": [
+                "date",
+                "items",
+                "storage_id"
+            ],
+            "properties": {
+                "act_group_id": {
+                    "type": "string",
+                    "example": "123e4567-e89b-12d3-a456-426614174000"
+                },
+                "date": {
+                    "type": "string",
+                    "example": "2024-01-01"
+                },
+                "description": {
+                    "type": "string",
+                    "example": "spoiled items"
+                },
+                "description_i18n": {
+                    "type": "string",
+                    "example": "123e4567-e89b-12d3-a456-426614174000"
+                },
+                "items": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                        "$ref": "#/definitions/model.CreateDeductionItemRequest"
+                    }
+                },
+                "status": {
+                    "type": "string",
+                    "example": "active"
+                },
+                "storage_id": {
+                    "type": "string",
+                    "example": "123e4567-e89b-12d3-a456-426614174000"
+                }
+            }
+        },
         "model.CreateDepartmentRequest": {
             "type": "object",
             "properties": {
@@ -18182,8 +19149,8 @@ const docTemplate = `{
                     "example": "123e4567-e89b-12d3-a456-426614174000"
                 },
                 "quantity": {
-                    "type": "integer",
-                    "example": 100
+                    "type": "string",
+                    "example": "100"
                 },
                 "storage_id": {
                     "type": "string",
@@ -18247,8 +19214,8 @@ const docTemplate = `{
                     "example": "10000"
                 },
                 "quantity": {
-                    "type": "integer",
-                    "example": 50
+                    "type": "string",
+                    "example": "50"
                 }
             }
         },
@@ -18500,6 +19467,176 @@ const docTemplate = `{
                     "example": "Salom"
                 }
             }
+        },
+        "model.DeductionActGroupResponse": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string",
+                    "example": "123e4567-e89b-12d3-a456-426614174000"
+                },
+                "name": {
+                    "type": "string",
+                    "example": "Spoiled"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "model.DeductionItemIngredientResponse": {
+            "type": "object",
+            "properties": {
+                "amount": {
+                    "type": "string",
+                    "example": "7500"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "deduction_item_id": {
+                    "type": "string",
+                    "example": "123e4567-e89b-12d3-a456-426614174000"
+                },
+                "id": {
+                    "type": "string",
+                    "example": "123e4567-e89b-12d3-a456-426614174000"
+                },
+                "ingredient_id": {
+                    "type": "string",
+                    "example": "123e4567-e89b-12d3-a456-426614174000"
+                },
+                "price_per_unit": {
+                    "type": "string",
+                    "example": "62500"
+                },
+                "quantity": {
+                    "type": "string",
+                    "example": "0.12"
+                },
+                "stock_after": {
+                    "type": "string",
+                    "example": "1.78"
+                },
+                "stock_before": {
+                    "type": "string",
+                    "example": "1.90"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "model.DeductionItemResponse": {
+            "type": "object",
+            "properties": {
+                "compound_id": {
+                    "type": "string",
+                    "example": "123e4567-e89b-12d3-a456-426614174000"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "deduction_id": {
+                    "type": "string",
+                    "example": "123e4567-e89b-12d3-a456-426614174000"
+                },
+                "good_id": {
+                    "type": "string",
+                    "example": "123e4567-e89b-12d3-a456-426614174000"
+                },
+                "id": {
+                    "type": "string",
+                    "example": "123e4567-e89b-12d3-a456-426614174000"
+                },
+                "ingredient_id": {
+                    "type": "string",
+                    "example": "123e4567-e89b-12d3-a456-426614174000"
+                },
+                "ingredients": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.DeductionItemIngredientResponse"
+                    }
+                },
+                "quantity": {
+                    "type": "string",
+                    "example": "2"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "model.DeductionResponse": {
+            "type": "object",
+            "properties": {
+                "act_group_id": {
+                    "type": "string",
+                    "example": "123e4567-e89b-12d3-a456-426614174000"
+                },
+                "balance": {
+                    "type": "string",
+                    "example": "7500"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "date": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "description_i18n": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string",
+                    "example": "123e4567-e89b-12d3-a456-426614174000"
+                },
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.DeductionItemResponse"
+                    }
+                },
+                "number": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "status": {
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/model.DeductionStatus"
+                        }
+                    ],
+                    "example": "active"
+                },
+                "storage_id": {
+                    "type": "string",
+                    "example": "123e4567-e89b-12d3-a456-426614174000"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "model.DeductionStatus": {
+            "type": "string",
+            "enum": [
+                "active",
+                "draft",
+                "deleted"
+            ],
+            "x-enum-varnames": [
+                "DeductionStatusActive",
+                "DeductionStatusDraft",
+                "DeductionStatusDeleted"
+            ]
         },
         "model.DepartmentResponse": {
             "type": "object",
@@ -18928,8 +20065,8 @@ const docTemplate = `{
                     "example": "123e4567-e89b-12d3-a456-426614174000"
                 },
                 "quantity": {
-                    "type": "integer",
-                    "example": 100
+                    "type": "string",
+                    "example": "100"
                 },
                 "storage_id": {
                     "type": "string",
@@ -18945,12 +20082,12 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "counted_quantity": {
-                    "type": "integer",
-                    "example": 3
+                    "type": "string",
+                    "example": "3"
                 },
                 "difference_quantity": {
-                    "type": "integer",
-                    "example": -3
+                    "type": "string",
+                    "example": "-3"
                 },
                 "ingredient_brand_id": {
                     "type": "string",
@@ -19001,8 +20138,35 @@ const docTemplate = `{
                     "example": "0"
                 },
                 "system_quantity": {
-                    "type": "integer",
-                    "example": 6
+                    "type": "string",
+                    "example": "6"
+                }
+            }
+        },
+        "model.InventoryItemResponse": {
+            "type": "object",
+            "properties": {
+                "counted_quantity": {
+                    "type": "string",
+                    "example": "10"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string",
+                    "example": "123e4567-e89b-12d3-a456-426614174000"
+                },
+                "ingredient_id": {
+                    "type": "string",
+                    "example": "123e4567-e89b-12d3-a456-426614174000"
+                },
+                "inventory_id": {
+                    "type": "string",
+                    "example": "123e4567-e89b-12d3-a456-426614174000"
+                },
+                "updated_at": {
+                    "type": "string"
                 }
             }
         },
@@ -19125,8 +20289,8 @@ const docTemplate = `{
                     "example": "10000"
                 },
                 "quantity": {
-                    "type": "integer",
-                    "example": 50
+                    "type": "string",
+                    "example": "50"
                 },
                 "updated_at": {
                     "type": "string"
@@ -19172,8 +20336,8 @@ const docTemplate = `{
                     "example": "10000"
                 },
                 "quantity": {
-                    "type": "integer",
-                    "example": 50
+                    "type": "string",
+                    "example": "50"
                 },
                 "updated_at": {
                     "type": "string"
@@ -19235,8 +20399,8 @@ const docTemplate = `{
                     "example": "1000000"
                 },
                 "total_quantity": {
-                    "type": "integer",
-                    "example": 100
+                    "type": "string",
+                    "example": "100"
                 },
                 "updated_at": {
                     "type": "string"
@@ -20035,6 +21199,44 @@ const docTemplate = `{
                 }
             }
         },
+        "model.UpdateDeductionActGroupRequest": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "type": "string",
+                    "example": "Spoiled"
+                }
+            }
+        },
+        "model.UpdateDeductionRequest": {
+            "type": "object",
+            "properties": {
+                "act_group_id": {
+                    "type": "string",
+                    "example": "123e4567-e89b-12d3-a456-426614174000"
+                },
+                "date": {
+                    "type": "string",
+                    "example": "2024-01-01"
+                },
+                "description": {
+                    "type": "string",
+                    "example": "spoiled items"
+                },
+                "description_i18n": {
+                    "type": "string",
+                    "example": "123e4567-e89b-12d3-a456-426614174000"
+                },
+                "status": {
+                    "type": "string",
+                    "example": "active"
+                },
+                "storage_id": {
+                    "type": "string",
+                    "example": "123e4567-e89b-12d3-a456-426614174000"
+                }
+            }
+        },
         "model.UpdateDepartmentRequest": {
             "type": "object",
             "properties": {
@@ -20261,8 +21463,20 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "quantity": {
-                    "type": "integer",
-                    "example": 100
+                    "type": "string",
+                    "example": "100"
+                }
+            }
+        },
+        "model.UpdateInventoryItemRequest": {
+            "type": "object",
+            "required": [
+                "counted_quantity"
+            ],
+            "properties": {
+                "counted_quantity": {
+                    "type": "string",
+                    "example": "10"
                 }
             }
         },
@@ -20298,8 +21512,8 @@ const docTemplate = `{
             ],
             "properties": {
                 "quantity": {
-                    "type": "integer",
-                    "example": 50
+                    "type": "string",
+                    "example": "50"
                 }
             }
         },
@@ -20319,8 +21533,8 @@ const docTemplate = `{
                     "example": "10000"
                 },
                 "quantity": {
-                    "type": "integer",
-                    "example": 50
+                    "type": "string",
+                    "example": "50"
                 }
             }
         },
@@ -20576,8 +21790,8 @@ const docTemplate = `{
             ],
             "properties": {
                 "counted_quantity": {
-                    "type": "integer",
-                    "example": 10
+                    "type": "string",
+                    "example": "10"
                 },
                 "ingredient_id": {
                     "type": "string",
@@ -20663,9 +21877,9 @@ const docTemplate = `{
 // SwaggerInfo holds exported Swagger Info so clients can modify it
 var SwaggerInfo = &swag.Spec{
 	Version:          "1.0",
-	Host:             "back.maryai.yurtal.tech",
+	Host:             "localhost:8080",
 	BasePath:         "/",
-	Schemes:          []string{"https"},
+	Schemes:          []string{"http"},
 	Title:            "MaryAI API",
 	Description:      "MaryAI API server with multi-language support (uz, ru, en)",
 	InfoInstanceName: "swagger",

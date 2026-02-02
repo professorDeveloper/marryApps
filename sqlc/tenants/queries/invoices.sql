@@ -199,7 +199,7 @@ SELECT
     i.created_at,
     i.updated_at,
     COUNT(id_table.id) as item_count,
-    SUM(id_table.quantity) as total_quantity
+    (COALESCE(SUM(id_table.quantity), 0::numeric))::numeric(18,6) as total_quantity
 FROM invoices i
 LEFT JOIN invoice_detailed id_table ON i.id = id_table.invoice_id AND id_table.deleted_at = 0
 WHERE i.id = $1 AND i.deleted_at = 0
