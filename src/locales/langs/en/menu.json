@@ -249,7 +249,9 @@
     "relatedProductsTitle": "Related products",
     "relatedProductsDescription": "Related products",
     "relatedProductsDeleteConfirm": "Are you sure you want to delete this related product?",
-    "relatedProductsDeleteMessage": "This action cannot be undone and cannot be reversed."
+    "relatedProductsDeleteMessage": "This action cannot be undone and cannot be reversed.",
+    "nameEn": "Name (English)",
+    "nameRu": "Name (Russian)"
   },
   "mealsProducts": {
     "title": "Meals",
@@ -314,7 +316,9 @@
     "department": "Department",
     "storage": "Storage",
     "storageDepartmentTitle": "Storage and department",
-    "uploading": "Uploading..."
+    "uploading": "Uploading...",
+    "nameEn": "Name (English)",
+    "nameRu": "Name (Russian)"
   },
   "overview": {
     "subheader": "Overview",

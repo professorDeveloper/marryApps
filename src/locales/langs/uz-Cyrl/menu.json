@@ -222,7 +222,9 @@
     "measurement": "Ўлчов",
     "department": "Бўлим",
     "description": "Тавсиф",
-    "newTitle": "Ярим тайёр маҳсулот қўшиш"
+    "newTitle": "Ярим тайёр маҳсулот қўшиш",
+    "nameEn": "Номи (инглизча)",
+    "nameRu": "Номи (русча)"
   },
   "mealsProducts": {
     "title": "Таомлар",
@@ -285,7 +287,9 @@
     "deleteConfirm": "Файлларни там оlishni xohlaysizmi?",
     "deleteMessage": "Танланган файллар тарихидан аллакайсиз тайёрганади ва буланма экинланган эмас.",
     "cancel": "Бекор қилиш",
-    "uploading": "Юкланмоқда..."
+    "uploading": "Юкланмоқда...",
+    "nameEn": "Номи (инглизча)",
+    "nameRu": "Номи (русча)"
   },
   "overview": {
     "subheader": "Умумий",

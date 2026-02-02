@@ -248,7 +248,9 @@
     "relatedProductsDescription": "Tegishli taomlar tahrirlash",
     "relatedProductsDeleteConfirm": "Fayllar o'chirilsinmi?",
     "relatedProductsDeleteMessage": "Tanlangan fayllar tizimdan butunlay o‘chiriladi va ushbu amalni bekor qilish yoki fayllarni tiklash mumkin emas.",
-    "relatedProductsCancel": "Bekor qilish"
+    "relatedProductsCancel": "Bekor qilish",
+    "nameEn":"Nomi (inglizcha)",
+    "nameRu":"Nomi (ruscha)"
   },
   "mealsProducts": {
     "title": "Taomlar",
@@ -312,7 +314,9 @@
     "deleteConfirm": "Fayllar o'chirilsinmi?",
     "deleteMessage": "Tanlangan fayllar tizimdan butunlay o‘chiriladi va ushbu amalni bekor qilish yoki fayllarni tiklash mumkin emas.",
     "cancel": "Bekor qilish",
-    "uploading": "Yuklanmoqda..."
+    "uploading": "Yuklanmoqda...",
+    "nameEn":"Nomi (inglizcha)",
+    "nameRu":"Nomi (ruscha)"
   },
   "overview": {
     "subheader": "Umumiy",
