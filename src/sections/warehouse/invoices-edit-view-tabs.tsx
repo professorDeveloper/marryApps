@@ -116,11 +116,16 @@ export function InvoicesEditViewTabs() {
 
             // If creating new invoice with details, use batch API
             if (isCreatingNew && details && details.length > 0) {
+                // Calculate total_amount from details (not from user input)
+                const calculatedTotal = details.reduce((sum, item) => {
+                    return sum + (parseFloat(item.price?.toString() || '0'));
+                }, 0);
+
                 const batchPayload = {
                     invoice: {
                         supplier_id: formData.supplier_id,
                         storage_id: formData.storage_id,
-                        total_amount: formData.total_amount.toString(),
+                        total_amount: calculatedTotal.toString(),
                         status: formData.status || 'pending',
                         date: formData.date || new Date().toISOString(),
                     },

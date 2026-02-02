@@ -410,13 +410,20 @@ export function InvoiceDetailsCalculation({ invoiceId, invoiceData, onSuccess, o
             // If this is a new invoice, validate and save with invoice info
             if (isNewInvoice && onSaveInvoice) {
                 // Check if form data is filled
-                if (!formData?.supplier_id || !formData?.total_amount) {
+                if (!formData?.supplier_id) {
                     toast.error(t('warehouse.invoices.fillInvoiceInfoFirst', 'Please fill invoice information in Tab 1 first'));
                     return;
                 }
 
+                // Use calculated total price from details (not from user input)
+                const calculatedTotalAmount = totals.totalPrice;
+                const updatedFormData = {
+                    ...formData,
+                    total_amount: calculatedTotalAmount.toString(),
+                };
+
                 // Call parent function to save invoice + details together
-                await onSaveInvoice(formData, batchData);
+                await onSaveInvoice(updatedFormData, batchData);
                 return;
             }
 
