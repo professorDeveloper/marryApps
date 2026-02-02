@@ -87,7 +87,7 @@ export function WarehouseEditView({ isNew = false }: { isNew?: boolean }) {
       }
 
       await new Promise((resolve) => setTimeout(resolve, 300));
-      router.push(paths.menu.inventory.root);
+      router.push(paths.warehouse.storage.root);
     },
     [createStorage, createTranslation, id, isNew, router, updateStorage]
   );
@@ -96,7 +96,7 @@ export function WarehouseEditView({ isNew = false }: { isNew?: boolean }) {
     if (!id) return;
     await deleteStorage(id);
     await new Promise((resolve) => setTimeout(resolve, 300));
-    router.push(paths.menu.inventory.root);
+    router.push(paths.warehouse.storage.root);
   }, [deleteStorage, id, router]);
 
   const IMAGE: CardSection = {

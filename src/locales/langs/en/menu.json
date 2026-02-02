@@ -801,6 +801,7 @@
   },
   "inventory": {
     "title": "Inventory",
+    "items": "Inventory Items",
     "list": "Inventory List",
     "create": "Create Inventory",
     "edit": "Edit Inventory",
@@ -818,7 +819,7 @@
     "details": "Inventory Details",
     "summary": "Summary",
     "active": "Active",
-    "completed": "Completed",
+    "deleted": "Deleted",
     "draft": "Draft",
     "cancelled": "Cancelled",
     "itemsCalculation": "Inventory Items Calculation",

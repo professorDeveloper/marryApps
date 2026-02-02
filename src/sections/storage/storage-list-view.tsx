@@ -138,7 +138,7 @@ export function WarehouseListView() {
 
   const handleEdit = useCallback(
     (id: string) => {
-      router.push(paths.warehouse.edit(id));
+      router.push(paths.warehouse.storage.edit(id));
     },
     [router]
   );

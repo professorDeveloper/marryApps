@@ -778,6 +778,7 @@
   },
     "inventory": {
       "title": "Ombor menusi",
+      "items": "Ombor elementlari",
       "list": "Ombor menusi ro'yxati",
       "create": "Ombor menusi yaratish",
       "edit": "Ombor menusi tahrirlash",
@@ -795,7 +796,7 @@
       "details": "Ombor menusi tafsilotlari",
       "summary": "Xulosa",
       "active": "Faol",
-      "completed": "Yakunlangan",
+      "deleted": "O'chirilgan",
       "draft": "Taslagi",
       "cancelled": "Bekor qilingan",
       "itemsCalculation": "Ombor menusi elementlari hisoblash",

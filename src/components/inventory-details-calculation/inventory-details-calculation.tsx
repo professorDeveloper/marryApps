@@ -535,7 +535,7 @@ export function InventoryDetailsCalculation({
 
             {/* Action Buttons */}
             <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end', pt: 1 }}>
-                <Button
+                {/* <Button
                     variant="outlined"
                     color="inherit"
                     disabled={isSaving}
@@ -548,7 +548,7 @@ export function InventoryDetailsCalculation({
                     }}
                 >
                     {t('common.cancel')}
-                </Button>
+                </Button> */}
                 <Button
                     variant="contained"
                     onClick={handleSave}
@@ -556,16 +556,14 @@ export function InventoryDetailsCalculation({
                     sx={{
                         position: 'relative',
                         minWidth: 120,
-                        background: `linear-gradient(135deg, ${theme.palette.success.main} 0%, ${theme.palette.success.dark} 100%)`,
+                        background: ``,
                         boxShadow: theme.shadows[4],
                         transition: 'all 0.3s ease',
                         '&:hover:not(:disabled)': {
                             boxShadow: theme.shadows[8],
                             transform: 'translateY(-2px)',
                         },
-                        '&:disabled': {
-                            opacity: 0.6,
-                        },
+                      
                     }}
                 >
                     {isSaving ? (

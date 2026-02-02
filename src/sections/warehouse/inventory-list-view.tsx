@@ -113,39 +113,40 @@ export function InventoryListView() {
             {
                 field: 'number',
                 headerName: t('inventory.number'),
-                width: 100,
+                width: 120,
             },
             {
                 field: 'date',
                 headerName: t('inventory.date'),
-                width: 130,
+                width: 150,
                 valueGetter: (_value, row) =>
                     row.date ? dayjs(row.date).format('DD.MM.YYYY') : '-',
             },
             {
                 field: 'storage_id',
                 headerName: t('inventory.storage'),
-                width: 150,
+                width: 170,
+                flex: 1,
                 valueGetter: (_value, row) =>
                     row.storage_id ? storageNameById.get(row.storage_id) || row.storage_id : '-',
             },
-            {
-                field: 'description',
-                headerName: t('inventory.description'),
-                flex: 1,
-                minWidth: 200,
-                valueGetter: (_value, row) => row.description || '-',
-            },
+            // {
+            //     field: 'description',
+            //     headerName: t('inventory.description'),
+            //     flex: 1,
+            //     minWidth: 200,
+            //     valueGetter: (_value, row) => row.description || '-',
+            // },
             {
                 field: 'status',
                 headerName: t('inventory.status'),
-                width: 130,
+                width: 120,
                 renderCell: (params) => <RenderCellStatus params={params} />,
             },
             {
                 field: 'remaining_amount',
                 headerName: t('inventory.remainingAmount'),
-                width: 150,
+                width: 180,
                 align: 'right',
                 headerAlign: 'right',
                 valueGetter: (_value, row) =>
@@ -158,7 +159,7 @@ export function InventoryListView() {
             {
                 field: 'shortage_amount',
                 headerName: t('inventory.shortageAmount'),
-                width: 150,
+                width: 180,
                 align: 'right',
                 headerAlign: 'right',
                 valueGetter: (_value, row) =>

@@ -134,7 +134,7 @@ export const paths = {
       details: (id: string) => `${ROOTS.MENU}/warehouse/storage/${id}`,
       edit: (id: string) => `${ROOTS.MENU}/warehouse/storage/${id}/edit`,
     },
-    new: `${ROOTS.MENU}/warehouse/inventory/new`,
+    new: `${ROOTS.MENU}/warehouse/storage/new`,
     details: (id: string) => `${ROOTS.MENU}/warehouse/inventory/${id}`,
     edit: (id: string) => `${ROOTS.MENU}/warehouse/inventory/${id}/edit`,
     stocks: {
