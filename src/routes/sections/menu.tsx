@@ -40,6 +40,8 @@ import { SupplierEditView } from 'src/sections/warehouse/supplier-edit-view';
 import { InvoicesEditViewTabs } from 'src/sections/warehouse/invoices-edit-view-tabs';
 import { InvoiceDetailsStandaloneListView } from 'src/sections/warehouse/invoice-details-standalone-list-view';
 import { InvoiceDetailsEditView } from 'src/sections/warehouse/invoice-details-edit-view';
+import { InventoryListView } from 'src/sections/warehouse/inventory-list-view';
+import { InventoryEditView } from 'src/sections/warehouse/inventory-edit-view';
 
 import { AuthGuard } from 'src/auth/guard';
 
@@ -123,9 +125,12 @@ export const dashboardRoutes: RouteObject[] = [
           { path: 'meals', element: <Meals /> },
           { path: 'meals/new', element: <MealEditView isNew /> },
           { path: 'meals/:id/edit', element: <MealEditView /> },
-          { path: 'warehouse/inventory', element: <WarehouseListView /> },
-          { path: 'warehouse/inventory/new', element: <WarehouseEditView isNew /> },
-          { path: 'warehouse/inventory/:id/edit', element: <WarehouseEditView /> },
+          { path: 'warehouse/storage', element: <WarehouseListView /> },
+          { path: 'warehouse/storage/new', element: <WarehouseEditView isNew /> },
+          { path: 'warehouse/storage/:id/edit', element: <WarehouseEditView /> },
+          { path: 'warehouse/inventories', element: <InventoryListView /> },
+          { path: 'warehouse/inventories/new', element: <InventoryEditView isNew /> },
+          { path: 'warehouse/inventories/:id/edit', element: <InventoryEditView /> },
           { path: 'warehouse/stocks', element: <StocksListView /> },
           { path: 'warehouse/stocks/new', element: <StocksEditView isNew /> },
           { path: 'warehouse/stocks/:id/edit', element: <StocksEditView /> },

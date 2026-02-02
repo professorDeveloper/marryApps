@@ -1,1 +1,0 @@
-import{j as t,f as e}from"./index-D6DHi8f3.js";import{a}from"./jwt-sign-up-view-J3AmLE5j.js";const i={title:`Sign up | Jwt - ${e.appName}`};function n(){return t.jsxs(t.Fragment,{children:[t.jsx("title",{children:i.title}),t.jsx(a,{})]})}export{n as default};

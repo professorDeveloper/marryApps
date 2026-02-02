@@ -35,6 +35,7 @@ export interface UseInvoiceDetailsAPIReturn {
     deleteInvoiceDetail: (id: string) => Promise<void>;
     deleteInvoiceDetails: (ids: string[]) => Promise<void>;
     createInvoiceDetailsBatch: (data: Array<Partial<InvoiceDetail>>) => Promise<InvoiceDetail[]>;
+    createInvoiceBatch: (data: any) => Promise<any>;
     getIngredients: () => Promise<any[]>;
     getInvoices: () => Promise<any[]>;
 }
@@ -171,6 +172,28 @@ export function useInvoiceDetailsAPI(): UseInvoiceDetailsAPIReturn {
     );
 
     /**
+     * Invoice va details batch shaklida yaratadi
+     */
+    const createInvoiceBatch = useCallback(
+        async (data: any): Promise<any> => {
+            try {
+                const response = await poster<BackendResponse<any>>(
+                    endpoints.invoice.batch,
+                    data
+                );
+                toast.success('Invoice batch created successfully');
+                return response.data;
+            } catch (error) {
+                const axiosError = error as AxiosError<any>;
+                const message = axiosError?.response?.data?.message || 'Failed to create invoice batch';
+                toast.error(message);
+                throw error;
+            }
+        },
+        []
+    );
+
+    /**
      * Barcha ingredients'ni oladi
      */
     const getIngredients = useCallback(async (): Promise<any[]> => {
@@ -208,6 +231,7 @@ export function useInvoiceDetailsAPI(): UseInvoiceDetailsAPIReturn {
         deleteInvoiceDetail,
         deleteInvoiceDetails,
         createInvoiceDetailsBatch,
+        createInvoiceBatch,
         getIngredients,
         getInvoices,
     };

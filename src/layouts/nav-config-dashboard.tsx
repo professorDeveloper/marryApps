@@ -75,7 +75,8 @@ export const getNavData = (t: TFunction): NavSectionProps['data'] => [
         path: paths.warehouse.root,
         icon: ICONS.banking,
         children: [
-          { title: t('overview.warehouse.storage', 'Storage'), path: paths.menu.inventory.root },
+          { title: t('overview.warehouse.storage', 'Storage'), path: paths.warehouse.storage.root },
+          { title: t('overview.warehouse.inventories', 'Ombor Menusi'), path: paths.menu.inventory.root },
           { title: t('overview.warehouse.ingredient-group', ''), path: paths.warehouse.ingredients_group.root },
           { title: t('overview.warehouse.ingredients', 'Ingredients'), path: paths.warehouse.ingredients.root },
           { title: t('overview.warehouse.invoiceDetails', 'Kirimlar'), path: paths.warehouse.invoiceDetails.root },
@@ -133,7 +134,7 @@ export const getNavData = (t: TFunction): NavSectionProps['data'] => [
           { title: t('overview.settings.deviceManagement', 'Device management'), path: paths.settings.profile.root },
           { title: t('overview.settings.restaurantInfo', 'Restaurant information'), path: paths.settings.notifications.root },
           // { title: 'Floor Plan', path: paths.settings.floorPlan },
-          { title: t('halls.Halls' , 'Halls'), path: paths.dashboard.halls },
+          { title: t('halls.Halls', 'Halls'), path: paths.dashboard.halls },
         ],
       },
     ],

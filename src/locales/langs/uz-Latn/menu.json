@@ -249,8 +249,8 @@
     "relatedProductsDeleteConfirm": "Fayllar o'chirilsinmi?",
     "relatedProductsDeleteMessage": "Tanlangan fayllar tizimdan butunlay o‘chiriladi va ushbu amalni bekor qilish yoki fayllarni tiklash mumkin emas.",
     "relatedProductsCancel": "Bekor qilish",
-    "nameEn":"Nomi (inglizcha)",
-    "nameRu":"Nomi (ruscha)"
+    "nameEn": "Nomi (inglizcha)",
+    "nameRu": "Nomi (ruscha)"
   },
   "mealsProducts": {
     "title": "Taomlar",
@@ -315,8 +315,8 @@
     "deleteMessage": "Tanlangan fayllar tizimdan butunlay o‘chiriladi va ushbu amalni bekor qilish yoki fayllarni tiklash mumkin emas.",
     "cancel": "Bekor qilish",
     "uploading": "Yuklanmoqda...",
-    "nameEn":"Nomi (inglizcha)",
-    "nameRu":"Nomi (ruscha)"
+    "nameEn": "Nomi (inglizcha)",
+    "nameRu": "Nomi (ruscha)"
   },
   "overview": {
     "subheader": "Umumiy",
@@ -330,6 +330,7 @@
     },
     "warehouse": {
       "title": "Ombor",
+      "inventories": "Inventarizatsiya",
       "invoiceDetails": "Kirimlar",
       "storage": "Ombor",
       "basicTitle": "Asosiy ma'lumotlar",
@@ -641,6 +642,7 @@
     "totalAmount": "Jami summa",
     "status": "Holati",
     "date": "Sana",
+    "storage": "Ombor",
     "group": "Guruh",
     "measurement": "O'lchov",
     "measurementKg": "kg",
@@ -773,5 +775,50 @@
       "delete": "O'chirish",
       "deleting": "O'chirilmoqda..."
     }
-  }
+  },
+    "inventory": {
+      "title": "Ombor menusi",
+      "list": "Ombor menusi ro'yxati",
+      "create": "Ombor menusi yaratish",
+      "edit": "Ombor menusi tahrirlash",
+      "new": "Yangi ombor menusi",
+      "add": "Ombor menusi qo'shish",
+      "inventory": "Ombor menusi",
+      "number": "Raqami",
+      "date": "Sana",
+      "storage": "Ombor",
+      "description": "Tavsifi",
+      "status": "Holati",
+      "remainingAmount": "Qolgan miqdori",
+      "shortageAmount": "Kam miqdori",
+      "surplusAmount": "Ortiq miqdori",
+      "details": "Ombor menusi tafsilotlari",
+      "summary": "Xulosa",
+      "active": "Faol",
+      "completed": "Yakunlangan",
+      "draft": "Taslagi",
+      "cancelled": "Bekor qilingan",
+      "itemsCalculation": "Ombor menusi elementlari hisoblash",
+      "itemsCalculationHelp": "Chap paneldan ingredientlarni tanlang va ularning hisoblab chiqilgan miqdorlarini o'ng panelga kiriting.",
+      "available": "Mavjud ingredientlar",
+      "itemsToCount": "Sanab chiqish uchun elementlar",
+      "counted": "Sanab chiqilgan miqdor",
+      "noIngredients": "Mavjud ingredientlar yo'q",
+      "noMatches": "Mos ingredientlar yo'q",
+      "noItemsSelected": "Hali hech qanday element tanlanmadi",
+      "itemsCount": "Elementlar soni",
+      "selectIngredients": "Iltimos, kamida bitta ingredient tanlang",
+      "selectStorage": "Iltimos, omborni tanlang",
+      "error": {
+        "notFound": "Ombor menusi topilmadi",
+        "loadFailed": "Ombor menusini yuklashda xato",
+        "saveFailed": "Ombor menusini saqlashda xato"
+      },
+      "success": {
+        "created": "Ombor menusi muvaffaqiyat yaratildi",
+        "updated": "Ombor menusi muvaffaqiyat yangilandi",
+        "itemsAdded": "Ombor menusi elementlari muvaffaqiyat qo'shildi"
+      }
+    }
+
 }

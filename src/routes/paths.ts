@@ -56,10 +56,10 @@ export const paths = {
       six: `${ROOTS.MENU}/group/six`,
     },
     inventory: {
-      root: `${ROOTS.MENU}/warehouse/inventory`,
-      new: `${ROOTS.MENU}/warehouse/inventory/new`,
-      details: (id: string) => `${ROOTS.MENU}/warehouse/inventory/${id}`,
-      edit: (id: string) => `${ROOTS.MENU}/warehouse/inventory/${id}/edit`,
+      root: `${ROOTS.MENU}/warehouse/inventories`,
+      new: `${ROOTS.MENU}/warehouse/inventories/new`,
+      details: (id: string) => `${ROOTS.MENU}/warehouse/inventories/${id}`,
+      edit: (id: string) => `${ROOTS.MENU}/warehouse/inventories/${id}/edit`,
     },
     product: {
       root: `${ROOTS.MENU}/section`,
@@ -128,6 +128,12 @@ export const paths = {
   },
   warehouse: {
     root: `${ROOTS.MENU}/warehouse`,
+    storage: {
+      root: `${ROOTS.MENU}/warehouse/storage`,
+      new: `${ROOTS.MENU}/warehouse/storage/new`,
+      details: (id: string) => `${ROOTS.MENU}/warehouse/storage/${id}`,
+      edit: (id: string) => `${ROOTS.MENU}/warehouse/storage/${id}/edit`,
+    },
     new: `${ROOTS.MENU}/warehouse/inventory/new`,
     details: (id: string) => `${ROOTS.MENU}/warehouse/inventory/${id}`,
     edit: (id: string) => `${ROOTS.MENU}/warehouse/inventory/${id}/edit`,

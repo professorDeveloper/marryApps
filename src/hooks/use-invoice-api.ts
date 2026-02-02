@@ -12,6 +12,7 @@ import { poster, putter, deleter, fetcher, endpoints } from 'src/lib/axios';
 export interface Invoice {
     id: string;
     supplier_id: string;
+    storage_id?: string;
     total_amount: string;
     status: string;
     date: string;

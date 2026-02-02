@@ -7,6 +7,7 @@ import { useTranslate } from 'src/locales';
 import { GenericEditView } from 'src/components/generic-edit-view';
 import { useInvoiceAPI } from 'src/hooks/use-invoice-api';
 import { useSupplierAPI } from 'src/hooks/use-supplier-api';
+import { useStorageAPI } from 'src/hooks/use-storage-api';
 import { Box, CircularProgress } from '@mui/material';
 
 interface InvoiceInfoEditViewProps {
@@ -39,11 +40,14 @@ export function InvoiceInfoEditView({
     const { id: urlId } = useParams<{ id?: string }>();
     const { createInvoice } = useInvoiceAPI();
     const { getSuppliers } = useSupplierAPI();
+    const { getStorages } = useStorageAPI();
     const [invoiceData, setInvoiceData] = useState<Record<string, any> | null>(null);
     const [loading, setLoading] = useState(true);
     const [suppliers, setSuppliers] = useState<any[]>([]);
+    const [storages, setStorages] = useState<any[]>([]);
     const [internalFormData, setInternalFormData] = useState<Record<string, any>>(persistedFormData || {
         supplier_id: '',
+        storage_id: '',
         date: new Date().toISOString(),
         status: 'pending',
         total_amount: '',
@@ -63,6 +67,20 @@ export function InvoiceInfoEditView({
         loadSuppliers();
     }, [getSuppliers]);
 
+    // Load storages for dropdown
+    useEffect(() => {
+        const loadStorages = async () => {
+            try {
+                const data = await getStorages();
+                setStorages(data || []);
+            } catch (error) {
+                console.error('Error loading storages:', error);
+            }
+        };
+
+        loadStorages();
+    }, [getStorages]);
+
     // Update internal form data when persisted data changes
     useEffect(() => {
         if (persistedFormData && Object.keys(persistedFormData).length > 0) {
@@ -80,6 +98,9 @@ export function InvoiceInfoEditView({
                 if (!formData.supplier_id) {
                     throw new Error(t('warehouse.invoices.supplierRequired'));
                 }
+                if (!formData.storage_id) {
+                    throw new Error(t('warehouse.invoices.storageRequired', 'Storage is required'));
+                }
                 if (!formData.total_amount) {
                     throw new Error(t('warehouse.invoices.amountRequired'));
                 }
@@ -88,6 +109,7 @@ export function InvoiceInfoEditView({
                 if (onInvoiceSubmit && detailsData && detailsData.length > 0) {
                     await onInvoiceSubmit({
                         supplier_id: formData.supplier_id,
+                        storage_id: formData.storage_id,
                         total_amount: formData.total_amount.toString(),
                         status: formData.status || 'pending',
                         date: formData.date || new Date().toISOString(),
@@ -104,6 +126,7 @@ export function InvoiceInfoEditView({
                 if (useBatchFlow && onInvoiceDataChange) {
                     onInvoiceDataChange({
                         supplier_id: formData.supplier_id,
+                        storage_id: formData.storage_id,
                         total_amount: formData.total_amount.toString(),
                         status: formData.status || 'pending',
                         date: formData.date || new Date().toISOString(),
@@ -115,6 +138,7 @@ export function InvoiceInfoEditView({
                 if (isNew) {
                     const newInvoice = await createInvoice({
                         supplier_id: formData.supplier_id,
+                        storage_id: formData.storage_id,
                         total_amount: formData.total_amount.toString(),
                         status: formData.status || 'pending',
                         date: formData.date || new Date().toISOString(),
@@ -152,6 +176,14 @@ export function InvoiceInfoEditView({
                 required: true,
                 defaultValue: '',
                 options: suppliers.map((s) => ({ value: s.id, label: s.name })),
+            },
+            {
+                key: 'storage_id',
+                label: t('warehouse.storages.title', 'Storage'),
+                type: 'select',
+                required: true,
+                defaultValue: '',
+                options: storages.map((s) => ({ value: s.id, label: s.name })),
             },
             {
                 key: 'date',

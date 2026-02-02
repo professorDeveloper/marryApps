@@ -45,6 +45,8 @@ interface BatchInvoiceDetail {
 
 interface InvoiceDetailsBatchProps {
     invoiceId: string;
+    storageId: string;
+    supplierId: string;
     onSuccess?: () => void;
 }
 
@@ -52,10 +54,10 @@ const calculatePrice = (quantity: number, pricePerUnit: number): number => {
     return quantity * pricePerUnit;
 };
 
-export function InvoiceDetailsBatch({ invoiceId, onSuccess }: InvoiceDetailsBatchProps) {
+export function InvoiceDetailsBatch({ invoiceId, storageId, supplierId, onSuccess }: InvoiceDetailsBatchProps) {
     const { t } = useTranslation('menu');
     const theme = useTheme();
-    const { getIngredients, createInvoiceDetailsBatch } = useInvoiceDetailsAPI();
+    const { getIngredients, createInvoiceDetailsBatch, createInvoiceBatch } = useInvoiceDetailsAPI();
     // Tab state
     const [currentTab, setCurrentTab] = useState(0);
 
@@ -184,7 +186,18 @@ export function InvoiceDetailsBatch({ invoiceId, onSuccess }: InvoiceDetailsBatc
                 price: item.price.toString(),
             }));
 
-            await createInvoiceDetailsBatch(batchData);
+            const payload = {
+                details: batchData,
+                invoice: {
+                    date: new Date().toISOString(),
+                    status: 'pending',
+                    storage_id: storageId,
+                    supplier_id: supplierId,
+                    total_amount: totals.totalPrice.toString(),
+                }
+            };
+
+            await createInvoiceBatch(payload);
             setBatchItems([]);
             resetForm();
             toast.success(t('warehouse.invoiceDetails.batchCreatedSuccess'));

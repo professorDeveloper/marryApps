@@ -6,6 +6,7 @@ import { paths } from 'src/routes/paths';
 import { useInvoiceDetailsAPI } from 'src/hooks/use-invoice-details-api';
 import { useInvoiceAPI } from 'src/hooks/use-invoice-api';
 import { useSupplierAPI } from 'src/hooks/use-supplier-api';
+import { useStorageAPI } from 'src/hooks/use-storage-api';
 import { Iconify } from 'src/components/iconify';
 import { CustomGridActionsCellItem } from 'src/components/custom-data-grid';
 import { GenericTableView } from 'src/components/generic-table-view';
@@ -40,6 +41,7 @@ export function InvoiceDetailsStandaloneListView() {
     const { getInvoiceDetails, deleteInvoiceDetails, getInvoices, getIngredients } = useInvoiceDetailsAPI();
     const { deleteInvoices } = useInvoiceAPI();
     const { getSuppliers } = useSupplierAPI();
+    const { getStorages } = useStorageAPI();
     const [invoices, setInvoices] = useState<any[]>([]);
     const [allDetails, setAllDetails] = useState<InvoiceDetailWithInvoiceInfo[]>([]);
     const [loading, setLoading] = useState(true);
@@ -54,16 +56,19 @@ export function InvoiceDetailsStandaloneListView() {
             try {
                 const fetchedInvoices = await getInvoices();
                 const suppliers = await getSuppliers();
+                const storages = await getStorages();
                 const details = await getInvoiceDetails();
                 const ingredients = await getIngredients();
 
-                // Enrich invoices with supplier information
+                // Enrich invoices with supplier and storage information
                 const enrichedInvoices = fetchedInvoices.map((invoice: any) => {
                     const supplier = suppliers.find((s: any) => s.id === invoice.supplier_id);
+                    const storage = storages.find((st: any) => st.id === invoice.storage_id);
                     return {
                         ...invoice,
                         supplier_name: supplier?.name || 'Unknown',
                         supplier_phone: supplier?.phone_number || '',
+                        storage_name: storage?.name || 'Unknown',
                     };
                 });
 
@@ -87,7 +92,7 @@ export function InvoiceDetailsStandaloneListView() {
         };
 
         fetchData();
-    }, [getInvoiceDetails, getInvoices, getIngredients, getSuppliers]);
+    }, [getInvoiceDetails, getInvoices, getIngredients, getSuppliers, getStorages]);
 
     const handleDeleteClick = (id: string, type: 'invoice' | 'detail') => {
         setSelectedDeleteId(id);
@@ -162,6 +167,12 @@ export function InvoiceDetailsStandaloneListView() {
                 field: 'supplier_phone',
                 headerName: t('invoices.phone', 'Phone'),
                 width: 160,
+            },
+            {
+                field: 'storage_name',
+                headerName: t('invoices.storage', 'Storage'),
+                flex: 1,
+                minWidth: 180,
             },
             {
                 field: 'total_amount',

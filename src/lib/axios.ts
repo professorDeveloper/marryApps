@@ -250,4 +250,15 @@ export const endpoints = {
     update: (id: string) => `/api/v1/translations/${id}`,
     delete: (id: string) => `/api/v1/translations/${id}`,
   },
+  inventory: {
+    list: '/api/v1/inventories',
+    details: (id: string) => `/api/v1/inventories/${id}`,
+    create: '/api/v1/inventories',
+    update: (id: string) => `/api/v1/inventories/${id}`,
+    delete: (id: string) => `/api/v1/inventories/${id}`,
+    items: (inventoryId: string) => `/api/v1/inventories/${inventoryId}/items`,
+    createItems: (inventoryId: string) => `/api/v1/inventories/${inventoryId}/items`,
+    updateItem: (inventoryId: string, itemId: string) => `/api/v1/inventories/${inventoryId}/items/${itemId}`,
+    deleteItem: (inventoryId: string, itemId: string) => `/api/v1/inventories/${inventoryId}/items/${itemId}`,
+  },
 } as const;

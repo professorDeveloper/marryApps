@@ -42,6 +42,7 @@ export function InvoicesEditViewTabs() {
     const [isLoading, setIsLoading] = useState(!!id); // Loading if editing
     const [formData, setFormData] = useState<Record<string, any>>({
         supplier_id: '',
+        storage_id: '',
         date: new Date().toISOString(),
         status: 'pending',
         total_amount: '',
@@ -60,6 +61,7 @@ export function InvoicesEditViewTabs() {
                         setInvoiceData(invoice);
                         setFormData({
                             supplier_id: invoice.supplier_id,
+                            storage_id: invoice.storage_id || '',
                             date: invoice.date,
                             status: invoice.status,
                             total_amount: invoice.total_amount?.toString() || '',
@@ -103,6 +105,9 @@ export function InvoicesEditViewTabs() {
             if (!formData.supplier_id) {
                 throw new Error(t('warehouse.invoices.supplierRequired'));
             }
+            if (!formData.storage_id) {
+                throw new Error(t('warehouse.invoices.storageRequired', 'Storage is required'));
+            }
             if (!formData.total_amount) {
                 throw new Error(t('warehouse.invoices.amountRequired'));
             }
@@ -114,6 +119,7 @@ export function InvoicesEditViewTabs() {
                 const batchPayload = {
                     invoice: {
                         supplier_id: formData.supplier_id,
+                        storage_id: formData.storage_id,
                         total_amount: formData.total_amount.toString(),
                         status: formData.status || 'pending',
                         date: formData.date || new Date().toISOString(),
@@ -130,6 +136,7 @@ export function InvoicesEditViewTabs() {
                 // Clear form and details data after successful submission
                 setFormData({
                     supplier_id: '',
+                    storage_id: '',
                     date: new Date().toISOString(),
                     status: 'pending',
                     total_amount: '',

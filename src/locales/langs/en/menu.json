@@ -333,6 +333,7 @@
     "warehouse": {
       "title": "Warehouse",
       "storage": "Storage",
+      "inventories": "Inventory",
       "stocks": "Stocks",
       "invoiceDetails": "Invoice details",
       "ingredients": "Ingredients",
@@ -660,6 +661,7 @@
     "pictureInfo": "Image information",
     "name": "Name",
     "phone": "Phone number",
+    "storage": "Storage",
     "email": "Email",
     "totalAmount": "Total amount",
     "status": "Status",
@@ -795,6 +797,50 @@
       "cancel": "Cancel",
       "delete": "Delete",
       "deleting": "Deleting..."
+    }
+  },
+  "inventory": {
+    "title": "Inventory",
+    "list": "Inventory List",
+    "create": "Create Inventory",
+    "edit": "Edit Inventory",
+    "new": "New Inventory",
+    "add": "Add Inventory",
+    "inventory": "Inventory",
+    "number": "Number",
+    "date": "Date",
+    "storage": "Storage",
+    "description": "Description",
+    "status": "Status",
+    "remainingAmount": "Remaining Amount",
+    "shortageAmount": "Shortage Amount",
+    "surplusAmount": "Surplus Amount",
+    "details": "Inventory Details",
+    "summary": "Summary",
+    "active": "Active",
+    "completed": "Completed",
+    "draft": "Draft",
+    "cancelled": "Cancelled",
+    "itemsCalculation": "Inventory Items Calculation",
+    "itemsCalculationHelp": "Select ingredients from the left panel and enter their counted quantities in the right panel.",
+    "available": "Available Ingredients",
+    "itemsToCount": "Items to Count",
+    "counted": "Counted Qty",
+    "noIngredients": "No ingredients available",
+    "noMatches": "No matching ingredients",
+    "noItemsSelected": "No items selected yet",
+    "itemsCount": "Items Count",
+    "selectIngredients": "Please select at least one ingredient",
+    "selectStorage": "Please select a storage",
+    "error": {
+      "notFound": "Inventory not found",
+      "loadFailed": "Failed to load inventory",
+      "saveFailed": "Failed to save inventory"
+    },
+    "success": {
+      "created": "Inventory created successfully",
+      "updated": "Inventory updated successfully",
+      "itemsAdded": "Inventory items added successfully"
     }
   }
 }
