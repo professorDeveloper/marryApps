@@ -35,6 +35,7 @@ import { CompoundEditViewWrapper } from 'src/sections/compounds/compounds-edit-v
 import { RestaurantInfoListView } from 'src/sections/settings/restaurant-info';
 import { IngredientListView } from 'src/sections/warehouse/ingredients-list-view';
 import { IngredientEditViewWrapper } from 'src/sections/warehouse/ingredients-edit-view';
+import IngredientStockListView from 'src/sections/warehouse/ingredient-stock-list-view';
 import { InvoicesListView } from 'src/sections/warehouse/supplier-list-view';
 import { SupplierEditView } from 'src/sections/warehouse/supplier-edit-view';
 import { InvoicesEditViewTabs } from 'src/sections/warehouse/invoices-edit-view-tabs';
@@ -42,6 +43,10 @@ import { InvoiceDetailsStandaloneListView } from 'src/sections/warehouse/invoice
 import { InvoiceDetailsEditView } from 'src/sections/warehouse/invoice-details-edit-view';
 import { InventoryListView } from 'src/sections/warehouse/inventory-list-view';
 import { InventoryEditView } from 'src/sections/warehouse/inventory-edit-view';
+import { DeductionsListView } from 'src/sections/warehouse/deductions-list-view';
+import { DeductionsEditView } from 'src/sections/warehouse/deductions-edit-view';
+import { DeductionGroupsListView } from 'src/sections/warehouse/deduction-groups-list-view';
+import { DeductionGroupEditView } from 'src/sections/warehouse/deduction-group-edit-view';
 
 import { AuthGuard } from 'src/auth/guard';
 
@@ -149,12 +154,19 @@ export const dashboardRoutes: RouteObject[] = [
           { path: 'warehouse/ingredients', element: <IngredientListView /> },
           { path: 'warehouse/ingredients/new', element: <IngredientEditViewWrapper isNew /> },
           { path: 'warehouse/ingredients/:id/edit', element: <IngredientEditViewWrapper /> },
+          { path: 'warehouse/ingredient-stock', element: <IngredientStockListView /> },
           { path: 'warehouse/invoices', element: <InvoicesListView /> },
           { path: 'warehouse/invoices/new', element: <InvoicesEditViewTabs /> },
           { path: 'warehouse/invoices/:id/edit', element: <InvoicesEditViewTabs /> },
           { path: 'warehouse/invoice-details', element: <InvoiceDetailsStandaloneListView /> },
           { path: 'warehouse/invoice-details/new', element: <InvoiceDetailsEditView isNew /> },
           { path: 'warehouse/invoice-details/:id/edit', element: <InvoiceDetailsEditView /> },
+          { path: 'warehouse/deductions', element: <DeductionsListView /> },
+          { path: 'warehouse/deductions/new', element: <DeductionsEditView isNew /> },
+          { path: 'warehouse/deductions/:id', element: <DeductionsEditView /> },
+          { path: 'warehouse/deduction-groups', element: <DeductionGroupsListView /> },
+          { path: 'warehouse/deduction-groups/new', element: <DeductionGroupEditView isNew /> },
+          { path: 'warehouse/deduction-groups/:id/edit', element: <DeductionGroupEditView /> },
           { path: 'reports', element: <ReportsListView /> },
           { path: 'reports/new', element: <ReportsEditView isNew /> },
           { path: 'reports/:id/edit', element: <ReportsEditView /> },

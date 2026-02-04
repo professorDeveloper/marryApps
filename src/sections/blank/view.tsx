@@ -6,6 +6,7 @@ import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 
 import { DashboardContent } from 'src/layouts/dashboard';
+import { useState } from 'react';
 
 // ----------------------------------------------------------------------
 
@@ -16,28 +17,74 @@ type Props = {
 };
 
 export function BlankView({ title = 'Blank', description, sx }: Props) {
-  const renderContent = () => (
-    <Box
-      sx={[
-        (theme) => ({
-          mt: 5,
-          width: 1,
-          height: 320,
-          borderRadius: 2,
-          border: `dashed 1px ${theme.vars.palette.divider}`,
-          bgcolor: varAlpha(theme.vars.palette.grey['500Channel'], 0.04),
-        }),
-        ...(Array.isArray(sx) ? sx : [sx]),
-      ]}
-    />
-  );
+    const [checkedOrder, setCheckedOrder] = useState<string[]>([]);
+
+  const handleChange = (id: string) => {
+    setCheckedOrder((prev) => {
+      // Agar allaqachon yoqilgan bo‘lsa → o‘chiramiz
+      if (prev.includes(id)) {
+        return prev.filter((item) => item !== id);
+      }
+
+      // Agar 2 ta yoqilgan bo‘lsa → birinchisini olib tashlaymiz
+      if (prev.length === 3) {
+        return [...prev.slice(1), id];
+      }
+
+      // Aks holda qo‘shamiz
+      return [...prev, id];
+    });
+  };
+
+  const isChecked = (id: string) => checkedOrder.includes(id);
+
 
   return (
     <DashboardContent maxWidth="xl">
       <Typography variant="h4"> {title} </Typography>
       {description && <Typography sx={{ mt: 1 }}> {description} </Typography>}
 
-      {renderContent()}
+       <div style={{ padding: 20 }}>
+
+      <label>
+        <input
+          type="checkbox"
+          checked={isChecked("a")}
+          onChange={() => handleChange("a")}
+        />
+        Checkbox A
+      </label>
+      <br />
+
+      <label>
+        <input
+          type="checkbox"
+          checked={isChecked("b")}
+          onChange={() => handleChange("b")}
+        />
+        Checkbox B
+      </label>
+      <br />
+
+      <label>
+        <input
+          type="checkbox"
+          checked={isChecked("c")}
+          onChange={() => handleChange("c")}
+        />
+        Checkbox C
+      </label>
+      <br />
+      
+        <label>
+        <input
+          type="checkbox"
+          checked={isChecked("d")}
+          onChange={() => handleChange("d")}
+        />
+        Checkbox D
+      </label>
+    </div>
     </DashboardContent>
   );
 }

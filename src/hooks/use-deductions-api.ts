@@ -1,0 +1,290 @@
+import type { AxiosError } from 'axios';
+
+import { toast } from 'sonner';
+import { useCallback } from 'react';
+
+import { poster, putter, deleter, fetcher, endpoints } from 'src/lib/axios';
+
+// ============================================================================
+// TYPES
+// ============================================================================
+
+export interface DeductionItem {
+    ingredient_id: string;
+    quantity: string;
+}
+
+export interface Deduction {
+    id: string;
+    number: number;
+    date: string;
+    act_group_id: string;
+    storage_id: string;
+    description: string;
+    status: string;
+    balance: string;
+    created_at: string;
+    updated_at: string;
+    storage_name?: string;  // Optional field from backend
+    group_name?: string;    // Optional field from backend
+    items?: DeductionItem[]; // Optional items array
+}
+
+export interface DeductionGroup {
+    id: string;
+    name: string;
+    created_at: string;
+    updated_at: string;
+}
+
+export interface BackendResponse<T> {
+    status: string;
+    message: string;
+    data: T;
+    code: number;
+}
+
+export interface UseDeductionsAPIReturn {
+    getDeductions: () => Promise<Deduction[]>;
+    getDeductionById: (id: string) => Promise<Deduction | null>;
+    createDeduction: (data: {
+        act_group_id: string;
+        date: string;
+        description: string;
+        items: DeductionItem[];
+        status: string;
+        storage_id: string;
+    }) => Promise<Deduction>;
+    updateDeduction: (
+        id: string,
+        data: Partial<Deduction>
+    ) => Promise<Deduction>;
+    deleteDeduction: (id: string) => Promise<void>;
+    getDeductionGroups: () => Promise<DeductionGroup[]>;
+    createDeductionGroup: (data: { name: string }) => Promise<DeductionGroup>;
+    updateDeductionGroup: (id: string, data: { name: string }) => Promise<DeductionGroup>;
+    deleteDeductionGroup: (id: string) => Promise<void>;
+}
+
+// ============================================================================
+// HOOK
+// ============================================================================
+
+export function useDeductionsAPI(): UseDeductionsAPIReturn {
+    /**
+     * Barcha deductions'ni oladi
+     */
+    const getDeductions = useCallback(async (): Promise<Deduction[]> => {
+        try {
+            const response = await fetcher<BackendResponse<Deduction[]>>(
+                endpoints.deductions.list
+            );
+            return response.data || [];
+        } catch (error) {
+            const axiosError = error as AxiosError<any>;
+            const message =
+                axiosError?.response?.data?.message ||
+                'Failed to fetch deductions';
+            toast.error(message);
+            return [];
+        }
+    }, []);
+
+    /**
+     * ID orqali deduction'ni oladi
+     */
+    const getDeductionById = useCallback(
+        async (id: string): Promise<Deduction | null> => {
+            try {
+                const endpoint = `${endpoints.deductions.list}/${id}`;
+                const response = await fetcher<BackendResponse<Deduction>>(endpoint);
+                return response.data || null;
+            } catch (error) {
+                const axiosError = error as AxiosError<any>;
+                const message =
+                    axiosError?.response?.data?.message ||
+                    'Failed to fetch deduction';
+                toast.error(message);
+                return null;
+            }
+        },
+        []
+    );
+
+    /**
+     * Yangi deduction yaratadi
+     */
+    const createDeduction = useCallback(
+        async (data: {
+            act_group_id: string;
+            date: string;
+            description: string;
+            items: DeductionItem[];
+            status: string;
+            storage_id: string;
+        }): Promise<Deduction> => {
+            try {
+                const response = await poster<BackendResponse<Deduction>>(
+                    endpoints.deductions.create,
+                    data
+                );
+                toast.success('Deduction successfully created');
+                return response.data;
+            } catch (error) {
+                const axiosError = error as AxiosError<any>;
+                const message =
+                    axiosError?.response?.data?.message ||
+                    'Failed to create deduction';
+                toast.error(message);
+                throw error;
+            }
+        },
+        []
+    );
+
+    /**
+     * Deduction'ni yangilaydi
+     */
+    const updateDeduction = useCallback(
+        async (
+            id: string,
+            data: Partial<Deduction>
+        ): Promise<Deduction> => {
+            try {
+                const response = await putter<BackendResponse<Deduction>>(
+                    endpoints.deductions.update(id),
+                    data
+                );
+                toast.success('Deduction successfully updated');
+                return response.data;
+            } catch (error) {
+                const axiosError = error as AxiosError<any>;
+                const message =
+                    axiosError?.response?.data?.message ||
+                    'Failed to update deduction';
+                toast.error(message);
+                throw error;
+            }
+        },
+        []
+    );
+
+    /**
+     * Deduction'ni o'chiradi
+     */
+    const deleteDeduction = useCallback(async (id: string): Promise<void> => {
+        try {
+            await deleter(endpoints.deductions.delete(id));
+            toast.success('Deduction successfully deleted');
+        } catch (error) {
+            const axiosError = error as AxiosError<any>;
+            const message =
+                axiosError?.response?.data?.message ||
+                'Failed to delete deduction';
+            toast.error(message);
+            throw error;
+        }
+    }, []);
+
+    /**
+     * Barcha deduction groups'ni oladi
+     */
+    const getDeductionGroups = useCallback(
+        async (): Promise<DeductionGroup[]> => {
+            try {
+                const response = await fetcher<BackendResponse<DeductionGroup[]>>(
+                    endpoints.deductions.groups
+                );
+                return response.data || [];
+            } catch (error) {
+                const axiosError = error as AxiosError<any>;
+                const message =
+                    axiosError?.response?.data?.message ||
+                    'Failed to fetch deduction groups';
+                toast.error(message);
+                return [];
+            }
+        },
+        []
+    );
+
+    /**
+     * Yangi deduction group yaratadi
+     */
+    const createDeductionGroup = useCallback(
+        async (data: { name: string }): Promise<DeductionGroup> => {
+            try {
+                const response = await poster<BackendResponse<DeductionGroup>>(
+                    endpoints.deductions.createGroup,
+                    data
+                );
+                toast.success('Deduction group successfully created');
+                return response.data;
+            } catch (error) {
+                const axiosError = error as AxiosError<any>;
+                const message =
+                    axiosError?.response?.data?.message ||
+                    'Failed to create deduction group';
+                toast.error(message);
+                throw error;
+            }
+        },
+        []
+    );
+
+    /**
+     * Deduction group'ni o'chiradi
+     */
+    const deleteDeductionGroup = useCallback(
+        async (id: string): Promise<void> => {
+            try {
+                await deleter(endpoints.deductions.deleteGroup(id));
+                toast.success('Deduction group successfully deleted');
+            } catch (error) {
+                const axiosError = error as AxiosError<any>;
+                const message =
+                    axiosError?.response?.data?.message ||
+                    'Failed to delete deduction group';
+                toast.error(message);
+                throw error;
+            }
+        },
+        []
+    );
+
+    /**
+     * Deduction group'ni yangilaydi
+     */
+    const updateDeductionGroup = useCallback(
+        async (id: string, data: { name: string }): Promise<DeductionGroup> => {
+            try {
+                const response = await putter<BackendResponse<DeductionGroup>>(
+                    endpoints.deductions.updateGroup(id),
+                    data
+                );
+                toast.success('Deduction group successfully updated');
+                return response.data;
+            } catch (error) {
+                const axiosError = error as AxiosError<any>;
+                const message =
+                    axiosError?.response?.data?.message ||
+                    'Failed to update deduction group';
+                toast.error(message);
+                throw error;
+            }
+        },
+        []
+    );
+
+    return {
+        getDeductions,
+        getDeductionById,
+        createDeduction,
+        updateDeduction,
+        deleteDeduction,
+        getDeductionGroups,
+        createDeductionGroup,
+        updateDeductionGroup,
+        deleteDeductionGroup,
+    };
+}

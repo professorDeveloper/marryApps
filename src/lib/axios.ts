@@ -261,4 +261,21 @@ export const endpoints = {
     updateItem: (inventoryId: string, itemId: string) => `/api/v1/inventories/${inventoryId}/items/${itemId}`,
     deleteItem: (inventoryId: string, itemId: string) => `/api/v1/inventories/${inventoryId}/items/${itemId}`,
   },
+  deductions: {
+    list: '/api/v1/deductions',
+    details: (id: string) => `/api/v1/deductions/${id}`,
+    create: '/api/v1/deductions',
+    update: (id: string) => `/api/v1/deductions/${id}`,
+    delete: (id: string) => `/api/v1/deductions/${id}`,
+    groups: '/api/v1/deductions/group',
+    createGroup: '/api/v1/deductions/group',
+    updateGroup: (id: string) => `/api/v1/deductions/group/${id}`,
+    deleteGroup: (id: string) => `/api/v1/deductions/group/${id}`,
+  },
+  ingredientStock: {
+    list: '/api/v1/ingredient-stock',
+    details: (id: string) => `/api/v1/ingredient-stock/${id}`,
+    update: (id: string) => `/api/v1/ingredient-stock/${id}`,
+    delete: (id: string) => `/api/v1/ingredient-stock/${id}`,
+  },
 } as const;

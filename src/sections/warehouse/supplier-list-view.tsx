@@ -6,6 +6,7 @@ import { useSupplierAPI } from 'src/hooks/use-supplier-api';
 import { Iconify } from 'src/components/iconify';
 import { CustomGridActionsCellItem } from 'src/components/custom-data-grid';
 import { GenericTableView } from 'src/components/generic-table-view';
+import { Box } from '@mui/material';
 
 export function InvoicesListView() {
     const { t } = useTranslation('menu');
@@ -52,6 +53,7 @@ export function InvoicesListView() {
                 headerName: t('suppliers.name', 'Supplier Name'),
                 flex: 1,
                 minWidth: 200,
+                renderCell: (params) => <Box sx={{ mt: 1.5, mb: 1.5 }}>{params.row.name}</Box>,
             },
             {
                 field: 'phone_number',

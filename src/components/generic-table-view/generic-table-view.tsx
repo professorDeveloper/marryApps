@@ -69,6 +69,9 @@ export interface GenericTableConfig<T = any> {
   onDeleteRow?: (id: string) => void;
   onDeleteRows?: (ids: string[]) => void;
 
+  // Row click handler
+  onRowClick?: (id: string) => void;
+
   // Filter state
   initialFilters?: Record<string, any>;
 
@@ -98,6 +101,7 @@ export function GenericTableView<T extends Record<string, any>>({
   filterOptions = {},
   onDeleteRow,
   onDeleteRows,
+  onRowClick,
   initialFilters = {},
   hideColumns = {},
   hideColumnsTogglable = [],
@@ -264,6 +268,11 @@ export function GenericTableView<T extends Record<string, any>>({
             columnVisibilityModel={columnVisibilityModel}
             onColumnVisibilityModelChange={(newModel) => setColumnVisibilityModel(newModel)}
             onRowSelectionModelChange={(newSelectionModel) => setSelectedRows(newSelectionModel)}
+            onRowClick={(params) => {
+              if (onRowClick && !hideCheckboxes) {
+                onRowClick(params.row[idField]);
+              }
+            }}
             slots={{
               noRowsOverlay: () => <EmptyContent title="Ishlab chiqish jarayonida" />,
               noResultsOverlay: () => <EmptyContent title="Natija topilmadi" />,

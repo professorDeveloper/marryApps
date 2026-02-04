@@ -340,6 +340,7 @@
       "invoiceDetails": "Invoice details",
       "ingredients": "Ingredients",
       "ingredient-group": "Ingredient groups",
+      "ingredientStock": "Ingredient Stock",
       "transfers": "Transfers",
       "locations": "Locations",
       "suppliers": "Suppliers"
@@ -537,6 +538,7 @@
     "name": "Name",
     "branch": "Branch",
     "color": "Color",
+    "price": "Price",
     "picture": "Picture",
     "created": "Created",
     "basicInfo": "Basic information",
@@ -609,7 +611,10 @@
     "close": "Close",
     "confirm": "Confirm",
     "noData": "No data available",
-    "total": "Total"
+    "total": "Total",
+    "saving": "Saving...",
+    "deleteConfirmTitle": "Confirm Deletion",
+    "deleteConfirmMessage": "Are you sure you want to delete this record? This action cannot be undone."
   },
   "ingredients": {
     "title": "Ingredients",
@@ -802,14 +807,78 @@
       "deleting": "Deleting..."
     }
   },
+  "deductions": {
+    "title": "Deductions",
+    "groups": "Deduction groups",
+    "items": "Deduction items",
+    "list": "Deductions list",
+    "create": "Create deduction",
+    "edit": "Edit deduction",
+    "new": "New deduction",
+    "add": "Add deduction",
+    "deductions": "Deductions",
+    "number": "Number",
+    "date": "Date",
+    "storage": "Warehouse",
+    "group": "Group",
+    "description": "Description",
+    "status": "Status",
+    "balance": "Balance",
+    "details": "Deduction details",
+    "summary": "Summary",
+    "active": "Active",
+    "inactive": "Inactive",
+    "deleted": "Deleted",
+    "draft": "Draft",
+    "cancelled": "Cancelled",
+    "itemsCalculation": "Deduction items calculation",
+    "availableIngredients": "Available ingredients",
+    "selectedItems": "Selected items",
+    "instructionsInfo": "Select ingredients from the left panel and move them to the right panel",
+    "noItemsSelected": "No items selected yet",
+    "createNew": "Create new deduction",
+    "storageAndGroupRequired": "Please select a warehouse and a group",
+    "storageRequired": "Warehouse selection is required",
+    "groupRequired": "Group selection is required",
+    "itemsRequired": "Please select at least one item",
+    "deductionIdRequired": "The deduction must be saved first",
+    "noIngredients": "No available ingredients",
+    "noMatches": "No matching ingredients found",
+    "selectIngredients": "Please select at least one ingredient",
+    "addNew": "Add new",
+    "selectItemsInfo": "Select a warehouse and group in the Details tab, then add items",
+    "error": {
+      "notFound": "Deduction not found",
+      "loadFailed": "Failed to load deduction",
+      "saveFailed": "Failed to save deduction"
+    },
+    "success": {
+      "created": "Deduction created successfully",
+      "updated": "Deduction updated successfully",
+      "itemsAdded": "Deduction items added successfully"
+    },
+    "loadError": "Failed to load write-off",
+    "groupDeleted": "Write-off group deleted",
+    "groupName": "Write-off group",
+    "createdAt": "Created date",
+    "addGroup": "Add new",
+    "deleteConfirm": "Are you sure you want to delete?",
+    "deleteGroupMessage": "Are you sure you want to delete this group?",
+    "groupNameRequired": "Write-off group name is required",
+    "groupCreated": "Write-off group created successfully",
+    "groupUpdated": "Write-off group updated successfully",
+    "createGroup": "Create write-off group",
+    "editGroup": "Edit write-off group",
+    "groupDetails": "Write-off group details"
+  },
   "inventory": {
     "title": "Inventory",
-    "items": "Inventory Items",
-    "list": "Inventory List",
-    "create": "Create Inventory",
-    "edit": "Edit Inventory",
-    "new": "New Inventory",
-    "add": "Add Inventory",
+    "items": "Inventory items",
+    "list": "Inventory list",
+    "create": "Create inventory",
+    "edit": "Edit inventory",
+    "new": "New inventory",
+    "add": "Add inventory",
     "inventory": "Inventory",
     "number": "Number",
     "date": "Date",
@@ -845,6 +914,29 @@
       "created": "Inventory created successfully",
       "updated": "Inventory updated successfully",
       "itemsAdded": "Inventory items added successfully"
+    }
+  },
+  "ingredientStock": {
+    "title": "Ingredient Stock",
+    "list": "Ingredient Stock",
+    "details": "Ingredient Stock Details",
+    "edit": "Edit Stock",
+    "ingredients_group": "Ingredients Group",
+    "ingredient": "Ingredient",
+    "quantity": "Quantity",
+    "storage": "Storage",
+    "measurement": "Measurement",
+    "created_at": "Created Date",
+    "updated_at": "Updated Date",
+    "error": {
+      "notFound": "Stock not found",
+      "loadFailed": "Failed to load stocks",
+      "updateFailed": "Failed to update stock quantity",
+      "deleteFailed": "Failed to delete stock"
+    },
+    "success": {
+      "updated": "Stock updated successfully",
+      "deleted": "Stock deleted successfully"
     }
   }
 }

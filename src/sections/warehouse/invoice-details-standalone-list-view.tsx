@@ -202,8 +202,8 @@ export function InvoiceDetailsStandaloneListView() {
                                 borderRadius: '4px',
                                 fontSize: '14px',
                                 fontWeight: 700,
-                                marginTop: '20px',
-                                marginBottom: '20px',
+                                marginTop: '10px',
+                                marginBottom: '10px',
                                 backgroundColor:
                                     color === 'warning'
                                         ? '#FFF3CD'

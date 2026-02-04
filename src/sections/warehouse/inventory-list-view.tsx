@@ -114,6 +114,7 @@ export function InventoryListView() {
                 field: 'number',
                 headerName: t('inventory.number'),
                 width: 120,
+                renderCell: (params) => <Box sx={{ mt: 1.5, mb: 1.5 }}>{params.row.number}</Box>,
             },
             {
                 field: 'date',

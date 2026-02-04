@@ -43,7 +43,7 @@ export interface IInventoryFormData {
 
 export interface IInventoryItemInput {
     ingredient_id: string;
-    counted_quantity: number;
+    counted_quantity: string;
 }
 
 export interface BackendResponse<T> {

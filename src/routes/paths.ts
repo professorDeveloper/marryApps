@@ -173,6 +173,11 @@ export const paths = {
       details: (id: string) => `${ROOTS.MENU}/warehouse/ingredients-group/${id}`,
       edit: (id: string) => `${ROOTS.MENU}/warehouse/ingredients-group/${id}/edit`,
     },
+    ingredientStock: {
+      root: `${ROOTS.MENU}/warehouse/ingredient-stock`,
+      details: (id: string) => `${ROOTS.MENU}/warehouse/ingredient-stock/${id}`,
+      edit: (id: string) => `${ROOTS.MENU}/warehouse/ingredient-stock/${id}/edit`,
+    },
 
     invoices: {
       root: `${ROOTS.MENU}/warehouse/invoices`,
@@ -185,6 +190,17 @@ export const paths = {
       new: `${ROOTS.MENU}/warehouse/invoice-details/new`,
       details: (id: string) => `${ROOTS.MENU}/warehouse/invoice-details/${id}`,
       edit: (id: string) => `${ROOTS.MENU}/warehouse/invoice-details/${id}/edit`,
+    },
+    deductions: {
+      root: `${ROOTS.MENU}/warehouse/deductions`,
+      new: `${ROOTS.MENU}/warehouse/deductions/new`,
+      details: (id: string) => `${ROOTS.MENU}/warehouse/deductions/${id}`,
+      edit: (id: string) => `${ROOTS.MENU}/warehouse/deductions/${id}/edit`,
+    },
+    deductionGroups: {
+      root: `${ROOTS.MENU}/warehouse/deduction-groups`,
+      new: `${ROOTS.MENU}/warehouse/deduction-groups/new`,
+      edit: (id: string) => `${ROOTS.MENU}/warehouse/deduction-groups/${id}/edit`,
     },
   },
 

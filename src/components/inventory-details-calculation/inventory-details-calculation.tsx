@@ -8,17 +8,12 @@ import {
     TextField,
     Button,
     IconButton,
-    Table,
-    TableBody,
-    TableCell,
-    TableContainer,
-    TableHead,
-    TableRow,
     Divider,
     InputAdornment,
     useTheme,
     Alert,
     CircularProgress,
+    Checkbox,
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
@@ -185,7 +180,7 @@ export function InventoryDetailsCalculation({
     const buildTransferData = (): IInventoryItemInput[] => {
         return transferredIds.map((id) => ({
             ingredient_id: id,
-            counted_quantity: quantities[id] || 0,
+            counted_quantity: String(quantities[id] || "0"),
         }));
     };
 
@@ -232,323 +227,290 @@ export function InventoryDetailsCalculation({
 
     return (
         <Box sx={{ p: 3, borderRadius: 1.5 }}>
-            <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
+            {/* <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
                 {t('inventory.itemsCalculation')}
-            </Typography>
+            </Typography> */}
 
-            <Alert severity="info" sx={{ mb: 2 }}>
+            {/* <Alert severity="info" sx={{ mb: 2 }}>
                 {t('inventory.itemsCalculationHelp')}
-            </Alert>
+            </Alert> */}
 
+            {/* MAIN GRID - 3 COLUMNS: Left | Middle | Right */}
             <Box
                 sx={{
                     display: 'grid',
-                    gridTemplateColumns: '1fr auto 1fr',
+                    gridTemplateColumns: { xs: '1fr', md: '5fr 1fr 6fr' },
                     gap: 2,
-                    mb: 3,
+                    alignItems: 'flex-start',
+                    mb: 4,
                 }}
             >
                 {/* LEFT PANEL - Available Ingredients */}
-                <Paper
-                    sx={{
-                        p: 2,
-                        display: 'flex',
-                        flexDirection: 'column',
-                        minHeight: 500,
-                        // background: theme.palette.mode === 'light' ? '#fafafa' : 'rgba(145, 158, 171, 0.12)',
-                        border: `1px solid ${theme.palette.divider}`,
-                        borderRadius: 2,
-                        transition: 'all 0.3s ease',
-                        '&:hover': {
-                            boxShadow: theme.shadows[2],
-                        },
-                    }}
-                >
-                    <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Box>
+                    <Box sx={{ display: 'flex', gap: 2, mb: 2, flexWrap: 'wrap' }}>
+                        <Box sx={{ width: '100%', minWidth: '200px' }}>
+                            <TextField
+                                fullWidth
+                                placeholder={t('calculation.search', 'Search...')}
+                                size="small"
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                InputProps={{
+                                    startAdornment: (
+                                        <InputAdornment position="start">
+                                            <SearchIcon color="action" />
+                                        </InputAdornment>
+                                    ),
+                                }}
+                            />
+                        </Box>
+                    </Box>
+
+                    <Paper sx={{ borderRadius: 2, overflow: 'hidden' }} elevation={1}>
                         <Box
                             sx={{
-                                width: 4,
-                                height: 24,
-                                borderRadius: 1,
-                                background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.light} 100%)`,
+                                display: 'flex',
+                                p: 1.5,
+                                bgcolor: 'action.hover',
+                                fontWeight: 'bold',
+                                fontSize: '0.875rem',
+                                color: 'text.primary',
                             }}
-                        />
-                        {t('inventory.available')}
-                    </Typography>
-
-                    <TextField
-                        placeholder={t('search')}
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        InputProps={{
-                            startAdornment: (
-                                <InputAdornment position="start">
-                                    <SearchIcon />
-                                </InputAdornment>
-                            ),
-                        }}
-                        size="small"
-                        sx={{ mb: 2 }}
-                    />
-
-                    <TableContainer sx={{ flex: 1, mb: 2, overflow: 'auto', maxHeight: 400 }}>
-                        <Table size="small">
-                            <TableHead>
-                                <TableRow>
-                                    <TableCell padding="checkbox" sx={{ width: 40 }}>
-                                        <input
-                                            ref={(el) => {
-                                                if (el) {
-                                                    (el as any).indeterminate =
-                                                        selectedIds.length > 0 && selectedIds.length < availableIngredients.length;
-                                                }
-                                            }}
-                                            type="checkbox"
-                                            checked={
-                                                availableIngredients.length > 0 &&
-                                                selectedIds.length === availableIngredients.length
-                                            }
-                                            onChange={(e) => {
-                                                if (e.target.checked) {
-                                                    setSelectedIds(availableIngredients.map((i) => i.id));
-                                                } else {
-                                                    setSelectedIds([]);
-                                                }
-                                            }}
-                                        />
-                                    </TableCell>
-                                    <TableCell sx={{ fontSize: '0.75rem', fontWeight: 600 }}>
-                                        {t('name')}
-                                    </TableCell>
-                                </TableRow>
-                            </TableHead>
-                            <TableBody>
-                                {availableIngredients.map((ing) => (
-                                    <TableRow key={ing.id}>
-                                        <TableCell padding="checkbox">
-                                            <input
-                                                type="checkbox"
-                                                checked={selectedIds.includes(ing.id)}
-                                                onChange={(e) => {
-                                                    if (e.target.checked) {
-                                                        setSelectedIds((prev) => [...prev, ing.id]);
-                                                    } else {
-                                                        setSelectedIds((prev) => prev.filter((i) => i !== ing.id));
-                                                    }
-                                                }}
-                                            />
-                                        </TableCell>
-                                        <TableCell sx={{ fontSize: '0.875rem' }}>{ing.name}</TableCell>
-                                    </TableRow>
-                                ))}
-                            </TableBody>
-                        </Table>
-                    </TableContainer>
-
-                    {availableIngredients.length === 0 && !loading && (
-                        <Typography variant="caption" sx={{ color: 'text.secondary', textAlign: 'center' }}>
-                            {t('inventory.noIngredients')}
-                        </Typography>
-                    )}
-                </Paper>
-
-                {/* MIDDLE PANEL - Arrows */}
-                <Box sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 1 }}>
-                    <Button
-                        variant="contained"
-                        size="small"
-                        onClick={handleAddIngredients}
-                        disabled={selectedIds.length === 0}
-                        endIcon={<ChevronRightIcon />}
-                        sx={{
-                            // background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 100%)`,
-                            // boxShadow: theme.shadows[3],
-                            transition: 'all 0.3s ease',
-                            '&:hover:not(:disabled)': {
-                                boxShadow: theme.shadows[6],
-                                transform: 'translateX(2px)',
-                            },
-                            '&:disabled': {
-                                opacity: 0.9,
-                            },
-                        }}
-                    >
-                        {t('add')}
-                    </Button>
-                </Box>
-
-                {/* RIGHT PANEL - Transferred Items */}
-                <Paper
-                    sx={{
-                        p: 2,
-                        display: 'flex',
-                        flexDirection: 'column',
-                        minHeight: 500,
-                        // background: theme.palette.mode === 'light' ? 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)' : 'rgba(145, 158, 171, 0.08)',
-                        border: `2px solid ${theme.palette.primary.main}20`,
-                        borderRadius: 2,
-                        transition: 'all 0.3s ease',
-                        '&:hover': {
-                            boxShadow: theme.shadows[3],
-                            borderColor: theme.palette.primary.main,
-                        },
-                    }}
-                >
-                    <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <Box
-                            sx={{
-                                width: 4,
-                                height: 24,
-                                borderRadius: 1,
-                                background: `linear-gradient(135deg, ${theme.palette.success.main} 0%, ${theme.palette.success.light} 100%)`,
-                            }}
-                        />
-                        {t('inventory.itemsToCount')}
-                    </Typography>
-
-                    <TextField
-                        placeholder={t('search')}
-                        value={rightSearchTerm}
-                        onChange={(e) => setRightSearchTerm(e.target.value)}
-                        InputProps={{
-                            startAdornment: (
-                                <InputAdornment position="start">
-                                    <SearchIcon />
-                                </InputAdornment>
-                            ),
-                        }}
-                        size="small"
-                        sx={{ mb: 2 }}
-                    />
-
-                    <TableContainer sx={{ flex: 1, mb: 2, overflow: 'auto', maxHeight: 400 }}>
-                        <Table size="small">
-                            <TableHead>
-                                <TableRow>
-                                    <TableCell sx={{ fontSize: '0.75rem', fontWeight: 600 }}>
-                                        {t('name')}
-                                    </TableCell>
-                                    <TableCell sx={{ fontSize: '0.75rem', fontWeight: 600, width: 100 }}>
-                                        {t('inventory.counted')}
-                                    </TableCell>
-                                    <TableCell sx={{ width: 40 }} />
-                                </TableRow>
-                            </TableHead>
-                            <TableBody>
-                                {transferredIngredients.map((ing) => (
-                                    <TableRow
-                                        key={ing.id}
+                        >
+                            <Box sx={{ width: '40%' }}>{t('calculation.productName', 'Product Name')}</Box>
+                            <Box sx={{ width: '30%' }}>{t('calculation.unit', 'Unit')}</Box>
+                            <Box sx={{ width: '30%', textAlign: 'right' }}>{t('calculation.price', 'Price')}</Box>
+                        </Box>
+                        <Divider />
+                        <Box sx={{ maxHeight: 400, overflowY: 'auto' }}>
+                            {loading ? (
+                                <Box sx={{ p: 3, textAlign: 'center' }}>
+                                    <CircularProgress size={40} />
+                                </Box>
+                            ) : availableIngredients.length === 0 ? (
+                                <Typography sx={{ p: 3, textAlign: 'center', color: 'text.secondary' }}>
+                                    {t('calculation.noProducts', 'No products found')}
+                                </Typography>
+                            ) : (
+                                availableIngredients.map((ingredient) => (
+                                    <Box
+                                        key={ingredient.id}
                                         sx={{
-                                            transition: 'all 0.2s ease',
-                                            '&:hover': {
-                                                backgroundColor: theme.palette.mode === 'light' ? 'rgba(33, 150, 243, 0.08)' : 'rgba(33, 150, 243, 0.12)',
-                                            },
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            p: 1.5,
+                                            borderBottom: `1px solid ${theme.vars.palette.divider}`,
+                                            '&:hover': { bgcolor: 'action.hover' },
                                         }}
                                     >
-                                        <TableCell sx={{ fontSize: '0.875rem' }}>{ing.name}</TableCell>
-                                        <TableCell>
-                                            <TextField
-                                                type="number"
-                                                value={quantities[ing.id]}
-                                                onChange={(e) => handleQuantityChange(ing.id, parseFloat(e.target.value))}
+                                        <Box sx={{ width: '40%', display: 'flex', alignItems: 'center', gap: 1 }}>
+                                            <Checkbox
                                                 size="small"
-                                                inputProps={{ min: 1, step: 0.1 }}
+                                                checked={selectedIds.includes(ingredient.id)}
+                                                onChange={() => {
+                                                    if (selectedIds.includes(ingredient.id)) {
+                                                        setSelectedIds((prev) => prev.filter((i) => i !== ingredient.id));
+                                                    } else {
+                                                        setSelectedIds((prev) => [...prev, ingredient.id]);
+                                                    }
+                                                }}
                                                 sx={{
-                                                    '& .MuiOutlinedInput-root': {
-                                                        transition: 'all 0.2s ease',
-                                                        '&:hover fieldset': {
-                                                            borderColor: theme.palette.primary.main,
-                                                        },
-                                                        '&.Mui-focused fieldset': {
-                                                            borderColor: theme.palette.primary.main,
-                                                            boxShadow: `0 0 0 2px ${theme.palette.primary.main}20`,
-                                                        },
-                                                    },
-                                                    width: 100,
+                                                    color: theme.palette.success.main,
+                                                    '&.Mui-checked': { color: theme.palette.success.main },
                                                 }}
                                             />
-                                        </TableCell>
-                                        <TableCell>
+                                            <Typography variant="body2">{ingredient.name}</Typography>
+                                        </Box>
+                                        <Box sx={{ width: '30%' }}>
+                                            <Typography variant="caption" color="text.secondary">
+                                                {ingredient.measurement}
+                                            </Typography>
+                                        </Box>
+                                        <Box sx={{ width: '30%', textAlign: 'right' }}>
+                                            <Typography variant="caption">{formatPrice(parseFloat(ingredient.price_per_unit || '0'))}</Typography>
+                                        </Box>
+                                    </Box>
+                                ))
+                            )}
+                        </Box>
+                    </Paper>
+                </Box>
+
+                {/* MIDDLE PANEL - Arrows */}
+                <Box
+                    sx={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        justifyContent: 'flex-start',
+                        height: '100%',
+                        pt: 5,
+                    }}
+                >
+                    <Box sx={{ display: 'flex', flexDirection: { xs: 'row', md: 'column' }, gap: 1 }}>
+                        <IconButton
+                            onClick={handleAddIngredients}
+                            disabled={selectedIds.length === 0}
+                            sx={{
+                                bgcolor:
+                                    selectedIds.length === 0
+                                        ? theme.palette.action.disabled
+                                        : theme.palette.action.hover,
+                                color:
+                                    selectedIds.length === 0
+                                        ? theme.palette.text.disabled
+                                        : theme.palette.warning.main,
+                                '&:hover': {
+                                    bgcolor:
+                                        selectedIds.length === 0
+                                            ? theme.palette.action.disabled
+                                            : theme.palette.warning.light,
+                                },
+                                borderRadius: '15%',
+                                padding: '10px',
+                            }}
+                            title={t('calculation.selectedProductsTransfer', 'Transfer selected')}
+                        >
+                            <ChevronRightIcon />
+                        </IconButton>
+                        <IconButton
+                            onClick={() => {
+                                setTransferredIds([]);
+                                setQuantities({});
+                            }}
+                            disabled={transferredIds.length === 0}
+                            sx={{
+                                bgcolor:
+                                    transferredIds.length === 0
+                                        ? theme.palette.action.disabled
+                                        : theme.palette.action.hover,
+                                color:
+                                    transferredIds.length === 0
+                                        ? theme.palette.text.disabled
+                                        : theme.palette.warning.main,
+                                '&:hover': {
+                                    bgcolor:
+                                        transferredIds.length === 0
+                                            ? theme.palette.action.disabled
+                                            : theme.palette.warning.light,
+                                },
+                                borderRadius: '15%',
+                                padding: '10px',
+                            }}
+                            title={t('calculation.returnAllProducts', 'Return all')}
+                        >
+                            <ChevronLeftIcon />
+                        </IconButton>
+                    </Box>
+                </Box>
+
+                {/* RIGHT PANEL - Selected Ingredients */}
+                <Box>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                        <TextField
+                            fullWidth
+                            placeholder={t('calculation.search', 'Search...')}
+                            size="small"
+                            value={rightSearchTerm}
+                            onChange={(e) => setRightSearchTerm(e.target.value)}
+                            InputProps={{
+                                startAdornment: (
+                                    <InputAdornment position="start">
+                                        <SearchIcon color="action" />
+                                    </InputAdornment>
+                                ),
+                            }}
+                        />
+                    </Box>
+
+                    <Paper sx={{ borderRadius: 2, overflow: 'hidden' }} elevation={1}>
+                        <Box
+                            sx={{
+                                display: 'flex',
+                                p: 1.5,
+                                bgcolor: 'action.hover',
+                                fontWeight: 'bold',
+                                fontSize: '0.875rem',
+                                color: 'text.primary',
+                            }}
+                        >
+                            <Box sx={{ width: '40%' }}>{t('calculation.productName', 'Product Name')}</Box>
+                            <Box sx={{ width: '30%' }}>{t('calculation.unitOfMeasurement', 'Unit')}</Box>
+                            <Box sx={{ width: '20%', textAlign: 'center' }}>{t('calculation.quantity', 'Qty')}</Box>
+                            <Box sx={{ width: '10%' }} />
+                        </Box>
+                        <Divider />
+                        <Box sx={{ maxHeight: 400, overflowY: 'auto', minHeight: 200 }}>
+                            {loading ? (
+                                <Box sx={{ p: 3, textAlign: 'center' }}>
+                                    <CircularProgress size={40} />
+                                </Box>
+                            ) : transferredIngredients.length === 0 ? (
+                                <Typography sx={{ p: 3, textAlign: 'center', color: 'text.secondary' }}>
+                                    {t('calculation.noProductsSelected', 'No products selected')}
+                                </Typography>
+                            ) : (
+                                transferredIngredients.map((ingredient) => (
+                                    <Box
+                                        key={ingredient.id}
+                                        sx={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            p: 1.5,
+                                            borderBottom: `1px solid ${theme.vars.palette.divider}`,
+                                            '&:hover': { bgcolor: 'action.hover' },
+                                        }}
+                                    >
+                                        <Box sx={{ width: '40%' }}>
+                                            <Typography variant="body2">{ingredient.name}</Typography>
+                                        </Box>
+                                        <Box sx={{ width: '30%' }}>
+                                            <Typography variant="caption" color="text.secondary">
+                                                {ingredient.measurement}
+                                            </Typography>
+                                        </Box>
+                                        <Box sx={{ width: '20%', textAlign: 'center' }}>
+                                            <TextField
+                                                type="number"
+                                                // value={}
+                                                defaultValue={1}
+                                                onChange={(e) =>
+                                                    handleQuantityChange(
+                                                        ingredient.id,
+                                                        parseFloat(e.target.value)
+                                                    )
+                                                }
+                                                size="small"
+                                                inputProps={{ min: 0, step: 0.1 }}
+                                                sx={{
+                                                    width: '100%',
+                                                    '& .MuiOutlinedInput-root': {
+                                                        fontSize: '0.875rem',
+                                                    },
+                                                }}
+                                            />
+                                        </Box>
+                                        <Box sx={{ width: '10%', textAlign: 'center' }}>
                                             <IconButton
                                                 size="small"
-                                                onClick={() => handleRemoveIngredient(ing.id)}
-                                                color="error"
+                                                onClick={() => handleRemoveIngredient(ingredient.id)}
                                                 sx={{
-                                                    transition: 'all 0.2s ease',
-                                                    '&:hover': {
-                                                        backgroundColor: 'rgba(244, 67, 54, 0.1)',
-                                                        transform: 'scale(1.1)',
-                                                    },
+                                                    color: 'error.main',
                                                 }}
                                             >
                                                 <DeleteIcon fontSize="small" />
                                             </IconButton>
-                                        </TableCell>
-                                    </TableRow>
-                                ))}
-                            </TableBody>
-                        </Table>
-                    </TableContainer>
-
-                    {transferredIngredients.length === 0 && transferredIds.length > 0 && (
-                        <Typography variant="caption" sx={{ color: 'text.secondary', textAlign: 'center' }}>
-                            {t('inventory.noMatches')}
-                        </Typography>
-                    )}
-
-                    {transferredIds.length === 0 && (
-                        <Typography variant="caption" sx={{ color: 'text.secondary', textAlign: 'center' }}>
-                            {t('inventory.noItemsSelected')}
-                        </Typography>
-                    )}
-                </Paper>
+                                        </Box>
+                                    </Box>
+                                ))
+                            )}
+                        </Box>
+                    </Paper>
+                </Box>
             </Box>
 
-            <Divider sx={{ my: 2 }} />
-
-            {/* Summary Section */}
-            <Box
-                sx={{
-                    mb: 3,
-                    p: 2,
-                    borderRadius: 2,
-                    background: theme.palette.mode === 'light' ? 'rgba(33, 150, 243, 0.05)' : 'rgba(33, 150, 243, 0.08)',
-                    border: `1px solid ${theme.palette.primary.main}30`,
-                    transition: 'all 0.3s ease',
-                }}
-            >
-                <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Box
-                        sx={{
-                            width: 3,
-                            height: 20,
-                            borderRadius: 0.5,
-                            background: `linear-gradient(135deg, ${theme.palette.info.main} 0%, ${theme.palette.info.light} 100%)`,
-                        }}
-                    />
-                    {t('inventory.summary')}
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                    {t('inventory.itemsCount')}: <Box component="span" sx={{ color: 'primary.main', fontWeight: 700 }}>{transferredIds.length}</Box>
-                </Typography>
-            </Box>
-
-            {/* Action Buttons */}
-            <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end', pt: 1 }}>
-                {/* <Button
-                    variant="outlined"
-                    color="inherit"
-                    disabled={isSaving}
-                    sx={{
-                        transition: 'all 0.2s ease',
-                        '&:hover:not(:disabled)': {
-                            borderColor: theme.palette.text.primary,
-                            backgroundColor: 'rgba(0, 0, 0, 0.02)',
-                        },
-                    }}
-                >
-                    {t('common.cancel')}
-                </Button> */}
+            {/* ACTION BUTTONS */}
+            <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
                 <Button
                     variant="contained"
                     onClick={handleSave}
@@ -556,14 +518,12 @@ export function InventoryDetailsCalculation({
                     sx={{
                         position: 'relative',
                         minWidth: 120,
-                        background: ``,
                         boxShadow: theme.shadows[4],
                         transition: 'all 0.3s ease',
                         '&:hover:not(:disabled)': {
                             boxShadow: theme.shadows[8],
                             transform: 'translateY(-2px)',
                         },
-                      
                     }}
                 >
                     {isSaving ? (

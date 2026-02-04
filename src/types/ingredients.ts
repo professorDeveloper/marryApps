@@ -3,6 +3,7 @@ export interface IIngredientItem {
     name: string;
     group_id: string;
     measurement: string;
+    price_per_unit?: string;
     picture_url?: string;
     color_code?: string;
     brand_id?: string;
@@ -15,6 +16,7 @@ export interface IIngredientFormData {
     name: string;
     group_id: string;
     measurement: string;
+    price_per_unit?: string;
     picture_url?: string;
     color_code?: string;
     brand_id?: string;

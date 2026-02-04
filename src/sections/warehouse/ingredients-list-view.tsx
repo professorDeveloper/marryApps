@@ -227,6 +227,16 @@ export function IngredientListView() {
                 renderCell: (params) => <RenderCellColor params={params} />,
             },
             {
+                field: 'price_per_unit',
+                headerName: t('warehouse.price'),
+                width: 150,
+                renderCell: (params) => (
+                    <div style={{ fontSize: '0.875rem', opacity: 0.8 }}>
+                        {params.row.price_per_unit ? `${params.row.price_per_unit}` : '-'}
+                    </div>
+                ),
+            },
+            {
                 type: 'actions',
                 field: 'actions',
                 headerName: ' ',
@@ -340,6 +350,12 @@ export function IngredientListView() {
                         {t('warehouse.measurement')}
                     </Typography>
                     <Typography variant="body2">{ingredient.measurement}</Typography>
+                </Box>
+                <Box>
+                    <Typography variant="subtitle2" sx={{ color: 'text.secondary', mb: 0.5 }}>
+                        {t('warehouse.price')}
+                    </Typography>
+                    <Typography variant="body2">{ingredient.price_per_unit || '-'}</Typography>
                 </Box>
                 {ingredient.color_code && (
                     <Box>
