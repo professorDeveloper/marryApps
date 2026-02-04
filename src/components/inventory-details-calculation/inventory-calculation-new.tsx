@@ -27,7 +27,7 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import { fetcher, endpoints } from 'src/lib/axios';
 import { toast } from 'sonner';
 import { useInventoryAPI } from 'src/hooks/use-inventory-api';
-import type { IInventoryItem, IInventoryItemInput } from 'src/types/inventory';
+import type { IInventoryItem } from 'src/types/inventory';
 
 // --- TYPES ---
 interface Ingredient {
@@ -198,7 +198,7 @@ export function InventoryDetailsCalculation({
             // Prepare items data
             const items = transferredIds.map((id) => ({
                 ingredient_id: id,
-                counted_quantity: quantities[id] || 0,
+                counted_quantity: String(quantities[id] || 0),
             }));
 
             // Save items
