@@ -526,6 +526,173 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/bills": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "List bills (orders) with bill snapshots and filters",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Bills"
+                ],
+                "summary": "Get bills",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "default": "uz",
+                        "description": "Language (uz, ru, en)",
+                        "name": "lang",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Start date/time (RFC3339 or YYYY-MM-DD)",
+                        "name": "start",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "End date/time (RFC3339 or YYYY-MM-DD)",
+                        "name": "end",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Bill status (opened, closed, paid)",
+                        "name": "bill_status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Payment type (cash, card)",
+                        "name": "payment_type",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Waiter ID (UUID)",
+                        "name": "waiter_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Hall ID (UUID)",
+                        "name": "hall_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Table ID (UUID)",
+                        "name": "table_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 20,
+                        "description": "Limit",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 0,
+                        "description": "Offset",
+                        "name": "offset",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.SuccessResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/bills/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get full bill details including items",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Bills"
+                ],
+                "summary": "Get bill details",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "default": "uz",
+                        "description": "Language (uz, ru, en)",
+                        "name": "lang",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Bill ID (UUID)",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.SuccessResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/branches": {
             "get": {
                 "security": [
@@ -13855,7 +14022,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Create a new order item",
+                "description": "Create a new order item. price can be omitted; it will be auto-filled from goods.price.",
                 "consumes": [
                     "application/json"
                 ],
@@ -14699,7 +14866,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Create a new order",
+                "description": "Create a new order. You can optionally create multiple order items in the same request via the items array. total_amount is computed server-side from items and service/discount fields.",
                 "consumes": [
                     "application/json"
                 ],
@@ -15394,6 +15561,77 @@ const docTemplate = `{
                         "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/model.OrderResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/orders/{id}/items": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Append multiple order items to an existing order (e.g. dessert after meal). Item price is auto-filled from goods.price and order totals are recalculated server-side.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Orders"
+                ],
+                "summary": "Add order items",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "default": "uz",
+                        "description": "Language (uz, ru, en)",
+                        "name": "lang",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Order ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Add order items request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.AddOrderItemsRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.AddOrderItemsResponse"
                         }
                     },
                     "400": {
@@ -18152,6 +18390,34 @@ const docTemplate = `{
                 }
             }
         },
+        "model.AddOrderItemsRequest": {
+            "type": "object",
+            "required": [
+                "items"
+            ],
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.CreateOrderItemInline"
+                    }
+                }
+            }
+        },
+        "model.AddOrderItemsResponse": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.OrderItemResponse"
+                    }
+                },
+                "order": {
+                    "$ref": "#/definitions/model.OrderResponse"
+                }
+            }
+        },
         "model.AddToCompoundStockRequest": {
             "type": "object",
             "required": [
@@ -18852,16 +19118,14 @@ const docTemplate = `{
             ],
             "properties": {
                 "compound_id": {
-                    "type": "string",
-                    "example": "123e4567-e89b-12d3-a456-426614174000"
+                    "type": "string"
                 },
                 "good_id": {
                     "type": "string",
                     "example": "123e4567-e89b-12d3-a456-426614174000"
                 },
                 "ingredient_id": {
-                    "type": "string",
-                    "example": "123e4567-e89b-12d3-a456-426614174000"
+                    "type": "string"
                 },
                 "quantity": {
                     "type": "string",
@@ -19312,12 +19576,32 @@ const docTemplate = `{
                 }
             }
         },
+        "model.CreateOrderItemInline": {
+            "type": "object",
+            "required": [
+                "good_id",
+                "quantity"
+            ],
+            "properties": {
+                "comment": {
+                    "type": "string"
+                },
+                "good_id": {
+                    "type": "string",
+                    "example": "d4e5f6a7-b8c9-4a5b-8c9d-e0f1a2b3c4d5"
+                },
+                "quantity": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "example": 2
+                }
+            }
+        },
         "model.CreateOrderItemRequest": {
             "type": "object",
             "required": [
                 "good_id",
                 "order_id",
-                "price",
                 "quantity"
             ],
             "properties": {
@@ -19364,6 +19648,12 @@ const docTemplate = `{
                     "type": "integer",
                     "example": 2
                 },
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.CreateOrderItemInline"
+                    }
+                },
                 "status": {
                     "type": "string",
                     "example": "open"
@@ -19371,10 +19661,6 @@ const docTemplate = `{
                 "table_id": {
                     "type": "string",
                     "example": "a1b2c3d4-e5f6-4a5b-8c9d-e0f1a2b3c4d5"
-                },
-                "total_amount": {
-                    "type": "string",
-                    "example": "100000"
                 },
                 "waiter_id": {
                     "type": "string",
@@ -19487,6 +19773,19 @@ const docTemplate = `{
                 }
             }
         },
+        "model.DeductionItemCompoundResponse": {
+            "type": "object",
+            "properties": {
+                "compound_id": {
+                    "type": "string",
+                    "example": "123e4567-e89b-12d3-a456-426614174000"
+                },
+                "quantity": {
+                    "type": "string",
+                    "example": "2"
+                }
+            }
+        },
         "model.DeductionItemIngredientResponse": {
             "type": "object",
             "properties": {
@@ -19536,6 +19835,12 @@ const docTemplate = `{
                 "compound_id": {
                     "type": "string",
                     "example": "123e4567-e89b-12d3-a456-426614174000"
+                },
+                "compounds": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.DeductionItemCompoundResponse"
+                    }
                 },
                 "created_at": {
                     "type": "string"
@@ -19622,6 +19927,12 @@ const docTemplate = `{
                 },
                 "updated_at": {
                     "type": "string"
+                },
+                "warnings": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 }
             }
         },
@@ -20554,13 +20865,29 @@ const docTemplate = `{
         },
         "model.MarkOrderPaidRequest": {
             "type": "object",
-            "required": [
-                "cashier_id"
-            ],
             "properties": {
                 "cashier_id": {
                     "type": "string",
                     "example": "a1b2c3d4-e5f6-4a5b-8c9d-e0f1a2b3c4d5"
+                },
+                "discount_amount": {
+                    "description": "discount_amount: fixed amount",
+                    "type": "string",
+                    "example": "5000"
+                },
+                "discount_comment": {
+                    "type": "string",
+                    "example": "Holiday discount"
+                },
+                "discount_percent": {
+                    "description": "discount_percent: e.g. 10 means 10%",
+                    "type": "string",
+                    "example": "10"
+                },
+                "payment_type": {
+                    "description": "payment_type: cash or card",
+                    "type": "string",
+                    "example": "cash"
                 }
             }
         },
@@ -21648,10 +21975,6 @@ const docTemplate = `{
                 "table_id": {
                     "type": "string",
                     "example": "a1b2c3d4-e5f6-4a5b-8c9d-e0f1a2b3c4d5"
-                },
-                "total_amount": {
-                    "type": "string",
-                    "example": "100000"
                 },
                 "waiter_id": {
                     "type": "string",

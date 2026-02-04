@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 	"strconv"
-	"strings"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -34,29 +33,7 @@ func stringToNumeric(s string) pgtype.Numeric {
 
 // Helper to convert pgtype.Numeric to string
 func numericToStr(n pgtype.Numeric) string {
-	if !n.Valid {
-		return "0"
-	}
-	// Convert pgtype.Numeric to string properly
-	val, err := n.Value()
-	if err != nil {
-		return "0"
-	}
-	if str, ok := val.(string); ok {
-		out := strings.TrimRight(strings.TrimRight(str, "0"), ".")
-		if out == "" || out == "-0" {
-			return "0"
-		}
-		return out
-	}
-	out := fmt.Sprintf("%v", val)
-	if strings.Contains(out, ".") {
-		out = strings.TrimRight(strings.TrimRight(out, "0"), ".")
-	}
-	if out == "" || out == "-0" {
-		return "0"
-	}
-	return out
+	return numericToString(n)
 }
 
 func anyNumericToStr(v any) string {

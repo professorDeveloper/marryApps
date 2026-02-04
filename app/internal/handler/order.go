@@ -15,7 +15,7 @@ import (
 
 // CreateOrder creates a new order
 // @Summary Create order
-// @Description Create a new order
+// @Description Create a new order. You can optionally create multiple order items in the same request via the items array. total_amount is computed server-side from items and service/discount fields.
 // @Tags Orders
 // @Accept json
 // @Produce json
@@ -36,6 +36,12 @@ func (h *Handler) CreateOrder(c echo.Context) error {
 			err.Error(),
 			http.StatusBadRequest,
 		))
+	}
+
+	role, _ := c.Get("role").(string)
+	userID, _ := c.Get("user_id").(string)
+	if role == "waiter" && userID != "" {
+		req.WaiterID = &userID
 	}
 
 	if req.TableID == "" {
@@ -71,9 +77,40 @@ func (h *Handler) CreateOrder(c echo.Context) error {
 		}
 	}
 
+	for i, it := range req.Items {
+		if it.GoodID == "" {
+			return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+				"good_id is required",
+				"items["+strconv.Itoa(i)+"].good_id is required",
+				http.StatusBadRequest,
+			))
+		}
+		if _, err := uuid.Parse(it.GoodID); err != nil {
+			return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+				"invalid good_id format",
+				"items["+strconv.Itoa(i)+"].good_id: "+err.Error(),
+				http.StatusBadRequest,
+			))
+		}
+		if it.Quantity <= 0 {
+			return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+				"quantity must be greater than 0",
+				"items["+strconv.Itoa(i)+"].quantity must be greater than 0",
+				http.StatusBadRequest,
+			))
+		}
+	}
+
 	order, err := h.service.Order().CreateOrder(c.Request().Context(), req)
 	if err != nil {
 		log.Printf("CreateOrder failed: %v", err)
+		if strings.Contains(strings.ToLower(err.Error()), "cafe table not found") {
+			return c.JSON(http.StatusNotFound, model.NewErrorResponse(
+				"cafe table not found",
+				err.Error(),
+				http.StatusNotFound,
+			))
+		}
 		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse(
 			"failed to create order",
 			err.Error(),
@@ -85,6 +122,96 @@ func (h *Handler) CreateOrder(c echo.Context) error {
 		"Order created successfully",
 		order,
 		http.StatusCreated,
+	))
+}
+
+// AddOrderItems appends multiple items to an existing order
+// @Summary Add order items
+// @Description Append multiple order items to an existing order (e.g. dessert after meal). Item price is auto-filled from goods.price and order totals are recalculated server-side.
+// @Tags Orders
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param lang query string false "Language (uz, ru, en)" default(uz)
+// @Param id path string true "Order ID"
+// @Param request body model.AddOrderItemsRequest true "Add order items request"
+// @Success 200 {object} model.AddOrderItemsResponse
+// @Failure 400 {object} model.ErrorResponse
+// @Failure 401 {object} model.ErrorResponse
+// @Failure 500 {object} model.ErrorResponse
+// @Router /api/v1/orders/{id}/items [post]
+func (h *Handler) AddOrderItems(c echo.Context) error {
+	orderID := c.Param("id")
+	if orderID == "" {
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"order id is required",
+			"missing path parameter: id",
+			http.StatusBadRequest,
+		))
+	}
+	if _, err := uuid.Parse(orderID); err != nil {
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"invalid order id format",
+			err.Error(),
+			http.StatusBadRequest,
+		))
+	}
+
+	var req model.AddOrderItemsRequest
+	if err := c.Bind(&req); err != nil {
+		log.Printf("Failed to bind add order items request: %v", err)
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"invalid request format",
+			err.Error(),
+			http.StatusBadRequest,
+		))
+	}
+
+	if len(req.Items) == 0 {
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"items is required",
+			"items must not be empty",
+			http.StatusBadRequest,
+		))
+	}
+	for i, it := range req.Items {
+		if it.GoodID == "" {
+			return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+				"good_id is required",
+				"items["+strconv.Itoa(i)+"].good_id is required",
+				http.StatusBadRequest,
+			))
+		}
+		if _, err := uuid.Parse(it.GoodID); err != nil {
+			return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+				"invalid good_id format",
+				"items["+strconv.Itoa(i)+"].good_id: "+err.Error(),
+				http.StatusBadRequest,
+			))
+		}
+		if it.Quantity <= 0 {
+			return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+				"quantity must be greater than 0",
+				"items["+strconv.Itoa(i)+"].quantity must be greater than 0",
+				http.StatusBadRequest,
+			))
+		}
+	}
+
+	resp, err := h.service.Order().AddOrderItems(c.Request().Context(), orderID, req)
+	if err != nil {
+		log.Printf("AddOrderItems failed for order %s: %v", orderID, err)
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse(
+			"failed to add order items",
+			err.Error(),
+			http.StatusInternalServerError,
+		))
+	}
+
+	return c.JSON(http.StatusOK, model.NewSuccessResponse(
+		"Order items added successfully",
+		resp,
+		http.StatusOK,
 	))
 }
 
@@ -538,14 +665,22 @@ func (h *Handler) MarkOrderPaid(c echo.Context) error {
 			http.StatusBadRequest,
 		))
 	}
-	if req.CashierID == "" {
+
+	cashierID := ""
+	if req.CashierID != nil && *req.CashierID != "" {
+		cashierID = *req.CashierID
+	} else {
+		cashierID, _ = c.Get("user_id").(string)
+	}
+
+	if cashierID == "" {
 		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
 			"cashier_id is required",
 			"missing required field: cashier_id",
 			http.StatusBadRequest,
 		))
 	}
-	if _, err := uuid.Parse(req.CashierID); err != nil {
+	if _, err := uuid.Parse(cashierID); err != nil {
 		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
 			"invalid cashier_id format",
 			err.Error(),
@@ -553,9 +688,9 @@ func (h *Handler) MarkOrderPaid(c echo.Context) error {
 		))
 	}
 
-	order, err := h.service.Order().MarkOrderPaid(c.Request().Context(), orderID, req.CashierID)
+	order, err := h.service.Order().MarkOrderPaid(c.Request().Context(), orderID, cashierID, req.PaymentType, req.DiscountPercent, req.DiscountAmount, req.DiscountComment)
 	if err != nil {
-		log.Printf("MarkOrderPaid failed for id %s: %v", orderID, err)
+		log.Printf("MarkOrderPaid failed for order %s: %v", orderID, err)
 		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse(
 			"failed to mark order paid",
 			err.Error(),
@@ -975,7 +1110,7 @@ func (h *Handler) RestoreOrder(c echo.Context) error {
 
 // CreateOrderItem creates a new order item
 // @Summary Create order item
-// @Description Create a new order item
+// @Description Create a new order item. price can be omitted; it will be auto-filled from goods.price.
 // @Tags Order Items
 // @Accept json
 // @Produce json
@@ -1016,13 +1151,6 @@ func (h *Handler) CreateOrderItem(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
 			"quantity must be greater than 0",
 			"quantity must be greater than 0",
-			http.StatusBadRequest,
-		))
-	}
-	if req.Price == "" {
-		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
-			"price is required",
-			"missing required field: price",
 			http.StatusBadRequest,
 		))
 	}

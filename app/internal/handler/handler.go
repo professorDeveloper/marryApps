@@ -225,6 +225,7 @@ func (h *Handler) Register(router *echo.Echo) {
 			orders.POST("", h.CreateOrder, mw.CheckLanguage())
 			orders.GET("", h.GetAllOrders, mw.CheckLanguage())
 			orders.GET("/:id", h.GetOrderByID, mw.CheckLanguage())
+			orders.POST("/:id/items", h.AddOrderItems, mw.CheckLanguage())
 			orders.PUT("/:id", h.UpdateOrder, mw.CheckLanguage())
 			orders.DELETE("/:id", h.DeleteOrder, mw.CheckLanguage())
 			orders.POST("/:id/restore", h.RestoreOrder, mw.CheckLanguage())
@@ -241,6 +242,12 @@ func (h *Handler) Register(router *echo.Echo) {
 			orders.GET("/waiter/:waiterId", h.GetOrdersByWaiterID, mw.CheckLanguage())
 			orders.POST("/:id/assign-waiter/:waiterId", h.AssignWaiterToOrder, mw.CheckLanguage())
 			orders.POST("/:id/assign-cashier/:cashierId", h.AssignCashierToOrder, mw.CheckLanguage())
+		}
+
+		bills := api.Group("/bills", mw.CheckAuth(h.cfg), mw.TenantMiddleware(h.repo))
+		{
+			bills.GET("", h.GetBills, mw.CheckLanguage())
+			bills.GET("/:id", h.GetBillDetails, mw.CheckLanguage())
 		}
 
 		orderItems := api.Group("/order-items", mw.CheckAuth(h.cfg), mw.TenantMiddleware(h.repo))

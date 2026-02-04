@@ -5,6 +5,24 @@ definitions:
       quantity:
         type: string
     type: object
+  model.AddOrderItemsRequest:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/model.CreateOrderItemInline'
+        type: array
+    required:
+    - items
+    type: object
+  model.AddOrderItemsResponse:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/model.OrderItemResponse'
+        type: array
+      order:
+        $ref: '#/definitions/model.OrderResponse'
+    type: object
   model.AddToCompoundStockRequest:
     properties:
       quantity:
@@ -501,13 +519,11 @@ definitions:
   model.CreateDeductionItemRequest:
     properties:
       compound_id:
-        example: 123e4567-e89b-12d3-a456-426614174000
         type: string
       good_id:
         example: 123e4567-e89b-12d3-a456-426614174000
         type: string
       ingredient_id:
-        example: 123e4567-e89b-12d3-a456-426614174000
         type: string
       quantity:
         example: "2"
@@ -828,6 +844,21 @@ definitions:
       summary:
         $ref: '#/definitions/model.InvoiceDetailsBatchSummary'
     type: object
+  model.CreateOrderItemInline:
+    properties:
+      comment:
+        type: string
+      good_id:
+        example: d4e5f6a7-b8c9-4a5b-8c9d-e0f1a2b3c4d5
+        type: string
+      quantity:
+        example: 2
+        minimum: 1
+        type: integer
+    required:
+    - good_id
+    - quantity
+    type: object
   model.CreateOrderItemRequest:
     properties:
       comment:
@@ -851,7 +882,6 @@ definitions:
     required:
     - good_id
     - order_id
-    - price
     - quantity
     type: object
   model.CreateOrderRequest:
@@ -864,14 +894,15 @@ definitions:
       guest_count:
         example: 2
         type: integer
+      items:
+        items:
+          $ref: '#/definitions/model.CreateOrderItemInline'
+        type: array
       status:
         example: open
         type: string
       table_id:
         example: a1b2c3d4-e5f6-4a5b-8c9d-e0f1a2b3c4d5
-        type: string
-      total_amount:
-        example: "100000"
         type: string
       waiter_id:
         example: a1b2c3d4-e5f6-4a5b-8c9d-e0f1a2b3c4d5
@@ -952,6 +983,15 @@ definitions:
       updated_at:
         type: string
     type: object
+  model.DeductionItemCompoundResponse:
+    properties:
+      compound_id:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+      quantity:
+        example: "2"
+        type: string
+    type: object
   model.DeductionItemIngredientResponse:
     properties:
       amount:
@@ -988,6 +1028,10 @@ definitions:
       compound_id:
         example: 123e4567-e89b-12d3-a456-426614174000
         type: string
+      compounds:
+        items:
+          $ref: '#/definitions/model.DeductionItemCompoundResponse'
+        type: array
       created_at:
         type: string
       deduction_id:
@@ -1047,6 +1091,10 @@ definitions:
         type: string
       updated_at:
         type: string
+      warnings:
+        items:
+          type: string
+        type: array
     type: object
   model.DeductionStatus:
     enum:
@@ -1710,8 +1758,21 @@ definitions:
       cashier_id:
         example: a1b2c3d4-e5f6-4a5b-8c9d-e0f1a2b3c4d5
         type: string
-    required:
-    - cashier_id
+      discount_amount:
+        description: 'discount_amount: fixed amount'
+        example: "5000"
+        type: string
+      discount_comment:
+        example: Holiday discount
+        type: string
+      discount_percent:
+        description: 'discount_percent: e.g. 10 means 10%'
+        example: "10"
+        type: string
+      payment_type:
+        description: 'payment_type: cash or card'
+        example: cash
+        type: string
     type: object
   model.OrderItemResponse:
     properties:
@@ -2478,9 +2539,6 @@ definitions:
       table_id:
         example: a1b2c3d4-e5f6-4a5b-8c9d-e0f1a2b3c4d5
         type: string
-      total_amount:
-        example: "100000"
-        type: string
       waiter_id:
         example: a1b2c3d4-e5f6-4a5b-8c9d-e0f1a2b3c4d5
         type: string
@@ -2967,6 +3025,115 @@ paths:
       summary: Register a new user account
       tags:
       - auth
+  /api/v1/bills:
+    get:
+      description: List bills (orders) with bill snapshots and filters
+      parameters:
+      - default: uz
+        description: Language (uz, ru, en)
+        in: query
+        name: lang
+        type: string
+      - description: Start date/time (RFC3339 or YYYY-MM-DD)
+        in: query
+        name: start
+        type: string
+      - description: End date/time (RFC3339 or YYYY-MM-DD)
+        in: query
+        name: end
+        type: string
+      - description: Bill status (opened, closed, paid)
+        in: query
+        name: bill_status
+        type: string
+      - description: Payment type (cash, card)
+        in: query
+        name: payment_type
+        type: string
+      - description: Waiter ID (UUID)
+        in: query
+        name: waiter_id
+        type: string
+      - description: Hall ID (UUID)
+        in: query
+        name: hall_id
+        type: string
+      - description: Table ID (UUID)
+        in: query
+        name: table_id
+        type: string
+      - default: 20
+        description: Limit
+        in: query
+        name: limit
+        type: integer
+      - default: 0
+        description: Offset
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.SuccessResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get bills
+      tags:
+      - Bills
+  /api/v1/bills/{id}:
+    get:
+      description: Get full bill details including items
+      parameters:
+      - default: uz
+        description: Language (uz, ru, en)
+        in: query
+        name: lang
+        type: string
+      - description: Bill ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.SuccessResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get bill details
+      tags:
+      - Bills
   /api/v1/branches:
     get:
       consumes:
@@ -11657,7 +11824,8 @@ paths:
     post:
       consumes:
       - application/json
-      description: Create a new order item
+      description: Create a new order item. price can be omitted; it will be auto-filled
+        from goods.price.
       parameters:
       - default: uz
         description: Language (uz, ru, en)
@@ -12204,7 +12372,9 @@ paths:
     post:
       consumes:
       - application/json
-      description: Create a new order
+      description: Create a new order. You can optionally create multiple order items
+        in the same request via the items array. total_amount is computed server-side
+        from items and service/discount fields.
       parameters:
       - default: uz
         description: Language (uz, ru, en)
@@ -12529,6 +12699,54 @@ paths:
       security:
       - BearerAuth: []
       summary: Mark order cooking
+      tags:
+      - Orders
+  /api/v1/orders/{id}/items:
+    post:
+      consumes:
+      - application/json
+      description: Append multiple order items to an existing order (e.g. dessert
+        after meal). Item price is auto-filled from goods.price and order totals are
+        recalculated server-side.
+      parameters:
+      - default: uz
+        description: Language (uz, ru, en)
+        in: query
+        name: lang
+        type: string
+      - description: Order ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Add order items request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.AddOrderItemsRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.AddOrderItemsResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Add order items
       tags:
       - Orders
   /api/v1/orders/{id}/pay:

@@ -27,6 +27,11 @@ type ingredientUsage struct {
 	quantity     pgtype.Numeric
 }
 
+type compoundUsage struct {
+	compoundID uuid.UUID
+	quantity   pgtype.Numeric
+}
+
 func numericToRat(n pgtype.Numeric) (*big.Rat, error) {
 	if !n.Valid {
 		return big.NewRat(0, 1), nil
@@ -264,6 +269,26 @@ func (s *DeductionS) expandCompoundToIngredients(ctx context.Context, compoundID
 	return out, nil
 }
 
+func (s *DeductionS) expandCompoundToDirectCompounds(ctx context.Context, compoundID uuid.UUID, multiplier pgtype.Numeric) ([]compoundUsage, error) {
+	calcs, err := s.repo.Tenant(ctx).GetCalculationsByCompoundID(ctx, pgtype.UUID{Bytes: compoundID, Valid: true})
+	if err != nil {
+		return nil, fmt.Errorf("failed to get compound calculations: %w", err)
+	}
+
+	out := make([]compoundUsage, 0)
+	for _, c := range calcs {
+		if !c.ComponentCompoundID.Valid {
+			continue
+		}
+		usedQty, err := mulNumeric(multiplier, c.Quantity, 6)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, compoundUsage{compoundID: c.ComponentCompoundID.Bytes, quantity: usedQty})
+	}
+	return out, nil
+}
+
 func (s *DeductionS) expandGoodToIngredients(ctx context.Context, goodID uuid.UUID, multiplier pgtype.Numeric) ([]ingredientUsage, error) {
 	calcs, err := s.repo.Tenant(ctx).GetCalculationsByGoodID(ctx, pgtype.UUID{Bytes: goodID, Valid: true})
 	if err != nil {
@@ -295,6 +320,27 @@ func (s *DeductionS) expandGoodToIngredients(ctx context.Context, goodID uuid.UU
 		}
 		out = append(out, ingredientUsage{ingredientID: c.IngredientID.Bytes, quantity: usedQty})
 	}
+	return out, nil
+}
+
+func (s *DeductionS) expandGoodToDirectCompounds(ctx context.Context, goodID uuid.UUID, multiplier pgtype.Numeric) ([]compoundUsage, error) {
+	calcs, err := s.repo.Tenant(ctx).GetCalculationsByGoodID(ctx, pgtype.UUID{Bytes: goodID, Valid: true})
+	if err != nil {
+		return nil, fmt.Errorf("failed to get good calculations: %w", err)
+	}
+
+	out := make([]compoundUsage, 0)
+	for _, c := range calcs {
+		if !c.ComponentCompoundID.Valid {
+			continue
+		}
+		usedQty, err := mulNumeric(multiplier, c.Quantity, 6)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, compoundUsage{compoundID: c.ComponentCompoundID.Bytes, quantity: usedQty})
+	}
+
 	return out, nil
 }
 
@@ -357,11 +403,26 @@ func (s *DeductionS) CreateDeduction(ctx context.Context, req *model.CreateDeduc
 		return nil, fmt.Errorf("failed to create deduction: %w", err)
 	}
 
+	warnings := make([]string, 0)
 	itemResponses := make([]model.DeductionItemResponse, 0, len(req.Items))
 	for _, it := range req.Items {
 		qtyNum := pgtype.Numeric{}
 		if err := qtyNum.Scan(it.Quantity); err != nil {
 			return nil, fmt.Errorf("invalid item quantity: %w", err)
+		}
+
+		refs := 0
+		if it.IngredientID != nil && *it.IngredientID != "" {
+			refs++
+		}
+		if it.GoodID != nil && *it.GoodID != "" {
+			refs++
+		}
+		if it.CompoundID != nil && *it.CompoundID != "" {
+			refs++
+		}
+		if refs != 1 {
+			return nil, fmt.Errorf("each item must have exactly one of ingredient_id or good_id or compound_id")
 		}
 
 		var ingID, goodID, compID pgtype.UUID
@@ -416,6 +477,7 @@ func (s *DeductionS) CreateDeduction(ctx context.Context, req *model.CreateDeduc
 
 		ingBreakdowns := make([]model.DeductionItemIngredientResponse, 0)
 		for _, u := range usages {
+			requestedQty := u.quantity
 			_, err := s.repo.Tenant(ctx).EnsureIngredientStockByStorage(ctx, pg.EnsureIngredientStockByStorageParams{
 				ID:           uuid.New(),
 				IngredientID: u.ingredientID,
@@ -445,29 +507,50 @@ func (s *DeductionS) CreateDeduction(ctx context.Context, req *model.CreateDeduc
 			}
 
 			stockBefore := stock.Quantity
-			expectedAfter, err := subNumericClampZero(stockBefore, u.quantity, 6)
+			available := stockBefore
+			// subNumericClampZero(requested, available) gives max(requested-available,0). We need min(requested, available).
+			// Compute missing := max(requested-available,0) and actual := requested-missing
+			missing, err := subNumericClampZero(requestedQty, available, 6)
+			if err != nil {
+				return nil, err
+			}
+			actualDeduct, err := subNumericClampZero(requestedQty, missing, 6)
 			if err != nil {
 				return nil, err
 			}
 
-			updated, err := s.repo.Tenant(ctx).RemoveFromIngredientStock(ctx, pg.RemoveFromIngredientStockParams{
-				ID:       stock.ID,
-				Quantity: u.quantity,
-			})
-			if err != nil {
-				return nil, fmt.Errorf("failed to remove from ingredient stock: %w", err)
+			// If actualDeduct is 0, do not change stock and do not calculate amount
+			updatedQty := stockBefore
+			if numericToString(actualDeduct) != "0" {
+				updated, err := s.repo.Tenant(ctx).RemoveFromIngredientStock(ctx, pg.RemoveFromIngredientStockParams{
+					ID:       stock.ID,
+					Quantity: actualDeduct,
+				})
+				if err != nil {
+					return nil, fmt.Errorf("failed to remove from ingredient stock: %w", err)
+				}
+				updatedQty = updated.Quantity
 			}
 
-			_, _ = expectedAfter, updated
+			// warning if missing > 0
+			if numericToString(missing) != "0" {
+				warnings = append(warnings, fmt.Sprintf("insufficient stock for ingredient %s: requested %s, available %s", u.ingredientID.String(), numericToString(requestedQty), numericToString(available)))
+			}
+
+			price := ingredient.PricePerUnit
+			if numericToString(actualDeduct) == "0" {
+				price = pgtype.Numeric{}
+				_ = price.Scan("0")
+			}
 
 			breakdown, err := s.repo.Tenant(ctx).CreateDeductionItemIngredient(ctx, pg.CreateDeductionItemIngredientParams{
 				ID:              uuid.New(),
 				DeductionItemID: row.ID,
 				IngredientID:    u.ingredientID,
-				Quantity:        u.quantity,
+				Quantity:        actualDeduct,
 				StockBefore:     stockBefore,
-				StockAfter:      updated.Quantity,
-				PricePerUnit:    ingredient.PricePerUnit,
+				StockAfter:      updatedQty,
+				PricePerUnit:    price,
 			})
 			if err != nil {
 				return nil, fmt.Errorf("failed to create deduction item ingredient breakdown: %w", err)
@@ -485,6 +568,32 @@ func (s *DeductionS) CreateDeduction(ctx context.Context, req *model.CreateDeduc
 				CreatedAt:       timestampToTime(breakdown.CreatedAt),
 				UpdatedAt:       timestampToTime(breakdown.UpdatedAt),
 			})
+		}
+
+		compBreakdowns := make([]model.DeductionItemCompoundResponse, 0)
+		if row.CompoundID.Valid {
+			comps, err := s.expandCompoundToDirectCompounds(ctx, row.CompoundID.Bytes, row.Quantity)
+			if err != nil {
+				return nil, err
+			}
+			for _, cu := range comps {
+				compBreakdowns = append(compBreakdowns, model.DeductionItemCompoundResponse{
+					CompoundID: cu.compoundID.String(),
+					Quantity:   numericToStr(cu.quantity),
+				})
+			}
+		}
+		if row.GoodID.Valid {
+			comps, err := s.expandGoodToDirectCompounds(ctx, row.GoodID.Bytes, row.Quantity)
+			if err != nil {
+				return nil, err
+			}
+			for _, cu := range comps {
+				compBreakdowns = append(compBreakdowns, model.DeductionItemCompoundResponse{
+					CompoundID: cu.compoundID.String(),
+					Quantity:   numericToStr(cu.quantity),
+				})
+			}
 		}
 
 		var ingredientIDStr, goodIDStr, compoundIDStr *string
@@ -508,6 +617,7 @@ func (s *DeductionS) CreateDeduction(ctx context.Context, req *model.CreateDeduc
 			GoodID:       goodIDStr,
 			CompoundID:   compoundIDStr,
 			Quantity:     numericToStr(row.Quantity),
+			Compounds:    compBreakdowns,
 			Ingredients:  ingBreakdowns,
 			CreatedAt:    timestampToTime(row.CreatedAt),
 			UpdatedAt:    timestampToTime(row.UpdatedAt),
@@ -540,6 +650,7 @@ func (s *DeductionS) CreateDeduction(ctx context.Context, req *model.CreateDeduc
 		DescriptionI18n: descI18nStr,
 		Status:          model.DeductionStatus(updatedDeduction.Status),
 		Balance:         numericToString(updatedDeduction.Balance),
+		Warnings:        warnings,
 		Items:           itemResponses,
 		CreatedAt:       timestampToTime(updatedDeduction.CreatedAt),
 		UpdatedAt:       timestampToTime(updatedDeduction.UpdatedAt),
@@ -605,6 +716,32 @@ func (s *DeductionS) GetDeductionByID(ctx context.Context, id string) (*model.De
 			compoundIDStr = &s
 		}
 
+		compBreakdowns := make([]model.DeductionItemCompoundResponse, 0)
+		if it.CompoundID.Valid {
+			comps, err := s.expandCompoundToDirectCompounds(ctx, it.CompoundID.Bytes, it.Quantity)
+			if err != nil {
+				return nil, err
+			}
+			for _, cu := range comps {
+				compBreakdowns = append(compBreakdowns, model.DeductionItemCompoundResponse{
+					CompoundID: cu.compoundID.String(),
+					Quantity:   numericToStr(cu.quantity),
+				})
+			}
+		}
+		if it.GoodID.Valid {
+			comps, err := s.expandGoodToDirectCompounds(ctx, it.GoodID.Bytes, it.Quantity)
+			if err != nil {
+				return nil, err
+			}
+			for _, cu := range comps {
+				compBreakdowns = append(compBreakdowns, model.DeductionItemCompoundResponse{
+					CompoundID: cu.compoundID.String(),
+					Quantity:   numericToStr(cu.quantity),
+				})
+			}
+		}
+
 		itemResp = append(itemResp, model.DeductionItemResponse{
 			ID:           it.ID.String(),
 			DeductionID:  it.DeductionID.String(),
@@ -612,6 +749,7 @@ func (s *DeductionS) GetDeductionByID(ctx context.Context, id string) (*model.De
 			GoodID:       goodIDStr,
 			CompoundID:   compoundIDStr,
 			Quantity:     numericToStr(it.Quantity),
+			Compounds:    compBreakdowns,
 			Ingredients:  bresp,
 			CreatedAt:    timestampToTime(it.CreatedAt),
 			UpdatedAt:    timestampToTime(it.UpdatedAt),

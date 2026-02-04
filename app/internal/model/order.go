@@ -35,23 +35,37 @@ type Order struct {
 }
 
 type CreateOrderRequest struct {
-	TableID     string  `json:"table_id" validate:"required" example:"a1b2c3d4-e5f6-4a5b-8c9d-e0f1a2b3c4d5"`
-	WaiterID    *string `json:"waiter_id,omitempty" example:"a1b2c3d4-e5f6-4a5b-8c9d-e0f1a2b3c4d5"`
-	CashierID   *string `json:"cashier_id,omitempty" example:"a1b2c3d4-e5f6-4a5b-8c9d-e0f1a2b3c4d5"`
-	Status      *string `json:"status,omitempty" example:"open"`
-	GuestCount  *int32  `json:"guest_count,omitempty" example:"2"`
-	TotalAmount *string `json:"total_amount,omitempty" example:"100000"`
-	Comment     *string `json:"comment,omitempty"`
+	TableID    string                  `json:"table_id" validate:"required" example:"a1b2c3d4-e5f6-4a5b-8c9d-e0f1a2b3c4d5"`
+	WaiterID   *string                 `json:"waiter_id,omitempty" example:"a1b2c3d4-e5f6-4a5b-8c9d-e0f1a2b3c4d5"`
+	CashierID  *string                 `json:"cashier_id,omitempty" example:"a1b2c3d4-e5f6-4a5b-8c9d-e0f1a2b3c4d5"`
+	Status     *string                 `json:"status,omitempty" example:"open"`
+	GuestCount *int32                  `json:"guest_count,omitempty" example:"2"`
+	Comment    *string                 `json:"comment,omitempty"`
+	Items      []CreateOrderItemInline `json:"items,omitempty"`
+}
+
+type CreateOrderItemInline struct {
+	GoodID   string  `json:"good_id" validate:"required" example:"d4e5f6a7-b8c9-4a5b-8c9d-e0f1a2b3c4d5"`
+	Quantity int32   `json:"quantity" validate:"required,min=1" example:"2"`
+	Comment  *string `json:"comment,omitempty"`
 }
 
 type UpdateOrderRequest struct {
-	TableID     *string `json:"table_id,omitempty" example:"a1b2c3d4-e5f6-4a5b-8c9d-e0f1a2b3c4d5"`
-	WaiterID    *string `json:"waiter_id,omitempty" example:"a1b2c3d4-e5f6-4a5b-8c9d-e0f1a2b3c4d5"`
-	CashierID   *string `json:"cashier_id,omitempty" example:"a1b2c3d4-e5f6-4a5b-8c9d-e0f1a2b3c4d5"`
-	Status      *string `json:"status,omitempty" example:"open"`
-	GuestCount  *int32  `json:"guest_count,omitempty" example:"2"`
-	TotalAmount *string `json:"total_amount,omitempty" example:"100000"`
-	Comment     *string `json:"comment,omitempty"`
+	TableID    *string `json:"table_id,omitempty" example:"a1b2c3d4-e5f6-4a5b-8c9d-e0f1a2b3c4d5"`
+	WaiterID   *string `json:"waiter_id,omitempty" example:"a1b2c3d4-e5f6-4a5b-8c9d-e0f1a2b3c4d5"`
+	CashierID  *string `json:"cashier_id,omitempty" example:"a1b2c3d4-e5f6-4a5b-8c9d-e0f1a2b3c4d5"`
+	Status     *string `json:"status,omitempty" example:"open"`
+	GuestCount *int32  `json:"guest_count,omitempty" example:"2"`
+	Comment    *string `json:"comment,omitempty"`
+}
+
+type AddOrderItemsRequest struct {
+	Items []CreateOrderItemInline `json:"items" validate:"required"`
+}
+
+type AddOrderItemsResponse struct {
+	Order *OrderResponse      `json:"order"`
+	Items []OrderItemResponse `json:"items"`
 }
 
 type UpdateOrderStatusRequest struct {
@@ -87,7 +101,7 @@ type CreateOrderItemRequest struct {
 	OrderID  string  `json:"order_id" validate:"required" example:"a1b2c3d4-e5f6-4a5b-8c9d-e0f1a2b3c4d5"`
 	GoodID   string  `json:"good_id" validate:"required" example:"d4e5f6a7-b8c9-4a5b-8c9d-e0f1a2b3c4d5"`
 	Quantity int32   `json:"quantity" validate:"required,min=1" example:"2"`
-	Price    string  `json:"price" validate:"required" example:"50000"`
+	Price    *string `json:"price,omitempty" example:"50000"`
 	Status   *string `json:"status,omitempty" example:"pending"`
 	Comment  *string `json:"comment,omitempty"`
 }
@@ -118,7 +132,14 @@ type OrderItemResponse struct {
 }
 
 type MarkOrderPaidRequest struct {
-	CashierID string `json:"cashier_id" validate:"required" example:"a1b2c3d4-e5f6-4a5b-8c9d-e0f1a2b3c4d5"`
+	CashierID *string `json:"cashier_id,omitempty" example:"a1b2c3d4-e5f6-4a5b-8c9d-e0f1a2b3c4d5"`
+	// payment_type: cash or card
+	PaymentType *string `json:"payment_type,omitempty" example:"cash"`
+	// discount_percent: e.g. 10 means 10%
+	DiscountPercent *string `json:"discount_percent,omitempty" example:"10"`
+	// discount_amount: fixed amount
+	DiscountAmount  *string `json:"discount_amount,omitempty" example:"5000"`
+	DiscountComment *string `json:"discount_comment,omitempty" example:"Holiday discount"`
 }
 
 type UpdateOrderItemQuantityRequest struct {

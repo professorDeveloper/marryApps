@@ -26,9 +26,9 @@ type UpdateDeductionActGroupRequest struct {
 }
 
 type CreateDeductionItemRequest struct {
-	IngredientID *string `json:"ingredient_id,omitempty" example:"123e4567-e89b-12d3-a456-426614174000"`
+	IngredientID *string `json:"ingredient_id,omitempty"`
 	GoodID       *string `json:"good_id,omitempty" example:"123e4567-e89b-12d3-a456-426614174000"`
-	CompoundID   *string `json:"compound_id,omitempty" example:"123e4567-e89b-12d3-a456-426614174000"`
+	CompoundID   *string `json:"compound_id,omitempty"`
 	Quantity     string  `json:"quantity" validate:"required" example:"2"`
 }
 
@@ -64,6 +64,11 @@ type DeductionItemIngredientResponse struct {
 	UpdatedAt       *time.Time `json:"updated_at,omitempty"`
 }
 
+type DeductionItemCompoundResponse struct {
+	CompoundID string `json:"compound_id" example:"123e4567-e89b-12d3-a456-426614174000"`
+	Quantity   string `json:"quantity" example:"2"`
+}
+
 type DeductionItemResponse struct {
 	ID           string                            `json:"id" example:"123e4567-e89b-12d3-a456-426614174000"`
 	DeductionID  string                            `json:"deduction_id" example:"123e4567-e89b-12d3-a456-426614174000"`
@@ -71,6 +76,7 @@ type DeductionItemResponse struct {
 	GoodID       *string                           `json:"good_id,omitempty" example:"123e4567-e89b-12d3-a456-426614174000"`
 	CompoundID   *string                           `json:"compound_id,omitempty" example:"123e4567-e89b-12d3-a456-426614174000"`
 	Quantity     string                            `json:"quantity" example:"2"`
+	Compounds    []DeductionItemCompoundResponse   `json:"compounds,omitempty"`
 	Ingredients  []DeductionItemIngredientResponse `json:"ingredients,omitempty"`
 	CreatedAt    *time.Time                        `json:"created_at,omitempty"`
 	UpdatedAt    *time.Time                        `json:"updated_at,omitempty"`
@@ -86,6 +92,7 @@ type DeductionResponse struct {
 	DescriptionI18n *string                 `json:"description_i18n,omitempty"`
 	Status          DeductionStatus         `json:"status" example:"active"`
 	Balance         string                  `json:"balance" example:"7500"`
+	Warnings        []string                `json:"warnings,omitempty"`
 	Items           []DeductionItemResponse `json:"items,omitempty"`
 	CreatedAt       *time.Time              `json:"created_at,omitempty"`
 	UpdatedAt       *time.Time              `json:"updated_at,omitempty"`

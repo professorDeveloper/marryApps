@@ -329,6 +329,7 @@ type InvoiceI interface {
 
 type OrderI interface {
 	CreateOrder(ctx context.Context, req model.CreateOrderRequest) (*model.OrderResponse, error)
+	AddOrderItems(ctx context.Context, orderID string, req model.AddOrderItemsRequest) (*model.AddOrderItemsResponse, error)
 	GetOrderByID(ctx context.Context, orderID string) (*model.OrderResponse, error)
 	GetAllOrders(ctx context.Context, limit, offset int32) ([]model.OrderResponse, error)
 	GetOrdersByStatus(ctx context.Context, status string, limit, offset int32) ([]model.OrderResponse, error)
@@ -336,7 +337,7 @@ type OrderI interface {
 	GetOrdersByTableID(ctx context.Context, tableID string) ([]model.OrderResponse, error)
 	UpdateOrder(ctx context.Context, orderID string, req model.UpdateOrderRequest) (*model.OrderResponse, error)
 	UpdateOrderStatus(ctx context.Context, orderID string, status string) (*model.OrderResponse, error)
-	MarkOrderPaid(ctx context.Context, orderID string, cashierID string) (*model.OrderResponse, error)
+	MarkOrderPaid(ctx context.Context, orderID string, cashierID string, paymentType *string, discountPercent *string, discountAmount *string, discountComment *string) (*model.OrderResponse, error)
 	AssignWaiterToOrder(ctx context.Context, orderID string, waiterID string) (*model.OrderResponse, error)
 	AssignCashierToOrder(ctx context.Context, orderID string, cashierID string) (*model.OrderResponse, error)
 	CancelOrder(ctx context.Context, orderID string) (*model.OrderResponse, error)
@@ -345,6 +346,9 @@ type OrderI interface {
 	MarkOrderServed(ctx context.Context, orderID string) (*model.OrderResponse, error)
 	DeleteOrder(ctx context.Context, orderID string) error
 	RestoreOrder(ctx context.Context, orderID string) error
+
+	GetBills(ctx context.Context, req model.GetBillsRequest) ([]model.BillListItem, error)
+	GetBillDetails(ctx context.Context, billID string) (*model.BillDetails, error)
 
 	CreateOrderItem(ctx context.Context, req model.CreateOrderItemRequest) (*model.OrderItemResponse, error)
 	GetOrderItemByID(ctx context.Context, itemID string) (*model.OrderItemResponse, error)

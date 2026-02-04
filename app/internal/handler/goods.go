@@ -595,8 +595,15 @@ func (h *Handler) CreateGoodWithCalculations(c echo.Context) error {
 		}
 	}
 
+	// Fetch updated good (cost fields should be updated now)
+	updatedGood, gErr := h.service.Goods().GetGoodByID(ctx, goodResp.ID)
+	if gErr != nil {
+		log.Printf("CreateGoodWithCalculations: failed to fetch updated good: %v", gErr)
+		updatedGood = goodResp
+	}
+
 	response := model.GoodWithCalculationsResponse{
-		Good:         goodResp,
+		Good:         updatedGood,
 		Calculations: calculations,
 	}
 
