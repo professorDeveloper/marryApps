@@ -468,7 +468,7 @@ export function CompoundEditView({ compoundId, isNew = false }: CompoundEditView
                     <Stack spacing={3}>
                         <ProductCalculator
                             compoundId={effectiveCompoundId}
-                            showTotalsSummary={false}
+                            // showTotalsSummary={false}
                             onCalculationsReady={(calculations) => {
                                 // Store calculations for when save is clicked
                                 pendingCalculationsRef.current = calculations;

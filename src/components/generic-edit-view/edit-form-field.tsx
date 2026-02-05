@@ -47,7 +47,7 @@ export const EditFormField: FC<EditFormFieldProps> = ({ field, value, onChange }
                 rows={field.rows || (field.type === 'textarea' ? 4 : 1)}
                 required={field.required}
                 helperText={field.helperText}
-                inputProps={field.type === 'number' ? { step: '1', min: '0' } : undefined}
+                inputProps={field.type === 'number' ? { step: '0.01', min: '0' } : undefined}
             />
         );
     }

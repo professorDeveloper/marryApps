@@ -1,6 +1,3 @@
-// Bu fayl inventory-details-calculation bilan bir xil UI struktuasiga ega ProductCalculator komponentini saqlab turadi
-// Fon har xil - product pricing va calculation logic
-
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -8,6 +5,8 @@ import {
     Paper,
     Typography,
     TextField,
+    MenuItem,
+    Select,
     Checkbox,
     Button,
     IconButton,
@@ -21,17 +20,24 @@ import {
     InputAdornment,
     useTheme,
     CircularProgress,
+    Alert
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
-import DeleteIcon from '@mui/icons-material/Delete';
 import { fetcher, endpoints, putter } from 'src/lib/axios';
 import { toast } from 'src/components/snackbar';
-import { useGetCompounds, useGetCompoundCalculations, useCreateCompoundCalculation, useDeleteCompoundCalculation, useGetCompoundWithCalculations } from 'src/hooks/use-compounds';
-import { useGetMealCalculations, useCreateMealCalculation, useDeleteMealCalculation, useGetMealWithCalculations } from 'src/hooks/use-meals';
+import { useGetCompounds, useGetCompoundCalculations, useCreateCompoundCalculation, useDeleteCompoundCalculation, useGetCompoundWithCalculations, type ICompoundCalculation } from 'src/hooks/use-compounds';
+import { useGetMealCalculations, useCreateMealCalculation, useDeleteMealCalculation, useGetMealWithCalculations, type IMealCalculation } from 'src/hooks/use-meals';
 
 // --- TYPES ---
+interface BackendResponse<T> {
+    status: string;
+    message: string;
+    data: T;
+    code: number;
+}
+
 interface ICalculation {
     id: string;
     ingredient_id: string;
@@ -51,11 +57,6 @@ interface Ingredient {
     brand_id: string;
     group_id: string;
     picture_url: string;
-    price_per_unit?: string | number;
-    name_i18n?: string;
-    color_code?: string;
-    created_at?: string;
-    updated_at?: string;
 }
 
 interface IngredientGroup {
@@ -65,6 +66,14 @@ interface IngredientGroup {
     color_code: string;
     created_at: string;
     updated_at: string;
+}
+
+interface InvoiceDetail {
+    id: string;
+    ingredient_id: string;
+    quantity: number;
+    price: string;
+    price_per_unit: string;
 }
 
 interface Product extends Ingredient {
@@ -83,34 +92,30 @@ interface CompoundProduct {
     price_per_unit: number;
 }
 
-type SubTabType = 'ingredients' | 'semifinished';
-
-interface ProductCalculatorProps {
-    compoundId?: string;
-    mealId?: string;
-    onEntityCreated?: (entityId: string) => void;
-    onCalculationsReady?: (calculations: {
-        ingredient_calculations?: Array<{ ingredient_id: string; quantity: string }>;
-        compound_calculations?: Array<{ compound_id: string; quantity: string }>;
-    }) => void;
-    onSaveWithGood?: (goodData: any) => Promise<void>;
-    onUpdateWithGood?: (goodData: any) => Promise<void>;
-    showTotalsSummary?: boolean;
-}
-
 const formatPrice = (price: number) => {
     return new Intl.NumberFormat('uz-UZ').format(price);
 };
 
-const ProductCalculator = ({
-    compoundId,
-    mealId,
-    onEntityCreated,
-    onCalculationsReady,
-    onSaveWithGood,
-    onUpdateWithGood,
-    showTotalsSummary = true,
-}: ProductCalculatorProps) => {
+interface ProductCalculatorProps {
+    compoundId?: string;
+    mealId?: string;
+    // NEW: Allow parent to notify when entity is created
+    onEntityCreated?: (entityId: string) => void;
+    // NEW: Callback to provide pending calculations data
+    onCalculationsReady?: (calculations: {
+        ingredient_calculations?: Array<{ ingredient_id: string; quantity: string }>;
+        compound_calculations?: Array<{ compound_id: string; quantity: string }>;
+    }) => void;
+    // NEW: Callback for save with good data
+    onSaveWithGood?: (goodData: any) => Promise<void>;
+    // NEW: Callback for update with good data
+    onUpdateWithGood?: (goodData: any) => Promise<void>;
+}
+
+// Sub-tab type
+type SubTabType = 'ingredients' | 'semifinished';
+
+const ProductCalculator = ({ compoundId, mealId, onEntityCreated, onCalculationsReady, onSaveWithGood, onUpdateWithGood }: ProductCalculatorProps) => {
     const { t } = useTranslation('menu');
     const theme = useTheme();
 
@@ -128,9 +133,9 @@ const ProductCalculator = ({
     const [transferredIds, setTransferredIds] = useState<string[]>([]);
     const [quantities, setQuantities] = useState<Record<string, number>>({});
     const [searchTerm, setSearchTerm] = useState('');
-    const [rightSearchTerm, setRightSearchTerm] = useState('');
     const [showCalculation, setShowCalculation] = useState(false);
     const [selectedGroupId, setSelectedGroupId] = useState<string>('');
+    const [viewModeCalculation, setViewModeCalculation] = useState(false);
 
     // --- SEMIFINISHED TAB STATE ---
     const { compounds, compoundsLoading } = useGetCompounds();
@@ -140,7 +145,15 @@ const ProductCalculator = ({
     const [sfSearchTerm, setSfSearchTerm] = useState('');
     const [sfShowCalculation, setSfShowCalculation] = useState(false);
 
-    // --- API HOOKS ---
+    // Track pending calculations when no entityId
+    const [pendingCalculations, setPendingCalculations] = useState<Array<{
+        ingredient_id?: string;
+        compound_to_add_id?: string;
+        quantity: number;
+    }>>([]);
+
+    const prevCalculationsRef = useRef<string>('');
+
     const { compoundWithCalculations, loading: compoundWithCalculationsLoading, mutate: mutateCompoundWithCalculations } = useGetCompoundWithCalculations(compoundId);
     const { mealWithCalculations, loading: mealWithCalculationsLoading, mutate: mutateMealWithCalculations } = useGetMealWithCalculations(mealId);
 
@@ -164,6 +177,7 @@ const ProductCalculator = ({
         }
     }, [entityType, compoundWithCalculations, mealWithCalculations, compoundCalculations, mealCalculations]);
 
+    // Split calculations into ingredient and compound based
     const ingredientCalculations = useMemo(() => {
         return calculations?.filter(calc => calc.ingredient_id && !calc.component_compound_id) || [];
     }, [calculations]);
@@ -190,133 +204,7 @@ const ProductCalculator = ({
         ? compoundWithCalculations?.profit_margin
         : mealWithCalculations?.profit_margin;
 
-    const goodPrice = entityType === 'compound'
-        ? parseFloat(compoundWithCalculations?.price || '0')
-        : parseFloat(mealWithCalculations?.price || '0');
-
-    // Load ingredients
-    useEffect(() => {
-        const loadData = async () => {
-            try {
-                setLoading(true);
-
-                const [ingredientsResponse, ingredientGroupsResponse] = await Promise.all([
-                    fetcher<any>(endpoints.ingredient.list),
-                    fetcher<any>(endpoints.ingredientGroups.list),
-                ]);
-
-                let ingredientsData: Ingredient[] = [];
-                if (Array.isArray(ingredientsResponse)) {
-                    ingredientsData = ingredientsResponse;
-                } else if (ingredientsResponse?.data && Array.isArray(ingredientsResponse.data)) {
-                    ingredientsData = ingredientsResponse.data;
-                }
-
-                let ingredientGroupsData: IngredientGroup[] = [];
-                if (Array.isArray(ingredientGroupsResponse)) {
-                    ingredientGroupsData = ingredientGroupsResponse;
-                } else if (ingredientGroupsResponse?.data && Array.isArray(ingredientGroupsResponse.data)) {
-                    ingredientGroupsData = ingredientGroupsResponse.data;
-                }
-
-                const groupNameMap = new Map<string, string>();
-                ingredientGroupsData.forEach(group => {
-                    groupNameMap.set(group.id, group.name);
-                });
-
-                const enrichedIngredients = (Array.isArray(ingredientsData) ? ingredientsData : [])
-                    .map(ingredient => ({
-                        ...ingredient,
-                        price_per_unit: parseFloat(ingredient.price_per_unit?.toString() || '0'),
-                        group_name: groupNameMap.get(ingredient.group_id) || '',
-                    }));
-
-                setIngredients(enrichedIngredients);
-                setIngredientGroups(ingredientGroupsData);
-            } catch (error) {
-                console.error('Error loading data:', error);
-                toast.error(t('error.loadFailed'));
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        loadData();
-    }, [t]);
-
-    // Load existing ingredient calculations
-    useEffect(() => {
-        if (!entityId || calculationsLoading) return;
-
-        if (ingredientCalculations && ingredientCalculations.length > 0) {
-            const calcMap = new Map<string, { id: string; quantity: number; updated_at: string }>();
-            ingredientCalculations.forEach(calc => {
-                const existing = calcMap.get(calc.ingredient_id);
-                if (!existing || (calc.updated_at && existing.updated_at && calc.updated_at > existing.updated_at)) {
-                    calcMap.set(calc.ingredient_id, {
-                        id: calc.id,
-                        quantity: parseFloat(calc.quantity),
-                        updated_at: calc.updated_at || ''
-                    });
-                }
-            });
-
-            const calcIngredientIds = Array.from(calcMap.keys());
-            const calcQuantities: Record<string, number> = {};
-
-            calcMap.forEach((value, key) => {
-                calcQuantities[key] = value.quantity;
-            });
-
-            const uniqueIds = Array.from(new Set(calcIngredientIds));
-            setTransferredIds(uniqueIds);
-            setQuantities(calcQuantities);
-            setShowCalculation(true);
-        } else if (ingredientCalculations && ingredientCalculations.length === 0 && transferredIds.length > 0) {
-            setTransferredIds([]);
-            setQuantities({});
-            setShowCalculation(false);
-        }
-    }, [entityId, ingredientCalculations, calculationsLoading]);
-
-    // Load existing compound calculations
-    useEffect(() => {
-        if (!entityId || calculationsLoading) return;
-
-        if (compoundCalculationsList && compoundCalculationsList.length > 0) {
-            const calcMap = new Map<string, { id: string; quantity: number; updated_at: string }>();
-            compoundCalculationsList.forEach(calc => {
-                if (calc.component_compound_id) {
-                    const existing = calcMap.get(calc.component_compound_id);
-                    if (!existing || (calc.updated_at && existing.updated_at && calc.updated_at > existing.updated_at)) {
-                        calcMap.set(calc.component_compound_id, {
-                            id: calc.id,
-                            quantity: parseFloat(calc.quantity),
-                            updated_at: calc.updated_at || ''
-                        });
-                    }
-                }
-            });
-
-            const calcCompoundIds = Array.from(calcMap.keys());
-            const calcQuantities: Record<string, number> = {};
-
-            calcMap.forEach((value, key) => {
-                calcQuantities[key] = value.quantity;
-            });
-
-            const uniqueIds = Array.from(new Set(calcCompoundIds));
-            setSfTransferredIds(uniqueIds);
-            setSfQuantities(calcQuantities);
-            setSfShowCalculation(true);
-        } else if (compoundCalculationsList && compoundCalculationsList.length === 0 && sfTransferredIds.length > 0) {
-            setSfTransferredIds([]);
-            setSfQuantities({});
-            setSfShowCalculation(false);
-        }
-    }, [entityId, compoundCalculationsList, calculationsLoading]);
-
-    // Create calculation
+    // Create calculation - supports both ingredient and compound
     const createCalculation = async (payload: {
         compound_id?: string;
         good_id?: string;
@@ -351,7 +239,304 @@ const ProductCalculator = ({
         throw new Error('No entity ID provided');
     };
 
-    // --- INGREDIENTS HANDLERS ---
+    // Load ingredients data
+    useEffect(() => {
+        const loadData = async () => {
+            try {
+                setLoading(true);
+
+                const [ingredientsResponse, invoiceDetailsResponse, ingredientGroupsResponse] = await Promise.all([
+                    fetcher<BackendResponse<Ingredient[]> | Ingredient[]>(endpoints.ingredient.list),
+                    fetcher<BackendResponse<InvoiceDetail[]> | InvoiceDetail[]>(endpoints.invoice.detailsList),
+                    fetcher<BackendResponse<IngredientGroup[]> | IngredientGroup[]>(endpoints.ingredientGroups.list),
+                ]);
+
+                let ingredientsData: Ingredient[] = [];
+                if (Array.isArray(ingredientsResponse)) {
+                    ingredientsData = ingredientsResponse;
+                } else if (ingredientsResponse?.data && Array.isArray(ingredientsResponse.data)) {
+                    ingredientsData = ingredientsResponse.data;
+                }
+
+                let invoiceDetailsData: InvoiceDetail[] = [];
+                if (Array.isArray(invoiceDetailsResponse)) {
+                    invoiceDetailsData = invoiceDetailsResponse;
+                } else if (invoiceDetailsResponse?.data && Array.isArray(invoiceDetailsResponse.data)) {
+                    invoiceDetailsData = invoiceDetailsResponse.data;
+                }
+
+                const priceMap = new Map<string, number>();
+                invoiceDetailsData.forEach(detail => {
+                    priceMap.set(detail.ingredient_id, parseFloat(detail.price_per_unit));
+                });
+
+                let ingredientGroupsData: IngredientGroup[] = [];
+                if (Array.isArray(ingredientGroupsResponse)) {
+                    ingredientGroupsData = ingredientGroupsResponse;
+                } else if (ingredientGroupsResponse?.data && Array.isArray(ingredientGroupsResponse.data)) {
+                    ingredientGroupsData = ingredientGroupsResponse.data;
+                }
+
+                const groupNameMap = new Map<string, string>();
+                ingredientGroupsData.forEach(group => {
+                    groupNameMap.set(group.id, group.name);
+                });
+
+                const enrichedIngredients = (Array.isArray(ingredientsData) ? ingredientsData : [])
+                    .map(ingredient => ({
+                        ...ingredient,
+                        price_per_unit: priceMap.get(ingredient.id) || 0,
+                        group_name: groupNameMap.get(ingredient.group_id) || '',
+                    }));
+
+                setIngredients(enrichedIngredients);
+                setIngredientGroups(ingredientGroupsData);
+            } catch (error) {
+                console.error('Error loading data:', error);
+                toast.error(t('error.loadFailed'));
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        loadData();
+    }, [t]);
+
+    // Load existing ingredient calculations
+    useEffect(() => {
+        if (!entityId) {
+            if (transferredIds.length > 0) {
+                setPendingCalculations(prev => [
+                    ...prev.filter(p => p.compound_to_add_id),
+                    ...transferredIds.map(id => ({
+                        ingredient_id: id,
+                        quantity: quantities[id] || 0
+                    }))
+                ]);
+                // Notify parent about pending calculations
+                if (onCalculationsReady) {
+                    const ingredientCalcs = transferredIds.map(id => ({
+                        ingredient_id: id,
+                        quantity: String(quantities[id] || 0)
+                    }));
+                    const compoundCalcs = sfTransferredIds.map(id => ({
+                        compound_id: id,
+                        quantity: String(sfQuantities[id] || 0)
+                    }));
+                    onCalculationsReady({
+                        ingredient_calculations: ingredientCalcs.length > 0 ? ingredientCalcs : undefined,
+                        compound_calculations: compoundCalcs.length > 0 ? compoundCalcs : undefined,
+                    });
+                }
+            }
+            prevCalculationsRef.current = '';
+            return;
+        }
+
+        if (calculationsLoading) return;
+
+        const calculationsStr = JSON.stringify(ingredientCalculations?.map(calc => ({
+            id: calc.id,
+            ingredient_id: calc.ingredient_id,
+            quantity: calc.quantity,
+        })).sort((a, b) => a.ingredient_id.localeCompare(b.ingredient_id)));
+
+        if (prevCalculationsRef.current === calculationsStr) {
+            return;
+        }
+
+        prevCalculationsRef.current = calculationsStr;
+
+        if (ingredientCalculations && ingredientCalculations.length > 0) {
+            const calcMap = new Map<string, { id: string; quantity: number; updated_at: string }>();
+            ingredientCalculations.forEach(calc => {
+                const existing = calcMap.get(calc.ingredient_id);
+                if (!existing || (calc.updated_at && existing.updated_at && calc.updated_at > existing.updated_at)) {
+                    calcMap.set(calc.ingredient_id, {
+                        id: calc.id,
+                        quantity: parseFloat(calc.quantity),
+                        updated_at: calc.updated_at || ''
+                    });
+                }
+            });
+
+            const calcIngredientIds = Array.from(calcMap.keys());
+            const calcQuantities: Record<string, number> = {};
+
+            calcMap.forEach((value, key) => {
+                calcQuantities[key] = value.quantity;
+            });
+
+            const uniqueIds = Array.from(new Set(calcIngredientIds));
+            setTransferredIds(uniqueIds);
+            setQuantities(calcQuantities);
+            setShowCalculation(true);
+            setPendingCalculations(prev => prev.filter(p => p.compound_to_add_id));
+        } else if (ingredientCalculations && ingredientCalculations.length === 0 && transferredIds.length > 0) {
+            setTransferredIds([]);
+            setQuantities({});
+            setShowCalculation(false);
+            setPendingCalculations(prev => prev.filter(p => p.compound_to_add_id));
+        }
+    }, [entityId, ingredientCalculations, calculationsLoading]);
+
+    // Load existing compound calculations
+    useEffect(() => {
+        if (!entityId) {
+            return;
+        }
+
+        if (calculationsLoading) return;
+
+        if (compoundCalculationsList && compoundCalculationsList.length > 0) {
+            const calcMap = new Map<string, { id: string; quantity: number; updated_at: string }>();
+            compoundCalculationsList.forEach(calc => {
+                if (calc.component_compound_id) {
+                    const existing = calcMap.get(calc.component_compound_id);
+                    if (!existing || (calc.updated_at && existing.updated_at && calc.updated_at > existing.updated_at)) {
+                        calcMap.set(calc.component_compound_id, {
+                            id: calc.id,
+                            quantity: parseFloat(calc.quantity),
+                            updated_at: calc.updated_at || ''
+                        });
+                    }
+                }
+            });
+
+            const calcCompoundIds = Array.from(calcMap.keys());
+            const calcQuantities: Record<string, number> = {};
+
+            calcMap.forEach((value, key) => {
+                calcQuantities[key] = value.quantity;
+            });
+
+            const uniqueIds = Array.from(new Set(calcCompoundIds));
+            setSfTransferredIds(uniqueIds);
+            setSfQuantities(calcQuantities);
+            setSfShowCalculation(true);
+        } else if (compoundCalculationsList && compoundCalculationsList.length === 0 && sfTransferredIds.length > 0) {
+            setSfTransferredIds([]);
+            setSfQuantities({});
+            setSfShowCalculation(false);
+        }
+    }, [entityId, compoundCalculationsList, calculationsLoading]);
+
+    // Save pending calculations when entity is created
+    useEffect(() => {
+        const savePendingCalculations = async () => {
+            if (!entityId || pendingCalculations.length === 0) return;
+
+            try {
+                console.log('Saving pending calculations:', pendingCalculations);
+
+                for (const calc of pendingCalculations) {
+                    if (calc.quantity > 0) {
+                        await createCalculation({
+                            ingredient_id: calc.ingredient_id,
+                            compound_to_add_id: calc.compound_to_add_id,
+                            quantity: String(calc.quantity),
+                        });
+                    }
+                }
+
+                await mutateCalculations();
+                setPendingCalculations([]);
+                toast.success(t('calculation.savedSuccessfully', 'Calculations saved successfully'));
+            } catch (error) {
+                console.error('Error saving pending calculations:', error);
+                toast.error(t('error.saveFailed', 'Failed to save calculations'));
+            }
+        };
+
+        savePendingCalculations();
+    }, [entityId, pendingCalculations, createCalculation, mutateCalculations, t]);
+
+    // Auto-save calculations when quantities change for existing meals/compounds
+    const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+    const prevTransferredIdsRef = useRef<string[]>([]);
+    const prevQuantitiesRef = useRef<Record<string, number>>({});
+
+    useEffect(() => {
+        // Only for existing entities (not new ones)
+        if (!entityId || !mealId) return;
+
+        // Check if there are actual changes
+        const idsChanged = JSON.stringify(transferredIds) !== JSON.stringify(prevTransferredIdsRef.current);
+        const quantitiesChanged = JSON.stringify(quantities) !== JSON.stringify(prevQuantitiesRef.current);
+
+        if (!idsChanged && !quantitiesChanged) return;
+
+        prevTransferredIdsRef.current = transferredIds;
+        prevQuantitiesRef.current = quantities;
+
+        // Clear previous timeout
+        if (autoSaveTimeoutRef.current) {
+            clearTimeout(autoSaveTimeoutRef.current);
+        }
+
+        // Set new timeout for auto-save (debounce)
+        autoSaveTimeoutRef.current = setTimeout(async () => {
+            try {
+                // Get current calculations from backend
+                const currentCalcs = ingredientCalculations || [];
+                const currentCalcMap = new Map<string, string>();
+                currentCalcs.forEach(calc => {
+                    currentCalcMap.set(calc.ingredient_id, calc.id);
+                });
+
+                // Find calculations to delete (in backend but not in transferredIds)
+                const toDelete = Array.from(currentCalcMap.keys()).filter(id => !transferredIds.includes(id));
+
+                // Delete removed calculations
+                for (const ingredientId of toDelete) {
+                    const calcId = currentCalcMap.get(ingredientId);
+                    if (calcId) {
+                        await deleteCalculation(calcId);
+                    }
+                }
+
+                // Find calculations to create or update
+                for (const ingredientId of transferredIds) {
+                    const quantity = quantities[ingredientId];
+                    const existingCalc = currentCalcs.find(c => c.ingredient_id === ingredientId);
+
+                    if (quantity > 0) {
+                        if (existingCalc) {
+                            // Update existing calculation via API
+                            try {
+                                await putter(`/api/v1/goods/calculations/${existingCalc.id}`, {
+                                    quantity: String(quantity)
+                                });
+                            } catch (updateError) {
+                                console.error('Error updating calculation:', updateError);
+                            }
+                        } else {
+                            // Create new calculation
+                            await createCalculation({
+                                ingredient_id: ingredientId,
+                                quantity: String(quantity),
+                            });
+                        }
+                    }
+                }
+
+                // Revalidate calculations
+                await mutateCalculations();
+                toast.success(t('calculation.savedSuccessfully', 'Saqlandi'));
+            } catch (error) {
+                console.error('Error auto-saving calculations:', error);
+                // Don't show error toast for auto-save to avoid spam
+            }
+        }, 1500); // Debounce 1.5 seconds
+
+        return () => {
+            if (autoSaveTimeoutRef.current) {
+                clearTimeout(autoSaveTimeoutRef.current);
+            }
+        };
+    }, [entityId, mealId, transferredIds, quantities, ingredientCalculations, deleteCalculation, createCalculation, mutateCalculations, t]);
+
+    // --- INGREDIENT HANDLERS ---
     const handleToggle = (id: string) => {
         const currentIndex = selectedIds.indexOf(id);
         const newChecked = [...selectedIds];
@@ -379,6 +564,7 @@ const ProductCalculator = ({
 
     const handleMoveRight = async () => {
         if (selectedIds.length > 0) {
+            // Update quantities state for all selected IDs to trigger auto-save
             const newQuantities = { ...quantities };
             for (const id of selectedIds) {
                 if (!newQuantities[id]) {
@@ -406,6 +592,12 @@ const ProductCalculator = ({
                 } catch (error) {
                     console.error('Error saving calculations:', error);
                 }
+            } else {
+                const newPending = selectedIds.map(id => ({
+                    ingredient_id: id,
+                    quantity: newQuantities[id] || 1
+                }));
+                setPendingCalculations(prev => [...prev, ...newPending]);
             }
 
             const newIds = selectedIds.filter(id => !transferredIds.includes(id));
@@ -429,6 +621,7 @@ const ProductCalculator = ({
         setTransferredIds([]);
         setQuantities({});
         setShowCalculation(false);
+        setPendingCalculations(prev => prev.filter(p => p.compound_to_add_id));
     };
 
     // --- SEMIFINISHED HANDLERS ---
@@ -480,6 +673,12 @@ const ProductCalculator = ({
                 } catch (error) {
                     console.error('Error saving calculations:', error);
                 }
+            } else {
+                const newPending = sfSelectedIds.map(id => ({
+                    compound_to_add_id: id,
+                    quantity: sfQuantities[id] || 1
+                }));
+                setPendingCalculations(prev => [...prev, ...newPending]);
             }
 
             const newIds = sfSelectedIds.filter(id => !sfTransferredIds.includes(id));
@@ -503,9 +702,10 @@ const ProductCalculator = ({
         setSfTransferredIds([]);
         setSfQuantities({});
         setSfShowCalculation(false);
+        setPendingCalculations(prev => prev.filter(p => p.ingredient_id));
     };
 
-    // --- CALCULATED ROWS ---
+    // --- CALCULATED ROWS FOR INGREDIENTS ---
     const calculatedRows = useMemo(() => {
         const uniqueIds = Array.from(new Set(transferredIds));
 
@@ -533,6 +733,7 @@ const ProductCalculator = ({
         }).filter(row => row !== null) as Array<Product & { qty: number; total: number; type: 'ingredient' }>;
     }, [transferredIds, quantities, ingredients, ingredientCalculations]);
 
+    // --- CALCULATED ROWS FOR SEMIFINISHED ---
     const sfCalculatedRows = useMemo(() => {
         const uniqueIds = Array.from(new Set(sfTransferredIds));
 
@@ -562,66 +763,47 @@ const ProductCalculator = ({
         }).filter(row => row !== null) as Array<{ id: string; name: string; measurement: string; price_per_unit: number; qty: number; total: number; type: 'compound' }>;
     }, [sfTransferredIds, sfQuantities, compounds, compoundCalculationsList]);
 
+    // Combined calculated rows for the total display
     const allCalculatedRows = useMemo(() => {
         return [...calculatedRows, ...sfCalculatedRows];
     }, [calculatedRows, sfCalculatedRows]);
 
+    // If there are no calculated rows, use backend values
     const shouldUseBackendValues = allCalculatedRows.length === 0;
-    const frontendGrandTotal = allCalculatedRows.length > 0
-        ? allCalculatedRows.reduce((acc, row) => acc + row.total, 0)
-        : 0;
 
-    const grandTotal = frontendGrandTotal > 0
-        ? frontendGrandTotal
+    const grandTotal = allCalculatedRows.length > 0
+        ? allCalculatedRows.reduce((acc, row) => acc + row.total, 0)
         : (backendTotalCost ? parseFloat(backendTotalCost) : 0);
 
-    const calculatedProfit = goodPrice - grandTotal;
-    const displayProfit = goodPrice > 0 && shouldUseBackendValues === false
-        ? calculatedProfit
-        : (backendProfit !== undefined ? parseFloat(backendProfit) : 0);
+    const displayProfit = shouldUseBackendValues
+        ? (backendProfit !== undefined ? parseFloat(backendProfit) : 0)
+        : backendProfit !== undefined ? parseFloat(backendProfit) : 0;
 
-    let displayProfitMarginValue: number;
-    if (goodPrice > 0 && shouldUseBackendValues === false) {
-        displayProfitMarginValue = (calculatedProfit / goodPrice) * 100;
-    } else if (backendProfitMargin) {
-        displayProfitMarginValue = parseFloat(backendProfitMargin);
-    } else {
-        displayProfitMarginValue = 0;
-    }
+    const displayProfitMargin = shouldUseBackendValues
+        ? (backendProfitMargin !== undefined ? backendProfitMargin : '0%')
+        : (backendProfitMargin !== undefined ? backendProfitMargin : '0%');
 
-    const displayProfitMargin = displayProfitMarginValue >= 0
-        ? `${displayProfitMarginValue.toFixed(2)}%`
-        : `${displayProfitMarginValue.toFixed(2)}%`;
-
-    // Filtered compounds
+    // Filtered compounds for semi-finished tab (exclude current compound if editing)
     const filteredCompounds = useMemo(() => {
         return compounds.filter(c => {
             if (compoundId && c.id === compoundId) return false;
-            return c.name.toLowerCase().includes(sfSearchTerm.toLowerCase()) && !sfTransferredIds.includes(c.id);
+            return c.name.toLowerCase().includes(sfSearchTerm.toLowerCase());
         });
-    }, [compounds, compoundId, sfSearchTerm, sfTransferredIds]);
-
-    // Filtered available ingredients
-    const availableIngredients = useMemo(() => {
-        return ingredients.filter(
-            (ing) =>
-                !transferredIds.includes(ing.id) &&
-                ing.name.toLowerCase().includes(searchTerm.toLowerCase()) &&
-                (!selectedGroupId || ing.group_id === selectedGroupId)
-        );
-    }, [ingredients, transferredIds, searchTerm, selectedGroupId]);
-
-    // Filtered transferred ingredients
-    const transferredIngredients = useMemo(() => {
-        return ingredients.filter(
-            (ing) =>
-                transferredIds.includes(ing.id) &&
-                ing.name.toLowerCase().includes(rightSearchTerm.toLowerCase())
-        );
-    }, [ingredients, transferredIds, rightSearchTerm]);
+    }, [compounds, compoundId, sfSearchTerm]);
 
     return (
-        <Box sx={{ p: 3, minHeight: '100vh' }}>
+        <Box sx={{
+            p: 3,
+            minHeight: '100vh',
+            fontFamily: 'Arial, sans-serif',
+        }}>
+            {/* Show warning if no entityId */}
+            {/* {!entityId && (
+                <Alert severity="info" sx={{ mb: 3 }}>
+                    {t('calculation.saveEntityFirst', 'Please save the item first to enable calculation saving. Your selections will be preserved.')}
+                </Alert>
+            )} */}
+
             {/* SUB-TABS */}
             <Box sx={{
                 mb: 3,
@@ -640,10 +822,12 @@ const ProductCalculator = ({
                         color: activeSubTab === 'ingredients' ? 'text.primary' : 'text.secondary',
                         cursor: 'pointer',
                         pb: 0.5,
-                        '&:hover': { color: 'text.primary' }
+                        '&:hover': {
+                            color: 'text.primary'
+                        }
                     }}
                 >
-                    {t('calculation.content', 'Content')}
+                    {t('calculation.content')}
                 </Typography>
                 <Typography
                     variant="subtitle1"
@@ -655,40 +839,81 @@ const ProductCalculator = ({
                         color: activeSubTab === 'semifinished' ? 'text.primary' : 'text.secondary',
                         cursor: 'pointer',
                         pb: 0.5,
-                        '&:hover': { color: 'text.primary' }
+                        '&:hover': {
+                            color: 'text.primary'
+                        }
                     }}
                 >
-                    {t('calculation.semifinishedProducts', 'Semifinished')}
+                    {t('calculation.semifinishedProducts')}
                 </Typography>
+                <Typography variant="subtitle1" color="text.secondary">{t('calculation.import')}</Typography>
             </Box>
 
-            {/* INGREDIENTS TAB */}
+            {/* INGREDIENTS TAB CONTENT */}
             {activeSubTab === 'ingredients' && (
                 <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '5fr 1fr 6fr' }, gap: 2, alignItems: 'flex-start' }}>
-                    {/* LEFT SIDE */}
+                    {/* LEFT SIDE - Ingredients */}
                     <Box>
-                        <Box sx={{ mb: 2 }}>
-                            <TextField
-                                fullWidth
-                                placeholder={t('calculation.search', 'Search...')}
-                                size="small"
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                                InputProps={{
-                                    startAdornment: (
-                                        <InputAdornment position="start">
-                                            <SearchIcon color="action" />
-                                        </InputAdornment>
-                                    ),
-                                }}
-                            />
+                        <Box sx={{ display: 'flex', gap: 2, mb: 2, flexWrap: 'wrap' }}>
+                            <Box sx={{ width: '100%', minWidth: '200px' }}>
+                                <TextField
+                                    fullWidth
+                                    placeholder={t('calculation.search')}
+                                    size="small"
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                    InputProps={{
+                                        startAdornment: (
+                                            <InputAdornment position="start">
+                                                <SearchIcon color="action" />
+                                            </InputAdornment>
+                                        ),
+                                    }}
+                                />
+                            </Box>
+                            {/* <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', flexGrow: 1 }}>
+                                <Box sx={{ flex: { xs: '1 1 100%', sm: '1 1 auto' }, minWidth: '200px' }}>
+                                    <Select
+                                        fullWidth
+                                        displayEmpty
+                                        value={selectedGroupId}
+                                        onChange={(e) => setSelectedGroupId(e.target.value as string)}
+                                        size="small"
+                                    >
+                                        <MenuItem value=""><em>{t('calculation.selectGroup')}</em></MenuItem>
+                                        {ingredientGroups.map((group) => (
+                                            <MenuItem key={group.id} value={group.id}>
+                                                {group.name}
+                                            </MenuItem>
+                                        ))}
+                                    </Select>
+                                </Box>
+                                <Box sx={{ flex: { xs: '1 1 100%', sm: '1 1 auto' }, minWidth: '150px' }}>
+                                    <Select
+                                        fullWidth
+                                        displayEmpty
+                                        defaultValue=""
+                                        size="small"
+                                    >
+                                        <MenuItem value=""><em>{t('calculation.selectWarehouse')}</em></MenuItem>
+                                        <MenuItem value="asosiy">{t('calculation.mainWarehouse')}</MenuItem>
+                                    </Select>
+                                </Box>
+                            </Box> */}
                         </Box>
-
                         <Paper sx={{ borderRadius: 2, overflow: 'hidden' }} elevation={1}>
-                            <Box sx={{ display: 'flex', p: 1.5, bgcolor: 'action.hover', fontWeight: 'bold', fontSize: '0.875rem', color: 'text.primary' }}>
-                                <Box sx={{ width: '40%' }}>{t('calculation.productName', 'Product')}</Box>
-                                <Box sx={{ width: '30%' }}>{t('calculation.unit', 'Unit')}</Box>
-                                <Box sx={{ width: '30%', textAlign: 'right' }}>{t('calculation.price', 'Price')}</Box>
+                            <Box sx={{
+                                display: 'flex',
+                                p: 1.5,
+                                bgcolor: 'action.hover',
+                                fontWeight: 'bold',
+                                fontSize: '0.875rem',
+                                color: 'text.primary'
+                            }}>
+                                <Box sx={{ width: '40%' }}>{t('calculation.productName')}</Box>
+                                <Box sx={{ width: '20%' }}>{t('calculation.unit')}</Box>
+                                <Box sx={{ width: '20%' }}>{t('calculation.group')}</Box>
+                                <Box sx={{ width: '20%', textAlign: 'center' }}>{t('calculation.price')}</Box>
                             </Box>
                             <Divider />
                             <Box sx={{ maxHeight: 400, overflowY: 'auto' }}>
@@ -696,37 +921,60 @@ const ProductCalculator = ({
                                     <Box sx={{ p: 3, textAlign: 'center' }}>
                                         <CircularProgress size={40} />
                                     </Box>
-                                ) : availableIngredients.length === 0 ? (
+                                ) : ingredients.length === 0 ? (
                                     <Typography sx={{ p: 3, textAlign: 'center', color: 'text.secondary' }}>
-                                        {t('calculation.noProducts', 'No products')}
+                                        {t('calculation.noProducts')}
                                     </Typography>
                                 ) : (
-                                    availableIngredients.map((ingredient) => (
-                                        <Box key={ingredient.id} sx={{ display: 'flex', alignItems: 'center', p: 1.5, borderBottom: `1px solid ${theme.vars.palette.divider}`, '&:hover': { bgcolor: 'action.hover' } }}>
-                                            <Box sx={{ width: '40%', display: 'flex', alignItems: 'center', gap: 1 }}>
-                                                <Checkbox
-                                                    size="small"
-                                                    checked={selectedIds.includes(ingredient.id)}
-                                                    onChange={() => handleToggle(ingredient.id)}
-                                                    sx={{ color: theme.palette.success.main, '&.Mui-checked': { color: theme.palette.success.main } }}
-                                                />
-                                                <Typography variant="body2">{ingredient.name}</Typography>
+                                    ingredients
+                                        .filter(p =>
+                                            p.name.toLowerCase().includes(searchTerm.toLowerCase()) &&
+                                            (!selectedGroupId || p.group_id === selectedGroupId)
+                                        )
+                                        .map((ingredient) => (
+                                            <Box
+                                                key={ingredient.id}
+                                                sx={{
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    p: 1.5,
+                                                    borderBottom: `1px solid ${theme.vars.palette.divider}`,
+                                                    '&:hover': { bgcolor: 'action.hover' }
+                                                }}
+                                            >
+                                                <Box sx={{ width: '40%', display: 'flex', alignItems: 'center', gap: 1 }}>
+                                                    <Checkbox
+                                                        size="small"
+                                                        checked={selectedIds.includes(ingredient.id)}
+                                                        onChange={() => handleToggle(ingredient.id)}
+                                                        sx={{ color: theme.palette.success.main, '&.Mui-checked': { color: theme.palette.success.main } }}
+                                                    />
+                                                    <Typography variant="body2" color="text.primary">
+                                                        {ingredient.name}
+                                                    </Typography>
+                                                </Box>
+                                                <Box sx={{ width: '20%' }}>
+                                                    <Typography variant="body2" color="text.secondary">{ingredient.measurement}</Typography>
+                                                </Box>
+                                                <Box sx={{ width: '20%' }}>
+                                                    <Typography variant="body2" color="text.secondary">
+                                                        {ingredient.group_name || '-'}
+                                                    </Typography>
+                                                </Box>
+                                                <Box sx={{ width: '20%', textAlign: 'right' }}>
+                                                    <Typography variant="body2" fontWeight="bold" color="text.primary">
+                                                        {formatPrice(ingredient.price_per_unit)}
+                                                    </Typography>
+                                                </Box>
                                             </Box>
-                                            <Box sx={{ width: '30%' }}>
-                                                <Typography variant="caption" color="text.secondary">{ingredient.measurement}</Typography>
-                                            </Box>
-                                            <Box sx={{ width: '30%', textAlign: 'right' }}>
-                                                <Typography variant="caption">{formatPrice(ingredient.price_per_unit)}</Typography>
-                                            </Box>
-                                        </Box>
-                                    ))
+                                        ))
                                 )}
                             </Box>
                         </Paper>
                     </Box>
 
-                    {/* MIDDLE */}
-                    <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start', height: '100%', pt: 5 }}>
+                    {/* MIDDLE: ARROWS */}
+                    <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'start', height: '100%', pt: 5 }}>
                         <Box sx={{ display: 'flex', flexDirection: { xs: 'row', md: 'column' }, gap: 1 }}>
                             <IconButton
                                 onClick={handleMoveRight}
@@ -734,10 +982,13 @@ const ProductCalculator = ({
                                 sx={{
                                     bgcolor: selectedIds.length === 0 ? theme.palette.action.disabled : theme.palette.action.hover,
                                     color: selectedIds.length === 0 ? theme.palette.text.disabled : theme.palette.warning.main,
-                                    '&:hover': { bgcolor: selectedIds.length === 0 ? theme.palette.action.disabled : theme.palette.warning.light },
+                                    '&:hover': {
+                                        bgcolor: selectedIds.length === 0 ? theme.palette.action.disabled : theme.palette.warning.light
+                                    },
                                     borderRadius: '15%',
                                     padding: '10px',
                                 }}
+                                title={t('calculation.selectedProductsTransfer')}
                             >
                                 <ChevronRightIcon />
                             </IconButton>
@@ -747,87 +998,197 @@ const ProductCalculator = ({
                                 sx={{
                                     bgcolor: transferredIds.length === 0 ? theme.palette.action.disabled : theme.palette.action.hover,
                                     color: transferredIds.length === 0 ? theme.palette.text.disabled : theme.palette.warning.main,
-                                    '&:hover': { bgcolor: transferredIds.length === 0 ? theme.palette.action.disabled : theme.palette.warning.light },
+                                    '&:hover': {
+                                        bgcolor: transferredIds.length === 0 ? theme.palette.action.disabled : theme.palette.warning.light
+                                    },
                                     borderRadius: '15%',
                                     padding: '10px',
                                 }}
+                                title={t('calculation.returnAllProducts')}
                             >
                                 <ChevronLeftIcon />
                             </IconButton>
                         </Box>
                     </Box>
 
-                    {/* RIGHT SIDE */}
+                    {/* RIGHT SIDE - Selected Ingredients */}
                     <Box>
-                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                            <TextField
-                                fullWidth
-                                placeholder={t('calculation.search', 'Search...')}
-                                size="small"
-                                value={rightSearchTerm}
-                                onChange={(e) => setRightSearchTerm(e.target.value)}
-                                InputProps={{
-                                    startAdornment: (
-                                        <InputAdornment position="start">
-                                            <SearchIcon color="action" />
-                                        </InputAdornment>
-                                    ),
-                                }}
-                            />
-                        </Box>
+                       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+    <Typography variant="subtitle2" fontWeight="bold" color="text.primary">
+        {t('calculation.calculateProductPrice')}
+    </Typography>
+    <Button
+        type="button"  // ← BU MUHIM! Forma submitni oldini oladi
+        variant="contained"
+        onClick={async (e) => {  // ← (e) qo'shing va e.preventDefault() ni ishlatish uchun
+            e.preventDefault();  // ← Qo'shimcha himoya: forma submit bo'lishini to'xtatadi
 
+            // Frontend-only calculation (view mode)
+            setShowCalculation(true);
+            setViewModeCalculation(true);
+
+            if (!entityId) {
+                // View mode - no API calls needed initially, but now handle save logic if conditions met
+                toast.info(t('calculation.calculatedLocally', 'Calculated locally'));
+
+                if (onSaveWithGood && (allCalculatedRows.length > 0 || (transferredIds.length === 0 && sfTransferredIds.length === 0))) {
+                    try {
+                        // Prepare calculations data
+                        const ingredientCalcs = transferredIds.map(id => ({
+                            ingredient_id: id,
+                            quantity: String(quantities[id] || 0)
+                        }));
+                        const compoundCalcs = sfTransferredIds.map(id => ({
+                            compound_id: id,
+                            quantity: String(sfQuantities[id] || 0)
+                        }));
+
+                        // Call parent callback with good data and calculations
+                        await onSaveWithGood({
+                            ingredient_calculations: ingredientCalcs.length > 0 ? ingredientCalcs : undefined,
+                            compound_calculations: compoundCalcs.length > 0 ? compoundCalcs : undefined,
+                        });
+                    } catch (error) {
+                        console.error('Error saving with calculations:', error);
+                        toast.error(t('error.saveFailed', 'Failed to save'));
+                    }
+                }
+                return;
+            }
+
+            // If entity exists, also save to backend
+            if (transferredIds.length > 0) {
+                try {
+                    for (const ingredientId of transferredIds) {
+                        const quantity = quantities[ingredientId] || 0;
+                        if (quantity > 0) {
+                            const existingCalculation = ingredientCalculations?.find(calc => calc.ingredient_id === ingredientId);
+
+                            if (existingCalculation) {
+                                await deleteCalculation(existingCalculation.id);
+                            }
+
+                            await createCalculation({
+                                ingredient_id: ingredientId,
+                                quantity: String(quantity),
+                            });
+                        }
+                    }
+                    await mutateCalculations();
+                    toast.success(t('calculation.calculatedSuccessfully', 'Calculated successfully'));
+                } catch (error) {
+                    console.error('Error saving calculations:', error);
+                    toast.error(t('error.saveFailed', 'Failed to save calculations'));
+                }
+            }
+        }}
+        sx={{
+            bgcolor: (transferredIds.length === 0) ? theme.palette.action.disabled : theme.palette.warning.main,
+            textTransform: 'none',
+            '&:hover': {
+                bgcolor: (transferredIds.length === 0) ? theme.palette.action.disabled : theme.palette.warning.dark
+            }
+        }}
+    >
+        {t('calculation.calculate')}
+    </Button>
+</Box>
                         <Paper sx={{ borderRadius: 2, overflow: 'hidden' }} elevation={1}>
-                            <Box sx={{ display: 'flex', p: 1.5, bgcolor: 'action.hover', fontWeight: 'bold', fontSize: '0.875rem', color: 'text.primary' }}>
-                                <Box sx={{ width: '40%' }}>{t('calculation.productName', 'Product')}</Box>
-                                <Box sx={{ width: '30%' }}>{t('calculation.unitOfMeasurement', 'Unit')}</Box>
-                                <Box sx={{ width: '20%', textAlign: 'center' }}>{t('calculation.quantity', 'Qty')}</Box>
-                                <Box sx={{ width: '10%' }} />
+                            <Box sx={{
+                                display: 'flex',
+                                p: 1.5,
+                                bgcolor: 'action.hover',
+                                fontWeight: 'bold',
+                                fontSize: '0.875rem',
+                                color: 'text.primary'
+                            }}>
+                                <Box sx={{ width: '35%' }}>{t('calculation.productName')}</Box>
+                                <Box sx={{ width: '30%' }}>{t('calculation.unitOfMeasurement')}</Box>
+                                <Box sx={{ width: '30%', textAlign: 'center' }}>{t('calculation.quantity')}</Box>
                             </Box>
                             <Divider />
                             <Box sx={{ maxHeight: 400, overflowY: 'auto', minHeight: 200 }}>
-                                {loading ? (
+                                {calculationsLoading ? (
                                     <Box sx={{ p: 3, textAlign: 'center' }}>
                                         <CircularProgress size={40} />
                                     </Box>
-                                ) : transferredIngredients.length === 0 ? (
+                                ) : transferredIds.length === 0 ? (
                                     <Typography sx={{ p: 3, textAlign: 'center', color: 'text.secondary' }}>
-                                        {t('calculation.noProductsSelected', 'No products selected')}
+                                        {t('calculation.noProductsSelected')}
                                     </Typography>
                                 ) : (
-                                    transferredIngredients.map((ingredient) => (
-                                        <Box key={ingredient.id} sx={{ display: 'flex', alignItems: 'center', p: 1.5, borderBottom: `1px solid ${theme.vars.palette.divider}`, '&:hover': { bgcolor: 'action.hover' } }}>
-                                            <Box sx={{ width: '40%' }}>
-                                                <Typography variant="body2">{ingredient.name}</Typography>
+                                    transferredIds.map(id => {
+                                        const ingredient = ingredients.find(p => p.id === id);
+                                        if (!ingredient) return null;
+
+                                        const calculation = ingredientCalculations?.find(calc => calc.ingredient_id === id);
+                                        const displayPrice = calculation
+                                            ? parseFloat(calculation.price_per_unit)
+                                            : ingredient.price_per_unit;
+
+                                        return (
+                                            <Box
+                                                key={id}
+                                                sx={{
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    p: 1,
+                                                    borderBottom: `1px solid ${theme.vars.palette.divider}`
+                                                }}
+                                            >
+                                                <Box sx={{ width: '5%', textAlign: 'center' }}>
+                                                    <Checkbox
+                                                        size="small"
+                                                        checked={true}
+                                                        onChange={async () => {
+                                                            // Remove from transferred IDs first
+                                                            setTransferredIds(prevIds => prevIds.filter(tid => tid !== id));
+                                                            const newQuantities = { ...quantities };
+                                                            delete newQuantities[id];
+                                                            setQuantities(newQuantities);
+
+                                                            if (entityId) {
+                                                                const calculation = ingredientCalculations?.find(calc => calc.ingredient_id === id);
+                                                                if (calculation) {
+                                                                    try {
+                                                                        await deleteCalculation(calculation.id);
+                                                                    } catch (error) {
+                                                                        console.error('Error deleting calculation:', error);
+                                                                        // Restore if delete failed
+                                                                        setTransferredIds(prevIds => [...prevIds, id]);
+                                                                        setQuantities({ ...newQuantities, [id]: quantities[id] });
+                                                                    }
+                                                                } else {
+                                                                    await mutateCalculations();
+                                                                }
+                                                            }
+                                                        }}
+                                                    />
+                                                </Box>
+                                                <Box sx={{ width: '35%' }}>
+                                                    <Typography variant="body2" color="text.primary">
+                                                        {ingredient.name}
+                                                    </Typography>
+                                                </Box>
+                                                <Box sx={{ width: '30%' }}>
+                                                    <Typography variant="body2" color="text.secondary">{ingredient.measurement}</Typography>
+                                                </Box>
+                                                <Box sx={{ width: '30%' }}>
+                                                    <TextField
+                                                        size="small"
+                                                        type="number"
+                                                        value={quantities[id] || ''}
+                                                        onChange={(e) => handleQuantityChange(id, e.target.value)}
+                                                        fullWidth
+                                                        inputProps={{
+                                                            min: 0,
+                                                            step: 'any'
+                                                        }}
+                                                    />
+                                                </Box>
                                             </Box>
-                                            <Box sx={{ width: '30%' }}>
-                                                <Typography variant="caption" color="text.secondary">{ingredient.measurement}</Typography>
-                                            </Box>
-                                            <Box sx={{ width: '20%', textAlign: 'center' }}>
-                                                <TextField
-                                                    type="number"
-                                                    value={quantities[ingredient.id] || 0}
-                                                    onChange={(e) => handleQuantityChange(ingredient.id, e.target.value)}
-                                                    size="small"
-                                                    inputProps={{ min: 0, step: 0.1 }}
-                                                    sx={{ width: '100%', '& .MuiOutlinedInput-root': { fontSize: '0.875rem' } }}
-                                                />
-                                            </Box>
-                                            <Box sx={{ width: '10%', textAlign: 'center' }}>
-                                                <IconButton
-                                                    size="small"
-                                                    onClick={() => {
-                                                        setTransferredIds((prev) => prev.filter((i) => i !== ingredient.id));
-                                                        const newQty = { ...quantities };
-                                                        delete newQty[ingredient.id];
-                                                        setQuantities(newQty);
-                                                    }}
-                                                    sx={{ color: 'error.main' }}
-                                                >
-                                                    <DeleteIcon fontSize="small" />
-                                                </IconButton>
-                                            </Box>
-                                        </Box>
-                                    ))
+                                        )
+                                    })
                                 )}
                             </Box>
                         </Paper>
@@ -835,33 +1196,41 @@ const ProductCalculator = ({
                 </Box>
             )}
 
-            {/* SEMIFINISHED TAB */}
+            {/* SEMIFINISHED TAB CONTENT */}
             {activeSubTab === 'semifinished' && (
                 <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '5fr 1fr 6fr' }, gap: 2, alignItems: 'flex-start' }}>
-                    {/* LEFT SIDE */}
+                    {/* LEFT SIDE - Compounds */}
                     <Box>
-                        <Box sx={{ mb: 2 }}>
-                            <TextField
-                                fullWidth
-                                placeholder={t('calculation.search', 'Search...')}
-                                size="small"
-                                value={sfSearchTerm}
-                                onChange={(e) => setSfSearchTerm(e.target.value)}
-                                InputProps={{
-                                    startAdornment: (
-                                        <InputAdornment position="start">
-                                            <SearchIcon color="action" />
-                                        </InputAdornment>
-                                    ),
-                                }}
-                            />
+                        <Box sx={{ display: 'flex', gap: 2, mb: 2, flexWrap: 'wrap' }}>
+                            <Box sx={{ width: '100%', minWidth: '200px' }}>
+                                <TextField
+                                    fullWidth
+                                    placeholder={t('calculation.search')}
+                                    size="small"
+                                    value={sfSearchTerm}
+                                    onChange={(e) => setSfSearchTerm(e.target.value)}
+                                    InputProps={{
+                                        startAdornment: (
+                                            <InputAdornment position="start">
+                                                <SearchIcon color="action" />
+                                            </InputAdornment>
+                                        ),
+                                    }}
+                                />
+                            </Box>
                         </Box>
-
                         <Paper sx={{ borderRadius: 2, overflow: 'hidden' }} elevation={1}>
-                            <Box sx={{ display: 'flex', p: 1.5, bgcolor: 'action.hover', fontWeight: 'bold', fontSize: '0.875rem', color: 'text.primary' }}>
-                                <Box sx={{ width: '40%' }}>{t('calculation.productName', 'Product')}</Box>
-                                <Box sx={{ width: '30%' }}>{t('calculation.unit', 'Unit')}</Box>
-                                <Box sx={{ width: '30%', textAlign: 'right' }}>{t('calculation.price', 'Price')}</Box>
+                            <Box sx={{
+                                display: 'flex',
+                                p: 1.5,
+                                bgcolor: 'action.hover',
+                                fontWeight: 'bold',
+                                fontSize: '0.875rem',
+                                color: 'text.primary'
+                            }}>
+                                <Box sx={{ width: '50%' }}>{t('calculation.productName')}</Box>
+                                <Box sx={{ width: '25%' }}>{t('calculation.unit')}</Box>
+                                <Box sx={{ width: '25%', textAlign: 'center' }}>{t('calculation.price')}</Box>
                             </Box>
                             <Divider />
                             <Box sx={{ maxHeight: 400, overflowY: 'auto' }}>
@@ -871,25 +1240,38 @@ const ProductCalculator = ({
                                     </Box>
                                 ) : filteredCompounds.length === 0 ? (
                                     <Typography sx={{ p: 3, textAlign: 'center', color: 'text.secondary' }}>
-                                        {t('calculation.noProducts', 'No products')}
+                                        {t('calculation.noProducts')}
                                     </Typography>
                                 ) : (
                                     filteredCompounds.map((compound) => (
-                                        <Box key={compound.id} sx={{ display: 'flex', alignItems: 'center', p: 1.5, borderBottom: `1px solid ${theme.vars.palette.divider}`, '&:hover': { bgcolor: 'action.hover' } }}>
-                                            <Box sx={{ width: '40%', display: 'flex', alignItems: 'center', gap: 1 }}>
+                                        <Box
+                                            key={compound.id}
+                                            sx={{
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                p: 1.5,
+                                                borderBottom: `1px solid ${theme.vars.palette.divider}`,
+                                                '&:hover': { bgcolor: 'action.hover' }
+                                            }}
+                                        >
+                                            <Box sx={{ width: '50%', display: 'flex', alignItems: 'center', gap: 1 }}>
                                                 <Checkbox
                                                     size="small"
                                                     checked={sfSelectedIds.includes(compound.id)}
                                                     onChange={() => handleSfToggle(compound.id)}
                                                     sx={{ color: theme.palette.success.main, '&.Mui-checked': { color: theme.palette.success.main } }}
                                                 />
-                                                <Typography variant="body2">{compound.name}</Typography>
+                                                <Typography variant="body2" color="text.primary">
+                                                    {compound.name}
+                                                </Typography>
                                             </Box>
-                                            <Box sx={{ width: '30%' }}>
-                                                <Typography variant="caption" color="text.secondary">{compound.measurement || 'kg'}</Typography>
+                                            <Box sx={{ width: '25%' }}>
+                                                <Typography variant="body2" color="text.secondary">{compound.measurement || 'kg'}</Typography>
                                             </Box>
-                                            <Box sx={{ width: '30%', textAlign: 'right' }}>
-                                                <Typography variant="caption">{formatPrice(parseFloat(String(compound.price || '0')))}</Typography>
+                                            <Box sx={{ width: '25%', textAlign: 'right' }}>
+                                                <Typography variant="body2" fontWeight="bold" color="text.primary">
+                                                    {formatPrice(parseFloat(String(compound.price || '0')))}
+                                                </Typography>
                                             </Box>
                                         </Box>
                                     ))
@@ -898,8 +1280,8 @@ const ProductCalculator = ({
                         </Paper>
                     </Box>
 
-                    {/* MIDDLE */}
-                    <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start', height: '100%', pt: 5 }}>
+                    {/* MIDDLE: ARROWS */}
+                    <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'start', height: '100%', pt: 5 }}>
                         <Box sx={{ display: 'flex', flexDirection: { xs: 'row', md: 'column' }, gap: 1 }}>
                             <IconButton
                                 onClick={handleSfMoveRight}
@@ -907,10 +1289,13 @@ const ProductCalculator = ({
                                 sx={{
                                     bgcolor: sfSelectedIds.length === 0 ? theme.palette.action.disabled : theme.palette.action.hover,
                                     color: sfSelectedIds.length === 0 ? theme.palette.text.disabled : theme.palette.warning.main,
-                                    '&:hover': { bgcolor: sfSelectedIds.length === 0 ? theme.palette.action.disabled : theme.palette.warning.light },
+                                    '&:hover': {
+                                        bgcolor: sfSelectedIds.length === 0 ? theme.palette.action.disabled : theme.palette.warning.light
+                                    },
                                     borderRadius: '15%',
                                     padding: '10px',
                                 }}
+                                title={t('calculation.selectedProductsTransfer')}
                             >
                                 <ChevronRightIcon />
                             </IconButton>
@@ -920,41 +1305,113 @@ const ProductCalculator = ({
                                 sx={{
                                     bgcolor: sfTransferredIds.length === 0 ? theme.palette.action.disabled : theme.palette.action.hover,
                                     color: sfTransferredIds.length === 0 ? theme.palette.text.disabled : theme.palette.warning.main,
-                                    '&:hover': { bgcolor: sfTransferredIds.length === 0 ? theme.palette.action.disabled : theme.palette.warning.light },
+                                    '&:hover': {
+                                        bgcolor: sfTransferredIds.length === 0 ? theme.palette.action.disabled : theme.palette.warning.light
+                                    },
                                     borderRadius: '15%',
                                     padding: '10px',
                                 }}
+                                title={t('calculation.returnAllProducts')}
                             >
                                 <ChevronLeftIcon />
                             </IconButton>
                         </Box>
                     </Box>
 
-                    {/* RIGHT SIDE */}
+                    {/* RIGHT SIDE - Selected Compounds */}
                     <Box>
-                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                            <TextField
-                                fullWidth
-                                placeholder={t('calculation.search', 'Search...')}
-                                size="small"
-                                value={sfSearchTerm}
-                                onChange={(e) => setSfSearchTerm(e.target.value)}
-                                InputProps={{
-                                    startAdornment: (
-                                        <InputAdornment position="start">
-                                            <SearchIcon color="action" />
-                                        </InputAdornment>
-                                    ),
-                                }}
-                            />
-                        </Box>
+                       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+    <Typography variant="subtitle2" fontWeight="bold" color="text.primary">
+        {t('calculation.calculateProductPrice')}
+    </Typography>
+    <Button
+        type="button"  // ← BU MUHIM! Forma submitni oldini oladi
+        variant="contained"
+        onClick={async (e) => {  // ← (e) qo'shing va e.preventDefault() ni ishlatish uchun
+            e.preventDefault();  // ← Qo'shimcha himoya: forma submit bo'lishini to'xtatadi
 
+            // Frontend-only calculation (view mode)
+            setShowCalculation(true);
+            setViewModeCalculation(true);
+
+            if (!entityId) {
+                // View mode - no API calls needed initially, but now handle save logic if conditions met
+                toast.info(t('calculation.calculatedLocally', 'Calculated locally'));
+
+                if (onSaveWithGood && (allCalculatedRows.length > 0 || (transferredIds.length === 0 && sfTransferredIds.length === 0))) {
+                    try {
+                        // Prepare calculations data
+                        const ingredientCalcs = transferredIds.map(id => ({
+                            ingredient_id: id,
+                            quantity: String(quantities[id] || 0)
+                        }));
+                        const compoundCalcs = sfTransferredIds.map(id => ({
+                            compound_id: id,
+                            quantity: String(sfQuantities[id] || 0)
+                        }));
+
+                        // Call parent callback with good data and calculations
+                        await onSaveWithGood({
+                            ingredient_calculations: ingredientCalcs.length > 0 ? ingredientCalcs : undefined,
+                            compound_calculations: compoundCalcs.length > 0 ? compoundCalcs : undefined,
+                        });
+                    } catch (error) {
+                        console.error('Error saving with calculations:', error);
+                        toast.error(t('error.saveFailed', 'Failed to save'));
+                    }
+                }
+                return;
+            }
+
+            // If entity exists, also save to backend
+            if (transferredIds.length > 0) {
+                try {
+                    for (const ingredientId of transferredIds) {
+                        const quantity = quantities[ingredientId] || 0;
+                        if (quantity > 0) {
+                            const existingCalculation = ingredientCalculations?.find(calc => calc.ingredient_id === ingredientId);
+
+                            if (existingCalculation) {
+                                await deleteCalculation(existingCalculation.id);
+                            }
+
+                            await createCalculation({
+                                ingredient_id: ingredientId,
+                                quantity: String(quantity),
+                            });
+                        }
+                    }
+                    await mutateCalculations();
+                    toast.success(t('calculation.calculatedSuccessfully', 'Calculated successfully'));
+                } catch (error) {
+                    console.error('Error saving calculations:', error);
+                    toast.error(t('error.saveFailed', 'Failed to save calculations'));
+                }
+            }
+        }}
+        sx={{
+            bgcolor: (transferredIds.length === 0) ? theme.palette.action.disabled : theme.palette.warning.main,
+            textTransform: 'none',
+            '&:hover': {
+                bgcolor: (transferredIds.length === 0) ? theme.palette.action.disabled : theme.palette.warning.dark
+            }
+        }}
+    >
+        {t('calculation.calculate')}
+    </Button>
+</Box>
                         <Paper sx={{ borderRadius: 2, overflow: 'hidden' }} elevation={1}>
-                            <Box sx={{ display: 'flex', p: 1.5, bgcolor: 'action.hover', fontWeight: 'bold', fontSize: '0.875rem', color: 'text.primary' }}>
-                                <Box sx={{ width: '40%' }}>{t('calculation.productName', 'Product')}</Box>
-                                <Box sx={{ width: '30%' }}>{t('calculation.unitOfMeasurement', 'Unit')}</Box>
-                                <Box sx={{ width: '20%', textAlign: 'center' }}>{t('calculation.quantity', 'Qty')}</Box>
-                                <Box sx={{ width: '10%' }} />
+                            <Box sx={{
+                                display: 'flex',
+                                p: 1.5,
+                                bgcolor: 'action.hover',
+                                fontWeight: 'bold',
+                                fontSize: '0.875rem',
+                                color: 'text.primary'
+                            }}>
+                                <Box sx={{ width: '35%' }}>{t('calculation.productName')}</Box>
+                                <Box sx={{ width: '30%' }}>{t('calculation.unitOfMeasurement')}</Box>
+                                <Box sx={{ width: '30%', textAlign: 'center' }}>{t('calculation.quantity')}</Box>
                             </Box>
                             <Divider />
                             <Box sx={{ maxHeight: 400, overflowY: 'auto', minHeight: 200 }}>
@@ -964,47 +1421,77 @@ const ProductCalculator = ({
                                     </Box>
                                 ) : sfTransferredIds.length === 0 ? (
                                     <Typography sx={{ p: 3, textAlign: 'center', color: 'text.secondary' }}>
-                                        {t('calculation.noProductsSelected', 'No products selected')}
+                                        {t('calculation.noProductsSelected')}
                                     </Typography>
                                 ) : (
-                                    sfTransferredIds.map((id) => {
+                                    sfTransferredIds.map(id => {
                                         const compound = compounds.find(p => p.id === id);
                                         if (!compound) return null;
 
                                         return (
-                                            <Box key={id} sx={{ display: 'flex', alignItems: 'center', p: 1.5, borderBottom: `1px solid ${theme.vars.palette.divider}`, '&:hover': { bgcolor: 'action.hover' } }}>
-                                                <Box sx={{ width: '40%' }}>
-                                                    <Typography variant="body2">{compound.name}</Typography>
-                                                </Box>
-                                                <Box sx={{ width: '30%' }}>
-                                                    <Typography variant="caption" color="text.secondary">{compound.measurement || 'kg'}</Typography>
-                                                </Box>
-                                                <Box sx={{ width: '20%', textAlign: 'center' }}>
-                                                    <TextField
-                                                        type="number"
-                                                        value={sfQuantities[id] || 0}
-                                                        onChange={(e) => handleSfQuantityChange(id, e.target.value)}
+                                            <Box
+                                                key={id}
+                                                sx={{
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    p: 1,
+                                                    borderBottom: `1px solid ${theme.vars.palette.divider}`
+                                                }}
+                                            >
+                                                <Box sx={{ width: '5%', textAlign: 'center' }}>
+                                                    <Checkbox
                                                         size="small"
-                                                        inputProps={{ min: 0, step: 0.1 }}
-                                                        sx={{ width: '100%', '& .MuiOutlinedInput-root': { fontSize: '0.875rem' } }}
+                                                        checked={true}
+                                                        onChange={async () => {
+                                                            // Remove from transferred IDs first
+                                                            setSfTransferredIds(prevIds => prevIds.filter(tid => tid !== id));
+                                                            const newQuantities = { ...sfQuantities };
+                                                            delete newQuantities[id];
+                                                            setSfQuantities(newQuantities);
+
+                                                            if (entityId) {
+                                                                const calculation = compoundCalculationsList?.find(
+                                                                    calc => calc.component_compound_id === id
+                                                                );
+                                                                if (calculation) {
+                                                                    try {
+                                                                        await deleteCalculation(calculation.id);
+                                                                    } catch (error) {
+                                                                        console.error('Error deleting calculation:', error);
+                                                                        // Restore if delete failed
+                                                                        setSfTransferredIds(prevIds => [...prevIds, id]);
+                                                                        setSfQuantities({ ...newQuantities, [id]: sfQuantities[id] });
+                                                                    }
+                                                                } else {
+                                                                    await mutateCalculations();
+                                                                }
+                                                            }
+                                                        }}
                                                     />
                                                 </Box>
-                                                <Box sx={{ width: '10%', textAlign: 'center' }}>
-                                                    <IconButton
+                                                <Box sx={{ width: '35%' }}>
+                                                    <Typography variant="body2" color="text.primary">
+                                                        {compound.name}
+                                                    </Typography>
+                                                </Box>
+                                                <Box sx={{ width: '30%' }}>
+                                                    <Typography variant="body2" color="text.secondary">{compound.measurement || 'kg'}</Typography>
+                                                </Box>
+                                                <Box sx={{ width: '30%' }}>
+                                                    <TextField
                                                         size="small"
-                                                        onClick={() => {
-                                                            setSfTransferredIds((prev) => prev.filter((i) => i !== id));
-                                                            const newQty = { ...sfQuantities };
-                                                            delete newQty[id];
-                                                            setSfQuantities(newQty);
+                                                        type="number"
+                                                        value={sfQuantities[id] || ''}
+                                                        onChange={(e) => handleSfQuantityChange(id, e.target.value)}
+                                                        fullWidth
+                                                        inputProps={{
+                                                            min: 0,
+                                                            step: 'any'
                                                         }}
-                                                        sx={{ color: 'error.main' }}
-                                                    >
-                                                        <DeleteIcon fontSize="small" />
-                                                    </IconButton>
+                                                    />
                                                 </Box>
                                             </Box>
-                                        );
+                                        )
                                     })
                                 )}
                             </Box>
@@ -1013,23 +1500,129 @@ const ProductCalculator = ({
                 </Box>
             )}
 
-            {/* TOTALS */}
-            {showTotalsSummary && (showCalculation || sfShowCalculation) && (
-                <Box sx={{ mt: 4, display: 'flex', flexDirection: 'column', gap: 2, alignItems: 'flex-end', pr: 2 }}>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', width: '300px' }}>
-                        <Typography color="text.secondary" fontWeight="bold">{t('calculation.total', 'Total')}</Typography>
-                        <Typography variant="h6" fontWeight="bold" color="text.primary">{formatPrice(grandTotal)}</Typography>
-                    </Box>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', width: '300px' }}>
-                        <Typography color="text.secondary" fontWeight="bold">{t('calculation.profit', 'Profit')}</Typography>
-                        <Typography fontWeight="bold" color={displayProfit < 0 ? 'error.main' : 'text.primary'}>{formatPrice(displayProfit)}</Typography>
-                    </Box>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', width: '300px' }}>
-                        <Typography color="text.secondary" fontWeight="bold">{t('calculation.profitMargin', 'Margin')}</Typography>
-                        <Typography fontWeight="bold" color={parseFloat(displayProfitMargin) < 0 ? 'error.main' : 'text.primary'}>{displayProfitMargin}</Typography>
+            {/* --- BOTTOM CALCULATION TABLE --- */}
+            {(showCalculation || sfShowCalculation || viewModeCalculation) && (
+                <Box sx={{ mt: 4 }}>
+                    <TableContainer
+                        component={Paper}
+                        elevation={1}
+                        sx={{
+                            borderRadius: 2,
+                        }}
+                    >
+                        <Table>
+                            <TableHead sx={{ bgcolor: 'action.hover' }}>
+                                <TableRow>
+                                    <TableCell sx={{ color: 'text.primary' }}>{t('calculation.number')}</TableCell>
+                                    <TableCell sx={{ color: 'text.primary' }}>{t('calculation.productName')}</TableCell>
+                                    <TableCell sx={{ color: 'text.primary' }}>{t('calculation.type', 'Turi')}</TableCell>
+                                    <TableCell sx={{ color: 'text.primary' }}>{t('calculation.quantity')}</TableCell>
+                                    <TableCell sx={{ color: 'text.primary' }}>{t('calculation.price')}</TableCell>
+                                    <TableCell align="right" sx={{ color: 'text.primary' }}>{t('calculation.totalPrice')}</TableCell>
+                                </TableRow>
+                            </TableHead>
+                            <TableBody>
+                                {allCalculatedRows.map((row, index) => (
+                                    <TableRow key={row.id} sx={{ borderBottom: `1px solid ${theme.vars.palette.divider}` }}>
+                                        <TableCell sx={{ color: 'text.secondary' }}>{index + 1}</TableCell>
+                                        <TableCell sx={{ color: 'text.primary' }}>{row.name}</TableCell>
+                                        <TableCell sx={{ color: 'text.secondary' }}>
+                                            {row.type === 'ingredient'
+                                                ? t('calculation.ingredientType', 'Ingredient')
+                                                : t('calculation.compoundType', 'Yarim tayyor')}
+                                        </TableCell>
+                                        <TableCell sx={{ color: 'text.primary' }}>{row.qty}</TableCell>
+                                        <TableCell sx={{ color: 'text.primary' }}>{formatPrice(row.price_per_unit)}</TableCell>
+                                        <TableCell align="right" sx={{ color: 'text.primary', fontWeight: 'bold' }}>
+                                            {formatPrice(row.total)}
+                                        </TableCell>
+                                    </TableRow>
+                                ))}
+                                {allCalculatedRows.length === 0 && (
+                                    <TableRow>
+                                        <TableCell colSpan={6} align="center" sx={{ color: 'text.secondary', py: 3 }}>
+                                            {t('calculation.selectProductsForCalculation')}
+                                        </TableCell>
+                                    </TableRow>
+                                )}
+                            </TableBody>
+                        </Table>
+                    </TableContainer>
+
+                    {/* TOTALS FOOTER */}
+                    <Box sx={{
+                        mt: 4,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: 2,
+                        alignItems: 'flex-end',
+                        pr: 2
+                    }}>
+                        {/* SAVE BUTTON FOR NEW MEAL/COMPOUND */}
+                        {/* {!entityId && onSaveWithGood && (allCalculatedRows.length > 0 || (transferredIds.length === 0 && sfTransferredIds.length === 0)) && (
+                            <Button
+                                variant="contained"
+                                color="success"
+                                size="large"
+                                onClick={async () => {
+                                    try {
+                                        // Prepare calculations data
+                                        const ingredientCalcs = transferredIds.map(id => ({
+                                            ingredient_id: id,
+                                            quantity: String(quantities[id] || 0)
+                                        }));
+                                        const compoundCalcs = sfTransferredIds.map(id => ({
+                                            compound_id: id,
+                                            quantity: String(sfQuantities[id] || 0)
+                                        }));
+
+                                        // Call parent callback with good data and calculations
+                                        await onSaveWithGood({
+                                            ingredient_calculations: ingredientCalcs.length > 0 ? ingredientCalcs : undefined,
+                                            compound_calculations: compoundCalcs.length > 0 ? compoundCalcs : undefined,
+                                        });
+                                    } catch (error) {
+                                        console.error('Error saving with calculations:', error);
+                                        toast.error(t('error.saveFailed', 'Failed to save'));
+                                    }
+                                }}
+                                sx={{ mb: 2 }}
+                            >
+                                {t('common.save', 'Saqlash')}
+                            </Button>
+                        )} */}
+
+                        {/* UPDATE BUTTON FOR EXISTING MEAL/COMPOUND - REMOVED */}
+                        {/* Button removed - calculations are auto-saved via props */}
+
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', width: '300px' }}>
+                            <Typography color="text.secondary" fontWeight="bold">
+                                {t('calculation.total')}
+                            </Typography>
+                            <Typography variant="h6" fontWeight="bold" color="text.primary">
+                                {formatPrice(grandTotal)}
+                            </Typography>
+                        </Box>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', width: '300px' }}>
+                            <Typography color="text.secondary" fontWeight="bold">
+                                {t('calculation.profit', 'Profit')}
+                            </Typography>
+                            <Typography fontWeight="bold" color={displayProfit < 0 ? 'error.main' : 'text.primary'}>
+                                {formatPrice(displayProfit)}
+                            </Typography>
+                        </Box>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', width: '300px' }}>
+                            <Typography color="text.secondary" fontWeight="bold">
+                                {t('calculation.profitMargin', 'Profit Margin')}
+                            </Typography>
+                            <Typography fontWeight="bold" color={displayProfitMargin && parseFloat(displayProfitMargin) < 0 ? 'error.main' : 'text.primary'}>
+                                {displayProfitMargin}
+                            </Typography>
+                        </Box>
                     </Box>
                 </Box>
             )}
+
         </Box>
     );
 };
