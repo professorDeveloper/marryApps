@@ -412,7 +412,7 @@ export function MealEditView({ isNew = false }: MealEditViewProps) {
                     {isNew ? (
                         <ProductCalculator
                             mealId={effectiveMealId}
-                            showTotalsSummary={true}
+                            // showTotalsSummary={true}
                             onCalculationsReady={(calculations) => {
                                 // Store calculations for when save is clicked
                                 pendingCalculationsRef.current = calculations;
@@ -468,7 +468,7 @@ export function MealEditView({ isNew = false }: MealEditViewProps) {
                     ) : (
                         <ProductCalculator
                             mealId={effectiveMealId}
-                            showTotalsSummary={true}
+                            // showTotalsSummary={true}
                             onCalculationsReady={(calculations) => {
                                 // Store calculations for when save is clicked
                                 pendingCalculationsRef.current = calculations;
