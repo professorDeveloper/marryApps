@@ -521,6 +521,7 @@ func (s *DeductionS) CreateDeduction(ctx context.Context, req *model.CreateDeduc
 
 			// If actualDeduct is 0, do not change stock and do not calculate amount
 			updatedQty := stockBefore
+			var updatedStock *pg.RemoveFromIngredientStockRow
 			if numericToString(actualDeduct) != "0" {
 				updated, err := s.repo.Tenant(ctx).RemoveFromIngredientStock(ctx, pg.RemoveFromIngredientStockParams{
 					ID:       stock.ID,
@@ -530,6 +531,7 @@ func (s *DeductionS) CreateDeduction(ctx context.Context, req *model.CreateDeduc
 					return nil, fmt.Errorf("failed to remove from ingredient stock: %w", err)
 				}
 				updatedQty = updated.Quantity
+				updatedStock = &updated
 			}
 
 			// warning if missing > 0
@@ -554,6 +556,28 @@ func (s *DeductionS) CreateDeduction(ctx context.Context, req *model.CreateDeduc
 			})
 			if err != nil {
 				return nil, fmt.Errorf("failed to create deduction item ingredient breakdown: %w", err)
+			}
+
+			if updatedStock != nil {
+				zero := pgtype.Numeric{}
+				_ = zero.Scan("0")
+				sourceType := "deduction"
+				srcID := deductionID
+				if err := s.repo.Tenant(ctx).InsertIngredientStockMovement(ctx, pg.InsertIngredientStockMovementParams{
+					ID:           uuid.New(),
+					StorageID:    uuid.UUID(storagePg.Bytes),
+					IngredientID: u.ingredientID,
+					EventType:    "deduction_out",
+					QtyIn:        zero,
+					QtyOut:       actualDeduct,
+					StockBefore:  stockBefore,
+					StockAfter:   updatedStock.Quantity,
+					PricePerUnit: price,
+					SourceType:   &sourceType,
+					SourceID:     &srcID,
+				}); err != nil {
+					return nil, fmt.Errorf("failed to insert stock movement: %w", err)
+				}
 			}
 
 			ingBreakdowns = append(ingBreakdowns, model.DeductionItemIngredientResponse{

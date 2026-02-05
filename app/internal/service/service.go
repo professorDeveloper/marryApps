@@ -142,6 +142,10 @@ type IngredientI interface {
 	RemoveFromIngredientStock(ctx context.Context, stockID string, quantity string) (*model.IngredientStockResponse, error)
 	DeleteIngredientStock(ctx context.Context, stockID string) error
 	RestoreIngredientStock(ctx context.Context, stockID string) error
+
+	GetIngredientReport(ctx context.Context, req model.GetIngredientReportRequest) ([]model.IngredientReportItem, error)
+	GetIngredientReportItem(ctx context.Context, req model.GetIngredientReportRequest) (*model.IngredientReportItem, error)
+	GetIngredientReportMovements(ctx context.Context, req model.GetIngredientReportMovementsRequest) ([]model.IngredientStockMovementResponse, error)
 }
 
 type CategoryI interface {
@@ -270,6 +274,7 @@ type InventoryI interface {
 	UpdateInventoryItem(ctx context.Context, inventoryItemID string, req *model.UpdateInventoryItemRequest) (*model.InventoryItemResponse, error)
 	DeleteInventoryItem(ctx context.Context, inventoryItemID string) error
 	CalculateInventory(ctx context.Context, inventoryID string) (*model.InventoryResponse, error)
+	ApplyInventory(ctx context.Context, inventoryID string) (*model.InventoryResponse, error)
 }
 
 type DeductionI interface {

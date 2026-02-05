@@ -207,17 +207,23 @@ func (h *Handler) Register(router *echo.Echo) {
 
 		ingredientStock := api.Group("/ingredient-stock", mw.CheckAuth(h.cfg), mw.TenantMiddleware(h.repo))
 		{
-			ingredientStock.POST("", h.CreateIngredientStock, mw.CheckLanguage())
 			ingredientStock.GET("", h.GetAllIngredientStock, mw.CheckLanguage())
 			ingredientStock.GET("/by-ingredient-branch", h.GetStockByIngredientAndBranch, mw.CheckLanguage())
 			ingredientStock.GET("/branch/:branchId", h.GetStockByBranchID, mw.CheckLanguage())
 			ingredientStock.GET("/ingredient/:ingredientId", h.GetStockByIngredientID, mw.CheckLanguage())
-			ingredientStock.GET("/:id", h.GetIngredientStockByID, mw.CheckLanguage())
-			ingredientStock.PUT("/:id", h.UpdateIngredientStock, mw.CheckLanguage())
-			ingredientStock.POST("/:id/add", h.AddToIngredientStock, mw.CheckLanguage())
-			ingredientStock.POST("/:id/remove", h.RemoveFromIngredientStock, mw.CheckLanguage())
-			ingredientStock.DELETE("/:id", h.DeleteIngredientStock, mw.CheckLanguage())
-			ingredientStock.POST("/:id/restore", h.RestoreIngredientStock, mw.CheckLanguage())
+			ingredientStock.GET(":id", h.GetIngredientStockByID, mw.CheckLanguage())
+			ingredientStock.PUT(":id", h.UpdateIngredientStock, mw.CheckLanguage())
+			ingredientStock.POST(":id/add", h.AddToIngredientStock, mw.CheckLanguage())
+			ingredientStock.POST(":id/remove", h.RemoveFromIngredientStock, mw.CheckLanguage())
+			ingredientStock.DELETE(":id", h.DeleteIngredientStock, mw.CheckLanguage())
+			ingredientStock.POST(":id/restore", h.RestoreIngredientStock, mw.CheckLanguage())
+		}
+
+		ingredientReports := api.Group("/ingredient-reports", mw.CheckAuth(h.cfg), mw.TenantMiddleware(h.repo))
+		{
+			ingredientReports.GET("", h.GetIngredientReport, mw.CheckLanguage())
+			ingredientReports.GET("/:ingredientId", h.GetIngredientReportItem, mw.CheckLanguage())
+			ingredientReports.GET("/:ingredientId/movements", h.GetIngredientReportMovements, mw.CheckLanguage())
 		}
 
 		orders := api.Group("/orders", mw.CheckAuth(h.cfg), mw.TenantMiddleware(h.repo))
@@ -481,6 +487,7 @@ func (h *Handler) Register(router *echo.Echo) {
 			inventories.POST("/:id/items", h.UpsertInventoryItems, mw.CheckLanguage())
 			inventories.GET("/:id/items", h.GetInventoryItems, mw.CheckLanguage())
 			inventories.POST("/:id/calculate", h.CalculateInventory, mw.CheckLanguage())
+			inventories.POST("/:id/apply", h.ApplyInventory, mw.CheckLanguage())
 			inventories.GET("/search", h.SearchInventories, mw.CheckLanguage())
 			inventories.PUT("/:id", h.UpdateInventory, mw.CheckLanguage())
 			inventories.DELETE("/:id", h.DeleteInventory, mw.CheckLanguage())

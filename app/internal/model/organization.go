@@ -207,3 +207,61 @@ type IngredientStockResponse struct {
 	CreatedAt    *time.Time `json:"created_at,omitempty" example:"2022-01-01T00:00:00Z"`
 	UpdatedAt    *time.Time `json:"updated_at,omitempty" example:"2022-01-01T00:00:00Z"`
 }
+
+type GetIngredientReportRequest struct {
+	StorageID    string     `json:"storage_id"`
+	Start        *time.Time `json:"start,omitempty"`
+	End          *time.Time `json:"end,omitempty"`
+	IngredientID *string    `json:"ingredient_id,omitempty"`
+}
+
+type IngredientReportItem struct {
+	IngredientID   string  `json:"ingredient_id"`
+	IngredientName string  `json:"ingredient_name"`
+	Measurement    *string `json:"measurement,omitempty"`
+	PictureUrl     *string `json:"picture_url,omitempty"`
+	ColorCode      *string `json:"color_code,omitempty"`
+
+	BeginQty string `json:"begin_qty"`
+	EndQty   string `json:"end_qty"`
+
+	InvoiceInQty    string `json:"invoice_in_qty"`
+	OrderOutQty     string `json:"order_out_qty"`
+	DeductionOutQty string `json:"deduction_out_qty"`
+	SurplusQty      string `json:"surplus_qty"`
+	ShortageQty     string `json:"shortage_qty"`
+
+	CostStart string `json:"cost_start"`
+	CostEnd   string `json:"cost_end"`
+
+	BeginAmount string `json:"begin_amount"`
+	EndAmount   string `json:"end_amount"`
+
+	InvoiceInAmount    string `json:"invoice_in_amount"`
+	OrderOutAmount     string `json:"order_out_amount"`
+	DeductionOutAmount string `json:"deduction_out_amount"`
+	SurplusAmount      string `json:"surplus_amount"`
+	ShortageAmount     string `json:"shortage_amount"`
+}
+
+type GetIngredientReportMovementsRequest struct {
+	StorageID    string     `json:"storage_id"`
+	IngredientID string     `json:"ingredient_id"`
+	Start        *time.Time `json:"start,omitempty"`
+	End          *time.Time `json:"end,omitempty"`
+	Limit        int32      `json:"limit"`
+	Offset       int32      `json:"offset"`
+}
+
+type IngredientStockMovementResponse struct {
+	ID           string     `json:"id"`
+	EventType    string     `json:"event_type"`
+	QtyIn        string     `json:"qty_in"`
+	QtyOut       string     `json:"qty_out"`
+	StockBefore  string     `json:"stock_before"`
+	StockAfter   string     `json:"stock_after"`
+	PricePerUnit string     `json:"price_per_unit"`
+	SourceType   *string    `json:"source_type,omitempty"`
+	SourceID     *string    `json:"source_id,omitempty"`
+	CreatedAt    *time.Time `json:"created_at,omitempty"`
+}

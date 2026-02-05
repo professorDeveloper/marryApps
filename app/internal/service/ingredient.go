@@ -221,6 +221,150 @@ func (i *IngredientS) DeleteIngredientGroup(ctx context.Context, groupID string)
 	return nil
 }
 
+func (i *IngredientS) GetIngredientReport(ctx context.Context, req model.GetIngredientReportRequest) ([]model.IngredientReportItem, error) {
+	storageUUID, err := uuid.Parse(req.StorageID)
+	if err != nil {
+		return nil, fmt.Errorf("invalid storage_id: %w", err)
+	}
+	startTime := time.Time{}
+	if req.Start != nil {
+		startTime = *req.Start
+	}
+	endTime := time.Now()
+	if req.End != nil {
+		endTime = *req.End
+	}
+	start := pgtype.Timestamptz{Time: startTime, Valid: true}
+	end := pgtype.Timestamptz{Time: endTime, Valid: true}
+
+	var ingredientUUID *uuid.UUID
+	if req.IngredientID != nil && *req.IngredientID != "" {
+		u, err := uuid.Parse(*req.IngredientID)
+		if err != nil {
+			return nil, fmt.Errorf("invalid ingredient_id: %w", err)
+		}
+		ingredientUUID = &u
+	}
+
+	rows, err := i.repo.Tenant(ctx).GetIngredientReport(ctx, pg.GetIngredientReportParams{
+		StorageID:    storageUUID,
+		Start:        start,
+		End:          end,
+		IngredientID: ingredientUUID,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to get ingredient report: %w", err)
+	}
+
+	out := make([]model.IngredientReportItem, 0, len(rows))
+	for _, r := range rows {
+		out = append(out, model.IngredientReportItem{
+			IngredientID:   r.IngredientID.String(),
+			IngredientName: r.IngredientName,
+			Measurement:    r.Measurement,
+			PictureUrl:     r.PictureUrl,
+			ColorCode:      r.ColorCode,
+
+			BeginQty: numericToStr(r.BeginQty),
+			EndQty:   numericToStr(r.EndQty),
+
+			InvoiceInQty:    numericToStr(r.InvoiceInQty),
+			OrderOutQty:     numericToStr(r.OrderOutQty),
+			DeductionOutQty: numericToStr(r.DeductionOutQty),
+			SurplusQty:      numericToStr(r.SurplusQty),
+			ShortageQty:     numericToStr(r.ShortageQty),
+
+			CostStart: numericToStr(r.CostStart),
+			CostEnd:   numericToStr(r.CostEnd),
+
+			BeginAmount: numericToStr(r.BeginAmount),
+			EndAmount:   numericToStr(r.EndAmount),
+
+			InvoiceInAmount:    numericToStr(r.InvoiceInAmount),
+			OrderOutAmount:     numericToStr(r.OrderOutAmount),
+			DeductionOutAmount: numericToStr(r.DeductionOutAmount),
+			SurplusAmount:      numericToStr(r.SurplusAmount),
+			ShortageAmount:     numericToStr(r.ShortageAmount),
+		})
+	}
+	return out, nil
+}
+
+func (i *IngredientS) GetIngredientReportItem(ctx context.Context, req model.GetIngredientReportRequest) (*model.IngredientReportItem, error) {
+	if req.IngredientID == nil || *req.IngredientID == "" {
+		return nil, fmt.Errorf("ingredient_id is required")
+	}
+	rows, err := i.GetIngredientReport(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+	if len(rows) == 0 {
+		return nil, nil
+	}
+	item := rows[0]
+	return &item, nil
+}
+
+func (i *IngredientS) GetIngredientReportMovements(ctx context.Context, req model.GetIngredientReportMovementsRequest) ([]model.IngredientStockMovementResponse, error) {
+	storageUUID, err := uuid.Parse(req.StorageID)
+	if err != nil {
+		return nil, fmt.Errorf("invalid storage_id: %w", err)
+	}
+	ingredientUUID, err := uuid.Parse(req.IngredientID)
+	if err != nil {
+		return nil, fmt.Errorf("invalid ingredient_id: %w", err)
+	}
+	startTime := time.Time{}
+	if req.Start != nil {
+		startTime = *req.Start
+	}
+	endTime := time.Now()
+	if req.End != nil {
+		endTime = *req.End
+	}
+	start := pgtype.Timestamptz{Time: startTime, Valid: true}
+	end := pgtype.Timestamptz{Time: endTime, Valid: true}
+
+	limit := req.Limit
+	if limit <= 0 {
+		limit = 50
+	}
+
+	rows, err := i.repo.Tenant(ctx).GetIngredientStockMovements(ctx, pg.GetIngredientStockMovementsParams{
+		StorageID:    storageUUID,
+		IngredientID: ingredientUUID,
+		Start:        start,
+		End:          end,
+		Limit:        limit,
+		Offset:       req.Offset,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to get ingredient stock movements: %w", err)
+	}
+
+	out := make([]model.IngredientStockMovementResponse, 0, len(rows))
+	for _, r := range rows {
+		var sourceIDStr *string
+		if r.SourceID != nil {
+			s := r.SourceID.String()
+			sourceIDStr = &s
+		}
+		out = append(out, model.IngredientStockMovementResponse{
+			ID:           r.ID.String(),
+			EventType:    r.EventType,
+			QtyIn:        numericToStr(r.QtyIn),
+			QtyOut:       numericToStr(r.QtyOut),
+			StockBefore:  numericToStr(r.StockBefore),
+			StockAfter:   numericToStr(r.StockAfter),
+			PricePerUnit: numericToStr(r.PricePerUnit),
+			SourceType:   r.SourceType,
+			SourceID:     sourceIDStr,
+			CreatedAt:    timestampToTime(r.CreatedAt),
+		})
+	}
+	return out, nil
+}
+
 // RestoreIngredientGroup restores a deleted ingredient group
 func (i *IngredientS) RestoreIngredientGroup(ctx context.Context, groupID string) error {
 	id, err := uuid.Parse(groupID)
@@ -636,12 +780,66 @@ func (i *IngredientS) UpdateIngredientStock(ctx context.Context, stockID string,
 		return nil, fmt.Errorf("invalid quantity: %w", err)
 	}
 
+	locked, err := i.repo.Tenant(ctx).GetIngredientStockByIDForUpdate(ctx, id)
+	if err != nil {
+		return nil, fmt.Errorf("failed to lock ingredient stock: %w", err)
+	}
+	stockBefore := locked.Quantity
+
+	ing, err := i.repo.Tenant(ctx).GetIngredientByID(ctx, locked.IngredientID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get ingredient: %w", err)
+	}
+	price := ing.PricePerUnit
+	if !price.Valid {
+		_ = price.Scan("0")
+	}
+
 	stock, err := i.repo.Tenant(ctx).UpdateIngredientStock(ctx, pg.UpdateIngredientStockParams{
 		ID:       id,
 		Quantity: quantityNum,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to update ingredient stock: %w", err)
+	}
+
+	// Determine adjustment direction
+	zero := pgtype.Numeric{}
+	_ = zero.Scan("0")
+	qtyIn := zero
+	qtyOut := zero
+
+	diff, err := subNumericClampZero(stock.Quantity, stockBefore, 6)
+	if err != nil {
+		return nil, err
+	}
+	if numericToString(diff) != "0" {
+		qtyIn = diff
+	}
+
+	diff2, err := subNumericClampZero(stockBefore, stock.Quantity, 6)
+	if err != nil {
+		return nil, err
+	}
+	if numericToString(diff2) != "0" {
+		qtyOut = diff2
+	}
+
+	eventType := "manual_adjustment"
+	if err := i.repo.Tenant(ctx).InsertIngredientStockMovement(ctx, pg.InsertIngredientStockMovementParams{
+		ID:           uuid.New(),
+		StorageID:    uuid.UUID(locked.StorageID.Bytes),
+		IngredientID: locked.IngredientID,
+		EventType:    eventType,
+		QtyIn:        qtyIn,
+		QtyOut:       qtyOut,
+		StockBefore:  stockBefore,
+		StockAfter:   stock.Quantity,
+		PricePerUnit: price,
+		SourceType:   nil,
+		SourceID:     nil,
+	}); err != nil {
+		return nil, fmt.Errorf("failed to insert stock movement: %w", err)
 	}
 
 	return toIngredientStockResponse(stock), nil
@@ -659,12 +857,46 @@ func (i *IngredientS) AddToIngredientStock(ctx context.Context, stockID string, 
 		return nil, fmt.Errorf("invalid quantity: %w", err)
 	}
 
+	locked, err := i.repo.Tenant(ctx).GetIngredientStockByIDForUpdate(ctx, id)
+	if err != nil {
+		return nil, fmt.Errorf("failed to lock ingredient stock: %w", err)
+	}
+	stockBefore := locked.Quantity
+
+	ing, err := i.repo.Tenant(ctx).GetIngredientByID(ctx, locked.IngredientID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get ingredient: %w", err)
+	}
+	price := ing.PricePerUnit
+	if !price.Valid {
+		_ = price.Scan("0")
+	}
+
 	stock, err := i.repo.Tenant(ctx).AddToIngredientStock(ctx, pg.AddToIngredientStockParams{
 		ID:       id,
 		Quantity: quantityNum,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to add to ingredient stock: %w", err)
+	}
+
+	zero := pgtype.Numeric{}
+	_ = zero.Scan("0")
+	eventType := "manual_in"
+	if err := i.repo.Tenant(ctx).InsertIngredientStockMovement(ctx, pg.InsertIngredientStockMovementParams{
+		ID:           uuid.New(),
+		StorageID:    uuid.UUID(locked.StorageID.Bytes),
+		IngredientID: locked.IngredientID,
+		EventType:    eventType,
+		QtyIn:        quantityNum,
+		QtyOut:       zero,
+		StockBefore:  stockBefore,
+		StockAfter:   stock.Quantity,
+		PricePerUnit: price,
+		SourceType:   nil,
+		SourceID:     nil,
+	}); err != nil {
+		return nil, fmt.Errorf("failed to insert stock movement: %w", err)
 	}
 
 	return toIngredientStockResponse(stock), nil
@@ -682,12 +914,46 @@ func (i *IngredientS) RemoveFromIngredientStock(ctx context.Context, stockID str
 		return nil, fmt.Errorf("invalid quantity: %w", err)
 	}
 
+	locked, err := i.repo.Tenant(ctx).GetIngredientStockByIDForUpdate(ctx, id)
+	if err != nil {
+		return nil, fmt.Errorf("failed to lock ingredient stock: %w", err)
+	}
+	stockBefore := locked.Quantity
+
+	ing, err := i.repo.Tenant(ctx).GetIngredientByID(ctx, locked.IngredientID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get ingredient: %w", err)
+	}
+	price := ing.PricePerUnit
+	if !price.Valid {
+		_ = price.Scan("0")
+	}
+
 	stock, err := i.repo.Tenant(ctx).RemoveFromIngredientStock(ctx, pg.RemoveFromIngredientStockParams{
 		ID:       id,
 		Quantity: quantityNum,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to remove from ingredient stock: %w", err)
+	}
+
+	zero := pgtype.Numeric{}
+	_ = zero.Scan("0")
+	eventType := "manual_out"
+	if err := i.repo.Tenant(ctx).InsertIngredientStockMovement(ctx, pg.InsertIngredientStockMovementParams{
+		ID:           uuid.New(),
+		StorageID:    uuid.UUID(locked.StorageID.Bytes),
+		IngredientID: locked.IngredientID,
+		EventType:    eventType,
+		QtyIn:        zero,
+		QtyOut:       quantityNum,
+		StockBefore:  stockBefore,
+		StockAfter:   stock.Quantity,
+		PricePerUnit: price,
+		SourceType:   nil,
+		SourceID:     nil,
+	}); err != nil {
+		return nil, fmt.Errorf("failed to insert stock movement: %w", err)
 	}
 
 	return toIngredientStockResponse(stock), nil

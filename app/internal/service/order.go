@@ -804,13 +804,42 @@ func (s *OrderS) consumeOrderIngredientsStock(ctx context.Context, orderID uuid.
 			if err != nil {
 				return fmt.Errorf("failed to lock ingredient stock row: %w", err)
 			}
-			_ = locked
 
-			if _, err := s.repo.Tenant(ctx).RemoveFromIngredientStock(ctx, pg.RemoveFromIngredientStockParams{
+			ing, err := s.repo.Tenant(ctx).GetIngredientByID(ctx, u.ingredientID)
+			if err != nil {
+				return fmt.Errorf("failed to get ingredient: %w", err)
+			}
+			price := ing.PricePerUnit
+			if !price.Valid {
+				_ = price.Scan("0")
+			}
+
+			updated, err := s.repo.Tenant(ctx).RemoveFromIngredientStock(ctx, pg.RemoveFromIngredientStockParams{
 				ID:       stockID,
 				Quantity: u.quantity,
-			}); err != nil {
+			})
+			if err != nil {
 				return fmt.Errorf("failed to consume ingredient stock: %w", err)
+			}
+
+			zero := pgtype.Numeric{}
+			_ = zero.Scan("0")
+			sourceType := "order"
+			srcID := orderID
+			if err := s.repo.Tenant(ctx).InsertIngredientStockMovement(ctx, pg.InsertIngredientStockMovementParams{
+				ID:           uuid.New(),
+				StorageID:    uuid.UUID(row.StorageID.Bytes),
+				IngredientID: u.ingredientID,
+				EventType:    "order_out",
+				QtyIn:        zero,
+				QtyOut:       u.quantity,
+				StockBefore:  locked.Quantity,
+				StockAfter:   updated.Quantity,
+				PricePerUnit: price,
+				SourceType:   &sourceType,
+				SourceID:     &srcID,
+			}); err != nil {
+				return fmt.Errorf("failed to insert stock movement: %w", err)
 			}
 		}
 	}

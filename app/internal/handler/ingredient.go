@@ -590,7 +590,7 @@ func (h *Handler) GetIngredientStockByID(c echo.Context) error {
 // @Failure 401 {object} model.ErrorResponse "Unauthorized"
 // @Failure 404 {object} model.ErrorResponse "Ingredient stock not found"
 // @Failure 500 {object} model.ErrorResponse "Internal server error"
-// @Router /api/v1/ingredient-stock/search [get]
+// @Router /api/v1/ingredient-stock/by-ingredient-branch [get]
 func (h *Handler) GetStockByIngredientAndBranch(c echo.Context) error {
 	ingredientID := c.QueryParam("ingredient_id")
 	branchID := c.QueryParam("branch_id")
@@ -673,7 +673,7 @@ func (h *Handler) GetAllIngredientStock(c echo.Context) error {
 // @Failure 400 {object} model.ErrorResponse "Invalid branch ID"
 // @Failure 401 {object} model.ErrorResponse "Unauthorized"
 // @Failure 500 {object} model.ErrorResponse "Internal server error"
-// @Router /api/v1/branches/{branchId}/ingredient-stock [get]
+// @Router /api/v1/ingredient-stock/branch/{branchId} [get]
 func (h *Handler) GetStockByBranchID(c echo.Context) error {
 	branchID := c.Param("branchId")
 	if branchID == "" {
@@ -723,7 +723,7 @@ func (h *Handler) GetStockByBranchID(c echo.Context) error {
 // @Failure 400 {object} model.ErrorResponse "Invalid ingredient ID"
 // @Failure 401 {object} model.ErrorResponse "Unauthorized"
 // @Failure 500 {object} model.ErrorResponse "Internal server error"
-// @Router /api/v1/ingredients/{ingredientId}/stock [get]
+// @Router /api/v1/ingredient-stock/ingredient/{ingredientId} [get]
 func (h *Handler) GetStockByIngredientID(c echo.Context) error {
 	ingredientID := c.Param("ingredientId")
 	if ingredientID == "" {

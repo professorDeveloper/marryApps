@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"math/big"
 	"strconv"
 	"strings"
 	"time"
@@ -198,6 +199,11 @@ func (s *InvoiceS) UpdateInvoice(ctx context.Context, id string, req *model.Upda
 		return nil, fmt.Errorf("invalid invoice id: %w", err)
 	}
 
+	currentInvoice, err := s.repo.Tenant(ctx).GetInvoiceByID(ctx, invoiceID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get invoice: %w", err)
+	}
+
 	// Parse storage ID if provided
 	storageID := pgtype.UUID{Valid: false}
 	if req.StorageID != nil {
@@ -261,6 +267,21 @@ func (s *InvoiceS) UpdateInvoice(ctx context.Context, id string, req *model.Upda
 	invoice, err := s.repo.Tenant(ctx).UpdateInvoice(ctx, params)
 	if err != nil {
 		return nil, fmt.Errorf("failed to update invoice: %w", err)
+	}
+
+	if storageID.Valid && currentInvoice.StorageID.Valid && storageID.Bytes != currentInvoice.StorageID.Bytes {
+		details, err := s.repo.Tenant(ctx).GetInvoiceDetailsByInvoiceID(ctx, invoiceID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get invoice details: %w", err)
+		}
+		for _, d := range details {
+			if err := s.applyInvoiceStockMovement(ctx, currentInvoice.StorageID, d.IngredientID, zeroNumeric(), d.Quantity, "invoice_storage_move_out", d.PricePerUnit, invoiceID); err != nil {
+				return nil, err
+			}
+			if err := s.applyInvoiceStockMovement(ctx, storageID, d.IngredientID, d.Quantity, zeroNumeric(), "invoice_storage_move_in", d.PricePerUnit, invoiceID); err != nil {
+				return nil, err
+			}
+		}
 	}
 
 	return toInvoiceResponse(invoice), nil
@@ -546,7 +567,21 @@ func (s *InvoiceS) CreateInvoiceDetail(ctx context.Context, invoiceID string, re
 		fmt.Printf("Warning: failed to update ingredient price_per_unit: %v\n", err)
 	}
 
-	_, err = s.repo.Tenant(ctx).UpsertAddIngredientStockByStorage(ctx, pg.UpsertAddIngredientStockByStorageParams{
+	_, _ = s.repo.Tenant(ctx).EnsureIngredientStockByStorage(ctx, pg.EnsureIngredientStockByStorageParams{
+		ID:           uuid.New(),
+		IngredientID: ingredientUUID,
+		StorageID:    invoice.StorageID,
+	})
+
+	locked, err := s.repo.Tenant(ctx).GetStockByIngredientAndStorageForUpdate(ctx, pg.GetStockByIngredientAndStorageForUpdateParams{
+		IngredientID: ingredientUUID,
+		StorageID:    invoice.StorageID,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to lock ingredient stock: %w", err)
+	}
+
+	updated, err := s.repo.Tenant(ctx).UpsertAddIngredientStockByStorage(ctx, pg.UpsertAddIngredientStockByStorageParams{
 		ID:           uuid.New(),
 		IngredientID: ingredientUUID,
 		StorageID:    invoice.StorageID,
@@ -554,6 +589,24 @@ func (s *InvoiceS) CreateInvoiceDetail(ctx context.Context, invoiceID string, re
 	})
 	if err != nil {
 		fmt.Printf("Warning: failed to update ingredient stock: %v\n", err)
+	} else {
+		zero := pgtype.Numeric{}
+		_ = zero.Scan("0")
+		sourceType := "invoice"
+		srcID := invoiceUUID
+		_ = s.repo.Tenant(ctx).InsertIngredientStockMovement(ctx, pg.InsertIngredientStockMovementParams{
+			ID:           uuid.New(),
+			StorageID:    uuid.UUID(invoice.StorageID.Bytes),
+			IngredientID: ingredientUUID,
+			EventType:    "invoice_in",
+			QtyIn:        qty,
+			QtyOut:       zero,
+			StockBefore:  locked.Quantity,
+			StockAfter:   updated.Quantity,
+			PricePerUnit: pricePerUnit,
+			SourceType:   &sourceType,
+			SourceID:     &srcID,
+		})
 	}
 
 	return toInvoiceDetailResponse(detail), nil
@@ -660,7 +713,23 @@ func (s *InvoiceS) CreateInvoiceDetailsBatch(ctx context.Context, invoiceID stri
 			fmt.Printf("Warning: failed to update ingredient price_per_unit for item %d: %v\n", i+1, err)
 		}
 
-		_, err = s.repo.Tenant(ctx).UpsertAddIngredientStockByStorage(ctx, pg.UpsertAddIngredientStockByStorageParams{
+		_, _ = s.repo.Tenant(ctx).EnsureIngredientStockByStorage(ctx, pg.EnsureIngredientStockByStorageParams{
+			ID:           uuid.New(),
+			IngredientID: ingredientUUID,
+			StorageID:    invoice.StorageID,
+		})
+
+		locked, err := s.repo.Tenant(ctx).GetStockByIngredientAndStorageForUpdate(ctx, pg.GetStockByIngredientAndStorageForUpdateParams{
+			IngredientID: ingredientUUID,
+			StorageID:    invoice.StorageID,
+		})
+		if err != nil {
+			response.Failed++
+			response.Errors = append(response.Errors, fmt.Sprintf("Item %d: failed to lock ingredient stock: %v", i+1, err))
+			continue
+		}
+
+		updated, err := s.repo.Tenant(ctx).UpsertAddIngredientStockByStorage(ctx, pg.UpsertAddIngredientStockByStorageParams{
 			ID:           uuid.New(),
 			IngredientID: ingredientUUID,
 			StorageID:    invoice.StorageID,
@@ -668,6 +737,24 @@ func (s *InvoiceS) CreateInvoiceDetailsBatch(ctx context.Context, invoiceID stri
 		})
 		if err != nil {
 			fmt.Printf("Warning: failed to update ingredient stock for item %d: %v\n", i+1, err)
+		} else {
+			zero := pgtype.Numeric{}
+			_ = zero.Scan("0")
+			sourceType := "invoice"
+			srcID := invoiceUUID
+			_ = s.repo.Tenant(ctx).InsertIngredientStockMovement(ctx, pg.InsertIngredientStockMovementParams{
+				ID:           uuid.New(),
+				StorageID:    uuid.UUID(invoice.StorageID.Bytes),
+				IngredientID: ingredientUUID,
+				EventType:    "invoice_in",
+				QtyIn:        qty,
+				QtyOut:       zero,
+				StockBefore:  locked.Quantity,
+				StockAfter:   updated.Quantity,
+				PricePerUnit: pricePerUnit,
+				SourceType:   &sourceType,
+				SourceID:     &srcID,
+			})
 		}
 
 		response.Success++
@@ -806,6 +893,14 @@ func (s *InvoiceS) UpdateInvoiceDetail(ctx context.Context, id string, req *mode
 		return nil, fmt.Errorf("failed to get current invoice detail: %w", err)
 	}
 
+	inv, err := s.repo.Tenant(ctx).GetInvoiceByID(ctx, currentDetail.InvoiceID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get invoice: %w", err)
+	}
+	if !inv.StorageID.Valid {
+		return nil, fmt.Errorf("invoice storage_id is required to update stock")
+	}
+
 	// Use new values if provided, otherwise keep current values
 	updateIngredientID := ingredientID
 	if ingredientID == (uuid.UUID{}) {
@@ -840,6 +935,51 @@ func (s *InvoiceS) UpdateInvoiceDetail(ctx context.Context, id string, req *mode
 		return nil, fmt.Errorf("failed to update invoice detail: %w", err)
 	}
 
+	if updatePricePerUnit.Valid {
+		_, _ = s.repo.Tenant(ctx).UpdateIngredientPriceAndQuantity(ctx, pg.UpdateIngredientPriceAndQuantityParams{
+			ID:           updateIngredientID,
+			PricePerUnit: updatePricePerUnit,
+		})
+	}
+
+	sourceID := currentDetail.InvoiceID
+	if currentDetail.IngredientID != updateIngredientID {
+		if err := s.applyInvoiceStockMovement(ctx, inv.StorageID, currentDetail.IngredientID, zeroNumeric(), currentDetail.Quantity, "invoice_update_out", currentDetail.PricePerUnit, sourceID); err != nil {
+			return nil, err
+		}
+		if err := s.applyInvoiceStockMovement(ctx, inv.StorageID, updateIngredientID, updateQuantity, zeroNumeric(), "invoice_update_in", updatePricePerUnit, sourceID); err != nil {
+			return nil, err
+		}
+	} else {
+		cmp, err := cmpNumeric(updateQuantity, currentDetail.Quantity)
+		if err != nil {
+			return nil, err
+		}
+		if cmp > 0 {
+			diff, err := subAbsNumeric(updateQuantity, currentDetail.Quantity, 6)
+			if err != nil {
+				return nil, err
+			}
+			if err := s.applyInvoiceStockMovement(ctx, inv.StorageID, updateIngredientID, diff, zeroNumeric(), "invoice_update_in", updatePricePerUnit, sourceID); err != nil {
+				return nil, err
+			}
+		} else if cmp < 0 {
+			diff, err := subAbsNumeric(updateQuantity, currentDetail.Quantity, 6)
+			if err != nil {
+				return nil, err
+			}
+			if err := s.applyInvoiceStockMovement(ctx, inv.StorageID, updateIngredientID, zeroNumeric(), diff, "invoice_update_out", currentDetail.PricePerUnit, sourceID); err != nil {
+				return nil, err
+			}
+		} else {
+			if numericToString(updatePricePerUnit) != numericToString(currentDetail.PricePerUnit) {
+				if err := s.applyInvoiceStockMovement(ctx, inv.StorageID, updateIngredientID, zeroNumeric(), zeroNumeric(), "invoice_price_update", updatePricePerUnit, sourceID); err != nil {
+					return nil, err
+				}
+			}
+		}
+	}
+
 	return toInvoiceDetailResponse(detail), nil
 }
 
@@ -848,6 +988,18 @@ func (s *InvoiceS) UpdateInvoiceDetailQuantity(ctx context.Context, id string, q
 	detailID, err := uuid.Parse(id)
 	if err != nil {
 		return nil, fmt.Errorf("invalid detail id: %w", err)
+	}
+
+	currentDetail, err := s.repo.Tenant(ctx).GetInvoiceDetailByID(ctx, detailID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get current invoice detail: %w", err)
+	}
+	inv, err := s.repo.Tenant(ctx).GetInvoiceByID(ctx, currentDetail.InvoiceID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get invoice: %w", err)
+	}
+	if !inv.StorageID.Valid {
+		return nil, fmt.Errorf("invoice storage_id is required to update stock")
 	}
 
 	qty := pgtype.Numeric{}
@@ -863,6 +1015,28 @@ func (s *InvoiceS) UpdateInvoiceDetailQuantity(ctx context.Context, id string, q
 		return nil, fmt.Errorf("failed to update invoice detail quantity: %w", err)
 	}
 
+	cmp, err := cmpNumeric(detail.Quantity, currentDetail.Quantity)
+	if err != nil {
+		return nil, err
+	}
+	if cmp > 0 {
+		diff, err := subAbsNumeric(detail.Quantity, currentDetail.Quantity, 6)
+		if err != nil {
+			return nil, err
+		}
+		if err := s.applyInvoiceStockMovement(ctx, inv.StorageID, currentDetail.IngredientID, diff, zeroNumeric(), "invoice_update_in", currentDetail.PricePerUnit, currentDetail.InvoiceID); err != nil {
+			return nil, err
+		}
+	} else if cmp < 0 {
+		diff, err := subAbsNumeric(detail.Quantity, currentDetail.Quantity, 6)
+		if err != nil {
+			return nil, err
+		}
+		if err := s.applyInvoiceStockMovement(ctx, inv.StorageID, currentDetail.IngredientID, zeroNumeric(), diff, "invoice_update_out", currentDetail.PricePerUnit, currentDetail.InvoiceID); err != nil {
+			return nil, err
+		}
+	}
+
 	return toInvoiceDetailResponse(detail), nil
 }
 
@@ -873,8 +1047,24 @@ func (s *InvoiceS) DeleteInvoiceDetail(ctx context.Context, id string) error {
 		return fmt.Errorf("invalid detail id: %w", err)
 	}
 
+	currentDetail, err := s.repo.Tenant(ctx).GetInvoiceDetailByID(ctx, detailID)
+	if err != nil {
+		return fmt.Errorf("failed to get invoice detail: %w", err)
+	}
+	inv, err := s.repo.Tenant(ctx).GetInvoiceByID(ctx, currentDetail.InvoiceID)
+	if err != nil {
+		return fmt.Errorf("failed to get invoice: %w", err)
+	}
+	if !inv.StorageID.Valid {
+		return fmt.Errorf("invoice storage_id is required to update stock")
+	}
+
 	if err := s.repo.Tenant(ctx).DeleteInvoiceDetail(ctx, detailID); err != nil {
 		return fmt.Errorf("failed to delete invoice detail: %w", err)
+	}
+
+	if err := s.applyInvoiceStockMovement(ctx, inv.StorageID, currentDetail.IngredientID, zeroNumeric(), currentDetail.Quantity, "invoice_delete_out", currentDetail.PricePerUnit, currentDetail.InvoiceID); err != nil {
+		return err
 	}
 
 	return nil
@@ -891,7 +1081,144 @@ func (s *InvoiceS) RestoreInvoiceDetail(ctx context.Context, id string) error {
 		return fmt.Errorf("failed to restore invoice detail: %w", err)
 	}
 
+	detail, err := s.repo.Tenant(ctx).GetInvoiceDetailByID(ctx, detailID)
+	if err != nil {
+		return fmt.Errorf("failed to get restored invoice detail: %w", err)
+	}
+	inv, err := s.repo.Tenant(ctx).GetInvoiceByID(ctx, detail.InvoiceID)
+	if err != nil {
+		return fmt.Errorf("failed to get invoice: %w", err)
+	}
+	if !inv.StorageID.Valid {
+		return fmt.Errorf("invoice storage_id is required to update stock")
+	}
+	if err := s.applyInvoiceStockMovement(ctx, inv.StorageID, detail.IngredientID, detail.Quantity, zeroNumeric(), "invoice_restore_in", detail.PricePerUnit, detail.InvoiceID); err != nil {
+		return err
+	}
+
 	return nil
+}
+
+func (s *InvoiceS) applyInvoiceStockMovement(ctx context.Context, storageID pgtype.UUID, ingredientID uuid.UUID, qtyIn, qtyOut pgtype.Numeric, eventType string, pricePerUnit pgtype.Numeric, invoiceID uuid.UUID) error {
+	if !storageID.Valid {
+		return fmt.Errorf("invoice storage_id is required to update stock")
+	}
+	if numericToString(qtyIn) != "0" && numericToString(qtyOut) != "0" {
+		return fmt.Errorf("invalid movement: both qty_in and qty_out set")
+	}
+
+	_, _ = s.repo.Tenant(ctx).EnsureIngredientStockByStorage(ctx, pg.EnsureIngredientStockByStorageParams{
+		ID:           uuid.New(),
+		IngredientID: ingredientID,
+		StorageID:    storageID,
+	})
+
+	locked, err := s.repo.Tenant(ctx).GetStockByIngredientAndStorageForUpdate(ctx, pg.GetStockByIngredientAndStorageForUpdateParams{
+		IngredientID: ingredientID,
+		StorageID:    storageID,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to lock ingredient stock: %w", err)
+	}
+	stockBefore := locked.Quantity
+	stockAfter := stockBefore
+
+	if numericToString(qtyIn) != "0" {
+		updated, err := s.repo.Tenant(ctx).UpsertAddIngredientStockByStorage(ctx, pg.UpsertAddIngredientStockByStorageParams{
+			ID:           uuid.New(),
+			IngredientID: ingredientID,
+			StorageID:    storageID,
+			Quantity:     qtyIn,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to add ingredient stock: %w", err)
+		}
+		stockAfter = updated.Quantity
+	} else if numericToString(qtyOut) != "0" {
+		updated, err := s.repo.Tenant(ctx).RemoveFromIngredientStock(ctx, pg.RemoveFromIngredientStockParams{
+			ID:       locked.ID,
+			Quantity: qtyOut,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to remove ingredient stock: %w", err)
+		}
+		stockAfter = updated.Quantity
+	}
+
+	zero := pgtype.Numeric{}
+	_ = zero.Scan("0")
+	if !pricePerUnit.Valid {
+		pricePerUnit = zero
+	}
+	sourceType := "invoice"
+	invID := invoiceID
+	if err := s.repo.Tenant(ctx).InsertIngredientStockMovement(ctx, pg.InsertIngredientStockMovementParams{
+		ID:           uuid.New(),
+		StorageID:    uuid.UUID(storageID.Bytes),
+		IngredientID: ingredientID,
+		EventType:    eventType,
+		QtyIn:        qtyIn,
+		QtyOut:       qtyOut,
+		StockBefore:  stockBefore,
+		StockAfter:   stockAfter,
+		PricePerUnit: pricePerUnit,
+		SourceType:   &sourceType,
+		SourceID:     &invID,
+	}); err != nil {
+		return fmt.Errorf("failed to insert stock movement: %w", err)
+	}
+	return nil
+}
+
+func ratFromNumeric(n pgtype.Numeric) (*big.Rat, error) {
+	s := numericToString(n)
+	r := new(big.Rat)
+	if _, ok := r.SetString(s); !ok {
+		return nil, fmt.Errorf("invalid numeric: %s", s)
+	}
+	return r, nil
+}
+
+func numericFromRat(r *big.Rat, scale int) (pgtype.Numeric, error) {
+	n := pgtype.Numeric{}
+	if err := n.Scan(r.FloatString(scale)); err != nil {
+		return pgtype.Numeric{}, err
+	}
+	return n, nil
+}
+
+func cmpNumeric(a, b pgtype.Numeric) (int, error) {
+	ra, err := ratFromNumeric(a)
+	if err != nil {
+		return 0, err
+	}
+	rb, err := ratFromNumeric(b)
+	if err != nil {
+		return 0, err
+	}
+	return ra.Cmp(rb), nil
+}
+
+func subAbsNumeric(a, b pgtype.Numeric, scale int) (pgtype.Numeric, error) {
+	ra, err := ratFromNumeric(a)
+	if err != nil {
+		return pgtype.Numeric{}, err
+	}
+	rb, err := ratFromNumeric(b)
+	if err != nil {
+		return pgtype.Numeric{}, err
+	}
+	out := new(big.Rat).Sub(ra, rb)
+	if out.Sign() < 0 {
+		out.Neg(out)
+	}
+	return numericFromRat(out, scale)
+}
+
+func zeroNumeric() pgtype.Numeric {
+	z := pgtype.Numeric{}
+	_ = z.Scan("0")
+	return z
 }
 
 // DeleteInvoiceDetailsByInvoiceID deletes all details for an invoice
@@ -1271,14 +1598,49 @@ func (s *InvoiceS) CreateInvoiceWithDetails(ctx context.Context, req *model.Crea
 			return nil, fmt.Errorf("item %d: failed to update ingredient price_per_unit: %w", i+1, err)
 		}
 
-		_, err = s.repo.Tenant(ctx).UpsertAddIngredientStockByStorage(ctx, pg.UpsertAddIngredientStockByStorageParams{
+		storagePg := pgtype.UUID{Bytes: invoiceStorageUUID, Valid: true}
+		_, _ = s.repo.Tenant(ctx).EnsureIngredientStockByStorage(ctx, pg.EnsureIngredientStockByStorageParams{
 			ID:           uuid.New(),
 			IngredientID: ingredientUUID,
-			StorageID:    pgtype.UUID{Bytes: invoiceStorageUUID, Valid: true},
+			StorageID:    storagePg,
+		})
+
+		locked, err := s.repo.Tenant(ctx).GetStockByIngredientAndStorageForUpdate(ctx, pg.GetStockByIngredientAndStorageForUpdateParams{
+			IngredientID: ingredientUUID,
+			StorageID:    storagePg,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("item %d: failed to lock ingredient stock: %w", i+1, err)
+		}
+
+		updated, err := s.repo.Tenant(ctx).UpsertAddIngredientStockByStorage(ctx, pg.UpsertAddIngredientStockByStorageParams{
+			ID:           uuid.New(),
+			IngredientID: ingredientUUID,
+			StorageID:    storagePg,
 			Quantity:     qty,
 		})
 		if err != nil {
 			return nil, fmt.Errorf("item %d: failed to update ingredient stock: %w", i+1, err)
+		}
+
+		zero := pgtype.Numeric{}
+		_ = zero.Scan("0")
+		sourceType := "invoice"
+		srcID := invoiceID
+		if err := s.repo.Tenant(ctx).InsertIngredientStockMovement(ctx, pg.InsertIngredientStockMovementParams{
+			ID:           uuid.New(),
+			StorageID:    invoiceStorageUUID,
+			IngredientID: ingredientUUID,
+			EventType:    "invoice_in",
+			QtyIn:        qty,
+			QtyOut:       zero,
+			StockBefore:  locked.Quantity,
+			StockAfter:   updated.Quantity,
+			PricePerUnit: pricePerUnit,
+			SourceType:   &sourceType,
+			SourceID:     &srcID,
+		}); err != nil {
+			return nil, fmt.Errorf("item %d: failed to insert stock movement: %w", i+1, err)
 		}
 
 		// Add to response

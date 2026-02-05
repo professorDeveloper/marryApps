@@ -538,7 +538,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "Bills"
+                    "reports"
                 ],
                 "summary": "Get bills",
                 "parameters": [
@@ -646,7 +646,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "Bills"
+                    "reports"
                 ],
                 "summary": "Get bill details",
                 "parameters": [
@@ -930,78 +930,6 @@ const docTemplate = `{
                     },
                     "404": {
                         "description": "Branch not found",
-                        "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal server error",
-                        "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
-                        }
-                    }
-                }
-            }
-        },
-        "/api/v1/branches/{branchId}/ingredient-stock": {
-            "get": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Retrieve all ingredient stock for a specific branch",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "ingredient-stock"
-                ],
-                "summary": "Get stock by branch ID",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Branch ID",
-                        "name": "branchId",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "type": "integer",
-                        "default": 20,
-                        "description": "Limit results (default: 20)",
-                        "name": "limit",
-                        "in": "query"
-                    },
-                    {
-                        "type": "integer",
-                        "default": 0,
-                        "description": "Offset for pagination (default: 0)",
-                        "name": "offset",
-                        "in": "query"
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "List of ingredient stock for the branch",
-                        "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/model.IngredientStockResponse"
-                            }
-                        }
-                    },
-                    "400": {
-                        "description": "Invalid branch ID",
-                        "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
                         "schema": {
                             "$ref": "#/definitions/model.ErrorResponse"
                         }
@@ -9759,6 +9687,251 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/ingredient-reports": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Retrieve ingredient report for a storage within a date range",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "reports"
+                ],
+                "summary": "Get ingredient report",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Storage ID",
+                        "name": "storage_id",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Start datetime (RFC3339) or date (YYYY-MM-DD)",
+                        "name": "start",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "End datetime (RFC3339) or date (YYYY-MM-DD)",
+                        "name": "end",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Ingredient ID (optional filter)",
+                        "name": "ingredient_id",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Ingredient report retrieved successfully",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/model.IngredientReportItem"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request parameters",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/ingredient-reports/{ingredientId}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Retrieve ingredient report for a specific ingredient within a storage and date range",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "reports"
+                ],
+                "summary": "Get ingredient report item",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Ingredient ID",
+                        "name": "ingredientId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Storage ID",
+                        "name": "storage_id",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Start datetime (RFC3339) or date (YYYY-MM-DD)",
+                        "name": "start",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "End datetime (RFC3339) or date (YYYY-MM-DD)",
+                        "name": "end",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Ingredient report item retrieved successfully",
+                        "schema": {
+                            "$ref": "#/definitions/model.IngredientReportItem"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request parameters",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not found",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/ingredient-reports/{ingredientId}/movements": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Retrieve ingredient stock movements for a specific ingredient within a storage and date range",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "reports"
+                ],
+                "summary": "Get ingredient report movements",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Ingredient ID",
+                        "name": "ingredientId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Storage ID",
+                        "name": "storage_id",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Start datetime (RFC3339) or date (YYYY-MM-DD)",
+                        "name": "start",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "End datetime (RFC3339) or date (YYYY-MM-DD)",
+                        "name": "end",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Limit (default: 50)",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Offset (default: 0)",
+                        "name": "offset",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Ingredient report movements retrieved successfully",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/model.IngredientStockMovementResponse"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request parameters",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/ingredient-stock": {
             "get": {
                 "security": [
@@ -9873,7 +10046,79 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/v1/ingredient-stock/search": {
+        "/api/v1/ingredient-stock/branch/{branchId}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Retrieve all ingredient stock for a specific branch",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "ingredient-stock"
+                ],
+                "summary": "Get stock by branch ID",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Branch ID",
+                        "name": "branchId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "default": 20,
+                        "description": "Limit results (default: 20)",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 0,
+                        "description": "Offset for pagination (default: 0)",
+                        "name": "offset",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "List of ingredient stock for the branch",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/model.IngredientStockResponse"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid branch ID",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/ingredient-stock/by-ingredient-branch": {
             "get": {
                 "security": [
                     {
@@ -9928,6 +10173,78 @@ const docTemplate = `{
                     },
                     "404": {
                         "description": "Ingredient stock not found",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/ingredient-stock/ingredient/{ingredientId}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Retrieve stock for a specific ingredient across all branches",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "ingredient-stock"
+                ],
+                "summary": "Get stock by ingredient ID",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Ingredient ID",
+                        "name": "ingredientId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "default": 20,
+                        "description": "Limit results (default: 20)",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 0,
+                        "description": "Offset for pagination (default: 0)",
+                        "name": "offset",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "List of stock for the ingredient",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/model.IngredientStockResponse"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid ingredient ID",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
                         "schema": {
                             "$ref": "#/definitions/model.ErrorResponse"
                         }
@@ -10793,78 +11110,6 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/v1/ingredients/{ingredientId}/stock": {
-            "get": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Retrieve stock for a specific ingredient across all branches",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "ingredient-stock"
-                ],
-                "summary": "Get stock by ingredient ID",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Ingredient ID",
-                        "name": "ingredientId",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "type": "integer",
-                        "default": 20,
-                        "description": "Limit results (default: 20)",
-                        "name": "limit",
-                        "in": "query"
-                    },
-                    {
-                        "type": "integer",
-                        "default": 0,
-                        "description": "Offset for pagination (default: 0)",
-                        "name": "offset",
-                        "in": "query"
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "List of stock for the ingredient",
-                        "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/model.IngredientStockResponse"
-                            }
-                        }
-                    },
-                    "400": {
-                        "description": "Invalid ingredient ID",
-                        "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal server error",
-                        "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
-                        }
-                    }
-                }
-            }
-        },
         "/api/v1/ingredients/{ingredient_id}/compounds": {
             "get": {
                 "security": [
@@ -11356,6 +11601,61 @@ const docTemplate = `{
                         "description": "Inventory deleted successfully",
                         "schema": {
                             "$ref": "#/definitions/model.SuccessResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid inventory ID",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/inventories/{id}/apply": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Apply inventory count to ingredient_stock for the inventory storage and record surplus/shortage movements",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "inventories"
+                ],
+                "summary": "Apply inventory",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Inventory ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Inventory applied successfully",
+                        "schema": {
+                            "$ref": "#/definitions/model.InventoryResponse"
                         }
                     },
                     "400": {
@@ -20307,6 +20607,74 @@ const docTemplate = `{
                 }
             }
         },
+        "model.IngredientReportItem": {
+            "type": "object",
+            "properties": {
+                "begin_amount": {
+                    "type": "string"
+                },
+                "begin_qty": {
+                    "type": "string"
+                },
+                "color_code": {
+                    "type": "string"
+                },
+                "cost_end": {
+                    "type": "string"
+                },
+                "cost_start": {
+                    "type": "string"
+                },
+                "deduction_out_amount": {
+                    "type": "string"
+                },
+                "deduction_out_qty": {
+                    "type": "string"
+                },
+                "end_amount": {
+                    "type": "string"
+                },
+                "end_qty": {
+                    "type": "string"
+                },
+                "ingredient_id": {
+                    "type": "string"
+                },
+                "ingredient_name": {
+                    "type": "string"
+                },
+                "invoice_in_amount": {
+                    "type": "string"
+                },
+                "invoice_in_qty": {
+                    "type": "string"
+                },
+                "measurement": {
+                    "type": "string"
+                },
+                "order_out_amount": {
+                    "type": "string"
+                },
+                "order_out_qty": {
+                    "type": "string"
+                },
+                "picture_url": {
+                    "type": "string"
+                },
+                "shortage_amount": {
+                    "type": "string"
+                },
+                "shortage_qty": {
+                    "type": "string"
+                },
+                "surplus_amount": {
+                    "type": "string"
+                },
+                "surplus_qty": {
+                    "type": "string"
+                }
+            }
+        },
         "model.IngredientResponse": {
             "type": "object",
             "properties": {
@@ -20353,6 +20721,41 @@ const docTemplate = `{
                 "updated_at": {
                     "type": "string",
                     "example": "2022-01-01T00:00:00Z"
+                }
+            }
+        },
+        "model.IngredientStockMovementResponse": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "event_type": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "price_per_unit": {
+                    "type": "string"
+                },
+                "qty_in": {
+                    "type": "string"
+                },
+                "qty_out": {
+                    "type": "string"
+                },
+                "source_id": {
+                    "type": "string"
+                },
+                "source_type": {
+                    "type": "string"
+                },
+                "stock_after": {
+                    "type": "string"
+                },
+                "stock_before": {
+                    "type": "string"
                 }
             }
         },

@@ -26,7 +26,7 @@ func parseBillTimeParam(v string) (*time.Time, error) {
 // GetBills retrieves bills list with filters
 // @Summary Get bills
 // @Description List bills (orders) with bill snapshots and filters
-// @Tags Bills
+// @Tags reports
 // @Produce json
 // @Security BearerAuth
 // @Param lang query string false "Language (uz, ru, en)" default(uz)
@@ -150,7 +150,7 @@ func (h *Handler) GetBills(c echo.Context) error {
 // GetBillDetails retrieves a single bill details by id
 // @Summary Get bill details
 // @Description Get full bill details including items
-// @Tags Bills
+// @Tags reports
 // @Produce json
 // @Security BearerAuth
 // @Param lang query string false "Language (uz, ru, en)" default(uz)

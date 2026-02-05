@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -287,6 +288,110 @@ func (s *InventoryS) CalculateInventory(ctx context.Context, inventoryID string)
 	}
 
 	return toInventoryResponse(updated), nil
+}
+
+func (s *InventoryS) ApplyInventory(ctx context.Context, inventoryID string) (*model.InventoryResponse, error) {
+	invID, err := uuid.Parse(inventoryID)
+	if err != nil {
+		return nil, fmt.Errorf("invalid inventory id: %w", err)
+	}
+
+	inv, err := s.repo.Tenant(ctx).GetInventoryForApply(ctx, invID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get inventory: %w", err)
+	}
+	if inv.AppliedAt.Valid {
+		return nil, fmt.Errorf("inventory already applied")
+	}
+
+	items, err := s.repo.Tenant(ctx).GetInventoryItemsComputedAll(ctx, invID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get inventory items: %w", err)
+	}
+
+	zero := pgtype.Numeric{}
+	_ = zero.Scan("0")
+
+	storagePg := pgtype.UUID{Bytes: inv.StorageID, Valid: true}
+	sourceType := "inventory"
+
+	for _, it := range items {
+		diffStr := numericToString(it.DifferenceQuantity)
+		if diffStr == "0" {
+			continue
+		}
+
+		isShortage := strings.HasPrefix(diffStr, "-")
+		absStr := strings.TrimPrefix(diffStr, "-")
+		absQty := pgtype.Numeric{}
+		if err := absQty.Scan(absStr); err != nil {
+			return nil, fmt.Errorf("invalid difference quantity: %w", err)
+		}
+
+		if !it.PricePerUnit.Valid {
+			it.PricePerUnit = zero
+		}
+
+		_, _ = s.repo.Tenant(ctx).EnsureIngredientStockByStorage(ctx, pg.EnsureIngredientStockByStorageParams{
+			ID:           uuid.New(),
+			IngredientID: it.IngredientID,
+			StorageID:    storagePg,
+		})
+
+		locked, err := s.repo.Tenant(ctx).GetStockByIngredientAndStorageForUpdate(ctx, pg.GetStockByIngredientAndStorageForUpdateParams{
+			IngredientID: it.IngredientID,
+			StorageID:    storagePg,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("failed to lock stock: %w", err)
+		}
+
+		updated, err := s.repo.Tenant(ctx).UpdateIngredientStock(ctx, pg.UpdateIngredientStockParams{
+			ID:       locked.ID,
+			Quantity: it.CountedQuantity,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("failed to update ingredient stock: %w", err)
+		}
+
+		qtyIn := zero
+		qtyOut := zero
+		eventType := "inventory_surplus_in"
+		if isShortage {
+			qtyOut = absQty
+			eventType = "inventory_shortage_out"
+		} else {
+			qtyIn = absQty
+		}
+
+		srcID := invID
+		if err := s.repo.Tenant(ctx).InsertIngredientStockMovement(ctx, pg.InsertIngredientStockMovementParams{
+			ID:           uuid.New(),
+			StorageID:    inv.StorageID,
+			IngredientID: it.IngredientID,
+			EventType:    eventType,
+			QtyIn:        qtyIn,
+			QtyOut:       qtyOut,
+			StockBefore:  locked.Quantity,
+			StockAfter:   updated.Quantity,
+			PricePerUnit: it.PricePerUnit,
+			SourceType:   &sourceType,
+			SourceID:     &srcID,
+		}); err != nil {
+			return nil, fmt.Errorf("failed to insert stock movement: %w", err)
+		}
+	}
+
+	if err := s.repo.Tenant(ctx).MarkInventoryApplied(ctx, invID); err != nil {
+		return nil, fmt.Errorf("failed to mark inventory applied: %w", err)
+	}
+
+	fresh, err := s.repo.Tenant(ctx).GetInventoryByID(ctx, invID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get inventory: %w", err)
+	}
+
+	return toInventoryResponse(fresh), nil
 }
 
 func (s *InventoryS) UpdateInventory(ctx context.Context, id string, req *model.UpdateInventoryRequest) (*model.InventoryResponse, error) {

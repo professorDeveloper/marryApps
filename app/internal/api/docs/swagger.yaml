@@ -1358,6 +1358,51 @@ definitions:
         example: "2022-01-01T00:00:00Z"
         type: string
     type: object
+  model.IngredientReportItem:
+    properties:
+      begin_amount:
+        type: string
+      begin_qty:
+        type: string
+      color_code:
+        type: string
+      cost_end:
+        type: string
+      cost_start:
+        type: string
+      deduction_out_amount:
+        type: string
+      deduction_out_qty:
+        type: string
+      end_amount:
+        type: string
+      end_qty:
+        type: string
+      ingredient_id:
+        type: string
+      ingredient_name:
+        type: string
+      invoice_in_amount:
+        type: string
+      invoice_in_qty:
+        type: string
+      measurement:
+        type: string
+      order_out_amount:
+        type: string
+      order_out_qty:
+        type: string
+      picture_url:
+        type: string
+      shortage_amount:
+        type: string
+      shortage_qty:
+        type: string
+      surplus_amount:
+        type: string
+      surplus_qty:
+        type: string
+    type: object
   model.IngredientResponse:
     properties:
       brand_id:
@@ -1392,6 +1437,29 @@ definitions:
         type: string
       updated_at:
         example: "2022-01-01T00:00:00Z"
+        type: string
+    type: object
+  model.IngredientStockMovementResponse:
+    properties:
+      created_at:
+        type: string
+      event_type:
+        type: string
+      id:
+        type: string
+      price_per_unit:
+        type: string
+      qty_in:
+        type: string
+      qty_out:
+        type: string
+      source_id:
+        type: string
+      source_type:
+        type: string
+      stock_after:
+        type: string
+      stock_before:
         type: string
     type: object
   model.IngredientStockResponse:
@@ -3095,7 +3163,7 @@ paths:
       - BearerAuth: []
       summary: Get bills
       tags:
-      - Bills
+      - reports
   /api/v1/bills/{id}:
     get:
       description: Get full bill details including items
@@ -3133,7 +3201,7 @@ paths:
       - BearerAuth: []
       summary: Get bill details
       tags:
-      - Bills
+      - reports
   /api/v1/branches:
     get:
       consumes:
@@ -3345,53 +3413,6 @@ paths:
       summary: Get compound stock by branch
       tags:
       - Compound Stock
-  /api/v1/branches/{branchId}/ingredient-stock:
-    get:
-      consumes:
-      - application/json
-      description: Retrieve all ingredient stock for a specific branch
-      parameters:
-      - description: Branch ID
-        in: path
-        name: branchId
-        required: true
-        type: string
-      - default: 20
-        description: 'Limit results (default: 20)'
-        in: query
-        name: limit
-        type: integer
-      - default: 0
-        description: 'Offset for pagination (default: 0)'
-        in: query
-        name: offset
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: List of ingredient stock for the branch
-          schema:
-            items:
-              $ref: '#/definitions/model.IngredientStockResponse'
-            type: array
-        "400":
-          description: Invalid branch ID
-          schema:
-            $ref: '#/definitions/model.ErrorResponse'
-        "401":
-          description: Unauthorized
-          schema:
-            $ref: '#/definitions/model.ErrorResponse'
-        "500":
-          description: Internal server error
-          schema:
-            $ref: '#/definitions/model.ErrorResponse'
-      security:
-      - BearerAuth: []
-      summary: Get stock by branch ID
-      tags:
-      - ingredient-stock
   /api/v1/branches/{id}:
     delete:
       consumes:
@@ -9061,6 +9082,167 @@ paths:
       summary: Restore ingredient group
       tags:
       - ingredient-groups
+  /api/v1/ingredient-reports:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve ingredient report for a storage within a date range
+      parameters:
+      - description: Storage ID
+        in: query
+        name: storage_id
+        required: true
+        type: string
+      - description: Start datetime (RFC3339) or date (YYYY-MM-DD)
+        in: query
+        name: start
+        type: string
+      - description: End datetime (RFC3339) or date (YYYY-MM-DD)
+        in: query
+        name: end
+        type: string
+      - description: Ingredient ID (optional filter)
+        in: query
+        name: ingredient_id
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Ingredient report retrieved successfully
+          schema:
+            items:
+              $ref: '#/definitions/model.IngredientReportItem'
+            type: array
+        "400":
+          description: Invalid request parameters
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get ingredient report
+      tags:
+      - reports
+  /api/v1/ingredient-reports/{ingredientId}:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve ingredient report for a specific ingredient within a storage
+        and date range
+      parameters:
+      - description: Ingredient ID
+        in: path
+        name: ingredientId
+        required: true
+        type: string
+      - description: Storage ID
+        in: query
+        name: storage_id
+        required: true
+        type: string
+      - description: Start datetime (RFC3339) or date (YYYY-MM-DD)
+        in: query
+        name: start
+        type: string
+      - description: End datetime (RFC3339) or date (YYYY-MM-DD)
+        in: query
+        name: end
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Ingredient report item retrieved successfully
+          schema:
+            $ref: '#/definitions/model.IngredientReportItem'
+        "400":
+          description: Invalid request parameters
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: Not found
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get ingredient report item
+      tags:
+      - reports
+  /api/v1/ingredient-reports/{ingredientId}/movements:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve ingredient stock movements for a specific ingredient within
+        a storage and date range
+      parameters:
+      - description: Ingredient ID
+        in: path
+        name: ingredientId
+        required: true
+        type: string
+      - description: Storage ID
+        in: query
+        name: storage_id
+        required: true
+        type: string
+      - description: Start datetime (RFC3339) or date (YYYY-MM-DD)
+        in: query
+        name: start
+        type: string
+      - description: End datetime (RFC3339) or date (YYYY-MM-DD)
+        in: query
+        name: end
+        type: string
+      - description: 'Limit (default: 50)'
+        in: query
+        name: limit
+        type: integer
+      - description: 'Offset (default: 0)'
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Ingredient report movements retrieved successfully
+          schema:
+            items:
+              $ref: '#/definitions/model.IngredientStockMovementResponse'
+            type: array
+        "400":
+          description: Invalid request parameters
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get ingredient report movements
+      tags:
+      - reports
   /api/v1/ingredient-stock:
     get:
       consumes:
@@ -9369,7 +9551,54 @@ paths:
       summary: Restore ingredient stock
       tags:
       - ingredient-stock
-  /api/v1/ingredient-stock/search:
+  /api/v1/ingredient-stock/branch/{branchId}:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve all ingredient stock for a specific branch
+      parameters:
+      - description: Branch ID
+        in: path
+        name: branchId
+        required: true
+        type: string
+      - default: 20
+        description: 'Limit results (default: 20)'
+        in: query
+        name: limit
+        type: integer
+      - default: 0
+        description: 'Offset for pagination (default: 0)'
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of ingredient stock for the branch
+          schema:
+            items:
+              $ref: '#/definitions/model.IngredientStockResponse'
+            type: array
+        "400":
+          description: Invalid branch ID
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get stock by branch ID
+      tags:
+      - ingredient-stock
+  /api/v1/ingredient-stock/by-ingredient-branch:
     get:
       consumes:
       - application/json
@@ -9412,6 +9641,53 @@ paths:
       security:
       - BearerAuth: []
       summary: Get stock by ingredient and branch
+      tags:
+      - ingredient-stock
+  /api/v1/ingredient-stock/ingredient/{ingredientId}:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve stock for a specific ingredient across all branches
+      parameters:
+      - description: Ingredient ID
+        in: path
+        name: ingredientId
+        required: true
+        type: string
+      - default: 20
+        description: 'Limit results (default: 20)'
+        in: query
+        name: limit
+        type: integer
+      - default: 0
+        description: 'Offset for pagination (default: 0)'
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of stock for the ingredient
+          schema:
+            items:
+              $ref: '#/definitions/model.IngredientStockResponse'
+            type: array
+        "400":
+          description: Invalid ingredient ID
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get stock by ingredient ID
       tags:
       - ingredient-stock
   /api/v1/ingredients:
@@ -9829,53 +10105,6 @@ paths:
       summary: Get good details by ingredient ID
       tags:
       - Good Details
-  /api/v1/ingredients/{ingredientId}/stock:
-    get:
-      consumes:
-      - application/json
-      description: Retrieve stock for a specific ingredient across all branches
-      parameters:
-      - description: Ingredient ID
-        in: path
-        name: ingredientId
-        required: true
-        type: string
-      - default: 20
-        description: 'Limit results (default: 20)'
-        in: query
-        name: limit
-        type: integer
-      - default: 0
-        description: 'Offset for pagination (default: 0)'
-        in: query
-        name: offset
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: List of stock for the ingredient
-          schema:
-            items:
-              $ref: '#/definitions/model.IngredientStockResponse'
-            type: array
-        "400":
-          description: Invalid ingredient ID
-          schema:
-            $ref: '#/definitions/model.ErrorResponse'
-        "401":
-          description: Unauthorized
-          schema:
-            $ref: '#/definitions/model.ErrorResponse'
-        "500":
-          description: Internal server error
-          schema:
-            $ref: '#/definitions/model.ErrorResponse'
-      security:
-      - BearerAuth: []
-      summary: Get stock by ingredient ID
-      tags:
-      - ingredient-stock
   /api/v1/inventories:
     get:
       consumes:
@@ -10061,6 +10290,42 @@ paths:
       security:
       - BearerAuth: []
       summary: Update inventory
+      tags:
+      - inventories
+  /api/v1/inventories/{id}/apply:
+    post:
+      consumes:
+      - application/json
+      description: Apply inventory count to ingredient_stock for the inventory storage
+        and record surplus/shortage movements
+      parameters:
+      - description: Inventory ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Inventory applied successfully
+          schema:
+            $ref: '#/definitions/model.InventoryResponse'
+        "400":
+          description: Invalid inventory ID
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Apply inventory
       tags:
       - inventories
   /api/v1/inventories/{id}/calculate:
