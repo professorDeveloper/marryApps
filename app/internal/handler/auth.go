@@ -74,7 +74,6 @@ func (h *Handler) LoginWithPincode(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("invalid request body", "see logs for details", http.StatusBadRequest))
 	}
 
-	// Validate required fields
 	if req.Password == "" {
 		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("password is required", "see logs for details", http.StatusBadRequest))
 	}
@@ -83,7 +82,7 @@ func (h *Handler) LoginWithPincode(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("brand_id is required", "see logs for details", http.StatusBadRequest))
 	}
 
-	// lang := c.Get("language").(string)
+
 
 	resp, err := h.service.Auth().LoginWithPincode(c.Request().Context(), req, &h.cfg.Jwt)
 	if err != nil {
