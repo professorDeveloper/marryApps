@@ -60,7 +60,7 @@ func Run(cfg *config.Config) {
 		pg.Host(cfg.MainPostgres.Host), pg.Port(cfg.MainPostgres.Port),
 		pg.Database(cfg.MainPostgres.Db), pg.MaxPoolSize(cfg.MainPostgres.MaxPoolSize))
 	if err != nil {
-		l.Fatalf("app - Run - pg.New(main): %v", err)
+		l.Fatalf("app - Run - pg.New(main): %v",  err)
 	}
 	defer mainPgClient.Close()
 
