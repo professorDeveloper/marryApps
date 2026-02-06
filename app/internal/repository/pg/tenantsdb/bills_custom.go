@@ -239,16 +239,21 @@ func (q *Queries) PayOrderBill(ctx context.Context, arg PayOrderBillParams) erro
 
 func (q *Queries) GetDefaultServicePercentByTable(ctx context.Context, tableID uuid.UUID) (pgtype.Numeric, error) {
 	const sql = `
-		SELECT b.default_service_percent
+		SELECT COALESCE(b.default_service_percent, 20)
 		FROM cafe_tables ct
-		JOIN halls h ON ct.hall_id = h.id AND h.deleted_at = 0
-		JOIN branches b ON h.branch_id = b.id AND b.deleted_at = 0
+		LEFT JOIN halls h ON ct.hall_id = h.id AND h.deleted_at = 0
+		LEFT JOIN branches b ON h.branch_id = b.id AND b.deleted_at = 0
 		WHERE ct.id = $1 AND ct.deleted_at = 0
 	`
 	row := q.db.QueryRow(ctx, sql, tableID)
 	var out pgtype.Numeric
 	if err := row.Scan(&out); err != nil {
-		return pgtype.Numeric{}, err
+		// If query fails, return default service percent of 20
+		defaultPercent := pgtype.Numeric{}
+		if err := defaultPercent.Scan("20"); err != nil {
+			return pgtype.Numeric{}, err
+		}
+		return defaultPercent, nil
 	}
 	return out, nil
 }
