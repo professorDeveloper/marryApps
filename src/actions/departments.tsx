@@ -338,9 +338,9 @@ export function useUpdateDepartment() {
           departmentPayload
         );
 
-        // Revalidate departments list and single department
-        await mutate(endpoints.department.list);
-        await mutate(endpoints.department.details(departmentId));
+        // Note: Mutations are now handled by the caller (edit-view) to ensure proper cache ordering
+        // await mutate(endpoints.department.list);
+        // await mutate(endpoints.department.details(departmentId));
 
         return response.data;
       } catch (error) {

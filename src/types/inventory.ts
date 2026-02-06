@@ -3,7 +3,8 @@
 // ============================================================================
 
 export interface IInventoryItem {
-    id: string;
+    id?: string;
+    inventory_item_id?: string;
     inventory_id: string;
     ingredient_id: string;
     ingredient_name: string;

@@ -312,31 +312,31 @@ export function InvoiceDetailsStandaloneListView() {
                     return `${amount.toLocaleString()} UZS`;
                 },
             },
-            {
-                type: 'actions',
-                field: 'actions',
-                headerName: ' ',
-                width: 100,
-                align: 'right',
-                headerAlign: 'right',
-                sortable: false,
-                filterable: false,
-                disableColumnMenu: true,
-                getActions: (params) => [
-                    <CustomGridActionsCellItem
-                        showInMenu
-                        label={t('edit')}
-                        icon={<Iconify icon="solar:pen-bold" />}
-                        href={paths.warehouse.invoiceDetails.edit(params.row.id)}
-                    />,
-                    <CustomGridActionsCellItem
-                        showInMenu
-                        label={t('delete')}
-                        icon={<Iconify icon="solar:trash-bin-trash-bold" />}
-                        onClick={() => handleDeleteClick(params.row.id, 'detail')}
-                    />,
-                ],
-            },
+            // {
+            //     type: 'actions',
+            //     field: 'actions',
+            //     headerName: ' ',
+            //     width: 100,
+            //     align: 'right',
+            //     headerAlign: 'right',
+            //     sortable: false,
+            //     filterable: false,
+            //     disableColumnMenu: true,
+            //     getActions: (params) => [
+            //         <CustomGridActionsCellItem
+            //             showInMenu
+            //             label={t('edit')}
+            //             icon={<Iconify icon="solar:pen-bold" />}
+            //             href={paths.warehouse.invoiceDetails.edit(params.row.id)}
+            //         />,
+            //         <CustomGridActionsCellItem
+            //             showInMenu
+            //             label={t('delete')}
+            //             icon={<Iconify icon="solar:trash-bin-trash-bold" />}
+            //             onClick={() => handleDeleteClick(params.row.id, 'detail')}
+            //         />,
+            //     ],
+            // },
         ],
         [t, selectedInvoice, allDetails]
     );
@@ -386,7 +386,7 @@ export function InvoiceDetailsStandaloneListView() {
                 // position="center"
                 renderContent={(data) => (
                     <>
-                        <Box sx={{ display: 'flex', justifyContent: 'flex-end', marginY: '6px' }}>
+                        {/* <Box sx={{ display: 'flex', justifyContent: 'flex-end', marginY: '6px' }}>
                             <Button
                                 variant="contained"
                                 color="primary"
@@ -396,7 +396,7 @@ export function InvoiceDetailsStandaloneListView() {
                             >
                                 {t('add_detail', 'Add Detail')}
                             </Button>
-                        </Box>
+                        </Box> */}
                         <Box sx={{ width: '100%' }}>
                             <DataGrid
                                 rows={filteredDetails}

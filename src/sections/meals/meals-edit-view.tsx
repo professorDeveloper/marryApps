@@ -3,10 +3,12 @@ import type { CardSection, GenericEditViewConfig } from 'src/components/generic-
 import { useParams } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
+import { mutate } from 'swr';
 import { Box, Tabs, Tab, Typography } from '@mui/material';
 import { CustomBreadcrumbs } from 'src/components/custom-breadcrumbs';
 import { paths } from 'src/routes/paths';
 import { useRouter } from 'src/routes/hooks';
+import { endpoints } from 'src/lib/axios';
 import { useGetMeal, useCreateMeal, useUpdateMeal, useDeleteMeal, useCreateMealWithCalculations, useUpdateMealWithCalculations } from 'src/hooks/use-meals';
 import { useGetCategories } from 'src/actions/categories';
 import { useGetDepartments } from 'src/actions/departments';
@@ -137,7 +139,7 @@ export function MealEditView({ isNew = false }: MealEditViewProps) {
     const { updateMealWithCalculations } = useUpdateMealWithCalculations();
     const { updateMeal } = useUpdateMeal();
     const { deleteMeal } = useDeleteMeal();
-    const { createTranslation } = useTranslationsAPI();
+    const { createTranslation, updateTranslation } = useTranslationsAPI();
 
     const [activeTab, setActiveTab] = useState(0);
     // Store form data at parent level to preserve across tab changes
@@ -252,14 +254,26 @@ export function MealEditView({ isNew = false }: MealEditViewProps) {
             try {
                 if (isNew && !createdMealId) {
                     // YANGI FLOW: For new meals, create the meal and redirect to meals list
-                    const translationData: any = {
-                        en: submitFormData.name_en || submitFormData.name || '',
-                        ru: submitFormData.name_ru || submitFormData.name || '',
-                        uz: submitFormData.name || '', // Primary name is always Uzbek
-                    };
+                    let name_i18n = submitFormData.name_i18n;
+                    if (!name_i18n) {
+                        const translationData: any = {
+                            en: submitFormData.name_en || submitFormData.name || '',
+                            ru: submitFormData.name_ru || submitFormData.name || '',
+                            uz: submitFormData.name || '', // Primary name is always Uzbek
+                        };
 
-                    const translationResult = await createTranslation(translationData);
-                    const name_i18n = translationResult.id;
+                        const translationResult = await createTranslation(translationData);
+                        name_i18n = translationResult.id;
+                    } else if (submitFormData.name_en || submitFormData.name_ru || submitFormData.name) {
+                        // Update existing translation if it exists and data changed
+                        const translationData: any = {
+                            en: submitFormData.name_en || submitFormData.name || '',
+                            ru: submitFormData.name_ru || submitFormData.name || '',
+                            uz: submitFormData.name || '',
+                        };
+                        await updateTranslation(name_i18n, translationData);
+                        await mutate(endpoints.translations.list);
+                    }
 
                     // Create description translation if provided
                     let description_i18n: string | undefined = submitFormData.description_i18n;
@@ -292,6 +306,27 @@ export function MealEditView({ isNew = false }: MealEditViewProps) {
                     router.push(paths.menu.meals.root);
                 } else if (mealId) {
                     // Update existing meal
+                    let name_i18n = submitFormData.name_i18n;
+                    if (!name_i18n && (submitFormData.name_en || submitFormData.name_ru)) {
+                        // Create translation if provided
+                        const translationData: any = {
+                            en: submitFormData.name_en || submitFormData.name || '',
+                            ru: submitFormData.name_ru || submitFormData.name || '',
+                            uz: submitFormData.name || '',
+                        };
+                        const translationResult = await createTranslation(translationData);
+                        name_i18n = translationResult.id;
+                    } else if (name_i18n && (submitFormData.name_en || submitFormData.name_ru || submitFormData.name)) {
+                        // Update existing translation when editing
+                        const translationData: any = {
+                            en: submitFormData.name_en || submitFormData.name || '',
+                            ru: submitFormData.name_ru || submitFormData.name || '',
+                            uz: submitFormData.name || '',
+                        };
+                        await updateTranslation(name_i18n, translationData);
+                        await mutate(endpoints.translations.list);
+                    }
+
                     let description_i18n: string | undefined = submitFormData.description_i18n;
                     if (!description_i18n && (submitFormData.description_en || submitFormData.description_ru)) {
                         const descriptionTranslationData: any = {
@@ -304,15 +339,19 @@ export function MealEditView({ isNew = false }: MealEditViewProps) {
                     }
                     await updateMeal(mealId, {
                         ...submitFormData,
+                        name_i18n,
                         description_i18n,
                     });
+                    // Revalidate cache to reflect updates immediately
+                    await mutate(endpoints.meals.details(mealId));
+                    await mutate(endpoints.meals.list);
                     router.push(paths.menu.meals.root);
                 }
             } catch (err) {
                 console.log("Error saving meal:", err);
             }
         },
-        [isNew, mealId, createdMealId, createMeal, createTranslation, updateMeal, router]
+        [isNew, mealId, createdMealId, createMeal, createTranslation, updateTranslation, updateMeal, router]
     );
 
     // Handle delete

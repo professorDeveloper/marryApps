@@ -1,9 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useParams, useNavigate } from 'react-router';
-import { Box, Card, CircularProgress, Tab, Tabs, Stack } from '@mui/material';
+import { Box, CircularProgress, Tab, Tabs, Stack } from '@mui/material';
 import dayjs from 'dayjs';
-
 import { paths } from 'src/routes/paths';
 import { toast } from 'src/components/snackbar';
 import { GenericEditView } from 'src/components/generic-edit-view';
@@ -12,10 +11,6 @@ import { useInventoryAPI } from 'src/hooks/use-inventory-api';
 import { useGetStorages } from 'src/actions/departments';
 import { InventoryDetailsCalculation } from 'src/components/inventory-details-calculation';
 import type { IInventoryFormData, IInventory } from 'src/types/inventory';
-
-// ============================================================================
-// MAIN COMPONENT
-// ============================================================================
 
 interface InventoryEditViewProps {
     isNew?: boolean;

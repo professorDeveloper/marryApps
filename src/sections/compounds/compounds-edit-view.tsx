@@ -3,9 +3,11 @@ import type { CardSection, GenericEditViewConfig } from 'src/components/generic-
 import { useParams } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import { useRef, useState, useEffect, useCallback } from 'react';
+import { mutate } from 'swr';
 import { Box, Tab, Tabs, Stack } from '@mui/material';
 import { paths } from 'src/routes/paths';
 import { useRouter } from 'src/routes/hooks';
+import { endpoints } from 'src/lib/axios';
 import { useTranslationsAPI } from 'src/hooks/use-translations-api';
 import { useGetCompound, useDeleteCompound, useUpdateCompound, useCreateCompoundWithCalculations, useCreateCompound } from 'src/hooks/use-compounds';
 import { useGetDepartments } from 'src/actions/departments';
@@ -148,7 +150,7 @@ export function CompoundEditView({ compoundId, isNew = false }: CompoundEditView
     const { departments } = useGetDepartments();
     const { updateCompound } = useUpdateCompound();
     const { deleteCompound } = useDeleteCompound();
-    const { createTranslation } = useTranslationsAPI();
+    const { createTranslation, updateTranslation } = useTranslationsAPI();
     const { createCompoundWithCalculations } = useCreateCompoundWithCalculations();
     const { createCompound } = useCreateCompound();
 
@@ -206,6 +208,15 @@ export function CompoundEditView({ compoundId, isNew = false }: CompoundEditView
 
                         const translationResult = await createTranslation(translationData);
                         name_i18n = translationResult.id;
+                    } else if (name_i18n && (submitFormData.name_en || submitFormData.name_ru || submitFormData.name)) {
+                        // Update existing translation if it exists and data changed
+                        const translationData: any = {
+                            en: submitFormData.name_en || submitFormData.name || '',
+                            ru: submitFormData.name_ru || submitFormData.name || '',
+                            uz: submitFormData.name || '',
+                        };
+                        await updateTranslation(name_i18n, translationData);
+                        await mutate(endpoints.translations.list);
                     }
 
                     // Create description translation if provided
@@ -297,6 +308,15 @@ export function CompoundEditView({ compoundId, isNew = false }: CompoundEditView
 
                         const translationResult = await createTranslation(translationData);
                         name_i18n = translationResult.id;
+                    } else if (name_i18n && (submitFormData.name_en || submitFormData.name_ru || submitFormData.name)) {
+                        // Update existing translation when editing
+                        const translationData: any = {
+                            en: submitFormData.name_en || submitFormData.name || '',
+                            ru: submitFormData.name_ru || submitFormData.name || '',
+                            uz: submitFormData.name || '',
+                        };
+                        await updateTranslation(name_i18n, translationData);
+                        await mutate(endpoints.translations.list);
                     }
 
                     // Create description translation if provided
@@ -323,6 +343,9 @@ export function CompoundEditView({ compoundId, isNew = false }: CompoundEditView
                         picture_url: submitFormData.picture_url || null,
                     };
                     await updateCompound(compoundId, payload);
+                    // Revalidate cache to reflect updates immediately
+                    await mutate(endpoints.compound.details(compoundId));
+                    await mutate(endpoints.compound.list);
                     toast.success(t('success.updated', 'Successfully updated'));
                     // Redirect to list
                     router.push(paths.menu.semifinished.root);
@@ -334,7 +357,7 @@ export function CompoundEditView({ compoundId, isNew = false }: CompoundEditView
                 );
             }
         },
-        [router, isNew, compoundId, createdCompoundId, updateCompound, t, createTranslation, createCompound]
+        [router, isNew, compoundId, createdCompoundId, updateCompound, t, createTranslation, updateTranslation, createCompound]
     );
 
     // Handle delete

@@ -1,10 +1,7 @@
 import type { GridColDef } from '@mui/x-data-grid';
-
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-
 import { paths } from 'src/routes/paths';
-
 import { Iconify } from 'src/components/iconify';
 import { GenericTableView } from 'src/components/generic-table-view';
 import { CustomGridActionsCellItem } from 'src/components/custom-data-grid';

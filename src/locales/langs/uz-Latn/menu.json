@@ -412,7 +412,14 @@
     "markup": "Belgilash",
     "markupPercent": "Belgilash %",
     "saveProductFirst": "Avval mahsulotni saqlang!",
-    "saveEntityFirst": "Iltimos, avval elementni saqlang, shunda hisoblashni saqlash imkoniyati ochiladi. Tanlovlaringiz saqlanadi."
+    "saveEntityFirst": "Iltimos, avval elementni saqlang, shunda hisoblashni saqlash imkoniyati ochiladi. Tanlovlaringiz saqlanadi.",
+    "systemQty": "Tizimdagi miqdor",
+    "countedQty": "Sanalgan miqdor",
+    "difference": "Farq",
+    "pricePerUnit": "Birlik narxi",
+    "surplus": "Ortiqcha",
+    "shortage": "Kamomad",
+    "remaining": "Qolgan miqdor"
   },
   "users": {
     "title": "Xodimlar",

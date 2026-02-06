@@ -414,7 +414,14 @@
     "markup": "Markup",
     "markupPercent": "Markup %",
     "saveProductFirst": "Please save the product first!",
-    "saveEntityFirst": "Please save the entity first, then the calculation save option will be enabled. Your selections will be saved."
+    "saveEntityFirst": "Please save the entity first, then the calculation save option will be enabled. Your selections will be saved.",
+    "systemQty": "System quantity",
+    "countedQty": "Counted quantity",
+    "difference": "Difference",
+    "pricePerUnit": "Price per unit",
+    "surplus": "Surplus",
+    "shortage": "Shortage",
+    "remaining": "Remaining"
   },
   "users": {
     "title": "Employees",

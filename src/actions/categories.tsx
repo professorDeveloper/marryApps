@@ -232,9 +232,9 @@ export function useUpdateCategory() {
                     formData
                 );
 
-                // Revalidate categories list and single category
-                await mutate(endpoints.category.list);
-                await mutate(endpoints.category.details(categoryId));
+                // Note: Mutations are now handled by the caller (edit-view) to ensure proper cache ordering
+                // await mutate(endpoints.category.list);
+                // await mutate(endpoints.category.details(categoryId));
 
                 return response;
             } catch (error) {

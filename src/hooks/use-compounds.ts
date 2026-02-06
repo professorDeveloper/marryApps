@@ -1,29 +1,18 @@
 import type { SWRConfiguration } from 'swr';
 import type { ICompound } from 'src/types/compounds';
 import type { ITranslationItem } from 'src/types/departments.tsx';
-
 import useSWR, { mutate } from 'swr';
 import { useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-
 import { useGetDepartments } from 'src/actions/departments';
 import { poster, putter, deleter, fetcher, endpoints } from 'src/lib/axios';
-
 import { toast } from 'src/components/snackbar';
-
-// ============================================================================
-// CONFIGURATION
-// ============================================================================
 
 const swrOptions: SWRConfiguration = {
     revalidateIfStale: true,
     revalidateOnFocus: false,
     revalidateOnReconnect: false,
 };
-
-// ============================================================================
-// TYPES
-// ============================================================================
 
 interface BackendResponse<T> {
     status: string;
@@ -372,9 +361,9 @@ export function useUpdateCompound() {
                     payload
                 );
 
-                // Revalidate compounds list and single compound
-                await mutate(endpoints.compound.list);
-                await mutate(endpoints.compound.details(compoundId));
+                // Note: Mutations are now handled by the caller (edit-view) to ensure proper cache ordering
+                // await mutate(endpoints.compound.list);
+                // await mutate(endpoints.compound.details(compoundId));
 
                 toast.success('Compound updated successfully');
                 return response.data || (response as unknown as ICompound);

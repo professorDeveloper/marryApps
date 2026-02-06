@@ -3,27 +3,29 @@ import type { IDepartmentFormData } from 'src/types/departments.tsx';
 import type { CardSection, GenericEditViewConfig } from 'src/components/generic-edit-view';
 import { useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
+import { mutate } from 'swr';
 import { Box } from '@mui/material';
 import { paths } from 'src/routes/paths';
 import { useRouter, useParams } from 'src/routes/hooks';
 import { useTranslationsAPI } from 'src/hooks/use-translations-api';
 import { useGetStorages, useGetDepartment, useCreateDepartment, useUpdateDepartment, useDeleteDepartment } from 'src/actions/departments';
+import { endpoints } from 'src/lib/axios';
 import { GenericEditView } from 'src/components/generic-edit-view';
 import { CustomBreadcrumbs } from 'src/components/custom-breadcrumbs';
 
 const COLOR_CODES = [
-    '#FF4842', // Red
-    '#1890FF', // Blue
-    '#00AB55', // Green
-    '#FFC107', // Yellow
-    '#7F00FF', // Violet
-    '#FF6B35', // Orange
-    '#FF1493', // Deep Pink
+    '#FF4842', // Red            
+    '#1890FF', // Blue               
+    '#00AB55', // Green            
+    '#FFC107', // Yellow               
+    '#7F00FF', // Violet             
+    '#FF6B35', // Orange              
+    '#FF1493', // Deep Pink                      
     '#00CED1', // Dark Turquoise
-    '#FFD700', // Gold
-    '#8B4513', // Saddle Brown
-    '#000000', // Black
-    '#FFFFFF', // White
+    '#FFD700', // Gold           
+    '#8B4513', // Saddle Brown    
+    '#000000', // Black           
+    '#FFFFFF', // White           
 ];
 
 export interface DepartmentEditViewProps {
@@ -38,7 +40,7 @@ export function ProductEditView({ isNew = false }: DepartmentEditViewProps) {
     const { createDepartment } = useCreateDepartment();
     const { updateDepartment } = useUpdateDepartment();
     const { deleteDepartment } = useDeleteDepartment();
-    const { createTranslation } = useTranslationsAPI();
+    const { createTranslation, updateTranslation } = useTranslationsAPI();
     const { storages } = useGetStorages();
     const { department, departmentLoading } = useGetDepartment(!isNew && id ? id : '');
 
@@ -72,19 +74,25 @@ export function ProductEditView({ isNew = false }: DepartmentEditViewProps) {
                     throw new Error(t('departments.storageRequired'));
                 }
 
-                // Create translation if translations are provided
+                // Create or update translation if translations are provided
                 let name_i18n = formData.name_i18n;
-                if (!name_i18n && (formData.name_en || formData.name_ru)) {
-                    // Create translation with provided language-specific names
-                    // name field is always Uzbek (uz), so use it as uz translation
+                if (formData.name_en || formData.name_ru || formData.name) {
                     const translationData: any = {
                         en: formData.name_en || formData.name || '',
                         ru: formData.name_ru || formData.name || '',
                         uz: formData.name || '', // Primary name is always Uzbek
                     };
 
-                    const translationResult = await createTranslation(translationData);
-                    name_i18n = translationResult.id;
+                    if (!isNew && name_i18n) {
+                        // Update existing translation when editing
+                        await updateTranslation(name_i18n, translationData);
+                        // Revalidate translations cache to reflect the update immediately
+                        await mutate(endpoints.translations.list);
+                    } else if (isNew && !name_i18n) {
+                        // Create new translation when creating
+                        const translationResult = await createTranslation(translationData);
+                        name_i18n = translationResult.id;
+                    }
                 }
 
                 const departmentData: IDepartmentFormData = {
@@ -97,12 +105,18 @@ export function ProductEditView({ isNew = false }: DepartmentEditViewProps) {
 
                 if (isNew) {
                     await createDepartment(departmentData);
+                    // Revalidate departments list to show the new department
+                    await mutate(endpoints.department.list);
+                    await mutate(endpoints.translations.list);
                 } else if (id) {
                     await updateDepartment(id, departmentData);
+                    // Revalidate department cache to reflect the update immediately
+                    await mutate(endpoints.department.details(id));
+                    await mutate(endpoints.department.list);
                 }
 
                 // Add small delay to ensure SWR cache is updated before redirect
-                await new Promise(resolve => setTimeout(resolve, 500));
+                await new Promise(resolve => setTimeout(resolve, 300));
 
                 // Only redirect if we're not already navigating away
                 router.push(paths.menu.product.root);
@@ -113,7 +127,7 @@ export function ProductEditView({ isNew = false }: DepartmentEditViewProps) {
                 throw err;
             }
         },
-        [isNew, id, createDepartment, updateDepartment, router, t, createTranslation]
+        [isNew, id, createDepartment, updateDepartment, router, t, createTranslation, updateTranslation]
     );
 
     // Handle delete

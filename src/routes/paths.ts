@@ -124,6 +124,10 @@ export const paths = {
         details: (id: string) => `${ROOTS.MENU}/reports/archives/${id}`,
         edit: (id: string) => `${ROOTS.MENU}/reports/archives/${id}/edit`,
       },
+      bills: {
+        root: `${ROOTS.MENU}/reports/bills`,
+        details: (id: string) => `${ROOTS.MENU}/reports/bills/${id}`,
+      },
     },
   },
   warehouse: {

@@ -9,11 +9,13 @@ import type { CardSection, GenericEditViewConfig } from 'src/components/generic-
 import { useCallback, useMemo, useState } from 'react';
 import { useParams } from 'react-router';
 import { useTranslation } from 'react-i18next';
+import { mutate } from 'swr';
 
 import { Box } from '@mui/material';
 
 import { paths } from 'src/routes/paths';
 import { useRouter } from 'src/routes/hooks';
+import { endpoints } from 'src/lib/axios';
 
 import { useDeleteCategory, useGetCategory, useCreateCategory, useUpdateCategory } from 'src/actions/categories';
 import { useGetDepartments, useGetStorages } from 'src/actions/departments';
@@ -151,7 +153,7 @@ export function CategoryEditView({ categoryId, isNew = false }: CategoryEditView
     const { createCategory } = useCreateCategory();
     const { updateCategory } = useUpdateCategory();
     const { deleteCategory } = useDeleteCategory();
-    const { createTranslation } = useTranslationsAPI();
+    const { createTranslation, updateTranslation } = useTranslationsAPI();
     const { departments } = useGetDepartments();
     const { storages } = useGetStorages();
 
@@ -192,9 +194,9 @@ export function CategoryEditView({ categoryId, isNew = false }: CategoryEditView
                     throw new Error(t('categories.departmentRequired'));
                 }
 
-                // Create translation if translations are provided
+                // Create or update translation if translations are provided
                 let name_i18n = formData.name_i18n;
-                if (!name_i18n && (formData.name_en || formData.name_ru)) {
+                if (formData.name_en || formData.name_ru || formData.name) {
                     // Create translation with provided language-specific names
                     // name field is always Uzbek (uz), so use it as uz translation
                     const translationData: any = {
@@ -203,8 +205,16 @@ export function CategoryEditView({ categoryId, isNew = false }: CategoryEditView
                         uz: formData.name || '', // Primary name is always Uzbek
                     };
 
-                    const translationResult = await createTranslation(translationData);
-                    name_i18n = translationResult.id;
+                    if (!isNew && name_i18n) {
+                        // Update existing translation when editing
+                        await updateTranslation(name_i18n, translationData);
+                        // Revalidate translations cache to reflect the update immediately
+                        await mutate(endpoints.translations.list);
+                    } else if (isNew && !name_i18n) {
+                        // Create new translation when creating
+                        const translationResult = await createTranslation(translationData);
+                        name_i18n = translationResult.id;
+                    }
                 }
 
                 const categoryData: ICategoryFormData = {
@@ -218,12 +228,18 @@ export function CategoryEditView({ categoryId, isNew = false }: CategoryEditView
 
                 if (isNew) {
                     await createCategory(categoryData);
+                    // Revalidate categories list to show the new category
+                    await mutate(endpoints.category.list);
+                    await mutate(endpoints.translations.list);
                 } else if (categoryId) {
                     await updateCategory(categoryId, categoryData);
+                    // Revalidate category cache to reflect the update immediately
+                    await mutate(endpoints.category.details(categoryId));
+                    await mutate(endpoints.category.list);
                 }
 
                 // Add small delay to ensure SWR cache is updated before redirect
-                await new Promise(resolve => setTimeout(resolve, 500));
+                await new Promise(resolve => setTimeout(resolve, 300));
                 router.push(paths.menu.category.root);
             } catch (err) {
                 console.error('Error saving category:', err);
@@ -231,7 +247,7 @@ export function CategoryEditView({ categoryId, isNew = false }: CategoryEditView
                 throw err;
             }
         },
-        [isNew, categoryId, createCategory, updateCategory, router, t, createTranslation]
+        [isNew, categoryId, createCategory, updateCategory, router, t, createTranslation, updateTranslation]
     );
 
     // Handle delete

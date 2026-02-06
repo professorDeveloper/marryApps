@@ -99,6 +99,7 @@ export const getNavData = (t: TFunction): NavSectionProps['data'] => [
           { title: t('overview.reports.inventory', 'Inventory'), path: paths.menu.reports.inventory.root },
           { title: t('overview.reports.custom', 'Custom'), path: paths.menu.reports.custom.root },
           { title: t('overview.reports.archives', 'Archives'), path: paths.menu.reports.archives.root },
+          { title: t('overview.reports.bills', 'Hisob-kitoblar'), path: paths.menu.reports.bills.root },
         ],
       }
     ],

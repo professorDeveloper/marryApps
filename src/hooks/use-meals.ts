@@ -412,9 +412,9 @@ export function useUpdateMeal() {
                     coverUrl: mealData.picture_url || '',
                 };
 
-                // Revalidate meals list and single meal
-                await mutate(endpoints.meals.list);
-                await mutate(endpoints.meals.details(id));
+                // Note: Mutations are now handled by the caller (edit-view) to ensure proper cache ordering
+                // await mutate(endpoints.meals.list);
+                // await mutate(endpoints.meals.details(id));
 
                 toast.success('Meal updated successfully');
                 return enriched;

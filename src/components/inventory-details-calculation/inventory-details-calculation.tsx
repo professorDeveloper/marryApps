@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
@@ -11,7 +11,6 @@ import {
     Divider,
     InputAdornment,
     useTheme,
-    Alert,
     CircularProgress,
     Checkbox,
 } from '@mui/material';
@@ -19,10 +18,8 @@ import SearchIcon from '@mui/icons-material/Search';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import DeleteIcon from '@mui/icons-material/Delete';
-
-import { fetcher, endpoints } from 'src/lib/axios';
+import { fetcher, endpoints, deleter } from 'src/lib/axios';
 import { toast } from 'sonner';
-import { Iconify } from 'src/components/iconify';
 import { useInventoryAPI } from 'src/hooks/use-inventory-api';
 import { paths } from 'src/routes/paths';
 import type { IInventoryItem, IInventoryItemInput } from 'src/types/inventory';
@@ -78,16 +75,22 @@ export function InventoryDetailsCalculation({
     const [searchTerm, setSearchTerm] = useState('');
 
     // Middle: quantity inputs
-    const [quantities, setQuantities] = useState<Record<string, number>>({});
+    const [quantities, setQuantities] = useState<Record<string, string>>({});
 
     // Right panel (transferred items)
     const [transferredIds, setTransferredIds] = useState<string[]>([]);
+
+    // Inventory item IDs (from backend) - used for deletion
+    const [inventoryItemIds, setInventoryItemIds] = useState<Record<string, string>>({});
 
     // Search for right panel
     const [rightSearchTerm, setRightSearchTerm] = useState('');
 
     // Save operation loading state
     const [isSaving, setIsSaving] = useState(false);
+
+    // Results table (after saving)
+    const [inventoryItems, setInventoryItems] = useState<IInventoryItem[]>([]);
 
     // Load ingredients
     useEffect(() => {
@@ -113,12 +116,12 @@ export function InventoryDetailsCalculation({
     useEffect(() => {
         if (persistedDetails && persistedDetails.length > 0) {
             const newTransferredIds: string[] = [];
-            const newQuantities: Record<string, number> = {};
+            const newQuantities: Record<string, string> = {};
 
             persistedDetails.forEach((detail) => {
                 const ingredientId = detail.ingredient_id;
                 newTransferredIds.push(ingredientId);
-                newQuantities[ingredientId] = detail.counted_quantity;
+                newQuantities[ingredientId] = String(detail.counted_quantity);
             });
 
             setTransferredIds(newTransferredIds);
@@ -151,7 +154,7 @@ export function InventoryDetailsCalculation({
             if (!quantities[id]) {
                 setQuantities((prev) => ({
                     ...prev,
-                    [id]: 0,
+                    [id]: '0',
                 }));
             }
         });
@@ -159,20 +162,40 @@ export function InventoryDetailsCalculation({
     };
 
     // Handle remove ingredient
-    const handleRemoveIngredient = (id: string) => {
+    const handleRemoveIngredient = async (id: string) => {
+        // If this item has a backend inventory_item_id, delete it from the backend
+        const inventoryItemId = inventoryItemIds[id];
+        if (inventoryItemId) {
+            try {
+                // Delete from backend using inventory_item_id
+                await deleter(`/api/v1/inventory-items/${inventoryItemId}`);
+                toast.success('Item deleted successfully');
+            } catch (error) {
+                console.error('Error deleting inventory item:', error);
+                toast.error('Failed to delete item');
+                return;
+            }
+        }
+
+        // Remove from UI state
         setTransferredIds((prev) => prev.filter((i) => i !== id));
         setQuantities((prev) => {
             const newQty = { ...prev };
             delete newQty[id];
             return newQty;
         });
+        setInventoryItemIds((prev) => {
+            const newIds = { ...prev };
+            delete newIds[id];
+            return newIds;
+        });
     };
 
     // Handle quantity change
-    const handleQuantityChange = (id: string, value: number) => {
+    const handleQuantityChange = (id: string, value: string) => {
         setQuantities((prev) => ({
             ...prev,
-            [id]: formatNumber(value),
+            [id]: value,
         }));
     };
 
@@ -180,7 +203,7 @@ export function InventoryDetailsCalculation({
     const buildTransferData = (): IInventoryItemInput[] => {
         return transferredIds.map((id) => ({
             ingredient_id: id,
-            counted_quantity: String(quantities[id] || "0"),
+            counted_quantity: String(quantities[id]),
         }));
     };
 
@@ -198,16 +221,21 @@ export function InventoryDetailsCalculation({
 
             if (result) {
                 toast.success(t('success.created'));
+                setInventoryItems(result);
+
+                // Store inventory_item_ids for deletion later
+                const newInventoryItemIds: Record<string, string> = {};
+                result.forEach((item) => {
+                    newInventoryItemIds[item.ingredient_id] = item.inventory_item_id || '';
+                });
+                setInventoryItemIds(newInventoryItemIds);
+
                 if (onDetailsChange) {
                     onDetailsChange(itemsData);
                 }
                 if (onSuccess) {
                     onSuccess();
                 }
-                // Navigate back to inventory list after successful save
-                setTimeout(() => {
-                    navigate(paths.menu.inventory.root);
-                }, 500);
             }
         } catch (error) {
             console.error('Error saving inventory items:', error);
@@ -277,8 +305,8 @@ export function InventoryDetailsCalculation({
                                 color: 'text.primary',
                             }}
                         >
-                            <Box sx={{ width: '40%' }}>{t('calculation.productName', 'Product Name')}</Box>
-                            <Box sx={{ width: '30%' }}>{t('calculation.unit', 'Unit')}</Box>
+                            <Box sx={{ width: '50%' }}>{t('calculation.productName', 'Product Name')}</Box>
+                            <Box sx={{ width: '20%' }}>{t('calculation.unit', 'Unit')}</Box>
                             <Box sx={{ width: '30%', textAlign: 'right' }}>{t('calculation.price', 'Price')}</Box>
                         </Box>
                         <Divider />
@@ -303,7 +331,7 @@ export function InventoryDetailsCalculation({
                                             '&:hover': { bgcolor: 'action.hover' },
                                         }}
                                     >
-                                        <Box sx={{ width: '40%', display: 'flex', alignItems: 'center', gap: 1 }}>
+                                        <Box sx={{ width: '50%', display: 'flex', alignItems: 'center', gap: 1 }}>
                                             <Checkbox
                                                 size="small"
                                                 checked={selectedIds.includes(ingredient.id)}
@@ -321,13 +349,13 @@ export function InventoryDetailsCalculation({
                                             />
                                             <Typography variant="body2">{ingredient.name}</Typography>
                                         </Box>
-                                        <Box sx={{ width: '30%' }}>
+                                        <Box sx={{ width: '20%' }}>
                                             <Typography variant="caption" color="text.secondary">
                                                 {ingredient.measurement}
                                             </Typography>
                                         </Box>
                                         <Box sx={{ width: '30%', textAlign: 'right' }}>
-                                            <Typography variant="caption">{formatPrice(parseFloat(ingredient.price_per_unit || '0'))}</Typography>
+                                            <Typography variant="caption">{formatPrice(parseFloat(ingredient.price_per_unit))}</Typography>
                                         </Box>
                                     </Box>
                                 ))
@@ -472,12 +500,11 @@ export function InventoryDetailsCalculation({
                                         <Box sx={{ width: '20%', textAlign: 'center' }}>
                                             <TextField
                                                 type="number"
-                                                // value={}
-                                                defaultValue={1}
+                                                value={quantities[ingredient.id]}
                                                 onChange={(e) =>
                                                     handleQuantityChange(
                                                         ingredient.id,
-                                                        parseFloat(e.target.value)
+                                                        e.target.value
                                                     )
                                                 }
                                                 size="small"
@@ -510,7 +537,7 @@ export function InventoryDetailsCalculation({
             </Box>
 
             {/* ACTION BUTTONS */}
-            <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
+            <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end', mb: 2 }}>
                 <Button
                     variant="contained"
                     onClick={handleSave}
@@ -536,6 +563,144 @@ export function InventoryDetailsCalculation({
                     )}
                 </Button>
             </Box>
+
+            {/* RESULTS TABLE - Shows after saving */}
+            {inventoryItems.length > 0 && (
+                <Box sx={{ mb: 4 }}>
+                    {/* <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
+                        {t('inventory.calculationResults', 'Calculation Results')}
+                    </Typography> */}
+                    <Paper sx={{ borderRadius: 2, overflow: 'hidden' }} elevation={1}>
+                        <Box sx={{ overflowX: 'auto' }}>
+                            <Box
+                                sx={{
+                                    display: 'grid',
+                                    gridTemplateColumns: 'repeat(9, 1fr)',
+                                    p: 1.5,
+                                    bgcolor: 'action.hover',
+                                    fontWeight: 'bold',
+                                    fontSize: '0.75rem',
+                                    color: 'text.primary',
+                                    minWidth: 1200,
+                                }}
+                            >
+                                <Box>{t('calculation.productName', 'Product')}</Box>
+                                <Box sx={{ textAlign: 'center' }}>{t('calculation.unit', 'Unit')}</Box>
+                                <Box sx={{ textAlign: 'right' }}>{t('calculation.systemQty', 'System Qty')}</Box>
+                                <Box sx={{ textAlign: 'right' }}>{t('calculation.countedQty', 'Counted Qty')}</Box>
+                                <Box sx={{ textAlign: 'right' }}>{t('calculation.difference', 'Difference')}</Box>
+                                <Box sx={{ textAlign: 'right' }}>{t('calculation.pricePerUnit', 'Price/Unit')}</Box>
+                                <Box sx={{ textAlign: 'right' }}>{t('calculation.surplus', 'Surplus')}</Box>
+                                <Box sx={{ textAlign: 'right' }}>{t('calculation.shortage', 'Shortage')}</Box>
+                                <Box sx={{ textAlign: 'right' }}>{t('calculation.remaining', 'Remaining')}</Box>
+                                {/* <Box sx={{ textAlign: 'center' }}>Action</Box> */}
+                            </Box>
+                        </Box>
+                        <Divider />
+                        <Box sx={{ maxHeight: 600, overflowY: 'auto' }}>
+                            {inventoryItems.map((item) => (
+                                <Box
+                                    key={item.inventory_item_id}
+                                    sx={{
+                                        display: 'grid',
+                                        gridTemplateColumns: 'repeat(9, 1fr)',
+                                        alignItems: 'center',
+                                        p: 1.5,
+                                        borderBottom: `1px solid ${theme.vars.palette.divider}`,
+                                        '&:hover': { bgcolor: 'action.hover' },
+                                        minWidth: 1200,
+                                        fontSize: '0.875rem',
+                                    }}
+                                >
+                                    <Box>
+                                        <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                                            {item.ingredient_name}
+                                        </Typography>
+                                    </Box>
+                                    <Box sx={{ textAlign: 'center' }}>
+                                        <Typography variant="caption" color="text.secondary">
+                                            {item.ingredient_measurement}
+                                        </Typography>
+                                    </Box>
+                                    <Box sx={{ textAlign: 'right' }}>
+                                        <Typography variant="body2">{item.system_quantity}</Typography>
+                                    </Box>
+                                    <Box sx={{ textAlign: 'right' }}>
+                                        <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                                            {item.counted_quantity}
+                                        </Typography>
+                                    </Box>
+                                    <Box sx={{ textAlign: 'right' }}>
+                                        <Typography
+                                            variant="body2"
+                                            sx={{
+                                                color:
+                                                    item.difference_quantity > 0
+                                                        ? 'success.main'
+                                                        : item.difference_quantity < 0
+                                                            ? 'error.main'
+                                                            : 'text.secondary',
+                                            }}
+                                        >
+                                            {item.difference_quantity}
+                                        </Typography>
+                                    </Box>
+                                    <Box sx={{ textAlign: 'right' }}>
+                                        <Typography variant="caption">
+                                            {formatPrice(parseFloat(item.price_per_unit))}
+                                        </Typography>
+                                    </Box>
+                                    <Box sx={{ textAlign: 'right' }}>
+                                        <Typography
+                                            variant="caption"
+                                            sx={{ color: 'success.main', fontWeight: 600 }}
+                                        >
+                                            {formatPrice(parseFloat(item.surplus_amount))}
+                                        </Typography>
+                                    </Box>
+                                    <Box sx={{ textAlign: 'right' }}>
+                                        <Typography
+                                            variant="caption"
+                                            sx={{ color: 'error.main', fontWeight: 600 }}
+                                        >
+                                            {formatPrice(parseFloat(item.shortage_amount))}
+                                        </Typography>
+                                    </Box>
+                                    <Box sx={{ textAlign: 'right' }}>
+                                        <Typography variant="body2">
+                                            {formatPrice(parseFloat(item.remaining_amount))}
+                                        </Typography>
+                                    </Box>
+                                    {/* <Box sx={{ textAlign: 'center' }}>
+                                        <IconButton
+                                            size="small"
+                                            onClick={() => {
+                                                setInventoryItems([]);
+                                                setTransferredIds([]);
+                                                setQuantities({});
+                                            }}
+                                            sx={{ color: 'warning.main' }}
+                                        >
+                                            <Iconify icon="solar:pen-bold" width={18} />
+                                        </IconButton>
+                                    </Box> */}
+                                </Box>
+                            ))}
+                        </Box>
+                    </Paper>
+                    <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end', mt: 2 }}>
+                        <Button
+                            variant="outlined"
+                            onClick={() => {
+                                setInventoryItems([]);
+                                navigate(paths.menu.inventory.root);
+                            }}
+                        >
+                            {t('common.back', 'Back')}
+                        </Button>
+                    </Box>
+                </Box>
+            )}
         </Box>
     );
 }
