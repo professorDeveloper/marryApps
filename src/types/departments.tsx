@@ -126,6 +126,8 @@ export type IStorageItem = {
 export type IStorageFormData = {
   name: string;
   name_i18n?: string; // Translation ID (optional)
+  name_en?: string; // English translation (for form input)
+  name_ru?: string; // Russian translation (for form input)
   branch_id: string;
   color_code?: string;
   picture_url?: string;

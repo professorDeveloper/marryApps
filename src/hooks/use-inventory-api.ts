@@ -215,6 +215,29 @@ export function useInventoryAPI() {
         []
     );
 
+    /**
+     * Inventory'ni apply qiladi (calculation saqlaydi)
+     */
+    const applyInventory = useCallback(
+        async (inventoryId: string): Promise<IInventory | null> => {
+            try {
+                const response = await poster<BackendResponse<IInventory>>(
+                    endpoints.inventory.apply(inventoryId),
+                    {} // Empty body
+                );
+                toast.success('Inventory successfully applied');
+                return response.data || null;
+            } catch (error) {
+                const axiosError = error as AxiosError<any>;
+                const message =
+                    axiosError?.response?.data?.message || 'Failed to apply inventory';
+                toast.error(message);
+                return null;
+            }
+        },
+        []
+    );
+
     return {
         getInventories,
         getInventoryById,
@@ -225,5 +248,6 @@ export function useInventoryAPI() {
         createInventoryItemsBatch,
         updateInventoryItem,
         deleteInventoryItem,
+        applyInventory,
     };
 }

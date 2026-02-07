@@ -116,13 +116,13 @@ function IngredientStockListView() {
                 sortable: false,
                 filterable: false,
                 getActions: (params) => [
-                    <CustomGridActionsCellItem
-                        key="edit"
-                        icon={<Iconify icon="solar:pen-bold" />}
-                        label={t('edit')}
-                        onClick={() => handleEditOpen(params.row)}
-                        showInMenu
-                    />,
+                    // <CustomGridActionsCellItem
+                    //     key="edit"
+                    //     icon={<Iconify icon="solar:pen-bold" />}
+                    //     label={t('edit')}
+                    //     onClick={() => handleEditOpen(params.row)}
+                    //     showInMenu
+                    // />,
                     <CustomGridActionsCellItem
                         key="delete"
                         icon={<Iconify icon="solar:trash-bin-trash-bold" />}

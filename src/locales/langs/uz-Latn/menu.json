@@ -348,7 +348,8 @@
       "sales": "Sotuvlar",
       "inventory": "Inventarizatsiya",
       "custom": "Maxsus",
-      "archives": "Arxivlar"
+      "archives": "Arxivlar",
+      "ingredients": "Ingredientlar bo'yicha hisobotlar"
     },
     "settings": {
       "title": "Sozlamalar",

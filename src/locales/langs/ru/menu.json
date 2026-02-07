@@ -326,7 +326,8 @@
       "sales": "Продажи",
       "inventory": "Инвентарь",
       "custom": "Пользовательский",
-      "archives": "Архивы"
+      "archives": "Архивы",
+      "ingredients": "Отчет об ингредиентах"
     },
     "settings": {
       "title": "Настройки",

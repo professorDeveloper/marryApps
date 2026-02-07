@@ -7,7 +7,7 @@ import { paths } from 'src/routes/paths';
 import { useParams, useRouter } from 'src/routes/hooks';
 import { GenericEditView } from 'src/components/generic-edit-view';
 import { CustomBreadcrumbs } from 'src/components/custom-breadcrumbs';
-import { useCreateStorage, useDeleteStorage, useGetStorage, useUpdateStorage } from 'src/actions/departments';
+import { useCreateStorage, useDeleteStorage, useGetStorage, useUpdateStorage, useUpdateTranslation } from 'src/actions/departments';
 import { useGetBranches } from 'src/actions/branches';
 import { useTranslationsAPI } from 'src/hooks/use-translations-api';
 
@@ -35,6 +35,7 @@ export function WarehouseEditView({ isNew = false }: { isNew?: boolean }) {
   const { createStorage } = useCreateStorage();
   const { updateStorage } = useUpdateStorage();
   const { deleteStorage } = useDeleteStorage();
+  const { updateTranslation } = useUpdateTranslation();
   const { createTranslation } = useTranslationsAPI();
 
   const { storage, storageLoading } = useGetStorage(!isNew && id ? id : '');
@@ -58,18 +59,23 @@ export function WarehouseEditView({ isNew = false }: { isNew?: boolean }) {
         throw new Error('Branch is required');
       }
 
-      // Create translation if translations are provided
+      // Create or update translation if translations are provided
       let name_i18n = formData.name_i18n;
-      if (!name_i18n && (formData.name_en || formData.name_ru)) {
-        // Create translation with provided language-specific names
+      if (formData.name_en || formData.name_ru) {
         const translationData: any = {
           en: formData.name_en || formData.name || '',
           ru: formData.name_ru || formData.name || '',
           uz: formData.name || '', // Primary name is always Uzbek
         };
 
-        const translationResult = await createTranslation(translationData);
-        name_i18n = translationResult.id;
+        if (name_i18n) {
+          // Update existing translation
+          await updateTranslation(name_i18n, translationData);
+        } else {
+          // Create new translation
+          const translationResult = await createTranslation(translationData);
+          name_i18n = translationResult.id;
+        }
       }
 
       const payload: IStorageFormData = {
@@ -89,7 +95,7 @@ export function WarehouseEditView({ isNew = false }: { isNew?: boolean }) {
       await new Promise((resolve) => setTimeout(resolve, 300));
       router.push(paths.warehouse.storage.root);
     },
-    [createStorage, createTranslation, id, isNew, router, updateStorage]
+    [createStorage, createTranslation, id, isNew, router, updateStorage, updateTranslation]
   );
 
   const handleDelete = useCallback(async () => {

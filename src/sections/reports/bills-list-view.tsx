@@ -1,6 +1,6 @@
 import type { GridColDef } from '@mui/x-data-grid';
 
-import { useMemo, useState, useCallback } from 'react';
+import { useMemo, useState, useCallback, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import Box from '@mui/material/Box';
@@ -55,6 +55,14 @@ export function BillsListView() {
 
     const [startDate, setStartDate] = useState<dayjs.Dayjs | null>(null);
     const [endDate, setEndDate] = useState<dayjs.Dayjs | null>(null);
+
+    // Set default date range to last 1 day on component mount
+    useEffect(() => {
+        const today = dayjs();
+        const yesterday = today.subtract(1, 'day');
+        setStartDate(yesterday);
+        setEndDate(today);
+    }, []);
 
     // Get bills with applied filters
     const { bills, billsLoading } = useGetBills(
@@ -215,8 +223,13 @@ export function BillsListView() {
                 flex: 1,
                 width: 180,
                 renderCell: (params) => (
-                    <RenderCellItem params={params} nameField="waiter_name" />
-                ),
+                    <Box>
+                        <Typography sx={{ mb: 1.5, mt: 1.5 }}>{params.row.waiter_name}</Typography>
+                    </Box>
+                )
+                // renderCell: (params) => (
+                //     <RenderCellItem params={params} nameField="waiter_name" />
+                // ),
             },
             {
                 field: 'table_number',
@@ -345,8 +358,7 @@ export function BillsListView() {
     }, [startDate, endDate, handleFilterChange]);
 
     const handleResetFilters = useCallback(() => {
-        setStartDate(null);
-        setEndDate(null);
+        // Don't reset dates - keep them as is
         setFilters({
             start: '',
             end: '',
@@ -392,7 +404,7 @@ export function BillsListView() {
         <>
             {/* Filter Card - Top */}
             <Card sx={{ p: 2, mb: 2.5, mx: { xs: 0, md: 5 } }}>
-                <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: 'repeat(4, 1fr)', lg: 'repeat(7, 1fr)' }, gap: 1.5, alignItems: 'flex-end' }}>
+                <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: 'repeat(4, 1fr)', lg: 'repeat(7, 1fr)' }, gap: 1.5 }}>
                     {/* Start Date */}
                     <DatePicker
                         label={t('Boshlanish sana') || 'Start Date'}
@@ -505,7 +517,7 @@ export function BillsListView() {
                     <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
                         <Button
                             variant="contained"
-                            size="small"
+                            size="medium"
                             startIcon={<Iconify icon="solar:check-circle-bold" />}
                             onClick={handleApplyDateRange}
                             sx={{ minWidth: 'auto', flex: 1 }}
@@ -514,7 +526,7 @@ export function BillsListView() {
                         </Button>
                         <Button
                             variant="outlined"
-                            size="small"
+                            size="medium"
                             startIcon={<Iconify icon="solar:restart-bold" />}
                             onClick={handleResetFilters}
                             sx={{ minWidth: 'auto', flex: 1 }}
@@ -552,6 +564,7 @@ export function BillsListView() {
                 onClose={() => setOpenDetailsModal(false)}
                 title={bill ? `${t('Hisob #') || 'Bill #'} ${bill.bill_no}` : t('Hisob detallar') || 'Bill Details'}
                 data={bill}
+                loading={billLoading}
                 renderContent={renderBillDetailsContent}
                 maxWidth="lg"
                 position="right"

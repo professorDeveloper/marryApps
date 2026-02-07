@@ -350,7 +350,8 @@
       "sales": "Sales",
       "inventory": "Inventory",
       "custom": "Custom",
-      "archives": "Archives"
+      "archives": "Archives",
+      "ingredients": "Ingredient Reports"
     },
     "settings": {
       "title": "Settings",

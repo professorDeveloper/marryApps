@@ -40,6 +40,7 @@ interface InventoryDetailsCalculationProps {
     inventoryId: string;
     onSuccess?: () => void;
     onDetailsChange?: (details: any[]) => void;
+    onApplySuccess?: () => void;
     isNewInventory?: boolean;
     persistedDetails?: IInventoryItem[];
 }
@@ -60,13 +61,14 @@ export function InventoryDetailsCalculation({
     inventoryId,
     onSuccess,
     onDetailsChange,
+    onApplySuccess,
     isNewInventory,
     persistedDetails,
 }: InventoryDetailsCalculationProps) {
     const { t } = useTranslation('menu');
     const theme = useTheme();
     const navigate = useNavigate();
-    const { getInventoryItems, createInventoryItemsBatch } = useInventoryAPI();
+    const { getInventoryItems, createInventoryItemsBatch, applyInventory } = useInventoryAPI();
 
     // Left panel (available ingredients)
     const [ingredients, setIngredients] = useState<Ingredient[]>([]);
@@ -207,6 +209,11 @@ export function InventoryDetailsCalculation({
         }));
     };
 
+    const actionButtonSx = {
+        minWidth: 100,
+        height: 40,
+    };
+
     // Handle save
     const handleSave = async () => {
         try {
@@ -233,6 +240,17 @@ export function InventoryDetailsCalculation({
                 if (onDetailsChange) {
                     onDetailsChange(itemsData);
                 }
+
+                // Apply inventory (call /api/v1/inventories/{id}/apply)
+                const applyResult = await applyInventory(inventoryId);
+                if (applyResult) {
+                    toast.success(t('success.applied') || 'Inventory applied successfully');
+                    // Call apply success callback to refresh parent data
+                    if (onApplySuccess) {
+                        onApplySuccess();
+                    }
+                }
+
                 if (onSuccess) {
                     onSuccess();
                 }
@@ -536,6 +554,7 @@ export function InventoryDetailsCalculation({
                 </Box>
             </Box>
 
+
             {/* ACTION BUTTONS */}
             <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end', mb: 2 }}>
                 <Button
@@ -543,8 +562,8 @@ export function InventoryDetailsCalculation({
                     onClick={handleSave}
                     disabled={transferredIds.length === 0 || isSaving}
                     sx={{
+                        ...actionButtonSx,
                         position: 'relative',
-                        minWidth: 120,
                         boxShadow: theme.shadows[4],
                         transition: 'all 0.3s ease',
                         '&:hover:not(:disabled)': {
@@ -562,7 +581,19 @@ export function InventoryDetailsCalculation({
                         t('common.save')
                     )}
                 </Button>
+
+                <Button
+                    variant="outlined"
+                    onClick={() => {
+                        setInventoryItems([]);
+                        navigate(paths.menu.inventory.root);
+                    }}
+                    sx={actionButtonSx}
+                >
+                    {t('common.back', 'Back')}
+                </Button>
             </Box>
+
 
             {/* RESULTS TABLE - Shows after saving */}
             {inventoryItems.length > 0 && (
@@ -688,17 +719,6 @@ export function InventoryDetailsCalculation({
                             ))}
                         </Box>
                     </Paper>
-                    <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end', mt: 2 }}>
-                        <Button
-                            variant="outlined"
-                            onClick={() => {
-                                setInventoryItems([]);
-                                navigate(paths.menu.inventory.root);
-                            }}
-                        >
-                            {t('common.back', 'Back')}
-                        </Button>
-                    </Box>
                 </Box>
             )}
         </Box>

@@ -11,6 +11,7 @@ import {
   DialogTitle,
   DialogContent,
   useMediaQuery,
+  CircularProgress,
   type SlideProps,
 } from '@mui/material';
 import { Iconify } from 'src/components/iconify';
@@ -26,6 +27,7 @@ export interface GenericViewModalProps {
   maxWidth?: 'xs' | 'sm' | 'md' | 'lg' | 'xl';
   slideDirection?: 'left' | 'right' | 'up' | 'down';
   position?: 'center' | 'right';
+  loading?: boolean;
 }
 
 const SlideUpTransition = forwardRef<unknown, SlideProps>(function Transition(
@@ -143,6 +145,7 @@ export function GenericViewModal({
   onClose,
   title,
   data,
+  loading,
   renderContent,
   fields,
   listItems,
@@ -156,6 +159,21 @@ export function GenericViewModal({
   const TransitionComponent = slideDirection === 'left' ? SlideLeftTransition : SlideUpTransition;
 
   const content = useMemo(() => {
+    if (loading) {
+      return (
+        <Box
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            minHeight: '200px',
+          }}
+        >
+          <CircularProgress />
+        </Box>
+      );
+    }
+
     if (!data) {
       return (
         <Box
@@ -211,7 +229,7 @@ export function GenericViewModal({
         </Typography>
       </Box>
     );
-  }, [data, renderContent, fields, listItems]);
+  }, [data, renderContent, fields, listItems, loading]);
 
   const handleClose = useCallback(() => {
     onClose();

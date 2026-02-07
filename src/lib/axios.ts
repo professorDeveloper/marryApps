@@ -256,6 +256,7 @@ export const endpoints = {
     create: '/api/v1/inventories',
     update: (id: string) => `/api/v1/inventories/${id}`,
     delete: (id: string) => `/api/v1/inventories/${id}`,
+    apply: (id: string) => `/api/v1/inventories/${id}/apply`,
     items: (inventoryId: string) => `/api/v1/inventories/${inventoryId}/items`,
     createItems: (inventoryId: string) => `/api/v1/inventories/${inventoryId}/items`,
     updateItem: (inventoryId: string, itemId: string) => `/api/v1/inventories/${inventoryId}/items/${itemId}`,
@@ -277,6 +278,10 @@ export const endpoints = {
     details: (id: string) => `/api/v1/ingredient-stock/${id}`,
     update: (id: string) => `/api/v1/ingredient-stock/${id}`,
     delete: (id: string) => `/api/v1/ingredient-stock/${id}`,
+  },
+  ingredientReports: {
+    list: '/api/v1/ingredient-reports',
+    details: (ingredientId: string) => `/api/v1/ingredient-reports/${ingredientId}`,
   },
   bills: {
     list: '/api/v1/bills',

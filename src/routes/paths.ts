@@ -128,6 +128,10 @@ export const paths = {
         root: `${ROOTS.MENU}/reports/bills`,
         details: (id: string) => `${ROOTS.MENU}/reports/bills/${id}`,
       },
+      ingredients: {
+        root: `${ROOTS.MENU}/reports/ingredients`,
+        details: (id: string) => `${ROOTS.MENU}/reports/ingredients/${id}`,
+      },
     },
   },
   warehouse: {

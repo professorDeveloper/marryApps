@@ -555,31 +555,32 @@ export function useGetStorage(storageId: string) {
       }
     };
 
+    // Build response with translation data for form editing
+    let responseData: any = {
+      ...storageData,
+    };
+
     // Apply translation if available
     if (storageData.name_i18n) {
       const translation = translations.find((t) => t.id === storageData.name_i18n);
       if (translation) {
         const langKey = getLangKey(currentLang);
         if (langKey in translation && translation[langKey]) {
-          return {
-            ...storageData,
-            name: translation[langKey] as string,
-          };
+          responseData.name = translation[langKey] as string;
         } else if (currentLang.startsWith('uz') && translation.uz) {
-          return {
-            ...storageData,
-            name: translation.uz,
-          };
+          responseData.name = translation.uz;
         } else if (translation.en) {
-          return {
-            ...storageData,
-            name: translation.en,
-          };
+          responseData.name = translation.en;
         }
+
+        // Add translation fields for form editing
+        responseData.name_en = translation.en || '';
+        responseData.name_ru = translation.ru || '';
+        responseData.name_uz = translation.uz || '';
       }
     }
 
-    return storageData;
+    return responseData;
   }, [data, translations, i18n.resolvedLanguage]);
 
   const memoizedValue = useMemo(
@@ -604,8 +605,26 @@ export function useCreateStorage() {
       try {
         let name_i18n = formData.name_i18n;
 
-        // If name_i18n is not provided, create a translation
-        if (!name_i18n) {
+        // Create or use provided translation
+        if (!name_i18n && (formData.name_en || formData.name_ru)) {
+          const translationData: ITranslationFormData = {
+            en: formData.name_en || formData.name || '',
+            ru: formData.name_ru || formData.name || '',
+            uz: formData.name || '',
+          };
+
+          try {
+            const translationResponse = await poster<any>(
+              endpoints.translations.create,
+              translationData
+            );
+            name_i18n = translationResponse?.data?.id || translationResponse?.id;
+          } catch (error) {
+            console.error('Failed to create translation:', error);
+            throw new Error('Failed to create translation for storage');
+          }
+        } else if (!name_i18n) {
+          // If no translation data provided, create default translation
           const translationData: ITranslationFormData = {
             en: formData.name || '',
             ru: formData.name || '',
@@ -650,6 +669,30 @@ export function useCreateStorage() {
 }
 
 /**
+ * Update translation by ID
+ */
+export function useUpdateTranslation() {
+  const updateTranslation = useCallback(
+    async (translationId: string, translationData: Partial<ITranslationFormData>) => {
+      try {
+        const response = await putter<BackendResponse<ITranslationItem>>(
+          endpoints.translations.update(translationId),
+          translationData
+        );
+        await mutate(endpoints.translations.list);
+        return response.data;
+      } catch (error) {
+        console.error('Failed to update translation:', error);
+        throw error;
+      }
+    },
+    []
+  );
+
+  return { updateTranslation };
+}
+
+/**
  * Update storage
  */
 export function useUpdateStorage() {
@@ -658,8 +701,26 @@ export function useUpdateStorage() {
       try {
         let name_i18n = formData.name_i18n;
 
-        // If name_i18n is not provided, create a translation
-        if (!name_i18n) {
+        // Create or use provided translation
+        if (!name_i18n && (formData.name_en || formData.name_ru)) {
+          const translationData: ITranslationFormData = {
+            en: formData.name_en || formData.name || '',
+            ru: formData.name_ru || formData.name || '',
+            uz: formData.name || '',
+          };
+
+          try {
+            const translationResponse = await poster<any>(
+              endpoints.translations.create,
+              translationData
+            );
+            name_i18n = translationResponse?.data?.id || translationResponse?.id;
+          } catch (error) {
+            console.error('Failed to create translation:', error);
+            throw new Error('Failed to create translation for storage');
+          }
+        } else if (!name_i18n) {
+          // If no translation data provided, create default translation
           const translationData: ITranslationFormData = {
             en: formData.name || '',
             ru: formData.name || '',

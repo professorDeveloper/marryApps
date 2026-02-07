@@ -67,6 +67,28 @@ export function InventoryEditView({ isNew = false }: InventoryEditViewProps) {
     // Effective inventory ID
     const effectiveInventoryId = id || inventory?.id || createdInventoryId;
 
+    // Refresh inventory data
+    const refreshInventoryData = useCallback(async (inventoryId: string) => {
+        try {
+            const data = await getInventoryById(inventoryId);
+            if (data) {
+                setInventory(data);
+                setFormData({
+                    date: dayjs(data.date).format('YYYY-MM-DD'),
+                    status: data.status,
+                    storage_id: data.storage_id,
+                    description: data.description || '',
+                });
+
+                // Load inventory items
+                const items = await getInventoryItems(inventoryId);
+                setInventoryItems(items);
+            }
+        } catch (error) {
+            console.error('Error refreshing inventory data:', error);
+        }
+    }, [getInventoryById, getInventoryItems]);
+
     // Load inventory data if editing
     useEffect(() => {
         if (!isNew && id) {
@@ -284,6 +306,12 @@ export function InventoryEditView({ isNew = false }: InventoryEditViewProps) {
                                 onDetailsChange={(details) => setInventoryItems(details)}
                                 onSuccess={() => {
                                     toast.success(t('success.itemsAdded'));
+                                }}
+                                onApplySuccess={() => {
+                                    // Refresh inventory data after apply
+                                    if (effectiveInventoryId) {
+                                        refreshInventoryData(effectiveInventoryId);
+                                    }
                                 }}
                             />
                         </Stack>

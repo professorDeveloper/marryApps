@@ -12,6 +12,7 @@ import { Meals } from 'src/sections/meals/meals-list-view';
 import { MealEditView } from 'src/sections/meals/meals-edit-view';
 import { SalesListView } from 'src/sections/reports/sales-list-view';
 import { BillsListView } from 'src/sections/reports/bills-list-view';
+import { IngredientReportsListView } from 'src/sections/reports/ingredients-reports-list-view';
 import { HalfMeals } from 'src/sections/compounds/compounds-list-view';
 import { ReportsEditView } from 'src/sections/reports/reports-edit-view';
 import { ReportsListView } from 'src/sections/reports/reports-list-view';
@@ -176,6 +177,7 @@ export const dashboardRoutes: RouteObject[] = [
           { path: 'reports/custom', element: <CustomReportsListView /> },
           { path: 'reports/archives', element: <ArchivesListView /> },
           { path: 'reports/bills', element: <BillsListView /> },
+          { path: 'reports/ingredients', element: <IngredientReportsListView /> },
           { path: 'floor-plan', element: <FloorPlanPage /> },
           { path: 'halls', element: <HallsPage /> },
         ],
