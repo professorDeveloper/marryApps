@@ -90,6 +90,9 @@ export interface GenericTableConfig<T = any> {
 
   // Hide checkboxes (will show row numbers instead)
   hideCheckboxes?: boolean;
+
+  // Custom filters render function
+  renderFilters?: () => React.ReactNode;
 }
 
 export function GenericTableView<T extends Record<string, any>>({
@@ -109,6 +112,7 @@ export function GenericTableView<T extends Record<string, any>>({
   idField = 'id',
   hideFilters = false,
   hideCheckboxes = false,
+  renderFilters,
 }: GenericTableConfig<T>) {
   const confirmDialog = useBoolean();
   const toolbarOptions = useToolbarSettings();
@@ -243,6 +247,12 @@ export function GenericTableView<T extends Record<string, any>>({
           }
           sx={{ mb: { xs: 2, md: 3 } }}
         />
+
+        {renderFilters && (
+          <Card sx={{ p: 2, mb: 2.5 }}>
+            {renderFilters()}
+          </Card>
+        )}
 
         <Card
           sx={{

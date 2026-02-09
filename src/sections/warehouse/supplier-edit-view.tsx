@@ -24,15 +24,33 @@ export function SupplierEditView({
     const { t } = useTranslate('menu');
     const router = useRouter();
     const { id: urlId } = useParams<{ id?: string }>();
-    const { createSupplier } = useSupplierAPI();
+    const { createSupplier, getSupplierById, updateSupplier } = useSupplierAPI();
     const [supplierData, setSupplierData] = useState<Record<string, any> | null>(null);
     const [loading, setLoading] = useState(false);
 
-    // Load supplier data when editing (currently not supported by API)
+    // Load supplier data when editing
     useEffect(() => {
-        // Suppliers API doesn't provide GET by ID endpoint yet
-        setLoading(false);
-    }, [isNew, urlId, currentSupplierId]);
+        const loadSupplier = async () => {
+            const supplierId = urlId || currentSupplierId;
+            if (supplierId && !isNew) {
+                setLoading(true);
+                try {
+                    const supplier = await getSupplierById(supplierId);
+                    if (supplier) {
+                        setSupplierData(supplier);
+                    }
+                } catch (error) {
+                    console.error('Error loading supplier:', error);
+                } finally {
+                    setLoading(false);
+                }
+            } else {
+                setLoading(false);
+            }
+        };
+
+        loadSupplier();
+    }, [isNew, urlId, currentSupplierId, getSupplierById]);
 
     const handleSubmit = useCallback(
         async (formData: Record<string, any>) => {
@@ -51,6 +69,15 @@ export function SupplierEditView({
                     if (!skipRedirect && !onSupplierCreated) {
                         router.push(paths.warehouse.suppliers.root);
                     }
+                } else {
+                    // Update mode
+                    const supplierId = urlId || currentSupplierId;
+                    if (supplierId) {
+                        await updateSupplier(supplierId, formData);
+                        if (!skipRedirect) {
+                            router.push(paths.warehouse.suppliers.root);
+                        }
+                    }
                 }
 
                 if (!onSupplierCreated && !skipRedirect) {
@@ -61,7 +88,7 @@ export function SupplierEditView({
                 throw error;
             }
         },
-        [isNew, createSupplier, router, onSupplierCreated, skipRedirect, currentSupplierId, urlId, t]
+        [isNew, createSupplier, updateSupplier, router, onSupplierCreated, skipRedirect, currentSupplierId, urlId, t]
     );
 
     const BASIC: CardSection = {
@@ -79,6 +106,18 @@ export function SupplierEditView({
             {
                 key: 'phone_number',
                 label: t('warehouse.suppliers.phoneNumber'),
+                type: 'text',
+                defaultValue: '',
+            },
+            {
+                key: 'email',
+                label: t('warehouse.suppliers.email'),
+                type: 'email',
+                defaultValue: '',
+            },
+            {
+                key: 'address',
+                label: t('warehouse.suppliers.address'),
                 type: 'text',
                 defaultValue: '',
             },

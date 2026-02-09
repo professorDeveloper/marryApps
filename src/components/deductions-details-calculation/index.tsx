@@ -120,6 +120,19 @@ export function DeductionsDetailsCalculation({
         loadData();
     }, [t]);
 
+    // Initialize transferred items from initialItems prop
+    // useEffect(() => {
+    //     if (initialItems && initialItems.length > 0) {
+    //         const ids = initialItems.map((item) => item.ingredient_id);
+    //         const newQuantities: Record<string, string> = {};
+    //         initialItems.forEach((item) => {
+    //             newQuantities[item.ingredient_id] = item.quantity || '1';
+    //         });
+    //         setTransferredIds(ids);
+    //         setQuantities(newQuantities);
+    //     }
+    // }, [initialItems, ingredients]);
+
     // Call onItemsChange whenever items change
     useEffect(() => {
         if (onItemsChange) {

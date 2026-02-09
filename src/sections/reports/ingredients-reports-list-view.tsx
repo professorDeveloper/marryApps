@@ -1,8 +1,6 @@
 import type { GridColDef } from '@mui/x-data-grid';
-
 import { useMemo, useState, useCallback, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-
 import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
 import Button from '@mui/material/Button';
@@ -16,12 +14,10 @@ import TableRow from '@mui/material/TableRow';
 import CircularProgress from '@mui/material/CircularProgress';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import dayjs from 'dayjs';
-
 import { paths } from 'src/routes/paths';
 import { useGetIngredientReports, useGetIngredientReportDetail } from 'src/actions/ingredient-reports';
 import { useGetIngredients } from 'src/actions/ingredients';
 import { useGetStorages } from 'src/actions/departments';
-
 import { Iconify } from 'src/components/iconify';
 import { CustomGridActionsCellItem } from 'src/components/custom-data-grid';
 import { RenderCellItem, GenericTableView } from 'src/components/generic-table-view';
@@ -107,7 +103,7 @@ export function IngredientReportsListView() {
         () => [
             {
                 field: 'ingredient_name',
-                headerName: t('Ingredientlar') || 'Ingredient',
+                headerName: t('ingredientReports.ingredient') || 'Ingredient',
                 flex: 1,
                 minWidth: 200,
                 renderCell: (params) => (
@@ -129,7 +125,7 @@ export function IngredientReportsListView() {
             // },
             {
                 field: 'measurement',
-                headerName: t('Birlik') || 'Unit',
+                headerName: t('ingredientReports.unit') || 'Unit',
                 width: 100,
                 renderCell: (params) => {
                     const measurement = params.row.measurement;
@@ -143,7 +139,7 @@ export function IngredientReportsListView() {
             },
             {
                 field: 'begin_qty',
-                headerName: t('Boshlanish miqdori') || 'Begin Qty',
+                headerName: t('ingredientReports.beginQty') || 'Begin Qty',
                 width: 120,
                 renderCell: (params) => {
                     return `${Number(params.row.begin_qty).toFixed(2)}`;
@@ -151,7 +147,7 @@ export function IngredientReportsListView() {
             },
             {
                 field: 'end_qty',
-                headerName: t('Tugash miqdori') || 'End Qty',
+                headerName: t('ingredientReports.endQty') || 'End Qty',
                 width: 120,
                 renderCell: (params) => {
                     return `${Number(params.row.end_qty).toFixed(2)}`;
@@ -159,7 +155,7 @@ export function IngredientReportsListView() {
             },
             {
                 field: 'invoice_in_qty',
-                headerName: t('Kirish') || 'In',
+                headerName: t('ingredientReports.in') || 'In',
                 width: 100,
                 renderCell: (params) => {
                     return `${Number(params.row.invoice_in_qty).toFixed(2)}`;
@@ -167,7 +163,7 @@ export function IngredientReportsListView() {
             },
             {
                 field: 'order_out_qty',
-                headerName: t('Chiqish') || 'Out',
+                headerName: t('ingredientReports.out') || 'Out',
                 width: 100,
                 renderCell: (params) => {
                     return `${Number(params.row.order_out_qty).toFixed(2)}`;
@@ -175,7 +171,7 @@ export function IngredientReportsListView() {
             },
             {
                 field: 'begin_amount',
-                headerName: t('Bosh. narxi') || 'Begin Cost',
+                headerName: t('ingredientReports.beginCost') || 'Begin Cost',
                 width: 120,
                 renderCell: (params) => {
                     const amount = Number(params.row.begin_amount) || 0;
@@ -184,7 +180,7 @@ export function IngredientReportsListView() {
             },
             {
                 field: 'end_amount',
-                headerName: t('Tug. narxi') || 'End Cost',
+                headerName: t('ingredientReports.endCost') || 'End Cost',
                 width: 120,
                 renderCell: (params) => {
                     const amount = Number(params.row.end_amount) || 0;
@@ -217,7 +213,7 @@ export function IngredientReportsListView() {
                 getActions: (params) => [
                     <CustomGridActionsCellItem
                         showInMenu
-                        label={t('Ko\'rish') || 'View'}
+                        label={t('ingredientReports.view') || 'View'}
                         icon={<Iconify icon="solar:eye-bold" />}
                         onClick={() => {
                             setSelectedIngredientId(params.row.ingredient_id);
@@ -279,6 +275,115 @@ export function IngredientReportsListView() {
         [handleFilterChange]
     );
 
+    const renderFiltersContent = () => (
+        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: 'repeat(4, 1fr)', lg: 'repeat(5, 1fr)' }, gap: 1.5 }}>
+            {/* Storage - Required */}
+            <TextField
+                select
+                label={t('ingredientReports.storage') || 'Storage'}
+                value={selectedStorageId}
+                onChange={(e) => handleStorageChange(e.target.value)}
+                SelectProps={{ native: true }}
+                size="small"
+                fullWidth
+                required
+                InputLabelProps={{ shrink: true }}
+                sx={{
+                    '& .MuiOutlinedInput-root': {
+                        '&.Mui-focused fieldset': {
+                            borderColor: '#1890FF',
+                        },
+                    },
+                }}
+            >
+                <option value="">{t('common.select') || 'Select Storage'}</option>
+                {filterOptions.storage_id.map((option) => (
+                    <option key={option.value} value={option.value}>
+                        {option.label}
+                    </option>
+                ))}
+            </TextField>
+
+            {/* Start Date - Required */}
+            <DatePicker
+                label={t('ingredientReports.startDate') || 'Start Date'}
+                value={startDate}
+                onChange={setStartDate}
+                format="DD.MM.YYYY"
+                slotProps={{
+                    textField: {
+                        fullWidth: true,
+                        size: 'small',
+                        inputProps: { readOnly: true },
+                        sx: { cursor: 'pointer' },
+                    },
+                }}
+            />
+
+            {/* End Date - Required */}
+            <DatePicker
+                label={t('ingredientReports.endDate') || 'End Date'}
+                value={endDate}
+                onChange={setEndDate}
+                format="DD.MM.YYYY"
+                slotProps={{
+                    textField: {
+                        fullWidth: true,
+                        size: 'small',
+                        inputProps: { readOnly: true },
+                        sx: { cursor: 'pointer' },
+                    },
+                }}
+            />
+
+            {/* Ingredient - Optional */}
+            <TextField
+                select
+                label={t('ingredientReports.ingredient') || 'Ingredient'}
+                value={filters.ingredient_id}
+                onChange={(e) => handleIngredientChange(e.target.value)}
+                SelectProps={{ native: true }}
+                size="small"
+                fullWidth
+                InputLabelProps={{ shrink: true }}
+            >
+                <option value="">{t('ingredientReports.all') || 'All'}</option>
+                {filterOptions.ingredient_id.map((option) => (
+                    <option key={option.value} value={option.value}>
+                        {option.label}
+                    </option>
+                ))}
+            </TextField>
+
+            {/* Action Buttons */}
+            <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                <Button
+                    variant="contained"
+                    size="small"
+                    startIcon={<Iconify icon="solar:check-circle-bold" />}
+                    onClick={handleApplyDateRange}
+                    disabled={!selectedStorageId || !startDate || !endDate}
+                    sx={{
+                        minWidth: 'auto',
+                        flex: 1,
+                        backgroundColor: !selectedStorageId || !startDate || !endDate ? 'rgba(24, 144, 255, 0.4)' : '#1890FF',
+                    }}
+                >
+                    {t('ingredientReports.apply') || 'Apply'}
+                </Button>
+                <Button
+                    variant="outlined"
+                    size="small"
+                    startIcon={<Iconify icon="solar:restart-bold" />}
+                    onClick={handleResetFilters}
+                    sx={{ minWidth: 'auto', flex: 1 }}
+                >
+                    {t('ingredientReports.reset') || 'Reset'}
+                </Button>
+            </Box>
+        </Box>
+    );
+
     // Render ingredient report detail modal content
     const renderReportDetailsContent = useCallback((data: any) => {
         if (reportLoading) {
@@ -300,37 +405,37 @@ export function IngredientReportsListView() {
 
         const statsCards = [
             {
-                label: t('Boshlanish') || 'Begin',
+                label: t('ingredientReports.begin') || 'Begin',
                 qty: Number(data.begin_qty).toFixed(2),
                 amount: Number(data.begin_amount).toLocaleString(),
             },
             {
-                label: t('Tugash') || 'End',
+                label: t('ingredientReports.end') || 'End',
                 qty: Number(data.end_qty).toFixed(2),
                 amount: Number(data.end_amount).toLocaleString(),
             },
             {
-                label: t('Kirish') || 'In',
+                label: t('ingredientReports.in') || 'In',
                 qty: Number(data.invoice_in_qty).toFixed(2),
                 amount: Number(data.invoice_in_amount).toLocaleString(),
             },
             {
-                label: t('Chiqish') || 'Out',
+                label: t('ingredientReports.out') || 'Out',
                 qty: Number(data.order_out_qty).toFixed(2),
                 amount: Number(data.order_out_amount).toLocaleString(),
             },
             {
-                label: t('Chegirma') || 'Deduction',
+                label: t('ingredientReports.deduction') || 'Deduction',
                 qty: Number(data.deduction_out_qty).toFixed(2),
                 amount: Number(data.deduction_out_amount).toLocaleString(),
             },
             {
-                label: t('Ortiqcha') || 'Surplus',
+                label: t('ingredientReports.surplus') || 'Surplus',
                 qty: Number(data.surplus_qty).toFixed(2),
                 amount: Number(data.surplus_amount).toLocaleString(),
             },
             {
-                label: t('Kamnama') || 'Shortage',
+                label: t('ingredientReports.shortage') || 'Shortage',
                 qty: Number(data.shortage_qty).toFixed(2),
                 amount: Number(data.shortage_amount).toLocaleString(),
             },
@@ -341,7 +446,7 @@ export function IngredientReportsListView() {
                 {/* Header Info */}
                 <Box sx={{ mb: 3, pb: 2, borderBottom: '1px solid', borderColor: 'divider' }}>
                     <Typography variant="body2" sx={{ color: 'text.secondary', mb: 0.5 }}>
-                        {t('Ingredientlar') || 'Ingredient'}
+                        {t('ingredientReports.ingredient') || 'Ingredient'}
                     </Typography>
                     <Typography variant="h6" sx={{ fontWeight: 700, mb: 2 }}>
                         {data.ingredient_name}
@@ -350,7 +455,7 @@ export function IngredientReportsListView() {
                     <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 2 }}>
                         <Box>
                             <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                                {t('Birlik') || 'Unit'}
+                                {t('ingredientReports.unit') || 'Unit'}
                             </Typography>
                             <Typography variant="body2" sx={{ fontWeight: 600 }}>
                                 {data.measurement === 'kg'
@@ -362,7 +467,7 @@ export function IngredientReportsListView() {
                         </Box>
                         <Box>
                             <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                                {t('Boshlanish narxi') || 'Cost/Unit'}
+                                {t('ingredientReports.costPerUnit') || 'Cost/Unit'}
                             </Typography>
                             <Typography variant="body2" sx={{ fontWeight: 600 }}>
                                 {Number(data.cost_start).toLocaleString()} so'm
@@ -373,7 +478,7 @@ export function IngredientReportsListView() {
 
                 {/* Stats Grid */}
                 <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 2 }}>
-                    {t('Umumiy ma\'lumot') || 'Summary'}
+                    {t('ingredientReports.summary') || 'Summary'}
                 </Typography>
 
                 <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)' }, gap: 2, mb: 3 }}>
@@ -413,129 +518,6 @@ export function IngredientReportsListView() {
 
     return (
         <>
-            {/* Filter Card - Top */}
-            <Card sx={{ p: 2, mb: 2.5, mx: { xs: 0, md: 5 } }}>
-                <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: 'repeat(4, 1fr)', lg: 'repeat(5, 1fr)' }, gap: 1.5 }}>
-                    {/* Storage - Required */}
-                    <TextField
-                        select
-                        label={t('Omborlar') || 'Storage'}
-                        value={selectedStorageId}
-                        onChange={(e) => handleStorageChange(e.target.value)}
-                        SelectProps={{ native: true }}
-                        size="small"
-                        fullWidth
-                        required
-                        InputLabelProps={{ shrink: true }}
-                        sx={{
-                            '& .MuiOutlinedInput-root': {
-                                '&.Mui-focused fieldset': {
-                                    borderColor: '#1890FF',
-                                },
-                            },
-                        }}
-                    >
-                        <option value="">Select Storage</option>
-                        {filterOptions.storage_id.map((option) => (
-                            <option key={option.value} value={option.value}>
-                                {option.label}
-                            </option>
-                        ))}
-                    </TextField>
-
-                    {/* Start Date - Required */}
-                    <DatePicker
-                        label={t('Boshlanish sana') || 'Start Date'}
-                        value={startDate}
-                        onChange={setStartDate}
-                        format="DD.MM.YYYY"
-                        slotProps={{
-                            textField: {
-                                fullWidth: true,
-                                size: 'small',
-                                inputProps: { readOnly: true },
-                                sx: { cursor: 'pointer' },
-                            },
-                        }}
-                    />
-
-                    {/* End Date - Required */}
-                    <DatePicker
-                        label={t('Tugash sana') || 'End Date'}
-                        value={endDate}
-                        onChange={setEndDate}
-                        format="DD.MM.YYYY"
-                        slotProps={{
-                            textField: {
-                                fullWidth: true,
-                                size: 'small',
-                                inputProps: { readOnly: true },
-                                sx: { cursor: 'pointer' },
-                            },
-                        }}
-                    />
-
-                    {/* Ingredient - Optional */}
-                    <TextField
-                        select
-                        label={t('Ingredientlar') || 'Ingredient'}
-                        value={filters.ingredient_id}
-                        onChange={(e) => handleIngredientChange(e.target.value)}
-                        SelectProps={{ native: true }}
-                        size="small"
-                        fullWidth
-                        InputLabelProps={{ shrink: true }}
-                    >
-                        <option value="">Barchasi</option>
-                        {filterOptions.ingredient_id.map((option) => (
-                            <option key={option.value} value={option.value}>
-                                {option.label}
-                            </option>
-                        ))}
-                    </TextField>
-
-                    {/* Action Buttons */}
-                    <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                        <Button
-                            variant="contained"
-                            size="small"
-                            startIcon={<Iconify icon="solar:check-circle-bold" />}
-                            onClick={handleApplyDateRange}
-                            disabled={!selectedStorageId || !startDate || !endDate}
-                            sx={{
-                                minWidth: 'auto',
-                                flex: 1,
-                                backgroundColor: !selectedStorageId || !startDate || !endDate ? 'rgba(24, 144, 255, 0.4)' : '#1890FF',
-                            }}
-                        >
-                            {t('Qo\'llash') || 'Apply'}
-                        </Button>
-                        <Button
-                            variant="outlined"
-                            size="small"
-                            startIcon={<Iconify icon="solar:restart-bold" />}
-                            onClick={handleResetFilters}
-                            sx={{ minWidth: 'auto', flex: 1 }}
-                        >
-                            {t('Qayta') || 'Reset'}
-                        </Button>
-                    </Box>
-                </Box>
-
-                {/* Required Fields Notice */}
-                {/* <Typography
-                    variant="caption"
-                    sx={{
-                        color: 'text.secondary',
-                        display: 'block',
-                        mt: 1,
-                        fontStyle: 'italic',
-                    }}
-                >
-                    * {t('Omborlar, boshlanish sana va tugash sana majburiy') || 'Storage, Start Date and End Date are required'}
-                </Typography> */}
-            </Card>
-
             {/* Table */}
             <GenericTableView
                 data={reports}
@@ -543,23 +525,24 @@ export function IngredientReportsListView() {
                 columns={columns}
                 idField="ingredient_id"
                 breadcrumbs={{
-                    heading: t('overview.reports.ingredients') || 'Ingredient Reports',
+                    heading: t('ingredientReports.title') || 'Ingredient Reports',
                     links: [
                         { name: t('app') || 'App', href: paths.menu.root },
                         { name: t('overview.reports.title') || 'Reports', href: paths.menu.reports.root },
                         {
-                            name: t('overview.reports.ingredients') || 'Ingredient Reports',
+                            name: t('ingredientReports.title') || 'Ingredient Reports',
                             href: paths.menu.reports.ingredients?.root || '#',
                         },
                     ],
                 }}
+                renderFilters={renderFiltersContent}
             />
 
             {/* Ingredient Report Detail Modal */}
             <GenericViewModal
                 isOpen={openDetailsModal}
                 onClose={() => setOpenDetailsModal(false)}
-                title={reportDetail ? reportDetail.ingredient_name : t('Ingredient Report') || 'Ingredient Report'}
+                title={reportDetail ? reportDetail.ingredient_name : t('ingredientReports.title') || 'Ingredient Report'}
                 data={reportDetail}
                 loading={reportLoading}
                 renderContent={renderReportDetailsContent}

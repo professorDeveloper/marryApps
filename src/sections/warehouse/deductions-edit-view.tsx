@@ -3,7 +3,6 @@ import { useTranslation } from 'react-i18next';
 import { useParams, useNavigate } from 'react-router';
 import { Box, Tab, Tabs, Stack } from '@mui/material';
 import dayjs from 'dayjs';
-
 import { paths } from 'src/routes/paths';
 import { toast } from 'src/components/snackbar';
 import { GenericEditView } from 'src/components/generic-edit-view';
@@ -12,10 +11,6 @@ import { useDeductionsAPI } from 'src/hooks/use-deductions-api';
 import { DeductionsDetailsCalculation } from 'src/components/deductions-details-calculation';
 import { fetcher, endpoints } from 'src/lib/axios';
 import type { Deduction } from 'src/hooks/use-deductions-api';
-
-// ============================================================================
-// TYPES
-// ============================================================================
 
 interface Storage {
     id: string;
@@ -66,9 +61,6 @@ function TabPanel(props: TabPanelProps) {
     );
 }
 
-// ============================================================================
-// MAIN COMPONENT
-// ============================================================================
 
 interface DeductionsEditViewProps {
     isNew?: boolean;
@@ -78,12 +70,9 @@ export function DeductionsEditView({ isNew = false }: DeductionsEditViewProps) {
     const { t } = useTranslation('menu');
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
-
     const { getDeductionById, createDeduction, updateDeduction, getDeductionGroups } = useDeductionsAPI();
-
     // Tab state
     const [activeTab, setActiveTab] = useState(0);
-
     // Form state
     const [formData, setFormData] = useState<DeductionsFormData>({
         date: dayjs().format('YYYY-MM-DD'),
@@ -96,7 +85,6 @@ export function DeductionsEditView({ isNew = false }: DeductionsEditViewProps) {
     // Items state (from calculation tab)
     const [items, setItems] = useState<DeductionItem[]>([]);
     const itemsRef = useRef<DeductionItem[]>([]);
-
     const [deduction, setDeduction] = useState<Deduction | null>(null);
     const [groups, setGroups] = useState<any[]>([]);
     const [storages, setStorages] = useState<Storage[]>([]);
@@ -253,12 +241,6 @@ export function DeductionsEditView({ isNew = false }: DeductionsEditViewProps) {
 
     // NEW: Handle items tab save - this will be called from DeductionsDetailsCalculation
     const handleItemsSave = useCallback(async () => {
-        console.log('=== handleItemsSave CALLED ===');
-        console.log('Form data:', formData);
-        console.log('Items:', itemsRef.current);
-        console.log('isNew:', isNew);
-        console.log('createdDeductionId:', createdDeductionId);
-        console.log('id:', id);
 
         try {
             // Validate that we have items

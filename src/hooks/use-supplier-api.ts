@@ -3,12 +3,14 @@ import type { AxiosError } from 'axios';
 import { toast } from 'sonner';
 import { useCallback } from 'react';
 
-import { poster, deleter, fetcher, endpoints } from 'src/lib/axios';
+import { poster, deleter, fetcher, putter, endpoints } from 'src/lib/axios';
 
 export interface Supplier {
     id: string;
     name: string;
     phone_number?: string | null;
+    email?: string | null;
+    address?: string | null;
     created_at?: string;
     updated_at?: string;
 }
@@ -35,10 +37,28 @@ export function useSupplierAPI() {
         }
     }, []);
 
+    const getSupplierById = useCallback(async (id: string): Promise<Supplier | null> => {
+        try {
+            const response = await fetcher<BackendResponse<Supplier>>(endpoints.supplier.details(id));
+            // @ts-ignore
+            return response.data || response || null;
+        } catch (error) {
+            const axiosError = error as AxiosError<any>;
+            const message = axiosError?.response?.data?.message || 'Failed to fetch supplier';
+            console.error('Error fetching supplier:', error);
+            return null;
+        }
+    }, []);
+
     const createSupplier = useCallback(async (data: Partial<Supplier>): Promise<Supplier> => {
         try {
             // The API expects name and phone_number
-            const payload = { name: data.name, phone_number: data.phone_number };
+            const payload = {
+                name: data.name,
+                phone_number: data.phone_number || null,
+                email: data.email || null,
+                address: data.address || null,
+            };
             const response = await poster<BackendResponse<Supplier>>(endpoints.supplier.create, payload);
             // @ts-ignore
             toast.success('Supplier created successfully');
@@ -47,6 +67,27 @@ export function useSupplierAPI() {
         } catch (error) {
             const axiosError = error as AxiosError<any>;
             const message = axiosError?.response?.data?.message || 'Failed to create supplier';
+            toast.error(message);
+            throw error;
+        }
+    }, []);
+
+    const updateSupplier = useCallback(async (id: string, data: Partial<Supplier>): Promise<Supplier> => {
+        try {
+            const payload = {
+                name: data.name,
+                phone_number: data.phone_number || null,
+                email: data.email || null,
+                address: data.address || null,
+            };
+            const response = await putter<BackendResponse<Supplier>>(endpoints.supplier.update(id), payload);
+            // @ts-ignore
+            toast.success('Supplier updated successfully');
+            // @ts-ignore
+            return response.data || response;
+        } catch (error) {
+            const axiosError = error as AxiosError<any>;
+            const message = axiosError?.response?.data?.message || 'Failed to update supplier';
             toast.error(message);
             throw error;
         }
@@ -67,7 +108,9 @@ export function useSupplierAPI() {
 
     return {
         getSuppliers,
+        getSupplierById,
         createSupplier,
+        updateSupplier,
         deleteSuppliers,
     };
 }

@@ -340,7 +340,7 @@
       "invoiceDetails": "Invoice details",
       "ingredients": "Ingredients",
       "ingredient-group": "Ingredient groups",
-      "ingredientStock": "Ingredient Stock",
+      "ingredientStock": "Ingredient stock",
       "transfers": "Transfers",
       "locations": "Locations",
       "suppliers": "Suppliers"
@@ -351,7 +351,8 @@
       "inventory": "Inventory",
       "custom": "Custom",
       "archives": "Archives",
-      "ingredients": "Ingredient Reports"
+      "bills": "Bill reports",
+      "ingredients": "Ingredient reports"
     },
     "settings": {
       "title": "Settings",
@@ -588,7 +589,7 @@
       "addNew": "Add supplier",
       "edit": "Edit supplier",
       "view": "View supplier",
-      "delete": "Delete supplier",
+      "delete": "Delete",
       "name": "Name",
       "contact": "Contact",
       "email": "Email",
@@ -600,7 +601,8 @@
       "deleteMessage": "This action cannot be undone and cannot be reversed.",
       "cancel": "Cancel",
       "info": "Information",
-      "phoneNumber": "Phone number"
+      "phoneNumber": "Phone number",
+      "nameRequired": "Supplier name is required"
     }
   },
   "common": {
@@ -621,6 +623,8 @@
     "noData": "No data available",
     "total": "Total",
     "saving": "Saving...",
+    "add": "Add",
+    "select": "Select",
     "deleteConfirmTitle": "Confirm Deletion",
     "deleteConfirmMessage": "Are you sure you want to delete this record? This action cannot be undone."
   },
@@ -923,6 +927,66 @@
       "updated": "Inventory updated successfully",
       "itemsAdded": "Inventory items added successfully"
     }
+  },
+  "ingredientReports": {
+    "title": "Ingredient Reports",
+    "list": "Ingredient Reports",
+    "details": "Ingredient Report Details",
+    "storage": "Storage",
+    "startDate": "Start Date",
+    "endDate": "End Date",
+    "ingredient": "Ingredient",
+    "unit": "Unit",
+    "beginQty": "Begin Qty",
+    "endQty": "End Qty",
+    "inQty": "In",
+    "outQty": "Out",
+    "beginCost": "Begin Cost",
+    "endCost": "End Cost",
+    "view": "View",
+    "apply": "Apply",
+    "reset": "Reset",
+    "begin": "Begin",
+    "end": "End",
+    "in": "In",
+    "out": "Out",
+    "deduction": "Deduction",
+    "surplus": "Surplus",
+    "shortage": "Shortage",
+    "summary": "Summary",
+    "costPerUnit": "Cost/Unit",
+    "all": "All"
+  },
+  "bills": {
+    "title": "Bills",
+    "list": "Bills Report",
+    "details": "Bill Details",
+    "billNo": "Bill #",
+    "date": "Date",
+    "waiter": "Waiter",
+    "table": "Table #",
+    "guests": "Guests",
+    "total": "Total",
+    "service": "Service",
+    "discount": "Discount",
+    "status": "Status",
+    "paymentType": "Payment Type",
+    "hall": "Hall",
+    "items": "Items",
+    "product": "Product",
+    "quantity": "Qty",
+    "price": "Price",
+    "foodTotal": "Food Total",
+    "grandTotal": "Grand Total",
+    "opened": "Opened",
+    "closed": "Closed",
+    "paid": "Paid",
+    "cash": "Cash",
+    "card": "Card",
+    "apply": "Apply",
+    "reset": "Reset",
+    "startDate": "Start Date",
+    "endDate": "End Date"
   },
   "ingredientStock": {
     "title": "Ingredient Stock",

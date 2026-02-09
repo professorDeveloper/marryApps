@@ -9,6 +9,7 @@ import { useInvoiceAPI } from 'src/hooks/use-invoice-api';
 import { useSupplierAPI } from 'src/hooks/use-supplier-api';
 import { useStorageAPI } from 'src/hooks/use-storage-api';
 import { Box, CircularProgress } from '@mui/material';
+import { toast } from 'sonner';
 
 interface InvoiceInfoEditViewProps {
     isNew?: boolean;
@@ -21,6 +22,7 @@ interface InvoiceInfoEditViewProps {
     useBatchFlow?: boolean; // If true, don't create invoice, just collect data
     onFormDataChange?: (formData: Record<string, any>) => void; // Callback to persist form data in parent
     persistedFormData?: Record<string, any>; // Form data from parent to restore
+    onSwitchToDetailsTab?: () => void; // Callback to switch to details tab when validation fails
 }
 
 export function InvoiceInfoEditView({
@@ -34,6 +36,7 @@ export function InvoiceInfoEditView({
     useBatchFlow = false,
     onFormDataChange,
     persistedFormData,
+    onSwitchToDetailsTab,
 }: InvoiceInfoEditViewProps) {
     const { t } = useTranslate('menu');
     const router = useRouter();
@@ -96,30 +99,37 @@ export function InvoiceInfoEditView({
         async (formData: Record<string, any>) => {
             try {
                 if (!formData.supplier_id) {
-                    throw new Error(t('warehouse.invoices.supplierRequired'));
+                    const errorMsg = t('warehouse.invoices.supplierRequired');
+                    toast.error(errorMsg);
+                    throw new Error(errorMsg);
                 }
                 if (!formData.storage_id) {
-                    throw new Error(t('warehouse.invoices.storageRequired', 'Storage is required'));
+                    const errorMsg = t('warehouse.invoices.storageRequired', 'Storage is required');
+                    toast.error(errorMsg);
+                    throw new Error(errorMsg);
                 }
-                // if (!formData.total_amount) {
-                //     throw new Error(t('warehouse.invoices.amountRequired'));
-                // }
 
                 // If using batch flow with details, call the batch submit handler
                 if (onInvoiceSubmit && detailsData && detailsData.length > 0) {
                     await onInvoiceSubmit({
                         supplier_id: formData.supplier_id,
                         storage_id: formData.storage_id,
-                        total_amount: formData.total_amount.toString(),
+                        total_amount: formData.total_amount?.toString() || '0',
                         status: formData.status || 'pending',
                         date: formData.date || new Date().toISOString(),
                     }, detailsData);
                     return;
                 }
 
-                // If using batch flow but no details, show error
+                // If using batch flow but no details, show error and redirect to details tab
                 if (useBatchFlow && (!detailsData || detailsData.length === 0)) {
-                    throw new Error(t('warehouse.invoiceDetails.addAtLeastOneItem'));
+                    const errorMsg = t('warehouse.invoiceDetails.addAtLeastOneItem');
+                    toast.error(errorMsg);
+                    // Switch to details tab
+                    if (onSwitchToDetailsTab) {
+                        onSwitchToDetailsTab();
+                    }
+                    throw new Error(errorMsg);
                 }
 
                 // If using batch flow, just pass data up to parent without creating invoice
@@ -127,7 +137,7 @@ export function InvoiceInfoEditView({
                     onInvoiceDataChange({
                         supplier_id: formData.supplier_id,
                         storage_id: formData.storage_id,
-                        total_amount: formData.total_amount.toString(),
+                        total_amount: formData.total_amount?.toString() || '0',
                         status: formData.status || 'pending',
                         date: formData.date || new Date().toISOString(),
                     });
@@ -139,10 +149,11 @@ export function InvoiceInfoEditView({
                     const newInvoice = await createInvoice({
                         supplier_id: formData.supplier_id,
                         storage_id: formData.storage_id,
-                        total_amount: formData.total_amount.toString(),
+                        total_amount: formData.total_amount?.toString() || '0',
                         status: formData.status || 'pending',
                         date: formData.date || new Date().toISOString(),
                     });
+                    toast.success(t('warehouse.invoices.created'));
                     // Call callback if provided (for tab component)
                     if (onInvoiceCreated) {
                         onInvoiceCreated(newInvoice.id);
@@ -161,7 +172,7 @@ export function InvoiceInfoEditView({
                 throw error;
             }
         },
-        [isNew, useBatchFlow, createInvoice, router, onInvoiceCreated, onInvoiceDataChange, onInvoiceSubmit, detailsData, skipRedirect, currentInvoiceId, urlId, t]
+        [isNew, useBatchFlow, createInvoice, router, onInvoiceCreated, onInvoiceDataChange, onInvoiceSubmit, detailsData, skipRedirect, currentInvoiceId, urlId, t, onSwitchToDetailsTab]
     );
 
     const BASIC: CardSection = {

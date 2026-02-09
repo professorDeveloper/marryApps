@@ -8,6 +8,7 @@ import { InvoiceInfoEditView } from './invoice-info-edit-view';
 import { InvoiceDetailsCalculation } from 'src/components/invoice-details-calculation/invoice-details-calculation';
 import { useInvoiceAPI } from 'src/hooks/use-invoice-api';
 import { fetcher, endpoints } from 'src/lib/axios';
+import { toast } from 'sonner';
 
 interface TabPanelProps {
     children?: React.ReactNode;
@@ -89,6 +90,11 @@ export function InvoicesEditViewTabs() {
         setCurrentTab(newValue);
     };
 
+    // Callback to switch to details tab
+    const handleSwitchToDetailsTab = () => {
+        setCurrentTab(1);
+    };
+
     // Called when form data changes in Tab 1 - stores data for persistence
     const handleFormDataChange = (newFormData: Record<string, any>) => {
         setFormData(newFormData);
@@ -97,6 +103,7 @@ export function InvoicesEditViewTabs() {
     // Called when user adds details in Tab 2
     const handleDetailsChange = (details: any[]) => {
         setDetailsData(details);
+        console.log('Details updated:', details);
     };
 
     // Called when user submits invoice info in Tab 1 - this is where batch API is called
@@ -114,10 +121,13 @@ export function InvoicesEditViewTabs() {
 
             setIsLoading(true);
 
+            // Use provided details or fallback to state
+            const detailsToSubmit = details && details.length > 0 ? details : detailsData;
+
             // If creating new invoice with details, use batch API
-            if (isCreatingNew && details && details.length > 0) {
+            if (isCreatingNew && detailsToSubmit && detailsToSubmit.length > 0) {
                 // Calculate total_amount from details (not from user input)
-                const calculatedTotal = details.reduce((sum, item) => {
+                const calculatedTotal = detailsToSubmit.reduce((sum, item) => {
                     return sum + (parseFloat(item.price?.toString() || '0'));
                 }, 0);
 
@@ -129,7 +139,7 @@ export function InvoicesEditViewTabs() {
                         status: formData.status || 'pending',
                         date: formData.date || new Date().toISOString(),
                     },
-                    details: details.map((item) => ({
+                    details: detailsToSubmit.map((item) => ({
                         ingredient_id: item.ingredient_id || item.id,
                         quantity: typeof item.quantity === 'string' ? item.quantity : item.quantity.toString(),
                         price_per_unit: item.price_per_unit?.toString() || '0',
@@ -147,8 +157,9 @@ export function InvoicesEditViewTabs() {
                     total_amount: '',
                 });
                 setDetailsData([]);
+                toast.success(t('warehouse.invoices.created'));
                 router.push(paths.warehouse.invoiceDetails.root);
-            } else if (isCreatingNew && (!details || details.length === 0)) {
+            } else if (isCreatingNew && (!detailsToSubmit || detailsToSubmit.length === 0)) {
                 // If no details added, show error
                 throw new Error(t('warehouse.invoiceDetails.addAtLeastOneItem'));
             }
@@ -201,6 +212,7 @@ export function InvoicesEditViewTabs() {
                         useBatchFlow={isCreatingNew}
                         onFormDataChange={handleFormDataChange}
                         persistedFormData={formData}
+                        onSwitchToDetailsTab={handleSwitchToDetailsTab}
                     />
                 </TabPanel>
 

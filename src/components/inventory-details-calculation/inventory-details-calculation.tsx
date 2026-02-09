@@ -128,6 +128,9 @@ export function InventoryDetailsCalculation({
 
             setTransferredIds(newTransferredIds);
             setQuantities(newQuantities);
+
+            // Also restore inventory items to show results table
+            setInventoryItems(persistedDetails);
         }
     }, [persistedDetails]);
 
@@ -555,46 +558,6 @@ export function InventoryDetailsCalculation({
             </Box>
 
 
-            {/* ACTION BUTTONS */}
-            <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end', mb: 2 }}>
-                <Button
-                    variant="contained"
-                    onClick={handleSave}
-                    disabled={transferredIds.length === 0 || isSaving}
-                    sx={{
-                        ...actionButtonSx,
-                        position: 'relative',
-                        boxShadow: theme.shadows[4],
-                        transition: 'all 0.3s ease',
-                        '&:hover:not(:disabled)': {
-                            boxShadow: theme.shadows[8],
-                            transform: 'translateY(-2px)',
-                        },
-                    }}
-                >
-                    {isSaving ? (
-                        <>
-                            <CircularProgress size={20} sx={{ mr: 1 }} />
-                            {t('common.saving') || 'Saving...'}
-                        </>
-                    ) : (
-                        t('common.save')
-                    )}
-                </Button>
-
-                <Button
-                    variant="outlined"
-                    onClick={() => {
-                        setInventoryItems([]);
-                        navigate(paths.menu.inventory.root);
-                    }}
-                    sx={actionButtonSx}
-                >
-                    {t('common.back', 'Back')}
-                </Button>
-            </Box>
-
-
             {/* RESULTS TABLE - Shows after saving */}
             {inventoryItems.length > 0 && (
                 <Box sx={{ mb: 4 }}>
@@ -719,6 +682,86 @@ export function InventoryDetailsCalculation({
                             ))}
                         </Box>
                     </Paper>
+
+                    {/* ACTION BUTTONS - Below results table */}
+                    <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end', mt: 3 }}>
+                        <Button
+                            variant="outlined"
+                            onClick={() => {
+                                setInventoryItems([]);
+                                navigate(paths.menu.inventory.root);
+                            }}
+                            sx={actionButtonSx}
+                        >
+                            {t('common.back', 'Back')}
+                        </Button>
+                        <Button
+                            // variant="contained"
+                            onClick={handleSave}
+                            disabled={transferredIds.length === 0 || isSaving}
+                            sx={{
+                                ...actionButtonSx,
+                                position: 'relative',
+                                backgroundColor: '#FB6633',
+                                // boxShadow: theme.shadows[4],
+                                transition: 'all 0.3s ease',
+                                '&:hover:not(:disabled)': {
+                                    boxShadow: theme.shadows[8],
+                                    transform: 'translateY(-2px)',
+                                },
+                            }}
+                        >
+                            {isSaving ? (
+                                <>
+                                    <CircularProgress size={20} sx={{ mr: 1 }} />
+                                    {t('common.saving') || 'Saving...'}
+                                </>
+                            ) : (
+                                t('common.save')
+                            )}
+                        </Button>
+                    </Box>
+                </Box>
+            )}
+
+            {/* ACTION BUTTONS - When no results table */}
+            {inventoryItems.length === 0 && (
+                <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end', mb: 2 }}>
+                    <Button
+                        variant="contained"
+                        onClick={handleSave}
+                        disabled={transferredIds.length === 0 || isSaving}
+                        sx={{
+                            ...actionButtonSx,
+                            position: 'relative',
+                            boxShadow: theme.shadows[4],
+                            transition: 'all 0.3s ease',
+                            '&:hover:not(:disabled)': {
+                                boxShadow: theme.shadows[8],
+                                transform: 'translateY(-2px)',
+                            },
+                        }}
+                    >
+                        {isSaving ? (
+                            <>
+                                <CircularProgress size={20} sx={{ mr: 1 }} />
+                                {t('common.saving') || 'Saving...'}
+                            </>
+                        ) : (
+                            t('common.save')
+                        )}
+                    </Button>
+
+                    <Button
+                        variant="outlined"
+                        onClick={() => {
+                            setInventoryItems([]);
+                            navigate(paths.menu.inventory.root);
+                        }}
+                        sx={actionButtonSx}
+                    >
+                        {t('common.back', 'Back')}
+                    </Button>
                 </Box>
             )}
         </Box>

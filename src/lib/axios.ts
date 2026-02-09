@@ -191,6 +191,8 @@ export const endpoints = {
   supplier: {
     list: '/api/v1/suppliers',
     create: '/api/v1/suppliers',
+    details: (id: string) => `/api/v1/suppliers/${id}`,
+    update: (id: string) => `/api/v1/suppliers/${id}`,
     delete: (id: string) => `/api/v1/suppliers/${id}`,
   },
   ingredientGroups: {

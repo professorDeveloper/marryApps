@@ -246,15 +246,15 @@ export function InvoiceDetailsStandaloneListView() {
                 getActions: (params) => [
                     <CustomGridActionsCellItem
                         showInMenu
-                        label={t('view')}
-                        icon={<Iconify icon="solar:eye-bold" />}
-                        onClick={() => handleViewClick(params.row)}
-                    />,
-                    <CustomGridActionsCellItem
-                        showInMenu
                         label={t('edit')}
                         icon={<Iconify icon="solar:pen-bold" />}
                         href={paths.warehouse.invoices.edit(params.row.id)}
+                    />,
+                    <CustomGridActionsCellItem
+                        showInMenu
+                        label={t('view')}
+                        icon={<Iconify icon="solar:eye-bold" />}
+                        onClick={() => handleViewClick(params.row)}
                     />,
                     <CustomGridActionsCellItem
                         showInMenu

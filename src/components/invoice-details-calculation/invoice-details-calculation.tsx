@@ -33,6 +33,7 @@ import { Iconify } from 'src/components/iconify';
 import { useInvoiceDetailsAPI } from 'src/hooks/use-invoice-details-api';
 import { useInvoiceAPI } from 'src/hooks/use-invoice-api';
 import { IngredientEditView } from 'src/sections/warehouse/ingredients-edit-view';
+import { useRouter } from 'src/routes/hooks/use-router';
 
 // --- TYPES ---
 interface BackendResponse<T> {
@@ -88,6 +89,7 @@ export function InvoiceDetailsCalculation({ invoiceId, invoiceData, onSuccess, o
     const theme = useTheme();
     const { getIngredients, createInvoiceDetailsBatch } = useInvoiceDetailsAPI();
     const { createInvoiceBatch } = useInvoiceAPI();
+    const router = useRouter();
 
     // Tab state
     const [currentTab, setCurrentTab] = useState(0);
@@ -130,9 +132,15 @@ export function InvoiceDetailsCalculation({ invoiceId, invoiceData, onSuccess, o
         loadData();
     }, [getIngredients, t]);
 
-    // Restore persisted details when component mounts
+    // Restore persisted details when component mounts or persistedDetails changes
     useEffect(() => {
-        if (persistedDetails && persistedDetails.length > 0) {
+        // Don't run if details are still being edited
+        if (!persistedDetails) return;
+
+        // Always clear state first to prevent duplicates
+        setSelectedIds([]);
+
+        if (persistedDetails.length > 0) {
             const newTransferredIds: string[] = [];
             const newQuantities: Record<string, number> = {};
             const newPricesPerUnit: Record<string, number> = {};
@@ -140,10 +148,14 @@ export function InvoiceDetailsCalculation({ invoiceId, invoiceData, onSuccess, o
 
             persistedDetails.forEach((detail) => {
                 const ingredientId = detail.ingredient_id || detail.id;
-                newTransferredIds.push(ingredientId);
-                newQuantities[ingredientId] = detail.quantity;
-                newPricesPerUnit[ingredientId] = detail.price_per_unit;
-                newPrices[ingredientId] = detail.price;
+
+                // Prevent duplicates - only add if not already present
+                if (!newTransferredIds.includes(ingredientId)) {
+                    newTransferredIds.push(ingredientId);
+                    newQuantities[ingredientId] = detail.quantity;
+                    newPricesPerUnit[ingredientId] = detail.price_per_unit;
+                    newPrices[ingredientId] = detail.price;
+                }
             });
 
             setTransferredIds(newTransferredIds);
@@ -151,7 +163,7 @@ export function InvoiceDetailsCalculation({ invoiceId, invoiceData, onSuccess, o
             setPricesPerUnit(newPricesPerUnit);
             setPrices(newPrices);
             setShowCalculation(true);
-        } else if (persistedDetails && persistedDetails.length === 0) {
+        } else if (persistedDetails.length === 0) {
             // Clear details if persistedDetails is empty (after successful batch submission)
             setTransferredIds([]);
             setQuantities({});
@@ -402,36 +414,40 @@ export function InvoiceDetailsCalculation({ invoiceId, invoiceData, onSuccess, o
             const batchData = transferredItems.map((item) => ({
                 ingredient_id: item.id,
                 invoice_id: invoiceId !== 'new' ? invoiceId : undefined,
-                quantity: item.quantity,
+                quantity: item.quantity.toString(),
                 price_per_unit: item.price_per_unit.toString(),
                 price: item.price.toString(),
             }));
 
             // If this is a new invoice, validate and save with invoice info
-            if (isNewInvoice && onSaveInvoice) {
-                // Check if form data is filled
-                if (!formData?.supplier_id) {
-                    toast.error(t('warehouse.invoices.fillInvoiceInfoFirst', 'Please fill invoice information in Tab 1 first'));
+            if (isNewInvoice) {
+                // If onSaveInvoice is provided, use it
+                if (onSaveInvoice) {
+                    // Check if form data is filled
+                    if (!formData?.supplier_id) {
+                        toast.error(t('warehouse.invoiceDetails.fillInvoiceInfoFirst', 'Please fill invoice information in Tab 1 first'));
+                        setLoading(false);
+                        return;
+                    }
+
+                    // Use calculated total price from details (not from user input)
+                    const calculatedTotalAmount = totals.totalPrice;
+                    const updatedFormData = {
+                        ...formData,
+                        total_amount: calculatedTotalAmount.toString(),
+                    };
+
+                    // Call parent function to save invoice + details together
+                    await onSaveInvoice(updatedFormData, batchData);
                     return;
                 }
 
-                // Use calculated total price from details (not from user input)
-                const calculatedTotalAmount = totals.totalPrice;
-                const updatedFormData = {
-                    ...formData,
-                    total_amount: calculatedTotalAmount.toString(),
-                };
-
-                // Call parent function to save invoice + details together
-                await onSaveInvoice(updatedFormData, batchData);
-                return;
-            }
-
-            // If this is a new invoice but no onSaveInvoice, pass details to parent
-            if (isNewInvoice && onDetailsChange) {
-                onDetailsChange(batchData);
-                toast.success(t('warehouse.invoiceDetails.detailsReady', 'Details ready. Now save invoice info in Tab 1'));
-                return;
+                // If no onSaveInvoice, pass details to parent via callback
+                if (onDetailsChange) {
+                    onDetailsChange(batchData);
+                    toast.success(t('warehouse.invoiceDetails.detailsReady', 'Details ready. Now save invoice info in Tab 1'));
+                    return;
+                }
             }
 
             // If this is an existing invoice, use the batch endpoint that creates details
@@ -449,6 +465,7 @@ export function InvoiceDetailsCalculation({ invoiceId, invoiceData, onSuccess, o
             }
         } catch (error) {
             console.error('Error submitting batch:', error);
+            toast.error(error instanceof Error ? error.message : t('error.loadFailed'));
         } finally {
             setLoading(false);
         }
@@ -471,15 +488,15 @@ export function InvoiceDetailsCalculation({ invoiceId, invoiceData, onSuccess, o
     };
 
     return (
-        <Paper sx={{ minHeight: '100vh' }}>
+        <div style={{ minHeight: '100vh' }}>
             {/* Tabs Navigation */}
             <Tabs
                 value={currentTab}
                 onChange={(e, newValue) => setCurrentTab(newValue)}
                 sx={{
-                    borderBottom: 1,
+                    // borderBottom: 1,
                     borderColor: 'divider',
-                    px: 3,
+                    // px: 3,
                 }}
             >
                 <Tab
@@ -758,17 +775,23 @@ export function InvoiceDetailsCalculation({ invoiceId, invoiceData, onSuccess, o
                             <Box sx={{ mt: 3, display: 'flex', justifyContent: 'flex-end', gap: 2 }}>
                                 <Button
                                     variant="outlined"
-                                    onClick={handleMoveLeft}
+                                    onClick={() => router.push('/menu/warehouse/invoice-details')}
                                     disabled={loading}
                                 >
                                     {t('cancel')}
                                 </Button>
                                 <Button
-                                    variant="contained"
+                                    sx={{
+                                        backgroundColor: '#FB6633',
+                                        color: 'white',
+                                        '&:hover': {
+                                            backgroundColor: '#d9534f',
+                                        },
+                                    }}
                                     color="primary"
                                     onClick={handleSubmitBatch}
                                     disabled={loading || transferredItems.length === 0}
-                                    startIcon={<Iconify icon="solar:check-circle-bold" />}
+                                // startIcon={<Iconify icon="solar:check-circle-bold" />}
                                 >
                                     {isNewInvoice ? t('save') : t('warehouse.invoiceDetails.submitBatch')}
                                 </Button>
@@ -796,6 +819,6 @@ export function InvoiceDetailsCalculation({ invoiceId, invoiceData, onSuccess, o
                     <IngredientEditView isNew={true} onSuccess={handleRefreshIngredients} />
                 </Box>
             )}
-        </Paper>
+        </div>
     );
 }
