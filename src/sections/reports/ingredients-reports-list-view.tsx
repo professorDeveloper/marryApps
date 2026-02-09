@@ -320,6 +320,7 @@ export function IngredientReportsListView() {
                 }}
             />
 
+
             {/* End Date - Required */}
             <DatePicker
                 label={t('ingredientReports.endDate') || 'End Date'}
