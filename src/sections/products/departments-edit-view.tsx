@@ -78,8 +78,8 @@ export function ProductEditView({ isNew = false }: DepartmentEditViewProps) {
                 let name_i18n = formData.name_i18n;
                 if (formData.name_en || formData.name_ru || formData.name) {
                     const translationData: any = {
-                        en: formData.name_en || formData.name || '',
-                        ru: formData.name_ru || formData.name || '',
+                        en: formData.name_en || '',
+                        ru: formData.name_ru || '',
                         uz: formData.name || '', // Primary name is always Uzbek
                     };
 

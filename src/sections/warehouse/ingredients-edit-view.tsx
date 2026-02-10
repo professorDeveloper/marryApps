@@ -2,20 +2,11 @@ import { useCallback, useMemo, useState, useEffect } from 'react';
 import type { TFunction } from 'i18next';
 import type { IIngredientFormData } from 'src/types/ingredients';
 import type { CardSection, GenericEditViewConfig } from 'src/components/generic-edit-view';
-
 import { useTranslation } from 'react-i18next';
 import { Box } from '@mui/material';
-
 import { paths } from 'src/routes/paths';
 import { useRouter, useParams } from 'src/routes/hooks';
-
-import {
-    useGetIngredient,
-    useCreateIngredient,
-    useUpdateIngredient,
-    useDeleteIngredient,
-    useGetIngredientGroups,
-} from 'src/actions/ingredients';
+import { useGetIngredient, useCreateIngredient, useUpdateIngredient, useDeleteIngredient, useGetIngredientGroups } from 'src/actions/ingredients';
 
 import { GenericEditView } from 'src/components/generic-edit-view';
 import { CustomBreadcrumbs } from 'src/components/custom-breadcrumbs';
@@ -118,7 +109,7 @@ function buildColorSection(): CardSection {
                 key: 'color_code',
                 label: 'common.colorCode',
                 type: 'color' as const,
-                defaultValue: '#FF4842',
+                defaultValue: COLOR_CODES[0],
                 colors: COLOR_CODES,
             },
         ],
@@ -141,10 +132,6 @@ function buildPictureSection(): CardSection {
         ],
     };
 }
-
-// ============================================================================
-// MAIN COMPONENT
-// ============================================================================
 
 export interface IngredientEditViewProps {
     isNew?: boolean;
@@ -325,10 +312,6 @@ export function IngredientEditView({ isNew = false, onSuccess }: IngredientEditV
         </Box>
     );
 }
-
-// ============================================================================
-// WRAPPER FOR ROUTE INTEGRATION
-// ============================================================================
 
 export function IngredientEditViewWrapper({ isNew = false }: IngredientEditViewProps) {
     return <IngredientEditView isNew={isNew} />;

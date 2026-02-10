@@ -359,7 +359,7 @@ export function IngredientReportsListView() {
             {/* Action Buttons */}
             <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
                 <Button
-                    variant="contained"
+                    // variant="contained"
                     size="small"
                     startIcon={<Iconify icon="solar:check-circle-bold" />}
                     onClick={handleApplyDateRange}
@@ -367,7 +367,8 @@ export function IngredientReportsListView() {
                     sx={{
                         minWidth: 'auto',
                         flex: 1,
-                        backgroundColor: !selectedStorageId || !startDate || !endDate ? 'rgba(24, 144, 255, 0.4)' : '#1890FF',
+                        backgroundColor: '#FB6633',
+                        color: '#FFFFFF',
                     }}
                 >
                     {t('ingredientReports.apply') || 'Apply'}

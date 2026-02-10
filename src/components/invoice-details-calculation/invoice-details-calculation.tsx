@@ -496,7 +496,7 @@ export function InvoiceDetailsCalculation({ invoiceId, invoiceData, onSuccess, o
                 sx={{
                     // borderBottom: 1,
                     borderColor: 'divider',
-                    // px: 3,
+                    px: 3,
                 }}
             >
                 <Tab
@@ -559,7 +559,7 @@ export function InvoiceDetailsCalculation({ invoiceId, invoiceData, onSuccess, o
                                     </Box>
                                 ) : filteredLeftIngredients.length > 0 ? (
                                     filteredLeftIngredients.map((ing) => (
-                                        <Box
+                                        <Box 
                                             key={ing.id}
                                             sx={{
                                                 display: 'flex',

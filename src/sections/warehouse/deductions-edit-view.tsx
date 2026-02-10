@@ -438,9 +438,10 @@ export function DeductionsEditView({ isNew = false }: DeductionsEditViewProps) {
                     <Tabs
                         value={activeTab}
                         onChange={handleTabChange}
+                        variant="fullWidth"
                         sx={{
                             px: 2,
-                            borderBottom: 1,
+                            // borderBottom: 1,
                             borderColor: 'divider',
                         }}
                     >
@@ -455,6 +456,7 @@ export function DeductionsEditView({ isNew = false }: DeductionsEditViewProps) {
                             aria-controls="deductions-tabpanel-1"
                         />
                     </Tabs>
+
 
                     {/* Tab 0: Deduction Details Form */}
                     <TabPanel value={activeTab} index={0}>

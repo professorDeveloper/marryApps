@@ -206,16 +206,17 @@ export function useGetDepartment(departmentId: string) {
         // Add all translation versions for editing
         enrichedDept.name_en = translation.en || '';
         enrichedDept.name_ru = translation.ru || '';
+        enrichedDept.name = translation.uz || '';
 
         const langKey = getLangKey(currentLang);
         if (langKey in translation && translation[langKey]) {
-          enrichedDept.name = translation[langKey] as string;
+          enrichedDept.displayName = translation[langKey] as string;
         } else if (currentLang.startsWith('uz') && translation.uz) {
           // Fallback to default uz if uz-Latn or uz-Cyrl not available
-          enrichedDept.name = translation.uz;
+          enrichedDept.displayName = translation.uz;
         } else if (translation.en) {
           // Fallback to English as last resort
-          enrichedDept.name = translation.en;
+          enrichedDept.displayName = translation.en;
         }
       }
     }

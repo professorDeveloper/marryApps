@@ -254,7 +254,7 @@ export function InvoiceInfoEditView({
     );
 
     return (
-        <Box sx={{ pl: 4, pt: 3 }}>
+        <Box>
             {loading ? (
                 <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 400 }}>
                     <CircularProgress />

@@ -72,6 +72,7 @@ function enrichCategories(
                 translationFields = {
                     name_en: translation.en || '',
                     name_ru: translation.ru || '',
+                    name: translation.uz || '', // Store uz value in name field
                 };
 
                 // Try to get exact language match

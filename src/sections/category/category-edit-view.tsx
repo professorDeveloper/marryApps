@@ -200,8 +200,8 @@ export function CategoryEditView({ categoryId, isNew = false }: CategoryEditView
                     // Create translation with provided language-specific names
                     // name field is always Uzbek (uz), so use it as uz translation
                     const translationData: any = {
-                        en: formData.name_en || formData.name || '',
-                        ru: formData.name_ru || formData.name || '',
+                        en: formData.name_en || '',
+                        ru: formData.name_ru || '',
                         uz: formData.name || '', // Primary name is always Uzbek
                     };
 

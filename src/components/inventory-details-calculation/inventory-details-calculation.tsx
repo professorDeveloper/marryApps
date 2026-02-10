@@ -703,6 +703,7 @@ export function InventoryDetailsCalculation({
                                 ...actionButtonSx,
                                 position: 'relative',
                                 backgroundColor: '#FB6633',
+                                color: '#FFFFFF',
                                 // boxShadow: theme.shadows[4],
                                 transition: 'all 0.3s ease',
                                 '&:hover:not(:disabled)': {

@@ -183,8 +183,9 @@ export function InvoicesEditViewTabs() {
                 <Tabs
                     value={currentTab}
                     onChange={handleTabChange}
+                    variant="fullWidth"
                     sx={{
-                        borderBottom: 1,
+                        // borderBottom: 1,
                         borderColor: 'divider',
                         mb: 3,
                     }}
@@ -200,6 +201,7 @@ export function InvoicesEditViewTabs() {
                         aria-controls="invoice-tabpanel-1"
                     />
                 </Tabs>
+
 
                 {/* TAB 1: Invoice Information */}
                 <TabPanel value={currentTab} index={0}>

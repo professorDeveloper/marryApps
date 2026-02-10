@@ -528,11 +528,16 @@ export function BillsListView() {
             {/* Action Buttons */}
             <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
                 <Button
-                    variant="contained"
+                    // variant="contained"
                     size="medium"
                     startIcon={<Iconify icon="solar:check-circle-bold" />}
                     onClick={handleApplyDateRange}
-                    sx={{ minWidth: 'auto', flex: 1 }}
+                    sx={{
+                        minWidth: 'auto',
+                        flex: 1,
+                        backgroundColor: '#FB6633',
+                        color: '#FFFFFF',
+                    }}
                 >
                     {t('bills.apply') || 'Apply'}
                 </Button>
