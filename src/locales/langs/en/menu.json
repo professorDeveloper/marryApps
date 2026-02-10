@@ -148,7 +148,11 @@
     "nameEn": "Name (English)",
     "nameUz": "Name (Uzbek)",
     "nameRu": "Name (Russian)",
-    "translationHelp": "Provide translations for the department name in different languages."
+    "translationHelp": "Provide translations for the department name in different languages.",
+    "deleteConfirm": "Are you sure you want to delete this department?",
+    "deleteMessage": "This action cannot be undone and cannot be reversed.",
+    "cancel": "Cancel",
+    "confirm": "Confirm"
   },
   "categories": {
     "title": "Categories",
@@ -193,7 +197,12 @@
     "storageRequired": "Storage selection is required",
     "departmentRequired": "Department selection is required",
     "nameEn": "Name (English)",
-    "nameRu": "Name (Russian)"
+    "nameRu": "Name (Russian)",
+    "nameUz": "Name (Uzbek)",
+    "deleteConfirm": "Are you sure you want to delete this category?",
+    "deleteMessage": "This action cannot be undone and cannot be reversed.",
+    "cancel": "Cancel",
+    "confirm": "Confirm"
   },
   "semifinishedProducts": {
     "title": "Semifinished products",
@@ -320,7 +329,11 @@
     "storageDepartmentTitle": "Storage and department",
     "uploading": "Uploading...",
     "nameEn": "Name (English)",
-    "nameRu": "Name (Russian)"
+    "nameRu": "Name (Russian)",
+    "deleteConfirm": "Are you sure you want to delete this meal product?",
+    "deleteMessage": "This action cannot be undone and cannot be reversed.",
+    "cancel": "Cancel",
+    "confirm": "Confirm"
   },
   "overview": {
     "subheader": "Overview",
