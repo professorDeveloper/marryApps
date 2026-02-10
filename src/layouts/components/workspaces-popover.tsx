@@ -1,7 +1,7 @@
 import type { Theme, SxProps } from '@mui/material/styles';
 import type { ButtonBaseProps } from '@mui/material/ButtonBase';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { usePopover } from 'minimal-shared/hooks';
 
 import Box from '@mui/material/Box';
@@ -18,6 +18,7 @@ import { useTranslate } from 'src/locales/use-locales';
 import { Iconify } from 'src/components/iconify';
 import { Scrollbar } from 'src/components/scrollbar';
 import { CustomPopover } from 'src/components/custom-popover';
+import { useBranchContext } from 'src/components/contexts/branch-context';
 
 // ----------------------------------------------------------------------
 
@@ -34,17 +35,36 @@ export function WorkspacesPopover({ data = [], sx, ...other }: WorkspacesPopover
   const mediaQuery = 'sm';
 
   const { open, anchorEl, onClose, onOpen } = usePopover();
+  const { selectedBranchId, setSelectedBranchId } = useBranchContext();
 
   const [workspace, setWorkspace] = useState(data[0]);
 
   const { t } = useTranslate('menu');
 
+  // Data change'da workspace'ni sync qilish
+  useEffect(() => {
+    if (data.length > 0) {
+      // Agar selectedBranchId mavjud bo'lsa, uning uchun workspace'ni topamiz
+      if (selectedBranchId) {
+        const selected = data.find((d) => d.id === selectedBranchId);
+        if (selected) {
+          setWorkspace(selected);
+        }
+      } else {
+        // Agar selectedBranchId yo'q bo'lsa, birinchisini tanlaylik
+        setWorkspace(data[0]);
+        setSelectedBranchId(data[0].id);
+      }
+    }
+  }, [data, selectedBranchId, setSelectedBranchId]);
+
   const handleChangeWorkspace = useCallback(
     (newValue: (typeof data)[0]) => {
       setWorkspace(newValue);
+      setSelectedBranchId(newValue.id);
       onClose();
     },
-    [onClose]
+    [onClose, setSelectedBranchId]
   );
 
   const buttonBg: SxProps<Theme> = {
@@ -142,9 +162,9 @@ export function WorkspacesPopover({ data = [], sx, ...other }: WorkspacesPopover
         </MenuList>
       </Scrollbar>
 
-      <Divider sx={{ my: 0.5, borderStyle: 'dashed' }} />
+      {/* <Divider sx={{ my: 0.5, borderStyle: 'dashed' }} /> */}
 
-      <Button
+      {/* <Button
         fullWidth
         startIcon={<Iconify width={18} icon="mingcute:add-line" />}
         onClick={() => {
@@ -165,7 +185,7 @@ export function WorkspacesPopover({ data = [], sx, ...other }: WorkspacesPopover
         }}
       >
         {t('workspaces.add')}
-      </Button>
+      </Button> */}
     </CustomPopover>
   );
 

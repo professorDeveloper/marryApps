@@ -6,22 +6,29 @@ import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 import CardHeader from '@mui/material/CardHeader';
 import CardContent from '@mui/material/CardContent';
+import CircularProgress from '@mui/material/CircularProgress';
+import Alert from '@mui/material/Alert';
 
 import { paths } from 'src/routes/paths';
 
 import { Iconify } from 'src/components/iconify';
 import { CustomBreadcrumbs } from 'src/components/custom-breadcrumbs';
 import { DashboardContent } from 'src/layouts/dashboard';
+import { useBranchContext } from 'src/components/contexts/branch-context';
+import { useGetBranchById } from 'src/hooks/use-branch-by-id';
 
 export function RestaurantInfoListView() {
   const { t } = useTranslation('menu');
+  const { selectedBranchId } = useBranchContext();
+  const { branch, branchLoading, branchError } = useGetBranchById(selectedBranchId ?? undefined);
 
   // Demo ma'lumotlar - keyin API dan keladi
   const restaurantData = {
-    organizationName: 'Nomdor somsa',
-    address: 'Chilonzor tumani novza metro',
+    organizationName: branch?.name || 'Nomdor somsa',
+    address: branch?.address || 'Chilonzor tumani novza metro',
     description: '',
     city: 'Toshkent',
+    phone: branch?.phone || '-',
     averageBill: '500 000 000 so\'m',
     averageCheckLevel: '600 ta',
     availableOnline: false,
@@ -42,12 +49,12 @@ export function RestaurantInfoListView() {
       twitter: 'https://www.twitter.com/name',
     },
   };
- 
+
   const location = {
     lat: 41.292258,
     lng: 69.222216,
   };
-  
+
   // 41.292258, 69.222276
   const weekDays = [
     { key: 'monday', label: 'Dushanba', value: restaurantData.workingDays.monday },
@@ -75,7 +82,7 @@ export function RestaurantInfoListView() {
           { name: t('app') || 'Bosh sahifa', href: paths.menu.root },
           {
             name: 'Restoran ma\'lumotlari',
-            icon: <Iconify icon="eva:chevron-down-fill" width={16} />,
+            // icon: <Iconify icon="eva:chevron-down-fill" width={16} />,
           },
         ]}
         sx={{ mb: { xs: 2, md: 3 } }}
@@ -91,80 +98,112 @@ export function RestaurantInfoListView() {
           gap: 3,
         }}
       >
+        {/* Loading va Error states */}
+        {branchLoading && (
+          <Card>
+            <CardContent sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 300 }}>
+              <CircularProgress />
+            </CardContent>
+          </Card>
+        )}
+
+        {branchError && !branchLoading && (
+          <Alert severity="error">
+            Restoran ma'lumotlarini yuklashda xatolik yuz berdi
+          </Alert>
+        )}
+
+        {!selectedBranchId && !branchLoading && (
+          <Alert severity="info">
+            Restoranni tanlang
+          </Alert>
+        )}
+
         {/* Asosiy ma'lumotlar Card */}
-        <Card>
-          <CardHeader title="Asosiy ma'lumotlar" />
-          <CardContent>
-            <Stack spacing={2.5}>
-              <Box>
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
-                  Tashkilot nomi
-                </Typography>
-                <Typography variant="body1" fontWeight={500}>
-                  {restaurantData.organizationName}
-                </Typography>
-              </Box>
+        {!branchLoading && selectedBranchId && (
+          <Card>
+            <CardHeader title="Asosiy ma'lumotlar" />
+            <CardContent>
+              <Stack spacing={3}>
+                <Box>
+                  <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+                    Tashkilot nomi
+                  </Typography>
+                  <Typography variant="body1" fontWeight={500}>
+                    {restaurantData.organizationName}
+                  </Typography>
+                </Box>
 
-              <Box>
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
-                  Manzil
-                </Typography>
-                <Typography variant="body1" fontWeight={500}>
-                  {restaurantData.address}
-                </Typography>
-              </Box>
+                <Box>
+                  <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+                    Manzil
+                  </Typography>
+                  <Typography variant="body1" fontWeight={500}>
+                    {restaurantData.address}
+                  </Typography>
+                </Box>
 
-              <Box>
+                <Box>
+                  <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+                    Telefon
+                  </Typography>
+                  <Typography variant="body1" fontWeight={500}>
+                    {restaurantData.phone}
+                  </Typography>
+                </Box>
+
+                {/* <Box>
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
                   Tavsif
                 </Typography>
                 <Typography variant="body1" fontWeight={500} color="text.secondary">
                   {restaurantData.description || '-'}
                 </Typography>
-              </Box>
+              </Box> */}
 
-              <Box>
+                {/* <Box>
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
                   Shahar
                 </Typography>
                 <Typography variant="body1" fontWeight={500}>
                   {restaurantData.city}
                 </Typography>
-              </Box>
+              </Box> */}
 
-              <Box>
+                {/* <Box>
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
                   O'rtacha hisob-kitob miqdori
                 </Typography>
                 <Typography variant="body1" fontWeight={500}>
                   {restaurantData.averageBill}
                 </Typography>
-              </Box>
+              </Box> */}
 
-              <Box>
+                {/* <Box>
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
                   O'rtacha tekshirish darajasi
                 </Typography>
                 <Typography variant="body1" fontWeight={500}>
                   {restaurantData.averageCheckLevel}
                 </Typography>
-              </Box>
+              </Box> */}
 
-              <Box>
+                {/* <Box>
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
                   Onlayn mavjud
                 </Typography>
                 <Typography variant="body1" fontWeight={500}>
                   {restaurantData.availableOnline ? 'Mavjud' : 'Mavjud emas'}
                 </Typography>
-              </Box>
-            </Stack>
-          </CardContent>
-        </Card>
+              </Box> */}
+              </Stack>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Map Display Card */}
         <Card>
-          <CardContent sx={{ p: 0, height: '100%', minHeight: 400 }}>
+          <CardContent sx={{ p: 0, m: 0, height: '100%', minHeight: 400 }}>
             <Box
               sx={{
                 width: '100%',

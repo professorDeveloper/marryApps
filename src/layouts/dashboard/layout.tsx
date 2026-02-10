@@ -18,6 +18,7 @@ import { Logo } from 'src/components/logo';
 import { useSettingsContext } from 'src/components/settings';
 
 import { useMockedUser } from 'src/auth/hooks';
+import { useGetWorkspacesBranches } from 'src/hooks/use-workspaces-branches';
 
 import { NavMobile } from './nav-mobile';
 import { VerticalDivider } from './content';
@@ -25,7 +26,6 @@ import { NavVertical } from './nav-vertical';
 import { NavHorizontal } from './nav-horizontal';
 import { Searchbar } from '../components/searchbar';
 import { getNavData } from '../nav-config-dashboard';
-import { _workspaces } from '../nav-config-workspace';
 import { getAccountData } from '../nav-config-account';
 import { MenuButton } from '../components/menu-button';
 import { AccountDrawer } from '../components/account-drawer';
@@ -63,6 +63,8 @@ export function DashboardLayout({
   const { user } = useMockedUser();
 
   const settings = useSettingsContext();
+
+  const { workspaces } = useGetWorkspacesBranches();
 
   const { t: tLayout } = useTranslation('layout');
   const { t: tMenu } = useTranslation('menu');
@@ -158,7 +160,7 @@ export function DashboardLayout({
 
           {/** @slot Workspace popover */}
           <WorkspacesPopover
-            data={_workspaces}
+            data={workspaces}
             sx={{ ...(isNavHorizontal && { color: 'var(--layout-nav-text-primary-color)' }) }}
           />
         </>
