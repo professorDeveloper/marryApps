@@ -75,6 +75,12 @@ export function DeductionGroupsListView() {
 
     const columns = useMemo<GridColDef[]>(
         () => [
+            // {
+            //     field: 'number',
+            //     headerName: t('deductions.number', 'Act Number'),
+            //     // flex: 0.8,
+            //     minWidth: 80,
+            // },
             {
                 field: 'name',
                 headerName: t('deductions.groupName', 'Group Name'),
@@ -93,10 +99,10 @@ export function DeductionGroupsListView() {
             {
                 type: 'actions',
                 field: 'actions',
-                headerName: ' ',
-                width: 64,
-                align: 'right',
-                headerAlign: 'right',
+                headerName: t('actions'),
+                width: 120,
+                // align: 'right',
+                // headerAlign: 'right',
                 sortable: false,
                 filterable: false,
                 disableColumnMenu: true,
@@ -108,14 +114,14 @@ export function DeductionGroupsListView() {
                     //     onClick={() => router.push(paths.warehouse.deductionGroups.edit(String(params.id)))}
                     // />,
                     <CustomGridActionsCellItem
-                        showInMenu
+                        // showInMenu
                         label={t('common.edit', 'Edit')}
                         icon={<Iconify icon="solar:pen-bold" />}
                         onClick={() => router.push(paths.warehouse.deductionGroups.edit(String(params.id)))}
                     />,
                     <CustomGridActionsCellItem
                         key="delete"
-                        showInMenu
+                        // showInMenu
                         label={t('common.delete', 'Delete')}
                         icon={<Iconify icon="solar:trash-bin-trash-bold" />}
                         onClick={() => handleDeleteClick(String(params.id))}

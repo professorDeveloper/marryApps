@@ -10,19 +10,11 @@ import { useMemo } from 'react';
 
 import { fetcher, endpoints } from 'src/lib/axios';
 
-// ============================================================================
-// CONFIGURATION
-// ============================================================================
-
 const swrOptions: SWRConfiguration = {
     revalidateIfStale: true,
     revalidateOnFocus: false,
     revalidateOnReconnect: false,
 };
-
-// ============================================================================
-// INGREDIENT REPORTS HOOKS
-// ============================================================================
 
 /**
  * Build query string from filter parameters

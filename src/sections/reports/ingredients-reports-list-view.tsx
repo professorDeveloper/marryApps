@@ -203,16 +203,16 @@ export function IngredientReportsListView() {
             {
                 type: 'actions',
                 field: 'actions',
-                headerName: ' ',
-                width: 64,
-                align: 'right',
-                headerAlign: 'right',
+                headerName: t('actions'),
+                width: 100,
+                // align: 'right',
+                // headerAlign: 'right',
                 sortable: false,
                 filterable: false,
                 disableColumnMenu: true,
                 getActions: (params) => [
                     <CustomGridActionsCellItem
-                        showInMenu
+                        // showInMenu
                         label={t('ingredientReports.view') || 'View'}
                         icon={<Iconify icon="solar:eye-bold" />}
                         onClick={() => {

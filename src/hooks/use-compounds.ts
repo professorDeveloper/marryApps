@@ -110,7 +110,7 @@ function enrichCompounds(
             ...compound,
             name: localizedName,
             ...translationFields,
-            department_name: departmentMap.get(compound.department_id) || 'Unknown',
+            department_name: departmentMap.get(compound.department_id) || '-',
         };
     });
 }
@@ -176,7 +176,7 @@ function enrichCompound(
         ...compoundData,
         name: localizedName,
         ...translationFields,
-        department_name: departmentMap.get(compoundData.department_id) || 'Unknown',
+        department_name: departmentMap.get(compoundData.department_id) || '-',
     };
 }
 

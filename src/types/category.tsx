@@ -5,6 +5,8 @@
 export type ICategory = {
     id: string;
     name: string;
+    name_en?: string;
+    name_ru?: string;
     name_i18n?: string;
     picture_url?: string;
     storage_id?: string;

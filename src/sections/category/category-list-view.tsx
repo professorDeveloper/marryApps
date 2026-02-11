@@ -148,8 +148,21 @@ function GoodsTable({ categoryId }: { categoryId: string }) {
  * Category image/avatar renderer
  */
 function RenderCellCategory({ params }: { params: any }) {
+  const { i18n } = useTranslation('menu');
   const category = params.row as ICategory;
-  const name = category.name || '-';
+  const currentLanguage = i18n.language;
+  
+  // Get name based on current language
+  let name = '-';
+  if (currentLanguage.startsWith('en')) {
+    name = category.name_en || category.name || '-';
+  } else if (currentLanguage.startsWith('ru')) {
+    name = category.name_ru || category.name || '-';
+  } else {
+    // Default to Uzbek (uz)
+    name = category.name || '-';
+  }
+  
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -322,29 +335,29 @@ export function CategoryListView() {
       {
         type: 'actions',
         field: 'actions',
-        headerName: '',
-        width: 64,
-        align: 'right',
-        headerAlign: 'right',
+        headerName: t('actions'),
+        width: 150,
+        // align: 'right',
+        // headerAlign: 'right',
         sortable: false,
         filterable: false,
         disableColumnMenu: true,
         getActions: (params) => [
           <CustomGridActionsCellItem
-            showInMenu
-            label={t('categories.edit')}
-            icon={<Iconify icon="solar:pen-bold" />}
-            href={paths.menu.category.edit(params.row.id)}
-          />,
-          <CustomGridActionsCellItem
-            showInMenu
+            // showInMenu
             label={t('categories.view')}
             icon={<Iconify icon="solar:eye-bold" />}
             onClick={() => openModal(params.row)}
           />,
           <CustomGridActionsCellItem
+            // showInMenu
+            label={t('categories.edit')}
+            icon={<Iconify icon="solar:pen-bold" />}
+            href={paths.menu.category.edit(params.row.id)}
+          />,
+          <CustomGridActionsCellItem
             key="delete"
-            showInMenu
+            // showInMenu
             label={t('categories.delete')}
             icon={<Iconify icon="solar:trash-bin-trash-bold" />}
             onClick={() => {

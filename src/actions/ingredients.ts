@@ -13,19 +13,11 @@ import { useMemo, useCallback } from 'react';
 import { poster, putter, fetcher, deleter, endpoints } from 'src/lib/axios';
 import { toast } from 'src/components/snackbar';
 
-// ============================================================================
-// CONFIGURATION
-// ============================================================================
-
 const swrOptions: SWRConfiguration = {
     revalidateIfStale: true,
     revalidateOnFocus: false,
     revalidateOnReconnect: false,
 };
-
-// ============================================================================
-// INGREDIENT GROUPS HOOKS
-// ============================================================================
 
 /**
  * Get all ingredient groups
@@ -52,10 +44,6 @@ export function useGetIngredientGroups() {
 
     return memoizedValue;
 }
-
-// ============================================================================
-// INGREDIENTS HOOKS
-// ============================================================================
 
 /**
  * Helper function to enrich ingredients with group names

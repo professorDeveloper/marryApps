@@ -236,28 +236,28 @@ export function InvoiceDetailsStandaloneListView() {
             {
                 type: 'actions',
                 field: 'actions',
-                headerName: ' ',
-                width: 100,
-                align: 'right',
-                headerAlign: 'right',
+                headerName: t('actions'),
+                width: 150,
+                // align: 'right',
+                // headerAlign: 'right',
                 sortable: false,
                 filterable: false,
                 disableColumnMenu: true,
                 getActions: (params) => [
                     <CustomGridActionsCellItem
-                        showInMenu
+                        // showInMenu
                         label={t('edit')}
                         icon={<Iconify icon="solar:pen-bold" />}
                         href={paths.warehouse.invoices.edit(params.row.id)}
                     />,
                     <CustomGridActionsCellItem
-                        showInMenu
+                        // showInMenu
                         label={t('view')}
                         icon={<Iconify icon="solar:eye-bold" />}
                         onClick={() => handleViewClick(params.row)}
                     />,
                     <CustomGridActionsCellItem
-                        showInMenu
+                        // showInMenu
                         label={t('delete')}
                         icon={<Iconify icon="solar:trash-bin-trash-bold" />}
                         onClick={() => handleDeleteClick(params.row.id, 'invoice')}

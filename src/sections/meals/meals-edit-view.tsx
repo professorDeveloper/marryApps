@@ -128,7 +128,7 @@ function TabPanel(props: TabPanelProps) {
 export function MealEditView({ isNew = false }: MealEditViewProps) {
     const { id: mealId } = useParams<{ id: string }>();
     const router = useRouter();
-    const { t } = useTranslation('menu');
+    const { t, i18n } = useTranslation('menu');
 
     // SWR hooks
     const { meal, mealLoading } = useGetMeal(isNew ? '' : mealId || '');
@@ -189,6 +189,22 @@ export function MealEditView({ isNew = false }: MealEditViewProps) {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [meal, isNew]);
 
+    // Helper function to get translated name based on current language
+    const getTranslatedName = useCallback((item: any) => {
+        const currentLang = i18n.language || 'uz';
+        let displayName = item.name || '-';
+
+        if (currentLang === 'en' && item.name_en) {
+            displayName = item.name_en;
+        } else if (currentLang === 'ru' && item.name_ru) {
+            displayName = item.name_ru;
+        } else if ((currentLang === 'uz' || currentLang === 'uz-Latn' || currentLang === 'uz-Cyrl') && item.name_uz) {
+            displayName = item.name_uz;
+        }
+
+        return displayName;
+    }, [i18n.language]);
+
     // Create translated copies of sections
     const IMAGE_SECTION_T: CardSection = {
         ...IMAGE_SECTION,
@@ -204,26 +220,26 @@ export function MealEditView({ isNew = false }: MealEditViewProps) {
         ...BASIC_INFO_SECTION,
         title: t(BASIC_INFO_SECTION.title),
         fields: BASIC_INFO_SECTION.fields.map((f) => {
-            // Map categories to options
+            // Map categories to options with translations
             if (f.key === 'category_id') {
                 return {
                     ...f,
                     label: t(f.label),
                     options: Array.isArray(categories) ? categories.map((cat: any) => ({
                         value: cat.id,
-                        label: cat.name,
+                        label: getTranslatedName(cat),
                     })) : [],
                 };
             }
 
-            // Map departments to options
+            // Map departments to options with translations
             if (f.key === 'department_id') {
                 return {
                     ...f,
                     label: t(f.label),
                     options: Array.isArray(departments) ? departments.map((dept: any) => ({
                         value: dept.id,
-                        label: dept.name,
+                        label: getTranslatedName(dept),
                     })) : [],
                 };
             }
@@ -246,7 +262,7 @@ export function MealEditView({ isNew = false }: MealEditViewProps) {
                 placeholder: f.placeholder ? t(f.placeholder) : undefined,
             };
         }),
-    }), [t, categories, departments]);
+    }), [t, categories, departments, getTranslatedName]);
 
     // Handle form submission
     const handleSubmit = useCallback(
@@ -416,19 +432,19 @@ export function MealEditView({ isNew = false }: MealEditViewProps) {
                         />
                         <Tab
                             sx={{ minWidth: 0, flex: 1 }}
-                            label="Hisoblash"
+                            label={t('mealsProducts.calculate') || 'Hisoblash'}
                             id="meal-tab-1"
                             aria-controls="meal-tabpanel-1"
                         />
                         <Tab
                             sx={{ minWidth: 0, flex: 1 }}
-                            label="Modifikatorlar"
+                            label={t('mealsProducts.modifiers') || 'Modifikatorlar'}
                             id="meal-tab-2"
                             aria-controls="meal-tabpanel-2"
                         />
                         <Tab
                             sx={{ minWidth: 0, flex: 1 }}
-                            label="Tegishli taomlar"
+                            label={t('mealsProducts.related') || 'Tegishli taomlar'}
                             id="meal-tab-3"
                             aria-controls="meal-tabpanel-3"
                         />

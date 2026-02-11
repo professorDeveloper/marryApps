@@ -94,7 +94,7 @@ function enrichCategories(
             name: localizedName,
             ...translationFields,
             storage_name: storageMap.get(cat.storage_id) || cat.storage_id || '-',
-            department_name: departmentMap.get(cat.department_id) || cat.department_id || '-',
+            department_name: departmentMap.get(cat.department_id) || '-',
         };
     });
 }

@@ -25,22 +25,37 @@ import { CustomGridActionsCellItem } from 'src/components/custom-data-grid';
 import { GenericViewModal, SpecificationsTable } from 'src/components/generic-view-view';
 import { GenericTableView } from 'src/components/generic-table-view';
 import { formatPrice } from 'src/components/generic-view-view/modal-formatters';
+import { useGetCategories } from 'src/actions/categories';
+import { useGetDepartments } from 'src/actions/departments';
 
 
 function MealCalculationsTable({ mealId }: { mealId: string }) {
-    const { t } = useTranslation('menu');
+    const { t, i18n } = useTranslation('menu');
     const { mealWithCalculations, loading } = useGetMealWithCalculations(mealId);
     const { ingredients } = useGetIngredients();
     const { meals } = useGetMeals();
 
-    // Create maps for quick name lookup
+    // Create maps for quick name lookup with translations
     const ingredientMap = useMemo(() => {
         const map = new Map<string, string>();
+        const currentLang = i18n.language || 'uz';
+        
         ingredients.forEach((ing: any) => {
-            map.set(ing.id, ing.name);
+            let displayName = ing.name || '-';
+            
+            // Get translated name based on current language
+            if (currentLang === 'en' && ing.name_en) {
+                displayName = ing.name_en;
+            } else if (currentLang === 'ru' && ing.name_ru) {
+                displayName = ing.name_ru;
+            } else if ((currentLang === 'uz' || currentLang === 'uz-Latn' || currentLang === 'uz-Cyrl') && ing.name_uz) {
+                displayName = ing.name_uz;
+            }
+            
+            map.set(ing.id, displayName);
         });
         return map;
-    }, [ingredients]);
+    }, [ingredients, i18n.language]);
 
     // Remove duplicate calculations - keep only unique ingredient_id or component_compound_id
     // HOOKS MUST BE CALLED BEFORE ANY EARLY RETURNS!
@@ -190,22 +205,55 @@ export function Meals() {
     const { meals, mealsLoading, mutate } = useGetMeals();
     const { deleteMeal } = useDeleteMeal();
     const { deleteMeals } = useDeleteMeals();
+    const { categories } = useGetCategories();
+    const { departments } = useGetDepartments();
 
     // State
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [mealToDelete, setMealToDelete] = useState<string | null>(null);
 
-    // Debug logs
-    // console.log('📊 Meals data:', meals);
-    // console.log('📊 Current language:', i18n.language);
-    // if (meals.length > 0) {
-    //     console.log('📊 First meal translation fields:', {
-    //         name: meals[0].name,
-    //         name_en: meals[0].name_en,
-    //         name_ru: meals[0].name_ru,
-    //         name_uz: meals[0].name_uz,
-    //     });
-    // }
+    // Create translation maps for categories and departments
+    const categoryMap = useMemo(() => {
+        const map = new Map<string, string>();
+        const currentLang = i18n.language || 'uz';
+        
+        categories.forEach((cat: any) => {
+            let displayName = cat.name || '-';
+            
+            // Get translated name based on current language
+            if (currentLang === 'en' && cat.name_en) {
+                displayName = cat.name_en;
+            } else if (currentLang === 'ru' && cat.name_ru) {
+                displayName = cat.name_ru;
+            } else if ((currentLang === 'uz' || currentLang === 'uz-Latn' || currentLang === 'uz-Cyrl') && cat.name_uz) {
+                displayName = cat.name_uz;
+            }
+            
+            map.set(cat.id, displayName);
+        });
+        return map;
+    }, [categories, i18n.language]);
+
+    const departmentMap = useMemo(() => {
+        const map = new Map<string, string>();
+        const currentLang = i18n.language || 'uz';
+        
+        departments.forEach((dept: any) => {
+            let displayName = dept.name || '-';
+            
+            // Get translated name based on current language
+            if (currentLang === 'en' && dept.name_en) {
+                displayName = dept.name_en;
+            } else if (currentLang === 'ru' && dept.name_ru) {
+                displayName = dept.name_ru;
+            } else if ((currentLang === 'uz' || currentLang === 'uz-Latn' || currentLang === 'uz-Cyrl') && dept.name_uz) {
+                displayName = dept.name_uz;
+            }
+            
+            map.set(dept.id, displayName);
+        });
+        return map;
+    }, [departments, i18n.language]);
 
     // View modal hook'i
     const { isOpen, selectedData, openModal, closeModal } = useGenericViewModal<IMealsItem>();
@@ -225,13 +273,6 @@ export function Meals() {
                     const currentLang = i18n.language || 'uz';
                     let displayName = row.name || '-';
 
-                    // console.log(`🍽️ Rendering meal: ${row.name}, lang: ${currentLang}`, {
-                    //     name: row.name,
-                    //     name_en: row.name_en,
-                    //     name_ru: row.name_ru,
-                    //     name_uz: row.name_uz,
-                    // });
-
                     if (currentLang === 'en' && row.name_en) {
                         displayName = row.name_en;
                     } else if (currentLang === 'ru' && row.name_ru) {
@@ -239,8 +280,6 @@ export function Meals() {
                     } else if ((currentLang === 'uz' || currentLang === 'uz-Latn' || currentLang === 'uz-Cyrl') && row.name_uz) {
                         displayName = row.name_uz;
                     }
-
-                    // console.log(`🎯 Final displayName: ${displayName}`);
 
                     const { imageUrl, loading } = useImageUrl(row.picture_url);
                     const initials = getInitials(displayName);
@@ -284,57 +323,58 @@ export function Meals() {
                 headerName: t('mealsProducts.category'),
                 width: 150,
                 type: 'string',
-                renderCell: (params) => params.row.category?.name || params.value || '-',
+                renderCell: (params) => {
+                    // Use the translated category name from categoryMap
+                    return categoryMap.get(params.value) || params.row.category?.name || params.value || '-';
+                },
             },
             {
                 field: 'department_id',
                 headerName: t('mealsProducts.department'),
                 width: 150,
                 type: 'string',
-                renderCell: (params) => params.row.department?.name || params.value || '-',
+                renderCell: (params) => {
+                    // Use the translated department name from departmentMap
+                    return departmentMap.get(params.value) || params.row.department?.name || params.value || '-';
+                },
             },
             {
                 field: 'price',
                 headerName: t('mealsProducts.price'),
                 width: 120,
                 type: 'number',
-                renderCell: (params) => `${params.value?.toLocaleString()} so'm`,
+                renderCell: (params) => `${params.value?.toLocaleString()} ${t('mealsProducts.som')}`,
             },
             {
                 field: 'cook_time',
                 headerName: t('mealsProducts.cookingTime'),
                 width: 120,
                 type: 'number',
-                renderCell: (params) => `${params.value} min`,
+                renderCell: (params) => `${params.value} ${t('mealsProducts.min')}`,
             },
             {
                 type: 'actions',
                 field: 'actions',
-                headerName: ' ',
-                width: 64,
-                align: 'right',
-                headerAlign: 'right',
+                headerName: t('actions'),
+                width: 150,
                 sortable: false,
                 filterable: false,
                 disableColumnMenu: true,
                 getActions: (params) => [
                     <CustomGridActionsCellItem
-                        key="edit"
-                        showInMenu
-                        label={t('mealsProducts.edit')}
-                        icon={<Iconify icon="solar:pen-bold" />}
-                        href={paths.menu.meals.edit(params.row.id)}
-                    />,
-                    <CustomGridActionsCellItem
                         key="view"
-                        showInMenu
                         label={t('mealsProducts.view')}
                         icon={<Iconify icon="solar:eye-bold" />}
                         onClick={() => openModal(params.row)}
                     />,
                     <CustomGridActionsCellItem
+                        key="edit"
+                        label={t('mealsProducts.edit')}
+                        icon={<Iconify icon="solar:pen-bold" />}
+                        href={paths.menu.meals.edit(params.row.id)}
+                    />,
+                    <CustomGridActionsCellItem
                         key="delete"
-                        showInMenu
                         label={t('mealsProducts.delete')}
                         icon={<Iconify icon="solar:trash-bin-trash-bold" />}
                         onClick={() => {
@@ -346,7 +386,7 @@ export function Meals() {
                 ],
             },
         ],
-        [theme.vars.palette.error.main, t, i18n.language, openModal]
+        [theme.vars.palette.error.main, t, i18n.language, openModal, categoryMap, departmentMap]
     );
 
     const handleConfirmDelete = useCallback(async () => {
@@ -409,11 +449,7 @@ export function Meals() {
                 data={selectedData}
                 renderContent={(data) => (
                     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-                        {/* {renderMealsSpecifications(data, t)} */}
                         <Box>
-                            {/* <Box sx={{ mb: 2, fontWeight: 600, fontSize: 16 }}>
-                                {t('common.calculations')}
-                            </Box> */}
                             <MealCalculationsTable mealId={data.id} />
                         </Box>
                     </Box>

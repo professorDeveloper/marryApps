@@ -171,25 +171,31 @@ export function EmployeeListView({ role, title }: EmployeeListViewProps) {
                 headerName: t('users.phoneNumber'),
                 width: 150,
             },
-                // {
-                //     field: 'status',
-                //     headerName: t('users.status'),
-                //     width: 120,
-                //     renderCell: (params) => <RenderCellStatus params={params} />,
-                // },
+            // {
+            //     field: 'status',
+            //     headerName: t('users.status'),
+            //     width: 120,
+            //     renderCell: (params) => <RenderCellStatus params={params} />,
+            // },
             {
                 type: 'actions',
                 field: 'actions',
-                headerName: '',
-                width: 64,
-                align: 'right',
-                headerAlign: 'right',
+                headerName: t('actions'),
+                width: 150,
+                // align: 'right',
+                // headerAlign: 'right',
                 sortable: false,
                 filterable: false,
                 disableColumnMenu: true,
                 getActions: (params) => [
                     <CustomGridActionsCellItem
-                        showInMenu
+                        // showInMenu
+                        label={t('users.view')}
+                        icon={<Iconify icon="solar:eye-bold" />}
+                        onClick={() => openModal(params.row)}
+                    />,
+                    <CustomGridActionsCellItem
+                        // showInMenu
                         label={t('users.edit')}
                         icon={<Iconify icon="solar:pen-bold" />}
                         href={role === 'user'
@@ -198,14 +204,8 @@ export function EmployeeListView({ role, title }: EmployeeListViewProps) {
                         }
                     />,
                     <CustomGridActionsCellItem
-                        showInMenu
-                        label={t('users.view')}
-                        icon={<Iconify icon="solar:eye-bold" />}
-                        onClick={() => openModal(params.row)}
-                    />,
-                    <CustomGridActionsCellItem
                         key="delete"
-                        showInMenu
+                        // showInMenu
                         label={t('users.delete')}
                         icon={<Iconify icon="solar:trash-bin-trash-bold" />}
                         onClick={() => {

@@ -112,7 +112,7 @@ function IngredientStockListView() {
                 type: 'actions',
                 headerName: t('actions'),
                 // flex: 0.8,
-                minWidth: 100,
+                width: 100,
                 sortable: false,
                 filterable: false,
                 getActions: (params) => [
@@ -129,7 +129,7 @@ function IngredientStockListView() {
                         label={t('delete')}
                         onClick={() => handleDeleteOpen(params.row.id)}
                         style={{ color: '#FB6633' }}
-                        showInMenu
+                        // showInMenu
                     />,
                 ],
             },

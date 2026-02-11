@@ -259,6 +259,9 @@
     "list": "Ro'yxat",
     "add": "Qo'shish",
     "edit": "Tahrirlash",
+    "calculate": "Hisoblash",
+    "modifiers": "Modifikatorlar",
+    "related": "Tegishli taomlar",
     "view": "Ko'rish",
     "delete": "O'chirish",
     "name": "Nomi",
@@ -318,7 +321,9 @@
     "cancel": "Bekor qilish",
     "uploading": "Yuklanmoqda...",
     "nameEn": "Nomi (inglizcha)",
-    "nameRu": "Nomi (ruscha)"
+    "nameRu": "Nomi (ruscha)",
+    "som": "so'm",
+    "min": "daqiqa"
   },
   "overview": {
     "subheader": "Umumiy",

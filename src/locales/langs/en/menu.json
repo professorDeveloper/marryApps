@@ -269,6 +269,9 @@
     "list": "List",
     "add": "Add",
     "edit": "Edit",
+    "calculate": "Calculate price",
+    "modifiers": "Modifiers",
+    "related": "Related products",
     "view": "View",
     "delete": "Delete",
     "name": "Name",
@@ -333,7 +336,9 @@
     "deleteConfirm": "Are you sure you want to delete this meal product?",
     "deleteMessage": "This action cannot be undone and cannot be reversed.",
     "cancel": "Cancel",
-    "confirm": "Confirm"
+    "confirm": "Confirm",
+    "som": "sum",
+    "min": "min"
   },
   "overview": {
     "subheader": "Overview",

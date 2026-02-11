@@ -65,22 +65,22 @@ export function InvoicesListView() {
             {
                 type: 'actions',
                 field: 'actions',
-                headerName: ' ',
-                width: 100,
-                align: 'right',
-                headerAlign: 'right',
+                headerName: t('actions'),
+                width: 120,
+                // align: 'right',
+                // headerAlign: 'right',
                 sortable: false,
                 filterable: false,
                 disableColumnMenu: true,
                 getActions: (params) => [
                     <CustomGridActionsCellItem
-                        showInMenu
+                        // showInMenu
                         label={t('edit')}
                         icon={<Iconify icon="solar:pen-bold" />}
                         href={paths.warehouse.suppliers.edit(params.row.id)}
                     />,
                     <CustomGridActionsCellItem
-                        showInMenu
+                        // showInMenu
                         label={t('delete')}
                         icon={<Iconify icon="solar:trash-bin-trash-bold" />}
                         style={{ color: theme.vars.palette.error.main }}

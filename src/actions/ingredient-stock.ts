@@ -12,19 +12,11 @@ import { useMemo, useCallback } from 'react';
 import { putter, fetcher, deleter, endpoints } from 'src/lib/axios';
 import { toast } from 'src/components/snackbar';
 
-// ============================================================================
-// CONFIGURATION
-// ============================================================================
-
 const swrOptions: SWRConfiguration = {
     revalidateIfStale: true,
     revalidateOnFocus: false,
     revalidateOnReconnect: false,
 };
-
-// ============================================================================
-// HELPER FUNCTIONS
-// ============================================================================
 
 /**
  * Enrich ingredient stock with ingredient and storage names
@@ -49,10 +41,6 @@ function enrichIngredientStocks(
         };
     });
 }
-
-// ============================================================================
-// INGREDIENT STOCK HOOKS
-// ============================================================================
 
 /**
  * Get all ingredient stocks

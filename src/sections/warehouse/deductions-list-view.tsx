@@ -229,10 +229,10 @@ export function DeductionsListView() {
             {
                 type: 'actions',
                 field: 'actions',
-                headerName: ' ',
-                width: 64,
-                align: 'right',
-                headerAlign: 'right',
+                headerName: t('actions'),
+                width: 120,
+                // align: 'right',
+                // headerAlign: 'right',
                 sortable: false,
                 filterable: false,
                 disableColumnMenu: true,
@@ -244,14 +244,14 @@ export function DeductionsListView() {
                     //     onClick={() => router.push(paths.warehouse.deductions.details(String(params.id)))}
                     // />,
                     <CustomGridActionsCellItem
-                        showInMenu
+                        // showInMenu
                         label={t('common.edit', 'Edit')}
                         icon={<Iconify icon="solar:pen-bold" />}
                         onClick={() => router.push(paths.warehouse.deductions.details(String(params.id)))}
                     />,
                     <CustomGridActionsCellItem
                         key="delete"
-                        showInMenu
+                        // showInMenu
                         label={t('common.delete', 'Delete')}
                         icon={<Iconify icon="solar:trash-bin-trash-bold" />}
                         onClick={() => handleDeleteClick(String(params.id))}

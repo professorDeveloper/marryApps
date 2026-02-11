@@ -14,7 +14,7 @@ import { CustomGridActionsCellItem } from 'src/components/custom-data-grid';
 import { GenericViewModal } from 'src/components/generic-view-view';
 import { getFullImageUrl } from 'src/utils/image-url';
 import { getInitials, getAvatarColor } from 'src/utils/avatar';
-import { Typography } from '@mui/material'; 
+import { Typography } from '@mui/material';
 
 function RenderCellDepartmentName({ params }: { params: any }) {
   const { row } = params;
@@ -286,7 +286,7 @@ function CategoriesTable({ departmentId }: { departmentId: string }) {
               </td>
               <td>
                 <Typography sx={{ color: 'text.primary' }}>
-                  {storageMap.get(category.storage_id) || category.storage_id || '-'}
+                  {storageMap.get(category.storage_id) || '-'}
                 </Typography>
               </td>
               <td>
@@ -372,29 +372,29 @@ export function ProductListView() {
       {
         type: 'actions',
         field: 'actions',
-        headerName: ' ',
-        width: 64,
-        align: 'right',
-        headerAlign: 'right',
+        headerName: t('actions'),
+        width: 150,
+        // align: 'right',
+        // headerAlign: 'right',
         sortable: false,
         filterable: false,
         disableColumnMenu: true,
         getActions: (params) => [
           <CustomGridActionsCellItem
-            showInMenu
-            label={t('departments.edit')}
-            icon={<Iconify icon="solar:pen-bold" />}
-            onClick={() => handleEditDepartment(params.row.id)}
-          />,
-          <CustomGridActionsCellItem
-            showInMenu
+            // showInMenu
             label={t('departments.view')}
             icon={<Iconify icon="solar:eye-bold" />}
             onClick={() => handleViewDepartment(params.row)}
           />,
           <CustomGridActionsCellItem
+            // showInMenu
+            label={t('departments.edit')}
+            icon={<Iconify icon="solar:pen-bold" />}
+            onClick={() => handleEditDepartment(params.row.id)}
+          />,
+          <CustomGridActionsCellItem
             key="delete"
-            showInMenu
+            // showInMenu
             label={t('departments.delete')}
             icon={<Iconify icon="solar:trash-bin-trash-bold" />}
             onClick={() => {

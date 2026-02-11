@@ -186,24 +186,24 @@ export function InventoryListView() {
             {
                 type: 'actions',
                 field: 'actions',
-                headerName: ' ',
-                width: 64,
-                align: 'right',
-                headerAlign: 'right',
+                headerName: t('actions'),
+                width: 130,
+                // align: 'right',
+                // headerAlign: 'right',
                 sortable: false,
                 filterable: false,
                 disableColumnMenu: true,
                 getActions: (params) => [
                     <CustomGridActionsCellItem
                         key="edit"
-                        showInMenu
+                        // showInMenu
                         label={t('common.edit')}
                         icon={<Iconify icon="solar:pen-bold" />}
                         onClick={() => handleEdit(params.row.id)}
                     />,
                     <CustomGridActionsCellItem
                         key="delete"
-                        showInMenu
+                        // showInMenu
                         label={t('common.delete')}
                         icon={<Iconify icon="solar:trash-bin-trash-bold" />}
                         style={{ color: theme.vars.palette.error.main }}

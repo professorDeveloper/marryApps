@@ -320,29 +320,29 @@ export function HalfMeals() {
             {
                 type: 'actions',
                 field: 'actions',
-                headerName: ' ',
-                width: 64,
-                align: 'right',
-                headerAlign: 'right',
+                headerName: t('actions'),
+                width: 150,
+                // align: 'right',
+                // headerAlign: 'right',
                 sortable: false,
                 filterable: false,
                 disableColumnMenu: true,
                 getActions: (params) => [
                     <CustomGridActionsCellItem
-                        showInMenu
-                        label={t('semifinishedProducts.edit')}
-                        icon={<Iconify icon="solar:pen-bold" />}
-                        href={paths.menu.semifinished.edit(params.row.id)}
-                    />,
-                    <CustomGridActionsCellItem
-                        showInMenu
+                        // showInMenu
                         label={t('semifinishedProducts.view')}
                         icon={<Iconify icon="solar:eye-bold" />}
                         onClick={() => openModal(params.row)}
                     />,
                     <CustomGridActionsCellItem
+                        // showInMenu
+                        label={t('semifinishedProducts.edit')}
+                        icon={<Iconify icon="solar:pen-bold" />}
+                        href={paths.menu.semifinished.edit(params.row.id)}
+                    />,
+                    <CustomGridActionsCellItem
                         key="delete"
-                        showInMenu
+                        // showInMenu
                         label={t('semifinishedProducts.delete')}
                         icon={<Iconify icon="solar:trash-bin-trash-bold" />}
                         onClick={() => {

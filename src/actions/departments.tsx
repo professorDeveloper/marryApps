@@ -95,7 +95,7 @@ function enrichDepartments(
     return {
       ...dept,
       name: displayName,
-      storage_name: storageMap.get(dept.storage_id) || dept.storage_id || '-',
+      storage_name: storageMap.get(dept.storage_id) || '-',
     };
   });
 }

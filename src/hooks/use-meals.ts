@@ -124,13 +124,13 @@ function enrichMeals(
             category: meal.category_id
                 ? {
                     id: meal.category_id,
-                    name: categoryMap.get(meal.category_id) || meal.category_id,
+                    name: categoryMap.get(meal.category_id) || '-',
                 }
                 : undefined,
             department: meal.department_id
                 ? {
                     id: meal.department_id,
-                    name: departmentMap.get(meal.department_id) || meal.department_id,
+                    name: departmentMap.get(meal.department_id) || '-',
                 }
                 : undefined,
         };
@@ -183,13 +183,13 @@ function enrichMeal(
         category: mealData.category_id
             ? {
                 id: mealData.category_id,
-                name: categoryMap.get(mealData.category_id) || mealData.category_id,
+                name: categoryMap.get(mealData.category_id) || '-',
             }
             : undefined,
         department: mealData.department_id
             ? {
                 id: mealData.department_id,
-                name: departmentMap.get(mealData.department_id) || mealData.department_id,
+                name: departmentMap.get(mealData.department_id) || '-',
             }
             : undefined,
     };

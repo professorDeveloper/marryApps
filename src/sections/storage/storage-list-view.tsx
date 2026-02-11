@@ -189,23 +189,23 @@ export function WarehouseListView() {
       {
         type: 'actions',
         field: 'actions',
-        headerName: ' ',
-        width: 64,
-        align: 'right',
-        headerAlign: 'right',
+        headerName: t('actions'),
+        width: 100,
+        // align: 'right',
+        // headerAlign: 'right',
         sortable: false,
         filterable: false,
         disableColumnMenu: true,
         getActions: (params) => [
           <CustomGridActionsCellItem
-            showInMenu
+            // showInMenu
             label={t('warehouse.edit', 'Edit')}
             icon={<Iconify icon="solar:pen-bold" />}
             onClick={() => handleEdit(params.row.id)}
           />,
           <CustomGridActionsCellItem
             key="delete"
-            showInMenu
+            // showInMenu
             label={t('warehouse.delete', 'Delete')}
             icon={<Iconify icon="solar:trash-bin-trash-bold" />}
             style={{ color: theme.vars.palette.error.main }}

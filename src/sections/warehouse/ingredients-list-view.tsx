@@ -224,6 +224,7 @@ export function IngredientListView() {
                 field: 'color_code',
                 headerName: t('warehouse.color'),
                 width: 150,
+                align: 'center',
                 renderCell: (params) => <RenderCellColor params={params} />,
             },
             {
@@ -239,29 +240,29 @@ export function IngredientListView() {
             {
                 type: 'actions',
                 field: 'actions',
-                headerName: ' ',
-                width: 64,
-                align: 'right',
-                headerAlign: 'right',
+                headerName: t('actions'),
+                width: 150,
+                // align: 'right',
+                // headerAlign: 'right',
                 sortable: false,
                 filterable: false,
                 disableColumnMenu: true,
                 getActions: (params) => [
                     <CustomGridActionsCellItem
-                        showInMenu
-                        label={t('warehouse.edit')}
-                        icon={<Iconify icon="solar:pen-bold" />}
-                        onClick={() => handleEditIngredient(params.row.id)}
-                    />,
-                    <CustomGridActionsCellItem
-                        showInMenu
+                        // showInMenu
                         label={t('warehouse.view')}
                         icon={<Iconify icon="solar:eye-bold" />}
                         onClick={() => handleViewIngredient(params.row)}
                     />,
                     <CustomGridActionsCellItem
+                        // showInMenu
+                        label={t('warehouse.edit')}
+                        icon={<Iconify icon="solar:pen-bold" />}
+                        onClick={() => handleEditIngredient(params.row.id)}
+                    />,
+                    <CustomGridActionsCellItem
                         key="delete"
-                        showInMenu
+                        // showInMenu
                         label={t('warehouse.delete')}
                         icon={<Iconify icon="solar:trash-bin-trash-bold" />}
                         onClick={() => {
