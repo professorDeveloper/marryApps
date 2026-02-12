@@ -17,6 +17,7 @@ import {
 import { paths } from 'src/routes/paths';
 import { useRouter } from 'src/routes/hooks';
 import { useGetIngredients, useDeleteIngredient, useGetIngredientGroups } from 'src/actions/ingredients';
+import { useGetIngredientStocks } from 'src/actions/ingredient-stock';
 import { toast } from 'src/components/snackbar';
 import { Iconify } from 'src/components/iconify';
 import { GenericTableView } from 'src/components/generic-table-view';
@@ -131,6 +132,27 @@ function RenderCellMeasurement({ params, t }: { params: any; t: (key: string) =>
 }
 
 /**
+ * Get ingredient quantity from stock
+ */
+function getIngredientQuantity(ingredientId: string, stocks: any[]): string {
+    const stock = stocks.find((s) => s.ingredient_id === ingredientId);
+    return stock ? stock.quantity : '-';
+}
+
+/**
+ * Quantity renderer
+ */
+function RenderCellQuantity({ params, stocks }: { params: any; stocks: any[] }) {
+    const quantity = getIngredientQuantity(params.row.id, stocks);
+
+    return (
+        <div style={{ fontSize: '0.875rem', opacity: 0.8 }}>
+            {quantity}
+        </div>
+    );
+}
+
+/**
  * Color renderer
  */
 function RenderCellColor({ params }: { params: any }) {
@@ -191,6 +213,7 @@ export function IngredientListView() {
     const { ingredients, ingredientsLoading } = useGetIngredients();
     const { ingredientGroups } = useGetIngredientGroups();
     const { deleteIngredient } = useDeleteIngredient();
+    const { stocks } = useGetIngredientStocks();
 
     const [viewModalOpen, setViewModalOpen] = useState(false);
     const [selectedIngredient, setSelectedIngredient] = useState<IIngredientItem | null>(null);
@@ -214,6 +237,13 @@ export function IngredientListView() {
                 width: 180,
                 renderCell: (params) => <RenderCellGroupName params={params} />,
             },
+            // {
+            //     field: 'quantity',
+            //     headerName: t('warehouse.quantity'),
+            //     width: 150,
+            //     align: 'right',
+            //     renderCell: (params) => <RenderCellQuantity params={params} stocks={stocks} />,
+            // },
             {
                 field: 'measurement',
                 headerName: t('warehouse.measurement'),
@@ -250,12 +280,6 @@ export function IngredientListView() {
                 getActions: (params) => [
                     <CustomGridActionsCellItem
                         // showInMenu
-                        label={t('warehouse.view')}
-                        icon={<Iconify icon="solar:eye-bold" />}
-                        onClick={() => handleViewIngredient(params.row)}
-                    />,
-                    <CustomGridActionsCellItem
-                        // showInMenu
                         label={t('warehouse.edit')}
                         icon={<Iconify icon="solar:pen-bold" />}
                         onClick={() => handleEditIngredient(params.row.id)}
@@ -274,7 +298,7 @@ export function IngredientListView() {
                 ],
             },
         ],
-        [t, theme.palette.error.main]
+        [t, theme.palette.error.main, stocks]
     );
 
     const handleEditIngredient = useCallback((id: string) => {
@@ -314,6 +338,8 @@ export function IngredientListView() {
 
     // Render specifications for view modal
     const renderIngredientSpecifications = useCallback((ingredient: IIngredientItem) => {
+        const quantity = getIngredientQuantity(ingredient.id, stocks);
+
         return (
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                 {ingredient.picture_url && (
@@ -354,6 +380,12 @@ export function IngredientListView() {
                 </Box>
                 <Box>
                     <Typography variant="subtitle2" sx={{ color: 'text.secondary', mb: 0.5 }}>
+                        {t('warehouse.quantity')}
+                    </Typography>
+                    <Typography variant="body2">{quantity}</Typography>
+                </Box>
+                <Box>
+                    <Typography variant="subtitle2" sx={{ color: 'text.secondary', mb: 0.5 }}>
                         {t('warehouse.price')}
                     </Typography>
                     <Typography variant="body2">{ingredient.price_per_unit || '-'}</Typography>
@@ -380,7 +412,7 @@ export function IngredientListView() {
                 )}
             </Box>
         );
-    }, [t, ingredientGroups]);
+    }, [t, ingredientGroups, stocks]);
 
     return (
         <>
@@ -412,6 +444,14 @@ export function IngredientListView() {
                         } catch (error) {
                             console.error('Failed to delete:', error);
                         }
+                    }
+                }}
+                onRowClick={(id) => {
+                    const ingredient = Array.isArray(ingredients)
+                        ? ingredients.find(ing => ing.id === id)
+                        : undefined;
+                    if (ingredient) {
+                        handleViewIngredient(ingredient);
                     }
                 }}
             />

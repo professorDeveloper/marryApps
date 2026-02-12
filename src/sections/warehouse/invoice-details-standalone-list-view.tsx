@@ -252,12 +252,6 @@ export function InvoiceDetailsStandaloneListView() {
                     />,
                     <CustomGridActionsCellItem
                         // showInMenu
-                        label={t('view')}
-                        icon={<Iconify icon="solar:eye-bold" />}
-                        onClick={() => handleViewClick(params.row)}
-                    />,
-                    <CustomGridActionsCellItem
-                        // showInMenu
                         label={t('delete')}
                         icon={<Iconify icon="solar:trash-bin-trash-bold" />}
                         onClick={() => handleDeleteClick(params.row.id, 'invoice')}
@@ -358,6 +352,12 @@ export function InvoiceDetailsStandaloneListView() {
                     ],
                 }}
                 addButton={{ label: t('add'), href: paths.warehouse.invoices.new }}
+                onRowClick={(id) => {
+                    const invoice = invoices.find(inv => inv.id === id);
+                    if (invoice) {
+                        handleViewClick(invoice);
+                    }
+                }}
             />
 
             <Dialog open={deleteDialogOpen} onClose={handleDeleteCancel}>

@@ -327,28 +327,20 @@ export function BillsListView() {
                     );
                 },
             },
-            {
-                type: 'actions',
-                field: 'actions',
-                headerName: t('actions'),
-                width: 100,
-                // align: 'right',
-                // headerAlign: 'right',
-                sortable: false,
-                filterable: false,
-                disableColumnMenu: true,
-                getActions: (params) => [
-                    <CustomGridActionsCellItem
-                        // showInMenu
-                        label={t('bills.details') || 'View'}
-                        icon={<Iconify icon="solar:eye-bold" />}
-                        onClick={() => {
-                            setSelectedBillId(params.row.id);
-                            setOpenDetailsModal(true);
-                        }}
-                    />,
-                ],
-            },
+            // {
+            //     type: 'actions',
+            //     field: 'actions',
+            //     headerName: t('actions'),
+            //     width: 100,
+            //     // align: 'right',
+            //     // headerAlign: 'right',
+            //     sortable: false,
+            //     filterable: false,
+            //     disableColumnMenu: true,
+            //     getActions: (params) => [
+            //         // View action removed - row click will trigger view
+            //     ],
+            // },
         ],
         [t]
     );
@@ -575,6 +567,10 @@ export function BillsListView() {
                 initialFilters={filters}
                 hideFilters={false}
                 renderFilters={renderFiltersContent}
+                onRowClick={(id) => {
+                    setSelectedBillId(id);
+                    setOpenDetailsModal(true);
+                }}
             />
 
             {/* Bill Details Modal - Using GenericViewModal */}

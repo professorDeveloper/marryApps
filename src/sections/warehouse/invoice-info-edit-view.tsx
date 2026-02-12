@@ -229,7 +229,7 @@ export function InvoiceInfoEditView({
         title: isNew ? t('warehouse.invoices.addNew') : t('warehouse.invoices.edit'),
         entityName: t('warehouse.invoices.title').toLowerCase(),
         breadcrumbs: [
-            { name: t('menu'), href: paths.menu.root },
+            { name: t('overview.menu.title'), href: paths.menu.root },
             { name: t('warehouse.title'), href: paths.warehouse.root },
             { name: t('warehouse.invoices.title'), href: paths.warehouse.invoices.root },
         ],

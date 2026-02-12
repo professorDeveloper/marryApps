@@ -117,7 +117,7 @@ export function InvoicesListView() {
                 breadcrumbs={{
                     heading: t('warehouse.suppliers.title'),
                     links: [
-                        { name: t('menu'), href: paths.menu.root },
+                        { name: t('overview.menu.title'), href: paths.menu.root },
                         { name: t('warehouse.title'), href: paths.warehouse.root },
                         { name: t('warehouse.suppliers.title'), href: paths.warehouse.suppliers.root },
                     ],

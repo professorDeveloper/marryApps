@@ -247,7 +247,7 @@ export const endpoints = {
     register: '/api/v1/auth/register',
   },
   translations: {
-    list: '/api/v1/translations',
+    list: '/api/v1/translations?limit=1000&offset=0', // Get all translations with high limit
     create: '/api/v1/translations',
     update: (id: string) => `/api/v1/translations/${id}`,
     delete: (id: string) => `/api/v1/translations/${id}`,

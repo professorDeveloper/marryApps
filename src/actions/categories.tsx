@@ -48,6 +48,11 @@ function enrichCategories(
         translations?.map((t: ITranslationItem) => [t.id, t]) || []
     );
 
+    // Debug: Show available translations
+    if (translationMap.size > 0) {
+        console.log('🔍 Available translations:', Array.from(translationMap.keys()).length, 'translations');
+    }
+
     // Helper function to map i18n language codes to translation fields
     const getLangKey = (lang: string): keyof ITranslationItem => {
         const langMap: Record<string, keyof ITranslationItem> = {
@@ -72,7 +77,8 @@ function enrichCategories(
                 translationFields = {
                     name_en: translation.en || '',
                     name_ru: translation.ru || '',
-                    name: translation.uz || '', // Store uz value in name field
+                    name_uz: translation.uz || '',
+                    name: translation.uz || cat.name, // Store uz value as fallback
                 };
 
                 // Try to get exact language match
@@ -83,10 +89,39 @@ function enrichCategories(
                     // Fallback to uz
                     localizedName = translation.uz as string;
                 } else if (translation.en) {
-                    // Final fallback to English
+                    // Fallback to English
                     localizedName = translation.en as string;
+                } else if (translation.ru) {
+                    // Fallback to Russian
+                    localizedName = translation.ru as string;
+                } else {
+                    // Last resort: use original name
+                    localizedName = cat.name;
                 }
+
+                // Debug log
+                console.log(`✅ Translation found for category "${cat.name}" (ID: ${cat.name_i18n})`);
+            } else {
+                // Translation ID topilmadi - faqat uz name-ni ko'rsatish
+                console.warn(`⚠️ Translation ID not found for category "${cat.name}" (ID: ${cat.name_i18n})`);
+                translationFields = {
+                    name_en: cat.name_en || '',
+                    name_ru: cat.name_ru || '',
+                    name_uz: cat.name || '',
+                    name: cat.name, // Uzbek nomini default qilib qo'y
+                };
+                localizedName = cat.name;
             }
+        } else {
+            // name_i18n mavjud emas - available fieldlardan foydalanish
+            console.info(`ℹ️ No translation ID for category "${cat.name}" - using direct fields`);
+            translationFields = {
+                name_en: cat.name_en || '',
+                name_ru: cat.name_ru || '',
+                name_uz: cat.name || '',
+                name: cat.name,
+            };
+            localizedName = cat.name;
         }
 
         return {

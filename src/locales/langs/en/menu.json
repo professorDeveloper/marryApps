@@ -575,6 +575,7 @@
     "ingredients": "Ingredients",
     "ingredient": "Ingredient",
     "group": "Group",
+    "quantity": "Quantity",
     "measurement": "Measurement",
     "colorCode": "Color code",
     "pictureUrl": "Picture URL",

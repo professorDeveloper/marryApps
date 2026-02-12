@@ -330,12 +330,6 @@ export function HalfMeals() {
                 getActions: (params) => [
                     <CustomGridActionsCellItem
                         // showInMenu
-                        label={t('semifinishedProducts.view')}
-                        icon={<Iconify icon="solar:eye-bold" />}
-                        onClick={() => openModal(params.row)}
-                    />,
-                    <CustomGridActionsCellItem
-                        // showInMenu
                         label={t('semifinishedProducts.edit')}
                         icon={<Iconify icon="solar:pen-bold" />}
                         href={paths.menu.semifinished.edit(params.row.id)}
@@ -423,6 +417,12 @@ export function HalfMeals() {
                 hideColumnsTogglable={['actions']}
                 onDeleteRow={handleDelete}
                 onDeleteRows={handleDeleteMultiple}
+                onRowClick={(id) => {
+                    const compound = compounds.find(c => c.id === id);
+                    if (compound) {
+                        openModal(compound);
+                    }
+                }}
             />
 
             {/* Compound Item View Modal */}

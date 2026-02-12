@@ -200,28 +200,20 @@ export function IngredientReportsListView() {
             //         });
             //     },
             // },
-            {
-                type: 'actions',
-                field: 'actions',
-                headerName: t('actions'),
-                width: 100,
-                // align: 'right',
-                // headerAlign: 'right',
-                sortable: false,
-                filterable: false,
-                disableColumnMenu: true,
-                getActions: (params) => [
-                    <CustomGridActionsCellItem
-                        // showInMenu
-                        label={t('ingredientReports.view') || 'View'}
-                        icon={<Iconify icon="solar:eye-bold" />}
-                        onClick={() => {
-                            setSelectedIngredientId(params.row.ingredient_id);
-                            setOpenDetailsModal(true);
-                        }}
-                    />,
-                ],
-            },
+            // {
+            //     type: 'actions',
+            //     field: 'actions',
+            //     headerName: t('actions'),
+            //     width: 100,
+            //     // align: 'right',
+            //     // headerAlign: 'right',
+            //     sortable: false,
+            //     filterable: false,
+            //     disableColumnMenu: true,
+            //     getActions: (params) => [
+            //         // View action removed - row click will trigger view
+            //     ],
+            // },
         ],
         [t]
     );
@@ -446,12 +438,12 @@ export function IngredientReportsListView() {
             <Box>
                 {/* Header Info */}
                 <Box sx={{ mb: 3, pb: 2, borderBottom: '1px solid', borderColor: 'divider' }}>
-                    <Typography variant="body2" sx={{ color: 'text.secondary', mb: 0.5 }}>
+                    {/* <Typography variant="body2" sx={{ color: 'text.secondary', mb: 0.5 }}>
                         {t('ingredientReports.ingredient') || 'Ingredient'}
                     </Typography>
                     <Typography variant="h6" sx={{ fontWeight: 700, mb: 2 }}>
                         {data.ingredient_name}
-                    </Typography>
+                    </Typography> */}
 
                     <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 2 }}>
                         <Box>
@@ -502,9 +494,9 @@ export function IngredientReportsListView() {
                                     <Typography variant="body2" sx={{ fontWeight: 600 }}>
                                         {card.qty}
                                     </Typography>
-                                    <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                                    {/* <Typography variant="caption" sx={{ color: 'text.secondary' }}>
                                         {data.measurement === 'kg' ? 'kg' : data.measurement === 'l' ? 'l' : 'dona'}
-                                    </Typography>
+                                    </Typography> */}
                                 </Box>
                                 <Typography variant="body2" sx={{ fontWeight: 700, color: '#1890FF' }}>
                                     {card.amount} so'm
@@ -537,6 +529,10 @@ export function IngredientReportsListView() {
                     ],
                 }}
                 renderFilters={renderFiltersContent}
+                onRowClick={(id) => {
+                    setSelectedIngredientId(id);
+                    setOpenDetailsModal(true);
+                }}
             />
 
             {/* Ingredient Report Detail Modal */}

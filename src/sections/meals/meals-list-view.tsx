@@ -39,10 +39,10 @@ function MealCalculationsTable({ mealId }: { mealId: string }) {
     const ingredientMap = useMemo(() => {
         const map = new Map<string, string>();
         const currentLang = i18n.language || 'uz';
-        
+
         ingredients.forEach((ing: any) => {
             let displayName = ing.name || '-';
-            
+
             // Get translated name based on current language
             if (currentLang === 'en' && ing.name_en) {
                 displayName = ing.name_en;
@@ -51,7 +51,7 @@ function MealCalculationsTable({ mealId }: { mealId: string }) {
             } else if ((currentLang === 'uz' || currentLang === 'uz-Latn' || currentLang === 'uz-Cyrl') && ing.name_uz) {
                 displayName = ing.name_uz;
             }
-            
+
             map.set(ing.id, displayName);
         });
         return map;
@@ -216,10 +216,10 @@ export function Meals() {
     const categoryMap = useMemo(() => {
         const map = new Map<string, string>();
         const currentLang = i18n.language || 'uz';
-        
+
         categories.forEach((cat: any) => {
             let displayName = cat.name || '-';
-            
+
             // Get translated name based on current language
             if (currentLang === 'en' && cat.name_en) {
                 displayName = cat.name_en;
@@ -228,7 +228,7 @@ export function Meals() {
             } else if ((currentLang === 'uz' || currentLang === 'uz-Latn' || currentLang === 'uz-Cyrl') && cat.name_uz) {
                 displayName = cat.name_uz;
             }
-            
+
             map.set(cat.id, displayName);
         });
         return map;
@@ -237,10 +237,10 @@ export function Meals() {
     const departmentMap = useMemo(() => {
         const map = new Map<string, string>();
         const currentLang = i18n.language || 'uz';
-        
+
         departments.forEach((dept: any) => {
             let displayName = dept.name || '-';
-            
+
             // Get translated name based on current language
             if (currentLang === 'en' && dept.name_en) {
                 displayName = dept.name_en;
@@ -249,7 +249,7 @@ export function Meals() {
             } else if ((currentLang === 'uz' || currentLang === 'uz-Latn' || currentLang === 'uz-Cyrl') && dept.name_uz) {
                 displayName = dept.name_uz;
             }
-            
+
             map.set(dept.id, displayName);
         });
         return map;
@@ -362,12 +362,6 @@ export function Meals() {
                 disableColumnMenu: true,
                 getActions: (params) => [
                     <CustomGridActionsCellItem
-                        key="view"
-                        label={t('mealsProducts.view')}
-                        icon={<Iconify icon="solar:eye-bold" />}
-                        onClick={() => openModal(params.row)}
-                    />,
-                    <CustomGridActionsCellItem
                         key="edit"
                         label={t('mealsProducts.edit')}
                         icon={<Iconify icon="solar:pen-bold" />}
@@ -439,6 +433,12 @@ export function Meals() {
                 hideColumns={{}}
                 hideColumnsTogglable={['actions']}
                 onDeleteRows={handleDeleteRows}
+                onRowClick={(id) => {
+                    const meal = meals.find(m => m.id === id);
+                    if (meal) {
+                        openModal(meal);
+                    }
+                }}
             />
 
             {/* Meals Item View Modal */}

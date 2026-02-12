@@ -382,12 +382,6 @@ export function ProductListView() {
         getActions: (params) => [
           <CustomGridActionsCellItem
             // showInMenu
-            label={t('departments.view')}
-            icon={<Iconify icon="solar:eye-bold" />}
-            onClick={() => handleViewDepartment(params.row)}
-          />,
-          <CustomGridActionsCellItem
-            // showInMenu
             label={t('departments.edit')}
             icon={<Iconify icon="solar:pen-bold" />}
             onClick={() => handleEditDepartment(params.row.id)}
@@ -482,6 +476,14 @@ export function ProductListView() {
             } catch (error) {
               console.error('Failed to delete:', error);
             }
+          }
+        }}
+        onRowClick={(id) => {
+          const department = Array.isArray(departments)
+            ? departments.find(dept => dept.id === id)
+            : undefined;
+          if (department) {
+            handleViewDepartment(department);
           }
         }}
       />

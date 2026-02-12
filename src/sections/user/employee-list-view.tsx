@@ -190,12 +190,6 @@ export function EmployeeListView({ role, title }: EmployeeListViewProps) {
                 getActions: (params) => [
                     <CustomGridActionsCellItem
                         // showInMenu
-                        label={t('users.view')}
-                        icon={<Iconify icon="solar:eye-bold" />}
-                        onClick={() => openModal(params.row)}
-                    />,
-                    <CustomGridActionsCellItem
-                        // showInMenu
                         label={t('users.edit')}
                         icon={<Iconify icon="solar:pen-bold" />}
                         href={role === 'user'
@@ -292,6 +286,12 @@ export function EmployeeListView({ role, title }: EmployeeListViewProps) {
                 }}
                 hideColumnsTogglable={['actions']}
                 onDeleteRows={handleDeleteMultiple}
+                onRowClick={(id) => {
+                    const employee = employees.find(emp => emp.id === id);
+                    if (employee) {
+                        openModal(employee);
+                    }
+                }}
             />
 
             {/* User View Modal */}

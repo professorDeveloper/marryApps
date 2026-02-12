@@ -151,7 +151,7 @@ function RenderCellCategory({ params }: { params: any }) {
   const { i18n } = useTranslation('menu');
   const category = params.row as ICategory;
   const currentLanguage = i18n.language;
-  
+
   // Get name based on current language
   let name = '-';
   if (currentLanguage.startsWith('en')) {
@@ -162,7 +162,7 @@ function RenderCellCategory({ params }: { params: any }) {
     // Default to Uzbek (uz)
     name = category.name || '-';
   }
-  
+
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -345,12 +345,6 @@ export function CategoryListView() {
         getActions: (params) => [
           <CustomGridActionsCellItem
             // showInMenu
-            label={t('categories.view')}
-            icon={<Iconify icon="solar:eye-bold" />}
-            onClick={() => openModal(params.row)}
-          />,
-          <CustomGridActionsCellItem
-            // showInMenu
             label={t('categories.edit')}
             icon={<Iconify icon="solar:pen-bold" />}
             href={paths.menu.category.edit(params.row.id)}
@@ -424,6 +418,12 @@ export function CategoryListView() {
         }}
         hideColumnsTogglable={['actions']}
         onDeleteRows={handleDeleteMultiple}
+        onRowClick={(id) => {
+          const category = categories.find(cat => cat.id === id);
+          if (category) {
+            openModal(category);
+          }
+        }}
       />
 
       {/* Category View Modal */}

@@ -77,14 +77,14 @@ const BASIC_INFO_SECTION: CardSection = {
             required: true,
             defaultValue: '',
         },
-        {
-            key: 'department_id',
-            label: 'mealsProducts.department',
-            type: 'select',
-            options: [], // Will be populated dynamically
-            required: true,
-            defaultValue: '',
-        },
+        // {
+        //     key: 'department_id',
+        //     label: 'mealsProducts.department',
+        //     type: 'select',
+        //     options: [], // Will be populated dynamically
+        //     required: true,
+        //     defaultValue: '',
+        // },
         {
             key: 'price',
             label: 'mealsProducts.price',
@@ -188,6 +188,19 @@ export function MealEditView({ isNew = false }: MealEditViewProps) {
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [meal, isNew]);
+
+    // Auto-set department_id when category changes
+    useEffect(() => {
+        if (formData.category_id && Array.isArray(categories)) {
+            const selectedCategory = categories.find((cat: any) => cat.id === formData.category_id);
+            if (selectedCategory && selectedCategory.department_id) {
+                setFormData((prev) => ({
+                    ...prev,
+                    department_id: selectedCategory.department_id,
+                }));
+            }
+        }
+    }, [formData.category_id, categories]);
 
     // Helper function to get translated name based on current language
     const getTranslatedName = useCallback((item: any) => {

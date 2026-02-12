@@ -323,6 +323,48 @@ export function GenericTableView<T extends Record<string, any>>({
               '& .MuiDataGrid-columnHeader:focus, & .MuiDataGrid-columnHeader:focus-within': {
                 outline: 'none',
               },
+              
+              // --- PAGINATION KENGAYTIRISH STILLARI ---
+              '& .MuiTablePagination-root': {
+                overflow: 'hidden',
+                // borderTop: '1px solid rgba(145, 158, 171, 0.24)', // Ajratib turish uchun chiziq
+              },
+              '& .MuiTablePagination-toolbar': {
+                height: 64, // Toolbar balandligini oshirish
+              },
+              '& .MuiTablePagination-selectLabel': {
+                fontSize: '14px', // Yozuvni kattalashtirish
+                fontWeight: 600,
+              },
+              '& .MuiTablePagination-input': {
+                // Select input (dropdown) stillari
+                marginLeft: '8px',
+                marginRight: '8px',
+                border: '1px solid rgba(145, 158, 171, 0.24)', // Chegara
+                borderRadius: '8px', // Yumaloq burchaklar
+                height: '36px',
+                minWidth: '100px', // Minimal kenglik (juda tor bo'lmasligi uchun)
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '14px',
+                fontWeight: 700,
+                padding: '0 8px',
+              },
+              '& .MuiTablePagination-select': {
+                paddingLeft: '8px',
+                paddingRight: '24px !important', // Icon uchun joy
+                display: 'flex',
+                alignItems: 'center',
+              },
+              '& .MuiTablePagination-displayedRows': {
+                fontSize: '14px',
+                fontWeight: 600,
+              },
+              '& .MuiTablePagination-actions': {
+                marginRight: '8px',
+              },
+              // ------------------------------------------
             }}
           />
         </Card>

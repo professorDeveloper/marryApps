@@ -28,11 +28,7 @@ export function TransfersListView() {
         filterable: false,
         disableColumnMenu: true,
         getActions: (params) => [
-          <CustomGridActionsCellItem
-            showInMenu
-            label={t('view')}
-            icon={<Iconify icon="solar:eye-bold" />}
-          />,
+          // View action removed - row click will trigger view
         ],
       },
     ],

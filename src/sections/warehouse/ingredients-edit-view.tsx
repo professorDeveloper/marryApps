@@ -153,8 +153,8 @@ export function IngredientEditView({ isNew = false, onSuccess }: IngredientEditV
         name: '',
         measurement: '',
         group_id: '',
-        color: '#FF4842',
-        image: null,
+        color_code: COLOR_CODES[0],
+        picture_url: null,
     });
 
     // Load ingredient if editing
@@ -234,8 +234,8 @@ export function IngredientEditView({ isNew = false, onSuccess }: IngredientEditV
                         name: '',
                         measurement: '',
                         group_id: '',
-                        color: '#FF4842',
-                        image: null,
+                        color_code: COLOR_CODES[0],
+                        picture_url: null,
                     });
                 }
 

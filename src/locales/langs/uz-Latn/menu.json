@@ -53,7 +53,7 @@
   "update": "Yangilash",
   "view": "Ko'rish",
   "details": "Tafsilotlar",
-  "actions": "Harakatlari",
+  "actions": "Harakatlar",
   "blog": {
     "title": "Blog",
     "caption": "Sozlangan klaviatura yorliqlari."
@@ -581,6 +581,7 @@
     "ingredient-group": "Maxsulot guruhlari",
     "ingredient": "Maxsulot",
     "group": "Guruh",
+    "quantity": "Miqdor",
     "measurement": "O'lchov",
     "colorCode": "Rang kodi",
     "pictureUrl": "Surat URL",

@@ -164,12 +164,6 @@ export function IngredientGroupListView() {
           onClick={() => handleEditGroup(params.row.id)}
         />,
         <CustomGridActionsCellItem
-          // showInMenu
-          label={t('warehouse.view')}
-          icon={<Iconify icon="solar:eye-bold" />}
-          onClick={() => handleViewGroup(params.row)}
-        />,
-        <CustomGridActionsCellItem
           key="delete"
           // showInMenu
           label={t('warehouse.delete')}
@@ -286,6 +280,14 @@ export function IngredientGroupListView() {
             } catch (error) {
               console.error('Failed to delete:', error);
             }
+          }
+        }}
+        onRowClick={(id) => {
+          const group = Array.isArray(ingredientGroups)
+            ? ingredientGroups.find(g => g.id === id)
+            : undefined;
+          if (group) {
+            handleViewGroup(group);
           }
         }}
       />
