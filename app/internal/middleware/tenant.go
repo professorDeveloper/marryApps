@@ -74,9 +74,18 @@ func TenantMiddleware(repo *repository.Repository) echo.MiddlewareFunc {
 				})
 			}
 
+			if _, err := tx.Exec(ctx, "SET LOCAL app.brand_id = $1", brandIDStr); err != nil {
+				log.Printf("Failed to set app.brand_id for brand %s: %v", brandIDStr, err)
+				tx.Rollback(ctx)
+				return c.JSON(http.StatusInternalServerError, map[string]interface{}{
+					"message": "Internal server error",
+				})
+			}
+
 			tenantQueries := repo.Tenant(ctx).WithTx(tx)
 
 			tenantCtx := repository.WithTenantQueries(ctx, tenantQueries)
+			tenantCtx = repository.WithTenantTx(tenantCtx, tx)
 			tenantCtx = context.WithValue(tenantCtx, "brand_id", brandIDStr)
 			tenantCtx = context.WithValue(tenantCtx, "user_id", userIDStr)
 			tenantCtx = context.WithValue(tenantCtx, "tenant_config", tenantCfg)

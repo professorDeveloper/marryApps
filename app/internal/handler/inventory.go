@@ -3,6 +3,8 @@ package handler
 import (
 	"net/http"
 	"strconv"
+	"strings"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
@@ -51,6 +53,11 @@ func (h *Handler) CreateInventory(c echo.Context) error {
 // @Accept json
 // @Produce json
 // @Security BearerAuth
+// @Param date_from query string false "Start date (YYYY-MM-DD)"
+// @Param date_to query string false "End date (YYYY-MM-DD)"
+// @Param storage_id query string false "Storage ID"
+// @Param ingredient_id query string false "Ingredient ID"
+// @Param status query string false "Inventory status"
 // @Param limit query int false "Limit results (default: 20)" default(20)
 // @Param offset query int false "Offset for pagination (default: 0)" default(0)
 // @Success 200 {array} model.InventoryResponse "Inventories retrieved successfully"
@@ -72,7 +79,29 @@ func (h *Handler) GetAllInventories(c echo.Context) error {
 		}
 	}
 
-	resp, err := h.service.Inventory().GetAllInventories(c.Request().Context(), limit, offset)
+	dateFrom, err := parseDateParam(c.QueryParam("date_from"))
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("invalid request", err.Error(), http.StatusBadRequest))
+	}
+	dateTo, err := parseDateParam(c.QueryParam("date_to"))
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("invalid request", err.Error(), http.StatusBadRequest))
+	}
+
+	var storageID *string
+	if v := strings.TrimSpace(c.QueryParam("storage_id")); v != "" {
+		storageID = &v
+	}
+	var ingredientID *string
+	if v := strings.TrimSpace(c.QueryParam("ingredient_id")); v != "" {
+		ingredientID = &v
+	}
+	var status *string
+	if v := strings.TrimSpace(c.QueryParam("status")); v != "" {
+		status = &v
+	}
+
+	resp, err := h.service.Inventory().GetInventoriesFiltered(c.Request().Context(), dateFrom, dateTo, storageID, ingredientID, status, limit, offset)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("Operation failed", err.Error(), http.StatusInternalServerError))
 	}
@@ -82,6 +111,25 @@ func (h *Handler) GetAllInventories(c echo.Context) error {
 		resp,
 		http.StatusOK,
 	))
+}
+
+func parseDateParam(v string) (*time.Time, error) {
+	v = strings.TrimSpace(v)
+	if v == "" {
+		return nil, nil
+	}
+	if len(v) == len("2006-01-02") {
+		t, err := time.Parse("2006-01-02", v)
+		if err != nil {
+			return nil, err
+		}
+		return &t, nil
+	}
+	t, err := time.Parse(time.RFC3339, v)
+	if err != nil {
+		return nil, err
+	}
+	return &t, nil
 }
 
 // GetAllInventoryItems retrieves inventory items with pagination and optional inventory filter

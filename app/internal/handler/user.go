@@ -83,6 +83,48 @@ func (h *Handler) UpdateUser(c echo.Context) error {
 	return c.JSON(http.StatusOK, model.NewSuccessResponse("User profile updated successfully", user, http.StatusOK))
 }
 
+// UpdateUserByID godoc
+// @Summary Update user profile by ID
+// @Description Update the profile information for the specified user (admin/superadmin use)
+// @Tags users
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path string true "User ID"
+// @Param request body model.UpdateUserRequest true "User update data"
+// @Success 200 {object} model.UserResponse "User profile updated successfully"
+// @Failure 400 {object} model.ErrorResponse "Invalid request format"
+// @Failure 401 {object} model.ErrorResponse "Unauthorized"
+// @Failure 500 {object} model.ErrorResponse "Failed to update user"
+// @Router /api/v1/users/{id} [put]
+func (h *Handler) UpdateUserByID(c echo.Context) error {
+	userID := c.Param("id")
+	if userID == "" {
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"Invalid user ID",
+			"missing id param",
+			http.StatusBadRequest,
+		))
+	}
+	lang := c.Get("language").(string)
+
+	var req model.UpdateUserRequest
+	if err := c.Bind(&req); err != nil {
+		message := model.GetLocalizedMessage(lang, "bad_request")
+		log.Printf("Bind error: %v", err)
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(message, err.Error(), http.StatusBadRequest))
+	}
+
+	user, err := h.service.Auth().UpdateUser(c.Request().Context(), req, userID)
+	if err != nil {
+		log.Printf("UpdateUserByID error: %v", err)
+		message := model.GetLocalizedMessage(lang, "user_info_cannot_be_reached")
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse(message, err.Error(), http.StatusInternalServerError))
+	}
+
+	return c.JSON(http.StatusOK, model.NewSuccessResponse("User profile updated successfully", user, http.StatusOK))
+}
+
 // UpdatePassword updates user password
 // @Summary Update user password
 // @Description Update the password of the currently authenticated user

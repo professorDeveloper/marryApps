@@ -321,6 +321,76 @@ func (q *Queries) GetInventoriesByStorageID(ctx context.Context, arg GetInventor
 	return items, nil
 }
 
+const getInventoriesFiltered = `-- name: GetInventoriesFiltered :many
+SELECT DISTINCT inv.id, inv.number, inv.date, inv.storage_id, inv.description, inv.description_i18n, inv.status,
+       inv.surplus_amount, inv.shortage_amount, inv.remaining_amount,
+       inv.created_at, inv.updated_at, inv.deleted_at
+FROM inventories inv
+LEFT JOIN inventory_items ii
+  ON ii.inventory_id = inv.id
+  AND ii.deleted_at = 0
+WHERE inv.deleted_at = 0
+  AND ($1::date IS NULL OR inv.date >= $1)
+  AND ($2::date IS NULL OR inv.date <= $2)
+  AND (NULLIF($3::uuid, '00000000-0000-0000-0000-000000000000') IS NULL OR inv.storage_id = $3)
+  AND (NULLIF($4::text, '') IS NULL OR inv.status = $4)
+  AND (NULLIF($5::uuid, '00000000-0000-0000-0000-000000000000') IS NULL OR ii.ingredient_id = $5)
+ORDER BY inv.date DESC, inv.number DESC
+LIMIT $6 OFFSET $7
+`
+
+type GetInventoriesFilteredParams struct {
+	Column1 pgtype.Date `json:"column_1"`
+	Column2 pgtype.Date `json:"column_2"`
+	Column3 uuid.UUID   `json:"column_3"`
+	Column4 string      `json:"column_4"`
+	Column5 uuid.UUID   `json:"column_5"`
+	Limit   int32       `json:"limit"`
+	Offset  int32       `json:"offset"`
+}
+
+func (q *Queries) GetInventoriesFiltered(ctx context.Context, arg GetInventoriesFilteredParams) ([]Inventory, error) {
+	rows, err := q.db.Query(ctx, getInventoriesFiltered,
+		arg.Column1,
+		arg.Column2,
+		arg.Column3,
+		arg.Column4,
+		arg.Column5,
+		arg.Limit,
+		arg.Offset,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Inventory
+	for rows.Next() {
+		var i Inventory
+		if err := rows.Scan(
+			&i.ID,
+			&i.Number,
+			&i.Date,
+			&i.StorageID,
+			&i.Description,
+			&i.DescriptionI18n,
+			&i.Status,
+			&i.SurplusAmount,
+			&i.ShortageAmount,
+			&i.RemainingAmount,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.DeletedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getInventoryByID = `-- name: GetInventoryByID :one
 SELECT id, number, date, storage_id, description, description_i18n, status,
        surplus_amount, shortage_amount, remaining_amount,

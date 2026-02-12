@@ -41,6 +41,13 @@ func (h *Handler) Register(router *echo.Echo) {
 			payments.POST("/create", h.CreateInvoice, mw.CheckLanguage(), mw.CheckAuth(h.cfg), mw.TenantMiddleware(h.repo))
 		}
 
+		sync := api.Group("/sync", mw.CheckAuth(h.cfg), mw.TenantMiddleware(h.repo))
+		{
+			sync.POST("/pull", h.SyncPull, mw.CheckLanguage())
+			sync.POST("/push", h.SyncPush, mw.CheckLanguage())
+			sync.GET("/change-logs", h.GetChangeLogs, mw.CheckLanguage())
+		}
+
 		user := api.Group("/user", mw.CheckAuth(h.cfg), mw.TenantMiddleware(h.repo))
 		{
 			user.GET("/me", h.GetUser, mw.CheckLanguage())
@@ -57,6 +64,7 @@ func (h *Handler) Register(router *echo.Echo) {
 			users.GET("/waiters", h.GetWaiters, mw.CheckLanguage())
 			users.GET("/cashiers", h.GetCashiers, mw.CheckLanguage())
 			users.GET("/search", h.SearchUsers, mw.CheckLanguage())
+			users.PUT("/:id", h.UpdateUserByID, mw.CheckLanguage())
 			users.DELETE("/:id", h.DeleteUser, mw.CheckLanguage())
 			users.POST("/:id/restore", h.RestoreUser, mw.CheckLanguage())
 		}

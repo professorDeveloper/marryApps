@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	mn "gitlab.yurtal.tech/company/maryai/back/internal/repository/minio"
 	pgmain "gitlab.yurtal.tech/company/maryai/back/internal/repository/pg/maindb"
@@ -30,9 +31,14 @@ type (
 )
 
 type tenantQueriesCtxKey struct{}
+type tenantTxCtxKey struct{}
 
 func WithTenantQueries(ctx context.Context, q *pg.Queries) context.Context {
 	return context.WithValue(ctx, tenantQueriesCtxKey{}, q)
+}
+
+func WithTenantTx(ctx context.Context, tx pgx.Tx) context.Context {
+	return context.WithValue(ctx, tenantTxCtxKey{}, tx)
 }
 
 func TenantQueriesFromContext(ctx context.Context) (*pg.Queries, bool) {
@@ -42,6 +48,15 @@ func TenantQueriesFromContext(ctx context.Context) (*pg.Queries, bool) {
 	}
 	q, ok := v.(*pg.Queries)
 	return q, ok
+}
+
+func TenantTxFromContext(ctx context.Context) (pgx.Tx, bool) {
+	v := ctx.Value(tenantTxCtxKey{})
+	if v == nil {
+		return nil, false
+	}
+	tx, ok := v.(pgx.Tx)
+	return tx, ok
 }
 
 func (r *Repository) Tenant(ctx context.Context) *pg.Queries {

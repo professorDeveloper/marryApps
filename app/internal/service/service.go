@@ -47,6 +47,12 @@ type PaymentI interface {
 	CreatePaymeInvoice(c echo.Context, ctx context.Context, planID string) (*model.CheckoutURL, error)
 }
 
+type SyncI interface {
+	Pull(ctx context.Context, lastCursor int64, limit int32) (model.SyncPullResponse, error)
+	Push(ctx context.Context, req model.SyncPushRequest) (model.SyncPushResult, error)
+	ListChangeLogs(ctx context.Context, filter ChangeLogFilter) (model.ChangeLogListResponse, error)
+}
+
 type ShiftI interface {
 	CreateShift(ctx context.Context, name string, role *string, workingDays *string, openTime *string, closeTime *string, branchID string) (*ShiftResponse, error)
 	GetShiftByID(ctx context.Context, shiftID string) (*ShiftResponse, error)
@@ -263,6 +269,7 @@ type InventoryI interface {
 	CreateInventory(ctx context.Context, req *model.CreateInventoryRequest) (*model.InventoryResponse, error)
 	GetInventoryByID(ctx context.Context, id string) (*model.InventoryResponse, error)
 	GetAllInventories(ctx context.Context, limit, offset int32) ([]*model.InventoryResponse, error)
+	GetInventoriesFiltered(ctx context.Context, dateFrom, dateTo *time.Time, storageID, ingredientID, status *string, limit, offset int32) ([]*model.InventoryResponse, error)
 	UpdateInventory(ctx context.Context, id string, req *model.UpdateInventoryRequest) (*model.InventoryResponse, error)
 	DeleteInventory(ctx context.Context, id string) error
 	RestoreInventory(ctx context.Context, id string) (*model.InventoryResponse, error)
@@ -397,6 +404,7 @@ type CalculationI interface {
 type I interface {
 	Auth() AuthI
 	Payment() PaymentI
+	Sync() SyncI
 	Repository() *repository.Repository
 	Minio() MinioI
 	Shift() ShiftI
@@ -421,6 +429,7 @@ type I interface {
 type Service struct {
 	auth         AuthI
 	payment      PaymentI
+	sync         SyncI
 	repo         *repository.Repository
 	minio        MinioI
 	shift        ShiftI
@@ -446,6 +455,7 @@ func New(cfg *config.Config, repo *repository.Repository, clickClient *paymentCl
 	return &Service{
 		auth:         NewAuthS(cfg, repo),
 		payment:      NewPaymentS(cfg, repo, clickClient, paymeClient),
+		sync:         NewSyncS(repo),
 		repo:         repo,
 		minio:        NewMinioS(cfg, minioClient),
 		shift:        NewShiftS(repo),
@@ -493,6 +503,10 @@ func (s *Service) Auth() AuthI {
 }
 func (s *Service) Payment() PaymentI {
 	return s.payment
+}
+
+func (s *Service) Sync() SyncI {
+	return s.sync
 }
 
 func (s *Service) Repository() *repository.Repository {

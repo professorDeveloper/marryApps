@@ -90,6 +90,66 @@ func (s *InventoryS) GetAllInventories(ctx context.Context, limit, offset int32)
 	return resp, nil
 }
 
+func (s *InventoryS) GetInventoriesFiltered(ctx context.Context, dateFrom, dateTo *time.Time, storageID, ingredientID, status *string, limit, offset int32) ([]*model.InventoryResponse, error) {
+	var fromDate pgtype.Date
+	if dateFrom != nil {
+		fromDate = pgtype.Date{Time: *dateFrom, Valid: true}
+	}
+
+	var toDate pgtype.Date
+	if dateTo != nil {
+		toDate = pgtype.Date{Time: *dateTo, Valid: true}
+	}
+
+	var storageUUID pgtype.UUID
+	if storageID != nil && strings.TrimSpace(*storageID) != "" {
+		id, err := uuid.Parse(*storageID)
+		if err != nil {
+			return nil, fmt.Errorf("invalid storage_id: %w", err)
+		}
+		storageUUID = pgtype.UUID{Bytes: id, Valid: true}
+	}
+
+	var ingredientUUID pgtype.UUID
+	if ingredientID != nil && strings.TrimSpace(*ingredientID) != "" {
+		id, err := uuid.Parse(*ingredientID)
+		if err != nil {
+			return nil, fmt.Errorf("invalid ingredient_id: %w", err)
+		}
+		ingredientUUID = pgtype.UUID{Bytes: id, Valid: true}
+	}
+
+	var statusVal *string
+	if status != nil && strings.TrimSpace(*status) != "" {
+		s := strings.TrimSpace(*status)
+		statusVal = &s
+	}
+
+	statusText := ""
+	if statusVal != nil {
+		statusText = *statusVal
+	}
+
+	invs, err := s.repo.Tenant(ctx).GetInventoriesFiltered(ctx, pg.GetInventoriesFilteredParams{
+		Column1: fromDate,
+		Column2: toDate,
+		Column3: storageUUID.Bytes,
+		Column4: statusText,
+		Column5: ingredientUUID.Bytes,
+		Limit:   limit,
+		Offset:  offset,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to get inventories: %w", err)
+	}
+
+	resp := make([]*model.InventoryResponse, 0, len(invs))
+	for _, inv := range invs {
+		resp = append(resp, toInventoryResponse(inv))
+	}
+	return resp, nil
+}
+
 func (s *InventoryS) GetAllInventoryItems(ctx context.Context, inventoryID *string, limit, offset int32) ([]*model.InventoryItemResponse, error) {
 	var (
 		items []pg.InventoryItem
