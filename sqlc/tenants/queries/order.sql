@@ -1,46 +1,65 @@
 -- name: CreateOrder :one
-INSERT INTO orders (id, table_id, waiter_id, cashier_id, status, guest_count, total_amount, comment)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-RETURNING id, table_id, waiter_id, cashier_id, status, guest_count, total_amount, comment, created_at, updated_at, deleted_at;
+INSERT INTO orders (id, table_id, waiter_id, cashier_id, status, guest_count, total_amount, comment, branch_id)
+VALUES (
+    $1, $2, $3, $4, $5, $6, $7, $8,
+    COALESCE(
+        (SELECT h.branch_id FROM cafe_tables ct JOIN halls h ON h.id = ct.hall_id WHERE ct.id = $2),
+        (SELECT s.branch_id FROM users u JOIN shifts s ON s.id = u.shift_id WHERE u.id = $3),
+        (SELECT s.branch_id FROM users u JOIN shifts s ON s.id = u.shift_id WHERE u.id = $4)
+    )
+)
+RETURNING id, table_id, waiter_id, cashier_id, status, guest_count, total_amount, comment, created_at, updated_at, deleted_at, branch_id;
 
 -- name: GetOrderByID :one
-SELECT id, table_id, waiter_id, cashier_id, status, guest_count, total_amount, comment, created_at, updated_at, deleted_at
+SELECT id, table_id, waiter_id, cashier_id, status, guest_count, total_amount, comment, created_at, updated_at, deleted_at, branch_id
 FROM orders
-WHERE id = $1 AND deleted_at = 0;
+WHERE orders.id = $1
+  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  AND deleted_at = 0;
 
 -- name: GetAllOrders :many
-SELECT id, table_id, waiter_id, cashier_id, status, guest_count, total_amount, comment, created_at, updated_at, deleted_at
+SELECT id, table_id, waiter_id, cashier_id, status, guest_count, total_amount, comment, created_at, updated_at, deleted_at, branch_id
 FROM orders
 WHERE deleted_at = 0
+  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 ORDER BY created_at DESC
 LIMIT $1 OFFSET $2;
 
 -- name: GetOrdersByStatus :many
-SELECT id, table_id, waiter_id, cashier_id, status, guest_count, total_amount, comment, created_at, updated_at, deleted_at
+SELECT id, table_id, waiter_id, cashier_id, status, guest_count, total_amount, comment, created_at, updated_at, deleted_at, branch_id
 FROM orders
-WHERE status = $1 AND deleted_at = 0
+WHERE status = $1
+  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  AND deleted_at = 0
 ORDER BY created_at DESC
 LIMIT $2 OFFSET $3;
 
 -- name: GetOrdersByTableID :many
-SELECT id, table_id, waiter_id, cashier_id, status, guest_count, total_amount, comment, created_at, updated_at, deleted_at
+SELECT id, table_id, waiter_id, cashier_id, status, guest_count, total_amount, comment, created_at, updated_at, deleted_at, branch_id
 FROM orders
-WHERE table_id = $1 AND deleted_at = 0
+WHERE table_id = $1
+  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  AND deleted_at = 0
 ORDER BY created_at DESC;
 
 -- name: GetOrdersByWaiterID :many
-SELECT id, table_id, waiter_id, cashier_id, status, guest_count, total_amount, comment, created_at, updated_at, deleted_at
+SELECT id, table_id, waiter_id, cashier_id, status, guest_count, total_amount, comment, created_at, updated_at, deleted_at, branch_id
 FROM orders
-WHERE waiter_id = $1 AND deleted_at = 0
+WHERE waiter_id = $1
+  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  AND deleted_at = 0
 ORDER BY created_at DESC
 LIMIT $2 OFFSET $3;
 
 
 
 -- name: GetOrdersByDateRange :many
-SELECT id, table_id, waiter_id, cashier_id, status, guest_count, total_amount, comment, created_at, updated_at, deleted_at
+SELECT id, table_id, waiter_id, cashier_id, status, guest_count, total_amount, comment, created_at, updated_at, deleted_at, branch_id
 FROM orders
-WHERE created_at >= $1 AND created_at <= $2 AND deleted_at = 0
+WHERE created_at >= $1
+  AND created_at <= $2
+  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  AND deleted_at = 0
 ORDER BY created_at DESC
 LIMIT $3 OFFSET $4;
 
@@ -56,16 +75,26 @@ SET table_id = COALESCE($2, table_id),
     guest_count = COALESCE($6, guest_count),
     total_amount = COALESCE($7, total_amount),
     comment = COALESCE($8, comment),
-    updated_at = NOW()
-WHERE id = $1 AND deleted_at = 0
-RETURNING id, table_id, waiter_id, cashier_id, status, guest_count, total_amount, comment, created_at, updated_at, deleted_at;
+    updated_at = NOW(),
+    branch_id = COALESCE(
+        (SELECT h.branch_id FROM cafe_tables ct JOIN halls h ON h.id = ct.hall_id WHERE ct.id = COALESCE($2, table_id)),
+        (SELECT s.branch_id FROM users u JOIN shifts s ON s.id = u.shift_id WHERE u.id = COALESCE($3, waiter_id)),
+        (SELECT s.branch_id FROM users u JOIN shifts s ON s.id = u.shift_id WHERE u.id = COALESCE($4, cashier_id)),
+        branch_id
+    )
+WHERE orders.id = $1
+  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  AND deleted_at = 0
+RETURNING id, table_id, waiter_id, cashier_id, status, guest_count, total_amount, comment, created_at, updated_at, deleted_at, branch_id;
 
 -- name: UpdateOrderStatus :one
 UPDATE orders
 SET status = $2,
     updated_at = NOW()
-WHERE id = $1 AND deleted_at = 0
-RETURNING id, table_id, waiter_id, cashier_id, status, guest_count, total_amount, comment, created_at, updated_at, deleted_at;
+WHERE orders.id = $1
+  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  AND deleted_at = 0
+RETURNING id, table_id, waiter_id, cashier_id, status, guest_count, total_amount, comment, created_at, updated_at, deleted_at, branch_id;
 
 
 
@@ -73,36 +102,45 @@ RETURNING id, table_id, waiter_id, cashier_id, status, guest_count, total_amount
 UPDATE orders
 SET waiter_id = $2,
     updated_at = NOW()
-WHERE id = $1 AND deleted_at = 0
-RETURNING id, table_id, waiter_id, cashier_id, status, guest_count, total_amount, comment, created_at, updated_at, deleted_at;
+WHERE orders.id = $1
+  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  AND deleted_at = 0
+RETURNING id, table_id, waiter_id, cashier_id, status, guest_count, total_amount, comment, created_at, updated_at, deleted_at, branch_id;
 
 -- name: AssignCashierToOrder :one
 UPDATE orders
 SET cashier_id = $2,
     updated_at = NOW()
-WHERE id = $1 AND deleted_at = 0
-RETURNING id, table_id, waiter_id, cashier_id, status, guest_count, total_amount, comment, created_at, updated_at, deleted_at;
+WHERE orders.id = $1
+  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  AND deleted_at = 0
+RETURNING id, table_id, waiter_id, cashier_id, status, guest_count, total_amount, comment, created_at, updated_at, deleted_at, branch_id;
 
 -- name: MarkOrderCooking :one
 UPDATE orders
 SET status = 'cooking',
     updated_at = NOW()
-WHERE id = $1 AND deleted_at = 0
-RETURNING id, table_id, waiter_id, cashier_id, status, guest_count, total_amount, comment, created_at, updated_at, deleted_at;
+WHERE orders.id = $1
+  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  AND deleted_at = 0
+RETURNING id, table_id, waiter_id, cashier_id, status, guest_count, total_amount, comment, created_at, updated_at, deleted_at, branch_id;
 
 -- name: MarkOrderReady :one
 UPDATE orders
 SET status = 'ready',
     updated_at = NOW()
-WHERE id = $1 AND deleted_at = 0
-RETURNING id, table_id, waiter_id, cashier_id, status, guest_count, total_amount, comment, created_at, updated_at, deleted_at;
+WHERE orders.id = $1
+  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  AND deleted_at = 0
+RETURNING id, table_id, waiter_id, cashier_id, status, guest_count, total_amount, comment, created_at, updated_at, deleted_at, branch_id;
 
 -- name: MarkOrderServed :one
 UPDATE orders
 SET status = 'served',
     updated_at = NOW()
 WHERE id = $1 AND deleted_at = 0
-RETURNING id, table_id, waiter_id, cashier_id, status, guest_count, total_amount, comment, created_at, updated_at, deleted_at;
+  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+RETURNING id, table_id, waiter_id, cashier_id, status, guest_count, total_amount, comment, created_at, updated_at, deleted_at, branch_id;
 
 -- name: MarkOrderPaid :one
 UPDATE orders
@@ -110,33 +148,47 @@ SET status = 'paid',
     cashier_id = $2,
     updated_at = NOW()
 WHERE id = $1 AND deleted_at = 0
-RETURNING id, table_id, waiter_id, cashier_id, status, guest_count, total_amount, comment, created_at, updated_at, deleted_at;
+  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+RETURNING id, table_id, waiter_id, cashier_id, status, guest_count, total_amount, comment, created_at, updated_at, deleted_at, branch_id;
 
 -- name: CancelOrder :one
 UPDATE orders
 SET status = 'cancelled',
     updated_at = NOW()
 WHERE id = $1 AND deleted_at = 0
-RETURNING id, table_id, waiter_id, cashier_id, status, guest_count, total_amount, comment, created_at, updated_at, deleted_at;
+  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+RETURNING id, table_id, waiter_id, cashier_id, status, guest_count, total_amount, comment, created_at, updated_at, deleted_at, branch_id;
 
 -- name: DeleteOrder :exec
 UPDATE orders
 SET deleted_at = EXTRACT(EPOCH FROM NOW())::BIGINT
-WHERE id = $1 AND deleted_at = 0;
+WHERE orders.id = $1
+  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  AND deleted_at = 0;
 
 -- name: RestoreOrder :exec
 UPDATE orders
 SET deleted_at = 0
-WHERE id = $1 AND deleted_at != 0;
+WHERE orders.id = $1
+  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  AND deleted_at != 0;
 
 -- name: CountOrders :one
-SELECT COUNT(*) FROM orders WHERE deleted_at = 0;
+SELECT COUNT(*) FROM orders
+WHERE deleted_at = 0
+  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid;
 
 -- name: CountOrdersByStatus :one
-SELECT COUNT(*) FROM orders WHERE status = $1 AND deleted_at = 0;
+SELECT COUNT(*) FROM orders
+WHERE status = $1
+  AND deleted_at = 0
+  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid;
 
 -- name: CountActiveOrders :one
-SELECT COUNT(*) FROM orders WHERE status NOT IN ('paid', 'cancelled') AND deleted_at = 0;
+SELECT COUNT(*) FROM orders
+WHERE status NOT IN ('paid', 'cancelled')
+  AND deleted_at = 0
+  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid;
 
 
 
@@ -148,19 +200,36 @@ RETURNING id, good_id, order_id, quantity, price, status, comment, created_at, u
 -- name: GetOrderItemByID :one
 SELECT id, good_id, order_id, quantity, price, status, comment, created_at, updated_at, deleted_at
 FROM order_items
-WHERE id = $1 AND deleted_at = 0;
+WHERE order_items.id = $1
+  AND order_items.deleted_at = 0
+  AND EXISTS (
+    SELECT 1 FROM orders o
+    WHERE o.id = order_items.order_id
+      AND o.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  );
 
 -- name: GetAllOrderItems :many
 SELECT id, good_id, order_id, quantity, price, status, comment, created_at, updated_at, deleted_at
 FROM order_items
-WHERE deleted_at = 0
+WHERE order_items.deleted_at = 0
+  AND EXISTS (
+    SELECT 1 FROM orders o
+    WHERE o.id = order_items.order_id
+      AND o.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  )
 ORDER BY created_at DESC
 LIMIT $1 OFFSET $2;
 
 -- name: GetOrderItemsByOrderID :many
 SELECT id, good_id, order_id, quantity, price, status, comment, created_at, updated_at, deleted_at
 FROM order_items
-WHERE order_id = $1 AND deleted_at = 0
+WHERE order_items.order_id = $1
+  AND order_items.deleted_at = 0
+  AND EXISTS (
+    SELECT 1 FROM orders o
+    WHERE o.id = order_items.order_id
+      AND o.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  )
 ORDER BY created_at ASC;
 
 
@@ -168,7 +237,13 @@ ORDER BY created_at ASC;
 -- name: GetOrderItemsByStatus :many
 SELECT id, good_id, order_id, quantity, price, status, comment, created_at, updated_at, deleted_at
 FROM order_items
-WHERE status = $1 AND deleted_at = 0
+WHERE order_items.status = $1
+  AND order_items.deleted_at = 0
+  AND EXISTS (
+    SELECT 1 FROM orders o
+    WHERE o.id = order_items.order_id
+      AND o.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  )
 ORDER BY created_at ASC
 LIMIT $2 OFFSET $3;
 
@@ -181,68 +256,131 @@ SET good_id = COALESCE($2, good_id),
     status = COALESCE($6, status),
     comment = COALESCE($7, comment),
     updated_at = NOW()
-WHERE id = $1 AND deleted_at = 0
+WHERE order_items.id = $1 AND order_items.deleted_at = 0
+  AND EXISTS (
+    SELECT 1 FROM orders o
+    WHERE o.id = order_items.order_id
+      AND o.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  )
 RETURNING id, good_id, order_id, quantity, price, status, comment, created_at, updated_at, deleted_at;
 
 -- name: UpdateOrderItemQuantity :one
 UPDATE order_items
 SET quantity = $2,
     updated_at = NOW()
-WHERE id = $1 AND deleted_at = 0
+WHERE order_items.id = $1 AND order_items.deleted_at = 0
+  AND EXISTS (
+    SELECT 1 FROM orders o
+    WHERE o.id = order_items.order_id
+      AND o.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  )
 RETURNING id, good_id, order_id, quantity, price, status, comment, created_at, updated_at, deleted_at;
 
 -- name: UpdateOrderItemStatus :one
 UPDATE order_items
 SET status = $2,
     updated_at = NOW()
-WHERE id = $1 AND deleted_at = 0
+WHERE order_items.id = $1 AND order_items.deleted_at = 0
+  AND EXISTS (
+    SELECT 1 FROM orders o
+    WHERE o.id = order_items.order_id
+      AND o.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  )
 RETURNING id, good_id, order_id, quantity, price, status, comment, created_at, updated_at, deleted_at;
 
 -- name: MarkOrderItemCooking :one
 UPDATE order_items
 SET status = 'cooking',
     updated_at = NOW()
-WHERE id = $1 AND deleted_at = 0
+WHERE order_items.id = $1 AND order_items.deleted_at = 0
+  AND EXISTS (
+    SELECT 1 FROM orders o
+    WHERE o.id = order_items.order_id
+      AND o.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  )
 RETURNING id, good_id, order_id, quantity, price, status, comment, created_at, updated_at, deleted_at;
 
 -- name: MarkOrderItemReady :one
 UPDATE order_items
 SET status = 'ready',
     updated_at = NOW()
-WHERE id = $1 AND deleted_at = 0
+WHERE order_items.id = $1 AND order_items.deleted_at = 0
+  AND EXISTS (
+    SELECT 1 FROM orders o
+    WHERE o.id = order_items.order_id
+      AND o.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  )
 RETURNING id, good_id, order_id, quantity, price, status, comment, created_at, updated_at, deleted_at;
 
 -- name: CancelOrderItem :one
 UPDATE order_items
 SET status = 'cancelled',
     updated_at = NOW()
-WHERE id = $1 AND deleted_at = 0
+WHERE order_items.id = $1 AND order_items.deleted_at = 0
+  AND EXISTS (
+    SELECT 1 FROM orders o
+    WHERE o.id = order_items.order_id
+      AND o.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  )
 RETURNING id, good_id, order_id, quantity, price, status, comment, created_at, updated_at, deleted_at;
 
 
 -- name: DeleteOrderItem :exec
 UPDATE order_items
 SET deleted_at = EXTRACT(EPOCH FROM NOW())::BIGINT
-WHERE id = $1 AND deleted_at = 0;
+WHERE order_items.id = $1 AND order_items.deleted_at = 0
+  AND EXISTS (
+    SELECT 1 FROM orders o
+    WHERE o.id = order_items.order_id
+      AND o.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  );
 
 -- name: RestoreOrderItem :exec
 UPDATE order_items
 SET deleted_at = 0
-WHERE id = $1 AND deleted_at != 0;
+WHERE order_items.id = $1 AND order_items.deleted_at != 0
+  AND EXISTS (
+    SELECT 1 FROM orders o
+    WHERE o.id = order_items.order_id
+      AND o.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  );
 
 -- name: DeleteOrderItemsByOrderID :exec
 UPDATE order_items
 SET deleted_at = EXTRACT(EPOCH FROM NOW())::BIGINT
-WHERE order_id = $1 AND deleted_at = 0;
+WHERE order_items.order_id = $1 AND order_items.deleted_at = 0
+  AND EXISTS (
+    SELECT 1 FROM orders o
+    WHERE o.id = order_items.order_id
+      AND o.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  );
 
 -- name: CountOrderItems :one
-SELECT COUNT(*) FROM order_items WHERE deleted_at = 0;
+SELECT COUNT(*) FROM order_items
+WHERE order_items.deleted_at = 0
+  AND EXISTS (
+    SELECT 1 FROM orders o
+    WHERE o.id = order_items.order_id
+      AND o.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  );
 
 -- name: CountOrderItemsByOrder :one
-SELECT COUNT(*) FROM order_items WHERE order_id = $1 AND deleted_at = 0;
+SELECT COUNT(*) FROM order_items
+WHERE order_items.order_id = $1 AND order_items.deleted_at = 0
+  AND EXISTS (
+    SELECT 1 FROM orders o
+    WHERE o.id = order_items.order_id
+      AND o.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  );
 
 -- name: CountOrderItemsByStatus :one
-SELECT COUNT(*) FROM order_items WHERE status = $1 AND deleted_at = 0;
+SELECT COUNT(*) FROM order_items
+WHERE order_items.status = $1 AND order_items.deleted_at = 0
+  AND EXISTS (
+    SELECT 1 FROM orders o
+    WHERE o.id = order_items.order_id
+      AND o.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  );
 
 
 
@@ -271,7 +409,9 @@ LEFT JOIN halls h ON ct.hall_id = h.id AND h.deleted_at = 0
 LEFT JOIN users w ON o.waiter_id = w.id AND w.deleted_at = 0
 LEFT JOIN users c ON o.cashier_id = c.id AND c.deleted_at = 0
 LEFT JOIN order_items oi ON o.id = oi.order_id AND oi.deleted_at = 0
-WHERE o.id = $1 AND o.deleted_at = 0
+WHERE o.id = $1
+  AND o.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  AND o.deleted_at = 0
 GROUP BY o.id, o.table_id, o.waiter_id, o.cashier_id, o.status, o.guest_count, o.total_amount, o.comment, o.created_at, o.updated_at, ct.number, ct.capacity, h.name, w.full_name, c.full_name;
 
 
@@ -297,5 +437,6 @@ LEFT JOIN orders o ON oi.order_id = o.id AND o.deleted_at = 0
 LEFT JOIN cafe_tables ct ON o.table_id = ct.id AND ct.deleted_at = 0
 LEFT JOIN halls h ON ct.hall_id = h.id AND h.deleted_at = 0
 WHERE oi.status IN ('pending', 'cooking') 
-AND oi.deleted_at = 0
+  AND oi.deleted_at = 0
+  AND o.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 ORDER BY oi.created_at ASC;

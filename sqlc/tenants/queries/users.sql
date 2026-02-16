@@ -10,10 +10,12 @@ INSERT INTO users (
     hash_password,
     brand_id,
     phone_number,
-    is_active
+    is_active,
+    branch_id
 )
 VALUES (
-    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11
+    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11,
+    COALESCE((SELECT branch_id FROM shifts WHERE id = $6), sqlc.arg(branch_id))
 )
 RETURNING *;
 
@@ -28,67 +30,83 @@ UPDATE users SET
     hash_password = COALESCE($8, hash_password),
     brand_id = COALESCE($9, brand_id),
     phone_number = COALESCE($10, phone_number),
-    is_active = COALESCE($11, is_active)
-WHERE id = $1 AND deleted_at = 0
+    is_active = COALESCE($11, is_active),
+    branch_id = COALESCE(
+        (SELECT branch_id FROM shifts WHERE id = COALESCE($6, shift_id)),
+        branch_id
+    )
+WHERE users.id = $1 AND deleted_at = 0
+  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 RETURNING *;
 
 -- name: UpdateUserIsActive :one
 UPDATE users SET
     is_active = $2
-WHERE id = $1 AND deleted_at = 0
+WHERE users.id = $1 AND deleted_at = 0
+  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 RETURNING *;
 
 -- name: UpdateUserPassword :one
 UPDATE users SET
     hash_password = $2
-WHERE id = $1 AND deleted_at = 0
+WHERE users.id = $1 AND deleted_at = 0
+  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 RETURNING *;
 
 -- name: UpdateUserShift :one
 UPDATE users SET
-    shift_id = $2
-WHERE id = $1 AND deleted_at = 0
+    shift_id = $2,
+    branch_id = (SELECT branch_id FROM shifts WHERE id = $2)
+WHERE users.id = $1 AND deleted_at = 0
+  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 RETURNING *;
 
 -- name: UpdateUserFCMToken :one
 UPDATE users SET
     fcm_token = $2
-WHERE id = $1 AND deleted_at = 0
+WHERE users.id = $1 AND deleted_at = 0
+  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 RETURNING *;
 
 -- name: SoftDeleteUser :one
 UPDATE users SET
     deleted_at = EXTRACT(EPOCH FROM CURRENT_TIMESTAMP)::bigint
-WHERE id = $1 AND deleted_at = 0
+WHERE users.id = $1 AND deleted_at = 0
+  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 RETURNING *;
 
 -- name: RestoreUser :one
 UPDATE users SET
     deleted_at = 0
 WHERE id = $1 AND deleted_at != 0
+  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 RETURNING *;
 
 
 
 -- name: GetUserByID :one
 SELECT * FROM users 
-WHERE id = $1 AND deleted_at = 0;
+WHERE id = $1 AND deleted_at = 0
+  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid;
 
 -- name: GetUserByUsername :one
 SELECT * FROM users 
 WHERE username = $1 AND deleted_at = 0;
 
 -- name: GetUserByEmail :one
-SELECT * FROM users 
-WHERE email = $1 AND deleted_at = 0;
+SELECT * FROM users
+WHERE email = $1 AND deleted_at = 0
+  AND (NULLIF(current_setting('app.branch_id', true), '') IS NULL OR branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid);
 
 -- name: GetUserByPhoneNumber :one
-SELECT * FROM users 
-WHERE phone_number = $1 AND deleted_at = 0;
+SELECT * FROM users
+WHERE phone_number = $1 AND deleted_at = 0
+  AND (NULLIF(current_setting('app.branch_id', true), '') IS NULL OR branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid);
 
 -- name: GetUserByPincode :one
-SELECT * FROM users 
-WHERE pincode = $1 AND deleted_at = 0;
+SELECT * FROM users
+WHERE pincode = $1 AND deleted_at = 0
+  AND (NULLIF(current_setting('app.branch_id', true), '') IS NULL OR branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid);
 
 
 -- name: GetUserWithShift :one
@@ -100,6 +118,7 @@ SELECT
     u.email,
     u.pincode,
     u.brand_id,
+    u.branch_id,
     u.phone_number,
     u.created_at,
     u.updated_at,
@@ -112,7 +131,8 @@ SELECT
     s.branch_id as shift_branch_id
 FROM users u
 LEFT JOIN shifts s ON u.shift_id = s.id AND s.deleted_at = 0
-WHERE u.id = $1 AND u.deleted_at = 0;
+WHERE u.id = $1 AND u.deleted_at = 0
+  AND u.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid;
 
 -- name: GetUserWithShiftAndBranch :one
 SELECT 
@@ -123,6 +143,7 @@ SELECT
     u.email,
     u.pincode,
     u.brand_id,
+    u.branch_id,
     u.phone_number,
     u.created_at,
     u.updated_at,
@@ -139,7 +160,8 @@ SELECT
 FROM users u
 LEFT JOIN shifts s ON u.shift_id = s.id AND s.deleted_at = 0
 LEFT JOIN branches b ON s.branch_id = b.id AND b.deleted_at = 0
-WHERE u.id = $1 AND u.deleted_at = 0;
+WHERE u.id = $1 AND u.deleted_at = 0
+  AND u.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid;
 
 -- name: GetUserWithAttendanceStats :one
 SELECT 
@@ -151,6 +173,7 @@ SELECT
 FROM users u
 LEFT JOIN attendances a ON u.id = a.user_id AND a.deleted_at = 0
 WHERE u.id = $1 AND u.deleted_at = 0
+  AND u.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 GROUP BY u.id;
 
 
@@ -158,22 +181,26 @@ GROUP BY u.id;
 -- name: GetAllUsers :many
 SELECT * FROM users 
 WHERE deleted_at = 0
+  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 ORDER BY created_at DESC;
 
 -- name: GetAllUsersPaginated :many
 SELECT * FROM users 
 WHERE deleted_at = 0
+  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 ORDER BY created_at DESC
 LIMIT $1 OFFSET $2;
 
 -- name: GetUsersByRole :many
 SELECT * FROM users 
 WHERE role = $1 AND deleted_at = 0
+  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 ORDER BY full_name ASC;
 
 -- name: GetUsersByRolePaginated :many
 SELECT * FROM users 
 WHERE role = $1 AND deleted_at = 0
+  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 ORDER BY full_name ASC
 LIMIT $2 OFFSET $3;
 
@@ -181,30 +208,36 @@ LIMIT $2 OFFSET $3;
 SELECT u.*
 FROM users u
 WHERE u.shift_id = $1 AND u.deleted_at = 0
+  AND u.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 ORDER BY u.full_name ASC;
 
 -- name: GetUsersByBrandID :many
 SELECT * FROM users 
 WHERE brand_id = $1 AND deleted_at = 0
+  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 ORDER BY full_name ASC;
 
 -- name: CountUsers :one
 SELECT COUNT(*) FROM users 
-WHERE deleted_at = 0;
+WHERE deleted_at = 0
+  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid;
 
 -- name: CountUsersByRole :one
 SELECT COUNT(*) FROM users 
-WHERE role = $1 AND deleted_at = 0;
+WHERE role = $1 AND deleted_at = 0
+  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid;
 
 -- name: CountUsersByShift :one
 SELECT COUNT(*) FROM users 
-WHERE shift_id = $1 AND deleted_at = 0;
+WHERE shift_id = $1 AND deleted_at = 0
+  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid;
 
 
 
 -- name: SearchUsers :many
 SELECT * FROM users 
 WHERE deleted_at = 0
+  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 AND (
     full_name ILIKE '%' || $1 || '%' OR
     username ILIKE '%' || $1 || '%' OR
@@ -217,6 +250,7 @@ LIMIT $2 OFFSET $3;
 -- name: SearchUsersByRole :many
 SELECT * FROM users 
 WHERE role = $1 AND deleted_at = 0
+  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 AND (
     full_name ILIKE '%' || $2 || '%' OR
     username ILIKE '%' || $2 || '%' OR
@@ -250,40 +284,47 @@ UPDATE shifts SET
     open_time = COALESCE($5, open_time),
     close_time = COALESCE($6, close_time),
     branch_id = COALESCE($7, branch_id)
-WHERE id = $1 AND deleted_at = 0
+WHERE shifts.id = $1 AND deleted_at = 0
+  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 RETURNING *;
 
 -- name: SoftDeleteShift :one
 UPDATE shifts SET
     deleted_at = EXTRACT(EPOCH FROM CURRENT_TIMESTAMP)::bigint
-WHERE id = $1 AND deleted_at = 0
+WHERE shifts.id = $1 AND deleted_at = 0
+  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 RETURNING *;
 
 -- name: RestoreShift :one
 UPDATE shifts SET
     deleted_at = 0
-WHERE id = $1 AND deleted_at != 0
+WHERE shifts.id = $1 AND deleted_at != 0
+  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 RETURNING *;
 
 
 
 -- name: GetShiftByID :one
 SELECT * FROM shifts 
-WHERE id = $1 AND deleted_at = 0;
+WHERE id = $1 AND deleted_at = 0
+  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid;
 
 -- name: GetAllShifts :many
 SELECT * FROM shifts 
 WHERE deleted_at = 0
+  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 ORDER BY name ASC;
 
 -- name: GetShiftsByBranchID :many
 SELECT * FROM shifts 
 WHERE branch_id = $1 AND deleted_at = 0
+  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 ORDER BY name ASC;
 
 -- name: GetShiftsByRole :many
 SELECT * FROM shifts 
 WHERE role = $1 AND deleted_at = 0
+  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 ORDER BY name ASC;
 
 -- name: GetShiftWithUsers :one
@@ -293,6 +334,7 @@ SELECT
 FROM shifts s
 LEFT JOIN users u ON s.id = u.shift_id AND u.deleted_at = 0
 WHERE s.id = $1 AND s.deleted_at = 0
+  AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 GROUP BY s.id;
 
 -- name: GetShiftsWithUserCounts :many
@@ -302,6 +344,7 @@ SELECT
 FROM shifts s
 LEFT JOIN users u ON s.id = u.shift_id AND u.deleted_at = 0
 WHERE s.deleted_at = 0
+  AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 GROUP BY s.id
 ORDER BY s.name ASC;
 
@@ -314,10 +357,12 @@ INSERT INTO attendances (
     open_date,
     close_date,
     difference,
-    working_hours
+    working_hours,
+    branch_id
 )
 VALUES (
-    $1, $2, $3, $4, $5, $6
+    $1, $2, $3, $4, $5, $6,
+    (SELECT branch_id FROM users WHERE id = $2)
 )
 RETURNING *;
 
@@ -328,6 +373,7 @@ UPDATE attendances SET
     difference = COALESCE($4, difference),
     working_hours = COALESCE($5, working_hours)
 WHERE id = $1 AND deleted_at = 0
+  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 RETURNING *;
 
 -- name: CloseAttendance :one
@@ -336,28 +382,33 @@ UPDATE attendances SET
     difference = $3,
     working_hours = $4
 WHERE id = $1 AND deleted_at = 0
+  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 RETURNING *;
 
 -- name: SoftDeleteAttendance :one
 UPDATE attendances SET
     deleted_at = EXTRACT(EPOCH FROM CURRENT_TIMESTAMP)::bigint
 WHERE id = $1 AND deleted_at = 0
+  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 RETURNING *;
 
 
 
 -- name: GetAttendanceByID :one
 SELECT * FROM attendances 
-WHERE id = $1 AND deleted_at = 0;
+WHERE id = $1 AND deleted_at = 0
+  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid;
 
 -- name: GetAttendancesByUserID :many
 SELECT * FROM attendances 
 WHERE user_id = $1 AND deleted_at = 0
+  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 ORDER BY open_date DESC;
 
 -- name: GetAttendancesByUserIDPaginated :many
 SELECT * FROM attendances 
 WHERE user_id = $1 AND deleted_at = 0
+  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 ORDER BY open_date DESC
 LIMIT $2 OFFSET $3;
 
@@ -368,6 +419,7 @@ JOIN users u ON a.user_id = u.id AND u.deleted_at = 0
 WHERE a.open_date >= $1 
 AND a.open_date <= $2 
 AND a.deleted_at = 0
+AND a.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 ORDER BY a.open_date DESC;
 
 -- name: GetOpenAttendancesByUserID :one
@@ -375,6 +427,7 @@ SELECT * FROM attendances
 WHERE user_id = $1 
 AND close_date IS NULL 
 AND deleted_at = 0
+AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 ORDER BY open_date DESC
 LIMIT 1;
 
@@ -384,6 +437,7 @@ FROM attendances a
 JOIN users u ON a.user_id = u.id AND u.deleted_at = 0
 WHERE a.open_date = CURRENT_DATE 
 AND a.deleted_at = 0
+AND a.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 ORDER BY a.open_date DESC;
 
 
@@ -398,6 +452,7 @@ SELECT
     MAX(open_date) as last_attendance
 FROM attendances
 WHERE user_id = $1 AND deleted_at = 0
+  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 GROUP BY user_id;
 
 -- name: GetUserAttendanceStatsByDateRange :one
@@ -413,6 +468,7 @@ WHERE user_id = $1
 AND open_date >= $2 
 AND open_date <= $3 
 AND deleted_at = 0
+AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 GROUP BY user_id;
 
 -- name: GetAttendanceStatsByRole :many
@@ -427,6 +483,7 @@ JOIN users u ON a.user_id = u.id AND u.deleted_at = 0
 WHERE a.open_date >= $1 
 AND a.open_date <= $2 
 AND a.deleted_at = 0
+AND a.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 GROUP BY u.role
 ORDER BY total_hours DESC;
 
@@ -441,5 +498,6 @@ FROM attendances a
 WHERE a.open_date >= $1 
 AND a.open_date <= $2 
 AND a.deleted_at = 0
+AND a.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 GROUP BY a.open_date
 ORDER BY a.open_date DESC;

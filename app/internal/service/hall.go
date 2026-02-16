@@ -27,13 +27,9 @@ func (h *HallS) CreateHall(ctx context.Context, name string, branchID string, na
 	if name == "" {
 		return nil, fmt.Errorf("hall name is required")
 	}
-	if branchID == "" {
-		return nil, fmt.Errorf("branch_id is required")
-	}
-
-	bID, err := uuid.Parse(branchID)
+	bID, err := resolveBranchUUID(ctx, branchID)
 	if err != nil {
-		return nil, fmt.Errorf("invalid branch ID: %w", err)
+		return nil, err
 	}
 
 	nameI18nUUID := pgtype.UUID{}
@@ -193,6 +189,9 @@ func (h *HallS) UpdateHall(ctx context.Context, hallID string, name *string, bra
 	}
 
 	finalBranchID := existing.BranchID
+	if err := validateBranchOverride(ctx, branchID); err != nil {
+		return nil, err
+	}
 	if branchID != nil && *branchID != "" {
 		branchUUID, err := uuid.Parse(*branchID)
 		if err != nil {

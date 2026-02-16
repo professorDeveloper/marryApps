@@ -18,6 +18,7 @@ func TenantMiddleware(repo *repository.Repository) echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
 			brandIDStr, _ := c.Get("brand_id").(string)
+			branchIDStr, _ := c.Get("branch_id").(string)
 			isGlobal, _ := c.Get("is_global").(bool)
 			userID, _ := c.Get("user_id").(string)
 
@@ -81,12 +82,22 @@ func TenantMiddleware(repo *repository.Repository) echo.MiddlewareFunc {
 					"message": "Internal server error",
 				})
 			}
+			if branchIDStr != "" {
+				if _, err := tx.Exec(ctx, "SET LOCAL app.branch_id = $1", branchIDStr); err != nil {
+					log.Printf("Failed to set app.branch_id: %v", err)
+					tx.Rollback(ctx)
+					return c.JSON(http.StatusInternalServerError, map[string]interface{}{
+						"message": "Internal server error",
+					})
+				}
+			}
 
 			tenantQueries := repo.Tenant(ctx).WithTx(tx)
 
 			tenantCtx := repository.WithTenantQueries(ctx, tenantQueries)
 			tenantCtx = repository.WithTenantTx(tenantCtx, tx)
 			tenantCtx = context.WithValue(tenantCtx, "brand_id", brandIDStr)
+			tenantCtx = context.WithValue(tenantCtx, "branch_id", branchIDStr)
 			tenantCtx = context.WithValue(tenantCtx, "user_id", userIDStr)
 			tenantCtx = context.WithValue(tenantCtx, "tenant_config", tenantCfg)
 
@@ -133,6 +144,13 @@ func GetBrandIDFromContext(c echo.Context) string {
 func GetUserIDFromContext(c echo.Context) string {
 	if userID, ok := c.Get("user_id").(string); ok {
 		return userID
+	}
+	return ""
+}
+
+func GetBranchIDFromContext(c echo.Context) string {
+	if branchID, ok := c.Get("branch_id").(string); ok {
+		return branchID
 	}
 	return ""
 }

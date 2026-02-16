@@ -97,13 +97,17 @@ type OrderItem struct {
 	UpdatedAt *time.Time      `json:"updated_at,omitempty"`
 }
 
-type CreateOrderItemRequest struct {
-	OrderID  string  `json:"order_id" validate:"required" example:"a1b2c3d4-e5f6-4a5b-8c9d-e0f1a2b3c4d5"`
+type CreateOrderItemEntry struct {
 	GoodID   string  `json:"good_id" validate:"required" example:"d4e5f6a7-b8c9-4a5b-8c9d-e0f1a2b3c4d5"`
 	Quantity int32   `json:"quantity" validate:"required,min=1" example:"2"`
 	Price    *string `json:"price,omitempty" example:"50000"`
 	Status   *string `json:"status,omitempty" example:"pending"`
 	Comment  *string `json:"comment,omitempty"`
+}
+
+type CreateOrderItemRequest struct {
+	OrderID string                 `json:"order_id" validate:"required" example:"a1b2c3d4-e5f6-4a5b-8c9d-e0f1a2b3c4d5"`
+	Items   []CreateOrderItemEntry `json:"items" validate:"required,min=1"`
 }
 
 type UpdateOrderItemRequest struct {

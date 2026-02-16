@@ -1,20 +1,24 @@
 -- name: CreateDeductionActGroup :one
 INSERT INTO deduction_act_groups (
   id,
-  name
+  name,
+  branch_id
 )
-VALUES ($1, $2)
-RETURNING id, name, created_at, updated_at, deleted_at;
+VALUES ($1, $2, NULLIF(current_setting('app.branch_id', true), '')::uuid)
+RETURNING id, name, created_at, updated_at, deleted_at, branch_id;
 
 -- name: GetDeductionActGroupByID :one
-SELECT id, name, created_at, updated_at, deleted_at
+SELECT id, name, created_at, updated_at, deleted_at, branch_id
 FROM deduction_act_groups
-WHERE id = $1 AND deleted_at = 0;
+WHERE id = $1
+  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  AND deleted_at = 0;
 
 -- name: GetAllDeductionActGroups :many
-SELECT id, name, created_at, updated_at, deleted_at
+SELECT id, name, created_at, updated_at, deleted_at, branch_id
 FROM deduction_act_groups
-WHERE deleted_at = 0
+WHERE branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  AND deleted_at = 0
 ORDER BY created_at DESC
 LIMIT $1 OFFSET $2;
 
@@ -22,18 +26,23 @@ LIMIT $1 OFFSET $2;
 UPDATE deduction_act_groups
 SET name = $2,
     updated_at = NOW()
-WHERE id = $1 AND deleted_at = 0
-RETURNING id, name, created_at, updated_at, deleted_at;
+WHERE id = $1
+  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  AND deleted_at = 0
+RETURNING id, name, created_at, updated_at, deleted_at, branch_id;
 
 -- name: DeleteDeductionActGroup :exec
 UPDATE deduction_act_groups
 SET deleted_at = EXTRACT(EPOCH FROM NOW())::BIGINT,
     updated_at = NOW()
-WHERE id = $1 AND deleted_at = 0;
+WHERE id = $1
+  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  AND deleted_at = 0;
 
 -- name: RestoreDeductionActGroup :one
 UPDATE deduction_act_groups
 SET deleted_at = 0,
     updated_at = NOW()
 WHERE id = $1
-RETURNING id, name, created_at, updated_at, deleted_at;
+  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+RETURNING id, name, created_at, updated_at, deleted_at, branch_id;

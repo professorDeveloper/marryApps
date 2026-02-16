@@ -10,6 +10,7 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 	pg "gitlab.yurtal.tech/company/maryai/back/internal/repository/pg/tenantsdb"
+	"golang.org/x/crypto/bcrypt"
 )
 
 // SeedData populates the database with sample data for testing
@@ -62,6 +63,10 @@ func seedTenantDB(ctx context.Context, db pg.DBTX) error {
 	log.Println("📝 Seeding tenant database...")
 
 	queries := pg.New(db)
+
+	if err := seedTenantSuperadmin(ctx, db); err != nil {
+		log.Printf("  ⚠️  Superadmin seed error: %v", err)
+	}
 
 	// ===== DEPARTMENTS (3) =====
 	deptIDs := make([]uuid.UUID, 3)
@@ -622,6 +627,94 @@ func seedTenantDB(ctx context.Context, db pg.DBTX) error {
 	log.Printf("   Cafe Tables: %d", len(tables))
 	log.Printf("   Orders: %d", len(orders))
 	log.Printf("   Order Items: %d", len(orderItems))
+
+	return nil
+}
+
+func seedTenantSuperadmin(ctx context.Context, db pg.DBTX) error {
+	// Define test users with different roles
+	testUsers := []struct {
+		fullName string
+		username string
+		password string
+		role     string
+		email    string
+	}{
+		{
+			fullName: "Admin User",
+			username: "admin",
+			password: "admin123",
+			role:     "admin",
+			email:    "admin@example.com",
+		},
+		{
+			fullName: "Waiter User",
+			username: "waiter",
+			password: "waiter123",
+			role:     "waiter",
+			email:    "waiter@example.com",
+		},
+		{
+			fullName: "Cashier User",
+			username: "cashier",
+			password: "cashier123",
+			role:     "cashier",
+			email:    "cashier@example.com",
+		},
+		{
+			fullName: "Kitchen Staff",
+			username: "kitchen",
+			password: "kitchen123",
+			role:     "kitchen",
+			email:    "kitchen@example.com",
+		},
+		{
+			fullName: "Super Admin",
+			username: "superadmin",
+			password: "superadmin",
+			role:     "superadmin",
+			email:    "superadmin@example.com",
+		},
+	}
+
+	for _, user := range testUsers {
+		hash, err := bcrypt.GenerateFromPassword([]byte(user.password), bcrypt.DefaultCost)
+		if err != nil {
+			return fmt.Errorf("failed to hash password for %s: %w", user.username, err)
+		}
+
+		_, err = db.Exec(ctx, `
+			INSERT INTO users (
+				id,
+				full_name,
+				username,
+				role,
+				email,
+				hash_password,
+				is_active,
+				created_at,
+				updated_at,
+				deleted_at
+			)
+			VALUES (
+				gen_random_uuid(),
+				$1,
+				$2,
+				$3,
+				$4,
+				$5,
+				TRUE,
+				NOW(),
+				NOW(),
+				0
+			);
+		`, user.fullName, user.username, user.role, user.email, string(hash))
+		if err != nil {
+			log.Printf("  ⚠️  User %s seed error: %v", user.username, err)
+		} else {
+			log.Printf("  ✓ Seeded user: %s (role: %s)", user.username, user.role)
+		}
+	}
 
 	return nil
 }

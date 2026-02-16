@@ -1,17 +1,32 @@
 -- name: CreateDepartment :one
 INSERT INTO departments (id, name, name_i18n, storage_id, color_code, picture_url)
-VALUES ($1, $2, $3, $4, $5, $6)
+SELECT $1, $2, $3, $4, $5, $6
+WHERE EXISTS (
+    SELECT 1 FROM storages s
+    WHERE s.id = $4
+      AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+)
 RETURNING id, name, name_i18n, storage_id, color_code, picture_url, created_at, updated_at, deleted_at;
 
 -- name: GetDepartmentByID :one
 SELECT id, name, name_i18n, storage_id, color_code, picture_url, created_at, updated_at, deleted_at
 FROM departments
-WHERE id = $1 AND deleted_at = 0;
+WHERE departments.id = $1 AND deleted_at = 0
+  AND EXISTS (
+    SELECT 1 FROM storages s
+    WHERE s.id = departments.storage_id
+      AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  );
 
 -- name: GetAllDepartments :many
 SELECT id, name, name_i18n, storage_id, color_code, picture_url, created_at, updated_at, deleted_at
 FROM departments
 WHERE deleted_at = 0
+  AND EXISTS (
+    SELECT 1 FROM storages s
+    WHERE s.id = departments.storage_id
+      AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  )
 ORDER BY created_at DESC
 LIMIT $1 OFFSET $2;
 
@@ -19,6 +34,11 @@ LIMIT $1 OFFSET $2;
 SELECT id, name, name_i18n, storage_id, color_code, picture_url, created_at, updated_at, deleted_at
 FROM departments
 WHERE storage_id = $1 AND deleted_at = 0
+  AND EXISTS (
+    SELECT 1 FROM storages s
+    WHERE s.id = departments.storage_id
+      AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  )
 ORDER BY created_at DESC
 LIMIT $2 OFFSET $3;
 
@@ -30,31 +50,70 @@ SET name = COALESCE($2, name),
     color_code = COALESCE($5, color_code),
     picture_url = COALESCE($6, picture_url),
     updated_at = NOW()
-WHERE id = $1 AND deleted_at = 0
+WHERE departments.id = $1 AND deleted_at = 0
+  AND EXISTS (
+    SELECT 1 FROM storages s
+    WHERE s.id = departments.storage_id
+      AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  )
+  AND (
+    $4 IS NULL OR EXISTS (
+      SELECT 1 FROM storages s2
+      WHERE s2.id = $4
+        AND s2.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+    )
+  )
 RETURNING id, name, name_i18n, storage_id, color_code, picture_url, created_at, updated_at, deleted_at;
 
 -- name: DeleteDepartment :exec
 UPDATE departments
 SET deleted_at = EXTRACT(EPOCH FROM NOW())::BIGINT
-WHERE id = $1 AND deleted_at = 0;
+WHERE departments.id = $1 AND deleted_at = 0
+  AND EXISTS (
+    SELECT 1 FROM storages s
+    WHERE s.id = departments.storage_id
+      AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  );
 
 -- name: RestoreDepartment :exec
 UPDATE departments
 SET deleted_at = 0
-WHERE id = $1 AND deleted_at != 0;
+WHERE departments.id = $1 AND deleted_at != 0
+  AND EXISTS (
+    SELECT 1 FROM storages s
+    WHERE s.id = departments.storage_id
+      AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  );
 
 -- name: SearchDepartments :many
 SELECT id, name, name_i18n, storage_id, color_code, picture_url, created_at, updated_at, deleted_at
 FROM departments
 WHERE deleted_at = 0 AND name ILIKE '%' || $1 || '%'
+  AND EXISTS (
+    SELECT 1 FROM storages s
+    WHERE s.id = departments.storage_id
+      AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  )
 ORDER BY created_at DESC
 LIMIT $2 OFFSET $3;
 
 -- name: CountDepartments :one
-SELECT COUNT(*) FROM departments WHERE deleted_at = 0;
+SELECT COUNT(*) FROM departments
+WHERE deleted_at = 0
+  AND EXISTS (
+    SELECT 1 FROM storages s
+    WHERE s.id = departments.storage_id
+      AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  );
 
 -- name: CountDepartmentsByStorage :one
-SELECT COUNT(*) FROM departments WHERE storage_id = $1 AND deleted_at = 0;
+SELECT COUNT(*) FROM departments
+WHERE storage_id = $1 AND deleted_at = 0
+  AND EXISTS (
+    SELECT 1 FROM storages s
+    WHERE s.id = departments.storage_id
+      AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  );
 
 
 
@@ -70,7 +129,8 @@ SELECT
     s.branch_id as storage_branch_id
 FROM departments d
 LEFT JOIN storages s ON d.storage_id = s.id AND s.deleted_at = 0
-WHERE d.id = $1 AND d.deleted_at = 0;
+WHERE d.id = $1 AND d.deleted_at = 0
+  AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid;
 
 
 
@@ -82,6 +142,11 @@ SELECT
 FROM departments d
 LEFT JOIN categories c ON d.id = c.department_id AND c.deleted_at = 0
 WHERE d.id = $1 AND d.deleted_at = 0
+  AND EXISTS (
+    SELECT 1 FROM storages s
+    WHERE s.id = d.storage_id
+      AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  )
 GROUP BY d.id, d.name;
 
 -- name: GetDepartmentByIDWithLanguage :one
@@ -102,7 +167,12 @@ SELECT
     d.deleted_at
 FROM departments d
 LEFT JOIN translations t ON d.name_i18n = t.id AND t.deleted_at = 0
-WHERE d.id = $1 AND d.deleted_at = 0;
+WHERE d.id = $1 AND d.deleted_at = 0
+  AND EXISTS (
+    SELECT 1 FROM storages s
+    WHERE s.id = d.storage_id
+      AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  );
 
 -- name: GetAllDepartmentsWithLanguage :many
 SELECT 
@@ -123,6 +193,10 @@ SELECT
 FROM departments d
 LEFT JOIN translations t ON d.name_i18n = t.id AND t.deleted_at = 0
 WHERE d.deleted_at = 0
+  AND EXISTS (
+    SELECT 1 FROM storages s
+    WHERE s.id = d.storage_id
+      AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  )
 ORDER BY d.created_at DESC
 LIMIT $2 OFFSET $3;
-

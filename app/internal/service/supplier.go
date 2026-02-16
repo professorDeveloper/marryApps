@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgtype"
 	"gitlab.yurtal.tech/company/maryai/back/internal/model"
 	"gitlab.yurtal.tech/company/maryai/back/internal/repository"
 	pg "gitlab.yurtal.tech/company/maryai/back/internal/repository/pg/tenantsdb"
@@ -166,20 +167,41 @@ func (s *SupplierS) SearchSuppliers(ctx context.Context, query string, limit, of
 }
 
 // Helper function to convert pg.Supplier to model.SupplierResponse
-func toSupplierResponse(supplier pg.Supplier) *model.SupplierResponse {
+func toSupplierResponse(supplier any) *model.SupplierResponse {
+	var (
+		id        uuid.UUID
+		name      string
+		phone     *string
+		location  *string
+		createdAt pgtype.Timestamptz
+		updatedAt pgtype.Timestamptz
+	)
+
+	switch row := supplier.(type) {
+	case pg.Supplier:
+		id = row.ID
+		name = row.Name
+		phone = row.PhoneNumber
+		location = row.Location
+		createdAt = row.CreatedAt
+		updatedAt = row.UpdatedAt
+	default:
+		return nil
+	}
+
 	response := &model.SupplierResponse{
-		ID:          supplier.ID.String(),
-		Name:        supplier.Name,
-		PhoneNumber: supplier.PhoneNumber,
-		Location:    supplier.Location,
+		ID:          id.String(),
+		Name:        name,
+		PhoneNumber: phone,
+		Location:    location,
 	}
 
-	if supplier.CreatedAt.Valid {
-		response.CreatedAt = &supplier.CreatedAt.Time
+	if createdAt.Valid {
+		response.CreatedAt = &createdAt.Time
 	}
 
-	if supplier.UpdatedAt.Valid {
-		response.UpdatedAt = &supplier.UpdatedAt.Time
+	if updatedAt.Valid {
+		response.UpdatedAt = &updatedAt.Time
 	}
 
 	return response

@@ -54,14 +54,6 @@ func (h *Handler) CreateHall(c echo.Context) error {
 			http.StatusBadRequest,
 		))
 	}
-	if req.BranchID == "" {
-		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
-			"branch_id is required",
-			"missing required field: branch_id",
-			http.StatusBadRequest,
-		))
-	}
-
 	hall, err := h.service.Hall().CreateHall(c.Request().Context(), *req.Name, req.BranchID, nameI18nUUID, req.Width, req.Height)
 	if err != nil {
 		log.Printf("CreateHall failed: %v", err)

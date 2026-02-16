@@ -9,7 +9,7 @@
         "contact": {},
         "version": "1.0"
     },
-    "host": "back.maryai.yurtal.tech",
+    "host": "back.staging.maryai.yurtal.tech",
     "basePath": "/",
     "paths": {
         "/api/v1/admin/brands": {
@@ -14349,7 +14349,7 @@
                         "BearerAuth": []
                     }
                 ],
-                "description": "Create a new order item. price can be omitted; it will be auto-filled from goods.price.",
+                "description": "Create one or more order items for the same order. price can be omitted; it will be auto-filled from goods.price.",
                 "consumes": [
                     "application/json"
                 ],
@@ -14359,7 +14359,7 @@
                 "tags": [
                     "Order Items"
                 ],
-                "summary": "Create order item",
+                "summary": "Create order items",
                 "parameters": [
                     {
                         "type": "string",
@@ -14369,7 +14369,7 @@
                         "in": "query"
                     },
                     {
-                        "description": "Create order item request",
+                        "description": "Create order items request",
                         "name": "request",
                         "in": "body",
                         "required": true,
@@ -14382,7 +14382,10 @@
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/model.OrderItemResponse"
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/model.OrderItemResponse"
+                            }
                         }
                     },
                     "400": {
@@ -20168,6 +20171,35 @@
                 }
             }
         },
+        "model.CreateOrderItemEntry": {
+            "type": "object",
+            "required": [
+                "good_id",
+                "quantity"
+            ],
+            "properties": {
+                "comment": {
+                    "type": "string"
+                },
+                "good_id": {
+                    "type": "string",
+                    "example": "d4e5f6a7-b8c9-4a5b-8c9d-e0f1a2b3c4d5"
+                },
+                "price": {
+                    "type": "string",
+                    "example": "50000"
+                },
+                "quantity": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "example": 2
+                },
+                "status": {
+                    "type": "string",
+                    "example": "pending"
+                }
+            }
+        },
         "model.CreateOrderItemInline": {
             "type": "object",
             "required": [
@@ -20192,34 +20224,20 @@
         "model.CreateOrderItemRequest": {
             "type": "object",
             "required": [
-                "good_id",
-                "order_id",
-                "quantity"
+                "items",
+                "order_id"
             ],
             "properties": {
-                "comment": {
-                    "type": "string"
-                },
-                "good_id": {
-                    "type": "string",
-                    "example": "d4e5f6a7-b8c9-4a5b-8c9d-e0f1a2b3c4d5"
+                "items": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                        "$ref": "#/definitions/model.CreateOrderItemEntry"
+                    }
                 },
                 "order_id": {
                     "type": "string",
                     "example": "a1b2c3d4-e5f6-4a5b-8c9d-e0f1a2b3c4d5"
-                },
-                "price": {
-                    "type": "string",
-                    "example": "50000"
-                },
-                "quantity": {
-                    "type": "integer",
-                    "minimum": 1,
-                    "example": 2
-                },
-                "status": {
-                    "type": "string",
-                    "example": "pending"
                 }
             }
         },
@@ -21807,6 +21825,10 @@
         "model.RegisterRequest": {
             "type": "object",
             "properties": {
+                "branch_id": {
+                    "type": "string",
+                    "example": "123e4567-e89b-12d3-a456-426614174000"
+                },
                 "brand_id": {
                     "type": "string",
                     "example": "my_restaurant"
@@ -22945,6 +22967,10 @@
         "model.UserResponse": {
             "type": "object",
             "properties": {
+                "branch_id": {
+                    "type": "string",
+                    "example": "123e4567-e89b-12d3-a456-426614174000"
+                },
                 "brand_id": {
                     "type": "string",
                     "example": "123e4567-e89b-12d3-a456-426614174000"

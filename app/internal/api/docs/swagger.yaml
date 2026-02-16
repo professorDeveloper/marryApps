@@ -871,6 +871,27 @@ definitions:
       summary:
         $ref: '#/definitions/model.InvoiceDetailsBatchSummary'
     type: object
+  model.CreateOrderItemEntry:
+    properties:
+      comment:
+        type: string
+      good_id:
+        example: d4e5f6a7-b8c9-4a5b-8c9d-e0f1a2b3c4d5
+        type: string
+      price:
+        example: "50000"
+        type: string
+      quantity:
+        example: 2
+        minimum: 1
+        type: integer
+      status:
+        example: pending
+        type: string
+    required:
+    - good_id
+    - quantity
+    type: object
   model.CreateOrderItemInline:
     properties:
       comment:
@@ -888,28 +909,17 @@ definitions:
     type: object
   model.CreateOrderItemRequest:
     properties:
-      comment:
-        type: string
-      good_id:
-        example: d4e5f6a7-b8c9-4a5b-8c9d-e0f1a2b3c4d5
-        type: string
+      items:
+        items:
+          $ref: '#/definitions/model.CreateOrderItemEntry'
+        minItems: 1
+        type: array
       order_id:
         example: a1b2c3d4-e5f6-4a5b-8c9d-e0f1a2b3c4d5
         type: string
-      price:
-        example: "50000"
-        type: string
-      quantity:
-        example: 2
-        minimum: 1
-        type: integer
-      status:
-        example: pending
-        type: string
     required:
-    - good_id
+    - items
     - order_id
-    - quantity
     type: object
   model.CreateOrderRequest:
     properties:
@@ -2023,6 +2033,9 @@ definitions:
     type: object
   model.RegisterRequest:
     properties:
+      branch_id:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
       brand_id:
         example: my_restaurant
         type: string
@@ -2818,6 +2831,9 @@ definitions:
     type: object
   model.UserResponse:
     properties:
+      branch_id:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
       brand_id:
         example: 123e4567-e89b-12d3-a456-426614174000
         type: string
@@ -2852,7 +2868,7 @@ definitions:
         example: admin
         type: string
     type: object
-host: back.maryai.yurtal.tech
+host: back.staging.maryai.yurtal.tech
 info:
   contact: {}
   description: MaryAI API server with multi-language support (uz, ru, en)
@@ -12208,15 +12224,15 @@ paths:
     post:
       consumes:
       - application/json
-      description: Create a new order item. price can be omitted; it will be auto-filled
-        from goods.price.
+      description: Create one or more order items for the same order. price can be
+        omitted; it will be auto-filled from goods.price.
       parameters:
       - default: uz
         description: Language (uz, ru, en)
         in: query
         name: lang
         type: string
-      - description: Create order item request
+      - description: Create order items request
         in: body
         name: request
         required: true
@@ -12228,7 +12244,9 @@ paths:
         "201":
           description: Created
           schema:
-            $ref: '#/definitions/model.OrderItemResponse'
+            items:
+              $ref: '#/definitions/model.OrderItemResponse'
+            type: array
         "400":
           description: Bad Request
           schema:
@@ -12243,7 +12261,7 @@ paths:
             $ref: '#/definitions/model.ErrorResponse'
       security:
       - BearerAuth: []
-      summary: Create order item
+      summary: Create order items
       tags:
       - Order Items
   /api/v1/order-items/{id}:

@@ -38,13 +38,9 @@ func (s *StorageS) CreateStorage(ctx context.Context, name string, branchID stri
 	if name == "" {
 		return nil, fmt.Errorf("storage name is required")
 	}
-	if branchID == "" {
-		return nil, fmt.Errorf("branch_id is required")
-	}
-
-	bID, err := uuid.Parse(branchID)
+	bID, err := resolveBranchUUID(ctx, branchID)
 	if err != nil {
-		return nil, fmt.Errorf("invalid branch ID: %w", err)
+		return nil, err
 	}
 
 	nameI18nUUID := pgtype.UUID{}
@@ -143,6 +139,9 @@ func (s *StorageS) UpdateStorage(ctx context.Context, storageID string, name *st
 	}
 
 	updatedBranchID := currentStorage.BranchID
+	if err := validateBranchOverride(ctx, branchID); err != nil {
+		return nil, err
+	}
 	if branchID != nil && *branchID != "" {
 		bID, err := uuid.Parse(*branchID)
 		if err != nil {

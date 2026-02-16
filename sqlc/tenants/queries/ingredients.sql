@@ -1,19 +1,22 @@
 -- ==================== INGREDIENT GROUPS QUERIES ====================
 
 -- name: CreateIngredientGroup :one
-INSERT INTO ingredient_groups (id, name, picture_url, name_i18n, color_code)
-VALUES ($1, $2, $3, $4, $5)
-RETURNING id, name, picture_url, name_i18n, color_code, created_at, updated_at, deleted_at;
+INSERT INTO ingredient_groups (id, name, picture_url, name_i18n, color_code, branch_id)
+VALUES ($1, $2, $3, $4, $5, NULLIF(current_setting('app.branch_id', true), '')::uuid)
+RETURNING id, name, picture_url, name_i18n, color_code, created_at, updated_at, deleted_at, branch_id;
 
 -- name: GetIngredientGroupByID :one
-SELECT id, name, picture_url, name_i18n, color_code, created_at, updated_at, deleted_at
+SELECT id, name, picture_url, name_i18n, color_code, created_at, updated_at, deleted_at, branch_id
 FROM ingredient_groups
-WHERE id = $1 AND deleted_at = 0;
+WHERE id = $1
+  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  AND deleted_at = 0;
 
 -- name: GetAllIngredientGroups :many
-SELECT id, name, picture_url, name_i18n, color_code, created_at, updated_at, deleted_at
+SELECT id, name, picture_url, name_i18n, color_code, created_at, updated_at, deleted_at, branch_id
 FROM ingredient_groups
-WHERE deleted_at = 0
+WHERE branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  AND deleted_at = 0
 ORDER BY created_at DESC
 LIMIT $1 OFFSET $2;
 
@@ -25,59 +28,81 @@ SET name = COALESCE($2, name),
     name_i18n = COALESCE($4, name_i18n),
     color_code = COALESCE($5, color_code),
     updated_at = NOW()
-WHERE id = $1 AND deleted_at = 0
-RETURNING id, name, picture_url, name_i18n, color_code, created_at, updated_at, deleted_at;
+WHERE ingredient_groups.id = $1
+  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  AND deleted_at = 0
+RETURNING id, name, picture_url, name_i18n, color_code, created_at, updated_at, deleted_at, branch_id;
 
 -- DeleteIngredientGroup soft deletes an ingredient group
 -- name: DeleteIngredientGroup :exec
 UPDATE ingredient_groups
 SET deleted_at = EXTRACT(EPOCH FROM NOW())::BIGINT
-WHERE id = $1 AND deleted_at = 0;
+WHERE id = $1
+  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  AND deleted_at = 0;
 
 -- RestoreIngredientGroup restores a deleted ingredient group
 -- name: RestoreIngredientGroup :exec
 UPDATE ingredient_groups
 SET deleted_at = 0
-WHERE id = $1 AND deleted_at != 0;
+WHERE id = $1
+  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  AND deleted_at != 0;
 
 -- SearchIngredientGroups searches ingredient groups by name
 -- name: SearchIngredientGroups :many
-SELECT id, name, picture_url, name_i18n, color_code, created_at, updated_at, deleted_at
+SELECT id, name, picture_url, name_i18n, color_code, created_at, updated_at, deleted_at, branch_id
 FROM ingredient_groups
-WHERE deleted_at = 0 AND name ILIKE '%' || $1 || '%'
+WHERE deleted_at = 0
+  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  AND name ILIKE '%' || $1 || '%'
 ORDER BY created_at DESC
 LIMIT $2 OFFSET $3;
 
 -- CountIngredientGroups counts total ingredient groups
 -- name: CountIngredientGroups :one
-SELECT COUNT(*) FROM ingredient_groups WHERE deleted_at = 0;
+SELECT COUNT(*)
+FROM ingredient_groups
+WHERE branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  AND deleted_at = 0;
 
 
 -- CreateIngredient creates a new ingredient
 -- name: CreateIngredient :one
-INSERT INTO ingredients (id, name, name_i18n, group_id, measurement, picture_url, color_code, brand_id)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-RETURNING id, name, name_i18n, group_id, measurement, picture_url, color_code, brand_id, price_per_unit, created_at, updated_at, deleted_at;
+INSERT INTO ingredients (id, name, name_i18n, group_id, measurement, picture_url, color_code, brand_id, branch_id)
+VALUES (
+    $1, $2, $3, $4, $5, $6, $7, $8,
+    COALESCE(
+        (SELECT branch_id FROM ingredient_groups WHERE id = $4),
+        NULLIF(current_setting('app.branch_id', true), '')::uuid
+    )
+)
+RETURNING id, name, name_i18n, group_id, measurement, picture_url, color_code, brand_id, price_per_unit, created_at, updated_at, deleted_at, branch_id;
 
 -- GetIngredientByID retrieves an ingredient by ID
 -- name: GetIngredientByID :one
-SELECT id, name, name_i18n, group_id, measurement, picture_url, color_code, brand_id, price_per_unit, created_at, updated_at, deleted_at
+SELECT id, name, name_i18n, group_id, measurement, picture_url, color_code, brand_id, price_per_unit, created_at, updated_at, deleted_at, branch_id
 FROM ingredients
-WHERE id = $1 AND deleted_at = 0;
+WHERE id = $1
+  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  AND deleted_at = 0;
 
 -- GetAllIngredients retrieves all ingredients with pagination
 -- name: GetAllIngredients :many
-SELECT id, name, name_i18n, group_id, measurement, picture_url, color_code, brand_id, price_per_unit, created_at, updated_at, deleted_at
+SELECT id, name, name_i18n, group_id, measurement, picture_url, color_code, brand_id, price_per_unit, created_at, updated_at, deleted_at, branch_id
 FROM ingredients
-WHERE deleted_at = 0
+WHERE branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  AND deleted_at = 0
 ORDER BY created_at DESC
 LIMIT $1 OFFSET $2;
 
 -- GetIngredientsByGroupID retrieves ingredients by group ID
 -- name: GetIngredientsByGroupID :many
-SELECT id, name, name_i18n, group_id, measurement, picture_url, color_code, brand_id, price_per_unit, created_at, updated_at, deleted_at
+SELECT id, name, name_i18n, group_id, measurement, picture_url, color_code, brand_id, price_per_unit, created_at, updated_at, deleted_at, branch_id
 FROM ingredients
-WHERE group_id = $1 AND deleted_at = 0
+WHERE group_id = $1
+  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  AND deleted_at = 0
 ORDER BY created_at DESC
 LIMIT $2 OFFSET $3;
 
@@ -91,40 +116,57 @@ SET name = COALESCE($2, name),
     picture_url = COALESCE($6, picture_url),
     color_code = COALESCE($7, color_code),
     brand_id = COALESCE($8, brand_id),
+    branch_id = COALESCE(
+        (SELECT branch_id FROM ingredient_groups WHERE id = COALESCE($4, group_id)),
+        branch_id
+    ),
     updated_at = NOW()
-WHERE id = $1 AND deleted_at = 0
-RETURNING id, name, name_i18n, group_id, measurement, picture_url, color_code, brand_id, price_per_unit, created_at, updated_at, deleted_at;
+WHERE ingredients.id = $1
+  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  AND deleted_at = 0
+RETURNING id, name, name_i18n, group_id, measurement, picture_url, color_code, brand_id, price_per_unit, created_at, updated_at, deleted_at, branch_id;
 
 -- DeleteIngredient soft deletes an ingredient
 -- name: DeleteIngredient :exec
 UPDATE ingredients
 SET deleted_at = EXTRACT(EPOCH FROM NOW())::BIGINT
-WHERE id = $1 AND deleted_at = 0;
+WHERE id = $1
+  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  AND deleted_at = 0;
 
 -- RestoreIngredient restores a deleted ingredient
 -- name: RestoreIngredient :exec
 UPDATE ingredients
 SET deleted_at = 0
-WHERE id = $1 AND deleted_at != 0;
+WHERE id = $1
+  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  AND deleted_at != 0;
 
 -- SearchIngredients searches ingredients by name
 -- name: SearchIngredients :many
-SELECT id, name, name_i18n, group_id, measurement, picture_url, color_code, brand_id, price_per_unit, created_at, updated_at, deleted_at
+SELECT id, name, name_i18n, group_id, measurement, picture_url, color_code, brand_id, price_per_unit, created_at, updated_at, deleted_at, branch_id
 FROM ingredients
-WHERE deleted_at = 0 AND name ILIKE '%' || $1 || '%'
+WHERE deleted_at = 0
+  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  AND name ILIKE '%' || $1 || '%'
 ORDER BY created_at DESC
 LIMIT $2 OFFSET $3;
 
 -- CountIngredients counts total ingredients
 -- name: CountIngredients :one
-SELECT COUNT(*) FROM ingredients WHERE deleted_at = 0;
+SELECT COUNT(*)
+FROM ingredients
+WHERE branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  AND deleted_at = 0;
 
 -- UpdateIngredientPriceAndQuantity updates price_per_unit for an ingredient
 -- name: UpdateIngredientPriceAndQuantity :one
 UPDATE ingredients
 SET price_per_unit = COALESCE($2, price_per_unit),
     updated_at = NOW()
-WHERE id = $1 AND deleted_at = 0
+WHERE id = $1
+  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  AND deleted_at = 0
 RETURNING id, name, name_i18n, group_id, measurement, picture_url, color_code, brand_id, price_per_unit, created_at, updated_at, deleted_at;
 
 -- AddIngredientQuantity adds/accumulates quantity to an ingredient (for invoice arrivals)
@@ -133,14 +175,18 @@ RETURNING id, name, name_i18n, group_id, measurement, picture_url, color_code, b
 UPDATE ingredients
 SET price_per_unit = COALESCE($2, price_per_unit),
     updated_at = NOW()
-WHERE id = $1 AND deleted_at = 0
+WHERE id = $1
+  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  AND deleted_at = 0
 RETURNING id, name, name_i18n, group_id, measurement, picture_url, color_code, brand_id, price_per_unit, created_at, updated_at, deleted_at;
 
 -- GetIngredientByIDWithPriceQuantity retrieves ingredient with price and quantity by ID
 -- name: GetIngredientByIDWithPriceQuantity :one
-SELECT id, name, name_i18n, group_id, measurement, picture_url, color_code, brand_id, price_per_unit, created_at, updated_at, deleted_at
+SELECT id, name, name_i18n, group_id, measurement, picture_url, color_code, brand_id, price_per_unit, created_at, updated_at, deleted_at, branch_id
 FROM ingredients
-WHERE id = $1 AND deleted_at = 0;
+WHERE id = $1
+  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  AND deleted_at = 0;
 
 
 -- name: CreateIngredientStock :one
@@ -152,19 +198,22 @@ RETURNING id, ingredient_id, quantity, branch_id, storage_id, created_at, update
 -- name: GetIngredientStockByID :one
 SELECT id, ingredient_id, quantity, branch_id, storage_id, created_at, updated_at, deleted_at
 FROM ingredient_stock
-WHERE id = $1 AND deleted_at = 0;
+WHERE id = $1 AND deleted_at = 0
+  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid;
 
 -- GetStockByIngredientAndBranch retrieves stock for a specific ingredient and branch
 -- name: GetStockByIngredientAndBranch :one
 SELECT id, ingredient_id, quantity, branch_id, storage_id, created_at, updated_at, deleted_at
 FROM ingredient_stock
-WHERE ingredient_id = $1 AND branch_id = $2 AND deleted_at = 0;
+WHERE ingredient_id = $1 AND branch_id = $2 AND deleted_at = 0
+  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid;
 
 -- GetStockByIngredientAndStorageForUpdate retrieves and locks stock row for an ingredient in a storage
 -- name: GetStockByIngredientAndStorageForUpdate :one
 SELECT id, ingredient_id, quantity, branch_id, storage_id, created_at, updated_at, deleted_at
 FROM ingredient_stock
 WHERE ingredient_id = $1 AND storage_id = $2 AND deleted_at = 0
+  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 FOR UPDATE;
 
 -- EnsureIngredientStockByStorage ensures a stock row exists for (ingredient_id, storage_id)
@@ -180,6 +229,7 @@ RETURNING id;
 SELECT id, ingredient_id, quantity, branch_id, storage_id, created_at, updated_at, deleted_at
 FROM ingredient_stock
 WHERE deleted_at = 0
+  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 ORDER BY created_at DESC
 LIMIT $1 OFFSET $2;
 
@@ -188,6 +238,7 @@ LIMIT $1 OFFSET $2;
 SELECT id, ingredient_id, quantity, branch_id, storage_id, created_at, updated_at, deleted_at
 FROM ingredient_stock
 WHERE branch_id = $1 AND deleted_at = 0
+  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 ORDER BY created_at DESC
 LIMIT $2 OFFSET $3;
 
@@ -196,6 +247,7 @@ LIMIT $2 OFFSET $3;
 SELECT id, ingredient_id, quantity, branch_id, storage_id, created_at, updated_at, deleted_at
 FROM ingredient_stock
 WHERE ingredient_id = $1 AND deleted_at = 0
+  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 ORDER BY created_at DESC
 LIMIT $2 OFFSET $3;
 
@@ -205,6 +257,7 @@ UPDATE ingredient_stock
 SET quantity = COALESCE($2, quantity),
     updated_at = NOW()
 WHERE id = $1 AND deleted_at = 0
+  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 RETURNING id, ingredient_id, quantity, branch_id, storage_id, created_at, updated_at, deleted_at;
 
 -- AddToIngredientStock increases ingredient stock quantity
@@ -213,6 +266,7 @@ UPDATE ingredient_stock
 SET quantity = quantity + $2,
     updated_at = NOW()
 WHERE id = $1 AND deleted_at = 0
+  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 RETURNING id, ingredient_id, quantity, branch_id, storage_id, created_at, updated_at, deleted_at;
 
 -- RemoveFromIngredientStock decreases ingredient stock quantity
@@ -224,6 +278,7 @@ SET quantity = CASE
 END,
     updated_at = NOW()
 WHERE id = $1 AND deleted_at = 0
+  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 RETURNING id, ingredient_id, quantity, branch_id, storage_id, created_at, updated_at, deleted_at;
 
 -- UpsertAddIngredientStockByStorage increases stock for ingredient in a storage (used for invoice arrivals)
@@ -241,17 +296,21 @@ RETURNING id, ingredient_id, quantity, branch_id, storage_id, created_at, update
 -- name: DeleteIngredientStock :exec
 UPDATE ingredient_stock
 SET deleted_at = EXTRACT(EPOCH FROM NOW())::BIGINT
-WHERE id = $1 AND deleted_at = 0;
+WHERE id = $1 AND deleted_at = 0
+  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid;
 
 -- RestoreIngredientStock restores deleted ingredient stock
 -- name: RestoreIngredientStock :exec
 UPDATE ingredient_stock
 SET deleted_at = 0
-WHERE id = $1 AND deleted_at != 0;
+WHERE id = $1 AND deleted_at != 0
+  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid;
 
 -- CountIngredientStock counts total ingredient stock entries
 -- name: CountIngredientStock :one
-SELECT COUNT(*) FROM ingredient_stock WHERE deleted_at = 0;
+SELECT COUNT(*) FROM ingredient_stock
+WHERE deleted_at = 0
+  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid;
 
 -- name: GetIngredientGroupByIDWithLanguage :one
 SELECT 
@@ -290,6 +349,7 @@ SELECT
 FROM ingredient_groups ig
 LEFT JOIN translations t ON ig.name_i18n = t.id AND t.deleted_at = 0
 WHERE ig.deleted_at = 0
+  AND ig.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 ORDER BY ig.created_at DESC
 LIMIT $2 OFFSET $3;
 
@@ -314,7 +374,9 @@ SELECT
     i.deleted_at
 FROM ingredients i
 LEFT JOIN translations t ON i.name_i18n = t.id AND t.deleted_at = 0
-WHERE i.id = $1 AND i.deleted_at = 0;
+WHERE i.id = $1
+  AND i.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  AND i.deleted_at = 0;
 
 -- name: GetAllIngredientsWithLanguage :many
 SELECT 
@@ -338,6 +400,6 @@ SELECT
 FROM ingredients i
 LEFT JOIN translations t ON i.name_i18n = t.id AND t.deleted_at = 0
 WHERE i.deleted_at = 0
+  AND i.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 ORDER BY i.created_at DESC
 LIMIT $2 OFFSET $3;
-

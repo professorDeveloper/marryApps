@@ -571,24 +571,161 @@ func dateToTime(d pgtype.Date) *time.Time {
 	return &t
 }
 
-func toInventoryResponse(inv pg.Inventory) *model.InventoryResponse {
-	resp := &model.InventoryResponse{
-		ID:              inv.ID.String(),
-		Number:          inv.Number,
-		StorageID:       inv.StorageID.String(),
-		Description:     inv.Description,
-		Status:          model.InventoryStatus(inv.Status),
-		SurplusAmount:   numericToString(inv.SurplusAmount),
-		ShortageAmount:  numericToString(inv.ShortageAmount),
-		RemainingAmount: numericToString(inv.RemainingAmount),
+func toInventoryResponse(inv any) *model.InventoryResponse {
+	var (
+		id              uuid.UUID
+		number          int64
+		date            pgtype.Date
+		storageID       uuid.UUID
+		description     *string
+		descriptionI18n pgtype.UUID
+		status          string
+		surplusAmount   pgtype.Numeric
+		shortageAmount  pgtype.Numeric
+		remainingAmount pgtype.Numeric
+		createdAt       pgtype.Timestamptz
+		updatedAt       pgtype.Timestamptz
+	)
+
+	switch row := inv.(type) {
+	case pg.Inventory:
+		id = row.ID
+		number = row.Number
+		date = row.Date
+		storageID = row.StorageID
+		description = row.Description
+		descriptionI18n = row.DescriptionI18n
+		status = row.Status
+		surplusAmount = row.SurplusAmount
+		shortageAmount = row.ShortageAmount
+		remainingAmount = row.RemainingAmount
+		createdAt = row.CreatedAt
+		updatedAt = row.UpdatedAt
+	case pg.CreateInventoryRow:
+		id = row.ID
+		number = row.Number
+		date = row.Date
+		storageID = row.StorageID
+		description = row.Description
+		descriptionI18n = row.DescriptionI18n
+		status = row.Status
+		surplusAmount = row.SurplusAmount
+		shortageAmount = row.ShortageAmount
+		remainingAmount = row.RemainingAmount
+		createdAt = row.CreatedAt
+		updatedAt = row.UpdatedAt
+	case pg.GetInventoryByIDRow:
+		id = row.ID
+		number = row.Number
+		date = row.Date
+		storageID = row.StorageID
+		description = row.Description
+		descriptionI18n = row.DescriptionI18n
+		status = row.Status
+		surplusAmount = row.SurplusAmount
+		shortageAmount = row.ShortageAmount
+		remainingAmount = row.RemainingAmount
+		createdAt = row.CreatedAt
+		updatedAt = row.UpdatedAt
+	case pg.GetAllInventoriesRow:
+		id = row.ID
+		number = row.Number
+		date = row.Date
+		storageID = row.StorageID
+		description = row.Description
+		descriptionI18n = row.DescriptionI18n
+		status = row.Status
+		surplusAmount = row.SurplusAmount
+		shortageAmount = row.ShortageAmount
+		remainingAmount = row.RemainingAmount
+		createdAt = row.CreatedAt
+		updatedAt = row.UpdatedAt
+	case pg.GetInventoriesFilteredRow:
+		id = row.ID
+		number = row.Number
+		date = row.Date
+		storageID = row.StorageID
+		description = row.Description
+		descriptionI18n = row.DescriptionI18n
+		status = row.Status
+		surplusAmount = row.SurplusAmount
+		shortageAmount = row.ShortageAmount
+		remainingAmount = row.RemainingAmount
+		createdAt = row.CreatedAt
+		updatedAt = row.UpdatedAt
+	case pg.UpdateInventoryRow:
+		id = row.ID
+		number = row.Number
+		date = row.Date
+		storageID = row.StorageID
+		description = row.Description
+		descriptionI18n = row.DescriptionI18n
+		status = row.Status
+		surplusAmount = row.SurplusAmount
+		shortageAmount = row.ShortageAmount
+		remainingAmount = row.RemainingAmount
+		createdAt = row.CreatedAt
+		updatedAt = row.UpdatedAt
+	case pg.UpdateInventoryAmountsRow:
+		id = row.ID
+		number = row.Number
+		date = row.Date
+		storageID = row.StorageID
+		description = row.Description
+		descriptionI18n = row.DescriptionI18n
+		status = row.Status
+		surplusAmount = row.SurplusAmount
+		shortageAmount = row.ShortageAmount
+		remainingAmount = row.RemainingAmount
+		createdAt = row.CreatedAt
+		updatedAt = row.UpdatedAt
+	case pg.RestoreInventoryRow:
+		id = row.ID
+		number = row.Number
+		date = row.Date
+		storageID = row.StorageID
+		description = row.Description
+		descriptionI18n = row.DescriptionI18n
+		status = row.Status
+		surplusAmount = row.SurplusAmount
+		shortageAmount = row.ShortageAmount
+		remainingAmount = row.RemainingAmount
+		createdAt = row.CreatedAt
+		updatedAt = row.UpdatedAt
+	case pg.SearchInventoriesRow:
+		id = row.ID
+		number = row.Number
+		date = row.Date
+		storageID = row.StorageID
+		description = row.Description
+		descriptionI18n = row.DescriptionI18n
+		status = row.Status
+		surplusAmount = row.SurplusAmount
+		shortageAmount = row.ShortageAmount
+		remainingAmount = row.RemainingAmount
+		createdAt = row.CreatedAt
+		updatedAt = row.UpdatedAt
+	default:
+		return nil
 	}
 
-	resp.Date = dateToTime(inv.Date)
-	resp.CreatedAt = timestampToTime(inv.CreatedAt)
-	resp.UpdatedAt = timestampToTime(inv.UpdatedAt)
+	resp := &model.InventoryResponse{
+		ID:              id.String(),
+		Number:          number,
+		StorageID:       storageID.String(),
+		Description:     description,
+		Status:          model.InventoryStatus(status),
+		SurplusAmount:   numericToString(surplusAmount),
+		ShortageAmount:  numericToString(shortageAmount),
+		RemainingAmount: numericToString(remainingAmount),
+	}
 
-	if inv.DescriptionI18n.Valid {
-		str := inv.DescriptionI18n.String()
+	resp.Date = dateToTime(date)
+	resp.CreatedAt = timestampToTime(createdAt)
+	resp.UpdatedAt = timestampToTime(updatedAt)
+
+	if descriptionI18n.Valid {
+		str := descriptionI18n.String()
 		resp.DescriptionI18n = &str
 	}
 

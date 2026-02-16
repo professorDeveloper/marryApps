@@ -145,7 +145,7 @@ func (s *OrderS) CreateOrder(ctx context.Context, req model.CreateOrderRequest) 
 		return nil, fmt.Errorf("failed to init total_amount: %w", err)
 	}
 
-	order, err := s.repo.Tenant(ctx).CreateOrder(ctx, pg.CreateOrderParams{
+	createdOrder, err := s.repo.Tenant(ctx).CreateOrder(ctx, pg.CreateOrderParams{
 		ID:          uuid.New(),
 		TableID:     pgtype.UUID{Bytes: tableUUID, Valid: true},
 		WaiterID:    waiterUUID,
@@ -158,6 +158,7 @@ func (s *OrderS) CreateOrder(ctx context.Context, req model.CreateOrderRequest) 
 	if err != nil {
 		return nil, fmt.Errorf("failed to create order: %w", err)
 	}
+	orderForResponse := any(createdOrder)
 
 	billNo, err := s.repo.Tenant(ctx).NextDailyBillNo(ctx)
 	if err != nil {
@@ -169,7 +170,7 @@ func (s *OrderS) CreateOrder(ctx context.Context, req model.CreateOrderRequest) 
 		return nil, fmt.Errorf("failed to get default service percent: %w", err)
 	}
 
-	if err := s.repo.Tenant(ctx).InitOrderBillFields(ctx, order.ID, billNo, servicePercent); err != nil {
+	if err := s.repo.Tenant(ctx).InitOrderBillFields(ctx, createdOrder.ID, billNo, servicePercent); err != nil {
 		return nil, fmt.Errorf("failed to init bill fields: %w", err)
 	}
 
@@ -192,7 +193,7 @@ func (s *OrderS) CreateOrder(ctx context.Context, req model.CreateOrderRequest) 
 			item, err := s.repo.Tenant(ctx).CreateOrderItem(ctx, pg.CreateOrderItemParams{
 				ID:       uuid.New(),
 				GoodID:   goodUUID,
-				OrderID:  order.ID,
+				OrderID:  createdOrder.ID,
 				Quantity: it.Quantity,
 				Price:    good.Price,
 				Status:   pg.NullOrderItemsStatus{OrderItemsStatus: pg.OrderItemsStatus(model.OrderItemStatusPending), Valid: true},
@@ -204,17 +205,17 @@ func (s *OrderS) CreateOrder(ctx context.Context, req model.CreateOrderRequest) 
 			_ = item
 		}
 
-		if err := s.repo.Tenant(ctx).RecalculateOrderTotalsFromItems(ctx, order.ID); err != nil {
+		if err := s.repo.Tenant(ctx).RecalculateOrderTotalsFromItems(ctx, createdOrder.ID); err != nil {
 			return nil, fmt.Errorf("failed to recalculate order totals: %w", err)
 		}
 
-		refetched, err := s.repo.Tenant(ctx).GetOrderByID(ctx, order.ID)
+		refetched, err := s.repo.Tenant(ctx).GetOrderByID(ctx, createdOrder.ID)
 		if err == nil {
-			order = refetched
+			orderForResponse = refetched
 		}
 	}
 
-	return toOrderResponse(order), nil
+	return toOrderResponse(orderForResponse), nil
 }
 
 func (s *OrderS) GetOrderByID(ctx context.Context, orderID string) (*model.OrderResponse, error) {
@@ -356,7 +357,7 @@ func (s *OrderS) UpdateOrder(ctx context.Context, orderID string, req model.Upda
 		finalStatus = existing.Status
 	}
 
-	order, err := s.repo.Tenant(ctx).UpdateOrder(ctx, pg.UpdateOrderParams{
+	updatedOrder, err := s.repo.Tenant(ctx).UpdateOrder(ctx, pg.UpdateOrderParams{
 		ID:          id,
 		TableID:     finalTableID,
 		WaiterID:    finalWaiterID,
@@ -369,17 +370,18 @@ func (s *OrderS) UpdateOrder(ctx context.Context, orderID string, req model.Upda
 	if err != nil {
 		return nil, fmt.Errorf("failed to update order: %w", err)
 	}
+	orderForResponse := any(updatedOrder)
 
-	_ = s.repo.Tenant(ctx).RecalculateOrderTotalsFromItems(ctx, order.ID)
-	if refetched, err := s.repo.Tenant(ctx).GetOrderByID(ctx, order.ID); err == nil {
-		order = refetched
+	_ = s.repo.Tenant(ctx).RecalculateOrderTotalsFromItems(ctx, updatedOrder.ID)
+	if refetched, err := s.repo.Tenant(ctx).GetOrderByID(ctx, updatedOrder.ID); err == nil {
+		orderForResponse = refetched
 	}
 
 	if statusRequestedServed && !statusAlreadyServed {
 		return s.MarkOrderServed(ctx, orderID)
 	}
 
-	return toOrderResponse(order), nil
+	return toOrderResponse(orderForResponse), nil
 }
 
 func (s *OrderS) UpdateOrderStatus(ctx context.Context, orderID string, status string) (*model.OrderResponse, error) {
@@ -923,61 +925,72 @@ func (s *OrderS) expandCompoundToIngredientsByCalculations(ctx context.Context, 
 	return out, nil
 }
 
-func (s *OrderS) CreateOrderItem(ctx context.Context, req model.CreateOrderItemRequest) (*model.OrderItemResponse, error) {
+func (s *OrderS) CreateOrderItems(ctx context.Context, req model.CreateOrderItemRequest) ([]model.OrderItemResponse, error) {
 	if req.OrderID == "" {
 		return nil, fmt.Errorf("order_id is required")
 	}
-	if req.GoodID == "" {
-		return nil, fmt.Errorf("good_id is required")
-	}
-	if req.Quantity <= 0 {
-		return nil, fmt.Errorf("quantity must be greater than 0")
+	if len(req.Items) == 0 {
+		return nil, fmt.Errorf("at least one item is required")
 	}
 
 	oID, err := uuid.Parse(req.OrderID)
 	if err != nil {
 		return nil, fmt.Errorf("invalid order_id: %w", err)
 	}
-	gID, err := uuid.Parse(req.GoodID)
-	if err != nil {
-		return nil, fmt.Errorf("invalid good_id: %w", err)
-	}
 
-	price := pgtype.Numeric{}
-	if req.Price != nil && *req.Price != "" {
-		if err := price.Scan(*req.Price); err != nil {
-			return nil, fmt.Errorf("invalid price: %w", err)
+	var responses []model.OrderItemResponse
+
+	for i, entry := range req.Items {
+		if entry.GoodID == "" {
+			return nil, fmt.Errorf("items[%d]: good_id is required", i)
 		}
-	} else {
-		good, err := s.repo.Tenant(ctx).GetGoodByID(ctx, gID)
+		if entry.Quantity <= 0 {
+			return nil, fmt.Errorf("items[%d]: quantity must be greater than 0", i)
+		}
+
+		gID, err := uuid.Parse(entry.GoodID)
 		if err != nil {
-			return nil, fmt.Errorf("failed to fetch good: %w", err)
+			return nil, fmt.Errorf("items[%d]: invalid good_id: %w", i, err)
 		}
-		price = good.Price
+
+		price := pgtype.Numeric{}
+		if entry.Price != nil && *entry.Price != "" {
+			if err := price.Scan(*entry.Price); err != nil {
+				return nil, fmt.Errorf("items[%d]: invalid price: %w", i, err)
+			}
+		} else {
+			good, err := s.repo.Tenant(ctx).GetGoodByID(ctx, gID)
+			if err != nil {
+				return nil, fmt.Errorf("items[%d]: failed to fetch good: %w", i, err)
+			}
+			price = good.Price
+		}
+
+		status := pg.NullOrderItemsStatus{OrderItemsStatus: pg.OrderItemsStatus(model.OrderItemStatusPending), Valid: true}
+		if entry.Status != nil && *entry.Status != "" {
+			status = pg.NullOrderItemsStatus{OrderItemsStatus: pg.OrderItemsStatus(*entry.Status), Valid: true}
+		}
+
+		item, err := s.repo.Tenant(ctx).CreateOrderItem(ctx, pg.CreateOrderItemParams{
+			ID:       uuid.New(),
+			GoodID:   gID,
+			OrderID:  oID,
+			Quantity: entry.Quantity,
+			Price:    price,
+			Status:   status,
+			Comment:  entry.Comment,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("items[%d]: failed to create order item: %w", i, err)
+		}
+
+		responses = append(responses, *toOrderItemResponse(item))
 	}
 
-	status := pg.NullOrderItemsStatus{OrderItemsStatus: pg.OrderItemsStatus(model.OrderItemStatusPending), Valid: true}
-	if req.Status != nil && *req.Status != "" {
-		status = pg.NullOrderItemsStatus{OrderItemsStatus: pg.OrderItemsStatus(*req.Status), Valid: true}
-	}
-
-	item, err := s.repo.Tenant(ctx).CreateOrderItem(ctx, pg.CreateOrderItemParams{
-		ID:       uuid.New(),
-		GoodID:   gID,
-		OrderID:  oID,
-		Quantity: req.Quantity,
-		Price:    price,
-		Status:   status,
-		Comment:  req.Comment,
-	})
-	if err != nil {
-		return nil, fmt.Errorf("failed to create order item: %w", err)
-	}
-
-	// Keep opened bills totals up-to-date while items are added.
+	// Keep opened bills totals up-to-date after all items are added.
 	_ = s.repo.Tenant(ctx).RecalculateOrderTotalsFromItems(ctx, oID)
 
-	return toOrderItemResponse(item), nil
+	return responses, nil
 }
 
 func (s *OrderS) GetOrderItemByID(ctx context.Context, itemID string) (*model.OrderItemResponse, error) {
@@ -1246,49 +1259,243 @@ func (s *OrderS) GetKitchenQueue(ctx context.Context) ([]KitchenQueueItem, error
 	return items, nil
 }
 
-func toOrderResponse(o pg.Order) *model.OrderResponse {
-	if o.ID == uuid.Nil {
+func toOrderResponse(o any) *model.OrderResponse {
+	var (
+		id         uuid.UUID
+		tableID    pgtype.UUID
+		waiterIDPg pgtype.UUID
+		cashierIDPg pgtype.UUID
+		statusPg   pg.NullOrderStatus
+		guestCount *int32
+		totalAmount pgtype.Numeric
+		comment    *string
+		createdAtPg pgtype.Timestamptz
+		updatedAtPg pgtype.Timestamptz
+	)
+
+	switch row := o.(type) {
+	case pg.Order:
+		id = row.ID
+		tableID = row.TableID
+		waiterIDPg = row.WaiterID
+		cashierIDPg = row.CashierID
+		statusPg = row.Status
+		guestCount = row.GuestCount
+		totalAmount = row.TotalAmount
+		comment = row.Comment
+		createdAtPg = row.CreatedAt
+		updatedAtPg = row.UpdatedAt
+	case pg.CreateOrderRow:
+		id = row.ID
+		tableID = row.TableID
+		waiterIDPg = row.WaiterID
+		cashierIDPg = row.CashierID
+		statusPg = pg.NullOrderStatus(row.Status)
+		guestCount = row.GuestCount
+		totalAmount = row.TotalAmount
+		comment = row.Comment
+		createdAtPg = row.CreatedAt
+		updatedAtPg = row.UpdatedAt
+	case pg.GetOrderByIDRow:
+		id = row.ID
+		tableID = row.TableID
+		waiterIDPg = row.WaiterID
+		cashierIDPg = row.CashierID
+		statusPg = pg.NullOrderStatus(row.Status)
+		guestCount = row.GuestCount
+		totalAmount = row.TotalAmount
+		comment = row.Comment
+		createdAtPg = row.CreatedAt
+		updatedAtPg = row.UpdatedAt
+	case pg.GetAllOrdersRow:
+		id = row.ID
+		tableID = row.TableID
+		waiterIDPg = row.WaiterID
+		cashierIDPg = row.CashierID
+		statusPg = pg.NullOrderStatus(row.Status)
+		guestCount = row.GuestCount
+		totalAmount = row.TotalAmount
+		comment = row.Comment
+		createdAtPg = row.CreatedAt
+		updatedAtPg = row.UpdatedAt
+	case pg.GetOrdersByStatusRow:
+		id = row.ID
+		tableID = row.TableID
+		waiterIDPg = row.WaiterID
+		cashierIDPg = row.CashierID
+		statusPg = pg.NullOrderStatus(row.Status)
+		guestCount = row.GuestCount
+		totalAmount = row.TotalAmount
+		comment = row.Comment
+		createdAtPg = row.CreatedAt
+		updatedAtPg = row.UpdatedAt
+	case pg.GetOrdersByWaiterIDRow:
+		id = row.ID
+		tableID = row.TableID
+		waiterIDPg = row.WaiterID
+		cashierIDPg = row.CashierID
+		statusPg = pg.NullOrderStatus(row.Status)
+		guestCount = row.GuestCount
+		totalAmount = row.TotalAmount
+		comment = row.Comment
+		createdAtPg = row.CreatedAt
+		updatedAtPg = row.UpdatedAt
+	case pg.GetOrdersByTableIDRow:
+		id = row.ID
+		tableID = row.TableID
+		waiterIDPg = row.WaiterID
+		cashierIDPg = row.CashierID
+		statusPg = pg.NullOrderStatus(row.Status)
+		guestCount = row.GuestCount
+		totalAmount = row.TotalAmount
+		comment = row.Comment
+		createdAtPg = row.CreatedAt
+		updatedAtPg = row.UpdatedAt
+	case pg.UpdateOrderRow:
+		id = row.ID
+		tableID = row.TableID
+		waiterIDPg = row.WaiterID
+		cashierIDPg = row.CashierID
+		statusPg = pg.NullOrderStatus(row.Status)
+		guestCount = row.GuestCount
+		totalAmount = row.TotalAmount
+		comment = row.Comment
+		createdAtPg = row.CreatedAt
+		updatedAtPg = row.UpdatedAt
+	case pg.UpdateOrderStatusRow:
+		id = row.ID
+		tableID = row.TableID
+		waiterIDPg = row.WaiterID
+		cashierIDPg = row.CashierID
+		statusPg = pg.NullOrderStatus(row.Status)
+		guestCount = row.GuestCount
+		totalAmount = row.TotalAmount
+		comment = row.Comment
+		createdAtPg = row.CreatedAt
+		updatedAtPg = row.UpdatedAt
+	case pg.AssignWaiterToOrderRow:
+		id = row.ID
+		tableID = row.TableID
+		waiterIDPg = row.WaiterID
+		cashierIDPg = row.CashierID
+		statusPg = pg.NullOrderStatus(row.Status)
+		guestCount = row.GuestCount
+		totalAmount = row.TotalAmount
+		comment = row.Comment
+		createdAtPg = row.CreatedAt
+		updatedAtPg = row.UpdatedAt
+	case pg.AssignCashierToOrderRow:
+		id = row.ID
+		tableID = row.TableID
+		waiterIDPg = row.WaiterID
+		cashierIDPg = row.CashierID
+		statusPg = pg.NullOrderStatus(row.Status)
+		guestCount = row.GuestCount
+		totalAmount = row.TotalAmount
+		comment = row.Comment
+		createdAtPg = row.CreatedAt
+		updatedAtPg = row.UpdatedAt
+	case pg.CancelOrderRow:
+		id = row.ID
+		tableID = row.TableID
+		waiterIDPg = row.WaiterID
+		cashierIDPg = row.CashierID
+		statusPg = pg.NullOrderStatus(row.Status)
+		guestCount = row.GuestCount
+		totalAmount = row.TotalAmount
+		comment = row.Comment
+		createdAtPg = row.CreatedAt
+		updatedAtPg = row.UpdatedAt
+	case pg.MarkOrderCookingRow:
+		id = row.ID
+		tableID = row.TableID
+		waiterIDPg = row.WaiterID
+		cashierIDPg = row.CashierID
+		statusPg = pg.NullOrderStatus(row.Status)
+		guestCount = row.GuestCount
+		totalAmount = row.TotalAmount
+		comment = row.Comment
+		createdAtPg = row.CreatedAt
+		updatedAtPg = row.UpdatedAt
+	case pg.MarkOrderReadyRow:
+		id = row.ID
+		tableID = row.TableID
+		waiterIDPg = row.WaiterID
+		cashierIDPg = row.CashierID
+		statusPg = pg.NullOrderStatus(row.Status)
+		guestCount = row.GuestCount
+		totalAmount = row.TotalAmount
+		comment = row.Comment
+		createdAtPg = row.CreatedAt
+		updatedAtPg = row.UpdatedAt
+	case pg.MarkOrderServedRow:
+		id = row.ID
+		tableID = row.TableID
+		waiterIDPg = row.WaiterID
+		cashierIDPg = row.CashierID
+		statusPg = pg.NullOrderStatus(row.Status)
+		guestCount = row.GuestCount
+		totalAmount = row.TotalAmount
+		comment = row.Comment
+		createdAtPg = row.CreatedAt
+		updatedAtPg = row.UpdatedAt
+	case pg.MarkOrderPaidRow:
+		id = row.ID
+		tableID = row.TableID
+		waiterIDPg = row.WaiterID
+		cashierIDPg = row.CashierID
+		statusPg = pg.NullOrderStatus(row.Status)
+		guestCount = row.GuestCount
+		totalAmount = row.TotalAmount
+		comment = row.Comment
+		createdAtPg = row.CreatedAt
+		updatedAtPg = row.UpdatedAt
+	default:
+		return nil
+	}
+
+	if id == uuid.Nil {
 		return nil
 	}
 
 	var waiterID *string
-	if o.WaiterID.Valid {
-		s := o.WaiterID.String()
+	if waiterIDPg.Valid {
+		s := waiterIDPg.String()
 		waiterID = &s
 	}
 
 	var cashierID *string
-	if o.CashierID.Valid {
-		s := o.CashierID.String()
+	if cashierIDPg.Valid {
+		s := cashierIDPg.String()
 		cashierID = &s
 	}
 
 	var createdAt *time.Time
-	if o.CreatedAt.Valid {
-		t := o.CreatedAt.Time
+	if createdAtPg.Valid {
+		t := createdAtPg.Time
 		createdAt = &t
 	}
 
 	var updatedAt *time.Time
-	if o.UpdatedAt.Valid {
-		t := o.UpdatedAt.Time
+	if updatedAtPg.Valid {
+		t := updatedAtPg.Time
 		updatedAt = &t
 	}
 
 	status := model.OrderStatusOpen
-	if o.Status.Valid {
-		status = model.OrderStatus(o.Status.OrderStatus)
+	if statusPg.Valid {
+		status = model.OrderStatus(statusPg.OrderStatus)
 	}
 
 	return &model.OrderResponse{
-		ID:          o.ID.String(),
-		TableID:     o.TableID.String(),
+		ID:          id.String(),
+		TableID:     tableID.String(),
 		WaiterID:    waiterID,
 		CashierID:   cashierID,
 		Status:      status,
-		GuestCount:  o.GuestCount,
-		TotalAmount: numericToString(o.TotalAmount),
-		Comment:     o.Comment,
+		GuestCount:  guestCount,
+		TotalAmount: numericToString(totalAmount),
+		Comment:     comment,
 		CreatedAt:   createdAt,
 		UpdatedAt:   updatedAt,
 	}

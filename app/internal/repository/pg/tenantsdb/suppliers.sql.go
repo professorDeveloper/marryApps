@@ -12,7 +12,10 @@ import (
 )
 
 const countSuppliers = `-- name: CountSuppliers :one
-SELECT COUNT(*) FROM suppliers WHERE deleted_at = 0
+SELECT COUNT(*)
+FROM suppliers
+WHERE branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  AND deleted_at = 0
 `
 
 func (q *Queries) CountSuppliers(ctx context.Context) (int64, error) {
@@ -24,9 +27,9 @@ func (q *Queries) CountSuppliers(ctx context.Context) (int64, error) {
 
 const createSupplier = `-- name: CreateSupplier :one
 
-INSERT INTO suppliers (id, name, phone_number, location)
-VALUES ($1, $2, $3, $4)
-RETURNING id, name, phone_number, location, created_at, updated_at, deleted_at
+INSERT INTO suppliers (id, name, phone_number, location, branch_id)
+VALUES ($1, $2, $3, $4, NULLIF(current_setting('app.branch_id', true), '')::uuid)
+RETURNING id, name, phone_number, location, created_at, updated_at, deleted_at, branch_id
 `
 
 type CreateSupplierParams struct {
@@ -53,6 +56,7 @@ func (q *Queries) CreateSupplier(ctx context.Context, arg CreateSupplierParams) 
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
+		&i.BranchID,
 	)
 	return i, err
 }
@@ -61,6 +65,7 @@ const deleteSupplier = `-- name: DeleteSupplier :exec
 UPDATE suppliers
 SET deleted_at = EXTRACT(EPOCH FROM NOW())::BIGINT
 WHERE id = $1
+  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 `
 
 func (q *Queries) DeleteSupplier(ctx context.Context, id uuid.UUID) error {
@@ -69,9 +74,10 @@ func (q *Queries) DeleteSupplier(ctx context.Context, id uuid.UUID) error {
 }
 
 const getAllSuppliers = `-- name: GetAllSuppliers :many
-SELECT id, name, phone_number, location, created_at, updated_at, deleted_at
+SELECT id, name, phone_number, location, created_at, updated_at, deleted_at, branch_id
 FROM suppliers
-WHERE deleted_at = 0
+WHERE branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  AND deleted_at = 0
 ORDER BY name ASC
 LIMIT $1 OFFSET $2
 `
@@ -98,6 +104,7 @@ func (q *Queries) GetAllSuppliers(ctx context.Context, arg GetAllSuppliersParams
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.DeletedAt,
+			&i.BranchID,
 		); err != nil {
 			return nil, err
 		}
@@ -110,9 +117,11 @@ func (q *Queries) GetAllSuppliers(ctx context.Context, arg GetAllSuppliersParams
 }
 
 const getSupplierByID = `-- name: GetSupplierByID :one
-SELECT id, name, phone_number, location, created_at, updated_at, deleted_at
+SELECT id, name, phone_number, location, created_at, updated_at, deleted_at, branch_id
 FROM suppliers
-WHERE id = $1 AND deleted_at = 0
+WHERE id = $1
+  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  AND deleted_at = 0
 `
 
 func (q *Queries) GetSupplierByID(ctx context.Context, id uuid.UUID) (Supplier, error) {
@@ -126,14 +135,17 @@ func (q *Queries) GetSupplierByID(ctx context.Context, id uuid.UUID) (Supplier, 
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
+		&i.BranchID,
 	)
 	return i, err
 }
 
 const getSuppliersByPhoneNumber = `-- name: GetSuppliersByPhoneNumber :many
-SELECT id, name, phone_number, location, created_at, updated_at, deleted_at
+SELECT id, name, phone_number, location, created_at, updated_at, deleted_at, branch_id
 FROM suppliers
-WHERE phone_number = $1 AND deleted_at = 0
+WHERE phone_number = $1
+  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  AND deleted_at = 0
 `
 
 func (q *Queries) GetSuppliersByPhoneNumber(ctx context.Context, phoneNumber *string) ([]Supplier, error) {
@@ -153,6 +165,7 @@ func (q *Queries) GetSuppliersByPhoneNumber(ctx context.Context, phoneNumber *st
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.DeletedAt,
+			&i.BranchID,
 		); err != nil {
 			return nil, err
 		}
@@ -169,7 +182,8 @@ UPDATE suppliers
 SET deleted_at = 0,
     updated_at = NOW()
 WHERE id = $1
-RETURNING id, name, phone_number, location, created_at, updated_at, deleted_at
+  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+RETURNING id, name, phone_number, location, created_at, updated_at, deleted_at, branch_id
 `
 
 func (q *Queries) RestoreSupplier(ctx context.Context, id uuid.UUID) (Supplier, error) {
@@ -183,14 +197,17 @@ func (q *Queries) RestoreSupplier(ctx context.Context, id uuid.UUID) (Supplier, 
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
+		&i.BranchID,
 	)
 	return i, err
 }
 
 const searchSuppliers = `-- name: SearchSuppliers :many
-SELECT id, name, phone_number, location, created_at, updated_at, deleted_at
+SELECT id, name, phone_number, location, created_at, updated_at, deleted_at, branch_id
 FROM suppliers
-WHERE name ILIKE $1 AND deleted_at = 0
+WHERE name ILIKE $1
+  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  AND deleted_at = 0
 ORDER BY name ASC
 LIMIT $2 OFFSET $3
 `
@@ -218,6 +235,7 @@ func (q *Queries) SearchSuppliers(ctx context.Context, arg SearchSuppliersParams
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.DeletedAt,
+			&i.BranchID,
 		); err != nil {
 			return nil, err
 		}
@@ -236,7 +254,8 @@ SET name = $2,
     location = $4,
     updated_at = NOW()
 WHERE id = $1
-RETURNING id, name, phone_number, location, created_at, updated_at, deleted_at
+  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+RETURNING id, name, phone_number, location, created_at, updated_at, deleted_at, branch_id
 `
 
 type UpdateSupplierParams struct {
@@ -262,6 +281,7 @@ func (q *Queries) UpdateSupplier(ctx context.Context, arg UpdateSupplierParams) 
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
+		&i.BranchID,
 	)
 	return i, err
 }

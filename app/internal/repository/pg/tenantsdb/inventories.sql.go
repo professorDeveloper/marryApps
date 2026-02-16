@@ -51,7 +51,13 @@ func (q *Queries) CalculateInventoryTotals(ctx context.Context, id uuid.UUID) (C
 }
 
 const countInventories = `-- name: CountInventories :one
-SELECT COUNT(*) FROM inventories WHERE deleted_at = 0
+SELECT COUNT(*) FROM inventories
+WHERE deleted_at = 0
+  AND EXISTS (
+    SELECT 1 FROM storages s
+    WHERE s.id = inventories.storage_id
+      AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  )
 `
 
 func (q *Queries) CountInventories(ctx context.Context) (int64, error) {
@@ -79,8 +85,24 @@ type CreateInventoryParams struct {
 	Status          string      `json:"status"`
 }
 
+type CreateInventoryRow struct {
+	ID              uuid.UUID          `json:"id"`
+	Number          int64              `json:"number"`
+	Date            pgtype.Date        `json:"date"`
+	StorageID       uuid.UUID          `json:"storage_id"`
+	Description     *string            `json:"description"`
+	DescriptionI18n pgtype.UUID        `json:"description_i18n"`
+	Status          string             `json:"status"`
+	SurplusAmount   pgtype.Numeric     `json:"surplus_amount"`
+	ShortageAmount  pgtype.Numeric     `json:"shortage_amount"`
+	RemainingAmount pgtype.Numeric     `json:"remaining_amount"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
+	DeletedAt       int64              `json:"deleted_at"`
+}
+
 // ==================== INVENTORIES QUERIES ====================
-func (q *Queries) CreateInventory(ctx context.Context, arg CreateInventoryParams) (Inventory, error) {
+func (q *Queries) CreateInventory(ctx context.Context, arg CreateInventoryParams) (CreateInventoryRow, error) {
 	row := q.db.QueryRow(ctx, createInventory,
 		arg.ID,
 		arg.Date,
@@ -89,7 +111,7 @@ func (q *Queries) CreateInventory(ctx context.Context, arg CreateInventoryParams
 		arg.DescriptionI18n,
 		arg.Status,
 	)
-	var i Inventory
+	var i CreateInventoryRow
 	err := row.Scan(
 		&i.ID,
 		&i.Number,
@@ -111,7 +133,12 @@ func (q *Queries) CreateInventory(ctx context.Context, arg CreateInventoryParams
 const deleteInventory = `-- name: DeleteInventory :exec
 UPDATE inventories
 SET deleted_at = EXTRACT(EPOCH FROM NOW())::BIGINT
-WHERE id = $1 AND deleted_at = 0
+WHERE inventories.id = $1 AND inventories.deleted_at = 0
+  AND EXISTS (
+    SELECT 1 FROM storages s
+    WHERE s.id = inventories.storage_id
+      AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  )
 `
 
 func (q *Queries) DeleteInventory(ctx context.Context, id uuid.UUID) error {
@@ -123,7 +150,13 @@ const deleteInventoryItem = `-- name: DeleteInventoryItem :exec
 UPDATE inventory_items
 SET deleted_at = EXTRACT(EPOCH FROM NOW())::BIGINT,
     updated_at = NOW()
-WHERE id = $1 AND deleted_at = 0
+WHERE inventory_items.id = $1 AND inventory_items.deleted_at = 0
+  AND EXISTS (
+    SELECT 1 FROM inventories inv
+    JOIN storages s ON s.id = inv.storage_id
+    WHERE inv.id = inventory_items.inventory_id
+      AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  )
 `
 
 func (q *Queries) DeleteInventoryItem(ctx context.Context, id uuid.UUID) error {
@@ -137,6 +170,11 @@ SELECT id, number, date, storage_id, description, description_i18n, status,
        created_at, updated_at, deleted_at
 FROM inventories
 WHERE deleted_at = 0
+  AND EXISTS (
+    SELECT 1 FROM storages s
+    WHERE s.id = inventories.storage_id
+      AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  )
 ORDER BY date DESC, number DESC
 LIMIT $1 OFFSET $2
 `
@@ -146,15 +184,31 @@ type GetAllInventoriesParams struct {
 	Offset int32 `json:"offset"`
 }
 
-func (q *Queries) GetAllInventories(ctx context.Context, arg GetAllInventoriesParams) ([]Inventory, error) {
+type GetAllInventoriesRow struct {
+	ID              uuid.UUID          `json:"id"`
+	Number          int64              `json:"number"`
+	Date            pgtype.Date        `json:"date"`
+	StorageID       uuid.UUID          `json:"storage_id"`
+	Description     *string            `json:"description"`
+	DescriptionI18n pgtype.UUID        `json:"description_i18n"`
+	Status          string             `json:"status"`
+	SurplusAmount   pgtype.Numeric     `json:"surplus_amount"`
+	ShortageAmount  pgtype.Numeric     `json:"shortage_amount"`
+	RemainingAmount pgtype.Numeric     `json:"remaining_amount"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
+	DeletedAt       int64              `json:"deleted_at"`
+}
+
+func (q *Queries) GetAllInventories(ctx context.Context, arg GetAllInventoriesParams) ([]GetAllInventoriesRow, error) {
 	rows, err := q.db.Query(ctx, getAllInventories, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []Inventory
+	var items []GetAllInventoriesRow
 	for rows.Next() {
-		var i Inventory
+		var i GetAllInventoriesRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.Number,
@@ -183,7 +237,13 @@ func (q *Queries) GetAllInventories(ctx context.Context, arg GetAllInventoriesPa
 const getAllInventoryItems = `-- name: GetAllInventoryItems :many
 SELECT id, inventory_id, ingredient_id, counted_quantity, created_at, updated_at, deleted_at
 FROM inventory_items
-WHERE deleted_at = 0
+WHERE inventory_items.deleted_at = 0
+  AND EXISTS (
+    SELECT 1 FROM inventories inv
+    JOIN storages s ON s.id = inv.storage_id
+    WHERE inv.id = inventory_items.inventory_id
+      AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  )
 ORDER BY created_at DESC
 LIMIT $1 OFFSET $2
 `
@@ -227,6 +287,11 @@ SELECT id, number, date, storage_id, description, description_i18n, status,
        created_at, updated_at, deleted_at
 FROM inventories
 WHERE status = $1 AND deleted_at = 0
+  AND EXISTS (
+    SELECT 1 FROM storages s
+    WHERE s.id = inventories.storage_id
+      AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  )
 ORDER BY date DESC, number DESC
 LIMIT $2 OFFSET $3
 `
@@ -237,15 +302,31 @@ type GetInventoriesByStatusParams struct {
 	Offset int32  `json:"offset"`
 }
 
-func (q *Queries) GetInventoriesByStatus(ctx context.Context, arg GetInventoriesByStatusParams) ([]Inventory, error) {
+type GetInventoriesByStatusRow struct {
+	ID              uuid.UUID          `json:"id"`
+	Number          int64              `json:"number"`
+	Date            pgtype.Date        `json:"date"`
+	StorageID       uuid.UUID          `json:"storage_id"`
+	Description     *string            `json:"description"`
+	DescriptionI18n pgtype.UUID        `json:"description_i18n"`
+	Status          string             `json:"status"`
+	SurplusAmount   pgtype.Numeric     `json:"surplus_amount"`
+	ShortageAmount  pgtype.Numeric     `json:"shortage_amount"`
+	RemainingAmount pgtype.Numeric     `json:"remaining_amount"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
+	DeletedAt       int64              `json:"deleted_at"`
+}
+
+func (q *Queries) GetInventoriesByStatus(ctx context.Context, arg GetInventoriesByStatusParams) ([]GetInventoriesByStatusRow, error) {
 	rows, err := q.db.Query(ctx, getInventoriesByStatus, arg.Status, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []Inventory
+	var items []GetInventoriesByStatusRow
 	for rows.Next() {
-		var i Inventory
+		var i GetInventoriesByStatusRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.Number,
@@ -277,6 +358,11 @@ SELECT id, number, date, storage_id, description, description_i18n, status,
        created_at, updated_at, deleted_at
 FROM inventories
 WHERE storage_id = $1 AND deleted_at = 0
+  AND EXISTS (
+    SELECT 1 FROM storages s
+    WHERE s.id = inventories.storage_id
+      AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  )
 ORDER BY date DESC, number DESC
 LIMIT $2 OFFSET $3
 `
@@ -287,15 +373,31 @@ type GetInventoriesByStorageIDParams struct {
 	Offset    int32     `json:"offset"`
 }
 
-func (q *Queries) GetInventoriesByStorageID(ctx context.Context, arg GetInventoriesByStorageIDParams) ([]Inventory, error) {
+type GetInventoriesByStorageIDRow struct {
+	ID              uuid.UUID          `json:"id"`
+	Number          int64              `json:"number"`
+	Date            pgtype.Date        `json:"date"`
+	StorageID       uuid.UUID          `json:"storage_id"`
+	Description     *string            `json:"description"`
+	DescriptionI18n pgtype.UUID        `json:"description_i18n"`
+	Status          string             `json:"status"`
+	SurplusAmount   pgtype.Numeric     `json:"surplus_amount"`
+	ShortageAmount  pgtype.Numeric     `json:"shortage_amount"`
+	RemainingAmount pgtype.Numeric     `json:"remaining_amount"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
+	DeletedAt       int64              `json:"deleted_at"`
+}
+
+func (q *Queries) GetInventoriesByStorageID(ctx context.Context, arg GetInventoriesByStorageIDParams) ([]GetInventoriesByStorageIDRow, error) {
 	rows, err := q.db.Query(ctx, getInventoriesByStorageID, arg.StorageID, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []Inventory
+	var items []GetInventoriesByStorageIDRow
 	for rows.Next() {
-		var i Inventory
+		var i GetInventoriesByStorageIDRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.Number,
@@ -330,6 +432,11 @@ LEFT JOIN inventory_items ii
   ON ii.inventory_id = inv.id
   AND ii.deleted_at = 0
 WHERE inv.deleted_at = 0
+  AND EXISTS (
+    SELECT 1 FROM storages s
+    WHERE s.id = inv.storage_id
+      AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  )
   AND ($1::date IS NULL OR inv.date >= $1)
   AND ($2::date IS NULL OR inv.date <= $2)
   AND (NULLIF($3::uuid, '00000000-0000-0000-0000-000000000000') IS NULL OR inv.storage_id = $3)
@@ -349,7 +456,23 @@ type GetInventoriesFilteredParams struct {
 	Offset  int32       `json:"offset"`
 }
 
-func (q *Queries) GetInventoriesFiltered(ctx context.Context, arg GetInventoriesFilteredParams) ([]Inventory, error) {
+type GetInventoriesFilteredRow struct {
+	ID              uuid.UUID          `json:"id"`
+	Number          int64              `json:"number"`
+	Date            pgtype.Date        `json:"date"`
+	StorageID       uuid.UUID          `json:"storage_id"`
+	Description     *string            `json:"description"`
+	DescriptionI18n pgtype.UUID        `json:"description_i18n"`
+	Status          string             `json:"status"`
+	SurplusAmount   pgtype.Numeric     `json:"surplus_amount"`
+	ShortageAmount  pgtype.Numeric     `json:"shortage_amount"`
+	RemainingAmount pgtype.Numeric     `json:"remaining_amount"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
+	DeletedAt       int64              `json:"deleted_at"`
+}
+
+func (q *Queries) GetInventoriesFiltered(ctx context.Context, arg GetInventoriesFilteredParams) ([]GetInventoriesFilteredRow, error) {
 	rows, err := q.db.Query(ctx, getInventoriesFiltered,
 		arg.Column1,
 		arg.Column2,
@@ -363,9 +486,9 @@ func (q *Queries) GetInventoriesFiltered(ctx context.Context, arg GetInventories
 		return nil, err
 	}
 	defer rows.Close()
-	var items []Inventory
+	var items []GetInventoriesFilteredRow
 	for rows.Next() {
-		var i Inventory
+		var i GetInventoriesFilteredRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.Number,
@@ -396,12 +519,33 @@ SELECT id, number, date, storage_id, description, description_i18n, status,
        surplus_amount, shortage_amount, remaining_amount,
        created_at, updated_at, deleted_at
 FROM inventories
-WHERE id = $1 AND deleted_at = 0
+WHERE inventories.id = $1 AND inventories.deleted_at = 0
+  AND EXISTS (
+    SELECT 1 FROM storages s
+    WHERE s.id = inventories.storage_id
+      AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  )
 `
 
-func (q *Queries) GetInventoryByID(ctx context.Context, id uuid.UUID) (Inventory, error) {
+type GetInventoryByIDRow struct {
+	ID              uuid.UUID          `json:"id"`
+	Number          int64              `json:"number"`
+	Date            pgtype.Date        `json:"date"`
+	StorageID       uuid.UUID          `json:"storage_id"`
+	Description     *string            `json:"description"`
+	DescriptionI18n pgtype.UUID        `json:"description_i18n"`
+	Status          string             `json:"status"`
+	SurplusAmount   pgtype.Numeric     `json:"surplus_amount"`
+	ShortageAmount  pgtype.Numeric     `json:"shortage_amount"`
+	RemainingAmount pgtype.Numeric     `json:"remaining_amount"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
+	DeletedAt       int64              `json:"deleted_at"`
+}
+
+func (q *Queries) GetInventoryByID(ctx context.Context, id uuid.UUID) (GetInventoryByIDRow, error) {
 	row := q.db.QueryRow(ctx, getInventoryByID, id)
-	var i Inventory
+	var i GetInventoryByIDRow
 	err := row.Scan(
 		&i.ID,
 		&i.Number,
@@ -423,7 +567,13 @@ func (q *Queries) GetInventoryByID(ctx context.Context, id uuid.UUID) (Inventory
 const getInventoryItemByID = `-- name: GetInventoryItemByID :one
 SELECT id, inventory_id, ingredient_id, counted_quantity, created_at, updated_at, deleted_at
 FROM inventory_items
-WHERE id = $1 AND deleted_at = 0
+WHERE inventory_items.id = $1 AND inventory_items.deleted_at = 0
+  AND EXISTS (
+    SELECT 1 FROM inventories inv
+    JOIN storages s ON s.id = inv.storage_id
+    WHERE inv.id = inventory_items.inventory_id
+      AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  )
 `
 
 func (q *Queries) GetInventoryItemByID(ctx context.Context, id uuid.UUID) (InventoryItem, error) {
@@ -444,7 +594,13 @@ func (q *Queries) GetInventoryItemByID(ctx context.Context, id uuid.UUID) (Inven
 const getInventoryItemsByInventoryID = `-- name: GetInventoryItemsByInventoryID :many
 SELECT id, inventory_id, ingredient_id, counted_quantity, created_at, updated_at, deleted_at
 FROM inventory_items
-WHERE inventory_id = $1 AND deleted_at = 0
+WHERE inventory_id = $1 AND inventory_items.deleted_at = 0
+  AND EXISTS (
+    SELECT 1 FROM inventories inv
+    JOIN storages s ON s.id = inv.storage_id
+    WHERE inv.id = inventory_items.inventory_id
+      AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  )
 ORDER BY created_at DESC
 LIMIT $2 OFFSET $3
 `
@@ -512,6 +668,11 @@ LEFT JOIN ingredient_stock st
   AND st.storage_id = inv.storage_id
   AND st.deleted_at = 0
 WHERE inv.id = $1 AND inv.deleted_at = 0
+  AND EXISTS (
+    SELECT 1 FROM storages s
+    WHERE s.id = inv.storage_id
+      AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  )
 ORDER BY ing.name ASC
 `
 
@@ -573,15 +734,36 @@ const restoreInventory = `-- name: RestoreInventory :one
 UPDATE inventories
 SET deleted_at = 0,
     updated_at = NOW()
-WHERE id = $1 AND deleted_at != 0
+WHERE inventories.id = $1 AND inventories.deleted_at != 0
+  AND EXISTS (
+    SELECT 1 FROM storages s
+    WHERE s.id = inventories.storage_id
+      AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  )
 RETURNING id, number, date, storage_id, description, description_i18n, status,
           surplus_amount, shortage_amount, remaining_amount,
           created_at, updated_at, deleted_at
 `
 
-func (q *Queries) RestoreInventory(ctx context.Context, id uuid.UUID) (Inventory, error) {
+type RestoreInventoryRow struct {
+	ID              uuid.UUID          `json:"id"`
+	Number          int64              `json:"number"`
+	Date            pgtype.Date        `json:"date"`
+	StorageID       uuid.UUID          `json:"storage_id"`
+	Description     *string            `json:"description"`
+	DescriptionI18n pgtype.UUID        `json:"description_i18n"`
+	Status          string             `json:"status"`
+	SurplusAmount   pgtype.Numeric     `json:"surplus_amount"`
+	ShortageAmount  pgtype.Numeric     `json:"shortage_amount"`
+	RemainingAmount pgtype.Numeric     `json:"remaining_amount"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
+	DeletedAt       int64              `json:"deleted_at"`
+}
+
+func (q *Queries) RestoreInventory(ctx context.Context, id uuid.UUID) (RestoreInventoryRow, error) {
 	row := q.db.QueryRow(ctx, restoreInventory, id)
-	var i Inventory
+	var i RestoreInventoryRow
 	err := row.Scan(
 		&i.ID,
 		&i.Number,
@@ -606,6 +788,11 @@ SELECT id, number, date, storage_id, description, description_i18n, status,
        created_at, updated_at, deleted_at
 FROM inventories
 WHERE deleted_at = 0
+  AND EXISTS (
+    SELECT 1 FROM storages s
+    WHERE s.id = inventories.storage_id
+      AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  )
 AND (
     description ILIKE '%' || $1 || '%'
     OR CAST(number AS TEXT) ILIKE '%' || $1 || '%'
@@ -620,15 +807,31 @@ type SearchInventoriesParams struct {
 	Offset  int32   `json:"offset"`
 }
 
-func (q *Queries) SearchInventories(ctx context.Context, arg SearchInventoriesParams) ([]Inventory, error) {
+type SearchInventoriesRow struct {
+	ID              uuid.UUID          `json:"id"`
+	Number          int64              `json:"number"`
+	Date            pgtype.Date        `json:"date"`
+	StorageID       uuid.UUID          `json:"storage_id"`
+	Description     *string            `json:"description"`
+	DescriptionI18n pgtype.UUID        `json:"description_i18n"`
+	Status          string             `json:"status"`
+	SurplusAmount   pgtype.Numeric     `json:"surplus_amount"`
+	ShortageAmount  pgtype.Numeric     `json:"shortage_amount"`
+	RemainingAmount pgtype.Numeric     `json:"remaining_amount"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
+	DeletedAt       int64              `json:"deleted_at"`
+}
+
+func (q *Queries) SearchInventories(ctx context.Context, arg SearchInventoriesParams) ([]SearchInventoriesRow, error) {
 	rows, err := q.db.Query(ctx, searchInventories, arg.Column1, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []Inventory
+	var items []SearchInventoriesRow
 	for rows.Next() {
-		var i Inventory
+		var i SearchInventoriesRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.Number,
@@ -662,7 +865,12 @@ SET date = COALESCE($2, date),
     description_i18n = COALESCE($5, description_i18n),
     status = COALESCE($6, status),
     updated_at = NOW()
-WHERE id = $1 AND deleted_at = 0
+WHERE inventories.id = $1 AND inventories.deleted_at = 0
+  AND EXISTS (
+    SELECT 1 FROM storages s
+    WHERE s.id = inventories.storage_id
+      AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  )
 RETURNING id, number, date, storage_id, description, description_i18n, status,
           surplus_amount, shortage_amount, remaining_amount,
           created_at, updated_at, deleted_at
@@ -677,7 +885,23 @@ type UpdateInventoryParams struct {
 	Status          string      `json:"status"`
 }
 
-func (q *Queries) UpdateInventory(ctx context.Context, arg UpdateInventoryParams) (Inventory, error) {
+type UpdateInventoryRow struct {
+	ID              uuid.UUID          `json:"id"`
+	Number          int64              `json:"number"`
+	Date            pgtype.Date        `json:"date"`
+	StorageID       uuid.UUID          `json:"storage_id"`
+	Description     *string            `json:"description"`
+	DescriptionI18n pgtype.UUID        `json:"description_i18n"`
+	Status          string             `json:"status"`
+	SurplusAmount   pgtype.Numeric     `json:"surplus_amount"`
+	ShortageAmount  pgtype.Numeric     `json:"shortage_amount"`
+	RemainingAmount pgtype.Numeric     `json:"remaining_amount"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
+	DeletedAt       int64              `json:"deleted_at"`
+}
+
+func (q *Queries) UpdateInventory(ctx context.Context, arg UpdateInventoryParams) (UpdateInventoryRow, error) {
 	row := q.db.QueryRow(ctx, updateInventory,
 		arg.ID,
 		arg.Date,
@@ -686,7 +910,7 @@ func (q *Queries) UpdateInventory(ctx context.Context, arg UpdateInventoryParams
 		arg.DescriptionI18n,
 		arg.Status,
 	)
-	var i Inventory
+	var i UpdateInventoryRow
 	err := row.Scan(
 		&i.ID,
 		&i.Number,
@@ -711,7 +935,12 @@ SET surplus_amount = $2,
     shortage_amount = $3,
     remaining_amount = $4,
     updated_at = NOW()
-WHERE id = $1 AND deleted_at = 0
+WHERE inventories.id = $1 AND inventories.deleted_at = 0
+  AND EXISTS (
+    SELECT 1 FROM storages s
+    WHERE s.id = inventories.storage_id
+      AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  )
 RETURNING id, number, date, storage_id, description, description_i18n, status,
           surplus_amount, shortage_amount, remaining_amount,
           created_at, updated_at, deleted_at
@@ -724,14 +953,30 @@ type UpdateInventoryAmountsParams struct {
 	RemainingAmount pgtype.Numeric `json:"remaining_amount"`
 }
 
-func (q *Queries) UpdateInventoryAmounts(ctx context.Context, arg UpdateInventoryAmountsParams) (Inventory, error) {
+type UpdateInventoryAmountsRow struct {
+	ID              uuid.UUID          `json:"id"`
+	Number          int64              `json:"number"`
+	Date            pgtype.Date        `json:"date"`
+	StorageID       uuid.UUID          `json:"storage_id"`
+	Description     *string            `json:"description"`
+	DescriptionI18n pgtype.UUID        `json:"description_i18n"`
+	Status          string             `json:"status"`
+	SurplusAmount   pgtype.Numeric     `json:"surplus_amount"`
+	ShortageAmount  pgtype.Numeric     `json:"shortage_amount"`
+	RemainingAmount pgtype.Numeric     `json:"remaining_amount"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
+	DeletedAt       int64              `json:"deleted_at"`
+}
+
+func (q *Queries) UpdateInventoryAmounts(ctx context.Context, arg UpdateInventoryAmountsParams) (UpdateInventoryAmountsRow, error) {
 	row := q.db.QueryRow(ctx, updateInventoryAmounts,
 		arg.ID,
 		arg.SurplusAmount,
 		arg.ShortageAmount,
 		arg.RemainingAmount,
 	)
-	var i Inventory
+	var i UpdateInventoryAmountsRow
 	err := row.Scan(
 		&i.ID,
 		&i.Number,
@@ -754,7 +999,13 @@ const updateInventoryItem = `-- name: UpdateInventoryItem :one
 UPDATE inventory_items
 SET counted_quantity = $2,
     updated_at = NOW()
-WHERE id = $1 AND deleted_at = 0
+WHERE inventory_items.id = $1 AND inventory_items.deleted_at = 0
+  AND EXISTS (
+    SELECT 1 FROM inventories inv
+    JOIN storages s ON s.id = inv.storage_id
+    WHERE inv.id = inventory_items.inventory_id
+      AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  )
 RETURNING id, inventory_id, ingredient_id, counted_quantity, created_at, updated_at, deleted_at
 `
 

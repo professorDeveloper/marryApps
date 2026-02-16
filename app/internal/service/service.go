@@ -362,7 +362,7 @@ type OrderI interface {
 	GetBills(ctx context.Context, req model.GetBillsRequest) ([]model.BillListItem, error)
 	GetBillDetails(ctx context.Context, billID string) (*model.BillDetails, error)
 
-	CreateOrderItem(ctx context.Context, req model.CreateOrderItemRequest) (*model.OrderItemResponse, error)
+	CreateOrderItems(ctx context.Context, req model.CreateOrderItemRequest) ([]model.OrderItemResponse, error)
 	GetOrderItemByID(ctx context.Context, itemID string) (*model.OrderItemResponse, error)
 	GetAllOrderItems(ctx context.Context, limit, offset int32) ([]model.OrderItemResponse, error)
 	GetOrderItemsByOrderID(ctx context.Context, orderID string) ([]model.OrderItemResponse, error)

@@ -27,9 +27,9 @@ func (s *ShiftS) CreateShift(ctx context.Context, name string, role *string, wor
 		return nil, fmt.Errorf("shift name is required")
 	}
 
-	branchUUID, err := uuid.Parse(branchID)
+	branchUUID, err := resolveBranchUUID(ctx, branchID)
 	if err != nil {
-		return nil, fmt.Errorf("invalid branch ID: %w", err)
+		return nil, err
 	}
 
 	// Convert time strings to int64 if provided (time_to_unix conversion can happen in DB)

@@ -10,13 +10,15 @@ RETURNING id, name, name_i18n, address, phone, created_at, updated_at, deleted_a
 -- name: GetBranchByID :one
 SELECT id, name, name_i18n, address, phone, created_at, updated_at, deleted_at
 FROM branches
-WHERE id = $1 AND deleted_at = 0;
+WHERE id = $1 AND deleted_at = 0
+  AND (NULLIF(current_setting('app.branch_id', true), '') IS NULL OR id = NULLIF(current_setting('app.branch_id', true), '')::uuid);
 
 -- GetAllBranches retrieves all branches (with pagination)
 -- name: GetAllBranches :many
 SELECT id, name, name_i18n, address, phone, created_at, updated_at, deleted_at
 FROM branches
 WHERE deleted_at = 0
+  AND (NULLIF(current_setting('app.branch_id', true), '') IS NULL OR id = NULLIF(current_setting('app.branch_id', true), '')::uuid)
 ORDER BY created_at DESC
 LIMIT $1 OFFSET $2;
 
@@ -47,13 +49,15 @@ WHERE id = $1;
 -- name: CountBranches :one
 SELECT COUNT(*) as count
 FROM branches
-WHERE deleted_at = 0;
+WHERE deleted_at = 0
+  AND (NULLIF(current_setting('app.branch_id', true), '') IS NULL OR id = NULLIF(current_setting('app.branch_id', true), '')::uuid);
 
 -- SearchBranches searches branches by name or phone
 -- name: SearchBranches :many
 SELECT id, name, name_i18n, address, phone, created_at, updated_at, deleted_at
 FROM branches
 WHERE deleted_at = 0
+  AND (NULLIF(current_setting('app.branch_id', true), '') IS NULL OR id = NULLIF(current_setting('app.branch_id', true), '')::uuid)
   AND (LOWER(name) LIKE LOWER('%' || $1 || '%')
        OR LOWER(address) LIKE LOWER('%' || $1 || '%')
        OR phone LIKE '%' || $1 || '%')
@@ -139,7 +143,8 @@ SELECT
     b.deleted_at
 FROM branches b
 LEFT JOIN translations t ON b.name_i18n = t.id AND t.deleted_at = 0
-WHERE b.id = $1 AND b.deleted_at = 0;
+WHERE b.id = $1 AND b.deleted_at = 0
+  AND (NULLIF(current_setting('app.branch_id', true), '') IS NULL OR b.id = NULLIF(current_setting('app.branch_id', true), '')::uuid);
 
 -- name: GetAllBranchesWithLanguage :many
 SELECT 
@@ -159,6 +164,7 @@ SELECT
 FROM branches b
 LEFT JOIN translations t ON b.name_i18n = t.id AND t.deleted_at = 0
 WHERE b.deleted_at = 0
+  AND (NULLIF(current_setting('app.branch_id', true), '') IS NULL OR b.id = NULLIF(current_setting('app.branch_id', true), '')::uuid)
 ORDER BY b.created_at DESC
 LIMIT $2 OFFSET $3;
 

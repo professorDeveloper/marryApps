@@ -21,6 +21,10 @@ sql:
       - "../../app/migrations/tenants/16_deduction.up.sql"
       - "../../app/migrations/tenants/17_numeric_quantities.up.sql"
       - "../../app/migrations/tenants/18_deduction_loss_details.up.sql"
+      - "../../app/migrations/tenants/19_bills.up.sql"
+      - "../../app/migrations/tenants/20_ingredient_stock_movements.up.sql"
+      - "../../app/migrations/tenants/21_change_log.up.sql"
+      - "../../app/migrations/tenants/22_add_branch_id_to_tenant_tables.up.sql"
     gen:
       go:
         emit_json_tags: true

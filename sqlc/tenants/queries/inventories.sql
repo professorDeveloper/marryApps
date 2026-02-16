@@ -12,7 +12,12 @@ SELECT id, number, date, storage_id, description, description_i18n, status,
        surplus_amount, shortage_amount, remaining_amount,
        created_at, updated_at, deleted_at
 FROM inventories
-WHERE id = $1 AND deleted_at = 0;
+WHERE inventories.id = $1 AND inventories.deleted_at = 0
+  AND EXISTS (
+    SELECT 1 FROM storages s
+    WHERE s.id = inventories.storage_id
+      AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  );
 
 -- name: GetAllInventories :many
 SELECT id, number, date, storage_id, description, description_i18n, status,
@@ -20,6 +25,11 @@ SELECT id, number, date, storage_id, description, description_i18n, status,
        created_at, updated_at, deleted_at
 FROM inventories
 WHERE deleted_at = 0
+  AND EXISTS (
+    SELECT 1 FROM storages s
+    WHERE s.id = inventories.storage_id
+      AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  )
 ORDER BY date DESC, number DESC
 LIMIT $1 OFFSET $2;
 
@@ -32,6 +42,11 @@ LEFT JOIN inventory_items ii
   ON ii.inventory_id = inv.id
   AND ii.deleted_at = 0
 WHERE inv.deleted_at = 0
+  AND EXISTS (
+    SELECT 1 FROM storages s
+    WHERE s.id = inv.storage_id
+      AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  )
   AND ($1::date IS NULL OR inv.date >= $1)
   AND ($2::date IS NULL OR inv.date <= $2)
   AND (NULLIF($3::uuid, '00000000-0000-0000-0000-000000000000') IS NULL OR inv.storage_id = $3)
@@ -46,6 +61,11 @@ SELECT id, number, date, storage_id, description, description_i18n, status,
        created_at, updated_at, deleted_at
 FROM inventories
 WHERE storage_id = $1 AND deleted_at = 0
+  AND EXISTS (
+    SELECT 1 FROM storages s
+    WHERE s.id = inventories.storage_id
+      AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  )
 ORDER BY date DESC, number DESC
 LIMIT $2 OFFSET $3;
 
@@ -55,6 +75,11 @@ SELECT id, number, date, storage_id, description, description_i18n, status,
        created_at, updated_at, deleted_at
 FROM inventories
 WHERE status = $1 AND deleted_at = 0
+  AND EXISTS (
+    SELECT 1 FROM storages s
+    WHERE s.id = inventories.storage_id
+      AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  )
 ORDER BY date DESC, number DESC
 LIMIT $2 OFFSET $3;
 
@@ -66,7 +91,12 @@ SET date = COALESCE($2, date),
     description_i18n = COALESCE($5, description_i18n),
     status = COALESCE($6, status),
     updated_at = NOW()
-WHERE id = $1 AND deleted_at = 0
+WHERE inventories.id = $1 AND inventories.deleted_at = 0
+  AND EXISTS (
+    SELECT 1 FROM storages s
+    WHERE s.id = inventories.storage_id
+      AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  )
 RETURNING id, number, date, storage_id, description, description_i18n, status,
           surplus_amount, shortage_amount, remaining_amount,
           created_at, updated_at, deleted_at;
@@ -74,13 +104,23 @@ RETURNING id, number, date, storage_id, description, description_i18n, status,
 -- name: DeleteInventory :exec
 UPDATE inventories
 SET deleted_at = EXTRACT(EPOCH FROM NOW())::BIGINT
-WHERE id = $1 AND deleted_at = 0;
+WHERE inventories.id = $1 AND inventories.deleted_at = 0
+  AND EXISTS (
+    SELECT 1 FROM storages s
+    WHERE s.id = inventories.storage_id
+      AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  );
 
 -- name: RestoreInventory :one
 UPDATE inventories
 SET deleted_at = 0,
     updated_at = NOW()
-WHERE id = $1 AND deleted_at != 0
+WHERE inventories.id = $1 AND inventories.deleted_at != 0
+  AND EXISTS (
+    SELECT 1 FROM storages s
+    WHERE s.id = inventories.storage_id
+      AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  )
 RETURNING id, number, date, storage_id, description, description_i18n, status,
           surplus_amount, shortage_amount, remaining_amount,
           created_at, updated_at, deleted_at;
@@ -91,6 +131,11 @@ SELECT id, number, date, storage_id, description, description_i18n, status,
        created_at, updated_at, deleted_at
 FROM inventories
 WHERE deleted_at = 0
+  AND EXISTS (
+    SELECT 1 FROM storages s
+    WHERE s.id = inventories.storage_id
+      AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  )
 AND (
     description ILIKE '%' || $1 || '%'
     OR CAST(number AS TEXT) ILIKE '%' || $1 || '%'
@@ -99,7 +144,13 @@ ORDER BY date DESC, number DESC
 LIMIT $2 OFFSET $3;
 
 -- name: CountInventories :one
-SELECT COUNT(*) FROM inventories WHERE deleted_at = 0;
+SELECT COUNT(*) FROM inventories
+WHERE deleted_at = 0
+  AND EXISTS (
+    SELECT 1 FROM storages s
+    WHERE s.id = inventories.storage_id
+      AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  );
 
 
 -- ==================== INVENTORY ITEMS ====================
@@ -118,19 +169,37 @@ RETURNING id, inventory_id, ingredient_id, counted_quantity, created_at, updated
 -- name: GetInventoryItemByID :one
 SELECT id, inventory_id, ingredient_id, counted_quantity, created_at, updated_at, deleted_at
 FROM inventory_items
-WHERE id = $1 AND deleted_at = 0;
+WHERE inventory_items.id = $1 AND inventory_items.deleted_at = 0
+  AND EXISTS (
+    SELECT 1 FROM inventories inv
+    JOIN storages s ON s.id = inv.storage_id
+    WHERE inv.id = inventory_items.inventory_id
+      AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  );
 
 -- name: GetAllInventoryItems :many
 SELECT id, inventory_id, ingredient_id, counted_quantity, created_at, updated_at, deleted_at
 FROM inventory_items
-WHERE deleted_at = 0
+WHERE inventory_items.deleted_at = 0
+  AND EXISTS (
+    SELECT 1 FROM inventories inv
+    JOIN storages s ON s.id = inv.storage_id
+    WHERE inv.id = inventory_items.inventory_id
+      AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  )
 ORDER BY created_at DESC
 LIMIT $1 OFFSET $2;
 
 -- name: GetInventoryItemsByInventoryID :many
 SELECT id, inventory_id, ingredient_id, counted_quantity, created_at, updated_at, deleted_at
 FROM inventory_items
-WHERE inventory_id = $1 AND deleted_at = 0
+WHERE inventory_id = $1 AND inventory_items.deleted_at = 0
+  AND EXISTS (
+    SELECT 1 FROM inventories inv
+    JOIN storages s ON s.id = inv.storage_id
+    WHERE inv.id = inventory_items.inventory_id
+      AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  )
 ORDER BY created_at DESC
 LIMIT $2 OFFSET $3;
 
@@ -138,14 +207,26 @@ LIMIT $2 OFFSET $3;
 UPDATE inventory_items
 SET counted_quantity = $2,
     updated_at = NOW()
-WHERE id = $1 AND deleted_at = 0
+WHERE inventory_items.id = $1 AND inventory_items.deleted_at = 0
+  AND EXISTS (
+    SELECT 1 FROM inventories inv
+    JOIN storages s ON s.id = inv.storage_id
+    WHERE inv.id = inventory_items.inventory_id
+      AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  )
 RETURNING id, inventory_id, ingredient_id, counted_quantity, created_at, updated_at, deleted_at;
 
 -- name: DeleteInventoryItem :exec
 UPDATE inventory_items
 SET deleted_at = EXTRACT(EPOCH FROM NOW())::BIGINT,
     updated_at = NOW()
-WHERE id = $1 AND deleted_at = 0;
+WHERE inventory_items.id = $1 AND inventory_items.deleted_at = 0
+  AND EXISTS (
+    SELECT 1 FROM inventories inv
+    JOIN storages s ON s.id = inv.storage_id
+    WHERE inv.id = inventory_items.inventory_id
+      AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  );
 
 -- name: GetInventoryItemsComputedAll :many
 SELECT
@@ -176,6 +257,11 @@ LEFT JOIN ingredient_stock st
   AND st.storage_id = inv.storage_id
   AND st.deleted_at = 0
 WHERE inv.id = $1 AND inv.deleted_at = 0
+  AND EXISTS (
+    SELECT 1 FROM storages s
+    WHERE s.id = inv.storage_id
+      AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  )
 ORDER BY ing.name ASC;
 
 -- name: CalculateInventoryTotals :one
@@ -208,7 +294,12 @@ SET surplus_amount = $2,
     shortage_amount = $3,
     remaining_amount = $4,
     updated_at = NOW()
-WHERE id = $1 AND deleted_at = 0
+WHERE inventories.id = $1 AND inventories.deleted_at = 0
+  AND EXISTS (
+    SELECT 1 FROM storages s
+    WHERE s.id = inventories.storage_id
+      AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  )
 RETURNING id, number, date, storage_id, description, description_i18n, status,
           surplus_amount, shortage_amount, remaining_amount,
           created_at, updated_at, deleted_at;

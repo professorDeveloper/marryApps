@@ -49,6 +49,7 @@ type RegisterRequest struct {
 	Pincode     string  `json:"pincode,omitempty" example:"1234"`
 	Role        string  `json:"role" example:"user"`
 	BrandID     *string `json:"brand_id,omitempty" example:"my_restaurant"`
+	BranchID    *string `json:"branch_id,omitempty" example:"123e4567-e89b-12d3-a456-426614174000"`
 }
 
 type ErrorResponse struct {
@@ -79,6 +80,7 @@ type UserResponse struct {
 	PhoneNumber *string    `json:"phone_number,omitempty" example:"+998901234567"`
 	ShiftID     *string    `json:"shift_id,omitempty" example:"123e4567-e89b-12d3-a456-426614174000"`
 	BrandID     *string    `json:"brand_id,omitempty" example:"123e4567-e89b-12d3-a456-426614174000"`
+	BranchID    *string    `json:"branch_id,omitempty" example:"123e4567-e89b-12d3-a456-426614174000"`
 	CreatedAt   *time.Time `json:"created_at,omitempty" example:"2021-01-01T00:00:00Z"`
 	UpdatedAt   *time.Time `json:"updated_at,omitempty" example:"2021-01-01T00:00:00Z"`
 }

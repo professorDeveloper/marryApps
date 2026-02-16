@@ -6,43 +6,78 @@ RETURNING id, hall_id, number, capacity, status, created_at, updated_at, deleted
 -- name: GetCafeTableByID :one
 SELECT id, hall_id, number, capacity, status, created_at, updated_at, deleted_at, pos_x, pos_y, width, height, rotation
 FROM cafe_tables
-WHERE id = $1 AND deleted_at = 0;
+WHERE cafe_tables.id = $1 AND cafe_tables.deleted_at = 0
+  AND EXISTS (
+    SELECT 1 FROM halls h
+    WHERE h.id = cafe_tables.hall_id
+      AND h.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  );
 
 -- name: GetCafeTableByNumber :one
 SELECT id, hall_id, number, capacity, status, created_at, updated_at, deleted_at, pos_x, pos_y, width, height, rotation
 FROM cafe_tables
-WHERE hall_id = $1 AND number = $2 AND deleted_at = 0;
+WHERE cafe_tables.hall_id = $1 AND cafe_tables.number = $2 AND cafe_tables.deleted_at = 0
+  AND EXISTS (
+    SELECT 1 FROM halls h
+    WHERE h.id = cafe_tables.hall_id
+      AND h.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  );
 
 -- name: GetAllCafeTables :many
 SELECT id, hall_id, number, capacity, status, created_at, updated_at, deleted_at, pos_x, pos_y, width, height, rotation
 FROM cafe_tables
-WHERE deleted_at = 0
+WHERE cafe_tables.deleted_at = 0
+  AND EXISTS (
+    SELECT 1 FROM halls h
+    WHERE h.id = cafe_tables.hall_id
+      AND h.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  )
 ORDER BY hall_id ASC, number ASC
 LIMIT $1 OFFSET $2;
 
 -- name: GetCafeTablesByHallID :many
 SELECT id, hall_id, number, capacity, status, created_at, updated_at, deleted_at, pos_x, pos_y, width, height, rotation
 FROM cafe_tables
-WHERE hall_id = $1 AND deleted_at = 0
+WHERE cafe_tables.hall_id = $1 AND cafe_tables.deleted_at = 0
+  AND EXISTS (
+    SELECT 1 FROM halls h
+    WHERE h.id = cafe_tables.hall_id
+      AND h.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  )
 ORDER BY number ASC;
 
 -- name: GetCafeTablesByStatus :many
 SELECT id, hall_id, number, capacity, status, created_at, updated_at, deleted_at, pos_x, pos_y, width, height, rotation
 FROM cafe_tables
-WHERE status = $1 AND deleted_at = 0
+WHERE cafe_tables.status = $1 AND cafe_tables.deleted_at = 0
+  AND EXISTS (
+    SELECT 1 FROM halls h
+    WHERE h.id = cafe_tables.hall_id
+      AND h.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  )
 ORDER BY hall_id ASC, number ASC
 LIMIT $2 OFFSET $3;
 
 -- name: GetCafeTablesByHallAndStatus :many
 SELECT id, hall_id, number, capacity, status, created_at, updated_at, deleted_at, pos_x, pos_y, width, height, rotation
 FROM cafe_tables
-WHERE hall_id = $1 AND status = $2 AND deleted_at = 0
+WHERE cafe_tables.hall_id = $1 AND cafe_tables.status = $2 AND cafe_tables.deleted_at = 0
+  AND EXISTS (
+    SELECT 1 FROM halls h
+    WHERE h.id = cafe_tables.hall_id
+      AND h.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  )
 ORDER BY number ASC;
 
 -- name: GetCafeTablesByCapacity :many
 SELECT id, hall_id, number, capacity, status, created_at, updated_at, deleted_at, pos_x, pos_y, width, height, rotation
 FROM cafe_tables
-WHERE capacity >= $1 AND deleted_at = 0
+WHERE cafe_tables.capacity >= $1 AND cafe_tables.deleted_at = 0
+  AND EXISTS (
+    SELECT 1 FROM halls h
+    WHERE h.id = cafe_tables.hall_id
+      AND h.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  )
 ORDER BY capacity ASC, number ASC
 LIMIT $2 OFFSET $3;
 
@@ -58,51 +93,105 @@ SET hall_id = COALESCE($2, hall_id),
     height = COALESCE($9, height),
     rotation = COALESCE($10, rotation),
     updated_at = NOW()
-WHERE id = $1 AND deleted_at = 0
+WHERE cafe_tables.id = $1 AND cafe_tables.deleted_at = 0
+  AND EXISTS (
+    SELECT 1 FROM halls h
+    WHERE h.id = cafe_tables.hall_id
+      AND h.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  )
 RETURNING id, hall_id, number, capacity, status, created_at, updated_at, deleted_at, pos_x, pos_y, width, height, rotation;
 
 -- name: UpdateCafeTableStatus :one
 UPDATE cafe_tables
 SET status = $2,
     updated_at = NOW()
-WHERE id = $1 AND deleted_at = 0
+WHERE cafe_tables.id = $1 AND cafe_tables.deleted_at = 0
+  AND EXISTS (
+    SELECT 1 FROM halls h
+    WHERE h.id = cafe_tables.hall_id
+      AND h.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  )
 RETURNING id, hall_id, number, capacity, status, created_at, updated_at, deleted_at, pos_x, pos_y, width, height, rotation;
 
 -- name: SetTableFree :one
 UPDATE cafe_tables
 SET status = 'free',
     updated_at = NOW()
-WHERE id = $1 AND deleted_at = 0
+WHERE cafe_tables.id = $1 AND cafe_tables.deleted_at = 0
+  AND EXISTS (
+    SELECT 1 FROM halls h
+    WHERE h.id = cafe_tables.hall_id
+      AND h.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  )
 RETURNING id, hall_id, number, capacity, status, created_at, updated_at, deleted_at, pos_x, pos_y, width, height, rotation;
 
 -- name: SetTableBusy :one
 UPDATE cafe_tables
 SET status = 'busy',
     updated_at = NOW()
-WHERE id = $1 AND deleted_at = 0
+WHERE cafe_tables.id = $1 AND cafe_tables.deleted_at = 0
+  AND EXISTS (
+    SELECT 1 FROM halls h
+    WHERE h.id = cafe_tables.hall_id
+      AND h.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  )
 RETURNING id, hall_id, number, capacity, status, created_at, updated_at, deleted_at, pos_x, pos_y, width, height, rotation;
 
 -- name: DeleteCafeTable :exec
 UPDATE cafe_tables
 SET deleted_at = EXTRACT(EPOCH FROM NOW())::BIGINT
-WHERE id = $1 AND deleted_at = 0;
+WHERE cafe_tables.id = $1 AND cafe_tables.deleted_at = 0
+  AND EXISTS (
+    SELECT 1 FROM halls h
+    WHERE h.id = cafe_tables.hall_id
+      AND h.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  );
 
 -- name: RestoreCafeTable :exec
 UPDATE cafe_tables
 SET deleted_at = 0
-WHERE id = $1 AND deleted_at != 0;
+WHERE cafe_tables.id = $1 AND cafe_tables.deleted_at != 0
+  AND EXISTS (
+    SELECT 1 FROM halls h
+    WHERE h.id = cafe_tables.hall_id
+      AND h.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  );
 
 -- name: CountCafeTables :one
-SELECT COUNT(*) FROM cafe_tables WHERE deleted_at = 0;
+SELECT COUNT(*) FROM cafe_tables
+WHERE cafe_tables.deleted_at = 0
+  AND EXISTS (
+    SELECT 1 FROM halls h
+    WHERE h.id = cafe_tables.hall_id
+      AND h.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  );
 
 -- name: CountCafeTablesByHall :one
-SELECT COUNT(*) FROM cafe_tables WHERE hall_id = $1 AND deleted_at = 0;
+SELECT COUNT(*) FROM cafe_tables
+WHERE cafe_tables.hall_id = $1 AND cafe_tables.deleted_at = 0
+  AND EXISTS (
+    SELECT 1 FROM halls h
+    WHERE h.id = cafe_tables.hall_id
+      AND h.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  );
 
 -- name: CountCafeTablesByStatus :one
-SELECT COUNT(*) FROM cafe_tables WHERE status = $1 AND deleted_at = 0;
+SELECT COUNT(*) FROM cafe_tables
+WHERE cafe_tables.status = $1 AND cafe_tables.deleted_at = 0
+  AND EXISTS (
+    SELECT 1 FROM halls h
+    WHERE h.id = cafe_tables.hall_id
+      AND h.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  );
 
 -- name: CountCafeTablesByHallAndStatus :one
-SELECT COUNT(*) FROM cafe_tables WHERE hall_id = $1 AND status = $2 AND deleted_at = 0;
+SELECT COUNT(*) FROM cafe_tables
+WHERE cafe_tables.hall_id = $1 AND cafe_tables.status = $2 AND cafe_tables.deleted_at = 0
+  AND EXISTS (
+    SELECT 1 FROM halls h
+    WHERE h.id = cafe_tables.hall_id
+      AND h.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  );
 
 
 
@@ -126,7 +215,8 @@ SELECT
 FROM cafe_tables ct
 LEFT JOIN halls h ON ct.hall_id = h.id AND h.deleted_at = 0
 LEFT JOIN branches b ON h.branch_id = b.id AND b.deleted_at = 0
-WHERE ct.id = $1 AND ct.deleted_at = 0;
+WHERE ct.id = $1 AND ct.deleted_at = 0
+  AND h.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid;
 
 
 
@@ -135,7 +225,12 @@ SELECT id, hall_id, number, capacity, status, created_at, updated_at, deleted_at
 FROM cafe_tables
 WHERE hall_id = $1 
 AND status = 'free' 
-AND deleted_at = 0
+AND cafe_tables.deleted_at = 0
+AND EXISTS (
+  SELECT 1 FROM halls h
+  WHERE h.id = cafe_tables.hall_id
+    AND h.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+)
 ORDER BY number ASC;
 
 -- name: GetAvailableTablesByCapacity :many
@@ -143,7 +238,12 @@ SELECT id, hall_id, number, capacity, status, created_at, updated_at, deleted_at
 FROM cafe_tables
 WHERE capacity >= $1 
 AND status = 'free' 
-AND deleted_at = 0
+AND cafe_tables.deleted_at = 0
+AND EXISTS (
+  SELECT 1 FROM halls h
+  WHERE h.id = cafe_tables.hall_id
+    AND h.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+)
 ORDER BY capacity ASC, number ASC
 LIMIT $2 OFFSET $3;
 
@@ -153,7 +253,12 @@ FROM cafe_tables
 WHERE hall_id = $1 
 AND capacity >= $2 
 AND status = 'free' 
-AND deleted_at = 0
+AND cafe_tables.deleted_at = 0
+AND EXISTS (
+  SELECT 1 FROM halls h
+  WHERE h.id = cafe_tables.hall_id
+    AND h.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+)
 ORDER BY capacity ASC, number ASC;
 
 -- name: GetTableOccupancyStats :one
@@ -166,5 +271,9 @@ SELECT
     SUM(capacity) as total_capacity,
     SUM(CASE WHEN status = 'free' THEN capacity ELSE 0 END) as available_seats
 FROM cafe_tables
-WHERE deleted_at = 0;
-
+WHERE cafe_tables.deleted_at = 0
+  AND EXISTS (
+    SELECT 1 FROM halls h
+    WHERE h.id = cafe_tables.hall_id
+      AND h.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  );

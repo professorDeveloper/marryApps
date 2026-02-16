@@ -18,7 +18,8 @@ UPDATE attendances SET
     difference = $3,
     working_hours = $4
 WHERE id = $1 AND deleted_at = 0
-RETURNING id, user_id, open_date, close_date, difference, working_hours, created_at, updated_at, deleted_at
+  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+RETURNING id, user_id, open_date, close_date, difference, working_hours, created_at, updated_at, deleted_at, branch_id
 `
 
 type CloseAttendanceParams struct {
@@ -46,6 +47,7 @@ func (q *Queries) CloseAttendance(ctx context.Context, arg CloseAttendanceParams
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
+		&i.BranchID,
 	)
 	return i, err
 }
@@ -53,6 +55,7 @@ func (q *Queries) CloseAttendance(ctx context.Context, arg CloseAttendanceParams
 const countUsers = `-- name: CountUsers :one
 SELECT COUNT(*) FROM users 
 WHERE deleted_at = 0
+  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 `
 
 func (q *Queries) CountUsers(ctx context.Context) (int64, error) {
@@ -65,6 +68,7 @@ func (q *Queries) CountUsers(ctx context.Context) (int64, error) {
 const countUsersByRole = `-- name: CountUsersByRole :one
 SELECT COUNT(*) FROM users 
 WHERE role = $1 AND deleted_at = 0
+  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 `
 
 func (q *Queries) CountUsersByRole(ctx context.Context, role string) (int64, error) {
@@ -77,6 +81,7 @@ func (q *Queries) CountUsersByRole(ctx context.Context, role string) (int64, err
 const countUsersByShift = `-- name: CountUsersByShift :one
 SELECT COUNT(*) FROM users 
 WHERE shift_id = $1 AND deleted_at = 0
+  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 `
 
 func (q *Queries) CountUsersByShift(ctx context.Context, shiftID pgtype.UUID) (int64, error) {
@@ -93,12 +98,14 @@ INSERT INTO attendances (
     open_date,
     close_date,
     difference,
-    working_hours
+    working_hours,
+    branch_id
 )
 VALUES (
-    $1, $2, $3, $4, $5, $6
+    $1, $2, $3, $4, $5, $6,
+    (SELECT branch_id FROM users WHERE id = $2)
 )
-RETURNING id, user_id, open_date, close_date, difference, working_hours, created_at, updated_at, deleted_at
+RETURNING id, user_id, open_date, close_date, difference, working_hours, created_at, updated_at, deleted_at, branch_id
 `
 
 type CreateAttendanceParams struct {
@@ -130,6 +137,7 @@ func (q *Queries) CreateAttendance(ctx context.Context, arg CreateAttendancePara
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
+		&i.BranchID,
 	)
 	return i, err
 }
@@ -199,12 +207,14 @@ INSERT INTO users (
     hash_password,
     brand_id,
     phone_number,
-    is_active
+    is_active,
+    branch_id
 )
 VALUES (
-    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11
+    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11,
+    COALESCE((SELECT branch_id FROM shifts WHERE id = $6), $12)
 )
-RETURNING id, full_name, username, role, email, shift_id, pincode, hash_password, brand_id, phone_number, fcm_token, is_active, created_at, updated_at, deleted_at
+RETURNING id, full_name, username, role, email, shift_id, pincode, hash_password, brand_id, phone_number, fcm_token, is_active, created_at, updated_at, deleted_at, branch_id
 `
 
 type CreateUserParams struct {
@@ -219,6 +229,7 @@ type CreateUserParams struct {
 	BrandID      pgtype.UUID `json:"brand_id"`
 	PhoneNumber  *string     `json:"phone_number"`
 	IsActive     bool        `json:"is_active"`
+	BranchID     interface{} `json:"branch_id"`
 }
 
 func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, error) {
@@ -234,6 +245,7 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 		arg.BrandID,
 		arg.PhoneNumber,
 		arg.IsActive,
+		arg.BranchID,
 	)
 	var i User
 	err := row.Scan(
@@ -252,6 +264,7 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
+		&i.BranchID,
 	)
 	return i, err
 }
@@ -259,6 +272,7 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 const getAllShifts = `-- name: GetAllShifts :many
 SELECT id, name, role, working_days, open_time, close_time, branch_id, is_active, created_at, updated_at, deleted_at FROM shifts 
 WHERE deleted_at = 0
+  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 ORDER BY name ASC
 `
 
@@ -295,8 +309,9 @@ func (q *Queries) GetAllShifts(ctx context.Context) ([]Shift, error) {
 }
 
 const getAllUsers = `-- name: GetAllUsers :many
-SELECT id, full_name, username, role, email, shift_id, pincode, hash_password, brand_id, phone_number, fcm_token, is_active, created_at, updated_at, deleted_at FROM users 
+SELECT id, full_name, username, role, email, shift_id, pincode, hash_password, brand_id, phone_number, fcm_token, is_active, created_at, updated_at, deleted_at, branch_id FROM users 
 WHERE deleted_at = 0
+  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 ORDER BY created_at DESC
 `
 
@@ -325,6 +340,7 @@ func (q *Queries) GetAllUsers(ctx context.Context) ([]User, error) {
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.DeletedAt,
+			&i.BranchID,
 		); err != nil {
 			return nil, err
 		}
@@ -337,8 +353,9 @@ func (q *Queries) GetAllUsers(ctx context.Context) ([]User, error) {
 }
 
 const getAllUsersPaginated = `-- name: GetAllUsersPaginated :many
-SELECT id, full_name, username, role, email, shift_id, pincode, hash_password, brand_id, phone_number, fcm_token, is_active, created_at, updated_at, deleted_at FROM users 
+SELECT id, full_name, username, role, email, shift_id, pincode, hash_password, brand_id, phone_number, fcm_token, is_active, created_at, updated_at, deleted_at, branch_id FROM users 
 WHERE deleted_at = 0
+  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 ORDER BY created_at DESC
 LIMIT $1 OFFSET $2
 `
@@ -373,6 +390,7 @@ func (q *Queries) GetAllUsersPaginated(ctx context.Context, arg GetAllUsersPagin
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.DeletedAt,
+			&i.BranchID,
 		); err != nil {
 			return nil, err
 		}
@@ -385,8 +403,9 @@ func (q *Queries) GetAllUsersPaginated(ctx context.Context, arg GetAllUsersPagin
 }
 
 const getAttendanceByID = `-- name: GetAttendanceByID :one
-SELECT id, user_id, open_date, close_date, difference, working_hours, created_at, updated_at, deleted_at FROM attendances 
+SELECT id, user_id, open_date, close_date, difference, working_hours, created_at, updated_at, deleted_at, branch_id FROM attendances 
 WHERE id = $1 AND deleted_at = 0
+  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 `
 
 func (q *Queries) GetAttendanceByID(ctx context.Context, id uuid.UUID) (Attendance, error) {
@@ -402,6 +421,7 @@ func (q *Queries) GetAttendanceByID(ctx context.Context, id uuid.UUID) (Attendan
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
+		&i.BranchID,
 	)
 	return i, err
 }
@@ -418,6 +438,7 @@ JOIN users u ON a.user_id = u.id AND u.deleted_at = 0
 WHERE a.open_date >= $1 
 AND a.open_date <= $2 
 AND a.deleted_at = 0
+AND a.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 GROUP BY u.role
 ORDER BY total_hours DESC
 `
@@ -462,12 +483,13 @@ func (q *Queries) GetAttendanceStatsByRole(ctx context.Context, arg GetAttendanc
 }
 
 const getAttendancesByDateRange = `-- name: GetAttendancesByDateRange :many
-SELECT a.id, a.user_id, a.open_date, a.close_date, a.difference, a.working_hours, a.created_at, a.updated_at, a.deleted_at, u.full_name, u.username, u.role
+SELECT a.id, a.user_id, a.open_date, a.close_date, a.difference, a.working_hours, a.created_at, a.updated_at, a.deleted_at, a.branch_id, u.full_name, u.username, u.role
 FROM attendances a
 JOIN users u ON a.user_id = u.id AND u.deleted_at = 0
 WHERE a.open_date >= $1 
 AND a.open_date <= $2 
 AND a.deleted_at = 0
+AND a.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 ORDER BY a.open_date DESC
 `
 
@@ -486,6 +508,7 @@ type GetAttendancesByDateRangeRow struct {
 	CreatedAt    pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
 	DeletedAt    *int64             `json:"deleted_at"`
+	BranchID     pgtype.UUID        `json:"branch_id"`
 	FullName     *string            `json:"full_name"`
 	Username     *string            `json:"username"`
 	Role         string             `json:"role"`
@@ -510,6 +533,7 @@ func (q *Queries) GetAttendancesByDateRange(ctx context.Context, arg GetAttendan
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.DeletedAt,
+			&i.BranchID,
 			&i.FullName,
 			&i.Username,
 			&i.Role,
@@ -525,8 +549,9 @@ func (q *Queries) GetAttendancesByDateRange(ctx context.Context, arg GetAttendan
 }
 
 const getAttendancesByUserID = `-- name: GetAttendancesByUserID :many
-SELECT id, user_id, open_date, close_date, difference, working_hours, created_at, updated_at, deleted_at FROM attendances 
+SELECT id, user_id, open_date, close_date, difference, working_hours, created_at, updated_at, deleted_at, branch_id FROM attendances 
 WHERE user_id = $1 AND deleted_at = 0
+  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 ORDER BY open_date DESC
 `
 
@@ -549,6 +574,7 @@ func (q *Queries) GetAttendancesByUserID(ctx context.Context, userID uuid.UUID) 
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.DeletedAt,
+			&i.BranchID,
 		); err != nil {
 			return nil, err
 		}
@@ -561,8 +587,9 @@ func (q *Queries) GetAttendancesByUserID(ctx context.Context, userID uuid.UUID) 
 }
 
 const getAttendancesByUserIDPaginated = `-- name: GetAttendancesByUserIDPaginated :many
-SELECT id, user_id, open_date, close_date, difference, working_hours, created_at, updated_at, deleted_at FROM attendances 
+SELECT id, user_id, open_date, close_date, difference, working_hours, created_at, updated_at, deleted_at, branch_id FROM attendances 
 WHERE user_id = $1 AND deleted_at = 0
+  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 ORDER BY open_date DESC
 LIMIT $2 OFFSET $3
 `
@@ -592,6 +619,7 @@ func (q *Queries) GetAttendancesByUserIDPaginated(ctx context.Context, arg GetAt
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.DeletedAt,
+			&i.BranchID,
 		); err != nil {
 			return nil, err
 		}
@@ -604,11 +632,12 @@ func (q *Queries) GetAttendancesByUserIDPaginated(ctx context.Context, arg GetAt
 }
 
 const getAttendancesForToday = `-- name: GetAttendancesForToday :many
-SELECT a.id, a.user_id, a.open_date, a.close_date, a.difference, a.working_hours, a.created_at, a.updated_at, a.deleted_at, u.full_name, u.username, u.role
+SELECT a.id, a.user_id, a.open_date, a.close_date, a.difference, a.working_hours, a.created_at, a.updated_at, a.deleted_at, a.branch_id, u.full_name, u.username, u.role
 FROM attendances a
 JOIN users u ON a.user_id = u.id AND u.deleted_at = 0
 WHERE a.open_date = CURRENT_DATE 
 AND a.deleted_at = 0
+AND a.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 ORDER BY a.open_date DESC
 `
 
@@ -622,6 +651,7 @@ type GetAttendancesForTodayRow struct {
 	CreatedAt    pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
 	DeletedAt    *int64             `json:"deleted_at"`
+	BranchID     pgtype.UUID        `json:"branch_id"`
 	FullName     *string            `json:"full_name"`
 	Username     *string            `json:"username"`
 	Role         string             `json:"role"`
@@ -646,6 +676,7 @@ func (q *Queries) GetAttendancesForToday(ctx context.Context) ([]GetAttendancesF
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.DeletedAt,
+			&i.BranchID,
 			&i.FullName,
 			&i.Username,
 			&i.Role,
@@ -671,6 +702,7 @@ FROM attendances a
 WHERE a.open_date >= $1 
 AND a.open_date <= $2 
 AND a.deleted_at = 0
+AND a.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 GROUP BY a.open_date
 ORDER BY a.open_date DESC
 `
@@ -715,10 +747,11 @@ func (q *Queries) GetDailyAttendanceSummary(ctx context.Context, arg GetDailyAtt
 }
 
 const getOpenAttendancesByUserID = `-- name: GetOpenAttendancesByUserID :one
-SELECT id, user_id, open_date, close_date, difference, working_hours, created_at, updated_at, deleted_at FROM attendances 
+SELECT id, user_id, open_date, close_date, difference, working_hours, created_at, updated_at, deleted_at, branch_id FROM attendances 
 WHERE user_id = $1 
 AND close_date IS NULL 
 AND deleted_at = 0
+AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 ORDER BY open_date DESC
 LIMIT 1
 `
@@ -736,6 +769,7 @@ func (q *Queries) GetOpenAttendancesByUserID(ctx context.Context, userID uuid.UU
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
+		&i.BranchID,
 	)
 	return i, err
 }
@@ -743,6 +777,7 @@ func (q *Queries) GetOpenAttendancesByUserID(ctx context.Context, userID uuid.UU
 const getShiftByID = `-- name: GetShiftByID :one
 SELECT id, name, role, working_days, open_time, close_time, branch_id, is_active, created_at, updated_at, deleted_at FROM shifts 
 WHERE id = $1 AND deleted_at = 0
+  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 `
 
 func (q *Queries) GetShiftByID(ctx context.Context, id uuid.UUID) (Shift, error) {
@@ -771,6 +806,7 @@ SELECT
 FROM shifts s
 LEFT JOIN users u ON s.id = u.shift_id AND u.deleted_at = 0
 WHERE s.id = $1 AND s.deleted_at = 0
+  AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 GROUP BY s.id
 `
 
@@ -812,6 +848,7 @@ func (q *Queries) GetShiftWithUsers(ctx context.Context, id uuid.UUID) (GetShift
 const getShiftsByBranchID = `-- name: GetShiftsByBranchID :many
 SELECT id, name, role, working_days, open_time, close_time, branch_id, is_active, created_at, updated_at, deleted_at FROM shifts 
 WHERE branch_id = $1 AND deleted_at = 0
+  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 ORDER BY name ASC
 `
 
@@ -850,6 +887,7 @@ func (q *Queries) GetShiftsByBranchID(ctx context.Context, branchID pgtype.UUID)
 const getShiftsByRole = `-- name: GetShiftsByRole :many
 SELECT id, name, role, working_days, open_time, close_time, branch_id, is_active, created_at, updated_at, deleted_at FROM shifts 
 WHERE role = $1 AND deleted_at = 0
+  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 ORDER BY name ASC
 `
 
@@ -892,6 +930,7 @@ SELECT
 FROM shifts s
 LEFT JOIN users u ON s.id = u.shift_id AND u.deleted_at = 0
 WHERE s.deleted_at = 0
+  AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 GROUP BY s.id
 ORDER BY s.name ASC
 `
@@ -954,6 +993,7 @@ SELECT
     MAX(open_date) as last_attendance
 FROM attendances
 WHERE user_id = $1 AND deleted_at = 0
+  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 GROUP BY user_id
 `
 
@@ -993,6 +1033,7 @@ WHERE user_id = $1
 AND open_date >= $2 
 AND open_date <= $3 
 AND deleted_at = 0
+AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 GROUP BY user_id
 `
 
@@ -1026,8 +1067,9 @@ func (q *Queries) GetUserAttendanceStatsByDateRange(ctx context.Context, arg Get
 }
 
 const getUserByEmail = `-- name: GetUserByEmail :one
-SELECT id, full_name, username, role, email, shift_id, pincode, hash_password, brand_id, phone_number, fcm_token, is_active, created_at, updated_at, deleted_at FROM users 
+SELECT id, full_name, username, role, email, shift_id, pincode, hash_password, brand_id, phone_number, fcm_token, is_active, created_at, updated_at, deleted_at, branch_id FROM users
 WHERE email = $1 AND deleted_at = 0
+  AND (NULLIF(current_setting('app.branch_id', true), '') IS NULL OR branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid)
 `
 
 func (q *Queries) GetUserByEmail(ctx context.Context, email *string) (User, error) {
@@ -1049,13 +1091,15 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email *string) (User, erro
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
+		&i.BranchID,
 	)
 	return i, err
 }
 
 const getUserByID = `-- name: GetUserByID :one
-SELECT id, full_name, username, role, email, shift_id, pincode, hash_password, brand_id, phone_number, fcm_token, is_active, created_at, updated_at, deleted_at FROM users 
+SELECT id, full_name, username, role, email, shift_id, pincode, hash_password, brand_id, phone_number, fcm_token, is_active, created_at, updated_at, deleted_at, branch_id FROM users 
 WHERE id = $1 AND deleted_at = 0
+  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 `
 
 func (q *Queries) GetUserByID(ctx context.Context, id uuid.UUID) (User, error) {
@@ -1077,13 +1121,15 @@ func (q *Queries) GetUserByID(ctx context.Context, id uuid.UUID) (User, error) {
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
+		&i.BranchID,
 	)
 	return i, err
 }
 
 const getUserByPhoneNumber = `-- name: GetUserByPhoneNumber :one
-SELECT id, full_name, username, role, email, shift_id, pincode, hash_password, brand_id, phone_number, fcm_token, is_active, created_at, updated_at, deleted_at FROM users 
+SELECT id, full_name, username, role, email, shift_id, pincode, hash_password, brand_id, phone_number, fcm_token, is_active, created_at, updated_at, deleted_at, branch_id FROM users
 WHERE phone_number = $1 AND deleted_at = 0
+  AND (NULLIF(current_setting('app.branch_id', true), '') IS NULL OR branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid)
 `
 
 func (q *Queries) GetUserByPhoneNumber(ctx context.Context, phoneNumber *string) (User, error) {
@@ -1105,13 +1151,15 @@ func (q *Queries) GetUserByPhoneNumber(ctx context.Context, phoneNumber *string)
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
+		&i.BranchID,
 	)
 	return i, err
 }
 
 const getUserByPincode = `-- name: GetUserByPincode :one
-SELECT id, full_name, username, role, email, shift_id, pincode, hash_password, brand_id, phone_number, fcm_token, is_active, created_at, updated_at, deleted_at FROM users 
+SELECT id, full_name, username, role, email, shift_id, pincode, hash_password, brand_id, phone_number, fcm_token, is_active, created_at, updated_at, deleted_at, branch_id FROM users
 WHERE pincode = $1 AND deleted_at = 0
+  AND (NULLIF(current_setting('app.branch_id', true), '') IS NULL OR branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid)
 `
 
 func (q *Queries) GetUserByPincode(ctx context.Context, pincode *string) (User, error) {
@@ -1133,12 +1181,13 @@ func (q *Queries) GetUserByPincode(ctx context.Context, pincode *string) (User, 
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
+		&i.BranchID,
 	)
 	return i, err
 }
 
 const getUserByUsername = `-- name: GetUserByUsername :one
-SELECT id, full_name, username, role, email, shift_id, pincode, hash_password, brand_id, phone_number, fcm_token, is_active, created_at, updated_at, deleted_at FROM users 
+SELECT id, full_name, username, role, email, shift_id, pincode, hash_password, brand_id, phone_number, fcm_token, is_active, created_at, updated_at, deleted_at, branch_id FROM users 
 WHERE username = $1 AND deleted_at = 0
 `
 
@@ -1161,13 +1210,14 @@ func (q *Queries) GetUserByUsername(ctx context.Context, username *string) (User
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
+		&i.BranchID,
 	)
 	return i, err
 }
 
 const getUserWithAttendanceStats = `-- name: GetUserWithAttendanceStats :one
 SELECT 
-    u.id, u.full_name, u.username, u.role, u.email, u.shift_id, u.pincode, u.hash_password, u.brand_id, u.phone_number, u.fcm_token, u.is_active, u.created_at, u.updated_at, u.deleted_at,
+    u.id, u.full_name, u.username, u.role, u.email, u.shift_id, u.pincode, u.hash_password, u.brand_id, u.phone_number, u.fcm_token, u.is_active, u.created_at, u.updated_at, u.deleted_at, u.branch_id,
     COUNT(a.id) as total_attendances,
     SUM(a.working_hours) as total_hours_worked,
     AVG(a.working_hours) as avg_hours_per_day,
@@ -1175,6 +1225,7 @@ SELECT
 FROM users u
 LEFT JOIN attendances a ON u.id = a.user_id AND a.deleted_at = 0
 WHERE u.id = $1 AND u.deleted_at = 0
+  AND u.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 GROUP BY u.id
 `
 
@@ -1194,6 +1245,7 @@ type GetUserWithAttendanceStatsRow struct {
 	CreatedAt          pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt          pgtype.Timestamptz `json:"updated_at"`
 	DeletedAt          *int64             `json:"deleted_at"`
+	BranchID           pgtype.UUID        `json:"branch_id"`
 	TotalAttendances   int64              `json:"total_attendances"`
 	TotalHoursWorked   int64              `json:"total_hours_worked"`
 	AvgHoursPerDay     float64            `json:"avg_hours_per_day"`
@@ -1219,6 +1271,7 @@ func (q *Queries) GetUserWithAttendanceStats(ctx context.Context, id uuid.UUID) 
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
+		&i.BranchID,
 		&i.TotalAttendances,
 		&i.TotalHoursWorked,
 		&i.AvgHoursPerDay,
@@ -1236,6 +1289,7 @@ SELECT
     u.email,
     u.pincode,
     u.brand_id,
+    u.branch_id,
     u.phone_number,
     u.created_at,
     u.updated_at,
@@ -1249,6 +1303,7 @@ SELECT
 FROM users u
 LEFT JOIN shifts s ON u.shift_id = s.id AND s.deleted_at = 0
 WHERE u.id = $1 AND u.deleted_at = 0
+  AND u.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 `
 
 type GetUserWithShiftRow struct {
@@ -1259,6 +1314,7 @@ type GetUserWithShiftRow struct {
 	Email            *string            `json:"email"`
 	Pincode          *string            `json:"pincode"`
 	BrandID          pgtype.UUID        `json:"brand_id"`
+	BranchID         pgtype.UUID        `json:"branch_id"`
 	PhoneNumber      *string            `json:"phone_number"`
 	CreatedAt        pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt        pgtype.Timestamptz `json:"updated_at"`
@@ -1282,6 +1338,7 @@ func (q *Queries) GetUserWithShift(ctx context.Context, id uuid.UUID) (GetUserWi
 		&i.Email,
 		&i.Pincode,
 		&i.BrandID,
+		&i.BranchID,
 		&i.PhoneNumber,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -1305,6 +1362,7 @@ SELECT
     u.email,
     u.pincode,
     u.brand_id,
+    u.branch_id,
     u.phone_number,
     u.created_at,
     u.updated_at,
@@ -1322,6 +1380,7 @@ FROM users u
 LEFT JOIN shifts s ON u.shift_id = s.id AND s.deleted_at = 0
 LEFT JOIN branches b ON s.branch_id = b.id AND b.deleted_at = 0
 WHERE u.id = $1 AND u.deleted_at = 0
+  AND u.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 `
 
 type GetUserWithShiftAndBranchRow struct {
@@ -1332,6 +1391,7 @@ type GetUserWithShiftAndBranchRow struct {
 	Email            *string            `json:"email"`
 	Pincode          *string            `json:"pincode"`
 	BrandID          pgtype.UUID        `json:"brand_id"`
+	BranchID         pgtype.UUID        `json:"branch_id"`
 	PhoneNumber      *string            `json:"phone_number"`
 	CreatedAt        pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt        pgtype.Timestamptz `json:"updated_at"`
@@ -1341,7 +1401,7 @@ type GetUserWithShiftAndBranchRow struct {
 	ShiftWorkingDays *string            `json:"shift_working_days"`
 	ShiftOpenTime    *int64             `json:"shift_open_time"`
 	ShiftCloseTime   *int64             `json:"shift_close_time"`
-	BranchID         pgtype.UUID        `json:"branch_id"`
+	BranchID_2       pgtype.UUID        `json:"branch_id_2"`
 	BranchName       *string            `json:"branch_name"`
 	BranchAddress    *string            `json:"branch_address"`
 	BranchPhone      *string            `json:"branch_phone"`
@@ -1358,6 +1418,7 @@ func (q *Queries) GetUserWithShiftAndBranch(ctx context.Context, id uuid.UUID) (
 		&i.Email,
 		&i.Pincode,
 		&i.BrandID,
+		&i.BranchID,
 		&i.PhoneNumber,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -1367,7 +1428,7 @@ func (q *Queries) GetUserWithShiftAndBranch(ctx context.Context, id uuid.UUID) (
 		&i.ShiftWorkingDays,
 		&i.ShiftOpenTime,
 		&i.ShiftCloseTime,
-		&i.BranchID,
+		&i.BranchID_2,
 		&i.BranchName,
 		&i.BranchAddress,
 		&i.BranchPhone,
@@ -1376,8 +1437,9 @@ func (q *Queries) GetUserWithShiftAndBranch(ctx context.Context, id uuid.UUID) (
 }
 
 const getUsersByBrandID = `-- name: GetUsersByBrandID :many
-SELECT id, full_name, username, role, email, shift_id, pincode, hash_password, brand_id, phone_number, fcm_token, is_active, created_at, updated_at, deleted_at FROM users 
+SELECT id, full_name, username, role, email, shift_id, pincode, hash_password, brand_id, phone_number, fcm_token, is_active, created_at, updated_at, deleted_at, branch_id FROM users 
 WHERE brand_id = $1 AND deleted_at = 0
+  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 ORDER BY full_name ASC
 `
 
@@ -1406,6 +1468,7 @@ func (q *Queries) GetUsersByBrandID(ctx context.Context, brandID pgtype.UUID) ([
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.DeletedAt,
+			&i.BranchID,
 		); err != nil {
 			return nil, err
 		}
@@ -1418,8 +1481,9 @@ func (q *Queries) GetUsersByBrandID(ctx context.Context, brandID pgtype.UUID) ([
 }
 
 const getUsersByRole = `-- name: GetUsersByRole :many
-SELECT id, full_name, username, role, email, shift_id, pincode, hash_password, brand_id, phone_number, fcm_token, is_active, created_at, updated_at, deleted_at FROM users 
+SELECT id, full_name, username, role, email, shift_id, pincode, hash_password, brand_id, phone_number, fcm_token, is_active, created_at, updated_at, deleted_at, branch_id FROM users 
 WHERE role = $1 AND deleted_at = 0
+  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 ORDER BY full_name ASC
 `
 
@@ -1448,6 +1512,7 @@ func (q *Queries) GetUsersByRole(ctx context.Context, role string) ([]User, erro
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.DeletedAt,
+			&i.BranchID,
 		); err != nil {
 			return nil, err
 		}
@@ -1460,8 +1525,9 @@ func (q *Queries) GetUsersByRole(ctx context.Context, role string) ([]User, erro
 }
 
 const getUsersByRolePaginated = `-- name: GetUsersByRolePaginated :many
-SELECT id, full_name, username, role, email, shift_id, pincode, hash_password, brand_id, phone_number, fcm_token, is_active, created_at, updated_at, deleted_at FROM users 
+SELECT id, full_name, username, role, email, shift_id, pincode, hash_password, brand_id, phone_number, fcm_token, is_active, created_at, updated_at, deleted_at, branch_id FROM users 
 WHERE role = $1 AND deleted_at = 0
+  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 ORDER BY full_name ASC
 LIMIT $2 OFFSET $3
 `
@@ -1497,6 +1563,7 @@ func (q *Queries) GetUsersByRolePaginated(ctx context.Context, arg GetUsersByRol
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.DeletedAt,
+			&i.BranchID,
 		); err != nil {
 			return nil, err
 		}
@@ -1509,9 +1576,10 @@ func (q *Queries) GetUsersByRolePaginated(ctx context.Context, arg GetUsersByRol
 }
 
 const getUsersByShiftID = `-- name: GetUsersByShiftID :many
-SELECT u.id, u.full_name, u.username, u.role, u.email, u.shift_id, u.pincode, u.hash_password, u.brand_id, u.phone_number, u.fcm_token, u.is_active, u.created_at, u.updated_at, u.deleted_at
+SELECT u.id, u.full_name, u.username, u.role, u.email, u.shift_id, u.pincode, u.hash_password, u.brand_id, u.phone_number, u.fcm_token, u.is_active, u.created_at, u.updated_at, u.deleted_at, u.branch_id
 FROM users u
 WHERE u.shift_id = $1 AND u.deleted_at = 0
+  AND u.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 ORDER BY u.full_name ASC
 `
 
@@ -1540,6 +1608,7 @@ func (q *Queries) GetUsersByShiftID(ctx context.Context, shiftID pgtype.UUID) ([
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.DeletedAt,
+			&i.BranchID,
 		); err != nil {
 			return nil, err
 		}
@@ -1554,7 +1623,8 @@ func (q *Queries) GetUsersByShiftID(ctx context.Context, shiftID pgtype.UUID) ([
 const restoreShift = `-- name: RestoreShift :one
 UPDATE shifts SET
     deleted_at = 0
-WHERE id = $1 AND deleted_at != 0
+WHERE shifts.id = $1 AND deleted_at != 0
+  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 RETURNING id, name, role, working_days, open_time, close_time, branch_id, is_active, created_at, updated_at, deleted_at
 `
 
@@ -1581,7 +1651,8 @@ const restoreUser = `-- name: RestoreUser :one
 UPDATE users SET
     deleted_at = 0
 WHERE id = $1 AND deleted_at != 0
-RETURNING id, full_name, username, role, email, shift_id, pincode, hash_password, brand_id, phone_number, fcm_token, is_active, created_at, updated_at, deleted_at
+  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+RETURNING id, full_name, username, role, email, shift_id, pincode, hash_password, brand_id, phone_number, fcm_token, is_active, created_at, updated_at, deleted_at, branch_id
 `
 
 func (q *Queries) RestoreUser(ctx context.Context, id uuid.UUID) (User, error) {
@@ -1603,13 +1674,15 @@ func (q *Queries) RestoreUser(ctx context.Context, id uuid.UUID) (User, error) {
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
+		&i.BranchID,
 	)
 	return i, err
 }
 
 const searchUsers = `-- name: SearchUsers :many
-SELECT id, full_name, username, role, email, shift_id, pincode, hash_password, brand_id, phone_number, fcm_token, is_active, created_at, updated_at, deleted_at FROM users 
+SELECT id, full_name, username, role, email, shift_id, pincode, hash_password, brand_id, phone_number, fcm_token, is_active, created_at, updated_at, deleted_at, branch_id FROM users 
 WHERE deleted_at = 0
+  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 AND (
     full_name ILIKE '%' || $1 || '%' OR
     username ILIKE '%' || $1 || '%' OR
@@ -1651,6 +1724,7 @@ func (q *Queries) SearchUsers(ctx context.Context, arg SearchUsersParams) ([]Use
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.DeletedAt,
+			&i.BranchID,
 		); err != nil {
 			return nil, err
 		}
@@ -1663,8 +1737,9 @@ func (q *Queries) SearchUsers(ctx context.Context, arg SearchUsersParams) ([]Use
 }
 
 const searchUsersByRole = `-- name: SearchUsersByRole :many
-SELECT id, full_name, username, role, email, shift_id, pincode, hash_password, brand_id, phone_number, fcm_token, is_active, created_at, updated_at, deleted_at FROM users 
+SELECT id, full_name, username, role, email, shift_id, pincode, hash_password, brand_id, phone_number, fcm_token, is_active, created_at, updated_at, deleted_at, branch_id FROM users 
 WHERE role = $1 AND deleted_at = 0
+  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 AND (
     full_name ILIKE '%' || $2 || '%' OR
     username ILIKE '%' || $2 || '%' OR
@@ -1711,6 +1786,7 @@ func (q *Queries) SearchUsersByRole(ctx context.Context, arg SearchUsersByRolePa
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.DeletedAt,
+			&i.BranchID,
 		); err != nil {
 			return nil, err
 		}
@@ -1726,7 +1802,8 @@ const softDeleteAttendance = `-- name: SoftDeleteAttendance :one
 UPDATE attendances SET
     deleted_at = EXTRACT(EPOCH FROM CURRENT_TIMESTAMP)::bigint
 WHERE id = $1 AND deleted_at = 0
-RETURNING id, user_id, open_date, close_date, difference, working_hours, created_at, updated_at, deleted_at
+  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+RETURNING id, user_id, open_date, close_date, difference, working_hours, created_at, updated_at, deleted_at, branch_id
 `
 
 func (q *Queries) SoftDeleteAttendance(ctx context.Context, id uuid.UUID) (Attendance, error) {
@@ -1742,6 +1819,7 @@ func (q *Queries) SoftDeleteAttendance(ctx context.Context, id uuid.UUID) (Atten
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
+		&i.BranchID,
 	)
 	return i, err
 }
@@ -1749,7 +1827,8 @@ func (q *Queries) SoftDeleteAttendance(ctx context.Context, id uuid.UUID) (Atten
 const softDeleteShift = `-- name: SoftDeleteShift :one
 UPDATE shifts SET
     deleted_at = EXTRACT(EPOCH FROM CURRENT_TIMESTAMP)::bigint
-WHERE id = $1 AND deleted_at = 0
+WHERE shifts.id = $1 AND deleted_at = 0
+  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 RETURNING id, name, role, working_days, open_time, close_time, branch_id, is_active, created_at, updated_at, deleted_at
 `
 
@@ -1775,8 +1854,9 @@ func (q *Queries) SoftDeleteShift(ctx context.Context, id uuid.UUID) (Shift, err
 const softDeleteUser = `-- name: SoftDeleteUser :one
 UPDATE users SET
     deleted_at = EXTRACT(EPOCH FROM CURRENT_TIMESTAMP)::bigint
-WHERE id = $1 AND deleted_at = 0
-RETURNING id, full_name, username, role, email, shift_id, pincode, hash_password, brand_id, phone_number, fcm_token, is_active, created_at, updated_at, deleted_at
+WHERE users.id = $1 AND deleted_at = 0
+  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+RETURNING id, full_name, username, role, email, shift_id, pincode, hash_password, brand_id, phone_number, fcm_token, is_active, created_at, updated_at, deleted_at, branch_id
 `
 
 func (q *Queries) SoftDeleteUser(ctx context.Context, id uuid.UUID) (User, error) {
@@ -1798,6 +1878,7 @@ func (q *Queries) SoftDeleteUser(ctx context.Context, id uuid.UUID) (User, error
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
+		&i.BranchID,
 	)
 	return i, err
 }
@@ -1809,7 +1890,8 @@ UPDATE attendances SET
     difference = COALESCE($4, difference),
     working_hours = COALESCE($5, working_hours)
 WHERE id = $1 AND deleted_at = 0
-RETURNING id, user_id, open_date, close_date, difference, working_hours, created_at, updated_at, deleted_at
+  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+RETURNING id, user_id, open_date, close_date, difference, working_hours, created_at, updated_at, deleted_at, branch_id
 `
 
 type UpdateAttendanceParams struct {
@@ -1839,6 +1921,7 @@ func (q *Queries) UpdateAttendance(ctx context.Context, arg UpdateAttendancePara
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
+		&i.BranchID,
 	)
 	return i, err
 }
@@ -1851,7 +1934,8 @@ UPDATE shifts SET
     open_time = COALESCE($5, open_time),
     close_time = COALESCE($6, close_time),
     branch_id = COALESCE($7, branch_id)
-WHERE id = $1 AND deleted_at = 0
+WHERE shifts.id = $1 AND deleted_at = 0
+  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 RETURNING id, name, role, working_days, open_time, close_time, branch_id, is_active, created_at, updated_at, deleted_at
 `
 
@@ -1903,9 +1987,14 @@ UPDATE users SET
     hash_password = COALESCE($8, hash_password),
     brand_id = COALESCE($9, brand_id),
     phone_number = COALESCE($10, phone_number),
-    is_active = COALESCE($11, is_active)
-WHERE id = $1 AND deleted_at = 0
-RETURNING id, full_name, username, role, email, shift_id, pincode, hash_password, brand_id, phone_number, fcm_token, is_active, created_at, updated_at, deleted_at
+    is_active = COALESCE($11, is_active),
+    branch_id = COALESCE(
+        (SELECT branch_id FROM shifts WHERE id = COALESCE($6, shift_id)),
+        branch_id
+    )
+WHERE users.id = $1 AND deleted_at = 0
+  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+RETURNING id, full_name, username, role, email, shift_id, pincode, hash_password, brand_id, phone_number, fcm_token, is_active, created_at, updated_at, deleted_at, branch_id
 `
 
 type UpdateUserParams struct {
@@ -1953,6 +2042,7 @@ func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (User, e
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
+		&i.BranchID,
 	)
 	return i, err
 }
@@ -1960,8 +2050,9 @@ func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (User, e
 const updateUserFCMToken = `-- name: UpdateUserFCMToken :one
 UPDATE users SET
     fcm_token = $2
-WHERE id = $1 AND deleted_at = 0
-RETURNING id, full_name, username, role, email, shift_id, pincode, hash_password, brand_id, phone_number, fcm_token, is_active, created_at, updated_at, deleted_at
+WHERE users.id = $1 AND deleted_at = 0
+  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+RETURNING id, full_name, username, role, email, shift_id, pincode, hash_password, brand_id, phone_number, fcm_token, is_active, created_at, updated_at, deleted_at, branch_id
 `
 
 type UpdateUserFCMTokenParams struct {
@@ -1988,6 +2079,7 @@ func (q *Queries) UpdateUserFCMToken(ctx context.Context, arg UpdateUserFCMToken
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
+		&i.BranchID,
 	)
 	return i, err
 }
@@ -1995,8 +2087,9 @@ func (q *Queries) UpdateUserFCMToken(ctx context.Context, arg UpdateUserFCMToken
 const updateUserIsActive = `-- name: UpdateUserIsActive :one
 UPDATE users SET
     is_active = $2
-WHERE id = $1 AND deleted_at = 0
-RETURNING id, full_name, username, role, email, shift_id, pincode, hash_password, brand_id, phone_number, fcm_token, is_active, created_at, updated_at, deleted_at
+WHERE users.id = $1 AND deleted_at = 0
+  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+RETURNING id, full_name, username, role, email, shift_id, pincode, hash_password, brand_id, phone_number, fcm_token, is_active, created_at, updated_at, deleted_at, branch_id
 `
 
 type UpdateUserIsActiveParams struct {
@@ -2023,6 +2116,7 @@ func (q *Queries) UpdateUserIsActive(ctx context.Context, arg UpdateUserIsActive
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
+		&i.BranchID,
 	)
 	return i, err
 }
@@ -2030,8 +2124,9 @@ func (q *Queries) UpdateUserIsActive(ctx context.Context, arg UpdateUserIsActive
 const updateUserPassword = `-- name: UpdateUserPassword :one
 UPDATE users SET
     hash_password = $2
-WHERE id = $1 AND deleted_at = 0
-RETURNING id, full_name, username, role, email, shift_id, pincode, hash_password, brand_id, phone_number, fcm_token, is_active, created_at, updated_at, deleted_at
+WHERE users.id = $1 AND deleted_at = 0
+  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+RETURNING id, full_name, username, role, email, shift_id, pincode, hash_password, brand_id, phone_number, fcm_token, is_active, created_at, updated_at, deleted_at, branch_id
 `
 
 type UpdateUserPasswordParams struct {
@@ -2058,15 +2153,18 @@ func (q *Queries) UpdateUserPassword(ctx context.Context, arg UpdateUserPassword
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
+		&i.BranchID,
 	)
 	return i, err
 }
 
 const updateUserShift = `-- name: UpdateUserShift :one
 UPDATE users SET
-    shift_id = $2
-WHERE id = $1 AND deleted_at = 0
-RETURNING id, full_name, username, role, email, shift_id, pincode, hash_password, brand_id, phone_number, fcm_token, is_active, created_at, updated_at, deleted_at
+    shift_id = $2,
+    branch_id = (SELECT branch_id FROM shifts WHERE id = $2)
+WHERE users.id = $1 AND deleted_at = 0
+  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+RETURNING id, full_name, username, role, email, shift_id, pincode, hash_password, brand_id, phone_number, fcm_token, is_active, created_at, updated_at, deleted_at, branch_id
 `
 
 type UpdateUserShiftParams struct {
@@ -2093,6 +2191,7 @@ func (q *Queries) UpdateUserShift(ctx context.Context, arg UpdateUserShiftParams
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
+		&i.BranchID,
 	)
 	return i, err
 }

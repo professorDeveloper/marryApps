@@ -1108,16 +1108,16 @@ func (h *Handler) RestoreOrder(c echo.Context) error {
 
 // ==================== ORDER ITEMS ====================
 
-// CreateOrderItem creates a new order item
-// @Summary Create order item
-// @Description Create a new order item. price can be omitted; it will be auto-filled from goods.price.
+// CreateOrderItem creates order items in batch
+// @Summary Create order items
+// @Description Create one or more order items for the same order. price can be omitted; it will be auto-filled from goods.price.
 // @Tags Order Items
 // @Accept json
 // @Produce json
 // @Security BearerAuth
 // @Param lang query string false "Language (uz, ru, en)" default(uz)
-// @Param request body model.CreateOrderItemRequest true "Create order item request"
-// @Success 201 {object} model.OrderItemResponse
+// @Param request body model.CreateOrderItemRequest true "Create order items request"
+// @Success 201 {array} model.OrderItemResponse
 // @Failure 400 {object} model.ErrorResponse
 // @Failure 401 {object} model.ErrorResponse
 // @Failure 500 {object} model.ErrorResponse
@@ -1140,20 +1140,6 @@ func (h *Handler) CreateOrderItem(c echo.Context) error {
 			http.StatusBadRequest,
 		))
 	}
-	if req.GoodID == "" {
-		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
-			"good_id is required",
-			"missing required field: good_id",
-			http.StatusBadRequest,
-		))
-	}
-	if req.Quantity <= 0 {
-		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
-			"quantity must be greater than 0",
-			"quantity must be greater than 0",
-			http.StatusBadRequest,
-		))
-	}
 	if _, err := uuid.Parse(req.OrderID); err != nil {
 		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
 			"invalid order_id format",
@@ -1161,27 +1147,27 @@ func (h *Handler) CreateOrderItem(c echo.Context) error {
 			http.StatusBadRequest,
 		))
 	}
-	if _, err := uuid.Parse(req.GoodID); err != nil {
+	if len(req.Items) == 0 {
 		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
-			"invalid good_id format",
-			err.Error(),
+			"at least one item is required",
+			"missing required field: items",
 			http.StatusBadRequest,
 		))
 	}
 
-	item, err := h.service.Order().CreateOrderItem(c.Request().Context(), req)
+	items, err := h.service.Order().CreateOrderItems(c.Request().Context(), req)
 	if err != nil {
-		log.Printf("CreateOrderItem failed: %v", err)
+		log.Printf("CreateOrderItems failed: %v", err)
 		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse(
-			"failed to create order item",
+			"failed to create order items",
 			err.Error(),
 			http.StatusInternalServerError,
 		))
 	}
 
 	return c.JSON(http.StatusCreated, model.NewSuccessResponse(
-		"Order item created successfully",
-		item,
+		"Order items created successfully",
+		items,
 		http.StatusCreated,
 	))
 }

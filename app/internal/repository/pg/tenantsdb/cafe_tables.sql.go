@@ -13,7 +13,13 @@ import (
 )
 
 const countCafeTables = `-- name: CountCafeTables :one
-SELECT COUNT(*) FROM cafe_tables WHERE deleted_at = 0
+SELECT COUNT(*) FROM cafe_tables
+WHERE cafe_tables.deleted_at = 0
+  AND EXISTS (
+    SELECT 1 FROM halls h
+    WHERE h.id = cafe_tables.hall_id
+      AND h.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  )
 `
 
 func (q *Queries) CountCafeTables(ctx context.Context) (int64, error) {
@@ -24,7 +30,13 @@ func (q *Queries) CountCafeTables(ctx context.Context) (int64, error) {
 }
 
 const countCafeTablesByHall = `-- name: CountCafeTablesByHall :one
-SELECT COUNT(*) FROM cafe_tables WHERE hall_id = $1 AND deleted_at = 0
+SELECT COUNT(*) FROM cafe_tables
+WHERE cafe_tables.hall_id = $1 AND cafe_tables.deleted_at = 0
+  AND EXISTS (
+    SELECT 1 FROM halls h
+    WHERE h.id = cafe_tables.hall_id
+      AND h.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  )
 `
 
 func (q *Queries) CountCafeTablesByHall(ctx context.Context, hallID uuid.UUID) (int64, error) {
@@ -35,7 +47,13 @@ func (q *Queries) CountCafeTablesByHall(ctx context.Context, hallID uuid.UUID) (
 }
 
 const countCafeTablesByHallAndStatus = `-- name: CountCafeTablesByHallAndStatus :one
-SELECT COUNT(*) FROM cafe_tables WHERE hall_id = $1 AND status = $2 AND deleted_at = 0
+SELECT COUNT(*) FROM cafe_tables
+WHERE cafe_tables.hall_id = $1 AND cafe_tables.status = $2 AND cafe_tables.deleted_at = 0
+  AND EXISTS (
+    SELECT 1 FROM halls h
+    WHERE h.id = cafe_tables.hall_id
+      AND h.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  )
 `
 
 type CountCafeTablesByHallAndStatusParams struct {
@@ -51,7 +69,13 @@ func (q *Queries) CountCafeTablesByHallAndStatus(ctx context.Context, arg CountC
 }
 
 const countCafeTablesByStatus = `-- name: CountCafeTablesByStatus :one
-SELECT COUNT(*) FROM cafe_tables WHERE status = $1 AND deleted_at = 0
+SELECT COUNT(*) FROM cafe_tables
+WHERE cafe_tables.status = $1 AND cafe_tables.deleted_at = 0
+  AND EXISTS (
+    SELECT 1 FROM halls h
+    WHERE h.id = cafe_tables.hall_id
+      AND h.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  )
 `
 
 func (q *Queries) CountCafeTablesByStatus(ctx context.Context, status NullTableStatus) (int64, error) {
@@ -115,7 +139,12 @@ func (q *Queries) CreateCafeTable(ctx context.Context, arg CreateCafeTableParams
 const deleteCafeTable = `-- name: DeleteCafeTable :exec
 UPDATE cafe_tables
 SET deleted_at = EXTRACT(EPOCH FROM NOW())::BIGINT
-WHERE id = $1 AND deleted_at = 0
+WHERE cafe_tables.id = $1 AND cafe_tables.deleted_at = 0
+  AND EXISTS (
+    SELECT 1 FROM halls h
+    WHERE h.id = cafe_tables.hall_id
+      AND h.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  )
 `
 
 func (q *Queries) DeleteCafeTable(ctx context.Context, id uuid.UUID) error {
@@ -126,7 +155,12 @@ func (q *Queries) DeleteCafeTable(ctx context.Context, id uuid.UUID) error {
 const getAllCafeTables = `-- name: GetAllCafeTables :many
 SELECT id, hall_id, number, capacity, status, created_at, updated_at, deleted_at, pos_x, pos_y, width, height, rotation
 FROM cafe_tables
-WHERE deleted_at = 0
+WHERE cafe_tables.deleted_at = 0
+  AND EXISTS (
+    SELECT 1 FROM halls h
+    WHERE h.id = cafe_tables.hall_id
+      AND h.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  )
 ORDER BY hall_id ASC, number ASC
 LIMIT $1 OFFSET $2
 `
@@ -175,7 +209,12 @@ SELECT id, hall_id, number, capacity, status, created_at, updated_at, deleted_at
 FROM cafe_tables
 WHERE capacity >= $1 
 AND status = 'free' 
-AND deleted_at = 0
+AND cafe_tables.deleted_at = 0
+AND EXISTS (
+  SELECT 1 FROM halls h
+  WHERE h.id = cafe_tables.hall_id
+    AND h.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+)
 ORDER BY capacity ASC, number ASC
 LIMIT $2 OFFSET $3
 `
@@ -225,7 +264,12 @@ SELECT id, hall_id, number, capacity, status, created_at, updated_at, deleted_at
 FROM cafe_tables
 WHERE hall_id = $1 
 AND status = 'free' 
-AND deleted_at = 0
+AND cafe_tables.deleted_at = 0
+AND EXISTS (
+  SELECT 1 FROM halls h
+  WHERE h.id = cafe_tables.hall_id
+    AND h.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+)
 ORDER BY number ASC
 `
 
@@ -269,7 +313,12 @@ FROM cafe_tables
 WHERE hall_id = $1 
 AND capacity >= $2 
 AND status = 'free' 
-AND deleted_at = 0
+AND cafe_tables.deleted_at = 0
+AND EXISTS (
+  SELECT 1 FROM halls h
+  WHERE h.id = cafe_tables.hall_id
+    AND h.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+)
 ORDER BY capacity ASC, number ASC
 `
 
@@ -315,7 +364,12 @@ func (q *Queries) GetAvailableTablesByHallAndCapacity(ctx context.Context, arg G
 const getCafeTableByID = `-- name: GetCafeTableByID :one
 SELECT id, hall_id, number, capacity, status, created_at, updated_at, deleted_at, pos_x, pos_y, width, height, rotation
 FROM cafe_tables
-WHERE id = $1 AND deleted_at = 0
+WHERE cafe_tables.id = $1 AND cafe_tables.deleted_at = 0
+  AND EXISTS (
+    SELECT 1 FROM halls h
+    WHERE h.id = cafe_tables.hall_id
+      AND h.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  )
 `
 
 func (q *Queries) GetCafeTableByID(ctx context.Context, id uuid.UUID) (CafeTable, error) {
@@ -342,7 +396,12 @@ func (q *Queries) GetCafeTableByID(ctx context.Context, id uuid.UUID) (CafeTable
 const getCafeTableByNumber = `-- name: GetCafeTableByNumber :one
 SELECT id, hall_id, number, capacity, status, created_at, updated_at, deleted_at, pos_x, pos_y, width, height, rotation
 FROM cafe_tables
-WHERE hall_id = $1 AND number = $2 AND deleted_at = 0
+WHERE cafe_tables.hall_id = $1 AND cafe_tables.number = $2 AND cafe_tables.deleted_at = 0
+  AND EXISTS (
+    SELECT 1 FROM halls h
+    WHERE h.id = cafe_tables.hall_id
+      AND h.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  )
 `
 
 type GetCafeTableByNumberParams struct {
@@ -392,6 +451,7 @@ FROM cafe_tables ct
 LEFT JOIN halls h ON ct.hall_id = h.id AND h.deleted_at = 0
 LEFT JOIN branches b ON h.branch_id = b.id AND b.deleted_at = 0
 WHERE ct.id = $1 AND ct.deleted_at = 0
+  AND h.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 `
 
 type GetCafeTableWithHallRow struct {
@@ -438,7 +498,12 @@ func (q *Queries) GetCafeTableWithHall(ctx context.Context, id uuid.UUID) (GetCa
 const getCafeTablesByCapacity = `-- name: GetCafeTablesByCapacity :many
 SELECT id, hall_id, number, capacity, status, created_at, updated_at, deleted_at, pos_x, pos_y, width, height, rotation
 FROM cafe_tables
-WHERE capacity >= $1 AND deleted_at = 0
+WHERE cafe_tables.capacity >= $1 AND cafe_tables.deleted_at = 0
+  AND EXISTS (
+    SELECT 1 FROM halls h
+    WHERE h.id = cafe_tables.hall_id
+      AND h.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  )
 ORDER BY capacity ASC, number ASC
 LIMIT $2 OFFSET $3
 `
@@ -486,7 +551,12 @@ func (q *Queries) GetCafeTablesByCapacity(ctx context.Context, arg GetCafeTables
 const getCafeTablesByHallAndStatus = `-- name: GetCafeTablesByHallAndStatus :many
 SELECT id, hall_id, number, capacity, status, created_at, updated_at, deleted_at, pos_x, pos_y, width, height, rotation
 FROM cafe_tables
-WHERE hall_id = $1 AND status = $2 AND deleted_at = 0
+WHERE cafe_tables.hall_id = $1 AND cafe_tables.status = $2 AND cafe_tables.deleted_at = 0
+  AND EXISTS (
+    SELECT 1 FROM halls h
+    WHERE h.id = cafe_tables.hall_id
+      AND h.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  )
 ORDER BY number ASC
 `
 
@@ -532,7 +602,12 @@ func (q *Queries) GetCafeTablesByHallAndStatus(ctx context.Context, arg GetCafeT
 const getCafeTablesByHallID = `-- name: GetCafeTablesByHallID :many
 SELECT id, hall_id, number, capacity, status, created_at, updated_at, deleted_at, pos_x, pos_y, width, height, rotation
 FROM cafe_tables
-WHERE hall_id = $1 AND deleted_at = 0
+WHERE cafe_tables.hall_id = $1 AND cafe_tables.deleted_at = 0
+  AND EXISTS (
+    SELECT 1 FROM halls h
+    WHERE h.id = cafe_tables.hall_id
+      AND h.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  )
 ORDER BY number ASC
 `
 
@@ -573,7 +648,12 @@ func (q *Queries) GetCafeTablesByHallID(ctx context.Context, hallID uuid.UUID) (
 const getCafeTablesByStatus = `-- name: GetCafeTablesByStatus :many
 SELECT id, hall_id, number, capacity, status, created_at, updated_at, deleted_at, pos_x, pos_y, width, height, rotation
 FROM cafe_tables
-WHERE status = $1 AND deleted_at = 0
+WHERE cafe_tables.status = $1 AND cafe_tables.deleted_at = 0
+  AND EXISTS (
+    SELECT 1 FROM halls h
+    WHERE h.id = cafe_tables.hall_id
+      AND h.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  )
 ORDER BY hall_id ASC, number ASC
 LIMIT $2 OFFSET $3
 `
@@ -628,7 +708,12 @@ SELECT
     SUM(capacity) as total_capacity,
     SUM(CASE WHEN status = 'free' THEN capacity ELSE 0 END) as available_seats
 FROM cafe_tables
-WHERE deleted_at = 0
+WHERE cafe_tables.deleted_at = 0
+  AND EXISTS (
+    SELECT 1 FROM halls h
+    WHERE h.id = cafe_tables.hall_id
+      AND h.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  )
 `
 
 type GetTableOccupancyStatsRow struct {
@@ -659,7 +744,12 @@ func (q *Queries) GetTableOccupancyStats(ctx context.Context) (GetTableOccupancy
 const restoreCafeTable = `-- name: RestoreCafeTable :exec
 UPDATE cafe_tables
 SET deleted_at = 0
-WHERE id = $1 AND deleted_at != 0
+WHERE cafe_tables.id = $1 AND cafe_tables.deleted_at != 0
+  AND EXISTS (
+    SELECT 1 FROM halls h
+    WHERE h.id = cafe_tables.hall_id
+      AND h.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  )
 `
 
 func (q *Queries) RestoreCafeTable(ctx context.Context, id uuid.UUID) error {
@@ -671,7 +761,12 @@ const setTableBusy = `-- name: SetTableBusy :one
 UPDATE cafe_tables
 SET status = 'busy',
     updated_at = NOW()
-WHERE id = $1 AND deleted_at = 0
+WHERE cafe_tables.id = $1 AND cafe_tables.deleted_at = 0
+  AND EXISTS (
+    SELECT 1 FROM halls h
+    WHERE h.id = cafe_tables.hall_id
+      AND h.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  )
 RETURNING id, hall_id, number, capacity, status, created_at, updated_at, deleted_at, pos_x, pos_y, width, height, rotation
 `
 
@@ -700,7 +795,12 @@ const setTableFree = `-- name: SetTableFree :one
 UPDATE cafe_tables
 SET status = 'free',
     updated_at = NOW()
-WHERE id = $1 AND deleted_at = 0
+WHERE cafe_tables.id = $1 AND cafe_tables.deleted_at = 0
+  AND EXISTS (
+    SELECT 1 FROM halls h
+    WHERE h.id = cafe_tables.hall_id
+      AND h.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  )
 RETURNING id, hall_id, number, capacity, status, created_at, updated_at, deleted_at, pos_x, pos_y, width, height, rotation
 `
 
@@ -737,7 +837,12 @@ SET hall_id = COALESCE($2, hall_id),
     height = COALESCE($9, height),
     rotation = COALESCE($10, rotation),
     updated_at = NOW()
-WHERE id = $1 AND deleted_at = 0
+WHERE cafe_tables.id = $1 AND cafe_tables.deleted_at = 0
+  AND EXISTS (
+    SELECT 1 FROM halls h
+    WHERE h.id = cafe_tables.hall_id
+      AND h.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  )
 RETURNING id, hall_id, number, capacity, status, created_at, updated_at, deleted_at, pos_x, pos_y, width, height, rotation
 `
 
@@ -790,7 +895,12 @@ const updateCafeTableStatus = `-- name: UpdateCafeTableStatus :one
 UPDATE cafe_tables
 SET status = $2,
     updated_at = NOW()
-WHERE id = $1 AND deleted_at = 0
+WHERE cafe_tables.id = $1 AND cafe_tables.deleted_at = 0
+  AND EXISTS (
+    SELECT 1 FROM halls h
+    WHERE h.id = cafe_tables.hall_id
+      AND h.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  )
 RETURNING id, hall_id, number, capacity, status, created_at, updated_at, deleted_at, pos_x, pos_y, width, height, rotation
 `
 

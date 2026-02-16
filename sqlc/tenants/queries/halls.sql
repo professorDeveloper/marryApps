@@ -6,12 +6,14 @@ RETURNING id, branch_id, name, name_i18n, created_at, updated_at, deleted_at, wi
 -- name: GetHallByID :one
 SELECT id, branch_id, name, name_i18n, created_at, updated_at, deleted_at, width, height
 FROM halls
-WHERE id = $1 AND deleted_at = 0;
+WHERE id = $1 AND deleted_at = 0
+  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid;
 
 -- name: GetAllHalls :many
 SELECT id, branch_id, name, name_i18n, created_at, updated_at, deleted_at, width, height
 FROM halls
 WHERE deleted_at = 0
+  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 ORDER BY created_at DESC
 LIMIT $1 OFFSET $2;
 
@@ -19,6 +21,7 @@ LIMIT $1 OFFSET $2;
 SELECT id, branch_id, name, name_i18n, created_at, updated_at, deleted_at, width, height
 FROM halls
 WHERE branch_id = $1 AND deleted_at = 0
+  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 ORDER BY created_at DESC
 LIMIT $2 OFFSET $3;
 
@@ -31,30 +34,38 @@ SET branch_id = COALESCE($2, branch_id),
     height = COALESCE($6, height),
     updated_at = NOW()
 WHERE id = $1 AND deleted_at = 0
+  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 RETURNING id, branch_id, name, name_i18n, created_at, updated_at, deleted_at, width, height;
 
 -- name: DeleteHall :exec
 UPDATE halls
 SET deleted_at = EXTRACT(EPOCH FROM NOW())::BIGINT
-WHERE id = $1 AND deleted_at = 0;
+WHERE id = $1 AND deleted_at = 0
+  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid;
 
 -- name: RestoreHall :exec
 UPDATE halls
 SET deleted_at = 0
-WHERE id = $1 AND deleted_at != 0;
+WHERE id = $1 AND deleted_at != 0
+  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid;
 
 -- name: SearchHalls :many
 SELECT id, branch_id, name, name_i18n, created_at, updated_at, deleted_at, width, height
 FROM halls
 WHERE deleted_at = 0 AND name ILIKE '%' || $1 || '%'
+  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 ORDER BY created_at DESC
 LIMIT $2 OFFSET $3;
 
 -- name: CountHalls :one
-SELECT COUNT(*) FROM halls WHERE deleted_at = 0;
+SELECT COUNT(*) FROM halls
+WHERE deleted_at = 0
+  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid;
 
 -- name: CountHallsByBranch :one
-SELECT COUNT(*) FROM halls WHERE branch_id = $1 AND deleted_at = 0;
+SELECT COUNT(*) FROM halls
+WHERE branch_id = $1 AND deleted_at = 0
+  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid;
 
 
 -- name: GetHallWithBranch :one
@@ -71,7 +82,8 @@ SELECT
     b.address as branch_address
 FROM halls h
 LEFT JOIN branches b ON h.branch_id = b.id AND b.deleted_at = 0
-WHERE h.id = $1 AND h.deleted_at = 0;
+WHERE h.id = $1 AND h.deleted_at = 0
+  AND h.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid;
 
 -- name: GetAllHallsWithLanguage :many
 SELECT 
@@ -92,6 +104,7 @@ SELECT
 FROM halls h
 LEFT JOIN translations t ON h.name_i18n = t.id AND t.deleted_at = 0
 WHERE h.deleted_at = 0
+  AND h.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 ORDER BY h.created_at DESC
 LIMIT $2 OFFSET $3;
 
@@ -114,6 +127,6 @@ SELECT
 FROM halls h
 LEFT JOIN translations t ON h.name_i18n = t.id AND t.deleted_at = 0
 WHERE h.branch_id = $1 AND h.deleted_at = 0
+  AND h.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 ORDER BY h.created_at DESC
 LIMIT $3 OFFSET $4;
-

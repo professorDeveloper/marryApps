@@ -16,6 +16,7 @@ const countBranches = `-- name: CountBranches :one
 SELECT COUNT(*) as count
 FROM branches
 WHERE deleted_at = 0
+  AND (NULLIF(current_setting('app.branch_id', true), '') IS NULL OR id = NULLIF(current_setting('app.branch_id', true), '')::uuid)
 `
 
 // CountBranches counts total active branches
@@ -55,9 +56,20 @@ type CreateBranchParams struct {
 	Phone    *string     `json:"phone"`
 }
 
+type CreateBranchRow struct {
+	ID        uuid.UUID          `json:"id"`
+	Name      string             `json:"name"`
+	NameI18n  pgtype.UUID        `json:"name_i18n"`
+	Address   *string            `json:"address"`
+	Phone     *string            `json:"phone"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
+	DeletedAt *int64             `json:"deleted_at"`
+}
+
 // Branches Management Queries
 // CreateBranch creates a new branch
-func (q *Queries) CreateBranch(ctx context.Context, arg CreateBranchParams) (Branch, error) {
+func (q *Queries) CreateBranch(ctx context.Context, arg CreateBranchParams) (CreateBranchRow, error) {
 	row := q.db.QueryRow(ctx, createBranch,
 		arg.ID,
 		arg.Name,
@@ -65,7 +77,7 @@ func (q *Queries) CreateBranch(ctx context.Context, arg CreateBranchParams) (Bra
 		arg.Address,
 		arg.Phone,
 	)
-	var i Branch
+	var i CreateBranchRow
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
@@ -143,6 +155,7 @@ const getAllBranches = `-- name: GetAllBranches :many
 SELECT id, name, name_i18n, address, phone, created_at, updated_at, deleted_at
 FROM branches
 WHERE deleted_at = 0
+  AND (NULLIF(current_setting('app.branch_id', true), '') IS NULL OR id = NULLIF(current_setting('app.branch_id', true), '')::uuid)
 ORDER BY created_at DESC
 LIMIT $1 OFFSET $2
 `
@@ -152,16 +165,27 @@ type GetAllBranchesParams struct {
 	Offset int32 `json:"offset"`
 }
 
+type GetAllBranchesRow struct {
+	ID        uuid.UUID          `json:"id"`
+	Name      string             `json:"name"`
+	NameI18n  pgtype.UUID        `json:"name_i18n"`
+	Address   *string            `json:"address"`
+	Phone     *string            `json:"phone"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
+	DeletedAt *int64             `json:"deleted_at"`
+}
+
 // GetAllBranches retrieves all branches (with pagination)
-func (q *Queries) GetAllBranches(ctx context.Context, arg GetAllBranchesParams) ([]Branch, error) {
+func (q *Queries) GetAllBranches(ctx context.Context, arg GetAllBranchesParams) ([]GetAllBranchesRow, error) {
 	rows, err := q.db.Query(ctx, getAllBranches, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []Branch
+	var items []GetAllBranchesRow
 	for rows.Next() {
-		var i Branch
+		var i GetAllBranchesRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.Name,
@@ -200,6 +224,7 @@ SELECT
 FROM branches b
 LEFT JOIN translations t ON b.name_i18n = t.id AND t.deleted_at = 0
 WHERE b.deleted_at = 0
+  AND (NULLIF(current_setting('app.branch_id', true), '') IS NULL OR b.id = NULLIF(current_setting('app.branch_id', true), '')::uuid)
 ORDER BY b.created_at DESC
 LIMIT $2 OFFSET $3
 `
@@ -210,15 +235,26 @@ type GetAllBranchesWithLanguageParams struct {
 	Offset  int32  `json:"offset"`
 }
 
-func (q *Queries) GetAllBranchesWithLanguage(ctx context.Context, arg GetAllBranchesWithLanguageParams) ([]Branch, error) {
+type GetAllBranchesWithLanguageRow struct {
+	ID        uuid.UUID          `json:"id"`
+	Name      string             `json:"name"`
+	NameI18n  pgtype.UUID        `json:"name_i18n"`
+	Address   *string            `json:"address"`
+	Phone     *string            `json:"phone"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
+	DeletedAt *int64             `json:"deleted_at"`
+}
+
+func (q *Queries) GetAllBranchesWithLanguage(ctx context.Context, arg GetAllBranchesWithLanguageParams) ([]GetAllBranchesWithLanguageRow, error) {
 	rows, err := q.db.Query(ctx, getAllBranchesWithLanguage, arg.Column1, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []Branch
+	var items []GetAllBranchesWithLanguageRow
 	for rows.Next() {
-		var i Branch
+		var i GetAllBranchesWithLanguageRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.Name,
@@ -285,12 +321,24 @@ const getBranchByID = `-- name: GetBranchByID :one
 SELECT id, name, name_i18n, address, phone, created_at, updated_at, deleted_at
 FROM branches
 WHERE id = $1 AND deleted_at = 0
+  AND (NULLIF(current_setting('app.branch_id', true), '') IS NULL OR id = NULLIF(current_setting('app.branch_id', true), '')::uuid)
 `
 
+type GetBranchByIDRow struct {
+	ID        uuid.UUID          `json:"id"`
+	Name      string             `json:"name"`
+	NameI18n  pgtype.UUID        `json:"name_i18n"`
+	Address   *string            `json:"address"`
+	Phone     *string            `json:"phone"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
+	DeletedAt *int64             `json:"deleted_at"`
+}
+
 // GetBranchByID retrieves a branch by its ID
-func (q *Queries) GetBranchByID(ctx context.Context, id uuid.UUID) (Branch, error) {
+func (q *Queries) GetBranchByID(ctx context.Context, id uuid.UUID) (GetBranchByIDRow, error) {
 	row := q.db.QueryRow(ctx, getBranchByID, id)
-	var i Branch
+	var i GetBranchByIDRow
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
@@ -322,6 +370,7 @@ SELECT
 FROM branches b
 LEFT JOIN translations t ON b.name_i18n = t.id AND t.deleted_at = 0
 WHERE b.id = $1 AND b.deleted_at = 0
+  AND (NULLIF(current_setting('app.branch_id', true), '') IS NULL OR b.id = NULLIF(current_setting('app.branch_id', true), '')::uuid)
 `
 
 type GetBranchByIDWithLanguageParams struct {
@@ -329,9 +378,20 @@ type GetBranchByIDWithLanguageParams struct {
 	Column2 string    `json:"column_2"`
 }
 
-func (q *Queries) GetBranchByIDWithLanguage(ctx context.Context, arg GetBranchByIDWithLanguageParams) (Branch, error) {
+type GetBranchByIDWithLanguageRow struct {
+	ID        uuid.UUID          `json:"id"`
+	Name      string             `json:"name"`
+	NameI18n  pgtype.UUID        `json:"name_i18n"`
+	Address   *string            `json:"address"`
+	Phone     *string            `json:"phone"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
+	DeletedAt *int64             `json:"deleted_at"`
+}
+
+func (q *Queries) GetBranchByIDWithLanguage(ctx context.Context, arg GetBranchByIDWithLanguageParams) (GetBranchByIDWithLanguageRow, error) {
 	row := q.db.QueryRow(ctx, getBranchByIDWithLanguage, arg.ID, arg.Column2)
-	var i Branch
+	var i GetBranchByIDWithLanguageRow
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
@@ -395,6 +455,7 @@ const searchBranches = `-- name: SearchBranches :many
 SELECT id, name, name_i18n, address, phone, created_at, updated_at, deleted_at
 FROM branches
 WHERE deleted_at = 0
+  AND (NULLIF(current_setting('app.branch_id', true), '') IS NULL OR id = NULLIF(current_setting('app.branch_id', true), '')::uuid)
   AND (LOWER(name) LIKE LOWER('%' || $1 || '%')
        OR LOWER(address) LIKE LOWER('%' || $1 || '%')
        OR phone LIKE '%' || $1 || '%')
@@ -408,16 +469,27 @@ type SearchBranchesParams struct {
 	Offset  int32   `json:"offset"`
 }
 
+type SearchBranchesRow struct {
+	ID        uuid.UUID          `json:"id"`
+	Name      string             `json:"name"`
+	NameI18n  pgtype.UUID        `json:"name_i18n"`
+	Address   *string            `json:"address"`
+	Phone     *string            `json:"phone"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
+	DeletedAt *int64             `json:"deleted_at"`
+}
+
 // SearchBranches searches branches by name or phone
-func (q *Queries) SearchBranches(ctx context.Context, arg SearchBranchesParams) ([]Branch, error) {
+func (q *Queries) SearchBranches(ctx context.Context, arg SearchBranchesParams) ([]SearchBranchesRow, error) {
 	rows, err := q.db.Query(ctx, searchBranches, arg.Column1, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []Branch
+	var items []SearchBranchesRow
 	for rows.Next() {
-		var i Branch
+		var i SearchBranchesRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.Name,
@@ -503,8 +575,19 @@ type UpdateBranchParams struct {
 	Phone    *string     `json:"phone"`
 }
 
+type UpdateBranchRow struct {
+	ID        uuid.UUID          `json:"id"`
+	Name      string             `json:"name"`
+	NameI18n  pgtype.UUID        `json:"name_i18n"`
+	Address   *string            `json:"address"`
+	Phone     *string            `json:"phone"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
+	DeletedAt *int64             `json:"deleted_at"`
+}
+
 // UpdateBranch updates an existing branch
-func (q *Queries) UpdateBranch(ctx context.Context, arg UpdateBranchParams) (Branch, error) {
+func (q *Queries) UpdateBranch(ctx context.Context, arg UpdateBranchParams) (UpdateBranchRow, error) {
 	row := q.db.QueryRow(ctx, updateBranch,
 		arg.ID,
 		arg.Name,
@@ -512,7 +595,7 @@ func (q *Queries) UpdateBranch(ctx context.Context, arg UpdateBranchParams) (Bra
 		arg.Address,
 		arg.Phone,
 	)
-	var i Branch
+	var i UpdateBranchRow
 	err := row.Scan(
 		&i.ID,
 		&i.Name,

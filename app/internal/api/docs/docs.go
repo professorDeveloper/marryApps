@@ -14352,7 +14352,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Create a new order item. price can be omitted; it will be auto-filled from goods.price.",
+                "description": "Create one or more order items for the same order. price can be omitted; it will be auto-filled from goods.price.",
                 "consumes": [
                     "application/json"
                 ],
@@ -14362,7 +14362,7 @@ const docTemplate = `{
                 "tags": [
                     "Order Items"
                 ],
-                "summary": "Create order item",
+                "summary": "Create order items",
                 "parameters": [
                     {
                         "type": "string",
@@ -14372,7 +14372,7 @@ const docTemplate = `{
                         "in": "query"
                     },
                     {
-                        "description": "Create order item request",
+                        "description": "Create order items request",
                         "name": "request",
                         "in": "body",
                         "required": true,
@@ -14385,7 +14385,10 @@ const docTemplate = `{
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/model.OrderItemResponse"
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/model.OrderItemResponse"
+                            }
                         }
                     },
                     "400": {
@@ -20171,6 +20174,35 @@ const docTemplate = `{
                 }
             }
         },
+        "model.CreateOrderItemEntry": {
+            "type": "object",
+            "required": [
+                "good_id",
+                "quantity"
+            ],
+            "properties": {
+                "comment": {
+                    "type": "string"
+                },
+                "good_id": {
+                    "type": "string",
+                    "example": "d4e5f6a7-b8c9-4a5b-8c9d-e0f1a2b3c4d5"
+                },
+                "price": {
+                    "type": "string",
+                    "example": "50000"
+                },
+                "quantity": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "example": 2
+                },
+                "status": {
+                    "type": "string",
+                    "example": "pending"
+                }
+            }
+        },
         "model.CreateOrderItemInline": {
             "type": "object",
             "required": [
@@ -20195,34 +20227,20 @@ const docTemplate = `{
         "model.CreateOrderItemRequest": {
             "type": "object",
             "required": [
-                "good_id",
-                "order_id",
-                "quantity"
+                "items",
+                "order_id"
             ],
             "properties": {
-                "comment": {
-                    "type": "string"
-                },
-                "good_id": {
-                    "type": "string",
-                    "example": "d4e5f6a7-b8c9-4a5b-8c9d-e0f1a2b3c4d5"
+                "items": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                        "$ref": "#/definitions/model.CreateOrderItemEntry"
+                    }
                 },
                 "order_id": {
                     "type": "string",
                     "example": "a1b2c3d4-e5f6-4a5b-8c9d-e0f1a2b3c4d5"
-                },
-                "price": {
-                    "type": "string",
-                    "example": "50000"
-                },
-                "quantity": {
-                    "type": "integer",
-                    "minimum": 1,
-                    "example": 2
-                },
-                "status": {
-                    "type": "string",
-                    "example": "pending"
                 }
             }
         },
@@ -21810,6 +21828,10 @@ const docTemplate = `{
         "model.RegisterRequest": {
             "type": "object",
             "properties": {
+                "branch_id": {
+                    "type": "string",
+                    "example": "123e4567-e89b-12d3-a456-426614174000"
+                },
                 "brand_id": {
                     "type": "string",
                     "example": "my_restaurant"
@@ -22948,6 +22970,10 @@ const docTemplate = `{
         "model.UserResponse": {
             "type": "object",
             "properties": {
+                "branch_id": {
+                    "type": "string",
+                    "example": "123e4567-e89b-12d3-a456-426614174000"
+                },
                 "brand_id": {
                     "type": "string",
                     "example": "123e4567-e89b-12d3-a456-426614174000"
@@ -23008,7 +23034,7 @@ const docTemplate = `{
 // SwaggerInfo holds exported Swagger Info so clients can modify it
 var SwaggerInfo = &swag.Spec{
 	Version:          "1.0",
-	Host:             "back.maryai.yurtal.tech",
+	Host:             "back.staging.maryai.yurtal.tech",
 	BasePath:         "/",
 	Schemes:          []string{"https"},
 	Title:            "MaryAI API",

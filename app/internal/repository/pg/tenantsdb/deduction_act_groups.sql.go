@@ -14,10 +14,11 @@ import (
 const createDeductionActGroup = `-- name: CreateDeductionActGroup :one
 INSERT INTO deduction_act_groups (
   id,
-  name
+  name,
+  branch_id
 )
-VALUES ($1, $2)
-RETURNING id, name, created_at, updated_at, deleted_at
+VALUES ($1, $2, NULLIF(current_setting('app.branch_id', true), '')::uuid)
+RETURNING id, name, created_at, updated_at, deleted_at, branch_id
 `
 
 type CreateDeductionActGroupParams struct {
@@ -34,6 +35,7 @@ func (q *Queries) CreateDeductionActGroup(ctx context.Context, arg CreateDeducti
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
+		&i.BranchID,
 	)
 	return i, err
 }
@@ -42,7 +44,9 @@ const deleteDeductionActGroup = `-- name: DeleteDeductionActGroup :exec
 UPDATE deduction_act_groups
 SET deleted_at = EXTRACT(EPOCH FROM NOW())::BIGINT,
     updated_at = NOW()
-WHERE id = $1 AND deleted_at = 0
+WHERE id = $1
+  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  AND deleted_at = 0
 `
 
 func (q *Queries) DeleteDeductionActGroup(ctx context.Context, id uuid.UUID) error {
@@ -51,9 +55,10 @@ func (q *Queries) DeleteDeductionActGroup(ctx context.Context, id uuid.UUID) err
 }
 
 const getAllDeductionActGroups = `-- name: GetAllDeductionActGroups :many
-SELECT id, name, created_at, updated_at, deleted_at
+SELECT id, name, created_at, updated_at, deleted_at, branch_id
 FROM deduction_act_groups
-WHERE deleted_at = 0
+WHERE branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  AND deleted_at = 0
 ORDER BY created_at DESC
 LIMIT $1 OFFSET $2
 `
@@ -78,6 +83,7 @@ func (q *Queries) GetAllDeductionActGroups(ctx context.Context, arg GetAllDeduct
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.DeletedAt,
+			&i.BranchID,
 		); err != nil {
 			return nil, err
 		}
@@ -90,9 +96,11 @@ func (q *Queries) GetAllDeductionActGroups(ctx context.Context, arg GetAllDeduct
 }
 
 const getDeductionActGroupByID = `-- name: GetDeductionActGroupByID :one
-SELECT id, name, created_at, updated_at, deleted_at
+SELECT id, name, created_at, updated_at, deleted_at, branch_id
 FROM deduction_act_groups
-WHERE id = $1 AND deleted_at = 0
+WHERE id = $1
+  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  AND deleted_at = 0
 `
 
 func (q *Queries) GetDeductionActGroupByID(ctx context.Context, id uuid.UUID) (DeductionActGroup, error) {
@@ -104,6 +112,7 @@ func (q *Queries) GetDeductionActGroupByID(ctx context.Context, id uuid.UUID) (D
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
+		&i.BranchID,
 	)
 	return i, err
 }
@@ -113,7 +122,8 @@ UPDATE deduction_act_groups
 SET deleted_at = 0,
     updated_at = NOW()
 WHERE id = $1
-RETURNING id, name, created_at, updated_at, deleted_at
+  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+RETURNING id, name, created_at, updated_at, deleted_at, branch_id
 `
 
 func (q *Queries) RestoreDeductionActGroup(ctx context.Context, id uuid.UUID) (DeductionActGroup, error) {
@@ -125,6 +135,7 @@ func (q *Queries) RestoreDeductionActGroup(ctx context.Context, id uuid.UUID) (D
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
+		&i.BranchID,
 	)
 	return i, err
 }
@@ -133,8 +144,10 @@ const updateDeductionActGroup = `-- name: UpdateDeductionActGroup :one
 UPDATE deduction_act_groups
 SET name = $2,
     updated_at = NOW()
-WHERE id = $1 AND deleted_at = 0
-RETURNING id, name, created_at, updated_at, deleted_at
+WHERE id = $1
+  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  AND deleted_at = 0
+RETURNING id, name, created_at, updated_at, deleted_at, branch_id
 `
 
 type UpdateDeductionActGroupParams struct {
@@ -151,6 +164,7 @@ func (q *Queries) UpdateDeductionActGroup(ctx context.Context, arg UpdateDeducti
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
+		&i.BranchID,
 	)
 	return i, err
 }

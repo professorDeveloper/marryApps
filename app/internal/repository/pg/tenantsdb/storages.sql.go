@@ -13,7 +13,9 @@ import (
 )
 
 const countStorages = `-- name: CountStorages :one
-SELECT COUNT(*) FROM storages WHERE deleted_at = 0
+SELECT COUNT(*) FROM storages
+WHERE deleted_at = 0
+  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 `
 
 func (q *Queries) CountStorages(ctx context.Context) (int64, error) {
@@ -24,7 +26,9 @@ func (q *Queries) CountStorages(ctx context.Context) (int64, error) {
 }
 
 const countStoragesByBranch = `-- name: CountStoragesByBranch :one
-SELECT COUNT(*) FROM storages WHERE branch_id = $1 AND deleted_at = 0
+SELECT COUNT(*) FROM storages
+WHERE branch_id = $1 AND deleted_at = 0
+  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 `
 
 func (q *Queries) CountStoragesByBranch(ctx context.Context, branchID pgtype.UUID) (int64, error) {
@@ -77,6 +81,7 @@ const deleteStorage = `-- name: DeleteStorage :exec
 UPDATE storages
 SET deleted_at = EXTRACT(EPOCH FROM NOW())::BIGINT
 WHERE id = $1 AND deleted_at = 0
+  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 `
 
 func (q *Queries) DeleteStorage(ctx context.Context, id uuid.UUID) error {
@@ -88,6 +93,7 @@ const getAllStorages = `-- name: GetAllStorages :many
 SELECT id, name, branch_id, name_i18n, picture_url, color_code, created_at, updated_at, deleted_at
 FROM storages
 WHERE deleted_at = 0
+  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 ORDER BY created_at DESC
 LIMIT $1 OFFSET $2
 `
@@ -146,6 +152,7 @@ SELECT
 FROM storages s
 LEFT JOIN translations t ON s.name_i18n = t.id AND t.deleted_at = 0
 WHERE s.deleted_at = 0
+  AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 ORDER BY s.created_at DESC
 LIMIT $2 OFFSET $3
 `
@@ -190,6 +197,7 @@ const getStorageByID = `-- name: GetStorageByID :one
 SELECT id, name, branch_id, name_i18n, picture_url, color_code, created_at, updated_at, deleted_at
 FROM storages
 WHERE id = $1 AND deleted_at = 0
+  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 `
 
 func (q *Queries) GetStorageByID(ctx context.Context, id uuid.UUID) (Storage, error) {
@@ -228,6 +236,7 @@ SELECT
 FROM storages s
 LEFT JOIN translations t ON s.name_i18n = t.id AND t.deleted_at = 0
 WHERE s.id = $1 AND s.deleted_at = 0
+  AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 `
 
 type GetStorageByIDWithLanguageParams struct {
@@ -263,6 +272,7 @@ FROM storages s
 LEFT JOIN departments d ON s.id = d.storage_id AND d.deleted_at = 0
 LEFT JOIN categories c ON s.id = c.storage_id AND c.deleted_at = 0
 WHERE s.id = $1 AND s.deleted_at = 0
+  AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 GROUP BY s.id, s.name, s.picture_url
 `
 
@@ -301,6 +311,7 @@ SELECT
 FROM storages s
 LEFT JOIN branches b ON s.branch_id = b.id AND b.deleted_at = 0
 WHERE s.id = $1 AND s.deleted_at = 0
+  AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 `
 
 type GetStorageWithBranchRow struct {
@@ -336,6 +347,7 @@ const getStoragesByBranchID = `-- name: GetStoragesByBranchID :many
 SELECT id, name, branch_id, name_i18n, picture_url, color_code, created_at, updated_at, deleted_at
 FROM storages
 WHERE branch_id = $1 AND deleted_at = 0
+  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 ORDER BY created_at DESC
 LIMIT $2 OFFSET $3
 `
@@ -380,6 +392,7 @@ const restoreStorage = `-- name: RestoreStorage :exec
 UPDATE storages
 SET deleted_at = 0
 WHERE id = $1 AND deleted_at != 0
+  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 `
 
 func (q *Queries) RestoreStorage(ctx context.Context, id uuid.UUID) error {
@@ -391,6 +404,7 @@ const searchStorages = `-- name: SearchStorages :many
 SELECT id, name, branch_id, name_i18n, picture_url, color_code, created_at, updated_at, deleted_at
 FROM storages
 WHERE deleted_at = 0 AND name ILIKE '%' || $1 || '%'
+  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 ORDER BY created_at DESC
 LIMIT $2 OFFSET $3
 `
@@ -440,6 +454,7 @@ SET name = COALESCE($2, name),
     color_code = COALESCE($6, color_code),
     updated_at = NOW()
 WHERE id = $1 AND deleted_at = 0
+  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 RETURNING id, name, branch_id, name_i18n, picture_url, color_code, created_at, updated_at, deleted_at
 `
 

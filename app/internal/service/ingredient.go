@@ -56,6 +56,42 @@ func mapIngredientToResponse(ingredient any) *model.IngredientResponse {
 		pricePerUnit = row.PricePerUnit
 		createdAt = row.CreatedAt
 		updatedAt = row.UpdatedAt
+	case pg.UpdateIngredientPriceAndQuantityRow:
+		id = row.ID
+		name = row.Name
+		nameI18n = row.NameI18n
+		groupID = row.GroupID
+		measurement = pg.NullMeasurementType(row.Measurement)
+		pictureUrl = row.PictureUrl
+		colorCode = row.ColorCode
+		brandID = row.BrandID
+		pricePerUnit = row.PricePerUnit
+		createdAt = row.CreatedAt
+		updatedAt = row.UpdatedAt
+	case pg.GetIngredientByIDWithLanguageRow:
+		id = row.ID
+		name = row.Name
+		nameI18n = row.NameI18n
+		groupID = row.GroupID
+		measurement = pg.NullMeasurementType(row.Measurement)
+		pictureUrl = row.PictureUrl
+		colorCode = row.ColorCode
+		brandID = row.BrandID
+		pricePerUnit = row.PricePerUnit
+		createdAt = row.CreatedAt
+		updatedAt = row.UpdatedAt
+	case pg.GetAllIngredientsWithLanguageRow:
+		id = row.ID
+		name = row.Name
+		nameI18n = row.NameI18n
+		groupID = row.GroupID
+		measurement = pg.NullMeasurementType(row.Measurement)
+		pictureUrl = row.PictureUrl
+		colorCode = row.ColorCode
+		brandID = row.BrandID
+		pricePerUnit = row.PricePerUnit
+		createdAt = row.CreatedAt
+		updatedAt = row.UpdatedAt
 	default:
 		return nil
 	}
@@ -571,13 +607,14 @@ func (i *IngredientS) UpdateIngredient(ctx context.Context, ingredientID string,
 			}
 		}
 
-		ingredient, err = i.repo.Tenant(ctx).UpdateIngredientPriceAndQuantity(ctx, pg.UpdateIngredientPriceAndQuantityParams{
+		priceUpdated, err := i.repo.Tenant(ctx).UpdateIngredientPriceAndQuantity(ctx, pg.UpdateIngredientPriceAndQuantityParams{
 			ID:           id,
 			PricePerUnit: price,
 		})
 		if err != nil {
 			return nil, fmt.Errorf("failed to update ingredient price/quantity: %w", err)
 		}
+		return mapIngredientToResponse(priceUpdated), nil
 	}
 
 	return mapIngredientToResponse(ingredient), nil

@@ -171,35 +171,113 @@ func (o *OrganizationS) RestoreTranslation(ctx context.Context, translationID st
 }
 
 // Helper functions
-func toBranchResponse(b pg.Branch) *model.BranchResponse {
-	if b.ID == uuid.Nil {
+func toBranchResponse(b any) *model.BranchResponse {
+	var (
+		id        uuid.UUID
+		name      string
+		nameI18n  pgtype.UUID
+		address   *string
+		phone     *string
+		createdAt pgtype.Timestamptz
+		updatedAt pgtype.Timestamptz
+	)
+
+	switch row := b.(type) {
+	case pg.Branch:
+		id = row.ID
+		name = row.Name
+		nameI18n = row.NameI18n
+		address = row.Address
+		phone = row.Phone
+		createdAt = row.CreatedAt
+		updatedAt = row.UpdatedAt
+	case pg.CreateBranchRow:
+		id = row.ID
+		name = row.Name
+		nameI18n = row.NameI18n
+		address = row.Address
+		phone = row.Phone
+		createdAt = row.CreatedAt
+		updatedAt = row.UpdatedAt
+	case pg.GetBranchByIDRow:
+		id = row.ID
+		name = row.Name
+		nameI18n = row.NameI18n
+		address = row.Address
+		phone = row.Phone
+		createdAt = row.CreatedAt
+		updatedAt = row.UpdatedAt
+	case pg.GetAllBranchesRow:
+		id = row.ID
+		name = row.Name
+		nameI18n = row.NameI18n
+		address = row.Address
+		phone = row.Phone
+		createdAt = row.CreatedAt
+		updatedAt = row.UpdatedAt
+	case pg.GetBranchByIDWithLanguageRow:
+		id = row.ID
+		name = row.Name
+		nameI18n = row.NameI18n
+		address = row.Address
+		phone = row.Phone
+		createdAt = row.CreatedAt
+		updatedAt = row.UpdatedAt
+	case pg.GetAllBranchesWithLanguageRow:
+		id = row.ID
+		name = row.Name
+		nameI18n = row.NameI18n
+		address = row.Address
+		phone = row.Phone
+		createdAt = row.CreatedAt
+		updatedAt = row.UpdatedAt
+	case pg.SearchBranchesRow:
+		id = row.ID
+		name = row.Name
+		nameI18n = row.NameI18n
+		address = row.Address
+		phone = row.Phone
+		createdAt = row.CreatedAt
+		updatedAt = row.UpdatedAt
+	case pg.UpdateBranchRow:
+		id = row.ID
+		name = row.Name
+		nameI18n = row.NameI18n
+		address = row.Address
+		phone = row.Phone
+		createdAt = row.CreatedAt
+		updatedAt = row.UpdatedAt
+	default:
+		return nil
+	}
+
+	if id == uuid.Nil {
 		return nil
 	}
 	var nameI18nStr *string
-	if b.NameI18n.Valid {
-		uuidStr := uuid.UUID(b.NameI18n.Bytes).String()
+	if nameI18n.Valid {
+		uuidStr := uuid.UUID(nameI18n.Bytes).String()
 		nameI18nStr = &uuidStr
 	}
 
-	var createdAt *time.Time
-	if b.CreatedAt.Valid {
-		createdAt = &b.CreatedAt.Time
+	var createdAtT *time.Time
+	if createdAt.Valid {
+		createdAtT = &createdAt.Time
 	}
 
-	var updatedAt *time.Time
-	if b.UpdatedAt.Valid {
-		updatedAt = &b.UpdatedAt.Time
+	var updatedAtT *time.Time
+	if updatedAt.Valid {
+		updatedAtT = &updatedAt.Time
 	}
 
-	name := b.Name
 	return &model.BranchResponse{
-		ID:        b.ID.String(),
+		ID:        id.String(),
 		Name:      &name,
 		NameI18n:  nameI18nStr,
-		Address:   b.Address,
-		Phone:     b.Phone,
-		CreatedAt: createdAt,
-		UpdatedAt: updatedAt,
+		Address:   address,
+		Phone:     phone,
+		CreatedAt: createdAtT,
+		UpdatedAt: updatedAtT,
 	}
 }
 

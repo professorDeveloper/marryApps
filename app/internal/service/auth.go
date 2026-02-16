@@ -76,11 +76,24 @@ func (s *AuthS) Register(ctx context.Context, req model.RegisterRequest) error {
 		if req.BrandID == nil || strings.TrimSpace(*req.BrandID) == "" {
 			return fmt.Errorf("brand_id is required for non-superadmin users")
 		}
+		if req.BranchID == nil || strings.TrimSpace(*req.BranchID) == "" {
+			return fmt.Errorf("branch_id is required for non-superadmin users")
+		}
 	}
 
 	var tenantBrandUUID uuid.UUID
 	var tenantResolver *TenantResolver
 	var brandIDSlug string
+	var branchUUID pgtype.UUID
+
+	if role != "superadmin" {
+		branchStr := strings.TrimSpace(*req.BranchID)
+		bID, err := uuid.Parse(branchStr)
+		if err != nil {
+			return fmt.Errorf("invalid branch_id: %w", err)
+		}
+		branchUUID = pgtype.UUID{Bytes: bID, Valid: true}
+	}
 
 	if role != "superadmin" {
 		brandIDSlug = strings.TrimSpace(*req.BrandID)
@@ -108,6 +121,19 @@ func (s *AuthS) Register(ctx context.Context, req model.RegisterRequest) error {
 		checkPhoneErr := tx.QueryRow(ctx,
 			"SELECT id FROM users WHERE phone_number = $1 AND deleted_at = 0 LIMIT 1",
 			&req.PhoneNumber).Scan(&existingID)
+
+		if branchUUID.Valid {
+			var branchID string
+			checkBranchErr := tx.QueryRow(ctx,
+				"SELECT id FROM branches WHERE id = $1 AND deleted_at = 0 LIMIT 1",
+				branchUUID).Scan(&branchID)
+			if checkBranchErr != nil {
+				tx.Rollback(ctx)
+				log.Printf("  ⚠️  Branch validation failed: branch_id=%s, schema=%s, error=%v", branchUUID.String(), schemaName, checkBranchErr)
+				return fmt.Errorf("invalid branch_id: branch not found in schema")
+			}
+			log.Printf("  ✓ Branch validated: %s", branchID)
+		}
 
 		tx.Rollback(ctx)
 
@@ -180,6 +206,7 @@ func (s *AuthS) Register(ctx context.Context, req model.RegisterRequest) error {
 		HashPassword: hashPassword,
 		Username:     &username,
 		BrandID:      brandID,
+		BranchID:     branchUUID,
 	}
 
 	if role != "superadmin" && brandIDSlug != "" {
@@ -245,12 +272,16 @@ func (s *AuthS) Login(ctx context.Context, req model.LoginRequest, jwtCfg *confi
 	if req.Username == "" {
 		return model.LoginResponse{}, errors.New(http.StatusText(http.StatusBadRequest))
 	}
-	if req.BrandID == nil || strings.TrimSpace(*req.BrandID) == "" {
-		return model.LoginResponse{}, errors.New(http.StatusText(http.StatusBadRequest))
-	}
 	if strings.TrimSpace(req.Password) == "" {
 		return model.LoginResponse{}, errors.New(http.StatusText(http.StatusBadRequest))
 	}
+
+	// Check if brand_id is provided, if not try global login
+	if req.BrandID == nil || strings.TrimSpace(*req.BrandID) == "" {
+		log.Printf("Login: No brand_id provided, attempting global login for username: %s", req.Username)
+		return s.LoginGlobal(ctx, req, jwtCfg)
+	}
+
 	brandIDSlug := strings.TrimSpace(*req.BrandID)
 	schemaName := fmt.Sprintf("tenant_%s", brandIDSlug)
 	tx, err := s.repo.PgRepo.TenantPool.Begin(ctx)
@@ -294,10 +325,22 @@ func (s *AuthS) Login(ctx context.Context, req model.LoginRequest, jwtCfg *confi
 		role = roleStr
 	}
 
+	var branchID *string
+	if user.BranchID.Valid {
+		s := user.BranchID.String()
+		branchID = &s
+	} else if user.ShiftID.Valid {
+		if sh, err := q.GetShiftByID(ctx, user.ShiftID.Bytes); err == nil {
+			s := sh.BranchID.String()
+			branchID = &s
+		}
+	}
+
 	accessToken, err := utils.CreateJWTWithClaims(
 		time.Duration(jwtCfg.AccessToken.ExpiresIn)*time.Second,
 		user.ID,
 		brandID,
+		branchID,
 		role,
 		false,
 		jwtCfg.SecretKey,
@@ -309,6 +352,7 @@ func (s *AuthS) Login(ctx context.Context, req model.LoginRequest, jwtCfg *confi
 		time.Duration(jwtCfg.RefreshToken.ExpiresIn)*time.Second,
 		user.ID,
 		brandID,
+		branchID,
 		role,
 		false,
 		jwtCfg.SecretKey,
@@ -420,10 +464,22 @@ func (s *AuthS) LoginWithPincode(ctx context.Context, req model.PincodeLoginRequ
 
 	log.Printf("LoginWithPincode: Successfully authenticated user %s with role %s", user.ID, role)
 
+	var branchID *string
+	if user.BranchID.Valid {
+		s := user.BranchID.String()
+		branchID = &s
+	} else if user.ShiftID.Valid {
+		if sh, err := q.GetShiftByID(ctx, user.ShiftID.Bytes); err == nil {
+			s := sh.BranchID.String()
+			branchID = &s
+		}
+	}
+
 	accessToken, err := utils.CreateJWTWithClaims(
 		time.Duration(jwtCfg.AccessToken.ExpiresIn)*time.Second,
 		user.ID,
 		brandID,
+		branchID,
 		role,
 		false,
 		jwtCfg.SecretKey,
@@ -435,6 +491,7 @@ func (s *AuthS) LoginWithPincode(ctx context.Context, req model.PincodeLoginRequ
 		time.Duration(jwtCfg.RefreshToken.ExpiresIn)*time.Second,
 		user.ID,
 		brandID,
+		branchID,
 		role,
 		false,
 		jwtCfg.SecretKey,
@@ -486,16 +543,24 @@ func (s *AuthS) LoginGlobal(ctx context.Context, req model.LoginRequest, jwtCfg 
 
 	log.Printf("LoginGlobal: User found. Username: %s, Email: %s, Role: %s", u.Username, u.Email, u.Role)
 
-	if u.Password != password {
-		log.Printf("LoginGlobal: Password verification failed for user %s", u.Username)
-		return model.LoginResponse{}, errors.New(http.StatusText(http.StatusUnauthorized))
+	// Try bcrypt verification first (for new hashed passwords)
+	bcryptErr := utils.VerifyPassword(u.Password, password)
+	if bcryptErr != nil {
+		// Fallback to plain text comparison (for legacy/old passwords in main DB)
+		if u.Password == password {
+			log.Printf("LoginGlobal: User authenticated with plain text password: %s", u.Username)
+		} else {
+			log.Printf("LoginGlobal: Password verification failed for user %s (bcrypt: %v, plain text: mismatch)", u.Username, bcryptErr)
+			return model.LoginResponse{}, errors.New(http.StatusText(http.StatusUnauthorized))
+		}
+	} else {
+		log.Printf("LoginGlobal: Password verified with bcrypt for user %s", u.Username)
 	}
-
-	log.Printf("LoginGlobal: Password verified successfully for user %s", u.Username)
 
 	accessToken, err := utils.CreateJWTWithClaims(
 		time.Duration(jwtCfg.AccessToken.ExpiresIn)*time.Second,
 		u.ID,
+		nil,
 		nil,
 		u.Role,
 		true,
@@ -507,6 +572,7 @@ func (s *AuthS) LoginGlobal(ctx context.Context, req model.LoginRequest, jwtCfg 
 	refreshToken, err := utils.CreateJWTWithClaims(
 		time.Duration(jwtCfg.RefreshToken.ExpiresIn)*time.Second,
 		u.ID,
+		nil,
 		nil,
 		u.Role,
 		true,
@@ -560,6 +626,7 @@ func (s *AuthS) Refresh(ctx context.Context, req model.RefreshRequest, jwtCfg *c
 			time.Duration(jwtCfg.AccessToken.ExpiresIn)*time.Second,
 			claims.UserID,
 			nil,
+			nil,
 			role,
 			true,
 			jwtCfg.SecretKey,
@@ -570,6 +637,7 @@ func (s *AuthS) Refresh(ctx context.Context, req model.RefreshRequest, jwtCfg *c
 		refreshToken, err := utils.CreateJWTWithClaims(
 			time.Duration(jwtCfg.RefreshToken.ExpiresIn)*time.Second,
 			claims.UserID,
+			nil,
 			nil,
 			role,
 			true,
@@ -615,10 +683,22 @@ func (s *AuthS) Refresh(ctx context.Context, req model.RefreshRequest, jwtCfg *c
 		role = roleStr
 	}
 
+	var branchID *string
+	if user.BranchID.Valid {
+		s := user.BranchID.String()
+		branchID = &s
+	} else if user.ShiftID.Valid {
+		if sh, err := q.GetShiftByID(ctx, user.ShiftID.Bytes); err == nil {
+			s := sh.BranchID.String()
+			branchID = &s
+		}
+	}
+
 	accessToken, err := utils.CreateJWTWithClaims(
 		time.Duration(jwtCfg.AccessToken.ExpiresIn)*time.Second,
 		user.ID,
 		brandID,
+		branchID,
 		role,
 		false,
 		jwtCfg.SecretKey,
@@ -630,6 +710,7 @@ func (s *AuthS) Refresh(ctx context.Context, req model.RefreshRequest, jwtCfg *c
 		time.Duration(jwtCfg.RefreshToken.ExpiresIn)*time.Second,
 		user.ID,
 		brandID,
+		branchID,
 		role,
 		false,
 		jwtCfg.SecretKey,
@@ -750,6 +831,7 @@ func toUserResponse(u pg.User) model.UserResponse {
 		createdAt *time.Time
 		updatedAt *time.Time
 		brandID   *string
+		branchID  *string
 	)
 
 	if u.FullName != nil {
@@ -776,6 +858,11 @@ func toUserResponse(u pg.User) model.UserResponse {
 		brandID = &b
 	}
 
+	if u.BranchID.Valid {
+		br := u.BranchID.String()
+		branchID = &br
+	}
+
 	if roleStr, ok := roleToString(u.Role); ok {
 		role = &roleStr
 	}
@@ -790,6 +877,7 @@ func toUserResponse(u pg.User) model.UserResponse {
 		PhoneNumber: u.PhoneNumber,
 		ShiftID:     shiftID,
 		BrandID:     brandID,
+		BranchID:    branchID,
 		CreatedAt:   createdAt,
 		UpdatedAt:   updatedAt,
 	}

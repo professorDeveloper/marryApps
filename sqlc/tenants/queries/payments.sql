@@ -5,16 +5,21 @@ INSERT INTO user_payments (
     price_for_plan_id,
     provider,
     order_number,
-    amount
+    amount,
+    branch_id
 ) VALUES (
-    $1, $2, $3, $4, $5, $6
+    $1, $2, $3, $4, $5, $6,
+    (SELECT branch_id FROM users WHERE id = $2)
 ) RETURNING *;
 
 -- name: GetUserPayment :one
-SELECT * FROM user_payments WHERE id = $1;
+SELECT * FROM user_payments
+WHERE id = $1
+  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid;
 
 -- name: GetUserPayments :many
-SELECT * FROM user_payments;
+SELECT * FROM user_payments
+WHERE branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid;
 
 -- name: UpdateUserPayment :one
 UPDATE user_payments SET
@@ -35,15 +40,19 @@ UPDATE user_payments SET
     reason = $16,
     amount = $17,
     cancel_time = $18,
-    updated_at = CURRENT_TIMESTAMP
-WHERE id = $1
+    updated_at = CURRENT_TIMESTAMP,
+    branch_id = (SELECT branch_id FROM users WHERE id = $2)
+WHERE user_payments.id = $1
+  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 RETURNING *;
 
 -- name: DeleteUserPayment :exec
-DELETE FROM user_payments WHERE id = $1;
+DELETE FROM user_payments
+WHERE user_payments.id = $1
+  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid;
 
 -- name: GetPriceForPlan :one
-SELECT * FROM price_for_plans WHERE id = $1;
+SELECT * FROM price_for_plans WHERE price_for_plans.id = $1;
 
 -- name: CreatePriceForPlan :one
 INSERT INTO price_for_plans (
@@ -60,8 +69,8 @@ UPDATE price_for_plans SET
     name = $2,
     amount = $3,
     updated_at = CURRENT_TIMESTAMP
-WHERE id = $1
+WHERE price_for_plans.id = $1
 RETURNING *;
 
 -- name: DeletePriceForPlan :exec
-DELETE FROM price_for_plans WHERE id = $1;
+DELETE FROM price_for_plans WHERE price_for_plans.id = $1;
