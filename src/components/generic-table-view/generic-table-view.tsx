@@ -323,7 +323,7 @@ export function GenericTableView<T extends Record<string, any>>({
               '& .MuiDataGrid-columnHeader:focus, & .MuiDataGrid-columnHeader:focus-within': {
                 outline: 'none',
               },
-              
+
               // --- PAGINATION KENGAYTIRISH STILLARI ---
               '& .MuiTablePagination-root': {
                 overflow: 'hidden',

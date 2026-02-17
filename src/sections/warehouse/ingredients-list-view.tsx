@@ -202,10 +202,6 @@ function RenderCellDate({ params, dateField }: { params: any; dateField: string 
     });
 }
 
-// ============================================================================
-// MAIN COMPONENT
-// ============================================================================
-
 export function IngredientListView() {
     const { t } = useTranslation('menu');
     const theme = useTheme();
@@ -237,13 +233,13 @@ export function IngredientListView() {
                 width: 180,
                 renderCell: (params) => <RenderCellGroupName params={params} />,
             },
-            // {
-            //     field: 'quantity',
-            //     headerName: t('warehouse.quantity'),
-            //     width: 150,
-            //     align: 'right',
-            //     renderCell: (params) => <RenderCellQuantity params={params} stocks={stocks} />,
-            // },
+            {
+                field: 'quantity',
+                headerName: t('warehouse.quantity'),
+                width: 150,
+                align: 'right',
+                renderCell: (params) => <RenderCellQuantity params={params} stocks={stocks} />,
+            },
             {
                 field: 'measurement',
                 headerName: t('warehouse.measurement'),

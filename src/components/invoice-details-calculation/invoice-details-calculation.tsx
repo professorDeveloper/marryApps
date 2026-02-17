@@ -25,7 +25,6 @@ import {
 import SearchIcon from '@mui/icons-material/Search';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
-import DeleteIcon from '@mui/icons-material/Delete';
 
 import { fetcher, endpoints } from 'src/lib/axios';
 import { toast } from 'sonner';
@@ -112,6 +111,9 @@ export function InvoiceDetailsCalculation({ invoiceId, invoiceData, onSuccess, o
     // Search for right panel
     const [rightSearchTerm, setRightSearchTerm] = useState('');
 
+    // Right panel - checkboxes for selection and bulk delete
+    const [rightSelectedIds, setRightSelectedIds] = useState<string[]>([]);
+
     const prevCalculationsRef = useRef<string>('');
 
     // Load ingredients
@@ -178,7 +180,7 @@ export function InvoiceDetailsCalculation({ invoiceId, invoiceData, onSuccess, o
         if (isNewInvoice && onDetailsChange && transferredIds.length > 0) {
             const batchData = transferredIds.map((id) => ({
                 ingredient_id: id,
-                quantity: quantities[id] || 0,
+                quantity: quantities[id],
                 price_per_unit: pricesPerUnit[id] || 0,
                 price: prices[id] || 0,
             }));
@@ -213,16 +215,16 @@ export function InvoiceDetailsCalculation({ invoiceId, invoiceData, onSuccess, o
 
     // Handle quantity change
     const handleQuantityChange = (id: string, value: string) => {
-        const qty = formatNumber(parseFloat(value) || 0);
+        const qty = formatNumber(parseFloat(value));
         setQuantities((prev) => ({
             ...prev,
             [id]: qty,
         }));
 
-        if (qty === 0) return;
+        // if (qty === 0) return;
 
-        const pricePerUnit = pricesPerUnit[id] || 0;
-        const totalPrice = prices[id] || 0;
+        const pricePerUnit = pricesPerUnit[id];
+        const totalPrice = prices[id];
 
         // If price_per_unit exists, auto-calculate price
         if (pricePerUnit > 0) {
@@ -344,21 +346,60 @@ export function InvoiceDetailsCalculation({ invoiceId, invoiceData, onSuccess, o
         }
     };
 
-    // Move left
+    // Move left - delete selected items or all if none selected
     const handleMoveLeft = () => {
-        setTransferredIds([]);
-        setPrices({});
-        setPricesPerUnit({});
-        setQuantities({});
-        setShowCalculation(false);
+        if (rightSelectedIds.length > 0) {
+            // Delete only selected items
+            setTransferredIds((prev) =>
+                prev.filter((item) => !rightSelectedIds.includes(item))
+            );
+
+            // Clear quantities, prices for deleted items
+            const newQuantities = { ...quantities };
+            const newPrices = { ...prices };
+            const newPricesPerUnit = { ...pricesPerUnit };
+
+            rightSelectedIds.forEach((id) => {
+                delete newQuantities[id];
+                delete newPrices[id];
+                delete newPricesPerUnit[id];
+            });
+
+            setQuantities(newQuantities);
+            setPrices(newPrices);
+            setPricesPerUnit(newPricesPerUnit);
+            setRightSelectedIds([]);
+
+            // Hide calculation if no items left
+            if (transferredIds.length === rightSelectedIds.length) {
+                setShowCalculation(false);
+            }
+
+            toast.success(t('warehouse.invoiceDetails.itemsDeleted', 'Items deleted'));
+        } else {
+            // Delete all items if none selected
+            setTransferredIds([]);
+            setPrices({});
+            setPricesPerUnit({});
+            setQuantities({});
+            setRightSelectedIds([]);
+            setShowCalculation(false);
+            toast.success(t('warehouse.invoiceDetails.allItemsRemoved', 'All items removed'));
+        }
     };
 
-    // Remove single item
-    const handleRemoveItem = (id: string) => {
-        setTransferredIds((prev) => prev.filter((item) => item !== id));
-        if (transferredIds.length === 1) {
-            setShowCalculation(false);
+    // Toggle checkbox in right panel
+    const handleRightToggle = (id: string) => {
+        const currentIndex = rightSelectedIds.indexOf(id);
+        const newChecked = [...rightSelectedIds];
+
+        if (currentIndex === -1) {
+            newChecked.push(id);
+        } else {
+            newChecked.splice(currentIndex, 1);
         }
+
+        setRightSelectedIds(newChecked);
     };
 
     // Filtered ingredients for left panel
@@ -377,8 +418,8 @@ export function InvoiceDetailsCalculation({ invoiceId, invoiceData, onSuccess, o
                 const ingredient = ingredients.find((ing) => ing.id === id);
                 if (!ingredient) return null;
 
-                const qty = quantities[id] || 0;
-                const pricePerUnit = pricesPerUnit[id] || 0;
+                const qty = quantities[id];
+                const pricePerUnit = pricesPerUnit[id];
                 const totalPrice = calculateTotalPrice(id);
 
                 return {
@@ -559,7 +600,7 @@ export function InvoiceDetailsCalculation({ invoiceId, invoiceData, onSuccess, o
                                     </Box>
                                 ) : filteredLeftIngredients.length > 0 ? (
                                     filteredLeftIngredients.map((ing) => (
-                                        <Box 
+                                        <Box
                                             key={ing.id}
                                             sx={{
                                                 display: 'flex',
@@ -611,7 +652,10 @@ export function InvoiceDetailsCalculation({ invoiceId, invoiceData, onSuccess, o
                                     onClick={handleMoveLeft}
                                     disabled={loading}
                                 >
-                                    {t('remove')}
+                                    {rightSelectedIds.length > 0
+                                        ? `${t('remove')}`
+                                        : t('remove')
+                                    }
                                 </Button>
                             )}
                         </Box>
@@ -619,7 +663,7 @@ export function InvoiceDetailsCalculation({ invoiceId, invoiceData, onSuccess, o
                         {/* RIGHT PANEL: Selected Items with Inputs */}
                         {showCalculation && (
                             <Paper sx={{ p: 2 }}>
-                                <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 'bold' }}>
+                                <Typography variant="subtitle1" sx={{ fontWeight: 'bold', mb: 2 }}>
                                     {t('warehouse.invoiceDetails.selectedItems', 'Selected Items')}
                                 </Typography>
 
@@ -641,29 +685,28 @@ export function InvoiceDetailsCalculation({ invoiceId, invoiceData, onSuccess, o
                                 />
 
                                 {/* Items with Input Fields */}
-                                <Box sx={{ maxHeight: 400, overflowY: 'auto' }}>
+                                <Box sx={{ maxHeight: 400, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 2 }}>
                                     {transferredItems.map((item) => (
-                                        <Paper key={item.id} sx={{ p: 2, mb: 2, backgroundColor: theme.vars.palette.background.default }}>
-                                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-                                                <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
-                                                    {item.name}
-                                                </Typography>
-                                                <IconButton
+                                        <Box key={item.id} sx={{ display: 'flex', alignItems: 'flex-start', gap: 2, paddingTop: 1 }}>
+                                            {/* Checkbox and Name */}
+                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0, minWidth: '150px', }}>
+                                                <Checkbox
                                                     size="small"
-                                                    color="error"
-                                                    onClick={() => handleRemoveItem(item.id)}
-                                                >
-                                                    <DeleteIcon fontSize="small" />
-                                                </IconButton>
+                                                    checked={rightSelectedIds.includes(item.id)}
+                                                    onChange={() => handleRightToggle(item.id)}
+                                                />
+                                                <Box>
+                                                    <Typography variant="subtitle2" sx={{ fontWeight: 'bold', fontSize: 12 }}>
+                                                        {item.name}
+                                                    </Typography>
+                                                </Box>
                                             </Box>
 
+                                            {/* Input Fields in a Row */}
                                             <Box
                                                 sx={{
-                                                    display: 'grid',
-                                                    gridTemplateColumns: {
-                                                        xs: '1fr',          // mobile
-                                                        sm: '1fr 1fr 1fr',  // desktop
-                                                    },
+                                                    display: 'flex',
+                                                    flex: 1,
                                                     gap: 1,
                                                 }}
                                             >
@@ -672,7 +715,7 @@ export function InvoiceDetailsCalculation({ invoiceId, invoiceData, onSuccess, o
                                                     size="small"
                                                     label={t('warehouse.invoiceDetails.quantity')}
                                                     type="number"
-                                                    value={quantities[item.id] || ''}
+                                                    value={quantities[item.id] ?? ''}
                                                     onChange={(e) => handleQuantityChange(item.id, e.target.value)}
                                                     inputProps={{ step: '0.01', min: '0' }}
                                                     InputProps={{
@@ -692,11 +735,6 @@ export function InvoiceDetailsCalculation({ invoiceId, invoiceData, onSuccess, o
                                                     value={pricesPerUnit[item.id] || ''}
                                                     onChange={(e) => handlePricePerUnitChange(item.id, e.target.value)}
                                                     inputProps={{ step: '0.01', min: '0' }}
-                                                    InputProps={{
-                                                        endAdornment: (
-                                                            <InputAdornment position="end">UZS</InputAdornment>
-                                                        ),
-                                                    }}
                                                 />
 
                                                 {/* Total Price */}
@@ -707,15 +745,9 @@ export function InvoiceDetailsCalculation({ invoiceId, invoiceData, onSuccess, o
                                                     value={prices[item.id] || ''}
                                                     onChange={(e) => handleTotalPriceChange(item.id, e.target.value)}
                                                     inputProps={{ step: '0.01', min: '0' }}
-                                                    InputProps={{
-                                                        endAdornment: (
-                                                            <InputAdornment position="end">UZS</InputAdornment>
-                                                        ),
-                                                    }}
                                                 />
                                             </Box>
-
-                                        </Paper>
+                                        </Box>
                                     ))}
                                 </Box>
                             </Paper>
@@ -799,11 +831,11 @@ export function InvoiceDetailsCalculation({ invoiceId, invoiceData, onSuccess, o
                         </Box>
                     )}
 
-                    {!showCalculation && transferredIds.length === 0 && (
+                    {/* {!showCalculation && transferredIds.length === 0 && (
                         <Alert severity="warning" sx={{ mt: 3 }}>
                             {t('warehouse.invoiceDetails.selectIngredientsFirst', 'Select ingredients from left panel and click Add to continue')}
                         </Alert>
-                    )}
+                    )} */}
 
                     {isNewInvoice && showCalculation && (
                         <Alert severity="info" sx={{ mt: 3 }}>

@@ -75,6 +75,13 @@ interface DeductionsDetailsCalculationProps {
     isNewDeduction?: boolean;
     onSuccess?: () => void;
     onItemsChange?: (items: DeductionItem[]) => void;
+    formData?: {
+        date: string;
+        status: string;
+        storage_id: string;
+        description: string;
+        act_group_id: string;
+    };
 }
 
 export function DeductionsDetailsCalculation({
@@ -85,6 +92,7 @@ export function DeductionsDetailsCalculation({
     isNewDeduction = false,
     onSuccess,
     onItemsChange,
+    formData: parentFormData,
 }: DeductionsDetailsCalculationProps) {
     const { t } = useTranslation('menu');
     const theme = useTheme();
@@ -99,6 +107,7 @@ export function DeductionsDetailsCalculation({
     const [searchTerm, setSearchTerm] = useState('');
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
+    const [initialized, setInitialized] = useState(false);
 
     // Load ingredients
     useEffect(() => {
@@ -120,18 +129,22 @@ export function DeductionsDetailsCalculation({
         loadData();
     }, [t]);
 
-    // Initialize transferred items from initialItems prop
-    // useEffect(() => {
-    //     if (initialItems && initialItems.length > 0) {
-    //         const ids = initialItems.map((item) => item.ingredient_id);
-    //         const newQuantities: Record<string, string> = {};
-    //         initialItems.forEach((item) => {
-    //             newQuantities[item.ingredient_id] = item.quantity || '1';
-    //         });
-    //         setTransferredIds(ids);
-    //         setQuantities(newQuantities);
-    //     }
-    // }, [initialItems, ingredients]);
+    // Initialize transferred items from initialItems prop (only once after ingredients are loaded)
+    useEffect(() => {
+        if (!initialized && initialItems && initialItems.length > 0 && ingredients.length > 0) {
+            console.log('Initializing items from initialItems:', initialItems);
+            const ids = initialItems.map((item) => item.ingredient_id);
+            const newQuantities: Record<string, string> = {};
+            initialItems.forEach((item) => {
+                newQuantities[item.ingredient_id] = item.quantity || '1';
+            });
+            console.log('Setting transferredIds:', ids);
+            console.log('Setting quantities:', newQuantities);
+            setTransferredIds(ids);
+            setQuantities(newQuantities);
+            setInitialized(true);
+        }
+    }, [initialItems, ingredients, initialized]);
 
     // Call onItemsChange whenever items change
     useEffect(() => {
@@ -233,9 +246,20 @@ export function DeductionsDetailsCalculation({
                     quantity: quantities[item.id] || '0',
                 }));
 
-                await updateDeduction(deductionId, {
+                // Prepare complete payload with all form data
+                const payload = parentFormData ? {
+                    date: parentFormData.date,
+                    status: parentFormData.status,
+                    storage_id: parentFormData.storage_id,
+                    description: parentFormData.description,
+                    act_group_id: parentFormData.act_group_id,
                     items,
-                } as any);
+                } : {
+                    items,
+                };
+
+                console.log('Saving deduction with payload:', payload);
+                await updateDeduction(deductionId, payload as any);
 
                 toast.success(t('deductions.itemsAdded', 'Items added successfully'));
                 onSuccess?.();

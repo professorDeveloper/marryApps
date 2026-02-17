@@ -481,6 +481,7 @@ export function DeductionsEditView({ isNew = false }: DeductionsEditViewProps) {
                                 items={items}
                                 onItemsChange={handleItemsChange}
                                 onSuccess={handleItemsSave}
+                                formData={formData}
                             />
                         </Stack>
                     </TabPanel>

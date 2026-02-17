@@ -95,7 +95,7 @@ const PRICING_SECTION: CardSection = {
             label: 'semifinishedProducts.quantity',
             type: 'number',
             required: true,
-            placeholder: '0',
+            // placeholder: '0',
         },
         {
             key: 'measurement',

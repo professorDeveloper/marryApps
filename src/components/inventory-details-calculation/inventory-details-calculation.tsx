@@ -40,7 +40,7 @@ interface InventoryDetailsCalculationProps {
     inventoryId: string;
     onSuccess?: () => void;
     onDetailsChange?: (details: any[]) => void;
-    onApplySuccess?: () => void;
+    onApplySuccess?: (items: IInventoryItem[]) => void;
     isNewInventory?: boolean;
     persistedDetails?: IInventoryItem[];
 }
@@ -69,28 +69,21 @@ export function InventoryDetailsCalculation({
     const theme = useTheme();
     const navigate = useNavigate();
     const { getInventoryItems, createInventoryItemsBatch, applyInventory } = useInventoryAPI();
-
     // Left panel (available ingredients)
     const [ingredients, setIngredients] = useState<Ingredient[]>([]);
     const [loading, setLoading] = useState(true);
     const [selectedIds, setSelectedIds] = useState<string[]>([]);
     const [searchTerm, setSearchTerm] = useState('');
-
     // Middle: quantity inputs
     const [quantities, setQuantities] = useState<Record<string, string>>({});
-
     // Right panel (transferred items)
     const [transferredIds, setTransferredIds] = useState<string[]>([]);
-
     // Inventory item IDs (from backend) - used for deletion
     const [inventoryItemIds, setInventoryItemIds] = useState<Record<string, string>>({});
-
     // Search for right panel
     const [rightSearchTerm, setRightSearchTerm] = useState('');
-
     // Save operation loading state
     const [isSaving, setIsSaving] = useState(false);
-
     // Results table (after saving)
     const [inventoryItems, setInventoryItems] = useState<IInventoryItem[]>([]);
 
@@ -248,9 +241,9 @@ export function InventoryDetailsCalculation({
                 const applyResult = await applyInventory(inventoryId);
                 if (applyResult) {
                     toast.success(t('success.applied') || 'Inventory applied successfully');
-                    // Call apply success callback to refresh parent data
+                    // Pass POST response data to parent - don't fetch again via GET
                     if (onApplySuccess) {
-                        onApplySuccess();
+                        onApplySuccess(result);
                     }
                 }
 

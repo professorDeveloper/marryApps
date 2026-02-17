@@ -307,10 +307,10 @@ export function InventoryEditView({ isNew = false }: InventoryEditViewProps) {
                                 onSuccess={() => {
                                     toast.success(t('success.itemsAdded'));
                                 }}
-                                onApplySuccess={() => {
-                                    // Refresh inventory data after apply
-                                    if (effectiveInventoryId) {
-                                        refreshInventoryData(effectiveInventoryId);
+                                onApplySuccess={(updatedItems: any) => {
+                                    // Update inventory items with the POST response data
+                                    if (updatedItems) {
+                                        setInventoryItems(updatedItems);
                                     }
                                 }}
                             />
