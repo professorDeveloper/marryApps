@@ -1,4 +1,4 @@
--- no-op: seed moved to app/internal/migrate/seed.go
-INSERT INTO users (username, password, email, role) VALUES 
-('superadmin', 'superadmin', 'admin@example.com', 'superadmin');
+-- Seed superadmin user with bcrypt-hashed password
+INSERT INTO users (username, hash_password, email, role) VALUES
+('superadmin', '$2a$10$yA5z17s2UyujjSjMuDYhaOQaau308wBl9X77o0VruihOrEzEyGb0y', 'admin@example.com', 'superadmin');
 

@@ -25,7 +25,11 @@ sql:
       - "../../app/migrations/tenants/20_ingredient_stock_movements.up.sql"
       - "../../app/migrations/tenants/21_change_log.up.sql"
       - "../../app/migrations/tenants/22_add_branch_id_to_tenant_tables.up.sql"
+      - "../../app/migrations/tenants/23_seed_tenant_superadmin.up.sql"
+      - "../../app/migrations/tenants/24_make_username_unique_per_branch.up.sql"
       - "../../app/migrations/tenants/25_transfers.up.sql"
+      - "../../app/migrations/tenants/26_cash_register.up.sql"
+      - "../../app/migrations/tenants/27_group_transactions.up.sql"
     gen:
       go:
         emit_json_tags: true

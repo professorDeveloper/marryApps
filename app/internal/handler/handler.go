@@ -569,6 +569,29 @@ func (h *Handler) Register(router *echo.Echo) {
 			invoiceDetails.GET("/:id/with-ingredient", h.GetInvoiceDetailWithIngredient, mw.CheckLanguage())
 		}
 
+		// Cash register management endpoints
+		cashRegisters := api.Group("/cash-registers", mw.CheckAuth(h.cfg), mw.TenantMiddleware(h.repo))
+		{
+			cashRegisters.POST("", h.CreateCashRegister, mw.CheckLanguage())
+			cashRegisters.GET("", h.GetAllCashRegisters, mw.CheckLanguage())
+			cashRegisters.GET("/:id", h.GetCashRegister, mw.CheckLanguage())
+			cashRegisters.PUT("/:id", h.UpdateCashRegister, mw.CheckLanguage())
+			cashRegisters.DELETE("/:id", h.DeleteCashRegister, mw.CheckLanguage())
+			cashRegisters.POST("/:id/restore", h.RestoreCashRegister, mw.CheckLanguage())
+		}
+
+		// Group transaction management endpoints
+		groupTransactions := api.Group("/group-transactions", mw.CheckAuth(h.cfg), mw.TenantMiddleware(h.repo))
+		{
+			groupTransactions.POST("", h.CreateGroupTransaction, mw.CheckLanguage())
+			groupTransactions.GET("", h.GetAllGroupTransactions, mw.CheckLanguage())
+			groupTransactions.GET("/search", h.SearchGroupTransactions, mw.CheckLanguage())
+			groupTransactions.GET("/:id", h.GetGroupTransactionByID, mw.CheckLanguage())
+			groupTransactions.PUT("/:id", h.UpdateGroupTransaction, mw.CheckLanguage())
+			groupTransactions.DELETE("/:id", h.DeleteGroupTransaction, mw.CheckLanguage())
+			groupTransactions.POST("/:id/restore", h.RestoreGroupTransaction, mw.CheckLanguage())
+		}
+
 		// Transfer management endpoints
 		transfers := api.Group("/transfers", mw.CheckAuth(h.cfg), mw.TenantMiddleware(h.repo))
 		{

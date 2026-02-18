@@ -157,6 +157,34 @@ definitions:
         example: "2022-01-01T00:00:00Z"
         type: string
     type: object
+  model.CashRegisterRequest:
+    properties:
+      name:
+        example: 'Register #1'
+        maxLength: 255
+        minLength: 1
+        type: string
+    required:
+    - name
+    type: object
+  model.CashRegisterResponse:
+    properties:
+      branch_id:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+      created_at:
+        example: "2021-01-01T00:00:00Z"
+        type: string
+      id:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+      name:
+        example: 'Register #1'
+        type: string
+      updated_at:
+        example: "2021-01-01T00:00:00Z"
+        type: string
+    type: object
   model.CategoryResponse:
     properties:
       color_code:
@@ -696,6 +724,14 @@ definitions:
         type: array
     required:
     - good
+    type: object
+  model.CreateGroupTransactionRequest:
+    properties:
+      name:
+        example: Group A
+        type: string
+    required:
+    - name
     type: object
   model.CreateHallRequest:
     properties:
@@ -1428,6 +1464,22 @@ definitions:
         allOf:
         - $ref: '#/definitions/model.GoodResponse'
         description: Good - the created good/menu item
+    type: object
+  model.GroupTransactionResponse:
+    properties:
+      branch_id:
+        example: c0f18a64-7f5c-4425-9414-1b01cddee9d9
+        type: string
+      created_at:
+        type: string
+      id:
+        example: c0f18a64-7f5c-4425-9414-1b01cddee9d9
+        type: string
+      name:
+        example: Group A
+        type: string
+      updated_at:
+        type: string
     type: object
   model.HallResponse:
     properties:
@@ -2681,6 +2733,12 @@ definitions:
         type: array
     required:
     - good
+    type: object
+  model.UpdateGroupTransactionRequest:
+    properties:
+      name:
+        example: Group A
+        type: string
     type: object
   model.UpdateHallRequest:
     properties:
@@ -4423,6 +4481,223 @@ paths:
       summary: Preview calculations (no DB writes)
       tags:
       - Calculations
+  /api/v1/cash-registers:
+    get:
+      description: Retrieve all cash registers for the current branch
+      parameters:
+      - default: 20
+        description: 'Limit results (default: 20)'
+        in: query
+        name: limit
+        type: integer
+      - default: 0
+        description: 'Offset for pagination (default: 0)'
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Cash registers retrieved successfully
+          schema:
+            items:
+              $ref: '#/definitions/model.CashRegisterResponse'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get all cash registers
+      tags:
+      - cash-registers
+    post:
+      consumes:
+      - application/json
+      description: Create a new cash register for the current branch
+      parameters:
+      - description: Cash register data
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.CashRegisterRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Cash register created successfully
+          schema:
+            $ref: '#/definitions/model.CashRegisterResponse'
+        "400":
+          description: Invalid request format
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create a new cash register
+      tags:
+      - cash-registers
+  /api/v1/cash-registers/{id}:
+    delete:
+      description: Soft delete a cash register
+      parameters:
+      - description: Cash register ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Cash register deleted successfully
+          schema:
+            $ref: '#/definitions/model.SuccessResponse'
+        "400":
+          description: Invalid ID
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: Cash register not found
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete cash register
+      tags:
+      - cash-registers
+    get:
+      description: Retrieve a cash register by its ID
+      parameters:
+      - description: Cash register ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Cash register retrieved successfully
+          schema:
+            $ref: '#/definitions/model.CashRegisterResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: Cash register not found
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get cash register by ID
+      tags:
+      - cash-registers
+    put:
+      consumes:
+      - application/json
+      description: Update a cash register
+      parameters:
+      - description: Cash register ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Cash register update data
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.CashRegisterRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Cash register updated successfully
+          schema:
+            $ref: '#/definitions/model.CashRegisterResponse'
+        "400":
+          description: Invalid request format
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: Cash register not found
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update cash register
+      tags:
+      - cash-registers
+  /api/v1/cash-registers/{id}/restore:
+    post:
+      description: Restore a soft-deleted cash register
+      parameters:
+      - description: Cash register ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Cash register restored successfully
+          schema:
+            $ref: '#/definitions/model.SuccessResponse'
+        "400":
+          description: Invalid ID
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Restore cash register
+      tags:
+      - cash-registers
   /api/v1/categories:
     get:
       consumes:
@@ -8621,6 +8896,246 @@ paths:
       summary: Create good with multiple ingredients and compounds (One Save)
       tags:
       - Goods
+  /api/v1/group-transactions:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve all group transactions with pagination
+      parameters:
+      - default: 10
+        description: Limit
+        in: query
+        name: limit
+        type: integer
+      - default: 0
+        description: Offset
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/model.GroupTransactionResponse'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get all group transactions
+      tags:
+      - group-transactions
+    post:
+      consumes:
+      - application/json
+      description: Create a new group transaction
+      parameters:
+      - description: Create group transaction request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.CreateGroupTransactionRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/model.GroupTransactionResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create group transaction
+      tags:
+      - group-transactions
+  /api/v1/group-transactions/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Soft delete a group transaction by its ID
+      parameters:
+      - description: Group Transaction ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.SuccessResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete group transaction
+      tags:
+      - group-transactions
+    get:
+      consumes:
+      - application/json
+      description: Retrieve a group transaction by its ID
+      parameters:
+      - description: Group Transaction ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.GroupTransactionResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get group transaction by ID
+      tags:
+      - group-transactions
+    put:
+      consumes:
+      - application/json
+      description: Update a group transaction by its ID
+      parameters:
+      - description: Group Transaction ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Update group transaction request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.UpdateGroupTransactionRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.GroupTransactionResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update group transaction
+      tags:
+      - group-transactions
+  /api/v1/group-transactions/{id}/restore:
+    post:
+      consumes:
+      - application/json
+      description: Restore a previously deleted group transaction
+      parameters:
+      - description: Group Transaction ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.GroupTransactionResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Restore group transaction
+      tags:
+      - group-transactions
+  /api/v1/group-transactions/search:
+    get:
+      consumes:
+      - application/json
+      description: Search group transactions by name
+      parameters:
+      - description: Search query
+        in: query
+        name: q
+        required: true
+        type: string
+      - default: 10
+        description: Limit
+        in: query
+        name: limit
+        type: integer
+      - default: 0
+        description: Offset
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/model.GroupTransactionResponse'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Search group transactions
+      tags:
+      - group-transactions
   /api/v1/halls:
     get:
       consumes:

@@ -336,6 +336,15 @@ type Calculation struct {
 	DeletedAt           *int64             `json:"deleted_at"`
 }
 
+type CashRegister struct {
+	ID        uuid.UUID          `json:"id"`
+	Name      string             `json:"name"`
+	BranchID  uuid.UUID          `json:"branch_id"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
+	DeletedAt *int64             `json:"deleted_at"`
+}
+
 type Category struct {
 	ID           uuid.UUID          `json:"id"`
 	Name         string             `json:"name"`
@@ -495,6 +504,15 @@ type GoodsDetail struct {
 	CreatedAt    pgtype.Timestamptz  `json:"created_at"`
 	UpdatedAt    pgtype.Timestamptz  `json:"updated_at"`
 	DeletedAt    *int64              `json:"deleted_at"`
+}
+
+type GroupTransaction struct {
+	ID        uuid.UUID   `json:"id"`
+	Name      string      `json:"name"`
+	BranchID  pgtype.UUID `json:"branch_id"`
+	CreatedAt time.Time   `json:"created_at"`
+	UpdatedAt time.Time   `json:"updated_at"`
+	DeletedAt *int64      `json:"deleted_at"`
 }
 
 type Hall struct {

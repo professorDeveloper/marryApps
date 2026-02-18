@@ -412,6 +412,25 @@ type TransferI interface {
 	DeleteTransferItem(ctx context.Context, itemID string) error
 }
 
+type CashRegisterI interface {
+	CreateCashRegister(ctx context.Context, req model.CashRegisterRequest) (model.CashRegisterResponse, error)
+	GetCashRegisterByID(ctx context.Context, id uuid.UUID) (model.CashRegisterResponse, error)
+	GetAllCashRegisters(ctx context.Context, limit, offset int32) ([]model.CashRegisterResponse, error)
+	UpdateCashRegister(ctx context.Context, id uuid.UUID, req model.CashRegisterRequest) (model.CashRegisterResponse, error)
+	DeleteCashRegister(ctx context.Context, id uuid.UUID) error
+	RestoreCashRegister(ctx context.Context, id uuid.UUID) error
+}
+
+type GroupTransactionI interface {
+	CreateGroupTransaction(ctx context.Context, req *model.CreateGroupTransactionRequest) (*model.GroupTransactionResponse, error)
+	GetGroupTransactionByID(ctx context.Context, id string) (*model.GroupTransactionResponse, error)
+	GetAllGroupTransactions(ctx context.Context, limit, offset int32) ([]*model.GroupTransactionResponse, error)
+	UpdateGroupTransaction(ctx context.Context, id string, req *model.UpdateGroupTransactionRequest) (*model.GroupTransactionResponse, error)
+	DeleteGroupTransaction(ctx context.Context, id string) error
+	RestoreGroupTransaction(ctx context.Context, id string) (*model.GroupTransactionResponse, error)
+	SearchGroupTransactions(ctx context.Context, query string, limit, offset int32) ([]*model.GroupTransactionResponse, error)
+}
+
 type I interface {
 	Auth() AuthI
 	Payment() PaymentI
@@ -436,6 +455,8 @@ type I interface {
 	Calculation() CalculationI
 	Deduction() DeductionI
 	Transfer() TransferI
+	Cash() CashRegisterI
+	GroupTransaction() GroupTransactionI
 }
 
 type Service struct {
@@ -462,6 +483,8 @@ type Service struct {
 	calculation  CalculationI
 	deduction    DeductionI
 	transfer     TransferI
+	cash             CashRegisterI
+	groupTransaction GroupTransactionI
 }
 
 func New(cfg *config.Config, repo *repository.Repository, clickClient *paymentClick.Client, paymeClient *paymentPayme.Client, minioClient *minio.Minio) *Service {
@@ -489,6 +512,8 @@ func New(cfg *config.Config, repo *repository.Repository, clickClient *paymentCl
 		calculation:  NewCalculationS(repo),
 		deduction:    NewDeductionS(repo),
 		transfer:     NewTransferS(repo),
+		cash:             NewCashRegisterS(repo),
+		groupTransaction: NewGroupTransactionS(repo),
 	}
 }
 
@@ -581,4 +606,12 @@ func (s *Service) Deduction() DeductionI {
 
 func (s *Service) Transfer() TransferI {
 	return s.transfer
+}
+
+func (s *Service) Cash() CashRegisterI {
+	return s.cash
+}
+
+func (s *Service) GroupTransaction() GroupTransactionI {
+	return s.groupTransaction
 }
