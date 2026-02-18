@@ -30,6 +30,8 @@ sql:
       - "../../app/migrations/tenants/25_transfers.up.sql"
       - "../../app/migrations/tenants/26_cash_register.up.sql"
       - "../../app/migrations/tenants/27_group_transactions.up.sql"
+      - "../../app/migrations/tenants/28_insert.up.sql"
+
     gen:
       go:
         emit_json_tags: true
