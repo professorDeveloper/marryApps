@@ -445,6 +445,12 @@ func (s *TransferS) processTransferItems(ctx context.Context, q *pg.Queries, tra
 			return nil, fmt.Errorf("items[%d]: failed to add to receiver stock: %w", i, err)
 		}
 
+		// 4.5 Auto-set visibility for receiver branch on transfer receive
+		_ = q.EnsureIngredientVisibility(ctx, pg.EnsureIngredientVisibilityParams{
+			IngredientID: ingredientID,
+			BranchID:     toBranchID,
+		})
+
 		// 5. Get ingredient price
 		ingredient, err := q.GetIngredientByID(ctx, ingredientID)
 		if err != nil {

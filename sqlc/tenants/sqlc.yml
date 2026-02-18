@@ -32,6 +32,7 @@ sql:
       - "../../app/migrations/tenants/27_group_transactions.up.sql"
       - "../../app/migrations/tenants/28_insert.up.sql"
       - "../../app/migrations/tenants/29_insert_superadmin.up.sql"
+      - "../../app/migrations/tenants/30_ingredient_visibility.up.sql"
 
 
     gen:

@@ -466,6 +466,9 @@ func (i *IngredientS) CreateIngredient(ctx context.Context, name string, nameI18
 		return nil, fmt.Errorf("failed to create ingredient: %w", err)
 	}
 
+	// Auto-set visibility for the current branch
+	_ = i.repo.Tenant(ctx).EnsureIngredientVisibilityForCurrentBranch(ctx, ingredient.ID)
+
 	return mapIngredientToResponse(ingredient), nil
 }
 

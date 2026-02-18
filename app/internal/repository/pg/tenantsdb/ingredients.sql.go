@@ -17,7 +17,6 @@ UPDATE ingredients
 SET price_per_unit = COALESCE($2, price_per_unit),
     updated_at = NOW()
 WHERE id = $1
-  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
   AND deleted_at = 0
 RETURNING id, name, name_i18n, group_id, measurement, picture_url, color_code, brand_id, price_per_unit, created_at, updated_at, deleted_at
 `
@@ -109,8 +108,7 @@ func (q *Queries) AddToIngredientStock(ctx context.Context, arg AddToIngredientS
 const countIngredientGroups = `-- name: CountIngredientGroups :one
 SELECT COUNT(*)
 FROM ingredient_groups
-WHERE branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-  AND deleted_at = 0
+WHERE deleted_at = 0
 `
 
 // CountIngredientGroups counts total ingredient groups
@@ -137,12 +135,14 @@ func (q *Queries) CountIngredientStock(ctx context.Context) (int64, error) {
 
 const countIngredients = `-- name: CountIngredients :one
 SELECT COUNT(*)
-FROM ingredients
-WHERE branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-  AND deleted_at = 0
+FROM ingredients i
+JOIN ingredient_visibility iv ON iv.ingredient_id = i.id
+  AND iv.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  AND iv.is_visible = true
+WHERE i.deleted_at = 0
 `
 
-// CountIngredients counts total ingredients
+// CountIngredients counts total ingredients visible to current branch
 func (q *Queries) CountIngredients(ctx context.Context) (int64, error) {
 	row := q.db.QueryRow(ctx, countIngredients)
 	var count int64
@@ -151,14 +151,9 @@ func (q *Queries) CountIngredients(ctx context.Context) (int64, error) {
 }
 
 const createIngredient = `-- name: CreateIngredient :one
-INSERT INTO ingredients (id, name, name_i18n, group_id, measurement, picture_url, color_code, brand_id, branch_id)
-VALUES (
-    $1, $2, $3, $4, $5, $6, $7, $8,
-    COALESCE(
-        (SELECT branch_id FROM ingredient_groups WHERE id = $4),
-        NULLIF(current_setting('app.branch_id', true), '')::uuid
-    )
-)
+
+INSERT INTO ingredients (id, name, name_i18n, group_id, measurement, picture_url, color_code, brand_id)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 RETURNING id, name, name_i18n, group_id, measurement, picture_url, color_code, brand_id, price_per_unit, created_at, updated_at, deleted_at, branch_id
 `
 
@@ -173,7 +168,9 @@ type CreateIngredientParams struct {
 	BrandID     pgtype.UUID         `json:"brand_id"`
 }
 
-// CreateIngredient creates a new ingredient
+// ==================== INGREDIENTS QUERIES ====================
+// Ingredients are shared across all branches. Visibility is controlled by ingredient_visibility table.
+// CreateIngredient creates a new ingredient (shared, no branch_id)
 func (q *Queries) CreateIngredient(ctx context.Context, arg CreateIngredientParams) (Ingredient, error) {
 	row := q.db.QueryRow(ctx, createIngredient,
 		arg.ID,
@@ -206,8 +203,8 @@ func (q *Queries) CreateIngredient(ctx context.Context, arg CreateIngredientPara
 
 const createIngredientGroup = `-- name: CreateIngredientGroup :one
 
-INSERT INTO ingredient_groups (id, name, picture_url, name_i18n, color_code, branch_id)
-VALUES ($1, $2, $3, $4, $5, NULLIF(current_setting('app.branch_id', true), '')::uuid)
+INSERT INTO ingredient_groups (id, name, picture_url, name_i18n, color_code)
+VALUES ($1, $2, $3, $4, $5)
 RETURNING id, name, picture_url, name_i18n, color_code, created_at, updated_at, deleted_at, branch_id
 `
 
@@ -232,6 +229,7 @@ type CreateIngredientGroupRow struct {
 }
 
 // ==================== INGREDIENT GROUPS QUERIES ====================
+// Ingredient groups are shared across all branches (no branch_id filter)
 func (q *Queries) CreateIngredientGroup(ctx context.Context, arg CreateIngredientGroupParams) (CreateIngredientGroupRow, error) {
 	row := q.db.QueryRow(ctx, createIngredientGroup,
 		arg.ID,
@@ -256,6 +254,7 @@ func (q *Queries) CreateIngredientGroup(ctx context.Context, arg CreateIngredien
 }
 
 const createIngredientStock = `-- name: CreateIngredientStock :one
+
 INSERT INTO ingredient_stock (id, ingredient_id, quantity, branch_id, storage_id)
 VALUES ($1, $2, $3, $4, $5)
 RETURNING id, ingredient_id, quantity, branch_id, storage_id, created_at, updated_at, deleted_at
@@ -280,6 +279,7 @@ type CreateIngredientStockRow struct {
 	DeletedAt    *int64             `json:"deleted_at"`
 }
 
+// ==================== INGREDIENT STOCK QUERIES ====================
 func (q *Queries) CreateIngredientStock(ctx context.Context, arg CreateIngredientStockParams) (CreateIngredientStockRow, error) {
 	row := q.db.QueryRow(ctx, createIngredientStock,
 		arg.ID,
@@ -306,7 +306,6 @@ const deleteIngredient = `-- name: DeleteIngredient :exec
 UPDATE ingredients
 SET deleted_at = EXTRACT(EPOCH FROM NOW())::BIGINT
 WHERE id = $1
-  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
   AND deleted_at = 0
 `
 
@@ -320,7 +319,6 @@ const deleteIngredientGroup = `-- name: DeleteIngredientGroup :exec
 UPDATE ingredient_groups
 SET deleted_at = EXTRACT(EPOCH FROM NOW())::BIGINT
 WHERE id = $1
-  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
   AND deleted_at = 0
 `
 
@@ -369,8 +367,7 @@ func (q *Queries) EnsureIngredientStockByStorage(ctx context.Context, arg Ensure
 const getAllIngredientGroups = `-- name: GetAllIngredientGroups :many
 SELECT id, name, picture_url, name_i18n, color_code, created_at, updated_at, deleted_at, branch_id
 FROM ingredient_groups
-WHERE branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-  AND deleted_at = 0
+WHERE deleted_at = 0
 ORDER BY created_at DESC
 LIMIT $1 OFFSET $2
 `
@@ -441,7 +438,6 @@ SELECT
 FROM ingredient_groups ig
 LEFT JOIN translations t ON ig.name_i18n = t.id AND t.deleted_at = 0
 WHERE ig.deleted_at = 0
-  AND ig.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 ORDER BY ig.created_at DESC
 LIMIT $2 OFFSET $3
 `
@@ -550,11 +546,13 @@ func (q *Queries) GetAllIngredientStock(ctx context.Context, arg GetAllIngredien
 }
 
 const getAllIngredients = `-- name: GetAllIngredients :many
-SELECT id, name, name_i18n, group_id, measurement, picture_url, color_code, brand_id, price_per_unit, created_at, updated_at, deleted_at, branch_id
-FROM ingredients
-WHERE branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-  AND deleted_at = 0
-ORDER BY created_at DESC
+SELECT i.id, i.name, i.name_i18n, i.group_id, i.measurement, i.picture_url, i.color_code, i.brand_id, i.price_per_unit, i.created_at, i.updated_at, i.deleted_at, i.branch_id
+FROM ingredients i
+JOIN ingredient_visibility iv ON iv.ingredient_id = i.id
+  AND iv.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  AND iv.is_visible = true
+WHERE i.deleted_at = 0
+ORDER BY i.created_at DESC
 LIMIT $1 OFFSET $2
 `
 
@@ -563,7 +561,7 @@ type GetAllIngredientsParams struct {
 	Offset int32 `json:"offset"`
 }
 
-// GetAllIngredients retrieves all ingredients with pagination
+// GetAllIngredients retrieves all ingredients visible to current branch
 func (q *Queries) GetAllIngredients(ctx context.Context, arg GetAllIngredientsParams) ([]Ingredient, error) {
 	rows, err := q.db.Query(ctx, getAllIngredients, arg.Limit, arg.Offset)
 	if err != nil {
@@ -599,9 +597,9 @@ func (q *Queries) GetAllIngredients(ctx context.Context, arg GetAllIngredientsPa
 }
 
 const getAllIngredientsWithLanguage = `-- name: GetAllIngredientsWithLanguage :many
-SELECT 
+SELECT
     i.id,
-    COALESCE(CASE 
+    COALESCE(CASE
         WHEN $1::text = 'uz' THEN t.uz
         WHEN $1::text = 'ru' THEN t.ru
         WHEN $1::text = 'en' THEN t.en
@@ -619,8 +617,10 @@ SELECT
     i.deleted_at
 FROM ingredients i
 LEFT JOIN translations t ON i.name_i18n = t.id AND t.deleted_at = 0
+JOIN ingredient_visibility iv ON iv.ingredient_id = i.id
+  AND iv.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  AND iv.is_visible = true
 WHERE i.deleted_at = 0
-  AND i.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 ORDER BY i.created_at DESC
 LIMIT $2 OFFSET $3
 `
@@ -683,11 +683,10 @@ const getIngredientByID = `-- name: GetIngredientByID :one
 SELECT id, name, name_i18n, group_id, measurement, picture_url, color_code, brand_id, price_per_unit, created_at, updated_at, deleted_at, branch_id
 FROM ingredients
 WHERE id = $1
-  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
   AND deleted_at = 0
 `
 
-// GetIngredientByID retrieves an ingredient by ID
+// GetIngredientByID retrieves an ingredient by ID (no branch filter - direct lookup)
 func (q *Queries) GetIngredientByID(ctx context.Context, id uuid.UUID) (Ingredient, error) {
 	row := q.db.QueryRow(ctx, getIngredientByID, id)
 	var i Ingredient
@@ -710,9 +709,9 @@ func (q *Queries) GetIngredientByID(ctx context.Context, id uuid.UUID) (Ingredie
 }
 
 const getIngredientByIDWithLanguage = `-- name: GetIngredientByIDWithLanguage :one
-SELECT 
+SELECT
     i.id,
-    COALESCE(CASE 
+    COALESCE(CASE
         WHEN $2::text = 'uz' THEN t.uz
         WHEN $2::text = 'ru' THEN t.ru
         WHEN $2::text = 'en' THEN t.en
@@ -731,7 +730,6 @@ SELECT
 FROM ingredients i
 LEFT JOIN translations t ON i.name_i18n = t.id AND t.deleted_at = 0
 WHERE i.id = $1
-  AND i.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
   AND i.deleted_at = 0
 `
 
@@ -779,7 +777,6 @@ const getIngredientByIDWithPriceQuantity = `-- name: GetIngredientByIDWithPriceQ
 SELECT id, name, name_i18n, group_id, measurement, picture_url, color_code, brand_id, price_per_unit, created_at, updated_at, deleted_at, branch_id
 FROM ingredients
 WHERE id = $1
-  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
   AND deleted_at = 0
 `
 
@@ -809,7 +806,6 @@ const getIngredientGroupByID = `-- name: GetIngredientGroupByID :one
 SELECT id, name, picture_url, name_i18n, color_code, created_at, updated_at, deleted_at, branch_id
 FROM ingredient_groups
 WHERE id = $1
-  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
   AND deleted_at = 0
 `
 
@@ -843,9 +839,10 @@ func (q *Queries) GetIngredientGroupByID(ctx context.Context, id uuid.UUID) (Get
 }
 
 const getIngredientGroupByIDWithLanguage = `-- name: GetIngredientGroupByIDWithLanguage :one
-SELECT 
+
+SELECT
     ig.id,
-    COALESCE(CASE 
+    COALESCE(CASE
         WHEN $2::text = 'uz' THEN t.uz
         WHEN $2::text = 'ru' THEN t.ru
         WHEN $2::text = 'en' THEN t.en
@@ -880,6 +877,7 @@ type GetIngredientGroupByIDWithLanguageRow struct {
 	DeletedAt  *int64             `json:"deleted_at"`
 }
 
+// ==================== WITH LANGUAGE QUERIES ====================
 func (q *Queries) GetIngredientGroupByIDWithLanguage(ctx context.Context, arg GetIngredientGroupByIDWithLanguageParams) (GetIngredientGroupByIDWithLanguageRow, error) {
 	row := q.db.QueryRow(ctx, getIngredientGroupByIDWithLanguage, arg.ID, arg.Column2)
 	var i GetIngredientGroupByIDWithLanguageRow
@@ -933,12 +931,14 @@ func (q *Queries) GetIngredientStockByID(ctx context.Context, id uuid.UUID) (Get
 }
 
 const getIngredientsByGroupID = `-- name: GetIngredientsByGroupID :many
-SELECT id, name, name_i18n, group_id, measurement, picture_url, color_code, brand_id, price_per_unit, created_at, updated_at, deleted_at, branch_id
-FROM ingredients
-WHERE group_id = $1
-  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-  AND deleted_at = 0
-ORDER BY created_at DESC
+SELECT i.id, i.name, i.name_i18n, i.group_id, i.measurement, i.picture_url, i.color_code, i.brand_id, i.price_per_unit, i.created_at, i.updated_at, i.deleted_at, i.branch_id
+FROM ingredients i
+JOIN ingredient_visibility iv ON iv.ingredient_id = i.id
+  AND iv.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  AND iv.is_visible = true
+WHERE i.group_id = $1
+  AND i.deleted_at = 0
+ORDER BY i.created_at DESC
 LIMIT $2 OFFSET $3
 `
 
@@ -948,7 +948,7 @@ type GetIngredientsByGroupIDParams struct {
 	Offset  int32       `json:"offset"`
 }
 
-// GetIngredientsByGroupID retrieves ingredients by group ID
+// GetIngredientsByGroupID retrieves ingredients by group ID visible to current branch
 func (q *Queries) GetIngredientsByGroupID(ctx context.Context, arg GetIngredientsByGroupIDParams) ([]Ingredient, error) {
 	rows, err := q.db.Query(ctx, getIngredientsByGroupID, arg.GroupID, arg.Limit, arg.Offset)
 	if err != nil {
@@ -1178,9 +1178,9 @@ func (q *Queries) GetStockByIngredientID(ctx context.Context, arg GetStockByIngr
 
 const removeFromIngredientStock = `-- name: RemoveFromIngredientStock :one
 UPDATE ingredient_stock
-SET quantity = CASE 
-    WHEN quantity - $2 < 0 THEN 0::numeric 
-    ELSE quantity - $2 
+SET quantity = CASE
+    WHEN quantity - $2 < 0 THEN 0::numeric
+    ELSE quantity - $2
 END,
     updated_at = NOW()
 WHERE id = $1 AND deleted_at = 0
@@ -1225,7 +1225,6 @@ const restoreIngredient = `-- name: RestoreIngredient :exec
 UPDATE ingredients
 SET deleted_at = 0
 WHERE id = $1
-  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
   AND deleted_at != 0
 `
 
@@ -1239,7 +1238,6 @@ const restoreIngredientGroup = `-- name: RestoreIngredientGroup :exec
 UPDATE ingredient_groups
 SET deleted_at = 0
 WHERE id = $1
-  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
   AND deleted_at != 0
 `
 
@@ -1266,7 +1264,6 @@ const searchIngredientGroups = `-- name: SearchIngredientGroups :many
 SELECT id, name, picture_url, name_i18n, color_code, created_at, updated_at, deleted_at, branch_id
 FROM ingredient_groups
 WHERE deleted_at = 0
-  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
   AND name ILIKE '%' || $1 || '%'
 ORDER BY created_at DESC
 LIMIT $2 OFFSET $3
@@ -1322,12 +1319,14 @@ func (q *Queries) SearchIngredientGroups(ctx context.Context, arg SearchIngredie
 }
 
 const searchIngredients = `-- name: SearchIngredients :many
-SELECT id, name, name_i18n, group_id, measurement, picture_url, color_code, brand_id, price_per_unit, created_at, updated_at, deleted_at, branch_id
-FROM ingredients
-WHERE deleted_at = 0
-  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-  AND name ILIKE '%' || $1 || '%'
-ORDER BY created_at DESC
+SELECT i.id, i.name, i.name_i18n, i.group_id, i.measurement, i.picture_url, i.color_code, i.brand_id, i.price_per_unit, i.created_at, i.updated_at, i.deleted_at, i.branch_id
+FROM ingredients i
+JOIN ingredient_visibility iv ON iv.ingredient_id = i.id
+  AND iv.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  AND iv.is_visible = true
+WHERE i.deleted_at = 0
+  AND i.name ILIKE '%' || $1 || '%'
+ORDER BY i.created_at DESC
 LIMIT $2 OFFSET $3
 `
 
@@ -1337,7 +1336,7 @@ type SearchIngredientsParams struct {
 	Offset  int32   `json:"offset"`
 }
 
-// SearchIngredients searches ingredients by name
+// SearchIngredients searches ingredients by name visible to current branch
 func (q *Queries) SearchIngredients(ctx context.Context, arg SearchIngredientsParams) ([]Ingredient, error) {
 	rows, err := q.db.Query(ctx, searchIngredients, arg.Column1, arg.Limit, arg.Offset)
 	if err != nil {
@@ -1381,13 +1380,8 @@ SET name = COALESCE($2, name),
     picture_url = COALESCE($6, picture_url),
     color_code = COALESCE($7, color_code),
     brand_id = COALESCE($8, brand_id),
-    branch_id = COALESCE(
-        (SELECT branch_id FROM ingredient_groups WHERE id = COALESCE($4, group_id)),
-        branch_id
-    ),
     updated_at = NOW()
 WHERE ingredients.id = $1
-  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
   AND deleted_at = 0
 RETURNING id, name, name_i18n, group_id, measurement, picture_url, color_code, brand_id, price_per_unit, created_at, updated_at, deleted_at, branch_id
 `
@@ -1403,7 +1397,7 @@ type UpdateIngredientParams struct {
 	BrandID     pgtype.UUID         `json:"brand_id"`
 }
 
-// UpdateIngredient updates an ingredient
+// UpdateIngredient updates an ingredient (shared, no branch filter)
 func (q *Queries) UpdateIngredient(ctx context.Context, arg UpdateIngredientParams) (Ingredient, error) {
 	row := q.db.QueryRow(ctx, updateIngredient,
 		arg.ID,
@@ -1442,7 +1436,6 @@ SET name = COALESCE($2, name),
     color_code = COALESCE($5, color_code),
     updated_at = NOW()
 WHERE ingredient_groups.id = $1
-  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
   AND deleted_at = 0
 RETURNING id, name, picture_url, name_i18n, color_code, created_at, updated_at, deleted_at, branch_id
 `
@@ -1496,7 +1489,6 @@ UPDATE ingredients
 SET price_per_unit = COALESCE($2, price_per_unit),
     updated_at = NOW()
 WHERE id = $1
-  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
   AND deleted_at = 0
 RETURNING id, name, name_i18n, group_id, measurement, picture_url, color_code, brand_id, price_per_unit, created_at, updated_at, deleted_at
 `

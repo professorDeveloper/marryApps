@@ -581,6 +581,15 @@ type IngredientStockMovement struct {
 	CreatedAt    pgtype.Timestamptz `json:"created_at"`
 }
 
+type IngredientVisibility struct {
+	ID           uuid.UUID `json:"id"`
+	IngredientID uuid.UUID `json:"ingredient_id"`
+	BranchID     uuid.UUID `json:"branch_id"`
+	IsVisible    bool      `json:"is_visible"`
+	CreatedAt    time.Time `json:"created_at"`
+	UpdatedAt    time.Time `json:"updated_at"`
+}
+
 type Inventory struct {
 	ID              uuid.UUID          `json:"id"`
 	Number          int64              `json:"number"`

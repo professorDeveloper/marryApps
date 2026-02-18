@@ -567,6 +567,9 @@ func (s *InvoiceS) CreateInvoiceDetail(ctx context.Context, invoiceID string, re
 		fmt.Printf("Warning: failed to update ingredient price_per_unit: %v\n", err)
 	}
 
+	// Auto-set visibility for current branch on invoice receive
+	_ = s.repo.Tenant(ctx).EnsureIngredientVisibilityForCurrentBranch(ctx, ingredientUUID)
+
 	_, _ = s.repo.Tenant(ctx).EnsureIngredientStockByStorage(ctx, pg.EnsureIngredientStockByStorageParams{
 		ID:           uuid.New(),
 		IngredientID: ingredientUUID,
@@ -712,6 +715,9 @@ func (s *InvoiceS) CreateInvoiceDetailsBatch(ctx context.Context, invoiceID stri
 		if err != nil {
 			fmt.Printf("Warning: failed to update ingredient price_per_unit for item %d: %v\n", i+1, err)
 		}
+
+		// Auto-set visibility for current branch on invoice receive
+		_ = s.repo.Tenant(ctx).EnsureIngredientVisibilityForCurrentBranch(ctx, ingredientUUID)
 
 		_, _ = s.repo.Tenant(ctx).EnsureIngredientStockByStorage(ctx, pg.EnsureIngredientStockByStorageParams{
 			ID:           uuid.New(),
@@ -1597,6 +1603,9 @@ func (s *InvoiceS) CreateInvoiceWithDetails(ctx context.Context, req *model.Crea
 		if err != nil {
 			return nil, fmt.Errorf("item %d: failed to update ingredient price_per_unit: %w", i+1, err)
 		}
+
+		// Auto-set visibility for current branch on invoice receive
+		_ = s.repo.Tenant(ctx).EnsureIngredientVisibilityForCurrentBranch(ctx, ingredientUUID)
 
 		storagePg := pgtype.UUID{Bytes: invoiceStorageUUID, Valid: true}
 		_, ensureErr := s.repo.Tenant(ctx).EnsureIngredientStockByStorage(ctx, pg.EnsureIngredientStockByStorageParams{
