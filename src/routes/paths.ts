@@ -212,6 +212,14 @@ export const paths = {
     },
   },
 
+  cashbox: {
+    root: `${ROOTS.MENU}/cashbox`,
+    cashiers: `${ROOTS.MENU}/cashbox/cashiers`,
+    transactionGroups: `${ROOTS.MENU}/cashbox/transaction-groups`,
+    transactions: `${ROOTS.MENU}/cashbox/transactions`,
+    report: `${ROOTS.MENU}/cashbox/report`,
+  },
+
   settings: {
     root: `${ROOTS.SETTING}`,
     general: {

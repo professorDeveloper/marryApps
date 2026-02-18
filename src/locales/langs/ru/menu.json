@@ -352,6 +352,13 @@
       "bills": "Счета",
       "ingredients": "Отчет по ингредиентам"
     },
+    "cashbox": {
+      "title": "Касса",
+      "cashiers": "Касси",
+      "transactionGroups": "групп транзакций",
+      "transactions": "Транзакции",
+      "report": "Кассовый отчет"
+    },
     "settings": {
       "title": "Настройки",
       "connecteddevices": "Подключенные мобильные устройства",

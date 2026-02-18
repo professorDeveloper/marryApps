@@ -34,10 +34,16 @@ export interface CollisionCheckResult {
     collidingTableId?: string;
 }
 
-export const DEFAULT_TABLE_WIDTH = 80;
-export const DEFAULT_TABLE_HEIGHT = 60;
+// Default values in pixels (1 meter = 100 pixels)
+export const DEFAULT_TABLE_WIDTH = 80; // 0.8m
+export const DEFAULT_TABLE_HEIGHT = 60; // 0.6m
 export const DEFAULT_TABLE_SEATS = 4;
-export const GRID_SIZE = 20;
+export const GRID_SIZE = 20; // 0.2m grid
 export const ROTATION_SNAP = 15; // degrees
-export const HALL_WIDTH = 700;
-export const HALL_HEIGHT = 500;
+export const HALL_WIDTH = 800; // 8m
+export const HALL_HEIGHT = 600; // 6m
+
+// Unit conversion constants (in pixels)
+export const PIXELS_PER_METER = 100;
+export const PIXELS_PER_CENTIMETER = 1;
+

@@ -21,6 +21,8 @@ import {
     Select,
     FormControl,
     InputLabel,
+    ToggleButton,
+    ToggleButtonGroup,
 } from '@mui/material';
 import { CONFIG } from 'src/global-config';
 import { Iconify } from 'src/components/iconify';
@@ -29,6 +31,7 @@ import { useGetBranches } from 'src/actions/branches';
 import { useRouter } from 'src/routes/hooks';
 import { paths } from 'src/routes/paths';
 import type { IHallItem } from 'src/types/halls';
+import { pxToMeters, pxToCentimeters, metersToPx, centimetersToPx, getDimensionDisplay } from 'src/utils/unit-converter';
 
 const metadata = { title: `Halls Management | ${CONFIG.appName}` };
 
@@ -43,11 +46,12 @@ export default function HallsPage() {
 
     const [createDialogOpen, setCreateDialogOpen] = useState(false);
     const [editDialogOpen, setEditDialogOpen] = useState(false);
+    const [unitType, setUnitType] = useState<'m' | 'cm'>('m'); // 'm' for meters, 'cm' for centimeters
     const [formData, setFormData] = useState({
         name: '',
         branch_id: '',
-        width: 800,
-        height: 600,
+        width: 8, // Default 8 meters
+        height: 6, // Default 6 meters
     });
     const [creating, setCreating] = useState(false);
     const [hallToEdit, setHallToEdit] = useState<IHallItem | null>(null);
@@ -60,9 +64,10 @@ export default function HallsPage() {
         setFormData({
             name: '',
             branch_id: '',
-            width: 800,
-            height: 600,
+            width: 8, // 8 meters
+            height: 6, // 6 meters
         });
+        setUnitType('m');
         setCreateDialogOpen(true);
     };
 
@@ -72,12 +77,15 @@ export default function HallsPage() {
 
     const handleEditDialogOpen = (hall: IHallItem) => {
         setHallToEdit(hall);
+        const metersWidth = pxToMeters(hall.width);
+        const metersHeight = pxToMeters(hall.height);
         setFormData({
             name: hall.name,
             branch_id: hall.branch_id,
-            width: hall.width,
-            height: hall.height,
+            width: metersWidth,
+            height: metersHeight,
         });
+        setUnitType('m');
         setEditDialogOpen(true);
     };
 
@@ -87,9 +95,10 @@ export default function HallsPage() {
         setFormData({
             name: '',
             branch_id: '',
-            width: 800,
-            height: 600,
+            width: 8,
+            height: 6,
         });
+        setUnitType('m');
     };
 
     const handleCreateHall = async () => {
@@ -105,11 +114,15 @@ export default function HallsPage() {
 
         setCreating(true);
         try {
+            // Convert meters/cm to pixels (using 100px = 1m)
+            const widthInPx = unitType === 'cm' ? centimetersToPx(formData.width) : metersToPx(formData.width);
+            const heightInPx = unitType === 'cm' ? centimetersToPx(formData.height) : metersToPx(formData.height);
+
             await createHall({
                 name: formData.name,
                 branch_id: formData.branch_id,
-                width: formData.width,
-                height: formData.height,
+                width: widthInPx,
+                height: heightInPx,
             });
             handleCreateDialogClose();
         } finally {
@@ -127,10 +140,14 @@ export default function HallsPage() {
 
         setUpdating(true);
         try {
+            // Convert meters/cm to pixels (using 100px = 1m)
+            const widthInPx = unitType === 'cm' ? centimetersToPx(formData.width) : metersToPx(formData.width);
+            const heightInPx = unitType === 'cm' ? centimetersToPx(formData.height) : metersToPx(formData.height);
+
             await updateHall(hallToEdit.id, {
                 name: formData.name,
-                width: formData.width,
-                height: formData.height,
+                width: widthInPx,
+                height: heightInPx,
             });
             handleEditDialogClose();
         } finally {
@@ -275,13 +292,13 @@ export default function HallsPage() {
                                         {hall.name}
                                     </Typography>
                                     <Typography variant="body2" sx={{ color: 'text.secondary', mb: 2 }}>
-                                        {hall.width} × {hall.height} px
+                                        {getDimensionDisplay(hall.width, 'm')} × {getDimensionDisplay(hall.height, 'm')}
                                     </Typography>
                                     <Stack direction="row" spacing={1} sx={{ mt: 2 }}>
                                         <Button
                                             size="small"
                                             // variant="contained"
-                                            sx={{ backgroundColor: '#FB6633' , color: 'white', ":hover": { backgroundColor: '#FB6633', opacity: 0.8 } }}
+                                            sx={{ backgroundColor: '#FB6633', color: 'white', ":hover": { backgroundColor: '#FB6633', opacity: 0.8 } }}
                                             startIcon={<Iconify icon="solar:copy-bold" />}
                                             onClick={(e) => {
                                                 e.stopPropagation();
@@ -327,6 +344,25 @@ export default function HallsPage() {
                 <DialogTitle>{t('halls.dialogCreate')}</DialogTitle>
                 <DialogContent sx={{ pt: 2 }}>
                     <Stack spacing={2} sx={{ pt: 2 }}>
+                        <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
+                            <ToggleButtonGroup
+                                value={unitType}
+                                exclusive
+                                onChange={(e, newUnit) => {
+                                    if (newUnit) {
+                                        setUnitType(newUnit);
+                                    }
+                                }}
+                                size="small"
+                            >
+                                <ToggleButton value="m">
+                                    Meters (m)
+                                </ToggleButton>
+                                <ToggleButton value="cm">
+                                    Centimeters (cm)
+                                </ToggleButton>
+                            </ToggleButtonGroup>
+                        </Box>
                         <FormControl fullWidth>
                             <InputLabel>{t('halls.form.branch')}</InputLabel>
                             <Select
@@ -350,24 +386,24 @@ export default function HallsPage() {
                             autoFocus
                         />
                         <TextField
-                            label={t('halls.form.width')}
+                            label={`${t('halls.form.width')} (${unitType === 'm' ? 'meters' : 'centimeters'})`}
                             type="number"
                             value={formData.width}
                             onChange={(e) =>
-                                setFormData((prev) => ({ ...prev, width: parseInt(e.target.value) }))
+                                setFormData((prev) => ({ ...prev, width: parseFloat(e.target.value) }))
                             }
                             fullWidth
-                            inputProps={{ min: 100, step: 50 }}
+                            inputProps={{ min: 0.5, step: 0.5 }}
                         />
                         <TextField
-                            label={t('halls.form.height')}
+                            label={`${t('halls.form.height')} (${unitType === 'm' ? 'meters' : 'centimeters'})`}
                             type="number"
                             value={formData.height}
                             onChange={(e) =>
-                                setFormData((prev) => ({ ...prev, height: parseInt(e.target.value) }))
+                                setFormData((prev) => ({ ...prev, height: parseFloat(e.target.value) }))
                             }
                             fullWidth
-                            inputProps={{ min: 100, step: 50 }}
+                            inputProps={{ min: 0.5, step: 0.5 }}
                         />
                     </Stack>
                 </DialogContent>
@@ -389,6 +425,25 @@ export default function HallsPage() {
                 <DialogTitle>{t('halls.dialogEdit')}</DialogTitle>
                 <DialogContent sx={{ pt: 2 }}>
                     <Stack spacing={2} sx={{ pt: 1 }}>
+                        <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
+                            <ToggleButtonGroup
+                                value={unitType}
+                                exclusive
+                                onChange={(e, newUnit) => {
+                                    if (newUnit) {
+                                        setUnitType(newUnit);
+                                    }
+                                }}
+                                size="small"
+                            >
+                                <ToggleButton value="m">
+                                    Meters (m)
+                                </ToggleButton>
+                                <ToggleButton value="cm">
+                                    Centimeters (cm)
+                                </ToggleButton>
+                            </ToggleButtonGroup>
+                        </Box>
                         <FormControl fullWidth disabled>
                             <InputLabel>{t('halls.form.branch')}</InputLabel>
                             <Select
@@ -410,24 +465,24 @@ export default function HallsPage() {
                             placeholder={t('halls.form.namePlaceholder')}
                         />
                         <TextField
-                            label={t('halls.form.width')}
+                            label={`${t('halls.form.width')} (${unitType === 'm' ? 'meters' : 'centimeters'})`}
                             type="number"
                             value={formData.width}
                             onChange={(e) =>
-                                setFormData((prev) => ({ ...prev, width: parseInt(e.target.value) || 0 }))
+                                setFormData((prev) => ({ ...prev, width: parseFloat(e.target.value) }))
                             }
                             fullWidth
-                            inputProps={{ min: 100, step: 50 }}
+                            inputProps={{ min: 0.5, step: 0.5 }}
                         />
                         <TextField
-                            label={t('halls.form.height')}
+                            label={`${t('halls.form.height')} (${unitType === 'm' ? 'meters' : 'centimeters'})`}
                             type="number"
                             value={formData.height}
                             onChange={(e) =>
-                                setFormData((prev) => ({ ...prev, height: parseInt(e.target.value) || 0 }))
+                                setFormData((prev) => ({ ...prev, height: parseFloat(e.target.value) }))
                             }
                             fullWidth
-                            inputProps={{ min: 100, step: 50 }}
+                            inputProps={{ min: 0.5, step: 0.5 }}
                         />
                     </Stack>
                 </DialogContent>

@@ -372,6 +372,13 @@
       "bills": "Bill reports",
       "ingredients": "Ingredient reports"
     },
+    "cashbox": {
+      "title": "Cashbox",
+      "cashiers": "Cashiers",
+      "transactionGroups": "Transaction Groups",
+      "transactions": "Transactions",
+      "report": "Cashbox Report"
+    },
     "settings": {
       "title": "Settings",
       "connecteddevices": "Connected mobile devices",

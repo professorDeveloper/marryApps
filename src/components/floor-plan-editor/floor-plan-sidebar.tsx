@@ -24,6 +24,8 @@ import {
     InputLabel,
     Select,
     MenuItem,
+    ToggleButton,
+    ToggleButtonGroup,
 } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
 import { Iconify } from '../iconify';
@@ -33,6 +35,7 @@ import { useCreateCafeTable, useUpdateCafeTable, useDeleteCafeTable } from 'src/
 import type { ICafeTableFormData } from 'src/types/cafe-tables';
 import type { Table } from './types';
 import { DEFAULT_TABLE_SEATS, DEFAULT_TABLE_WIDTH, DEFAULT_TABLE_HEIGHT, HALL_WIDTH, HALL_HEIGHT } from './types';
+import { pxToMeters, pxToCentimeters, metersToPx, centimetersToPx, getDimensionDisplay } from 'src/utils/unit-converter';
 import { findNearestEmptyPosition } from './utils';
 
 interface FloorPlanSidebarProps {
@@ -85,7 +88,8 @@ export const FloorPlanSidebar = ({
     const [editTableId, setEditTableId] = useState<string | null>(null);
     const [editFormData, setEditFormData] = useState<Partial<Table>>({});
     const [createTableDialogOpen, setCreateTableDialogOpen] = useState(false);
-    const [createTableFormData, setCreateTableFormData] = useState({ number: 0, capacity: 4, pos_x: 0, pos_y: 0, width: 80, height: 60, rotation: 0 });
+    const [unitType, setUnitType] = useState<'m' | 'cm'>('m');
+    const [createTableFormData, setCreateTableFormData] = useState({ number: 0, capacity: 4, pos_x: 0, pos_y: 0, width: 0.8, height: 0.6, rotation: 0 });
     const [creatingTable, setCreatingTable] = useState(false);
     const [updatingTable, setUpdatingTable] = useState(false);
     const [deletingTable, setDeletingTable] = useState(false);
@@ -132,12 +136,16 @@ export const FloorPlanSidebar = ({
 
     const handleEditOpen = (table: Table) => {
         setEditTableId(table.id);
+        // Convert pixels to meters for display
+        const widthInMeters = pxToMeters(table.width);
+        const heightInMeters = pxToMeters(table.height);
         setEditFormData({
             number: table.number,
             seats: table.seats,
-            width: table.width,
-            height: table.height,
+            width: widthInMeters,
+            height: heightInMeters,
         });
+        setUnitType('m');
         setEditDialogOpen(true);
     };
 
@@ -154,14 +162,18 @@ export const FloorPlanSidebar = ({
 
         setUpdatingTable(true);
         try {
+            // Convert meters/cm to pixels
+            const widthInPx = unitType === 'cm' ? centimetersToPx(editFormData.width || 0) : metersToPx(editFormData.width || 0);
+            const heightInPx = unitType === 'cm' ? centimetersToPx(editFormData.height || 0) : metersToPx(editFormData.height || 0);
+
             // Map table fields to café table API format
             const payload: Partial<ICafeTableFormData> = {
                 number: editFormData.number,
                 capacity: editFormData.seats,
                 pos_x: editFormData.x,
                 pos_y: editFormData.y,
-                width: editFormData.width,
-                height: editFormData.height,
+                width: widthInPx,  // Send in pixels
+                height: heightInPx,  // Send in pixels
                 rotation: editFormData.rotation,
             };
 
@@ -183,16 +195,17 @@ export const FloorPlanSidebar = ({
     // Table create/edit dialogs
     const handleCreateTableDialogOpen = () => {
         const nextNumber = Math.max(0, ...tables.map(t => t.number)) + 1;
-        // Default form data - no position input needed
+        // Default form data in meters (0.8m x 0.6m)
         setCreateTableFormData({
             number: nextNumber,
             capacity: 4,
             pos_x: 0,  // Will be auto-set by server or ignored
             pos_y: 0,  // Will be auto-set by server or ignored
-            width: 80,
-            height: 60,
+            width: 0.8,   // 0.8 meters
+            height: 0.6,  // 0.6 meters
             rotation: 0
         });
+        setUnitType('m');
         setCreateTableDialogOpen(true);
     };
 
@@ -211,13 +224,17 @@ export const FloorPlanSidebar = ({
             const effectiveHallWidth = hallWidth || HALL_WIDTH;
             const effectiveHallHeight = hallHeight || HALL_HEIGHT;
 
+            // Convert meters/cm to pixels for calculations
+            const tableWidthPx = unitType === 'cm' ? centimetersToPx(createTableFormData.width) : metersToPx(createTableFormData.width);
+            const tableHeightPx = unitType === 'cm' ? centimetersToPx(createTableFormData.height) : metersToPx(createTableFormData.height);
+
             // Find nearest empty position for new table
             const position = findNearestEmptyPosition(
                 tables,
                 effectiveHallWidth,
                 effectiveHallHeight,
-                createTableFormData.width,
-                createTableFormData.height
+                tableWidthPx,
+                tableHeightPx
             );
 
             await createTable(hallId, {
@@ -225,8 +242,8 @@ export const FloorPlanSidebar = ({
                 capacity: createTableFormData.capacity,
                 pos_x: position.x,  // Use calculated position
                 pos_y: position.y,  // Use calculated position
-                width: createTableFormData.width,
-                height: createTableFormData.height,
+                width: tableWidthPx,  // Send in pixels
+                height: tableHeightPx,  // Send in pixels
                 rotation: createTableFormData.rotation,
             });
             handleCreateTableDialogClose();
@@ -574,7 +591,7 @@ export const FloorPlanSidebar = ({
                                 label={t('floorPlan.createHallDialog.width')}
                                 type="number"
                                 value={hallFormData.width}
-                                onChange={(e) => setHallFormData((prev) => ({ ...prev, width: parseInt(e.target.value) || 0 }))}
+                                onChange={(e) => setHallFormData((prev) => ({ ...prev, width: parseInt(e.target.value)  }))}
                                 fullWidth
                                 size="small"
                                 inputProps={{ min: 100, step: 50 }}
@@ -583,7 +600,7 @@ export const FloorPlanSidebar = ({
                                 label={t('floorPlan.createHallDialog.height')}
                                 type="number"
                                 value={hallFormData.height}
-                                onChange={(e) => setHallFormData((prev) => ({ ...prev, height: parseInt(e.target.value) || 0 }))}
+                                onChange={(e) => setHallFormData((prev) => ({ ...prev, height: parseInt(e.target.value)  }))}
                                 fullWidth
                                 size="small"
                                 inputProps={{ min: 100, step: 50 }}
@@ -627,27 +644,46 @@ export const FloorPlanSidebar = ({
                             size="small"
                             inputProps={{ min: 1, max: 20 }}
                         />
-                        <Typography variant="caption" sx={{ color: theme.palette.text.secondary, pt: 1 }}>
-                            {t('floorPlan.createTableDialog.tableSize')}
-                        </Typography>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <Typography variant="caption" sx={{ color: theme.palette.text.secondary, fontWeight: 'bold' }}>
+                                {t('floorPlan.createTableDialog.tableSize')}
+                            </Typography>
+                            <ToggleButtonGroup
+                                value={unitType}
+                                exclusive
+                                onChange={(e, newUnit) => {
+                                    if (newUnit) {
+                                        setUnitType(newUnit);
+                                    }
+                                }}
+                                size="small"
+                            >
+                                <ToggleButton value="m">
+                                    m
+                                </ToggleButton>
+                                <ToggleButton value="cm">
+                                    cm
+                                </ToggleButton>
+                            </ToggleButtonGroup>
+                        </Box>
                         <Stack direction="row" spacing={1}>
                             <TextField
-                                label={t('floorPlan.createTableDialog.width')}
+                                label={`${t('floorPlan.createTableDialog.width')} (${unitType})`}
                                 type="number"
                                 value={createTableFormData.width}
-                                onChange={(e) => setCreateTableFormData((prev) => ({ ...prev, width: parseInt(e.target.value) }))}
+                                onChange={(e) => setCreateTableFormData((prev) => ({ ...prev, width: parseFloat(e.target.value)  }))}
                                 fullWidth
                                 size="small"
-                                inputProps={{ min: 40, step: 10 }}
+                                inputProps={{ min: 0.2, step: 0.1 }}
                             />
                             <TextField
-                                label={t('floorPlan.createTableDialog.height')}
+                                label={`${t('floorPlan.createTableDialog.height')} (${unitType})`}
                                 type="number"
                                 value={createTableFormData.height}
-                                onChange={(e) => setCreateTableFormData((prev) => ({ ...prev, height: parseInt(e.target.value) }))}
+                                onChange={(e) => setCreateTableFormData((prev) => ({ ...prev, height: parseFloat(e.target.value)  }))}
                                 fullWidth
                                 size="small"
-                                inputProps={{ min: 40, step: 10 }}
+                                inputProps={{ min: 0.2, step: 0.1 }}
                             />
                         </Stack>
                         <TextField
@@ -701,27 +737,46 @@ export const FloorPlanSidebar = ({
                             size="small"
                             inputProps={{ min: 1, max: 20 }}
                         />
-                        <Typography variant="caption" sx={{ color: theme.palette.text.secondary, pt: 1 }}>
-                            {t('floorPlan.editTableDialog.tableDimensions')}
-                        </Typography>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <Typography variant="caption" sx={{ color: theme.palette.text.secondary, fontWeight: 'bold' }}>
+                                {t('floorPlan.editTableDialog.tableDimensions')}
+                            </Typography>
+                            <ToggleButtonGroup
+                                value={unitType}
+                                exclusive
+                                onChange={(e, newUnit) => {
+                                    if (newUnit) {
+                                        setUnitType(newUnit);
+                                    }
+                                }}
+                                size="small"
+                            >
+                                <ToggleButton value="m">
+                                    m
+                                </ToggleButton>
+                                <ToggleButton value="cm">
+                                    cm
+                                </ToggleButton>
+                            </ToggleButtonGroup>
+                        </Box>
                         <Stack direction="row" spacing={1}>
                             <TextField
-                                label={t('floorPlan.editTableDialog.width')}
+                                label={`${t('floorPlan.editTableDialog.width')} (${unitType})`}
                                 type="number"
                                 value={editFormData.width}
-                                onChange={(e) => handleInputChange('width', parseInt(e.target.value))}
+                                onChange={(e) => handleInputChange('width', parseFloat(e.target.value) )}
                                 fullWidth
                                 size="small"
-                                inputProps={{ min: 40, step: 10 }}
+                                inputProps={{ min: 0.2, step: 0.1 }}
                             />
                             <TextField
-                                label={t('floorPlan.editTableDialog.height')}
+                                label={`${t('floorPlan.editTableDialog.height')} (${unitType})`}
                                 type="number"
                                 value={editFormData.height}
-                                onChange={(e) => handleInputChange('height', parseInt(e.target.value))}
+                                onChange={(e) => handleInputChange('height', parseFloat(e.target.value) )}
                                 fullWidth
                                 size="small"
-                                inputProps={{ min: 40, step: 10 }}
+                                inputProps={{ min: 0.2, step: 0.1 }}
                             />
                         </Stack>
                         <TextField

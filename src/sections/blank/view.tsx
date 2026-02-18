@@ -44,7 +44,7 @@ export function BlankView({ title = 'Blank', description, sx }: Props) {
       <Typography variant="h4"> {title} </Typography>
       {description && <Typography sx={{ mt: 1 }}> {description} </Typography>}
 
-       <div style={{ padding: 20 }}>
+       {/* <div style={{ padding: 20 }}>
 
       <label>
         <input
@@ -84,7 +84,7 @@ export function BlankView({ title = 'Blank', description, sx }: Props) {
         />
         Checkbox D
       </label>
-    </div>
+    </div> */}
     </DashboardContent>
   );
 }

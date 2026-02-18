@@ -357,6 +357,13 @@
       "bills": "Hisob-kitoblar",
       "ingredients": "Ingredientlar bo'yicha hisobotlar"
     },
+    "cashbox": {
+      "title": "Kassa",
+      "cashiers": "Kassi",
+      "transactionGroups": "Tranzaksiya guruhlari",
+      "transactions": "Tranzaksiyalar",
+      "report": "Kassa bo'yicha hisobot"
+    },
     "settings": {
       "title": "Sozlamalar",
       "connecteddevices": "Ulangan mobil qurilmalar",

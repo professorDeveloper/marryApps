@@ -288,4 +288,19 @@ export const endpoints = {
   bills: {
     list: '/api/v1/bills',
   },
+  cashbox: {
+    groupTransactions: {
+      root: '/api/v1/group-transactions',
+      details: (id: string) => `/api/v1/group-transactions/${id}`,
+    },
+    cashiers: {
+      root: '/api/v1/group-transactions',
+      details: (id: string) => `/api/v1/group-transactions/${id}`,
+    },
+    transactions: {
+      root: '/api/v1/group-transactions',
+      details: (id: string) => `/api/v1/group-transactions/${id}`,
+    },
+    report: '/api/v1/cashbox/report',
+  },
 } as const;

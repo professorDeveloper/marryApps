@@ -118,6 +118,7 @@ export const DraggableTable = ({
     const tableColor = isSelected ? selectedColor : table.color || defaultColor;
     const borderColor = isSelected ? selectedBorderColor : defaultBorderColor;
 
+
     return (
         <>
             <Group
@@ -166,9 +167,9 @@ export const DraggableTable = ({
                 {/* Table number/label */}
                 <Text
                     x={0}
-                    y={table.height / 2 - 20}
+                    y={table.height / 2 - 25}
                     text={`Table ${table.number}`}
-                    fontSize={14}
+                    fontSize={Math.max(14, table.width * 0.15)}
                     fontFamily="Arial"
                     fontStyle="bold"
                     fill={textColor}
@@ -180,9 +181,9 @@ export const DraggableTable = ({
                 {/* Seats indicator */}
                 <Text
                     x={0}
-                    y={table.height / 2 + 5}
+                    y={table.height / 2 + 8}
                     text={`${table.seats} seats`}
-                    fontSize={11}
+                    fontSize={Math.max(14, table.width * 0.08)}
                     fontFamily="Arial"
                     fill={textColor}
                     width={table.width}

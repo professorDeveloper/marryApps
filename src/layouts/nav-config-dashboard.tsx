@@ -102,6 +102,18 @@ export const getNavData = (t: TFunction): NavSectionProps['data'] => [
           { title: t('overview.reports.custom', 'Custom'), path: paths.menu.reports.custom.root },
           { title: t('overview.reports.archives', 'Archives'), path: paths.menu.reports.archives.root },
         ],
+      },
+      {
+        title: t('cashbox.title', 'Kassa'),
+        path: paths.cashbox.root,
+        icon: ICONS.banking,
+        deepMatch: true,
+        children: [
+          { title: t('cashbox.cashiers', 'Kassi'), path: paths.cashbox.cashiers },
+          { title: t('cashbox.transactionGroups', 'групп транзакций'), path: paths.cashbox.transactionGroups },
+          { title: t('cashbox.transactions', 'Транзакции'), path: paths.cashbox.transactions },
+          { title: t('cashbox.report', 'Кассовый отчет'), path: paths.cashbox.report },
+        ],
       }
     ],
   },
