@@ -33,10 +33,6 @@ func (h *Handler) CreateStorage(c echo.Context) error {
 	if req.Name == nil || *req.Name == "" {
 		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("name is required", "see logs for details", http.StatusBadRequest))
 	}
-	if req.BranchID == "" {
-		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("branch_id is required", "see logs for details", http.StatusBadRequest))
-	}
-
 	var nameI18nUUID *uuid.UUID
 	if req.NameI18n != nil && *req.NameI18n != "" {
 		id, err := uuid.Parse(*req.NameI18n)

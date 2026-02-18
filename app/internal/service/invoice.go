@@ -1599,11 +1599,14 @@ func (s *InvoiceS) CreateInvoiceWithDetails(ctx context.Context, req *model.Crea
 		}
 
 		storagePg := pgtype.UUID{Bytes: invoiceStorageUUID, Valid: true}
-		_, _ = s.repo.Tenant(ctx).EnsureIngredientStockByStorage(ctx, pg.EnsureIngredientStockByStorageParams{
+		_, ensureErr := s.repo.Tenant(ctx).EnsureIngredientStockByStorage(ctx, pg.EnsureIngredientStockByStorageParams{
 			ID:           uuid.New(),
 			IngredientID: ingredientUUID,
 			StorageID:    storagePg,
 		})
+		if ensureErr != nil {
+			return nil, fmt.Errorf("item %d: failed to ensure ingredient stock: %w", i+1, ensureErr)
+		}
 
 		locked, err := s.repo.Tenant(ctx).GetStockByIngredientAndStorageForUpdate(ctx, pg.GetStockByIngredientAndStorageForUpdateParams{
 			IngredientID: ingredientUUID,

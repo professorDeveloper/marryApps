@@ -68,6 +68,7 @@ type OrganizationI interface {
 	GetAllBranches(ctx context.Context, limit, offset int32) ([]model.BranchResponse, error)
 	GetBranchByIDWithLang(ctx context.Context, branchID string, lang string) (*model.BranchResponse, error)
 	GetAllBranchesWithLang(ctx context.Context, lang string, limit, offset int32) ([]model.BranchResponse, error)
+	UpdateBranch(ctx context.Context, branchID string, name, nameI18n, address, phone *string) (*model.BranchResponse, error)
 	DeleteBranch(ctx context.Context, branchID string) error
 	RestoreBranch(ctx context.Context, branchID string) error
 	CreateTranslation(ctx context.Context, uz *string, ru *string, en *string) (*model.TranslationResponse, error)
@@ -401,6 +402,16 @@ type CalculationI interface {
 	GetCompoundWithCalculations(ctx context.Context, compoundID string) (*model.CompoundCalculationResponse, error)
 }
 
+type TransferI interface {
+	CreateTransferBatch(ctx context.Context, req model.CreateTransferBatchRequest) (*model.TransferResponse, error)
+	CreateTransfer(ctx context.Context, req model.CreateTransferRequest) (*model.TransferResponse, error)
+	AddTransferItems(ctx context.Context, req model.CreateTransferItemsRequest) (*model.TransferResponse, error)
+	GetTransferByID(ctx context.Context, transferID string) (*model.TransferResponse, error)
+	GetAllTransfers(ctx context.Context, limit, offset int32) ([]model.TransferResponse, error)
+	DeleteTransfer(ctx context.Context, transferID string) error
+	DeleteTransferItem(ctx context.Context, itemID string) error
+}
+
 type I interface {
 	Auth() AuthI
 	Payment() PaymentI
@@ -424,6 +435,7 @@ type I interface {
 	Brand() BrandI
 	Calculation() CalculationI
 	Deduction() DeductionI
+	Transfer() TransferI
 }
 
 type Service struct {
@@ -449,6 +461,7 @@ type Service struct {
 	brand        BrandI
 	calculation  CalculationI
 	deduction    DeductionI
+	transfer     TransferI
 }
 
 func New(cfg *config.Config, repo *repository.Repository, clickClient *paymentClick.Client, paymeClient *paymentPayme.Client, minioClient *minio.Minio) *Service {
@@ -475,6 +488,7 @@ func New(cfg *config.Config, repo *repository.Repository, clickClient *paymentCl
 		brand:        NewBrandS(repo),
 		calculation:  NewCalculationS(repo),
 		deduction:    NewDeductionS(repo),
+		transfer:     NewTransferS(repo),
 	}
 }
 
@@ -563,4 +577,8 @@ func (s *Service) Calculation() CalculationI {
 
 func (s *Service) Deduction() DeductionI {
 	return s.deduction
+}
+
+func (s *Service) Transfer() TransferI {
+	return s.transfer
 }

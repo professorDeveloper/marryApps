@@ -995,6 +995,87 @@ definitions:
     required:
     - name
     type: object
+  model.CreateTransferBatchRequest:
+    properties:
+      act_group_id:
+        type: string
+      description:
+        type: string
+      from_branch_id:
+        example: uuid
+        type: string
+      from_storage_id:
+        example: uuid
+        type: string
+      items:
+        items:
+          $ref: '#/definitions/model.CreateTransferItemEntry'
+        minItems: 1
+        type: array
+      to_branch_id:
+        example: uuid
+        type: string
+      to_storage_id:
+        example: uuid
+        type: string
+    required:
+    - from_branch_id
+    - from_storage_id
+    - items
+    - to_branch_id
+    - to_storage_id
+    type: object
+  model.CreateTransferItemEntry:
+    properties:
+      ingredient_id:
+        example: uuid
+        type: string
+      quantity:
+        example: "5"
+        type: string
+    required:
+    - ingredient_id
+    - quantity
+    type: object
+  model.CreateTransferItemsRequest:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/model.CreateTransferItemEntry'
+        minItems: 1
+        type: array
+      transfer_id:
+        example: uuid
+        type: string
+    required:
+    - items
+    - transfer_id
+    type: object
+  model.CreateTransferRequest:
+    properties:
+      act_group_id:
+        example: uuid
+        type: string
+      description:
+        type: string
+      from_branch_id:
+        example: uuid
+        type: string
+      from_storage_id:
+        example: uuid
+        type: string
+      to_branch_id:
+        example: uuid
+        type: string
+      to_storage_id:
+        example: uuid
+        type: string
+    required:
+    - from_branch_id
+    - from_storage_id
+    - to_branch_id
+    - to_storage_id
+    type: object
   model.CreateTranslationRequest:
     properties:
       en:
@@ -1390,6 +1471,9 @@ definitions:
     type: object
   model.IngredientGroupResponse:
     properties:
+      branch_id:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
       color_code:
         example: '#FF5733'
         type: string
@@ -2235,6 +2319,62 @@ definitions:
     x-enum-varnames:
     - TableStatusFree
     - TableStatusBusy
+  model.TransferItemResponse:
+    properties:
+      created_at:
+        type: string
+      id:
+        type: string
+      ingredient_id:
+        type: string
+      price:
+        type: string
+      quantity:
+        type: string
+      stock_qty_after:
+        type: string
+      stock_qty_before:
+        type: string
+      total_amount:
+        type: string
+      transfer_id:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  model.TransferResponse:
+    properties:
+      act_group_id:
+        type: string
+      created_at:
+        type: string
+      date:
+        type: string
+      description:
+        type: string
+      from_branch_id:
+        type: string
+      from_storage_id:
+        type: string
+      id:
+        type: string
+      items:
+        items:
+          $ref: '#/definitions/model.TransferItemResponse'
+        type: array
+      number:
+        type: integer
+      status:
+        type: string
+      to_branch_id:
+        type: string
+      to_storage_id:
+        type: string
+      total_amount:
+        type: string
+      updated_at:
+        type: string
+    type: object
   model.TranslationResponse:
     properties:
       created_at:
@@ -2254,6 +2394,17 @@ definitions:
         type: string
       uz:
         example: Salom
+        type: string
+    type: object
+  model.UpdateBranchRequest:
+    properties:
+      address:
+        type: string
+      name:
+        type: string
+      name_i18n:
+        type: string
+      phone:
         type: string
     type: object
   model.UpdateBrandRequest:
@@ -2868,7 +3019,7 @@ definitions:
         example: admin
         type: string
     type: object
-host: back.staging.maryai.yurtal.tech
+host: localhost:8080
 info:
   contact: {}
   description: MaryAI API server with multi-language support (uz, ru, en)
@@ -3599,6 +3750,46 @@ paths:
       security:
       - BearerAuth: []
       summary: Get branch by ID
+      tags:
+      - branches
+    put:
+      consumes:
+      - application/json
+      description: Update a branch's name, name_i18n, or phone
+      parameters:
+      - description: Branch ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Branch update data
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/model.UpdateBranchRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Branch updated successfully
+          schema:
+            $ref: '#/definitions/model.BranchResponse'
+        "400":
+          description: Invalid request data
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update branch
       tags:
       - branches
   /api/v1/branches/{id}/restore:
@@ -14566,6 +14757,241 @@ paths:
       summary: Sync push
       tags:
       - Sync
+  /api/v1/transfers:
+    get:
+      description: Get all transfers visible to the current branch
+      parameters:
+      - description: 'Limit (default: 20)'
+        in: query
+        name: limit
+        type: integer
+      - description: 'Offset (default: 0)'
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/model.TransferResponse'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get all transfers
+      tags:
+      - Transfers
+    post:
+      consumes:
+      - application/json
+      description: Create a transfer without items. Items can be added later.
+      parameters:
+      - description: Transfer request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.CreateTransferRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/model.TransferResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create transfer (header only)
+      tags:
+      - Transfers
+  /api/v1/transfers/{id}:
+    delete:
+      description: Soft delete a transfer and reverse all stock changes
+      parameters:
+      - description: Transfer ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: Transfer deleted successfully
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete transfer
+      tags:
+      - Transfers
+    get:
+      description: Get a transfer with all its items
+      parameters:
+      - description: Transfer ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.TransferResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get transfer by ID
+      tags:
+      - Transfers
+  /api/v1/transfers/batch:
+    post:
+      consumes:
+      - application/json
+      description: Create a transfer and its items in one call. Stock is moved immediately.
+      parameters:
+      - description: Transfer batch request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.CreateTransferBatchRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/model.TransferResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create transfer with items (batch)
+      tags:
+      - Transfers
+  /api/v1/transfers/items:
+    post:
+      consumes:
+      - application/json
+      description: Add items to an existing active transfer. Stock is moved immediately.
+      parameters:
+      - description: Transfer items request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.CreateTransferItemsRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/model.TransferResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Add items to transfer
+      tags:
+      - Transfers
+  /api/v1/transfers/items/{id}:
+    delete:
+      description: Delete a single transfer item and reverse its stock change
+      parameters:
+      - description: Transfer Item ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: Transfer item deleted successfully
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete transfer item
+      tags:
+      - Transfers
   /api/v1/translations:
     get:
       consumes:
@@ -15189,7 +15615,7 @@ paths:
       tags:
       - users
 schemes:
-- https
+- http
 securityDefinitions:
   BearerAuth:
     description: Type "Bearer" followed by a space and your JWT token

@@ -232,6 +232,49 @@ func (ns NullTableStatus) Value() (driver.Value, error) {
 	return string(ns.TableStatus), nil
 }
 
+type TransferStatus string
+
+const (
+	TransferStatusDraft   TransferStatus = "draft"
+	TransferStatusActive  TransferStatus = "active"
+	TransferStatusDeleted TransferStatus = "deleted"
+)
+
+func (e *TransferStatus) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = TransferStatus(s)
+	case string:
+		*e = TransferStatus(s)
+	default:
+		return fmt.Errorf("unsupported scan type for TransferStatus: %T", src)
+	}
+	return nil
+}
+
+type NullTransferStatus struct {
+	TransferStatus TransferStatus `json:"transfer_status"`
+	Valid          bool           `json:"valid"` // Valid is true if TransferStatus is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullTransferStatus) Scan(value interface{}) error {
+	if value == nil {
+		ns.TransferStatus, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.TransferStatus.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullTransferStatus) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.TransferStatus), nil
+}
+
 type Attendance struct {
 	ID           uuid.UUID          `json:"id"`
 	UserID       uuid.UUID          `json:"user_id"`
@@ -670,6 +713,37 @@ type Supplier struct {
 	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
 	DeletedAt   *int64             `json:"deleted_at"`
 	BranchID    pgtype.UUID        `json:"branch_id"`
+}
+
+type Transfer struct {
+	ID            uuid.UUID          `json:"id"`
+	Number        *int64             `json:"number"`
+	FromBranchID  uuid.UUID          `json:"from_branch_id"`
+	ToBranchID    uuid.UUID          `json:"to_branch_id"`
+	FromStorageID uuid.UUID          `json:"from_storage_id"`
+	ToStorageID   uuid.UUID          `json:"to_storage_id"`
+	ActGroupID    pgtype.UUID        `json:"act_group_id"`
+	Description   *string            `json:"description"`
+	Status        TransferStatus     `json:"status"`
+	Date          pgtype.Timestamptz `json:"date"`
+	TotalAmount   pgtype.Numeric     `json:"total_amount"`
+	CreatedAt     pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt     pgtype.Timestamptz `json:"updated_at"`
+	DeletedAt     int64              `json:"deleted_at"`
+}
+
+type TransferItem struct {
+	ID             uuid.UUID          `json:"id"`
+	TransferID     uuid.UUID          `json:"transfer_id"`
+	IngredientID   uuid.UUID          `json:"ingredient_id"`
+	Quantity       pgtype.Numeric     `json:"quantity"`
+	StockQtyBefore pgtype.Numeric     `json:"stock_qty_before"`
+	StockQtyAfter  pgtype.Numeric     `json:"stock_qty_after"`
+	Price          pgtype.Numeric     `json:"price"`
+	TotalAmount    pgtype.Numeric     `json:"total_amount"`
+	CreatedAt      pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
+	DeletedAt      int64              `json:"deleted_at"`
 }
 
 type Translation struct {

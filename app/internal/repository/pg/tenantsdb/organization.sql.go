@@ -16,7 +16,6 @@ const countBranches = `-- name: CountBranches :one
 SELECT COUNT(*) as count
 FROM branches
 WHERE deleted_at = 0
-  AND (NULLIF(current_setting('app.branch_id', true), '') IS NULL OR id = NULLIF(current_setting('app.branch_id', true), '')::uuid)
 `
 
 // CountBranches counts total active branches
@@ -155,7 +154,6 @@ const getAllBranches = `-- name: GetAllBranches :many
 SELECT id, name, name_i18n, address, phone, created_at, updated_at, deleted_at
 FROM branches
 WHERE deleted_at = 0
-  AND (NULLIF(current_setting('app.branch_id', true), '') IS NULL OR id = NULLIF(current_setting('app.branch_id', true), '')::uuid)
 ORDER BY created_at DESC
 LIMIT $1 OFFSET $2
 `
@@ -224,7 +222,6 @@ SELECT
 FROM branches b
 LEFT JOIN translations t ON b.name_i18n = t.id AND t.deleted_at = 0
 WHERE b.deleted_at = 0
-  AND (NULLIF(current_setting('app.branch_id', true), '') IS NULL OR b.id = NULLIF(current_setting('app.branch_id', true), '')::uuid)
 ORDER BY b.created_at DESC
 LIMIT $2 OFFSET $3
 `
@@ -321,7 +318,6 @@ const getBranchByID = `-- name: GetBranchByID :one
 SELECT id, name, name_i18n, address, phone, created_at, updated_at, deleted_at
 FROM branches
 WHERE id = $1 AND deleted_at = 0
-  AND (NULLIF(current_setting('app.branch_id', true), '') IS NULL OR id = NULLIF(current_setting('app.branch_id', true), '')::uuid)
 `
 
 type GetBranchByIDRow struct {
@@ -370,7 +366,6 @@ SELECT
 FROM branches b
 LEFT JOIN translations t ON b.name_i18n = t.id AND t.deleted_at = 0
 WHERE b.id = $1 AND b.deleted_at = 0
-  AND (NULLIF(current_setting('app.branch_id', true), '') IS NULL OR b.id = NULLIF(current_setting('app.branch_id', true), '')::uuid)
 `
 
 type GetBranchByIDWithLanguageParams struct {
@@ -455,7 +450,6 @@ const searchBranches = `-- name: SearchBranches :many
 SELECT id, name, name_i18n, address, phone, created_at, updated_at, deleted_at
 FROM branches
 WHERE deleted_at = 0
-  AND (NULLIF(current_setting('app.branch_id', true), '') IS NULL OR id = NULLIF(current_setting('app.branch_id', true), '')::uuid)
   AND (LOWER(name) LIKE LOWER('%' || $1 || '%')
        OR LOWER(address) LIKE LOWER('%' || $1 || '%')
        OR phone LIKE '%' || $1 || '%')

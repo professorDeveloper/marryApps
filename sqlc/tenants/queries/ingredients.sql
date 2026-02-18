@@ -218,10 +218,11 @@ FOR UPDATE;
 
 -- EnsureIngredientStockByStorage ensures a stock row exists for (ingredient_id, storage_id)
 -- name: EnsureIngredientStockByStorage :one
-INSERT INTO ingredient_stock (id, ingredient_id, storage_id, quantity, deleted_at)
-VALUES ($1, $2, $3, 0, 0)
+INSERT INTO ingredient_stock (id, ingredient_id, storage_id, branch_id, quantity, deleted_at)
+VALUES ($1, $2, $3, NULLIF(current_setting('app.branch_id', true), '')::uuid, 0, 0)
 ON CONFLICT (ingredient_id, storage_id)
-DO UPDATE SET deleted_at = 0, updated_at = NOW()
+DO UPDATE SET deleted_at = 0, updated_at = NOW(),
+  branch_id = COALESCE(ingredient_stock.branch_id, NULLIF(current_setting('app.branch_id', true), '')::uuid)
 RETURNING id;
 
 -- GetAllIngredientStock retrieves all ingredient stock entries with pagination
@@ -324,6 +325,7 @@ SELECT
     ig.picture_url,
     ig.name_i18n,
     ig.color_code,
+    ig.branch_id,
     ig.created_at,
     ig.updated_at,
     ig.deleted_at
@@ -332,9 +334,9 @@ LEFT JOIN translations t ON ig.name_i18n = t.id AND t.deleted_at = 0
 WHERE ig.id = $1 AND ig.deleted_at = 0;
 
 -- name: GetAllIngredientGroupsWithLanguage :many
-SELECT 
+SELECT
     ig.id,
-    COALESCE(CASE 
+    COALESCE(CASE
         WHEN $1::text = 'uz' THEN t.uz
         WHEN $1::text = 'ru' THEN t.ru
         WHEN $1::text = 'en' THEN t.en
@@ -343,6 +345,7 @@ SELECT
     ig.picture_url,
     ig.name_i18n,
     ig.color_code,
+    ig.branch_id,
     ig.created_at,
     ig.updated_at,
     ig.deleted_at

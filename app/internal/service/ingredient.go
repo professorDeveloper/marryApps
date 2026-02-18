@@ -13,13 +13,14 @@ import (
 )
 
 // Mapper functions for ingredient groups and ingredients
-func mapIngredientGroupToResponse(id uuid.UUID, name string, nameI18n pgtype.UUID, pictureUrl *string, colorCode *string, createdAt, updatedAt pgtype.Timestamptz) *model.IngredientGroupResponse {
+func mapIngredientGroupToResponse(id uuid.UUID, name string, nameI18n pgtype.UUID, pictureUrl *string, colorCode *string, branchID pgtype.UUID, createdAt, updatedAt pgtype.Timestamptz) *model.IngredientGroupResponse {
 	return &model.IngredientGroupResponse{
 		ID:         id.String(),
 		Name:       &name,
 		NameI18n:   uuidToStr(nameI18n),
 		PictureUrl: pictureUrl,
 		ColorCode:  colorCode,
+		BranchID:   uuidToStr(branchID),
 		CreatedAt:  timestampToTime(createdAt),
 		UpdatedAt:  timestampToTime(updatedAt),
 	}
@@ -156,7 +157,7 @@ func (i *IngredientS) CreateIngredientGroup(ctx context.Context, name string, na
 		return nil, fmt.Errorf("failed to create ingredient group: %w", err)
 	}
 
-	return mapIngredientGroupToResponse(group.ID, group.Name, group.NameI18n, group.PictureUrl, group.ColorCode, group.CreatedAt, group.UpdatedAt), nil
+	return mapIngredientGroupToResponse(group.ID, group.Name, group.NameI18n, group.PictureUrl, group.ColorCode, group.BranchID, group.CreatedAt, group.UpdatedAt), nil
 }
 
 // GetIngredientGroupByID retrieves an ingredient group by ID
@@ -171,7 +172,7 @@ func (i *IngredientS) GetIngredientGroupByID(ctx context.Context, groupID string
 		return nil, fmt.Errorf("failed to get ingredient group: %w", err)
 	}
 
-	return mapIngredientGroupToResponse(group.ID, group.Name, group.NameI18n, group.PictureUrl, group.ColorCode, group.CreatedAt, group.UpdatedAt), nil
+	return mapIngredientGroupToResponse(group.ID, group.Name, group.NameI18n, group.PictureUrl, group.ColorCode, group.BranchID, group.CreatedAt, group.UpdatedAt), nil
 }
 
 // GetAllIngredientGroups retrieves all ingredient groups
@@ -186,7 +187,7 @@ func (i *IngredientS) GetAllIngredientGroups(ctx context.Context, limit, offset 
 
 	var responses []model.IngredientGroupResponse
 	for _, g := range groups {
-		responses = append(responses, *mapIngredientGroupToResponse(g.ID, g.Name, g.NameI18n, g.PictureUrl, g.ColorCode, g.CreatedAt, g.UpdatedAt))
+		responses = append(responses, *mapIngredientGroupToResponse(g.ID, g.Name, g.NameI18n, g.PictureUrl, g.ColorCode, g.BranchID, g.CreatedAt, g.UpdatedAt))
 	}
 
 	return responses, nil
@@ -240,7 +241,7 @@ func (i *IngredientS) UpdateIngredientGroup(ctx context.Context, groupID string,
 		return nil, fmt.Errorf("failed to update ingredient group: %w", err)
 	}
 
-	return mapIngredientGroupToResponse(group.ID, group.Name, group.NameI18n, group.PictureUrl, group.ColorCode, group.CreatedAt, group.UpdatedAt), nil
+	return mapIngredientGroupToResponse(group.ID, group.Name, group.NameI18n, group.PictureUrl, group.ColorCode, group.BranchID, group.CreatedAt, group.UpdatedAt), nil
 }
 
 // DeleteIngredientGroup soft deletes an ingredient group
@@ -1110,7 +1111,7 @@ func (i *IngredientS) GetIngredientGroupByIDWithLang(ctx context.Context, groupI
 		return nil, fmt.Errorf("failed to get ingredient group: %w", err)
 	}
 
-	return mapIngredientGroupToResponse(group.ID, group.Name, group.NameI18n, group.PictureUrl, group.ColorCode, group.CreatedAt, group.UpdatedAt), nil
+	return mapIngredientGroupToResponse(group.ID, group.Name, group.NameI18n, group.PictureUrl, group.ColorCode, group.BranchID, group.CreatedAt, group.UpdatedAt), nil
 }
 
 // GetAllIngredientGroupsWithLang retrieves all ingredient groups with language support
@@ -1126,7 +1127,7 @@ func (i *IngredientS) GetAllIngredientGroupsWithLang(ctx context.Context, lang s
 
 	var responses []model.IngredientGroupResponse
 	for _, group := range groups {
-		responses = append(responses, *mapIngredientGroupToResponse(group.ID, group.Name, group.NameI18n, group.PictureUrl, group.ColorCode, group.CreatedAt, group.UpdatedAt))
+		responses = append(responses, *mapIngredientGroupToResponse(group.ID, group.Name, group.NameI18n, group.PictureUrl, group.ColorCode, group.BranchID, group.CreatedAt, group.UpdatedAt))
 	}
 	return responses, nil
 }

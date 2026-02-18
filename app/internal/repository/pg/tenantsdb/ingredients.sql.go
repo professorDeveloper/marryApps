@@ -344,10 +344,11 @@ func (q *Queries) DeleteIngredientStock(ctx context.Context, id uuid.UUID) error
 }
 
 const ensureIngredientStockByStorage = `-- name: EnsureIngredientStockByStorage :one
-INSERT INTO ingredient_stock (id, ingredient_id, storage_id, quantity, deleted_at)
-VALUES ($1, $2, $3, 0, 0)
+INSERT INTO ingredient_stock (id, ingredient_id, storage_id, branch_id, quantity, deleted_at)
+VALUES ($1, $2, $3, NULLIF(current_setting('app.branch_id', true), '')::uuid, 0, 0)
 ON CONFLICT (ingredient_id, storage_id)
-DO UPDATE SET deleted_at = 0, updated_at = NOW()
+DO UPDATE SET deleted_at = 0, updated_at = NOW(),
+  branch_id = COALESCE(ingredient_stock.branch_id, NULLIF(current_setting('app.branch_id', true), '')::uuid)
 RETURNING id
 `
 
@@ -422,9 +423,9 @@ func (q *Queries) GetAllIngredientGroups(ctx context.Context, arg GetAllIngredie
 }
 
 const getAllIngredientGroupsWithLanguage = `-- name: GetAllIngredientGroupsWithLanguage :many
-SELECT 
+SELECT
     ig.id,
-    COALESCE(CASE 
+    COALESCE(CASE
         WHEN $1::text = 'uz' THEN t.uz
         WHEN $1::text = 'ru' THEN t.ru
         WHEN $1::text = 'en' THEN t.en
@@ -433,6 +434,7 @@ SELECT
     ig.picture_url,
     ig.name_i18n,
     ig.color_code,
+    ig.branch_id,
     ig.created_at,
     ig.updated_at,
     ig.deleted_at
@@ -456,6 +458,7 @@ type GetAllIngredientGroupsWithLanguageRow struct {
 	PictureUrl *string            `json:"picture_url"`
 	NameI18n   pgtype.UUID        `json:"name_i18n"`
 	ColorCode  *string            `json:"color_code"`
+	BranchID   pgtype.UUID        `json:"branch_id"`
 	CreatedAt  pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt  pgtype.Timestamptz `json:"updated_at"`
 	DeletedAt  *int64             `json:"deleted_at"`
@@ -476,6 +479,7 @@ func (q *Queries) GetAllIngredientGroupsWithLanguage(ctx context.Context, arg Ge
 			&i.PictureUrl,
 			&i.NameI18n,
 			&i.ColorCode,
+			&i.BranchID,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.DeletedAt,
@@ -850,6 +854,7 @@ SELECT
     ig.picture_url,
     ig.name_i18n,
     ig.color_code,
+    ig.branch_id,
     ig.created_at,
     ig.updated_at,
     ig.deleted_at
@@ -869,6 +874,7 @@ type GetIngredientGroupByIDWithLanguageRow struct {
 	PictureUrl *string            `json:"picture_url"`
 	NameI18n   pgtype.UUID        `json:"name_i18n"`
 	ColorCode  *string            `json:"color_code"`
+	BranchID   pgtype.UUID        `json:"branch_id"`
 	CreatedAt  pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt  pgtype.Timestamptz `json:"updated_at"`
 	DeletedAt  *int64             `json:"deleted_at"`
@@ -883,6 +889,7 @@ func (q *Queries) GetIngredientGroupByIDWithLanguage(ctx context.Context, arg Ge
 		&i.PictureUrl,
 		&i.NameI18n,
 		&i.ColorCode,
+		&i.BranchID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,

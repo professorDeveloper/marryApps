@@ -86,6 +86,7 @@ func (h *Handler) Register(router *echo.Echo) {
 			branches.POST("", h.CreateBranch, mw.CheckLanguage())
 			branches.GET("", h.GetAllBranches, mw.CheckLanguage())
 			branches.GET("/:id", h.GetBranchByID, mw.CheckLanguage())
+			branches.PUT("/:id", h.UpdateBranch, mw.CheckLanguage())
 			branches.DELETE("/:id", h.DeleteBranch, mw.CheckLanguage())
 			branches.POST("/:id/restore", h.RestoreBranch, mw.CheckLanguage())
 		}
@@ -566,6 +567,18 @@ func (h *Handler) Register(router *echo.Echo) {
 			invoiceDetails.DELETE("/:id", h.DeleteInvoiceDetail, mw.CheckLanguage())
 			invoiceDetails.POST("/:id/restore", h.RestoreInvoiceDetail, mw.CheckLanguage())
 			invoiceDetails.GET("/:id/with-ingredient", h.GetInvoiceDetailWithIngredient, mw.CheckLanguage())
+		}
+
+		// Transfer management endpoints
+		transfers := api.Group("/transfers", mw.CheckAuth(h.cfg), mw.TenantMiddleware(h.repo))
+		{
+			transfers.POST("/batch", h.CreateTransferBatch, mw.CheckLanguage())
+			transfers.POST("/items", h.AddTransferItems, mw.CheckLanguage())
+			transfers.POST("", h.CreateTransfer, mw.CheckLanguage())
+			transfers.GET("", h.GetAllTransfers, mw.CheckLanguage())
+			transfers.GET("/:id", h.GetTransferByID, mw.CheckLanguage())
+			transfers.DELETE("/:id", h.DeleteTransfer, mw.CheckLanguage())
+			transfers.DELETE("/items/:id", h.DeleteTransferItem, mw.CheckLanguage())
 		}
 
 		// Brand management endpoints (admin only)

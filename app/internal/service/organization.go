@@ -66,6 +66,40 @@ func (o *OrganizationS) GetAllBranches(ctx context.Context, limit, offset int32)
 	return responses, nil
 }
 
+// UpdateBranch updates a branch
+func (o *OrganizationS) UpdateBranch(ctx context.Context, branchID string, name, nameI18n, address, phone *string) (*model.BranchResponse, error) {
+	id, err := uuid.Parse(branchID)
+	if err != nil {
+		return nil, fmt.Errorf("invalid branch ID: %w", err)
+	}
+
+	nameStr := ""
+	if name != nil {
+		nameStr = *name
+	}
+
+	nameI18nUUID := pgtype.UUID{}
+	if nameI18n != nil && *nameI18n != "" {
+		parsed, err := uuid.Parse(*nameI18n)
+		if err != nil {
+			return nil, fmt.Errorf("invalid name_i18n UUID: %w", err)
+		}
+		nameI18nUUID = pgtype.UUID{Bytes: parsed, Valid: true}
+	}
+
+	branch, err := o.repo.Tenant(ctx).UpdateBranch(ctx, pg.UpdateBranchParams{
+		ID:       id,
+		Name:     nameStr,
+		NameI18n: nameI18nUUID,
+		Address:  address,
+		Phone:    phone,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to update branch: %w", err)
+	}
+	return toBranchResponse(branch), nil
+}
+
 // DeleteBranch soft deletes a branch
 func (o *OrganizationS) DeleteBranch(ctx context.Context, branchID string) error {
 	id, err := uuid.Parse(branchID)

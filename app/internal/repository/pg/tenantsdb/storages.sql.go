@@ -347,7 +347,6 @@ const getStoragesByBranchID = `-- name: GetStoragesByBranchID :many
 SELECT id, name, branch_id, name_i18n, picture_url, color_code, created_at, updated_at, deleted_at
 FROM storages
 WHERE branch_id = $1 AND deleted_at = 0
-  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 ORDER BY created_at DESC
 LIMIT $2 OFFSET $3
 `

@@ -195,6 +195,45 @@ func (h *Handler) RestoreBranch(c echo.Context) error {
 	return c.JSON(http.StatusOK, model.NewSuccessResponse("Branch restored successfully", map[string]interface{}{}, http.StatusOK))
 }
 
+// UpdateBranch updates a branch
+// @Summary Update branch
+// @Description Update a branch's name, name_i18n, or phone
+// @Tags branches
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path string true "Branch ID"
+// @Param input body model.UpdateBranchRequest true "Branch update data"
+// @Success 200 {object} model.BranchResponse "Branch updated successfully"
+// @Failure 400 {object} model.ErrorResponse "Invalid request data"
+// @Failure 401 {object} model.ErrorResponse "Unauthorized"
+// @Failure 500 {object} model.ErrorResponse "Internal server error"
+// @Router /api/v1/branches/{id} [put]
+func (h *Handler) UpdateBranch(c echo.Context) error {
+	branchID := c.Param("id")
+	if branchID == "" {
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("branch id is required", "see logs for details", http.StatusBadRequest))
+	}
+
+	if _, err := uuid.Parse(branchID); err != nil {
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("invalid branch id format", "see logs for details", http.StatusBadRequest))
+	}
+
+	var req model.UpdateBranchRequest
+	if err := c.Bind(&req); err != nil {
+		log.Printf("Failed to bind update branch request: %v", err)
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("invalid request format", "see logs for details", http.StatusBadRequest))
+	}
+
+	branch, err := h.service.Organization().UpdateBranch(c.Request().Context(), branchID, req.Name, req.NameI18n, req.Address, req.Phone)
+	if err != nil {
+		log.Printf("UpdateBranch failed for id %s: %v", branchID, err)
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("failed to update branch", "see logs for details", http.StatusInternalServerError))
+	}
+
+	return c.JSON(http.StatusOK, model.NewSuccessResponse("Branch updated successfully", branch, http.StatusOK))
+}
+
 // ==================== TRANSLATION HANDLERS ====================
 
 // CreateTranslation creates a new translation
