@@ -31,6 +31,8 @@ sql:
       - "../../app/migrations/tenants/26_cash_register.up.sql"
       - "../../app/migrations/tenants/27_group_transactions.up.sql"
       - "../../app/migrations/tenants/28_insert.up.sql"
+      - "../../app/migrations/tenants/29_insert_superadmin.up.sql"
+
 
     gen:
       go:
