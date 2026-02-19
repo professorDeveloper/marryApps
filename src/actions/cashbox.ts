@@ -1,5 +1,5 @@
 import type { SWRConfiguration } from 'swr';
-import type { IGroupTransaction, IGroupTransactionFormData, ICashier, ICashierFormData, ITransaction, ITransactionFormData } from 'src/types/cashbox';
+import type { IGroupTransaction, IGroupTransactionFormData, ICashier, ICashierFormData, ITransaction, ITransactionFormData, ICashRegister, ICashRegisterFormData } from 'src/types/cashbox';
 
 import useSWR, { mutate } from 'swr';
 import { useCallback, useMemo } from 'react';
@@ -251,6 +251,84 @@ export function useDeleteTransaction() {
         try {
             await deleter(`${endpoints.cashbox.transactions.root}/${id}`);
             mutate(endpoints.cashbox.transactions.root);
+        } catch (error) {
+            throw error;
+        }
+    }, []);
+
+    return { onDelete };
+}
+
+// =============================================
+// CASH REGISTERS HOOKS (Transaction Groups)
+// =============================================
+
+export function useGetCashRegisters() {
+    const { data, isLoading, error } = useSWR<BackendResponse<ICashRegister[]>>(
+        endpoints.cashbox.cashRegisters.root,
+        fetcher,
+        swrOptions
+    );
+
+    const cashRegisters = useMemo(
+        () => data?.data || [],
+        [data?.data]
+    );
+
+    return {
+        cashRegisters,
+        cashRegistersLoading: isLoading,
+        cashRegistersError: error,
+    };
+}
+
+export function useGetCashRegister(id: string) {
+    const { data, isLoading, error } = useSWR<BackendResponse<ICashRegister>>(
+        id ? `${endpoints.cashbox.cashRegisters.root}/${id}` : null,
+        fetcher,
+        swrOptions
+    );
+
+    return {
+        cashRegister: data?.data,
+        cashRegisterLoading: isLoading,
+        cashRegisterError: error,
+    };
+}
+
+export function useCreateCashRegister() {
+    const onSubmit = useCallback(async (payload: ICashRegisterFormData) => {
+        try {
+            const res = await poster(endpoints.cashbox.cashRegisters.root, payload);
+            mutate(endpoints.cashbox.cashRegisters.root);
+            return res;
+        } catch (error) {
+            throw error;
+        }
+    }, []);
+
+    return { onSubmit };
+}
+
+export function useUpdateCashRegister(id: string) {
+    const onSubmit = useCallback(async (payload: ICashRegisterFormData) => {
+        try {
+            const res = await putter(`${endpoints.cashbox.cashRegisters.root}/${id}`, payload);
+            mutate(endpoints.cashbox.cashRegisters.root);
+            return res;
+        } catch (error) {
+            throw error;
+        }
+    }, [id]);
+
+    return { onSubmit };
+}
+
+export function useDeleteCashRegister() {
+    const onDelete = useCallback(async (id: string) => {
+        try {
+            await deleter(`${endpoints.cashbox.cashRegisters.root}/${id}`);
+            mutate(endpoints.cashbox.cashRegisters.root);
         } catch (error) {
             throw error;
         }

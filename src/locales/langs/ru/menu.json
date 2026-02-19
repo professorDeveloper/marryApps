@@ -352,13 +352,6 @@
       "bills": "Счета",
       "ingredients": "Отчет по ингредиентам"
     },
-    "cashbox": {
-      "title": "Касса",
-      "cashiers": "Касси",
-      "transactionGroups": "групп транзакций",
-      "transactions": "Транзакции",
-      "report": "Кассовый отчет"
-    },
     "settings": {
       "title": "Настройки",
       "connecteddevices": "Подключенные мобильные устройства",
@@ -998,6 +991,15 @@
     "success": {
       "updated": "Запас успешно обновлен",
       "deleted": "Запас успешно удален"
+    }
+  },
+  "cashbox": {
+    "sidebar": {
+      "title": "Касса",
+      "cashiers": "Кассы",
+      "transactionGroups": "Группы транзакций",
+      "transactions": "Транзакции",
+      "report": "Отчет по кассе"
     }
   }
 }

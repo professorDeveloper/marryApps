@@ -1,5 +1,5 @@
 import type { GridColDef } from '@mui/x-data-grid';
-import type { ICashier } from 'src/types/cashbox';
+import type { ICashRegister } from 'src/types/cashbox';
 
 import { useTranslation } from 'react-i18next';
 import { useMemo, useState, useCallback } from 'react';
@@ -13,15 +13,15 @@ import { toast } from 'src/components/snackbar';
 import { Iconify } from 'src/components/iconify';
 import { GenericTableView } from 'src/components/generic-table-view';
 import { CustomGridActionsCellItem } from 'src/components/custom-data-grid';
-import { useGetCashiers, useDeleteCashier } from 'src/actions/cashbox';
+import { useGetCashRegisters, useDeleteCashRegister } from 'src/actions/cashbox';
 import { RouterLink } from 'src/routes/components';
 import { DashboardContent } from 'src/layouts/dashboard';
 import { CustomBreadcrumbs } from 'src/components/custom-breadcrumbs';
 
-export function CashiersListView() {
+export function CashRegistersListView() {
     const { t } = useTranslation('menu');
-    const { cashiers, cashiersLoading } = useGetCashiers();
-    const { onDelete } = useDeleteCashier();
+    const { cashRegisters, cashRegistersLoading } = useGetCashRegisters();
+    const { onDelete } = useDeleteCashRegister();
 
     const [deleteId, setDeleteId] = useState<string | null>(null);
     const [openConfirm, setOpenConfirm] = useState(false);
@@ -70,13 +70,12 @@ export function CashiersListView() {
                         key="edit"
                         icon={<Iconify icon="solar:pen-bold" />}
                         label={t('common.edit', 'Edit')}
-                        href={`/menu/cashbox/cashiers/${params.row.id}/edit`}
+                        href={`/menu/cashbox/transaction-groups/${params.row.id}/edit`}
                     />,
                     <CustomGridActionsCellItem
                         key="delete"
                         icon={<Iconify icon="solar:trash-bin-trash-bold" />}
                         label={t('common.delete', 'Delete')}
-                        style={{ color: '#FB6633' }}
                         onClick={() => {
                             setDeleteId(params.row.id);
                             setOpenConfirm(true);
@@ -92,29 +91,29 @@ export function CashiersListView() {
         <>
             <DashboardContent>
                 <CustomBreadcrumbs
-                    heading={t('cashbox.cashiers', 'Cashiers')}
+                    heading={t('cashbox.transactionGroups', 'Transaction Groups')}
                     links={[
                         { name: t('dashboard', 'Dashboard'), href: paths.dashboard.root },
                         { name: t('cashbox.title', 'Cashbox'), href: paths.cashbox.root },
-                        { name: t('cashbox.cashiers', 'Cashiers') },
+                        { name: t('cashbox.transactionGroups', 'Transaction Groups') },
                     ]}
                     action={
                         <Button
                             component={RouterLink}
-                            href={`/menu/cashbox/cashiers/new`}
+                            href={`/menu/cashbox/transaction-groups/new`}
                             variant="contained"
                             startIcon={<Iconify icon="mingcute:add-line" />}
                         >
                             {t('common.add', 'Add')}
                         </Button>
                     }
-                    // sx={{ mb: { xs: 3, md: 5 } }}
+                // sx={{ mb: { xs: 3, md: 5 } }}
                 />
 
                 <GenericTableView
-                    data={cashiers}
+                    data={cashRegisters}
                     columns={columns}
-                    loading={cashiersLoading}
+                    loading={cashRegistersLoading}
                     breadcrumbs={{
                         heading: '',
                         links: [],

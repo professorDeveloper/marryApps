@@ -297,9 +297,13 @@ export const endpoints = {
       root: '/api/v1/group-transactions',
       details: (id: string) => `/api/v1/group-transactions/${id}`,
     },
+    cashRegisters: {
+      root: '/api/v1/cash-registers',
+      details: (id: string) => `/api/v1/cash-registers/${id}`,
+    },
     transactions: {
-      root: '/api/v1/group-transactions',
-      details: (id: string) => `/api/v1/group-transactions/${id}`,
+      root: '/api/v1/transactions',
+      details: (id: string) => `/api/v1/transactions/${id}`,
     },
     report: '/api/v1/cashbox/report',
   },
