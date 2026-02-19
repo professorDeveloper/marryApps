@@ -19,36 +19,23 @@ SET status = 'cancelled',
 WHERE invoices.id = $1
   AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
   AND deleted_at = 0
-RETURNING id, supplier_id, storage_id, total_amount, status, date, created_at, updated_at, deleted_at, branch_id
+RETURNING id, supplier_id, storage_id, branch_id, total_amount, status, date, created_at, updated_at, deleted_at
 `
 
-type CancelInvoiceRow struct {
-	ID          uuid.UUID          `json:"id"`
-	SupplierID  uuid.UUID          `json:"supplier_id"`
-	StorageID   pgtype.UUID        `json:"storage_id"`
-	TotalAmount pgtype.Numeric     `json:"total_amount"`
-	Status      NullInvoiceStatus  `json:"status"`
-	Date        pgtype.Timestamp   `json:"date"`
-	CreatedAt   pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
-	DeletedAt   *int64             `json:"deleted_at"`
-	BranchID    pgtype.UUID        `json:"branch_id"`
-}
-
-func (q *Queries) CancelInvoice(ctx context.Context, id uuid.UUID) (CancelInvoiceRow, error) {
+func (q *Queries) CancelInvoice(ctx context.Context, id uuid.UUID) (Invoice, error) {
 	row := q.db.QueryRow(ctx, cancelInvoice, id)
-	var i CancelInvoiceRow
+	var i Invoice
 	err := row.Scan(
 		&i.ID,
 		&i.SupplierID,
 		&i.StorageID,
+		&i.BranchID,
 		&i.TotalAmount,
 		&i.Status,
 		&i.Date,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
-		&i.BranchID,
 	)
 	return i, err
 }
@@ -117,7 +104,7 @@ const createInvoice = `-- name: CreateInvoice :one
 
 INSERT INTO invoices (id, supplier_id, storage_id, total_amount, status, date, branch_id)
 VALUES ($1, $2, $3, $4, $5, $6, (SELECT branch_id FROM storages WHERE id = $3))
-RETURNING id, supplier_id, storage_id, total_amount, status, date, created_at, updated_at, deleted_at, branch_id
+RETURNING id, supplier_id, storage_id, branch_id, total_amount, status, date, created_at, updated_at, deleted_at
 `
 
 type CreateInvoiceParams struct {
@@ -129,21 +116,8 @@ type CreateInvoiceParams struct {
 	Date        pgtype.Timestamp  `json:"date"`
 }
 
-type CreateInvoiceRow struct {
-	ID          uuid.UUID          `json:"id"`
-	SupplierID  uuid.UUID          `json:"supplier_id"`
-	StorageID   pgtype.UUID        `json:"storage_id"`
-	TotalAmount pgtype.Numeric     `json:"total_amount"`
-	Status      NullInvoiceStatus  `json:"status"`
-	Date        pgtype.Timestamp   `json:"date"`
-	CreatedAt   pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
-	DeletedAt   *int64             `json:"deleted_at"`
-	BranchID    pgtype.UUID        `json:"branch_id"`
-}
-
 // ==================== INVOICES QUERIES ====================
-func (q *Queries) CreateInvoice(ctx context.Context, arg CreateInvoiceParams) (CreateInvoiceRow, error) {
+func (q *Queries) CreateInvoice(ctx context.Context, arg CreateInvoiceParams) (Invoice, error) {
 	row := q.db.QueryRow(ctx, createInvoice,
 		arg.ID,
 		arg.SupplierID,
@@ -152,18 +126,18 @@ func (q *Queries) CreateInvoice(ctx context.Context, arg CreateInvoiceParams) (C
 		arg.Status,
 		arg.Date,
 	)
-	var i CreateInvoiceRow
+	var i Invoice
 	err := row.Scan(
 		&i.ID,
 		&i.SupplierID,
 		&i.StorageID,
+		&i.BranchID,
 		&i.TotalAmount,
 		&i.Status,
 		&i.Date,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
-		&i.BranchID,
 	)
 	return i, err
 }
@@ -303,7 +277,7 @@ func (q *Queries) GetAllInvoiceDetails(ctx context.Context, arg GetAllInvoiceDet
 }
 
 const getAllInvoices = `-- name: GetAllInvoices :many
-SELECT id, supplier_id, storage_id, total_amount, status, date, created_at, updated_at, deleted_at, branch_id
+SELECT id, supplier_id, storage_id, branch_id, total_amount, status, date, created_at, updated_at, deleted_at
 FROM invoices
 WHERE deleted_at = 0
   AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
@@ -316,39 +290,26 @@ type GetAllInvoicesParams struct {
 	Offset int32 `json:"offset"`
 }
 
-type GetAllInvoicesRow struct {
-	ID          uuid.UUID          `json:"id"`
-	SupplierID  uuid.UUID          `json:"supplier_id"`
-	StorageID   pgtype.UUID        `json:"storage_id"`
-	TotalAmount pgtype.Numeric     `json:"total_amount"`
-	Status      NullInvoiceStatus  `json:"status"`
-	Date        pgtype.Timestamp   `json:"date"`
-	CreatedAt   pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
-	DeletedAt   *int64             `json:"deleted_at"`
-	BranchID    pgtype.UUID        `json:"branch_id"`
-}
-
-func (q *Queries) GetAllInvoices(ctx context.Context, arg GetAllInvoicesParams) ([]GetAllInvoicesRow, error) {
+func (q *Queries) GetAllInvoices(ctx context.Context, arg GetAllInvoicesParams) ([]Invoice, error) {
 	rows, err := q.db.Query(ctx, getAllInvoices, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []GetAllInvoicesRow
+	var items []Invoice
 	for rows.Next() {
-		var i GetAllInvoicesRow
+		var i Invoice
 		if err := rows.Scan(
 			&i.ID,
 			&i.SupplierID,
 			&i.StorageID,
+			&i.BranchID,
 			&i.TotalAmount,
 			&i.Status,
 			&i.Date,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.DeletedAt,
-			&i.BranchID,
 		); err != nil {
 			return nil, err
 		}
@@ -361,40 +322,27 @@ func (q *Queries) GetAllInvoices(ctx context.Context, arg GetAllInvoicesParams) 
 }
 
 const getInvoiceByID = `-- name: GetInvoiceByID :one
-SELECT id, supplier_id, storage_id, total_amount, status, date, created_at, updated_at, deleted_at, branch_id
+SELECT id, supplier_id, storage_id, branch_id, total_amount, status, date, created_at, updated_at, deleted_at
 FROM invoices
 WHERE invoices.id = $1
   AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
   AND deleted_at = 0
 `
 
-type GetInvoiceByIDRow struct {
-	ID          uuid.UUID          `json:"id"`
-	SupplierID  uuid.UUID          `json:"supplier_id"`
-	StorageID   pgtype.UUID        `json:"storage_id"`
-	TotalAmount pgtype.Numeric     `json:"total_amount"`
-	Status      NullInvoiceStatus  `json:"status"`
-	Date        pgtype.Timestamp   `json:"date"`
-	CreatedAt   pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
-	DeletedAt   *int64             `json:"deleted_at"`
-	BranchID    pgtype.UUID        `json:"branch_id"`
-}
-
-func (q *Queries) GetInvoiceByID(ctx context.Context, id uuid.UUID) (GetInvoiceByIDRow, error) {
+func (q *Queries) GetInvoiceByID(ctx context.Context, id uuid.UUID) (Invoice, error) {
 	row := q.db.QueryRow(ctx, getInvoiceByID, id)
-	var i GetInvoiceByIDRow
+	var i Invoice
 	err := row.Scan(
 		&i.ID,
 		&i.SupplierID,
 		&i.StorageID,
+		&i.BranchID,
 		&i.TotalAmount,
 		&i.Status,
 		&i.Date,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
-		&i.BranchID,
 	)
 	return i, err
 }
@@ -727,7 +675,7 @@ func (q *Queries) GetInvoiceWithDetails(ctx context.Context, id uuid.UUID) (GetI
 }
 
 const getInvoicesByDateRange = `-- name: GetInvoicesByDateRange :many
-SELECT id, supplier_id, storage_id, total_amount, status, date, created_at, updated_at, deleted_at, branch_id
+SELECT id, supplier_id, storage_id, branch_id, total_amount, status, date, created_at, updated_at, deleted_at
 FROM invoices
 WHERE date >= $1
   AND date <= $2
@@ -744,20 +692,7 @@ type GetInvoicesByDateRangeParams struct {
 	Offset int32            `json:"offset"`
 }
 
-type GetInvoicesByDateRangeRow struct {
-	ID          uuid.UUID          `json:"id"`
-	SupplierID  uuid.UUID          `json:"supplier_id"`
-	StorageID   pgtype.UUID        `json:"storage_id"`
-	TotalAmount pgtype.Numeric     `json:"total_amount"`
-	Status      NullInvoiceStatus  `json:"status"`
-	Date        pgtype.Timestamp   `json:"date"`
-	CreatedAt   pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
-	DeletedAt   *int64             `json:"deleted_at"`
-	BranchID    pgtype.UUID        `json:"branch_id"`
-}
-
-func (q *Queries) GetInvoicesByDateRange(ctx context.Context, arg GetInvoicesByDateRangeParams) ([]GetInvoicesByDateRangeRow, error) {
+func (q *Queries) GetInvoicesByDateRange(ctx context.Context, arg GetInvoicesByDateRangeParams) ([]Invoice, error) {
 	rows, err := q.db.Query(ctx, getInvoicesByDateRange,
 		arg.Date,
 		arg.Date_2,
@@ -768,20 +703,20 @@ func (q *Queries) GetInvoicesByDateRange(ctx context.Context, arg GetInvoicesByD
 		return nil, err
 	}
 	defer rows.Close()
-	var items []GetInvoicesByDateRangeRow
+	var items []Invoice
 	for rows.Next() {
-		var i GetInvoicesByDateRangeRow
+		var i Invoice
 		if err := rows.Scan(
 			&i.ID,
 			&i.SupplierID,
 			&i.StorageID,
+			&i.BranchID,
 			&i.TotalAmount,
 			&i.Status,
 			&i.Date,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.DeletedAt,
-			&i.BranchID,
 		); err != nil {
 			return nil, err
 		}
@@ -794,7 +729,7 @@ func (q *Queries) GetInvoicesByDateRange(ctx context.Context, arg GetInvoicesByD
 }
 
 const getInvoicesByStatus = `-- name: GetInvoicesByStatus :many
-SELECT id, supplier_id, storage_id, total_amount, status, date, created_at, updated_at, deleted_at, branch_id
+SELECT id, supplier_id, storage_id, branch_id, total_amount, status, date, created_at, updated_at, deleted_at
 FROM invoices
 WHERE status = $1
   AND deleted_at = 0
@@ -809,39 +744,26 @@ type GetInvoicesByStatusParams struct {
 	Offset int32             `json:"offset"`
 }
 
-type GetInvoicesByStatusRow struct {
-	ID          uuid.UUID          `json:"id"`
-	SupplierID  uuid.UUID          `json:"supplier_id"`
-	StorageID   pgtype.UUID        `json:"storage_id"`
-	TotalAmount pgtype.Numeric     `json:"total_amount"`
-	Status      NullInvoiceStatus  `json:"status"`
-	Date        pgtype.Timestamp   `json:"date"`
-	CreatedAt   pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
-	DeletedAt   *int64             `json:"deleted_at"`
-	BranchID    pgtype.UUID        `json:"branch_id"`
-}
-
-func (q *Queries) GetInvoicesByStatus(ctx context.Context, arg GetInvoicesByStatusParams) ([]GetInvoicesByStatusRow, error) {
+func (q *Queries) GetInvoicesByStatus(ctx context.Context, arg GetInvoicesByStatusParams) ([]Invoice, error) {
 	rows, err := q.db.Query(ctx, getInvoicesByStatus, arg.Status, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []GetInvoicesByStatusRow
+	var items []Invoice
 	for rows.Next() {
-		var i GetInvoicesByStatusRow
+		var i Invoice
 		if err := rows.Scan(
 			&i.ID,
 			&i.SupplierID,
 			&i.StorageID,
+			&i.BranchID,
 			&i.TotalAmount,
 			&i.Status,
 			&i.Date,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.DeletedAt,
-			&i.BranchID,
 		); err != nil {
 			return nil, err
 		}
@@ -854,7 +776,7 @@ func (q *Queries) GetInvoicesByStatus(ctx context.Context, arg GetInvoicesByStat
 }
 
 const getInvoicesBySupplier = `-- name: GetInvoicesBySupplier :many
-SELECT i.id, i.supplier_id, i.storage_id, i.total_amount, i.status, i.date, i.created_at, i.updated_at, i.deleted_at, i.branch_id
+SELECT i.id, i.supplier_id, i.storage_id, i.branch_id, i.total_amount, i.status, i.date, i.created_at, i.updated_at, i.deleted_at
 FROM invoices i
 JOIN suppliers s ON i.supplier_id = s.id AND s.deleted_at = 0
 WHERE s.name ILIKE '%' || $1 || '%'
@@ -870,39 +792,26 @@ type GetInvoicesBySupplierParams struct {
 	Offset  int32   `json:"offset"`
 }
 
-type GetInvoicesBySupplierRow struct {
-	ID          uuid.UUID          `json:"id"`
-	SupplierID  uuid.UUID          `json:"supplier_id"`
-	StorageID   pgtype.UUID        `json:"storage_id"`
-	TotalAmount pgtype.Numeric     `json:"total_amount"`
-	Status      NullInvoiceStatus  `json:"status"`
-	Date        pgtype.Timestamp   `json:"date"`
-	CreatedAt   pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
-	DeletedAt   *int64             `json:"deleted_at"`
-	BranchID    pgtype.UUID        `json:"branch_id"`
-}
-
-func (q *Queries) GetInvoicesBySupplier(ctx context.Context, arg GetInvoicesBySupplierParams) ([]GetInvoicesBySupplierRow, error) {
+func (q *Queries) GetInvoicesBySupplier(ctx context.Context, arg GetInvoicesBySupplierParams) ([]Invoice, error) {
 	rows, err := q.db.Query(ctx, getInvoicesBySupplier, arg.Column1, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []GetInvoicesBySupplierRow
+	var items []Invoice
 	for rows.Next() {
-		var i GetInvoicesBySupplierRow
+		var i Invoice
 		if err := rows.Scan(
 			&i.ID,
 			&i.SupplierID,
 			&i.StorageID,
+			&i.BranchID,
 			&i.TotalAmount,
 			&i.Status,
 			&i.Date,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.DeletedAt,
-			&i.BranchID,
 		); err != nil {
 			return nil, err
 		}
@@ -951,36 +860,23 @@ SET status = 'arrived',
 WHERE invoices.id = $1
   AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
   AND deleted_at = 0
-RETURNING id, supplier_id, storage_id, total_amount, status, date, created_at, updated_at, deleted_at, branch_id
+RETURNING id, supplier_id, storage_id, branch_id, total_amount, status, date, created_at, updated_at, deleted_at
 `
 
-type MarkInvoiceArrivedRow struct {
-	ID          uuid.UUID          `json:"id"`
-	SupplierID  uuid.UUID          `json:"supplier_id"`
-	StorageID   pgtype.UUID        `json:"storage_id"`
-	TotalAmount pgtype.Numeric     `json:"total_amount"`
-	Status      NullInvoiceStatus  `json:"status"`
-	Date        pgtype.Timestamp   `json:"date"`
-	CreatedAt   pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
-	DeletedAt   *int64             `json:"deleted_at"`
-	BranchID    pgtype.UUID        `json:"branch_id"`
-}
-
-func (q *Queries) MarkInvoiceArrived(ctx context.Context, id uuid.UUID) (MarkInvoiceArrivedRow, error) {
+func (q *Queries) MarkInvoiceArrived(ctx context.Context, id uuid.UUID) (Invoice, error) {
 	row := q.db.QueryRow(ctx, markInvoiceArrived, id)
-	var i MarkInvoiceArrivedRow
+	var i Invoice
 	err := row.Scan(
 		&i.ID,
 		&i.SupplierID,
 		&i.StorageID,
+		&i.BranchID,
 		&i.TotalAmount,
 		&i.Status,
 		&i.Date,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
-		&i.BranchID,
 	)
 	return i, err
 }
@@ -992,36 +888,23 @@ SET status = 'received',
 WHERE invoices.id = $1
   AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
   AND deleted_at = 0
-RETURNING id, supplier_id, storage_id, total_amount, status, date, created_at, updated_at, deleted_at, branch_id
+RETURNING id, supplier_id, storage_id, branch_id, total_amount, status, date, created_at, updated_at, deleted_at
 `
 
-type MarkInvoiceReceivedRow struct {
-	ID          uuid.UUID          `json:"id"`
-	SupplierID  uuid.UUID          `json:"supplier_id"`
-	StorageID   pgtype.UUID        `json:"storage_id"`
-	TotalAmount pgtype.Numeric     `json:"total_amount"`
-	Status      NullInvoiceStatus  `json:"status"`
-	Date        pgtype.Timestamp   `json:"date"`
-	CreatedAt   pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
-	DeletedAt   *int64             `json:"deleted_at"`
-	BranchID    pgtype.UUID        `json:"branch_id"`
-}
-
-func (q *Queries) MarkInvoiceReceived(ctx context.Context, id uuid.UUID) (MarkInvoiceReceivedRow, error) {
+func (q *Queries) MarkInvoiceReceived(ctx context.Context, id uuid.UUID) (Invoice, error) {
 	row := q.db.QueryRow(ctx, markInvoiceReceived, id)
-	var i MarkInvoiceReceivedRow
+	var i Invoice
 	err := row.Scan(
 		&i.ID,
 		&i.SupplierID,
 		&i.StorageID,
+		&i.BranchID,
 		&i.TotalAmount,
 		&i.Status,
 		&i.Date,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
-		&i.BranchID,
 	)
 	return i, err
 }
@@ -1056,7 +939,7 @@ func (q *Queries) RestoreInvoiceDetail(ctx context.Context, id uuid.UUID) error 
 }
 
 const searchInvoices = `-- name: SearchInvoices :many
-SELECT i.id, i.supplier_id, i.storage_id, i.total_amount, i.status, i.date, i.created_at, i.updated_at, i.deleted_at, i.branch_id
+SELECT i.id, i.supplier_id, i.storage_id, i.branch_id, i.total_amount, i.status, i.date, i.created_at, i.updated_at, i.deleted_at
 FROM invoices i
 JOIN suppliers s ON i.supplier_id = s.id AND s.deleted_at = 0
 WHERE i.deleted_at = 0 
@@ -1075,39 +958,26 @@ type SearchInvoicesParams struct {
 	Offset  int32   `json:"offset"`
 }
 
-type SearchInvoicesRow struct {
-	ID          uuid.UUID          `json:"id"`
-	SupplierID  uuid.UUID          `json:"supplier_id"`
-	StorageID   pgtype.UUID        `json:"storage_id"`
-	TotalAmount pgtype.Numeric     `json:"total_amount"`
-	Status      NullInvoiceStatus  `json:"status"`
-	Date        pgtype.Timestamp   `json:"date"`
-	CreatedAt   pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
-	DeletedAt   *int64             `json:"deleted_at"`
-	BranchID    pgtype.UUID        `json:"branch_id"`
-}
-
-func (q *Queries) SearchInvoices(ctx context.Context, arg SearchInvoicesParams) ([]SearchInvoicesRow, error) {
+func (q *Queries) SearchInvoices(ctx context.Context, arg SearchInvoicesParams) ([]Invoice, error) {
 	rows, err := q.db.Query(ctx, searchInvoices, arg.Column1, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []SearchInvoicesRow
+	var items []Invoice
 	for rows.Next() {
-		var i SearchInvoicesRow
+		var i Invoice
 		if err := rows.Scan(
 			&i.ID,
 			&i.SupplierID,
 			&i.StorageID,
+			&i.BranchID,
 			&i.TotalAmount,
 			&i.Status,
 			&i.Date,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.DeletedAt,
-			&i.BranchID,
 		); err != nil {
 			return nil, err
 		}
@@ -1131,7 +1001,7 @@ SET supplier_id = COALESCE($2, supplier_id),
 WHERE invoices.id = $1
   AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
   AND deleted_at = 0
-RETURNING id, supplier_id, storage_id, total_amount, status, date, created_at, updated_at, deleted_at, branch_id
+RETURNING id, supplier_id, storage_id, branch_id, total_amount, status, date, created_at, updated_at, deleted_at
 `
 
 type UpdateInvoiceParams struct {
@@ -1143,20 +1013,7 @@ type UpdateInvoiceParams struct {
 	Date        pgtype.Timestamp  `json:"date"`
 }
 
-type UpdateInvoiceRow struct {
-	ID          uuid.UUID          `json:"id"`
-	SupplierID  uuid.UUID          `json:"supplier_id"`
-	StorageID   pgtype.UUID        `json:"storage_id"`
-	TotalAmount pgtype.Numeric     `json:"total_amount"`
-	Status      NullInvoiceStatus  `json:"status"`
-	Date        pgtype.Timestamp   `json:"date"`
-	CreatedAt   pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
-	DeletedAt   *int64             `json:"deleted_at"`
-	BranchID    pgtype.UUID        `json:"branch_id"`
-}
-
-func (q *Queries) UpdateInvoice(ctx context.Context, arg UpdateInvoiceParams) (UpdateInvoiceRow, error) {
+func (q *Queries) UpdateInvoice(ctx context.Context, arg UpdateInvoiceParams) (Invoice, error) {
 	row := q.db.QueryRow(ctx, updateInvoice,
 		arg.ID,
 		arg.SupplierID,
@@ -1165,18 +1022,18 @@ func (q *Queries) UpdateInvoice(ctx context.Context, arg UpdateInvoiceParams) (U
 		arg.Status,
 		arg.Date,
 	)
-	var i UpdateInvoiceRow
+	var i Invoice
 	err := row.Scan(
 		&i.ID,
 		&i.SupplierID,
 		&i.StorageID,
+		&i.BranchID,
 		&i.TotalAmount,
 		&i.Status,
 		&i.Date,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
-		&i.BranchID,
 	)
 	return i, err
 }
@@ -1271,7 +1128,7 @@ SET status = $2,
 WHERE invoices.id = $1
   AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
   AND deleted_at = 0
-RETURNING id, supplier_id, storage_id, total_amount, status, date, created_at, updated_at, deleted_at, branch_id
+RETURNING id, supplier_id, storage_id, branch_id, total_amount, status, date, created_at, updated_at, deleted_at
 `
 
 type UpdateInvoiceStatusParams struct {
@@ -1279,33 +1136,20 @@ type UpdateInvoiceStatusParams struct {
 	Status NullInvoiceStatus `json:"status"`
 }
 
-type UpdateInvoiceStatusRow struct {
-	ID          uuid.UUID          `json:"id"`
-	SupplierID  uuid.UUID          `json:"supplier_id"`
-	StorageID   pgtype.UUID        `json:"storage_id"`
-	TotalAmount pgtype.Numeric     `json:"total_amount"`
-	Status      NullInvoiceStatus  `json:"status"`
-	Date        pgtype.Timestamp   `json:"date"`
-	CreatedAt   pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
-	DeletedAt   *int64             `json:"deleted_at"`
-	BranchID    pgtype.UUID        `json:"branch_id"`
-}
-
-func (q *Queries) UpdateInvoiceStatus(ctx context.Context, arg UpdateInvoiceStatusParams) (UpdateInvoiceStatusRow, error) {
+func (q *Queries) UpdateInvoiceStatus(ctx context.Context, arg UpdateInvoiceStatusParams) (Invoice, error) {
 	row := q.db.QueryRow(ctx, updateInvoiceStatus, arg.ID, arg.Status)
-	var i UpdateInvoiceStatusRow
+	var i Invoice
 	err := row.Scan(
 		&i.ID,
 		&i.SupplierID,
 		&i.StorageID,
+		&i.BranchID,
 		&i.TotalAmount,
 		&i.Status,
 		&i.Date,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
-		&i.BranchID,
 	)
 	return i, err
 }

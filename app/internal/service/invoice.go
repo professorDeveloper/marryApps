@@ -1285,46 +1285,15 @@ func (s *InvoiceS) GetInvoiceDetailWithIngredient(ctx context.Context, id string
 
 // ==================== HELPER FUNCTIONS ====================
 
-func toInvoiceResponse(inv any) *model.InvoiceResponse {
-	var (
-		id          uuid.UUID
-		supplierID  uuid.UUID
-		storageID   pgtype.UUID
-		totalAmount pgtype.Numeric
-		status      pg.NullInvoiceStatus
-		date        pgtype.Timestamp
-		createdAt   pgtype.Timestamptz
-		updatedAt   pgtype.Timestamptz
-	)
-
-	switch invoice := inv.(type) {
-	case pg.CreateInvoiceRow:
-		id, supplierID, storageID, totalAmount, status, date, createdAt, updatedAt = invoice.ID, invoice.SupplierID, invoice.StorageID, invoice.TotalAmount, invoice.Status, invoice.Date, invoice.CreatedAt, invoice.UpdatedAt
-	case pg.GetInvoiceByIDRow:
-		id, supplierID, storageID, totalAmount, status, date, createdAt, updatedAt = invoice.ID, invoice.SupplierID, invoice.StorageID, invoice.TotalAmount, invoice.Status, invoice.Date, invoice.CreatedAt, invoice.UpdatedAt
-	case pg.GetAllInvoicesRow:
-		id, supplierID, storageID, totalAmount, status, date, createdAt, updatedAt = invoice.ID, invoice.SupplierID, invoice.StorageID, invoice.TotalAmount, invoice.Status, invoice.Date, invoice.CreatedAt, invoice.UpdatedAt
-	case pg.GetInvoicesByStatusRow:
-		id, supplierID, storageID, totalAmount, status, date, createdAt, updatedAt = invoice.ID, invoice.SupplierID, invoice.StorageID, invoice.TotalAmount, invoice.Status, invoice.Date, invoice.CreatedAt, invoice.UpdatedAt
-	case pg.GetInvoicesBySupplierRow:
-		id, supplierID, storageID, totalAmount, status, date, createdAt, updatedAt = invoice.ID, invoice.SupplierID, invoice.StorageID, invoice.TotalAmount, invoice.Status, invoice.Date, invoice.CreatedAt, invoice.UpdatedAt
-	case pg.GetInvoicesByDateRangeRow:
-		id, supplierID, storageID, totalAmount, status, date, createdAt, updatedAt = invoice.ID, invoice.SupplierID, invoice.StorageID, invoice.TotalAmount, invoice.Status, invoice.Date, invoice.CreatedAt, invoice.UpdatedAt
-	case pg.UpdateInvoiceRow:
-		id, supplierID, storageID, totalAmount, status, date, createdAt, updatedAt = invoice.ID, invoice.SupplierID, invoice.StorageID, invoice.TotalAmount, invoice.Status, invoice.Date, invoice.CreatedAt, invoice.UpdatedAt
-	case pg.UpdateInvoiceStatusRow:
-		id, supplierID, storageID, totalAmount, status, date, createdAt, updatedAt = invoice.ID, invoice.SupplierID, invoice.StorageID, invoice.TotalAmount, invoice.Status, invoice.Date, invoice.CreatedAt, invoice.UpdatedAt
-	case pg.MarkInvoiceArrivedRow:
-		id, supplierID, storageID, totalAmount, status, date, createdAt, updatedAt = invoice.ID, invoice.SupplierID, invoice.StorageID, invoice.TotalAmount, invoice.Status, invoice.Date, invoice.CreatedAt, invoice.UpdatedAt
-	case pg.MarkInvoiceReceivedRow:
-		id, supplierID, storageID, totalAmount, status, date, createdAt, updatedAt = invoice.ID, invoice.SupplierID, invoice.StorageID, invoice.TotalAmount, invoice.Status, invoice.Date, invoice.CreatedAt, invoice.UpdatedAt
-	case pg.CancelInvoiceRow:
-		id, supplierID, storageID, totalAmount, status, date, createdAt, updatedAt = invoice.ID, invoice.SupplierID, invoice.StorageID, invoice.TotalAmount, invoice.Status, invoice.Date, invoice.CreatedAt, invoice.UpdatedAt
-	case pg.SearchInvoicesRow:
-		id, supplierID, storageID, totalAmount, status, date, createdAt, updatedAt = invoice.ID, invoice.SupplierID, invoice.StorageID, invoice.TotalAmount, invoice.Status, invoice.Date, invoice.CreatedAt, invoice.UpdatedAt
-	default:
-		return nil
-	}
+func toInvoiceResponse(inv pg.Invoice) *model.InvoiceResponse {
+	id := inv.ID
+	supplierID := inv.SupplierID
+	storageID := inv.StorageID
+	totalAmount := inv.TotalAmount
+	status := inv.Status
+	date := inv.Date
+	createdAt := inv.CreatedAt
+	updatedAt := inv.UpdatedAt
 
 	response := &model.InvoiceResponse{
 		ID:          id.String(),

@@ -5,17 +5,17 @@ INSERT INTO deduction_act_groups (
   branch_id
 )
 VALUES ($1, $2, NULLIF(current_setting('app.branch_id', true), '')::uuid)
-RETURNING id, name, created_at, updated_at, deleted_at, branch_id;
+RETURNING id, name, branch_id, created_at, updated_at, deleted_at;
 
 -- name: GetDeductionActGroupByID :one
-SELECT id, name, created_at, updated_at, deleted_at, branch_id
+SELECT id, name, branch_id, created_at, updated_at, deleted_at
 FROM deduction_act_groups
 WHERE id = $1
   AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
   AND deleted_at = 0;
 
 -- name: GetAllDeductionActGroups :many
-SELECT id, name, created_at, updated_at, deleted_at, branch_id
+SELECT id, name, branch_id, created_at, updated_at, deleted_at
 FROM deduction_act_groups
 WHERE branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
   AND deleted_at = 0
@@ -29,7 +29,7 @@ SET name = $2,
 WHERE id = $1
   AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
   AND deleted_at = 0
-RETURNING id, name, created_at, updated_at, deleted_at, branch_id;
+RETURNING id, name, branch_id, created_at, updated_at, deleted_at;
 
 -- name: DeleteDeductionActGroup :exec
 UPDATE deduction_act_groups
@@ -45,4 +45,4 @@ SET deleted_at = 0,
     updated_at = NOW()
 WHERE id = $1
   AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-RETURNING id, name, created_at, updated_at, deleted_at, branch_id;
+RETURNING id, name, branch_id, created_at, updated_at, deleted_at;

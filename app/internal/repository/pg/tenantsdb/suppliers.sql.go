@@ -9,7 +9,6 @@ import (
 	"context"
 
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const countSuppliers = `-- name: CountSuppliers :one
@@ -30,7 +29,7 @@ const createSupplier = `-- name: CreateSupplier :one
 
 INSERT INTO suppliers (id, name, phone_number, location, branch_id)
 VALUES ($1, $2, $3, $4, NULLIF(current_setting('app.branch_id', true), '')::uuid)
-RETURNING id, name, phone_number, location, created_at, updated_at, deleted_at, branch_id
+RETURNING id, name, phone_number, location, branch_id, created_at, updated_at, deleted_at
 `
 
 type CreateSupplierParams struct {
@@ -40,35 +39,24 @@ type CreateSupplierParams struct {
 	Location    *string   `json:"location"`
 }
 
-type CreateSupplierRow struct {
-	ID          uuid.UUID          `json:"id"`
-	Name        string             `json:"name"`
-	PhoneNumber *string            `json:"phone_number"`
-	Location    *string            `json:"location"`
-	CreatedAt   pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
-	DeletedAt   *int64             `json:"deleted_at"`
-	BranchID    pgtype.UUID        `json:"branch_id"`
-}
-
 // ==================== SUPPLIERS QUERIES ====================
-func (q *Queries) CreateSupplier(ctx context.Context, arg CreateSupplierParams) (CreateSupplierRow, error) {
+func (q *Queries) CreateSupplier(ctx context.Context, arg CreateSupplierParams) (Supplier, error) {
 	row := q.db.QueryRow(ctx, createSupplier,
 		arg.ID,
 		arg.Name,
 		arg.PhoneNumber,
 		arg.Location,
 	)
-	var i CreateSupplierRow
+	var i Supplier
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
 		&i.PhoneNumber,
 		&i.Location,
+		&i.BranchID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
-		&i.BranchID,
 	)
 	return i, err
 }
@@ -86,7 +74,7 @@ func (q *Queries) DeleteSupplier(ctx context.Context, id uuid.UUID) error {
 }
 
 const getAllSuppliers = `-- name: GetAllSuppliers :many
-SELECT id, name, phone_number, location, created_at, updated_at, deleted_at, branch_id
+SELECT id, name, phone_number, location, branch_id, created_at, updated_at, deleted_at
 FROM suppliers
 WHERE branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
   AND deleted_at = 0
@@ -99,35 +87,24 @@ type GetAllSuppliersParams struct {
 	Offset int32 `json:"offset"`
 }
 
-type GetAllSuppliersRow struct {
-	ID          uuid.UUID          `json:"id"`
-	Name        string             `json:"name"`
-	PhoneNumber *string            `json:"phone_number"`
-	Location    *string            `json:"location"`
-	CreatedAt   pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
-	DeletedAt   *int64             `json:"deleted_at"`
-	BranchID    pgtype.UUID        `json:"branch_id"`
-}
-
-func (q *Queries) GetAllSuppliers(ctx context.Context, arg GetAllSuppliersParams) ([]GetAllSuppliersRow, error) {
+func (q *Queries) GetAllSuppliers(ctx context.Context, arg GetAllSuppliersParams) ([]Supplier, error) {
 	rows, err := q.db.Query(ctx, getAllSuppliers, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []GetAllSuppliersRow
+	var items []Supplier
 	for rows.Next() {
-		var i GetAllSuppliersRow
+		var i Supplier
 		if err := rows.Scan(
 			&i.ID,
 			&i.Name,
 			&i.PhoneNumber,
 			&i.Location,
+			&i.BranchID,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.DeletedAt,
-			&i.BranchID,
 		); err != nil {
 			return nil, err
 		}
@@ -140,77 +117,55 @@ func (q *Queries) GetAllSuppliers(ctx context.Context, arg GetAllSuppliersParams
 }
 
 const getSupplierByID = `-- name: GetSupplierByID :one
-SELECT id, name, phone_number, location, created_at, updated_at, deleted_at, branch_id
+SELECT id, name, phone_number, location, branch_id, created_at, updated_at, deleted_at
 FROM suppliers
 WHERE id = $1
   AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
   AND deleted_at = 0
 `
 
-type GetSupplierByIDRow struct {
-	ID          uuid.UUID          `json:"id"`
-	Name        string             `json:"name"`
-	PhoneNumber *string            `json:"phone_number"`
-	Location    *string            `json:"location"`
-	CreatedAt   pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
-	DeletedAt   *int64             `json:"deleted_at"`
-	BranchID    pgtype.UUID        `json:"branch_id"`
-}
-
-func (q *Queries) GetSupplierByID(ctx context.Context, id uuid.UUID) (GetSupplierByIDRow, error) {
+func (q *Queries) GetSupplierByID(ctx context.Context, id uuid.UUID) (Supplier, error) {
 	row := q.db.QueryRow(ctx, getSupplierByID, id)
-	var i GetSupplierByIDRow
+	var i Supplier
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
 		&i.PhoneNumber,
 		&i.Location,
+		&i.BranchID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
-		&i.BranchID,
 	)
 	return i, err
 }
 
 const getSuppliersByPhoneNumber = `-- name: GetSuppliersByPhoneNumber :many
-SELECT id, name, phone_number, location, created_at, updated_at, deleted_at, branch_id
+SELECT id, name, phone_number, location, branch_id, created_at, updated_at, deleted_at
 FROM suppliers
 WHERE phone_number = $1
   AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
   AND deleted_at = 0
 `
 
-type GetSuppliersByPhoneNumberRow struct {
-	ID          uuid.UUID          `json:"id"`
-	Name        string             `json:"name"`
-	PhoneNumber *string            `json:"phone_number"`
-	Location    *string            `json:"location"`
-	CreatedAt   pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
-	DeletedAt   *int64             `json:"deleted_at"`
-	BranchID    pgtype.UUID        `json:"branch_id"`
-}
-
-func (q *Queries) GetSuppliersByPhoneNumber(ctx context.Context, phoneNumber *string) ([]GetSuppliersByPhoneNumberRow, error) {
+func (q *Queries) GetSuppliersByPhoneNumber(ctx context.Context, phoneNumber *string) ([]Supplier, error) {
 	rows, err := q.db.Query(ctx, getSuppliersByPhoneNumber, phoneNumber)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []GetSuppliersByPhoneNumberRow
+	var items []Supplier
 	for rows.Next() {
-		var i GetSuppliersByPhoneNumberRow
+		var i Supplier
 		if err := rows.Scan(
 			&i.ID,
 			&i.Name,
 			&i.PhoneNumber,
 			&i.Location,
+			&i.BranchID,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.DeletedAt,
-			&i.BranchID,
 		); err != nil {
 			return nil, err
 		}
@@ -228,38 +183,27 @@ SET deleted_at = 0,
     updated_at = NOW()
 WHERE id = $1
   AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-RETURNING id, name, phone_number, location, created_at, updated_at, deleted_at, branch_id
+RETURNING id, name, phone_number, location, branch_id, created_at, updated_at, deleted_at
 `
 
-type RestoreSupplierRow struct {
-	ID          uuid.UUID          `json:"id"`
-	Name        string             `json:"name"`
-	PhoneNumber *string            `json:"phone_number"`
-	Location    *string            `json:"location"`
-	CreatedAt   pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
-	DeletedAt   *int64             `json:"deleted_at"`
-	BranchID    pgtype.UUID        `json:"branch_id"`
-}
-
-func (q *Queries) RestoreSupplier(ctx context.Context, id uuid.UUID) (RestoreSupplierRow, error) {
+func (q *Queries) RestoreSupplier(ctx context.Context, id uuid.UUID) (Supplier, error) {
 	row := q.db.QueryRow(ctx, restoreSupplier, id)
-	var i RestoreSupplierRow
+	var i Supplier
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
 		&i.PhoneNumber,
 		&i.Location,
+		&i.BranchID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
-		&i.BranchID,
 	)
 	return i, err
 }
 
 const searchSuppliers = `-- name: SearchSuppliers :many
-SELECT id, name, phone_number, location, created_at, updated_at, deleted_at, branch_id
+SELECT id, name, phone_number, location, branch_id, created_at, updated_at, deleted_at
 FROM suppliers
 WHERE name ILIKE $1
   AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
@@ -274,35 +218,24 @@ type SearchSuppliersParams struct {
 	Offset int32  `json:"offset"`
 }
 
-type SearchSuppliersRow struct {
-	ID          uuid.UUID          `json:"id"`
-	Name        string             `json:"name"`
-	PhoneNumber *string            `json:"phone_number"`
-	Location    *string            `json:"location"`
-	CreatedAt   pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
-	DeletedAt   *int64             `json:"deleted_at"`
-	BranchID    pgtype.UUID        `json:"branch_id"`
-}
-
-func (q *Queries) SearchSuppliers(ctx context.Context, arg SearchSuppliersParams) ([]SearchSuppliersRow, error) {
+func (q *Queries) SearchSuppliers(ctx context.Context, arg SearchSuppliersParams) ([]Supplier, error) {
 	rows, err := q.db.Query(ctx, searchSuppliers, arg.Name, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []SearchSuppliersRow
+	var items []Supplier
 	for rows.Next() {
-		var i SearchSuppliersRow
+		var i Supplier
 		if err := rows.Scan(
 			&i.ID,
 			&i.Name,
 			&i.PhoneNumber,
 			&i.Location,
+			&i.BranchID,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.DeletedAt,
-			&i.BranchID,
 		); err != nil {
 			return nil, err
 		}
@@ -322,7 +255,7 @@ SET name = $2,
     updated_at = NOW()
 WHERE id = $1
   AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-RETURNING id, name, phone_number, location, created_at, updated_at, deleted_at, branch_id
+RETURNING id, name, phone_number, location, branch_id, created_at, updated_at, deleted_at
 `
 
 type UpdateSupplierParams struct {
@@ -332,34 +265,23 @@ type UpdateSupplierParams struct {
 	Location    *string   `json:"location"`
 }
 
-type UpdateSupplierRow struct {
-	ID          uuid.UUID          `json:"id"`
-	Name        string             `json:"name"`
-	PhoneNumber *string            `json:"phone_number"`
-	Location    *string            `json:"location"`
-	CreatedAt   pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
-	DeletedAt   *int64             `json:"deleted_at"`
-	BranchID    pgtype.UUID        `json:"branch_id"`
-}
-
-func (q *Queries) UpdateSupplier(ctx context.Context, arg UpdateSupplierParams) (UpdateSupplierRow, error) {
+func (q *Queries) UpdateSupplier(ctx context.Context, arg UpdateSupplierParams) (Supplier, error) {
 	row := q.db.QueryRow(ctx, updateSupplier,
 		arg.ID,
 		arg.Name,
 		arg.PhoneNumber,
 		arg.Location,
 	)
-	var i UpdateSupplierRow
+	var i Supplier
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
 		&i.PhoneNumber,
 		&i.Location,
+		&i.BranchID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
-		&i.BranchID,
 	)
 	return i, err
 }

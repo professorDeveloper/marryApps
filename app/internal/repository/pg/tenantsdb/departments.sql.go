@@ -54,7 +54,7 @@ WHERE EXISTS (
     WHERE s.id = $4
       AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 )
-RETURNING id, name, name_i18n, storage_id, color_code, picture_url, created_at, updated_at, deleted_at
+RETURNING id, name, color_code, picture_url, name_i18n, storage_id, created_at, updated_at, deleted_at
 `
 
 type CreateDepartmentParams struct {
@@ -66,19 +66,7 @@ type CreateDepartmentParams struct {
 	PictureUrl *string     `json:"picture_url"`
 }
 
-type CreateDepartmentRow struct {
-	ID         uuid.UUID          `json:"id"`
-	Name       string             `json:"name"`
-	NameI18n   pgtype.UUID        `json:"name_i18n"`
-	StorageID  pgtype.UUID        `json:"storage_id"`
-	ColorCode  *string            `json:"color_code"`
-	PictureUrl *string            `json:"picture_url"`
-	CreatedAt  pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt  pgtype.Timestamptz `json:"updated_at"`
-	DeletedAt  *int64             `json:"deleted_at"`
-}
-
-func (q *Queries) CreateDepartment(ctx context.Context, arg CreateDepartmentParams) (CreateDepartmentRow, error) {
+func (q *Queries) CreateDepartment(ctx context.Context, arg CreateDepartmentParams) (Department, error) {
 	row := q.db.QueryRow(ctx, createDepartment,
 		arg.ID,
 		arg.Name,
@@ -87,14 +75,14 @@ func (q *Queries) CreateDepartment(ctx context.Context, arg CreateDepartmentPara
 		arg.ColorCode,
 		arg.PictureUrl,
 	)
-	var i CreateDepartmentRow
+	var i Department
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
-		&i.NameI18n,
-		&i.StorageID,
 		&i.ColorCode,
 		&i.PictureUrl,
+		&i.NameI18n,
+		&i.StorageID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
@@ -119,7 +107,7 @@ func (q *Queries) DeleteDepartment(ctx context.Context, id uuid.UUID) error {
 }
 
 const getAllDepartments = `-- name: GetAllDepartments :many
-SELECT id, name, name_i18n, storage_id, color_code, picture_url, created_at, updated_at, deleted_at
+SELECT id, name, color_code, picture_url, name_i18n, storage_id, created_at, updated_at, deleted_at
 FROM departments
 WHERE deleted_at = 0
   AND EXISTS (
@@ -136,34 +124,22 @@ type GetAllDepartmentsParams struct {
 	Offset int32 `json:"offset"`
 }
 
-type GetAllDepartmentsRow struct {
-	ID         uuid.UUID          `json:"id"`
-	Name       string             `json:"name"`
-	NameI18n   pgtype.UUID        `json:"name_i18n"`
-	StorageID  pgtype.UUID        `json:"storage_id"`
-	ColorCode  *string            `json:"color_code"`
-	PictureUrl *string            `json:"picture_url"`
-	CreatedAt  pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt  pgtype.Timestamptz `json:"updated_at"`
-	DeletedAt  *int64             `json:"deleted_at"`
-}
-
-func (q *Queries) GetAllDepartments(ctx context.Context, arg GetAllDepartmentsParams) ([]GetAllDepartmentsRow, error) {
+func (q *Queries) GetAllDepartments(ctx context.Context, arg GetAllDepartmentsParams) ([]Department, error) {
 	rows, err := q.db.Query(ctx, getAllDepartments, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []GetAllDepartmentsRow
+	var items []Department
 	for rows.Next() {
-		var i GetAllDepartmentsRow
+		var i Department
 		if err := rows.Scan(
 			&i.ID,
 			&i.Name,
-			&i.NameI18n,
-			&i.StorageID,
 			&i.ColorCode,
 			&i.PictureUrl,
+			&i.NameI18n,
+			&i.StorageID,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.DeletedAt,
@@ -255,7 +231,7 @@ func (q *Queries) GetAllDepartmentsWithLanguage(ctx context.Context, arg GetAllD
 }
 
 const getDepartmentByID = `-- name: GetDepartmentByID :one
-SELECT id, name, name_i18n, storage_id, color_code, picture_url, created_at, updated_at, deleted_at
+SELECT id, name, color_code, picture_url, name_i18n, storage_id, created_at, updated_at, deleted_at
 FROM departments
 WHERE departments.id = $1 AND deleted_at = 0
   AND EXISTS (
@@ -265,28 +241,16 @@ WHERE departments.id = $1 AND deleted_at = 0
   )
 `
 
-type GetDepartmentByIDRow struct {
-	ID         uuid.UUID          `json:"id"`
-	Name       string             `json:"name"`
-	NameI18n   pgtype.UUID        `json:"name_i18n"`
-	StorageID  pgtype.UUID        `json:"storage_id"`
-	ColorCode  *string            `json:"color_code"`
-	PictureUrl *string            `json:"picture_url"`
-	CreatedAt  pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt  pgtype.Timestamptz `json:"updated_at"`
-	DeletedAt  *int64             `json:"deleted_at"`
-}
-
-func (q *Queries) GetDepartmentByID(ctx context.Context, id uuid.UUID) (GetDepartmentByIDRow, error) {
+func (q *Queries) GetDepartmentByID(ctx context.Context, id uuid.UUID) (Department, error) {
 	row := q.db.QueryRow(ctx, getDepartmentByID, id)
-	var i GetDepartmentByIDRow
+	var i Department
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
-		&i.NameI18n,
-		&i.StorageID,
 		&i.ColorCode,
 		&i.PictureUrl,
+		&i.NameI18n,
+		&i.StorageID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
@@ -427,7 +391,7 @@ func (q *Queries) GetDepartmentWithStorage(ctx context.Context, id uuid.UUID) (G
 }
 
 const getDepartmentsByStorageID = `-- name: GetDepartmentsByStorageID :many
-SELECT id, name, name_i18n, storage_id, color_code, picture_url, created_at, updated_at, deleted_at
+SELECT id, name, color_code, picture_url, name_i18n, storage_id, created_at, updated_at, deleted_at
 FROM departments
 WHERE storage_id = $1 AND deleted_at = 0
   AND EXISTS (
@@ -445,34 +409,22 @@ type GetDepartmentsByStorageIDParams struct {
 	Offset    int32       `json:"offset"`
 }
 
-type GetDepartmentsByStorageIDRow struct {
-	ID         uuid.UUID          `json:"id"`
-	Name       string             `json:"name"`
-	NameI18n   pgtype.UUID        `json:"name_i18n"`
-	StorageID  pgtype.UUID        `json:"storage_id"`
-	ColorCode  *string            `json:"color_code"`
-	PictureUrl *string            `json:"picture_url"`
-	CreatedAt  pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt  pgtype.Timestamptz `json:"updated_at"`
-	DeletedAt  *int64             `json:"deleted_at"`
-}
-
-func (q *Queries) GetDepartmentsByStorageID(ctx context.Context, arg GetDepartmentsByStorageIDParams) ([]GetDepartmentsByStorageIDRow, error) {
+func (q *Queries) GetDepartmentsByStorageID(ctx context.Context, arg GetDepartmentsByStorageIDParams) ([]Department, error) {
 	rows, err := q.db.Query(ctx, getDepartmentsByStorageID, arg.StorageID, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []GetDepartmentsByStorageIDRow
+	var items []Department
 	for rows.Next() {
-		var i GetDepartmentsByStorageIDRow
+		var i Department
 		if err := rows.Scan(
 			&i.ID,
 			&i.Name,
-			&i.NameI18n,
-			&i.StorageID,
 			&i.ColorCode,
 			&i.PictureUrl,
+			&i.NameI18n,
+			&i.StorageID,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.DeletedAt,
@@ -504,7 +456,7 @@ func (q *Queries) RestoreDepartment(ctx context.Context, id uuid.UUID) error {
 }
 
 const searchDepartments = `-- name: SearchDepartments :many
-SELECT id, name, name_i18n, storage_id, color_code, picture_url, created_at, updated_at, deleted_at
+SELECT id, name, color_code, picture_url, name_i18n, storage_id, created_at, updated_at, deleted_at
 FROM departments
 WHERE deleted_at = 0 AND name ILIKE '%' || $1 || '%'
   AND EXISTS (
@@ -522,34 +474,22 @@ type SearchDepartmentsParams struct {
 	Offset  int32   `json:"offset"`
 }
 
-type SearchDepartmentsRow struct {
-	ID         uuid.UUID          `json:"id"`
-	Name       string             `json:"name"`
-	NameI18n   pgtype.UUID        `json:"name_i18n"`
-	StorageID  pgtype.UUID        `json:"storage_id"`
-	ColorCode  *string            `json:"color_code"`
-	PictureUrl *string            `json:"picture_url"`
-	CreatedAt  pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt  pgtype.Timestamptz `json:"updated_at"`
-	DeletedAt  *int64             `json:"deleted_at"`
-}
-
-func (q *Queries) SearchDepartments(ctx context.Context, arg SearchDepartmentsParams) ([]SearchDepartmentsRow, error) {
+func (q *Queries) SearchDepartments(ctx context.Context, arg SearchDepartmentsParams) ([]Department, error) {
 	rows, err := q.db.Query(ctx, searchDepartments, arg.Column1, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []SearchDepartmentsRow
+	var items []Department
 	for rows.Next() {
-		var i SearchDepartmentsRow
+		var i Department
 		if err := rows.Scan(
 			&i.ID,
 			&i.Name,
-			&i.NameI18n,
-			&i.StorageID,
 			&i.ColorCode,
 			&i.PictureUrl,
+			&i.NameI18n,
+			&i.StorageID,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.DeletedAt,
@@ -585,7 +525,7 @@ WHERE departments.id = $1 AND deleted_at = 0
         AND s2.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
     )
   )
-RETURNING id, name, name_i18n, storage_id, color_code, picture_url, created_at, updated_at, deleted_at
+RETURNING id, name, color_code, picture_url, name_i18n, storage_id, created_at, updated_at, deleted_at
 `
 
 type UpdateDepartmentParams struct {
@@ -597,19 +537,7 @@ type UpdateDepartmentParams struct {
 	PictureUrl *string     `json:"picture_url"`
 }
 
-type UpdateDepartmentRow struct {
-	ID         uuid.UUID          `json:"id"`
-	Name       string             `json:"name"`
-	NameI18n   pgtype.UUID        `json:"name_i18n"`
-	StorageID  pgtype.UUID        `json:"storage_id"`
-	ColorCode  *string            `json:"color_code"`
-	PictureUrl *string            `json:"picture_url"`
-	CreatedAt  pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt  pgtype.Timestamptz `json:"updated_at"`
-	DeletedAt  *int64             `json:"deleted_at"`
-}
-
-func (q *Queries) UpdateDepartment(ctx context.Context, arg UpdateDepartmentParams) (UpdateDepartmentRow, error) {
+func (q *Queries) UpdateDepartment(ctx context.Context, arg UpdateDepartmentParams) (Department, error) {
 	row := q.db.QueryRow(ctx, updateDepartment,
 		arg.ID,
 		arg.Name,
@@ -618,14 +546,14 @@ func (q *Queries) UpdateDepartment(ctx context.Context, arg UpdateDepartmentPara
 		arg.ColorCode,
 		arg.PictureUrl,
 	)
-	var i UpdateDepartmentRow
+	var i Department
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
-		&i.NameI18n,
-		&i.StorageID,
 		&i.ColorCode,
 		&i.PictureUrl,
+		&i.NameI18n,
+		&i.StorageID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,

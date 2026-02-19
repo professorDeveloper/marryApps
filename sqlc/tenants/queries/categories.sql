@@ -14,10 +14,10 @@ WHERE (
           AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
     ))
 )
-RETURNING id, name, picture_url, name_i18n, department_id, storage_id, parent, color_code, created_at, updated_at, deleted_at;
+RETURNING id, name, picture_url, color_code, name_i18n, department_id, storage_id, parent, created_at, updated_at, deleted_at;
 
 -- name: GetCategoryByID :one
-SELECT id, name, picture_url, name_i18n, department_id, storage_id, parent, color_code, created_at, updated_at, deleted_at
+SELECT id, name, picture_url, color_code, name_i18n, department_id, storage_id, parent, created_at, updated_at, deleted_at
 FROM categories
 WHERE categories.id = $1 AND deleted_at = 0
   AND (
@@ -35,7 +35,7 @@ WHERE categories.id = $1 AND deleted_at = 0
   );
 
 -- name: GetAllCategories :many
-SELECT id, name, picture_url, name_i18n, department_id, storage_id, parent, color_code, created_at, updated_at, deleted_at
+SELECT id, name, picture_url, color_code, name_i18n, department_id, storage_id, parent, created_at, updated_at, deleted_at
 FROM categories
 WHERE deleted_at = 0
   AND (
@@ -55,7 +55,7 @@ ORDER BY created_at DESC
 LIMIT $1 OFFSET $2;
 
 -- name: GetCategoriesByDepartmentID :many
-SELECT id, name, picture_url, name_i18n, department_id, storage_id, parent, color_code, created_at, updated_at, deleted_at
+SELECT id, name, picture_url, color_code, name_i18n, department_id, storage_id, parent, created_at, updated_at, deleted_at
 FROM categories
 WHERE department_id = $1 AND deleted_at = 0
   AND EXISTS (
@@ -68,7 +68,7 @@ ORDER BY created_at DESC
 LIMIT $2 OFFSET $3;
 
 -- name: GetCategoriesByStorageID :many
-SELECT id, name, picture_url, name_i18n, department_id, storage_id, parent, color_code, created_at, updated_at, deleted_at
+SELECT id, name, picture_url, color_code, name_i18n, department_id, storage_id, parent, created_at, updated_at, deleted_at
 FROM categories
 WHERE storage_id = $1 AND deleted_at = 0
   AND EXISTS (
@@ -80,7 +80,7 @@ ORDER BY created_at DESC
 LIMIT $2 OFFSET $3;
 
 -- name: GetCategoriesByParentID :many
-SELECT id, name, picture_url, name_i18n, department_id, storage_id, parent, color_code, created_at, updated_at, deleted_at
+SELECT id, name, picture_url, color_code, name_i18n, department_id, storage_id, parent, created_at, updated_at, deleted_at
 FROM categories
 WHERE parent = $1 AND deleted_at = 0
   AND (
@@ -100,7 +100,7 @@ ORDER BY created_at DESC
 LIMIT $2 OFFSET $3;
 
 -- name: GetRootCategories :many
-SELECT id, name, picture_url, name_i18n, department_id, storage_id, parent, color_code, created_at, updated_at, deleted_at
+SELECT id, name, picture_url, color_code, name_i18n, department_id, storage_id, parent, created_at, updated_at, deleted_at
 FROM categories
 WHERE parent IS NULL AND deleted_at = 0
   AND (
@@ -158,7 +158,7 @@ WHERE categories.id = $1 AND deleted_at = 0
         AND s2.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
     )
   )
-RETURNING id, name, picture_url, name_i18n, department_id, storage_id, parent, color_code, created_at, updated_at, deleted_at;
+RETURNING id, name, picture_url, color_code, name_i18n, department_id, storage_id, parent, created_at, updated_at, deleted_at;
 
 -- name: DeleteCategory :exec
 UPDATE categories
@@ -197,7 +197,7 @@ WHERE categories.id = $1 AND deleted_at != 0
   );
 
 -- name: SearchCategories :many
-SELECT id, name, picture_url, name_i18n, department_id, storage_id, parent, color_code, created_at, updated_at, deleted_at
+SELECT id, name, picture_url, color_code, name_i18n, department_id, storage_id, parent, created_at, updated_at, deleted_at
 FROM categories
 WHERE deleted_at = 0 AND name ILIKE '%' || $1 || '%'
   AND (

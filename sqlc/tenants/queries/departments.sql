@@ -6,10 +6,10 @@ WHERE EXISTS (
     WHERE s.id = $4
       AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 )
-RETURNING id, name, name_i18n, storage_id, color_code, picture_url, created_at, updated_at, deleted_at;
+RETURNING id, name, color_code, picture_url, name_i18n, storage_id, created_at, updated_at, deleted_at;
 
 -- name: GetDepartmentByID :one
-SELECT id, name, name_i18n, storage_id, color_code, picture_url, created_at, updated_at, deleted_at
+SELECT id, name, color_code, picture_url, name_i18n, storage_id, created_at, updated_at, deleted_at
 FROM departments
 WHERE departments.id = $1 AND deleted_at = 0
   AND EXISTS (
@@ -19,7 +19,7 @@ WHERE departments.id = $1 AND deleted_at = 0
   );
 
 -- name: GetAllDepartments :many
-SELECT id, name, name_i18n, storage_id, color_code, picture_url, created_at, updated_at, deleted_at
+SELECT id, name, color_code, picture_url, name_i18n, storage_id, created_at, updated_at, deleted_at
 FROM departments
 WHERE deleted_at = 0
   AND EXISTS (
@@ -31,7 +31,7 @@ ORDER BY created_at DESC
 LIMIT $1 OFFSET $2;
 
 -- name: GetDepartmentsByStorageID :many
-SELECT id, name, name_i18n, storage_id, color_code, picture_url, created_at, updated_at, deleted_at
+SELECT id, name, color_code, picture_url, name_i18n, storage_id, created_at, updated_at, deleted_at
 FROM departments
 WHERE storage_id = $1 AND deleted_at = 0
   AND EXISTS (
@@ -63,7 +63,7 @@ WHERE departments.id = $1 AND deleted_at = 0
         AND s2.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
     )
   )
-RETURNING id, name, name_i18n, storage_id, color_code, picture_url, created_at, updated_at, deleted_at;
+RETURNING id, name, color_code, picture_url, name_i18n, storage_id, created_at, updated_at, deleted_at;
 
 -- name: DeleteDepartment :exec
 UPDATE departments
@@ -86,7 +86,7 @@ WHERE departments.id = $1 AND deleted_at != 0
   );
 
 -- name: SearchDepartments :many
-SELECT id, name, name_i18n, storage_id, color_code, picture_url, created_at, updated_at, deleted_at
+SELECT id, name, color_code, picture_url, name_i18n, storage_id, created_at, updated_at, deleted_at
 FROM departments
 WHERE deleted_at = 0 AND name ILIKE '%' || $1 || '%'
   AND EXISTS (

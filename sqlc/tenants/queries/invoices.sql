@@ -3,17 +3,17 @@
 -- name: CreateInvoice :one
 INSERT INTO invoices (id, supplier_id, storage_id, total_amount, status, date, branch_id)
 VALUES ($1, $2, $3, $4, $5, $6, (SELECT branch_id FROM storages WHERE id = $3))
-RETURNING id, supplier_id, storage_id, total_amount, status, date, created_at, updated_at, deleted_at, branch_id;
+RETURNING id, supplier_id, storage_id, branch_id, total_amount, status, date, created_at, updated_at, deleted_at;
 
 -- name: GetInvoiceByID :one
-SELECT id, supplier_id, storage_id, total_amount, status, date, created_at, updated_at, deleted_at, branch_id
+SELECT id, supplier_id, storage_id, branch_id, total_amount, status, date, created_at, updated_at, deleted_at
 FROM invoices
 WHERE invoices.id = $1
   AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
   AND deleted_at = 0;
 
 -- name: GetAllInvoices :many
-SELECT id, supplier_id, storage_id, total_amount, status, date, created_at, updated_at, deleted_at, branch_id
+SELECT id, supplier_id, storage_id, branch_id, total_amount, status, date, created_at, updated_at, deleted_at
 FROM invoices
 WHERE deleted_at = 0
   AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
@@ -21,7 +21,7 @@ ORDER BY date DESC
 LIMIT $1 OFFSET $2;
 
 -- name: GetInvoicesByStatus :many
-SELECT id, supplier_id, storage_id, total_amount, status, date, created_at, updated_at, deleted_at, branch_id
+SELECT id, supplier_id, storage_id, branch_id, total_amount, status, date, created_at, updated_at, deleted_at
 FROM invoices
 WHERE status = $1
   AND deleted_at = 0
@@ -30,7 +30,7 @@ ORDER BY date DESC
 LIMIT $2 OFFSET $3;
 
 -- name: GetInvoicesBySupplier :many
-SELECT i.id, i.supplier_id, i.storage_id, i.total_amount, i.status, i.date, i.created_at, i.updated_at, i.deleted_at, i.branch_id
+SELECT i.id, i.supplier_id, i.storage_id, i.branch_id, i.total_amount, i.status, i.date, i.created_at, i.updated_at, i.deleted_at
 FROM invoices i
 JOIN suppliers s ON i.supplier_id = s.id AND s.deleted_at = 0
 WHERE s.name ILIKE '%' || $1 || '%'
@@ -40,7 +40,7 @@ ORDER BY i.date DESC
 LIMIT $2 OFFSET $3;
 
 -- name: GetInvoicesByDateRange :many
-SELECT id, supplier_id, storage_id, total_amount, status, date, created_at, updated_at, deleted_at, branch_id
+SELECT id, supplier_id, storage_id, branch_id, total_amount, status, date, created_at, updated_at, deleted_at
 FROM invoices
 WHERE date >= $1
   AND date <= $2
@@ -61,7 +61,7 @@ SET supplier_id = COALESCE($2, supplier_id),
 WHERE invoices.id = $1
   AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
   AND deleted_at = 0
-RETURNING id, supplier_id, storage_id, total_amount, status, date, created_at, updated_at, deleted_at, branch_id;
+RETURNING id, supplier_id, storage_id, branch_id, total_amount, status, date, created_at, updated_at, deleted_at;
 
 -- name: UpdateInvoiceStatus :one
 UPDATE invoices
@@ -70,7 +70,7 @@ SET status = $2,
 WHERE invoices.id = $1
   AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
   AND deleted_at = 0
-RETURNING id, supplier_id, storage_id, total_amount, status, date, created_at, updated_at, deleted_at, branch_id;
+RETURNING id, supplier_id, storage_id, branch_id, total_amount, status, date, created_at, updated_at, deleted_at;
 
 -- name: MarkInvoiceArrived :one
 UPDATE invoices
@@ -79,7 +79,7 @@ SET status = 'arrived',
 WHERE invoices.id = $1
   AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
   AND deleted_at = 0
-RETURNING id, supplier_id, storage_id, total_amount, status, date, created_at, updated_at, deleted_at, branch_id;
+RETURNING id, supplier_id, storage_id, branch_id, total_amount, status, date, created_at, updated_at, deleted_at;
 
 -- name: MarkInvoiceReceived :one
 UPDATE invoices
@@ -88,7 +88,7 @@ SET status = 'received',
 WHERE invoices.id = $1
   AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
   AND deleted_at = 0
-RETURNING id, supplier_id, storage_id, total_amount, status, date, created_at, updated_at, deleted_at, branch_id;
+RETURNING id, supplier_id, storage_id, branch_id, total_amount, status, date, created_at, updated_at, deleted_at;
 
 -- name: CancelInvoice :one
 UPDATE invoices
@@ -97,7 +97,7 @@ SET status = 'cancelled',
 WHERE invoices.id = $1
   AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
   AND deleted_at = 0
-RETURNING id, supplier_id, storage_id, total_amount, status, date, created_at, updated_at, deleted_at, branch_id;
+RETURNING id, supplier_id, storage_id, branch_id, total_amount, status, date, created_at, updated_at, deleted_at;
 
 -- name: DeleteInvoice :exec
 UPDATE invoices
@@ -124,7 +124,7 @@ WHERE status = $1 AND deleted_at = 0
   AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid;
 
 -- name: SearchInvoices :many
-SELECT i.id, i.supplier_id, i.storage_id, i.total_amount, i.status, i.date, i.created_at, i.updated_at, i.deleted_at, i.branch_id
+SELECT i.id, i.supplier_id, i.storage_id, i.branch_id, i.total_amount, i.status, i.date, i.created_at, i.updated_at, i.deleted_at
 FROM invoices i
 JOIN suppliers s ON i.supplier_id = s.id AND s.deleted_at = 0
 WHERE i.deleted_at = 0 
