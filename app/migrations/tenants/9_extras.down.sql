@@ -1,0 +1,5 @@
+DROP TABLE IF EXISTS group_transactions;
+DROP TABLE IF EXISTS cash_registers;
+DROP TABLE IF EXISTS transfer_items;
+DROP TABLE IF EXISTS transfers;
+DROP TYPE IF EXISTS transfer_status;

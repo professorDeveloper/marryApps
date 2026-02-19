@@ -119,7 +119,7 @@ func toGroupTransactionResponse(row pg.GroupTransaction) *model.GroupTransaction
 		ID:        row.ID.String(),
 		Name:      row.Name,
 		BranchID:  uuidToStr(row.BranchID),
-		CreatedAt: &row.CreatedAt,
-		UpdatedAt: &row.UpdatedAt,
+		CreatedAt: timestampToTime(row.CreatedAt),
+		UpdatedAt: timestampToTime(row.UpdatedAt),
 	}
 }

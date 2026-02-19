@@ -9,6 +9,7 @@ import (
 	"context"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const createDeductionActGroup = `-- name: CreateDeductionActGroup :one
@@ -26,9 +27,18 @@ type CreateDeductionActGroupParams struct {
 	Name string    `json:"name"`
 }
 
-func (q *Queries) CreateDeductionActGroup(ctx context.Context, arg CreateDeductionActGroupParams) (DeductionActGroup, error) {
+type CreateDeductionActGroupRow struct {
+	ID        uuid.UUID          `json:"id"`
+	Name      string             `json:"name"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
+	DeletedAt int64              `json:"deleted_at"`
+	BranchID  pgtype.UUID        `json:"branch_id"`
+}
+
+func (q *Queries) CreateDeductionActGroup(ctx context.Context, arg CreateDeductionActGroupParams) (CreateDeductionActGroupRow, error) {
 	row := q.db.QueryRow(ctx, createDeductionActGroup, arg.ID, arg.Name)
-	var i DeductionActGroup
+	var i CreateDeductionActGroupRow
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
@@ -68,15 +78,24 @@ type GetAllDeductionActGroupsParams struct {
 	Offset int32 `json:"offset"`
 }
 
-func (q *Queries) GetAllDeductionActGroups(ctx context.Context, arg GetAllDeductionActGroupsParams) ([]DeductionActGroup, error) {
+type GetAllDeductionActGroupsRow struct {
+	ID        uuid.UUID          `json:"id"`
+	Name      string             `json:"name"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
+	DeletedAt int64              `json:"deleted_at"`
+	BranchID  pgtype.UUID        `json:"branch_id"`
+}
+
+func (q *Queries) GetAllDeductionActGroups(ctx context.Context, arg GetAllDeductionActGroupsParams) ([]GetAllDeductionActGroupsRow, error) {
 	rows, err := q.db.Query(ctx, getAllDeductionActGroups, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []DeductionActGroup
+	var items []GetAllDeductionActGroupsRow
 	for rows.Next() {
-		var i DeductionActGroup
+		var i GetAllDeductionActGroupsRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.Name,
@@ -103,9 +122,18 @@ WHERE id = $1
   AND deleted_at = 0
 `
 
-func (q *Queries) GetDeductionActGroupByID(ctx context.Context, id uuid.UUID) (DeductionActGroup, error) {
+type GetDeductionActGroupByIDRow struct {
+	ID        uuid.UUID          `json:"id"`
+	Name      string             `json:"name"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
+	DeletedAt int64              `json:"deleted_at"`
+	BranchID  pgtype.UUID        `json:"branch_id"`
+}
+
+func (q *Queries) GetDeductionActGroupByID(ctx context.Context, id uuid.UUID) (GetDeductionActGroupByIDRow, error) {
 	row := q.db.QueryRow(ctx, getDeductionActGroupByID, id)
-	var i DeductionActGroup
+	var i GetDeductionActGroupByIDRow
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
@@ -126,9 +154,18 @@ WHERE id = $1
 RETURNING id, name, created_at, updated_at, deleted_at, branch_id
 `
 
-func (q *Queries) RestoreDeductionActGroup(ctx context.Context, id uuid.UUID) (DeductionActGroup, error) {
+type RestoreDeductionActGroupRow struct {
+	ID        uuid.UUID          `json:"id"`
+	Name      string             `json:"name"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
+	DeletedAt int64              `json:"deleted_at"`
+	BranchID  pgtype.UUID        `json:"branch_id"`
+}
+
+func (q *Queries) RestoreDeductionActGroup(ctx context.Context, id uuid.UUID) (RestoreDeductionActGroupRow, error) {
 	row := q.db.QueryRow(ctx, restoreDeductionActGroup, id)
-	var i DeductionActGroup
+	var i RestoreDeductionActGroupRow
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
@@ -155,9 +192,18 @@ type UpdateDeductionActGroupParams struct {
 	Name string    `json:"name"`
 }
 
-func (q *Queries) UpdateDeductionActGroup(ctx context.Context, arg UpdateDeductionActGroupParams) (DeductionActGroup, error) {
+type UpdateDeductionActGroupRow struct {
+	ID        uuid.UUID          `json:"id"`
+	Name      string             `json:"name"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
+	DeletedAt int64              `json:"deleted_at"`
+	BranchID  pgtype.UUID        `json:"branch_id"`
+}
+
+func (q *Queries) UpdateDeductionActGroup(ctx context.Context, arg UpdateDeductionActGroupParams) (UpdateDeductionActGroupRow, error) {
 	row := q.db.QueryRow(ctx, updateDeductionActGroup, arg.ID, arg.Name)
-	var i DeductionActGroup
+	var i UpdateDeductionActGroupRow
 	err := row.Scan(
 		&i.ID,
 		&i.Name,

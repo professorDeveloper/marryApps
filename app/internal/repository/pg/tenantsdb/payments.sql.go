@@ -50,7 +50,7 @@ INSERT INTO user_payments (
 ) VALUES (
     $1, $2, $3, $4, $5, $6,
     (SELECT branch_id FROM users WHERE id = $2)
-) RETURNING id, user_id, price_for_plan_id, is_paid, click_trans_id, click_pay_doc_id, error, error_note, status, merchant_prepare_id, payme_id, provider, order_number, paid_at, time_payme_trans_created, reason, amount, cancel_time, created_at, updated_at, branch_id
+) RETURNING id, user_id, price_for_plan_id, branch_id, is_paid, click_trans_id, click_pay_doc_id, error, error_note, status, merchant_prepare_id, payme_id, provider, order_number, paid_at, time_payme_trans_created, reason, amount, cancel_time, created_at, updated_at
 `
 
 type CreateUserPaymentParams struct {
@@ -76,6 +76,7 @@ func (q *Queries) CreateUserPayment(ctx context.Context, arg CreateUserPaymentPa
 		&i.ID,
 		&i.UserID,
 		&i.PriceForPlanID,
+		&i.BranchID,
 		&i.IsPaid,
 		&i.ClickTransID,
 		&i.ClickPayDocID,
@@ -93,7 +94,6 @@ func (q *Queries) CreateUserPayment(ctx context.Context, arg CreateUserPaymentPa
 		&i.CancelTime,
 		&i.CreatedAt,
 		&i.UpdatedAt,
-		&i.BranchID,
 	)
 	return i, err
 }
@@ -166,7 +166,7 @@ func (q *Queries) GetPriceForPlans(ctx context.Context) ([]PriceForPlan, error) 
 }
 
 const getUserPayment = `-- name: GetUserPayment :one
-SELECT id, user_id, price_for_plan_id, is_paid, click_trans_id, click_pay_doc_id, error, error_note, status, merchant_prepare_id, payme_id, provider, order_number, paid_at, time_payme_trans_created, reason, amount, cancel_time, created_at, updated_at, branch_id FROM user_payments
+SELECT id, user_id, price_for_plan_id, branch_id, is_paid, click_trans_id, click_pay_doc_id, error, error_note, status, merchant_prepare_id, payme_id, provider, order_number, paid_at, time_payme_trans_created, reason, amount, cancel_time, created_at, updated_at FROM user_payments
 WHERE id = $1
   AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 `
@@ -178,6 +178,7 @@ func (q *Queries) GetUserPayment(ctx context.Context, id uuid.UUID) (UserPayment
 		&i.ID,
 		&i.UserID,
 		&i.PriceForPlanID,
+		&i.BranchID,
 		&i.IsPaid,
 		&i.ClickTransID,
 		&i.ClickPayDocID,
@@ -195,13 +196,12 @@ func (q *Queries) GetUserPayment(ctx context.Context, id uuid.UUID) (UserPayment
 		&i.CancelTime,
 		&i.CreatedAt,
 		&i.UpdatedAt,
-		&i.BranchID,
 	)
 	return i, err
 }
 
 const getUserPayments = `-- name: GetUserPayments :many
-SELECT id, user_id, price_for_plan_id, is_paid, click_trans_id, click_pay_doc_id, error, error_note, status, merchant_prepare_id, payme_id, provider, order_number, paid_at, time_payme_trans_created, reason, amount, cancel_time, created_at, updated_at, branch_id FROM user_payments
+SELECT id, user_id, price_for_plan_id, branch_id, is_paid, click_trans_id, click_pay_doc_id, error, error_note, status, merchant_prepare_id, payme_id, provider, order_number, paid_at, time_payme_trans_created, reason, amount, cancel_time, created_at, updated_at FROM user_payments
 WHERE branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 `
 
@@ -218,6 +218,7 @@ func (q *Queries) GetUserPayments(ctx context.Context) ([]UserPayment, error) {
 			&i.ID,
 			&i.UserID,
 			&i.PriceForPlanID,
+			&i.BranchID,
 			&i.IsPaid,
 			&i.ClickTransID,
 			&i.ClickPayDocID,
@@ -235,7 +236,6 @@ func (q *Queries) GetUserPayments(ctx context.Context) ([]UserPayment, error) {
 			&i.CancelTime,
 			&i.CreatedAt,
 			&i.UpdatedAt,
-			&i.BranchID,
 		); err != nil {
 			return nil, err
 		}
@@ -298,7 +298,7 @@ UPDATE user_payments SET
     branch_id = (SELECT branch_id FROM users WHERE id = $2)
 WHERE user_payments.id = $1
   AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-RETURNING id, user_id, price_for_plan_id, is_paid, click_trans_id, click_pay_doc_id, error, error_note, status, merchant_prepare_id, payme_id, provider, order_number, paid_at, time_payme_trans_created, reason, amount, cancel_time, created_at, updated_at, branch_id
+RETURNING id, user_id, price_for_plan_id, branch_id, is_paid, click_trans_id, click_pay_doc_id, error, error_note, status, merchant_prepare_id, payme_id, provider, order_number, paid_at, time_payme_trans_created, reason, amount, cancel_time, created_at, updated_at
 `
 
 type UpdateUserPaymentParams struct {
@@ -348,6 +348,7 @@ func (q *Queries) UpdateUserPayment(ctx context.Context, arg UpdateUserPaymentPa
 		&i.ID,
 		&i.UserID,
 		&i.PriceForPlanID,
+		&i.BranchID,
 		&i.IsPaid,
 		&i.ClickTransID,
 		&i.ClickPayDocID,
@@ -365,7 +366,6 @@ func (q *Queries) UpdateUserPayment(ctx context.Context, arg UpdateUserPaymentPa
 		&i.CancelTime,
 		&i.CreatedAt,
 		&i.UpdatedAt,
-		&i.BranchID,
 	)
 	return i, err
 }

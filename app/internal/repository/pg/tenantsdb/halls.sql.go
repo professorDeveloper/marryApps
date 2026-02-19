@@ -41,7 +41,7 @@ func (q *Queries) CountHallsByBranch(ctx context.Context, branchID uuid.UUID) (i
 const createHall = `-- name: CreateHall :one
 INSERT INTO halls (id, branch_id, name, name_i18n, width, height)
 VALUES ($1, $2, $3, $4, $5, $6)
-RETURNING id, branch_id, name, name_i18n, created_at, updated_at, deleted_at, width, height
+RETURNING id, branch_id, name, name_i18n, width, height, created_at, updated_at, deleted_at
 `
 
 type CreateHallParams struct {
@@ -68,11 +68,11 @@ func (q *Queries) CreateHall(ctx context.Context, arg CreateHallParams) (Hall, e
 		&i.BranchID,
 		&i.Name,
 		&i.NameI18n,
+		&i.Width,
+		&i.Height,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
-		&i.Width,
-		&i.Height,
 	)
 	return i, err
 }
@@ -90,7 +90,7 @@ func (q *Queries) DeleteHall(ctx context.Context, id uuid.UUID) error {
 }
 
 const getAllHalls = `-- name: GetAllHalls :many
-SELECT id, branch_id, name, name_i18n, created_at, updated_at, deleted_at, width, height
+SELECT id, branch_id, name, name_i18n, width, height, created_at, updated_at, deleted_at
 FROM halls
 WHERE deleted_at = 0
   AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
@@ -117,11 +117,11 @@ func (q *Queries) GetAllHalls(ctx context.Context, arg GetAllHallsParams) ([]Hal
 			&i.BranchID,
 			&i.Name,
 			&i.NameI18n,
+			&i.Width,
+			&i.Height,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.DeletedAt,
-			&i.Width,
-			&i.Height,
 		); err != nil {
 			return nil, err
 		}
@@ -144,11 +144,11 @@ SELECT
         ELSE h.name
     END, h.name) as name,
     h.name_i18n,
+    h.width,
+    h.height,
     h.created_at,
     h.updated_at,
-    h.deleted_at,
-    h.width,
-    h.height
+    h.deleted_at
 FROM halls h
 LEFT JOIN translations t ON h.name_i18n = t.id AND t.deleted_at = 0
 WHERE h.deleted_at = 0
@@ -177,11 +177,11 @@ func (q *Queries) GetAllHallsWithLanguage(ctx context.Context, arg GetAllHallsWi
 			&i.BranchID,
 			&i.Name,
 			&i.NameI18n,
+			&i.Width,
+			&i.Height,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.DeletedAt,
-			&i.Width,
-			&i.Height,
 		); err != nil {
 			return nil, err
 		}
@@ -194,7 +194,7 @@ func (q *Queries) GetAllHallsWithLanguage(ctx context.Context, arg GetAllHallsWi
 }
 
 const getHallByID = `-- name: GetHallByID :one
-SELECT id, branch_id, name, name_i18n, created_at, updated_at, deleted_at, width, height
+SELECT id, branch_id, name, name_i18n, width, height, created_at, updated_at, deleted_at
 FROM halls
 WHERE id = $1 AND deleted_at = 0
   AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
@@ -208,11 +208,11 @@ func (q *Queries) GetHallByID(ctx context.Context, id uuid.UUID) (Hall, error) {
 		&i.BranchID,
 		&i.Name,
 		&i.NameI18n,
+		&i.Width,
+		&i.Height,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
-		&i.Width,
-		&i.Height,
 	)
 	return i, err
 }
@@ -267,7 +267,7 @@ func (q *Queries) GetHallWithBranch(ctx context.Context, id uuid.UUID) (GetHallW
 }
 
 const getHallsByBranchID = `-- name: GetHallsByBranchID :many
-SELECT id, branch_id, name, name_i18n, created_at, updated_at, deleted_at, width, height
+SELECT id, branch_id, name, name_i18n, width, height, created_at, updated_at, deleted_at
 FROM halls
 WHERE branch_id = $1 AND deleted_at = 0
   AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
@@ -295,11 +295,11 @@ func (q *Queries) GetHallsByBranchID(ctx context.Context, arg GetHallsByBranchID
 			&i.BranchID,
 			&i.Name,
 			&i.NameI18n,
+			&i.Width,
+			&i.Height,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.DeletedAt,
-			&i.Width,
-			&i.Height,
 		); err != nil {
 			return nil, err
 		}
@@ -312,21 +312,21 @@ func (q *Queries) GetHallsByBranchID(ctx context.Context, arg GetHallsByBranchID
 }
 
 const getHallsByBranchIDWithLanguage = `-- name: GetHallsByBranchIDWithLanguage :many
-SELECT 
+SELECT
     h.id,
     h.branch_id,
-    COALESCE(CASE 
+    COALESCE(CASE
         WHEN $2::text = 'uz' THEN t.uz
         WHEN $2::text = 'ru' THEN t.ru
         WHEN $2::text = 'en' THEN t.en
         ELSE h.name
     END, h.name) as name,
     h.name_i18n,
+    h.width,
+    h.height,
     h.created_at,
     h.updated_at,
-    h.deleted_at,
-    h.width,
-    h.height
+    h.deleted_at
 FROM halls h
 LEFT JOIN translations t ON h.name_i18n = t.id AND t.deleted_at = 0
 WHERE h.branch_id = $1 AND h.deleted_at = 0
@@ -361,11 +361,11 @@ func (q *Queries) GetHallsByBranchIDWithLanguage(ctx context.Context, arg GetHal
 			&i.BranchID,
 			&i.Name,
 			&i.NameI18n,
+			&i.Width,
+			&i.Height,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.DeletedAt,
-			&i.Width,
-			&i.Height,
 		); err != nil {
 			return nil, err
 		}
@@ -390,7 +390,7 @@ func (q *Queries) RestoreHall(ctx context.Context, id uuid.UUID) error {
 }
 
 const searchHalls = `-- name: SearchHalls :many
-SELECT id, branch_id, name, name_i18n, created_at, updated_at, deleted_at, width, height
+SELECT id, branch_id, name, name_i18n, width, height, created_at, updated_at, deleted_at
 FROM halls
 WHERE deleted_at = 0 AND name ILIKE '%' || $1 || '%'
   AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
@@ -418,11 +418,11 @@ func (q *Queries) SearchHalls(ctx context.Context, arg SearchHallsParams) ([]Hal
 			&i.BranchID,
 			&i.Name,
 			&i.NameI18n,
+			&i.Width,
+			&i.Height,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.DeletedAt,
-			&i.Width,
-			&i.Height,
 		); err != nil {
 			return nil, err
 		}
@@ -444,7 +444,7 @@ SET branch_id = COALESCE($2, branch_id),
     updated_at = NOW()
 WHERE id = $1 AND deleted_at = 0
   AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-RETURNING id, branch_id, name, name_i18n, created_at, updated_at, deleted_at, width, height
+RETURNING id, branch_id, name, name_i18n, width, height, created_at, updated_at, deleted_at
 `
 
 type UpdateHallParams struct {
@@ -471,11 +471,11 @@ func (q *Queries) UpdateHall(ctx context.Context, arg UpdateHallParams) (Hall, e
 		&i.BranchID,
 		&i.Name,
 		&i.NameI18n,
+		&i.Width,
+		&i.Height,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
-		&i.Width,
-		&i.Height,
 	)
 	return i, err
 }

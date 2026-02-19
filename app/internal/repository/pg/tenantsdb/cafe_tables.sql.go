@@ -88,7 +88,7 @@ func (q *Queries) CountCafeTablesByStatus(ctx context.Context, status NullTableS
 const createCafeTable = `-- name: CreateCafeTable :one
 INSERT INTO cafe_tables (id, hall_id, number, capacity, status, pos_x, pos_y, width, height, rotation)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-RETURNING id, hall_id, number, capacity, status, created_at, updated_at, deleted_at, pos_x, pos_y, width, height, rotation
+RETURNING id, hall_id, number, capacity, status, pos_x, pos_y, width, height, rotation, created_at, updated_at, deleted_at
 `
 
 type CreateCafeTableParams struct {
@@ -124,14 +124,14 @@ func (q *Queries) CreateCafeTable(ctx context.Context, arg CreateCafeTableParams
 		&i.Number,
 		&i.Capacity,
 		&i.Status,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-		&i.DeletedAt,
 		&i.PosX,
 		&i.PosY,
 		&i.Width,
 		&i.Height,
 		&i.Rotation,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
 	)
 	return i, err
 }
@@ -153,7 +153,7 @@ func (q *Queries) DeleteCafeTable(ctx context.Context, id uuid.UUID) error {
 }
 
 const getAllCafeTables = `-- name: GetAllCafeTables :many
-SELECT id, hall_id, number, capacity, status, created_at, updated_at, deleted_at, pos_x, pos_y, width, height, rotation
+SELECT id, hall_id, number, capacity, status, pos_x, pos_y, width, height, rotation, created_at, updated_at, deleted_at
 FROM cafe_tables
 WHERE cafe_tables.deleted_at = 0
   AND EXISTS (
@@ -185,14 +185,14 @@ func (q *Queries) GetAllCafeTables(ctx context.Context, arg GetAllCafeTablesPara
 			&i.Number,
 			&i.Capacity,
 			&i.Status,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-			&i.DeletedAt,
 			&i.PosX,
 			&i.PosY,
 			&i.Width,
 			&i.Height,
 			&i.Rotation,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.DeletedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -205,7 +205,7 @@ func (q *Queries) GetAllCafeTables(ctx context.Context, arg GetAllCafeTablesPara
 }
 
 const getAvailableTablesByCapacity = `-- name: GetAvailableTablesByCapacity :many
-SELECT id, hall_id, number, capacity, status, created_at, updated_at, deleted_at, pos_x, pos_y, width, height, rotation
+SELECT id, hall_id, number, capacity, status, pos_x, pos_y, width, height, rotation, created_at, updated_at, deleted_at
 FROM cafe_tables
 WHERE capacity >= $1 
 AND status = 'free' 
@@ -240,14 +240,14 @@ func (q *Queries) GetAvailableTablesByCapacity(ctx context.Context, arg GetAvail
 			&i.Number,
 			&i.Capacity,
 			&i.Status,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-			&i.DeletedAt,
 			&i.PosX,
 			&i.PosY,
 			&i.Width,
 			&i.Height,
 			&i.Rotation,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.DeletedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -260,7 +260,7 @@ func (q *Queries) GetAvailableTablesByCapacity(ctx context.Context, arg GetAvail
 }
 
 const getAvailableTablesByHall = `-- name: GetAvailableTablesByHall :many
-SELECT id, hall_id, number, capacity, status, created_at, updated_at, deleted_at, pos_x, pos_y, width, height, rotation
+SELECT id, hall_id, number, capacity, status, pos_x, pos_y, width, height, rotation, created_at, updated_at, deleted_at
 FROM cafe_tables
 WHERE hall_id = $1 
 AND status = 'free' 
@@ -288,14 +288,14 @@ func (q *Queries) GetAvailableTablesByHall(ctx context.Context, hallID uuid.UUID
 			&i.Number,
 			&i.Capacity,
 			&i.Status,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-			&i.DeletedAt,
 			&i.PosX,
 			&i.PosY,
 			&i.Width,
 			&i.Height,
 			&i.Rotation,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.DeletedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -308,7 +308,7 @@ func (q *Queries) GetAvailableTablesByHall(ctx context.Context, hallID uuid.UUID
 }
 
 const getAvailableTablesByHallAndCapacity = `-- name: GetAvailableTablesByHallAndCapacity :many
-SELECT id, hall_id, number, capacity, status, created_at, updated_at, deleted_at, pos_x, pos_y, width, height, rotation
+SELECT id, hall_id, number, capacity, status, pos_x, pos_y, width, height, rotation, created_at, updated_at, deleted_at
 FROM cafe_tables
 WHERE hall_id = $1 
 AND capacity >= $2 
@@ -342,14 +342,14 @@ func (q *Queries) GetAvailableTablesByHallAndCapacity(ctx context.Context, arg G
 			&i.Number,
 			&i.Capacity,
 			&i.Status,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-			&i.DeletedAt,
 			&i.PosX,
 			&i.PosY,
 			&i.Width,
 			&i.Height,
 			&i.Rotation,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.DeletedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -362,7 +362,7 @@ func (q *Queries) GetAvailableTablesByHallAndCapacity(ctx context.Context, arg G
 }
 
 const getCafeTableByID = `-- name: GetCafeTableByID :one
-SELECT id, hall_id, number, capacity, status, created_at, updated_at, deleted_at, pos_x, pos_y, width, height, rotation
+SELECT id, hall_id, number, capacity, status, pos_x, pos_y, width, height, rotation, created_at, updated_at, deleted_at
 FROM cafe_tables
 WHERE cafe_tables.id = $1 AND cafe_tables.deleted_at = 0
   AND EXISTS (
@@ -381,20 +381,20 @@ func (q *Queries) GetCafeTableByID(ctx context.Context, id uuid.UUID) (CafeTable
 		&i.Number,
 		&i.Capacity,
 		&i.Status,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-		&i.DeletedAt,
 		&i.PosX,
 		&i.PosY,
 		&i.Width,
 		&i.Height,
 		&i.Rotation,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
 	)
 	return i, err
 }
 
 const getCafeTableByNumber = `-- name: GetCafeTableByNumber :one
-SELECT id, hall_id, number, capacity, status, created_at, updated_at, deleted_at, pos_x, pos_y, width, height, rotation
+SELECT id, hall_id, number, capacity, status, pos_x, pos_y, width, height, rotation, created_at, updated_at, deleted_at
 FROM cafe_tables
 WHERE cafe_tables.hall_id = $1 AND cafe_tables.number = $2 AND cafe_tables.deleted_at = 0
   AND EXISTS (
@@ -418,14 +418,14 @@ func (q *Queries) GetCafeTableByNumber(ctx context.Context, arg GetCafeTableByNu
 		&i.Number,
 		&i.Capacity,
 		&i.Status,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-		&i.DeletedAt,
 		&i.PosX,
 		&i.PosY,
 		&i.Width,
 		&i.Height,
 		&i.Rotation,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
 	)
 	return i, err
 }
@@ -496,7 +496,7 @@ func (q *Queries) GetCafeTableWithHall(ctx context.Context, id uuid.UUID) (GetCa
 }
 
 const getCafeTablesByCapacity = `-- name: GetCafeTablesByCapacity :many
-SELECT id, hall_id, number, capacity, status, created_at, updated_at, deleted_at, pos_x, pos_y, width, height, rotation
+SELECT id, hall_id, number, capacity, status, pos_x, pos_y, width, height, rotation, created_at, updated_at, deleted_at
 FROM cafe_tables
 WHERE cafe_tables.capacity >= $1 AND cafe_tables.deleted_at = 0
   AND EXISTS (
@@ -529,14 +529,14 @@ func (q *Queries) GetCafeTablesByCapacity(ctx context.Context, arg GetCafeTables
 			&i.Number,
 			&i.Capacity,
 			&i.Status,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-			&i.DeletedAt,
 			&i.PosX,
 			&i.PosY,
 			&i.Width,
 			&i.Height,
 			&i.Rotation,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.DeletedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -549,7 +549,7 @@ func (q *Queries) GetCafeTablesByCapacity(ctx context.Context, arg GetCafeTables
 }
 
 const getCafeTablesByHallAndStatus = `-- name: GetCafeTablesByHallAndStatus :many
-SELECT id, hall_id, number, capacity, status, created_at, updated_at, deleted_at, pos_x, pos_y, width, height, rotation
+SELECT id, hall_id, number, capacity, status, pos_x, pos_y, width, height, rotation, created_at, updated_at, deleted_at
 FROM cafe_tables
 WHERE cafe_tables.hall_id = $1 AND cafe_tables.status = $2 AND cafe_tables.deleted_at = 0
   AND EXISTS (
@@ -580,14 +580,14 @@ func (q *Queries) GetCafeTablesByHallAndStatus(ctx context.Context, arg GetCafeT
 			&i.Number,
 			&i.Capacity,
 			&i.Status,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-			&i.DeletedAt,
 			&i.PosX,
 			&i.PosY,
 			&i.Width,
 			&i.Height,
 			&i.Rotation,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.DeletedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -600,7 +600,7 @@ func (q *Queries) GetCafeTablesByHallAndStatus(ctx context.Context, arg GetCafeT
 }
 
 const getCafeTablesByHallID = `-- name: GetCafeTablesByHallID :many
-SELECT id, hall_id, number, capacity, status, created_at, updated_at, deleted_at, pos_x, pos_y, width, height, rotation
+SELECT id, hall_id, number, capacity, status, pos_x, pos_y, width, height, rotation, created_at, updated_at, deleted_at
 FROM cafe_tables
 WHERE cafe_tables.hall_id = $1 AND cafe_tables.deleted_at = 0
   AND EXISTS (
@@ -626,14 +626,14 @@ func (q *Queries) GetCafeTablesByHallID(ctx context.Context, hallID uuid.UUID) (
 			&i.Number,
 			&i.Capacity,
 			&i.Status,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-			&i.DeletedAt,
 			&i.PosX,
 			&i.PosY,
 			&i.Width,
 			&i.Height,
 			&i.Rotation,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.DeletedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -646,7 +646,7 @@ func (q *Queries) GetCafeTablesByHallID(ctx context.Context, hallID uuid.UUID) (
 }
 
 const getCafeTablesByStatus = `-- name: GetCafeTablesByStatus :many
-SELECT id, hall_id, number, capacity, status, created_at, updated_at, deleted_at, pos_x, pos_y, width, height, rotation
+SELECT id, hall_id, number, capacity, status, pos_x, pos_y, width, height, rotation, created_at, updated_at, deleted_at
 FROM cafe_tables
 WHERE cafe_tables.status = $1 AND cafe_tables.deleted_at = 0
   AND EXISTS (
@@ -679,14 +679,14 @@ func (q *Queries) GetCafeTablesByStatus(ctx context.Context, arg GetCafeTablesBy
 			&i.Number,
 			&i.Capacity,
 			&i.Status,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-			&i.DeletedAt,
 			&i.PosX,
 			&i.PosY,
 			&i.Width,
 			&i.Height,
 			&i.Rotation,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.DeletedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -767,7 +767,7 @@ WHERE cafe_tables.id = $1 AND cafe_tables.deleted_at = 0
     WHERE h.id = cafe_tables.hall_id
       AND h.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
   )
-RETURNING id, hall_id, number, capacity, status, created_at, updated_at, deleted_at, pos_x, pos_y, width, height, rotation
+RETURNING id, hall_id, number, capacity, status, pos_x, pos_y, width, height, rotation, created_at, updated_at, deleted_at
 `
 
 func (q *Queries) SetTableBusy(ctx context.Context, id uuid.UUID) (CafeTable, error) {
@@ -779,14 +779,14 @@ func (q *Queries) SetTableBusy(ctx context.Context, id uuid.UUID) (CafeTable, er
 		&i.Number,
 		&i.Capacity,
 		&i.Status,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-		&i.DeletedAt,
 		&i.PosX,
 		&i.PosY,
 		&i.Width,
 		&i.Height,
 		&i.Rotation,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
 	)
 	return i, err
 }
@@ -801,7 +801,7 @@ WHERE cafe_tables.id = $1 AND cafe_tables.deleted_at = 0
     WHERE h.id = cafe_tables.hall_id
       AND h.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
   )
-RETURNING id, hall_id, number, capacity, status, created_at, updated_at, deleted_at, pos_x, pos_y, width, height, rotation
+RETURNING id, hall_id, number, capacity, status, pos_x, pos_y, width, height, rotation, created_at, updated_at, deleted_at
 `
 
 func (q *Queries) SetTableFree(ctx context.Context, id uuid.UUID) (CafeTable, error) {
@@ -813,14 +813,14 @@ func (q *Queries) SetTableFree(ctx context.Context, id uuid.UUID) (CafeTable, er
 		&i.Number,
 		&i.Capacity,
 		&i.Status,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-		&i.DeletedAt,
 		&i.PosX,
 		&i.PosY,
 		&i.Width,
 		&i.Height,
 		&i.Rotation,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
 	)
 	return i, err
 }
@@ -843,7 +843,7 @@ WHERE cafe_tables.id = $1 AND cafe_tables.deleted_at = 0
     WHERE h.id = cafe_tables.hall_id
       AND h.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
   )
-RETURNING id, hall_id, number, capacity, status, created_at, updated_at, deleted_at, pos_x, pos_y, width, height, rotation
+RETURNING id, hall_id, number, capacity, status, pos_x, pos_y, width, height, rotation, created_at, updated_at, deleted_at
 `
 
 type UpdateCafeTableParams struct {
@@ -879,14 +879,14 @@ func (q *Queries) UpdateCafeTable(ctx context.Context, arg UpdateCafeTableParams
 		&i.Number,
 		&i.Capacity,
 		&i.Status,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-		&i.DeletedAt,
 		&i.PosX,
 		&i.PosY,
 		&i.Width,
 		&i.Height,
 		&i.Rotation,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
 	)
 	return i, err
 }
@@ -901,7 +901,7 @@ WHERE cafe_tables.id = $1 AND cafe_tables.deleted_at = 0
     WHERE h.id = cafe_tables.hall_id
       AND h.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
   )
-RETURNING id, hall_id, number, capacity, status, created_at, updated_at, deleted_at, pos_x, pos_y, width, height, rotation
+RETURNING id, hall_id, number, capacity, status, pos_x, pos_y, width, height, rotation, created_at, updated_at, deleted_at
 `
 
 type UpdateCafeTableStatusParams struct {
@@ -918,14 +918,14 @@ func (q *Queries) UpdateCafeTableStatus(ctx context.Context, arg UpdateCafeTable
 		&i.Number,
 		&i.Capacity,
 		&i.Status,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-		&i.DeletedAt,
 		&i.PosX,
 		&i.PosY,
 		&i.Width,
 		&i.Height,
 		&i.Rotation,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
 	)
 	return i, err
 }

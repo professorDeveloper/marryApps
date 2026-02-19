@@ -9,6 +9,7 @@ import (
 	"context"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const countSuppliers = `-- name: CountSuppliers :one
@@ -39,15 +40,26 @@ type CreateSupplierParams struct {
 	Location    *string   `json:"location"`
 }
 
+type CreateSupplierRow struct {
+	ID          uuid.UUID          `json:"id"`
+	Name        string             `json:"name"`
+	PhoneNumber *string            `json:"phone_number"`
+	Location    *string            `json:"location"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
+	DeletedAt   *int64             `json:"deleted_at"`
+	BranchID    pgtype.UUID        `json:"branch_id"`
+}
+
 // ==================== SUPPLIERS QUERIES ====================
-func (q *Queries) CreateSupplier(ctx context.Context, arg CreateSupplierParams) (Supplier, error) {
+func (q *Queries) CreateSupplier(ctx context.Context, arg CreateSupplierParams) (CreateSupplierRow, error) {
 	row := q.db.QueryRow(ctx, createSupplier,
 		arg.ID,
 		arg.Name,
 		arg.PhoneNumber,
 		arg.Location,
 	)
-	var i Supplier
+	var i CreateSupplierRow
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
@@ -87,15 +99,26 @@ type GetAllSuppliersParams struct {
 	Offset int32 `json:"offset"`
 }
 
-func (q *Queries) GetAllSuppliers(ctx context.Context, arg GetAllSuppliersParams) ([]Supplier, error) {
+type GetAllSuppliersRow struct {
+	ID          uuid.UUID          `json:"id"`
+	Name        string             `json:"name"`
+	PhoneNumber *string            `json:"phone_number"`
+	Location    *string            `json:"location"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
+	DeletedAt   *int64             `json:"deleted_at"`
+	BranchID    pgtype.UUID        `json:"branch_id"`
+}
+
+func (q *Queries) GetAllSuppliers(ctx context.Context, arg GetAllSuppliersParams) ([]GetAllSuppliersRow, error) {
 	rows, err := q.db.Query(ctx, getAllSuppliers, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []Supplier
+	var items []GetAllSuppliersRow
 	for rows.Next() {
-		var i Supplier
+		var i GetAllSuppliersRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.Name,
@@ -124,9 +147,20 @@ WHERE id = $1
   AND deleted_at = 0
 `
 
-func (q *Queries) GetSupplierByID(ctx context.Context, id uuid.UUID) (Supplier, error) {
+type GetSupplierByIDRow struct {
+	ID          uuid.UUID          `json:"id"`
+	Name        string             `json:"name"`
+	PhoneNumber *string            `json:"phone_number"`
+	Location    *string            `json:"location"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
+	DeletedAt   *int64             `json:"deleted_at"`
+	BranchID    pgtype.UUID        `json:"branch_id"`
+}
+
+func (q *Queries) GetSupplierByID(ctx context.Context, id uuid.UUID) (GetSupplierByIDRow, error) {
 	row := q.db.QueryRow(ctx, getSupplierByID, id)
-	var i Supplier
+	var i GetSupplierByIDRow
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
@@ -148,15 +182,26 @@ WHERE phone_number = $1
   AND deleted_at = 0
 `
 
-func (q *Queries) GetSuppliersByPhoneNumber(ctx context.Context, phoneNumber *string) ([]Supplier, error) {
+type GetSuppliersByPhoneNumberRow struct {
+	ID          uuid.UUID          `json:"id"`
+	Name        string             `json:"name"`
+	PhoneNumber *string            `json:"phone_number"`
+	Location    *string            `json:"location"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
+	DeletedAt   *int64             `json:"deleted_at"`
+	BranchID    pgtype.UUID        `json:"branch_id"`
+}
+
+func (q *Queries) GetSuppliersByPhoneNumber(ctx context.Context, phoneNumber *string) ([]GetSuppliersByPhoneNumberRow, error) {
 	rows, err := q.db.Query(ctx, getSuppliersByPhoneNumber, phoneNumber)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []Supplier
+	var items []GetSuppliersByPhoneNumberRow
 	for rows.Next() {
-		var i Supplier
+		var i GetSuppliersByPhoneNumberRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.Name,
@@ -186,9 +231,20 @@ WHERE id = $1
 RETURNING id, name, phone_number, location, created_at, updated_at, deleted_at, branch_id
 `
 
-func (q *Queries) RestoreSupplier(ctx context.Context, id uuid.UUID) (Supplier, error) {
+type RestoreSupplierRow struct {
+	ID          uuid.UUID          `json:"id"`
+	Name        string             `json:"name"`
+	PhoneNumber *string            `json:"phone_number"`
+	Location    *string            `json:"location"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
+	DeletedAt   *int64             `json:"deleted_at"`
+	BranchID    pgtype.UUID        `json:"branch_id"`
+}
+
+func (q *Queries) RestoreSupplier(ctx context.Context, id uuid.UUID) (RestoreSupplierRow, error) {
 	row := q.db.QueryRow(ctx, restoreSupplier, id)
-	var i Supplier
+	var i RestoreSupplierRow
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
@@ -218,15 +274,26 @@ type SearchSuppliersParams struct {
 	Offset int32  `json:"offset"`
 }
 
-func (q *Queries) SearchSuppliers(ctx context.Context, arg SearchSuppliersParams) ([]Supplier, error) {
+type SearchSuppliersRow struct {
+	ID          uuid.UUID          `json:"id"`
+	Name        string             `json:"name"`
+	PhoneNumber *string            `json:"phone_number"`
+	Location    *string            `json:"location"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
+	DeletedAt   *int64             `json:"deleted_at"`
+	BranchID    pgtype.UUID        `json:"branch_id"`
+}
+
+func (q *Queries) SearchSuppliers(ctx context.Context, arg SearchSuppliersParams) ([]SearchSuppliersRow, error) {
 	rows, err := q.db.Query(ctx, searchSuppliers, arg.Name, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []Supplier
+	var items []SearchSuppliersRow
 	for rows.Next() {
-		var i Supplier
+		var i SearchSuppliersRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.Name,
@@ -265,14 +332,25 @@ type UpdateSupplierParams struct {
 	Location    *string   `json:"location"`
 }
 
-func (q *Queries) UpdateSupplier(ctx context.Context, arg UpdateSupplierParams) (Supplier, error) {
+type UpdateSupplierRow struct {
+	ID          uuid.UUID          `json:"id"`
+	Name        string             `json:"name"`
+	PhoneNumber *string            `json:"phone_number"`
+	Location    *string            `json:"location"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
+	DeletedAt   *int64             `json:"deleted_at"`
+	BranchID    pgtype.UUID        `json:"branch_id"`
+}
+
+func (q *Queries) UpdateSupplier(ctx context.Context, arg UpdateSupplierParams) (UpdateSupplierRow, error) {
 	row := q.db.QueryRow(ctx, updateSupplier,
 		arg.ID,
 		arg.Name,
 		arg.PhoneNumber,
 		arg.Location,
 	)
-	var i Supplier
+	var i UpdateSupplierRow
 	err := row.Scan(
 		&i.ID,
 		&i.Name,

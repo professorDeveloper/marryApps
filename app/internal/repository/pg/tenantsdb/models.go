@@ -7,11 +7,55 @@ package pg
 import (
 	"database/sql/driver"
 	"fmt"
-	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 )
+
+type BillStatus string
+
+const (
+	BillStatusOpened  BillStatus = "opened"
+	BillStatusClosed  BillStatus = "closed"
+	BillStatusPaid    BillStatus = "paid"
+	BillStatusDebt    BillStatus = "debt"
+	BillStatusDeleted BillStatus = "deleted"
+)
+
+func (e *BillStatus) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = BillStatus(s)
+	case string:
+		*e = BillStatus(s)
+	default:
+		return fmt.Errorf("unsupported scan type for BillStatus: %T", src)
+	}
+	return nil
+}
+
+type NullBillStatus struct {
+	BillStatus BillStatus `json:"bill_status"`
+	Valid      bool       `json:"valid"` // Valid is true if BillStatus is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullBillStatus) Scan(value interface{}) error {
+	if value == nil {
+		ns.BillStatus, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.BillStatus.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullBillStatus) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.BillStatus), nil
+}
 
 type InvoiceStatus string
 
@@ -190,6 +234,48 @@ func (ns NullOrderStatus) Value() (driver.Value, error) {
 	return string(ns.OrderStatus), nil
 }
 
+type PaymentType string
+
+const (
+	PaymentTypeCash PaymentType = "cash"
+	PaymentTypeCard PaymentType = "card"
+)
+
+func (e *PaymentType) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = PaymentType(s)
+	case string:
+		*e = PaymentType(s)
+	default:
+		return fmt.Errorf("unsupported scan type for PaymentType: %T", src)
+	}
+	return nil
+}
+
+type NullPaymentType struct {
+	PaymentType PaymentType `json:"payment_type"`
+	Valid       bool        `json:"valid"` // Valid is true if PaymentType is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullPaymentType) Scan(value interface{}) error {
+	if value == nil {
+		ns.PaymentType, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.PaymentType.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullPaymentType) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.PaymentType), nil
+}
+
 type TableStatus string
 
 const (
@@ -278,6 +364,7 @@ func (ns NullTransferStatus) Value() (driver.Value, error) {
 type Attendance struct {
 	ID           uuid.UUID          `json:"id"`
 	UserID       uuid.UUID          `json:"user_id"`
+	BranchID     pgtype.UUID        `json:"branch_id"`
 	OpenDate     pgtype.Date        `json:"open_date"`
 	CloseDate    pgtype.Date        `json:"close_date"`
 	Difference   *int32             `json:"difference"`
@@ -285,7 +372,6 @@ type Attendance struct {
 	CreatedAt    pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
 	DeletedAt    *int64             `json:"deleted_at"`
-	BranchID     pgtype.UUID        `json:"branch_id"`
 }
 
 type BillDailyCounter struct {
@@ -299,10 +385,10 @@ type Branch struct {
 	NameI18n              pgtype.UUID        `json:"name_i18n"`
 	Address               *string            `json:"address"`
 	Phone                 *string            `json:"phone"`
+	DefaultServicePercent pgtype.Numeric     `json:"default_service_percent"`
 	CreatedAt             pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt             pgtype.Timestamptz `json:"updated_at"`
 	DeletedAt             *int64             `json:"deleted_at"`
-	DefaultServicePercent pgtype.Numeric     `json:"default_service_percent"`
 }
 
 type CafeTable struct {
@@ -311,14 +397,14 @@ type CafeTable struct {
 	Number    int32              `json:"number"`
 	Capacity  int32              `json:"capacity"`
 	Status    NullTableStatus    `json:"status"`
-	CreatedAt pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
-	DeletedAt *int64             `json:"deleted_at"`
 	PosX      int32              `json:"pos_x"`
 	PosY      int32              `json:"pos_y"`
 	Width     int32              `json:"width"`
 	Height    int32              `json:"height"`
 	Rotation  int32              `json:"rotation"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
+	DeletedAt *int64             `json:"deleted_at"`
 }
 
 type Calculation struct {
@@ -360,13 +446,13 @@ type Category struct {
 }
 
 type ChangeLog struct {
-	ID        int64     `json:"id"`
-	BrandID   *string   `json:"brand_id"`
-	Entity    string    `json:"entity"`
-	Action    string    `json:"action"`
-	EntityID  string    `json:"entity_id"`
-	Payload   []byte    `json:"payload"`
-	ChangedAt time.Time `json:"changed_at"`
+	ID        int64              `json:"id"`
+	BrandID   *string            `json:"brand_id"`
+	Entity    string             `json:"entity"`
+	Action    string             `json:"action"`
+	EntityID  string             `json:"entity_id"`
+	Payload   []byte             `json:"payload"`
+	ChangedAt pgtype.Timestamptz `json:"changed_at"`
 }
 
 type Compound struct {
@@ -427,10 +513,10 @@ type Deduction struct {
 type DeductionActGroup struct {
 	ID        uuid.UUID          `json:"id"`
 	Name      string             `json:"name"`
+	BranchID  pgtype.UUID        `json:"branch_id"`
 	CreatedAt pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
 	DeletedAt int64              `json:"deleted_at"`
-	BranchID  pgtype.UUID        `json:"branch_id"`
 }
 
 type DeductionItem struct {
@@ -472,26 +558,23 @@ type Department struct {
 }
 
 type Good struct {
-	ID              uuid.UUID      `json:"id"`
-	Name            string         `json:"name"`
-	Description     *string        `json:"description"`
-	NameI18n        pgtype.UUID    `json:"name_i18n"`
-	DescriptionI18n pgtype.UUID    `json:"description_i18n"`
-	CategoryID      pgtype.UUID    `json:"category_id"`
-	DepartmentID    pgtype.UUID    `json:"department_id"`
-	PictureUrl      *string        `json:"picture_url"`
-	ColorCode       *string        `json:"color_code"`
-	Price           pgtype.Numeric `json:"price"`
-	CookTime        *int32         `json:"cook_time"`
-	// Total preparation cost (sum of all calculations total_cost)
-	CostPrice pgtype.Numeric `json:"cost_price"`
-	// Profit = price - cost_price
-	Profit pgtype.Numeric `json:"profit"`
-	// Profit margin percentage = (profit / cost_price) * 100
-	ProfitMargin pgtype.Numeric     `json:"profit_margin"`
-	CreatedAt    pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
-	DeletedAt    *int64             `json:"deleted_at"`
+	ID              uuid.UUID          `json:"id"`
+	Name            string             `json:"name"`
+	Description     *string            `json:"description"`
+	NameI18n        pgtype.UUID        `json:"name_i18n"`
+	DescriptionI18n pgtype.UUID        `json:"description_i18n"`
+	CategoryID      pgtype.UUID        `json:"category_id"`
+	DepartmentID    pgtype.UUID        `json:"department_id"`
+	PictureUrl      *string            `json:"picture_url"`
+	ColorCode       *string            `json:"color_code"`
+	Price           pgtype.Numeric     `json:"price"`
+	CookTime        *int32             `json:"cook_time"`
+	CostPrice       pgtype.Numeric     `json:"cost_price"`
+	Profit          pgtype.Numeric     `json:"profit"`
+	ProfitMargin    pgtype.Numeric     `json:"profit_margin"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
+	DeletedAt       *int64             `json:"deleted_at"`
 }
 
 type GoodsDetail struct {
@@ -507,12 +590,12 @@ type GoodsDetail struct {
 }
 
 type GroupTransaction struct {
-	ID        uuid.UUID   `json:"id"`
-	Name      string      `json:"name"`
-	BranchID  pgtype.UUID `json:"branch_id"`
-	CreatedAt time.Time   `json:"created_at"`
-	UpdatedAt time.Time   `json:"updated_at"`
-	DeletedAt *int64      `json:"deleted_at"`
+	ID        uuid.UUID          `json:"id"`
+	Name      string             `json:"name"`
+	BranchID  pgtype.UUID        `json:"branch_id"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
+	DeletedAt *int64             `json:"deleted_at"`
 }
 
 type Hall struct {
@@ -520,11 +603,11 @@ type Hall struct {
 	BranchID  uuid.UUID          `json:"branch_id"`
 	Name      string             `json:"name"`
 	NameI18n  pgtype.UUID        `json:"name_i18n"`
+	Width     int32              `json:"width"`
+	Height    int32              `json:"height"`
 	CreatedAt pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
 	DeletedAt *int64             `json:"deleted_at"`
-	Width     int32              `json:"width"`
-	Height    int32              `json:"height"`
 }
 
 type Ingredient struct {
@@ -536,11 +619,11 @@ type Ingredient struct {
 	PictureUrl   *string             `json:"picture_url"`
 	ColorCode    *string             `json:"color_code"`
 	BrandID      pgtype.UUID         `json:"brand_id"`
+	BranchID     pgtype.UUID         `json:"branch_id"`
 	PricePerUnit pgtype.Numeric      `json:"price_per_unit"`
 	CreatedAt    pgtype.Timestamptz  `json:"created_at"`
 	UpdatedAt    pgtype.Timestamptz  `json:"updated_at"`
 	DeletedAt    *int64              `json:"deleted_at"`
-	BranchID     pgtype.UUID         `json:"branch_id"`
 }
 
 type IngredientGroup struct {
@@ -549,21 +632,21 @@ type IngredientGroup struct {
 	PictureUrl *string            `json:"picture_url"`
 	ColorCode  *string            `json:"color_code"`
 	NameI18n   pgtype.UUID        `json:"name_i18n"`
+	BranchID   pgtype.UUID        `json:"branch_id"`
 	CreatedAt  pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt  pgtype.Timestamptz `json:"updated_at"`
 	DeletedAt  *int64             `json:"deleted_at"`
-	BranchID   pgtype.UUID        `json:"branch_id"`
 }
 
 type IngredientStock struct {
 	ID           uuid.UUID          `json:"id"`
 	IngredientID uuid.UUID          `json:"ingredient_id"`
-	Quantity     pgtype.Numeric     `json:"quantity"`
+	StorageID    pgtype.UUID        `json:"storage_id"`
 	BranchID     pgtype.UUID        `json:"branch_id"`
+	Quantity     pgtype.Numeric     `json:"quantity"`
 	CreatedAt    pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
 	DeletedAt    *int64             `json:"deleted_at"`
-	StorageID    pgtype.UUID        `json:"storage_id"`
 }
 
 type IngredientStockMovement struct {
@@ -582,12 +665,12 @@ type IngredientStockMovement struct {
 }
 
 type IngredientVisibility struct {
-	ID           uuid.UUID `json:"id"`
-	IngredientID uuid.UUID `json:"ingredient_id"`
-	BranchID     uuid.UUID `json:"branch_id"`
-	IsVisible    bool      `json:"is_visible"`
-	CreatedAt    time.Time `json:"created_at"`
-	UpdatedAt    time.Time `json:"updated_at"`
+	ID           uuid.UUID          `json:"id"`
+	IngredientID uuid.UUID          `json:"ingredient_id"`
+	BranchID     uuid.UUID          `json:"branch_id"`
+	IsVisible    bool               `json:"is_visible"`
+	CreatedAt    pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
 }
 
 type Inventory struct {
@@ -601,10 +684,10 @@ type Inventory struct {
 	SurplusAmount   pgtype.Numeric     `json:"surplus_amount"`
 	ShortageAmount  pgtype.Numeric     `json:"shortage_amount"`
 	RemainingAmount pgtype.Numeric     `json:"remaining_amount"`
+	AppliedAt       pgtype.Timestamptz `json:"applied_at"`
 	CreatedAt       pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
 	DeletedAt       int64              `json:"deleted_at"`
-	AppliedAt       pgtype.Timestamptz `json:"applied_at"`
 }
 
 type InventoryItem struct {
@@ -620,14 +703,14 @@ type InventoryItem struct {
 type Invoice struct {
 	ID          uuid.UUID          `json:"id"`
 	SupplierID  uuid.UUID          `json:"supplier_id"`
+	StorageID   pgtype.UUID        `json:"storage_id"`
+	BranchID    pgtype.UUID        `json:"branch_id"`
 	TotalAmount pgtype.Numeric     `json:"total_amount"`
 	Status      NullInvoiceStatus  `json:"status"`
 	Date        pgtype.Timestamp   `json:"date"`
 	CreatedAt   pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
 	DeletedAt   *int64             `json:"deleted_at"`
-	StorageID   pgtype.UUID        `json:"storage_id"`
-	BranchID    pgtype.UUID        `json:"branch_id"`
 }
 
 type InvoiceDetailed struct {
@@ -647,19 +730,17 @@ type Order struct {
 	TableID         pgtype.UUID        `json:"table_id"`
 	WaiterID        pgtype.UUID        `json:"waiter_id"`
 	CashierID       pgtype.UUID        `json:"cashier_id"`
+	BranchID        pgtype.UUID        `json:"branch_id"`
 	Status          NullOrderStatus    `json:"status"`
 	GuestCount      *int32             `json:"guest_count"`
 	TotalAmount     pgtype.Numeric     `json:"total_amount"`
 	Comment         *string            `json:"comment"`
-	CreatedAt       pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
-	DeletedAt       *int64             `json:"deleted_at"`
 	BillNo          int32              `json:"bill_no"`
-	BillStatus      interface{}        `json:"bill_status"`
-	BillOpenedAt    time.Time          `json:"bill_opened_at"`
+	BillStatus      BillStatus         `json:"bill_status"`
+	BillOpenedAt    pgtype.Timestamptz `json:"bill_opened_at"`
 	BillClosedAt    pgtype.Timestamptz `json:"bill_closed_at"`
 	PaidAt          pgtype.Timestamptz `json:"paid_at"`
-	PaymentType     interface{}        `json:"payment_type"`
+	PaymentType     NullPaymentType    `json:"payment_type"`
 	FoodCost        pgtype.Numeric     `json:"food_cost"`
 	FoodTotal       pgtype.Numeric     `json:"food_total"`
 	ServicePercent  pgtype.Numeric     `json:"service_percent"`
@@ -669,7 +750,9 @@ type Order struct {
 	DiscountComment *string            `json:"discount_comment"`
 	GrandTotal      pgtype.Numeric     `json:"grand_total"`
 	StockConsumedAt pgtype.Timestamptz `json:"stock_consumed_at"`
-	BranchID        pgtype.UUID        `json:"branch_id"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
+	DeletedAt       *int64             `json:"deleted_at"`
 }
 
 type OrderItem struct {
@@ -736,10 +819,10 @@ type Supplier struct {
 	Name        string             `json:"name"`
 	PhoneNumber *string            `json:"phone_number"`
 	Location    *string            `json:"location"`
+	BranchID    pgtype.UUID        `json:"branch_id"`
 	CreatedAt   pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
 	DeletedAt   *int64             `json:"deleted_at"`
-	BranchID    pgtype.UUID        `json:"branch_id"`
 }
 
 type Transfer struct {
@@ -793,19 +876,20 @@ type User struct {
 	Pincode      *string            `json:"pincode"`
 	HashPassword *string            `json:"hash_password"`
 	BrandID      pgtype.UUID        `json:"brand_id"`
+	BranchID     pgtype.UUID        `json:"branch_id"`
 	PhoneNumber  *string            `json:"phone_number"`
 	FcmToken     *string            `json:"fcm_token"`
 	IsActive     bool               `json:"is_active"`
 	CreatedAt    pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
 	DeletedAt    *int64             `json:"deleted_at"`
-	BranchID     pgtype.UUID        `json:"branch_id"`
 }
 
 type UserPayment struct {
 	ID                    uuid.UUID          `json:"id"`
 	UserID                uuid.UUID          `json:"user_id"`
 	PriceForPlanID        uuid.UUID          `json:"price_for_plan_id"`
+	BranchID              pgtype.UUID        `json:"branch_id"`
 	IsPaid                *bool              `json:"is_paid"`
 	ClickTransID          *int32             `json:"click_trans_id"`
 	ClickPayDocID         *int32             `json:"click_pay_doc_id"`
@@ -823,5 +907,4 @@ type UserPayment struct {
 	CancelTime            *int64             `json:"cancel_time"`
 	CreatedAt             pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt             pgtype.Timestamptz `json:"updated_at"`
-	BranchID              pgtype.UUID        `json:"branch_id"`
 }
