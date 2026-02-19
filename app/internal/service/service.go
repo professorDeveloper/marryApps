@@ -128,7 +128,7 @@ type IngredientI interface {
 	DeleteIngredientGroup(ctx context.Context, groupID string) error
 	RestoreIngredientGroup(ctx context.Context, groupID string) error
 
-	CreateIngredient(ctx context.Context, name string, nameI18n *uuid.UUID, groupID *string, measurement *string, pictureUrl *string, brandID *string, colorCode *string) (*model.IngredientResponse, error)
+	CreateIngredient(ctx context.Context, name string, nameI18n *uuid.UUID, groupID *string, measurement *string, pictureUrl *string, colorCode *string) (*model.IngredientResponse, error)
 	GetIngredientByID(ctx context.Context, ingredientID string) (*model.IngredientResponse, error)
 	GetAllIngredients(ctx context.Context, limit, offset int32) ([]model.IngredientResponse, error)
 	GetIngredientByIDWithLang(ctx context.Context, ingredientID string, lang string) (*model.IngredientResponse, error)

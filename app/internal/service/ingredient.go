@@ -93,6 +93,18 @@ func mapIngredientToResponse(ingredient any) *model.IngredientResponse {
 		pricePerUnit = row.PricePerUnit
 		createdAt = row.CreatedAt
 		updatedAt = row.UpdatedAt
+	case pg.CreateIngredientRow:
+		id = row.ID
+		name = row.Name
+		nameI18n = row.NameI18n
+		groupID = row.GroupID
+		measurement = row.Measurement
+		pictureUrl = row.PictureUrl
+		colorCode = row.ColorCode
+		brandID = row.BrandID
+		pricePerUnit = row.PricePerUnit
+		createdAt = row.CreatedAt
+		updatedAt = row.UpdatedAt
 	default:
 		return nil
 	}
@@ -419,7 +431,7 @@ func (i *IngredientS) RestoreIngredientGroup(ctx context.Context, groupID string
 // ==================== INGREDIENTS ====================
 
 // CreateIngredient creates a new ingredient
-func (i *IngredientS) CreateIngredient(ctx context.Context, name string, nameI18n *uuid.UUID, groupID *string, measurement *string, pictureUrl *string, brandID *string, colorCode *string) (*model.IngredientResponse, error) {
+func (i *IngredientS) CreateIngredient(ctx context.Context, name string, nameI18n *uuid.UUID, groupID *string, measurement *string, pictureUrl *string, colorCode *string) (*model.IngredientResponse, error) {
 	if name == "" {
 		return nil, fmt.Errorf("ingredient name is required")
 	}
@@ -438,15 +450,6 @@ func (i *IngredientS) CreateIngredient(ctx context.Context, name string, nameI18
 		groupUUID = pgtype.UUID{Bytes: id, Valid: true}
 	}
 
-	brandUUID := pgtype.UUID{}
-	if brandID != nil && *brandID != "" {
-		id, err := uuid.Parse(*brandID)
-		if err != nil {
-			return nil, fmt.Errorf("invalid brand_id: %w", err)
-		}
-		brandUUID = pgtype.UUID{Bytes: id, Valid: true}
-	}
-
 	measurementNullable := pg.NullMeasurementType{}
 	if measurement != nil && *measurement != "" {
 		measurementNullable = pg.NullMeasurementType{MeasurementType: pg.MeasurementType(*measurement), Valid: true}
@@ -459,7 +462,7 @@ func (i *IngredientS) CreateIngredient(ctx context.Context, name string, nameI18
 		GroupID:     groupUUID,
 		Measurement: measurementNullable,
 		PictureUrl:  pictureUrl,
-		BrandID:     brandUUID,
+		BrandID:     pgtype.UUID{},
 		ColorCode:   colorCode,
 	})
 	if err != nil {
