@@ -264,7 +264,7 @@ func (h *Handler) CreateIngredient(c echo.Context) error {
 		nameI18nUUID = &id
 	}
 
-	ingredient, err := h.service.Ingredient().CreateIngredient(c.Request().Context(), *req.Name, nameI18nUUID, req.GroupID, req.Measurement, req.PictureUrl, req.BrandID, req.ColorCode)
+	ingredient, err := h.service.Ingredient().CreateIngredient(c.Request().Context(), *req.Name, nameI18nUUID, req.GroupID, req.Measurement, req.PictureUrl, req.ColorCode)
 	if err != nil {
 		log.Printf("CreateIngredient failed: %v", err)
 		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("failed to create ingredient", "see logs for details", http.StatusInternalServerError))

@@ -763,9 +763,6 @@ definitions:
     type: object
   model.CreateIngredientRequest:
     properties:
-      brand_id:
-        example: 123e4567-e89b-12d3-a456-426614174000
-        type: string
       color_code:
         example: '#FF5733'
         type: string

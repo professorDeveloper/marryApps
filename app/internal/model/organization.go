@@ -160,7 +160,6 @@ type CreateIngredientRequest struct {
 	Measurement *string `json:"measurement,omitempty" example:"kg"`
 	PictureUrl  *string `json:"picture_url,omitempty" example:"https://example.com/tomato.jpg"`
 	ColorCode   *string `json:"color_code,omitempty" example:"#FF5733"`
-	BrandID     *string `json:"brand_id,omitempty" example:"123e4567-e89b-12d3-a456-426614174000"`
 }
 
 type UpdateIngredientRequest struct {
