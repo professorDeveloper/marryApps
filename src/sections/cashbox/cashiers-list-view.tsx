@@ -116,12 +116,8 @@ export function CashiersListView() {
                     columns={columns}
                     loading={cashiersLoading}
                     breadcrumbs={{
-                        // heading: t('cashbox.cashiers', 'Cashiers'),
-                        // links: [
-                        //     { name: t('dashboard', 'Dashboard'), href: paths.dashboard.root },
-                        //     { name: t('cashbox.title', 'Cashbox'), href: paths.cashbox.root },
-                        //     { name: t('cashbox.cashiers', 'Cashiers') },
-                        // ],
+                        heading: '',
+                        links: [],
                     }}
                 />
             </DashboardContent>

@@ -107,7 +107,7 @@ export function CashRegistersListView() {
                             {t('common.add', 'Add')}
                         </Button>
                     }
-                    // sx={{ mb: { xs: 3, md: 5 } }}
+                // sx={{ mb: { xs: 3, md: 5 } }}
                 />
 
                 <GenericTableView
@@ -115,12 +115,8 @@ export function CashRegistersListView() {
                     columns={columns}
                     loading={cashRegistersLoading}
                     breadcrumbs={{
-                        // heading: t('cashbox.transactionGroups', 'Transaction Groups'),
-                        // links: [
-                        //     { name: t('dashboard', 'Dashboard'), href: paths.dashboard.root },
-                        //     { name: t('cashbox.title', 'Cashbox'), href: paths.cashbox.root },
-                        //     { name: t('cashbox.transactionGroups', 'Transaction Groups') },
-                        // ],
+                        heading: '',
+                        links: [],
                     }}
                 />
             </DashboardContent>
