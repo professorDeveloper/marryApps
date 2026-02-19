@@ -186,7 +186,6 @@ export const paths = {
       details: (id: string) => `${ROOTS.MENU}/warehouse/ingredient-stock/${id}`,
       edit: (id: string) => `${ROOTS.MENU}/warehouse/ingredient-stock/${id}/edit`,
     },
-
     invoices: {
       root: `${ROOTS.MENU}/warehouse/invoices`,
       new: `${ROOTS.MENU}/warehouse/invoices/new`,

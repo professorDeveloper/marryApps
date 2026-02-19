@@ -2,7 +2,7 @@
 // GENERIC EDIT VIEW - TYPES
 // ============================================================================
 
-export type FieldType = 'text' | 'number' | 'textarea' | 'select' | 'checkbox' | 'switch' | 'color' | 'email' | 'url' | 'image';
+export type FieldType = 'text' | 'number' | 'textarea' | 'select' | 'checkbox' | 'switch' | 'color' | 'email' | 'url' | 'image' | 'date';
 
 export interface FieldOption {
     value: string | number;
