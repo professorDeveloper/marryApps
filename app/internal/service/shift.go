@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/google/uuid"
@@ -32,12 +33,8 @@ func (s *ShiftS) CreateShift(ctx context.Context, name string, role *string, wor
 		return nil, err
 	}
 
-	// Convert time strings to int64 if provided (time_to_unix conversion can happen in DB)
-	var openTimeInt *int64
-	var closeTimeInt *int64
-
-	// For now, we'll leave them as nil and let the DB handle defaults
-	// In production, you might want to parse time.Time and convert to unix timestamp
+	openTimeInt := parseTimeToSeconds(openTime)
+	closeTimeInt := parseTimeToSeconds(closeTime)
 
 	var roleValue *string
 	if role != nil {
@@ -152,7 +149,13 @@ func (s *ShiftS) UpdateShift(ctx context.Context, shiftID string, name *string, 
 	}
 
 	finalOpenTime := existingShift.OpenTime
+	if openTime != nil {
+		finalOpenTime = parseTimeToSeconds(openTime)
+	}
 	finalCloseTime := existingShift.CloseTime
+	if closeTime != nil {
+		finalCloseTime = parseTimeToSeconds(closeTime)
+	}
 
 	params := pg.UpdateShiftParams{
 		ID:          shiftUUID,
@@ -218,4 +221,26 @@ func toShiftResponse(shift pg.Shift) *ShiftResponse {
 		CloseTime:   shift.CloseTime,
 		BranchID:    branchID,
 	}
+}
+
+// parseTimeToSeconds parses "HH:MM:SS" or "HH:MM" into seconds since midnight.
+func parseTimeToSeconds(t *string) *int64 {
+	if t == nil || *t == "" {
+		return nil
+	}
+	parts := strings.Split(*t, ":")
+	if len(parts) < 2 {
+		return nil
+	}
+	h, err1 := strconv.ParseInt(parts[0], 10, 64)
+	m, err2 := strconv.ParseInt(parts[1], 10, 64)
+	if err1 != nil || err2 != nil {
+		return nil
+	}
+	var s int64
+	if len(parts) >= 3 {
+		s, _ = strconv.ParseInt(parts[2], 10, 64)
+	}
+	total := h*3600 + m*60 + s
+	return &total
 }
