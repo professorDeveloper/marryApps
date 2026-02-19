@@ -357,13 +357,6 @@
       "bills": "Hisob-kitoblar",
       "ingredients": "Ingredientlar bo'yicha hisobotlar"
     },
-    "cashbox": {
-      "title": "Kassa",
-      "cashiers": "Kassi",
-      "transactionGroups": "Tranzaksiya guruhlari",
-      "transactions": "Tranzaksiyalar",
-      "report": "Kassa bo'yicha hisobot"
-    },
     "settings": {
       "title": "Sozlamalar",
       "connecteddevices": "Ulangan mobil qurilmalar",
@@ -1019,5 +1012,21 @@
       "updated": "Zaxira muvaffaqiyat yangilandi",
       "deleted": "Zaxira muvaffaqiyat o'chirildi"
     }
+  },
+  "cashbox": {
+     "sidebar": {
+       "title": "Kassa",
+       "cashiers": "Kassi",
+       "transactionGroups": "Tranzaksiya guruhlari",
+       "transactions": "Tranzaksiyalar",
+       "report": "Kassa bo'yicha hisobot"
+     },
+     "cashbox": {
+        "cashbox" : "Kassa",
+        "date": "Sana",
+        "action": "Harakat",
+        "editcashier": "Kassani tahrirlash"
+
+     }
   }
 }

@@ -345,13 +345,6 @@
       "bills": "Ҳисоб-фактуралар",
       "ingredients": "Ингредиентлар бўйича ҳисоботлар"
     },
-    "cashbox": {
-      "title": "Касса",
-      "cashiers": "Касси",
-      "transactionGroups": "Трансакция гуруҳлари",
-      "transactions": "Трансакциялар",
-      "report": "Касса бўйича ҳиcоbot"
-    },
     "settings": {
       "title": "Созламалар",
       "connecteddevices": "Уланган мобил қурилмалар",
@@ -969,5 +962,14 @@
       "updated": "Зохира муваффақиятли янгиланди",
       "deleted": "Зохира муваффақиятли ўчирилди"
     }
+  },
+  "cashbox": {
+     "sidebar": {
+       "title": "Касса",
+       "cashiers": "Касси",
+       "transactionGroups": "Трансакция гуруҳлари",
+       "transactions": "Трансакциялар",
+       "report": "Касса бўйича ҳиcоbot"
+     }
   }
 }

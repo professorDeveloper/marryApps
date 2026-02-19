@@ -8,7 +8,6 @@ import Card from '@mui/material/Card';
 import Stack from '@mui/material/Stack';
 import Button from '@mui/material/Button';
 import TextField from '@mui/material/TextField';
-import MenuItem from '@mui/material/MenuItem';
 
 import { paths } from 'src/routes/paths';
 import { toast } from 'src/components/snackbar';
@@ -16,25 +15,23 @@ import { Iconify } from 'src/components/iconify';
 import { DashboardContent } from 'src/layouts/dashboard';
 import { CustomBreadcrumbs } from 'src/components/custom-breadcrumbs';
 import {
-    useGetCashier,
-    useCreateCashier,
-    useUpdateCashier,
-    useGetGroupTransactions,
+    useGetCashRegister,
+    useCreateCashRegister,
+    useUpdateCashRegister,
 } from 'src/actions/cashbox';
 
-interface CashierEditViewProps {
+interface CashRegisterEditViewProps {
     isNew?: boolean;
 }
 
-export function CashierEditView({ isNew = false }: CashierEditViewProps) {
+export function CashRegisterEditView({ isNew = false }: CashRegisterEditViewProps) {
     const { t } = useTranslation('menu');
     const navigate = useNavigate();
     const { id } = useParams();
 
-    const { cashier, cashierLoading } = useGetCashier(!isNew && id ? id : '');
-    const { onSubmit: onCreate } = useCreateCashier();
-    const { onSubmit: onUpdate } = useUpdateCashier(id || '');
-    const { groupTransactions } = useGetGroupTransactions();
+    const { cashRegister, cashRegisterLoading } = useGetCashRegister(!isNew && id ? id : '');
+    const { onSubmit: onCreate } = useCreateCashRegister();
+    const { onSubmit: onUpdate } = useUpdateCashRegister(id || '');
 
     const {
         control,
@@ -46,23 +43,21 @@ export function CashierEditView({ isNew = false }: CashierEditViewProps) {
         defaultValues: useMemo(
             () => ({
                 name: '',
-                group_transaction_id: '',
             }),
             []
         ),
     });
 
-    // Set form values when cashier data loads
+    // Set form values when cash register data loads
     const formReset = useCallback(() => {
-        if (!isNew && cashier) {
+        if (!isNew && cashRegister) {
             reset({
-                name: cashier.name,
-                group_transaction_id: cashier.group_transaction_id,
+                name: cashRegister.name,
             });
         }
-    }, [cashier, isNew, reset]);
+    }, [cashRegister, isNew, reset]);
 
-    // Reset form when cashier loads
+    // Reset form when cash register loads
     useMemo(() => {
         formReset();
     }, [formReset]);
@@ -70,13 +65,13 @@ export function CashierEditView({ isNew = false }: CashierEditViewProps) {
     const onFormSubmit = handleSubmit(async (data) => {
         try {
             if (isNew) {
-                await onCreate({ name: data.name, group_transaction_id: data.group_transaction_id });
+                await onCreate({ name: data.name });
                 toast.success(t('common.createSuccess', 'Created successfully'));
             } else {
-                await onUpdate({ name: data.name, group_transaction_id: data.group_transaction_id });
+                await onUpdate({ name: data.name });
                 toast.success(t('common.updateSuccess', 'Updated successfully'));
             }
-            navigate(paths.cashbox.cashiers);
+            navigate(paths.cashbox.transactionGroups);
         } catch (error: any) {
             toast.error(error?.message || t('common.saveFailed', 'Failed to save'));
         }
@@ -85,12 +80,12 @@ export function CashierEditView({ isNew = false }: CashierEditViewProps) {
     return (
         <DashboardContent>
             <CustomBreadcrumbs
-                heading={isNew ? t('cashbox.newCashier', 'New Cashier') : t('cashbox.editCashier', 'Edit Cashier')}
+                heading={isNew ? t('cashbox.newTransactionGroup', 'New Transaction Group') : t('cashbox.editTransactionGroup', 'Edit Transaction Group')}
                 links={[
                     { name: t('dashboard', 'Dashboard'), href: paths.dashboard.root },
                     { name: t('cashbox.title', 'Cashbox'), href: paths.cashbox.root },
-                    { name: t('cashbox.cashiers', 'Cashiers'), href: paths.cashbox.cashiers },
-                    { name: isNew ? t('cashbox.newCashier', 'New') : t('cashbox.editCashier', 'Edit') },
+                    { name: t('cashbox.transactionGroups', 'Transaction Groups'), href: paths.cashbox.transactionGroups },
+                    { name: isNew ? t('cashbox.newTransactionGroup', 'New') : t('cashbox.editTransactionGroup', 'Edit') },
                 ]}
                 sx={{ mb: { xs: 3, md: 5 } }}
             />
@@ -112,23 +107,6 @@ export function CashierEditView({ isNew = false }: CashierEditViewProps) {
                             helperText={errors.name?.message}
                             fullWidth
                         />
-
-                        {/* <TextField
-                            select
-                            label={t('cashbox.groupTransaction', 'Group Transaction')}
-                            {...register('group_transaction_id', {
-                                required: t('cashbox.groupTransactionRequired', 'Group Transaction is required'),
-                            })}
-                            error={!!errors.group_transaction_id}
-                            helperText={errors.group_transaction_id?.message}
-                            fullWidth
-                        >
-                            {groupTransactions.map((group) => (
-                                <MenuItem key={group.id} value={group.id}>
-                                    {group.name}
-                                </MenuItem>
-                            ))}
-                        </TextField> */}
 
                         <Stack direction="row" spacing={2} justifyContent="flex-end">
                             <Button

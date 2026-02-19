@@ -17,6 +17,7 @@ export interface IGroupTransactionFormData {
 export interface ICashier {
     id: string;
     name: string;
+    group_transaction_id: string;
     branch_id: string;
     created_at: string;
     updated_at: string;
@@ -24,6 +25,7 @@ export interface ICashier {
 
 export interface ICashierFormData {
     name: string;
+    group_transaction_id: string;
 }
 
 export interface ITransaction {
@@ -38,4 +40,16 @@ export interface ITransaction {
 export interface ITransactionFormData {
     name: string;
     group_transaction_id: string;
+}
+
+export interface ICashRegister {
+    id: string;
+    name: string;
+    branch_id: string;
+    created_at: string;
+    updated_at: string;
+}
+
+export interface ICashRegisterFormData {
+    name: string;
 }
