@@ -145,7 +145,6 @@ type CreateShiftRequest struct {
 	WorkingDays *string `json:"working_days,omitempty" example:"Mon,Tue,Wed,Thu,Fri"`
 	OpenTime    *string `json:"open_time,omitempty" example:"09:00:00"`
 	CloseTime   *string `json:"close_time,omitempty" example:"17:00:00"`
-	BranchID    string  `json:"branch_id" example:"123e4567-e89b-12d3-a456-426614174000"`
 }
 
 type UpdateShiftRequest struct {

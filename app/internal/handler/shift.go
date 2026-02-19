@@ -6,6 +6,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
+	"gitlab.yurtal.tech/company/maryai/back/internal/middleware"
 	"gitlab.yurtal.tech/company/maryai/back/internal/model"
 )
 
@@ -41,7 +42,8 @@ func (h *Handler) CreateShift(c echo.Context) error {
 		))
 	}
 
-	if req.BranchID == "" {
+	branchID := middleware.GetBranchIDFromContext(c)
+	if branchID == "" {
 		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
 			"branch_id is required",
 			"missing required field: branch_id",
@@ -49,7 +51,7 @@ func (h *Handler) CreateShift(c echo.Context) error {
 		))
 	}
 
-	shift, err := h.service.Shift().CreateShift(c.Request().Context(), req.Name, req.Role, req.WorkingDays, req.OpenTime, req.CloseTime, req.BranchID)
+	shift, err := h.service.Shift().CreateShift(c.Request().Context(), req.Name, req.Role, req.WorkingDays, req.OpenTime, req.CloseTime, branchID)
 	if err != nil {
 		log.Printf("CreateShift failed: %v", err)
 		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse(
