@@ -22474,10 +22474,6 @@ const docTemplate = `{
                     "type": "string",
                     "example": "-3"
                 },
-                "ingredient_brand_id": {
-                    "type": "string",
-                    "example": "123e4567-e89b-12d3-a456-426614174000"
-                },
                 "ingredient_color_code": {
                     "type": "string",
                     "example": "#FF5733"

@@ -18,7 +18,7 @@ SET price_per_unit = COALESCE($2, price_per_unit),
     updated_at = NOW()
 WHERE id = $1
   AND deleted_at = 0
-RETURNING id, name, name_i18n, group_id, measurement, picture_url, color_code, brand_id, price_per_unit, created_at, updated_at, deleted_at
+RETURNING id, name, name_i18n, group_id, measurement, picture_url, color_code, price_per_unit, created_at, updated_at, deleted_at
 `
 
 type AddIngredientQuantityParams struct {
@@ -26,26 +26,10 @@ type AddIngredientQuantityParams struct {
 	PricePerUnit pgtype.Numeric `json:"price_per_unit"`
 }
 
-type AddIngredientQuantityRow struct {
-	ID           uuid.UUID           `json:"id"`
-	Name         string              `json:"name"`
-	NameI18n     pgtype.UUID         `json:"name_i18n"`
-	GroupID      pgtype.UUID         `json:"group_id"`
-	Measurement  NullMeasurementType `json:"measurement"`
-	PictureUrl   *string             `json:"picture_url"`
-	ColorCode    *string             `json:"color_code"`
-	BrandID      pgtype.UUID         `json:"brand_id"`
-	PricePerUnit pgtype.Numeric      `json:"price_per_unit"`
-	CreatedAt    pgtype.Timestamptz  `json:"created_at"`
-	UpdatedAt    pgtype.Timestamptz  `json:"updated_at"`
-	DeletedAt    *int64              `json:"deleted_at"`
-}
-
-// AddIngredientQuantity adds/accumulates quantity to an ingredient (for invoice arrivals)
-// Also updates the price_per_unit to the latest price from invoice
-func (q *Queries) AddIngredientQuantity(ctx context.Context, arg AddIngredientQuantityParams) (AddIngredientQuantityRow, error) {
+// AddIngredientQuantity updates price_per_unit for an ingredient (for invoice arrivals)
+func (q *Queries) AddIngredientQuantity(ctx context.Context, arg AddIngredientQuantityParams) (Ingredient, error) {
 	row := q.db.QueryRow(ctx, addIngredientQuantity, arg.ID, arg.PricePerUnit)
-	var i AddIngredientQuantityRow
+	var i Ingredient
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
@@ -54,7 +38,6 @@ func (q *Queries) AddIngredientQuantity(ctx context.Context, arg AddIngredientQu
 		&i.Measurement,
 		&i.PictureUrl,
 		&i.ColorCode,
-		&i.BrandID,
 		&i.PricePerUnit,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -69,7 +52,7 @@ SET quantity = quantity + $2,
     updated_at = NOW()
 WHERE id = $1 AND deleted_at = 0
   AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-RETURNING id, ingredient_id, quantity, branch_id, storage_id, created_at, updated_at, deleted_at
+RETURNING id, ingredient_id, storage_id, branch_id, quantity, created_at, updated_at, deleted_at
 `
 
 type AddToIngredientStockParams struct {
@@ -77,27 +60,16 @@ type AddToIngredientStockParams struct {
 	Quantity pgtype.Numeric `json:"quantity"`
 }
 
-type AddToIngredientStockRow struct {
-	ID           uuid.UUID          `json:"id"`
-	IngredientID uuid.UUID          `json:"ingredient_id"`
-	Quantity     pgtype.Numeric     `json:"quantity"`
-	BranchID     pgtype.UUID        `json:"branch_id"`
-	StorageID    pgtype.UUID        `json:"storage_id"`
-	CreatedAt    pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
-	DeletedAt    *int64             `json:"deleted_at"`
-}
-
 // AddToIngredientStock increases ingredient stock quantity
-func (q *Queries) AddToIngredientStock(ctx context.Context, arg AddToIngredientStockParams) (AddToIngredientStockRow, error) {
+func (q *Queries) AddToIngredientStock(ctx context.Context, arg AddToIngredientStockParams) (IngredientStock, error) {
 	row := q.db.QueryRow(ctx, addToIngredientStock, arg.ID, arg.Quantity)
-	var i AddToIngredientStockRow
+	var i IngredientStock
 	err := row.Scan(
 		&i.ID,
 		&i.IngredientID,
-		&i.Quantity,
-		&i.BranchID,
 		&i.StorageID,
+		&i.BranchID,
+		&i.Quantity,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
@@ -152,9 +124,9 @@ func (q *Queries) CountIngredients(ctx context.Context) (int64, error) {
 
 const createIngredient = `-- name: CreateIngredient :one
 
-INSERT INTO ingredients (id, name, name_i18n, group_id, measurement, picture_url, color_code, brand_id)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-RETURNING id, name, name_i18n, group_id, measurement, picture_url, color_code, brand_id, price_per_unit, created_at, updated_at, deleted_at, branch_id
+INSERT INTO ingredients (id, name, name_i18n, group_id, measurement, picture_url, color_code)
+VALUES ($1, $2, $3, $4, $5, $6, $7)
+RETURNING id, name, name_i18n, group_id, measurement, picture_url, color_code, price_per_unit, created_at, updated_at, deleted_at
 `
 
 type CreateIngredientParams struct {
@@ -165,29 +137,12 @@ type CreateIngredientParams struct {
 	Measurement NullMeasurementType `json:"measurement"`
 	PictureUrl  *string             `json:"picture_url"`
 	ColorCode   *string             `json:"color_code"`
-	BrandID     pgtype.UUID         `json:"brand_id"`
-}
-
-type CreateIngredientRow struct {
-	ID           uuid.UUID           `json:"id"`
-	Name         string              `json:"name"`
-	NameI18n     pgtype.UUID         `json:"name_i18n"`
-	GroupID      pgtype.UUID         `json:"group_id"`
-	Measurement  NullMeasurementType `json:"measurement"`
-	PictureUrl   *string             `json:"picture_url"`
-	ColorCode    *string             `json:"color_code"`
-	BrandID      pgtype.UUID         `json:"brand_id"`
-	PricePerUnit pgtype.Numeric      `json:"price_per_unit"`
-	CreatedAt    pgtype.Timestamptz  `json:"created_at"`
-	UpdatedAt    pgtype.Timestamptz  `json:"updated_at"`
-	DeletedAt    *int64              `json:"deleted_at"`
-	BranchID     pgtype.UUID         `json:"branch_id"`
 }
 
 // ==================== INGREDIENTS QUERIES ====================
 // Ingredients are shared across all branches. Visibility is controlled by ingredient_visibility table.
-// CreateIngredient creates a new ingredient (shared, no branch_id)
-func (q *Queries) CreateIngredient(ctx context.Context, arg CreateIngredientParams) (CreateIngredientRow, error) {
+// CreateIngredient creates a new ingredient (shared, brand-wide)
+func (q *Queries) CreateIngredient(ctx context.Context, arg CreateIngredientParams) (Ingredient, error) {
 	row := q.db.QueryRow(ctx, createIngredient,
 		arg.ID,
 		arg.Name,
@@ -196,9 +151,8 @@ func (q *Queries) CreateIngredient(ctx context.Context, arg CreateIngredientPara
 		arg.Measurement,
 		arg.PictureUrl,
 		arg.ColorCode,
-		arg.BrandID,
 	)
-	var i CreateIngredientRow
+	var i Ingredient
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
@@ -207,12 +161,10 @@ func (q *Queries) CreateIngredient(ctx context.Context, arg CreateIngredientPara
 		&i.Measurement,
 		&i.PictureUrl,
 		&i.ColorCode,
-		&i.BrandID,
 		&i.PricePerUnit,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
-		&i.BranchID,
 	)
 	return i, err
 }
@@ -221,7 +173,7 @@ const createIngredientGroup = `-- name: CreateIngredientGroup :one
 
 INSERT INTO ingredient_groups (id, name, picture_url, name_i18n, color_code)
 VALUES ($1, $2, $3, $4, $5)
-RETURNING id, name, picture_url, name_i18n, color_code, created_at, updated_at, deleted_at, branch_id
+RETURNING id, name, picture_url, color_code, name_i18n, created_at, updated_at, deleted_at
 `
 
 type CreateIngredientGroupParams struct {
@@ -232,21 +184,9 @@ type CreateIngredientGroupParams struct {
 	ColorCode  *string     `json:"color_code"`
 }
 
-type CreateIngredientGroupRow struct {
-	ID         uuid.UUID          `json:"id"`
-	Name       string             `json:"name"`
-	PictureUrl *string            `json:"picture_url"`
-	NameI18n   pgtype.UUID        `json:"name_i18n"`
-	ColorCode  *string            `json:"color_code"`
-	CreatedAt  pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt  pgtype.Timestamptz `json:"updated_at"`
-	DeletedAt  *int64             `json:"deleted_at"`
-	BranchID   pgtype.UUID        `json:"branch_id"`
-}
-
 // ==================== INGREDIENT GROUPS QUERIES ====================
-// Ingredient groups are shared across all branches (no branch_id filter)
-func (q *Queries) CreateIngredientGroup(ctx context.Context, arg CreateIngredientGroupParams) (CreateIngredientGroupRow, error) {
+// Ingredient groups are shared across all branches (brand-wide catalog)
+func (q *Queries) CreateIngredientGroup(ctx context.Context, arg CreateIngredientGroupParams) (IngredientGroup, error) {
 	row := q.db.QueryRow(ctx, createIngredientGroup,
 		arg.ID,
 		arg.Name,
@@ -254,17 +194,16 @@ func (q *Queries) CreateIngredientGroup(ctx context.Context, arg CreateIngredien
 		arg.NameI18n,
 		arg.ColorCode,
 	)
-	var i CreateIngredientGroupRow
+	var i IngredientGroup
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
 		&i.PictureUrl,
-		&i.NameI18n,
 		&i.ColorCode,
+		&i.NameI18n,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
-		&i.BranchID,
 	)
 	return i, err
 }
@@ -273,7 +212,7 @@ const createIngredientStock = `-- name: CreateIngredientStock :one
 
 INSERT INTO ingredient_stock (id, ingredient_id, quantity, branch_id, storage_id)
 VALUES ($1, $2, $3, $4, $5)
-RETURNING id, ingredient_id, quantity, branch_id, storage_id, created_at, updated_at, deleted_at
+RETURNING id, ingredient_id, storage_id, branch_id, quantity, created_at, updated_at, deleted_at
 `
 
 type CreateIngredientStockParams struct {
@@ -284,19 +223,8 @@ type CreateIngredientStockParams struct {
 	StorageID    pgtype.UUID    `json:"storage_id"`
 }
 
-type CreateIngredientStockRow struct {
-	ID           uuid.UUID          `json:"id"`
-	IngredientID uuid.UUID          `json:"ingredient_id"`
-	Quantity     pgtype.Numeric     `json:"quantity"`
-	BranchID     pgtype.UUID        `json:"branch_id"`
-	StorageID    pgtype.UUID        `json:"storage_id"`
-	CreatedAt    pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
-	DeletedAt    *int64             `json:"deleted_at"`
-}
-
 // ==================== INGREDIENT STOCK QUERIES ====================
-func (q *Queries) CreateIngredientStock(ctx context.Context, arg CreateIngredientStockParams) (CreateIngredientStockRow, error) {
+func (q *Queries) CreateIngredientStock(ctx context.Context, arg CreateIngredientStockParams) (IngredientStock, error) {
 	row := q.db.QueryRow(ctx, createIngredientStock,
 		arg.ID,
 		arg.IngredientID,
@@ -304,13 +232,13 @@ func (q *Queries) CreateIngredientStock(ctx context.Context, arg CreateIngredien
 		arg.BranchID,
 		arg.StorageID,
 	)
-	var i CreateIngredientStockRow
+	var i IngredientStock
 	err := row.Scan(
 		&i.ID,
 		&i.IngredientID,
-		&i.Quantity,
-		&i.BranchID,
 		&i.StorageID,
+		&i.BranchID,
+		&i.Quantity,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
@@ -381,7 +309,7 @@ func (q *Queries) EnsureIngredientStockByStorage(ctx context.Context, arg Ensure
 }
 
 const getAllIngredientGroups = `-- name: GetAllIngredientGroups :many
-SELECT id, name, picture_url, name_i18n, color_code, created_at, updated_at, deleted_at, branch_id
+SELECT id, name, picture_url, color_code, name_i18n, created_at, updated_at, deleted_at
 FROM ingredient_groups
 WHERE deleted_at = 0
 ORDER BY created_at DESC
@@ -393,37 +321,24 @@ type GetAllIngredientGroupsParams struct {
 	Offset int32 `json:"offset"`
 }
 
-type GetAllIngredientGroupsRow struct {
-	ID         uuid.UUID          `json:"id"`
-	Name       string             `json:"name"`
-	PictureUrl *string            `json:"picture_url"`
-	NameI18n   pgtype.UUID        `json:"name_i18n"`
-	ColorCode  *string            `json:"color_code"`
-	CreatedAt  pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt  pgtype.Timestamptz `json:"updated_at"`
-	DeletedAt  *int64             `json:"deleted_at"`
-	BranchID   pgtype.UUID        `json:"branch_id"`
-}
-
-func (q *Queries) GetAllIngredientGroups(ctx context.Context, arg GetAllIngredientGroupsParams) ([]GetAllIngredientGroupsRow, error) {
+func (q *Queries) GetAllIngredientGroups(ctx context.Context, arg GetAllIngredientGroupsParams) ([]IngredientGroup, error) {
 	rows, err := q.db.Query(ctx, getAllIngredientGroups, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []GetAllIngredientGroupsRow
+	var items []IngredientGroup
 	for rows.Next() {
-		var i GetAllIngredientGroupsRow
+		var i IngredientGroup
 		if err := rows.Scan(
 			&i.ID,
 			&i.Name,
 			&i.PictureUrl,
-			&i.NameI18n,
 			&i.ColorCode,
+			&i.NameI18n,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.DeletedAt,
-			&i.BranchID,
 		); err != nil {
 			return nil, err
 		}
@@ -445,9 +360,8 @@ SELECT
         ELSE ig.name
     END, ig.name) as name,
     ig.picture_url,
-    ig.name_i18n,
     ig.color_code,
-    ig.branch_id,
+    ig.name_i18n,
     ig.created_at,
     ig.updated_at,
     ig.deleted_at
@@ -464,34 +378,21 @@ type GetAllIngredientGroupsWithLanguageParams struct {
 	Offset  int32  `json:"offset"`
 }
 
-type GetAllIngredientGroupsWithLanguageRow struct {
-	ID         uuid.UUID          `json:"id"`
-	Name       string             `json:"name"`
-	PictureUrl *string            `json:"picture_url"`
-	NameI18n   pgtype.UUID        `json:"name_i18n"`
-	ColorCode  *string            `json:"color_code"`
-	BranchID   pgtype.UUID        `json:"branch_id"`
-	CreatedAt  pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt  pgtype.Timestamptz `json:"updated_at"`
-	DeletedAt  *int64             `json:"deleted_at"`
-}
-
-func (q *Queries) GetAllIngredientGroupsWithLanguage(ctx context.Context, arg GetAllIngredientGroupsWithLanguageParams) ([]GetAllIngredientGroupsWithLanguageRow, error) {
+func (q *Queries) GetAllIngredientGroupsWithLanguage(ctx context.Context, arg GetAllIngredientGroupsWithLanguageParams) ([]IngredientGroup, error) {
 	rows, err := q.db.Query(ctx, getAllIngredientGroupsWithLanguage, arg.Column1, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []GetAllIngredientGroupsWithLanguageRow
+	var items []IngredientGroup
 	for rows.Next() {
-		var i GetAllIngredientGroupsWithLanguageRow
+		var i IngredientGroup
 		if err := rows.Scan(
 			&i.ID,
 			&i.Name,
 			&i.PictureUrl,
-			&i.NameI18n,
 			&i.ColorCode,
-			&i.BranchID,
+			&i.NameI18n,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.DeletedAt,
@@ -507,7 +408,7 @@ func (q *Queries) GetAllIngredientGroupsWithLanguage(ctx context.Context, arg Ge
 }
 
 const getAllIngredientStock = `-- name: GetAllIngredientStock :many
-SELECT id, ingredient_id, quantity, branch_id, storage_id, created_at, updated_at, deleted_at
+SELECT id, ingredient_id, storage_id, branch_id, quantity, created_at, updated_at, deleted_at
 FROM ingredient_stock
 WHERE deleted_at = 0
   AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
@@ -520,33 +421,22 @@ type GetAllIngredientStockParams struct {
 	Offset int32 `json:"offset"`
 }
 
-type GetAllIngredientStockRow struct {
-	ID           uuid.UUID          `json:"id"`
-	IngredientID uuid.UUID          `json:"ingredient_id"`
-	Quantity     pgtype.Numeric     `json:"quantity"`
-	BranchID     pgtype.UUID        `json:"branch_id"`
-	StorageID    pgtype.UUID        `json:"storage_id"`
-	CreatedAt    pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
-	DeletedAt    *int64             `json:"deleted_at"`
-}
-
 // GetAllIngredientStock retrieves all ingredient stock entries with pagination
-func (q *Queries) GetAllIngredientStock(ctx context.Context, arg GetAllIngredientStockParams) ([]GetAllIngredientStockRow, error) {
+func (q *Queries) GetAllIngredientStock(ctx context.Context, arg GetAllIngredientStockParams) ([]IngredientStock, error) {
 	rows, err := q.db.Query(ctx, getAllIngredientStock, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []GetAllIngredientStockRow
+	var items []IngredientStock
 	for rows.Next() {
-		var i GetAllIngredientStockRow
+		var i IngredientStock
 		if err := rows.Scan(
 			&i.ID,
 			&i.IngredientID,
-			&i.Quantity,
-			&i.BranchID,
 			&i.StorageID,
+			&i.BranchID,
+			&i.Quantity,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.DeletedAt,
@@ -562,7 +452,7 @@ func (q *Queries) GetAllIngredientStock(ctx context.Context, arg GetAllIngredien
 }
 
 const getAllIngredients = `-- name: GetAllIngredients :many
-SELECT i.id, i.name, i.name_i18n, i.group_id, i.measurement, i.picture_url, i.color_code, i.brand_id, i.price_per_unit, i.created_at, i.updated_at, i.deleted_at, i.branch_id
+SELECT i.id, i.name, i.name_i18n, i.group_id, i.measurement, i.picture_url, i.color_code, i.price_per_unit, i.created_at, i.updated_at, i.deleted_at
 FROM ingredients i
 JOIN ingredient_visibility iv ON iv.ingredient_id = i.id
   AND iv.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
@@ -577,32 +467,16 @@ type GetAllIngredientsParams struct {
 	Offset int32 `json:"offset"`
 }
 
-type GetAllIngredientsRow struct {
-	ID           uuid.UUID           `json:"id"`
-	Name         string              `json:"name"`
-	NameI18n     pgtype.UUID         `json:"name_i18n"`
-	GroupID      pgtype.UUID         `json:"group_id"`
-	Measurement  NullMeasurementType `json:"measurement"`
-	PictureUrl   *string             `json:"picture_url"`
-	ColorCode    *string             `json:"color_code"`
-	BrandID      pgtype.UUID         `json:"brand_id"`
-	PricePerUnit pgtype.Numeric      `json:"price_per_unit"`
-	CreatedAt    pgtype.Timestamptz  `json:"created_at"`
-	UpdatedAt    pgtype.Timestamptz  `json:"updated_at"`
-	DeletedAt    *int64              `json:"deleted_at"`
-	BranchID     pgtype.UUID         `json:"branch_id"`
-}
-
 // GetAllIngredients retrieves all ingredients visible to current branch
-func (q *Queries) GetAllIngredients(ctx context.Context, arg GetAllIngredientsParams) ([]GetAllIngredientsRow, error) {
+func (q *Queries) GetAllIngredients(ctx context.Context, arg GetAllIngredientsParams) ([]Ingredient, error) {
 	rows, err := q.db.Query(ctx, getAllIngredients, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []GetAllIngredientsRow
+	var items []Ingredient
 	for rows.Next() {
-		var i GetAllIngredientsRow
+		var i Ingredient
 		if err := rows.Scan(
 			&i.ID,
 			&i.Name,
@@ -611,12 +485,10 @@ func (q *Queries) GetAllIngredients(ctx context.Context, arg GetAllIngredientsPa
 			&i.Measurement,
 			&i.PictureUrl,
 			&i.ColorCode,
-			&i.BrandID,
 			&i.PricePerUnit,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.DeletedAt,
-			&i.BranchID,
 		); err != nil {
 			return nil, err
 		}
@@ -642,7 +514,6 @@ SELECT
     i.measurement,
     i.picture_url,
     i.color_code,
-    i.brand_id,
     i.price_per_unit,
     i.created_at,
     i.updated_at,
@@ -663,30 +534,15 @@ type GetAllIngredientsWithLanguageParams struct {
 	Offset  int32  `json:"offset"`
 }
 
-type GetAllIngredientsWithLanguageRow struct {
-	ID           uuid.UUID           `json:"id"`
-	Name         string              `json:"name"`
-	NameI18n     pgtype.UUID         `json:"name_i18n"`
-	GroupID      pgtype.UUID         `json:"group_id"`
-	Measurement  NullMeasurementType `json:"measurement"`
-	PictureUrl   *string             `json:"picture_url"`
-	ColorCode    *string             `json:"color_code"`
-	BrandID      pgtype.UUID         `json:"brand_id"`
-	PricePerUnit pgtype.Numeric      `json:"price_per_unit"`
-	CreatedAt    pgtype.Timestamptz  `json:"created_at"`
-	UpdatedAt    pgtype.Timestamptz  `json:"updated_at"`
-	DeletedAt    *int64              `json:"deleted_at"`
-}
-
-func (q *Queries) GetAllIngredientsWithLanguage(ctx context.Context, arg GetAllIngredientsWithLanguageParams) ([]GetAllIngredientsWithLanguageRow, error) {
+func (q *Queries) GetAllIngredientsWithLanguage(ctx context.Context, arg GetAllIngredientsWithLanguageParams) ([]Ingredient, error) {
 	rows, err := q.db.Query(ctx, getAllIngredientsWithLanguage, arg.Column1, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []GetAllIngredientsWithLanguageRow
+	var items []Ingredient
 	for rows.Next() {
-		var i GetAllIngredientsWithLanguageRow
+		var i Ingredient
 		if err := rows.Scan(
 			&i.ID,
 			&i.Name,
@@ -695,7 +551,6 @@ func (q *Queries) GetAllIngredientsWithLanguage(ctx context.Context, arg GetAllI
 			&i.Measurement,
 			&i.PictureUrl,
 			&i.ColorCode,
-			&i.BrandID,
 			&i.PricePerUnit,
 			&i.CreatedAt,
 			&i.UpdatedAt,
@@ -712,32 +567,16 @@ func (q *Queries) GetAllIngredientsWithLanguage(ctx context.Context, arg GetAllI
 }
 
 const getIngredientByID = `-- name: GetIngredientByID :one
-SELECT id, name, name_i18n, group_id, measurement, picture_url, color_code, brand_id, price_per_unit, created_at, updated_at, deleted_at, branch_id
+SELECT id, name, name_i18n, group_id, measurement, picture_url, color_code, price_per_unit, created_at, updated_at, deleted_at
 FROM ingredients
 WHERE id = $1
   AND deleted_at = 0
 `
 
-type GetIngredientByIDRow struct {
-	ID           uuid.UUID           `json:"id"`
-	Name         string              `json:"name"`
-	NameI18n     pgtype.UUID         `json:"name_i18n"`
-	GroupID      pgtype.UUID         `json:"group_id"`
-	Measurement  NullMeasurementType `json:"measurement"`
-	PictureUrl   *string             `json:"picture_url"`
-	ColorCode    *string             `json:"color_code"`
-	BrandID      pgtype.UUID         `json:"brand_id"`
-	PricePerUnit pgtype.Numeric      `json:"price_per_unit"`
-	CreatedAt    pgtype.Timestamptz  `json:"created_at"`
-	UpdatedAt    pgtype.Timestamptz  `json:"updated_at"`
-	DeletedAt    *int64              `json:"deleted_at"`
-	BranchID     pgtype.UUID         `json:"branch_id"`
-}
-
 // GetIngredientByID retrieves an ingredient by ID (no branch filter - direct lookup)
-func (q *Queries) GetIngredientByID(ctx context.Context, id uuid.UUID) (GetIngredientByIDRow, error) {
+func (q *Queries) GetIngredientByID(ctx context.Context, id uuid.UUID) (Ingredient, error) {
 	row := q.db.QueryRow(ctx, getIngredientByID, id)
-	var i GetIngredientByIDRow
+	var i Ingredient
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
@@ -746,12 +585,10 @@ func (q *Queries) GetIngredientByID(ctx context.Context, id uuid.UUID) (GetIngre
 		&i.Measurement,
 		&i.PictureUrl,
 		&i.ColorCode,
-		&i.BrandID,
 		&i.PricePerUnit,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
-		&i.BranchID,
 	)
 	return i, err
 }
@@ -770,7 +607,6 @@ SELECT
     i.measurement,
     i.picture_url,
     i.color_code,
-    i.brand_id,
     i.price_per_unit,
     i.created_at,
     i.updated_at,
@@ -786,24 +622,9 @@ type GetIngredientByIDWithLanguageParams struct {
 	Column2 string    `json:"column_2"`
 }
 
-type GetIngredientByIDWithLanguageRow struct {
-	ID           uuid.UUID           `json:"id"`
-	Name         string              `json:"name"`
-	NameI18n     pgtype.UUID         `json:"name_i18n"`
-	GroupID      pgtype.UUID         `json:"group_id"`
-	Measurement  NullMeasurementType `json:"measurement"`
-	PictureUrl   *string             `json:"picture_url"`
-	ColorCode    *string             `json:"color_code"`
-	BrandID      pgtype.UUID         `json:"brand_id"`
-	PricePerUnit pgtype.Numeric      `json:"price_per_unit"`
-	CreatedAt    pgtype.Timestamptz  `json:"created_at"`
-	UpdatedAt    pgtype.Timestamptz  `json:"updated_at"`
-	DeletedAt    *int64              `json:"deleted_at"`
-}
-
-func (q *Queries) GetIngredientByIDWithLanguage(ctx context.Context, arg GetIngredientByIDWithLanguageParams) (GetIngredientByIDWithLanguageRow, error) {
+func (q *Queries) GetIngredientByIDWithLanguage(ctx context.Context, arg GetIngredientByIDWithLanguageParams) (Ingredient, error) {
 	row := q.db.QueryRow(ctx, getIngredientByIDWithLanguage, arg.ID, arg.Column2)
-	var i GetIngredientByIDWithLanguageRow
+	var i Ingredient
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
@@ -812,7 +633,6 @@ func (q *Queries) GetIngredientByIDWithLanguage(ctx context.Context, arg GetIngr
 		&i.Measurement,
 		&i.PictureUrl,
 		&i.ColorCode,
-		&i.BrandID,
 		&i.PricePerUnit,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -822,32 +642,16 @@ func (q *Queries) GetIngredientByIDWithLanguage(ctx context.Context, arg GetIngr
 }
 
 const getIngredientByIDWithPriceQuantity = `-- name: GetIngredientByIDWithPriceQuantity :one
-SELECT id, name, name_i18n, group_id, measurement, picture_url, color_code, brand_id, price_per_unit, created_at, updated_at, deleted_at, branch_id
+SELECT id, name, name_i18n, group_id, measurement, picture_url, color_code, price_per_unit, created_at, updated_at, deleted_at
 FROM ingredients
 WHERE id = $1
   AND deleted_at = 0
 `
 
-type GetIngredientByIDWithPriceQuantityRow struct {
-	ID           uuid.UUID           `json:"id"`
-	Name         string              `json:"name"`
-	NameI18n     pgtype.UUID         `json:"name_i18n"`
-	GroupID      pgtype.UUID         `json:"group_id"`
-	Measurement  NullMeasurementType `json:"measurement"`
-	PictureUrl   *string             `json:"picture_url"`
-	ColorCode    *string             `json:"color_code"`
-	BrandID      pgtype.UUID         `json:"brand_id"`
-	PricePerUnit pgtype.Numeric      `json:"price_per_unit"`
-	CreatedAt    pgtype.Timestamptz  `json:"created_at"`
-	UpdatedAt    pgtype.Timestamptz  `json:"updated_at"`
-	DeletedAt    *int64              `json:"deleted_at"`
-	BranchID     pgtype.UUID         `json:"branch_id"`
-}
-
-// GetIngredientByIDWithPriceQuantity retrieves ingredient with price and quantity by ID
-func (q *Queries) GetIngredientByIDWithPriceQuantity(ctx context.Context, id uuid.UUID) (GetIngredientByIDWithPriceQuantityRow, error) {
+// GetIngredientByIDWithPriceQuantity retrieves ingredient with price by ID
+func (q *Queries) GetIngredientByIDWithPriceQuantity(ctx context.Context, id uuid.UUID) (Ingredient, error) {
 	row := q.db.QueryRow(ctx, getIngredientByIDWithPriceQuantity, id)
-	var i GetIngredientByIDWithPriceQuantityRow
+	var i Ingredient
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
@@ -856,48 +660,33 @@ func (q *Queries) GetIngredientByIDWithPriceQuantity(ctx context.Context, id uui
 		&i.Measurement,
 		&i.PictureUrl,
 		&i.ColorCode,
-		&i.BrandID,
 		&i.PricePerUnit,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
-		&i.BranchID,
 	)
 	return i, err
 }
 
 const getIngredientGroupByID = `-- name: GetIngredientGroupByID :one
-SELECT id, name, picture_url, name_i18n, color_code, created_at, updated_at, deleted_at, branch_id
+SELECT id, name, picture_url, color_code, name_i18n, created_at, updated_at, deleted_at
 FROM ingredient_groups
 WHERE id = $1
   AND deleted_at = 0
 `
 
-type GetIngredientGroupByIDRow struct {
-	ID         uuid.UUID          `json:"id"`
-	Name       string             `json:"name"`
-	PictureUrl *string            `json:"picture_url"`
-	NameI18n   pgtype.UUID        `json:"name_i18n"`
-	ColorCode  *string            `json:"color_code"`
-	CreatedAt  pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt  pgtype.Timestamptz `json:"updated_at"`
-	DeletedAt  *int64             `json:"deleted_at"`
-	BranchID   pgtype.UUID        `json:"branch_id"`
-}
-
-func (q *Queries) GetIngredientGroupByID(ctx context.Context, id uuid.UUID) (GetIngredientGroupByIDRow, error) {
+func (q *Queries) GetIngredientGroupByID(ctx context.Context, id uuid.UUID) (IngredientGroup, error) {
 	row := q.db.QueryRow(ctx, getIngredientGroupByID, id)
-	var i GetIngredientGroupByIDRow
+	var i IngredientGroup
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
 		&i.PictureUrl,
-		&i.NameI18n,
 		&i.ColorCode,
+		&i.NameI18n,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
-		&i.BranchID,
 	)
 	return i, err
 }
@@ -913,9 +702,8 @@ SELECT
         ELSE ig.name
     END, ig.name) as name,
     ig.picture_url,
-    ig.name_i18n,
     ig.color_code,
-    ig.branch_id,
+    ig.name_i18n,
     ig.created_at,
     ig.updated_at,
     ig.deleted_at
@@ -929,29 +717,16 @@ type GetIngredientGroupByIDWithLanguageParams struct {
 	Column2 string    `json:"column_2"`
 }
 
-type GetIngredientGroupByIDWithLanguageRow struct {
-	ID         uuid.UUID          `json:"id"`
-	Name       string             `json:"name"`
-	PictureUrl *string            `json:"picture_url"`
-	NameI18n   pgtype.UUID        `json:"name_i18n"`
-	ColorCode  *string            `json:"color_code"`
-	BranchID   pgtype.UUID        `json:"branch_id"`
-	CreatedAt  pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt  pgtype.Timestamptz `json:"updated_at"`
-	DeletedAt  *int64             `json:"deleted_at"`
-}
-
 // ==================== WITH LANGUAGE QUERIES ====================
-func (q *Queries) GetIngredientGroupByIDWithLanguage(ctx context.Context, arg GetIngredientGroupByIDWithLanguageParams) (GetIngredientGroupByIDWithLanguageRow, error) {
+func (q *Queries) GetIngredientGroupByIDWithLanguage(ctx context.Context, arg GetIngredientGroupByIDWithLanguageParams) (IngredientGroup, error) {
 	row := q.db.QueryRow(ctx, getIngredientGroupByIDWithLanguage, arg.ID, arg.Column2)
-	var i GetIngredientGroupByIDWithLanguageRow
+	var i IngredientGroup
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
 		&i.PictureUrl,
-		&i.NameI18n,
 		&i.ColorCode,
-		&i.BranchID,
+		&i.NameI18n,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
@@ -960,33 +735,22 @@ func (q *Queries) GetIngredientGroupByIDWithLanguage(ctx context.Context, arg Ge
 }
 
 const getIngredientStockByID = `-- name: GetIngredientStockByID :one
-SELECT id, ingredient_id, quantity, branch_id, storage_id, created_at, updated_at, deleted_at
+SELECT id, ingredient_id, storage_id, branch_id, quantity, created_at, updated_at, deleted_at
 FROM ingredient_stock
 WHERE id = $1 AND deleted_at = 0
   AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 `
 
-type GetIngredientStockByIDRow struct {
-	ID           uuid.UUID          `json:"id"`
-	IngredientID uuid.UUID          `json:"ingredient_id"`
-	Quantity     pgtype.Numeric     `json:"quantity"`
-	BranchID     pgtype.UUID        `json:"branch_id"`
-	StorageID    pgtype.UUID        `json:"storage_id"`
-	CreatedAt    pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
-	DeletedAt    *int64             `json:"deleted_at"`
-}
-
 // GetIngredientStockByID retrieves ingredient stock by ID
-func (q *Queries) GetIngredientStockByID(ctx context.Context, id uuid.UUID) (GetIngredientStockByIDRow, error) {
+func (q *Queries) GetIngredientStockByID(ctx context.Context, id uuid.UUID) (IngredientStock, error) {
 	row := q.db.QueryRow(ctx, getIngredientStockByID, id)
-	var i GetIngredientStockByIDRow
+	var i IngredientStock
 	err := row.Scan(
 		&i.ID,
 		&i.IngredientID,
-		&i.Quantity,
-		&i.BranchID,
 		&i.StorageID,
+		&i.BranchID,
+		&i.Quantity,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
@@ -995,7 +759,7 @@ func (q *Queries) GetIngredientStockByID(ctx context.Context, id uuid.UUID) (Get
 }
 
 const getIngredientsByGroupID = `-- name: GetIngredientsByGroupID :many
-SELECT i.id, i.name, i.name_i18n, i.group_id, i.measurement, i.picture_url, i.color_code, i.brand_id, i.price_per_unit, i.created_at, i.updated_at, i.deleted_at, i.branch_id
+SELECT i.id, i.name, i.name_i18n, i.group_id, i.measurement, i.picture_url, i.color_code, i.price_per_unit, i.created_at, i.updated_at, i.deleted_at
 FROM ingredients i
 JOIN ingredient_visibility iv ON iv.ingredient_id = i.id
   AND iv.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
@@ -1012,32 +776,16 @@ type GetIngredientsByGroupIDParams struct {
 	Offset  int32       `json:"offset"`
 }
 
-type GetIngredientsByGroupIDRow struct {
-	ID           uuid.UUID           `json:"id"`
-	Name         string              `json:"name"`
-	NameI18n     pgtype.UUID         `json:"name_i18n"`
-	GroupID      pgtype.UUID         `json:"group_id"`
-	Measurement  NullMeasurementType `json:"measurement"`
-	PictureUrl   *string             `json:"picture_url"`
-	ColorCode    *string             `json:"color_code"`
-	BrandID      pgtype.UUID         `json:"brand_id"`
-	PricePerUnit pgtype.Numeric      `json:"price_per_unit"`
-	CreatedAt    pgtype.Timestamptz  `json:"created_at"`
-	UpdatedAt    pgtype.Timestamptz  `json:"updated_at"`
-	DeletedAt    *int64              `json:"deleted_at"`
-	BranchID     pgtype.UUID         `json:"branch_id"`
-}
-
 // GetIngredientsByGroupID retrieves ingredients by group ID visible to current branch
-func (q *Queries) GetIngredientsByGroupID(ctx context.Context, arg GetIngredientsByGroupIDParams) ([]GetIngredientsByGroupIDRow, error) {
+func (q *Queries) GetIngredientsByGroupID(ctx context.Context, arg GetIngredientsByGroupIDParams) ([]Ingredient, error) {
 	rows, err := q.db.Query(ctx, getIngredientsByGroupID, arg.GroupID, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []GetIngredientsByGroupIDRow
+	var items []Ingredient
 	for rows.Next() {
-		var i GetIngredientsByGroupIDRow
+		var i Ingredient
 		if err := rows.Scan(
 			&i.ID,
 			&i.Name,
@@ -1046,12 +794,10 @@ func (q *Queries) GetIngredientsByGroupID(ctx context.Context, arg GetIngredient
 			&i.Measurement,
 			&i.PictureUrl,
 			&i.ColorCode,
-			&i.BrandID,
 			&i.PricePerUnit,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.DeletedAt,
-			&i.BranchID,
 		); err != nil {
 			return nil, err
 		}
@@ -1064,7 +810,7 @@ func (q *Queries) GetIngredientsByGroupID(ctx context.Context, arg GetIngredient
 }
 
 const getStockByBranchID = `-- name: GetStockByBranchID :many
-SELECT id, ingredient_id, quantity, branch_id, storage_id, created_at, updated_at, deleted_at
+SELECT id, ingredient_id, storage_id, branch_id, quantity, created_at, updated_at, deleted_at
 FROM ingredient_stock
 WHERE branch_id = $1 AND deleted_at = 0
   AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
@@ -1078,33 +824,22 @@ type GetStockByBranchIDParams struct {
 	Offset   int32       `json:"offset"`
 }
 
-type GetStockByBranchIDRow struct {
-	ID           uuid.UUID          `json:"id"`
-	IngredientID uuid.UUID          `json:"ingredient_id"`
-	Quantity     pgtype.Numeric     `json:"quantity"`
-	BranchID     pgtype.UUID        `json:"branch_id"`
-	StorageID    pgtype.UUID        `json:"storage_id"`
-	CreatedAt    pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
-	DeletedAt    *int64             `json:"deleted_at"`
-}
-
 // GetStockByBranchID retrieves all stock for a branch
-func (q *Queries) GetStockByBranchID(ctx context.Context, arg GetStockByBranchIDParams) ([]GetStockByBranchIDRow, error) {
+func (q *Queries) GetStockByBranchID(ctx context.Context, arg GetStockByBranchIDParams) ([]IngredientStock, error) {
 	rows, err := q.db.Query(ctx, getStockByBranchID, arg.BranchID, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []GetStockByBranchIDRow
+	var items []IngredientStock
 	for rows.Next() {
-		var i GetStockByBranchIDRow
+		var i IngredientStock
 		if err := rows.Scan(
 			&i.ID,
 			&i.IngredientID,
-			&i.Quantity,
-			&i.BranchID,
 			&i.StorageID,
+			&i.BranchID,
+			&i.Quantity,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.DeletedAt,
@@ -1120,7 +855,7 @@ func (q *Queries) GetStockByBranchID(ctx context.Context, arg GetStockByBranchID
 }
 
 const getStockByIngredientAndBranch = `-- name: GetStockByIngredientAndBranch :one
-SELECT id, ingredient_id, quantity, branch_id, storage_id, created_at, updated_at, deleted_at
+SELECT id, ingredient_id, storage_id, branch_id, quantity, created_at, updated_at, deleted_at
 FROM ingredient_stock
 WHERE ingredient_id = $1 AND branch_id = $2 AND deleted_at = 0
   AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
@@ -1131,27 +866,16 @@ type GetStockByIngredientAndBranchParams struct {
 	BranchID     pgtype.UUID `json:"branch_id"`
 }
 
-type GetStockByIngredientAndBranchRow struct {
-	ID           uuid.UUID          `json:"id"`
-	IngredientID uuid.UUID          `json:"ingredient_id"`
-	Quantity     pgtype.Numeric     `json:"quantity"`
-	BranchID     pgtype.UUID        `json:"branch_id"`
-	StorageID    pgtype.UUID        `json:"storage_id"`
-	CreatedAt    pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
-	DeletedAt    *int64             `json:"deleted_at"`
-}
-
 // GetStockByIngredientAndBranch retrieves stock for a specific ingredient and branch
-func (q *Queries) GetStockByIngredientAndBranch(ctx context.Context, arg GetStockByIngredientAndBranchParams) (GetStockByIngredientAndBranchRow, error) {
+func (q *Queries) GetStockByIngredientAndBranch(ctx context.Context, arg GetStockByIngredientAndBranchParams) (IngredientStock, error) {
 	row := q.db.QueryRow(ctx, getStockByIngredientAndBranch, arg.IngredientID, arg.BranchID)
-	var i GetStockByIngredientAndBranchRow
+	var i IngredientStock
 	err := row.Scan(
 		&i.ID,
 		&i.IngredientID,
-		&i.Quantity,
-		&i.BranchID,
 		&i.StorageID,
+		&i.BranchID,
+		&i.Quantity,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
@@ -1160,7 +884,7 @@ func (q *Queries) GetStockByIngredientAndBranch(ctx context.Context, arg GetStoc
 }
 
 const getStockByIngredientAndStorageForUpdate = `-- name: GetStockByIngredientAndStorageForUpdate :one
-SELECT id, ingredient_id, quantity, branch_id, storage_id, created_at, updated_at, deleted_at
+SELECT id, ingredient_id, storage_id, branch_id, quantity, created_at, updated_at, deleted_at
 FROM ingredient_stock
 WHERE ingredient_id = $1 AND storage_id = $2 AND deleted_at = 0
   AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
@@ -1172,27 +896,16 @@ type GetStockByIngredientAndStorageForUpdateParams struct {
 	StorageID    pgtype.UUID `json:"storage_id"`
 }
 
-type GetStockByIngredientAndStorageForUpdateRow struct {
-	ID           uuid.UUID          `json:"id"`
-	IngredientID uuid.UUID          `json:"ingredient_id"`
-	Quantity     pgtype.Numeric     `json:"quantity"`
-	BranchID     pgtype.UUID        `json:"branch_id"`
-	StorageID    pgtype.UUID        `json:"storage_id"`
-	CreatedAt    pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
-	DeletedAt    *int64             `json:"deleted_at"`
-}
-
 // GetStockByIngredientAndStorageForUpdate retrieves and locks stock row for an ingredient in a storage
-func (q *Queries) GetStockByIngredientAndStorageForUpdate(ctx context.Context, arg GetStockByIngredientAndStorageForUpdateParams) (GetStockByIngredientAndStorageForUpdateRow, error) {
+func (q *Queries) GetStockByIngredientAndStorageForUpdate(ctx context.Context, arg GetStockByIngredientAndStorageForUpdateParams) (IngredientStock, error) {
 	row := q.db.QueryRow(ctx, getStockByIngredientAndStorageForUpdate, arg.IngredientID, arg.StorageID)
-	var i GetStockByIngredientAndStorageForUpdateRow
+	var i IngredientStock
 	err := row.Scan(
 		&i.ID,
 		&i.IngredientID,
-		&i.Quantity,
-		&i.BranchID,
 		&i.StorageID,
+		&i.BranchID,
+		&i.Quantity,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
@@ -1201,7 +914,7 @@ func (q *Queries) GetStockByIngredientAndStorageForUpdate(ctx context.Context, a
 }
 
 const getStockByIngredientID = `-- name: GetStockByIngredientID :many
-SELECT id, ingredient_id, quantity, branch_id, storage_id, created_at, updated_at, deleted_at
+SELECT id, ingredient_id, storage_id, branch_id, quantity, created_at, updated_at, deleted_at
 FROM ingredient_stock
 WHERE ingredient_id = $1 AND deleted_at = 0
   AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
@@ -1215,33 +928,22 @@ type GetStockByIngredientIDParams struct {
 	Offset       int32     `json:"offset"`
 }
 
-type GetStockByIngredientIDRow struct {
-	ID           uuid.UUID          `json:"id"`
-	IngredientID uuid.UUID          `json:"ingredient_id"`
-	Quantity     pgtype.Numeric     `json:"quantity"`
-	BranchID     pgtype.UUID        `json:"branch_id"`
-	StorageID    pgtype.UUID        `json:"storage_id"`
-	CreatedAt    pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
-	DeletedAt    *int64             `json:"deleted_at"`
-}
-
 // GetStockByIngredientID retrieves all stock for an ingredient
-func (q *Queries) GetStockByIngredientID(ctx context.Context, arg GetStockByIngredientIDParams) ([]GetStockByIngredientIDRow, error) {
+func (q *Queries) GetStockByIngredientID(ctx context.Context, arg GetStockByIngredientIDParams) ([]IngredientStock, error) {
 	rows, err := q.db.Query(ctx, getStockByIngredientID, arg.IngredientID, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []GetStockByIngredientIDRow
+	var items []IngredientStock
 	for rows.Next() {
-		var i GetStockByIngredientIDRow
+		var i IngredientStock
 		if err := rows.Scan(
 			&i.ID,
 			&i.IngredientID,
-			&i.Quantity,
-			&i.BranchID,
 			&i.StorageID,
+			&i.BranchID,
+			&i.Quantity,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.DeletedAt,
@@ -1265,7 +967,7 @@ END,
     updated_at = NOW()
 WHERE id = $1 AND deleted_at = 0
   AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-RETURNING id, ingredient_id, quantity, branch_id, storage_id, created_at, updated_at, deleted_at
+RETURNING id, ingredient_id, storage_id, branch_id, quantity, created_at, updated_at, deleted_at
 `
 
 type RemoveFromIngredientStockParams struct {
@@ -1273,27 +975,16 @@ type RemoveFromIngredientStockParams struct {
 	Quantity pgtype.Numeric `json:"quantity"`
 }
 
-type RemoveFromIngredientStockRow struct {
-	ID           uuid.UUID          `json:"id"`
-	IngredientID uuid.UUID          `json:"ingredient_id"`
-	Quantity     pgtype.Numeric     `json:"quantity"`
-	BranchID     pgtype.UUID        `json:"branch_id"`
-	StorageID    pgtype.UUID        `json:"storage_id"`
-	CreatedAt    pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
-	DeletedAt    *int64             `json:"deleted_at"`
-}
-
 // RemoveFromIngredientStock decreases ingredient stock quantity
-func (q *Queries) RemoveFromIngredientStock(ctx context.Context, arg RemoveFromIngredientStockParams) (RemoveFromIngredientStockRow, error) {
+func (q *Queries) RemoveFromIngredientStock(ctx context.Context, arg RemoveFromIngredientStockParams) (IngredientStock, error) {
 	row := q.db.QueryRow(ctx, removeFromIngredientStock, arg.ID, arg.Quantity)
-	var i RemoveFromIngredientStockRow
+	var i IngredientStock
 	err := row.Scan(
 		&i.ID,
 		&i.IngredientID,
-		&i.Quantity,
-		&i.BranchID,
 		&i.StorageID,
+		&i.BranchID,
+		&i.Quantity,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
@@ -1341,7 +1032,7 @@ func (q *Queries) RestoreIngredientStock(ctx context.Context, id uuid.UUID) erro
 }
 
 const searchIngredientGroups = `-- name: SearchIngredientGroups :many
-SELECT id, name, picture_url, name_i18n, color_code, created_at, updated_at, deleted_at, branch_id
+SELECT id, name, picture_url, color_code, name_i18n, created_at, updated_at, deleted_at
 FROM ingredient_groups
 WHERE deleted_at = 0
   AND name ILIKE '%' || $1 || '%'
@@ -1355,38 +1046,25 @@ type SearchIngredientGroupsParams struct {
 	Offset  int32   `json:"offset"`
 }
 
-type SearchIngredientGroupsRow struct {
-	ID         uuid.UUID          `json:"id"`
-	Name       string             `json:"name"`
-	PictureUrl *string            `json:"picture_url"`
-	NameI18n   pgtype.UUID        `json:"name_i18n"`
-	ColorCode  *string            `json:"color_code"`
-	CreatedAt  pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt  pgtype.Timestamptz `json:"updated_at"`
-	DeletedAt  *int64             `json:"deleted_at"`
-	BranchID   pgtype.UUID        `json:"branch_id"`
-}
-
 // SearchIngredientGroups searches ingredient groups by name
-func (q *Queries) SearchIngredientGroups(ctx context.Context, arg SearchIngredientGroupsParams) ([]SearchIngredientGroupsRow, error) {
+func (q *Queries) SearchIngredientGroups(ctx context.Context, arg SearchIngredientGroupsParams) ([]IngredientGroup, error) {
 	rows, err := q.db.Query(ctx, searchIngredientGroups, arg.Column1, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []SearchIngredientGroupsRow
+	var items []IngredientGroup
 	for rows.Next() {
-		var i SearchIngredientGroupsRow
+		var i IngredientGroup
 		if err := rows.Scan(
 			&i.ID,
 			&i.Name,
 			&i.PictureUrl,
-			&i.NameI18n,
 			&i.ColorCode,
+			&i.NameI18n,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.DeletedAt,
-			&i.BranchID,
 		); err != nil {
 			return nil, err
 		}
@@ -1399,7 +1077,7 @@ func (q *Queries) SearchIngredientGroups(ctx context.Context, arg SearchIngredie
 }
 
 const searchIngredients = `-- name: SearchIngredients :many
-SELECT i.id, i.name, i.name_i18n, i.group_id, i.measurement, i.picture_url, i.color_code, i.brand_id, i.price_per_unit, i.created_at, i.updated_at, i.deleted_at, i.branch_id
+SELECT i.id, i.name, i.name_i18n, i.group_id, i.measurement, i.picture_url, i.color_code, i.price_per_unit, i.created_at, i.updated_at, i.deleted_at
 FROM ingredients i
 JOIN ingredient_visibility iv ON iv.ingredient_id = i.id
   AND iv.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
@@ -1416,32 +1094,16 @@ type SearchIngredientsParams struct {
 	Offset  int32   `json:"offset"`
 }
 
-type SearchIngredientsRow struct {
-	ID           uuid.UUID           `json:"id"`
-	Name         string              `json:"name"`
-	NameI18n     pgtype.UUID         `json:"name_i18n"`
-	GroupID      pgtype.UUID         `json:"group_id"`
-	Measurement  NullMeasurementType `json:"measurement"`
-	PictureUrl   *string             `json:"picture_url"`
-	ColorCode    *string             `json:"color_code"`
-	BrandID      pgtype.UUID         `json:"brand_id"`
-	PricePerUnit pgtype.Numeric      `json:"price_per_unit"`
-	CreatedAt    pgtype.Timestamptz  `json:"created_at"`
-	UpdatedAt    pgtype.Timestamptz  `json:"updated_at"`
-	DeletedAt    *int64              `json:"deleted_at"`
-	BranchID     pgtype.UUID         `json:"branch_id"`
-}
-
 // SearchIngredients searches ingredients by name visible to current branch
-func (q *Queries) SearchIngredients(ctx context.Context, arg SearchIngredientsParams) ([]SearchIngredientsRow, error) {
+func (q *Queries) SearchIngredients(ctx context.Context, arg SearchIngredientsParams) ([]Ingredient, error) {
 	rows, err := q.db.Query(ctx, searchIngredients, arg.Column1, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []SearchIngredientsRow
+	var items []Ingredient
 	for rows.Next() {
-		var i SearchIngredientsRow
+		var i Ingredient
 		if err := rows.Scan(
 			&i.ID,
 			&i.Name,
@@ -1450,12 +1112,10 @@ func (q *Queries) SearchIngredients(ctx context.Context, arg SearchIngredientsPa
 			&i.Measurement,
 			&i.PictureUrl,
 			&i.ColorCode,
-			&i.BrandID,
 			&i.PricePerUnit,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.DeletedAt,
-			&i.BranchID,
 		); err != nil {
 			return nil, err
 		}
@@ -1475,11 +1135,10 @@ SET name = COALESCE($2, name),
     measurement = COALESCE($5, measurement),
     picture_url = COALESCE($6, picture_url),
     color_code = COALESCE($7, color_code),
-    brand_id = COALESCE($8, brand_id),
     updated_at = NOW()
 WHERE ingredients.id = $1
   AND deleted_at = 0
-RETURNING id, name, name_i18n, group_id, measurement, picture_url, color_code, brand_id, price_per_unit, created_at, updated_at, deleted_at, branch_id
+RETURNING id, name, name_i18n, group_id, measurement, picture_url, color_code, price_per_unit, created_at, updated_at, deleted_at
 `
 
 type UpdateIngredientParams struct {
@@ -1490,27 +1149,10 @@ type UpdateIngredientParams struct {
 	Measurement NullMeasurementType `json:"measurement"`
 	PictureUrl  *string             `json:"picture_url"`
 	ColorCode   *string             `json:"color_code"`
-	BrandID     pgtype.UUID         `json:"brand_id"`
-}
-
-type UpdateIngredientRow struct {
-	ID           uuid.UUID           `json:"id"`
-	Name         string              `json:"name"`
-	NameI18n     pgtype.UUID         `json:"name_i18n"`
-	GroupID      pgtype.UUID         `json:"group_id"`
-	Measurement  NullMeasurementType `json:"measurement"`
-	PictureUrl   *string             `json:"picture_url"`
-	ColorCode    *string             `json:"color_code"`
-	BrandID      pgtype.UUID         `json:"brand_id"`
-	PricePerUnit pgtype.Numeric      `json:"price_per_unit"`
-	CreatedAt    pgtype.Timestamptz  `json:"created_at"`
-	UpdatedAt    pgtype.Timestamptz  `json:"updated_at"`
-	DeletedAt    *int64              `json:"deleted_at"`
-	BranchID     pgtype.UUID         `json:"branch_id"`
 }
 
 // UpdateIngredient updates an ingredient (shared, no branch filter)
-func (q *Queries) UpdateIngredient(ctx context.Context, arg UpdateIngredientParams) (UpdateIngredientRow, error) {
+func (q *Queries) UpdateIngredient(ctx context.Context, arg UpdateIngredientParams) (Ingredient, error) {
 	row := q.db.QueryRow(ctx, updateIngredient,
 		arg.ID,
 		arg.Name,
@@ -1519,9 +1161,8 @@ func (q *Queries) UpdateIngredient(ctx context.Context, arg UpdateIngredientPara
 		arg.Measurement,
 		arg.PictureUrl,
 		arg.ColorCode,
-		arg.BrandID,
 	)
-	var i UpdateIngredientRow
+	var i Ingredient
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
@@ -1530,12 +1171,10 @@ func (q *Queries) UpdateIngredient(ctx context.Context, arg UpdateIngredientPara
 		&i.Measurement,
 		&i.PictureUrl,
 		&i.ColorCode,
-		&i.BrandID,
 		&i.PricePerUnit,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
-		&i.BranchID,
 	)
 	return i, err
 }
@@ -1549,7 +1188,7 @@ SET name = COALESCE($2, name),
     updated_at = NOW()
 WHERE ingredient_groups.id = $1
   AND deleted_at = 0
-RETURNING id, name, picture_url, name_i18n, color_code, created_at, updated_at, deleted_at, branch_id
+RETURNING id, name, picture_url, color_code, name_i18n, created_at, updated_at, deleted_at
 `
 
 type UpdateIngredientGroupParams struct {
@@ -1560,20 +1199,8 @@ type UpdateIngredientGroupParams struct {
 	ColorCode  *string     `json:"color_code"`
 }
 
-type UpdateIngredientGroupRow struct {
-	ID         uuid.UUID          `json:"id"`
-	Name       string             `json:"name"`
-	PictureUrl *string            `json:"picture_url"`
-	NameI18n   pgtype.UUID        `json:"name_i18n"`
-	ColorCode  *string            `json:"color_code"`
-	CreatedAt  pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt  pgtype.Timestamptz `json:"updated_at"`
-	DeletedAt  *int64             `json:"deleted_at"`
-	BranchID   pgtype.UUID        `json:"branch_id"`
-}
-
 // UpdateIngredientGroup updates an ingredient group
-func (q *Queries) UpdateIngredientGroup(ctx context.Context, arg UpdateIngredientGroupParams) (UpdateIngredientGroupRow, error) {
+func (q *Queries) UpdateIngredientGroup(ctx context.Context, arg UpdateIngredientGroupParams) (IngredientGroup, error) {
 	row := q.db.QueryRow(ctx, updateIngredientGroup,
 		arg.ID,
 		arg.Name,
@@ -1581,17 +1208,16 @@ func (q *Queries) UpdateIngredientGroup(ctx context.Context, arg UpdateIngredien
 		arg.NameI18n,
 		arg.ColorCode,
 	)
-	var i UpdateIngredientGroupRow
+	var i IngredientGroup
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
 		&i.PictureUrl,
-		&i.NameI18n,
 		&i.ColorCode,
+		&i.NameI18n,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
-		&i.BranchID,
 	)
 	return i, err
 }
@@ -1602,7 +1228,7 @@ SET price_per_unit = COALESCE($2, price_per_unit),
     updated_at = NOW()
 WHERE id = $1
   AND deleted_at = 0
-RETURNING id, name, name_i18n, group_id, measurement, picture_url, color_code, brand_id, price_per_unit, created_at, updated_at, deleted_at
+RETURNING id, name, name_i18n, group_id, measurement, picture_url, color_code, price_per_unit, created_at, updated_at, deleted_at
 `
 
 type UpdateIngredientPriceAndQuantityParams struct {
@@ -1610,25 +1236,10 @@ type UpdateIngredientPriceAndQuantityParams struct {
 	PricePerUnit pgtype.Numeric `json:"price_per_unit"`
 }
 
-type UpdateIngredientPriceAndQuantityRow struct {
-	ID           uuid.UUID           `json:"id"`
-	Name         string              `json:"name"`
-	NameI18n     pgtype.UUID         `json:"name_i18n"`
-	GroupID      pgtype.UUID         `json:"group_id"`
-	Measurement  NullMeasurementType `json:"measurement"`
-	PictureUrl   *string             `json:"picture_url"`
-	ColorCode    *string             `json:"color_code"`
-	BrandID      pgtype.UUID         `json:"brand_id"`
-	PricePerUnit pgtype.Numeric      `json:"price_per_unit"`
-	CreatedAt    pgtype.Timestamptz  `json:"created_at"`
-	UpdatedAt    pgtype.Timestamptz  `json:"updated_at"`
-	DeletedAt    *int64              `json:"deleted_at"`
-}
-
 // UpdateIngredientPriceAndQuantity updates price_per_unit for an ingredient
-func (q *Queries) UpdateIngredientPriceAndQuantity(ctx context.Context, arg UpdateIngredientPriceAndQuantityParams) (UpdateIngredientPriceAndQuantityRow, error) {
+func (q *Queries) UpdateIngredientPriceAndQuantity(ctx context.Context, arg UpdateIngredientPriceAndQuantityParams) (Ingredient, error) {
 	row := q.db.QueryRow(ctx, updateIngredientPriceAndQuantity, arg.ID, arg.PricePerUnit)
-	var i UpdateIngredientPriceAndQuantityRow
+	var i Ingredient
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
@@ -1637,7 +1248,6 @@ func (q *Queries) UpdateIngredientPriceAndQuantity(ctx context.Context, arg Upda
 		&i.Measurement,
 		&i.PictureUrl,
 		&i.ColorCode,
-		&i.BrandID,
 		&i.PricePerUnit,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -1652,7 +1262,7 @@ SET quantity = COALESCE($2, quantity),
     updated_at = NOW()
 WHERE id = $1 AND deleted_at = 0
   AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-RETURNING id, ingredient_id, quantity, branch_id, storage_id, created_at, updated_at, deleted_at
+RETURNING id, ingredient_id, storage_id, branch_id, quantity, created_at, updated_at, deleted_at
 `
 
 type UpdateIngredientStockParams struct {
@@ -1660,27 +1270,16 @@ type UpdateIngredientStockParams struct {
 	Quantity pgtype.Numeric `json:"quantity"`
 }
 
-type UpdateIngredientStockRow struct {
-	ID           uuid.UUID          `json:"id"`
-	IngredientID uuid.UUID          `json:"ingredient_id"`
-	Quantity     pgtype.Numeric     `json:"quantity"`
-	BranchID     pgtype.UUID        `json:"branch_id"`
-	StorageID    pgtype.UUID        `json:"storage_id"`
-	CreatedAt    pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
-	DeletedAt    *int64             `json:"deleted_at"`
-}
-
 // UpdateIngredientStock updates ingredient stock quantity
-func (q *Queries) UpdateIngredientStock(ctx context.Context, arg UpdateIngredientStockParams) (UpdateIngredientStockRow, error) {
+func (q *Queries) UpdateIngredientStock(ctx context.Context, arg UpdateIngredientStockParams) (IngredientStock, error) {
 	row := q.db.QueryRow(ctx, updateIngredientStock, arg.ID, arg.Quantity)
-	var i UpdateIngredientStockRow
+	var i IngredientStock
 	err := row.Scan(
 		&i.ID,
 		&i.IngredientID,
-		&i.Quantity,
-		&i.BranchID,
 		&i.StorageID,
+		&i.BranchID,
+		&i.Quantity,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
@@ -1696,7 +1295,7 @@ DO UPDATE SET
   quantity = ingredient_stock.quantity + EXCLUDED.quantity,
   updated_at = NOW(),
   deleted_at = 0
-RETURNING id, ingredient_id, quantity, branch_id, storage_id, created_at, updated_at, deleted_at
+RETURNING id, ingredient_id, storage_id, branch_id, quantity, created_at, updated_at, deleted_at
 `
 
 type UpsertAddIngredientStockByStorageParams struct {
@@ -1706,32 +1305,21 @@ type UpsertAddIngredientStockByStorageParams struct {
 	Quantity     pgtype.Numeric `json:"quantity"`
 }
 
-type UpsertAddIngredientStockByStorageRow struct {
-	ID           uuid.UUID          `json:"id"`
-	IngredientID uuid.UUID          `json:"ingredient_id"`
-	Quantity     pgtype.Numeric     `json:"quantity"`
-	BranchID     pgtype.UUID        `json:"branch_id"`
-	StorageID    pgtype.UUID        `json:"storage_id"`
-	CreatedAt    pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
-	DeletedAt    *int64             `json:"deleted_at"`
-}
-
 // UpsertAddIngredientStockByStorage increases stock for ingredient in a storage (used for invoice arrivals)
-func (q *Queries) UpsertAddIngredientStockByStorage(ctx context.Context, arg UpsertAddIngredientStockByStorageParams) (UpsertAddIngredientStockByStorageRow, error) {
+func (q *Queries) UpsertAddIngredientStockByStorage(ctx context.Context, arg UpsertAddIngredientStockByStorageParams) (IngredientStock, error) {
 	row := q.db.QueryRow(ctx, upsertAddIngredientStockByStorage,
 		arg.ID,
 		arg.IngredientID,
 		arg.StorageID,
 		arg.Quantity,
 	)
-	var i UpsertAddIngredientStockByStorageRow
+	var i IngredientStock
 	err := row.Scan(
 		&i.ID,
 		&i.IngredientID,
-		&i.Quantity,
-		&i.BranchID,
 		&i.StorageID,
+		&i.BranchID,
+		&i.Quantity,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,

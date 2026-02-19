@@ -237,7 +237,6 @@ SELECT
   ing.measurement as ingredient_measurement,
   ing.picture_url as ingredient_picture_url,
   ing.color_code as ingredient_color_code,
-  ing.brand_id as ingredient_brand_id,
   COALESCE(st.quantity, 0::numeric) as system_quantity,
   ii.counted_quantity as counted_quantity,
   (ii.counted_quantity - COALESCE(st.quantity, 0::numeric))::numeric(15,6) as difference_quantity,

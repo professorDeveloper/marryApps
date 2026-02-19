@@ -1,19 +1,19 @@
 -- ==================== INGREDIENT GROUPS QUERIES ====================
--- Ingredient groups are shared across all branches (no branch_id filter)
+-- Ingredient groups are shared across all branches (brand-wide catalog)
 
 -- name: CreateIngredientGroup :one
 INSERT INTO ingredient_groups (id, name, picture_url, name_i18n, color_code)
 VALUES ($1, $2, $3, $4, $5)
-RETURNING id, name, picture_url, name_i18n, color_code, created_at, updated_at, deleted_at, branch_id;
+RETURNING id, name, picture_url, color_code, name_i18n, created_at, updated_at, deleted_at;
 
 -- name: GetIngredientGroupByID :one
-SELECT id, name, picture_url, name_i18n, color_code, created_at, updated_at, deleted_at, branch_id
+SELECT id, name, picture_url, color_code, name_i18n, created_at, updated_at, deleted_at
 FROM ingredient_groups
 WHERE id = $1
   AND deleted_at = 0;
 
 -- name: GetAllIngredientGroups :many
-SELECT id, name, picture_url, name_i18n, color_code, created_at, updated_at, deleted_at, branch_id
+SELECT id, name, picture_url, color_code, name_i18n, created_at, updated_at, deleted_at
 FROM ingredient_groups
 WHERE deleted_at = 0
 ORDER BY created_at DESC
@@ -29,7 +29,7 @@ SET name = COALESCE($2, name),
     updated_at = NOW()
 WHERE ingredient_groups.id = $1
   AND deleted_at = 0
-RETURNING id, name, picture_url, name_i18n, color_code, created_at, updated_at, deleted_at, branch_id;
+RETURNING id, name, picture_url, color_code, name_i18n, created_at, updated_at, deleted_at;
 
 -- DeleteIngredientGroup soft deletes an ingredient group
 -- name: DeleteIngredientGroup :exec
@@ -47,7 +47,7 @@ WHERE id = $1
 
 -- SearchIngredientGroups searches ingredient groups by name
 -- name: SearchIngredientGroups :many
-SELECT id, name, picture_url, name_i18n, color_code, created_at, updated_at, deleted_at, branch_id
+SELECT id, name, picture_url, color_code, name_i18n, created_at, updated_at, deleted_at
 FROM ingredient_groups
 WHERE deleted_at = 0
   AND name ILIKE '%' || $1 || '%'
@@ -64,22 +64,22 @@ WHERE deleted_at = 0;
 -- ==================== INGREDIENTS QUERIES ====================
 -- Ingredients are shared across all branches. Visibility is controlled by ingredient_visibility table.
 
--- CreateIngredient creates a new ingredient (shared, no branch_id)
+-- CreateIngredient creates a new ingredient (shared, brand-wide)
 -- name: CreateIngredient :one
-INSERT INTO ingredients (id, name, name_i18n, group_id, measurement, picture_url, color_code, brand_id)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-RETURNING id, name, name_i18n, group_id, measurement, picture_url, color_code, brand_id, price_per_unit, created_at, updated_at, deleted_at, branch_id;
+INSERT INTO ingredients (id, name, name_i18n, group_id, measurement, picture_url, color_code)
+VALUES ($1, $2, $3, $4, $5, $6, $7)
+RETURNING id, name, name_i18n, group_id, measurement, picture_url, color_code, price_per_unit, created_at, updated_at, deleted_at;
 
 -- GetIngredientByID retrieves an ingredient by ID (no branch filter - direct lookup)
 -- name: GetIngredientByID :one
-SELECT id, name, name_i18n, group_id, measurement, picture_url, color_code, brand_id, price_per_unit, created_at, updated_at, deleted_at, branch_id
+SELECT id, name, name_i18n, group_id, measurement, picture_url, color_code, price_per_unit, created_at, updated_at, deleted_at
 FROM ingredients
 WHERE id = $1
   AND deleted_at = 0;
 
 -- GetAllIngredients retrieves all ingredients visible to current branch
 -- name: GetAllIngredients :many
-SELECT i.id, i.name, i.name_i18n, i.group_id, i.measurement, i.picture_url, i.color_code, i.brand_id, i.price_per_unit, i.created_at, i.updated_at, i.deleted_at, i.branch_id
+SELECT i.id, i.name, i.name_i18n, i.group_id, i.measurement, i.picture_url, i.color_code, i.price_per_unit, i.created_at, i.updated_at, i.deleted_at
 FROM ingredients i
 JOIN ingredient_visibility iv ON iv.ingredient_id = i.id
   AND iv.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
@@ -90,7 +90,7 @@ LIMIT $1 OFFSET $2;
 
 -- GetIngredientsByGroupID retrieves ingredients by group ID visible to current branch
 -- name: GetIngredientsByGroupID :many
-SELECT i.id, i.name, i.name_i18n, i.group_id, i.measurement, i.picture_url, i.color_code, i.brand_id, i.price_per_unit, i.created_at, i.updated_at, i.deleted_at, i.branch_id
+SELECT i.id, i.name, i.name_i18n, i.group_id, i.measurement, i.picture_url, i.color_code, i.price_per_unit, i.created_at, i.updated_at, i.deleted_at
 FROM ingredients i
 JOIN ingredient_visibility iv ON iv.ingredient_id = i.id
   AND iv.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
@@ -109,11 +109,10 @@ SET name = COALESCE($2, name),
     measurement = COALESCE($5, measurement),
     picture_url = COALESCE($6, picture_url),
     color_code = COALESCE($7, color_code),
-    brand_id = COALESCE($8, brand_id),
     updated_at = NOW()
 WHERE ingredients.id = $1
   AND deleted_at = 0
-RETURNING id, name, name_i18n, group_id, measurement, picture_url, color_code, brand_id, price_per_unit, created_at, updated_at, deleted_at, branch_id;
+RETURNING id, name, name_i18n, group_id, measurement, picture_url, color_code, price_per_unit, created_at, updated_at, deleted_at;
 
 -- DeleteIngredient soft deletes an ingredient
 -- name: DeleteIngredient :exec
@@ -131,7 +130,7 @@ WHERE id = $1
 
 -- SearchIngredients searches ingredients by name visible to current branch
 -- name: SearchIngredients :many
-SELECT i.id, i.name, i.name_i18n, i.group_id, i.measurement, i.picture_url, i.color_code, i.brand_id, i.price_per_unit, i.created_at, i.updated_at, i.deleted_at, i.branch_id
+SELECT i.id, i.name, i.name_i18n, i.group_id, i.measurement, i.picture_url, i.color_code, i.price_per_unit, i.created_at, i.updated_at, i.deleted_at
 FROM ingredients i
 JOIN ingredient_visibility iv ON iv.ingredient_id = i.id
   AND iv.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
@@ -157,21 +156,20 @@ SET price_per_unit = COALESCE($2, price_per_unit),
     updated_at = NOW()
 WHERE id = $1
   AND deleted_at = 0
-RETURNING id, name, name_i18n, group_id, measurement, picture_url, color_code, brand_id, price_per_unit, created_at, updated_at, deleted_at;
+RETURNING id, name, name_i18n, group_id, measurement, picture_url, color_code, price_per_unit, created_at, updated_at, deleted_at;
 
--- AddIngredientQuantity adds/accumulates quantity to an ingredient (for invoice arrivals)
--- Also updates the price_per_unit to the latest price from invoice
+-- AddIngredientQuantity updates price_per_unit for an ingredient (for invoice arrivals)
 -- name: AddIngredientQuantity :one
 UPDATE ingredients
 SET price_per_unit = COALESCE($2, price_per_unit),
     updated_at = NOW()
 WHERE id = $1
   AND deleted_at = 0
-RETURNING id, name, name_i18n, group_id, measurement, picture_url, color_code, brand_id, price_per_unit, created_at, updated_at, deleted_at;
+RETURNING id, name, name_i18n, group_id, measurement, picture_url, color_code, price_per_unit, created_at, updated_at, deleted_at;
 
--- GetIngredientByIDWithPriceQuantity retrieves ingredient with price and quantity by ID
+-- GetIngredientByIDWithPriceQuantity retrieves ingredient with price by ID
 -- name: GetIngredientByIDWithPriceQuantity :one
-SELECT id, name, name_i18n, group_id, measurement, picture_url, color_code, brand_id, price_per_unit, created_at, updated_at, deleted_at, branch_id
+SELECT id, name, name_i18n, group_id, measurement, picture_url, color_code, price_per_unit, created_at, updated_at, deleted_at
 FROM ingredients
 WHERE id = $1
   AND deleted_at = 0;
@@ -182,25 +180,25 @@ WHERE id = $1
 -- name: CreateIngredientStock :one
 INSERT INTO ingredient_stock (id, ingredient_id, quantity, branch_id, storage_id)
 VALUES ($1, $2, $3, $4, $5)
-RETURNING id, ingredient_id, quantity, branch_id, storage_id, created_at, updated_at, deleted_at;
+RETURNING id, ingredient_id, storage_id, branch_id, quantity, created_at, updated_at, deleted_at;
 
 -- GetIngredientStockByID retrieves ingredient stock by ID
 -- name: GetIngredientStockByID :one
-SELECT id, ingredient_id, quantity, branch_id, storage_id, created_at, updated_at, deleted_at
+SELECT id, ingredient_id, storage_id, branch_id, quantity, created_at, updated_at, deleted_at
 FROM ingredient_stock
 WHERE id = $1 AND deleted_at = 0
   AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid;
 
 -- GetStockByIngredientAndBranch retrieves stock for a specific ingredient and branch
 -- name: GetStockByIngredientAndBranch :one
-SELECT id, ingredient_id, quantity, branch_id, storage_id, created_at, updated_at, deleted_at
+SELECT id, ingredient_id, storage_id, branch_id, quantity, created_at, updated_at, deleted_at
 FROM ingredient_stock
 WHERE ingredient_id = $1 AND branch_id = $2 AND deleted_at = 0
   AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid;
 
 -- GetStockByIngredientAndStorageForUpdate retrieves and locks stock row for an ingredient in a storage
 -- name: GetStockByIngredientAndStorageForUpdate :one
-SELECT id, ingredient_id, quantity, branch_id, storage_id, created_at, updated_at, deleted_at
+SELECT id, ingredient_id, storage_id, branch_id, quantity, created_at, updated_at, deleted_at
 FROM ingredient_stock
 WHERE ingredient_id = $1 AND storage_id = $2 AND deleted_at = 0
   AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
@@ -217,7 +215,7 @@ RETURNING id;
 
 -- GetAllIngredientStock retrieves all ingredient stock entries with pagination
 -- name: GetAllIngredientStock :many
-SELECT id, ingredient_id, quantity, branch_id, storage_id, created_at, updated_at, deleted_at
+SELECT id, ingredient_id, storage_id, branch_id, quantity, created_at, updated_at, deleted_at
 FROM ingredient_stock
 WHERE deleted_at = 0
   AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
@@ -226,7 +224,7 @@ LIMIT $1 OFFSET $2;
 
 -- GetStockByBranchID retrieves all stock for a branch
 -- name: GetStockByBranchID :many
-SELECT id, ingredient_id, quantity, branch_id, storage_id, created_at, updated_at, deleted_at
+SELECT id, ingredient_id, storage_id, branch_id, quantity, created_at, updated_at, deleted_at
 FROM ingredient_stock
 WHERE branch_id = $1 AND deleted_at = 0
   AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
@@ -235,7 +233,7 @@ LIMIT $2 OFFSET $3;
 
 -- GetStockByIngredientID retrieves all stock for an ingredient
 -- name: GetStockByIngredientID :many
-SELECT id, ingredient_id, quantity, branch_id, storage_id, created_at, updated_at, deleted_at
+SELECT id, ingredient_id, storage_id, branch_id, quantity, created_at, updated_at, deleted_at
 FROM ingredient_stock
 WHERE ingredient_id = $1 AND deleted_at = 0
   AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
@@ -249,7 +247,7 @@ SET quantity = COALESCE($2, quantity),
     updated_at = NOW()
 WHERE id = $1 AND deleted_at = 0
   AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-RETURNING id, ingredient_id, quantity, branch_id, storage_id, created_at, updated_at, deleted_at;
+RETURNING id, ingredient_id, storage_id, branch_id, quantity, created_at, updated_at, deleted_at;
 
 -- AddToIngredientStock increases ingredient stock quantity
 -- name: AddToIngredientStock :one
@@ -258,7 +256,7 @@ SET quantity = quantity + $2,
     updated_at = NOW()
 WHERE id = $1 AND deleted_at = 0
   AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-RETURNING id, ingredient_id, quantity, branch_id, storage_id, created_at, updated_at, deleted_at;
+RETURNING id, ingredient_id, storage_id, branch_id, quantity, created_at, updated_at, deleted_at;
 
 -- RemoveFromIngredientStock decreases ingredient stock quantity
 -- name: RemoveFromIngredientStock :one
@@ -270,7 +268,7 @@ END,
     updated_at = NOW()
 WHERE id = $1 AND deleted_at = 0
   AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-RETURNING id, ingredient_id, quantity, branch_id, storage_id, created_at, updated_at, deleted_at;
+RETURNING id, ingredient_id, storage_id, branch_id, quantity, created_at, updated_at, deleted_at;
 
 -- UpsertAddIngredientStockByStorage increases stock for ingredient in a storage (used for invoice arrivals)
 -- name: UpsertAddIngredientStockByStorage :one
@@ -281,7 +279,7 @@ DO UPDATE SET
   quantity = ingredient_stock.quantity + EXCLUDED.quantity,
   updated_at = NOW(),
   deleted_at = 0
-RETURNING id, ingredient_id, quantity, branch_id, storage_id, created_at, updated_at, deleted_at;
+RETURNING id, ingredient_id, storage_id, branch_id, quantity, created_at, updated_at, deleted_at;
 
 -- DeleteIngredientStock soft deletes ingredient stock
 -- name: DeleteIngredientStock :exec
@@ -315,9 +313,8 @@ SELECT
         ELSE ig.name
     END, ig.name) as name,
     ig.picture_url,
-    ig.name_i18n,
     ig.color_code,
-    ig.branch_id,
+    ig.name_i18n,
     ig.created_at,
     ig.updated_at,
     ig.deleted_at
@@ -335,9 +332,8 @@ SELECT
         ELSE ig.name
     END, ig.name) as name,
     ig.picture_url,
-    ig.name_i18n,
     ig.color_code,
-    ig.branch_id,
+    ig.name_i18n,
     ig.created_at,
     ig.updated_at,
     ig.deleted_at
@@ -361,7 +357,6 @@ SELECT
     i.measurement,
     i.picture_url,
     i.color_code,
-    i.brand_id,
     i.price_per_unit,
     i.created_at,
     i.updated_at,
@@ -385,7 +380,6 @@ SELECT
     i.measurement,
     i.picture_url,
     i.color_code,
-    i.brand_id,
     i.price_per_unit,
     i.created_at,
     i.updated_at,

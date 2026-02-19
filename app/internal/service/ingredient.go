@@ -13,130 +13,45 @@ import (
 )
 
 // Mapper functions for ingredient groups and ingredients
-func mapIngredientGroupToResponse(id uuid.UUID, name string, nameI18n pgtype.UUID, pictureUrl *string, colorCode *string, branchID pgtype.UUID, createdAt, updatedAt pgtype.Timestamptz) *model.IngredientGroupResponse {
+func mapIngredientGroupToResponse(id uuid.UUID, name string, nameI18n pgtype.UUID, pictureUrl *string, colorCode *string, createdAt, updatedAt pgtype.Timestamptz) *model.IngredientGroupResponse {
 	return &model.IngredientGroupResponse{
 		ID:         id.String(),
 		Name:       &name,
 		NameI18n:   uuidToStr(nameI18n),
 		PictureUrl: pictureUrl,
 		ColorCode:  colorCode,
-		BranchID:   uuidToStr(branchID),
 		CreatedAt:  timestampToTime(createdAt),
 		UpdatedAt:  timestampToTime(updatedAt),
 	}
 }
 
 // mapIngredientToResponse converts a database ingredient to response model
-func mapIngredientToResponse(ingredient any) *model.IngredientResponse {
-	// Handle different row types
-	var (
-		id           uuid.UUID
-		name         string
-		nameI18n     pgtype.UUID
-		groupID      pgtype.UUID
-		measurement  pg.NullMeasurementType
-		pictureUrl   *string
-		colorCode    *string
-		brandID      pgtype.UUID
-		pricePerUnit pgtype.Numeric
-		createdAt    pgtype.Timestamptz
-		updatedAt    pgtype.Timestamptz
-	)
-
-	// Type switch to extract fields from different struct types
-	switch row := ingredient.(type) {
-	case pg.Ingredient:
-		id = row.ID
-		name = row.Name
-		nameI18n = row.NameI18n
-		groupID = row.GroupID
-		measurement = row.Measurement
-		pictureUrl = row.PictureUrl
-		colorCode = row.ColorCode
-		brandID = row.BrandID
-		pricePerUnit = row.PricePerUnit
-		createdAt = row.CreatedAt
-		updatedAt = row.UpdatedAt
-	case pg.UpdateIngredientPriceAndQuantityRow:
-		id = row.ID
-		name = row.Name
-		nameI18n = row.NameI18n
-		groupID = row.GroupID
-		measurement = pg.NullMeasurementType(row.Measurement)
-		pictureUrl = row.PictureUrl
-		colorCode = row.ColorCode
-		brandID = row.BrandID
-		pricePerUnit = row.PricePerUnit
-		createdAt = row.CreatedAt
-		updatedAt = row.UpdatedAt
-	case pg.GetIngredientByIDWithLanguageRow:
-		id = row.ID
-		name = row.Name
-		nameI18n = row.NameI18n
-		groupID = row.GroupID
-		measurement = pg.NullMeasurementType(row.Measurement)
-		pictureUrl = row.PictureUrl
-		colorCode = row.ColorCode
-		brandID = row.BrandID
-		pricePerUnit = row.PricePerUnit
-		createdAt = row.CreatedAt
-		updatedAt = row.UpdatedAt
-	case pg.GetAllIngredientsWithLanguageRow:
-		id = row.ID
-		name = row.Name
-		nameI18n = row.NameI18n
-		groupID = row.GroupID
-		measurement = pg.NullMeasurementType(row.Measurement)
-		pictureUrl = row.PictureUrl
-		colorCode = row.ColorCode
-		brandID = row.BrandID
-		pricePerUnit = row.PricePerUnit
-		createdAt = row.CreatedAt
-		updatedAt = row.UpdatedAt
-	case pg.CreateIngredientRow:
-		id = row.ID
-		name = row.Name
-		nameI18n = row.NameI18n
-		groupID = row.GroupID
-		measurement = row.Measurement
-		pictureUrl = row.PictureUrl
-		colorCode = row.ColorCode
-		brandID = row.BrandID
-		pricePerUnit = row.PricePerUnit
-		createdAt = row.CreatedAt
-		updatedAt = row.UpdatedAt
-	default:
-		return nil
-	}
-
-	// Convert measurement to string pointer
+func mapIngredientToResponse(row pg.Ingredient) *model.IngredientResponse {
 	var measurementStr *string
-	if measurement.Valid {
-		str := string(measurement.MeasurementType)
+	if row.Measurement.Valid {
+		str := string(row.Measurement.MeasurementType)
 		measurementStr = &str
 	}
 
-	// Convert price_per_unit decimal to string pointer
 	var pricePerUnitStr *string
-	if pricePerUnit.Valid {
-		val, _ := pricePerUnit.Value()
+	if row.PricePerUnit.Valid {
+		val, _ := row.PricePerUnit.Value()
 		if str, ok := val.(string); ok {
 			pricePerUnitStr = &str
 		}
 	}
 
 	return &model.IngredientResponse{
-		ID:           id.String(),
-		Name:         &name,
-		NameI18n:     uuidToStr(nameI18n),
-		GroupID:      uuidToStr(groupID),
-		BrandID:      uuidToStr(brandID),
+		ID:           row.ID.String(),
+		Name:         &row.Name,
+		NameI18n:     uuidToStr(row.NameI18n),
+		GroupID:      uuidToStr(row.GroupID),
 		Measurement:  measurementStr,
-		PictureUrl:   pictureUrl,
-		ColorCode:    colorCode,
+		PictureUrl:   row.PictureUrl,
+		ColorCode:    row.ColorCode,
 		PricePerUnit: pricePerUnitStr,
-		CreatedAt:    timestampToTime(createdAt),
-		UpdatedAt:    timestampToTime(updatedAt),
+		CreatedAt:    timestampToTime(row.CreatedAt),
+		UpdatedAt:    timestampToTime(row.UpdatedAt),
 	}
 }
 
@@ -169,7 +84,7 @@ func (i *IngredientS) CreateIngredientGroup(ctx context.Context, name string, na
 		return nil, fmt.Errorf("failed to create ingredient group: %w", err)
 	}
 
-	return mapIngredientGroupToResponse(group.ID, group.Name, group.NameI18n, group.PictureUrl, group.ColorCode, group.BranchID, group.CreatedAt, group.UpdatedAt), nil
+	return mapIngredientGroupToResponse(group.ID, group.Name, group.NameI18n, group.PictureUrl, group.ColorCode, group.CreatedAt, group.UpdatedAt), nil
 }
 
 // GetIngredientGroupByID retrieves an ingredient group by ID
@@ -184,7 +99,7 @@ func (i *IngredientS) GetIngredientGroupByID(ctx context.Context, groupID string
 		return nil, fmt.Errorf("failed to get ingredient group: %w", err)
 	}
 
-	return mapIngredientGroupToResponse(group.ID, group.Name, group.NameI18n, group.PictureUrl, group.ColorCode, group.BranchID, group.CreatedAt, group.UpdatedAt), nil
+	return mapIngredientGroupToResponse(group.ID, group.Name, group.NameI18n, group.PictureUrl, group.ColorCode, group.CreatedAt, group.UpdatedAt), nil
 }
 
 // GetAllIngredientGroups retrieves all ingredient groups
@@ -199,7 +114,7 @@ func (i *IngredientS) GetAllIngredientGroups(ctx context.Context, limit, offset 
 
 	var responses []model.IngredientGroupResponse
 	for _, g := range groups {
-		responses = append(responses, *mapIngredientGroupToResponse(g.ID, g.Name, g.NameI18n, g.PictureUrl, g.ColorCode, g.BranchID, g.CreatedAt, g.UpdatedAt))
+		responses = append(responses, *mapIngredientGroupToResponse(g.ID, g.Name, g.NameI18n, g.PictureUrl, g.ColorCode, g.CreatedAt, g.UpdatedAt))
 	}
 
 	return responses, nil
@@ -253,7 +168,7 @@ func (i *IngredientS) UpdateIngredientGroup(ctx context.Context, groupID string,
 		return nil, fmt.Errorf("failed to update ingredient group: %w", err)
 	}
 
-	return mapIngredientGroupToResponse(group.ID, group.Name, group.NameI18n, group.PictureUrl, group.ColorCode, group.BranchID, group.CreatedAt, group.UpdatedAt), nil
+	return mapIngredientGroupToResponse(group.ID, group.Name, group.NameI18n, group.PictureUrl, group.ColorCode, group.CreatedAt, group.UpdatedAt), nil
 }
 
 // DeleteIngredientGroup soft deletes an ingredient group
@@ -462,7 +377,6 @@ func (i *IngredientS) CreateIngredient(ctx context.Context, name string, nameI18
 		GroupID:     groupUUID,
 		Measurement: measurementNullable,
 		PictureUrl:  pictureUrl,
-		BrandID:     pgtype.UUID{},
 		ColorCode:   colorCode,
 	})
 	if err != nil {
@@ -573,15 +487,6 @@ func (i *IngredientS) UpdateIngredient(ctx context.Context, ingredientID string,
 		finalGroupID = pgtype.UUID{Bytes: groupUUID, Valid: true}
 	}
 
-	finalBrandID := existing.BrandID
-	if brandID != nil && *brandID != "" {
-		brandUUID, err := uuid.Parse(*brandID)
-		if err != nil {
-			return nil, fmt.Errorf("invalid brand_id: %w", err)
-		}
-		finalBrandID = pgtype.UUID{Bytes: brandUUID, Valid: true}
-	}
-
 	finalMeasurement := existing.Measurement
 	if measurement != nil && *measurement != "" {
 		finalMeasurement = pg.NullMeasurementType{MeasurementType: pg.MeasurementType(*measurement), Valid: true}
@@ -599,7 +504,6 @@ func (i *IngredientS) UpdateIngredient(ctx context.Context, ingredientID string,
 		GroupID:     finalGroupID,
 		Measurement: finalMeasurement,
 		PictureUrl:  pictureUrl,
-		BrandID:     finalBrandID,
 		ColorCode:   finalColorCode,
 	})
 	if err != nil {
@@ -1043,23 +947,7 @@ func toIngredientStockResponse(stock any) *model.IngredientStockResponse {
 	)
 
 	switch s := stock.(type) {
-	case pg.CreateIngredientStockRow:
-		id, ingredientID, quantity, branchID, storageID, createdAtDB, updatedAtDB = s.ID, s.IngredientID, s.Quantity, s.BranchID, s.StorageID, s.CreatedAt, s.UpdatedAt
-	case pg.GetIngredientStockByIDRow:
-		id, ingredientID, quantity, branchID, storageID, createdAtDB, updatedAtDB = s.ID, s.IngredientID, s.Quantity, s.BranchID, s.StorageID, s.CreatedAt, s.UpdatedAt
-	case pg.GetStockByIngredientAndBranchRow:
-		id, ingredientID, quantity, branchID, storageID, createdAtDB, updatedAtDB = s.ID, s.IngredientID, s.Quantity, s.BranchID, s.StorageID, s.CreatedAt, s.UpdatedAt
-	case pg.GetAllIngredientStockRow:
-		id, ingredientID, quantity, branchID, storageID, createdAtDB, updatedAtDB = s.ID, s.IngredientID, s.Quantity, s.BranchID, s.StorageID, s.CreatedAt, s.UpdatedAt
-	case pg.GetStockByBranchIDRow:
-		id, ingredientID, quantity, branchID, storageID, createdAtDB, updatedAtDB = s.ID, s.IngredientID, s.Quantity, s.BranchID, s.StorageID, s.CreatedAt, s.UpdatedAt
-	case pg.GetStockByIngredientIDRow:
-		id, ingredientID, quantity, branchID, storageID, createdAtDB, updatedAtDB = s.ID, s.IngredientID, s.Quantity, s.BranchID, s.StorageID, s.CreatedAt, s.UpdatedAt
-	case pg.UpdateIngredientStockRow:
-		id, ingredientID, quantity, branchID, storageID, createdAtDB, updatedAtDB = s.ID, s.IngredientID, s.Quantity, s.BranchID, s.StorageID, s.CreatedAt, s.UpdatedAt
-	case pg.AddToIngredientStockRow:
-		id, ingredientID, quantity, branchID, storageID, createdAtDB, updatedAtDB = s.ID, s.IngredientID, s.Quantity, s.BranchID, s.StorageID, s.CreatedAt, s.UpdatedAt
-	case pg.RemoveFromIngredientStockRow:
+	case pg.IngredientStock:
 		id, ingredientID, quantity, branchID, storageID, createdAtDB, updatedAtDB = s.ID, s.IngredientID, s.Quantity, s.BranchID, s.StorageID, s.CreatedAt, s.UpdatedAt
 	default:
 		return nil
@@ -1117,7 +1005,7 @@ func (i *IngredientS) GetIngredientGroupByIDWithLang(ctx context.Context, groupI
 		return nil, fmt.Errorf("failed to get ingredient group: %w", err)
 	}
 
-	return mapIngredientGroupToResponse(group.ID, group.Name, group.NameI18n, group.PictureUrl, group.ColorCode, group.BranchID, group.CreatedAt, group.UpdatedAt), nil
+	return mapIngredientGroupToResponse(group.ID, group.Name, group.NameI18n, group.PictureUrl, group.ColorCode, group.CreatedAt, group.UpdatedAt), nil
 }
 
 // GetAllIngredientGroupsWithLang retrieves all ingredient groups with language support
@@ -1133,7 +1021,7 @@ func (i *IngredientS) GetAllIngredientGroupsWithLang(ctx context.Context, lang s
 
 	var responses []model.IngredientGroupResponse
 	for _, group := range groups {
-		responses = append(responses, *mapIngredientGroupToResponse(group.ID, group.Name, group.NameI18n, group.PictureUrl, group.ColorCode, group.BranchID, group.CreatedAt, group.UpdatedAt))
+		responses = append(responses, *mapIngredientGroupToResponse(group.ID, group.Name, group.NameI18n, group.PictureUrl, group.ColorCode, group.CreatedAt, group.UpdatedAt))
 	}
 	return responses, nil
 }

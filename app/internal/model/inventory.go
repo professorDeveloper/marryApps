@@ -58,8 +58,6 @@ type InventoryItemComputedResponse struct {
 	IngredientMeasurement *string `json:"ingredient_measurement,omitempty" example:"kg"`
 	IngredientPictureUrl  *string `json:"ingredient_picture_url,omitempty" example:"https://example.com/tomato.jpg"`
 	IngredientColorCode   *string `json:"ingredient_color_code,omitempty" example:"#FF5733"`
-	IngredientBrandID     *string `json:"ingredient_brand_id,omitempty" example:"123e4567-e89b-12d3-a456-426614174000"`
-
 	SystemQuantity     string `json:"system_quantity" example:"6"`
 	CountedQuantity    string `json:"counted_quantity" example:"3"`
 	DifferenceQuantity string `json:"difference_quantity" example:"-3"`

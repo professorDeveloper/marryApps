@@ -1681,9 +1681,6 @@ definitions:
       difference_quantity:
         example: "-3"
         type: string
-      ingredient_brand_id:
-        example: 123e4567-e89b-12d3-a456-426614174000
-        type: string
       ingredient_color_code:
         example: '#FF5733'
         type: string

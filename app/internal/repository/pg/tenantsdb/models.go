@@ -618,8 +618,6 @@ type Ingredient struct {
 	Measurement  NullMeasurementType `json:"measurement"`
 	PictureUrl   *string             `json:"picture_url"`
 	ColorCode    *string             `json:"color_code"`
-	BrandID      pgtype.UUID         `json:"brand_id"`
-	BranchID     pgtype.UUID         `json:"branch_id"`
 	PricePerUnit pgtype.Numeric      `json:"price_per_unit"`
 	CreatedAt    pgtype.Timestamptz  `json:"created_at"`
 	UpdatedAt    pgtype.Timestamptz  `json:"updated_at"`
@@ -632,7 +630,6 @@ type IngredientGroup struct {
 	PictureUrl *string            `json:"picture_url"`
 	ColorCode  *string            `json:"color_code"`
 	NameI18n   pgtype.UUID        `json:"name_i18n"`
-	BranchID   pgtype.UUID        `json:"branch_id"`
 	CreatedAt  pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt  pgtype.Timestamptz `json:"updated_at"`
 	DeletedAt  *int64             `json:"deleted_at"`

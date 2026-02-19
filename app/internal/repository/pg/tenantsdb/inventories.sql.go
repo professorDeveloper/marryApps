@@ -648,7 +648,6 @@ SELECT
   ing.measurement as ingredient_measurement,
   ing.picture_url as ingredient_picture_url,
   ing.color_code as ingredient_color_code,
-  ing.brand_id as ingredient_brand_id,
   COALESCE(st.quantity, 0::numeric) as system_quantity,
   ii.counted_quantity as counted_quantity,
   (ii.counted_quantity - COALESCE(st.quantity, 0::numeric))::numeric(15,6) as difference_quantity,
@@ -684,7 +683,6 @@ type GetInventoryItemsComputedAllRow struct {
 	IngredientMeasurement NullMeasurementType `json:"ingredient_measurement"`
 	IngredientPictureUrl  *string             `json:"ingredient_picture_url"`
 	IngredientColorCode   *string             `json:"ingredient_color_code"`
-	IngredientBrandID     pgtype.UUID         `json:"ingredient_brand_id"`
 	SystemQuantity        pgtype.Numeric      `json:"system_quantity"`
 	CountedQuantity       pgtype.Numeric      `json:"counted_quantity"`
 	DifferenceQuantity    pgtype.Numeric      `json:"difference_quantity"`
@@ -711,7 +709,6 @@ func (q *Queries) GetInventoryItemsComputedAll(ctx context.Context, id uuid.UUID
 			&i.IngredientMeasurement,
 			&i.IngredientPictureUrl,
 			&i.IngredientColorCode,
-			&i.IngredientBrandID,
 			&i.SystemQuantity,
 			&i.CountedQuantity,
 			&i.DifferenceQuantity,

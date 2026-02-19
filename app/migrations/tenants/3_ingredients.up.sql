@@ -1,21 +1,17 @@
 CREATE TYPE measurement_type AS ENUM ('kg', 'l', 'piece');
 
 -- ==================== INGREDIENT GROUPS ====================
--- Groups are shared across all branches (no branch_id filtering)
--- branch_id kept as nullable legacy column
+-- Groups are shared across all branches (brand-wide catalog)
 CREATE TABLE IF NOT EXISTS ingredient_groups (
   id          UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
   name        TEXT        NOT NULL,
   picture_url TEXT,
   color_code  TEXT,
   name_i18n   UUID        REFERENCES translations(id) ON DELETE SET NULL,
-  branch_id   UUID        REFERENCES branches(id) ON DELETE SET NULL,
   created_at  TIMESTAMPTZ DEFAULT NOW(),
   updated_at  TIMESTAMPTZ DEFAULT NOW(),
   deleted_at  BIGINT      DEFAULT 0
 );
-
-CREATE INDEX idx_ingredient_groups_branch_id ON ingredient_groups(branch_id) WHERE deleted_at = 0;
 
 CREATE TRIGGER update_ingredient_groups_updated_at
 BEFORE UPDATE ON ingredient_groups
@@ -23,7 +19,7 @@ FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- ==================== INGREDIENTS ====================
 -- Ingredients are shared across all branches (brand-wide catalog)
--- branch_id kept as nullable legacy column; visibility controlled via ingredient_visibility
+-- Visibility per branch is controlled via ingredient_visibility table
 CREATE TABLE IF NOT EXISTS ingredients (
   id             UUID             PRIMARY KEY DEFAULT gen_random_uuid(),
   name           TEXT             NOT NULL,
@@ -32,16 +28,13 @@ CREATE TABLE IF NOT EXISTS ingredients (
   measurement    measurement_type,
   picture_url    TEXT,
   color_code     TEXT,
-  brand_id       UUID,
-  branch_id      UUID             REFERENCES branches(id) ON DELETE SET NULL,
   price_per_unit DECIMAL(15,2)   DEFAULT 0,
   created_at     TIMESTAMPTZ DEFAULT NOW(),
   updated_at     TIMESTAMPTZ DEFAULT NOW(),
   deleted_at     BIGINT          DEFAULT 0
 );
 
-CREATE INDEX idx_ingredients_group         ON ingredients(group_id)       WHERE deleted_at = 0;
-CREATE INDEX idx_ingredients_branch_id     ON ingredients(branch_id)      WHERE deleted_at = 0;
+CREATE INDEX idx_ingredients_group          ON ingredients(group_id)       WHERE deleted_at = 0;
 CREATE INDEX idx_ingredients_price_per_unit ON ingredients(price_per_unit) WHERE deleted_at = 0;
 
 CREATE TRIGGER update_ingredients_updated_at

@@ -521,7 +521,7 @@ func (s *DeductionS) CreateDeduction(ctx context.Context, req *model.CreateDeduc
 
 			// If actualDeduct is 0, do not change stock and do not calculate amount
 			updatedQty := stockBefore
-			var updatedStock *pg.RemoveFromIngredientStockRow
+			var updatedStock *pg.IngredientStock
 			if numericToString(actualDeduct) != "0" {
 				updated, err := s.repo.Tenant(ctx).RemoveFromIngredientStock(ctx, pg.RemoveFromIngredientStockParams{
 					ID:       stock.ID,

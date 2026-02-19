@@ -739,12 +739,6 @@ func toInventoryItemComputedResponse(row pg.GetInventoryItemsComputedAllRow) *mo
 		inventoryItemID = &id
 	}
 
-	var brandID *string
-	if row.IngredientBrandID.Valid {
-		b := uuid.UUID(row.IngredientBrandID.Bytes).String()
-		brandID = &b
-	}
-
 	return &model.InventoryItemComputedResponse{
 		InventoryItemID:       inventoryItemID,
 		InventoryID:           row.InventoryID.String(),
@@ -753,7 +747,6 @@ func toInventoryItemComputedResponse(row pg.GetInventoryItemsComputedAllRow) *mo
 		IngredientMeasurement: toMeasurementTypeString(row.IngredientMeasurement),
 		IngredientPictureUrl:  row.IngredientPictureUrl,
 		IngredientColorCode:   row.IngredientColorCode,
-		IngredientBrandID:     brandID,
 		SystemQuantity:        anyNumericToStr(row.SystemQuantity),
 		CountedQuantity:       anyNumericToStr(row.CountedQuantity),
 		DifferenceQuantity:    anyNumericToStr(row.DifferenceQuantity),
