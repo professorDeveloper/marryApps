@@ -22,13 +22,27 @@ export interface BackendResponse<T> {
     code: number;
 }
 
+function extractSupplierList(payload: unknown): Supplier[] {
+    if (Array.isArray(payload)) return payload as Supplier[];
+    if (!payload || typeof payload !== 'object') return [];
+
+    const obj = payload as Record<string, unknown>;
+
+    if (Array.isArray(obj.data)) return obj.data as Supplier[];
+
+    if (obj.data && typeof obj.data === 'object') {
+        const nestedData = (obj.data as Record<string, unknown>).data;
+        if (Array.isArray(nestedData)) return nestedData as Supplier[];
+    }
+
+    return [];
+}
+
 export function useSupplierAPI() {
     const getSuppliers = useCallback(async (): Promise<Supplier[]> => {
         try {
             const response = await fetcher<BackendResponse<Supplier[]>>(endpoints.supplier.list);
-            // Some endpoints return { data: [...] } and some return the array directly. Handle both.
-            // @ts-ignore
-            return response.data || response || [];
+            return extractSupplierList(response);
         } catch (error) {
             const axiosError = error as AxiosError<any>;
             const message = axiosError?.response?.data?.message || 'Failed to fetch suppliers';

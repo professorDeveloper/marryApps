@@ -493,7 +493,9 @@
     "select": "Tanlang",
     "saving": "Saqlanmoqda...",
     "deleteConfirmTitle": "O'chirishni tasdiqlash",
-    "deleteConfirmMessage": "Haqiqatan ham ushbu yozuvni o'chirmoqchimisiz? Bu amalni bekor qilib bo'lmaydi."
+    "deleteConfirmMessage": "Haqiqatan ham ushbu yozuvni o'chirmoqchimisiz? Bu amalni bekor qilib bo'lmaydi.",
+    "created_at": "Yaratilgan vaqti",
+    "actions":"Harakatlar"
   },
   "warehouse": {
     "title": "Ombor",
@@ -1026,7 +1028,12 @@
         "date": "Sana",
         "action": "Harakat",
         "editcashier": "Kassani tahrirlash"
-
+     },
+     "transactionGroups": {
+        "title": "Tranzaksiya guruhlari",
+        "list": "Tranzaksiya guruhlari ro'yxati",
+        "details": "Tranzaksiya guruhi tafsilotlari",
+        "edit": "Tranzaksiya guruhini tahrirlash"
      }
   }
 }

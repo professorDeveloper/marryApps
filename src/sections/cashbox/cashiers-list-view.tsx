@@ -4,7 +4,6 @@ import type { ICashier } from 'src/types/cashbox';
 import { useTranslation } from 'react-i18next';
 import { useMemo, useState, useCallback } from 'react';
 
-import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import { Dialog, DialogTitle, DialogActions, DialogContent } from '@mui/material';
 
@@ -14,9 +13,6 @@ import { Iconify } from 'src/components/iconify';
 import { GenericTableView } from 'src/components/generic-table-view';
 import { CustomGridActionsCellItem } from 'src/components/custom-data-grid';
 import { useGetCashiers, useDeleteCashier } from 'src/actions/cashbox';
-import { RouterLink } from 'src/routes/components';
-import { DashboardContent } from 'src/layouts/dashboard';
-import { CustomBreadcrumbs } from 'src/components/custom-breadcrumbs';
 
 export function CashiersListView() {
     const { t } = useTranslation('menu');
@@ -49,7 +45,7 @@ export function CashiersListView() {
             },
             {
                 field: 'created_at',
-                headerName: t('common.createdAt', 'Created At'),
+                headerName: t('common.created_at', 'Created At'),
                 flex: 1,
                 minWidth: 180,
                 type: 'dateTime',
@@ -62,7 +58,7 @@ export function CashiersListView() {
                 field: 'actions',
                 type: 'actions',
                 headerName: t('common.actions', 'Actions'),
-                width: 80,
+                width: 120,
                 sortable: false,
                 filterable: false,
                 getActions: (params: any) => [
@@ -90,37 +86,23 @@ export function CashiersListView() {
 
     return (
         <>
-            <DashboardContent>
-                <CustomBreadcrumbs
-                    heading={t('cashbox.cashiers', 'Cashiers')}
-                    links={[
+            <GenericTableView
+                data={cashiers}
+                columns={columns}
+                loading={cashiersLoading}
+                breadcrumbs={{
+                    heading: t('cashbox.cashiers', 'Cashiers'),
+                    links: [
                         { name: t('dashboard', 'Dashboard'), href: paths.dashboard.root },
                         { name: t('cashbox.title', 'Cashbox'), href: paths.cashbox.root },
                         { name: t('cashbox.cashiers', 'Cashiers') },
-                    ]}
-                    action={
-                        <Button
-                            component={RouterLink}
-                            href={`/menu/cashbox/cashiers/new`}
-                            variant="contained"
-                            startIcon={<Iconify icon="mingcute:add-line" />}
-                        >
-                            {t('common.add', 'Add')}
-                        </Button>
-                    }
-                    // sx={{ mb: { xs: 3, md: 5 } }}
-                />
-
-                <GenericTableView
-                    data={cashiers}
-                    columns={columns}
-                    loading={cashiersLoading}
-                    breadcrumbs={{
-                        heading: '',
-                        links: [],
-                    }}
-                />
-            </DashboardContent>
+                    ],
+                }}
+                addButton={{
+                    label: t('common.add', 'Add'),
+                    href: `/menu/cashbox/cashiers/new`,
+                }}
+            />
 
             <Dialog
                 open={openConfirm}

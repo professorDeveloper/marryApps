@@ -645,7 +645,9 @@
     "add": "Add",
     "select": "Select",
     "deleteConfirmTitle": "Confirm Deletion",
-    "deleteConfirmMessage": "Are you sure you want to delete this record? This action cannot be undone."
+    "deleteConfirmMessage": "Are you sure you want to delete this record? This action cannot be undone.",
+    "created_at": "Created at",
+    "actions": "Actions"
   },
   "ingredients": {
     "title": "Ingredients",
@@ -1037,6 +1039,12 @@
        "transactionGroups": "Transaction Groups",
        "transactions": "Transactions",
        "report": "Cashbox Report"
+     },
+     "transactionGroups": {
+       "title": "Transaction Groups",
+       "list": "Transaction Groups List",
+       "details": "Transaction Group Details",
+       "edit": "Edit Transaction Group"
      }
   }
 }

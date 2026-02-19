@@ -61,7 +61,7 @@ export function InvoiceInfoEditView({
         const loadSuppliers = async () => {
             try {
                 const data = await getSuppliers();
-                setSuppliers(data || []);
+                setSuppliers(Array.isArray(data) ? data : []);
             } catch (error) {
                 console.error('Error loading suppliers:', error);
             }
@@ -75,7 +75,7 @@ export function InvoiceInfoEditView({
         const loadStorages = async () => {
             try {
                 const data = await getStorages();
-                setStorages(data || []);
+                setStorages(Array.isArray(data) ? data : []);
             } catch (error) {
                 console.error('Error loading storages:', error);
             }
