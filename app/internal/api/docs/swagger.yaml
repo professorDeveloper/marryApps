@@ -3071,7 +3071,7 @@ definitions:
         example: admin
         type: string
     type: object
-host: back.maryai.yurtal.tech
+host: back.staging.maryai.yurtal.tech
 info:
   contact: {}
   description: MaryAI API server with multi-language support (uz, ru, en)
