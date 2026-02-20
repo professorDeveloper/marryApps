@@ -137,6 +137,8 @@ type OrderItemResponse struct {
 
 type MarkOrderPaidRequest struct {
 	CashierID *string `json:"cashier_id,omitempty" example:"a1b2c3d4-e5f6-4a5b-8c9d-e0f1a2b3c4d5"`
+	// cash_register_id: if provided, auto-creates an income transaction
+	CashRegisterID *string `json:"cash_register_id,omitempty" example:"uuid"`
 	// payment_type: cash or card
 	PaymentType *string `json:"payment_type,omitempty" example:"cash"`
 	// discount_percent: e.g. 10 means 10%

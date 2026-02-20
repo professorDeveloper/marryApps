@@ -410,7 +410,7 @@ func (s *OrderS) UpdateOrderStatus(ctx context.Context, orderID string, status s
 	return toOrderResponse(order), nil
 }
 
-func (s *OrderS) MarkOrderPaid(ctx context.Context, orderID string, cashierID string, paymentType *string, discountPercent *string, discountAmount *string, discountComment *string) (*model.OrderResponse, error) {
+func (s *OrderS) MarkOrderPaid(ctx context.Context, orderID string, cashierID string, cashRegisterID *string, paymentType *string, discountPercent *string, discountAmount *string, discountComment *string) (*model.OrderResponse, error) {
 	oID, err := uuid.Parse(orderID)
 	if err != nil {
 		return nil, fmt.Errorf("invalid order id: %w", err)
@@ -447,6 +447,34 @@ func (s *OrderS) MarkOrderPaid(ctx context.Context, orderID string, cashierID st
 		DiscountComment: discountComment,
 	}); err != nil {
 		return nil, fmt.Errorf("failed to mark order paid: %w", err)
+	}
+
+	// Auto-create income transaction if cash register provided
+	if cashRegisterID != nil && *cashRegisterID != "" {
+		crID, parseErr := uuid.Parse(*cashRegisterID)
+		if parseErr == nil {
+			bill, billErr := s.repo.Tenant(ctx).GetBillDetails(ctx, oID)
+			if billErr == nil {
+				descStr := fmt.Sprintf("Bill payment #%d", bill.BillNo)
+				txParams := pg.CreateTransactionParams{
+					ID:             uuid.New(),
+					Type:           pg.TransactionTypeBillPayment,
+					CashRegisterID: pgtype.UUID{Bytes: crID, Valid: true},
+					Amount:         bill.GrandTotal,
+					Description:    &descStr,
+					Date:           time.Now(),
+					UserID:         pgtype.UUID{Bytes: cID, Valid: true},
+				}
+				if paymentType != nil && *paymentType != "" {
+					txParams.PayType = pg.NullPaymentType{
+						PaymentType: pg.PaymentType(*paymentType),
+						Valid:        true,
+					}
+				}
+				// Best-effort: don't fail the payment if transaction creation fails
+				_, _ = s.repo.Tenant(ctx).CreateTransaction(ctx, txParams)
+			}
+		}
 	}
 
 	order, err := s.repo.Tenant(ctx).GetOrderByID(ctx, oID)

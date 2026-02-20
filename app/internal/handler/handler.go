@@ -592,6 +592,17 @@ func (h *Handler) Register(router *echo.Echo) {
 			groupTransactions.POST("/:id/restore", h.RestoreGroupTransaction, mw.CheckLanguage())
 		}
 
+		// Transaction management endpoints
+		transactions := api.Group("/transactions", mw.CheckAuth(h.cfg), mw.TenantMiddleware(h.repo))
+		{
+			transactions.POST("/income-expense", h.CreateIncomeExpense, mw.CheckLanguage())
+			transactions.POST("/transfer", h.CreateCashTransfer, mw.CheckLanguage())
+			transactions.GET("", h.GetAllTransactions, mw.CheckLanguage())
+			transactions.GET("/:id", h.GetTransactionByID, mw.CheckLanguage())
+			transactions.PUT("/:id", h.UpdateTransaction, mw.CheckLanguage())
+			transactions.DELETE("/:id", h.DeleteTransaction, mw.CheckLanguage())
+		}
+
 		// Transfer management endpoints
 		transfers := api.Group("/transfers", mw.CheckAuth(h.cfg), mw.TenantMiddleware(h.repo))
 		{

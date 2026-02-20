@@ -7,6 +7,7 @@ package pg
 import (
 	"database/sql/driver"
 	"fmt"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -316,6 +317,50 @@ func (ns NullTableStatus) Value() (driver.Value, error) {
 		return nil, nil
 	}
 	return string(ns.TableStatus), nil
+}
+
+type TransactionType string
+
+const (
+	TransactionTypeIncome      TransactionType = "income"
+	TransactionTypeExpense     TransactionType = "expense"
+	TransactionTypeTransfer    TransactionType = "transfer"
+	TransactionTypeBillPayment TransactionType = "bill_payment"
+)
+
+func (e *TransactionType) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = TransactionType(s)
+	case string:
+		*e = TransactionType(s)
+	default:
+		return fmt.Errorf("unsupported scan type for TransactionType: %T", src)
+	}
+	return nil
+}
+
+type NullTransactionType struct {
+	TransactionType TransactionType `json:"transaction_type"`
+	Valid           bool            `json:"valid"` // Valid is true if TransactionType is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullTransactionType) Scan(value interface{}) error {
+	if value == nil {
+		ns.TransactionType, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.TransactionType.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullTransactionType) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.TransactionType), nil
 }
 
 type TransferStatus string
@@ -820,6 +865,26 @@ type Supplier struct {
 	CreatedAt   pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
 	DeletedAt   *int64             `json:"deleted_at"`
+}
+
+type Transaction struct {
+	ID                 uuid.UUID          `json:"id"`
+	Type               TransactionType    `json:"type"`
+	CashRegisterID     pgtype.UUID        `json:"cash_register_id"`
+	FromCashRegisterID pgtype.UUID        `json:"from_cash_register_id"`
+	ToCashRegisterID   pgtype.UUID        `json:"to_cash_register_id"`
+	FromBranchID       pgtype.UUID        `json:"from_branch_id"`
+	ToBranchID         pgtype.UUID        `json:"to_branch_id"`
+	GroupTransactionID pgtype.UUID        `json:"group_transaction_id"`
+	Amount             pgtype.Numeric     `json:"amount"`
+	Description        *string            `json:"description"`
+	PayType            NullPaymentType    `json:"pay_type"`
+	Date               time.Time          `json:"date"`
+	UserID             pgtype.UUID        `json:"user_id"`
+	BranchID           pgtype.UUID        `json:"branch_id"`
+	CreatedAt          pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt          pgtype.Timestamptz `json:"updated_at"`
+	DeletedAt          *int64             `json:"deleted_at"`
 }
 
 type Transfer struct {

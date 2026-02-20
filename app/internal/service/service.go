@@ -350,7 +350,7 @@ type OrderI interface {
 	GetOrdersByTableID(ctx context.Context, tableID string) ([]model.OrderResponse, error)
 	UpdateOrder(ctx context.Context, orderID string, req model.UpdateOrderRequest) (*model.OrderResponse, error)
 	UpdateOrderStatus(ctx context.Context, orderID string, status string) (*model.OrderResponse, error)
-	MarkOrderPaid(ctx context.Context, orderID string, cashierID string, paymentType *string, discountPercent *string, discountAmount *string, discountComment *string) (*model.OrderResponse, error)
+	MarkOrderPaid(ctx context.Context, orderID string, cashierID string, cashRegisterID *string, paymentType *string, discountPercent *string, discountAmount *string, discountComment *string) (*model.OrderResponse, error)
 	AssignWaiterToOrder(ctx context.Context, orderID string, waiterID string) (*model.OrderResponse, error)
 	AssignCashierToOrder(ctx context.Context, orderID string, cashierID string) (*model.OrderResponse, error)
 	CancelOrder(ctx context.Context, orderID string) (*model.OrderResponse, error)
@@ -431,6 +431,19 @@ type GroupTransactionI interface {
 	SearchGroupTransactions(ctx context.Context, query string, limit, offset int32) ([]*model.GroupTransactionResponse, error)
 }
 
+type TransactionI interface {
+	CreateIncomeExpense(ctx context.Context, userID string, req model.CreateIncomeExpenseRequest) (*model.TransactionResponse, error)
+	CreateTransfer(ctx context.Context, userID string, req model.CreateCashTransferRequest) (*model.TransactionResponse, error)
+	GetTransactionByID(ctx context.Context, id uuid.UUID) (*model.TransactionResponse, error)
+	GetAllTransactions(ctx context.Context, limit, offset int32) ([]model.TransactionResponse, error)
+	GetTransactionsByType(ctx context.Context, txType string, limit, offset int32) ([]model.TransactionResponse, error)
+	GetTransactionsByCashRegister(ctx context.Context, cashRegisterID string, limit, offset int32) ([]model.TransactionResponse, error)
+	GetTransactionsByDateRange(ctx context.Context, from, to time.Time, limit, offset int32) ([]model.TransactionResponse, error)
+	GetTransactionsByGroup(ctx context.Context, groupID string, limit, offset int32) ([]model.TransactionResponse, error)
+	UpdateTransaction(ctx context.Context, id uuid.UUID, req model.UpdateTransactionRequest) (*model.TransactionResponse, error)
+	DeleteTransaction(ctx context.Context, id uuid.UUID) error
+}
+
 type I interface {
 	Auth() AuthI
 	Payment() PaymentI
@@ -457,6 +470,7 @@ type I interface {
 	Transfer() TransferI
 	Cash() CashRegisterI
 	GroupTransaction() GroupTransactionI
+	Transaction() TransactionI
 }
 
 type Service struct {
@@ -485,6 +499,7 @@ type Service struct {
 	transfer     TransferI
 	cash             CashRegisterI
 	groupTransaction GroupTransactionI
+	transaction      TransactionI
 }
 
 func New(cfg *config.Config, repo *repository.Repository, clickClient *paymentClick.Client, paymeClient *paymentPayme.Client, minioClient *minio.Minio) *Service {
@@ -514,6 +529,7 @@ func New(cfg *config.Config, repo *repository.Repository, clickClient *paymentCl
 		transfer:     NewTransferS(repo),
 		cash:             NewCashRegisterS(repo),
 		groupTransaction: NewGroupTransactionS(repo),
+		transaction:      NewTransactionS(repo),
 	}
 }
 
@@ -614,4 +630,8 @@ func (s *Service) Cash() CashRegisterI {
 
 func (s *Service) GroupTransaction() GroupTransactionI {
 	return s.groupTransaction
+}
+
+func (s *Service) Transaction() TransactionI {
+	return s.transaction
 }

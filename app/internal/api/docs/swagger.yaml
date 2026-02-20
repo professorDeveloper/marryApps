@@ -438,6 +438,42 @@ definitions:
     - hall_id
     - number
     type: object
+  model.CreateCashTransferRequest:
+    properties:
+      amount:
+        example: "50000"
+        type: string
+      date:
+        example: "2026-02-20T09:00:00Z"
+        type: string
+      description:
+        example: Branch cash transfer
+        type: string
+      from_branch_id:
+        description: 'Optional: cross-branch transfer. If omitted, uses current branch
+          for both.'
+        example: uuid
+        type: string
+      from_cash_register_id:
+        example: uuid
+        type: string
+      group_transaction_id:
+        example: uuid
+        type: string
+      pay_type:
+        example: cash
+        type: string
+      to_branch_id:
+        example: uuid
+        type: string
+      to_cash_register_id:
+        example: uuid
+        type: string
+    required:
+    - amount
+    - from_cash_register_id
+    - to_cash_register_id
+    type: object
   model.CreateCategoryRequest:
     properties:
       color_code:
@@ -745,6 +781,38 @@ definitions:
         type: string
       width:
         type: integer
+    type: object
+  model.CreateIncomeExpenseRequest:
+    properties:
+      amount:
+        example: "150000"
+        type: string
+      cash_register_id:
+        example: uuid
+        type: string
+      date:
+        example: "2026-02-20T09:00:00Z"
+        type: string
+      description:
+        example: Salary payment
+        type: string
+      group_transaction_id:
+        example: uuid
+        type: string
+      pay_type:
+        example: cash
+        type: string
+      type:
+        allOf:
+        - $ref: '#/definitions/model.TransactionType'
+        enum:
+        - income
+        - expense
+        example: income
+    required:
+    - amount
+    - cash_register_id
+    - type
     type: object
   model.CreateIngredientGroupRequest:
     properties:
@@ -2004,6 +2072,10 @@ definitions:
     type: object
   model.MarkOrderPaidRequest:
     properties:
+      cash_register_id:
+        description: 'cash_register_id: if provided, auto-creates an income transaction'
+        example: uuid
+        type: string
       cashier_id:
         example: a1b2c3d4-e5f6-4a5b-8c9d-e0f1a2b3c4d5
         type: string
@@ -2362,6 +2434,56 @@ definitions:
     x-enum-varnames:
     - TableStatusFree
     - TableStatusBusy
+  model.TransactionResponse:
+    properties:
+      amount:
+        type: string
+      branch_id:
+        type: string
+      cash_register_id:
+        description: income/expense
+        type: string
+      created_at:
+        type: string
+      date:
+        type: string
+      description:
+        type: string
+      from_branch_id:
+        type: string
+      from_cash_register_id:
+        description: transfer
+        type: string
+      group_transaction_id:
+        description: common
+        type: string
+      id:
+        type: string
+      pay_type:
+        type: string
+      to_branch_id:
+        type: string
+      to_cash_register_id:
+        type: string
+      type:
+        $ref: '#/definitions/model.TransactionType'
+      updated_at:
+        type: string
+      user_id:
+        type: string
+    type: object
+  model.TransactionType:
+    enum:
+    - income
+    - expense
+    - transfer
+    - bill_payment
+    type: string
+    x-enum-varnames:
+    - TransactionTypeIncome
+    - TransactionTypeExpense
+    - TransactionTypeTransfer
+    - TransactionTypeBillPayment
   model.TransferItemResponse:
     properties:
       created_at:
@@ -2983,6 +3105,20 @@ definitions:
         example: "998901234567"
         type: string
     type: object
+  model.UpdateTransactionRequest:
+    properties:
+      amount:
+        example: "200000"
+        type: string
+      date:
+        type: string
+      description:
+        example: Updated description
+        type: string
+      pay_type:
+        example: card
+        type: string
+    type: object
   model.UpdateTranslationRequest:
     properties:
       en:
@@ -3068,7 +3204,7 @@ definitions:
         example: admin
         type: string
     type: object
-host: back.maryai.yurtal.tech
+host: back.staging.maryai.yurtal.tech
 info:
   contact: {}
   description: MaryAI API server with multi-language support (uz, ru, en)
@@ -15263,6 +15399,209 @@ paths:
       summary: Sync push
       tags:
       - Sync
+  /api/v1/transactions:
+    get:
+      description: 'Supports filters: type (income|expense|transfer), cash_register_id,
+        group_id, date_from, date_to'
+      parameters:
+      - description: 'Filter by type: income, expense, transfer'
+        in: query
+        name: type
+        type: string
+      - description: Filter by cash register
+        in: query
+        name: cash_register_id
+        type: string
+      - description: Filter by group transaction
+        in: query
+        name: group_id
+        type: string
+      - description: Start date (RFC3339)
+        in: query
+        name: date_from
+        type: string
+      - description: End date (RFC3339)
+        in: query
+        name: date_to
+        type: string
+      - description: Limit (default 20)
+        in: query
+        name: limit
+        type: integer
+      - description: Offset (default 0)
+        in: query
+        name: offset
+        type: integer
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/model.TransactionResponse'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get all transactions
+      tags:
+      - transactions
+  /api/v1/transactions/{id}:
+    delete:
+      parameters:
+      - description: Transaction ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete transaction
+      tags:
+      - transactions
+    get:
+      parameters:
+      - description: Transaction ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.TransactionResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get transaction by ID
+      tags:
+      - transactions
+    put:
+      parameters:
+      - description: Transaction ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Update data
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/model.UpdateTransactionRequest'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.TransactionResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update transaction
+      tags:
+      - transactions
+  /api/v1/transactions/income-expense:
+    post:
+      consumes:
+      - application/json
+      description: Create a new income or expense transaction. Type must be "income"
+        or "expense".
+      parameters:
+      - description: Transaction data
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/model.CreateIncomeExpenseRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/model.TransactionResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create income or expense transaction
+      tags:
+      - transactions
+  /api/v1/transactions/transfer:
+    post:
+      consumes:
+      - application/json
+      description: Transfer an amount between two cash registers (optionally across
+        branches)
+      parameters:
+      - description: Transfer data
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/model.CreateCashTransferRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/model.TransactionResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Transfer between cash registers
+      tags:
+      - transactions
   /api/v1/transfers:
     get:
       description: Get all transfers visible to the current branch

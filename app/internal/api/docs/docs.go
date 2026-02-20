@@ -18740,6 +18740,323 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/transactions": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Supports filters: type (income|expense|transfer), cash_register_id, group_id, date_from, date_to",
+                "tags": [
+                    "transactions"
+                ],
+                "summary": "Get all transactions",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Filter by type: income, expense, transfer",
+                        "name": "type",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by cash register",
+                        "name": "cash_register_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by group transaction",
+                        "name": "group_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Start date (RFC3339)",
+                        "name": "date_from",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "End date (RFC3339)",
+                        "name": "date_to",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Limit (default 20)",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Offset (default 0)",
+                        "name": "offset",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/model.TransactionResponse"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/transactions/income-expense": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Create a new income or expense transaction. Type must be \"income\" or \"expense\".",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "transactions"
+                ],
+                "summary": "Create income or expense transaction",
+                "parameters": [
+                    {
+                        "description": "Transaction data",
+                        "name": "input",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.CreateIncomeExpenseRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/model.TransactionResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/transactions/transfer": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Transfer an amount between two cash registers (optionally across branches)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "transactions"
+                ],
+                "summary": "Transfer between cash registers",
+                "parameters": [
+                    {
+                        "description": "Transfer data",
+                        "name": "input",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.CreateCashTransferRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/model.TransactionResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/transactions/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "transactions"
+                ],
+                "summary": "Get transaction by ID",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Transaction ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.TransactionResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "transactions"
+                ],
+                "summary": "Update transaction",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Transaction ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Update data",
+                        "name": "input",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.UpdateTransactionRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.TransactionResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "transactions"
+                ],
+                "summary": "Delete transaction",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Transaction ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/transfers": {
             "get": {
                 "security": [
@@ -20709,6 +21026,53 @@ const docTemplate = `{
                 }
             }
         },
+        "model.CreateCashTransferRequest": {
+            "type": "object",
+            "required": [
+                "amount",
+                "from_cash_register_id",
+                "to_cash_register_id"
+            ],
+            "properties": {
+                "amount": {
+                    "type": "string",
+                    "example": "50000"
+                },
+                "date": {
+                    "type": "string",
+                    "example": "2026-02-20T09:00:00Z"
+                },
+                "description": {
+                    "type": "string",
+                    "example": "Branch cash transfer"
+                },
+                "from_branch_id": {
+                    "description": "Optional: cross-branch transfer. If omitted, uses current branch for both.",
+                    "type": "string",
+                    "example": "uuid"
+                },
+                "from_cash_register_id": {
+                    "type": "string",
+                    "example": "uuid"
+                },
+                "group_transaction_id": {
+                    "type": "string",
+                    "example": "uuid"
+                },
+                "pay_type": {
+                    "type": "string",
+                    "example": "cash"
+                },
+                "to_branch_id": {
+                    "type": "string",
+                    "example": "uuid"
+                },
+                "to_cash_register_id": {
+                    "type": "string",
+                    "example": "uuid"
+                }
+            }
+        },
         "model.CreateCategoryRequest": {
             "type": "object",
             "properties": {
@@ -21140,6 +21504,52 @@ const docTemplate = `{
                 },
                 "width": {
                     "type": "integer"
+                }
+            }
+        },
+        "model.CreateIncomeExpenseRequest": {
+            "type": "object",
+            "required": [
+                "amount",
+                "cash_register_id",
+                "type"
+            ],
+            "properties": {
+                "amount": {
+                    "type": "string",
+                    "example": "150000"
+                },
+                "cash_register_id": {
+                    "type": "string",
+                    "example": "uuid"
+                },
+                "date": {
+                    "type": "string",
+                    "example": "2026-02-20T09:00:00Z"
+                },
+                "description": {
+                    "type": "string",
+                    "example": "Salary payment"
+                },
+                "group_transaction_id": {
+                    "type": "string",
+                    "example": "uuid"
+                },
+                "pay_type": {
+                    "type": "string",
+                    "example": "cash"
+                },
+                "type": {
+                    "enum": [
+                        "income",
+                        "expense"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/model.TransactionType"
+                        }
+                    ],
+                    "example": "income"
                 }
             }
         },
@@ -22932,6 +23342,11 @@ const docTemplate = `{
         "model.MarkOrderPaidRequest": {
             "type": "object",
             "properties": {
+                "cash_register_id": {
+                    "description": "cash_register_id: if provided, auto-creates an income transaction",
+                    "type": "string",
+                    "example": "uuid"
+                },
                 "cashier_id": {
                     "type": "string",
                     "example": "a1b2c3d4-e5f6-4a5b-8c9d-e0f1a2b3c4d5"
@@ -23444,6 +23859,77 @@ const docTemplate = `{
             "x-enum-varnames": [
                 "TableStatusFree",
                 "TableStatusBusy"
+            ]
+        },
+        "model.TransactionResponse": {
+            "type": "object",
+            "properties": {
+                "amount": {
+                    "type": "string"
+                },
+                "branch_id": {
+                    "type": "string"
+                },
+                "cash_register_id": {
+                    "description": "income/expense",
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "date": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "from_branch_id": {
+                    "type": "string"
+                },
+                "from_cash_register_id": {
+                    "description": "transfer",
+                    "type": "string"
+                },
+                "group_transaction_id": {
+                    "description": "common",
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "pay_type": {
+                    "type": "string"
+                },
+                "to_branch_id": {
+                    "type": "string"
+                },
+                "to_cash_register_id": {
+                    "type": "string"
+                },
+                "type": {
+                    "$ref": "#/definitions/model.TransactionType"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "user_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "model.TransactionType": {
+            "type": "string",
+            "enum": [
+                "income",
+                "expense",
+                "transfer",
+                "bill_payment"
+            ],
+            "x-enum-varnames": [
+                "TransactionTypeIncome",
+                "TransactionTypeExpense",
+                "TransactionTypeTransfer",
+                "TransactionTypeBillPayment"
             ]
         },
         "model.TransferItemResponse": {
@@ -24335,6 +24821,26 @@ const docTemplate = `{
                 }
             }
         },
+        "model.UpdateTransactionRequest": {
+            "type": "object",
+            "properties": {
+                "amount": {
+                    "type": "string",
+                    "example": "200000"
+                },
+                "date": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string",
+                    "example": "Updated description"
+                },
+                "pay_type": {
+                    "type": "string",
+                    "example": "card"
+                }
+            }
+        },
         "model.UpdateTranslationRequest": {
             "type": "object",
             "properties": {
@@ -24470,7 +24976,7 @@ const docTemplate = `{
 // SwaggerInfo holds exported Swagger Info so clients can modify it
 var SwaggerInfo = &swag.Spec{
 	Version:          "1.0",
-	Host:             "back.maryai.yurtal.tech",
+	Host:             "back.staging.maryai.yurtal.tech",
 	BasePath:         "/",
 	Schemes:          []string{"https"},
 	Title:            "MaryAI API",
