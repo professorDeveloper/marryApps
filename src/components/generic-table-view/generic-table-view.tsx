@@ -59,6 +59,8 @@ export interface GenericTableConfig<T = any> {
     label: string;
     href: string;
   };
+  // Custom header actions
+  headerActions?: React.ReactNode;
 
   // Filter options
   filterOptions?: {
@@ -101,6 +103,7 @@ export function GenericTableView<T extends Record<string, any>>({
   columns,
   breadcrumbs,
   addButton,
+  headerActions,
   filterOptions = {},
   onDeleteRow,
   onDeleteRows,
@@ -249,15 +252,17 @@ export function GenericTableView<T extends Record<string, any>>({
           heading={breadcrumbs.heading}
           links={breadcrumbs.links}
           action={
-            addButton && (
-              <Button
-                component={RouterLink}
-                href={addButton.href}
-                variant="contained"
-                startIcon={<Iconify icon="mingcute:add-line" />}
-              >
-                {addButton.label}
-              </Button>
+            headerActions || (
+              addButton && (
+                <Button
+                  component={RouterLink}
+                  href={addButton.href}
+                  variant="contained"
+                  startIcon={<Iconify icon="mingcute:add-line" />}
+                >
+                  {addButton.label}
+                </Button>
+              )
             )
           }
           sx={{ mb: { xs: 2, md: 3 } }}

@@ -64,7 +64,7 @@ import { IngredientGroupEditViewWrapper } from 'src/sections/warehouse/ingredien
 import { CashiersListView } from 'src/sections/cashbox/cashiers-list-view';
 import { CashierEditView } from 'src/sections/cashbox/cashiers-edit-view';
 import { CashRegisterEditView } from 'src/sections/cashbox/transaction-groups-edit-view';
-import { TransactionsEditView } from 'src/sections/cashbox/transfer-edit-view';
+import { TransactionsEditView } from 'src/sections/cashbox/transactions-edit-view';
 
 const CashiersPage = lazy(() => import('src/pages/dashboard/cashbox/cashiers'));
 const TransactionGroupsPage = lazy(() => import('src/pages/dashboard/cashbox/transaction-groups'));

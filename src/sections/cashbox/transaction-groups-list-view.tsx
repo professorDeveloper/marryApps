@@ -1,5 +1,4 @@
 import type { GridColDef } from '@mui/x-data-grid';
-import type { ICashRegister } from 'src/types/cashbox';
 
 import { useTranslation } from 'react-i18next';
 import { useMemo, useState, useCallback } from 'react';
@@ -8,16 +7,18 @@ import Button from '@mui/material/Button';
 import { Dialog, DialogTitle, DialogActions, DialogContent } from '@mui/material';
 
 import { paths } from 'src/routes/paths';
+
+import { useGetGroupTransactions, useDeleteGroupTransaction } from 'src/actions/cashbox';
+
 import { toast } from 'src/components/snackbar';
 import { Iconify } from 'src/components/iconify';
 import { GenericTableView } from 'src/components/generic-table-view';
 import { CustomGridActionsCellItem } from 'src/components/custom-data-grid';
-import { useGetCashRegisters, useDeleteCashRegister } from 'src/actions/cashbox';
 
 export function CashRegistersListView() {
     const { t } = useTranslation('menu');
-    const { cashRegisters, cashRegistersLoading } = useGetCashRegisters();
-    const { onDelete } = useDeleteCashRegister();
+    const { groupTransactions, groupTransactionsLoading } = useGetGroupTransactions();
+    const { onDelete } = useDeleteGroupTransaction();
 
     const [deleteId, setDeleteId] = useState<string | null>(null);
     const [openConfirm, setOpenConfirm] = useState(false);
@@ -87,9 +88,9 @@ export function CashRegistersListView() {
     return (
         <>
             <GenericTableView
-                data={cashRegisters}
+                data={groupTransactions}
                 columns={columns}
-                loading={cashRegistersLoading}
+                loading={groupTransactionsLoading}
                 breadcrumbs={{
                     heading: t('cashbox.transactionGroups.title', 'Transaction Groups'),
                     links: [

@@ -243,6 +243,7 @@ export const endpoints = {
   },
   users: {
     list: '/api/v1/users',
+    me: '/api/v1/user/me',
     byRole: (role: string) => `/api/v1/users/by-role?role=${role}`,
     details: (id: string) => `/api/v1/users/${id}`,
     create: '/api/v1/users',
@@ -306,11 +307,12 @@ export const endpoints = {
       details: (id: string) => `/api/v1/group-transactions/${id}`,
     },
     cashiers: {
-      root: '/api/v1/group-transactions',
-      details: (id: string) => `/api/v1/group-transactions/${id}`,
+      root: '/api/v1/cash-registers',
+      details: (id: string) => `/api/v1/cash-registers/${id}`,
     },
     cashRegisters: {
       root: '/api/v1/cash-registers',
+      byBranch: (branchId: string) => `/api/v1/cash-registers/branch/${branchId}`,
       details: (id: string) => `/api/v1/cash-registers/${id}`,
     },
     transactions: {
