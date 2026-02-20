@@ -322,10 +322,12 @@ func (ns NullTableStatus) Value() (driver.Value, error) {
 type TransactionType string
 
 const (
-	TransactionTypeIncome      TransactionType = "income"
-	TransactionTypeExpense     TransactionType = "expense"
-	TransactionTypeTransfer    TransactionType = "transfer"
-	TransactionTypeBillPayment TransactionType = "bill_payment"
+	TransactionTypeIncome          TransactionType = "income"
+	TransactionTypeExpense         TransactionType = "expense"
+	TransactionTypeTransfer        TransactionType = "transfer"
+	TransactionTypeBillPayment     TransactionType = "bill_payment"
+	TransactionTypeTransferIncome  TransactionType = "transfer_income"
+	TransactionTypeTransferExpense TransactionType = "transfer_expense"
 )
 
 func (e *TransactionType) Scan(src interface{}) error {

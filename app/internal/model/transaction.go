@@ -6,10 +6,11 @@ import "time"
 type TransactionType string
 
 const (
-	TransactionTypeIncome      TransactionType = "income"
-	TransactionTypeExpense     TransactionType = "expense"
-	TransactionTypeTransfer    TransactionType = "transfer"
-	TransactionTypeBillPayment TransactionType = "bill_payment"
+	TransactionTypeIncome         TransactionType = "income"
+	TransactionTypeExpense        TransactionType = "expense"
+	TransactionTypeTransferIncome  TransactionType = "transfer_income"
+	TransactionTypeTransferExpense TransactionType = "transfer_expense"
+	TransactionTypeBillPayment    TransactionType = "bill_payment"
 )
 
 // CreateIncomeExpenseRequest is used for income and expense transactions

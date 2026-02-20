@@ -14,6 +14,7 @@ sql:
       - "../../app/migrations/tenants/9_extras.up.sql"
       - "../../app/migrations/tenants/10_seed.up.sql"
       - "../../app/migrations/tenants/11_transaction_category.up.sql"
+      - "../../app/migrations/tenants/12_transaction_type_update.up.sql"
 
 
     gen:

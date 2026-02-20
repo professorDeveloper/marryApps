@@ -35,7 +35,7 @@ INSERT INTO transactions (
   group_transaction_id, amount, description, pay_type, date, user_id, branch_id
 )
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13,
-        NULLIF(current_setting('app.branch_id', true), '')::uuid)
+        COALESCE($14::uuid, NULLIF(current_setting('app.branch_id', true), '')::uuid))
 RETURNING id, type,
           cash_register_id,
           from_cash_register_id, to_cash_register_id, from_branch_id, to_branch_id,
@@ -57,6 +57,7 @@ type CreateTransactionParams struct {
 	PayType            NullPaymentType `json:"pay_type"`
 	Date               time.Time       `json:"date"`
 	UserID             pgtype.UUID     `json:"user_id"`
+	BranchID           pgtype.UUID     `json:"branch_id"`
 }
 
 // ==================== TRANSACTION QUERIES ====================
@@ -75,6 +76,7 @@ func (q *Queries) CreateTransaction(ctx context.Context, arg CreateTransactionPa
 		arg.PayType,
 		arg.Date,
 		arg.UserID,
+		arg.BranchID,
 	)
 	var i Transaction
 	err := row.Scan(
@@ -213,7 +215,7 @@ SELECT id, type,
        created_at, updated_at, deleted_at
 FROM transactions
 WHERE branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-  AND (cash_register_id = $1 OR from_cash_register_id = $1 OR to_cash_register_id = $1)
+  AND cash_register_id = $1
   AND deleted_at = 0
 ORDER BY date DESC
 LIMIT $2 OFFSET $3
