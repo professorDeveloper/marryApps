@@ -325,9 +325,9 @@ const (
 	TransactionTypeIncome          TransactionType = "income"
 	TransactionTypeExpense         TransactionType = "expense"
 	TransactionTypeTransfer        TransactionType = "transfer"
-	TransactionTypeBillPayment     TransactionType = "bill_payment"
 	TransactionTypeTransferIncome  TransactionType = "transfer_income"
 	TransactionTypeTransferExpense TransactionType = "transfer_expense"
+	TransactionTypeBillPayment     TransactionType = "bill_payment"
 )
 
 func (e *TransactionType) Scan(src interface{}) error {

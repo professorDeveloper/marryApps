@@ -18941,6 +18941,68 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/transactions/report": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns summary by transaction type, income/expense grouped by category, and day balance totals.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "transactions"
+                ],
+                "summary": "Cash register report",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "example": "\"2026-02-01T00:00:00Z\"",
+                        "description": "Start datetime (RFC3339)",
+                        "name": "from",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "example": "\"2026-02-20T23:59:59Z\"",
+                        "description": "End datetime (RFC3339)",
+                        "name": "to",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by cash register UUID",
+                        "name": "cash_register_id",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.CashReportResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/transactions/transfer": {
             "post": {
                 "security": [
@@ -20737,6 +20799,96 @@ const docTemplate = `{
                 "updated_at": {
                     "type": "string",
                     "example": "2021-01-01T00:00:00Z"
+                }
+            }
+        },
+        "model.CashReportGroupRow": {
+            "type": "object",
+            "properties": {
+                "card_total": {
+                    "type": "string"
+                },
+                "cash_total": {
+                    "type": "string"
+                },
+                "group_id": {
+                    "type": "string"
+                },
+                "group_name": {
+                    "type": "string"
+                },
+                "total": {
+                    "type": "string"
+                },
+                "type": {
+                    "type": "string"
+                }
+            }
+        },
+        "model.CashReportResponse": {
+            "type": "object",
+            "properties": {
+                "balance": {
+                    "description": "Balance row: (income types) − (expense types)",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/model.CashReportSummaryRow"
+                        }
+                    ]
+                },
+                "closing_balance": {
+                    "type": "string"
+                },
+                "day_balance": {
+                    "type": "string"
+                },
+                "expense_groups": {
+                    "description": "Expense detail panel: grouped by category",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.CashReportGroupRow"
+                    }
+                },
+                "income_groups": {
+                    "description": "Income detail panel: grouped by category",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.CashReportGroupRow"
+                    }
+                },
+                "opening_balance": {
+                    "description": "Day summary",
+                    "type": "string"
+                },
+                "summary": {
+                    "description": "Summary table: one row per transaction type",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.CashReportSummaryRow"
+                    }
+                },
+                "total_expense": {
+                    "type": "string"
+                },
+                "total_income": {
+                    "type": "string"
+                }
+            }
+        },
+        "model.CashReportSummaryRow": {
+            "type": "object",
+            "properties": {
+                "card_total": {
+                    "type": "string"
+                },
+                "cash_total": {
+                    "type": "string"
+                },
+                "total": {
+                    "type": "string"
+                },
+                "type": {
+                    "type": "string"
                 }
             }
         },

@@ -443,6 +443,7 @@ type TransactionI interface {
 	GetTransactionsByGroup(ctx context.Context, groupID string, limit, offset int32) ([]model.TransactionResponse, error)
 	UpdateTransaction(ctx context.Context, id uuid.UUID, req model.UpdateTransactionRequest) (*model.TransactionResponse, error)
 	DeleteTransaction(ctx context.Context, id uuid.UUID) error
+	GetCashReport(ctx context.Context, req model.CashReportRequest) (*model.CashReportResponse, error)
 }
 
 type I interface {

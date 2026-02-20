@@ -371,3 +371,192 @@ func toTransactionResponses(rows []pg.Transaction) []model.TransactionResponse {
 	}
 	return out
 }
+
+// GetCashReport builds the full cash register report for the given date range.
+func (s *TransactionS) GetCashReport(ctx context.Context, req model.CashReportRequest) (*model.CashReportResponse, error) {
+	from, err := time.Parse(time.RFC3339, req.From)
+	if err != nil {
+		return nil, fmt.Errorf("invalid from date: %w", err)
+	}
+	to, err := time.Parse(time.RFC3339, req.To)
+	if err != nil {
+		return nil, fmt.Errorf("invalid to date: %w", err)
+	}
+
+	var crPg pgtype.UUID
+	if req.CashRegisterID != nil && *req.CashRegisterID != "" {
+		id, err := uuid.Parse(*req.CashRegisterID)
+		if err != nil {
+			return nil, fmt.Errorf("invalid cash_register_id: %w", err)
+		}
+		crPg = pgtype.UUID{Bytes: id, Valid: true}
+	}
+
+	repo := s.repo.Tenant(ctx)
+
+	// 1. Summary by type
+	summaryRows, err := repo.GetTransactionReportSummary(ctx, pg.GetTransactionReportSummaryParams{
+		FromDate:       from,
+		ToDate:         to,
+		CashRegisterID: crPg,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to get report summary: %w", err)
+	}
+
+	// 2. Group detail (income + expense panels)
+	groupRows, err := repo.GetTransactionGroupReport(ctx, pg.GetTransactionGroupReportParams{
+		FromDate:       from,
+		ToDate:         to,
+		CashRegisterID: crPg,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to get group report: %w", err)
+	}
+
+	// 3. Opening balance (all transactions before from date)
+	ob, err := repo.GetTransactionOpeningBalance(ctx, pg.GetTransactionOpeningBalanceParams{
+		FromDate:       from,
+		CashRegisterID: crPg,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to get opening balance: %w", err)
+	}
+
+	// --- Build response ---
+	resp := &model.CashReportResponse{}
+
+	// Income types and expense types for balance calculation
+	incomeTypes := map[string]bool{
+		"income": true, "bill_payment": true, "transfer_income": true,
+	}
+	expenseTypes := map[string]bool{
+		"expense": true, "transfer_expense": true,
+	}
+
+	var balCash, balCard, balTotal float64
+
+	for _, r := range summaryRows {
+		cash := ifaceToFloat(r.CashTotal)
+		card := ifaceToFloat(r.CardTotal)
+		total := ifaceToFloat(r.Total)
+		row := model.CashReportSummaryRow{
+			Type:      string(r.Type),
+			CashTotal: floatToStr(cash),
+			CardTotal: floatToStr(card),
+			Total:     floatToStr(total),
+		}
+		resp.Summary = append(resp.Summary, row)
+
+		if incomeTypes[string(r.Type)] {
+			balCash += cash
+			balCard += card
+			balTotal += total
+		} else if expenseTypes[string(r.Type)] {
+			balCash -= cash
+			balCard -= card
+			balTotal -= total
+		}
+	}
+
+	resp.Balance = model.CashReportSummaryRow{
+		Type:      "balance",
+		CashTotal: floatToStr(balCash),
+		CardTotal: floatToStr(balCard),
+		Total:     floatToStr(balTotal),
+	}
+
+	// Build income/expense group panels
+	for _, r := range groupRows {
+		cash := ifaceToFloat(r.CashTotal)
+		card := ifaceToFloat(r.CardTotal)
+		total := ifaceToFloat(r.Total)
+		row := model.CashReportGroupRow{
+			Type:      string(r.Type),
+			CashTotal: floatToStr(cash),
+			CardTotal: floatToStr(card),
+			Total:     floatToStr(total),
+		}
+		if r.GroupID.Valid {
+			s := uuid.UUID(r.GroupID.Bytes).String()
+			row.GroupID = &s
+		}
+		if r.GroupName != nil {
+			row.GroupName = r.GroupName
+		}
+
+		if incomeTypes[string(r.Type)] {
+			resp.IncomeGroups = append(resp.IncomeGroups, row)
+		} else if expenseTypes[string(r.Type)] {
+			resp.ExpenseGroups = append(resp.ExpenseGroups, row)
+		}
+	}
+
+	// Day summary
+	openingIncome := ifaceToFloat(ob.IncomeTotal)
+	openingExpense := ifaceToFloat(ob.ExpenseTotal)
+	openingBalance := openingIncome - openingExpense
+
+	totalIncome := balCash + balCard // already split by pay_type; use total
+	// Re-compute from summary for accuracy
+	var totalIncomeAll, totalExpenseAll float64
+	for _, r := range summaryRows {
+		t := ifaceToFloat(r.Total)
+		if incomeTypes[string(r.Type)] {
+			totalIncomeAll += t
+		} else if expenseTypes[string(r.Type)] {
+			totalExpenseAll += t
+		}
+	}
+	_ = totalIncome
+
+	dayBalance := totalIncomeAll - totalExpenseAll
+	closingBalance := openingBalance + dayBalance
+
+	resp.OpeningBalance = floatToStr(openingBalance)
+	resp.TotalIncome = floatToStr(totalIncomeAll)
+	resp.TotalExpense = floatToStr(totalExpenseAll)
+	resp.DayBalance = floatToStr(dayBalance)
+	resp.ClosingBalance = floatToStr(closingBalance)
+
+	return resp, nil
+}
+
+// ifaceToFloat converts the interface{} returned by sqlc for computed numeric columns.
+func ifaceToFloat(v interface{}) float64 {
+	if v == nil {
+		return 0
+	}
+	switch val := v.(type) {
+	case pgtype.Numeric:
+		f, _ := val.Float64Value()
+		return f.Float64
+	case *pgtype.Numeric:
+		if val == nil {
+			return 0
+		}
+		f, _ := val.Float64Value()
+		return f.Float64
+	case float64:
+		return val
+	case float32:
+		return float64(val)
+	case int64:
+		return float64(val)
+	case int32:
+		return float64(val)
+	default:
+		return 0
+	}
+}
+
+// floatToStr formats a float64 as a decimal string with 2 decimal places,
+// stripping trailing zeros (e.g. 6987434.47, not 6987434.470000).
+func floatToStr(f float64) string {
+	s := fmt.Sprintf("%.2f", f)
+	// trim trailing zeros after decimal point
+	for len(s) > 1 && s[len(s)-1] == '0' && s[len(s)-2] != '.' {
+		s = s[:len(s)-1]
+	}
+	return s
+}

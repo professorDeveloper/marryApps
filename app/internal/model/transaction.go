@@ -46,6 +46,51 @@ type UpdateTransactionRequest struct {
 	Date        *time.Time `json:"date,omitempty"`
 }
 
+// ==================== CASH REPORT MODELS ====================
+
+// CashReportRequest are the query params for the cash report endpoint.
+type CashReportRequest struct {
+	From           string  `query:"from"             validate:"required" example:"2026-02-01T00:00:00Z"`
+	To             string  `query:"to"               validate:"required" example:"2026-02-20T23:59:59Z"`
+	CashRegisterID *string `query:"cash_register_id"                   example:"uuid"`
+}
+
+// CashReportSummaryRow is one row of the top summary table (per transaction type).
+type CashReportSummaryRow struct {
+	Type      string `json:"type"`
+	CashTotal string `json:"cash_total"`
+	CardTotal string `json:"card_total"`
+	Total     string `json:"total"`
+}
+
+// CashReportGroupRow is one row in the income or expense detail panel (per group).
+type CashReportGroupRow struct {
+	GroupID   *string `json:"group_id,omitempty"`
+	GroupName *string `json:"group_name,omitempty"`
+	Type      string  `json:"type"`
+	CashTotal string  `json:"cash_total"`
+	CardTotal string  `json:"card_total"`
+	Total     string  `json:"total"`
+}
+
+// CashReportResponse is the full cash report response.
+type CashReportResponse struct {
+	// Summary table: one row per transaction type
+	Summary []CashReportSummaryRow `json:"summary"`
+	// Balance row: (income types) − (expense types)
+	Balance CashReportSummaryRow `json:"balance"`
+	// Income detail panel: grouped by category
+	IncomeGroups []CashReportGroupRow `json:"income_groups"`
+	// Expense detail panel: grouped by category
+	ExpenseGroups []CashReportGroupRow `json:"expense_groups"`
+	// Day summary
+	OpeningBalance string `json:"opening_balance"`
+	TotalIncome    string `json:"total_income"`
+	TotalExpense   string `json:"total_expense"`
+	DayBalance     string `json:"day_balance"`
+	ClosingBalance string `json:"closing_balance"`
+}
+
 // TransactionResponse is the API response for a transaction
 type TransactionResponse struct {
 	ID                 string          `json:"id"`

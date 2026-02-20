@@ -223,3 +223,34 @@ func (h *Handler) DeleteTransaction(c echo.Context) error {
 
 	return c.NoContent(http.StatusNoContent)
 }
+
+// GetCashReport returns the full cash register report for a date range.
+// @Summary Cash register report
+// @Description Returns summary by transaction type, income/expense grouped by category, and day balance totals.
+// @Tags transactions
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param from             query string false "Start datetime (RFC3339)" example("2026-02-01T00:00:00Z")
+// @Param to               query string false "End datetime (RFC3339)"   example("2026-02-20T23:59:59Z")
+// @Param cash_register_id query string false "Filter by cash register UUID"
+// @Success 200 {object} model.CashReportResponse
+// @Failure 400 {object} model.ErrorResponse
+// @Failure 500 {object} model.ErrorResponse
+// @Router /api/v1/transactions/report [get]
+func (h *Handler) GetCashReport(c echo.Context) error {
+	var req model.CashReportRequest
+	if err := c.Bind(&req); err != nil {
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("Invalid request", err.Error(), http.StatusBadRequest))
+	}
+	if req.From == "" || req.To == "" {
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("from and to are required", "", http.StatusBadRequest))
+	}
+
+	report, err := h.service.Transaction().GetCashReport(c.Request().Context(), req)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("Failed to build report", err.Error(), http.StatusInternalServerError))
+	}
+
+	return c.JSON(http.StatusOK, report)
+}

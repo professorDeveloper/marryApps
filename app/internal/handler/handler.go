@@ -598,6 +598,7 @@ func (h *Handler) Register(router *echo.Echo) {
 		{
 			transactions.POST("/income-expense", h.CreateIncomeExpense, mw.CheckLanguage())
 			transactions.POST("/transfer", h.CreateCashTransfer, mw.CheckLanguage())
+			transactions.GET("/report", h.GetCashReport, mw.CheckLanguage())
 			transactions.GET("", h.GetAllTransactions, mw.CheckLanguage())
 			transactions.GET("/:id", h.GetTransactionByID, mw.CheckLanguage())
 			transactions.PUT("/:id", h.UpdateTransaction, mw.CheckLanguage())

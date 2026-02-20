@@ -185,6 +185,65 @@ definitions:
         example: "2021-01-01T00:00:00Z"
         type: string
     type: object
+  model.CashReportGroupRow:
+    properties:
+      card_total:
+        type: string
+      cash_total:
+        type: string
+      group_id:
+        type: string
+      group_name:
+        type: string
+      total:
+        type: string
+      type:
+        type: string
+    type: object
+  model.CashReportResponse:
+    properties:
+      balance:
+        allOf:
+        - $ref: '#/definitions/model.CashReportSummaryRow'
+        description: 'Balance row: (income types) − (expense types)'
+      closing_balance:
+        type: string
+      day_balance:
+        type: string
+      expense_groups:
+        description: 'Expense detail panel: grouped by category'
+        items:
+          $ref: '#/definitions/model.CashReportGroupRow'
+        type: array
+      income_groups:
+        description: 'Income detail panel: grouped by category'
+        items:
+          $ref: '#/definitions/model.CashReportGroupRow'
+        type: array
+      opening_balance:
+        description: Day summary
+        type: string
+      summary:
+        description: 'Summary table: one row per transaction type'
+        items:
+          $ref: '#/definitions/model.CashReportSummaryRow'
+        type: array
+      total_expense:
+        type: string
+      total_income:
+        type: string
+    type: object
+  model.CashReportSummaryRow:
+    properties:
+      card_total:
+        type: string
+      cash_total:
+        type: string
+      total:
+        type: string
+      type:
+        type: string
+    type: object
   model.CategoryResponse:
     properties:
       color_code:
@@ -15610,6 +15669,47 @@ paths:
       security:
       - BearerAuth: []
       summary: Create income or expense transaction
+      tags:
+      - transactions
+  /api/v1/transactions/report:
+    get:
+      consumes:
+      - application/json
+      description: Returns summary by transaction type, income/expense grouped by
+        category, and day balance totals.
+      parameters:
+      - description: Start datetime (RFC3339)
+        example: '"2026-02-01T00:00:00Z"'
+        in: query
+        name: from
+        type: string
+      - description: End datetime (RFC3339)
+        example: '"2026-02-20T23:59:59Z"'
+        in: query
+        name: to
+        type: string
+      - description: Filter by cash register UUID
+        in: query
+        name: cash_register_id
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.CashReportResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Cash register report
       tags:
       - transactions
   /api/v1/transactions/transfer:

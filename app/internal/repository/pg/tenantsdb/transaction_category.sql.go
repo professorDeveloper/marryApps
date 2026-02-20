@@ -207,6 +207,159 @@ func (q *Queries) GetTransactionByID(ctx context.Context, id uuid.UUID) (Transac
 	return i, err
 }
 
+const getTransactionGroupReport = `-- name: GetTransactionGroupReport :many
+SELECT
+  gt.id   AS group_id,
+  gt.name AS group_name,
+  t.type,
+  COALESCE(SUM(t.amount) FILTER (WHERE t.pay_type = 'cash'), 0::numeric) AS cash_total,
+  COALESCE(SUM(t.amount) FILTER (WHERE t.pay_type = 'card'), 0::numeric) AS card_total,
+  COALESCE(SUM(t.amount), 0::numeric)                                     AS total
+FROM transactions t
+LEFT JOIN group_transactions gt
+  ON gt.id = t.group_transaction_id AND gt.deleted_at = 0
+WHERE t.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  AND t.deleted_at = 0
+  AND t.date >= $1::timestamptz
+  AND t.date <= $2::timestamptz
+  AND ($3::uuid IS NULL OR t.cash_register_id = $3::uuid)
+GROUP BY gt.id, gt.name, t.type
+ORDER BY t.type, gt.name
+`
+
+type GetTransactionGroupReportParams struct {
+	FromDate       time.Time   `json:"from_date"`
+	ToDate         time.Time   `json:"to_date"`
+	CashRegisterID pgtype.UUID `json:"cash_register_id"`
+}
+
+type GetTransactionGroupReportRow struct {
+	GroupID   pgtype.UUID     `json:"group_id"`
+	GroupName *string         `json:"group_name"`
+	Type      TransactionType `json:"type"`
+	CashTotal interface{}     `json:"cash_total"`
+	CardTotal interface{}     `json:"card_total"`
+	Total     interface{}     `json:"total"`
+}
+
+// Returns totals grouped by (group_transaction, type) for the income/expense detail panels.
+func (q *Queries) GetTransactionGroupReport(ctx context.Context, arg GetTransactionGroupReportParams) ([]GetTransactionGroupReportRow, error) {
+	rows, err := q.db.Query(ctx, getTransactionGroupReport, arg.FromDate, arg.ToDate, arg.CashRegisterID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetTransactionGroupReportRow
+	for rows.Next() {
+		var i GetTransactionGroupReportRow
+		if err := rows.Scan(
+			&i.GroupID,
+			&i.GroupName,
+			&i.Type,
+			&i.CashTotal,
+			&i.CardTotal,
+			&i.Total,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getTransactionOpeningBalance = `-- name: GetTransactionOpeningBalance :one
+SELECT
+  COALESCE(SUM(amount) FILTER (WHERE
+    type = 'income' OR type = 'bill_payment' OR type = 'transfer_income'
+  ), 0::numeric) AS income_total,
+  COALESCE(SUM(amount) FILTER (WHERE
+    type = 'expense' OR type = 'transfer_expense'
+  ), 0::numeric) AS expense_total
+FROM transactions
+WHERE branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  AND deleted_at = 0
+  AND date < $1::timestamptz
+  AND ($2::uuid IS NULL OR cash_register_id = $2::uuid)
+`
+
+type GetTransactionOpeningBalanceParams struct {
+	FromDate       time.Time   `json:"from_date"`
+	CashRegisterID pgtype.UUID `json:"cash_register_id"`
+}
+
+type GetTransactionOpeningBalanceRow struct {
+	IncomeTotal  interface{} `json:"income_total"`
+	ExpenseTotal interface{} `json:"expense_total"`
+}
+
+// Returns income/expense totals before from_date to compute opening balance.
+func (q *Queries) GetTransactionOpeningBalance(ctx context.Context, arg GetTransactionOpeningBalanceParams) (GetTransactionOpeningBalanceRow, error) {
+	row := q.db.QueryRow(ctx, getTransactionOpeningBalance, arg.FromDate, arg.CashRegisterID)
+	var i GetTransactionOpeningBalanceRow
+	err := row.Scan(&i.IncomeTotal, &i.ExpenseTotal)
+	return i, err
+}
+
+const getTransactionReportSummary = `-- name: GetTransactionReportSummary :many
+
+SELECT
+  type,
+  COALESCE(SUM(amount) FILTER (WHERE pay_type = 'cash'), 0::numeric) AS cash_total,
+  COALESCE(SUM(amount) FILTER (WHERE pay_type = 'card'), 0::numeric) AS card_total,
+  COALESCE(SUM(amount), 0::numeric)                                  AS total
+FROM transactions
+WHERE branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  AND deleted_at = 0
+  AND date >= $1::timestamptz
+  AND date <= $2::timestamptz
+  AND ($3::uuid IS NULL OR cash_register_id = $3::uuid)
+GROUP BY type
+ORDER BY type
+`
+
+type GetTransactionReportSummaryParams struct {
+	FromDate       time.Time   `json:"from_date"`
+	ToDate         time.Time   `json:"to_date"`
+	CashRegisterID pgtype.UUID `json:"cash_register_id"`
+}
+
+type GetTransactionReportSummaryRow struct {
+	Type      TransactionType `json:"type"`
+	CashTotal interface{}     `json:"cash_total"`
+	CardTotal interface{}     `json:"card_total"`
+	Total     interface{}     `json:"total"`
+}
+
+// ==================== CASH REPORT QUERIES ====================
+// Returns totals grouped by type × pay_type (cash/card) for the date range.
+func (q *Queries) GetTransactionReportSummary(ctx context.Context, arg GetTransactionReportSummaryParams) ([]GetTransactionReportSummaryRow, error) {
+	rows, err := q.db.Query(ctx, getTransactionReportSummary, arg.FromDate, arg.ToDate, arg.CashRegisterID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetTransactionReportSummaryRow
+	for rows.Next() {
+		var i GetTransactionReportSummaryRow
+		if err := rows.Scan(
+			&i.Type,
+			&i.CashTotal,
+			&i.CardTotal,
+			&i.Total,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getTransactionsByCashRegister = `-- name: GetTransactionsByCashRegister :many
 SELECT id, type,
        cash_register_id,
