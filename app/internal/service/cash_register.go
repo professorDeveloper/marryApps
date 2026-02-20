@@ -112,6 +112,25 @@ func (s *CashRegisterS) RestoreCashRegister(ctx context.Context, id uuid.UUID) e
 	return nil
 }
 
+// GetCashRegistersByBranchID retrieves all cash registers for an explicit branch_id
+func (s *CashRegisterS) GetCashRegistersByBranchID(ctx context.Context, branchID uuid.UUID, limit, offset int32) ([]model.CashRegisterResponse, error) {
+	cashRegisters, err := s.repo.Tenant(ctx).GetCashRegistersByBranchID(ctx, pg.GetCashRegistersByBranchIDParams{
+		BranchID: branchID,
+		Limit:    limit,
+		Offset:   offset,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to get cash registers: %w", err)
+	}
+
+	responses := make([]model.CashRegisterResponse, len(cashRegisters))
+	for i, cr := range cashRegisters {
+		responses[i] = toCashRegisterResponse(cr)
+	}
+
+	return responses, nil
+}
+
 // Helper function to convert database model to response model
 func toCashRegisterResponse(cr pg.CashRegister) model.CashRegisterResponse {
 	return model.CashRegisterResponse{

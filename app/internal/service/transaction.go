@@ -76,7 +76,9 @@ func (s *TransactionS) CreateIncomeExpense(ctx context.Context, userID string, r
 	return toTransactionResponse(tx), nil
 }
 
-// CreateTransfer creates a transfer transaction between cash registers
+// CreateTransfer creates two transaction records for a transfer:
+//   - transfer_expense in the sender's branch/cash register (money OUT)
+//   - transfer_income in the receiver's branch/cash register (money IN)
 func (s *TransactionS) CreateTransfer(ctx context.Context, userID string, req model.CreateCashTransferRequest) (*model.TransactionResponse, error) {
 	fromCR, err := uuid.Parse(req.FromCashRegisterID)
 	if err != nil {
@@ -97,59 +99,83 @@ func (s *TransactionS) CreateTransfer(ctx context.Context, userID string, req mo
 		date = *req.Date
 	}
 
-	params := pg.CreateTransactionParams{
-		ID:                   uuid.New(),
-		Type:                 pg.TransactionTypeTransfer,
-		FromCashRegisterID:   pgtype.UUID{Bytes: fromCR, Valid: true},
-		ToCashRegisterID:     pgtype.UUID{Bytes: toCR, Valid: true},
-		Amount:               amount,
-		Description:          req.Description,
-		Date:                 date,
-	}
-
+	// Parse optional branch IDs
+	var fromBranchPg, toBranchPg pgtype.UUID
 	if req.FromBranchID != nil {
 		bid, err := uuid.Parse(*req.FromBranchID)
 		if err != nil {
 			return nil, fmt.Errorf("invalid from_branch_id: %w", err)
 		}
-		params.FromBranchID = pgtype.UUID{Bytes: bid, Valid: true}
+		fromBranchPg = pgtype.UUID{Bytes: bid, Valid: true}
 	}
 	if req.ToBranchID != nil {
 		bid, err := uuid.Parse(*req.ToBranchID)
 		if err != nil {
 			return nil, fmt.Errorf("invalid to_branch_id: %w", err)
 		}
-		params.ToBranchID = pgtype.UUID{Bytes: bid, Valid: true}
+		toBranchPg = pgtype.UUID{Bytes: bid, Valid: true}
 	}
 
+	var groupPg pgtype.UUID
 	if req.GroupTransactionID != nil {
 		gid, err := uuid.Parse(*req.GroupTransactionID)
 		if err != nil {
 			return nil, fmt.Errorf("invalid group_transaction_id: %w", err)
 		}
-		params.GroupTransactionID = pgtype.UUID{Bytes: gid, Valid: true}
+		groupPg = pgtype.UUID{Bytes: gid, Valid: true}
 	}
 
+	var payType pg.NullPaymentType
 	if req.PayType != nil {
-		params.PayType = pg.NullPaymentType{
-			PaymentType: pg.PaymentType(*req.PayType),
-			Valid:        true,
-		}
+		payType = pg.NullPaymentType{PaymentType: pg.PaymentType(*req.PayType), Valid: true}
 	}
 
+	var userPg pgtype.UUID
 	if userID != "" {
-		uid, err := uuid.Parse(userID)
-		if err == nil {
-			params.UserID = pgtype.UUID{Bytes: uid, Valid: true}
+		if uid, err := uuid.Parse(userID); err == nil {
+			userPg = pgtype.UUID{Bytes: uid, Valid: true}
 		}
 	}
 
-	tx, err := s.repo.Tenant(ctx).CreateTransaction(ctx, params)
+	// Row 1: transfer_expense — money OUT from sender's cash register
+	expenseParams := pg.CreateTransactionParams{
+		ID:                 uuid.New(),
+		Type:               pg.TransactionTypeTransferExpense,
+		CashRegisterID:     pgtype.UUID{Bytes: fromCR, Valid: true},
+		ToCashRegisterID:   pgtype.UUID{Bytes: toCR, Valid: true}, // reference to receiver
+		GroupTransactionID: groupPg,
+		Amount:             amount,
+		Description:        req.Description,
+		PayType:            payType,
+		Date:               date,
+		UserID:             userPg,
+		BranchID:           fromBranchPg, // sender's branch (null = current branch from middleware)
+	}
+	expenseTx, err := s.repo.Tenant(ctx).CreateTransaction(ctx, expenseParams)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create transfer: %w", err)
+		return nil, fmt.Errorf("failed to create transfer_expense: %w", err)
 	}
 
-	return toTransactionResponse(tx), nil
+	// Row 2: transfer_income — money IN to receiver's cash register
+	incomeParams := pg.CreateTransactionParams{
+		ID:                 uuid.New(),
+		Type:               pg.TransactionTypeTransferIncome,
+		CashRegisterID:     pgtype.UUID{Bytes: toCR, Valid: true},
+		FromCashRegisterID: pgtype.UUID{Bytes: fromCR, Valid: true}, // reference to sender
+		GroupTransactionID: groupPg,
+		Amount:             amount,
+		Description:        req.Description,
+		PayType:            payType,
+		Date:               date,
+		UserID:             userPg,
+		BranchID:           toBranchPg, // receiver's branch (null = current branch from middleware)
+	}
+	if _, err := s.repo.Tenant(ctx).CreateTransaction(ctx, incomeParams); err != nil {
+		return nil, fmt.Errorf("failed to create transfer_income: %w", err)
+	}
+
+	// Return the expense (sender) side as the primary response
+	return toTransactionResponse(expenseTx), nil
 }
 
 // GetTransactionByID retrieves a transaction by ID

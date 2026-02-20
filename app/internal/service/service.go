@@ -416,6 +416,7 @@ type CashRegisterI interface {
 	CreateCashRegister(ctx context.Context, req model.CashRegisterRequest) (model.CashRegisterResponse, error)
 	GetCashRegisterByID(ctx context.Context, id uuid.UUID) (model.CashRegisterResponse, error)
 	GetAllCashRegisters(ctx context.Context, limit, offset int32) ([]model.CashRegisterResponse, error)
+	GetCashRegistersByBranchID(ctx context.Context, branchID uuid.UUID, limit, offset int32) ([]model.CashRegisterResponse, error)
 	UpdateCashRegister(ctx context.Context, id uuid.UUID, req model.CashRegisterRequest) (model.CashRegisterResponse, error)
 	DeleteCashRegister(ctx context.Context, id uuid.UUID) error
 	RestoreCashRegister(ctx context.Context, id uuid.UUID) error

@@ -41,6 +41,13 @@ WHERE id = $1 AND deleted_at != 0
   AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 RETURNING *;
 
+-- name: GetCashRegistersByBranchID :many
+SELECT * FROM cash_registers
+WHERE deleted_at = 0
+  AND branch_id = $1
+ORDER BY created_at DESC
+LIMIT $2 OFFSET $3;
+
 -- name: CountCashRegisters :one
 SELECT COUNT(*) FROM cash_registers
 WHERE deleted_at = 0

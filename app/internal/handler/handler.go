@@ -574,6 +574,7 @@ func (h *Handler) Register(router *echo.Echo) {
 		{
 			cashRegisters.POST("", h.CreateCashRegister, mw.CheckLanguage())
 			cashRegisters.GET("", h.GetAllCashRegisters, mw.CheckLanguage())
+			cashRegisters.GET("/branch/:branchId", h.GetCashRegistersByBranchID, mw.CheckLanguage())
 			cashRegisters.GET("/:id", h.GetCashRegister, mw.CheckLanguage())
 			cashRegisters.PUT("/:id", h.UpdateCashRegister, mw.CheckLanguage())
 			cashRegisters.DELETE("/:id", h.DeleteCashRegister, mw.CheckLanguage())

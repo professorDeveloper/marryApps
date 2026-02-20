@@ -114,6 +114,47 @@ func (q *Queries) GetCashRegisterByID(ctx context.Context, id uuid.UUID) (CashRe
 	return i, err
 }
 
+const getCashRegistersByBranchID = `-- name: GetCashRegistersByBranchID :many
+SELECT id, name, branch_id, created_at, updated_at, deleted_at FROM cash_registers
+WHERE deleted_at = 0
+  AND branch_id = $1
+ORDER BY created_at DESC
+LIMIT $2 OFFSET $3
+`
+
+type GetCashRegistersByBranchIDParams struct {
+	BranchID uuid.UUID `json:"branch_id"`
+	Limit    int32     `json:"limit"`
+	Offset   int32     `json:"offset"`
+}
+
+func (q *Queries) GetCashRegistersByBranchID(ctx context.Context, arg GetCashRegistersByBranchIDParams) ([]CashRegister, error) {
+	rows, err := q.db.Query(ctx, getCashRegistersByBranchID, arg.BranchID, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []CashRegister
+	for rows.Next() {
+		var i CashRegister
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.BranchID,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.DeletedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const restoreCashRegister = `-- name: RestoreCashRegister :one
 UPDATE cash_registers SET
     deleted_at = 0
