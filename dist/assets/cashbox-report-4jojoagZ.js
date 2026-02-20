@@ -1,0 +1,1 @@
+import{j as t,f as a}from"./index-B8WwrYBe.js";import{B as e}from"./view-sp2OeXKR.js";const r={title:`Cashbox Report | Dashboard - ${a.appName}`};function o(){return t.jsxs(t.Fragment,{children:[t.jsx("title",{children:r.title}),t.jsx(e,{title:"Кассовый отчет"})]})}export{o as default};

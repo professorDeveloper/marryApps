@@ -133,13 +133,28 @@ export function GenericTableView<T extends Record<string, any>>({
     setTableData(data);
   }, [data]);
 
+  const normalizedTableData = useMemo(() => {
+    if (!Array.isArray(tableData)) {
+      return [] as T[];
+    }
+
+    return tableData
+      .filter((row): row is T => Boolean(row) && typeof row === 'object')
+      .map((row, index) => {
+        if (row[idField] == null) {
+          return { ...row, [idField]: `__fallback_row_${index}` } as T;
+        }
+        return row;
+      });
+  }, [tableData, idField]);
+
   const canReset = useMemo(
     () => Object.values(filters.state).some((value) => Array.isArray(value) && value.length > 0),
     [filters.state]
   );
 
   const dataFiltered = useMemo(() => {
-    let filtered = tableData;
+    let filtered = normalizedTableData;
 
     Object.entries(filters.state).forEach(([key, value]) => {
       if (Array.isArray(value) && value.length > 0) {
@@ -148,7 +163,7 @@ export function GenericTableView<T extends Record<string, any>>({
     });
 
     return filtered;
-  }, [tableData, filters.state]);
+  }, [normalizedTableData, filters.state]);
 
   // Add row number column when checkboxes are hidden
   const columnsWithRowNumber = useMemo(() => {
@@ -179,7 +194,7 @@ export function GenericTableView<T extends Record<string, any>>({
       if (onDeleteRow) {
         onDeleteRow(id);
       }
-      setTableData((prev) => prev.filter((row) => row[idField] !== id));
+      setTableData((prev) => prev.filter((row) => row && row[idField] !== id));
       toast.success("O'chirildi!");
     },
     [onDeleteRow, idField]
@@ -190,7 +205,7 @@ export function GenericTableView<T extends Record<string, any>>({
     if (onDeleteRows) {
       onDeleteRows(idsArray as string[]);
     }
-    setTableData((prev) => prev.filter((row) => !selectedRows.ids.has(row[idField])));
+    setTableData((prev) => prev.filter((row) => row && !selectedRows.ids.has(row[idField])));
     toast.success("O'chirildi!");
   }, [selectedRows.ids, onDeleteRows, idField]);
 
@@ -272,7 +287,7 @@ export function GenericTableView<T extends Record<string, any>>({
             columns={columnsWithRowNumber}
             loading={loading}
             getRowHeight={() => 'auto'}
-            getRowId={(row) => row[idField]}
+            getRowId={(row) => row?.[idField]}
             pageSizeOptions={[5, 10, 20, { value: -1, label: 'Hammasi' }]}
             initialState={{ pagination: { paginationModel: { pageSize: 10 } } }}
             columnVisibilityModel={columnVisibilityModel}

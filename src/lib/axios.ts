@@ -25,7 +25,11 @@ axiosInstance.interceptors.request.use((config) => {
 axiosInstance.interceptors.response.use(
   (response) => response,
   (error) => {
-    const message = error?.response?.data?.message || error?.message || 'Something went wrong!';
+    const message =
+      error?.response?.data?.error ||
+      error?.response?.data?.message ||
+      error?.message ||
+      'Something went wrong!';
     console.error('Axios error:', message);
     return Promise.reject(new Error(message));
   }
@@ -274,6 +278,14 @@ export const endpoints = {
     createGroup: '/api/v1/deductions/group',
     updateGroup: (id: string) => `/api/v1/deductions/group/${id}`,
     deleteGroup: (id: string) => `/api/v1/deductions/group/${id}`,
+  },
+  transfers: {
+    list: '/api/v1/transfers',
+    details: (id: string) => `/api/v1/transfers/${id}`,
+    create: '/api/v1/transfers',
+    update: (id: string) => `/api/v1/transfers/${id}`,
+    delete: (id: string) => `/api/v1/transfers/${id}`,
+    batch: '/api/v1/transfers/batch',
   },
   ingredientStock: {
     list: '/api/v1/ingredient-stock',

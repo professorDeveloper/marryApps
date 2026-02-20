@@ -474,6 +474,7 @@
   },
   "common": {
     "name": "Nomi",
+    "nameRequired": "Nomi majburiy",
     "measurement": "O'lchov",
     "colorCode": "Rang kodi",
     "pictureUrl": "Surat URL",
@@ -494,8 +495,15 @@
     "saving": "Saqlanmoqda...",
     "deleteConfirmTitle": "O'chirishni tasdiqlash",
     "deleteConfirmMessage": "Haqiqatan ham ushbu yozuvni o'chirmoqchimisiz? Bu amalni bekor qilib bo'lmaydi.",
+    "createSuccess": "Muvaffaqiyatli yaratildi",
+    "updateSuccess": "Muvaffaqiyatli yangilandi",
+    "deleteSuccess": "Muvaffaqiyatli o'chirildi",
+    "deleteFailed": "O'chirishda xato",
+    "saveFailed": "Saqlashda xato",
     "created_at": "Yaratilgan vaqti",
-    "actions":"Harakatlar"
+    "actions": "Harakatlar",
+    "create": "Yaratish",
+    "update": "Yangilash"
   },
   "warehouse": {
     "title": "Ombor",
@@ -726,8 +734,8 @@
       "branch": "Filial",
       "name": "Zal nomi",
       "namePlaceholder": "masalan: Asosiy zal, VIP zal",
-      "width": "Kengligi (px)",
-      "height": "Endligi (px)"
+      "width": "Kengligi",
+      "height": "Endligi"
     },
     "buttons": {
       "create": "Zal yaratish",
@@ -1016,24 +1024,40 @@
     }
   },
   "cashbox": {
-     "sidebar": {
-       "title": "Kassa",
-       "cashiers": "Kassi",
-       "transactionGroups": "Tranzaksiya guruhlari",
-       "transactions": "Tranzaksiyalar",
-       "report": "Kassa bo'yicha hisobot"
-     },
-     "cashbox": {
-        "cashbox" : "Kassa",
-        "date": "Sana",
-        "action": "Harakat",
-        "editcashier": "Kassani tahrirlash"
-     },
-     "transactionGroups": {
-        "title": "Tranzaksiya guruhlari",
-        "list": "Tranzaksiya guruhlari ro'yxati",
-        "details": "Tranzaksiya guruhi tafsilotlari",
-        "edit": "Tranzaksiya guruhini tahrirlash"
-     }
+    "sidebar": {
+      "title": "Kassa",
+      "cashiers": "Kassalar",
+      "transactionGroups": "Tranzaksiya guruhlari",
+      "transactions": "Tranzaksiyalar",
+      "report": "Kassa bo'yicha hisobot"
+    },
+    "cashiers": {
+      "title": "Kassalar",
+      "list": "Kassalar ro'yxati",
+      "new": "Yangi kassa",
+      "edit": "Kassani tahrirlash",
+      "name": "Nom",
+      "created_at": "Yaratilgan sana",
+      "nameRequired": "Kassir nomi talab qilinadi",
+      "createSuccess": "Kassir muvaffaqiyatli yaratildi",
+      "updateSuccess": "Kassir muvaffaqiyatli yangilandi",
+      "deleteSuccess": "Kassir muvaffaqiyatli o'chirildi",
+      "deleteFailed": "Kassirni o'chirishda xato",
+      "saveFailed": "Kassirni saqlashda xato",
+      "deleteConfirmTitle": "O'chirishni tasdiqlash",
+      "deleteConfirmMessage": "Siz bu kassirni o'chirishga ishonchimisiz? Bu harakatni qaytarib bo'lmaydi."
+    },
+    "cashbox": {
+      "cashbox": "Kassa",
+      "date": "Sana",
+      "action": "Harakat",
+      "editcashier": "Kassani tahrirlash"
+    },
+    "transactionGroups": {
+      "title": "Tranzaksiya guruhlari",
+      "list": "Tranzaksiya guruhlari ro'yxati",
+      "details": "Tranzaksiya guruhi tafsilotlari",
+      "edit": "Tranzaksiya guruhini tahrirlash"
+    }
   }
 }

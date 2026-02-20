@@ -325,7 +325,7 @@
     "menu": {
       "title": "Меню",
       "storage": "Хранилище",
-      "sections": "Разделы",
+      "sections": "Отделы",
       "categories": "Категории",
       "semifinished": "Полуфабрикаты",
       "meals": "Блюда"
@@ -476,7 +476,15 @@
     "deleteConfirmTitle": "Подтверждение удаления",
     "deleteConfirmMessage": "Вы уверены, что хотите удалить эту запись? Это действие нельзя отменить.",
     "created_at": "Создано",
-    "actions": "Действия"
+    "actions": "Действия",
+    "nameRequired": "Name is required",
+    "createSuccess": "Created successfully",
+    "updateSuccess": "Updated successfully",
+    "deleteSuccess": "Deleted successfully",
+    "deleteFailed": "Failed to delete",
+    "saveFailed": "Failed to save",
+    "create": "Создать",
+    "update": "Обновить"
   },
   "warehouse": {
     "title": "Склад",
@@ -706,8 +714,8 @@
       "branch": "Отделение",
       "name": "Название зала",
       "namePlaceholder": "например: Основной зал, VIP зал",
-      "width": "Ширина (px)",
-      "height": "Высота (px)"
+      "width": "Ширина",
+      "height": "Высота"
     },
     "buttons": {
       "create": "Создать зал",
@@ -1000,7 +1008,7 @@
       "title": "Касса",
       "cashiers": "Кассы",
       "transactionGroups": "Группы транзакций",
-      "transactions": "Транзакции",
+      "transactions": "Перемещение",
       "report": "Отчет по кассе"
     },
     "transactionGroups": {
@@ -1008,6 +1016,22 @@
       "list": "Список групп транзакций",
       "details": "Детали группы транзакций",
       "edit": "Редактировать группу транзакций"
+    },
+    "cashiers": {
+      "title": "Кассиры",
+      "list": "Список кассиров",
+      "new": "Новый кассир",
+      "edit": "Редактировать кассира",
+      "name": "Имя",
+      "created_at": "Дата создания",
+      "nameRequired": "Имя кассира обязательно",
+      "createSuccess": "Кассир успешно создан",
+      "updateSuccess": "Кассир успешно обновлен",
+      "deleteSuccess": "Кассир успешно удален",
+      "deleteFailed": "Ошибка при удалении кассира",
+      "saveFailed": "Ошибка при сохранении кассира",
+      "deleteConfirmTitle": "Подтверждение удаления",
+      "deleteConfirmMessage": "Вы уверены, что хотите удалить этого кассира? Это действие нельзя отменить."
     }
   }
 }

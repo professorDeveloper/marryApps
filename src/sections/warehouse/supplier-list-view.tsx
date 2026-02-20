@@ -30,7 +30,11 @@ export function InvoicesListView() {
             setLoading(true);
             try {
                 const suppliers = await getSuppliers();
-                setRows(suppliers);
+                setRows(
+                    Array.isArray(suppliers)
+                        ? suppliers.filter((row) => row && typeof row === 'object' && row.id != null)
+                        : []
+                );
             } finally {
                 setLoading(false);
             }
@@ -46,7 +50,7 @@ export function InvoicesListView() {
                 headerName: '№',
                 width: 80,
                 renderCell: (params) => {
-                    const index = rows.findIndex((row) => row.id === params.row.id);
+                    const index = rows.findIndex((row) => row && row.id === params.row.id);
                     return index + 1;
                 },
             },
@@ -99,7 +103,7 @@ export function InvoicesListView() {
         if (supplierToDelete) {
             try {
                 await deleteSuppliers([supplierToDelete]);
-                setRows((prev) => prev.filter((row) => row.id !== supplierToDelete));
+                setRows((prev) => prev.filter((row) => row && row.id !== supplierToDelete));
                 setDeleteDialogOpen(false);
                 setSupplierToDelete(null);
             } catch (error) {

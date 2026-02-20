@@ -469,7 +469,15 @@
     "deleteConfirmTitle": "Ўчиришни тасдиқлаш",
     "deleteConfirmMessage": "Ҳақиқатан ҳам ушбу ёзувни ўчирмоқчимисиз? Бу амални бекор қилиб бўлмайди.",
     "created_at": "Яратилган вақти",
-    "actions": "Ҳаракатлар"
+    "actions": "Ҳаракатлар",
+    "nameRequired": "Name is required",
+    "createSuccess": "Created successfully",
+    "updateSuccess": "Updated successfully",
+    "deleteSuccess": "Deleted successfully",
+    "deleteFailed": "Failed to delete",
+    "saveFailed": "Failed to save",
+    "create": "Яратиш",
+    "update": "Янгилаш"
   },
   "warehouse": {
     "title": "Захира",
@@ -676,8 +684,8 @@
       "branch": "Филиал",
       "name": "Зал номи",
       "namePlaceholder": "масал: Асосий зал, VIP зал",
-      "width": "Кенглиги (px)",
-      "height": "Эндлиги (px)"
+      "width": "Кенглиги",
+      "height": "Эндлиги"
     },
     "buttons": {
       "create": "Зал яратиш",
@@ -966,18 +974,34 @@
     }
   },
   "cashbox": {
-     "sidebar": {
-       "title": "Касса",
-       "cashiers": "Касси",
-       "transactionGroups": "Трансакция гуруҳлари",
-       "transactions": "Трансакциялар",
-       "report": "Касса бўйича ҳисобот"
-     },
-     "transactionGroups": {
-       "title": "Трансакция гуруҳлари",
-       "list": "Трансакция гуруҳлари рўйхати",
-       "details": "Трансакция гуруҳи тафсилотлари",
-       "edit": "Трансакция гуруҳини таҳрирлаш"
-     }
+    "sidebar": {
+      "title": "Кассалар",
+      "cashiers": "Кассалар",
+      "transactionGroups": "Трансакция гуруҳлари",
+      "transactions": "Трансакциялар",
+      "report": "Касса бўйича ҳисобот"
+    },
+    "transactionGroups": {
+      "title": "Трансакция гуруҳлари",
+      "list": "Трансакция гуруҳлари рўйхати",
+      "details": "Трансакция гуруҳи тафсилотлари",
+      "edit": "Трансакция гуруҳини таҳрирлаш"
+    },
+    "cashiers": {
+      "title": "Кассалар",
+      "list": "Кассалар рўйхати",
+      "new": "Янги касса",
+      "edit": "Кассалар таҳрирлаш",
+      "name": "Ном",
+      "created_at": "Яратилган сана",
+      "nameRequired": "Кассир номи талаб қилинади",
+      "createSuccess": "Кассир муваффақиятли яратилди",
+      "updateSuccess": "Кассир муваффақиятли янгиланди",
+      "deleteSuccess": "Кассир муваффақиятли ўчирилди",
+      "deleteFailed": "Кассирни ўчиришда хато",
+      "saveFailed": "Кассирни сақлашда хато",
+      "deleteConfirmTitle": "Ўчиришни тасдиқлаш",
+      "deleteConfirmMessage": "Сиз бу кассирни ўчиришга ишончимисиз? Бу ҳаракатни қайтариб бўлмайди."
+    }
   }
 }
