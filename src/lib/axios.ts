@@ -320,6 +320,6 @@ export const endpoints = {
       root: '/api/v1/transactions',
       details: (id: string) => `/api/v1/transactions/${id}`,
     },
-    report: '/api/v1/cashbox/report',
+    report: '/api/v1/transactions/report',
   },
 } as const;

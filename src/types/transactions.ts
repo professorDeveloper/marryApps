@@ -27,6 +27,40 @@ export interface TransactionFilters {
   group_id?: string;
 }
 
+export interface TransactionReportFilters {
+  from?: string;
+  to?: string;
+  cash_register_id?: string;
+}
+
+export interface TransactionReportSummaryItem {
+  card_total: string;
+  cash_total: string;
+  total: string;
+  type: string;
+}
+
+export interface TransactionReportGroupItem {
+  card_total: string;
+  cash_total: string;
+  group_id: string;
+  group_name: string;
+  total: string;
+  type: string;
+}
+
+export interface TransactionReportResponse {
+  balance: TransactionReportSummaryItem;
+  closing_balance: string;
+  day_balance: string;
+  expense_groups: TransactionReportGroupItem[];
+  income_groups: TransactionReportGroupItem[];
+  opening_balance: string;
+  summary: TransactionReportSummaryItem[];
+  total_expense: string;
+  total_income: string;
+}
+
 export interface IncomeExpensePayload {
   amount: string;
   cash_register_id: string;

@@ -8,6 +8,8 @@ import type {
   TransactionFilters,
   ICashRegisterOption,
   IncomeExpensePayload,
+  TransactionReportFilters,
+  TransactionReportResponse,
 } from 'src/types/transactions';
 
 import { toast } from 'sonner';
@@ -28,6 +30,39 @@ const getErrorMessage = (error: unknown, fallback: string) => {
 };
 
 export function useTransactionsAPI() {
+  const getTransactionsReport = useCallback(
+    async (filters: TransactionReportFilters = {}): Promise<TransactionReportResponse> => {
+      const fallback: TransactionReportResponse = {
+        balance: { card_total: '0', cash_total: '0', total: '0', type: '' },
+        closing_balance: '0',
+        day_balance: '0',
+        expense_groups: [],
+        income_groups: [],
+        opening_balance: '0',
+        summary: [],
+        total_expense: '0',
+        total_income: '0',
+      };
+
+      try {
+        const params = Object.fromEntries(
+          Object.entries(filters).filter(([, value]) => value !== '' && value !== undefined && value !== null)
+        );
+
+        const response = await fetcher<TransactionReportResponse>([
+          endpoints.cashbox.report,
+          { params },
+        ]);
+
+        return response || fallback;
+      } catch (error) {
+        toast.error(getErrorMessage(error, 'Failed to fetch transactions report'));
+        return fallback;
+      }
+    },
+    []
+  );
+
   const getTransactions = useCallback(async (filters: TransactionFilters = {}): Promise<ITransaction[]> => {
     try {
       const params = Object.fromEntries(
@@ -166,6 +201,7 @@ export function useTransactionsAPI() {
   }, []);
 
   return {
+    getTransactionsReport,
     getTransactions,
     getTransactionById,
     createIncomeExpense,
