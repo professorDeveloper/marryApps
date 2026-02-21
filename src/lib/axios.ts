@@ -163,6 +163,7 @@ export const endpoints = {
   },
   storage: {
     list: '/api/v1/storages',
+    byBranch: (branchId: string) => `/api/v1/storages/branch/${branchId}`,
     details: (id: string) => `/api/v1/storages/${id}`,
     create: '/api/v1/storages',
     update: (id: string) => `/api/v1/storages/${id}`,

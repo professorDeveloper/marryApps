@@ -1,19 +1,22 @@
 import type { Transfer, TransferFormData, TransferBatchItemInput } from 'src/types/transfers';
 
-import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
+import dayjs from 'dayjs';
 import { useTranslation } from 'react-i18next';
 import { useParams, useNavigate } from 'react-router';
+import { useRef, useMemo, useState, useEffect, useCallback } from 'react';
+
 import { Box, Tab, Tabs, Stack } from '@mui/material';
-import dayjs from 'dayjs';
 
 import { paths } from 'src/routes/paths';
+
+import { useTransfersAPI } from 'src/hooks/use-transfers-api';
+
+import { fetcher, endpoints } from 'src/lib/axios';
+
 import { toast } from 'src/components/snackbar';
 import { GenericEditView } from 'src/components/generic-edit-view';
 import { CustomBreadcrumbs } from 'src/components/custom-breadcrumbs';
 import TransfersDetailsCalculation from 'src/components/transfers-details-calculation';
-
-import { fetcher, endpoints } from 'src/lib/axios';
-import { useTransfersAPI } from 'src/hooks/use-transfers-api';
 
 interface Branch {
   id: string;
@@ -55,7 +58,7 @@ function TabPanel({ children, value, index, ...other }: TabPanelProps) {
 interface TransfersEditViewProps {
   isNew?: boolean;
 }
-
+  
 export function TransfersEditView({ isNew = false }: TransfersEditViewProps) {
   const { t } = useTranslation('menu');
   const { id } = useParams<{ id: string }>();
@@ -69,7 +72,8 @@ export function TransfersEditView({ isNew = false }: TransfersEditViewProps) {
 
   const [transfer, setTransfer] = useState<Transfer | null>(null);
   const [branches, setBranches] = useState<Branch[]>([]);
-  const [storages, setStorages] = useState<Storage[]>([]);
+  const [fromStorages, setFromStorages] = useState<Storage[]>([]);
+  const [toStorages, setToStorages] = useState<Storage[]>([]);
   const [groups, setGroups] = useState<{ id: string; name: string }[]>([]);
 
   const [formData, setFormData] = useState<TransferFormData>({
@@ -104,11 +108,22 @@ export function TransfersEditView({ isNew = false }: TransfersEditViewProps) {
     setFormData(data as TransferFormData);
   }, []);
 
+  const getStoragesByBranch = useCallback(async (branchId: string): Promise<Storage[]> => {
+    if (!branchId) return [];
+
+    try {
+      const response = await fetcher<BackendResponse<Storage[]>>(endpoints.storage.byBranch(branchId));
+      return Array.isArray(response.data) ? response.data : [];
+    } catch {
+      return [];
+    }
+  }, []);
+
   useEffect(() => {
     const loadBaseData = async () => {
       try {
         setLoading(true);
-        const [groupsData, branchesData, storagesData] = await Promise.all([
+        const [groupsData, branchesData] = await Promise.all([
           getTransferGroups(),
           fetcher<BackendResponse<Branch[]>>(endpoints.branches.list).catch(
             () =>
@@ -119,20 +134,10 @@ export function TransfersEditView({ isNew = false }: TransfersEditViewProps) {
                 code: 500,
               }) as BackendResponse<Branch[]>
           ),
-          fetcher<BackendResponse<Storage[]>>(endpoints.storage.list).catch(
-            () =>
-              ({
-                status: 'error',
-                message: 'failed',
-                data: [],
-                code: 500,
-              }) as BackendResponse<Storage[]>
-          ),
         ]);
 
         setGroups(groupsData);
         setBranches(Array.isArray(branchesData.data) ? branchesData.data : []);
-        setStorages(Array.isArray(storagesData.data) ? storagesData.data : []);
       } finally {
         setLoading(false);
       }
@@ -180,6 +185,66 @@ export function TransfersEditView({ isNew = false }: TransfersEditViewProps) {
 
     loadTransfer();
   }, [getTransferById, id, isNew, navigate, t]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadFromStorages = async () => {
+      if (!formData.from_branch_id) {
+        setFromStorages([]);
+        return;
+      }
+
+      const branchStorages = await getStoragesByBranch(formData.from_branch_id);
+      if (!isMounted) return;
+
+      setFromStorages(branchStorages);
+
+      if (
+        formData.from_storage_id &&
+        !branchStorages.some((storage) => storage.id === formData.from_storage_id)
+      ) {
+        setFormData((prev) =>
+          prev.from_storage_id ? { ...prev, from_storage_id: '' } : prev
+        );
+      }
+    };
+
+    loadFromStorages();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [formData.from_branch_id, formData.from_storage_id, getStoragesByBranch]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadToStorages = async () => {
+      if (!formData.to_branch_id) {
+        setToStorages([]);
+        return;
+      }
+
+      const branchStorages = await getStoragesByBranch(formData.to_branch_id);
+      if (!isMounted) return;
+
+      setToStorages(branchStorages);
+
+      if (
+        formData.to_storage_id &&
+        !branchStorages.some((storage) => storage.id === formData.to_storage_id)
+      ) {
+        setFormData((prev) => (prev.to_storage_id ? { ...prev, to_storage_id: '' } : prev));
+      }
+    };
+
+    loadToStorages();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [formData.to_branch_id, formData.to_storage_id, getStoragesByBranch]);
 
   const saveByBatch = useCallback(async () => {
     if (!itemsRef.current.length) {
@@ -261,9 +326,13 @@ export function TransfersEditView({ isNew = false }: TransfersEditViewProps) {
     () => branches.map((branch) => ({ value: branch.id, label: branch.name })),
     [branches]
   );
-  const storageOptions = useMemo(
-    () => storages.map((storage) => ({ value: storage.id, label: storage.name })),
-    [storages]
+  const fromStorageOptions = useMemo(
+    () => fromStorages.map((storage) => ({ value: storage.id, label: storage.name })),
+    [fromStorages]
+  );
+  const toStorageOptions = useMemo(
+    () => toStorages.map((storage) => ({ value: storage.id, label: storage.name })),
+    [toStorages]
   );
 
   const config = useMemo(
@@ -305,7 +374,7 @@ export function TransfersEditView({ isNew = false }: TransfersEditViewProps) {
               label: t('deductions.storage', 'From storage'),
               type: 'select' as const,
               required: true,
-              options: storageOptions,
+              options: fromStorageOptions,
               defaultValue: '',
             },
             {
@@ -313,7 +382,7 @@ export function TransfersEditView({ isNew = false }: TransfersEditViewProps) {
               label: t('warehouse.storage', 'To storage'),
               type: 'select' as const,
               required: true,
-              options: storageOptions,
+              options: toStorageOptions,
               defaultValue: '',
             },
             {
@@ -346,7 +415,7 @@ export function TransfersEditView({ isNew = false }: TransfersEditViewProps) {
       ],
       onSubmit: handleSubmit as (formData: Record<string, any>) => Promise<void>,
     }),
-    [isNew, t, branchOptions, storageOptions, groupOptions, handleSubmit]
+    [isNew, t, branchOptions, fromStorageOptions, toStorageOptions, groupOptions, handleSubmit]
   );
 
   return (
