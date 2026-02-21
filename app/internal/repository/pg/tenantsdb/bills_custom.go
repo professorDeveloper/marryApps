@@ -582,3 +582,18 @@ func (q *Queries) GetOrderItemsWithStorage(ctx context.Context, orderID uuid.UUI
 	}
 	return out, nil
 }
+
+func (q *Queries) GetStorageByGoodID(ctx context.Context, goodID uuid.UUID) (pgtype.UUID, error) {
+	const sql = `
+		SELECT d.storage_id
+		FROM goods g
+		LEFT JOIN departments d ON g.department_id = d.id AND d.deleted_at = 0
+		WHERE g.id = $1 AND g.deleted_at = 0
+	`
+	row := q.db.QueryRow(ctx, sql, goodID)
+	var storageID pgtype.UUID
+	if err := row.Scan(&storageID); err != nil {
+		return pgtype.UUID{}, err
+	}
+	return storageID, nil
+}
