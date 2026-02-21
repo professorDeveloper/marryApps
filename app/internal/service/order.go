@@ -160,6 +160,11 @@ func (s *OrderS) CreateOrder(ctx context.Context, req model.CreateOrderRequest) 
 	}
 	orderForResponse := any(createdOrder)
 
+	// Mark the table as busy
+	if _, err := s.repo.Tenant(ctx).SetTableBusy(ctx, tableUUID); err != nil {
+		return nil, fmt.Errorf("failed to set table busy: %w", err)
+	}
+
 	billNo, err := s.repo.Tenant(ctx).NextDailyBillNo(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate bill number: %w", err)
@@ -438,6 +443,12 @@ func (s *OrderS) MarkOrderPaid(ctx context.Context, orderID string, cashierID st
 		discAmountNum = &n
 	}
 
+	// Fetch the order before paying so we have the table_id
+	orderBeforePay, err := s.repo.Tenant(ctx).GetOrderByID(ctx, oID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch order: %w", err)
+	}
+
 	if err := s.repo.Tenant(ctx).PayOrderBill(ctx, pg.PayOrderBillParams{
 		OrderID:         oID,
 		CashierID:       cID,
@@ -447,6 +458,11 @@ func (s *OrderS) MarkOrderPaid(ctx context.Context, orderID string, cashierID st
 		DiscountComment: discountComment,
 	}); err != nil {
 		return nil, fmt.Errorf("failed to mark order paid: %w", err)
+	}
+
+	// Free the table when order is paid
+	if orderBeforePay.TableID.Valid {
+		_, _ = s.repo.Tenant(ctx).SetTableFree(ctx, orderBeforePay.TableID.Bytes)
 	}
 
 	// Auto-create income transaction if cash register provided
