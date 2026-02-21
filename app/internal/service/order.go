@@ -616,7 +616,7 @@ func (s *OrderS) MarkOrderServed(ctx context.Context, orderID string) (*model.Or
 	return toOrderResponse(order), nil
 }
 
-func (s *OrderS) GetBills(ctx context.Context, req model.GetBillsRequest) ([]model.BillListItem, error) {
+func (s *OrderS) GetBills(ctx context.Context, req model.GetBillsRequest) (*model.BillListResponse, error) {
 	startEnd := func(t *time.Time) *pgtype.Timestamptz {
 		if t == nil {
 			return nil
@@ -655,7 +655,7 @@ func (s *OrderS) GetBills(ctx context.Context, req model.GetBillsRequest) ([]mod
 		limit = 20
 	}
 
-	rows, err := s.repo.Tenant(ctx).GetBills(ctx, pg.GetBillsParams{
+	params := pg.GetBillsParams{
 		Start:       startEnd(req.Start),
 		End:         startEnd(req.End),
 		BillStatus:  req.BillStatus,
@@ -665,12 +665,19 @@ func (s *OrderS) GetBills(ctx context.Context, req model.GetBillsRequest) ([]mod
 		TableID:     tableUUID,
 		Limit:       limit,
 		Offset:      req.Offset,
-	})
+	}
+
+	total, err := s.repo.Tenant(ctx).CountBills(ctx, params)
+	if err != nil {
+		return nil, fmt.Errorf("failed to count bills: %w", err)
+	}
+
+	rows, err := s.repo.Tenant(ctx).GetBills(ctx, params)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get bills: %w", err)
 	}
 
-	out := make([]model.BillListItem, 0, len(rows))
+	items := make([]model.BillListItem, 0, len(rows))
 	for _, r := range rows {
 		var openedAt *time.Time
 		if r.BillOpenedAt.Valid {
@@ -687,7 +694,7 @@ func (s *OrderS) GetBills(ctx context.Context, req model.GetBillsRequest) ([]mod
 			s := r.WaiterID.String()
 			waiterIDStr = &s
 		}
-		out = append(out, model.BillListItem{
+		items = append(items, model.BillListItem{
 			ID:              r.ID.String(),
 			BillNo:          r.BillNo,
 			BillStatus:      r.BillStatus,
@@ -706,9 +713,15 @@ func (s *OrderS) GetBills(ctx context.Context, req model.GetBillsRequest) ([]mod
 			DiscountAmount:  numericToString(r.DiscountAmount),
 			GrandTotal:      numericToString(r.GrandTotal),
 			PaymentType:     r.PaymentType,
+			Quantity:        r.TotalQty,
 		})
 	}
-	return out, nil
+	return &model.BillListResponse{
+		Total:  total,
+		Limit:  limit,
+		Offset: req.Offset,
+		Items:  items,
+	}, nil
 }
 
 func (s *OrderS) GetBillDetails(ctx context.Context, billID string) (*model.BillDetails, error) {

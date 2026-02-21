@@ -360,7 +360,7 @@ type OrderI interface {
 	DeleteOrder(ctx context.Context, orderID string) error
 	RestoreOrder(ctx context.Context, orderID string) error
 
-	GetBills(ctx context.Context, req model.GetBillsRequest) ([]model.BillListItem, error)
+	GetBills(ctx context.Context, req model.GetBillsRequest) (*model.BillListResponse, error)
 	GetBillDetails(ctx context.Context, billID string) (*model.BillDetails, error)
 
 	CreateOrderItems(ctx context.Context, req model.CreateOrderItemRequest) ([]model.OrderItemResponse, error)

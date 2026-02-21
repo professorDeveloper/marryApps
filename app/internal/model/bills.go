@@ -35,6 +35,14 @@ type BillListItem struct {
 	DiscountAmount  string     `json:"discount_amount"`
 	GrandTotal      string     `json:"grand_total"`
 	PaymentType     *string    `json:"payment_type,omitempty"`
+	Quantity        int32      `json:"quantity"`
+}
+
+type BillListResponse struct {
+	Total  int64          `json:"total"`
+	Limit  int32          `json:"limit"`
+	Offset int32          `json:"offset"`
+	Items  []BillListItem `json:"items"`
 }
 
 type BillItem struct {
