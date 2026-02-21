@@ -405,20 +405,20 @@ export function CashboxReportView() {
                     Naqd
                   </Typography>
                   <Typography variant="body2">{toNumberText(group.cash_total)}</Typography>
-                  <Link component="button" underline="hover" color="#6f66ff" sx={{ fontSize: 12 }}>
+                  {/* <Link component="button" underline="hover" color="#6f66ff" sx={{ fontSize: 12 }}>
                     Details
-                  </Link>
+                  </Link> */}
                 </Stack>
               </Box>
             ))}
-            <Stack direction="row" justifyContent="space-between">
+            {/* <Stack direction="row" justifyContent="space-between">
               <Typography variant="body2" sx={{ fontWeight: 700 }}>
                 Incomes
               </Typography>
               <Typography variant="body2" sx={{ fontWeight: 700 }}>
                 {toNumberText(incomesSummary?.total || report.total_income)}
               </Typography>
-            </Stack>
+            </Stack> */}
           </Stack>
         </Card>
 
@@ -451,20 +451,20 @@ export function CashboxReportView() {
                     Naqd
                   </Typography>
                   <Typography variant="body2">{toNumberText(group.cash_total)}</Typography>
-                  <Link component="button" underline="hover" color="#6f66ff" sx={{ fontSize: 12 }}>
+                  {/* <Link component="button" underline="hover" color="#6f66ff" sx={{ fontSize: 12 }}>
                     Details
-                  </Link>
+                  </Link> */}
                 </Stack>
               </Box>
             ))}
-            <Stack direction="row" justifyContent="space-between">
+            {/* <Stack direction="row" justifyContent="space-between">
               <Typography variant="body2" sx={{ fontWeight: 700 }}>
                 Expenses total
               </Typography>
               <Typography variant="body2" sx={{ fontWeight: 700 }}>
                 {toNumberText(expensesSummary?.total || report.total_expense)}
               </Typography>
-            </Stack>
+            </Stack> */}
           </Stack>
         </Card>
       </Box>
