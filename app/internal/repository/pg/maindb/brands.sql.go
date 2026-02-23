@@ -40,6 +40,23 @@ func (q *Queries) CreateBrand(ctx context.Context, arg CreateBrandParams) (Brand
 	return i, err
 }
 
+const deleteBrand = `-- name: DeleteBrand :one
+DELETE FROM brands WHERE id = $1 RETURNING id, name, brand_id, created_at, updated_at
+`
+
+func (q *Queries) DeleteBrand(ctx context.Context, id uuid.UUID) (Brand, error) {
+	row := q.db.QueryRow(ctx, deleteBrand, id)
+	var i Brand
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.BrandID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const getBrandByBrandID = `-- name: GetBrandByBrandID :one
 SELECT id, name, brand_id, created_at, updated_at
 FROM brands

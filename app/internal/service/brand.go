@@ -203,9 +203,20 @@ func (s *BrandS) DeleteBrand(ctx context.Context, brandID uuid.UUID) error {
 		return fmt.Errorf("invalid brand ID")
 	}
 
-	_, err := s.repo.Main(ctx).GetBrandByID(ctx, brandID)
+	brand, err := s.repo.Main(ctx).GetBrandByID(ctx, brandID)
 	if err != nil {
 		return fmt.Errorf("brand not found")
+	}
+
+	schemaName := fmt.Sprintf("tenant_%s", brand.BrandID)
+	if _, err := s.repo.PgRepo.TenantPool.Exec(ctx, fmt.Sprintf("DROP SCHEMA IF EXISTS \"%s\" CASCADE", schemaName)); err != nil {
+		log.Printf("Failed to drop schema %s: %v", schemaName, err)
+		return fmt.Errorf("failed to drop tenant schema: %w", err)
+	}
+
+	if _, err := s.repo.Main(ctx).DeleteBrand(ctx, brandID); err != nil {
+		log.Printf("Failed to delete brand %s: %v", brandID, err)
+		return fmt.Errorf("failed to delete brand: %w", err)
 	}
 
 	return nil

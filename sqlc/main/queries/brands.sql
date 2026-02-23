@@ -23,3 +23,6 @@ SELECT id, name, brand_id, created_at, updated_at
 FROM brands
 ORDER BY id DESC
 LIMIT $1 OFFSET $2;
+
+-- name: DeleteBrand :one
+DELETE FROM brands WHERE id = $1 RETURNING id, name, brand_id, created_at, updated_at;
