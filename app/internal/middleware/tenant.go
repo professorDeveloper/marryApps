@@ -82,6 +82,18 @@ func TenantMiddleware(repo *repository.Repository) echo.MiddlewareFunc {
 					"message": "Internal server error",
 				})
 			}
+			// Brand superadmin (role=superadmin, not global) can pass X-Branch-ID header
+			// to scope their request to a specific branch.
+			if branchIDStr == "" && !isGlobal {
+				role, _ := c.Get("role").(string)
+				if role == "superadmin" {
+					if h := c.Request().Header.Get("X-Branch-ID"); h != "" {
+						branchIDStr = h
+						log.Printf("TenantMiddleware: Brand superadmin using X-Branch-ID header: %s", branchIDStr)
+					}
+				}
+			}
+
 			if branchIDStr != "" {
 				if _, err := tx.Exec(ctx, "SET LOCAL app.branch_id = $1", branchIDStr); err != nil {
 					log.Printf("Failed to set app.branch_id: %v", err)

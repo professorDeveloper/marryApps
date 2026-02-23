@@ -625,7 +625,13 @@ func (h *Handler) Register(router *echo.Echo) {
 			brands.GET("/:id", h.GetBrand, mw.CheckLanguage(), mw.CheckAuth(h.cfg), mw.RequireGlobalSuperadmin)
 			brands.PUT("/:id", h.UpdateBrand, mw.CheckLanguage(), mw.CheckAuth(h.cfg), mw.RequireGlobalSuperadmin)
 			brands.DELETE("/:id", h.DeleteBrand, mw.CheckLanguage(), mw.CheckAuth(h.cfg), mw.RequireGlobalSuperadmin)
-			// brands.POST("/:id/init-schema", h.InitializeTenantSchema, mw.CheckLanguage(), mw.CheckAuth(h.cfg), mw.RequireGlobalSuperadmin)
+
+			// Brand superadmin management
+			brands.POST("/:id/superadmins", h.CreateBrandSuperadmin, mw.CheckLanguage(), mw.CheckAuth(h.cfg), mw.RequireGlobalSuperadmin)
+			brands.GET("/:id/superadmins", h.ListBrandSuperadmins, mw.CheckLanguage(), mw.CheckAuth(h.cfg), mw.RequireGlobalSuperadmin)
+			brands.GET("/:id/superadmins/:user_id", h.GetBrandSuperadmin, mw.CheckLanguage(), mw.CheckAuth(h.cfg), mw.RequireGlobalSuperadmin)
+			brands.PUT("/:id/superadmins/:user_id", h.UpdateBrandSuperadmin, mw.CheckLanguage(), mw.CheckAuth(h.cfg), mw.RequireGlobalSuperadmin)
+			brands.DELETE("/:id/superadmins/:user_id", h.DeleteBrandSuperadmin, mw.CheckLanguage(), mw.CheckAuth(h.cfg), mw.RequireGlobalSuperadmin)
 		}
 
 	}

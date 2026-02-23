@@ -28,3 +28,34 @@ type ListBrandsResponse struct {
 	Limit  int32           `json:"limit"`
 	Offset int32           `json:"offset"`
 }
+
+// Brand superadmin models
+
+type CreateBrandSuperadminRequest struct {
+	FullName    string  `json:"full_name"`
+	Username    string  `json:"username"`
+	Password    string  `json:"password"`
+	Email       *string `json:"email,omitempty"`
+	PhoneNumber *string `json:"phone_number,omitempty"`
+}
+
+type UpdateBrandSuperadminRequest struct {
+	FullName    *string `json:"full_name,omitempty"`
+	Username    *string `json:"username,omitempty"`
+	Password    *string `json:"password,omitempty"`
+	Email       *string `json:"email,omitempty"`
+	PhoneNumber *string `json:"phone_number,omitempty"`
+	IsActive    *bool   `json:"is_active,omitempty"`
+}
+
+type BrandSuperadminResponse struct {
+	ID          string     `json:"id"`
+	FullName    *string    `json:"full_name,omitempty"`
+	Username    *string    `json:"username,omitempty"`
+	Email       *string    `json:"email,omitempty"`
+	PhoneNumber *string    `json:"phone_number,omitempty"`
+	IsActive    bool       `json:"is_active"`
+	BrandID     *string    `json:"brand_id,omitempty"`
+	CreatedAt   *time.Time `json:"created_at,omitempty"`
+	UpdatedAt   *time.Time `json:"updated_at,omitempty"`
+}

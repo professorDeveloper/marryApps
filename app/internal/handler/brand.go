@@ -264,6 +264,144 @@ func (h *Handler) DeleteBrand(c echo.Context) error {
 	))
 }
 
+// CreateBrandSuperadmin creates a superadmin user for a brand
+// @Summary Create brand superadmin
+// @Tags brands
+// @Security BearerAuth
+// @Accept json
+// @Produce json
+// @Param id path string true "Brand UUID"
+// @Param request body model.CreateBrandSuperadminRequest true "Superadmin creation request"
+// @Success 201 {object} model.BrandSuperadminResponse
+// @Failure 400 {object} model.ErrorResponse
+// @Failure 500 {object} model.ErrorResponse
+// @Router /api/v1/admin/brands/{id}/superadmins [post]
+func (h *Handler) CreateBrandSuperadmin(c echo.Context) error {
+	brandID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("Invalid brand ID", err.Error(), http.StatusBadRequest))
+	}
+
+	req := &model.CreateBrandSuperadminRequest{}
+	if err := c.Bind(req); err != nil {
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("Invalid request body", err.Error(), http.StatusBadRequest))
+	}
+	if req.Username == "" || req.Password == "" {
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("username and password are required", "", http.StatusBadRequest))
+	}
+
+	resp, err := h.service.Brand().CreateBrandSuperadmin(c.Request().Context(), brandID, *req)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("Failed to create superadmin", err.Error(), http.StatusInternalServerError))
+	}
+	return c.JSON(http.StatusCreated, model.NewSuccessResponse("Superadmin created successfully", resp, http.StatusCreated))
+}
+
+// ListBrandSuperadmins lists all superadmins of a brand
+// @Summary List brand superadmins
+// @Tags brands
+// @Security BearerAuth
+// @Produce json
+// @Param id path string true "Brand UUID"
+// @Success 200 {array} model.BrandSuperadminResponse
+// @Router /api/v1/admin/brands/{id}/superadmins [get]
+func (h *Handler) ListBrandSuperadmins(c echo.Context) error {
+	brandID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("Invalid brand ID", err.Error(), http.StatusBadRequest))
+	}
+
+	resp, err := h.service.Brand().ListBrandSuperadmins(c.Request().Context(), brandID)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("Failed to list superadmins", err.Error(), http.StatusInternalServerError))
+	}
+	return c.JSON(http.StatusOK, model.NewSuccessResponse("Data retrieved successfully", resp, http.StatusOK))
+}
+
+// GetBrandSuperadmin gets a single superadmin of a brand
+// @Summary Get brand superadmin
+// @Tags brands
+// @Security BearerAuth
+// @Produce json
+// @Param id path string true "Brand UUID"
+// @Param user_id path string true "User UUID"
+// @Success 200 {object} model.BrandSuperadminResponse
+// @Router /api/v1/admin/brands/{id}/superadmins/{user_id} [get]
+func (h *Handler) GetBrandSuperadmin(c echo.Context) error {
+	brandID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("Invalid brand ID", err.Error(), http.StatusBadRequest))
+	}
+	userID, err := uuid.Parse(c.Param("user_id"))
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("Invalid user ID", err.Error(), http.StatusBadRequest))
+	}
+
+	resp, err := h.service.Brand().GetBrandSuperadmin(c.Request().Context(), brandID, userID)
+	if err != nil {
+		return c.JSON(http.StatusNotFound, model.NewErrorResponse("Superadmin not found", err.Error(), http.StatusNotFound))
+	}
+	return c.JSON(http.StatusOK, model.NewSuccessResponse("Data retrieved successfully", resp, http.StatusOK))
+}
+
+// UpdateBrandSuperadmin updates a superadmin of a brand
+// @Summary Update brand superadmin
+// @Tags brands
+// @Security BearerAuth
+// @Accept json
+// @Produce json
+// @Param id path string true "Brand UUID"
+// @Param user_id path string true "User UUID"
+// @Param request body model.UpdateBrandSuperadminRequest true "Update request"
+// @Success 200 {object} model.BrandSuperadminResponse
+// @Router /api/v1/admin/brands/{id}/superadmins/{user_id} [put]
+func (h *Handler) UpdateBrandSuperadmin(c echo.Context) error {
+	brandID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("Invalid brand ID", err.Error(), http.StatusBadRequest))
+	}
+	userID, err := uuid.Parse(c.Param("user_id"))
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("Invalid user ID", err.Error(), http.StatusBadRequest))
+	}
+
+	req := &model.UpdateBrandSuperadminRequest{}
+	if err := c.Bind(req); err != nil {
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("Invalid request body", err.Error(), http.StatusBadRequest))
+	}
+
+	resp, err := h.service.Brand().UpdateBrandSuperadmin(c.Request().Context(), brandID, userID, *req)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("Failed to update superadmin", err.Error(), http.StatusInternalServerError))
+	}
+	return c.JSON(http.StatusOK, model.NewSuccessResponse("Superadmin updated successfully", resp, http.StatusOK))
+}
+
+// DeleteBrandSuperadmin soft-deletes a superadmin of a brand
+// @Summary Delete brand superadmin
+// @Tags brands
+// @Security BearerAuth
+// @Produce json
+// @Param id path string true "Brand UUID"
+// @Param user_id path string true "User UUID"
+// @Success 200
+// @Router /api/v1/admin/brands/{id}/superadmins/{user_id} [delete]
+func (h *Handler) DeleteBrandSuperadmin(c echo.Context) error {
+	brandID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("Invalid brand ID", err.Error(), http.StatusBadRequest))
+	}
+	userID, err := uuid.Parse(c.Param("user_id"))
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("Invalid user ID", err.Error(), http.StatusBadRequest))
+	}
+
+	if err := h.service.Brand().DeleteBrandSuperadmin(c.Request().Context(), brandID, userID); err != nil {
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("Failed to delete superadmin", err.Error(), http.StatusInternalServerError))
+	}
+	return c.JSON(http.StatusOK, model.NewSuccessResponse("Superadmin deleted successfully", map[string]any{}, http.StatusOK))
+}
+
 // // InitializeTenantSchema initializes a tenant schema for a brand
 // // @Summary Initialize tenant schema
 // // @Description Create a schema for the brand and run tenant migrations

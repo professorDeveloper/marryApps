@@ -6,13 +6,17 @@ import (
 	"log"
 	"regexp"
 	"strings"
+	"time"
 	"unicode"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgtype"
 	"gitlab.yurtal.tech/company/maryai/back/internal/migrate"
 	"gitlab.yurtal.tech/company/maryai/back/internal/model"
 	"gitlab.yurtal.tech/company/maryai/back/internal/repository"
 	pgmain "gitlab.yurtal.tech/company/maryai/back/internal/repository/pg/maindb"
+	pg "gitlab.yurtal.tech/company/maryai/back/internal/repository/pg/tenantsdb"
+	"gitlab.yurtal.tech/company/maryai/back/pkg/utils"
 )
 
 type BrandI interface {
@@ -22,6 +26,12 @@ type BrandI interface {
 	UpdateBrand(ctx context.Context, brandID uuid.UUID, name *string) (*model.BrandResponse, error)
 	DeleteBrand(ctx context.Context, brandID uuid.UUID) error
 	InitializeTenantSchema(ctx context.Context, brandID uuid.UUID) error
+
+	CreateBrandSuperadmin(ctx context.Context, brandID uuid.UUID, req model.CreateBrandSuperadminRequest) (*model.BrandSuperadminResponse, error)
+	ListBrandSuperadmins(ctx context.Context, brandID uuid.UUID) ([]model.BrandSuperadminResponse, error)
+	GetBrandSuperadmin(ctx context.Context, brandID uuid.UUID, userID uuid.UUID) (*model.BrandSuperadminResponse, error)
+	UpdateBrandSuperadmin(ctx context.Context, brandID uuid.UUID, userID uuid.UUID, req model.UpdateBrandSuperadminRequest) (*model.BrandSuperadminResponse, error)
+	DeleteBrandSuperadmin(ctx context.Context, brandID uuid.UUID, userID uuid.UUID) error
 }
 
 type BrandS struct {
@@ -242,3 +252,183 @@ func (s *BrandS) createSchema(ctx context.Context, schemaName string) error {
 func (s *BrandS) runMigrationsInSchema(ctx context.Context, schemaName string) error {
 	return migrate.RunMigrationsInSchema(ctx, s.repo.PgRepo.TenantPool, schemaName)
 }
+
+// execInBrandSchema resolves brand schema and runs fn inside a transaction scoped to it.
+func (s *BrandS) execInBrandSchema(ctx context.Context, brandID uuid.UUID, fn func(q *pg.Queries) error) error {
+	resolver := NewTenantResolver(s.repo)
+	cfg, err := resolver.ResolveTenantByBrandUUID(ctx, brandID)
+	if err != nil {
+		return err
+	}
+	schemaName := fmt.Sprintf("tenant_%s", cfg.BrandID)
+
+	tx, err := s.repo.PgRepo.TenantPool.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	if _, err := tx.Exec(ctx, fmt.Sprintf(`SET LOCAL search_path TO "%s", public`, schemaName)); err != nil {
+		tx.Rollback(ctx)
+		return fmt.Errorf("failed to set schema: %w", err)
+	}
+	q := s.repo.Tenant(ctx).WithTx(tx)
+	if err := fn(q); err != nil {
+		tx.Rollback(ctx)
+		return err
+	}
+	return tx.Commit(ctx)
+}
+
+func toSuperadminResponse(u pg.User) model.BrandSuperadminResponse {
+	r := model.BrandSuperadminResponse{
+		ID:          u.ID.String(),
+		FullName:    u.FullName,
+		Username:    u.Username,
+		Email:       u.Email,
+		PhoneNumber: u.PhoneNumber,
+		IsActive:    u.IsActive,
+	}
+	if u.BrandID.Valid {
+		s := u.BrandID.String()
+		r.BrandID = &s
+	}
+	if u.CreatedAt.Valid {
+		t := u.CreatedAt.Time
+		r.CreatedAt = &t
+	}
+	if u.UpdatedAt.Valid {
+		t := u.UpdatedAt.Time
+		r.UpdatedAt = &t
+	}
+	return r
+}
+
+func (s *BrandS) CreateBrandSuperadmin(ctx context.Context, brandID uuid.UUID, req model.CreateBrandSuperadminRequest) (*model.BrandSuperadminResponse, error) {
+	req.Username = strings.TrimSpace(req.Username)
+	req.Password = strings.TrimSpace(req.Password)
+	if req.Username == "" {
+		return nil, fmt.Errorf("username is required")
+	}
+	if req.Password == "" {
+		return nil, fmt.Errorf("password is required")
+	}
+
+	hash, err := utils.HashPassword(req.Password)
+	if err != nil {
+		return nil, fmt.Errorf("failed to hash password: %w", err)
+	}
+
+	// Resolve brand to get brand UUID for brand_id field
+	resolver := NewTenantResolver(s.repo)
+	cfg, err := resolver.ResolveTenantByBrandUUID(ctx, brandID)
+	if err != nil {
+		return nil, err
+	}
+
+	fullName := strings.TrimSpace(req.FullName)
+
+	var result model.BrandSuperadminResponse
+	err = s.execInBrandSchema(ctx, brandID, func(q *pg.Queries) error {
+		user, err := q.CreateUser(ctx, pg.CreateUserParams{
+			ID:           uuid.New(),
+			FullName:     &fullName,
+			Username:     &req.Username,
+			Role:         "superadmin",
+			Email:        req.Email,
+			PhoneNumber:  req.PhoneNumber,
+			HashPassword: &hash,
+			BrandID:      pgtype.UUID{Bytes: cfg.BrandUUID, Valid: true},
+			BranchID:     pgtype.UUID{},
+			ShiftID:      pgtype.UUID{},
+			IsActive:     true,
+			Pincode:      nil,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to create superadmin: %w", err)
+		}
+		result = toSuperadminResponse(user)
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return &result, nil
+}
+
+func (s *BrandS) ListBrandSuperadmins(ctx context.Context, brandID uuid.UUID) ([]model.BrandSuperadminResponse, error) {
+	var result []model.BrandSuperadminResponse
+	err := s.execInBrandSchema(ctx, brandID, func(q *pg.Queries) error {
+		users, err := q.GetBrandSuperadmins(ctx)
+		if err != nil {
+			return fmt.Errorf("failed to list superadmins: %w", err)
+		}
+		for _, u := range users {
+			result = append(result, toSuperadminResponse(u))
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return result, nil
+}
+
+func (s *BrandS) GetBrandSuperadmin(ctx context.Context, brandID uuid.UUID, userID uuid.UUID) (*model.BrandSuperadminResponse, error) {
+	var result model.BrandSuperadminResponse
+	err := s.execInBrandSchema(ctx, brandID, func(q *pg.Queries) error {
+		u, err := q.GetBrandSuperadminByID(ctx, userID)
+		if err != nil {
+			return fmt.Errorf("superadmin not found")
+		}
+		result = toSuperadminResponse(u)
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return &result, nil
+}
+
+func (s *BrandS) UpdateBrandSuperadmin(ctx context.Context, brandID uuid.UUID, userID uuid.UUID, req model.UpdateBrandSuperadminRequest) (*model.BrandSuperadminResponse, error) {
+	var hashPtr *string
+	if req.Password != nil && strings.TrimSpace(*req.Password) != "" {
+		h, err := utils.HashPassword(*req.Password)
+		if err != nil {
+			return nil, fmt.Errorf("failed to hash password: %w", err)
+		}
+		hashPtr = &h
+	}
+
+	var result model.BrandSuperadminResponse
+	err := s.execInBrandSchema(ctx, brandID, func(q *pg.Queries) error {
+		u, err := q.UpdateBrandSuperadmin(ctx, pg.UpdateBrandSuperadminParams{
+			ID:           userID,
+			FullName:     req.FullName,
+			Username:     req.Username,
+			Email:        req.Email,
+			PhoneNumber:  req.PhoneNumber,
+			HashPassword: hashPtr,
+			IsActive:     req.IsActive,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to update superadmin: %w", err)
+		}
+		result = toSuperadminResponse(u)
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return &result, nil
+}
+
+func (s *BrandS) DeleteBrandSuperadmin(ctx context.Context, brandID uuid.UUID, userID uuid.UUID) error {
+	return s.execInBrandSchema(ctx, brandID, func(q *pg.Queries) error {
+		if err := q.SoftDeleteBrandSuperadmin(ctx, userID); err != nil {
+			return fmt.Errorf("failed to delete superadmin: %w", err)
+		}
+		return nil
+	})
+}
+
+// ensure time import is used
+var _ = time.Now
