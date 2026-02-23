@@ -5,7 +5,7 @@ import { useCallback, useMemo } from 'react';
 import { toast } from 'sonner';
 
 import { deleter, endpoints, fetcher, poster, putter } from 'src/lib/axios';
-import type { IHallFormData, IHallItem } from 'src/types/halls';
+import type { IHallCreateRequest, IHallFormData, IHallItem } from 'src/types/halls';
 
 const swrOptions: SWRConfiguration = {
     revalidateIfStale: true,
@@ -86,39 +86,21 @@ export function useGetHall(hallId: string) {
 
 /**
  * Create new hall
- * branch_id ni user tanlasi yoki localStorage'dan oladi
  */
 export function useCreateHall() {
     const createHall = useCallback(async (formData: IHallFormData) => {
         try {
-            // branch_id ni formData'dan ol, yoki localStorage'dan olish
-            let branchId = formData.branch_id;
-
-            if (!branchId) {
-                branchId = localStorage.getItem('branch_id') || localStorage.getItem('brand_id') || '';
-            }
-
-            console.log('Creating hall with branchId:', branchId);
-            console.log('Form data:', formData);
-
-            if (!branchId) {
-                toast.error('Branch ID not found. Please select branch or login again.');
-                throw new Error('Branch ID not found');
-            }
-
-            const payload: IHallFormData = {
-                ...formData,
-                branch_id: branchId,
+            const payload: IHallCreateRequest = {
+                name: formData.name,
+                name_i18n: formData.name_i18n,
+                width: formData.width,
+                height: formData.height,
             };
-
-            console.log('Sending payload:', payload);
 
             const response = await poster<BackendResponse<IHallItem>>(
                 endpoints.halls.create,
                 payload
             );
-
-            console.log('Response:', response);
 
             // Extract data from wrapped response
             let hallData: IHallItem;

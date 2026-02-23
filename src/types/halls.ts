@@ -15,7 +15,7 @@ export interface IHallItem {
 }
 
 export interface IHallFormData {
-    branch_id: string;
+    branch_id?: string;
     name: string;
     name_i18n?: any;
     width: number;
@@ -23,7 +23,7 @@ export interface IHallFormData {
 }
 
 export interface IHallCreateRequest {
-    branch_id: string;
+    branch_id?: string;
     name: string;
     name_i18n?: any;
     width: number;

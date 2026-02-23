@@ -107,11 +107,6 @@ export default function HallsPage() {
             return;
         }
 
-        if (!formData.branch_id) {
-            alert(t('halls.messages.branchRequired'));
-            return;
-        }
-
         setCreating(true);
         try {
             // Convert meters/cm to pixels (using 100px = 1m)
@@ -120,7 +115,6 @@ export default function HallsPage() {
 
             await createHall({
                 name: formData.name,
-                branch_id: formData.branch_id,
                 width: widthInPx,
                 height: heightInPx,
             });
@@ -363,20 +357,6 @@ export default function HallsPage() {
                                 </ToggleButton>
                             </ToggleButtonGroup>
                         </Box>
-                        <FormControl fullWidth>
-                            <InputLabel>{t('halls.form.branch')}</InputLabel>
-                            <Select
-                                label={t('halls.form.branch')}
-                                value={formData.branch_id}
-                                onChange={(e) => setFormData((prev) => ({ ...prev, branch_id: e.target.value }))}
-                            >
-                                {branches.map((branch) => (
-                                    <MenuItem key={branch.id} value={branch.id}>
-                                        {branch.name}
-                                    </MenuItem>
-                                ))}
-                            </Select>
-                        </FormControl>
                         <TextField
                             label={t('halls.form.name')}
                             value={formData.name}
@@ -413,7 +393,7 @@ export default function HallsPage() {
                         onClick={handleCreateHall}
                         // variant="contained"
                         sx={{ backgroundColor: '#FB6633', '&:hover': { backgroundColor: '#FB6633', opacity: 0.8 } }}
-                        disabled={creating || !formData.name.trim() || !formData.branch_id}
+                        disabled={creating || !formData.name.trim()}
                     >
                         {creating ? t('halls.buttons.creating') : t('halls.buttons.create')}
                     </Button>
