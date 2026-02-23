@@ -22,6 +22,20 @@ import { CustomGridActionsCellItem } from 'src/components/custom-data-grid';
 import { RenderCellItem, GenericTableView } from 'src/components/generic-table-view';
 import { GenericViewModal } from 'src/components/generic-view-view/GenericViewModal';
 
+const toUtcDayBoundary = (value: dayjs.Dayjs, endOfDay = false): string => {
+    const date = new Date(
+        Date.UTC(
+            value.year(),
+            value.month(),
+            value.date(),
+            endOfDay ? 23 : 0,
+            endOfDay ? 59 : 0,
+            endOfDay ? 59 : 0
+        )
+    );
+    return date.toISOString().replace('.000Z', 'Z');
+};
+
 export function BillsListView() {
     const { t, i18n } = useTranslation('menu');
 
@@ -358,10 +372,10 @@ export function BillsListView() {
     const handleApplyDateRange = useCallback(() => {
         const newFilters: Record<string, string> = {};
         if (startDate) {
-            newFilters.start = startDate.format('YYYY-MM-DD');
+            newFilters.start = toUtcDayBoundary(startDate);
         }
         if (endDate) {
-            newFilters.end = endDate.format('YYYY-MM-DD');
+            newFilters.end = toUtcDayBoundary(endDate, true);
         }
         handleFilterChange(newFilters);
     }, [startDate, endDate, handleFilterChange]);

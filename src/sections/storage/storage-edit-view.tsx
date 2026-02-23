@@ -1,14 +1,13 @@
 import type { CardSection, GenericEditViewConfig } from 'src/components/generic-edit-view';
 import type { IStorageFormData } from 'src/types/departments.tsx';
 import { Box } from '@mui/material';
-import { useCallback, useMemo } from 'react';
+import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { paths } from 'src/routes/paths';
 import { useParams, useRouter } from 'src/routes/hooks';
 import { GenericEditView } from 'src/components/generic-edit-view';
 import { CustomBreadcrumbs } from 'src/components/custom-breadcrumbs';
 import { useCreateStorage, useDeleteStorage, useGetStorage, useUpdateStorage, useUpdateTranslation } from 'src/actions/departments';
-import { useGetBranches } from 'src/actions/branches';
 import { useTranslationsAPI } from 'src/hooks/use-translations-api';
 
 const COLOR_CODES = [
@@ -39,24 +38,11 @@ export function WarehouseEditView({ isNew = false }: { isNew?: boolean }) {
   const { createTranslation } = useTranslationsAPI();
 
   const { storage, storageLoading } = useGetStorage(!isNew && id ? id : '');
-  const { branches } = useGetBranches();
-
-  const branchOptions = useMemo(
-    () =>
-      (branches || []).map((b) => ({
-        value: b.id,
-        label: b.name || b.id,
-      })),
-    [branches]
-  );
 
   const handleSubmit = useCallback(
     async (formData: Record<string, any>) => {
       if (!formData.name || !String(formData.name).trim()) {
         throw new Error('Name is required');
-      }
-      if (!formData.branch_id) {
-        throw new Error('Branch is required');
       }
 
       // Create or update translation if translations are provided
@@ -81,7 +67,6 @@ export function WarehouseEditView({ isNew = false }: { isNew?: boolean }) {
       const payload: IStorageFormData = {
         name: String(formData.name).trim(),
         name_i18n,
-        branch_id: formData.branch_id,
         picture_url: formData.picture_url ?? undefined,
         color_code: formData.color_code ?? undefined,
       };

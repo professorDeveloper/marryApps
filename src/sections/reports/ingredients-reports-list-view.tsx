@@ -23,6 +23,20 @@ import { CustomGridActionsCellItem } from 'src/components/custom-data-grid';
 import { RenderCellItem, GenericTableView } from 'src/components/generic-table-view';
 import { GenericViewModal } from 'src/components/generic-view-view/GenericViewModal';
 
+const toUtcDayBoundary = (value: dayjs.Dayjs, endOfDay = false): string => {
+    const date = new Date(
+        Date.UTC(
+            value.year(),
+            value.month(),
+            value.date(),
+            endOfDay ? 23 : 0,
+            endOfDay ? 59 : 0,
+            endOfDay ? 59 : 0
+        )
+    );
+    return date.toISOString().replace('.000Z', 'Z');
+};
+
 export function IngredientReportsListView() {
     const { t } = useTranslation('menu');
 
@@ -65,8 +79,8 @@ export function IngredientReportsListView() {
             setFilters((prev) => ({
                 ...prev,
                 storage_id: firstStorageId,
-                start: yesterday.format('YYYY-MM-DD'),
-                end: today.format('YYYY-MM-DD'),
+                start: toUtcDayBoundary(yesterday),
+                end: toUtcDayBoundary(today, true),
             }));
         }
     }, [storages]);
@@ -85,8 +99,8 @@ export function IngredientReportsListView() {
     const { report: reportDetail, reportLoading } = useGetIngredientReportDetail(
         selectedIngredientId || '',
         selectedStorageId,
-        startDate?.format('YYYY-MM-DD') || '',
-        endDate?.format('YYYY-MM-DD') || ''
+        startDate ? toUtcDayBoundary(startDate) : '',
+        endDate ? toUtcDayBoundary(endDate, true) : ''
     );
 
     // Prepare filter options
@@ -234,10 +248,10 @@ export function IngredientReportsListView() {
     const handleApplyDateRange = useCallback(() => {
         const newFilters: Record<string, string> = {};
         if (startDate) {
-            newFilters.start = startDate.format('YYYY-MM-DD');
+            newFilters.start = toUtcDayBoundary(startDate);
         }
         if (endDate) {
-            newFilters.end = endDate.format('YYYY-MM-DD');
+            newFilters.end = toUtcDayBoundary(endDate, true);
         }
         if (selectedStorageId) {
             newFilters.storage_id = selectedStorageId;

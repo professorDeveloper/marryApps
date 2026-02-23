@@ -98,6 +98,8 @@ export function DashboardLayout({
   const canDisplayItemByRole = (allowedRoles: NavItemProps['allowedRoles']): boolean =>
     !allowedRoles?.includes(user?.role);
 
+  const isSuperadmin = String(user?.role || '').toLowerCase() === 'superadmin';
+
   const renderHeader = () => {
     const headerSlotProps: HeaderSectionProps['slotProps'] = {
       container: {
@@ -159,10 +161,12 @@ export function DashboardLayout({
           )}
 
           {/** @slot Workspace popover */}
-          <WorkspacesPopover
-            data={workspaces}
-            sx={{ ...(isNavHorizontal && { color: 'var(--layout-nav-text-primary-color)' }) }}
-          />
+          {isSuperadmin && (
+            <WorkspacesPopover
+              data={workspaces}
+              sx={{ ...(isNavHorizontal && { color: 'var(--layout-nav-text-primary-color)' }) }}
+            />
+          )}
         </>
       ),
       rightArea: (

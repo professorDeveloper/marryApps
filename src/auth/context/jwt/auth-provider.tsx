@@ -50,6 +50,25 @@ export function AuthProvider({ children }: Props) {
             email: decoded.email || '',
           };
 
+          const resolvedBrandId = profile.brand_id || decoded.brand_id || decoded.brandId;
+          const resolvedBranchId = profile.branch_id || decoded.branch_id || decoded.branchId;
+          const resolvedRole = profile.role || decoded.role || 'user';
+
+          if (resolvedBrandId) {
+            localStorage.setItem('brand_id', resolvedBrandId);
+          }
+
+          if (resolvedBranchId) {
+            localStorage.setItem('branch_id', resolvedBranchId);
+            if (String(resolvedRole).toLowerCase() !== 'superadmin') {
+              localStorage.setItem('selectedBranchId', resolvedBranchId);
+            }
+          } else {
+            localStorage.removeItem('branch_id');
+          }
+
+          localStorage.setItem('user_role', String(resolvedRole));
+
           setState({ user: { ...user, accessToken }, loading: false });
         } catch (profileError) {
           console.error('Failed to fetch /api/v1/user/me profile:', profileError);
@@ -64,6 +83,25 @@ export function AuthProvider({ children }: Props) {
             email: decoded.email || '',
             role: decoded.role || 'user',
           };
+
+          const resolvedBrandId = decoded.brand_id || decoded.brandId;
+          const resolvedBranchId = decoded.branch_id || decoded.branchId;
+          const resolvedRole = decoded.role || 'user';
+
+          if (resolvedBrandId) {
+            localStorage.setItem('brand_id', resolvedBrandId);
+          }
+
+          if (resolvedBranchId) {
+            localStorage.setItem('branch_id', resolvedBranchId);
+            if (String(resolvedRole).toLowerCase() !== 'superadmin') {
+              localStorage.setItem('selectedBranchId', resolvedBranchId);
+            }
+          } else {
+            localStorage.removeItem('branch_id');
+          }
+
+          localStorage.setItem('user_role', String(resolvedRole));
 
           setState({ user: { ...fallbackUser, accessToken }, loading: false });
         }

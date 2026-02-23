@@ -1,6 +1,7 @@
 export type IBillStatus = 'opened' | 'closed' | 'paid';
 export type IPaymentType = 'cash' | 'card';
 export type IBillItemStatus = 'pending' | 'completed' | 'cancelled';
+export type IAmountValue = string | number;
 
 export interface IBillItemDetail {
     id: string;
@@ -17,19 +18,21 @@ export interface IBillItem {
     bill_no: number;
     bill_status: IBillStatus;
     opened_at: string;
+    closed_at?: string | null;
+    paid_at?: string | null;
     waiter_id?: string;
     waiter_name?: string;
-    table_number: number;
+    table_number?: number | null;
     hall_name?: string;
-    guest_count: number;
-    food_cost: string;
-    food_total: string;
-    service_percent: string;
-    service_amount: string;
-    discount_percent: string;
-    discount_amount: string;
-    grand_total: string;
-    quantity?: number;
+    guest_count?: number;
+    food_cost: IAmountValue;
+    food_total: IAmountValue;
+    service_percent: IAmountValue;
+    service_amount: IAmountValue;
+    discount_percent: IAmountValue;
+    discount_amount: IAmountValue;
+    grand_total: IAmountValue;
+    quantity: number;
 }
 
 export interface IBillDetail extends IBillItem {
@@ -49,14 +52,14 @@ export interface IBillsResponse {
     status: string;
     message: string;
     data: IBillsListData;
-    code: number;
+    code?: number;
 }
 
 export interface IBillDetailResponse {
     status: string;
     message: string;
     data: IBillDetail;
-    code: number;
+    code?: number;
 }
 
 export interface IBillsFilterParams {

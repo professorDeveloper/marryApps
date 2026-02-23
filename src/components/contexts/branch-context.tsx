@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { createContext, useContext, useState, useCallback, useMemo, useEffect } from 'react';
+import { mutate } from 'swr';
 
 interface BranchContextType {
     selectedBranchId: string | null;
@@ -31,6 +32,13 @@ export function BranchProvider({ children }: { children: ReactNode }) {
         } else {
             localStorage.removeItem(BRANCH_STORAGE_KEY);
         }
+
+        // Branch o'zgarganda SWR query'larini qayta yuklaymiz
+        void mutate(
+            (key) => typeof key === 'string' && key.startsWith('/api/'),
+            undefined,
+            { revalidate: true }
+        );
     }, []);
 
     const value = useMemo(

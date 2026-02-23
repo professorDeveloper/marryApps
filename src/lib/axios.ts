@@ -14,11 +14,49 @@ const axiosInstance = axios.create({
 /**
  * Token interceptor
  */
+function decodeJwtPayload(token: string | null): Record<string, any> | null {
+  if (!token) return null;
+
+  try {
+    const [, payload] = token.split('.');
+    if (!payload) return null;
+
+    const normalized = payload.replace(/-/g, '+').replace(/_/g, '/');
+    return JSON.parse(atob(normalized));
+  } catch {
+    return null;
+  }
+}
+
 axiosInstance.interceptors.request.use((config) => {
-  const token = sessionStorage.getItem('accessToken') || localStorage.getItem('accessToken');
+  const token =
+    sessionStorage.getItem('jwt_access_token') ||
+    sessionStorage.getItem('accessToken') ||
+    localStorage.getItem('accessToken');
+  const decoded = decodeJwtPayload(token);
+
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
+
+  const storedRole = localStorage.getItem('user_role');
+  const storedBrandId = localStorage.getItem('brand_id');
+  const storedBranchId = localStorage.getItem('branch_id');
+  const selectedBranchId = localStorage.getItem('selectedBranchId');
+
+  const role = (storedRole || decoded?.role || '').toLowerCase();
+  const brandId = storedBrandId || decoded?.brand_id || decoded?.brandId;
+  const fallbackBranchId = storedBranchId || decoded?.branch_id || decoded?.branchId;
+  const branchId = role === 'superadmin' ? selectedBranchId : fallbackBranchId;
+
+  if (brandId) {
+    (config.headers as any)['X-Brand-Id'] = String(brandId);
+  }
+
+  if (branchId) {
+    (config.headers as any)['X-Branch-ID'] = String(branchId);
+  }
+
   return config;
 });
 

@@ -647,7 +647,6 @@ export function useCreateStorage() {
         const storagePayload = {
           name: formData.name,
           name_i18n,
-          branch_id: formData.branch_id,
           color_code: formData.color_code,
           picture_url: formData.picture_url,
         };
@@ -743,7 +742,6 @@ export function useUpdateStorage() {
         const storagePayload = {
           name: formData.name,
           name_i18n,
-          branch_id: formData.branch_id,
           color_code: formData.color_code,
           picture_url: formData.picture_url,
         };

@@ -73,6 +73,8 @@ export async function setSession(accessToken: string | null, brandId?: string) {
   try {
     if (accessToken) {
       sessionStorage.setItem(JWT_STORAGE_KEY, accessToken);
+      // Backward compatibility for legacy code paths
+      sessionStorage.setItem('accessToken', accessToken);
 
       axios.defaults.headers.common.Authorization = `Bearer ${accessToken}`;
 
@@ -84,18 +86,31 @@ export async function setSession(accessToken: string | null, brandId?: string) {
         throw new Error('Invalid access token!');
       }
 
-      // brand_id ni localStorage ga saqlab qolamiz
-      if (brandId) {
-        localStorage.setItem('brand_id', brandId);
-        localStorage.setItem('branch_id', brandId); // Also save as branch_id for API
-      } else if (decodedToken && decodedToken.brand_id) {
-        localStorage.setItem('brand_id', decodedToken.brand_id);
-        localStorage.setItem('branch_id', decodedToken.brand_id); // Also save as branch_id for API
+      // Persist tenant scope for request headers
+      const resolvedBrandId = brandId || decodedToken?.brand_id || decodedToken?.brandId;
+      const resolvedBranchId = decodedToken?.branch_id || decodedToken?.branchId;
+      const resolvedRole = decodedToken?.role;
+
+      if (resolvedBrandId) {
+        localStorage.setItem('brand_id', resolvedBrandId);
+      }
+
+      if (resolvedBranchId) {
+        localStorage.setItem('branch_id', resolvedBranchId);
+      } else {
+        localStorage.removeItem('branch_id');
+      }
+
+      if (resolvedRole) {
+        localStorage.setItem('user_role', String(resolvedRole));
       }
     } else {
       sessionStorage.removeItem(JWT_STORAGE_KEY);
+      sessionStorage.removeItem('accessToken');
       localStorage.removeItem('brand_id');
       localStorage.removeItem('branch_id');
+      localStorage.removeItem('user_role');
+      localStorage.removeItem('selectedBranchId');
       delete axios.defaults.headers.common.Authorization;
     }
   } catch (error) {

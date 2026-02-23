@@ -1,5 +1,5 @@
 import type { SWRConfiguration } from 'swr';
-import type { IBillItem, IBillDetail, IBillsListData, IBillsFilterParams } from 'src/types/bills';
+import type { IBillDetail, IBillsListData, IBillsFilterParams } from 'src/types/bills';
 
 import useSWR from 'swr';
 import { useMemo } from 'react';
@@ -16,7 +16,7 @@ interface BackendResponse<T> {
     status: string;
     message: string;
     data: T;
-    code: number;
+    code?: number;
 }
 
 /**
@@ -47,24 +47,19 @@ export function useGetBills(params?: IBillsFilterParams) {
     const queryString = buildQueryString(params || {});
     const url = queryString ? `${endpoints.bills.list}${queryString}` : endpoints.bills.list;
 
-    const { data, isLoading, error, isValidating } = useSWR<BackendResponse<IBillsListData | IBillItem[]>>(
+    const { data, isLoading, error, isValidating } = useSWR<BackendResponse<IBillsListData>>(
         url,
         fetcher,
         { ...swrOptions }
     );
 
     const bills = useMemo(() => {
-        if (!data?.data) return [];
-
-        if (Array.isArray(data.data)) {
-            return data.data;
-        }
-
+        if (!data?.data?.items) return [];
         return Array.isArray(data.data.items) ? data.data.items : [];
     }, [data]);
 
     const total = useMemo(() => {
-        if (!data?.data || Array.isArray(data.data)) return bills.length;
+        if (!data?.data) return bills.length;
         return data.data.total ?? bills.length;
     }, [data, bills.length]);
 
