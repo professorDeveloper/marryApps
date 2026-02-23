@@ -960,10 +960,7 @@ func (q *Queries) GetStockByIngredientID(ctx context.Context, arg GetStockByIngr
 
 const removeFromIngredientStock = `-- name: RemoveFromIngredientStock :one
 UPDATE ingredient_stock
-SET quantity = CASE
-    WHEN quantity - $2 < 0 THEN 0::numeric
-    ELSE quantity - $2
-END,
+SET quantity = quantity - $2,
     updated_at = NOW()
 WHERE id = $1 AND deleted_at = 0
   AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
@@ -975,7 +972,7 @@ type RemoveFromIngredientStockParams struct {
 	Quantity pgtype.Numeric `json:"quantity"`
 }
 
-// RemoveFromIngredientStock decreases ingredient stock quantity
+// RemoveFromIngredientStock decreases ingredient stock quantity (can go negative)
 func (q *Queries) RemoveFromIngredientStock(ctx context.Context, arg RemoveFromIngredientStockParams) (IngredientStock, error) {
 	row := q.db.QueryRow(ctx, removeFromIngredientStock, arg.ID, arg.Quantity)
 	var i IngredientStock

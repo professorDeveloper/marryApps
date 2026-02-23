@@ -258,13 +258,10 @@ WHERE id = $1 AND deleted_at = 0
   AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 RETURNING id, ingredient_id, storage_id, branch_id, quantity, created_at, updated_at, deleted_at;
 
--- RemoveFromIngredientStock decreases ingredient stock quantity
+-- RemoveFromIngredientStock decreases ingredient stock quantity (can go negative)
 -- name: RemoveFromIngredientStock :one
 UPDATE ingredient_stock
-SET quantity = CASE
-    WHEN quantity - $2 < 0 THEN 0::numeric
-    ELSE quantity - $2
-END,
+SET quantity = quantity - $2,
     updated_at = NOW()
 WHERE id = $1 AND deleted_at = 0
   AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
