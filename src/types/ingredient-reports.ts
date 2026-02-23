@@ -1,9 +1,10 @@
 export interface IIngredientReportItem {
-    id: string;
+    id?: string;
     ingredient_id: string;
     ingredient_name: string;
-    storage_id: string;
-    storage_name: string;
+    color_code?: string;
+    storage_id?: string;
+    storage_name?: string;
     measurement: string;
     begin_qty: string;
     end_qty: string;
@@ -27,7 +28,7 @@ export interface IIngredientReportItem {
 }
 
 export interface IIngredientReportsFilterParams {
-    storage_id: string; // majburiy
+    storage_id?: string; // ixtiyoriy (bo'sh string ham yuborilishi mumkin)
     start: string; // RFC3339 yoki YYYY-MM-DD
     end: string; // RFC3339 yoki YYYY-MM-DD
     ingredient_id?: string; // ixtiyoriy
