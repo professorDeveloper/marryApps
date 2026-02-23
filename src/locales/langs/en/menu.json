@@ -984,6 +984,14 @@
     "shortage": "Shortage",
     "summary": "Summary",
     "costPerUnit": "Cost/Unit",
+    "color": "Color",
+    "costStart": "Cost Start",
+    "costEnd": "Cost End",
+    "inAmount": "In Amount",
+    "outAmount": "Out Amount",
+    "deductionAmount": "Deduction Amount",
+    "surplusAmount": "Surplus Amount",
+    "shortageAmount": "Shortage Amount",
     "all": "All"
   },
   "bills": {
@@ -1005,6 +1013,7 @@
     "product": "Product",
     "quantity": "Qty",
     "price": "Price",
+    "foodCost": "Food Cost",
     "foodTotal": "Food Total",
     "grandTotal": "Grand Total",
     "opened": "Opened",
@@ -1015,7 +1024,8 @@
     "apply": "Apply",
     "reset": "Reset",
     "startDate": "Start Date",
-    "endDate": "End Date"
+    "endDate": "End Date",
+    "closedAt": "Closed At"
   },
   "ingredientStock": {
     "title": "Ingredient Stock",

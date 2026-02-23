@@ -967,6 +967,14 @@
     "shortage": "Kamomad",
     "summary": "Umumiy ma'lumot",
     "costPerUnit": "Birlik narxi",
+    "color": "Rang",
+    "costStart": "Boshlang'ich narx",
+    "costEnd": "Yakuniy narx",
+    "inAmount": "Kirim summasi",
+    "outAmount": "Chiqim summasi",
+    "deductionAmount": "Hisobdan chiqarish summasi",
+    "surplusAmount": "Ortiqcha summasi",
+    "shortageAmount": "Kamomad summasi",
     "all": "Barchasi"
   },
   "bills": {
@@ -988,6 +996,7 @@
     "product": "Maxsulot",
     "quantity": "Miqdor",
     "price": "Narx",
+    "foodCost": "Taom tannarxi",
     "foodTotal": "Taom jami",
     "grandTotal": "Jami summa",
     "opened": "Ochiiq",
@@ -998,7 +1007,8 @@
     "apply": "Qo'llash",
     "reset": "Qayta",
     "startDate": "Boshlanish sana",
-    "endDate": "Tugash sana"
+    "endDate": "Tugash sana",
+    "closedAt": "Yopilgan vaqti"
   },
   "ingredientStock": {
     "title": "Maxsulotlar zaxirasi",

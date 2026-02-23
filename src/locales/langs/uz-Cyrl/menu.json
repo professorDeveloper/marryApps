@@ -917,6 +917,14 @@
     "shortage": "Камомад",
     "summary": "Ўзбек маълумот",
     "costPerUnit": "Бирлик нархи",
+    "color": "Ранг",
+    "costStart": "Бошланғич нарх",
+    "costEnd": "Якуний нарх",
+    "inAmount": "Кирим суммаси",
+    "outAmount": "Чиқим суммаси",
+    "deductionAmount": "Ҳисобдан чиқариш суммаси",
+    "surplusAmount": "Ортиқча суммаси",
+    "shortageAmount": "Камомад суммаси",
     "all": "Бармаси"
   },
   "bills": {
@@ -938,6 +946,7 @@
     "product": "Махсулот",
     "quantity": "Миқдор",
     "price": "Нарх",
+    "foodCost": "Таом таннархи",
     "foodTotal": "Таом жами",
     "grandTotal": "Жами сумма",
     "opened": "Очик",
@@ -948,7 +957,8 @@
     "apply": "Қўллаш",
     "reset": "Қайта",
     "startDate": "Бошланиш сана",
-    "endDate": "Тугаш сана"
+    "endDate": "Тугаш сана",
+    "closedAt": "Ёпилган вақти"
   },
   "ingredientStock": {
     "title": "Махсулотлар захираси",

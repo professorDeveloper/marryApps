@@ -120,6 +120,12 @@ export function IngredientReportsListView() {
 
     const columns = useMemo<GridColDef[]>(
         () => [
+                // {
+                //     field: 'ingredient_id',
+                //     headerName: 'ID',
+                //     minWidth: 260,
+                //     renderCell: (params) => params.row.ingredient_id || '-',
+                // },
             {
                 field: 'ingredient_name',
                 headerName: t('ingredientReports.ingredient') || 'Ingredient',
@@ -135,11 +141,22 @@ export function IngredientReportsListView() {
                 // ),
             },
             // {
-            //     field: 'storage_name',
-            //     headerName: t('Omborlar') || 'Storage',
-            //     width: 150,
+            //     field: 'color_code',
+            //     headerName: t('ingredientReports.color', 'Color'),
+            //     width: 120,
             //     renderCell: (params) => (
-            //         <RenderCellItem params={params} nameField="storage_name" />
+            //         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            //             <Box
+            //                 sx={{
+            //                     width: 16,
+            //                     height: 16,
+            //                     borderRadius: '4px',
+            //                     border: '1px solid #ccc',
+            //                     bgcolor: params.row.color_code || 'transparent',
+            //                 }}
+            //             />
+            //             <Typography variant="body2">{params.row.color_code || '-'}</Typography>
+            //         </Box>
             //     ),
             // },
             {
@@ -160,32 +177,60 @@ export function IngredientReportsListView() {
                 field: 'begin_qty',
                 headerName: t('ingredientReports.beginQty') || 'Begin Qty',
                 width: 120,
-                renderCell: (params) => {
-                    return `${Number(params.row.begin_qty).toFixed(2)}`;
-                },
+                renderCell: (params) => `${Number(params.row.begin_qty).toFixed(2)}`,
             },
             {
                 field: 'end_qty',
                 headerName: t('ingredientReports.endQty') || 'End Qty',
                 width: 120,
-                renderCell: (params) => {
-                    return `${Number(params.row.end_qty).toFixed(2)}`;
-                },
+                renderCell: (params) => `${Number(params.row.end_qty).toFixed(2)}`,
             },
             {
                 field: 'invoice_in_qty',
                 headerName: t('ingredientReports.in') || 'In',
                 width: 100,
-                renderCell: (params) => {
-                    return `${Number(params.row.invoice_in_qty).toFixed(2)}`;
-                },
+                renderCell: (params) => `${Number(params.row.invoice_in_qty).toFixed(2)}`,
             },
             {
                 field: 'order_out_qty',
                 headerName: t('ingredientReports.out') || 'Out',
                 width: 100,
+                renderCell: (params) => `${Number(params.row.order_out_qty).toFixed(2)}`,
+            },
+            {
+                field: 'deduction_out_qty',
+                headerName: t('ingredientReports.deduction', 'Deduction Qty'),
+                width: 140,
+                renderCell: (params) => `${Number(params.row.deduction_out_qty).toFixed(2)}`,
+            },
+            {
+                field: 'surplus_qty',
+                headerName: t('ingredientReports.surplus', 'Surplus Qty'),
+                width: 130,
+                renderCell: (params) => `${Number(params.row.surplus_qty).toFixed(2)}`,
+            },
+            {
+                field: 'shortage_qty',
+                headerName: t('ingredientReports.shortage', 'Shortage Qty'),
+                width: 140,
+                renderCell: (params) => `${Number(params.row.shortage_qty).toFixed(2)}`,
+            },
+            {
+                field: 'cost_start',
+                headerName: t('ingredientReports.costStart', 'Cost Start'),
+                width: 130,
                 renderCell: (params) => {
-                    return `${Number(params.row.order_out_qty).toFixed(2)}`;
+                    const amount = Number(params.row.cost_start) || 0;
+                    return `${amount.toLocaleString()} so'm`;
+                },
+            },
+            {
+                field: 'cost_end',
+                headerName: t('ingredientReports.costEnd', 'Cost End'),
+                width: 130,
+                renderCell: (params) => {
+                    const amount = Number(params.row.cost_end) || 0;
+                    return `${amount.toLocaleString()} so'm`;
                 },
             },
             {
@@ -206,33 +251,51 @@ export function IngredientReportsListView() {
                     return `${amount.toLocaleString()} so'm`;
                 },
             },
-            // {
-            //     field: 'date',
-            //     headerName: t('Sana') || 'Date',
-            //     width: 120,
-            //     renderCell: (params) => {
-            //         const date = new Date(params.row.date);
-            //         return date.toLocaleDateString('en-US', {
-            //             year: 'numeric',
-            //             month: '2-digit',
-            //             day: '2-digit',
-            //         });
-            //     },
-            // },
-            // {
-            //     type: 'actions',
-            //     field: 'actions',
-            //     headerName: t('actions'),
-            //     width: 100,
-            //     // align: 'right',
-            //     // headerAlign: 'right',
-            //     sortable: false,
-            //     filterable: false,
-            //     disableColumnMenu: true,
-            //     getActions: (params) => [
-            //         // View action removed - row click will trigger view
-            //     ],
-            // },
+            {
+                field: 'invoice_in_amount',
+                headerName: t('ingredientReports.inAmount', 'In Amount'),
+                width: 140,
+                renderCell: (params) => {
+                    const amount = Number(params.row.invoice_in_amount) || 0;
+                    return `${amount.toLocaleString()} so'm`;
+                },
+            },
+            {
+                field: 'order_out_amount',
+                headerName: t('ingredientReports.outAmount', 'Out Amount'),
+                width: 140,
+                renderCell: (params) => {
+                    const amount = Number(params.row.order_out_amount) || 0;
+                    return `${amount.toLocaleString()} so'm`;
+                },
+            },
+            {
+                field: 'deduction_out_amount',
+                headerName: t('ingredientReports.deductionAmount', 'Deduction Amount'),
+                width: 170,
+                renderCell: (params) => {
+                    const amount = Number(params.row.deduction_out_amount) || 0;
+                    return `${amount.toLocaleString()} so'm`;
+                },
+            },
+            {
+                field: 'surplus_amount',
+                headerName: t('ingredientReports.surplusAmount', 'Surplus Amount'),
+                width: 160,
+                renderCell: (params) => {
+                    const amount = Number(params.row.surplus_amount) || 0;
+                    return `${amount.toLocaleString()} so'm`;
+                },
+            },
+            {
+                field: 'shortage_amount',
+                headerName: t('ingredientReports.shortageAmount', 'Shortage Amount'),
+                width: 170,
+                renderCell: (params) => {
+                    const amount = Number(params.row.shortage_amount) || 0;
+                    return `${amount.toLocaleString()} so'm`;
+                },
+            },
         ],
         [t]
     );

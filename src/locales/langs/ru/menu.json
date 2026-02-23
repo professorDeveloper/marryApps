@@ -947,6 +947,14 @@
     "shortage": "Недостаток",
     "summary": "Сводка",
     "costPerUnit": "Стоимость/ед.",
+    "color": "Цвет",
+    "costStart": "Начальная себестоимость",
+    "costEnd": "Конечная себестоимость",
+    "inAmount": "Сумма прихода",
+    "outAmount": "Сумма расхода",
+    "deductionAmount": "Сумма списания",
+    "surplusAmount": "Сумма излишка",
+    "shortageAmount": "Сумма недостачи",
     "all": "Все"
   },
   "bills": {
@@ -968,6 +976,7 @@
     "product": "Товар",
     "quantity": "Кол-во",
     "price": "Цена",
+    "foodCost": "Себестоимость еды",
     "foodTotal": "Итого по еде",
     "grandTotal": "Общая сумма",
     "opened": "Открыт",
@@ -978,7 +987,8 @@
     "apply": "Применить",
     "reset": "Сбросить",
     "startDate": "Дата начала",
-    "endDate": "Дата окончания"
+    "endDate": "Дата окончания",
+    "closedAt": "Время закрытия"
   },
   "ingredientStock": {
     "title": "Запас ингредиентов",

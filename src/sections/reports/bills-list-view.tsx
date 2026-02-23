@@ -107,6 +107,13 @@ export function BillsListView() {
     const renderBillDetailsContent = useCallback((billData: any) => {
         if (!billData) return null;
 
+        const paymentTypeLabel =
+            billData.payment_type === 'cash'
+                ? t('bills.cash', 'Cash')
+                : billData.payment_type === 'card'
+                    ? t('bills.card', 'Card')
+                    : '-';
+
         return (
             <Box>
                 {/* Bill Header Summary */}
@@ -116,7 +123,15 @@ export function BillsListView() {
                             {t('bills.waiter') || 'Waiter'}
                         </Typography>
                         <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
-                            {billData.waiter_name || billData.hall_name || '-'}
+                            {billData.waiter_name || '-'}
+                        </Typography>
+                    </Box>
+                    <Box>
+                        <Typography variant="body2" sx={{ color: 'text.secondary', mb: 0.5 }}>
+                            {t('bills.hall') || 'Hall'}
+                        </Typography>
+                        <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+                            {billData.hall_name || '-'}
                         </Typography>
                     </Box>
                     <Box>
@@ -192,8 +207,22 @@ export function BillsListView() {
                 {/* Summary */}
                 <Box sx={{ backgroundColor: 'rgba(0, 0, 0, 0.02)', p: 1.5, borderRadius: 1 }}>
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.75 }}>
+                        <Typography variant="body2">{t('bills.foodCost', 'Food Cost')}:</Typography>
+                        <Typography variant="body2">{Number(billData.food_cost).toLocaleString()}</Typography>
+                    </Box>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.75 }}>
                         <Typography variant="body2">{t('bills.foodTotal') || 'Food Total'}:</Typography>
                         <Typography variant="body2">{Number(billData.food_total).toLocaleString()}</Typography>
+                    </Box>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.75 }}>
+                        <Typography variant="body2">{t('bills.paymentType') || 'Payment Type'}:</Typography>
+                        <Typography variant="body2">{paymentTypeLabel}</Typography>
+                    </Box>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.75 }}>
+                        <Typography variant="body2">{t('bills.closedAt', 'Closed At')}:</Typography>
+                        <Typography variant="body2">
+                            {billData.closed_at ? dayjs(billData.closed_at).format('YYYY-MM-DD HH:mm') : '-'}
+                        </Typography>
                     </Box>
                     {Number(billData.service_amount) > 0 && (
                         <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.75 }}>
@@ -225,13 +254,13 @@ export function BillsListView() {
             {
                 field: 'bill_no',
                 headerName: t('bills.billNo') || 'Bill #',
-                width: 100,
+                width: 20,
             },
             {
                 field: 'opened_at',
                 headerName: t('bills.date') || 'Date',
                 // flex: 0.5,
-                width: 140,
+                width: 100,
                 renderCell: (params) => {
                     const dateObj = dayjs(params.row.opened_at);
                     const currentLang = i18n.language;
@@ -263,14 +292,28 @@ export function BillsListView() {
                 },
             },
             {
+                field: 'closed_at',
+                headerName: t('bills.closedAt', 'Closed At'),
+                width: 100,
+                renderCell: (params) => {
+                    const closedAt = params.row.closed_at || params.row.paid_at;
+                    if (!closedAt) return '-';
+
+                    const dateObj = dayjs(closedAt);
+                    if (!dateObj.isValid()) return '-';
+
+                    return dateObj.format('DD.MM.YYYY HH:mm');
+                },
+            },
+            {
                 field: 'waiter_name',
                 headerName: t('bills.waiter') || 'Waiter',
-                flex: 0.5,
-                width: 200,
+                flex: 1,
+                width: 150,
                 renderCell: (params) => (
                     <Box>
                         <Typography sx={{ mb: 1.5, mt: 1.5 }}>
-                            {params.row.waiter_name || params.row.hall_name || '-'}
+                            {params.row.waiter_name || '-'}
                         </Typography>
                     </Box>
                 )
@@ -279,28 +322,54 @@ export function BillsListView() {
                 // ),
             },
             {
+                field: 'hall_name',
+                headerName: t('bills.hall') || 'Hall',
+                width: 100,
+                renderCell: (params) => params.row.hall_name || '-',
+            },
+            {
                 field: 'table_number',
                 headerName: t('bills.table') || 'Table #',
-                width: 120,
+                width: 60,
             },
             {
                 field: 'guest_count',
                 headerName: t('bills.guests') || 'Guests',
-                width: 120,
+                width: 60,
+            },
+            {
+                field: 'food_cost',
+                headerName: t('bills.foodCost', 'Food Cost'),
+                width: 160,
+                renderCell: (params) => {
+                    const amount = Number(params.row.food_cost) || 0;
+                    return `${amount.toLocaleString()} so'm`;
+                },
             },
             {
                 field: 'grand_total',
                 headerName: t('bills.total') || 'Total',
-                width: 200,
+                width: 160,
                 renderCell: (params) => {
                     const amount = Number(params.row.grand_total) || 0;
                     return `${amount.toLocaleString()} so'm`;
                 },
             },
             {
+                field: 'payment_type',
+                headerName: t('bills.paymentType') || 'Payment Type',
+                width: 100,
+                renderCell: (params) => {
+                    const value = params.row.payment_type;
+                    if (value === 'cash') return t('bills.cash', 'Cash');
+                    if (value === 'card') return t('bills.card', 'Card');
+                    return '-';
+                },
+            },
+            {
                 field: 'service_amount',
                 headerName: t('bills.service') || 'Service',
-                width: 200,
+                width: 160,
                 renderCell: (params) => {
                     const amount = Number(params.row.service_amount) || 0;
                     return `${amount.toLocaleString()} so'm`;
@@ -309,7 +378,7 @@ export function BillsListView() {
             {
                 field: 'discount_amount',
                 headerName: t('bills.discount') || 'Discount',
-                width: 200,
+                width: 100,
                 renderCell: (params) => {
                     const amount = Number(params.row.discount_amount) || 0;
                     return amount > 0 ? `${amount.toLocaleString()} so'm` : '-';

@@ -20,6 +20,7 @@ export interface IBillItem {
     opened_at: string;
     closed_at?: string | null;
     paid_at?: string | null;
+    payment_type?: IPaymentType | null;
     waiter_id?: string;
     waiter_name?: string;
     table_number?: number | null;
