@@ -32,7 +32,7 @@ export function IngredientReportsListView() {
 
     // Filter states
     const [filters, setFilters] = useState({
-        // storage_id: '',
+        storage_id: '',
         start: '',
         end: '',
         ingredient_id: '',
@@ -72,9 +72,14 @@ export function IngredientReportsListView() {
     }, [storages]);
 
     // Get reports with applied filters
-    const { reports, reportsLoading } = useGetIngredientReports(
-        Object.fromEntries(Object.entries(filters).filter(([, v]) => v !== ''))
-    );
+    const { reports, reportsLoading } = useGetIngredientReports({
+        storage_id: filters.storage_id,
+        start: filters.start,
+        end: filters.end,
+        ingredient_id: filters.ingredient_id || undefined,
+        limit: filters.limit,
+        offset: filters.offset,
+    });
 
     // Get ingredient report detail for modal
     const { report: reportDetail, reportLoading } = useGetIngredientReportDetail(
@@ -242,7 +247,7 @@ export function IngredientReportsListView() {
 
     const handleResetFilters = useCallback(() => {
         setFilters({
-            // storage_id: '',
+            storage_id: '',
             start: '',
             end: '',
             ingredient_id: '',
@@ -278,7 +283,6 @@ export function IngredientReportsListView() {
                 SelectProps={{ native: true }}
                 size="small"
                 fullWidth
-                required
                 InputLabelProps={{ shrink: true }}
                 sx={{
                     '& .MuiOutlinedInput-root': {
@@ -355,7 +359,7 @@ export function IngredientReportsListView() {
                     size="small"
                     startIcon={<Iconify icon="solar:check-circle-bold" />}
                     onClick={handleApplyDateRange}
-                    disabled={!selectedStorageId || !startDate || !endDate}
+                    disabled={!startDate || !endDate}
                     sx={{
                         minWidth: 'auto',
                         flex: 1,

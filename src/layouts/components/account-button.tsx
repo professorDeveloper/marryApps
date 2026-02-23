@@ -2,6 +2,7 @@ import type { IconButtonProps } from '@mui/material/IconButton';
 
 import { m } from 'framer-motion';
 
+import Box from '@mui/material/Box';
 import Avatar from '@mui/material/Avatar';
 import IconButton from '@mui/material/IconButton';
 
@@ -15,6 +16,44 @@ export type AccountButtonProps = IconButtonProps & {
 };
 
 export function AccountButton({ photoURL, displayName, sx, ...other }: AccountButtonProps) {
+  const renderDefaultAvatar = () => (
+    <Box
+      sx={{
+        width: 1,
+        height: 1,
+        borderRadius: '50%',
+        overflow: 'hidden',
+        position: 'relative',
+        bgcolor: '#d9d9d9',
+      }}
+    >
+      <Box
+        sx={{
+          top: '22%',
+          left: '50%',
+          width: '40%',
+          aspectRatio: '1 / 1',
+          borderRadius: '50%',
+          bgcolor: '#f2f2f2',
+          position: 'absolute',
+          transform: 'translateX(-50%)',
+        }}
+      />
+      <Box
+        sx={{
+          left: '50%',
+          bottom: '10%',
+          width: '72%',
+          height: '30%',
+          bgcolor: '#f2f2f2',
+          position: 'absolute',
+          transform: 'translateX(-50%)',
+          borderRadius: '999px 999px 0 0',
+        }}
+      />
+    </Box>
+  );
+
   return (
     <IconButton
       component={m.button}
@@ -33,7 +72,7 @@ export function AccountButton({ photoURL, displayName, sx, ...other }: AccountBu
         }}
       >
         <Avatar src={photoURL} alt={displayName} sx={{ width: 1, height: 1 }}>
-          {displayName?.charAt(0).toUpperCase()}
+          {!photoURL && renderDefaultAvatar()}
         </Avatar>
       </AnimateBorder>
     </IconButton>

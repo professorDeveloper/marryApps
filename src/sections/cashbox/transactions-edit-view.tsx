@@ -1,0 +1,404 @@
+import type { TransactionType } from 'src/types/transactions';
+
+import dayjs from 'dayjs';
+import { useTranslation } from 'react-i18next';
+import { useMemo, useState, useEffect, useCallback } from 'react';
+import { useParams, useNavigate, useSearchParams } from 'react-router';
+
+import Box from '@mui/material/Box';
+
+import { paths } from 'src/routes/paths';
+
+import { useTransactionsAPI } from 'src/hooks/use-transactions-api';
+
+import { toast } from 'src/components/snackbar';
+import { GenericEditView } from 'src/components/generic-edit-view';
+import { CustomBreadcrumbs } from 'src/components/custom-breadcrumbs';
+
+interface TransactionsEditViewProps {
+  isNew?: boolean;
+}
+
+const PAY_TYPE_OPTIONS = [
+  { value: 'cash', label: 'Cash' },
+  { value: 'card', label: 'Card' },
+  { value: 'transfer', label: 'Transfer' },
+];
+
+const getDefaultType = (kind: string | null): TransactionType => {
+  if (kind === 'expense' || kind === 'transfer') return kind;
+  return 'income';
+};
+
+const toApiDate = (value: string) => {
+  const date = dayjs(value);
+  if (!date.isValid()) return new Date().toISOString();
+  return date.startOf('day').toISOString();
+};
+
+export function TransactionsEditView({ isNew = false }: TransactionsEditViewProps) {
+  const { t } = useTranslation('menu');
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const kind = searchParams.get('kind');
+
+  const {
+    getTransactionById,
+    createIncomeExpense,
+    createTransfer,
+    updateTransaction,
+    getTransactionGroups,
+    getCashRegisters,
+    getCashRegistersByBranch,
+    getCurrentUser,
+    getBranches,
+  } = useTransactionsAPI();
+
+  const [loading, setLoading] = useState(false);
+  const [transactionType, setTransactionType] = useState<TransactionType>(getDefaultType(kind));
+  const [groupOptions, setGroupOptions] = useState<{ value: string; label: string }[]>([]);
+  const [cashRegisterOptions, setCashRegisterOptions] = useState<{ value: string; label: string }[]>([]);
+  const [toCashRegisterOptions, setToCashRegisterOptions] = useState<{ value: string; label: string }[]>([]);
+  const [branchOptions, setBranchOptions] = useState<{ value: string; label: string }[]>([]);
+  const [fromBranchOptions, setFromBranchOptions] = useState<{ value: string; label: string }[]>([]);
+  const [myBranchId, setMyBranchId] = useState('');
+
+  const [formData, setFormData] = useState<Record<string, any>>({
+    type: getDefaultType(kind),
+    amount: '',
+    date: dayjs().format('YYYY-MM-DD'),
+    description: '',
+    pay_type: 'cash',
+    group_transaction_id: '',
+    cash_register_id: '',
+    from_branch_id: '',
+    from_cash_register_id: '',
+    to_branch_id: '',
+    to_cash_register_id: '',
+  });
+
+  const loadBaseData = useCallback(async () => {
+    const [groups, cashRegisters, branches, currentUser] = await Promise.all([
+      getTransactionGroups(),
+      getCashRegisters(),
+      getBranches(),
+      getCurrentUser(),
+    ]);
+
+    const nextBranchOptions = branches.map((item) => ({ value: item.id, label: item.name }));
+
+    setGroupOptions(groups.map((item) => ({ value: item.id, label: item.name })));
+    setCashRegisterOptions(cashRegisters.map((item) => ({ value: item.id, label: item.name })));
+    setBranchOptions(nextBranchOptions);
+
+    if (currentUser?.branch_id) {
+      setMyBranchId(currentUser.branch_id);
+
+      if (isNew) {
+        const currentBranch = nextBranchOptions.find((item) => item.value === currentUser.branch_id);
+        setFromBranchOptions(currentBranch ? [currentBranch] : []);
+        setFormData((prev) => ({
+          ...prev,
+          from_branch_id: prev.from_branch_id || currentUser.branch_id,
+        }));
+      } else {
+        setFromBranchOptions(nextBranchOptions);
+      }
+    } else {
+      setFromBranchOptions(nextBranchOptions);
+    }
+  }, [getBranches, getCashRegisters, getCurrentUser, getTransactionGroups, isNew]);
+
+  useEffect(() => {
+    const init = async () => {
+      setLoading(true);
+      try {
+        await loadBaseData();
+
+        if (!isNew && id) {
+          const data = await getTransactionById(id);
+          if (!data) {
+            toast.error('Transaction not found');
+            navigate(paths.cashbox.transactions, { replace: true });
+            return;
+          }
+
+          setTransactionType(data.type);
+          setFormData({
+            type: data.type,
+            amount: data.amount || '',
+            date: dayjs(data.date).isValid() ? dayjs(data.date).format('YYYY-MM-DD') : dayjs().format('YYYY-MM-DD'),
+            description: data.description || '',
+            pay_type: data.pay_type || 'cash',
+            group_transaction_id: data.group_transaction_id || '',
+            cash_register_id: data.cash_register_id || '',
+            from_branch_id: data.from_branch_id || '',
+            from_cash_register_id: data.from_cash_register_id || '',
+            to_branch_id: data.to_branch_id || '',
+            to_cash_register_id: data.to_cash_register_id || '',
+          });
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    init();
+  }, [getTransactionById, id, isNew, loadBaseData, navigate]);
+
+  useEffect(() => {
+    if (!isNew || transactionType !== 'transfer' || !myBranchId) return;
+
+    setFormData((prev) => {
+      if (prev.from_branch_id) return prev;
+      return {
+        ...prev,
+        from_branch_id: myBranchId,
+      };
+    });
+  }, [isNew, myBranchId, transactionType]);
+
+  useEffect(() => {
+    const loadToBranchCashRegisters = async () => {
+      if (transactionType !== 'transfer') {
+        setToCashRegisterOptions([]);
+        return;
+      }
+
+      if (!formData.to_branch_id) {
+        setToCashRegisterOptions([]);
+        setFormData((prev) => ({
+          ...prev,
+          to_cash_register_id: '',
+        }));
+        return;
+      }
+
+      const branchCashRegisters = await getCashRegistersByBranch(formData.to_branch_id);
+      const options = branchCashRegisters.map((item) => ({ value: item.id, label: item.name }));
+      setToCashRegisterOptions(options);
+
+      setFormData((prev) => {
+        const exists = options.some((item) => item.value === prev.to_cash_register_id);
+        if (exists) return prev;
+        return {
+          ...prev,
+          to_cash_register_id: '',
+        };
+      });
+    };
+
+    loadToBranchCashRegisters();
+  }, [formData.to_branch_id, getCashRegistersByBranch, transactionType]);
+
+  const handleSubmit = useCallback(
+    async (data: Record<string, any>) => {
+      const type = (data.type || transactionType) as TransactionType;
+
+      if (type === 'transfer') {
+        const transferPayload = {
+          amount: String(data.amount || 0),
+          date: toApiDate(data.date),
+          description: data.description || '',
+          from_branch_id: data.from_branch_id,
+          from_cash_register_id: data.from_cash_register_id,
+          group_transaction_id: data.group_transaction_id,
+          pay_type: data.pay_type,
+          to_branch_id: data.to_branch_id,
+          to_cash_register_id: data.to_cash_register_id,
+        };
+
+        if (isNew) {
+          await createTransfer(transferPayload);
+        } else if (id) {
+          await updateTransaction(id, { ...transferPayload, type: 'transfer' });
+        }
+      } else {
+        const incomeExpensePayload = {
+          amount: String(data.amount || 0),
+          cash_register_id: data.cash_register_id,
+          date: toApiDate(data.date),
+          description: data.description || '',
+          group_transaction_id: data.group_transaction_id,
+          pay_type: data.pay_type,
+          type,
+        } as const;
+
+        if (isNew) {
+          await createIncomeExpense(incomeExpensePayload);
+        } else if (id) {
+          await updateTransaction(id, incomeExpensePayload);
+        }
+      }
+
+      toast.success(isNew ? t('common.createSuccess', 'Created successfully') : t('common.updateSuccess', 'Updated successfully'));
+      navigate(paths.cashbox.transactions, { replace: true });
+    },
+    [createIncomeExpense, createTransfer, id, isNew, navigate, t, transactionType, updateTransaction]
+  );
+
+  const sections = useMemo(() => {
+    const commonFields = [
+      {
+        key: 'amount',
+        label: t('common.total', 'Amount'),
+        type: 'number' as const,
+        required: true,
+        defaultValue: '',
+      },
+      {
+        key: 'date',
+        label: t('deductions.date', 'Date'),
+        type: 'date' as const,
+        required: true,
+        defaultValue: dayjs().format('YYYY-MM-DD'),
+      },
+      {
+        key: 'pay_type',
+        label: t('common.paymentType', 'Pay type'),
+        type: 'select' as const,
+        required: true,
+        options: PAY_TYPE_OPTIONS,
+        defaultValue: 'cash',
+      },
+      {
+        key: 'group_transaction_id',
+        label: t('deductions.group', 'Group'),
+        type: 'select' as const,
+        required: true,
+        options: groupOptions,
+        defaultValue: '',
+      },
+      {
+        key: 'description',
+        label: t('deductions.description', 'Description'),
+        type: 'textarea' as const,
+        rows: 3,
+        defaultValue: '',
+      },
+    ];
+
+    if (transactionType === 'transfer') {
+      return [
+        {
+          id: 'transfer',
+          title: 'Transfer details',
+          columns: 2,
+          fields: [
+            ...commonFields,
+            {
+              key: 'from_branch_id',
+              label: 'From branch',
+              type: 'select' as const,
+              required: true,
+              options: fromBranchOptions.length ? fromBranchOptions : branchOptions,
+              defaultValue: '',
+            },
+            {
+              key: 'to_branch_id',
+              label: 'To branch',
+              type: 'select' as const,
+              required: true,
+              options: branchOptions,
+              defaultValue: '',
+            },
+            {
+              key: 'from_cash_register_id',
+              label: 'From cash register',
+              type: 'select' as const,
+              required: true,
+              options: cashRegisterOptions,
+              defaultValue: '',
+            },
+            {
+              key: 'to_cash_register_id',
+              label: 'To cash register',
+              type: 'select' as const,
+              required: true,
+              options: toCashRegisterOptions,
+              defaultValue: '',
+            },
+          ],
+        },
+      ];
+    }
+
+    return [
+      {
+        id: 'income-expense',
+        title: 'Transaction details',
+        columns: 2,
+        fields: [
+          ...commonFields,
+          {
+            key: 'type',
+            label: t('common.type', 'Type'),
+            type: 'select' as const,
+            required: true,
+            options: [
+              { value: 'income', label: 'Income' },
+              { value: 'expense', label: 'Expense' },
+            ],
+            defaultValue: transactionType,
+          },
+          {
+            key: 'cash_register_id',
+            label: 'Cash register',
+            type: 'select' as const,
+            required: true,
+            options: cashRegisterOptions,
+            defaultValue: '',
+          },
+        ],
+      },
+    ];
+  }, [branchOptions, cashRegisterOptions, fromBranchOptions, groupOptions, t, toCashRegisterOptions, transactionType]);
+
+  const config = useMemo(
+    () => ({
+      title: isNew ? 'Create transaction' : 'Edit transaction',
+      entityName: 'transaction',
+      showBreadcrumbs: false,
+      showDeleteButton: false,
+      breadcrumbs: [
+        { name: t('dashboard', 'Dashboard'), href: paths.dashboard.root },
+        { name: t('cashbox.sidebar.title', 'Cashbox'), href: paths.cashbox.root },
+        { name: t('cashbox.sidebar.transactions', 'Transactions'), href: paths.cashbox.transactions },
+        { name: isNew ? t('common.create', 'Create') : t('common.edit', 'Edit'), href: '' },
+      ],
+      sections,
+      onSubmit: handleSubmit as (formData: Record<string, any>) => Promise<void>,
+    }),
+    [handleSubmit, isNew, sections, t]
+  );
+
+  return (
+    <Box sx={{ p: 3 }}>
+      <Box sx={{ maxWidth: 1200, mx: 'auto' }}>
+        <CustomBreadcrumbs heading={config.title} links={config.breadcrumbs} sx={{ mb: 3 }} />
+
+        <GenericEditView
+          config={config}
+          data={formData}
+          formData={formData}
+          onFormDataChange={(next) => {
+            const nextFormData =
+              isNew && next.type === 'transfer' && myBranchId && !next.from_branch_id
+                ? { ...next, from_branch_id: myBranchId }
+                : next;
+
+            setFormData(nextFormData);
+            if ((next.type === 'income' || next.type === 'expense' || next.type === 'transfer') && next.type !== transactionType) {
+              setTransactionType(next.type);
+            }
+          }}
+          isNew={isNew}
+          loading={loading}
+        />
+      </Box>
+    </Box>
+  );
+}
+
+export default TransactionsEditView;

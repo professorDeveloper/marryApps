@@ -22,7 +22,9 @@ const swrOptions: SWRConfiguration = {
 const buildQueryString = (params: Partial<IIngredientReportsFilterParams>): string => {
     const queryParams = new URLSearchParams();
 
-    if (params.storage_id) queryParams.append('storage_id', params.storage_id);
+    if (params.storage_id !== undefined && params.storage_id !== null) {
+        queryParams.append('storage_id', params.storage_id);
+    }
     if (params.start) queryParams.append('start', params.start);
     if (params.end) queryParams.append('end', params.end);
     if (params.ingredient_id) queryParams.append('ingredient_id', params.ingredient_id);
@@ -36,11 +38,11 @@ const buildQueryString = (params: Partial<IIngredientReportsFilterParams>): stri
 
 /**
  * Get ingredient reports with filters
- * Note: storage_id is required - hook will not fetch if storage_id is missing
+ * Note: storage_id is optional - empty string can be sent as `storage_id=`
  */
 export function useGetIngredientReports(params?: Partial<IIngredientReportsFilterParams>) {
-    // Don't fetch if storage_id is missing (required parameter)
-    const shouldFetch = params?.storage_id;
+    // Fetch when date range exists; storage_id can be empty
+    const shouldFetch = Boolean(params?.start && params?.end);
 
     const queryString = buildQueryString(params || {});
     const url = shouldFetch ? `${endpoints.ingredientReports.list}${queryString}` : null;

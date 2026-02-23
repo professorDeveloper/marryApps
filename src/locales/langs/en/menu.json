@@ -345,7 +345,7 @@
     "menu": {
       "title": "Menu",
       "storage": "Storage",
-      "sections": "Sections",
+      "sections": "Department",
       "categories": "Categories",
       "semifinished": "Semifinished",
       "meals": "Meals"
@@ -626,6 +626,7 @@
   },
   "common": {
     "name": "Name",
+    "nameRequired": "Name is required",
     "measurement": "Measurement",
     "colorCode": "Color code",
     "pictureUrl": "Picture URL",
@@ -645,7 +646,16 @@
     "add": "Add",
     "select": "Select",
     "deleteConfirmTitle": "Confirm Deletion",
-    "deleteConfirmMessage": "Are you sure you want to delete this record? This action cannot be undone."
+    "deleteConfirmMessage": "Are you sure you want to delete this record? This action cannot be undone.",
+    "createSuccess": "Created successfully",
+    "updateSuccess": "Updated successfully",
+    "deleteSuccess": "Deleted successfully",
+    "deleteFailed": "Failed to delete",
+    "saveFailed": "Failed to save",
+    "created_at": "Created at",
+    "actions": "Actions",
+    "create": "Create",
+    "update": "Update"
   },
   "ingredients": {
     "title": "Ingredients",
@@ -741,8 +751,8 @@
       "branch": "Branch",
       "name": "Hall Name",
       "namePlaceholder": "e.g., Main Hall, VIP Hall",
-      "width": "Width (px)",
-      "height": "Height (px)"
+      "width": "Width",
+      "height": "Height"
     },
     "buttons": {
       "create": "Create Hall",
@@ -1031,12 +1041,34 @@
     }
   },
   "cashbox": {
-     "sidebar": {
-       "title": "Cashbox",
-       "cashiers": "Cashiers",
-       "transactionGroups": "Transaction Groups",
-       "transactions": "Transactions",
-       "report": "Cashbox Report"
-     }
+    "sidebar": {
+      "title": "Cashbox",
+      "cashiers": "Cashiers",
+      "transactionGroups": "Transaction Groups",
+      "transactions": "Transactions",
+      "report": "Cashbox Report"
+    },
+    "cashiers": {
+      "title": "Cashiers",
+      "list": "Cashiers List",
+      "new": "New Cashier",
+      "edit": "Edit Cashier",
+      "name": "Name",
+      "created_at": "Created Date",
+      "nameRequired": "Cashier name is required",
+      "createSuccess": "Cashier created successfully",
+      "updateSuccess": "Cashier updated successfully",
+      "deleteSuccess": "Cashier deleted successfully",
+      "deleteFailed": "Failed to delete cashier",
+      "saveFailed": "Failed to save cashier",
+      "deleteConfirmTitle": "Confirm Deletion",
+      "deleteConfirmMessage": "Are you sure you want to delete this cashier? This action cannot be undone."
+    },
+    "transactionGroups": {
+      "title": "Transaction Groups",
+      "list": "Transaction Groups List",
+      "details": "Transaction Group Details",
+      "edit": "Edit Transaction Group"
+    }
   }
 }

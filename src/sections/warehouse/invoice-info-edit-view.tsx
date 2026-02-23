@@ -61,7 +61,9 @@ export function InvoiceInfoEditView({
         const loadSuppliers = async () => {
             try {
                 const data = await getSuppliers();
-                setSuppliers(data || []);
+                setSuppliers(
+                    Array.isArray(data) ? data.filter((item) => item && item.id != null) : []
+                );
             } catch (error) {
                 console.error('Error loading suppliers:', error);
             }
@@ -75,7 +77,9 @@ export function InvoiceInfoEditView({
         const loadStorages = async () => {
             try {
                 const data = await getStorages();
-                setStorages(data || []);
+                setStorages(
+                    Array.isArray(data) ? data.filter((item) => item && item.id != null) : []
+                );
             } catch (error) {
                 console.error('Error loading storages:', error);
             }
@@ -186,7 +190,9 @@ export function InvoiceInfoEditView({
                 type: 'select',
                 required: true,
                 defaultValue: '',
-                options: suppliers.map((s) => ({ value: s.id, label: s.name })),
+                options: suppliers
+                    .filter((s) => s && s.id != null)
+                    .map((s) => ({ value: s.id, label: s.name ?? '' })),
             },
             {
                 key: 'storage_id',
@@ -194,7 +200,9 @@ export function InvoiceInfoEditView({
                 type: 'select',
                 required: true,
                 defaultValue: '',
-                options: storages.map((s) => ({ value: s.id, label: s.name })),
+                options: storages
+                    .filter((s) => s && s.id != null)
+                    .map((s) => ({ value: s.id, label: s.name ?? '' })),
             },
             {
                 key: 'date',

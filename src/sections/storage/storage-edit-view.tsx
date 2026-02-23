@@ -138,14 +138,14 @@ export function WarehouseEditView({ isNew = false }: { isNew?: boolean }) {
         required: false,
         defaultValue: '',
       },
-      {
-        key: 'branch_id',
-        label: t('warehouse.branch', 'Branch'),
-        type: 'select',
-        required: true,
-        defaultValue: '',
-        options: branchOptions,
-      },
+      // {
+      //   key: 'branch_id',
+      //   label: t('warehouse.branch', 'Branch'),
+      //   type: 'select',
+      //   required: true,
+      //   defaultValue: '',
+      //   options: branchOptions,
+      // },
       {
         key: 'color_code',
         label: t('warehouse.color', 'Color'),

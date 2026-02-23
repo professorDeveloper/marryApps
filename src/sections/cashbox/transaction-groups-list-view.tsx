@@ -1,27 +1,24 @@
 import type { GridColDef } from '@mui/x-data-grid';
-import type { ICashRegister } from 'src/types/cashbox';
 
 import { useTranslation } from 'react-i18next';
 import { useMemo, useState, useCallback } from 'react';
 
-import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import { Dialog, DialogTitle, DialogActions, DialogContent } from '@mui/material';
 
 import { paths } from 'src/routes/paths';
+
+import { useGetGroupTransactions, useDeleteGroupTransaction } from 'src/actions/cashbox';
+
 import { toast } from 'src/components/snackbar';
 import { Iconify } from 'src/components/iconify';
 import { GenericTableView } from 'src/components/generic-table-view';
 import { CustomGridActionsCellItem } from 'src/components/custom-data-grid';
-import { useGetCashRegisters, useDeleteCashRegister } from 'src/actions/cashbox';
-import { RouterLink } from 'src/routes/components';
-import { DashboardContent } from 'src/layouts/dashboard';
-import { CustomBreadcrumbs } from 'src/components/custom-breadcrumbs';
 
 export function CashRegistersListView() {
     const { t } = useTranslation('menu');
-    const { cashRegisters, cashRegistersLoading } = useGetCashRegisters();
-    const { onDelete } = useDeleteCashRegister();
+    const { groupTransactions, groupTransactionsLoading } = useGetGroupTransactions();
+    const { onDelete } = useDeleteGroupTransaction();
 
     const [deleteId, setDeleteId] = useState<string | null>(null);
     const [openConfirm, setOpenConfirm] = useState(false);
@@ -49,7 +46,7 @@ export function CashRegistersListView() {
             },
             {
                 field: 'created_at',
-                headerName: t('common.createdAt', 'Created At'),
+                headerName: t('common.created_at', 'Created At'),
                 flex: 1,
                 minWidth: 180,
                 type: 'dateTime',
@@ -62,7 +59,7 @@ export function CashRegistersListView() {
                 field: 'actions',
                 type: 'actions',
                 headerName: t('common.actions', 'Actions'),
-                width: 80,
+                width: 120,
                 sortable: false,
                 filterable: false,
                 getActions: (params: any) => [
@@ -76,6 +73,7 @@ export function CashRegistersListView() {
                         key="delete"
                         icon={<Iconify icon="solar:trash-bin-trash-bold" />}
                         label={t('common.delete', 'Delete')}
+                        style={{ color: '#FB6633' }}
                         onClick={() => {
                             setDeleteId(params.row.id);
                             setOpenConfirm(true);
@@ -89,37 +87,22 @@ export function CashRegistersListView() {
 
     return (
         <>
-            <DashboardContent>
-                <CustomBreadcrumbs
-                    heading={t('cashbox.transactionGroups', 'Transaction Groups')}
-                    links={[
+            <GenericTableView
+                data={groupTransactions}
+                columns={columns}
+                loading={groupTransactionsLoading}
+                breadcrumbs={{
+                    heading: t('cashbox.transactionGroups.title', 'Transaction Groups'),
+                    links: [
                         { name: t('dashboard', 'Dashboard'), href: paths.dashboard.root },
-                        { name: t('cashbox.title', 'Cashbox'), href: paths.cashbox.root },
-                        { name: t('cashbox.transactionGroups', 'Transaction Groups') },
-                    ]}
-                    action={
-                        <Button
-                            component={RouterLink}
-                            href={`/menu/cashbox/transaction-groups/new`}
-                            variant="contained"
-                            startIcon={<Iconify icon="mingcute:add-line" />}
-                        >
-                            {t('common.add', 'Add')}
-                        </Button>
-                    }
-                // sx={{ mb: { xs: 3, md: 5 } }}
-                />
-
-                <GenericTableView
-                    data={cashRegisters}
-                    columns={columns}
-                    loading={cashRegistersLoading}
-                    breadcrumbs={{
-                        heading: '',
-                        links: [],
-                    }}
-                />
-            </DashboardContent>
+                        { name: t('cashbox.transactionGroups.title', 'Transaction Groups') },
+                    ],
+                }}
+                addButton={{
+                    label: t('common.add', 'Add'),
+                    href: `/menu/cashbox/transaction-groups/new`,
+                }}
+            />
 
             <Dialog
                 open={openConfirm}

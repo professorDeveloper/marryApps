@@ -77,6 +77,7 @@ export const getNavData = (t: TFunction): NavSectionProps['data'] => [
         children: [
           { title: t('overview.warehouse.storage', 'Storage'), path: paths.warehouse.storage.root },
           { title: t('overview.warehouse.inventories', 'Ombor Menusi'), path: paths.menu.inventory.root },
+          { title: t('overview.warehouse.transfers', 'Transfers'), path: paths.warehouse.transfers.root },
           { title: t('overview.warehouse.ingredient-group', ''), path: paths.warehouse.ingredients_group.root },
           { title: t('overview.warehouse.ingredients', 'Ingredients'), path: paths.warehouse.ingredients.root },
           { title: t('ingredientStock.title', 'Ingredient Stock'), path: paths.warehouse.ingredientStock.root },
@@ -85,7 +86,6 @@ export const getNavData = (t: TFunction): NavSectionProps['data'] => [
           { title: t('deductions.title', 'Deductions'), path: paths.warehouse.deductions.root },
           { title: t('deductions.groups', 'Deduction Groups'), path: paths.warehouse.deductionGroups.root },
           // { title: t('overview.warehouse.stocks', 'Stocks'), path: paths.menu.warehouse.stocks.root },
-          // { title: t('overview.warehouse.transfers', 'Transfers'), path: paths.menu.warehouse.transfers.root },
           // { title: t('overview.warehouse.locations', 'Locations'), path: paths.menu.warehouse.locations.root },
           // { title: t('overview.warehouse.suppliers', 'Suppliers'), path: paths.menu.warehouse.suppliers.root },
         ],
@@ -111,7 +111,7 @@ export const getNavData = (t: TFunction): NavSectionProps['data'] => [
         children: [
           { title: t('cashbox.sidebar.cashiers', 'Kassirlar'), path: paths.cashbox.cashiers },
           { title: t('cashbox.sidebar.transactionGroups', 'Transaktsiya Guruhlari'), path: paths.cashbox.transactionGroups },
-          { title: t('cashbox.sidebar.transactions', 'Transaktsiyalar'), path: paths.cashbox.transactions },
+          { title: t('cashbox.sidebar.transactions', 'Transactions'), path: paths.cashbox.transactions },
           { title: t('cashbox.sidebar.report', 'Kassa Hisoboti'), path: paths.cashbox.report },
         ],
       }

@@ -3,6 +3,8 @@ import type { AuthState } from '../../types';
 import { useSetState } from 'minimal-shared/hooks';
 import { useMemo, useEffect, useCallback } from 'react';
 
+import axios, { endpoints } from 'src/lib/axios';
+
 import { JWT_STORAGE_KEY } from './constant';
 import { AuthContext } from '../auth-context';
 import { jwtDecode, setSession, isValidToken } from './utils';
@@ -28,19 +30,43 @@ export function AuthProvider({ children }: Props) {
 
       if (accessToken && isValidToken(accessToken)) {
         setSession(accessToken);
-
-        // Decode user info from token instead of fetching from /me endpoint
         const decoded = jwtDecode(accessToken);
 
-        const user = {
-          id: decoded.sub || decoded.id || 'user',
-          username: decoded.username || 'User',
-          fullName: decoded.fullName || decoded.name || 'User',
-          email: decoded.email || '',
-          role: decoded.role || 'user',
-        };
+        try {
+          const res = await axios.get(endpoints.users.me);
+          const profile = res.data?.data ?? {};
 
-        setState({ user: { ...user, accessToken }, loading: false });
+          const user = {
+            id: profile.id || decoded.sub || decoded.id || 'user',
+            username: profile.username || decoded.username || 'User',
+            role: profile.role || decoded.role || 'user',
+            isActive: profile.is_active,
+            brandId: profile.brand_id,
+            branchId: profile.branch_id,
+            phoneNumber: profile.phone_number || '',
+            full_name: profile.full_name || decoded.fullName || decoded.name || 'User',
+            fullName: profile.full_name || decoded.fullName || decoded.name || 'User',
+            displayName: profile.full_name || decoded.fullName || decoded.name || 'User',
+            email: decoded.email || '',
+          };
+
+          setState({ user: { ...user, accessToken }, loading: false });
+        } catch (profileError) {
+          console.error('Failed to fetch /api/v1/user/me profile:', profileError);
+
+          const fallbackUser = {
+            id: decoded.sub || decoded.id || 'user',
+            username: decoded.username || 'User',
+            full_name: decoded.fullName || decoded.name || 'User',
+            fullName: decoded.fullName || decoded.name || 'User',
+            displayName: decoded.fullName || decoded.name || decoded.username || 'User',
+            phoneNumber: '',
+            email: decoded.email || '',
+            role: decoded.role || 'user',
+          };
+
+          setState({ user: { ...fallbackUser, accessToken }, loading: false });
+        }
       } else {
         setState({ user: null, loading: false });
       }

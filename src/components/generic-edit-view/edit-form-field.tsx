@@ -5,6 +5,7 @@
 import type { FC } from 'react';
 import type { FieldConfig } from './types';
 
+import dayjs from 'dayjs';
 import Box from '@mui/material/Box';
 import Select from '@mui/material/Select';
 import Switch from '@mui/material/Switch';
@@ -13,6 +14,7 @@ import TextField from '@mui/material/TextField';
 import InputLabel from '@mui/material/InputLabel';
 import FormControl from '@mui/material/FormControl';
 import FormControlLabel from '@mui/material/FormControlLabel';
+import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { ImageUploadField } from './image-upload-field';
 
 interface EditFormFieldProps {
@@ -160,6 +162,31 @@ export const EditFormField: FC<EditFormFieldProps> = ({ field, value, onChange }
                 value={value}
                 onChange={onChange}
                 height={field.height || 200}
+            />
+        );
+    }
+
+    // Date field
+    if (field.type === 'date') {
+        const dateValue = value ? dayjs(value) : null;
+        return (
+            <DatePicker
+                label={field.label}
+                value={dateValue}
+                onChange={(newDate) => {
+                    onChange(newDate ? newDate.format('YYYY-MM-DD') : '');
+                }}
+                format="DD.MM.YYYY"
+                slotProps={{
+                    textField: {
+                        fullWidth: field.fullWidth !== false,
+                        size: 'small',
+                        required: field.required,
+                        helperText: field.helperText,
+                        inputProps: { readOnly: true },
+                        sx: { cursor: 'pointer' },
+                    },
+                }}
             />
         );
     }

@@ -102,7 +102,7 @@ export function BillsListView() {
                             {t('bills.waiter') || 'Waiter'}
                         </Typography>
                         <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
-                            {billData.waiter_name}
+                            {billData.waiter_name || billData.hall_name || '-'}
                         </Typography>
                     </Box>
                     <Box>
@@ -142,7 +142,7 @@ export function BillsListView() {
                 {billData.items && billData.items.length > 0 && (
                     <Box sx={{ mb: 2 }}>
                         <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1 }}>
-                            {t('bills.items') || 'Items'} ({billData.items.length})
+                            {t('bills.items') || 'Items'} ({billData.items.length || billData.quantity || 0})
                         </Typography>
                         <Table size="small" sx={{ '& td': { py: 0.75 } }}>
                             <TableHead sx={{ backgroundColor: 'rgba(0, 0, 0, 0.04)' }}>
@@ -255,7 +255,9 @@ export function BillsListView() {
                 width: 200,
                 renderCell: (params) => (
                     <Box>
-                        <Typography sx={{ mb: 1.5, mt: 1.5 }}>{params.row.waiter_name}</Typography>
+                        <Typography sx={{ mb: 1.5, mt: 1.5 }}>
+                            {params.row.waiter_name || params.row.hall_name || '-'}
+                        </Typography>
                     </Box>
                 )
                 // renderCell: (params) => (

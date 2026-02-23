@@ -17,9 +17,10 @@ export interface IBillItem {
     bill_no: number;
     bill_status: IBillStatus;
     opened_at: string;
-    waiter_id: string;
-    waiter_name: string;
+    waiter_id?: string;
+    waiter_name?: string;
     table_number: number;
+    hall_name?: string;
     guest_count: number;
     food_cost: string;
     food_total: string;
@@ -28,6 +29,7 @@ export interface IBillItem {
     discount_percent: string;
     discount_amount: string;
     grand_total: string;
+    quantity?: number;
 }
 
 export interface IBillDetail extends IBillItem {
@@ -36,10 +38,17 @@ export interface IBillDetail extends IBillItem {
     items: IBillItemDetail[];
 }
 
+export interface IBillsListData {
+    total: number;
+    limit: number;
+    offset: number;
+    items: IBillItem[];
+}
+
 export interface IBillsResponse {
     status: string;
     message: string;
-    data: IBillItem[];
+    data: IBillsListData;
     code: number;
 }
 

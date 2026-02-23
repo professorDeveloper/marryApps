@@ -4,7 +4,6 @@ import type { ICashier } from 'src/types/cashbox';
 import { useTranslation } from 'react-i18next';
 import { useMemo, useState, useCallback } from 'react';
 
-import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import { Dialog, DialogTitle, DialogActions, DialogContent } from '@mui/material';
 
@@ -14,9 +13,6 @@ import { Iconify } from 'src/components/iconify';
 import { GenericTableView } from 'src/components/generic-table-view';
 import { CustomGridActionsCellItem } from 'src/components/custom-data-grid';
 import { useGetCashiers, useDeleteCashier } from 'src/actions/cashbox';
-import { RouterLink } from 'src/routes/components';
-import { DashboardContent } from 'src/layouts/dashboard';
-import { CustomBreadcrumbs } from 'src/components/custom-breadcrumbs';
 
 export function CashiersListView() {
     const { t } = useTranslation('menu');
@@ -31,11 +27,11 @@ export function CashiersListView() {
 
         try {
             await onDelete(deleteId);
-            toast.success(t('common.deleteSuccess', 'Successfully deleted'));
+            toast.success(t('cashbox.cashiers.deleteSuccess'));
             setOpenConfirm(false);
             setDeleteId(null);
         } catch (error: any) {
-            toast.error(error?.message || t('common.deleteFailed', 'Failed to delete'));
+            toast.error(error?.message || t('cashbox.cashiers.deleteFailed'));
         }
     }, [deleteId, onDelete, t]);
 
@@ -43,13 +39,13 @@ export function CashiersListView() {
         () => [
             {
                 field: 'name',
-                headerName: t('common.name', 'Name'),
+                headerName: t('cashbox.cashiers.name'),
                 flex: 1,
                 minWidth: 200,
             },
             {
                 field: 'created_at',
-                headerName: t('common.createdAt', 'Created At'),
+                headerName: t('cashbox.cashiers.created_at'),
                 flex: 1,
                 minWidth: 180,
                 type: 'dateTime',
@@ -61,21 +57,21 @@ export function CashiersListView() {
             {
                 field: 'actions',
                 type: 'actions',
-                headerName: t('common.actions', 'Actions'),
-                width: 80,
+                headerName: t('common.actions'),
+                width: 120,
                 sortable: false,
                 filterable: false,
                 getActions: (params: any) => [
                     <CustomGridActionsCellItem
                         key="edit"
                         icon={<Iconify icon="solar:pen-bold" />}
-                        label={t('common.edit', 'Edit')}
-                        href={`/menu/cashbox/cashiers/${params.row.id}/edit`}
+                        label={t('common.edit')}
+                        href={`${paths.cashbox.cashiers}/${params.row.id}/edit`}
                     />,
                     <CustomGridActionsCellItem
                         key="delete"
                         icon={<Iconify icon="solar:trash-bin-trash-bold" />}
-                        label={t('common.delete', 'Delete')}
+                        label={t('common.delete')}
                         style={{ color: '#FB6633' }}
                         onClick={() => {
                             setDeleteId(params.row.id);
@@ -90,37 +86,23 @@ export function CashiersListView() {
 
     return (
         <>
-            <DashboardContent>
-                <CustomBreadcrumbs
-                    heading={t('cashbox.cashiers', 'Cashiers')}
-                    links={[
-                        { name: t('dashboard', 'Dashboard'), href: paths.dashboard.root },
-                        { name: t('cashbox.title', 'Cashbox'), href: paths.cashbox.root },
-                        { name: t('cashbox.cashiers', 'Cashiers') },
-                    ]}
-                    action={
-                        <Button
-                            component={RouterLink}
-                            href={`/menu/cashbox/cashiers/new`}
-                            variant="contained"
-                            startIcon={<Iconify icon="mingcute:add-line" />}
-                        >
-                            {t('common.add', 'Add')}
-                        </Button>
-                    }
-                    // sx={{ mb: { xs: 3, md: 5 } }}
-                />
-
-                <GenericTableView
-                    data={cashiers}
-                    columns={columns}
-                    loading={cashiersLoading}
-                    breadcrumbs={{
-                        heading: '',
-                        links: [],
-                    }}
-                />
-            </DashboardContent>
+            <GenericTableView
+                data={cashiers}
+                columns={columns}
+                loading={cashiersLoading}
+                breadcrumbs={{
+                    heading: t('cashbox.cashiers.title'),
+                    links: [
+                        { name: t('dashboard'), href: paths.dashboard.root },
+                        { name: t('cashbox.sidebar.title'), href: paths.cashbox.root },
+                        { name: t('cashbox.cashiers.title') },
+                    ],
+                }}
+                addButton={{
+                    label: t('common.add'),
+                    href: `${paths.cashbox.cashiers}/new`,
+                }}
+            />
 
             <Dialog
                 open={openConfirm}
@@ -128,20 +110,20 @@ export function CashiersListView() {
                 maxWidth="xs"
                 fullWidth
             >
-                <DialogTitle>{t('common.confirmDelete', 'Confirm Delete')}</DialogTitle>
+                <DialogTitle>{t('cashbox.cashiers.deleteConfirmTitle')}</DialogTitle>
                 <DialogContent>
-                    {t('common.deleteConfirmation', 'Are you sure you want to delete this item?')}
+                    {t('cashbox.cashiers.deleteConfirmMessage')}
                 </DialogContent>
                 <DialogActions>
                     <Button onClick={() => setOpenConfirm(false)}>
-                        {t('common.cancel', 'Cancel')}
+                        {t('common.cancel')}
                     </Button>
                     <Button
                         onClick={handleDelete}
                         variant="contained"
                         color="error"
                     >
-                        {t('common.delete', 'Delete')}
+                        {t('common.delete')}
                     </Button>
                 </DialogActions>
             </Dialog>

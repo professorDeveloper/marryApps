@@ -1,25 +1,21 @@
 import { useTranslation } from 'react-i18next';
-import { useCallback, useMemo } from 'react';
+import { useCallback, useEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { useNavigate, useParams } from 'react-router';
 
-import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
 import Stack from '@mui/material/Stack';
 import Button from '@mui/material/Button';
 import TextField from '@mui/material/TextField';
-import MenuItem from '@mui/material/MenuItem';
 
 import { paths } from 'src/routes/paths';
 import { toast } from 'src/components/snackbar';
-import { Iconify } from 'src/components/iconify';
 import { DashboardContent } from 'src/layouts/dashboard';
 import { CustomBreadcrumbs } from 'src/components/custom-breadcrumbs';
 import {
     useGetCashier,
     useCreateCashier,
     useUpdateCashier,
-    useGetGroupTransactions,
 } from 'src/actions/cashbox';
 
 interface CashierEditViewProps {
@@ -31,13 +27,11 @@ export function CashierEditView({ isNew = false }: CashierEditViewProps) {
     const navigate = useNavigate();
     const { id } = useParams();
 
-    const { cashier, cashierLoading } = useGetCashier(!isNew && id ? id : '');
+    const { cashier } = useGetCashier(!isNew && id ? id : '');
     const { onSubmit: onCreate } = useCreateCashier();
     const { onSubmit: onUpdate } = useUpdateCashier(id || '');
-    const { groupTransactions } = useGetGroupTransactions();
 
     const {
-        control,
         register,
         handleSubmit,
         formState: { errors, isSubmitting },
@@ -63,7 +57,7 @@ export function CashierEditView({ isNew = false }: CashierEditViewProps) {
     }, [cashier, isNew, reset]);
 
     // Reset form when cashier loads
-    useMemo(() => {
+    useEffect(() => {
         formReset();
     }, [formReset]);
 
@@ -71,26 +65,26 @@ export function CashierEditView({ isNew = false }: CashierEditViewProps) {
         try {
             if (isNew) {
                 await onCreate({ name: data.name, group_transaction_id: data.group_transaction_id });
-                toast.success(t('common.createSuccess', 'Created successfully'));
+                toast.success(t('cashbox.cashiers.createSuccess'));
             } else {
                 await onUpdate({ name: data.name, group_transaction_id: data.group_transaction_id });
-                toast.success(t('common.updateSuccess', 'Updated successfully'));
+                toast.success(t('cashbox.cashiers.updateSuccess'));
             }
             navigate(paths.cashbox.cashiers);
         } catch (error: any) {
-            toast.error(error?.message || t('common.saveFailed', 'Failed to save'));
+            toast.error(error?.message || t('cashbox.cashiers.saveFailed'));
         }
     });
 
     return (
         <DashboardContent>
             <CustomBreadcrumbs
-                heading={isNew ? t('cashbox.newCashier', 'New Cashier') : t('cashbox.editCashier', 'Edit Cashier')}
+                heading={isNew ? t('cashbox.cashiers.new') : t('cashbox.cashiers.edit')}
                 links={[
-                    { name: t('dashboard', 'Dashboard'), href: paths.dashboard.root },
-                    { name: t('cashbox.title', 'Cashbox'), href: paths.cashbox.root },
-                    { name: t('cashbox.cashiers', 'Cashiers'), href: paths.cashbox.cashiers },
-                    { name: isNew ? t('cashbox.newCashier', 'New') : t('cashbox.editCashier', 'Edit') },
+                    { name: t('dashboard'), href: paths.dashboard.root },
+                    { name: t('cashbox.sidebar.title'), href: paths.cashbox.root },
+                    { name: t('cashbox.cashiers.title'), href: paths.cashbox.cashiers },
+                    { name: isNew ? t('cashbox.cashiers.new') : t('cashbox.cashiers.edit') },
                 ]}
                 sx={{ mb: { xs: 3, md: 5 } }}
             />
@@ -104,45 +98,28 @@ export function CashierEditView({ isNew = false }: CashierEditViewProps) {
                 <form onSubmit={onFormSubmit}>
                     <Stack spacing={3}>
                         <TextField
-                            label={t('common.name', 'Name')}
+                            label={t('cashbox.cashiers.name')}
                             {...register('name', {
-                                required: t('common.nameRequired', 'Name is required'),
+                                required: t('cashbox.cashiers.nameRequired'),
                             })}
                             error={!!errors.name}
                             helperText={errors.name?.message}
                             fullWidth
                         />
 
-                        {/* <TextField
-                            select
-                            label={t('cashbox.groupTransaction', 'Group Transaction')}
-                            {...register('group_transaction_id', {
-                                required: t('cashbox.groupTransactionRequired', 'Group Transaction is required'),
-                            })}
-                            error={!!errors.group_transaction_id}
-                            helperText={errors.group_transaction_id?.message}
-                            fullWidth
-                        >
-                            {groupTransactions.map((group) => (
-                                <MenuItem key={group.id} value={group.id}>
-                                    {group.name}
-                                </MenuItem>
-                            ))}
-                        </TextField> */}
-
                         <Stack direction="row" spacing={2} justifyContent="flex-end">
                             <Button
                                 variant="outlined"
                                 onClick={() => navigate(-1)}
                             >
-                                {t('common.cancel', 'Cancel')}
+                                {t('common.cancel')}
                             </Button>
                             <Button
                                 type="submit"
                                 variant="contained"
                                 disabled={isSubmitting}
                             >
-                                {isNew ? t('common.create', 'Create') : t('common.update', 'Update')}
+                                {isNew ? t('common.create') : t('common.update')}
                             </Button>
                         </Stack>
                     </Stack>

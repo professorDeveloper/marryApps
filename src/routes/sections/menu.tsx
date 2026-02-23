@@ -64,6 +64,7 @@ import { IngredientGroupEditViewWrapper } from 'src/sections/warehouse/ingredien
 import { CashiersListView } from 'src/sections/cashbox/cashiers-list-view';
 import { CashierEditView } from 'src/sections/cashbox/cashiers-edit-view';
 import { CashRegisterEditView } from 'src/sections/cashbox/transaction-groups-edit-view';
+import { TransactionsEditView } from 'src/sections/cashbox/transactions-edit-view';
 
 const CashiersPage = lazy(() => import('src/pages/dashboard/cashbox/cashiers'));
 const TransactionGroupsPage = lazy(() => import('src/pages/dashboard/cashbox/transaction-groups'));
@@ -193,6 +194,8 @@ export const dashboardRoutes: RouteObject[] = [
           { path: 'cashbox/transaction-groups/new', element: <CashRegisterEditView isNew /> },
           { path: 'cashbox/transaction-groups/:id/edit', element: <CashRegisterEditView /> },
           { path: 'cashbox/transactions', element: <TransactionsPage /> },
+          { path: 'cashbox/transactions/new', element: <TransactionsEditView isNew /> },
+          { path: 'cashbox/transactions/:id/edit', element: <TransactionsEditView /> },
           { path: 'cashbox/report', element: <CashboxReportPage /> },
           { path: 'floor-plan', element: <FloorPlanPage /> },
           { path: 'halls', element: <HallsPage /> },

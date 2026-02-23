@@ -25,7 +25,11 @@ axiosInstance.interceptors.request.use((config) => {
 axiosInstance.interceptors.response.use(
   (response) => response,
   (error) => {
-    const message = error?.response?.data?.message || error?.message || 'Something went wrong!';
+    const message =
+      error?.response?.data?.error ||
+      error?.response?.data?.message ||
+      error?.message ||
+      'Something went wrong!';
     console.error('Axios error:', message);
     return Promise.reject(new Error(message));
   }
@@ -159,6 +163,7 @@ export const endpoints = {
   },
   storage: {
     list: '/api/v1/storages',
+    byBranch: (branchId: string) => `/api/v1/storages/branch/${branchId}`,
     details: (id: string) => `/api/v1/storages/${id}`,
     create: '/api/v1/storages',
     update: (id: string) => `/api/v1/storages/${id}`,
@@ -239,6 +244,7 @@ export const endpoints = {
   },
   users: {
     list: '/api/v1/users',
+    me: '/api/v1/user/me',
     byRole: (role: string) => `/api/v1/users/by-role?role=${role}`,
     details: (id: string) => `/api/v1/users/${id}`,
     create: '/api/v1/users',
@@ -275,6 +281,14 @@ export const endpoints = {
     updateGroup: (id: string) => `/api/v1/deductions/group/${id}`,
     deleteGroup: (id: string) => `/api/v1/deductions/group/${id}`,
   },
+  transfers: {
+    list: '/api/v1/transfers',
+    details: (id: string) => `/api/v1/transfers/${id}`,
+    create: '/api/v1/transfers',
+    update: (id: string) => `/api/v1/transfers/${id}`,
+    delete: (id: string) => `/api/v1/transfers/${id}`,
+    batch: '/api/v1/transfers/batch',
+  },
   ingredientStock: {
     list: '/api/v1/ingredient-stock',
     details: (id: string) => `/api/v1/ingredient-stock/${id}`,
@@ -294,17 +308,18 @@ export const endpoints = {
       details: (id: string) => `/api/v1/group-transactions/${id}`,
     },
     cashiers: {
-      root: '/api/v1/group-transactions',
-      details: (id: string) => `/api/v1/group-transactions/${id}`,
+      root: '/api/v1/cash-registers',
+      details: (id: string) => `/api/v1/cash-registers/${id}`,
     },
     cashRegisters: {
       root: '/api/v1/cash-registers',
+      byBranch: (branchId: string) => `/api/v1/cash-registers/branch/${branchId}`,
       details: (id: string) => `/api/v1/cash-registers/${id}`,
     },
     transactions: {
       root: '/api/v1/transactions',
       details: (id: string) => `/api/v1/transactions/${id}`,
     },
-    report: '/api/v1/cashbox/report',
+    report: '/api/v1/transactions/report',
   },
 } as const;

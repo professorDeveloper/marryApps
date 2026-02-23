@@ -17,7 +17,7 @@ import { _notifications } from 'src/_mock';
 import { Logo } from 'src/components/logo';
 import { useSettingsContext } from 'src/components/settings';
 
-import { useMockedUser } from 'src/auth/hooks';
+import { useAuthContext } from 'src/auth/hooks';
 import { useGetWorkspacesBranches } from 'src/hooks/use-workspaces-branches';
 
 import { NavMobile } from './nav-mobile';
@@ -60,7 +60,7 @@ export function DashboardLayout({
 }: DashboardLayoutProps) {
   const theme = useTheme();
 
-  const { user } = useMockedUser();
+  const { user } = useAuthContext();
 
   const settings = useSettingsContext();
 

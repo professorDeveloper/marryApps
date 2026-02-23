@@ -186,7 +186,6 @@ export const paths = {
       details: (id: string) => `${ROOTS.MENU}/warehouse/ingredient-stock/${id}`,
       edit: (id: string) => `${ROOTS.MENU}/warehouse/ingredient-stock/${id}/edit`,
     },
-
     invoices: {
       root: `${ROOTS.MENU}/warehouse/invoices`,
       new: `${ROOTS.MENU}/warehouse/invoices/new`,
@@ -217,6 +216,8 @@ export const paths = {
     cashiers: `${ROOTS.MENU}/cashbox/cashiers`,
     transactionGroups: `${ROOTS.MENU}/cashbox/transaction-groups`,
     transactions: `${ROOTS.MENU}/cashbox/transactions`,
+    transactionsNew: `${ROOTS.MENU}/cashbox/transactions/new`,
+    transactionsEdit: (id: string) => `${ROOTS.MENU}/cashbox/transactions/${id}/edit`,
     report: `${ROOTS.MENU}/cashbox/report`,
   },
 

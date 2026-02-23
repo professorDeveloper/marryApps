@@ -1,15 +1,9 @@
 import type { ButtonProps } from '@mui/material/Button';
-
 import { useCallback } from 'react';
-
 import Button from '@mui/material/Button';
-
 import { useRouter } from 'src/routes/hooks';
-
 import { useAuthContext } from 'src/auth/hooks';
 import { signOut } from 'src/auth/context/jwt/action';
-
-// ----------------------------------------------------------------------
 
 type Props = ButtonProps & {
   onClose?: () => void;

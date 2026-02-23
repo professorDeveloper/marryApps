@@ -199,12 +199,12 @@ export function InventoryEditView({ isNew = false }: InventoryEditViewProps) {
             {
                 id: 'basic-info',
                 title: t('inventory.details'),
-                columns: 1,
+                columns: 2,
                 fields: [
                     {
                         key: 'date',
                         label: t('inventory.date'),
-                        type: 'text' as const,
+                        type: 'date' as const,
                         required: true,
                         defaultValue: dayjs().format('YYYY-MM-DD'),
                     },

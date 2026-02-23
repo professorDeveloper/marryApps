@@ -325,23 +325,23 @@
     "menu": {
       "title": "Меню",
       "storage": "Хранилище",
-      "sections": "Разделы",
+      "sections": "Отделы",
       "categories": "Категории",
       "semifinished": "Полуфабрикаты",
       "meals": "Блюда"
     },
     "warehouse": {
-      "title": "Склад",
-      "storage": "Хранилище",
-      "inventories": "Инвентаризация",
-      "invoiceDetails": "Накладные",
-      "stocks": "Запасы",
-      "ingredients": "Ингредиенты",
-      "ingredient-group": "Группы ингредиентов",
-      "ingredientStock": "Запас ингредиентов",
-      "transfers": "Передачи",
-      "locations": "Местоположения",
-      "suppliers": "Поставщики"
+      "title": "Группы актов",
+      "storage": "Поставщики",
+      "inventories": "Накладные",
+      "invoiceDetails": "Отгрузки",
+      "stocks": "Расходные накладные",
+      "ingredients": "Акты разделки",
+      "ingredient-group": "Списание",
+      "ingredientStock": "Транзакции",
+      "transfers": "Производство ингредиента",
+      "locations": "Инвентаризация",
+      "suppliers": "Предзаказ"
     },
     "reports": {
       "title": "Отчеты",
@@ -349,7 +349,7 @@
       "inventory": "Инвентарь",
       "custom": "Пользовательский",
       "archives": "Архивы",
-      "bills": "Счета",
+      "bills": "Отчет по счетам",
       "ingredients": "Отчет по ингредиентам"
     },
     "settings": {
@@ -474,7 +474,17 @@
     "add": "Добавить",
     "select": "Выбрать",
     "deleteConfirmTitle": "Подтверждение удаления",
-    "deleteConfirmMessage": "Вы уверены, что хотите удалить эту запись? Это действие нельзя отменить."
+    "deleteConfirmMessage": "Вы уверены, что хотите удалить эту запись? Это действие нельзя отменить.",
+    "created_at": "Создано",
+    "actions": "Действия",
+    "nameRequired": "Name is required",
+    "createSuccess": "Created successfully",
+    "updateSuccess": "Updated successfully",
+    "deleteSuccess": "Deleted successfully",
+    "deleteFailed": "Failed to delete",
+    "saveFailed": "Failed to save",
+    "create": "Создать",
+    "update": "Обновить"
   },
   "warehouse": {
     "title": "Склад",
@@ -704,8 +714,8 @@
       "branch": "Отделение",
       "name": "Название зала",
       "namePlaceholder": "например: Основной зал, VIP зал",
-      "width": "Ширина (px)",
-      "height": "Высота (px)"
+      "width": "Ширина",
+      "height": "Высота"
     },
     "buttons": {
       "create": "Создать зал",
@@ -726,15 +736,15 @@
     }
   },
   "deductions": {
-    "title": "Списания",
+    "title": "Списание",
     "groups": "Группы списаний",
-    "items": "Элементы списания",
+    "items": "Элементы Списание",
     "list": "Список списаний",
     "create": "Создать списание",
     "edit": "Редактировать списание",
     "new": "Новое списание",
     "add": "Добавить списание",
-    "deductions": "Списания",
+    "deductions": "Списание",
     "number": "Номер",
     "date": "Дата",
     "storage": "Склад",
@@ -742,14 +752,14 @@
     "description": "Описание",
     "status": "Статус",
     "balance": "Баланс",
-    "details": "Детали списания",
+    "details": "Детали Списание",
     "summary": "Сводка",
     "active": "Активно",
     "inactive": "Неактивно",
     "deleted": "Удалено",
     "draft": "Черновик",
     "cancelled": "Отменено",
-    "itemsCalculation": "Расчет элементов списания",
+    "itemsCalculation": "Расчет элементов Списание",
     "availableIngredients": "Доступные ингредиенты",
     "selectedItems": "Выбранные элементы",
     "instructionsInfo": "Выберите ингредиенты на левой панели и перенесите их на правую",
@@ -767,15 +777,15 @@
     "selectItemsInfo": "На вкладке «Детали» выберите склад и группу, затем добавьте элементы",
     "error": {
       "notFound": "Списание не найдено",
-      "loadFailed": "Ошибка загрузки списания",
-      "saveFailed": "Ошибка сохранения списания"
+      "loadFailed": "Ошибка загрузки Списание",
+      "saveFailed": "Ошибка сохранения Списание"
     },
     "success": {
       "created": "Списание успешно создано",
       "updated": "Списание успешно обновлено",
-      "itemsAdded": "Элементы списания успешно добавлены"
+      "itemsAdded": "Элементы Списание успешно добавлены"
     },
-    "loadError": "Ошибка загрузки списания",
+    "loadError": "Ошибка загрузки Списание",
     "groupDeleted": "Группа списаний удалена",
     "groupName": "Группа списаний",
     "createdAt": "Дата создания",
@@ -940,7 +950,7 @@
     "all": "Все"
   },
   "bills": {
-    "title": "Счета",
+    "title": "Отчет по счетам",
     "list": "Отчет по счетам",
     "details": "Детали счета",
     "billNo": "Счет #",
@@ -1000,6 +1010,28 @@
       "transactionGroups": "Группы транзакций",
       "transactions": "Транзакции",
       "report": "Отчет по кассе"
+    },
+    "transactionGroups": {
+      "title": "Группы транзакций",
+      "list": "Список групп транзакций",
+      "details": "Детали группы транзакций",
+      "edit": "Редактировать группу транзакций"
+    },
+    "cashiers": {
+      "title": "Кассиры",
+      "list": "Список кассиров",
+      "new": "Новый кассир",
+      "edit": "Редактировать кассира",
+      "name": "Имя",
+      "created_at": "Дата создания",
+      "nameRequired": "Имя кассира обязательно",
+      "createSuccess": "Кассир успешно создан",
+      "updateSuccess": "Кассир успешно обновлен",
+      "deleteSuccess": "Кассир успешно удален",
+      "deleteFailed": "Ошибка при удалении кассира",
+      "saveFailed": "Ошибка при сохранении кассира",
+      "deleteConfirmTitle": "Подтверждение удаления",
+      "deleteConfirmMessage": "Вы уверены, что хотите удалить этого кассира? Это действие нельзя отменить."
     }
   }
 }
