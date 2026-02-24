@@ -198,16 +198,16 @@ export function IngredientReportsListView() {
                 renderCell: (params) => `${Number(params.row.order_out_qty).toFixed(2)}`,
             },
             {
-                field: 'deduction_out_qty',
-                headerName: t('ingredientReports.deduction', 'Deduction Qty'),
-                width: 140,
-                renderCell: (params) => `${Number(params.row.deduction_out_qty).toFixed(2)}`,
-            },
-            {
                 field: 'surplus_qty',
                 headerName: t('ingredientReports.surplus', 'Surplus Qty'),
                 width: 130,
                 renderCell: (params) => `${Number(params.row.surplus_qty).toFixed(2)}`,
+            },
+            {
+                field: 'deduction_out_qty',
+                headerName: t('ingredientReports.deduction', 'Deduction Qty'),
+                width: 140,
+                renderCell: (params) => `${Number(params.row.deduction_out_qty).toFixed(2)}`,
             },
             {
                 field: 'shortage_qty',
