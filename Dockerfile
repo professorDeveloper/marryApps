@@ -16,7 +16,7 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY package.json yarn.lock* package-lock.json* pnpm-lock.yaml* ./
 COPY . .
-COPY .env.prod .env
+COPY .env.staging.env
 RUN npm run build
 
 # ---------- RUNNER STAGE ----------
