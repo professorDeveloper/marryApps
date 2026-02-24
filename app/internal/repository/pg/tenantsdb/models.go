@@ -277,6 +277,49 @@ func (ns NullPaymentType) Value() (driver.Value, error) {
 	return string(ns.PaymentType), nil
 }
 
+type ShipmentStatus string
+
+const (
+	ShipmentStatusDraft     ShipmentStatus = "draft"
+	ShipmentStatusActive    ShipmentStatus = "active"
+	ShipmentStatusCancelled ShipmentStatus = "cancelled"
+)
+
+func (e *ShipmentStatus) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = ShipmentStatus(s)
+	case string:
+		*e = ShipmentStatus(s)
+	default:
+		return fmt.Errorf("unsupported scan type for ShipmentStatus: %T", src)
+	}
+	return nil
+}
+
+type NullShipmentStatus struct {
+	ShipmentStatus ShipmentStatus `json:"shipment_status"`
+	Valid          bool           `json:"valid"` // Valid is true if ShipmentStatus is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullShipmentStatus) Scan(value interface{}) error {
+	if value == nil {
+		ns.ShipmentStatus, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.ShipmentStatus.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullShipmentStatus) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.ShipmentStatus), nil
+}
+
 type TableStatus string
 
 const (
@@ -844,6 +887,36 @@ type Shift struct {
 	CreatedAt   pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
 	DeletedAt   *int64             `json:"deleted_at"`
+}
+
+type Shipment struct {
+	ID          uuid.UUID          `json:"id"`
+	Number      int32              `json:"number"`
+	Date        pgtype.Timestamp   `json:"date"`
+	StorageID   pgtype.UUID        `json:"storage_id"`
+	SupplierID  pgtype.UUID        `json:"supplier_id"`
+	BranchID    pgtype.UUID        `json:"branch_id"`
+	Description *string            `json:"description"`
+	Status      ShipmentStatus     `json:"status"`
+	TotalAmount pgtype.Numeric     `json:"total_amount"`
+	PaidAmount  pgtype.Numeric     `json:"paid_amount"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
+	DeletedAt   *int64             `json:"deleted_at"`
+}
+
+type ShipmentItem struct {
+	ID           uuid.UUID          `json:"id"`
+	ShipmentID   uuid.UUID          `json:"shipment_id"`
+	IngredientID uuid.UUID          `json:"ingredient_id"`
+	Quantity     pgtype.Numeric     `json:"quantity"`
+	PricePerUnit pgtype.Numeric     `json:"price_per_unit"`
+	TotalAmount  pgtype.Numeric     `json:"total_amount"`
+	StockBefore  pgtype.Numeric     `json:"stock_before"`
+	StockAfter   pgtype.Numeric     `json:"stock_after"`
+	CreatedAt    pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
+	DeletedAt    *int64             `json:"deleted_at"`
 }
 
 type Storage struct {

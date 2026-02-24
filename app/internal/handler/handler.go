@@ -617,6 +617,21 @@ func (h *Handler) Register(router *echo.Echo) {
 			transfers.DELETE("/items/:id", h.DeleteTransferItem, mw.CheckLanguage())
 		}
 
+		// Shipment endpoints (outgoing stock removal)
+		shipments := api.Group("/shipments", mw.CheckAuth(h.cfg), mw.TenantMiddleware(h.repo))
+		{
+			shipments.POST("", h.CreateShipment, mw.CheckLanguage())
+			shipments.POST("/batch", h.CreateShipmentBatch, mw.CheckLanguage())
+			shipments.GET("", h.ListShipments, mw.CheckLanguage())
+			shipments.GET("/:id", h.GetShipment, mw.CheckLanguage())
+			shipments.PUT("/:id", h.UpdateShipment, mw.CheckLanguage())
+			shipments.DELETE("/:id", h.DeleteShipment, mw.CheckLanguage())
+			shipments.POST("/:id/confirm", h.ConfirmShipment, mw.CheckLanguage())
+			shipments.POST("/:id/cancel", h.CancelShipment, mw.CheckLanguage())
+			shipments.POST("/:id/items", h.UpsertShipmentItem, mw.CheckLanguage())
+			shipments.DELETE("/:id/items/:item_id", h.DeleteShipmentItem, mw.CheckLanguage())
+		}
+
 		// Brand management endpoints (admin only)
 		brands := api.Group("/admin/brands")
 		{

@@ -1159,6 +1159,40 @@ definitions:
         example: Mon,Tue,Wed,Thu,Fri
         type: string
     type: object
+  model.CreateShipmentBatchRequest:
+    properties:
+      date:
+        example: "2026-01-24T00:00:00Z"
+        type: string
+      description:
+        type: string
+      items:
+        items:
+          $ref: '#/definitions/model.UpsertShipmentItemRequest'
+        minItems: 1
+        type: array
+      storage_id:
+        type: string
+      supplier_id:
+        type: string
+    required:
+    - items
+    type: object
+  model.CreateShipmentRequest:
+    properties:
+      date:
+        example: "2026-01-24T00:00:00Z"
+        type: string
+      description:
+        example: Expired goods return
+        type: string
+      storage_id:
+        example: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+        type: string
+      supplier_id:
+        example: d1f29b75-8g6d-5536-0525-2c12deeef0e0
+        type: string
+    type: object
   model.CreateStorageRequest:
     properties:
       branch_id:
@@ -2393,6 +2427,78 @@ definitions:
         example: Mon,Tue,Wed,Thu,Fri
         type: string
     type: object
+  model.ShipmentItemResponse:
+    properties:
+      created_at:
+        type: string
+      id:
+        type: string
+      ingredient_id:
+        type: string
+      price_per_unit:
+        type: string
+      quantity:
+        type: string
+      shipment_id:
+        type: string
+      stock_after:
+        description: 'active: live projected (current-qty); confirmed: actual after
+          deduction'
+        type: string
+      stock_before:
+        description: 'active: live current stock; confirmed: actual before deduction'
+        type: string
+      total_amount:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  model.ShipmentResponse:
+    properties:
+      branch_id:
+        type: string
+      created_at:
+        type: string
+      date:
+        type: string
+      description:
+        type: string
+      id:
+        type: string
+      number:
+        type: integer
+      paid_amount:
+        type: string
+      status:
+        $ref: '#/definitions/model.ShipmentStatus'
+      storage_id:
+        type: string
+      supplier_id:
+        type: string
+      total_amount:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  model.ShipmentStatus:
+    enum:
+    - draft
+    - active
+    - cancelled
+    type: string
+    x-enum-varnames:
+    - ShipmentStatusDraft
+    - ShipmentStatusActive
+    - ShipmentStatusCancelled
+  model.ShipmentWithItemsResponse:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/model.ShipmentItemResponse'
+        type: array
+      shipment:
+        $ref: '#/definitions/model.ShipmentResponse'
+    type: object
   model.StorageResponse:
     properties:
       branch_id:
@@ -3190,6 +3296,21 @@ definitions:
         example: Mon,Tue,Wed,Thu,Fri
         type: string
     type: object
+  model.UpdateShipmentRequest:
+    properties:
+      date:
+        example: "2026-01-24T00:00:00Z"
+        type: string
+      description:
+        example: Expired goods return
+        type: string
+      storage_id:
+        example: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+        type: string
+      supplier_id:
+        example: d1f29b75-8g6d-5536-0525-2c12deeef0e0
+        type: string
+    type: object
   model.UpdateStorageRequest:
     properties:
       branch_id:
@@ -3270,6 +3391,28 @@ definitions:
       items:
         items:
           $ref: '#/definitions/model.UpsertInventoryItemRequest'
+        minItems: 1
+        type: array
+    required:
+    - items
+    type: object
+  model.UpsertShipmentItemRequest:
+    properties:
+      ingredient_id:
+        example: b2c3d4e5-f6a7-8901-bcde-f01234567890
+        type: string
+      quantity:
+        example: "5.5"
+        type: string
+    required:
+    - ingredient_id
+    - quantity
+    type: object
+  model.UpsertShipmentItemsRequest:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/model.UpsertShipmentItemRequest'
         minItems: 1
         type: array
     required:
@@ -14877,6 +15020,343 @@ paths:
       summary: Get shifts by branch
       tags:
       - shifts
+  /api/v1/shipments:
+    get:
+      description: List shipments filtered by storage, supplier, status, date range
+      parameters:
+      - description: Filter by storage UUID
+        in: query
+        name: storage_id
+        type: string
+      - description: Filter by supplier UUID
+        in: query
+        name: supplier_id
+        type: string
+      - description: Filter by status (draft/confirmed/cancelled)
+        in: query
+        name: status
+        type: string
+      - description: Start date (RFC3339)
+        in: query
+        name: start_date
+        type: string
+      - description: End date (RFC3339)
+        in: query
+        name: end_date
+        type: string
+      - default: 20
+        description: Limit
+        in: query
+        name: limit
+        type: integer
+      - default: 0
+        description: Offset
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/model.ShipmentResponse'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: List shipments
+      tags:
+      - Shipments
+    post:
+      consumes:
+      - application/json
+      description: Create a new shipment in draft status. Add items, then confirm
+        to deduct stock.
+      parameters:
+      - description: Create shipment
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.CreateShipmentRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/model.ShipmentResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create shipment
+      tags:
+      - Shipments
+  /api/v1/shipments/{id}:
+    delete:
+      description: Soft-deletes a shipment. Only draft shipments can be deleted.
+      parameters:
+      - description: Shipment ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.SuccessResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete shipment
+      tags:
+      - Shipments
+    get:
+      description: Returns shipment header + all items with stock_before/stock_after
+        snapshots
+      parameters:
+      - description: Shipment ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.ShipmentWithItemsResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get shipment by ID
+      tags:
+      - Shipments
+    put:
+      consumes:
+      - application/json
+      description: Update storage, supplier, date, description. Only works on draft
+        shipments.
+      parameters:
+      - description: Shipment ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Update shipment
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.UpdateShipmentRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.ShipmentResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update shipment
+      tags:
+      - Shipments
+  /api/v1/shipments/{id}/cancel:
+    post:
+      description: Cancels a draft shipment (no stock change)
+      parameters:
+      - description: Shipment ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.ShipmentResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Cancel shipment
+      tags:
+      - Shipments
+  /api/v1/shipments/{id}/confirm:
+    post:
+      description: Confirms shipment (draft→confirmed). Deducts each item's quantity
+        from ingredient_stock. Stock can go negative.
+      parameters:
+      - description: Shipment ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.ShipmentResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Confirm shipment
+      tags:
+      - Shipments
+  /api/v1/shipments/{id}/items:
+    post:
+      consumes:
+      - application/json
+      description: Add/update multiple ingredient items. Each item is upserted (insert
+        or update by ingredient_id). Returns items with live stock preview.
+      parameters:
+      - description: Shipment ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Items to upsert
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.UpsertShipmentItemsRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/model.ShipmentItemResponse'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Upsert shipment items
+      tags:
+      - Shipments
+  /api/v1/shipments/{id}/items/{item_id}:
+    delete:
+      description: Remove an ingredient item from a draft shipment
+      parameters:
+      - description: Shipment ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Item ID
+        in: path
+        name: item_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.SuccessResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete shipment item
+      tags:
+      - Shipments
+  /api/v1/shipments/batch:
+    post:
+      consumes:
+      - application/json
+      description: Creates a shipment header and upserts all provided items in a single
+        request. Returns full shipment with stock preview.
+      parameters:
+      - description: Batch create
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.CreateShipmentBatchRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/model.ShipmentWithItemsResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create shipment with items (batch)
+      tags:
+      - Shipments
   /api/v1/storages:
     get:
       consumes:

@@ -196,6 +196,13 @@ FROM ingredient_stock
 WHERE ingredient_id = $1 AND branch_id = $2 AND deleted_at = 0
   AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid;
 
+-- GetStockByIngredientAndStorage retrieves stock row for an ingredient in a storage (read-only)
+-- name: GetStockByIngredientAndStorage :one
+SELECT id, ingredient_id, storage_id, branch_id, quantity, created_at, updated_at, deleted_at
+FROM ingredient_stock
+WHERE ingredient_id = $1 AND storage_id = $2 AND deleted_at = 0
+  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid;
+
 -- GetStockByIngredientAndStorageForUpdate retrieves and locks stock row for an ingredient in a storage
 -- name: GetStockByIngredientAndStorageForUpdate :one
 SELECT id, ingredient_id, storage_id, branch_id, quantity, created_at, updated_at, deleted_at

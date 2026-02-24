@@ -883,6 +883,35 @@ func (q *Queries) GetStockByIngredientAndBranch(ctx context.Context, arg GetStoc
 	return i, err
 }
 
+const getStockByIngredientAndStorage = `-- name: GetStockByIngredientAndStorage :one
+SELECT id, ingredient_id, storage_id, branch_id, quantity, created_at, updated_at, deleted_at
+FROM ingredient_stock
+WHERE ingredient_id = $1 AND storage_id = $2 AND deleted_at = 0
+  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+`
+
+type GetStockByIngredientAndStorageParams struct {
+	IngredientID uuid.UUID   `json:"ingredient_id"`
+	StorageID    pgtype.UUID `json:"storage_id"`
+}
+
+// GetStockByIngredientAndStorage retrieves stock row for an ingredient in a storage (read-only)
+func (q *Queries) GetStockByIngredientAndStorage(ctx context.Context, arg GetStockByIngredientAndStorageParams) (IngredientStock, error) {
+	row := q.db.QueryRow(ctx, getStockByIngredientAndStorage, arg.IngredientID, arg.StorageID)
+	var i IngredientStock
+	err := row.Scan(
+		&i.ID,
+		&i.IngredientID,
+		&i.StorageID,
+		&i.BranchID,
+		&i.Quantity,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
+	)
+	return i, err
+}
+
 const getStockByIngredientAndStorageForUpdate = `-- name: GetStockByIngredientAndStorageForUpdate :one
 SELECT id, ingredient_id, storage_id, branch_id, quantity, created_at, updated_at, deleted_at
 FROM ingredient_stock

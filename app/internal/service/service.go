@@ -473,6 +473,7 @@ type I interface {
 	Cash() CashRegisterI
 	GroupTransaction() GroupTransactionI
 	Transaction() TransactionI
+	Shipment() ShipmentI
 }
 
 type Service struct {
@@ -502,6 +503,7 @@ type Service struct {
 	cash             CashRegisterI
 	groupTransaction GroupTransactionI
 	transaction      TransactionI
+	shipment         ShipmentI
 }
 
 func New(cfg *config.Config, repo *repository.Repository, clickClient *paymentClick.Client, paymeClient *paymentPayme.Client, minioClient *minio.Minio) *Service {
@@ -532,6 +534,7 @@ func New(cfg *config.Config, repo *repository.Repository, clickClient *paymentCl
 		cash:             NewCashRegisterS(repo),
 		groupTransaction: NewGroupTransactionS(repo),
 		transaction:      NewTransactionS(repo),
+		shipment:         NewShipmentS(repo),
 	}
 }
 
@@ -636,4 +639,8 @@ func (s *Service) GroupTransaction() GroupTransactionI {
 
 func (s *Service) Transaction() TransactionI {
 	return s.transaction
+}
+
+func (s *Service) Shipment() ShipmentI {
+	return s.shipment
 }

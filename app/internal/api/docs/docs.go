@@ -17766,6 +17766,526 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/shipments": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "List shipments filtered by storage, supplier, status, date range",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Shipments"
+                ],
+                "summary": "List shipments",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Filter by storage UUID",
+                        "name": "storage_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by supplier UUID",
+                        "name": "supplier_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by status (draft/confirmed/cancelled)",
+                        "name": "status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Start date (RFC3339)",
+                        "name": "start_date",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "End date (RFC3339)",
+                        "name": "end_date",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 20,
+                        "description": "Limit",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 0,
+                        "description": "Offset",
+                        "name": "offset",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/model.ShipmentResponse"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Create a new shipment in draft status. Add items, then confirm to deduct stock.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Shipments"
+                ],
+                "summary": "Create shipment",
+                "parameters": [
+                    {
+                        "description": "Create shipment",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.CreateShipmentRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/model.ShipmentResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/shipments/batch": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Creates a shipment header and upserts all provided items in a single request. Returns full shipment with stock preview.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Shipments"
+                ],
+                "summary": "Create shipment with items (batch)",
+                "parameters": [
+                    {
+                        "description": "Batch create",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.CreateShipmentBatchRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/model.ShipmentWithItemsResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/shipments/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns shipment header + all items with stock_before/stock_after snapshots",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Shipments"
+                ],
+                "summary": "Get shipment by ID",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Shipment ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.ShipmentWithItemsResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Update storage, supplier, date, description. Only works on draft shipments.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Shipments"
+                ],
+                "summary": "Update shipment",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Shipment ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Update shipment",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.UpdateShipmentRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.ShipmentResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Soft-deletes a shipment. Only draft shipments can be deleted.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Shipments"
+                ],
+                "summary": "Delete shipment",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Shipment ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.SuccessResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/shipments/{id}/cancel": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Cancels a draft shipment (no stock change)",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Shipments"
+                ],
+                "summary": "Cancel shipment",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Shipment ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.ShipmentResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/shipments/{id}/confirm": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Confirms shipment (draft→confirmed). Deducts each item's quantity from ingredient_stock. Stock can go negative.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Shipments"
+                ],
+                "summary": "Confirm shipment",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Shipment ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.ShipmentResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/shipments/{id}/items": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Add/update multiple ingredient items. Each item is upserted (insert or update by ingredient_id). Returns items with live stock preview.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Shipments"
+                ],
+                "summary": "Upsert shipment items",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Shipment ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Items to upsert",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.UpsertShipmentItemsRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/model.ShipmentItemResponse"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/shipments/{id}/items/{item_id}": {
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Remove an ingredient item from a draft shipment",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Shipments"
+                ],
+                "summary": "Delete shipment item",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Shipment ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Item ID",
+                        "name": "item_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.SuccessResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/storages": {
             "get": {
                 "security": [
@@ -22399,6 +22919,55 @@ const docTemplate = `{
                 }
             }
         },
+        "model.CreateShipmentBatchRequest": {
+            "type": "object",
+            "required": [
+                "items"
+            ],
+            "properties": {
+                "date": {
+                    "type": "string",
+                    "example": "2026-01-24T00:00:00Z"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "items": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                        "$ref": "#/definitions/model.UpsertShipmentItemRequest"
+                    }
+                },
+                "storage_id": {
+                    "type": "string"
+                },
+                "supplier_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "model.CreateShipmentRequest": {
+            "type": "object",
+            "properties": {
+                "date": {
+                    "type": "string",
+                    "example": "2026-01-24T00:00:00Z"
+                },
+                "description": {
+                    "type": "string",
+                    "example": "Expired goods return"
+                },
+                "storage_id": {
+                    "type": "string",
+                    "example": "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+                },
+                "supplier_id": {
+                    "type": "string",
+                    "example": "d1f29b75-8g6d-5536-0525-2c12deeef0e0"
+                }
+            }
+        },
         "model.CreateStorageRequest": {
             "type": "object",
             "properties": {
@@ -24152,6 +24721,111 @@ const docTemplate = `{
                 }
             }
         },
+        "model.ShipmentItemResponse": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "ingredient_id": {
+                    "type": "string"
+                },
+                "price_per_unit": {
+                    "type": "string"
+                },
+                "quantity": {
+                    "type": "string"
+                },
+                "shipment_id": {
+                    "type": "string"
+                },
+                "stock_after": {
+                    "description": "active: live projected (current-qty); confirmed: actual after deduction",
+                    "type": "string"
+                },
+                "stock_before": {
+                    "description": "active: live current stock; confirmed: actual before deduction",
+                    "type": "string"
+                },
+                "total_amount": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "model.ShipmentResponse": {
+            "type": "object",
+            "properties": {
+                "branch_id": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "date": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "number": {
+                    "type": "integer"
+                },
+                "paid_amount": {
+                    "type": "string"
+                },
+                "status": {
+                    "$ref": "#/definitions/model.ShipmentStatus"
+                },
+                "storage_id": {
+                    "type": "string"
+                },
+                "supplier_id": {
+                    "type": "string"
+                },
+                "total_amount": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "model.ShipmentStatus": {
+            "type": "string",
+            "enum": [
+                "draft",
+                "active",
+                "cancelled"
+            ],
+            "x-enum-varnames": [
+                "ShipmentStatusDraft",
+                "ShipmentStatusActive",
+                "ShipmentStatusCancelled"
+            ]
+        },
+        "model.ShipmentWithItemsResponse": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.ShipmentItemResponse"
+                    }
+                },
+                "shipment": {
+                    "$ref": "#/definitions/model.ShipmentResponse"
+                }
+            }
+        },
         "model.StorageResponse": {
             "type": "object",
             "properties": {
@@ -25298,6 +25972,27 @@ const docTemplate = `{
                 }
             }
         },
+        "model.UpdateShipmentRequest": {
+            "type": "object",
+            "properties": {
+                "date": {
+                    "type": "string",
+                    "example": "2026-01-24T00:00:00Z"
+                },
+                "description": {
+                    "type": "string",
+                    "example": "Expired goods return"
+                },
+                "storage_id": {
+                    "type": "string",
+                    "example": "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+                },
+                "supplier_id": {
+                    "type": "string",
+                    "example": "d1f29b75-8g6d-5536-0525-2c12deeef0e0"
+                }
+            }
+        },
         "model.UpdateStorageRequest": {
             "type": "object",
             "properties": {
@@ -25419,6 +26114,38 @@ const docTemplate = `{
                     "minItems": 1,
                     "items": {
                         "$ref": "#/definitions/model.UpsertInventoryItemRequest"
+                    }
+                }
+            }
+        },
+        "model.UpsertShipmentItemRequest": {
+            "type": "object",
+            "required": [
+                "ingredient_id",
+                "quantity"
+            ],
+            "properties": {
+                "ingredient_id": {
+                    "type": "string",
+                    "example": "b2c3d4e5-f6a7-8901-bcde-f01234567890"
+                },
+                "quantity": {
+                    "type": "string",
+                    "example": "5.5"
+                }
+            }
+        },
+        "model.UpsertShipmentItemsRequest": {
+            "type": "object",
+            "required": [
+                "items"
+            ],
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                        "$ref": "#/definitions/model.UpsertShipmentItemRequest"
                     }
                 }
             }
