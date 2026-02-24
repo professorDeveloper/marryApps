@@ -2,7 +2,6 @@ import type { GridColDef } from '@mui/x-data-grid';
 import { useMemo, useState, useCallback, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import Box from '@mui/material/Box';
-import Card from '@mui/material/Card';
 import Button from '@mui/material/Button';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
@@ -11,6 +10,7 @@ import TableBody from '@mui/material/TableBody';
 import TableCell from '@mui/material/TableCell';
 import TableHead from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
+import Tooltip from '@mui/material/Tooltip';
 import CircularProgress from '@mui/material/CircularProgress';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import dayjs from 'dayjs';
@@ -19,8 +19,7 @@ import { useGetIngredientReports, useGetIngredientReportDetail } from 'src/actio
 import { useGetIngredients } from 'src/actions/ingredients';
 import { useGetStorages } from 'src/actions/departments';
 import { Iconify } from 'src/components/iconify';
-import { CustomGridActionsCellItem } from 'src/components/custom-data-grid';
-import { RenderCellItem, GenericTableView } from 'src/components/generic-table-view';
+import { GenericTableView } from 'src/components/generic-table-view';
 import { GenericViewModal } from 'src/components/generic-view-view/GenericViewModal';
 
 const toUtcDayBoundary = (value: dayjs.Dayjs, endOfDay = false): string => {
@@ -61,6 +60,8 @@ export function IngredientReportsListView() {
     // Modal states
     const [openDetailsModal, setOpenDetailsModal] = useState(false);
     const [selectedIngredientId, setSelectedIngredientId] = useState<string | null>(null);
+    const [openAmountsModal, setOpenAmountsModal] = useState(false);
+    const [selectedAmountsData, setSelectedAmountsData] = useState<any | null>(null);
 
     // Set default date range and storage on component mount
     useEffect(() => {
@@ -118,14 +119,19 @@ export function IngredientReportsListView() {
         [ingredients, storages]
     );
 
+    const handleOpenAmountsModal = useCallback((row: any) => {
+        setSelectedAmountsData(row);
+        setOpenAmountsModal(true);
+    }, []);
+
     const columns = useMemo<GridColDef[]>(
         () => [
-                // {
-                //     field: 'ingredient_id',
-                //     headerName: 'ID',
-                //     minWidth: 260,
-                //     renderCell: (params) => params.row.ingredient_id || '-',
-                // },
+            // {
+            //     field: 'ingredient_id',
+            //     headerName: 'ID',
+            //     minWidth: 260,
+            //     renderCell: (params) => params.row.ingredient_id || '-',
+            // },
             {
                 field: 'ingredient_name',
                 headerName: t('ingredientReports.ingredient') || 'Ingredient',
@@ -174,16 +180,19 @@ export function IngredientReportsListView() {
                 },
             },
             {
+                field: 'cost_start',
+                headerName: t('ingredientReports.costStart', 'Cost Start'),
+                width: 130,
+                renderCell: (params) => {
+                    const amount = Number(params.row.cost_start) || 0;
+                    return `${amount.toLocaleString()} so'm`;
+                },
+            },
+            {
                 field: 'begin_qty',
                 headerName: t('ingredientReports.beginQty') || 'Begin Qty',
                 width: 120,
                 renderCell: (params) => `${Number(params.row.begin_qty).toFixed(2)}`,
-            },
-            {
-                field: 'end_qty',
-                headerName: t('ingredientReports.endQty') || 'End Qty',
-                width: 120,
-                renderCell: (params) => `${Number(params.row.end_qty).toFixed(2)}`,
             },
             {
                 field: 'invoice_in_qty',
@@ -195,7 +204,20 @@ export function IngredientReportsListView() {
                 field: 'order_out_qty',
                 headerName: t('ingredientReports.out') || 'Out',
                 width: 100,
-                renderCell: (params) => `${Number(params.row.order_out_qty).toFixed(2)}`,
+                renderCell: (params) => (
+                    <Tooltip
+                        title={`${t('ingredientReports.deduction', 'Deduction')}: ${Number(params.row.deduction_out_qty).toFixed(2)}`}
+                        arrow
+                        disableInteractive
+                        slotProps={{
+                            popper: {
+                                sx: { pointerEvents: 'none' },
+                            },
+                        }}
+                    >
+                        <Box component="span">{`${Number(params.row.order_out_qty).toFixed(2)}`}</Box>
+                    </Tooltip>
+                ),
             },
             {
                 field: 'surplus_qty',
@@ -204,41 +226,30 @@ export function IngredientReportsListView() {
                 renderCell: (params) => `${Number(params.row.surplus_qty).toFixed(2)}`,
             },
             {
-                field: 'deduction_out_qty',
-                headerName: t('ingredientReports.deduction', 'Deduction Qty'),
-                width: 140,
-                renderCell: (params) => `${Number(params.row.deduction_out_qty).toFixed(2)}`,
-            },
-            {
                 field: 'shortage_qty',
                 headerName: t('ingredientReports.shortage', 'Shortage Qty'),
                 width: 140,
                 renderCell: (params) => `${Number(params.row.shortage_qty).toFixed(2)}`,
             },
             {
-                field: 'cost_start',
-                headerName: t('ingredientReports.costStart', 'Cost Start'),
-                width: 130,
-                renderCell: (params) => {
-                    const amount = Number(params.row.cost_start) || 0;
-                    return `${amount.toLocaleString()} so'm`;
-                },
+                field: 'end_qty',
+                headerName: t('ingredientReports.endQty') || 'End Qty',
+                width: 120,
+                renderCell: (params) => `${Number(params.row.end_qty).toFixed(2)}`,
             },
+            // rasxod hoverda chiqshi kerak
+            // {
+            //     field: 'deduction_out_qty',
+            //     headerName: t('ingredientReports.deduction', 'Deduction Qty'),
+            //     width: 140,
+            //     renderCell: (params) => `${Number(params.row.deduction_out_qty).toFixed(2)}`,
+            // },
             {
                 field: 'cost_end',
                 headerName: t('ingredientReports.costEnd', 'Cost End'),
                 width: 130,
                 renderCell: (params) => {
                     const amount = Number(params.row.cost_end) || 0;
-                    return `${amount.toLocaleString()} so'm`;
-                },
-            },
-            {
-                field: 'begin_amount',
-                headerName: t('ingredientReports.beginCost') || 'Begin Cost',
-                width: 120,
-                renderCell: (params) => {
-                    const amount = Number(params.row.begin_amount) || 0;
                     return `${amount.toLocaleString()} so'm`;
                 },
             },
@@ -251,51 +262,61 @@ export function IngredientReportsListView() {
                     return `${amount.toLocaleString()} so'm`;
                 },
             },
-            {
-                field: 'invoice_in_amount',
-                headerName: t('ingredientReports.inAmount', 'In Amount'),
-                width: 140,
-                renderCell: (params) => {
-                    const amount = Number(params.row.invoice_in_amount) || 0;
-                    return `${amount.toLocaleString()} so'm`;
-                },
-            },
-            {
-                field: 'order_out_amount',
-                headerName: t('ingredientReports.outAmount', 'Out Amount'),
-                width: 140,
-                renderCell: (params) => {
-                    const amount = Number(params.row.order_out_amount) || 0;
-                    return `${amount.toLocaleString()} so'm`;
-                },
-            },
-            {
-                field: 'deduction_out_amount',
-                headerName: t('ingredientReports.deductionAmount', 'Deduction Amount'),
-                width: 170,
-                renderCell: (params) => {
-                    const amount = Number(params.row.deduction_out_amount) || 0;
-                    return `${amount.toLocaleString()} so'm`;
-                },
-            },
-            {
-                field: 'surplus_amount',
-                headerName: t('ingredientReports.surplusAmount', 'Surplus Amount'),
-                width: 160,
-                renderCell: (params) => {
-                    const amount = Number(params.row.surplus_amount) || 0;
-                    return `${amount.toLocaleString()} so'm`;
-                },
-            },
-            {
-                field: 'shortage_amount',
-                headerName: t('ingredientReports.shortageAmount', 'Shortage Amount'),
-                width: 170,
-                renderCell: (params) => {
-                    const amount = Number(params.row.shortage_amount) || 0;
-                    return `${amount.toLocaleString()} so'm`;
-                },
-            },
+            // detailda chiqshi kerak
+            // {
+            //     field: 'begin_amount',
+            //     headerName: t('ingredientReports.beginCost') || 'Begin Cost',
+            //     width: 120,
+            //     renderCell: (params) => {
+            //         const amount = Number(params.row.begin_amount) || 0;
+            //         return `${amount.toLocaleString()} so'm`;
+            //     },
+            // },
+            // {
+            //     field: 'invoice_in_amount',
+            //     headerName: t('ingredientReports.inAmount', 'In Amount'),
+            //     width: 140,
+            //     renderCell: (params) => {
+            //         const amount = Number(params.row.invoice_in_amount) || 0;
+            //         return `${amount.toLocaleString()} so'm`;
+            //     },
+            // },
+            // {
+            //     field: 'order_out_amount',
+            //     headerName: t('ingredientReports.outAmount', 'Out Amount'),
+            //     width: 140,
+            //     renderCell: (params) => {
+            //         const amount = Number(params.row.order_out_amount) || 0;
+            //         return `${amount.toLocaleString()} so'm`;
+            //     },
+            // },
+            // {
+            //     field: 'deduction_out_amount',
+            //     headerName: t('ingredientReports.deductionAmount', 'Deduction Amount'),
+            //     width: 170,
+            //     renderCell: (params) => {
+            //         const amount = Number(params.row.deduction_out_amount) || 0;
+            //         return `${amount.toLocaleString()} so'm`;
+            //     },
+            // },
+            // {
+            //     field: 'surplus_amount',
+            //     headerName: t('ingredientReports.surplusAmount', 'Surplus Amount'),
+            //     width: 160,
+            //     renderCell: (params) => {
+            //         const amount = Number(params.row.surplus_amount) || 0;
+            //         return `${amount.toLocaleString()} so'm`;
+            //     },
+            // },
+            // {
+            //     field: 'shortage_amount',
+            //     headerName: t('ingredientReports.shortageAmount', 'Shortage Amount'),
+            //     width: 170,
+            //     renderCell: (params) => {
+            //         const amount = Number(params.row.shortage_amount) || 0;
+            //         return `${amount.toLocaleString()} so'm`;
+            //     },
+            // },
         ],
         [t]
     );
@@ -590,6 +611,70 @@ export function IngredientReportsListView() {
         );
     }, [t, reportLoading]);
 
+    const renderAmountsDetailsContent = useCallback((data: any) => {
+        if (!data) return null;
+
+        const amountRows = [
+            {
+                label: t('ingredientReports.beginCost') || 'Begin Cost',
+                value: Number(data.begin_amount).toLocaleString(),
+            },
+            {
+                label: t('ingredientReports.inAmount', 'In Amount'),
+                value: Number(data.invoice_in_amount).toLocaleString(),
+            },
+            {
+                label: t('ingredientReports.outAmount', 'Out Amount'),
+                value: Number(data.order_out_amount).toLocaleString(),
+            },
+            {
+                label: t('ingredientReports.deductionAmount', 'Deduction Amount'),
+                value: Number(data.deduction_out_amount).toLocaleString(),
+            },
+            {
+                label: t('ingredientReports.surplusAmount', 'Surplus Amount'),
+                value: Number(data.surplus_amount).toLocaleString(),
+            },
+            {
+                label: t('ingredientReports.shortageAmount', 'Shortage Amount'),
+                value: Number(data.shortage_amount).toLocaleString(),
+            },
+        ];
+
+        return (
+            <Box>
+                <Table size="small">
+                    <TableHead>
+                        <TableRow>
+                            <TableCell>{t('common.name') || 'Name'}</TableCell>
+                            <TableCell align="right">{t('common.amount') || 'Amount'}</TableCell>
+                        </TableRow>
+                    </TableHead>
+                    <TableBody>
+                        {amountRows.map((row) => (
+                            <TableRow key={row.label}>
+                                <TableCell>{row.label}</TableCell>
+                                <TableCell align="right" sx={{ fontWeight: 600 }}>
+                                    {row.value} so'm
+                                </TableCell>
+                            </TableRow>
+                        ))}
+                    </TableBody>
+                </Table>
+            </Box>
+        );
+    }, [t]);
+
+    const handleAmountRowClick = useCallback(
+        (id: string) => {
+            const selectedRow = reports.find((row: any) => row.ingredient_id === id);
+            if (selectedRow) {
+                handleOpenAmountsModal(selectedRow);
+            }
+        },
+        [reports, handleOpenAmountsModal]
+    );
+
     return (
         <>
             {/* Table */}
@@ -610,10 +695,7 @@ export function IngredientReportsListView() {
                     ],
                 }}
                 renderFilters={renderFiltersContent}
-                onRowClick={(id) => {
-                    setSelectedIngredientId(id);
-                    setOpenDetailsModal(true);
-                }}
+                onRowClick={handleAmountRowClick}
             />
 
             {/* Ingredient Report Detail Modal */}
@@ -625,6 +707,20 @@ export function IngredientReportsListView() {
                 loading={reportLoading}
                 renderContent={renderReportDetailsContent}
                 maxWidth="lg"
+                position="right"
+                slideDirection="left"
+            />
+
+            <GenericViewModal
+                isOpen={openAmountsModal}
+                onClose={() => {
+                    setOpenAmountsModal(false);
+                    setSelectedAmountsData(null);
+                }}
+                title={selectedAmountsData?.ingredient_name || (t('ingredientReports.title') || 'Ingredient Report')}
+                data={selectedAmountsData}
+                renderContent={renderAmountsDetailsContent}
+                maxWidth="sm"
                 position="right"
                 slideDirection="left"
             />
