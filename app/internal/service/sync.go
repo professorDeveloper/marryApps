@@ -444,7 +444,7 @@ func (s *SyncS) updateOrderFromPayload(ctx context.Context, orderSvc *OrderS, id
 		discountComment, _ := getOptionalString(payload, "discount_comment")
 
 		if cashierID != "" {
-			if _, err := orderSvc.MarkOrderPaid(ctx, id.String(), cashierID, nil, stringPtrOrNil(paymentType), stringPtrOrNil(discountPercent), stringPtrOrNil(discountAmount), stringPtrOrNil(discountComment)); err != nil {
+			if _, err := orderSvc.MarkOrderPaid(ctx, id.String(), cashierID, nil, stringPtrOrNil(paymentType), stringPtrOrNil(discountPercent), stringPtrOrNil(discountAmount), stringPtrOrNil(discountComment), nil); err != nil {
 				return err
 			}
 		} else {

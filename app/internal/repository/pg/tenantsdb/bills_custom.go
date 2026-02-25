@@ -65,9 +65,11 @@ type BillDetailsRow struct {
 	ServiceAmount   pgtype.Numeric     `json:"service_amount"`
 	DiscountPercent pgtype.Numeric     `json:"discount_percent"`
 	DiscountAmount  pgtype.Numeric     `json:"discount_amount"`
-	DiscountComment *string            `json:"discount_comment"`
-	GrandTotal      pgtype.Numeric     `json:"grand_total"`
-	Comment         *string            `json:"comment"`
+	DiscountComment    *string            `json:"discount_comment"`
+	GrandTotal         pgtype.Numeric     `json:"grand_total"`
+	CustomerPaidAmount *pgtype.Numeric    `json:"customer_paid_amount"`
+	ChangeAmount       *pgtype.Numeric    `json:"change_amount"`
+	Comment            *string            `json:"comment"`
 }
 
 type BillItemRow struct {
@@ -169,12 +171,13 @@ func (q *Queries) RecalculateOrderTotalsFromItems(ctx context.Context, orderID u
 }
 
 type PayOrderBillParams struct {
-	OrderID         uuid.UUID
-	CashierID       uuid.UUID
-	PaymentType     *string
-	DiscountPercent *pgtype.Numeric
-	DiscountAmount  *pgtype.Numeric
-	DiscountComment *string
+	OrderID             uuid.UUID
+	CashierID           uuid.UUID
+	PaymentType         *string
+	DiscountPercent     *pgtype.Numeric
+	DiscountAmount      *pgtype.Numeric
+	DiscountComment     *string
+	CustomerPaidAmount  *pgtype.Numeric // optional — cash handed by customer
 }
 
 func (q *Queries) PayOrderBill(ctx context.Context, arg PayOrderBillParams) error {
@@ -214,27 +217,46 @@ func (q *Queries) PayOrderBill(ctx context.Context, arg PayOrderBillParams) erro
 					ELSE 0::numeric(15,2)
 				END AS discount_amount
 			FROM base_calc
+		),
+		final_calc AS (
+			SELECT
+				b.base_total,
+				b.food_total,
+				b.food_cost,
+				b.service_amount,
+				d.discount_amount,
+				GREATEST(ROUND((b.base_total - d.discount_amount), 2), 0) AS grand_total
+			FROM base_calc b, disc_calc d
 		)
 		UPDATE orders o
 		SET
-			food_total = b.food_total,
-			food_cost = b.food_cost,
-			service_amount = b.service_amount,
+			food_total = f.food_total,
+			food_cost = f.food_cost,
+			service_amount = f.service_amount,
 			payment_type = CASE WHEN $3::text IS NULL OR $3::text = '' THEN o.payment_type ELSE $3::payment_type END,
 			discount_percent = $4,
-			discount_amount = d.discount_amount,
+			discount_amount = f.discount_amount,
 			discount_comment = $6,
-			grand_total = GREATEST(ROUND((b.base_total - d.discount_amount), 2), 0),
-			total_amount = GREATEST(ROUND((b.base_total - d.discount_amount), 2), 0),
+			grand_total = f.grand_total,
+			total_amount = f.grand_total,
+			customer_paid_amount = $7,
+			change_amount = CASE
+				WHEN $7::numeric IS NOT NULL THEN GREATEST($7::numeric - f.grand_total, 0)
+				ELSE NULL
+			END,
 			bill_status = 'paid',
 			bill_closed_at = COALESCE(o.bill_closed_at, NOW()),
 			paid_at = NOW(),
 			cashier_id = $2,
 			status = 'paid'
-		FROM base_calc b, disc_calc d
+		FROM final_calc f
 		WHERE o.id = $1 AND o.deleted_at = 0
 	`
-	_, err := q.db.Exec(ctx, sql, arg.OrderID, arg.CashierID, arg.PaymentType, arg.DiscountPercent, arg.DiscountAmount, arg.DiscountComment)
+	_, err := q.db.Exec(ctx, sql,
+		arg.OrderID, arg.CashierID, arg.PaymentType,
+		arg.DiscountPercent, arg.DiscountAmount, arg.DiscountComment,
+		arg.CustomerPaidAmount,
+	)
 	return err
 }
 
@@ -434,6 +456,8 @@ func (q *Queries) GetBillDetails(ctx context.Context, orderID uuid.UUID) (BillDe
 			COALESCE(o.discount_amount, 0) AS discount_amount,
 			o.discount_comment,
 			o.grand_total,
+			o.customer_paid_amount,
+			o.change_amount,
 			o.comment
 		FROM orders o
 		LEFT JOIN cafe_tables ct ON o.table_id = ct.id AND ct.deleted_at = 0
@@ -469,6 +493,8 @@ func (q *Queries) GetBillDetails(ctx context.Context, orderID uuid.UUID) (BillDe
 		&out.DiscountAmount,
 		&out.DiscountComment,
 		&out.GrandTotal,
+		&out.CustomerPaidAmount,
+		&out.ChangeAmount,
 		&out.Comment,
 	); err != nil {
 		return BillDetailsRow{}, err

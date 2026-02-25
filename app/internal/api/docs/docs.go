@@ -24580,6 +24580,9 @@ const docTemplate = `{
         },
         "model.MarkOrderPaidRequest": {
             "type": "object",
+            "required": [
+                "customer_paid_amount"
+            ],
             "properties": {
                 "cash_register_id": {
                     "description": "cash_register_id: if provided, auto-creates an income transaction",
@@ -24589,6 +24592,11 @@ const docTemplate = `{
                 "cashier_id": {
                     "type": "string",
                     "example": "a1b2c3d4-e5f6-4a5b-8c9d-e0f1a2b3c4d5"
+                },
+                "customer_paid_amount": {
+                    "description": "customer_paid_amount: how much the customer paid (required — equals grand_total for card, may differ for cash)",
+                    "type": "string",
+                    "example": "100000"
                 },
                 "discount_amount": {
                     "description": "discount_amount: fixed amount",

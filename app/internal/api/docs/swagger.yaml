@@ -2257,6 +2257,11 @@ definitions:
       cashier_id:
         example: a1b2c3d4-e5f6-4a5b-8c9d-e0f1a2b3c4d5
         type: string
+      customer_paid_amount:
+        description: 'customer_paid_amount: how much the customer paid (required —
+          equals grand_total for card, may differ for cash)'
+        example: "100000"
+        type: string
       discount_amount:
         description: 'discount_amount: fixed amount'
         example: "5000"
@@ -2272,6 +2277,8 @@ definitions:
         description: 'payment_type: cash or card'
         example: cash
         type: string
+    required:
+    - customer_paid_amount
     type: object
   model.OrderItemResponse:
     properties:

@@ -1474,6 +1474,14 @@ func numericToString(n pgtype.Numeric) string {
 	return str
 }
 
+func numericPtrToStringPtr(n *pgtype.Numeric) *string {
+	if n == nil {
+		return nil
+	}
+	s := numericToString(*n)
+	return &s
+}
+
 // CreateInvoiceWithDetails creates a new invoice with its details in a single atomic operation
 func (s *InvoiceS) CreateInvoiceWithDetails(ctx context.Context, req *model.CreateInvoiceWithDetailsRequest) (*model.CreateInvoiceWithDetailsResponse, error) {
 	// Validate that details array is not empty

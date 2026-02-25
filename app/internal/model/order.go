@@ -146,6 +146,8 @@ type MarkOrderPaidRequest struct {
 	// discount_amount: fixed amount
 	DiscountAmount  *string `json:"discount_amount,omitempty" example:"5000"`
 	DiscountComment *string `json:"discount_comment,omitempty" example:"Holiday discount"`
+	// customer_paid_amount: how much the customer paid (required — equals grand_total for card, may differ for cash)
+	CustomerPaidAmount string `json:"customer_paid_amount" validate:"required" example:"100000"`
 }
 
 type UpdateOrderItemQuantityRequest struct {

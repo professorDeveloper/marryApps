@@ -421,7 +421,7 @@ func (s *OrderS) UpdateOrderStatus(ctx context.Context, orderID string, status s
 	return toOrderResponse(order), nil
 }
 
-func (s *OrderS) MarkOrderPaid(ctx context.Context, orderID string, cashierID string, cashRegisterID *string, paymentType *string, discountPercent *string, discountAmount *string, discountComment *string) (*model.OrderResponse, error) {
+func (s *OrderS) MarkOrderPaid(ctx context.Context, orderID string, cashierID string, cashRegisterID *string, paymentType *string, discountPercent *string, discountAmount *string, discountComment *string, customerPaidAmount *string) (*model.OrderResponse, error) {
 	oID, err := uuid.Parse(orderID)
 	if err != nil {
 		return nil, fmt.Errorf("invalid order id: %w", err)
@@ -449,6 +449,15 @@ func (s *OrderS) MarkOrderPaid(ctx context.Context, orderID string, cashierID st
 		discAmountNum = &n
 	}
 
+	var paidAmountNum *pgtype.Numeric
+	if customerPaidAmount != nil && *customerPaidAmount != "" {
+		n := pgtype.Numeric{}
+		if err := n.Scan(*customerPaidAmount); err != nil {
+			return nil, fmt.Errorf("invalid customer_paid_amount: %w", err)
+		}
+		paidAmountNum = &n
+	}
+
 	// Fetch the order before paying so we have the table_id
 	orderBeforePay, err := s.repo.Tenant(ctx).GetOrderByID(ctx, oID)
 	if err != nil {
@@ -456,12 +465,13 @@ func (s *OrderS) MarkOrderPaid(ctx context.Context, orderID string, cashierID st
 	}
 
 	if err := s.repo.Tenant(ctx).PayOrderBill(ctx, pg.PayOrderBillParams{
-		OrderID:         oID,
-		CashierID:       cID,
-		PaymentType:     paymentType,
-		DiscountPercent: discPercentNum,
-		DiscountAmount:  discAmountNum,
-		DiscountComment: discountComment,
+		OrderID:            oID,
+		CashierID:          cID,
+		PaymentType:        paymentType,
+		DiscountPercent:    discPercentNum,
+		DiscountAmount:     discAmountNum,
+		DiscountComment:    discountComment,
+		CustomerPaidAmount: paidAmountNum,
 	}); err != nil {
 		return nil, fmt.Errorf("failed to mark order paid: %w", err)
 	}
@@ -815,10 +825,12 @@ func (s *OrderS) GetBillDetails(ctx context.Context, billID string) (*model.Bill
 		ServiceAmount:   numericToString(h.ServiceAmount),
 		DiscountPercent: numericToString(h.DiscountPercent),
 		DiscountAmount:  numericToString(h.DiscountAmount),
-		DiscountComment: h.DiscountComment,
-		GrandTotal:      numericToString(h.GrandTotal),
-		Comment:         h.Comment,
-		Items:           outItems,
+		DiscountComment:    h.DiscountComment,
+		GrandTotal:         numericToString(h.GrandTotal),
+		CustomerPaidAmount: numericPtrToStringPtr(h.CustomerPaidAmount),
+		ChangeAmount:       numericPtrToStringPtr(h.ChangeAmount),
+		Comment:            h.Comment,
+		Items:              outItems,
 	}, nil
 }
 

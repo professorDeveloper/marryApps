@@ -77,8 +77,10 @@ type BillDetails struct {
 	ServiceAmount   string     `json:"service_amount"`
 	DiscountPercent string     `json:"discount_percent"`
 	DiscountAmount  string     `json:"discount_amount"`
-	DiscountComment *string    `json:"discount_comment,omitempty"`
-	GrandTotal      string     `json:"grand_total"`
-	Comment         *string    `json:"comment,omitempty"`
-	Items           []BillItem `json:"items"`
+	DiscountComment    *string    `json:"discount_comment,omitempty"`
+	GrandTotal         string     `json:"grand_total"`
+	CustomerPaidAmount *string    `json:"customer_paid_amount,omitempty"`
+	ChangeAmount       *string    `json:"change_amount,omitempty"`
+	Comment            *string    `json:"comment,omitempty"`
+	Items              []BillItem `json:"items"`
 }
