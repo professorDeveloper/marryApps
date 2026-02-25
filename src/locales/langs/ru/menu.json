@@ -334,7 +334,7 @@
       "title": "Склад",
       "storage": "Склады",
       "inventories": "Инвентаризация",
-      "invoiceDetails": "Отгрузки",
+      "invoiceDetails": "Накладные",
       "stocks": "Расходные накладные",
       "ingredients": "Ингредиенты",
       "ingredient-group": "Группы ингредиентов",
@@ -342,7 +342,7 @@
       "transfers": "Перемещения",
       "locations": "Инвентаризация",
       "suppliers": "Предзаказ",
-      "shipments": "Накладные"
+      "shipments": "Отгрузки"
     },
     "reports": {
       "title": "Отчеты",
