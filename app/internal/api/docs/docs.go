@@ -17440,7 +17440,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "Reports"
+                    "reports"
                 ],
                 "summary": "Goods sales report",
                 "parameters": [

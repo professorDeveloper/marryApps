@@ -11,7 +11,7 @@ import (
 // GoodsReport returns dish sales report grouped by good
 // @Summary Goods sales report
 // @Description Paginated report: qty sold, selling price, cost price, markup per dish. Only paid orders. Filters by date range, department, category, dish, waiter, hall, table.
-// @Tags Reports
+// @Tags reports
 // @Produce json
 // @Security BearerAuth
 // @Param start_date    query string true  "Start date (YYYY-MM-DD)"

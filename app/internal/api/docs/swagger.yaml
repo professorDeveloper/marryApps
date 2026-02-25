@@ -14924,7 +14924,7 @@ paths:
       - BearerAuth: []
       summary: Goods sales report
       tags:
-      - Reports
+      - reports
   /api/v1/shifts:
     get:
       consumes:
