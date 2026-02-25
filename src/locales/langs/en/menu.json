@@ -362,7 +362,7 @@
       "transfers": "Transfers",
       "locations": "Locations",
       "suppliers": "Suppliers",
-      "shipments": "Shipments"
+      "shipments": "Dispatches"
     },
     "reports": {
       "title": "Reports",
@@ -371,7 +371,8 @@
       "custom": "Custom",
       "archives": "Archives",
       "bills": "Bill reports",
-      "ingredients": "Ingredient reports"
+      "ingredients": "Ingredient reports",
+      "goods": "Goods report"
     },
     "settings": {
       "title": "Settings",
@@ -914,9 +915,9 @@
     "groupDetails": "Write-off group details"
   },
   "shipments": {
-    "create": "Create shipment",
-    "view": "View shipment",
-    "shipment": "Shipment",
+    "create": "Create dispatches",
+    "view": "View dispatch",
+    "shipment": "Dispatch",
     "items": "Items",
     "totals": "Totals",
     "total": "Total",
@@ -926,24 +927,24 @@
     "pricePerUnit": "Price / Unit",
     "stockBefore": "Stock Before",
     "stockAfter": "Stock After",
-    "notFound": "Shipment not found",
+    "notFound": "Dispatch not found",
     "messages": {
-      "fetchFailed": "Failed to fetch shipments",
-      "createFailed": "Failed to create shipment",
-      "fetchOneFailed": "Failed to fetch shipment",
-      "confirmFailed": "Failed to confirm shipment",
-      "cancelFailed": "Failed to cancel shipment",
-      "deleteFailed": "Failed to delete shipment",
-      "itemDeleteFailed": "Failed to delete shipment item",
-      "updateFailed": "Failed to update shipment",
-      "itemsAddFailed": "Failed to add shipment items",
-      "created": "Shipment created successfully",
-      "confirmed": "Shipment confirmed",
-      "cancelled": "Shipment cancelled",
-      "deleted": "Shipment deleted",
-      "itemDeleted": "Shipment item deleted",
-      "updated": "Shipment updated successfully",
-      "itemsAdded": "Shipment items added successfully"
+      "fetchFailed": "Failed to fetch dispatches",
+      "createFailed": "Failed to create dispatch",
+      "fetchOneFailed": "Failed to fetch dispatch",
+      "confirmFailed": "Failed to confirm dispatch",
+      "cancelFailed": "Failed to cancel dispatch",
+      "deleteFailed": "Failed to delete dispatch",
+      "itemDeleteFailed": "Failed to delete dispatch item",
+      "updateFailed": "Failed to update dispatch",
+      "itemsAddFailed": "Failed to add dispatch items",
+      "created": "Dispatch created successfully",
+      "confirmed": "Dispatch confirmed",
+      "cancelled": "Dispatch cancelled",
+      "deleted": "Dispatch deleted",
+      "itemDeleted": "Dispatch item deleted",
+      "updated": "Dispatch updated successfully",
+      "itemsAdded": "Dispatch items added successfully"
     }
   },
   "inventory": {
@@ -1027,6 +1028,28 @@
     "surplusAmount": "Surplus Amount",
     "shortageAmount": "Shortage Amount",
     "all": "All"
+  },
+  "goodsReports": {
+    "title": "Goods report",
+    "good": "Good",
+    "startDate": "Start Date",
+    "endDate": "End Date",
+    "department": "Department",
+    "category": "Category",
+    "waiter": "Waiter",
+    "hall": "Hall",
+    "table": "Table",
+    "totalQty": "Total Qty",
+    "avgSellPrice": "Avg sell price",
+    "totalSell": "Total sell",
+    "avgCostPrice": "Avg cost price",
+    "totalCost": "Total cost",
+    "avgMarkup": "Avg markup",
+    "totalMarkup": "Total markup",
+    "avgMarkupPct": "Avg markup %",
+    "totalCount": "Total count",
+    "apply": "Apply",
+    "reset": "Reset"
   },
   "bills": {
     "title": "Bills",

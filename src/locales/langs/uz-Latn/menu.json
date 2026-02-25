@@ -347,7 +347,7 @@
       "transfers": "O'tkazmalar",
       "locations": "Joylashuvlar",
       "suppliers": "Yetkazib beruvchilar",
-      "shipments": "Yetkazib berishlar"
+      "shipments": "Jo‘natmalar"
     },
     "reports": {
       "title": "Hisobotlar",
@@ -356,7 +356,8 @@
       "custom": "Maxsus",
       "archives": "Arxivlar",
       "bills": "Hisob-kitoblar",
-      "ingredients": "Ingredientlar bo'yicha hisobotlar"
+      "ingredients": "Ingredientlar bo'yicha hisobotlar",
+      "goods": "Tovarlar hisoboti"
     },
     "settings": {
       "title": "Sozlamalar",
@@ -978,6 +979,28 @@
     "shortageAmount": "Kamomad summasi",
     "all": "Barchasi"
   },
+  "goodsReports": {
+    "title": "Tovarlar hisoboti",
+    "good": "Tovar",
+    "startDate": "Boshlanish sana",
+    "endDate": "Tugash sana",
+    "department": "Bo'lim",
+    "category": "Kategoriya",
+    "waiter": "Ofitsiant",
+    "hall": "Zal",
+    "table": "Stol",
+    "totalQty": "Jami miqdor",
+    "avgSellPrice": "O'rtacha sotuv narxi",
+    "totalSell": "Jami sotuv",
+    "avgCostPrice": "O'rtacha tannarx",
+    "totalCost": "Jami tannarx",
+    "avgMarkup": "O'rtacha ustama",
+    "totalMarkup": "Jami ustama",
+    "avgMarkupPct": "O'rtacha ustama %",
+    "totalCount": "Jami soni",
+    "apply": "Qo'llash",
+    "reset": "Qayta tiklash"
+  },
   "bills": {
     "title": "Hisob-Kitoblar",
     "list": "Hisob-faktualar hisoboti",
@@ -1086,7 +1109,7 @@
     "stockAfter": "Keyingi qoldiq",
     "notFound": "Yetkazib berish topilmadi",
     "messages": {
-      "fetchFailed": "Yetkazib berishlar yuklanmadi",
+      "fetchFailed": "Jo‘natmalar yuklanmadi",
       "createFailed": "Yetkazib berishni yaratib bo'lmadi",
       "fetchOneFailed": "Yetkazib berishni yuklab bo'lmadi",
       "confirmFailed": "Yetkazib berishni tasdiqlab bo'lmadi",

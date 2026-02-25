@@ -379,7 +379,7 @@ export function ShipmentsListView() {
               <option value="">{t('ingredientReports.all', 'All')}</option>
               <option value="active">{t('deductions.active', 'Active')}</option>
               <option value="draft">{t('common.draft', 'Draft')}</option>
-              <option value="deleted">{t('deductions.deleted', 'Deleted')}</option>
+              <option value="cancelled">{t('deductions.canceled', 'Canceled')}</option>
             </TextField>
             <Box sx={{ display: 'flex', gap: 1 }}>
               <Button

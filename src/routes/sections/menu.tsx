@@ -5,6 +5,12 @@ import { Outlet, Navigate } from 'react-router';
 
 import { CONFIG } from 'src/global-config';
 import { DashboardLayout } from 'src/layouts/dashboard';
+import { EmployeeNewPage } from 'src/pages/dashboard/user/new';
+import { EmployeeEditPage } from 'src/pages/dashboard/user/edit';
+import { EmployeesPage } from 'src/pages/dashboard/user/employees';
+import { RestaurantStaffPage } from 'src/pages/dashboard/user/restaurant-staff';
+import { RestaurantStaffNewPage } from 'src/pages/dashboard/user/restaurant-staff-new';
+import { RestaurantStaffEditPage } from 'src/pages/dashboard/user/restaurant-staff-edit';
 
 import { LoadingScreen } from 'src/components/loading-screen';
 
@@ -12,14 +18,18 @@ import { Meals } from 'src/sections/meals/meals-list-view';
 import { MealEditView } from 'src/sections/meals/meals-edit-view';
 import { SalesListView } from 'src/sections/reports/sales-list-view';
 import { BillsListView } from 'src/sections/reports/bills-list-view';
-import { IngredientReportsListView } from 'src/sections/reports/ingredients-reports-list-view';
 import { HalfMeals } from 'src/sections/compounds/compounds-list-view';
 import { ReportsEditView } from 'src/sections/reports/reports-edit-view';
 import { ReportsListView } from 'src/sections/reports/reports-list-view';
 import { StocksEditView } from 'src/sections/warehouse/stocks-edit-view';
 import { StocksListView } from 'src/sections/warehouse/stocks-list-view';
+import { CashierEditView } from 'src/sections/cashbox/cashiers-edit-view';
 import { ArchivesListView } from 'src/sections/reports/archives-list-view';
+import { WarehouseEditView } from 'src/sections/storage/storage-edit-view';
+import { WarehouseListView } from 'src/sections/storage/storage-list-view';
 import { CategoryListView } from 'src/sections/category/category-list-view';
+import { InvoicesListView } from 'src/sections/warehouse/supplier-list-view';
+import { SupplierEditView } from 'src/sections/warehouse/supplier-edit-view';
 import { CustomReportsListView } from 'src/sections/reports/custom-list-view';
 import { ProductEditView } from 'src/sections/products/departments-edit-view';
 import { ProductListView } from 'src/sections/products/departments-list-view';
@@ -29,44 +39,34 @@ import { TransfersEditView } from 'src/sections/warehouse/transfers-edit-view';
 import { TransfersListView } from 'src/sections/warehouse/transfers-list-view';
 import { ShipmentsEditView } from 'src/sections/warehouse/shipments-edit-view';
 import { ShipmentsListView } from 'src/sections/warehouse/shipments-list-view';
-import { WarehouseEditView } from 'src/sections/storage/storage-edit-view';
-import { WarehouseListView } from 'src/sections/storage/storage-list-view';
-import { ConnectedDeviceListView } from 'src/sections/settings/connected-Device-list-view';
 import { ManagementListView } from 'src/sections/settings/manegment-list-view';
-import { CategoryEditViewWrapper } from 'src/sections/category/category-edit-view';
-import { InventoryReportsListView } from 'src/sections/reports/inventory-list-view';
-import { CompoundEditViewWrapper } from 'src/sections/compounds/compounds-edit-view';
 import { RestaurantInfoListView } from 'src/sections/settings/restaurant-info';
-import { IngredientListView } from 'src/sections/warehouse/ingredients-list-view';
-import { IngredientEditViewWrapper } from 'src/sections/warehouse/ingredients-edit-view';
-import IngredientStockListView from 'src/sections/warehouse/ingredient-stock-list-view';
-import { InvoicesListView } from 'src/sections/warehouse/supplier-list-view';
-import { SupplierEditView } from 'src/sections/warehouse/supplier-edit-view';
-import { InvoicesEditViewTabs } from 'src/sections/warehouse/invoices-edit-view-tabs';
-import { InvoiceDetailsStandaloneListView } from 'src/sections/warehouse/invoice-details-standalone-list-view';
-import { InvoiceDetailsEditView } from 'src/sections/warehouse/invoice-details-edit-view';
 import { InventoryListView } from 'src/sections/warehouse/inventory-list-view';
 import { InventoryEditView } from 'src/sections/warehouse/inventory-edit-view';
 import { DeductionsListView } from 'src/sections/warehouse/deductions-list-view';
 import { DeductionsEditView } from 'src/sections/warehouse/deductions-edit-view';
-import { DeductionGroupsListView } from 'src/sections/warehouse/deduction-groups-list-view';
+import { IngredientListView } from 'src/sections/warehouse/ingredients-list-view';
+import { CategoryEditViewWrapper } from 'src/sections/category/category-edit-view';
+import { TransactionsEditView } from 'src/sections/cashbox/transactions-edit-view';
+import { GoodsReportsListView } from 'src/sections/reports/goods-reports-list-view';
+import { InventoryReportsListView } from 'src/sections/reports/inventory-list-view';
+import { CompoundEditViewWrapper } from 'src/sections/compounds/compounds-edit-view';
+import { InvoicesEditViewTabs } from 'src/sections/warehouse/invoices-edit-view-tabs';
+import IngredientStockListView from 'src/sections/warehouse/ingredient-stock-list-view';
+import { IngredientEditViewWrapper } from 'src/sections/warehouse/ingredients-edit-view';
+import { CashRegisterEditView } from 'src/sections/cashbox/transaction-groups-edit-view';
+import { InvoiceDetailsEditView } from 'src/sections/warehouse/invoice-details-edit-view';
 import { DeductionGroupEditView } from 'src/sections/warehouse/deduction-group-edit-view';
+import { ConnectedDeviceListView } from 'src/sections/settings/connected-Device-list-view';
+import { DeductionGroupsListView } from 'src/sections/warehouse/deduction-groups-list-view';
+import { IngredientGroupListView } from 'src/sections/warehouse/ingredient-group-list-view';
+import { IngredientReportsListView } from 'src/sections/reports/ingredients-reports-list-view';
+import { IngredientGroupEditViewWrapper } from 'src/sections/warehouse/ingredient-group-edit-view';
+import { InvoiceDetailsStandaloneListView } from 'src/sections/warehouse/invoice-details-standalone-list-view';
 
 import { AuthGuard } from 'src/auth/guard';
 
 import { usePathname } from '../hooks';
-import { EmployeesPage } from 'src/pages/dashboard/user/employees';
-import { RestaurantStaffPage } from 'src/pages/dashboard/user/restaurant-staff';
-import { EmployeeNewPage } from 'src/pages/dashboard/user/new';
-import { EmployeeEditPage } from 'src/pages/dashboard/user/edit';
-import { RestaurantStaffNewPage } from 'src/pages/dashboard/user/restaurant-staff-new';
-import { RestaurantStaffEditPage } from 'src/pages/dashboard/user/restaurant-staff-edit';
-import { IngredientGroupListView } from 'src/sections/warehouse/ingredient-group-list-view';
-import { IngredientGroupEditViewWrapper } from 'src/sections/warehouse/ingredient-group-edit-view';
-import { CashiersListView } from 'src/sections/cashbox/cashiers-list-view';
-import { CashierEditView } from 'src/sections/cashbox/cashiers-edit-view';
-import { CashRegisterEditView } from 'src/sections/cashbox/transaction-groups-edit-view';
-import { TransactionsEditView } from 'src/sections/cashbox/transactions-edit-view';
 
 const CashiersPage = lazy(() => import('src/pages/dashboard/cashbox/cashiers'));
 const TransactionGroupsPage = lazy(() => import('src/pages/dashboard/cashbox/transaction-groups'));
@@ -192,6 +192,7 @@ export const dashboardRoutes: RouteObject[] = [
           { path: 'reports/archives', element: <ArchivesListView /> },
           { path: 'reports/bills', element: <BillsListView /> },
           { path: 'reports/ingredients', element: <IngredientReportsListView /> },
+          { path: 'reports/goods', element: <GoodsReportsListView /> },
           { path: 'cashbox/cashiers', element: <CashiersPage /> },
           { path: 'cashbox/cashiers/new', element: <CashierEditView isNew /> },
           { path: 'cashbox/cashiers/:id/edit', element: <CashierEditView /> },
