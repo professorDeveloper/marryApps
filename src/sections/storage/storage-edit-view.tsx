@@ -147,7 +147,7 @@ export function WarehouseEditView({ isNew = false }: { isNew?: boolean }) {
     showBreadcrumbs: false,
     breadcrumbs: [
       { name: t('app', 'Menu'), href: paths.menu.root },
-      { name: t('warehouse.title', 'Warehouse'), href: paths.menu.inventory.root },
+      { name: t('overview.warehouse.storage', 'Storage'), href: paths.warehouse.storage.root },
       { name: isNew ? t('warehouse.new', 'New') : t('warehouse.edit', 'Edit'), href: '' },
     ],
     leftSidecard: IMAGE,
@@ -171,3 +171,4 @@ export function WarehouseEditView({ isNew = false }: { isNew?: boolean }) {
     </Box>
   );
 }
+

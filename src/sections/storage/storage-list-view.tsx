@@ -227,11 +227,11 @@ export function WarehouseListView() {
         loading={storagesLoading}
         columns={columns}
         breadcrumbs={{
-          heading: t('warehouse.title', 'Warehouse'),
+          heading: t('overview.warehouse.storage', 'Storage'),
           links: [
             { name: t('app'), href: paths.menu.root },
-            { name: t('warehouse.title', 'Warehouse'), href: paths.warehouse.root },
-            { name: t('warehouse.list', 'List') },
+            { name: t('overview.warehouse.title', 'Warehouse'), href: paths.warehouse.root },
+            { name: t('overview.warehouse.storage', 'Storage') },
           ],
         }}
         addButton={{
@@ -268,3 +268,4 @@ export function WarehouseListView() {
     </>
   );
 }
+

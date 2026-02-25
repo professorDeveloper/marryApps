@@ -331,18 +331,18 @@
       "meals": "Блюда"
     },
     "warehouse": {
-      "title": "Группы актов",
-      "storage": "Поставщики",
-      "inventories": "Накладные",
+      "title": "Склад",
+      "storage": "Склады",
+      "inventories": "Инвентаризация",
       "invoiceDetails": "Отгрузки",
       "stocks": "Расходные накладные",
-      "ingredients": "Акты разделки",
-      "ingredient-group": "Списание",
+      "ingredients": "Ингредиенты",
+      "ingredient-group": "Группы ингредиентов",
       "ingredientStock": "Транзакции",
-      "transfers": "Производство ингредиента",
+      "transfers": "Перемещения",
       "locations": "Инвентаризация",
       "suppliers": "Предзаказ",
-      "shipments": "Отгрузки"
+      "shipments": "Накладные"
     },
     "reports": {
       "title": "Отчеты",
@@ -656,7 +656,7 @@
     "saveFailed": "Ошибка при сохранении ингредиента"
   },
   "ingredientGroups": {
-    "title": "Группа сырья",
+    "title": "Группа ингредиентов",
     "name": "Название",
     "color": "Цвет",
     "new": "Новая группа сырья",
@@ -666,7 +666,7 @@
     "colorCode": "Код цвета"
   },
   "invoices": {
-    "title": "Поставщики",
+    "title": "Поставщикиsad",
     "new": "Новый поставщик",
     "edit": "Редактировать поставщика",
     "basicInfo": "Основная информация",

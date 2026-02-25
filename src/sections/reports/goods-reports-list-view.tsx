@@ -23,7 +23,8 @@ import { useGetDepartments, useGetCategoriesByDepartment } from 'src/actions/dep
 import { Iconify } from 'src/components/iconify';
 import { GenericTableView } from 'src/components/generic-table-view';
 
-const toApiDateTime = (value: dayjs.Dayjs): string => `${value.format('YYYY-MM-DD')}T00:00:00Z`;
+const toApiStartDateTime = (value: dayjs.Dayjs): string => `${value.format('YYYY-MM-DD')}T00:00:00Z`;
+const toApiEndDateTime = (value: dayjs.Dayjs): string => `${value.format('YYYY-MM-DD')}T23:59:59Z`;
 
 const formatAmount = (value: string | number | undefined) => {
   const amount = Number(value) || 0;
@@ -69,8 +70,8 @@ export function GoodsReportsListView() {
 
     setFilters((prev) => ({
       ...prev,
-      start_date: toApiDateTime(yesterday),
-      end_date: toApiDateTime(today),
+      start_date: toApiStartDateTime(yesterday),
+      end_date: toApiEndDateTime(today),
     }));
   }, []);
 
@@ -157,8 +158,8 @@ export function GoodsReportsListView() {
   const handleApplyDateRange = useCallback(() => {
     const newFilters: Record<string, string> = {};
 
-    if (startDate) newFilters.start_date = toApiDateTime(startDate);
-    if (endDate) newFilters.end_date = toApiDateTime(endDate);
+    if (startDate) newFilters.start_date = toApiStartDateTime(startDate);
+    if (endDate) newFilters.end_date = toApiEndDateTime(endDate);
 
     handleFilterChange(newFilters);
   }, [startDate, endDate, handleFilterChange]);
