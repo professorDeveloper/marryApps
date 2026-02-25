@@ -33,16 +33,18 @@ func (s *ReportS) GoodsReport(ctx context.Context,
 	departmentID, categoryID, goodID, waiterID, hallID, tableID *string,
 	limit, offset int32,
 ) (*model.GoodsReportResponse, error) {
-	start, err := time.Parse("2006-01-02", startDate)
+	start, err := parseReportDate(startDate)
 	if err != nil {
 		return nil, fmt.Errorf("invalid start_date: %w", err)
 	}
-	// end date is inclusive — add 1 day so we use < end+1
-	end, err := time.Parse("2006-01-02", endDate)
+	end, err := parseReportDate(endDate)
 	if err != nil {
 		return nil, fmt.Errorf("invalid end_date: %w", err)
 	}
-	end = end.AddDate(0, 0, 1)
+	// If end_date was given as plain date (no time), make it inclusive by adding 1 day
+	if len(endDate) <= 10 {
+		end = end.AddDate(0, 0, 1)
+	}
 
 	startTs := pgtype.Timestamptz{Time: start, Valid: true}
 	endTs := pgtype.Timestamptz{Time: end, Valid: true}
@@ -132,6 +134,17 @@ func strOrEmpty(s *string) string {
 		return ""
 	}
 	return *s
+}
+
+// parseReportDate accepts RFC3339 ("2026-02-24T00:00:00Z") or plain date ("2026-02-24").
+func parseReportDate(s string) (time.Time, error) {
+	if t, err := time.Parse(time.RFC3339, s); err == nil {
+		return t, nil
+	}
+	if t, err := time.ParseInLocation("2006-01-02", s, time.UTC); err == nil {
+		return t, nil
+	}
+	return time.Time{}, fmt.Errorf("expected YYYY-MM-DD or RFC3339, got %q", s)
 }
 
 // ifaceToStr converts interface{} returned by sqlc for COALESCE(numeric) columns.
