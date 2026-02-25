@@ -360,6 +360,14 @@ func toTransactionResponse(tx pg.Transaction) *model.TransactionResponse {
 	}
 	resp.CreatedAt = timestampToTime(tx.CreatedAt)
 	resp.UpdatedAt = timestampToTime(tx.UpdatedAt)
+	if tx.CustomerPaidAmount.Valid {
+		s := numericToString(tx.CustomerPaidAmount)
+		resp.CustomerPaidAmount = &s
+	}
+	if tx.ChangeAmount.Valid {
+		s := numericToString(tx.ChangeAmount)
+		resp.ChangeAmount = &s
+	}
 
 	return resp
 }

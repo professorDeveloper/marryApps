@@ -5,22 +5,26 @@ INSERT INTO transactions (
   id, type,
   cash_register_id,
   from_cash_register_id, to_cash_register_id, from_branch_id, to_branch_id,
-  group_transaction_id, amount, description, pay_type, date, user_id, branch_id
+  group_transaction_id, amount, description, pay_type, date, user_id, branch_id,
+  customer_paid_amount, change_amount
 )
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13,
-        COALESCE(sqlc.narg('branch_id')::uuid, NULLIF(current_setting('app.branch_id', true), '')::uuid))
+        COALESCE(sqlc.narg('branch_id')::uuid, NULLIF(current_setting('app.branch_id', true), '')::uuid),
+        sqlc.narg('customer_paid_amount'), sqlc.narg('change_amount'))
 RETURNING id, type,
           cash_register_id,
           from_cash_register_id, to_cash_register_id, from_branch_id, to_branch_id,
           group_transaction_id, amount, description, pay_type, date, user_id, branch_id,
-          created_at, updated_at, deleted_at;
+          created_at, updated_at, deleted_at,
+          customer_paid_amount, change_amount;
 
 -- name: GetTransactionByID :one
 SELECT id, type,
        cash_register_id,
        from_cash_register_id, to_cash_register_id, from_branch_id, to_branch_id,
        group_transaction_id, amount, description, pay_type, date, user_id, branch_id,
-       created_at, updated_at, deleted_at
+       created_at, updated_at, deleted_at,
+       customer_paid_amount, change_amount
 FROM transactions
 WHERE id = $1
   AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
@@ -31,7 +35,8 @@ SELECT id, type,
        cash_register_id,
        from_cash_register_id, to_cash_register_id, from_branch_id, to_branch_id,
        group_transaction_id, amount, description, pay_type, date, user_id, branch_id,
-       created_at, updated_at, deleted_at
+       created_at, updated_at, deleted_at,
+       customer_paid_amount, change_amount
 FROM transactions
 WHERE branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
   AND deleted_at = 0
@@ -43,7 +48,8 @@ SELECT id, type,
        cash_register_id,
        from_cash_register_id, to_cash_register_id, from_branch_id, to_branch_id,
        group_transaction_id, amount, description, pay_type, date, user_id, branch_id,
-       created_at, updated_at, deleted_at
+       created_at, updated_at, deleted_at,
+       customer_paid_amount, change_amount
 FROM transactions
 WHERE branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
   AND type = $1
@@ -56,7 +62,8 @@ SELECT id, type,
        cash_register_id,
        from_cash_register_id, to_cash_register_id, from_branch_id, to_branch_id,
        group_transaction_id, amount, description, pay_type, date, user_id, branch_id,
-       created_at, updated_at, deleted_at
+       created_at, updated_at, deleted_at,
+       customer_paid_amount, change_amount
 FROM transactions
 WHERE branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
   AND cash_register_id = $1
@@ -69,7 +76,8 @@ SELECT id, type,
        cash_register_id,
        from_cash_register_id, to_cash_register_id, from_branch_id, to_branch_id,
        group_transaction_id, amount, description, pay_type, date, user_id, branch_id,
-       created_at, updated_at, deleted_at
+       created_at, updated_at, deleted_at,
+       customer_paid_amount, change_amount
 FROM transactions
 WHERE branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
   AND date >= $1
@@ -83,7 +91,8 @@ SELECT id, type,
        cash_register_id,
        from_cash_register_id, to_cash_register_id, from_branch_id, to_branch_id,
        group_transaction_id, amount, description, pay_type, date, user_id, branch_id,
-       created_at, updated_at, deleted_at
+       created_at, updated_at, deleted_at,
+       customer_paid_amount, change_amount
 FROM transactions
 WHERE branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
   AND group_transaction_id = $1
@@ -105,7 +114,8 @@ RETURNING id, type,
           cash_register_id,
           from_cash_register_id, to_cash_register_id, from_branch_id, to_branch_id,
           group_transaction_id, amount, description, pay_type, date, user_id, branch_id,
-          created_at, updated_at, deleted_at;
+          created_at, updated_at, deleted_at,
+          customer_paid_amount, change_amount;
 
 -- name: DeleteTransaction :exec
 UPDATE transactions

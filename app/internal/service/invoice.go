@@ -1474,6 +1474,13 @@ func numericToString(n pgtype.Numeric) string {
 	return str
 }
 
+func derefNumeric(n *pgtype.Numeric) pgtype.Numeric {
+	if n == nil {
+		return pgtype.Numeric{}
+	}
+	return *n
+}
+
 func numericPtrToStringPtr(n *pgtype.Numeric) *string {
 	if n == nil {
 		return nil

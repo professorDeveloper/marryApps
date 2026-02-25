@@ -112,4 +112,6 @@ type TransactionResponse struct {
 	BranchID           *string         `json:"branch_id,omitempty"`
 	CreatedAt          *time.Time      `json:"created_at,omitempty"`
 	UpdatedAt          *time.Time      `json:"updated_at,omitempty"`
+	CustomerPaidAmount *string         `json:"customer_paid_amount,omitempty"`
+	ChangeAmount       *string         `json:"change_amount,omitempty"`
 }

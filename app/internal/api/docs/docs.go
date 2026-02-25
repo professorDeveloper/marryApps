@@ -25226,7 +25226,13 @@ const docTemplate = `{
                     "description": "income/expense",
                     "type": "string"
                 },
+                "change_amount": {
+                    "type": "string"
+                },
                 "created_at": {
+                    "type": "string"
+                },
+                "customer_paid_amount": {
                     "type": "string"
                 },
                 "date": {

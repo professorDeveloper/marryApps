@@ -813,33 +813,35 @@ type InvoiceDetailed struct {
 }
 
 type Order struct {
-	ID              uuid.UUID          `json:"id"`
-	TableID         pgtype.UUID        `json:"table_id"`
-	WaiterID        pgtype.UUID        `json:"waiter_id"`
-	CashierID       pgtype.UUID        `json:"cashier_id"`
-	BranchID        pgtype.UUID        `json:"branch_id"`
-	Status          NullOrderStatus    `json:"status"`
-	GuestCount      *int32             `json:"guest_count"`
-	TotalAmount     pgtype.Numeric     `json:"total_amount"`
-	Comment         *string            `json:"comment"`
-	BillNo          int32              `json:"bill_no"`
-	BillStatus      BillStatus         `json:"bill_status"`
-	BillOpenedAt    pgtype.Timestamptz `json:"bill_opened_at"`
-	BillClosedAt    pgtype.Timestamptz `json:"bill_closed_at"`
-	PaidAt          pgtype.Timestamptz `json:"paid_at"`
-	PaymentType     NullPaymentType    `json:"payment_type"`
-	FoodCost        pgtype.Numeric     `json:"food_cost"`
-	FoodTotal       pgtype.Numeric     `json:"food_total"`
-	ServicePercent  pgtype.Numeric     `json:"service_percent"`
-	ServiceAmount   pgtype.Numeric     `json:"service_amount"`
-	DiscountPercent pgtype.Numeric     `json:"discount_percent"`
-	DiscountAmount  pgtype.Numeric     `json:"discount_amount"`
-	DiscountComment *string            `json:"discount_comment"`
-	GrandTotal      pgtype.Numeric     `json:"grand_total"`
-	StockConsumedAt pgtype.Timestamptz `json:"stock_consumed_at"`
-	CreatedAt       pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
-	DeletedAt       *int64             `json:"deleted_at"`
+	ID                 uuid.UUID          `json:"id"`
+	TableID            pgtype.UUID        `json:"table_id"`
+	WaiterID           pgtype.UUID        `json:"waiter_id"`
+	CashierID          pgtype.UUID        `json:"cashier_id"`
+	BranchID           pgtype.UUID        `json:"branch_id"`
+	Status             NullOrderStatus    `json:"status"`
+	GuestCount         *int32             `json:"guest_count"`
+	TotalAmount        pgtype.Numeric     `json:"total_amount"`
+	Comment            *string            `json:"comment"`
+	BillNo             int32              `json:"bill_no"`
+	BillStatus         BillStatus         `json:"bill_status"`
+	BillOpenedAt       pgtype.Timestamptz `json:"bill_opened_at"`
+	BillClosedAt       pgtype.Timestamptz `json:"bill_closed_at"`
+	PaidAt             pgtype.Timestamptz `json:"paid_at"`
+	PaymentType        NullPaymentType    `json:"payment_type"`
+	FoodCost           pgtype.Numeric     `json:"food_cost"`
+	FoodTotal          pgtype.Numeric     `json:"food_total"`
+	ServicePercent     pgtype.Numeric     `json:"service_percent"`
+	ServiceAmount      pgtype.Numeric     `json:"service_amount"`
+	DiscountPercent    pgtype.Numeric     `json:"discount_percent"`
+	DiscountAmount     pgtype.Numeric     `json:"discount_amount"`
+	DiscountComment    *string            `json:"discount_comment"`
+	GrandTotal         pgtype.Numeric     `json:"grand_total"`
+	StockConsumedAt    pgtype.Timestamptz `json:"stock_consumed_at"`
+	CreatedAt          pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt          pgtype.Timestamptz `json:"updated_at"`
+	DeletedAt          *int64             `json:"deleted_at"`
+	CustomerPaidAmount pgtype.Numeric     `json:"customer_paid_amount"`
+	ChangeAmount       pgtype.Numeric     `json:"change_amount"`
 }
 
 type OrderItem struct {
@@ -961,6 +963,8 @@ type Transaction struct {
 	CreatedAt          pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt          pgtype.Timestamptz `json:"updated_at"`
 	DeletedAt          *int64             `json:"deleted_at"`
+	CustomerPaidAmount pgtype.Numeric     `json:"customer_paid_amount"`
+	ChangeAmount       pgtype.Numeric     `json:"change_amount"`
 }
 
 type Transfer struct {

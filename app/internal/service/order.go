@@ -495,13 +495,15 @@ func (s *OrderS) MarkOrderPaid(ctx context.Context, orderID string, cashierID st
 				}
 				descStr := fmt.Sprintf("Bill payment #%d", bill.BillNo)
 				txParams := pg.CreateTransactionParams{
-					ID:             uuid.New(),
-					Type:           pg.TransactionTypeBillPayment,
-					CashRegisterID: pgtype.UUID{Bytes: crID, Valid: true},
-					Amount:         bill.GrandTotal,
-					Description:    &descStr,
-					Date:           time.Now(),
-					UserID:         pgtype.UUID{Bytes: cID, Valid: true},
+					ID:                 uuid.New(),
+					Type:               pg.TransactionTypeBillPayment,
+					CashRegisterID:     pgtype.UUID{Bytes: crID, Valid: true},
+					Amount:             bill.GrandTotal,
+					Description:        &descStr,
+					Date:               time.Now(),
+					UserID:             pgtype.UUID{Bytes: cID, Valid: true},
+					CustomerPaidAmount: derefNumeric(bill.CustomerPaidAmount),
+					ChangeAmount:       derefNumeric(bill.ChangeAmount),
 				}
 				if paymentType != nil && *paymentType != "" {
 					txParams.PayType = pg.NullPaymentType{

@@ -32,15 +32,18 @@ INSERT INTO transactions (
   id, type,
   cash_register_id,
   from_cash_register_id, to_cash_register_id, from_branch_id, to_branch_id,
-  group_transaction_id, amount, description, pay_type, date, user_id, branch_id
+  group_transaction_id, amount, description, pay_type, date, user_id, branch_id,
+  customer_paid_amount, change_amount
 )
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13,
-        COALESCE($14::uuid, NULLIF(current_setting('app.branch_id', true), '')::uuid))
+        COALESCE($14::uuid, NULLIF(current_setting('app.branch_id', true), '')::uuid),
+        $15, $16)
 RETURNING id, type,
           cash_register_id,
           from_cash_register_id, to_cash_register_id, from_branch_id, to_branch_id,
           group_transaction_id, amount, description, pay_type, date, user_id, branch_id,
-          created_at, updated_at, deleted_at
+          created_at, updated_at, deleted_at,
+          customer_paid_amount, change_amount
 `
 
 type CreateTransactionParams struct {
@@ -58,6 +61,8 @@ type CreateTransactionParams struct {
 	Date               time.Time       `json:"date"`
 	UserID             pgtype.UUID     `json:"user_id"`
 	BranchID           pgtype.UUID     `json:"branch_id"`
+	CustomerPaidAmount pgtype.Numeric  `json:"customer_paid_amount"`
+	ChangeAmount       pgtype.Numeric  `json:"change_amount"`
 }
 
 // ==================== TRANSACTION QUERIES ====================
@@ -77,6 +82,8 @@ func (q *Queries) CreateTransaction(ctx context.Context, arg CreateTransactionPa
 		arg.Date,
 		arg.UserID,
 		arg.BranchID,
+		arg.CustomerPaidAmount,
+		arg.ChangeAmount,
 	)
 	var i Transaction
 	err := row.Scan(
@@ -97,6 +104,8 @@ func (q *Queries) CreateTransaction(ctx context.Context, arg CreateTransactionPa
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
+		&i.CustomerPaidAmount,
+		&i.ChangeAmount,
 	)
 	return i, err
 }
@@ -119,7 +128,8 @@ SELECT id, type,
        cash_register_id,
        from_cash_register_id, to_cash_register_id, from_branch_id, to_branch_id,
        group_transaction_id, amount, description, pay_type, date, user_id, branch_id,
-       created_at, updated_at, deleted_at
+       created_at, updated_at, deleted_at,
+       customer_paid_amount, change_amount
 FROM transactions
 WHERE branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
   AND deleted_at = 0
@@ -159,6 +169,8 @@ func (q *Queries) GetAllTransactions(ctx context.Context, arg GetAllTransactions
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.DeletedAt,
+			&i.CustomerPaidAmount,
+			&i.ChangeAmount,
 		); err != nil {
 			return nil, err
 		}
@@ -175,7 +187,8 @@ SELECT id, type,
        cash_register_id,
        from_cash_register_id, to_cash_register_id, from_branch_id, to_branch_id,
        group_transaction_id, amount, description, pay_type, date, user_id, branch_id,
-       created_at, updated_at, deleted_at
+       created_at, updated_at, deleted_at,
+       customer_paid_amount, change_amount
 FROM transactions
 WHERE id = $1
   AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
@@ -203,6 +216,8 @@ func (q *Queries) GetTransactionByID(ctx context.Context, id uuid.UUID) (Transac
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
+		&i.CustomerPaidAmount,
+		&i.ChangeAmount,
 	)
 	return i, err
 }
@@ -365,7 +380,8 @@ SELECT id, type,
        cash_register_id,
        from_cash_register_id, to_cash_register_id, from_branch_id, to_branch_id,
        group_transaction_id, amount, description, pay_type, date, user_id, branch_id,
-       created_at, updated_at, deleted_at
+       created_at, updated_at, deleted_at,
+       customer_paid_amount, change_amount
 FROM transactions
 WHERE branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
   AND cash_register_id = $1
@@ -407,6 +423,8 @@ func (q *Queries) GetTransactionsByCashRegister(ctx context.Context, arg GetTran
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.DeletedAt,
+			&i.CustomerPaidAmount,
+			&i.ChangeAmount,
 		); err != nil {
 			return nil, err
 		}
@@ -423,7 +441,8 @@ SELECT id, type,
        cash_register_id,
        from_cash_register_id, to_cash_register_id, from_branch_id, to_branch_id,
        group_transaction_id, amount, description, pay_type, date, user_id, branch_id,
-       created_at, updated_at, deleted_at
+       created_at, updated_at, deleted_at,
+       customer_paid_amount, change_amount
 FROM transactions
 WHERE branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
   AND date >= $1
@@ -472,6 +491,8 @@ func (q *Queries) GetTransactionsByDateRange(ctx context.Context, arg GetTransac
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.DeletedAt,
+			&i.CustomerPaidAmount,
+			&i.ChangeAmount,
 		); err != nil {
 			return nil, err
 		}
@@ -488,7 +509,8 @@ SELECT id, type,
        cash_register_id,
        from_cash_register_id, to_cash_register_id, from_branch_id, to_branch_id,
        group_transaction_id, amount, description, pay_type, date, user_id, branch_id,
-       created_at, updated_at, deleted_at
+       created_at, updated_at, deleted_at,
+       customer_paid_amount, change_amount
 FROM transactions
 WHERE branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
   AND group_transaction_id = $1
@@ -530,6 +552,8 @@ func (q *Queries) GetTransactionsByGroup(ctx context.Context, arg GetTransaction
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.DeletedAt,
+			&i.CustomerPaidAmount,
+			&i.ChangeAmount,
 		); err != nil {
 			return nil, err
 		}
@@ -546,7 +570,8 @@ SELECT id, type,
        cash_register_id,
        from_cash_register_id, to_cash_register_id, from_branch_id, to_branch_id,
        group_transaction_id, amount, description, pay_type, date, user_id, branch_id,
-       created_at, updated_at, deleted_at
+       created_at, updated_at, deleted_at,
+       customer_paid_amount, change_amount
 FROM transactions
 WHERE branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
   AND type = $1
@@ -588,6 +613,8 @@ func (q *Queries) GetTransactionsByType(ctx context.Context, arg GetTransactions
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.DeletedAt,
+			&i.CustomerPaidAmount,
+			&i.ChangeAmount,
 		); err != nil {
 			return nil, err
 		}
@@ -613,7 +640,8 @@ RETURNING id, type,
           cash_register_id,
           from_cash_register_id, to_cash_register_id, from_branch_id, to_branch_id,
           group_transaction_id, amount, description, pay_type, date, user_id, branch_id,
-          created_at, updated_at, deleted_at
+          created_at, updated_at, deleted_at,
+          customer_paid_amount, change_amount
 `
 
 type UpdateTransactionParams struct {
@@ -651,6 +679,8 @@ func (q *Queries) UpdateTransaction(ctx context.Context, arg UpdateTransactionPa
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
+		&i.CustomerPaidAmount,
+		&i.ChangeAmount,
 	)
 	return i, err
 }
