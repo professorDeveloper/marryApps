@@ -75,6 +75,9 @@ const toUtcDayBoundary = (value: dayjs.Dayjs, endOfDay = false): string => {
   return date.toISOString().replace('.000Z', 'Z');
 };
 
+const toPickerDate = (value?: string): dayjs.Dayjs | null =>
+  value ? dayjs(value.slice(0, 10)) : null;
+
 export function ShipmentsListView() {
   const { t } = useTranslation('menu');
   const router = useRouter();
@@ -253,14 +256,8 @@ export function ShipmentsListView() {
     [storagesMap, suppliersMap, t, router]
   );
 
-  const startDateValue = useMemo(
-    () => (draftFilters.start_date ? dayjs(draftFilters.start_date) : null),
-    [draftFilters.start_date]
-  );
-  const endDateValue = useMemo(
-    () => (draftFilters.end_date ? dayjs(draftFilters.end_date) : null),
-    [draftFilters.end_date]
-  );
+  const startDateValue = useMemo(() => toPickerDate(draftFilters.start_date), [draftFilters.start_date]);
+  const endDateValue = useMemo(() => toPickerDate(draftFilters.end_date), [draftFilters.end_date]);
 
   return (
     <>
