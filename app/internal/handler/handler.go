@@ -632,6 +632,12 @@ func (h *Handler) Register(router *echo.Echo) {
 			shipments.DELETE("/:id/items/:item_id", h.DeleteShipmentItem, mw.CheckLanguage())
 		}
 
+		// Reports
+		reports := api.Group("/reports", mw.CheckAuth(h.cfg), mw.TenantMiddleware(h.repo))
+		{
+			reports.GET("/goods", h.GoodsReport, mw.CheckLanguage())
+		}
+
 		// Brand management endpoints (admin only)
 		brands := api.Group("/admin/brands")
 		{

@@ -474,6 +474,7 @@ type I interface {
 	GroupTransaction() GroupTransactionI
 	Transaction() TransactionI
 	Shipment() ShipmentI
+	Report() ReportI
 }
 
 type Service struct {
@@ -504,6 +505,7 @@ type Service struct {
 	groupTransaction GroupTransactionI
 	transaction      TransactionI
 	shipment         ShipmentI
+	report           ReportI
 }
 
 func New(cfg *config.Config, repo *repository.Repository, clickClient *paymentClick.Client, paymeClient *paymentPayme.Client, minioClient *minio.Minio) *Service {
@@ -535,6 +537,7 @@ func New(cfg *config.Config, repo *repository.Repository, clickClient *paymentCl
 		groupTransaction: NewGroupTransactionS(repo),
 		transaction:      NewTransactionS(repo),
 		shipment:         NewShipmentS(repo),
+		report:           NewReportS(repo),
 	}
 }
 
@@ -643,4 +646,8 @@ func (s *Service) Transaction() TransactionI {
 
 func (s *Service) Shipment() ShipmentI {
 	return s.shipment
+}
+
+func (s *Service) Report() ReportI {
+	return s.report
 }

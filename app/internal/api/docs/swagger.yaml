@@ -1654,6 +1654,57 @@ definitions:
         - $ref: '#/definitions/model.GoodResponse'
         description: Good - the created good/menu item
     type: object
+  model.GoodsReportResponse:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/model.GoodsReportRow'
+        type: array
+      limit:
+        type: integer
+      offset:
+        type: integer
+      totals:
+        $ref: '#/definitions/model.GoodsReportTotals'
+    type: object
+  model.GoodsReportRow:
+    properties:
+      avg_cost_price:
+        type: string
+      avg_markup:
+        type: string
+      avg_markup_pct:
+        type: string
+      avg_sell_price:
+        type: string
+      good_id:
+        type: string
+      name:
+        type: string
+      total_cost:
+        type: string
+      total_markup:
+        type: string
+      total_qty:
+        type: integer
+      total_sell:
+        type: string
+    type: object
+  model.GoodsReportTotals:
+    properties:
+      avg_markup_pct:
+        type: string
+      total_cost:
+        type: string
+      total_count:
+        type: integer
+      total_markup:
+        type: string
+      total_qty:
+        type: integer
+      total_sell:
+        type: string
+    type: object
   model.GroupTransactionResponse:
     properties:
       branch_id:
@@ -14804,6 +14855,76 @@ paths:
       summary: Create a new payment invoice
       tags:
       - payments
+  /api/v1/reports/goods:
+    get:
+      description: 'Paginated report: qty sold, selling price, cost price, markup
+        per dish. Only paid orders. Filters by date range, department, category, dish,
+        waiter, hall, table.'
+      parameters:
+      - description: Start date (YYYY-MM-DD)
+        in: query
+        name: start_date
+        required: true
+        type: string
+      - description: End date (YYYY-MM-DD, inclusive)
+        in: query
+        name: end_date
+        required: true
+        type: string
+      - description: Filter by department UUID
+        in: query
+        name: department_id
+        type: string
+      - description: Filter by category UUID
+        in: query
+        name: category_id
+        type: string
+      - description: Filter by specific good UUID
+        in: query
+        name: good_id
+        type: string
+      - description: Filter by waiter UUID
+        in: query
+        name: waiter_id
+        type: string
+      - description: Filter by hall UUID
+        in: query
+        name: hall_id
+        type: string
+      - description: Filter by table UUID
+        in: query
+        name: table_id
+        type: string
+      - default: 20
+        description: Limit
+        in: query
+        name: limit
+        type: integer
+      - default: 0
+        description: Offset
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.GoodsReportResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Goods sales report
+      tags:
+      - Reports
   /api/v1/shifts:
     get:
       consumes:

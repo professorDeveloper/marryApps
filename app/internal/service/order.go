@@ -464,17 +464,23 @@ func (s *OrderS) MarkOrderPaid(ctx context.Context, orderID string, cashierID st
 		return nil, fmt.Errorf("failed to mark order paid: %w", err)
 	}
 
-	// Free the table when order is paid
+	// Free the table — best-effort, must not abort the main transaction on failure
 	if orderBeforePay.TableID.Valid {
-		_, _ = s.repo.Tenant(ctx).SetTableFree(ctx, orderBeforePay.TableID.Bytes)
+		withSavepoint(ctx, "sp_set_table_free", func() error {
+			_, err := s.repo.Tenant(ctx).SetTableFree(ctx, orderBeforePay.TableID.Bytes)
+			return err
+		})
 	}
 
-	// Auto-create income transaction if cash register provided
+	// Auto-create income transaction — best-effort, must not abort the main transaction
 	if cashRegisterID != nil && *cashRegisterID != "" {
 		crID, parseErr := uuid.Parse(*cashRegisterID)
 		if parseErr == nil {
-			bill, billErr := s.repo.Tenant(ctx).GetBillDetails(ctx, oID)
-			if billErr == nil {
+			withSavepoint(ctx, "sp_create_tx", func() error {
+				bill, billErr := s.repo.Tenant(ctx).GetBillDetails(ctx, oID)
+				if billErr != nil {
+					return billErr
+				}
 				descStr := fmt.Sprintf("Bill payment #%d", bill.BillNo)
 				txParams := pg.CreateTransactionParams{
 					ID:             uuid.New(),
@@ -491,9 +497,9 @@ func (s *OrderS) MarkOrderPaid(ctx context.Context, orderID string, cashierID st
 						Valid:        true,
 					}
 				}
-				// Best-effort: don't fail the payment if transaction creation fails
-				_, _ = s.repo.Tenant(ctx).CreateTransaction(ctx, txParams)
-			}
+				_, err := s.repo.Tenant(ctx).CreateTransaction(ctx, txParams)
+				return err
+			})
 		}
 	}
 
