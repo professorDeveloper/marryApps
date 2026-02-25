@@ -327,6 +327,17 @@ export const endpoints = {
     delete: (id: string) => `/api/v1/transfers/${id}`,
     batch: '/api/v1/transfers/batch',
   },
+  shipments: {
+    list: '/api/v1/shipments',
+    batch: '/api/v1/shipments/batch',
+    details: (id: string) => `/api/v1/shipments/${id}`,
+    update: (id: string) => `/api/v1/shipments/${id}`,
+    delete: (id: string) => `/api/v1/shipments/${id}`,
+    deleteItem: (id: string, itemId: string) => `/api/v1/shipments/${id}/items/${itemId}`,
+    items: (id: string) => `/api/v1/shipments/${id}/items`,
+    confirm: (id: string) => `/api/v1/shipments/${id}/confirm`,
+    cancel: (id: string) => `/api/v1/shipments/${id}/cancel`,
+  },
   ingredientStock: {
     list: '/api/v1/ingredient-stock',
     details: (id: string) => `/api/v1/ingredient-stock/${id}`,

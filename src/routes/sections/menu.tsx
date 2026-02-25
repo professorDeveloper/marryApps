@@ -27,6 +27,8 @@ import { LocationsEditView } from 'src/sections/warehouse/locations-edit-view';
 import { LocationsListView } from 'src/sections/warehouse/locations-list-view';
 import { TransfersEditView } from 'src/sections/warehouse/transfers-edit-view';
 import { TransfersListView } from 'src/sections/warehouse/transfers-list-view';
+import { ShipmentsEditView } from 'src/sections/warehouse/shipments-edit-view';
+import { ShipmentsListView } from 'src/sections/warehouse/shipments-list-view';
 import { WarehouseEditView } from 'src/sections/storage/storage-edit-view';
 import { WarehouseListView } from 'src/sections/storage/storage-list-view';
 import { ConnectedDeviceListView } from 'src/sections/settings/connected-Device-list-view';
@@ -153,6 +155,9 @@ export const dashboardRoutes: RouteObject[] = [
           { path: 'warehouse/transfers', element: <TransfersListView /> },
           { path: 'warehouse/transfers/new', element: <TransfersEditView isNew /> },
           { path: 'warehouse/transfers/:id/edit', element: <TransfersEditView /> },
+          { path: 'warehouse/shipments', element: <ShipmentsListView /> },
+          { path: 'warehouse/shipments/new', element: <ShipmentsEditView /> },
+          { path: 'warehouse/shipments/:id/edit', element: <ShipmentsEditView /> },
           { path: 'warehouse/locations', element: <LocationsListView /> },
           { path: 'warehouse/locations/new', element: <LocationsEditView isNew /> },
           { path: 'warehouse/locations/:id/edit', element: <LocationsEditView /> },

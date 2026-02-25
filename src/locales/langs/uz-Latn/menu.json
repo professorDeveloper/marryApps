@@ -346,7 +346,8 @@
       "ingredient-group": "Maxsulot guruhlari",
       "transfers": "O'tkazmalar",
       "locations": "Joylashuvlar",
-      "suppliers": "Yetkazib beruvchilar"
+      "suppliers": "Yetkazib beruvchilar",
+      "shipments": "Yetkazib berishlar"
     },
     "reports": {
       "title": "Hisobotlar",
@@ -1068,6 +1069,39 @@
       "list": "Tranzaksiya guruhlari ro'yxati",
       "details": "Tranzaksiya guruhi tafsilotlari",
       "edit": "Tranzaksiya guruhini tahrirlash"
+    }
+  },
+  "shipments": {
+    "create": "Yetkazib berish yaratish",
+    "view": "Yetkazib berishni ko'rish",
+    "shipment": "Yetkazib berish",
+    "items": "Elementlar",
+    "totals": "Jami",
+    "total": "Jami",
+    "paid": "To'langan",
+    "totalAmount": "Umumiy summa",
+    "paidAmount": "To'langan summa",
+    "pricePerUnit": "Narx / birlik",
+    "stockBefore": "Oldingi qoldiq",
+    "stockAfter": "Keyingi qoldiq",
+    "notFound": "Yetkazib berish topilmadi",
+    "messages": {
+      "fetchFailed": "Yetkazib berishlar yuklanmadi",
+      "createFailed": "Yetkazib berishni yaratib bo'lmadi",
+      "fetchOneFailed": "Yetkazib berishni yuklab bo'lmadi",
+      "confirmFailed": "Yetkazib berishni tasdiqlab bo'lmadi",
+      "cancelFailed": "Yetkazib berishni bekor qilib bo'lmadi",
+      "deleteFailed": "Yetkazib berishni o'chirib bo'lmadi",
+      "itemDeleteFailed": "Yetkazib berish elementini o'chirib bo'lmadi",
+      "updateFailed": "Yetkazib berishni yangilab bo'lmadi",
+      "itemsAddFailed": "Yetkazib berish elementlarini qo'shib bo'lmadi",
+      "created": "Yetkazib berish muvaffaqiyatli yaratildi",
+      "confirmed": "Yetkazib berish tasdiqlandi",
+      "cancelled": "Yetkazib berish bekor qilindi",
+      "deleted": "Yetkazib berish o'chirildi",
+      "itemDeleted": "Yetkazib berish elementi o'chirildi",
+      "updated": "Yetkazib berish muvaffaqiyatli yangilandi",
+      "itemsAdded": "Yetkazib berish elementlari muvaffaqiyatli qo'shildi"
     }
   }
 }

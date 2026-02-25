@@ -361,7 +361,8 @@
       "ingredientStock": "Ingredient stock",
       "transfers": "Transfers",
       "locations": "Locations",
-      "suppliers": "Suppliers"
+      "suppliers": "Suppliers",
+      "shipments": "Shipments"
     },
     "reports": {
       "title": "Reports",
@@ -911,6 +912,39 @@
     "createGroup": "Create write-off group",
     "editGroup": "Edit write-off group",
     "groupDetails": "Write-off group details"
+  },
+  "shipments": {
+    "create": "Create shipment",
+    "view": "View shipment",
+    "shipment": "Shipment",
+    "items": "Items",
+    "totals": "Totals",
+    "total": "Total",
+    "paid": "Paid",
+    "totalAmount": "Total Amount",
+    "paidAmount": "Paid Amount",
+    "pricePerUnit": "Price / Unit",
+    "stockBefore": "Stock Before",
+    "stockAfter": "Stock After",
+    "notFound": "Shipment not found",
+    "messages": {
+      "fetchFailed": "Failed to fetch shipments",
+      "createFailed": "Failed to create shipment",
+      "fetchOneFailed": "Failed to fetch shipment",
+      "confirmFailed": "Failed to confirm shipment",
+      "cancelFailed": "Failed to cancel shipment",
+      "deleteFailed": "Failed to delete shipment",
+      "itemDeleteFailed": "Failed to delete shipment item",
+      "updateFailed": "Failed to update shipment",
+      "itemsAddFailed": "Failed to add shipment items",
+      "created": "Shipment created successfully",
+      "confirmed": "Shipment confirmed",
+      "cancelled": "Shipment cancelled",
+      "deleted": "Shipment deleted",
+      "itemDeleted": "Shipment item deleted",
+      "updated": "Shipment updated successfully",
+      "itemsAdded": "Shipment items added successfully"
+    }
   },
   "inventory": {
     "title": "Inventory",
