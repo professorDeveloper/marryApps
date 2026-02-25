@@ -592,12 +592,13 @@ func seedTenantDB(ctx context.Context, db pg.DBTX) error {
 
 		// Insert order item
 		_, err := queries.CreateOrderItem(ctx, pg.CreateOrderItemParams{
-			ID:       itemID,
-			GoodID:   goodIDs[item.goodIdx],
-			OrderID:  orderIDs[item.orderIdx],
-			Quantity: item.quantity,
-			Price:    priceNum,
-			Status:   pg.NullOrderItemsStatus{OrderItemsStatus: pg.OrderItemsStatus(item.status), Valid: true},
+			ID:        itemID,
+			GoodID:    goodIDs[item.goodIdx],
+			OrderID:   orderIDs[item.orderIdx],
+			Quantity:  item.quantity,
+			Price:     priceNum,
+			CostPrice: pgtype.Numeric{},
+			Status:    pg.NullOrderItemsStatus{OrderItemsStatus: pg.OrderItemsStatus(item.status), Valid: true},
 		})
 		if err != nil {
 			log.Printf("  ⚠️  Order item already exists or error: %v", err)

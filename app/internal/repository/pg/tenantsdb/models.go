@@ -853,6 +853,7 @@ type OrderItem struct {
 	CreatedAt pgtype.Timestamptz   `json:"created_at"`
 	UpdatedAt pgtype.Timestamptz   `json:"updated_at"`
 	DeletedAt *int64               `json:"deleted_at"`
+	CostPrice pgtype.Numeric       `json:"cost_price"`
 }
 
 type PriceForPlan struct {

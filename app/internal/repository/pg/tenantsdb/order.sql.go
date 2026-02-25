@@ -166,7 +166,7 @@ WHERE order_items.id = $1 AND order_items.deleted_at = 0
     WHERE o.id = order_items.order_id
       AND o.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
   )
-RETURNING id, good_id, order_id, quantity, price, status, comment, created_at, updated_at, deleted_at
+RETURNING id, good_id, order_id, quantity, price, status, comment, created_at, updated_at, deleted_at, cost_price
 `
 
 func (q *Queries) CancelOrderItem(ctx context.Context, id uuid.UUID) (OrderItem, error) {
@@ -183,6 +183,7 @@ func (q *Queries) CancelOrderItem(ctx context.Context, id uuid.UUID) (OrderItem,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
+		&i.CostPrice,
 	)
 	return i, err
 }
@@ -348,19 +349,20 @@ func (q *Queries) CreateOrder(ctx context.Context, arg CreateOrderParams) (Creat
 }
 
 const createOrderItem = `-- name: CreateOrderItem :one
-INSERT INTO order_items (id, good_id, order_id, quantity, price, status, comment)
-VALUES ($1, $2, $3, $4, $5, $6, $7)
-RETURNING id, good_id, order_id, quantity, price, status, comment, created_at, updated_at, deleted_at
+INSERT INTO order_items (id, good_id, order_id, quantity, price, cost_price, status, comment)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+RETURNING id, good_id, order_id, quantity, price, status, comment, created_at, updated_at, deleted_at, cost_price
 `
 
 type CreateOrderItemParams struct {
-	ID       uuid.UUID            `json:"id"`
-	GoodID   uuid.UUID            `json:"good_id"`
-	OrderID  uuid.UUID            `json:"order_id"`
-	Quantity int32                `json:"quantity"`
-	Price    pgtype.Numeric       `json:"price"`
-	Status   NullOrderItemsStatus `json:"status"`
-	Comment  *string              `json:"comment"`
+	ID        uuid.UUID            `json:"id"`
+	GoodID    uuid.UUID            `json:"good_id"`
+	OrderID   uuid.UUID            `json:"order_id"`
+	Quantity  int32                `json:"quantity"`
+	Price     pgtype.Numeric       `json:"price"`
+	CostPrice pgtype.Numeric       `json:"cost_price"`
+	Status    NullOrderItemsStatus `json:"status"`
+	Comment   *string              `json:"comment"`
 }
 
 func (q *Queries) CreateOrderItem(ctx context.Context, arg CreateOrderItemParams) (OrderItem, error) {
@@ -370,6 +372,7 @@ func (q *Queries) CreateOrderItem(ctx context.Context, arg CreateOrderItemParams
 		arg.OrderID,
 		arg.Quantity,
 		arg.Price,
+		arg.CostPrice,
 		arg.Status,
 		arg.Comment,
 	)
@@ -385,6 +388,7 @@ func (q *Queries) CreateOrderItem(ctx context.Context, arg CreateOrderItemParams
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
+		&i.CostPrice,
 	)
 	return i, err
 }
@@ -435,7 +439,7 @@ func (q *Queries) DeleteOrderItemsByOrderID(ctx context.Context, orderID uuid.UU
 }
 
 const getAllOrderItems = `-- name: GetAllOrderItems :many
-SELECT id, good_id, order_id, quantity, price, status, comment, created_at, updated_at, deleted_at
+SELECT id, good_id, order_id, quantity, price, status, comment, created_at, updated_at, deleted_at, cost_price
 FROM order_items
 WHERE order_items.deleted_at = 0
   AND EXISTS (
@@ -472,6 +476,7 @@ func (q *Queries) GetAllOrderItems(ctx context.Context, arg GetAllOrderItemsPara
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.DeletedAt,
+			&i.CostPrice,
 		); err != nil {
 			return nil, err
 		}
@@ -668,7 +673,7 @@ func (q *Queries) GetOrderByID(ctx context.Context, id uuid.UUID) (GetOrderByIDR
 }
 
 const getOrderItemByID = `-- name: GetOrderItemByID :one
-SELECT id, good_id, order_id, quantity, price, status, comment, created_at, updated_at, deleted_at
+SELECT id, good_id, order_id, quantity, price, status, comment, created_at, updated_at, deleted_at, cost_price
 FROM order_items
 WHERE order_items.id = $1
   AND order_items.deleted_at = 0
@@ -693,12 +698,13 @@ func (q *Queries) GetOrderItemByID(ctx context.Context, id uuid.UUID) (OrderItem
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
+		&i.CostPrice,
 	)
 	return i, err
 }
 
 const getOrderItemsByOrderID = `-- name: GetOrderItemsByOrderID :many
-SELECT id, good_id, order_id, quantity, price, status, comment, created_at, updated_at, deleted_at
+SELECT id, good_id, order_id, quantity, price, status, comment, created_at, updated_at, deleted_at, cost_price
 FROM order_items
 WHERE order_items.order_id = $1
   AND order_items.deleted_at = 0
@@ -730,6 +736,7 @@ func (q *Queries) GetOrderItemsByOrderID(ctx context.Context, orderID uuid.UUID)
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.DeletedAt,
+			&i.CostPrice,
 		); err != nil {
 			return nil, err
 		}
@@ -742,7 +749,7 @@ func (q *Queries) GetOrderItemsByOrderID(ctx context.Context, orderID uuid.UUID)
 }
 
 const getOrderItemsByStatus = `-- name: GetOrderItemsByStatus :many
-SELECT id, good_id, order_id, quantity, price, status, comment, created_at, updated_at, deleted_at
+SELECT id, good_id, order_id, quantity, price, status, comment, created_at, updated_at, deleted_at, cost_price
 FROM order_items
 WHERE order_items.status = $1
   AND order_items.deleted_at = 0
@@ -781,6 +788,7 @@ func (q *Queries) GetOrderItemsByStatus(ctx context.Context, arg GetOrderItemsBy
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.DeletedAt,
+			&i.CostPrice,
 		); err != nil {
 			return nil, err
 		}
@@ -1179,7 +1187,7 @@ WHERE order_items.id = $1 AND order_items.deleted_at = 0
     WHERE o.id = order_items.order_id
       AND o.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
   )
-RETURNING id, good_id, order_id, quantity, price, status, comment, created_at, updated_at, deleted_at
+RETURNING id, good_id, order_id, quantity, price, status, comment, created_at, updated_at, deleted_at, cost_price
 `
 
 func (q *Queries) MarkOrderItemCooking(ctx context.Context, id uuid.UUID) (OrderItem, error) {
@@ -1196,6 +1204,7 @@ func (q *Queries) MarkOrderItemCooking(ctx context.Context, id uuid.UUID) (Order
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
+		&i.CostPrice,
 	)
 	return i, err
 }
@@ -1210,7 +1219,7 @@ WHERE order_items.id = $1 AND order_items.deleted_at = 0
     WHERE o.id = order_items.order_id
       AND o.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
   )
-RETURNING id, good_id, order_id, quantity, price, status, comment, created_at, updated_at, deleted_at
+RETURNING id, good_id, order_id, quantity, price, status, comment, created_at, updated_at, deleted_at, cost_price
 `
 
 func (q *Queries) MarkOrderItemReady(ctx context.Context, id uuid.UUID) (OrderItem, error) {
@@ -1227,6 +1236,7 @@ func (q *Queries) MarkOrderItemReady(ctx context.Context, id uuid.UUID) (OrderIt
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
+		&i.CostPrice,
 	)
 	return i, err
 }
@@ -1491,7 +1501,7 @@ WHERE order_items.id = $1 AND order_items.deleted_at = 0
     WHERE o.id = order_items.order_id
       AND o.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
   )
-RETURNING id, good_id, order_id, quantity, price, status, comment, created_at, updated_at, deleted_at
+RETURNING id, good_id, order_id, quantity, price, status, comment, created_at, updated_at, deleted_at, cost_price
 `
 
 type UpdateOrderItemParams struct {
@@ -1526,6 +1536,7 @@ func (q *Queries) UpdateOrderItem(ctx context.Context, arg UpdateOrderItemParams
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
+		&i.CostPrice,
 	)
 	return i, err
 }
@@ -1540,7 +1551,7 @@ WHERE order_items.id = $1 AND order_items.deleted_at = 0
     WHERE o.id = order_items.order_id
       AND o.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
   )
-RETURNING id, good_id, order_id, quantity, price, status, comment, created_at, updated_at, deleted_at
+RETURNING id, good_id, order_id, quantity, price, status, comment, created_at, updated_at, deleted_at, cost_price
 `
 
 type UpdateOrderItemQuantityParams struct {
@@ -1562,6 +1573,7 @@ func (q *Queries) UpdateOrderItemQuantity(ctx context.Context, arg UpdateOrderIt
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
+		&i.CostPrice,
 	)
 	return i, err
 }
@@ -1576,7 +1588,7 @@ WHERE order_items.id = $1 AND order_items.deleted_at = 0
     WHERE o.id = order_items.order_id
       AND o.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
   )
-RETURNING id, good_id, order_id, quantity, price, status, comment, created_at, updated_at, deleted_at
+RETURNING id, good_id, order_id, quantity, price, status, comment, created_at, updated_at, deleted_at, cost_price
 `
 
 type UpdateOrderItemStatusParams struct {
@@ -1598,6 +1610,7 @@ func (q *Queries) UpdateOrderItemStatus(ctx context.Context, arg UpdateOrderItem
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
+		&i.CostPrice,
 	)
 	return i, err
 }

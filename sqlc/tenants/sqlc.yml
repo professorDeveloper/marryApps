@@ -16,6 +16,7 @@ sql:
       - "../../app/migrations/tenants/11_transaction_category.up.sql"
       - "../../app/migrations/tenants/12_transaction_type_update.up.sql"
       - "../../app/migrations/tenants/13_shipments.up.sql"
+      - "../../app/migrations/tenants/14_order_item_cost_price.up.sql"
 
 
     gen:

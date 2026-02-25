@@ -193,12 +193,12 @@ WHERE status NOT IN ('paid', 'cancelled')
 
 
 -- name: CreateOrderItem :one
-INSERT INTO order_items (id, good_id, order_id, quantity, price, status, comment)
-VALUES ($1, $2, $3, $4, $5, $6, $7)
-RETURNING id, good_id, order_id, quantity, price, status, comment, created_at, updated_at, deleted_at;
+INSERT INTO order_items (id, good_id, order_id, quantity, price, cost_price, status, comment)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+RETURNING id, good_id, order_id, quantity, price, status, comment, created_at, updated_at, deleted_at, cost_price;
 
 -- name: GetOrderItemByID :one
-SELECT id, good_id, order_id, quantity, price, status, comment, created_at, updated_at, deleted_at
+SELECT id, good_id, order_id, quantity, price, status, comment, created_at, updated_at, deleted_at, cost_price
 FROM order_items
 WHERE order_items.id = $1
   AND order_items.deleted_at = 0
@@ -209,7 +209,7 @@ WHERE order_items.id = $1
   );
 
 -- name: GetAllOrderItems :many
-SELECT id, good_id, order_id, quantity, price, status, comment, created_at, updated_at, deleted_at
+SELECT id, good_id, order_id, quantity, price, status, comment, created_at, updated_at, deleted_at, cost_price
 FROM order_items
 WHERE order_items.deleted_at = 0
   AND EXISTS (
@@ -221,7 +221,7 @@ ORDER BY created_at DESC
 LIMIT $1 OFFSET $2;
 
 -- name: GetOrderItemsByOrderID :many
-SELECT id, good_id, order_id, quantity, price, status, comment, created_at, updated_at, deleted_at
+SELECT id, good_id, order_id, quantity, price, status, comment, created_at, updated_at, deleted_at, cost_price
 FROM order_items
 WHERE order_items.order_id = $1
   AND order_items.deleted_at = 0
@@ -235,7 +235,7 @@ ORDER BY created_at ASC;
 
 
 -- name: GetOrderItemsByStatus :many
-SELECT id, good_id, order_id, quantity, price, status, comment, created_at, updated_at, deleted_at
+SELECT id, good_id, order_id, quantity, price, status, comment, created_at, updated_at, deleted_at, cost_price
 FROM order_items
 WHERE order_items.status = $1
   AND order_items.deleted_at = 0
@@ -262,7 +262,7 @@ WHERE order_items.id = $1 AND order_items.deleted_at = 0
     WHERE o.id = order_items.order_id
       AND o.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
   )
-RETURNING id, good_id, order_id, quantity, price, status, comment, created_at, updated_at, deleted_at;
+RETURNING id, good_id, order_id, quantity, price, status, comment, created_at, updated_at, deleted_at, cost_price;
 
 -- name: UpdateOrderItemQuantity :one
 UPDATE order_items
@@ -274,7 +274,7 @@ WHERE order_items.id = $1 AND order_items.deleted_at = 0
     WHERE o.id = order_items.order_id
       AND o.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
   )
-RETURNING id, good_id, order_id, quantity, price, status, comment, created_at, updated_at, deleted_at;
+RETURNING id, good_id, order_id, quantity, price, status, comment, created_at, updated_at, deleted_at, cost_price;
 
 -- name: UpdateOrderItemStatus :one
 UPDATE order_items
@@ -286,7 +286,7 @@ WHERE order_items.id = $1 AND order_items.deleted_at = 0
     WHERE o.id = order_items.order_id
       AND o.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
   )
-RETURNING id, good_id, order_id, quantity, price, status, comment, created_at, updated_at, deleted_at;
+RETURNING id, good_id, order_id, quantity, price, status, comment, created_at, updated_at, deleted_at, cost_price;
 
 -- name: MarkOrderItemCooking :one
 UPDATE order_items
@@ -298,7 +298,7 @@ WHERE order_items.id = $1 AND order_items.deleted_at = 0
     WHERE o.id = order_items.order_id
       AND o.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
   )
-RETURNING id, good_id, order_id, quantity, price, status, comment, created_at, updated_at, deleted_at;
+RETURNING id, good_id, order_id, quantity, price, status, comment, created_at, updated_at, deleted_at, cost_price;
 
 -- name: MarkOrderItemReady :one
 UPDATE order_items
@@ -310,7 +310,7 @@ WHERE order_items.id = $1 AND order_items.deleted_at = 0
     WHERE o.id = order_items.order_id
       AND o.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
   )
-RETURNING id, good_id, order_id, quantity, price, status, comment, created_at, updated_at, deleted_at;
+RETURNING id, good_id, order_id, quantity, price, status, comment, created_at, updated_at, deleted_at, cost_price;
 
 -- name: CancelOrderItem :one
 UPDATE order_items
@@ -322,7 +322,7 @@ WHERE order_items.id = $1 AND order_items.deleted_at = 0
     WHERE o.id = order_items.order_id
       AND o.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
   )
-RETURNING id, good_id, order_id, quantity, price, status, comment, created_at, updated_at, deleted_at;
+RETURNING id, good_id, order_id, quantity, price, status, comment, created_at, updated_at, deleted_at, cost_price;
 
 
 -- name: DeleteOrderItem :exec

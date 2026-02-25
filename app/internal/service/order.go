@@ -65,13 +65,14 @@ func (s *OrderS) AddOrderItems(ctx context.Context, orderID string, req model.Ad
 		}
 
 		item, err := s.repo.Tenant(ctx).CreateOrderItem(ctx, pg.CreateOrderItemParams{
-			ID:       uuid.New(),
-			GoodID:   goodUUID,
-			OrderID:  oID,
-			Quantity: it.Quantity,
-			Price:    good.Price,
-			Status:   pg.NullOrderItemsStatus{OrderItemsStatus: pg.OrderItemsStatus(model.OrderItemStatusPending), Valid: true},
-			Comment:  it.Comment,
+			ID:        uuid.New(),
+			GoodID:    goodUUID,
+			OrderID:   oID,
+			Quantity:  it.Quantity,
+			Price:     good.Price,
+			CostPrice: good.CostPrice,
+			Status:    pg.NullOrderItemsStatus{OrderItemsStatus: pg.OrderItemsStatus(model.OrderItemStatusPending), Valid: true},
+			Comment:   it.Comment,
 		})
 		if err != nil {
 			return nil, fmt.Errorf("failed to create order item: %w", err)
@@ -199,13 +200,14 @@ func (s *OrderS) CreateOrder(ctx context.Context, req model.CreateOrderRequest) 
 			}
 
 			if _, err := s.repo.Tenant(ctx).CreateOrderItem(ctx, pg.CreateOrderItemParams{
-				ID:       uuid.New(),
-				GoodID:   goodUUID,
-				OrderID:  createdOrder.ID,
-				Quantity: it.Quantity,
-				Price:    good.Price,
-				Status:   pg.NullOrderItemsStatus{OrderItemsStatus: pg.OrderItemsStatus(model.OrderItemStatusPending), Valid: true},
-				Comment:  it.Comment,
+				ID:        uuid.New(),
+				GoodID:    goodUUID,
+				OrderID:   createdOrder.ID,
+				Quantity:  it.Quantity,
+				Price:     good.Price,
+				CostPrice: good.CostPrice,
+				Status:    pg.NullOrderItemsStatus{OrderItemsStatus: pg.OrderItemsStatus(model.OrderItemStatusPending), Valid: true},
+				Comment:   it.Comment,
 			}); err != nil {
 				return nil, fmt.Errorf("failed to create order item: %w", err)
 			}
@@ -1001,17 +1003,16 @@ func (s *OrderS) CreateOrderItems(ctx context.Context, req model.CreateOrderItem
 			return nil, fmt.Errorf("items[%d]: invalid good_id: %w", i, err)
 		}
 
-		price := pgtype.Numeric{}
+		good, err := s.repo.Tenant(ctx).GetGoodByID(ctx, gID)
+		if err != nil {
+			return nil, fmt.Errorf("items[%d]: failed to fetch good: %w", i, err)
+		}
+
+		price := good.Price
 		if entry.Price != nil && *entry.Price != "" {
 			if err := price.Scan(*entry.Price); err != nil {
 				return nil, fmt.Errorf("items[%d]: invalid price: %w", i, err)
 			}
-		} else {
-			good, err := s.repo.Tenant(ctx).GetGoodByID(ctx, gID)
-			if err != nil {
-				return nil, fmt.Errorf("items[%d]: failed to fetch good: %w", i, err)
-			}
-			price = good.Price
 		}
 
 		status := pg.NullOrderItemsStatus{OrderItemsStatus: pg.OrderItemsStatus(model.OrderItemStatusPending), Valid: true}
@@ -1020,13 +1021,14 @@ func (s *OrderS) CreateOrderItems(ctx context.Context, req model.CreateOrderItem
 		}
 
 		item, err := s.repo.Tenant(ctx).CreateOrderItem(ctx, pg.CreateOrderItemParams{
-			ID:       uuid.New(),
-			GoodID:   gID,
-			OrderID:  oID,
-			Quantity: entry.Quantity,
-			Price:    price,
-			Status:   status,
-			Comment:  entry.Comment,
+			ID:        uuid.New(),
+			GoodID:    gID,
+			OrderID:   oID,
+			Quantity:  entry.Quantity,
+			Price:     price,
+			CostPrice: good.CostPrice,
+			Status:    status,
+			Comment:   entry.Comment,
 		})
 		if err != nil {
 			return nil, fmt.Errorf("items[%d]: failed to create order item: %w", i, err)

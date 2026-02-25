@@ -5,13 +5,13 @@ SELECT
   COALESCE(SUM(oi.quantity), 0)::bigint                                    AS total_qty,
   COALESCE(AVG(oi.price), 0)::numeric                                      AS avg_sell_price,
   COALESCE(SUM(oi.quantity::numeric * oi.price), 0)                        AS total_sell,
-  COALESCE(AVG(g.cost_price), 0)::numeric                                  AS avg_cost_price,
-  COALESCE(SUM(oi.quantity::numeric * g.cost_price), 0)                    AS total_cost,
-  COALESCE(AVG(oi.price - g.cost_price), 0)::numeric                      AS avg_markup,
-  COALESCE(SUM(oi.quantity::numeric * (oi.price - g.cost_price)), 0)       AS total_markup,
+  COALESCE(AVG(oi.cost_price), 0)::numeric                                 AS avg_cost_price,
+  COALESCE(SUM(oi.quantity::numeric * oi.cost_price), 0)                   AS total_cost,
+  COALESCE(AVG(oi.price - oi.cost_price), 0)::numeric                     AS avg_markup,
+  COALESCE(SUM(oi.quantity::numeric * (oi.price - oi.cost_price)), 0)      AS total_markup,
   CASE
-    WHEN COALESCE(AVG(g.cost_price), 0) = 0 THEN 0
-    ELSE (AVG(oi.price - g.cost_price) / AVG(g.cost_price)) * 100
+    WHEN COALESCE(AVG(oi.cost_price), 0) = 0 THEN 0
+    ELSE (AVG(oi.price - oi.cost_price) / AVG(oi.cost_price)) * 100
   END::numeric                                                             AS avg_markup_pct
 FROM order_items oi
 JOIN orders o     ON o.id      = oi.order_id AND o.deleted_at = 0 AND o.bill_status = 'paid'
@@ -36,12 +36,12 @@ OFFSET $10;
 SELECT
   COALESCE(SUM(oi.quantity), 0)::bigint                                          AS total_qty,
   COALESCE(SUM(oi.quantity::numeric * oi.price), 0)                              AS total_sell,
-  COALESCE(SUM(oi.quantity::numeric * g.cost_price), 0)                          AS total_cost,
-  COALESCE(SUM(oi.quantity::numeric * (oi.price - g.cost_price)), 0)             AS total_markup,
+  COALESCE(SUM(oi.quantity::numeric * oi.cost_price), 0)                         AS total_cost,
+  COALESCE(SUM(oi.quantity::numeric * (oi.price - oi.cost_price)), 0)            AS total_markup,
   CASE
-    WHEN COALESCE(SUM(oi.quantity::numeric * g.cost_price), 0) = 0 THEN 0
-    ELSE SUM(oi.quantity::numeric * (oi.price - g.cost_price))
-       / SUM(oi.quantity::numeric * g.cost_price) * 100
+    WHEN COALESCE(SUM(oi.quantity::numeric * oi.cost_price), 0) = 0 THEN 0
+    ELSE SUM(oi.quantity::numeric * (oi.price - oi.cost_price))
+       / SUM(oi.quantity::numeric * oi.cost_price) * 100
   END::numeric                                                                   AS avg_markup_pct,
   COUNT(DISTINCT g.id)::bigint                                                   AS total_count
 FROM order_items oi

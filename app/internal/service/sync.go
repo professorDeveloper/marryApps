@@ -505,7 +505,8 @@ func (s *SyncS) createOrderItemFromPayload(ctx context.Context, id uuid.UUID, pa
 	if err != nil {
 		return fmt.Errorf("good_id: %w", err)
 	}
-	if _, err := s.repo.Tenant(ctx).GetGoodByID(ctx, goodID); err != nil {
+	good, err := s.repo.Tenant(ctx).GetGoodByID(ctx, goodID)
+	if err != nil {
 		return fmt.Errorf("good not found: %w", err)
 	}
 
@@ -529,13 +530,14 @@ func (s *SyncS) createOrderItemFromPayload(ctx context.Context, id uuid.UUID, pa
 	}
 
 	if _, err := s.repo.Tenant(ctx).CreateOrderItem(ctx, pg.CreateOrderItemParams{
-		ID:       id,
-		GoodID:   goodID,
-		OrderID:  orderID,
-		Quantity: quantity,
-		Price:    price,
-		Status:   status,
-		Comment:  comment,
+		ID:        id,
+		GoodID:    goodID,
+		OrderID:   orderID,
+		Quantity:  quantity,
+		Price:     price,
+		CostPrice: good.CostPrice,
+		Status:    status,
+		Comment:   comment,
 	}); err != nil {
 		return fmt.Errorf("failed to create order item: %w", err)
 	}
