@@ -61,11 +61,16 @@ export function DeductionsListView() {
             setGroups(finalGroups);
             setStorages(finalStorages);
 
+            const storageIdSet = new Set(finalStorages.map((s) => s.id));
+
             // Then load deductions
             const deductionsData = await getDeductions();
 
+            // Scope deductions to current branch storages to prevent cross-branch ID leakage
+            const scopedDeductions = deductionsData.filter((d) => storageIdSet.has(d.storage_id));
+
             // Enrich deductions with storage_name and group_name if not present
-            const enrichedDeductions = deductionsData.map(d => {
+            const enrichedDeductions = scopedDeductions.map(d => {
                 const storage = finalStorages.find(s => s.id === d.storage_id);
                 const group = finalGroups.find(g => g.id === d.act_group_id);
 
@@ -100,7 +105,7 @@ export function DeductionsListView() {
         }
         // Fallback: search in groups array
         const group = groups.find((g) => g.id === row.act_group_id);
-        return group?.name || `[Group: ${row.act_group_id}]`;
+        return group?.name || '-';
     };
 
     // Get storage name by ID
@@ -111,7 +116,7 @@ export function DeductionsListView() {
         }
         // Fallback: search in storages array
         const storage = storages.find((s) => s.id === row.storage_id);
-        return storage?.name || `[Storage: ${row.storage_id}]`;
+        return storage?.name || '-';
     };
 
     // Handle delete deduction
