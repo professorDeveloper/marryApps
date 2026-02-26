@@ -235,6 +235,49 @@ func (ns NullOrderStatus) Value() (driver.Value, error) {
 	return string(ns.OrderStatus), nil
 }
 
+type OutgoingInvoiceStatus string
+
+const (
+	OutgoingInvoiceStatusDraft     OutgoingInvoiceStatus = "draft"
+	OutgoingInvoiceStatusActive    OutgoingInvoiceStatus = "active"
+	OutgoingInvoiceStatusCancelled OutgoingInvoiceStatus = "cancelled"
+)
+
+func (e *OutgoingInvoiceStatus) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = OutgoingInvoiceStatus(s)
+	case string:
+		*e = OutgoingInvoiceStatus(s)
+	default:
+		return fmt.Errorf("unsupported scan type for OutgoingInvoiceStatus: %T", src)
+	}
+	return nil
+}
+
+type NullOutgoingInvoiceStatus struct {
+	OutgoingInvoiceStatus OutgoingInvoiceStatus `json:"outgoing_invoice_status"`
+	Valid                 bool                  `json:"valid"` // Valid is true if OutgoingInvoiceStatus is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullOutgoingInvoiceStatus) Scan(value interface{}) error {
+	if value == nil {
+		ns.OutgoingInvoiceStatus, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.OutgoingInvoiceStatus.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullOutgoingInvoiceStatus) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.OutgoingInvoiceStatus), nil
+}
+
 type PaymentType string
 
 const (
@@ -275,6 +318,49 @@ func (ns NullPaymentType) Value() (driver.Value, error) {
 		return nil, nil
 	}
 	return string(ns.PaymentType), nil
+}
+
+type SeparationActStatus string
+
+const (
+	SeparationActStatusDraft     SeparationActStatus = "draft"
+	SeparationActStatusActive    SeparationActStatus = "active"
+	SeparationActStatusCancelled SeparationActStatus = "cancelled"
+)
+
+func (e *SeparationActStatus) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = SeparationActStatus(s)
+	case string:
+		*e = SeparationActStatus(s)
+	default:
+		return fmt.Errorf("unsupported scan type for SeparationActStatus: %T", src)
+	}
+	return nil
+}
+
+type NullSeparationActStatus struct {
+	SeparationActStatus SeparationActStatus `json:"separation_act_status"`
+	Valid               bool                `json:"valid"` // Valid is true if SeparationActStatus is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullSeparationActStatus) Scan(value interface{}) error {
+	if value == nil {
+		ns.SeparationActStatus, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.SeparationActStatus.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullSeparationActStatus) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.SeparationActStatus), nil
 }
 
 type ShipmentStatus string
@@ -858,6 +944,35 @@ type OrderItem struct {
 	CostPrice pgtype.Numeric       `json:"cost_price"`
 }
 
+type OutgoingInvoice struct {
+	ID          uuid.UUID             `json:"id"`
+	Number      int32                 `json:"number"`
+	Date        pgtype.Timestamp      `json:"date"`
+	StorageID   pgtype.UUID           `json:"storage_id"`
+	GroupID     pgtype.UUID           `json:"group_id"`
+	BranchID    pgtype.UUID           `json:"branch_id"`
+	Description *string               `json:"description"`
+	Status      OutgoingInvoiceStatus `json:"status"`
+	TotalAmount pgtype.Numeric        `json:"total_amount"`
+	CreatedAt   pgtype.Timestamptz    `json:"created_at"`
+	UpdatedAt   pgtype.Timestamptz    `json:"updated_at"`
+	DeletedAt   *int64                `json:"deleted_at"`
+}
+
+type OutgoingInvoiceItem struct {
+	ID                uuid.UUID          `json:"id"`
+	OutgoingInvoiceID uuid.UUID          `json:"outgoing_invoice_id"`
+	IngredientID      uuid.UUID          `json:"ingredient_id"`
+	Quantity          pgtype.Numeric     `json:"quantity"`
+	PricePerUnit      pgtype.Numeric     `json:"price_per_unit"`
+	TotalAmount       pgtype.Numeric     `json:"total_amount"`
+	StockBefore       pgtype.Numeric     `json:"stock_before"`
+	StockAfter        pgtype.Numeric     `json:"stock_after"`
+	CreatedAt         pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt         pgtype.Timestamptz `json:"updated_at"`
+	DeletedAt         *int64             `json:"deleted_at"`
+}
+
 type PriceForPlan struct {
 	ID        uuid.UUID          `json:"id"`
 	Name      string             `json:"name"`
@@ -876,6 +991,40 @@ type QrSession struct {
 	CreatedAt pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
 	DeletedAt *int64             `json:"deleted_at"`
+}
+
+type SeparationAct struct {
+	ID                 uuid.UUID           `json:"id"`
+	Number             int32               `json:"number"`
+	Date               pgtype.Timestamp    `json:"date"`
+	StorageID          pgtype.UUID         `json:"storage_id"`
+	SourceIngredientID uuid.UUID           `json:"source_ingredient_id"`
+	SourceQuantity     pgtype.Numeric      `json:"source_quantity"`
+	SourceStockBefore  pgtype.Numeric      `json:"source_stock_before"`
+	SourceStockAfter   pgtype.Numeric      `json:"source_stock_after"`
+	GroupID            pgtype.UUID         `json:"group_id"`
+	BranchID           pgtype.UUID         `json:"branch_id"`
+	Description        *string             `json:"description"`
+	Status             SeparationActStatus `json:"status"`
+	TotalAmount        pgtype.Numeric      `json:"total_amount"`
+	CreatedAt          pgtype.Timestamptz  `json:"created_at"`
+	UpdatedAt          pgtype.Timestamptz  `json:"updated_at"`
+	DeletedAt          *int64              `json:"deleted_at"`
+}
+
+type SeparationActItem struct {
+	ID              uuid.UUID          `json:"id"`
+	SeparationActID uuid.UUID          `json:"separation_act_id"`
+	IngredientID    uuid.UUID          `json:"ingredient_id"`
+	StorageID       pgtype.UUID        `json:"storage_id"`
+	Quantity        pgtype.Numeric     `json:"quantity"`
+	PricePerUnit    pgtype.Numeric     `json:"price_per_unit"`
+	TotalAmount     pgtype.Numeric     `json:"total_amount"`
+	StockBefore     pgtype.Numeric     `json:"stock_before"`
+	StockAfter      pgtype.Numeric     `json:"stock_after"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
+	DeletedAt       *int64             `json:"deleted_at"`
 }
 
 type Shift struct {

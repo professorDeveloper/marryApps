@@ -474,7 +474,9 @@ type I interface {
 	GroupTransaction() GroupTransactionI
 	Transaction() TransactionI
 	Shipment() ShipmentI
+	OutgoingInvoice() OutgoingInvoiceI
 	Report() ReportI
+	SeparationAct() SeparationActI
 }
 
 type Service struct {
@@ -505,7 +507,9 @@ type Service struct {
 	groupTransaction GroupTransactionI
 	transaction      TransactionI
 	shipment         ShipmentI
+	outgoingInvoice  OutgoingInvoiceI
 	report           ReportI
+	separationAct    SeparationActI
 }
 
 func New(cfg *config.Config, repo *repository.Repository, clickClient *paymentClick.Client, paymeClient *paymentPayme.Client, minioClient *minio.Minio) *Service {
@@ -537,7 +541,9 @@ func New(cfg *config.Config, repo *repository.Repository, clickClient *paymentCl
 		groupTransaction: NewGroupTransactionS(repo),
 		transaction:      NewTransactionS(repo),
 		shipment:         NewShipmentS(repo),
+		outgoingInvoice:  NewOutgoingInvoiceS(repo),
 		report:           NewReportS(repo),
+		separationAct:    NewSeparationActS(repo),
 	}
 }
 
@@ -648,6 +654,14 @@ func (s *Service) Shipment() ShipmentI {
 	return s.shipment
 }
 
+func (s *Service) OutgoingInvoice() OutgoingInvoiceI {
+	return s.outgoingInvoice
+}
+
 func (s *Service) Report() ReportI {
 	return s.report
+}
+
+func (s *Service) SeparationAct() SeparationActI {
+	return s.separationAct
 }
