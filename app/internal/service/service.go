@@ -474,6 +474,7 @@ type I interface {
 	GroupTransaction() GroupTransactionI
 	Transaction() TransactionI
 	Shipment() ShipmentI
+	OutgoingInvoice() OutgoingInvoiceI
 	Report() ReportI
 }
 
@@ -505,6 +506,7 @@ type Service struct {
 	groupTransaction GroupTransactionI
 	transaction      TransactionI
 	shipment         ShipmentI
+	outgoingInvoice  OutgoingInvoiceI
 	report           ReportI
 }
 
@@ -537,6 +539,7 @@ func New(cfg *config.Config, repo *repository.Repository, clickClient *paymentCl
 		groupTransaction: NewGroupTransactionS(repo),
 		transaction:      NewTransactionS(repo),
 		shipment:         NewShipmentS(repo),
+		outgoingInvoice:  NewOutgoingInvoiceS(repo),
 		report:           NewReportS(repo),
 	}
 }
@@ -646,6 +649,10 @@ func (s *Service) Transaction() TransactionI {
 
 func (s *Service) Shipment() ShipmentI {
 	return s.shipment
+}
+
+func (s *Service) OutgoingInvoice() OutgoingInvoiceI {
+	return s.outgoingInvoice
 }
 
 func (s *Service) Report() ReportI {

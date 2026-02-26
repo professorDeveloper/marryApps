@@ -235,6 +235,49 @@ func (ns NullOrderStatus) Value() (driver.Value, error) {
 	return string(ns.OrderStatus), nil
 }
 
+type OutgoingInvoiceStatus string
+
+const (
+	OutgoingInvoiceStatusDraft     OutgoingInvoiceStatus = "draft"
+	OutgoingInvoiceStatusActive    OutgoingInvoiceStatus = "active"
+	OutgoingInvoiceStatusCancelled OutgoingInvoiceStatus = "cancelled"
+)
+
+func (e *OutgoingInvoiceStatus) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = OutgoingInvoiceStatus(s)
+	case string:
+		*e = OutgoingInvoiceStatus(s)
+	default:
+		return fmt.Errorf("unsupported scan type for OutgoingInvoiceStatus: %T", src)
+	}
+	return nil
+}
+
+type NullOutgoingInvoiceStatus struct {
+	OutgoingInvoiceStatus OutgoingInvoiceStatus `json:"outgoing_invoice_status"`
+	Valid                 bool                  `json:"valid"` // Valid is true if OutgoingInvoiceStatus is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullOutgoingInvoiceStatus) Scan(value interface{}) error {
+	if value == nil {
+		ns.OutgoingInvoiceStatus, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.OutgoingInvoiceStatus.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullOutgoingInvoiceStatus) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.OutgoingInvoiceStatus), nil
+}
+
 type PaymentType string
 
 const (
@@ -856,6 +899,35 @@ type OrderItem struct {
 	UpdatedAt pgtype.Timestamptz   `json:"updated_at"`
 	DeletedAt *int64               `json:"deleted_at"`
 	CostPrice pgtype.Numeric       `json:"cost_price"`
+}
+
+type OutgoingInvoice struct {
+	ID          uuid.UUID             `json:"id"`
+	Number      int32                 `json:"number"`
+	Date        pgtype.Timestamp      `json:"date"`
+	StorageID   pgtype.UUID           `json:"storage_id"`
+	GroupID     pgtype.UUID           `json:"group_id"`
+	BranchID    pgtype.UUID           `json:"branch_id"`
+	Description *string               `json:"description"`
+	Status      OutgoingInvoiceStatus `json:"status"`
+	TotalAmount pgtype.Numeric        `json:"total_amount"`
+	CreatedAt   pgtype.Timestamptz    `json:"created_at"`
+	UpdatedAt   pgtype.Timestamptz    `json:"updated_at"`
+	DeletedAt   *int64                `json:"deleted_at"`
+}
+
+type OutgoingInvoiceItem struct {
+	ID                uuid.UUID          `json:"id"`
+	OutgoingInvoiceID uuid.UUID          `json:"outgoing_invoice_id"`
+	IngredientID      uuid.UUID          `json:"ingredient_id"`
+	Quantity          pgtype.Numeric     `json:"quantity"`
+	PricePerUnit      pgtype.Numeric     `json:"price_per_unit"`
+	TotalAmount       pgtype.Numeric     `json:"total_amount"`
+	StockBefore       pgtype.Numeric     `json:"stock_before"`
+	StockAfter        pgtype.Numeric     `json:"stock_after"`
+	CreatedAt         pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt         pgtype.Timestamptz `json:"updated_at"`
+	DeletedAt         *int64             `json:"deleted_at"`
 }
 
 type PriceForPlan struct {

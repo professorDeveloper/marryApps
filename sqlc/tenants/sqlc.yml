@@ -19,6 +19,7 @@ sql:
       - "../../app/migrations/tenants/14_order_item_cost_price.up.sql"
       - "../../app/migrations/tenants/15_order_paid_amount.up.sql"
       - "../../app/migrations/tenants/16_transaction_paid_amount.up.sql"
+      - "../../app/migrations/tenants/17_outgoing_invoices.up.sql"
 
 
     gen:

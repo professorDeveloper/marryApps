@@ -632,6 +632,21 @@ func (h *Handler) Register(router *echo.Echo) {
 			shipments.DELETE("/:id/items/:item_id", h.DeleteShipmentItem, mw.CheckLanguage())
 		}
 
+		// Outgoing invoices (расходные накладные)
+		outgoingInvoices := api.Group("/outgoing-invoices", mw.CheckAuth(h.cfg), mw.TenantMiddleware(h.repo))
+		{
+			outgoingInvoices.POST("", h.CreateOutgoingInvoice, mw.CheckLanguage())
+			outgoingInvoices.POST("/batch", h.CreateOutgoingInvoiceBatch, mw.CheckLanguage())
+			outgoingInvoices.GET("", h.ListOutgoingInvoices, mw.CheckLanguage())
+			outgoingInvoices.GET("/:id", h.GetOutgoingInvoice, mw.CheckLanguage())
+			outgoingInvoices.PUT("/:id", h.UpdateOutgoingInvoice, mw.CheckLanguage())
+			outgoingInvoices.DELETE("/:id", h.DeleteOutgoingInvoice, mw.CheckLanguage())
+			outgoingInvoices.POST("/:id/confirm", h.ConfirmOutgoingInvoice, mw.CheckLanguage())
+			outgoingInvoices.POST("/:id/cancel", h.CancelOutgoingInvoice, mw.CheckLanguage())
+			outgoingInvoices.POST("/:id/items", h.UpsertOutgoingInvoiceItems, mw.CheckLanguage())
+			outgoingInvoices.DELETE("/:id/items/:item_id", h.DeleteOutgoingInvoiceItem, mw.CheckLanguage())
+		}
+
 		// Reports
 		reports := api.Group("/reports", mw.CheckAuth(h.cfg), mw.TenantMiddleware(h.repo))
 		{

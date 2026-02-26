@@ -1141,6 +1141,39 @@ definitions:
     required:
     - table_id
     type: object
+  model.CreateOutgoingInvoiceBatchRequest:
+    properties:
+      date:
+        type: string
+      description:
+        type: string
+      group_id:
+        type: string
+      items:
+        items:
+          $ref: '#/definitions/model.UpsertOutgoingInvoiceItemRequest'
+        minItems: 1
+        type: array
+      storage_id:
+        type: string
+    required:
+    - items
+    type: object
+  model.CreateOutgoingInvoiceRequest:
+    properties:
+      date:
+        example: "2026-02-26T00:00:00Z"
+        type: string
+      description:
+        example: Monthly write-off
+        type: string
+      group_id:
+        example: d1f29b75-8g6d-5536-0525-2c12deeef0e0
+        type: string
+      storage_id:
+        example: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+        type: string
+    type: object
   model.CreateShiftRequest:
     properties:
       close_time:
@@ -2367,6 +2400,86 @@ definitions:
     - OrderStatusServed
     - OrderStatusPaid
     - OrderStatusCancelled
+  model.OutgoingInvoiceItemResponse:
+    properties:
+      created_at:
+        type: string
+      id:
+        type: string
+      ingredient_id:
+        type: string
+      outgoing_invoice_id:
+        type: string
+      price_per_unit:
+        type: string
+      quantity:
+        type: string
+      stock_after:
+        type: string
+      stock_before:
+        type: string
+      total_amount:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  model.OutgoingInvoiceListResponse:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/model.OutgoingInvoiceResponse'
+        type: array
+      limit:
+        type: integer
+      offset:
+        type: integer
+      total:
+        type: integer
+      total_sum:
+        type: string
+    type: object
+  model.OutgoingInvoiceResponse:
+    properties:
+      branch_id:
+        type: string
+      created_at:
+        type: string
+      date:
+        type: string
+      description:
+        type: string
+      group_id:
+        type: string
+      id:
+        type: string
+      number:
+        type: integer
+      status:
+        $ref: '#/definitions/model.OutgoingInvoiceStatus'
+      storage_id:
+        type: string
+      total_amount:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  model.OutgoingInvoiceStatus:
+    enum:
+    - active
+    - cancelled
+    type: string
+    x-enum-varnames:
+    - OutgoingInvoiceStatusActive
+    - OutgoingInvoiceStatusCancelled
+  model.OutgoingInvoiceWithItemsResponse:
+    properties:
+      invoice:
+        $ref: '#/definitions/model.OutgoingInvoiceResponse'
+      items:
+        items:
+          $ref: '#/definitions/model.OutgoingInvoiceItemResponse'
+        type: array
+    type: object
   model.PincodeLoginRequest:
     properties:
       brand_id:
@@ -3331,6 +3444,21 @@ definitions:
     required:
     - status
     type: object
+  model.UpdateOutgoingInvoiceRequest:
+    properties:
+      date:
+        example: "2026-02-26T00:00:00Z"
+        type: string
+      description:
+        example: Monthly write-off
+        type: string
+      group_id:
+        example: d1f29b75-8g6d-5536-0525-2c12deeef0e0
+        type: string
+      storage_id:
+        example: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+        type: string
+    type: object
   model.UpdatePasswordRequest:
     properties:
       currentPassword:
@@ -3453,6 +3581,28 @@ definitions:
       items:
         items:
           $ref: '#/definitions/model.UpsertInventoryItemRequest'
+        minItems: 1
+        type: array
+    required:
+    - items
+    type: object
+  model.UpsertOutgoingInvoiceItemRequest:
+    properties:
+      ingredient_id:
+        example: b2c3d4e5-f6a7-8901-bcde-f01234567890
+        type: string
+      quantity:
+        example: "5.5"
+        type: string
+    required:
+    - ingredient_id
+    - quantity
+    type: object
+  model.UpsertOutgoingInvoiceItemsRequest:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/model.UpsertOutgoingInvoiceItemRequest'
         minItems: 1
         type: array
     required:
@@ -14826,6 +14976,387 @@ paths:
       summary: Get orders by waiter
       tags:
       - Orders
+  /api/v1/outgoing-invoices:
+    get:
+      description: List invoices filtered by storage, group, status, date range. Returns
+        total count and total sum.
+      parameters:
+      - default: uz
+        description: Language (uz, ru, en)
+        in: query
+        name: lang
+        type: string
+      - description: Filter by storage UUID
+        in: query
+        name: storage_id
+        type: string
+      - description: Filter by deduction act group UUID
+        in: query
+        name: group_id
+        type: string
+      - description: Filter by status (active/cancelled)
+        in: query
+        name: status
+        type: string
+      - description: Start date (RFC3339)
+        in: query
+        name: start_date
+        type: string
+      - description: End date (RFC3339)
+        in: query
+        name: end_date
+        type: string
+      - default: 20
+        description: Limit
+        in: query
+        name: limit
+        type: integer
+      - default: 0
+        description: Offset
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.OutgoingInvoiceListResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: List outgoing invoices
+      tags:
+      - OutgoingInvoices
+    post:
+      consumes:
+      - application/json
+      description: Create a new outgoing invoice. Add items, then confirm to deduct
+        stock.
+      parameters:
+      - default: uz
+        description: Language (uz, ru, en)
+        in: query
+        name: lang
+        type: string
+      - description: Create outgoing invoice
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.CreateOutgoingInvoiceRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/model.OutgoingInvoiceResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create outgoing invoice
+      tags:
+      - OutgoingInvoices
+  /api/v1/outgoing-invoices/{id}:
+    delete:
+      description: Soft-deletes an invoice. Only active invoices can be deleted.
+      parameters:
+      - default: uz
+        description: Language (uz, ru, en)
+        in: query
+        name: lang
+        type: string
+      - description: Invoice ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.SuccessResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete outgoing invoice
+      tags:
+      - OutgoingInvoices
+    get:
+      description: Returns invoice header + all items with stock_before/stock_after
+      parameters:
+      - default: uz
+        description: Language (uz, ru, en)
+        in: query
+        name: lang
+        type: string
+      - description: Invoice ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.OutgoingInvoiceWithItemsResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get outgoing invoice by ID
+      tags:
+      - OutgoingInvoices
+    put:
+      consumes:
+      - application/json
+      description: Update storage, group, date, description. Only works on active
+        invoices.
+      parameters:
+      - default: uz
+        description: Language (uz, ru, en)
+        in: query
+        name: lang
+        type: string
+      - description: Invoice ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Update invoice
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.UpdateOutgoingInvoiceRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.OutgoingInvoiceResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update outgoing invoice
+      tags:
+      - OutgoingInvoices
+  /api/v1/outgoing-invoices/{id}/cancel:
+    post:
+      description: Cancels an invoice (no stock change)
+      parameters:
+      - default: uz
+        description: Language (uz, ru, en)
+        in: query
+        name: lang
+        type: string
+      - description: Invoice ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.OutgoingInvoiceResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Cancel outgoing invoice
+      tags:
+      - OutgoingInvoices
+  /api/v1/outgoing-invoices/{id}/confirm:
+    post:
+      description: Confirms invoice. Deducts each item's quantity from ingredient_stock
+        and saves stock snapshots.
+      parameters:
+      - default: uz
+        description: Language (uz, ru, en)
+        in: query
+        name: lang
+        type: string
+      - description: Invoice ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.OutgoingInvoiceResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Confirm outgoing invoice
+      tags:
+      - OutgoingInvoices
+  /api/v1/outgoing-invoices/{id}/items:
+    post:
+      consumes:
+      - application/json
+      description: Add/update multiple ingredient items. Returns items with live stock
+        preview.
+      parameters:
+      - default: uz
+        description: Language (uz, ru, en)
+        in: query
+        name: lang
+        type: string
+      - description: Invoice ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Items to upsert
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.UpsertOutgoingInvoiceItemsRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/model.OutgoingInvoiceItemResponse'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Upsert outgoing invoice items
+      tags:
+      - OutgoingInvoices
+  /api/v1/outgoing-invoices/{id}/items/{item_id}:
+    delete:
+      description: Remove an ingredient item from an active invoice
+      parameters:
+      - default: uz
+        description: Language (uz, ru, en)
+        in: query
+        name: lang
+        type: string
+      - description: Invoice ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Item ID
+        in: path
+        name: item_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.SuccessResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete outgoing invoice item
+      tags:
+      - OutgoingInvoices
+  /api/v1/outgoing-invoices/batch:
+    post:
+      consumes:
+      - application/json
+      description: Creates invoice header and upserts all items in one request. Returns
+        full invoice with stock preview.
+      parameters:
+      - default: uz
+        description: Language (uz, ru, en)
+        in: query
+        name: lang
+        type: string
+      - description: Batch create
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.CreateOutgoingInvoiceBatchRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/model.OutgoingInvoiceWithItemsResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create outgoing invoice with items (batch)
+      tags:
+      - OutgoingInvoices
   /api/v1/payments/create:
     post:
       consumes:
