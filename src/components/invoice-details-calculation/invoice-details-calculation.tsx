@@ -534,10 +534,11 @@ export function InvoiceDetailsCalculation({ invoiceId, invoiceData, onSuccess, o
             <Tabs
                 value={currentTab}
                 onChange={(e, newValue) => setCurrentTab(newValue)}
+                variant="fullWidth"
                 sx={{
-                    // borderBottom: 1,
                     borderColor: 'divider',
                     px: 3,
+                    width: '100%',
                 }}
             >
                 <Tab
@@ -555,10 +556,6 @@ export function InvoiceDetailsCalculation({ invoiceId, invoiceData, onSuccess, o
             {/* Tab 1: Batch Operations */}
             {currentTab === 0 && (
                 <Box sx={{ p: 3, minHeight: '100vh' }}>
-                    {/* Info Alert */}
-                    {/* <Alert severity="info" sx={{ mb: 3 }}>
-                {t('warehouse.invoiceDetails.batchInfo')}
-            </Alert> */}
 
                     {/* Main Grid: Left | Middle | Right */}
                     <Box

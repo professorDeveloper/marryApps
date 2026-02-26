@@ -238,7 +238,7 @@ export function ShipmentsDetailsCalculation({
 
   return (
     <Box>
-      <Tabs
+      {/* <Tabs
         value={activeTab}
         onChange={(_, next) => setActiveTab(next)}
         variant="fullWidth"
@@ -246,7 +246,7 @@ export function ShipmentsDetailsCalculation({
       >
         <Tab label={t('mealsProducts.calculate', 'Calculation')} />
         <Tab label={t('warehouse.ingredients.add', 'Add ingredient')} />
-      </Tabs>
+      </Tabs> */}
 
       {activeTab === 0 && (
         <Box>
