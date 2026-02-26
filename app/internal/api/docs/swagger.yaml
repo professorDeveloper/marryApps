@@ -1174,6 +1174,58 @@ definitions:
         example: a1b2c3d4-e5f6-7890-abcd-ef1234567890
         type: string
     type: object
+  model.CreateSeparationActBatchRequest:
+    properties:
+      date:
+        example: "2024-01-01T00:00:00Z"
+        type: string
+      description:
+        example: Description
+        type: string
+      group_id:
+        example: uuid
+        type: string
+      items:
+        items:
+          $ref: '#/definitions/model.UpsertSeparationActItemRequest'
+        type: array
+      source_ingredient_id:
+        example: uuid
+        type: string
+      source_quantity:
+        example: "2"
+        type: string
+      storage_id:
+        example: uuid
+        type: string
+    required:
+    - source_ingredient_id
+    - source_quantity
+    type: object
+  model.CreateSeparationActRequest:
+    properties:
+      date:
+        example: "2024-01-01T00:00:00Z"
+        type: string
+      description:
+        example: Description
+        type: string
+      group_id:
+        example: uuid
+        type: string
+      source_ingredient_id:
+        example: uuid
+        type: string
+      source_quantity:
+        example: "2"
+        type: string
+      storage_id:
+        example: uuid
+        type: string
+    required:
+    - source_ingredient_id
+    - source_quantity
+    type: object
   model.CreateShiftRequest:
     properties:
       close_time:
@@ -2568,6 +2620,102 @@ definitions:
     required:
     - quantity
     type: object
+  model.SeparationActItemResponse:
+    properties:
+      created_at:
+        type: string
+      id:
+        type: string
+      ingredient_id:
+        type: string
+      price_per_unit:
+        type: string
+      quantity:
+        type: string
+      separation_act_id:
+        type: string
+      stock_after:
+        type: string
+      stock_before:
+        type: string
+      storage_id:
+        type: string
+      total_amount:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  model.SeparationActListResponse:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/model.SeparationActResponse'
+        type: array
+      limit:
+        type: integer
+      offset:
+        type: integer
+      total:
+        type: integer
+      total_amount:
+        type: string
+      total_source_qty:
+        type: string
+    type: object
+  model.SeparationActResponse:
+    properties:
+      branch_id:
+        type: string
+      created_at:
+        type: string
+      date:
+        type: string
+      description:
+        type: string
+      group_id:
+        type: string
+      id:
+        type: string
+      number:
+        type: integer
+      source_ingredient_id:
+        type: string
+      source_quantity:
+        type: string
+      source_stock_after:
+        type: string
+      source_stock_before:
+        type: string
+      status:
+        $ref: '#/definitions/model.SeparationActStatus'
+      storage_id:
+        type: string
+      total_amount:
+        type: string
+      updated_at:
+        type: string
+      waste_quantity:
+        type: string
+    type: object
+  model.SeparationActStatus:
+    enum:
+    - draft
+    - active
+    - cancelled
+    type: string
+    x-enum-varnames:
+    - SeparationActStatusDraft
+    - SeparationActStatusActive
+    - SeparationActStatusCancelled
+  model.SeparationActWithItemsResponse:
+    properties:
+      act:
+        $ref: '#/definitions/model.SeparationActResponse'
+      items:
+        items:
+          $ref: '#/definitions/model.SeparationActItemResponse'
+        type: array
+    type: object
   model.ShiftResponse:
     properties:
       branch_id:
@@ -3468,6 +3616,21 @@ definitions:
         example: newPassword123
         type: string
     type: object
+  model.UpdateSeparationActRequest:
+    properties:
+      date:
+        example: "2024-01-01T00:00:00Z"
+        type: string
+      description:
+        example: Description
+        type: string
+      group_id:
+        example: uuid
+        type: string
+      storage_id:
+        example: uuid
+        type: string
+    type: object
   model.UpdateShiftRequest:
     properties:
       close_time:
@@ -3604,6 +3767,33 @@ definitions:
         items:
           $ref: '#/definitions/model.UpsertOutgoingInvoiceItemRequest'
         minItems: 1
+        type: array
+    required:
+    - items
+    type: object
+  model.UpsertSeparationActItemRequest:
+    properties:
+      ingredient_id:
+        example: uuid
+        type: string
+      price:
+        example: "10000"
+        type: string
+      quantity:
+        example: "12"
+        type: string
+      storage_id:
+        example: uuid
+        type: string
+    required:
+    - ingredient_id
+    - quantity
+    type: object
+  model.UpsertSeparationActItemsRequest:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/model.UpsertSeparationActItemRequest'
         type: array
     required:
     - items
@@ -15467,6 +15657,391 @@ paths:
       summary: Goods sales report
       tags:
       - reports
+  /api/v1/separation-acts:
+    get:
+      description: List acts filtered by storage, group, ingredient, status, date
+        range. Returns total count and sums.
+      parameters:
+      - default: uz
+        description: Language (uz, ru, en)
+        in: query
+        name: lang
+        type: string
+      - description: Filter by storage UUID
+        in: query
+        name: storage_id
+        type: string
+      - description: Filter by group UUID
+        in: query
+        name: group_id
+        type: string
+      - description: Filter by source ingredient UUID
+        in: query
+        name: ingredient_id
+        type: string
+      - description: Filter by status (draft/active/cancelled)
+        in: query
+        name: status
+        type: string
+      - description: Start date (RFC3339)
+        in: query
+        name: start_date
+        type: string
+      - description: End date (RFC3339)
+        in: query
+        name: end_date
+        type: string
+      - default: 20
+        description: Limit
+        in: query
+        name: limit
+        type: integer
+      - default: 0
+        description: Offset
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.SeparationActListResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: List separation acts
+      tags:
+      - SeparationActs
+    post:
+      consumes:
+      - application/json
+      description: Create a new separation act in draft status. Add items, then confirm
+        to apply stock changes.
+      parameters:
+      - default: uz
+        description: Language (uz, ru, en)
+        in: query
+        name: lang
+        type: string
+      - description: Create separation act
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.CreateSeparationActRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/model.SeparationActResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create separation act
+      tags:
+      - SeparationActs
+  /api/v1/separation-acts/{id}:
+    delete:
+      description: Soft-deletes a separation act. If confirmed (active), reverses
+        all stock changes first.
+      parameters:
+      - default: uz
+        description: Language (uz, ru, en)
+        in: query
+        name: lang
+        type: string
+      - description: Separation Act ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.SuccessResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete separation act
+      tags:
+      - SeparationActs
+    get:
+      description: Returns act header + all items with stock_before/stock_after
+      parameters:
+      - default: uz
+        description: Language (uz, ru, en)
+        in: query
+        name: lang
+        type: string
+      - description: Separation Act ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.SeparationActWithItemsResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get separation act by ID
+      tags:
+      - SeparationActs
+    put:
+      consumes:
+      - application/json
+      description: Update storage, group, date, description. Only works on draft acts.
+      parameters:
+      - default: uz
+        description: Language (uz, ru, en)
+        in: query
+        name: lang
+        type: string
+      - description: Separation Act ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Update act
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.UpdateSeparationActRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.SeparationActResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update separation act
+      tags:
+      - SeparationActs
+  /api/v1/separation-acts/{id}/cancel:
+    post:
+      description: Cancels a draft act (no stock change)
+      parameters:
+      - default: uz
+        description: Language (uz, ru, en)
+        in: query
+        name: lang
+        type: string
+      - description: Separation Act ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.SeparationActResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Cancel separation act
+      tags:
+      - SeparationActs
+  /api/v1/separation-acts/{id}/confirm:
+    post:
+      description: 'Confirms act: removes source ingredient qty from source storage,
+        adds output items to their storages, saves stock snapshots.'
+      parameters:
+      - default: uz
+        description: Language (uz, ru, en)
+        in: query
+        name: lang
+        type: string
+      - description: Separation Act ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.SeparationActResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Confirm separation act
+      tags:
+      - SeparationActs
+  /api/v1/separation-acts/{id}/items:
+    post:
+      consumes:
+      - application/json
+      description: Add/update multiple output ingredient items. Returns items with
+        live stock preview.
+      parameters:
+      - default: uz
+        description: Language (uz, ru, en)
+        in: query
+        name: lang
+        type: string
+      - description: Separation Act ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Items to upsert
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.UpsertSeparationActItemsRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/model.SeparationActItemResponse'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Upsert separation act items
+      tags:
+      - SeparationActs
+  /api/v1/separation-acts/{id}/items/{item_id}:
+    delete:
+      description: Remove an output ingredient item from a draft act
+      parameters:
+      - default: uz
+        description: Language (uz, ru, en)
+        in: query
+        name: lang
+        type: string
+      - description: Separation Act ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Item ID
+        in: path
+        name: item_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.SuccessResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete separation act item
+      tags:
+      - SeparationActs
+  /api/v1/separation-acts/batch:
+    post:
+      consumes:
+      - application/json
+      description: Creates act header and upserts all output items in one request.
+        Returns full act with stock preview.
+      parameters:
+      - default: uz
+        description: Language (uz, ru, en)
+        in: query
+        name: lang
+        type: string
+      - description: Batch create
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.CreateSeparationActBatchRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/model.SeparationActWithItemsResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create separation act with items (batch)
+      tags:
+      - SeparationActs
   /api/v1/shifts:
     get:
       consumes:
