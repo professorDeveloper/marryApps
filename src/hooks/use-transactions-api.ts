@@ -3,6 +3,7 @@ import type {
   ICurrentUser,
   ITransaction,
   IBranchOption,
+  IUserOption,
   TransferPayload,
   ITransactionGroup,
   TransactionFilters,
@@ -200,6 +201,17 @@ export function useTransactionsAPI() {
     }
   }, []);
 
+  const getStaffUsers = useCallback(async (): Promise<IUserOption[]> => {
+    try {
+      const response = await fetcher<BackendResponse<IUserOption[]> | IUserOption[]>(endpoints.users.staff);
+      if (Array.isArray(response)) return response;
+      return response.data || [];
+    } catch (error) {
+      toast.error(getErrorMessage(error, 'Failed to fetch staff users'));
+      return [];
+    }
+  }, []);
+
   return {
     getTransactionsReport,
     getTransactions,
@@ -213,5 +225,6 @@ export function useTransactionsAPI() {
     getCashRegistersByBranch,
     getCurrentUser,
     getBranches,
+    getStaffUsers,
   };
 }

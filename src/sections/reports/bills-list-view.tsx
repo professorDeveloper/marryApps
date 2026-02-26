@@ -438,22 +438,10 @@ export function BillsListView() {
         }));
     }, []);
 
-    const handleApplyDateRange = useCallback(() => {
-        const newFilters: Record<string, string> = {};
-        if (startDate) {
-            newFilters.start = toUtcDayBoundary(startDate);
-        }
-        if (endDate) {
-            newFilters.end = toUtcDayBoundary(endDate, true);
-        }
-        handleFilterChange(newFilters);
-    }, [startDate, endDate, handleFilterChange]);
-
     const handleResetFilters = useCallback(() => {
-        // Don't reset dates - keep them as is
         setFilters({
-            start: '',
-            end: '',
+            start: startDate ? toUtcDayBoundary(startDate) : '',
+            end: endDate ? toUtcDayBoundary(endDate, true) : '',
             bill_status: '',
             payment_type: '',
             waiter_id: '',
@@ -462,7 +450,7 @@ export function BillsListView() {
             limit: 20,
             offset: 0,
         });
-    }, []);
+    }, [startDate, endDate]);
 
     const handleStatusChange = useCallback(
         (status: string) => {
@@ -491,6 +479,15 @@ export function BillsListView() {
         },
         [handleFilterChange]
     );
+
+    useEffect(() => {
+        setFilters((prev) => ({
+            ...prev,
+            start: startDate ? toUtcDayBoundary(startDate) : '',
+            end: endDate ? toUtcDayBoundary(endDate, true) : '',
+            offset: 0,
+        }));
+    }, [startDate, endDate]);
 
     const renderFiltersContent = () => (
         <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: 'repeat(4, 1fr)', lg: 'repeat(7, 1fr)' }, gap: 1.5 }}>
@@ -604,19 +601,6 @@ export function BillsListView() {
 
             {/* Action Buttons */}
             <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                <Button
-                    variant="contained"
-                    size="medium"
-                    startIcon={<Iconify icon="solar:check-circle-bold" />}
-                    onClick={handleApplyDateRange}
-                    sx={{
-                        minWidth: 'auto',
-                        flex: 1,
-                        borderColor: '#1890FF',
-                    }}
-                >
-                    {t('bills.apply') || 'Apply'}
-                </Button>
                 <Button
                     variant="outlined"
                     size="medium"

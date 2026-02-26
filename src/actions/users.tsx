@@ -26,24 +26,37 @@ interface BackendResponse<T> {
 /**
  * Get users by role
  */
-export function useGetUsersByRole(role: string) {
-    const url = role ? endpoints.users.byRole(role) : '';
+export function useGetUsersByRole(role: string, useStaffApi = false) {
+    const url = useStaffApi ? endpoints.users.staff : (role ? endpoints.users.byRole(role) : '');
 
-    const { data, isLoading, error, isValidating } = useSWR<BackendResponse<IUser[]>>(
+    const { data, isLoading, error, isValidating } = useSWR<BackendResponse<IUser[]> | IUser[]>(
         url,
         fetcher,
         { ...swrOptions }
     );
 
+    const users = useMemo(() => {
+        const rawUsers = Array.isArray(data) ? data : (data?.data || []);
+
+        return rawUsers.map((user: any) => ({
+            ...user,
+            status:
+                user.status ??
+                (typeof user.is_active === 'boolean'
+                    ? (user.is_active ? 'active' : 'inactive')
+                    : undefined),
+        }));
+    }, [data]);
+
     const memoizedValue = useMemo(
         () => ({
-            users: data?.data || [],
+            users,
             usersLoading: isLoading,
             usersError: error,
             usersValidating: isValidating,
-            usersEmpty: !isLoading && !isValidating && !data?.data?.length,
+            usersEmpty: !isLoading && !isValidating && !users.length,
         }),
-        [data, error, isLoading, isValidating]
+        [error, isLoading, isValidating, users]
     );
 
     return memoizedValue;
@@ -160,6 +173,7 @@ export function useDeleteUser() {
                 const roleUrl = endpoints.users.byRole(role);
                 mutate(roleUrl, undefined, { revalidate: true });
             });
+            mutate(endpoints.users.staff, undefined, { revalidate: true });
         },
         []
     );

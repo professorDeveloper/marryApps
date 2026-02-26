@@ -15,6 +15,8 @@ export interface ITransaction {
   date: string;
   user_id?: string;
   branch_id?: string;
+  customer_paid_amount?: string;
+  change_amount?: string;
   created_at: string;
   updated_at: string;
 }
@@ -97,6 +99,12 @@ export interface ICashRegisterOption {
 export interface IBranchOption {
   id: string;
   name: string;
+}
+
+export interface IUserOption {
+  id: string;
+  full_name: string;
+  username?: string;
 }
 
 export interface ICurrentUser {

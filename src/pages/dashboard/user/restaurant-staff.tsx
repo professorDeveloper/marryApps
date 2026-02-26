@@ -8,6 +8,7 @@ export function RestaurantStaffPage() {
     return (
         <EmployeeListView
             role="user"
+            useStaffApi
             title={t('overview.employe.staff')}
         />
     );

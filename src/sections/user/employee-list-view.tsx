@@ -124,15 +124,16 @@ function UserSpecifications({ user, t }: { user: IUser; t: any }) {
 interface EmployeeListViewProps {
     role: string;
     title: string;
+    useStaffApi?: boolean;
 }
 
-export function EmployeeListView({ role, title }: EmployeeListViewProps) {
+export function EmployeeListView({ role, title, useStaffApi = false }: EmployeeListViewProps) {
     console.log('EmployeeListView rendered for role:', role);
     const theme = useTheme();
     const { t } = useTranslation('menu');
 
     // API hooks
-    const { users: employees, usersLoading } = useGetUsersByRole(role);
+    const { users: employees, usersLoading } = useGetUsersByRole(role, useStaffApi);
     const deleteUser = useDeleteUser();
 
     // State

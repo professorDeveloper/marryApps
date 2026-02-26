@@ -165,7 +165,8 @@ export function ShipmentsListView() {
     loadShipments();
   }, [loadShipments]);
 
-  const handleApplyFilters = useCallback(() => {
+  // Auto-apply filters when draftFilters changes
+  useEffect(() => {
     setFilters((prev) => ({
       ...prev,
       ...draftFilters,
@@ -173,9 +174,12 @@ export function ShipmentsListView() {
     }));
   }, [draftFilters]);
 
+  const handleApplyFilters = useCallback(() => {
+    // This function is now handled automatically by the useEffect above
+  }, []);
+
   const handleResetFilters = useCallback(() => {
     setDraftFilters(initialFilters);
-    setFilters(initialFilters);
   }, []);
 
   const columns = useMemo<GridColDef[]>(
@@ -379,15 +383,6 @@ export function ShipmentsListView() {
               <option value="cancelled">{t('deductions.canceled', 'Canceled')}</option>
             </TextField>
             <Box sx={{ display: 'flex', gap: 1 }}>
-              <Button
-                variant="contained"
-                size="small"
-                startIcon={<Iconify icon="solar:check-circle-bold" />}
-                onClick={handleApplyFilters}
-                sx={{ flex: 1 }}
-              >
-                {t('ingredientReports.apply', 'Apply')}
-              </Button>
               <Button
                 variant="outlined"
                 size="small"

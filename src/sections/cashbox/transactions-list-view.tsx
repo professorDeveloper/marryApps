@@ -31,23 +31,38 @@ import { Iconify } from 'src/components/iconify';
 import { GenericTableView } from 'src/components/generic-table-view';
 import { CustomGridActionsCellItem } from 'src/components/custom-data-grid';
 
-const INITIAL_FILTERS: TransactionFilters = {
-  date_from: '',
-  date_to: '',
-  type: '',
-  cash_register_id: '',
-  group_id: '',
+const getInitialFilters = (): TransactionFilters => {
+  const today = dayjs().format('YYYY-MM-DD');
+
+  return {
+    date_from: today,
+    date_to: today,
+    type: '',
+    cash_register_id: '',
+    group_id: '',
+  };
 };
+
+const INITIAL_FILTERS: TransactionFilters = getInitialFilters();
 
 export function TransactionsListView() {
   const { t } = useTranslation('menu');
-  const { getTransactions, deleteTransaction, getTransactionGroups, getCashRegisters } = useTransactionsAPI();
+  const {
+    getTransactions,
+    deleteTransaction,
+    getTransactionGroups,
+    getCashRegisters,
+    getBranches,
+    getStaffUsers,
+  } = useTransactionsAPI();
 
   const [loading, setLoading] = useState(true);
   const [rows, setRows] = useState<ITransaction[]>([]);
-  const [filters, setFilters] = useState<TransactionFilters>(INITIAL_FILTERS);
+  const [filters, setFilters] = useState<TransactionFilters>(getInitialFilters);
   const [groupsMap, setGroupsMap] = useState<Record<string, string>>({});
   const [cashRegisterMap, setCashRegisterMap] = useState<Record<string, string>>({});
+  const [branchesMap, setBranchesMap] = useState<Record<string, string>>({});
+  const [usersMap, setUsersMap] = useState<Record<string, string>>({});
 
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [openConfirm, setOpenConfirm] = useState(false);
@@ -56,10 +71,12 @@ export function TransactionsListView() {
     async (nextFilters: TransactionFilters = {}) => {
       setLoading(true);
       try {
-        const [transactions, groups, cashRegisters] = await Promise.all([
+        const [transactions, groups, cashRegisters, branches, users] = await Promise.all([
           getTransactions(nextFilters),
           getTransactionGroups(),
           getCashRegisters(),
+          getBranches(),
+          getStaffUsers(),
         ]);
 
         setRows(transactions);
@@ -81,16 +98,39 @@ export function TransactionsListView() {
             {} as Record<string, string>
           )
         );
+        setBranchesMap(
+          branches.reduce(
+            (acc, item) => ({
+              ...acc,
+              [item.id]: item.name || item.id,
+            }),
+            {} as Record<string, string>
+          )
+        );
+        setUsersMap(
+          users.reduce(
+            (acc, item) => ({
+              ...acc,
+              [item.id]: item.full_name || item.username || item.id,
+            }),
+            {} as Record<string, string>
+          )
+        );
       } finally {
         setLoading(false);
       }
     },
-    [getCashRegisters, getTransactionGroups, getTransactions]
+    [getBranches, getCashRegisters, getStaffUsers, getTransactionGroups, getTransactions]
   );
 
   useEffect(() => {
     loadData(INITIAL_FILTERS);
   }, [loadData]);
+
+  // Auto-apply filters when any filter changes
+  useEffect(() => {
+    loadData(filters);
+  }, [filters, loadData]);
 
   const handleDelete = useCallback(async () => {
     if (!deleteId) return;
@@ -101,14 +141,9 @@ export function TransactionsListView() {
     await loadData(filters);
   }, [deleteId, deleteTransaction, filters, loadData]);
 
-  const handleApplyFilters = useCallback(async () => {
-    await loadData(filters);
-  }, [filters, loadData]);
-
-  const handleResetFilters = useCallback(async () => {
-    setFilters(INITIAL_FILTERS);
-    await loadData(INITIAL_FILTERS);
-  }, [loadData]);
+  const handleResetFilters = useCallback(() => {
+    setFilters(getInitialFilters());
+  }, []);
 
   const columns = useMemo<GridColDef[]>(
     () => [
@@ -146,10 +181,40 @@ export function TransactionsListView() {
         renderCell: (params) =>
           groupsMap[params.row.group_transaction_id] || params.row.group_transaction_id || '-',
       },
+      // {
+      //   field: 'branch_id',
+      //   headerName: t('branches.title', 'Branch'),
+      //   flex: 1,
+      //   minWidth: 150,
+      //   renderCell: (params) => branchesMap[params.row.branch_id] || params.row.branch_id || '-',
+      // },
+      {
+        field: 'user_id',
+        headerName: t('users.fullName', 'User'),
+        flex: 1,
+        minWidth: 180,
+        renderCell: (params) => usersMap[params.row.user_id] || params.row.user_id || '-',
+      },
       {
         field: 'pay_type',
         headerName: t('common.paymentType', 'Pay type'),
         width: 120,
+      },
+      {
+        field: 'customer_paid_amount',
+        headerName: t('cashbox.customerPaid', 'Customer paid'),
+        width: 150,
+        renderCell: (params) =>
+          params.row.customer_paid_amount
+            ? Number(params.row.customer_paid_amount).toLocaleString()
+            : '-',
+      },
+      {
+        field: 'change_amount',
+        headerName: t('cashbox.changeAmount', 'Change'),
+        width: 120,
+        renderCell: (params) =>
+          params.row.change_amount ? Number(params.row.change_amount).toLocaleString() : '-',
       },
       {
         field: 'date',
@@ -191,7 +256,7 @@ export function TransactionsListView() {
         ],
       },
     ],
-    [cashRegisterMap, groupsMap, t]
+    [branchesMap, cashRegisterMap, groupsMap, t, usersMap]
   );
 
   const renderFilters = useCallback(
@@ -231,10 +296,11 @@ export function TransactionsListView() {
 
         {/* Type */}
         <FormControl fullWidth size="small">
-          <InputLabel>{t('common.type', 'Type')}</InputLabel>
+          <InputLabel shrink>{t('common.type', 'Type')}</InputLabel>
           <Select
             value={filters.type || ''}
             label={t('common.type', 'Type')}
+            displayEmpty
             onChange={(event) => setFilters((prev) => ({ ...prev, type: event.target.value as any }))}
           >
             <MenuItem value="">
@@ -248,10 +314,11 @@ export function TransactionsListView() {
 
         {/* Cash Register */}
         <FormControl fullWidth size="small">
-          <InputLabel>{t('cashbox.cashiers.title', 'Cash register')}</InputLabel>
+          <InputLabel shrink>{t('cashbox.cashiers.title', 'Cash register')}</InputLabel>
           <Select
             value={filters.cash_register_id || ''}
             label={t('cashbox.cashiers.title', 'Cash register')}
+            displayEmpty
             onChange={(event) =>
               setFilters((prev) => ({ ...prev, cash_register_id: event.target.value }))
             }
@@ -269,10 +336,11 @@ export function TransactionsListView() {
 
         {/* Group */}
         <FormControl fullWidth size="small">
-          <InputLabel>{t('deductions.group', 'Group')}</InputLabel>
+          <InputLabel shrink>{t('deductions.group', 'Group')}</InputLabel>
           <Select
             value={filters.group_id || ''}
             label={t('deductions.group', 'Group')}
+            displayEmpty
             onChange={(event) => setFilters((prev) => ({ ...prev, group_id: event.target.value }))}
           >
             <MenuItem value="">
@@ -296,18 +364,10 @@ export function TransactionsListView() {
           >
             {t('bills.reset', 'Reset')}
           </Button>
-          <Button
-            variant="contained"
-            size="small"
-            onClick={handleApplyFilters}
-            fullWidth
-          >
-            {t('bills.apply', 'Apply')}
-          </Button>
         </Box>
       </Box>
     ),
-    [cashRegisterMap, filters.cash_register_id, filters.date_from, filters.date_to, filters.group_id, filters.type, groupsMap, handleApplyFilters, handleResetFilters, t]
+    [cashRegisterMap, filters.cash_register_id, filters.date_from, filters.date_to, filters.group_id, filters.type, groupsMap, handleResetFilters, t]
   );
 
   return (

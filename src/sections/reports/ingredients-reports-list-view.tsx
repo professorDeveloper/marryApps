@@ -329,7 +329,8 @@ export function IngredientReportsListView() {
         }));
     }, []);
 
-    const handleApplyDateRange = useCallback(() => {
+    // Auto-apply filters when date range or storage changes
+    useEffect(() => {
         const newFilters: Record<string, string> = {};
         if (startDate) {
             newFilters.start = toUtcDayBoundary(startDate);
@@ -340,7 +341,9 @@ export function IngredientReportsListView() {
         if (selectedStorageId) {
             newFilters.storage_id = selectedStorageId;
         }
-        handleFilterChange(newFilters);
+        if (Object.keys(newFilters).length > 0) {
+            handleFilterChange(newFilters);
+        }
     }, [startDate, endDate, selectedStorageId, handleFilterChange]);
 
     const handleResetFilters = useCallback(() => {
@@ -352,7 +355,6 @@ export function IngredientReportsListView() {
             limit: 20,
             offset: 0,
         });
-        setSelectedStorageId('');
     }, []);
 
     const handleIngredientChange = useCallback(
@@ -451,21 +453,7 @@ export function IngredientReportsListView() {
             </TextField>
 
             {/* Action Buttons */}
-            <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                <Button
-                    variant="contained"
-                    size="small"
-                    startIcon={<Iconify icon="solar:check-circle-bold" />}
-                    onClick={handleApplyDateRange}
-                    disabled={!startDate || !endDate}
-                    sx={{
-                        minWidth: 'auto',
-                        flex: 1,
-                        borderColor: '#1890FF',
-                    }}
-                >
-                    {t('ingredientReports.apply') || 'Apply'}
-                </Button>
+            {/* <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
                 <Button
                     variant="outlined"
                     size="small"
@@ -475,7 +463,7 @@ export function IngredientReportsListView() {
                 >
                     {t('ingredientReports.reset') || 'Reset'}
                 </Button>
-            </Box>
+            </Box> */}
         </Box>
     );
 

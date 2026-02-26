@@ -155,13 +155,16 @@ export function GoodsReportsListView() {
     }));
   }, []);
 
-  const handleApplyDateRange = useCallback(() => {
+  // Auto-apply filters when date range changes
+  useEffect(() => {
     const newFilters: Record<string, string> = {};
 
     if (startDate) newFilters.start_date = toApiStartDateTime(startDate);
     if (endDate) newFilters.end_date = toApiEndDateTime(endDate);
 
-    handleFilterChange(newFilters);
+    if (Object.keys(newFilters).length > 0) {
+      handleFilterChange(newFilters);
+    }
   }, [startDate, endDate, handleFilterChange]);
 
   const handleResetFilters = useCallback(() => {
@@ -174,7 +177,7 @@ export function GoodsReportsListView() {
       hall_id: '',
       table_id: '',
       limit: 20,
-      offset: 0,
+      offset: 0,  
     }));
   }, []);
 
@@ -347,16 +350,6 @@ export function GoodsReportsListView() {
         </TextField>
 
         <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-          <Button
-            variant="contained"
-            size="small"
-            startIcon={<Iconify icon="solar:check-circle-bold" />}
-            onClick={handleApplyDateRange}
-            disabled={!startDate || !endDate}
-            sx={{ minWidth: 'auto', flex: 1 }}
-          >
-            {t('goodsReports.apply', 'Apply')}
-          </Button>
           <Button
             variant="outlined"
             size="small"

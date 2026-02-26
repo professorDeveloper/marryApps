@@ -8,10 +8,12 @@ import dayjs from 'dayjs';
 import { useTranslation } from 'react-i18next';
 import { useMemo, useState, useEffect, useCallback } from 'react';
 
+import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import {
   Box,
   Card,
-  Link,
   Stack,
   Table,
   Select,
@@ -21,7 +23,6 @@ import {
   TableBody,
   TableCell,
   TableHead,
-  TextField,
   Typography,
   InputLabel,
   FormControl,
@@ -34,13 +35,7 @@ import { useTransactionsAPI } from 'src/hooks/use-transactions-api';
 
 import { CustomBreadcrumbs } from 'src/components/custom-breadcrumbs';
 
-const toLocalDateTime = (value: dayjs.Dayjs) => value.format('YYYY-MM-DDTHH:mm');
-
-const toApiDateTime = (value: string) => {
-  const parsed = dayjs(value);
-  if (!parsed.isValid()) return '';
-  return parsed.toISOString();
-};
+const toApiDateTime = (value: dayjs.Dayjs) => value.format('YYYY-MM-DDTHH:mm:ssZ');
 
 const toNumber = (value?: string) => Number(value || 0);
 const toNumberText = (value?: string) => toNumber(value).toLocaleString();
@@ -121,8 +116,8 @@ export function CashboxReportView() {
   const [cashRegisters, setCashRegisters] = useState<{ id: string; name: string }[]>([]);
   const [report, setReport] = useState<TransactionReportResponse>(FALLBACK_REPORT);
 
-  const [from, setFrom] = useState(toLocalDateTime(dayjs().startOf('day')));
-  const [to, setTo] = useState(toLocalDateTime(dayjs().endOf('day')));
+  const [fromDate, setFromDate] = useState<dayjs.Dayjs>(dayjs().startOf('day').subtract(1, 'day'));
+  const [toDate, setToDate] = useState<dayjs.Dayjs>(dayjs().endOf('day'));
   const [cashRegisterId, setCashRegisterId] = useState('');
 
   useEffect(() => {
@@ -139,15 +134,15 @@ export function CashboxReportView() {
     setLoading(true);
     try {
       const data = await getTransactionsReport({
-        from: toApiDateTime(from),
-        to: toApiDateTime(to),
+        from: toApiDateTime(fromDate),
+        to: toApiDateTime(toDate),
         cash_register_id: cashRegisterId || undefined,
       });
       setReport(normalizeReport(data));
     } finally {
       setLoading(false);
     }
-  }, [cashRegisterId, from, getTransactionsReport, to]);
+  }, [cashRegisterId, fromDate, getTransactionsReport, toDate]);
 
   useEffect(() => {
     loadReport();
@@ -181,7 +176,7 @@ export function CashboxReportView() {
       ...groupedRows,
       {
         id: 'balance',
-        type: 'Balance',
+        type: t('cashbox.report.balance', 'Balance'),
         cash: report.balance.cash_total,
         card: report.balance.card_total,
         debt: '0',
@@ -190,12 +185,21 @@ export function CashboxReportView() {
         total: report.balance.total,
       },
     ];
-  }, [report.balance, report.expense_groups, report.income_groups]);
+  }, [report.balance, report.expense_groups, report.income_groups, t]);
 
   const exportMain = useCallback(() => {
     buildCsv(
       'cash-report-main.csv',
-      ['No', 'Type', 'Cash', 'Bank account', 'Debt', 'Not paid', 'Deposits', 'Total'],
+      [
+        t('cashbox.report.columnNo', 'No'),
+        t('cashbox.report.columnType', 'Type'),
+        t('cashbox.report.columnCash', 'Cash'),
+        t('cashbox.report.columnBankAccount', 'Bank account'),
+        t('cashbox.report.columnDebt', 'Debt'),
+        t('cashbox.report.columnNotPaid', 'Not paid'),
+        t('cashbox.report.columnDeposits', 'Deposits'),
+        t('cashbox.report.columnTotal', 'Total'),
+      ],
       mainRows.map((row, index) => [
         index + 1,
         row.type,
@@ -207,12 +211,17 @@ export function CashboxReportView() {
         toNumberText(row.total),
       ])
     );
-  }, [mainRows]);
+  }, [mainRows, t]);
 
   const exportGroups = useCallback((filename: string, groups: TransactionReportGroupItem[]) => {
     buildCsv(
       filename,
-      ['Group', 'Cash', 'Card', 'Total'],
+      [
+        t('cashbox.report.group', 'Group'),
+        t('cashbox.report.columnCash', 'Cash'),
+        t('cashbox.report.card', 'Card'),
+        t('cashbox.report.columnTotal', 'Total'),
+      ],
       groups.map((group) => [
         group.group_name || group.group_id,
         toNumberText(group.cash_total),
@@ -220,21 +229,21 @@ export function CashboxReportView() {
         toNumberText(group.total),
       ])
     );
-  }, []);
+  }, [t]);
 
   const exportSummary = useCallback(() => {
     buildCsv(
       'cash-report-summary.csv',
-      ['Metric', 'Amount'],
+      [t('cashbox.report.metric', 'Metric'), t('cashbox.report.amount', 'Amount')],
       [
-        ['At the start of day', toNumberText(report.opening_balance)],
-        ['Income', toNumberText(report.total_income)],
-        ['Expenses', toNumberText(report.total_expense)],
-        ['Balance of day', toNumberText(report.day_balance)],
-        ['At the end of day', toNumberText(report.closing_balance)],
+        [t('cashbox.report.atStartOfDay', 'At the start of day'), toNumberText(report.opening_balance)],
+        [t('cashbox.report.incomeTitle', 'Income'), toNumberText(report.total_income)],
+        [t('cashbox.report.expensesTitle', 'Expenses'), toNumberText(report.total_expense)],
+        [t('cashbox.report.balanceOfDay', 'Balance of day'), toNumberText(report.day_balance)],
+        [t('cashbox.report.atEndOfDay', 'At the end of day'), toNumberText(report.closing_balance)],
       ]
     );
-  }, [report.closing_balance, report.day_balance, report.opening_balance, report.total_expense, report.total_income]);
+  }, [report.closing_balance, report.day_balance, report.opening_balance, report.total_expense, report.total_income, t]);
 
   const handlePrint = useCallback(() => {
     window.print();
@@ -281,34 +290,61 @@ export function CashboxReportView() {
             alignItems={{ xs: 'stretch', md: 'center' }}
           >
             <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} sx={{ width: '100%' }}>
-              <TextField
-                label="From"
-                type="datetime-local"
-                value={from}
-                size="small"
-                onChange={(event) => setFrom(event.target.value)}
-                InputLabelProps={{ shrink: true }}
-                sx={{ width: { xs: '100%', sm: 230 } }}
-              />
-              <TextField
-                label="To"
-                type="datetime-local"
-                value={to}
-                size="small"
-                onChange={(event) => setTo(event.target.value)}
-                InputLabelProps={{ shrink: true }}
-                sx={{ width: { xs: '100%', sm: 230 } }}
-              />
+              <LocalizationProvider dateAdapter={AdapterDayjs}>
+                <DatePicker
+                  label={t('ingredientReports.startDate', 'Start date')}
+                  value={fromDate}
+                  onChange={(date) => {
+                    if (date) setFromDate(date.startOf('day'));
+                  }}
+                  format="DD.MM.YYYY"
+                  slotProps={{
+                    textField: {
+                      size: 'small',
+                      sx: { width: { xs: '100%', sm: 230 } },
+                      inputProps: { readOnly: true },
+                    },
+                  }}
+                />
+              </LocalizationProvider>
+
+              <LocalizationProvider dateAdapter={AdapterDayjs}>
+                <DatePicker
+                  label={t('ingredientReports.endDate', 'End date')}
+                  value={toDate}
+                  onChange={(date) => {
+                    if (date) setToDate(date.endOf('day'));
+                  }}
+                  format="DD.MM.YYYY"
+                  slotProps={{
+                    textField: {
+                      size: 'small',
+                      sx: { width: { xs: '100%', sm: 230 } },
+                      inputProps: { readOnly: true },
+                    },
+                  }}
+                />
+              </LocalizationProvider>
+
               <FormControl size="small" sx={{ minWidth: 220 }}>
-                <InputLabel id="cash-register-filter-label">Cashier</InputLabel>
+                <InputLabel id="cash-register-filter-label" shrink>
+                  {t('cashbox.report.filterCashier', 'Cashier')}
+                </InputLabel>
                 <Select
                   labelId="cash-register-filter-label"
                   value={cashRegisterId}
-                  label="Cashier"
+                  label={t('cashbox.report.filterCashier', 'Cashier')}
+                  displayEmpty
+                  renderValue={(selected) => {
+                    const value = String(selected || '');
+                    if (!value) return t('cashbox.report.all', 'All');
+                    const selectedCashRegister = cashRegisters.find((item) => item.id === value);
+                    return selectedCashRegister?.name || t('cashbox.report.all', 'All');
+                  }}
                   onChange={(event: SelectChangeEvent<string>) => setCashRegisterId(event.target.value)}
                 >
                   <MenuItem value="">
-                    <em>All</em>
+                    <em>{t('cashbox.report.all', 'All')}</em>
                   </MenuItem>
                   {cashRegisters.map((cashRegister) => (
                     <MenuItem key={cashRegister.id} value={cashRegister.id}>
@@ -320,14 +356,11 @@ export function CashboxReportView() {
             </Stack>
 
             <Stack direction="row" spacing={1} justifyContent="flex-end">
-              <Button variant="outlined" size="small" onClick={loadReport} disabled={loading}>
-                {loading ? t('loading', 'Loading...') : t('bills.apply', 'Apply')}
-              </Button>
               <Button variant="contained" size="small" onClick={handlePrint} sx={sectionActionsSx}>
-                Pechat
+                {t('cashbox.report.print', 'Print')}
               </Button>
               <Button variant="contained" size="small" onClick={exportMain} sx={sectionActionsSx}>
-                Export
+                {t('cashbox.report.export', 'Export')}
               </Button>
             </Stack>
           </Stack>
@@ -336,14 +369,14 @@ export function CashboxReportView() {
             <Table size="small">
               <TableHead>
                 <TableRow>
-                  <TableCell width={52}>N</TableCell>
-                  <TableCell>Type</TableCell>
-                  <TableCell align="right">Cash</TableCell>
-                  <TableCell align="right">Bank account</TableCell>
-                  <TableCell align="right">Debt</TableCell>
-                  <TableCell align="right">Not paid</TableCell>
-                  <TableCell align="right">Deposits</TableCell>
-                  <TableCell align="right">Total</TableCell>
+                  <TableCell width={52}>{t('cashbox.report.columnNo', 'No')}</TableCell>
+                  <TableCell>{t('cashbox.report.columnType', 'Type')}</TableCell>
+                  <TableCell align="right">{t('cashbox.report.columnCash', 'Cash')}</TableCell>
+                  <TableCell align="right">{t('cashbox.report.columnBankAccount', 'Bank account')}</TableCell>
+                  <TableCell align="right">{t('cashbox.report.columnDebt', 'Debt')}</TableCell>
+                  <TableCell align="right">{t('cashbox.report.columnNotPaid', 'Not paid')}</TableCell>
+                  <TableCell align="right">{t('cashbox.report.columnDeposits', 'Deposits')}</TableCell>
+                  <TableCell align="right">{t('cashbox.report.columnTotal', 'Total')}</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -370,10 +403,10 @@ export function CashboxReportView() {
       <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: '1fr 1fr' }, gap: 2, mb: 2 }}>
         <Card sx={{ p: 2 }}>
           <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1.5 }}>
-            <Typography variant="h6">Income</Typography>
+            <Typography variant="h6">{t('cashbox.report.incomeTitle', 'Income')}</Typography>
             <Stack direction="row" spacing={1}>
               <Button variant="contained" size="small" onClick={handlePrint} sx={sectionActionsSx}>
-                Pechat
+                {t('cashbox.report.print', 'Print')}
               </Button>
               <Button
                 variant="contained"
@@ -381,7 +414,7 @@ export function CashboxReportView() {
                 onClick={() => exportGroups('cash-report-income.csv', report.income_groups)}
                 sx={sectionActionsSx}
               >
-                Export
+                {t('cashbox.report.export', 'Export')}
               </Button>
             </Stack>
           </Stack>
@@ -389,7 +422,7 @@ export function CashboxReportView() {
           <Stack spacing={1.25}>
             <Stack direction="row" justifyContent="space-between">
               <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                Accounts
+                {t('cashbox.report.accounts', 'Accounts')}
               </Typography>
               <Typography variant="body2" sx={{ fontWeight: 600 }}>
                 {toNumberText(accountsSummary?.total || '0')}
@@ -402,7 +435,7 @@ export function CashboxReportView() {
                 </Typography>
                 <Stack direction="row" justifyContent="space-between">
                   <Typography variant="caption" color="text.secondary">
-                    Naqd
+                    {t('cashbox.report.cashLabel', 'Cash')}
                   </Typography>
                   <Typography variant="body2">{toNumberText(group.cash_total)}</Typography>
                   {/* <Link component="button" underline="hover" color="#6f66ff" sx={{ fontSize: 12 }}>
@@ -424,10 +457,10 @@ export function CashboxReportView() {
 
         <Card sx={{ p: 2 }}>
           <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1.5 }}>
-            <Typography variant="h6">Expenses</Typography>
+            <Typography variant="h6">{t('cashbox.report.expensesTitle', 'Expenses')}</Typography>
             <Stack direction="row" spacing={1}>
               <Button variant="contained" size="small" onClick={handlePrint} sx={sectionActionsSx}>
-                Pechat
+                {t('cashbox.report.print', 'Print')}
               </Button>
               <Button
                 variant="contained"
@@ -435,7 +468,7 @@ export function CashboxReportView() {
                 onClick={() => exportGroups('cash-report-expenses.csv', report.expense_groups)}
                 sx={sectionActionsSx}
               >
-                Export
+                {t('cashbox.report.export', 'Export')}
               </Button>
             </Stack>
           </Stack>
@@ -448,7 +481,7 @@ export function CashboxReportView() {
                 </Typography>
                 <Stack direction="row" justifyContent="space-between">
                   <Typography variant="caption" color="text.secondary">
-                    Naqd
+                    {t('cashbox.report.cashLabel', 'Cash')}
                   </Typography>
                   <Typography variant="body2">{toNumberText(group.cash_total)}</Typography>
                   {/* <Link component="button" underline="hover" color="#6f66ff" sx={{ fontSize: 12 }}>
@@ -472,44 +505,44 @@ export function CashboxReportView() {
       <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: '1fr 1fr' }, gap: 2 }}>
         <Card sx={{ p: 2 }}>
           <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1.5 }}>
-            <Typography variant="h6">Summary</Typography>
+            <Typography variant="h6">{t('cashbox.report.summaryTitle', 'Summary')}</Typography>
             <Stack direction="row" spacing={1}>
               <Button variant="contained" size="small" onClick={handlePrint} sx={sectionActionsSx}>
-                Pechat
+                {t('cashbox.report.print', 'Print')}
               </Button>
               <Button variant="contained" size="small" onClick={exportSummary} sx={sectionActionsSx}>
-                Export
+                {t('cashbox.report.export', 'Export')}
               </Button>
             </Stack>
           </Stack>
 
           <Stack spacing={1}>
             <Stack direction="row" justifyContent="space-between">
-              <Typography>At the start of day:</Typography>
+              <Typography>{t('cashbox.report.atStartOfDay', 'At the start of day')}:</Typography>
               <Typography sx={{ fontWeight: 700 }}>{toNumberText(report.opening_balance)}</Typography>
             </Stack>
             <Stack direction="row" justifyContent="space-between">
-              <Typography>Income:</Typography>
+              <Typography>{t('cashbox.report.incomeTitle', 'Income')}:</Typography>
               <Typography sx={{ fontWeight: 700 }}>{toNumberText(report.total_income)}</Typography>
             </Stack>
             <Stack direction="row" justifyContent="space-between">
-              <Typography>Expenses:</Typography>
+              <Typography>{t('cashbox.report.expensesTitle', 'Expenses')}:</Typography>
               <Typography sx={{ fontWeight: 700 }}>{toNumberText(report.total_expense)}</Typography>
             </Stack>
             <Stack direction="row" justifyContent="space-between">
-              <Typography>Balance of day:</Typography>
+              <Typography>{t('cashbox.report.balanceOfDay', 'Balance of day')}:</Typography>
               <Typography sx={{ fontWeight: 700 }}>{toNumberText(report.day_balance)}</Typography>
             </Stack>
             <Stack direction="row" justifyContent="space-between">
-              <Typography>At the end of day:</Typography>
+              <Typography>{t('cashbox.report.atEndOfDay', 'At the end of day')}:</Typography>
               <Typography sx={{ fontWeight: 700 }}>{toNumberText(report.closing_balance)}</Typography>
             </Stack>
             <Stack direction="row" justifyContent="space-between" sx={{ mt: 1 }}>
-              <Typography>Debt orders:</Typography>
+              <Typography>{t('cashbox.report.debtOrders', 'Debt orders')}:</Typography>
               <Typography sx={{ fontWeight: 700 }}>0</Typography>
             </Stack>
             <Stack direction="row" justifyContent="space-between">
-              <Typography>Debt orders paid:</Typography>
+              <Typography>{t('cashbox.report.debtOrdersPaid', 'Debt orders paid')}:</Typography>
               <Typography sx={{ fontWeight: 700 }}>{toNumberText(depositsSummary?.total || '0')}</Typography>
             </Stack>
           </Stack>
@@ -517,13 +550,13 @@ export function CashboxReportView() {
 
         <Card sx={{ p: 2 }}>
           <Typography variant="h6" sx={{ mb: 1.5 }}>
-            Departments
+            {t('cashbox.report.departmentsTitle', 'Departments')}
           </Typography>
 
           <Table size="small">
             <TableBody>
               <TableRow>
-                <TableCell sx={{ pl: 0 }}>All departments</TableCell>
+                <TableCell sx={{ pl: 0 }}>{t('cashbox.report.allDepartments', 'All departments')}</TableCell>
                 <TableCell align="right" sx={{ pr: 0, fontWeight: 700 }}>
                   {toNumberText(String(toNumber(report.total_income) + toNumber(report.total_expense)))}
                 </TableCell>

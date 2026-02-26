@@ -284,6 +284,7 @@ export const endpoints = {
     list: '/api/v1/users',
     me: '/api/v1/user/me',
     byRole: (role: string) => `/api/v1/users/by-role?role=${role}`,
+    staff: '/api/v1/users/staff',
     details: (id: string) => `/api/v1/users/${id}`,
     create: '/api/v1/users',
     update: (id: string) => `/api/v1/user/update/${id}`,
