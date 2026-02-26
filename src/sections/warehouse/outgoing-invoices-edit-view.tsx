@@ -1,4 +1,7 @@
-import type { ShipmentBatchItemInput, ShipmentBatchApiResponse } from 'src/types/shipments';
+import type {
+  OutgoingInvoiceBatchItemInput,
+  OutgoingInvoiceBatchApiResponse,
+} from 'src/types/outgoing-invoices';
 
 import dayjs from 'dayjs';
 import { useTranslation } from 'react-i18next';
@@ -27,8 +30,8 @@ import {
 import { paths } from 'src/routes/paths';
 
 import { useStorageAPI } from 'src/hooks/use-storage-api';
-import { useSupplierAPI } from 'src/hooks/use-supplier-api';
-import { useShipmentsAPI } from 'src/hooks/use-shipments-api';
+import { useDeductionsAPI } from 'src/hooks/use-deductions-api';
+import { useOutgoingInvoicesAPI } from 'src/hooks/use-outgoing-invoices-api';
 
 import { fetcher, endpoints } from 'src/lib/axios';
 
@@ -42,10 +45,10 @@ interface TabPanelProps {
   value: number;
 }
 
-interface ShipmentFormData {
+interface OutgoingInvoiceFormData {
   date: string;
   storage_id: string;
-  supplier_id: string;
+  group_id: string;
   description: string;
 }
 
@@ -66,8 +69,8 @@ function TabPanel({ children, value, index, ...other }: TabPanelProps) {
     <div
       role="tabpanel"
       hidden={value !== index}
-      id={`shipments-tabpanel-${index}`}
-      aria-labelledby={`shipments-tab-${index}`}
+      id={`outgoing-invoices-tabpanel-${index}`}
+      aria-labelledby={`outgoing-invoices-tab-${index}`}
       {...other}
     >
       <Box sx={{ pt: 0, display: value === index ? 'block' : 'none' }}>{children}</Box>
@@ -75,22 +78,22 @@ function TabPanel({ children, value, index, ...other }: TabPanelProps) {
   );
 }
 
-export function ShipmentsEditView() {
+export function OutgoingInvoicesEditView() {
   const { t } = useTranslation('menu');
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const isNewMode = !id;
 
-  const { getSuppliers } = useSupplierAPI();
+  const { getDeductionGroups } = useDeductionsAPI();
   const { getStorages } = useStorageAPI();
   const {
-    getShipmentById,
-    createShipmentBatch,
-    confirmShipment,
-    cancelShipment,
-    deleteShipment,
-    deleteShipmentItem,
-  } = useShipmentsAPI();
+    getOutgoingInvoiceById,
+    createOutgoingInvoiceBatch,
+    confirmOutgoingInvoice,
+    cancelOutgoingInvoice,
+    deleteOutgoingInvoice,
+    deleteOutgoingInvoiceItem,
+  } = useOutgoingInvoicesAPI();
 
   const [activeTab, setActiveTab] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -99,27 +102,27 @@ export function ShipmentsEditView() {
   const [deletingItemId, setDeletingItemId] = useState<string | null>(null);
 
   const [storages, setStorages] = useState<Array<{ id: string; name: string }>>([]);
-  const [suppliers, setSuppliers] = useState<Array<{ id: string; name: string }>>([]);
+  const [groups, setGroups] = useState<Array<{ id: string; name: string }>>([]);
   const [ingredientsMap, setIngredientsMap] = useState<Record<string, string>>({});
 
-  const [formData, setFormData] = useState<ShipmentFormData>({
+  const [formData, setFormData] = useState<OutgoingInvoiceFormData>({
     date: dayjs().format('YYYY-MM-DD'),
     storage_id: '',
-    supplier_id: '',
+    group_id: '',
     description: '',
   });
 
-  const [items, setItems] = useState<ShipmentBatchItemInput[]>([]);
-  const [batchResponse, setBatchResponse] = useState<ShipmentBatchApiResponse | null>(null);
-  const itemsRef = useRef<ShipmentBatchItemInput[]>([]);
+  const [items, setItems] = useState<OutgoingInvoiceBatchItemInput[]>([]);
+  const [batchResponse, setBatchResponse] = useState<OutgoingInvoiceBatchApiResponse | null>(null);
+  const itemsRef = useRef<OutgoingInvoiceBatchItemInput[]>([]);
 
-  const mapResponseToState = useCallback((response: ShipmentBatchApiResponse) => {
+  const mapResponseToState = useCallback((response: OutgoingInvoiceBatchApiResponse) => {
     setBatchResponse(response);
     setFormData({
-      date: dayjs(response.data.shipment.date).format('YYYY-MM-DD'),
-      storage_id: response.data.shipment.storage_id,
-      supplier_id: response.data.shipment.supplier_id,
-      description: response.data.shipment.description || '',
+      date: dayjs(response.data.invoice.date).format('YYYY-MM-DD'),
+      storage_id: response.data.invoice.storage_id,
+      group_id: response.data.invoice.group_id,
+      description: response.data.invoice.description || '',
     });
     const mappedItems = response.data.items.map((item) => ({
       ingredient_id: item.ingredient_id,
@@ -129,34 +132,34 @@ export function ShipmentsEditView() {
     itemsRef.current = mappedItems;
   }, []);
 
-  const loadShipmentDetails = useCallback(
-    async (shipmentId: string) => {
-      const details = await getShipmentById(shipmentId);
+  const loadOutgoingInvoiceDetails = useCallback(
+    async (outgoingInvoiceId: string) => {
+      const details = await getOutgoingInvoiceById(outgoingInvoiceId);
       if (!details) {
-        navigate(paths.warehouse.shipments.root, { replace: true });
+        navigate(paths.warehouse.outgoingInvoices.root, { replace: true });
         return;
       }
       mapResponseToState(details);
     },
-    [getShipmentById, mapResponseToState, navigate]
+    [getOutgoingInvoiceById, mapResponseToState, navigate]
   );
 
-  const handleItemsChange = useCallback((nextItems: ShipmentBatchItemInput[]) => {
+  const handleItemsChange = useCallback((nextItems: OutgoingInvoiceBatchItemInput[]) => {
     setItems(nextItems);
     itemsRef.current = nextItems;
   }, []);
 
   const handleFormDataChange = useCallback((data: Record<string, any>) => {
-    setFormData(data as ShipmentFormData);
+    setFormData(data as OutgoingInvoiceFormData);
   }, []);
 
   useEffect(() => {
     const loadBaseData = async () => {
       try {
         setLoading(true);
-        const [storagesData, suppliersData, ingredientsData] = await Promise.all([
+        const [storagesData, groupsData, ingredientsData] = await Promise.all([
           getStorages(),
-          getSuppliers(),
+          getDeductionGroups(),
           fetcher<BackendResponse<Ingredient[]>>(endpoints.ingredient.list).catch(() => ({
             status: 'error',
             message: 'failed',
@@ -165,7 +168,7 @@ export function ShipmentsEditView() {
           })),
         ]);
         setStorages(storagesData);
-        setSuppliers(suppliersData);
+        setGroups(groupsData);
         setIngredientsMap(
           (ingredientsData.data || []).reduce(
             (acc, item) => ({ ...acc, [item.id]: item.name || item.id }),
@@ -178,12 +181,12 @@ export function ShipmentsEditView() {
     };
 
     loadBaseData();
-  }, [getStorages, getSuppliers]);
+  }, [getStorages, getDeductionGroups]);
 
   useEffect(() => {
     if (!id) return;
-    loadShipmentDetails(id);
-  }, [id, loadShipmentDetails]);
+    loadOutgoingInvoiceDetails(id);
+  }, [id, loadOutgoingInvoiceDetails]);
 
   const normalizeDateForApi = useCallback((value: string) => {
     if (!value) return new Date().toISOString();
@@ -200,21 +203,21 @@ export function ShipmentsEditView() {
       setActiveTab(0);
       throw new Error(t('deductions.storageRequired', 'Please select storage'));
     }
-    if (!formData.supplier_id) {
+    if (!formData.group_id) {
       setActiveTab(0);
-      throw new Error(t('warehouse.invoices.supplierRequired', 'Please select supplier'));
+      throw new Error(t('outgoingInvoices.groupRequired', 'Please select group'));
     }
 
-    const response = await createShipmentBatch({
+    const response = await createOutgoingInvoiceBatch({
       date: normalizeDateForApi(formData.date),
       description: formData.description || '',
       storage_id: formData.storage_id,
-      supplier_id: formData.supplier_id,
+      group_id: formData.group_id,
       items: itemsRef.current,
     });
 
     mapResponseToState(response);
-  }, [createShipmentBatch, formData, mapResponseToState, normalizeDateForApi, t]);
+  }, [createOutgoingInvoiceBatch, formData, mapResponseToState, normalizeDateForApi, t]);
 
   const handleSubmit = useCallback(async () => {
     await saveByBatch();
@@ -233,21 +236,26 @@ export function ShipmentsEditView() {
     () => storages.map((storage) => ({ value: storage.id, label: storage.name })),
     [storages]
   );
-  const supplierOptions = useMemo(
-    () => suppliers.map((supplier) => ({ value: supplier.id, label: supplier.name })),
-    [suppliers]
+  const groupOptions = useMemo(
+    () => groups.map((group) => ({ value: group.id, label: group.name })),
+    [groups]
   );
 
   const config = useMemo(
     () => ({
-      title: isNewMode ? t('shipments.create', 'Create shipment') : t('shipments.view', 'View shipment'),
-      entityName: 'shipment',
+      title: isNewMode
+        ? t('outgoingInvoices.create', 'Create outgoing invoice')
+        : t('outgoingInvoices.view', 'View outgoing invoice'),
+      entityName: 'outgoing-invoice',
       showBreadcrumbs: false,
       showDeleteButton: false,
       breadcrumbs: [
         { name: t('dashboard', 'Dashboard'), href: paths.dashboard.root },
         { name: t('overview.warehouse.title', 'Warehouse'), href: paths.warehouse.root },
-        { name: t('overview.warehouse.shipments', 'Shipments'), href: paths.warehouse.shipments.root },
+        {
+          name: t('overview.warehouse.expensesInvoices', 'Expenses invoices'),
+          href: paths.warehouse.outgoingInvoices.root,
+        },
         { name: isNewMode ? t('common.create', 'Create') : t('common.view', 'View'), href: '' },
       ],
       sections: [
@@ -272,11 +280,11 @@ export function ShipmentsEditView() {
               defaultValue: '',
             },
             {
-              key: 'supplier_id',
-              label: t('invoices.name', 'Supplier'),
+              key: 'group_id',
+              label: t('outgoingInvoices.group', 'Group'),
               type: 'select' as const,
               required: true,
-              options: supplierOptions,
+              options: groupOptions,
               defaultValue: '',
             },
             {
@@ -291,10 +299,10 @@ export function ShipmentsEditView() {
       ],
       onSubmit: handleSubmit as (submittedFormData: Record<string, any>) => Promise<void>,
     }),
-    [handleSubmit, isNewMode, storageOptions, supplierOptions, t]
+    [handleSubmit, isNewMode, storageOptions, groupOptions, t]
   );
 
-  const shipmentId = batchResponse?.data?.shipment?.id;
+  const outgoingInvoiceId = batchResponse?.data?.invoice?.id;
 
   return (
     <Box sx={{ p: 3 }}>
@@ -310,8 +318,8 @@ export function ShipmentsEditView() {
                 variant="fullWidth"
                 sx={{ mb: 0, width: '100%' }}
               >
-                <Tab label={t('common.edit', 'Details')} id="shipments-tab-0" />
-                <Tab label={t('mealsProducts.calculate', 'Calculation')} id="shipments-tab-1" />
+                <Tab label={t('common.edit', 'Details')} id="outgoing-invoices-tab-0" />
+                <Tab label={t('mealsProducts.calculate', 'Calculation')} id="outgoing-invoices-tab-1" />
               </Tabs>
             )}
 
@@ -353,8 +361,8 @@ export function ShipmentsEditView() {
               variant="fullWidth"
               sx={{ mb: 0, width: '100%' }}
             >
-              <Tab label={t('common.edit', 'Details')} id="shipments-tab-0" />
-              <Tab label={t('shipments.items', 'Items')} id="shipments-tab-1" />
+              <Tab label={t('common.edit', 'Details')} id="outgoing-invoices-tab-0" />
+              <Tab label={t('outgoingInvoices.items', 'Items')} id="outgoing-invoices-tab-1" />
             </Tabs>
 
             <TabPanel value={activeTab} index={0}>
@@ -383,49 +391,10 @@ export function ShipmentsEditView() {
 
         {batchResponse && isNewMode && (
           <Box sx={{ p: 3 }}>
-            {/* <Paper sx={{ p: 2, mb: 2 }}>
-              <Typography variant="h6" sx={{ mb: 1 }}>
-                {t('shipments.shipment', 'Shipment')}
-              </Typography>
-              <TableContainer>
-                <Table size="small">
-                  <TableHead>
-                    <TableRow>
-                      <TableCell>{t('deductions.number', 'Number')}</TableCell>
-                      <TableCell>{t('deductions.date', 'Date')}</TableCell>
-                      <TableCell>{t('deductions.status', 'Status')}</TableCell>
-                      <TableCell>{t('deductions.storage', 'Storage')}</TableCell>
-                      <TableCell>{t('invoices.name', 'Supplier')}</TableCell>
-                      <TableCell>{t('shipments.totalAmount', 'Total Amount')}</TableCell>
-                      <TableCell>{t('shipments.paidAmount', 'Paid Amount')}</TableCell>
-                      <TableCell>{t('deductions.description', 'Description')}</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    <TableRow>
-                      <TableCell>{batchResponse.data.shipment.number}</TableCell>
-                      <TableCell>{new Date(batchResponse.data.shipment.date).toLocaleString()}</TableCell>
-                      <TableCell>{batchResponse.data.shipment.status}</TableCell>
-                      <TableCell>
-                        {storageOptions.find((s) => s.value === batchResponse.data.shipment.storage_id)?.label
-                          || batchResponse.data.shipment.storage_id}
-                      </TableCell>
-                      <TableCell>
-                        {supplierOptions.find((s) => s.value === batchResponse.data.shipment.supplier_id)?.label
-                          || batchResponse.data.shipment.supplier_id}
-                      </TableCell>
-                      <TableCell>{batchResponse.data.shipment.total_amount}</TableCell>
-                      <TableCell>{batchResponse.data.shipment.paid_amount}</TableCell>
-                      <TableCell>{batchResponse.data.shipment.description}</TableCell>
-                    </TableRow>
-                  </TableBody>
-                </Table>
-              </TableContainer>
-            </Paper> */}
-
+         
             <Paper sx={{ p: 2, mb: 2 }}>
               <Typography variant="h6" sx={{ mb: 1 }}>
-                {t('shipments.items', 'Items')}
+                {t('outgoingInvoices.items', 'Items')}
               </Typography>
               <TableContainer>
                 <Table size="small">
@@ -434,10 +403,10 @@ export function ShipmentsEditView() {
                       <TableCell>#</TableCell>
                       <TableCell>{t('warehouse.ingredient', 'Ingredient')}</TableCell>
                       <TableCell>{t('calculation.quantity', 'Quantity')}</TableCell>
-                      <TableCell>{t('shipments.pricePerUnit', 'Price / Unit')}</TableCell>
-                      <TableCell>{t('shipments.totalAmount', 'Total Amount')}</TableCell>
-                      <TableCell>{t('shipments.stockBefore', 'Stock Before')}</TableCell>
-                      <TableCell>{t('shipments.stockAfter', 'Stock After')}</TableCell>
+                      <TableCell>{t('outgoingInvoices.pricePerUnit', 'Price / Unit')}</TableCell>
+                      <TableCell>{t('outgoingInvoices.totalAmount', 'Total Amount')}</TableCell>
+                      <TableCell>{t('outgoingInvoices.stockBefore', 'Stock Before')}</TableCell>
+                      <TableCell>{t('outgoingInvoices.stockAfter', 'Stock After')}</TableCell>
                       <TableCell align="right">{t('common.actions', 'Actions')}</TableCell>
                     </TableRow>
                   </TableHead>
@@ -455,13 +424,13 @@ export function ShipmentsEditView() {
                           <IconButton
                             color="error"
                             size="small"
-                            disabled={!shipmentId || deletingItemId === item.id}
+                            disabled={!outgoingInvoiceId || deletingItemId === item.id}
                             onClick={async () => {
-                              if (!shipmentId) return;
+                              if (!outgoingInvoiceId) return;
                               try {
                                 setDeletingItemId(item.id);
-                                await deleteShipmentItem(shipmentId, item.id);
-                                await loadShipmentDetails(shipmentId);
+                                await deleteOutgoingInvoiceItem(outgoingInvoiceId, item.id);
+                                await loadOutgoingInvoiceDetails(outgoingInvoiceId);
                               } finally {
                                 setDeletingItemId(null);
                               }
@@ -479,27 +448,18 @@ export function ShipmentsEditView() {
 
             {/* <Paper sx={{ p: 2, mb: 2 }}>
               <Typography variant="h6" sx={{ mb: 1 }}>
-                {t('shipments.totals', 'Totals')}
+                {t('outgoingInvoices.totals', 'Totals')}
               </Typography>
               <TableContainer>
                 <Table size="small">
                   <TableHead>
                     <TableRow>
-                      <TableCell>{t('shipments.totalAmount', 'Total Amount')}</TableCell>
-                      <TableCell>{t('shipments.paidAmount', 'Paid Amount')}</TableCell>
-                      <TableCell>{t('deductions.balance', 'Balance')}</TableCell>
+                      <TableCell>{t('outgoingInvoices.totalAmount', 'Total Amount')}</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
                     <TableRow>
-                      <TableCell>{Number(batchResponse.data.shipment.total_amount || 0).toLocaleString()}</TableCell>
-                      <TableCell>{Number(batchResponse.data.shipment.paid_amount || 0).toLocaleString()}</TableCell>
-                      <TableCell>
-                        {(
-                          Number(batchResponse.data.shipment.total_amount || 0) -
-                          Number(batchResponse.data.shipment.paid_amount || 0)
-                        ).toLocaleString()}
-                      </TableCell>
+                      <TableCell>{Number(batchResponse.data.invoice.total_amount || 0).toLocaleString()}</TableCell>
                     </TableRow>
                   </TableBody>
                 </Table>
@@ -510,13 +470,13 @@ export function ShipmentsEditView() {
               <Button
                 variant="contained"
                 color="success"
-                disabled={!shipmentId || !!actionLoading}
+                disabled={!outgoingInvoiceId || !!actionLoading}
                 onClick={async () => {
-                  if (!shipmentId) return;
+                  if (!outgoingInvoiceId) return;
                   try {
                     setActionLoading('confirm');
-                    await confirmShipment(shipmentId);
-                    navigate(paths.warehouse.shipments.root, { replace: true });
+                    await confirmOutgoingInvoice(outgoingInvoiceId);
+                    navigate(paths.warehouse.outgoingInvoices.root, { replace: true });
                   } finally {
                     setActionLoading(null);
                   }
@@ -531,13 +491,13 @@ export function ShipmentsEditView() {
               <Button
                 variant="contained"
                 color="warning"
-                disabled={!shipmentId || !!actionLoading}
+                disabled={!outgoingInvoiceId || !!actionLoading}
                 onClick={async () => {
-                  if (!shipmentId) return;
+                  if (!outgoingInvoiceId) return;
                   try {
                     setActionLoading('cancel');
-                    await cancelShipment(shipmentId);
-                    navigate(paths.warehouse.shipments.root, { replace: true });
+                    await cancelOutgoingInvoice(outgoingInvoiceId);
+                    navigate(paths.warehouse.outgoingInvoices.root, { replace: true });
                   } finally {
                     setActionLoading(null);
                   }
@@ -552,16 +512,16 @@ export function ShipmentsEditView() {
               <Button
                 variant="contained"
                 color="error"
-                disabled={!shipmentId || !!actionLoading}
+                disabled={!outgoingInvoiceId || !!actionLoading}
                 onClick={async () => {
-                  if (!shipmentId) return;
+                  if (!outgoingInvoiceId) return;
                   const confirmed = window.confirm(t('common.deleteConfirmMessage', 'Are you sure?'));
                   if (!confirmed) return;
 
                   try {
                     setActionLoading('delete');
-                    await deleteShipment(shipmentId);
-                    navigate(paths.warehouse.shipments.root, { replace: true });
+                    await deleteOutgoingInvoice(outgoingInvoiceId);
+                    navigate(paths.warehouse.outgoingInvoices.root, { replace: true });
                   } finally {
                     setActionLoading(null);
                   }
@@ -586,10 +546,14 @@ export function ShipmentsEditView() {
         {!isNewMode && !batchResponse && !loading && (
           <Box sx={{ py: 4 }}>
             <Typography color="text.secondary">
-              {t('shipments.notFound', 'Shipment not found')}
+              {t('outgoingInvoices.notFound', 'Outgoing invoice not found')}
             </Typography>
-            <Button sx={{ mt: 2 }} variant="contained" onClick={() => navigate(paths.warehouse.shipments.root)}>
-              {t('overview.warehouse.shipments', 'Shipments')}
+            <Button
+              sx={{ mt: 2 }}
+              variant="contained"
+              onClick={() => navigate(paths.warehouse.outgoingInvoices.root)}
+            >
+              {t('overview.warehouse.expensesInvoices', 'Expenses invoices')}
             </Button>
           </Box>
         )}
@@ -598,4 +562,4 @@ export function ShipmentsEditView() {
   );
 }
 
-export default ShipmentsEditView;
+export default OutgoingInvoicesEditView;

@@ -362,7 +362,8 @@
       "transfers": "Transfers",
       "locations": "Locations",
       "suppliers": "Suppliers",
-      "shipments": "Dispatches"
+      "shipments": "Dispatches",
+      "expensesInvoices": "Expenses invoices"
     },
     "reports": {
       "title": "Reports",
@@ -946,6 +947,39 @@
       "itemDeleted": "Dispatch item deleted",
       "updated": "Dispatch updated successfully",
       "itemsAdded": "Dispatch items added successfully"
+    }
+  },
+  "outgoingInvoices": {
+    "create": "Create outgoing invoice",
+    "view": "View outgoing invoice",
+    "invoice": "Outgoing invoice",
+    "items": "Items",
+    "totals": "Totals",
+    "total": "Total",
+    "totalAmount": "Total Amount",
+    "group": "Group",
+    "groupRequired": "Please select group",
+    "pricePerUnit": "Price / Unit",
+    "stockBefore": "Stock Before",
+    "stockAfter": "Stock After",
+    "notFound": "Outgoing invoice not found",
+    "messages": {
+      "fetchFailed": "Failed to fetch outgoing invoices",
+      "createFailed": "Failed to create outgoing invoice",
+      "fetchOneFailed": "Failed to fetch outgoing invoice",
+      "confirmFailed": "Failed to confirm outgoing invoice",
+      "cancelFailed": "Failed to cancel outgoing invoice",
+      "deleteFailed": "Failed to delete outgoing invoice",
+      "itemDeleteFailed": "Failed to delete outgoing invoice item",
+      "updateFailed": "Failed to update outgoing invoice",
+      "itemsAddFailed": "Failed to add outgoing invoice items",
+      "created": "Outgoing invoice created successfully",
+      "confirmed": "Outgoing invoice confirmed",
+      "cancelled": "Outgoing invoice cancelled",
+      "deleted": "Outgoing invoice deleted",
+      "itemDeleted": "Outgoing invoice item deleted",
+      "updated": "Outgoing invoice updated successfully",
+      "itemsAdded": "Outgoing invoice items added successfully"
     }
   },
   "inventory": {

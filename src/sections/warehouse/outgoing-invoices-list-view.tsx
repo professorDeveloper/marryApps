@@ -1,5 +1,9 @@
 import type { GridColDef } from '@mui/x-data-grid';
-import type { Shipment, ShipmentFilters, ShipmentBatchApiResponse } from 'src/types/shipments';
+import type {
+  OutgoingInvoice,
+  OutgoingInvoiceFilters,
+  OutgoingInvoiceBatchApiResponse,
+} from 'src/types/outgoing-invoices';
 
 import dayjs from 'dayjs';
 import { useTranslation } from 'react-i18next';
@@ -26,8 +30,8 @@ import {
 import { paths } from 'src/routes/paths';
 
 import { useStorageAPI } from 'src/hooks/use-storage-api';
-import { useSupplierAPI } from 'src/hooks/use-supplier-api';
-import { useShipmentsAPI } from 'src/hooks/use-shipments-api';
+import { useDeductionsAPI } from 'src/hooks/use-deductions-api';
+import { useOutgoingInvoicesAPI } from 'src/hooks/use-outgoing-invoices-api';
 
 import { useRouter } from 'src/routes/hooks';
 
@@ -54,11 +58,11 @@ const getTodayUtcBoundary = (endOfDay = false): string => {
   return date.toISOString().replace('.000Z', 'Z');
 };
 
-const initialFilters: ShipmentFilters = {
+const initialFilters: OutgoingInvoiceFilters = {
   start_date: getTodayUtcBoundary(),
   end_date: getTodayUtcBoundary(true),
   storage_id: '',
-  supplier_id: '',
+  group_id: '',
   status: '',
   limit: 20,
   offset: 0,
@@ -94,44 +98,44 @@ const toUtcDayBoundary = (value: dayjs.Dayjs, endOfDay = false): string => {
 const toPickerDate = (value?: string): dayjs.Dayjs | null =>
   value ? dayjs(value.slice(0, 10)) : null;
 
-export function ShipmentsListView() {
+export function OutgoingInvoicesListView() {
   const { t } = useTranslation('menu');
   const router = useRouter();
 
-  const { getShipments, getShipmentById, deleteShipment } = useShipmentsAPI();
+  const { getOutgoingInvoices, getOutgoingInvoiceById, deleteOutgoingInvoice } = useOutgoingInvoicesAPI();
   const { getStorages } = useStorageAPI();
-  const { getSuppliers } = useSupplierAPI();
+  const { getDeductionGroups } = useDeductionsAPI();
 
   const [loading, setLoading] = useState(true);
-  const [rows, setRows] = useState<Shipment[]>([]);
+  const [rows, setRows] = useState<OutgoingInvoice[]>([]);
   const [total, setTotal] = useState(0);
 
   const [storagesMap, setStoragesMap] = useState<Record<string, string>>({});
-  const [suppliersMap, setSuppliersMap] = useState<Record<string, string>>({});
+  const [groupsMap, setGroupsMap] = useState<Record<string, string>>({});
   const [ingredientsMap, setIngredientsMap] = useState<Record<string, string>>({});
 
-  const [filters, setFilters] = useState<ShipmentFilters>(initialFilters);
-  const [draftFilters, setDraftFilters] = useState<ShipmentFilters>(initialFilters);
+  const [filters, setFilters] = useState<OutgoingInvoiceFilters>(initialFilters);
+  const [draftFilters, setDraftFilters] = useState<OutgoingInvoiceFilters>(initialFilters);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [viewOpen, setViewOpen] = useState(false);
   const [viewLoading, setViewLoading] = useState(false);
-  const [viewData, setViewData] = useState<ShipmentBatchApiResponse | null>(null);
+  const [viewData, setViewData] = useState<OutgoingInvoiceBatchApiResponse | null>(null);
 
-  const openViewModal = useCallback(async (shipmentId: string) => {
+  const openViewModal = useCallback(async (outgoingInvoiceId: string) => {
     setViewOpen(true);
     setViewLoading(true);
     try {
-      const details = await getShipmentById(shipmentId);
+      const details = await getOutgoingInvoiceById(outgoingInvoiceId);
       setViewData(details);
     } finally {
       setViewLoading(false);
     }
-  }, [getShipmentById]);
+  }, [getOutgoingInvoiceById]);
 
   const loadBaseData = useCallback(async () => {
-    const [storagesData, suppliersData, ingredientsData] = await Promise.all([
+    const [storagesData, groupsData, ingredientsData] = await Promise.all([
       getStorages(),
-      getSuppliers(),
+      getDeductionGroups(),
       fetcher<BackendResponse<Ingredient[]>>(endpoints.ingredient.list).catch(() => ({
         status: 'error',
         message: 'failed',
@@ -147,8 +151,8 @@ export function ShipmentsListView() {
       )
     );
 
-    setSuppliersMap(
-      (suppliersData || []).reduce(
+    setGroupsMap(
+      (groupsData || []).reduce(
         (acc, item) => ({ ...acc, [item.id]: item.name || item.id }),
         {} as Record<string, string>
       )
@@ -160,28 +164,27 @@ export function ShipmentsListView() {
         {} as Record<string, string>
       )
     );
-  }, [getStorages, getSuppliers]);
+  }, [getStorages, getDeductionGroups]);
 
-  const loadShipments = useCallback(async () => {
+  const loadOutgoingInvoices = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await getShipments(filters);
+      const response = await getOutgoingInvoices(filters);
       setRows(response.data);
       setTotal(response.total);
     } finally {
       setLoading(false);
     }
-  }, [filters, getShipments]);
+  }, [filters, getOutgoingInvoices]);
 
   useEffect(() => {
     loadBaseData();
   }, [loadBaseData]);
 
   useEffect(() => {
-    loadShipments();
-  }, [loadShipments]);
+    loadOutgoingInvoices();
+  }, [loadOutgoingInvoices]);
 
-  // Auto-apply filters when draftFilters changes
   useEffect(() => {
     setFilters((prev) => ({
       ...prev,
@@ -189,10 +192,6 @@ export function ShipmentsListView() {
       offset: 0,
     }));
   }, [draftFilters]);
-
-  const handleApplyFilters = useCallback(() => {
-    // This function is now handled automatically by the useEffect above
-  }, []);
 
   const handleResetFilters = useCallback(() => {
     setDraftFilters(initialFilters);
@@ -219,11 +218,11 @@ export function ShipmentsListView() {
         renderCell: (params) => storagesMap[params.row.storage_id] || params.row.storage_id,
       },
       {
-        field: 'supplier_id',
-        headerName: t('invoices.name', 'Supplier'),
+        field: 'group_id',
+        headerName: t('outgoingInvoices.group', 'Group'),
         flex: 1,
         minWidth: 180,
-        renderCell: (params) => suppliersMap[params.row.supplier_id] || params.row.supplier_id,
+        renderCell: (params) => groupsMap[params.row.group_id] || params.row.group_id,
       },
       {
         field: 'status',
@@ -232,22 +231,10 @@ export function ShipmentsListView() {
       },
       {
         field: 'total_amount',
-        headerName: t('invoices.totalAmount', 'Total amount'),
-        width: 140,
+        headerName: t('outgoingInvoices.totalAmount', 'Total amount'),
+        width: 150,
         renderCell: (params) => Number(params.row.total_amount || 0).toLocaleString(),
       },
-      {
-        field: 'paid_amount',
-        headerName: t('invoices.paidAmount', 'Paid amount'),
-        width: 130,
-        renderCell: (params) => Number(params.row.paid_amount || 0).toLocaleString(),
-      },
-      // {
-      //   field: 'description',
-      //   headerName: t('deductions.description', 'Description'),
-      //   flex: 1,
-      //   minWidth: 220,
-      // },
       {
         type: 'actions',
         field: 'actions',
@@ -261,7 +248,7 @@ export function ShipmentsListView() {
             key="edit"
             icon={<Iconify icon="solar:pen-bold" />}
             label={t('common.edit', 'Edit')}
-            onClick={() => router.push(paths.warehouse.shipments.edit(String(params.row.id)))}
+            onClick={() => router.push(paths.warehouse.outgoingInvoices.edit(String(params.row.id)))}
           />,
           <CustomGridActionsCellItem
             key="delete"
@@ -273,7 +260,7 @@ export function ShipmentsListView() {
         ],
       },
     ],
-    [storagesMap, suppliersMap, t, router]
+    [storagesMap, groupsMap, t, router]
   );
 
   const startDateValue = useMemo(() => toPickerDate(draftFilters.start_date), [draftFilters.start_date]);
@@ -361,19 +348,19 @@ export function ShipmentsListView() {
             <TextField
               select
               size="small"
-              label={t('invoices.name', 'Supplier')}
+              label={t('outgoingInvoices.group', 'Group')}
               SelectProps={{ native: true }}
-              value={draftFilters.supplier_id || ''}
+              value={draftFilters.group_id || ''}
               onChange={(e) =>
                 setDraftFilters((prev) => ({
                   ...prev,
-                  supplier_id: e.target.value,
+                  group_id: e.target.value,
                 }))
               }
               InputLabelProps={{ shrink: true }}
             >
               <option value="">{t('ingredientReports.all', 'All')}</option>
-              {Object.entries(suppliersMap).map(([id, name]) => (
+              {Object.entries(groupsMap).map(([id, name]) => (
                 <option key={id} value={id}>
                   {name}
                 </option>
@@ -412,16 +399,16 @@ export function ShipmentsListView() {
           </Box>
         )}
         breadcrumbs={{
-          heading: t('overview.warehouse.shipments', 'Shipments'),
+          heading: t('overview.warehouse.expensesInvoices', 'Expenses invoices'),
           links: [
             { name: t('dashboard', 'Dashboard'), href: paths.dashboard.root },
             { name: t('overview.warehouse.title', 'Warehouse'), href: paths.warehouse.root },
-            { name: t('overview.warehouse.shipments', 'Shipments') },
+            { name: t('overview.warehouse.expensesInvoices', 'Expenses invoices') },
           ],
         }}
         addButton={{
           label: t('common.add', 'Add'),
-          href: paths.warehouse.shipments.new,
+          href: paths.warehouse.outgoingInvoices.new,
         }}
       />
 
@@ -435,9 +422,9 @@ export function ShipmentsListView() {
             color="error"
             onClick={async () => {
               if (!deleteId) return;
-              await deleteShipment(deleteId);
+              await deleteOutgoingInvoice(deleteId);
               setDeleteId(null);
-              await loadShipments();
+              await loadOutgoingInvoices();
             }}
           >
             {t('common.delete', 'Delete')}
@@ -451,20 +438,18 @@ export function ShipmentsListView() {
           setViewOpen(false);
           setViewData(null);
         }}
-        title={t('overview.warehouse.shipments', 'Shipments')}
+        title={t('overview.warehouse.expensesInvoices', 'Expenses invoices')}
         data={viewData}
         loading={viewLoading}
         position="right"
         slideDirection="left"
         maxWidth="lg"
-        renderContent={(payload: ShipmentBatchApiResponse | null) => {
-          const shipment = payload?.data?.shipment;
+        renderContent={(payload: OutgoingInvoiceBatchApiResponse | null) => {
+          const outgoingInvoice = payload?.data?.invoice;
           const items = payload?.data?.items || [];
-          if (!shipment) return null;
+          if (!outgoingInvoice) return null;
 
-          const totalAmount = Number(shipment.total_amount || 0);
-          const paidAmount = Number(shipment.paid_amount || 0);
-          const balance = totalAmount - paidAmount;
+          const totalAmount = Number(outgoingInvoice.total_amount || 0);
 
           return (
             <Box sx={{ display: 'grid', gap: 2 }}>
@@ -476,18 +461,18 @@ export function ShipmentsListView() {
                       <TableCell>{t('deductions.date', 'Date')}</TableCell>
                       <TableCell>{t('deductions.status', 'Status')}</TableCell>
                       <TableCell>{t('deductions.storage', 'Storage')}</TableCell>
-                      <TableCell>{t('invoices.name', 'Supplier')}</TableCell>
+                      <TableCell>{t('outgoingInvoices.group', 'Group')}</TableCell>
                       <TableCell>{t('deductions.description', 'Description')}</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
                     <TableRow>
-                      <TableCell>{shipment.number}</TableCell>
-                      <TableCell>{new Date(shipment.date).toLocaleString()}</TableCell>
-                      <TableCell>{shipment.status}</TableCell>
-                      <TableCell>{storagesMap[shipment.storage_id] || shipment.storage_id}</TableCell>
-                      <TableCell>{suppliersMap[shipment.supplier_id] || shipment.supplier_id}</TableCell>
-                      <TableCell>{shipment.description || '-'}</TableCell>
+                      <TableCell>{outgoingInvoice.number}</TableCell>
+                      <TableCell>{new Date(outgoingInvoice.date).toLocaleString()}</TableCell>
+                      <TableCell>{outgoingInvoice.status}</TableCell>
+                      <TableCell>{storagesMap[outgoingInvoice.storage_id] || outgoingInvoice.storage_id}</TableCell>
+                      <TableCell>{groupsMap[outgoingInvoice.group_id] || outgoingInvoice.group_id}</TableCell>
+                      <TableCell>{outgoingInvoice.description || '-'}</TableCell>
                     </TableRow>
                   </TableBody>
                 </Table>
@@ -500,10 +485,10 @@ export function ShipmentsListView() {
                       <TableCell>#</TableCell>
                       <TableCell>{t('warehouse.ingredient', 'Ingredient')}</TableCell>
                       <TableCell>{t('calculation.quantity', 'Qty')}</TableCell>
-                      <TableCell>{t('shipments.pricePerUnit', 'Price / Unit')}</TableCell>
-                      <TableCell>{t('shipments.total', 'Total')}</TableCell>
-                      <TableCell>{t('shipments.stockBefore', 'Stock Before')}</TableCell>
-                      <TableCell>{t('shipments.stockAfter', 'Stock After')}</TableCell>
+                      <TableCell>{t('outgoingInvoices.pricePerUnit', 'Price / Unit')}</TableCell>
+                      <TableCell>{t('outgoingInvoices.total', 'Total')}</TableCell>
+                      <TableCell>{t('outgoingInvoices.stockBefore', 'Stock Before')}</TableCell>
+                      <TableCell>{t('outgoingInvoices.stockAfter', 'Stock After')}</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
@@ -524,13 +509,7 @@ export function ShipmentsListView() {
 
               <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 3 }}>
                 <Typography variant="body2">
-                  <strong>{t('shipments.total', 'Total')}:</strong> {totalAmount.toLocaleString()}
-                </Typography>
-                <Typography variant="body2">
-                  <strong>{t('shipments.paid', 'Paid')}:</strong> {paidAmount.toLocaleString()}
-                </Typography>
-                <Typography variant="body2">
-                  <strong>{t('deductions.balance', 'Balance')}:</strong> {balance.toLocaleString()}
+                  <strong>{t('outgoingInvoices.total', 'Total')}:</strong> {totalAmount.toLocaleString()}
                 </Typography>
               </Box>
             </Box>

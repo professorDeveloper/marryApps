@@ -347,7 +347,8 @@
       "transfers": "O'tkazmalar",
       "locations": "Joylashuvlar",
       "suppliers": "Yetkazib beruvchilar",
-      "shipments": "Jo‘natmalar"
+      "shipments": "Jo‘natmalar",
+      "expensesInvoices": "Chiqim fakturalari"
     },
     "reports": {
       "title": "Hisobotlar",
@@ -1157,6 +1158,39 @@
       "itemDeleted": "Yetkazib berish elementi o'chirildi",
       "updated": "Yetkazib berish muvaffaqiyatli yangilandi",
       "itemsAdded": "Yetkazib berish elementlari muvaffaqiyatli qo'shildi"
+    }
+  },
+  "outgoingInvoices": {
+    "create": "Chiqim fakturasini yaratish",
+    "view": "Chiqim fakturasini ko'rish",
+    "invoice": "Chiqim fakturasi",
+    "items": "Elementlar",
+    "totals": "Jami",
+    "total": "Jami",
+    "totalAmount": "Umumiy summa",
+    "group": "Guruh",
+    "groupRequired": "Iltimos, guruhni tanlang",
+    "pricePerUnit": "Narx / birlik",
+    "stockBefore": "Oldingi qoldiq",
+    "stockAfter": "Keyingi qoldiq",
+    "notFound": "Chiqim fakturasi topilmadi",
+    "messages": {
+      "fetchFailed": "Chiqim fakturalari yuklanmadi",
+      "createFailed": "Chiqim fakturasini yaratib bo'lmadi",
+      "fetchOneFailed": "Chiqim fakturasini yuklab bo'lmadi",
+      "confirmFailed": "Chiqim fakturasini tasdiqlab bo'lmadi",
+      "cancelFailed": "Chiqim fakturasini bekor qilib bo'lmadi",
+      "deleteFailed": "Chiqim fakturasini o'chirib bo'lmadi",
+      "itemDeleteFailed": "Chiqim fakturasi elementini o'chirib bo'lmadi",
+      "updateFailed": "Chiqim fakturasini yangilab bo'lmadi",
+      "itemsAddFailed": "Chiqim fakturasi elementlarini qo'shib bo'lmadi",
+      "created": "Chiqim fakturasi muvaffaqiyatli yaratildi",
+      "confirmed": "Chiqim fakturasi tasdiqlandi",
+      "cancelled": "Chiqim fakturasi bekor qilindi",
+      "deleted": "Chiqim fakturasi o'chirildi",
+      "itemDeleted": "Chiqim fakturasi elementi o'chirildi",
+      "updated": "Chiqim fakturasi muvaffaqiyatli yangilandi",
+      "itemsAdded": "Chiqim fakturasi elementlari muvaffaqiyatli qo'shildi"
     }
   }
 }

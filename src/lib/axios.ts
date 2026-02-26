@@ -339,6 +339,17 @@ export const endpoints = {
     confirm: (id: string) => `/api/v1/shipments/${id}/confirm`,
     cancel: (id: string) => `/api/v1/shipments/${id}/cancel`,
   },
+  outgoingInvoices: {
+    list: '/api/v1/outgoing-invoices',
+    batch: '/api/v1/outgoing-invoices/batch',
+    details: (id: string) => `/api/v1/outgoing-invoices/${id}`,
+    update: (id: string) => `/api/v1/outgoing-invoices/${id}`,
+    delete: (id: string) => `/api/v1/outgoing-invoices/${id}`,
+    deleteItem: (id: string, itemId: string) => `/api/v1/outgoing-invoices/${id}/items/${itemId}`,
+    items: (id: string) => `/api/v1/outgoing-invoices/${id}/items`,
+    confirm: (id: string) => `/api/v1/outgoing-invoices/${id}/confirm`,
+    cancel: (id: string) => `/api/v1/outgoing-invoices/${id}/cancel`,
+  },
   ingredientStock: {
     list: '/api/v1/ingredient-stock',
     details: (id: string) => `/api/v1/ingredient-stock/${id}`,
