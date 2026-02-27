@@ -45,7 +45,7 @@ axiosInstance.interceptors.request.use((config) => {
   const selectedBranchId = localStorage.getItem('selectedBranchId');
 
   const role = (storedRole || decoded?.role || '').toLowerCase();
-  const brandId = storedBrandId || decoded?.brand_id || decoded?.brandId;
+  const brandId = decoded?.brand_id || decoded?.brandId || storedBrandId;
   const fallbackBranchId = storedBranchId || decoded?.branch_id || decoded?.branchId;
   const branchId = role === 'superadmin' ? selectedBranchId : fallbackBranchId;
 
@@ -349,6 +349,17 @@ export const endpoints = {
     items: (id: string) => `/api/v1/outgoing-invoices/${id}/items`,
     confirm: (id: string) => `/api/v1/outgoing-invoices/${id}/confirm`,
     cancel: (id: string) => `/api/v1/outgoing-invoices/${id}/cancel`,
+  },
+  separationActs: {
+    list: '/api/v1/separation-acts',
+    batch: '/api/v1/separation-acts/batch',
+    details: (id: string) => `/api/v1/separation-acts/${id}`,
+    update: (id: string) => `/api/v1/separation-acts/${id}`,
+    delete: (id: string) => `/api/v1/separation-acts/${id}`,
+    deleteItem: (id: string, itemId: string) => `/api/v1/separation-acts/${id}/items/${itemId}`,
+    items: (id: string) => `/api/v1/separation-acts/${id}/items`,
+    confirm: (id: string) => `/api/v1/separation-acts/${id}/confirm`,
+    cancel: (id: string) => `/api/v1/separation-acts/${id}/cancel`,
   },
   ingredientStock: {
     list: '/api/v1/ingredient-stock',

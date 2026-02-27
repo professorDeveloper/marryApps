@@ -363,7 +363,8 @@
       "locations": "Locations",
       "suppliers": "Suppliers",
       "shipments": "Dispatches",
-      "expensesInvoices": "Expenses invoices"
+      "expensesInvoices": "Expenses invoices",
+      "separationActs": "Separation acts"
     },
     "reports": {
       "title": "Reports",
@@ -980,6 +981,39 @@
       "itemDeleted": "Outgoing invoice item deleted",
       "updated": "Outgoing invoice updated successfully",
       "itemsAdded": "Outgoing invoice items added successfully"
+    }
+  },
+  "separationActs": {
+    "create": "Create separation act",
+    "view": "View separation act",
+    "act": "Separation act",
+    "items": "Items",
+    "totals": "Totals",
+    "total": "Total",
+    "totalAmount": "Total Amount",
+    "group": "Group",
+    "sourceIngredient": "Source ingredient",
+    "sourceQuantity": "Source quantity",
+    "sourceIngredientRequired": "Please select source ingredient",
+    "sourceQuantityRequired": "Source quantity must be greater than zero",
+    "notFound": "Separation act not found",
+    "messages": {
+      "fetchFailed": "Failed to fetch separation acts",
+      "createFailed": "Failed to create separation act",
+      "fetchOneFailed": "Failed to fetch separation act",
+      "confirmFailed": "Failed to confirm separation act",
+      "cancelFailed": "Failed to cancel separation act",
+      "deleteFailed": "Failed to delete separation act",
+      "itemDeleteFailed": "Failed to delete separation act item",
+      "updateFailed": "Failed to update separation act",
+      "itemsAddFailed": "Failed to add separation act items",
+      "created": "Separation act created successfully",
+      "confirmed": "Separation act confirmed",
+      "cancelled": "Separation act cancelled",
+      "deleted": "Separation act deleted",
+      "itemDeleted": "Separation act item deleted",
+      "updated": "Separation act updated successfully",
+      "itemsAdded": "Separation act items added successfully"
     }
   },
   "inventory": {

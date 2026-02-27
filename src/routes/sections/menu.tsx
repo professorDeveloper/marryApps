@@ -41,6 +41,8 @@ import { ShipmentsEditView } from 'src/sections/warehouse/shipments-edit-view';
 import { ShipmentsListView } from 'src/sections/warehouse/shipments-list-view';
 import { OutgoingInvoicesEditView } from 'src/sections/warehouse/outgoing-invoices-edit-view';
 import { OutgoingInvoicesListView } from 'src/sections/warehouse/outgoing-invoices-list-view';
+import { SeparationActsEditView } from 'src/sections/warehouse/separation-acts-edit-view';
+import { SeparationActsListView } from 'src/sections/warehouse/separation-acts-list-view';
 import { ManagementListView } from 'src/sections/settings/manegment-list-view';
 import { RestaurantInfoListView } from 'src/sections/settings/restaurant-info';
 import { InventoryListView } from 'src/sections/warehouse/inventory-list-view';
@@ -163,6 +165,9 @@ export const dashboardRoutes: RouteObject[] = [
           { path: 'warehouse/expenses-invoices', element: <OutgoingInvoicesListView /> },
           { path: 'warehouse/expenses-invoices/new', element: <OutgoingInvoicesEditView /> },
           { path: 'warehouse/expenses-invoices/:id/edit', element: <OutgoingInvoicesEditView /> },
+          { path: 'warehouse/separations-acts', element: <SeparationActsListView /> },
+          { path: 'warehouse/separations-acts/new', element: <SeparationActsEditView /> },
+          { path: 'warehouse/separations-acts/:id/edit', element: <SeparationActsEditView /> },
           { path: 'warehouse/locations', element: <LocationsListView /> },
           { path: 'warehouse/locations/new', element: <LocationsEditView isNew /> },
           { path: 'warehouse/locations/:id/edit', element: <LocationsEditView /> },

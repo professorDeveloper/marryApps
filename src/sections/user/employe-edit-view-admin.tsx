@@ -95,6 +95,7 @@ export function EmployeeEditViewAdmin({ userId, isNew = false }: EmployeeEditVie
                     phone_number: formData.phone_number,
                     // Login qilgan vaqtda saqlangan brand_id ni olamiz
                     brand_id: localStorage.getItem('brand_id') || 'default_brand',
+                    branch_id: localStorage.getItem('selectedBranchId') || localStorage.getItem('branch_id') || '',
                 };
 
                 if (isNew) {

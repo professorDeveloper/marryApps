@@ -22,6 +22,25 @@ interface BackendResponse<T> {
     code: number;
 }
 
+function getBrandIdFromToken(): string {
+    const token =
+        sessionStorage.getItem('jwt_access_token')
+        || sessionStorage.getItem('accessToken')
+        || localStorage.getItem('accessToken');
+
+    if (!token) return '';
+
+    try {
+        const [, payload] = token.split('.');
+        if (!payload) return '';
+        const normalized = payload.replace(/-/g, '+').replace(/_/g, '/');
+        const decoded = JSON.parse(atob(normalized));
+        return decoded?.brand_id || decoded?.brandId || '';
+    } catch {
+        return '';
+    }
+}
+
 
 /**
  * Get users by role
@@ -119,10 +138,18 @@ export function useGetUser(userId: string) {
 export function useCreateUser() {
     const callback = useCallback(
         async (formData: IUserFormData) => {
+            const tokenBrandId = getBrandIdFromToken();
+
             // Transform form data to register API format
             const registerData: IUserRegisterData = {
-                // Login qilgan vaqtda saqlangan brand_id ni ishlatamiz
-                brand_id: formData.brand_id || localStorage.getItem('brand_id') || '',
+                // Token ichidagi brand_id ustuvor (UUID id emas, haqiqiy tenant kodi bo'lishi uchun)
+                brand_id: tokenBrandId || formData.brand_id || localStorage.getItem('brand_id') || '',
+                // selectedBranchId ustuvor, bo'lmasa tokendan kelgan branch_id ishlatiladi
+                branch_id:
+                    formData.branch_id
+                    || localStorage.getItem('selectedBranchId')
+                    || localStorage.getItem('branch_id')
+                    || '',
                 fullName: formData.full_name || formData.fullName || '',
                 username: formData.username,
                 password: formData.password || Math.random().toString(36).slice(-8), // Generate random if not provided

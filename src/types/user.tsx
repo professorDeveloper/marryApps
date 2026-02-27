@@ -14,6 +14,7 @@ export interface IUser {
     status: UserStatus;
     phone_number?: string;
     brand_id?: string;
+    branch_id?: string;
     pincode?: string;
     terminal?: string;
     created_at: string;
@@ -32,10 +33,12 @@ export interface IUserFormData {
     pincode?: string;
     terminal?: string;
     brand_id?: string;
+    branch_id?: string;
 }
 
 export interface IUserRegisterData {
     brand_id: string;
+    branch_id: string;
     fullName: string;
     username: string;
     password: string;

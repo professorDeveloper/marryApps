@@ -173,6 +173,12 @@ export const paths = {
       details: (id: string) => `${ROOTS.MENU}/warehouse/expenses-invoices/${id}`,
       edit: (id: string) => `${ROOTS.MENU}/warehouse/expenses-invoices/${id}/edit`,
     },
+    separationActs: {
+      root: `${ROOTS.MENU}/warehouse/separations-acts`,
+      new: `${ROOTS.MENU}/warehouse/separations-acts/new`,
+      details: (id: string) => `${ROOTS.MENU}/warehouse/separations-acts/${id}`,
+      edit: (id: string) => `${ROOTS.MENU}/warehouse/separations-acts/${id}/edit`,
+    },
     locations: {
       root: `${ROOTS.MENU}/warehouse/locations`,
       new: `${ROOTS.MENU}/warehouse/locations/new`,
