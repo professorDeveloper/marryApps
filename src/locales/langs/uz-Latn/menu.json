@@ -954,6 +954,7 @@
     "type": "Turi",
     "status": "Holati",
     "table": "Stol",
+    "tableOption": "Stol #{{number}} (sig'imi: {{capacity}})",
     "scheduledAt": "Rejalashtirilgan vaqt",
     "reschedule": "Vaqtni o'zgartirish",
     "waiter": "Ofitsiant",
@@ -962,7 +963,20 @@
     "items": "Pozitsiyalar",
     "good": "Taom",
     "quantity": "Soni",
-    "addItem": "Pozitsiya qo'shish"
+    "addItem": "Pozitsiya qo'shish",
+    "scenarios": {
+      "dineInWithFood": "Stol va ovqat buyurtmasi",
+      "tableOnly": "Faqat stol broni",
+      "takeawayWithFood": "Faqat ovqat buyurtmasi"
+    },
+    "helpers": {
+      "dineInWithFood": "Stol, ofitsiant, mehmonlar soni, vaqt va taomlar majburiy",
+      "tableOnly": "Stol, mehmonlar soni va vaqt majburiy. Taom hozircha shart emas",
+      "takeawayWithFood": "Takeaway turi, kassir, vaqt va taomlar majburiy"
+    },
+    "errors": {
+      "requiredFields": "Majburiy maydonlar to'ldirilmagan"
+    }
   },
   "ingredientReports": {
     "title": "Maxsulotlar hisobotlari",

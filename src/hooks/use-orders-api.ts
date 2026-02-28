@@ -3,7 +3,6 @@ import type {
   OrderEntity,
   CreateOrderPayload,
   OrdersListResponse,
-  RescheduleOrderPayload,
 } from 'src/types/orders';
 
 import { useCallback } from 'react';
@@ -117,40 +116,8 @@ export function useOrdersAPI() {
     }
   }, []);
 
-  const activateOrder = useCallback(async (orderId: string): Promise<OrderEntity | null> => {
-    try {
-      const response = await poster<unknown>(endpoints.orders.activate(orderId), {});
-      const updated = normalizeOrder(response);
-      toast.success('Order activated');
-      return updated;
-    } catch (error) {
-      const axiosError = error as AxiosError<{ message?: string }>;
-      toast.error(axiosError?.response?.data?.message || 'Failed to activate order');
-      return null;
-    }
-  }, []);
-
-  const rescheduleOrder = useCallback(
-    async (orderId: string, payload: RescheduleOrderPayload): Promise<OrderEntity | null> => {
-      try {
-        const response = await poster<unknown>(endpoints.orders.reschedule(orderId), payload);
-        const updated = normalizeOrder(response);
-        toast.success('Order rescheduled');
-        return updated;
-      } catch (error) {
-        const axiosError = error as AxiosError<{ message?: string }>;
-        toast.error(axiosError?.response?.data?.message || 'Failed to reschedule order');
-        return null;
-      }
-    },
-    []
-  );
-
   return {
     getOrders,
     createOrder,
-    activateOrder,
-    rescheduleOrder,
   };
 }
-

@@ -902,6 +902,7 @@
     "type": "Тури",
     "status": "Ҳолати",
     "table": "Стол",
+    "tableOption": "Стол #{{number}} (сигими: {{capacity}})",
     "scheduledAt": "Режалаштирилган вақт",
     "reschedule": "Вақтни ўзгартириш",
     "waiter": "Официант",
@@ -910,7 +911,20 @@
     "items": "Позициялар",
     "good": "Таом",
     "quantity": "Сони",
-    "addItem": "Позиция қўшиш"
+    "addItem": "Позиция қўшиш",
+    "scenarios": {
+      "dineInWithFood": "Стол ва таом буюртмаси",
+      "tableOnly": "Фақат стол брони",
+      "takeawayWithFood": "Фақат овқат буюртмаси"
+    },
+    "helpers": {
+      "dineInWithFood": "Стол, официант, меҳмонлар сони, вақт ва таомлар мажбурий",
+      "tableOnly": "Стол, меҳмонлар сони ва вақт мажбурий. Таомни кейин қўшса бўлади",
+      "takeawayWithFood": "Takeaway тури, кассир, вақт ва таомлар мажбурий"
+    },
+    "errors": {
+      "requiredFields": "Мажбурий майдонлар тўлдирилмаган"
+    }
   },
   "ingredientReports": {
     "title": "Махсулотлар ҳисоботлари",

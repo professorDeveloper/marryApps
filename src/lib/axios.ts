@@ -182,9 +182,6 @@ export const endpoints = {
   orders: {
     list: '/api/v1/orders',
     create: '/api/v1/orders',
-    details: (id: string) => `/api/v1/orders/${id}`,
-    activate: (id: string) => `/api/v1/orders/${id}/activate`,
-    reschedule: (id: string) => `/api/v1/orders/${id}/reschedule`,
   },
   department: {
     list: '/api/v1/departments',

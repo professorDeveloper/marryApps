@@ -1,68 +1,49 @@
 import type { CreateOrderPayload } from 'src/types/orders';
 
 import dayjs from 'dayjs';
-import { useMemo, useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useMemo, useState, useCallback } from 'react';
 
 import {
   Box,
-  Card,
+  Tab,
   Grid,
   Tabs,
-  Tab,
+  Alert,
   Paper,
   Stack,
-  Alert,
   Button,
+  Select,
   Divider,
   MenuItem,
-  Select,
   TextField,
   InputLabel,
   Typography,
   FormControl,
-  SelectChangeEvent,
 } from '@mui/material';
 
 import { paths } from 'src/routes/paths';
 import { useRouter } from 'src/routes/hooks';
+
 import { useGetMeals } from 'src/hooks/use-meals';
 import { useOrdersAPI } from 'src/hooks/use-orders-api';
+
 import { useGetUsersByRole } from 'src/actions/users';
+import { DashboardContent } from 'src/layouts/dashboard';
 import { useGetCafeTables } from 'src/actions/cafe-tables';
 
 import { toast } from 'src/components/snackbar';
-import { DashboardContent } from 'src/layouts/dashboard';
-import { CustomBreadcrumbs } from 'src/components/custom-breadcrumbs';
 import { Iconify } from 'src/components/iconify';
+import { CustomBreadcrumbs } from 'src/components/custom-breadcrumbs';
 
-type ScenarioType =
-  | 'dine_in_immediate'
-  | 'dine_in_reserved'
-  | 'table_only_reserved'
-  | 'takeaway_immediate'
-  | 'takeaway_reserved';
+type ScenarioType = 'dine_in_with_food' | 'table_only' | 'takeaway_with_food';
 
 interface DraftItem {
   good_id: string;
   quantity: number;
 }
 
-const scenarioLabels: Record<ScenarioType, string> = {
-  dine_in_immediate: 'Dine-in Immediate',
-  dine_in_reserved: 'Dine-in Reserved',
-  table_only_reserved: 'Table-only Reservation',
-  takeaway_immediate: 'Takeaway Immediate',
-  takeaway_reserved: 'Takeaway Reserved',
-};
-
-const scenarioTabValue: ScenarioType[] = [
-  'dine_in_immediate',
-  'dine_in_reserved',
-  'table_only_reserved',
-  'takeaway_immediate',
-  'takeaway_reserved',
-];
+const scenarioTabValue: ScenarioType[] = ['dine_in_with_food', 'table_only', 'takeaway_with_food'];
 
 const toISOFromLocal = (value: string): string | undefined => {
   if (!value) return undefined;
@@ -82,7 +63,7 @@ export function OrdersCreateView() {
 
   const { createOrder } = useOrdersAPI();
 
-  const [scenario, setScenario] = useState<ScenarioType>('dine_in_immediate');
+  const [scenario, setScenario] = useState<ScenarioType>('dine_in_with_food');
   const [submitting, setSubmitting] = useState(false);
   const [tableId, setTableId] = useState('');
   const [waiterId, setWaiterId] = useState('');
@@ -92,27 +73,36 @@ export function OrdersCreateView() {
   const [comment, setComment] = useState('');
   const [items, setItems] = useState<DraftItem[]>([{ good_id: '', quantity: 1 }]);
 
-  const isTakeaway = scenario === 'takeaway_immediate' || scenario === 'takeaway_reserved';
-  const isDineIn = !isTakeaway;
-  const requiresItems = scenario !== 'table_only_reserved';
-  const requiresSchedule = scenario === 'dine_in_reserved' || scenario === 'table_only_reserved' || scenario === 'takeaway_reserved';
+  const isTableOrder = scenario === 'dine_in_with_food' || scenario === 'table_only';
+  const requiresItems = scenario !== 'table_only';
+
+  const scenarioLabels = useMemo<Record<ScenarioType, string>>(
+    () => ({
+      dine_in_with_food: t('order.scenarios.dineInWithFood', 'Table + food order'),
+      table_only: t('order.scenarios.tableOnly', 'Table-only reservation'),
+      takeaway_with_food: t('order.scenarios.takeawayWithFood', 'Takeaway + food order'),
+    }),
+    [t]
+  );
 
   const selectedScenarioHelpText = useMemo(() => {
-    switch (scenario) {
-      case 'dine_in_immediate':
-        return 'Flow: open -> cooking -> ready -> served -> paid';
-      case 'dine_in_reserved':
-        return 'Flow: reserved -> auto-activates at scheduled time -> open -> cooking -> ready -> served -> paid';
-      case 'table_only_reserved':
-        return 'Flow: reserved -> items added when guest arrives -> open -> cooking -> ...';
-      case 'takeaway_immediate':
-        return 'Flow: open -> paid -> cooking -> ready';
-      case 'takeaway_reserved':
-        return 'Flow: reserved -> paid -> auto-activates at scheduled time -> cooking -> ready';
-      default:
-        return '';
+    if (scenario === 'dine_in_with_food') {
+      return t(
+        'order.helpers.dineInWithFood',
+        'Table, waiter, guest count, scheduled time and items are required'
+      );
     }
-  }, [scenario]);
+    if (scenario === 'table_only') {
+      return t(
+        'order.helpers.tableOnly',
+        'Table, guest count and scheduled time are required. Items are optional for now'
+      );
+    }
+    return t(
+      'order.helpers.takeawayWithFood',
+      'Takeaway type, cashier, scheduled time and items are required'
+    );
+  }, [scenario, t]);
 
   const buildCreatePayload = useCallback((): CreateOrderPayload | null => {
     const normalizedItems = items
@@ -120,32 +110,22 @@ export function OrdersCreateView() {
       .map((item) => ({ good_id: item.good_id, quantity: item.quantity }));
 
     const schedule = toISOFromLocal(scheduledAt);
+    if (!schedule) return null;
 
-    if (scenario === 'dine_in_immediate') {
+    if (scenario === 'dine_in_with_food') {
       if (!tableId || !waiterId || normalizedItems.length === 0) return null;
       return {
         table_id: tableId,
         waiter_id: waiterId,
         guest_count: guestCount || 1,
-        comment: comment || undefined,
-        items: normalizedItems,
-      };
-    }
-
-    if (scenario === 'dine_in_reserved') {
-      if (!tableId || !waiterId || !schedule || normalizedItems.length === 0) return null;
-      return {
-        table_id: tableId,
-        waiter_id: waiterId,
-        guest_count: guestCount || 1,
         scheduled_at: schedule,
         comment: comment || undefined,
         items: normalizedItems,
       };
     }
 
-    if (scenario === 'table_only_reserved') {
-      if (!tableId || !schedule) return null;
+    if (scenario === 'table_only') {
+      if (!tableId) return null;
       return {
         table_id: tableId,
         guest_count: guestCount || 1,
@@ -154,34 +134,20 @@ export function OrdersCreateView() {
       };
     }
 
-    if (scenario === 'takeaway_immediate') {
-      if (!cashierId || normalizedItems.length === 0) return null;
-      return {
-        order_type: 'takeaway',
-        cashier_id: cashierId,
-        comment: comment || undefined,
-        items: normalizedItems,
-      };
-    }
-
-    if (scenario === 'takeaway_reserved') {
-      if (!cashierId || !schedule || normalizedItems.length === 0) return null;
-      return {
-        order_type: 'takeaway',
-        cashier_id: cashierId,
-        scheduled_at: schedule,
-        comment: comment || undefined,
-        items: normalizedItems,
-      };
-    }
-
-    return null;
+    if (!cashierId || normalizedItems.length === 0) return null;
+    return {
+      order_type: 'takeaway',
+      cashier_id: cashierId,
+      scheduled_at: schedule,
+      comment: comment || undefined,
+      items: normalizedItems,
+    };
   }, [scenario, items, scheduledAt, tableId, waiterId, guestCount, comment, cashierId]);
 
   const handleCreateOrder = useCallback(async () => {
     const payload = buildCreatePayload();
     if (!payload) {
-      toast.error('Required fields are not filled for selected scenario');
+      toast.error(t('order.errors.requiredFields', 'Required fields are missing'));
       return;
     }
 
@@ -194,7 +160,7 @@ export function OrdersCreateView() {
     } finally {
       setSubmitting(false);
     }
-  }, [buildCreatePayload, createOrder, router]);
+  }, [buildCreatePayload, createOrder, router, t]);
 
   return (
     <DashboardContent
@@ -245,7 +211,7 @@ export function OrdersCreateView() {
         </Alert>
 
         <Grid container spacing={2}>
-          {isDineIn && (
+          {isTableOrder && (
             <Grid size={{ xs: 12, md: 4 }}>
               <FormControl fullWidth>
                 <InputLabel>{t('order.table', 'Table')}</InputLabel>
@@ -257,7 +223,10 @@ export function OrdersCreateView() {
                 >
                   {tables.map((table) => (
                     <MenuItem key={table.id} value={table.id}>
-                      Table #{table.number} (cap: {table.capacity})
+                      {t('order.tableOption', 'Table #{{number}} (cap: {{capacity}})', {
+                        number: table.number,
+                        capacity: table.capacity,
+                      })}
                     </MenuItem>
                   ))}
                 </Select>
@@ -265,7 +234,7 @@ export function OrdersCreateView() {
             </Grid>
           )}
 
-          {isDineIn && scenario !== 'table_only_reserved' && (
+          {scenario === 'dine_in_with_food' && (
             <Grid size={{ xs: 12, md: 4 }}>
               <FormControl fullWidth>
                 <InputLabel>{t('order.waiter', 'Waiter')}</InputLabel>
@@ -285,7 +254,7 @@ export function OrdersCreateView() {
             </Grid>
           )}
 
-          {isTakeaway && (
+          {scenario === 'takeaway_with_food' && (
             <Grid size={{ xs: 12, md: 4 }}>
               <FormControl fullWidth>
                 <InputLabel>{t('order.cashier', 'Cashier')}</InputLabel>
@@ -305,7 +274,7 @@ export function OrdersCreateView() {
             </Grid>
           )}
 
-          {isDineIn && (
+          {isTableOrder && (
             <Grid size={{ xs: 12, md: 4 }}>
               <TextField
                 fullWidth
@@ -318,18 +287,16 @@ export function OrdersCreateView() {
             </Grid>
           )}
 
-          {requiresSchedule && (
-            <Grid size={{ xs: 12, md: 4 }}>
-              <TextField
-                fullWidth
-                type="datetime-local"
-                label={t('order.scheduledAt', 'Scheduled at')}
-                value={scheduledAt}
-                onChange={(event) => setScheduledAt(event.target.value)}
-                InputLabelProps={{ shrink: true }}
-              />
-            </Grid>
-          )}
+          <Grid size={{ xs: 12, md: 4 }}>
+            <TextField
+              fullWidth
+              type="datetime-local"
+              label={t('order.scheduledAt', 'Scheduled at')}
+              value={scheduledAt}
+              onChange={(event) => setScheduledAt(event.target.value)}
+              InputLabelProps={{ shrink: true }}
+            />
+          </Grid>
 
           <Grid size={{ xs: 12, md: 8 }}>
             <TextField

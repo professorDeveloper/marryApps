@@ -1068,6 +1068,7 @@
     "type": "Type",
     "status": "Status",
     "table": "Table",
+    "tableOption": "Table #{{number}} (cap: {{capacity}})",
     "scheduledAt": "Scheduled at",
     "reschedule": "Reschedule",
     "waiter": "Waiter",
@@ -1076,7 +1077,20 @@
     "items": "Items",
     "good": "Good",
     "quantity": "Qty",
-    "addItem": "Add item"
+    "addItem": "Add item",
+    "scenarios": {
+      "dineInWithFood": "Table + food order",
+      "tableOnly": "Table-only reservation",
+      "takeawayWithFood": "Takeaway + food order"
+    },
+    "helpers": {
+      "dineInWithFood": "Table, waiter, guest count, scheduled time and items are required",
+      "tableOnly": "Table, guest count and scheduled time are required. Items are optional for now",
+      "takeawayWithFood": "Takeaway type, cashier, scheduled time and items are required"
+    },
+    "errors": {
+      "requiredFields": "Required fields are missing"
+    }
   },
   "ingredientReports": {
     "title": "Ingredient Reports",
