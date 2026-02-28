@@ -60,9 +60,7 @@ export function OrdersCreateView() {
   const { tables, tablesLoading } = useGetCafeTables();
   const { users: waiters, usersLoading: waitersLoading } = useGetUsersByRole('waiter');
   const { users: cashiers, usersLoading: cashiersLoading } = useGetUsersByRole('cashier');
-
   const { createOrder } = useOrdersAPI();
-
   const [scenario, setScenario] = useState<ScenarioType>('dine_in_with_food');
   const [submitting, setSubmitting] = useState(false);
   const [tableId, setTableId] = useState('');

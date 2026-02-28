@@ -1,8 +1,8 @@
 import type { Theme, SxProps } from '@mui/material/styles';
 import type { ButtonBaseProps } from '@mui/material/ButtonBase';
 
-import { useState, useCallback, useEffect } from 'react';
 import { usePopover } from 'minimal-shared/hooks';
+import { useState, useCallback, useEffect } from 'react';
 
 import Box from '@mui/material/Box';
 import Avatar from '@mui/material/Avatar';
@@ -36,6 +36,7 @@ export function WorkspacesPopover({ data = [], sx, ...other }: WorkspacesPopover
 
   const { open, anchorEl, onClose, onOpen } = usePopover();
   const { selectedBranchId, setSelectedBranchId } = useBranchContext();
+  const isSuperadmin = String(localStorage.getItem('user_role') || '').toLowerCase() === 'superadmin';
 
   const [workspace, setWorkspace] = useState(data[0]);
 
@@ -60,11 +61,16 @@ export function WorkspacesPopover({ data = [], sx, ...other }: WorkspacesPopover
 
   const handleChangeWorkspace = useCallback(
     (newValue: (typeof data)[0]) => {
+      const hasChanged = selectedBranchId !== newValue.id;
       setWorkspace(newValue);
       setSelectedBranchId(newValue.id);
       onClose();
+
+      if (isSuperadmin && hasChanged) {
+        window.location.reload();
+      }
     },
-    [onClose, setSelectedBranchId]
+    [isSuperadmin, onClose, selectedBranchId, setSelectedBranchId]
   );
 
   const buttonBg: SxProps<Theme> = {
