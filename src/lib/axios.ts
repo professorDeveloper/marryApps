@@ -179,6 +179,13 @@ export const endpoints = {
     details: '/api/order/details',
     search: '/api/order/search',
   },
+  orders: {
+    list: '/api/v1/orders',
+    create: '/api/v1/orders',
+    details: (id: string) => `/api/v1/orders/${id}`,
+    activate: (id: string) => `/api/v1/orders/${id}/activate`,
+    reschedule: (id: string) => `/api/v1/orders/${id}/reschedule`,
+  },
   department: {
     list: '/api/v1/departments',
     details: (id: string) => `/api/v1/departments/${id}`,

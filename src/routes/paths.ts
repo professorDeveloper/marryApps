@@ -231,6 +231,10 @@ export const paths = {
       new: `${ROOTS.MENU}/warehouse/deduction-groups/new`,
       edit: (id: string) => `${ROOTS.MENU}/warehouse/deduction-groups/${id}/edit`,
     },
+    orders: {
+      root: `${ROOTS.MENU}/warehouse/orders`,
+      new: `${ROOTS.MENU}/warehouse/orders/new`,
+    },
   },
 
   cashbox: {

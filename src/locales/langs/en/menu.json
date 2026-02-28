@@ -364,7 +364,8 @@
       "suppliers": "Suppliers",
       "shipments": "Dispatches",
       "expensesInvoices": "Expenses invoices",
-      "separationActs": "Separation acts"
+      "separationActs": "Separation acts",
+      "orders": "Order management"
     },
     "reports": {
       "title": "Reports",
@@ -640,6 +641,7 @@
     "success": "Success",
     "save": "Save",
     "cancel": "Cancel",
+    "back": "Back",
     "delete": "Delete",
     "edit": "Edit",
     "view": "View",
@@ -1060,6 +1062,21 @@
       "updated": "Inventory updated successfully",
       "itemsAdded": "Inventory items added successfully"
     }
+  },
+  "order": {
+    "create": "Create order",
+    "type": "Type",
+    "status": "Status",
+    "table": "Table",
+    "scheduledAt": "Scheduled at",
+    "reschedule": "Reschedule",
+    "waiter": "Waiter",
+    "cashier": "Cashier",
+    "guestCount": "Guest count",
+    "items": "Items",
+    "good": "Good",
+    "quantity": "Qty",
+    "addItem": "Add item"
   },
   "ingredientReports": {
     "title": "Ingredient Reports",

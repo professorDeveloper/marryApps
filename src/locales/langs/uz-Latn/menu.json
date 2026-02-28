@@ -349,7 +349,8 @@
       "suppliers": "Yetkazib beruvchilar",
       "shipments": "Jo‘natmalar",
       "expensesInvoices": "Chiqim fakturalari",
-      "separationActs": "Ajratish aktlari"
+      "separationActs": "Ajratish aktlari",
+      "orders": "Buyurtmalar boshqaruvi"
     },
     "reports": {
       "title": "Hisobotlar",
@@ -490,6 +491,7 @@
     "success": "Muvaffaqiyatli",
     "save": "Saqlash",
     "cancel": "Bekor qilish",
+    "back": "Orqaga",
     "delete": "O'chirish",
     "edit": "Tahrir qilish",
     "view": "Ko'rish",
@@ -946,6 +948,21 @@
       "updated": "Ombor menusi muvaffaqiyat yangilandi",
       "itemsAdded": "Ombor menusi elementlari muvaffaqiyat qo'shildi"
     }
+  },
+  "order": {
+    "create": "Buyurtma yaratish",
+    "type": "Turi",
+    "status": "Holati",
+    "table": "Stol",
+    "scheduledAt": "Rejalashtirilgan vaqt",
+    "reschedule": "Vaqtni o'zgartirish",
+    "waiter": "Ofitsiant",
+    "cashier": "Kassir",
+    "guestCount": "Mehmonlar soni",
+    "items": "Pozitsiyalar",
+    "good": "Taom",
+    "quantity": "Soni",
+    "addItem": "Pozitsiya qo'shish"
   },
   "ingredientReports": {
     "title": "Maxsulotlar hisobotlari",

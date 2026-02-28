@@ -50,6 +50,8 @@ import { InventoryEditView } from 'src/sections/warehouse/inventory-edit-view';
 import { DeductionsListView } from 'src/sections/warehouse/deductions-list-view';
 import { DeductionsEditView } from 'src/sections/warehouse/deductions-edit-view';
 import { IngredientListView } from 'src/sections/warehouse/ingredients-list-view';
+import { OrdersCreateView } from 'src/sections/warehouse/orders-create-view';
+import { OrdersManagementView } from 'src/sections/warehouse/orders-management-view';
 import { CategoryEditViewWrapper } from 'src/sections/category/category-edit-view';
 import { TransactionsEditView } from 'src/sections/cashbox/transactions-edit-view';
 import { GoodsReportsListView } from 'src/sections/reports/goods-reports-list-view';
@@ -193,6 +195,8 @@ export const dashboardRoutes: RouteObject[] = [
           { path: 'warehouse/deduction-groups', element: <DeductionGroupsListView /> },
           { path: 'warehouse/deduction-groups/new', element: <DeductionGroupEditView isNew /> },
           { path: 'warehouse/deduction-groups/:id/edit', element: <DeductionGroupEditView /> },
+          { path: 'warehouse/orders', element: <OrdersManagementView /> },
+          { path: 'warehouse/orders/new', element: <OrdersCreateView /> },
           { path: 'reports', element: <ReportsListView /> },
           { path: 'reports/new', element: <ReportsEditView isNew /> },
           { path: 'reports/:id/edit', element: <ReportsEditView /> },

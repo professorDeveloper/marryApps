@@ -46,6 +46,7 @@ interface InventoryDetailsCalculationProps {
 }
 
 const formatPrice = (price: number) => {
+    if (Number.isNaN(price)) return '0.00';
     const formatted = Math.round(price * 100) / 100;
     return new Intl.NumberFormat('uz-UZ', {
         minimumFractionDigits: 2,
@@ -86,6 +87,8 @@ export function InventoryDetailsCalculation({
     const [isSaving, setIsSaving] = useState(false);
     // Results table (after saving)
     const [inventoryItems, setInventoryItems] = useState<IInventoryItem[]>([]);
+    // Track last successfully applied payload to avoid duplicate apply calls
+    const [lastAppliedPayloadKey, setLastAppliedPayloadKey] = useState('');
 
     // Load ingredients
     useEffect(() => {
@@ -205,21 +208,35 @@ export function InventoryDetailsCalculation({
         }));
     };
 
+    const buildPayloadKey = (items: IInventoryItemInput[]) =>
+        [...items]
+            .sort((a, b) => a.ingredient_id.localeCompare(b.ingredient_id))
+            .map((item) => `${item.ingredient_id}:${item.counted_quantity}`)
+            .join('|');
+
     const actionButtonSx = {
         minWidth: 100,
         height: 40,
     };
 
     // Handle save
-    const handleSave = async () => {
+    const handleSave = async (): Promise<boolean> => {
         try {
             if (transferredIds.length === 0) {
                 toast.error(t('inventory.selectIngredients') || 'Please select ingredients');
-                return;
+                return false;
             }
 
             setIsSaving(true);
             const itemsData = buildTransferData();
+            const payloadKey = buildPayloadKey(itemsData);
+
+            // Prevent duplicate save/apply request when user clicks Save again without changes
+            if (payloadKey === lastAppliedPayloadKey) {
+                toast.info(t('inventory.noChanges') || 'No changes to save');
+                return true;
+            }
+
             const result = await createInventoryItemsBatch(inventoryId, itemsData);
 
             if (result) {
@@ -234,7 +251,7 @@ export function InventoryDetailsCalculation({
                 setInventoryItemIds(newInventoryItemIds);
 
                 if (onDetailsChange) {
-                    onDetailsChange(itemsData);
+                    onDetailsChange(result);
                 }
 
                 // Apply inventory (call /api/v1/inventories/{id}/apply)
@@ -250,10 +267,15 @@ export function InventoryDetailsCalculation({
                 if (onSuccess) {
                     onSuccess();
                 }
+
+                setLastAppliedPayloadKey(payloadKey);
+                return true;
             }
+            return false;
         } catch (error) {
             console.error('Error saving inventory items:', error);
             toast.error(t('error.saveFailed'));
+            return false;
         } finally {
             setIsSaving(false);
         }
@@ -690,7 +712,12 @@ export function InventoryDetailsCalculation({
                         </Button>
                         <Button
                             // variant="contained"
-                            onClick={handleSave}
+                            onClick={async () => {
+                                const success = await handleSave();
+                                if (success) {
+                                    navigate(paths.menu.inventory.root);
+                                }
+                            }}
                             disabled={transferredIds.length === 0 || isSaving}
                             sx={{
                                 ...actionButtonSx,

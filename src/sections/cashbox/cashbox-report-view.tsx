@@ -81,9 +81,12 @@ interface MainTableRow {
 }
 
 const sectionActionsSx = {
-  bgcolor: '#6f66ff',
   minWidth: 86,
-  '&:hover': { bgcolor: '#6157f0' },
+  bgcolor: (theme: any) => (theme.palette.mode === 'light' ? theme.palette.common.black : theme.palette.common.white),
+  color: (theme: any) => (theme.palette.mode === 'light' ? theme.palette.common.white : theme.palette.common.black),
+  '&:hover': {
+    bgcolor: (theme: any) => (theme.palette.mode === 'light' ? theme.palette.grey[800] : theme.palette.grey[200]),
+  },
 } as const;
 
 function buildCsv(filename: string, headers: string[], rows: Array<Array<string | number>>) {
