@@ -16728,6 +16728,65 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/orders/{id}/activate": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Manually activate a reserved or rescheduled order (sets status to open)",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Orders"
+                ],
+                "summary": "Activate reserved order",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "default": "uz",
+                        "description": "Language (uz, ru, en)",
+                        "name": "lang",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Order ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.SuccessResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/orders/{id}/assign-cashier/{cashierId}": {
             "post": {
                 "security": [
@@ -17156,6 +17215,77 @@ const docTemplate = `{
                         "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/model.OrderResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/orders/{id}/reschedule": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Move a reservation to a new scheduled time with an optional comment",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Orders"
+                ],
+                "summary": "Reschedule order",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "default": "uz",
+                        "description": "Language (uz, ru, en)",
+                        "name": "lang",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Order ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Reschedule request",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.RescheduleOrderRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.SuccessResponse"
                         }
                     },
                     "400": {
@@ -24130,9 +24260,6 @@ const docTemplate = `{
         },
         "model.CreateOrderRequest": {
             "type": "object",
-            "required": [
-                "table_id"
-            ],
             "properties": {
                 "cashier_id": {
                     "type": "string",
@@ -24150,6 +24277,14 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/model.CreateOrderItemInline"
                     }
+                },
+                "order_type": {
+                    "type": "string",
+                    "example": "dine_in"
+                },
+                "scheduled_at": {
+                    "type": "string",
+                    "example": "2024-01-01T15:00:00Z"
                 },
                 "status": {
                     "type": "string",
@@ -25985,6 +26120,16 @@ const docTemplate = `{
                     "type": "string",
                     "example": "c0f18a64-7f5c-4425-9414-1b01cddee9d9"
                 },
+                "order_type": {
+                    "type": "string",
+                    "example": "dine_in"
+                },
+                "reschedule_comment": {
+                    "type": "string"
+                },
+                "scheduled_at": {
+                    "type": "string"
+                },
                 "status": {
                     "allOf": [
                         {
@@ -26018,7 +26163,9 @@ const docTemplate = `{
                 "ready",
                 "served",
                 "paid",
-                "cancelled"
+                "cancelled",
+                "reserved",
+                "rescheduled"
             ],
             "x-enum-varnames": [
                 "OrderStatusOpen",
@@ -26026,7 +26173,9 @@ const docTemplate = `{
                 "OrderStatusReady",
                 "OrderStatusServed",
                 "OrderStatusPaid",
-                "OrderStatusCancelled"
+                "OrderStatusCancelled",
+                "OrderStatusReserved",
+                "OrderStatusRescheduled"
             ]
         },
         "model.OutgoingInvoiceItemResponse": {
@@ -26275,6 +26424,22 @@ const docTemplate = `{
                 "quantity": {
                     "type": "integer",
                     "example": 50
+                }
+            }
+        },
+        "model.RescheduleOrderRequest": {
+            "type": "object",
+            "required": [
+                "scheduled_at"
+            ],
+            "properties": {
+                "comment": {
+                    "type": "string",
+                    "example": "Customer called to reschedule"
+                },
+                "scheduled_at": {
+                    "type": "string",
+                    "example": "2024-01-01T18:00:00Z"
                 }
             }
         },
@@ -28078,9 +28243,9 @@ const docTemplate = `{
 // SwaggerInfo holds exported Swagger Info so clients can modify it
 var SwaggerInfo = &swag.Spec{
 	Version:          "1.0",
-	Host:             "back.staging.maryai.yurtal.tech",
+	Host:             "localhost:8080",
 	BasePath:         "/",
-	Schemes:          []string{"https"},
+	Schemes:          []string{"http"},
 	Title:            "MaryAI API",
 	Description:      "MaryAI API server with multi-language support (uz, ru, en)",
 	InfoInstanceName: "swagger",

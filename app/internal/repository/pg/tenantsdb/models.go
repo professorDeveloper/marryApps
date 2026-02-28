@@ -192,12 +192,14 @@ func (ns NullOrderItemsStatus) Value() (driver.Value, error) {
 type OrderStatus string
 
 const (
-	OrderStatusOpen      OrderStatus = "open"
-	OrderStatusCooking   OrderStatus = "cooking"
-	OrderStatusReady     OrderStatus = "ready"
-	OrderStatusServed    OrderStatus = "served"
-	OrderStatusPaid      OrderStatus = "paid"
-	OrderStatusCancelled OrderStatus = "cancelled"
+	OrderStatusOpen        OrderStatus = "open"
+	OrderStatusCooking     OrderStatus = "cooking"
+	OrderStatusReady       OrderStatus = "ready"
+	OrderStatusServed      OrderStatus = "served"
+	OrderStatusPaid        OrderStatus = "paid"
+	OrderStatusCancelled   OrderStatus = "cancelled"
+	OrderStatusReserved    OrderStatus = "reserved"
+	OrderStatusRescheduled OrderStatus = "rescheduled"
 )
 
 func (e *OrderStatus) Scan(src interface{}) error {
@@ -928,6 +930,9 @@ type Order struct {
 	DeletedAt          *int64             `json:"deleted_at"`
 	CustomerPaidAmount pgtype.Numeric     `json:"customer_paid_amount"`
 	ChangeAmount       pgtype.Numeric     `json:"change_amount"`
+	OrderType          string             `json:"order_type"`
+	ScheduledAt        pgtype.Timestamptz `json:"scheduled_at"`
+	RescheduleComment  *string            `json:"reschedule_comment"`
 }
 
 type OrderItem struct {

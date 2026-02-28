@@ -21,6 +21,7 @@ sql:
       - "../../app/migrations/tenants/16_transaction_paid_amount.up.sql"
       - "../../app/migrations/tenants/17_outgoing_invoices.up.sql"
       - "../../app/migrations/tenants/18_separation_acts.up.sql"
+      - "../../app/migrations/tenants/19_order_reservations.up.sql"
 
 
     gen:

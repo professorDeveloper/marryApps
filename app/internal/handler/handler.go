@@ -251,6 +251,8 @@ func (h *Handler) Register(router *echo.Echo) {
 			orders.POST("/:id/cooking", h.MarkOrderCooking, mw.CheckLanguage())
 			orders.POST("/:id/ready", h.MarkOrderReady, mw.CheckLanguage())
 			orders.POST("/:id/served", h.MarkOrderServed, mw.CheckLanguage())
+			orders.POST("/:id/activate", h.ActivateOrder, mw.CheckLanguage())
+			orders.POST("/:id/reschedule", h.RescheduleOrder, mw.CheckLanguage())
 
 			orders.GET("/status/:status", h.GetOrdersByStatus, mw.CheckLanguage())
 			orders.GET("/table/:tableId", h.GetOrdersByTableID, mw.CheckLanguage())

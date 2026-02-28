@@ -359,6 +359,8 @@ type OrderI interface {
 	MarkOrderServed(ctx context.Context, orderID string) (*model.OrderResponse, error)
 	DeleteOrder(ctx context.Context, orderID string) error
 	RestoreOrder(ctx context.Context, orderID string) error
+	ActivateOrder(ctx context.Context, orderID string) (*model.OrderResponse, error)
+	RescheduleOrder(ctx context.Context, orderID string, req model.RescheduleOrderRequest) (*model.OrderResponse, error)
 
 	GetBills(ctx context.Context, req model.GetBillsRequest) (*model.BillListResponse, error)
 	GetBillDetails(ctx context.Context, billID string) (*model.BillDetails, error)

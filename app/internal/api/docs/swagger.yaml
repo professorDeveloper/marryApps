@@ -1129,6 +1129,12 @@ definitions:
         items:
           $ref: '#/definitions/model.CreateOrderItemInline'
         type: array
+      order_type:
+        example: dine_in
+        type: string
+      scheduled_at:
+        example: "2024-01-01T15:00:00Z"
+        type: string
       status:
         example: open
         type: string
@@ -1138,8 +1144,6 @@ definitions:
       waiter_id:
         example: a1b2c3d4-e5f6-4a5b-8c9d-e0f1a2b3c4d5
         type: string
-    required:
-    - table_id
     type: object
   model.CreateOutgoingInvoiceBatchRequest:
     properties:
@@ -2420,6 +2424,13 @@ definitions:
       id:
         example: c0f18a64-7f5c-4425-9414-1b01cddee9d9
         type: string
+      order_type:
+        example: dine_in
+        type: string
+      reschedule_comment:
+        type: string
+      scheduled_at:
+        type: string
       status:
         allOf:
         - $ref: '#/definitions/model.OrderStatus'
@@ -2444,6 +2455,8 @@ definitions:
     - served
     - paid
     - cancelled
+    - reserved
+    - rescheduled
     type: string
     x-enum-varnames:
     - OrderStatusOpen
@@ -2452,6 +2465,8 @@ definitions:
     - OrderStatusServed
     - OrderStatusPaid
     - OrderStatusCancelled
+    - OrderStatusReserved
+    - OrderStatusRescheduled
   model.OutgoingInvoiceItemResponse:
     properties:
       created_at:
@@ -2619,6 +2634,17 @@ definitions:
         type: integer
     required:
     - quantity
+    type: object
+  model.RescheduleOrderRequest:
+    properties:
+      comment:
+        example: Customer called to reschedule
+        type: string
+      scheduled_at:
+        example: "2024-01-01T18:00:00Z"
+        type: string
+    required:
+    - scheduled_at
     type: object
   model.SeparationActItemResponse:
     properties:
@@ -3859,7 +3885,7 @@ definitions:
         example: admin
         type: string
     type: object
-host: back.staging.maryai.yurtal.tech
+host: localhost:8080
 info:
   contact: {}
   description: MaryAI API server with multi-language support (uz, ru, en)
@@ -14610,6 +14636,45 @@ paths:
       summary: Update order
       tags:
       - Orders
+  /api/v1/orders/{id}/activate:
+    post:
+      description: Manually activate a reserved or rescheduled order (sets status
+        to open)
+      parameters:
+      - default: uz
+        description: Language (uz, ru, en)
+        in: query
+        name: lang
+        type: string
+      - description: Order ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.SuccessResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Activate reserved order
+      tags:
+      - Orders
   /api/v1/orders/{id}/assign-cashier/{cashierId}:
     post:
       description: Assign a cashier to an order
@@ -14902,6 +14967,52 @@ paths:
       security:
       - BearerAuth: []
       summary: Mark order ready
+      tags:
+      - Orders
+  /api/v1/orders/{id}/reschedule:
+    post:
+      consumes:
+      - application/json
+      description: Move a reservation to a new scheduled time with an optional comment
+      parameters:
+      - default: uz
+        description: Language (uz, ru, en)
+        in: query
+        name: lang
+        type: string
+      - description: Order ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Reschedule request
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/model.RescheduleOrderRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.SuccessResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Reschedule order
       tags:
       - Orders
   /api/v1/orders/{id}/restore:
@@ -18510,7 +18621,7 @@ paths:
       tags:
       - users
 schemes:
-- https
+- http
 securityDefinitions:
   BearerAuth:
     description: Type "Bearer" followed by a space and your JWT token
