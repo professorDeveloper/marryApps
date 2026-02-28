@@ -6,6 +6,7 @@ type GetBillsRequest struct {
 	Start *time.Time `json:"start,omitempty"`
 	End   *time.Time `json:"end,omitempty"`
 
+	BillNo      *int32  `json:"bill_no,omitempty"`
 	BillStatus  *string `json:"bill_status,omitempty"`
 	PaymentType *string `json:"payment_type,omitempty"`
 	WaiterID    *string `json:"waiter_id,omitempty"`

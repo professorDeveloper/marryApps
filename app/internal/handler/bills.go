@@ -32,6 +32,7 @@ func parseBillTimeParam(v string) (*time.Time, error) {
 // @Param lang query string false "Language (uz, ru, en)" default(uz)
 // @Param start query string false "Start date/time (RFC3339 or YYYY-MM-DD)"
 // @Param end query string false "End date/time (RFC3339 or YYYY-MM-DD)"
+// @Param bill_no query int false "Bill number to search within the date range"
 // @Param bill_status query string false "Bill status (opened, closed, paid)"
 // @Param payment_type query string false "Payment type (cash, card)"
 // @Param waiter_id query string false "Waiter ID (UUID)"
@@ -95,6 +96,18 @@ func (h *Handler) GetBills(c echo.Context) error {
 		Offset: offset,
 	}
 
+	if v := c.QueryParam("bill_no"); v != "" {
+		n, err := strconv.Atoi(v)
+		if err != nil || n <= 0 {
+			return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+				"invalid bill_no",
+				"bill_no must be a positive integer",
+				http.StatusBadRequest,
+			))
+		}
+		n32 := int32(n)
+		req.BillNo = &n32
+	}
 	if v := c.QueryParam("bill_status"); v != "" {
 		req.BillStatus = &v
 	}

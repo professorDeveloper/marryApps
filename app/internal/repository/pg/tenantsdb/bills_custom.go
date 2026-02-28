@@ -33,6 +33,7 @@ type GetBillsParams struct {
 	Start *pgtype.Timestamptz
 	End   *pgtype.Timestamptz
 
+	BillNo      *int32
 	BillStatus  *string
 	PaymentType *string
 	WaiterID    *uuid.UUID
@@ -320,6 +321,7 @@ func (q *Queries) GetBills(ctx context.Context, arg GetBillsParams) ([]BillListR
 			AND ($5::uuid IS NULL OR o.waiter_id = $5)
 			AND ($6::uuid IS NULL OR ct.hall_id = $6)
 			AND ($7::uuid IS NULL OR o.table_id = $7)
+			AND ($10::int IS NULL OR o.bill_no = $10)
 		ORDER BY o.bill_opened_at DESC
 		LIMIT $8 OFFSET $9
 	`
@@ -345,7 +347,7 @@ func (q *Queries) GetBills(ctx context.Context, arg GetBillsParams) ([]BillListR
 		table = *arg.TableID
 	}
 
-	rows, err := q.db.Query(ctx, sql, start, end, arg.BillStatus, arg.PaymentType, waiter, hall, table, arg.Limit, arg.Offset)
+	rows, err := q.db.Query(ctx, sql, start, end, arg.BillStatus, arg.PaymentType, waiter, hall, table, arg.Limit, arg.Offset, arg.BillNo)
 	if err != nil {
 		return nil, err
 	}
@@ -399,6 +401,7 @@ func (q *Queries) CountBills(ctx context.Context, arg GetBillsParams) (int64, er
 			AND ($5::uuid IS NULL OR o.waiter_id = $5)
 			AND ($6::uuid IS NULL OR ct.hall_id = $6)
 			AND ($7::uuid IS NULL OR o.table_id = $7)
+			AND ($8::int IS NULL OR o.bill_no = $8)
 	`
 
 	var start any
@@ -422,7 +425,7 @@ func (q *Queries) CountBills(ctx context.Context, arg GetBillsParams) (int64, er
 		table = *arg.TableID
 	}
 
-	row := q.db.QueryRow(ctx, sql, start, end, arg.BillStatus, arg.PaymentType, waiter, hall, table)
+	row := q.db.QueryRow(ctx, sql, start, end, arg.BillStatus, arg.PaymentType, waiter, hall, table, arg.BillNo)
 	var count int64
 	if err := row.Scan(&count); err != nil {
 		return 0, err

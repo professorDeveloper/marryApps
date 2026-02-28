@@ -762,6 +762,7 @@ func (s *OrderS) GetBills(ctx context.Context, req model.GetBillsRequest) (*mode
 	params := pg.GetBillsParams{
 		Start:       startEnd(req.Start),
 		End:         startEnd(req.End),
+		BillNo:      req.BillNo,
 		BillStatus:  req.BillStatus,
 		PaymentType: req.PaymentType,
 		WaiterID:    waiterUUID,

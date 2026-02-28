@@ -4378,6 +4378,10 @@ paths:
         in: query
         name: end
         type: string
+      - description: Bill number to search within the date range
+        in: query
+        name: bill_no
+        type: integer
       - description: Bill status (opened, closed, paid)
         in: query
         name: bill_status

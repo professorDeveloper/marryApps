@@ -778,6 +778,12 @@ const docTemplate = `{
                         "in": "query"
                     },
                     {
+                        "type": "integer",
+                        "description": "Bill number to search within the date range",
+                        "name": "bill_no",
+                        "in": "query"
+                    },
+                    {
                         "type": "string",
                         "description": "Bill status (opened, closed, paid)",
                         "name": "bill_status",
