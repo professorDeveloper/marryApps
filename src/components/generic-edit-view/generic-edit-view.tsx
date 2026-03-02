@@ -15,6 +15,7 @@ import useMediaQuery from '@mui/material/useMediaQuery';
 
 import { useRouter } from 'src/routes/hooks';
 
+import { ConfirmDialog } from 'src/components/custom-dialog';
 import { Iconify } from 'src/components/iconify';
 import { CustomBreadcrumbs } from 'src/components/custom-breadcrumbs';
 
@@ -39,6 +40,7 @@ export const GenericEditView: FC<GenericEditViewProps> = ({
 
     const [loading, setLoading] = useState(externalLoading);
     const [error, setError] = useState<string | null>(null);
+    const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [internalFormData, setInternalFormData] = useState<Record<string, any>>(
         data || buildInitialFormData(config)
     );
@@ -118,11 +120,9 @@ export const GenericEditView: FC<GenericEditViewProps> = ({
 
     // Handle delete
     const handleDelete = useCallback(async () => {
-        const message = config.deleteConfirmMessage || `Are you sure you want to delete this ${config.entityName}?`;
-        if (!window.confirm(message)) return;
-
         isSubmittingRef.current = true;
         setLoading(true);
+        setDeleteDialogOpen(false);
         try {
             if (config.onDelete) {
                 await config.onDelete();
@@ -173,8 +173,6 @@ export const GenericEditView: FC<GenericEditViewProps> = ({
                             {/* Action Buttons */}
                             <Stack direction="column" spacing={2} sx={{ mt: 3 }}>
                                 <Button
-                                    fullWidth
-                                    // variant="contained"
                                     // color="primary"
                                     sx={{ backgroundColor: '#FB6633', color: '#FFFFFF' }}
                                     type="submit"
@@ -186,10 +184,9 @@ export const GenericEditView: FC<GenericEditViewProps> = ({
 
                                 {!isNew && config.showDeleteButton !== false && (
                                     <Button
-                                        fullWidth
                                         variant="outlined"
                                         color="error"
-                                        onClick={handleDelete}
+                                        onClick={() => setDeleteDialogOpen(true)}
                                         disabled={loading}
                                         startIcon={<Iconify icon="solar:trash-bin-trash-bold" />}
                                     >
@@ -198,7 +195,6 @@ export const GenericEditView: FC<GenericEditViewProps> = ({
                                 )}
 
                                 <Button
-                                    fullWidth
                                     variant="outlined"
                                     onClick={() => router.back()}
                                 >
@@ -231,7 +227,6 @@ export const GenericEditView: FC<GenericEditViewProps> = ({
                         {!config.leftSidecard && (
                             <Stack direction="column" spacing={2} sx={{ mt: 3 }}>
                                 <Button
-                                    fullWidth
                                     // variant="contained"
                                     sx={{ backgroundColor: '#FB6633', color: '#FFFFFF' }}
                                     type="submit"
@@ -243,10 +238,9 @@ export const GenericEditView: FC<GenericEditViewProps> = ({
 
                                 {!isNew && config.showDeleteButton !== false && (
                                     <Button
-                                        fullWidth
                                         variant="outlined"
                                         color="error"
-                                        onClick={handleDelete}
+                                        onClick={() => setDeleteDialogOpen(true)}
                                         disabled={loading}
                                         startIcon={<Iconify icon="solar:trash-bin-trash-bold" />}
                                     >
@@ -255,7 +249,6 @@ export const GenericEditView: FC<GenericEditViewProps> = ({
                                 )}
 
                                 <Button
-                                    fullWidth
                                     variant="outlined"
                                     onClick={() => router.back()}
                                 >
@@ -266,6 +259,26 @@ export const GenericEditView: FC<GenericEditViewProps> = ({
                     </Box>
                 </Box>
             </form>
+
+            <ConfirmDialog
+                open={deleteDialogOpen}
+                onClose={() => setDeleteDialogOpen(false)}
+                title={t('common.deleteConfirmTitle')}
+                content={
+                    config.deleteConfirmMessage ||
+                    t('common.deleteConfirmMessage')
+                }
+                action={
+                    <Button
+                        variant="contained"
+                        color="error"
+                        onClick={handleDelete}
+                        disabled={loading}
+                    >
+                        {t('delete')}
+                    </Button>
+                }
+            />
         </Box>
     );
 };

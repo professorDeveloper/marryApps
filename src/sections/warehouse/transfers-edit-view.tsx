@@ -26,6 +26,7 @@ interface Branch {
 interface Storage {
   id: string;
   name: string;
+  branch_id?: string;
 }
 
 interface BackendResponse<T> {
@@ -72,16 +73,22 @@ export function TransfersEditView({ isNew = false }: TransfersEditViewProps) {
 
   const [transfer, setTransfer] = useState<Transfer | null>(null);
   const [branches, setBranches] = useState<Branch[]>([]);
+  const [storages, setStorages] = useState<Storage[]>([]);
   const [fromStorages, setFromStorages] = useState<Storage[]>([]);
   const [toStorages, setToStorages] = useState<Storage[]>([]);
   const [groups, setGroups] = useState<{ id: string; name: string }[]>([]);
 
+  const initialBranchId =
+    typeof window !== 'undefined'
+      ? localStorage.getItem('selectedBranchId') || localStorage.getItem('branch_id') || ''
+      : '';
+
   const [formData, setFormData] = useState<TransferFormData>({
     act_group_id: '',
     description: '',
-    to_branch_id: '',
+    to_branch_id: initialBranchId,
     to_storage_id: '',
-    from_branch_id: '',
+    from_branch_id: initialBranchId,
     from_storage_id: '',
     status: 'active',
     date: dayjs().format('YYYY-MM-DD'),
@@ -111,19 +118,39 @@ export function TransfersEditView({ isNew = false }: TransfersEditViewProps) {
   const getStoragesByBranch = useCallback(async (branchId: string): Promise<Storage[]> => {
     if (!branchId) return [];
 
+    const localBranchStorages = storages.filter((storage) => storage.branch_id === branchId);
+    if (localBranchStorages.length) {
+      return localBranchStorages;
+    }
+
     try {
-      const response = await fetcher<BackendResponse<Storage[]>>(endpoints.storage.byBranch(branchId));
-      return Array.isArray(response.data) ? response.data : [];
+      const response = await fetcher<
+        BackendResponse<Storage[]> | Storage[] | { data?: BackendResponse<Storage[]> | Storage[] }
+      >(endpoints.storage.byBranch(branchId));
+
+      if (Array.isArray(response)) return response;
+      if (response && 'data' in response && Array.isArray(response.data)) return response.data;
+      if (
+        response &&
+        'data' in response &&
+        response.data &&
+        typeof response.data === 'object' &&
+        'data' in response.data &&
+        Array.isArray((response.data as BackendResponse<Storage[]>).data)
+      ) {
+        return (response.data as BackendResponse<Storage[]>).data;
+      }
+      return [];
     } catch {
       return [];
     }
-  }, []);
+  }, [storages]);
 
   useEffect(() => {
     const loadBaseData = async () => {
       try {
         setLoading(true);
-        const [groupsData, branchesData] = await Promise.all([
+        const [groupsData, branchesData, storagesData] = await Promise.all([
           getTransferGroups(),
           fetcher<BackendResponse<Branch[]>>(endpoints.branches.list).catch(
             () =>
@@ -134,10 +161,20 @@ export function TransfersEditView({ isNew = false }: TransfersEditViewProps) {
                 code: 500,
               }) as BackendResponse<Branch[]>
           ),
+          fetcher<BackendResponse<Storage[]>>(endpoints.storage.list).catch(
+            () =>
+              ({
+                status: 'error',
+                message: 'failed',
+                data: [],
+                code: 500,
+              }) as BackendResponse<Storage[]>
+          ),
         ]);
 
         setGroups(groupsData);
         setBranches(Array.isArray(branchesData.data) ? branchesData.data : []);
+        setStorages(Array.isArray(storagesData.data) ? storagesData.data : []);
       } finally {
         setLoading(false);
       }
@@ -145,6 +182,18 @@ export function TransfersEditView({ isNew = false }: TransfersEditViewProps) {
 
     loadBaseData();
   }, [getTransferGroups]);
+
+  useEffect(() => {
+    if (!isNew) return;
+    if (branches.length !== 1) return;
+
+    const onlyBranchId = branches[0].id;
+    setFormData((prev) => ({
+      ...prev,
+      from_branch_id: prev.from_branch_id || onlyBranchId,
+      to_branch_id: prev.to_branch_id || onlyBranchId,
+    }));
+  }, [branches, isNew]);
 
   useEffect(() => {
     if (isNew || !id) return;
@@ -200,6 +249,11 @@ export function TransfersEditView({ isNew = false }: TransfersEditViewProps) {
 
       setFromStorages(branchStorages);
 
+      if (!formData.from_storage_id && branchStorages.length === 1) {
+        setFormData((prev) => ({ ...prev, from_storage_id: branchStorages[0].id }));
+        return;
+      }
+
       if (
         formData.from_storage_id &&
         !branchStorages.some((storage) => storage.id === formData.from_storage_id)
@@ -230,6 +284,11 @@ export function TransfersEditView({ isNew = false }: TransfersEditViewProps) {
       if (!isMounted) return;
 
       setToStorages(branchStorages);
+
+      if (!formData.to_storage_id && branchStorages.length === 1) {
+        setFormData((prev) => ({ ...prev, to_storage_id: branchStorages[0].id }));
+        return;
+      }
 
       if (
         formData.to_storage_id &&

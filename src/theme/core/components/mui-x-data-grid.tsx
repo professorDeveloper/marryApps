@@ -274,6 +274,23 @@ const MuiDataGrid: Components<Theme>['MuiDataGrid'] = {
       const baseStyles: CSSObject = {
         borderWidth: 0,
         backgroundColor: 'transparent',
+        [`& .${gridClasses.actionsCell} .${iconButtonClasses.root}`]: {
+          width: 40,
+          height: 40,
+          borderRadius: theme.shape.borderRadius,
+          marginInline: theme.spacing(0.25),
+          '&:hover': {
+            backgroundColor: varAlpha(theme.vars.palette.text.primaryChannel, 0.08),
+          },
+          '&:focus-visible': {
+            outline: `2px solid ${theme.vars.palette.primary.main}`,
+            outlineOffset: 1,
+          },
+          [`& .${svgIconClasses.root}`]: {
+            width: 20,
+            height: 20,
+          },
+        },
       };
 
       return {
