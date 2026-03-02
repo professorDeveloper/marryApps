@@ -20,7 +20,6 @@ WHERE id = $1 AND deleted_at = 0;
 -- name: GetAllDeductions :many
 SELECT id, number, date, act_group_id, storage_id, description, description_i18n, status, balance, created_at, updated_at, deleted_at
 FROM deductions
-WHERE deleted_at = 0
 ORDER BY date DESC, number DESC
 LIMIT $1 OFFSET $2;
 

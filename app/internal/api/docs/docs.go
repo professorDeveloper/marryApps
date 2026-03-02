@@ -25247,6 +25247,9 @@ const docTemplate = `{
                     "type": "string",
                     "example": "c0f18a64-7f5c-4425-9414-1b01cddee9d9"
                 },
+                "is_deleted": {
+                    "type": "boolean"
+                },
                 "name": {
                     "type": "string",
                     "example": "Group A"

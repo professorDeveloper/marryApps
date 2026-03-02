@@ -362,6 +362,15 @@ func (s *InvoiceS) DeleteInvoice(ctx context.Context, id string) error {
 		return fmt.Errorf("invalid invoice id: %w", err)
 	}
 
+	// Reverse stock: remove quantities that were added when each invoice detail was created
+	inv, err := s.repo.Tenant(ctx).GetInvoiceByID(ctx, invoiceID)
+	if err == nil && inv.StorageID.Valid && inv.Status.InvoiceStatus != "cancelled" {
+		details, _ := s.repo.Tenant(ctx).GetInvoiceDetailsByInvoiceID(ctx, invoiceID)
+		for _, d := range details {
+			_ = s.applyInvoiceStockMovement(ctx, inv.StorageID, d.IngredientID, zeroNumeric(), d.Quantity, "invoice_deleted_out", d.PricePerUnit, invoiceID)
+		}
+	}
+
 	if err := s.repo.Tenant(ctx).DeleteInvoice(ctx, invoiceID); err != nil {
 		return fmt.Errorf("failed to delete invoice: %w", err)
 	}
@@ -1295,11 +1304,16 @@ func toInvoiceResponse(inv pg.Invoice) *model.InvoiceResponse {
 	createdAt := inv.CreatedAt
 	updatedAt := inv.UpdatedAt
 
+	responseStatus := model.InvoiceStatus(status.InvoiceStatus)
+	if inv.DeletedAt != nil && *inv.DeletedAt > 0 {
+		responseStatus = "deleted"
+	}
+
 	response := &model.InvoiceResponse{
 		ID:          id.String(),
 		SupplierID:  supplierID.String(),
 		TotalAmount: numericToString(totalAmount),
-		Status:      model.InvoiceStatus(status.InvoiceStatus),
+		Status:      responseStatus,
 	}
 
 	if storageID.Valid {

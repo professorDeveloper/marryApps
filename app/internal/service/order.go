@@ -799,10 +799,14 @@ func (s *OrderS) GetBills(ctx context.Context, req model.GetBillsRequest) (*mode
 			s := r.WaiterID.String()
 			waiterIDStr = &s
 		}
+		billStatus := r.BillStatus
+		if r.DeletedAt > 0 {
+			billStatus = "deleted"
+		}
 		items = append(items, model.BillListItem{
 			ID:              r.ID.String(),
 			BillNo:          r.BillNo,
-			BillStatus:      r.BillStatus,
+			BillStatus:      billStatus,
 			OpenedAt:        openedAt,
 			ClosedAt:        closedAt,
 			WaiterID:        waiterIDStr,

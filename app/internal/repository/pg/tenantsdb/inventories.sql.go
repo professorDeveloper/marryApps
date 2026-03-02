@@ -169,8 +169,7 @@ SELECT id, number, date, storage_id, description, description_i18n, status,
        surplus_amount, shortage_amount, remaining_amount,
        created_at, updated_at, deleted_at
 FROM inventories
-WHERE deleted_at = 0
-  AND EXISTS (
+WHERE EXISTS (
     SELECT 1 FROM storages s
     WHERE s.id = inventories.storage_id
       AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
@@ -431,8 +430,7 @@ FROM inventories inv
 LEFT JOIN inventory_items ii
   ON ii.inventory_id = inv.id
   AND ii.deleted_at = 0
-WHERE inv.deleted_at = 0
-  AND EXISTS (
+WHERE EXISTS (
     SELECT 1 FROM storages s
     WHERE s.id = inv.storage_id
       AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
@@ -784,8 +782,7 @@ SELECT id, number, date, storage_id, description, description_i18n, status,
        surplus_amount, shortage_amount, remaining_amount,
        created_at, updated_at, deleted_at
 FROM inventories
-WHERE deleted_at = 0
-  AND EXISTS (
+WHERE EXISTS (
     SELECT 1 FROM storages s
     WHERE s.id = inventories.storage_id
       AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid

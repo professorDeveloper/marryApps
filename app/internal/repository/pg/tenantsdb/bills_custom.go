@@ -27,6 +27,7 @@ type BillListRow struct {
 	GrandTotal      pgtype.Numeric     `json:"grand_total"`
 	PaymentType     *string            `json:"payment_type"`
 	TotalQty        int32              `json:"total_qty"`
+	DeletedAt       int64              `json:"deleted_at"`
 }
 
 type GetBillsParams struct {
@@ -308,13 +309,13 @@ func (q *Queries) GetBills(ctx context.Context, arg GetBillsParams) ([]BillListR
 				FROM order_items oi
 				WHERE oi.order_id = o.id AND oi.deleted_at = 0
 				  AND oi.status != 'cancelled'
-			), 0)::int AS total_qty
+			), 0)::int AS total_qty,
+			o.deleted_at
 		FROM orders o
 		LEFT JOIN cafe_tables ct ON o.table_id = ct.id AND ct.deleted_at = 0
 		LEFT JOIN halls h ON ct.hall_id = h.id AND h.deleted_at = 0
 		LEFT JOIN users w ON o.waiter_id = w.id AND w.deleted_at = 0
-		WHERE o.deleted_at = 0
-			AND ($1::timestamptz IS NULL OR o.bill_opened_at >= $1)
+		WHERE ($1::timestamptz IS NULL OR o.bill_opened_at >= $1)
 			AND ($2::timestamptz IS NULL OR o.bill_opened_at <= $2)
 			AND ($3::text IS NULL OR o.bill_status::text = $3)
 			AND ($4::text IS NULL OR o.payment_type::text = $4)
@@ -376,6 +377,7 @@ func (q *Queries) GetBills(ctx context.Context, arg GetBillsParams) ([]BillListR
 			&r.GrandTotal,
 			&r.PaymentType,
 			&r.TotalQty,
+			&r.DeletedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -393,8 +395,7 @@ func (q *Queries) CountBills(ctx context.Context, arg GetBillsParams) (int64, er
 		FROM orders o
 		LEFT JOIN cafe_tables ct ON o.table_id = ct.id AND ct.deleted_at = 0
 		LEFT JOIN halls h ON ct.hall_id = h.id AND h.deleted_at = 0
-		WHERE o.deleted_at = 0
-			AND ($1::timestamptz IS NULL OR o.bill_opened_at >= $1)
+		WHERE ($1::timestamptz IS NULL OR o.bill_opened_at >= $1)
 			AND ($2::timestamptz IS NULL OR o.bill_opened_at <= $2)
 			AND ($3::text IS NULL OR o.bill_status::text = $3)
 			AND ($4::text IS NULL OR o.payment_type::text = $4)

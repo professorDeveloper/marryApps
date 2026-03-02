@@ -15,8 +15,7 @@ WHERE invoices.id = $1
 -- name: GetAllInvoices :many
 SELECT id, supplier_id, storage_id, branch_id, total_amount, status, date, created_at, updated_at, deleted_at
 FROM invoices
-WHERE deleted_at = 0
-  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+WHERE branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 ORDER BY date DESC
 LIMIT $1 OFFSET $2;
 
@@ -24,7 +23,6 @@ LIMIT $1 OFFSET $2;
 SELECT id, supplier_id, storage_id, branch_id, total_amount, status, date, created_at, updated_at, deleted_at
 FROM invoices
 WHERE status = $1
-  AND deleted_at = 0
   AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 ORDER BY date DESC
 LIMIT $2 OFFSET $3;
@@ -34,7 +32,6 @@ SELECT i.id, i.supplier_id, i.storage_id, i.branch_id, i.total_amount, i.status,
 FROM invoices i
 JOIN suppliers s ON i.supplier_id = s.id AND s.deleted_at = 0
 WHERE s.name ILIKE '%' || $1 || '%'
-  AND i.deleted_at = 0
   AND i.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 ORDER BY i.date DESC
 LIMIT $2 OFFSET $3;
@@ -44,7 +41,6 @@ SELECT id, supplier_id, storage_id, branch_id, total_amount, status, date, creat
 FROM invoices
 WHERE date >= $1
   AND date <= $2
-  AND deleted_at = 0
   AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 ORDER BY date DESC
 LIMIT $3 OFFSET $4;
@@ -115,20 +111,18 @@ WHERE invoices.id = $1
 
 -- name: CountInvoices :one
 SELECT COUNT(*) FROM invoices
-WHERE deleted_at = 0
-  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid;
+WHERE branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid;
 
 -- name: CountInvoicesByStatus :one
 SELECT COUNT(*) FROM invoices
-WHERE status = $1 AND deleted_at = 0
+WHERE status = $1
   AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid;
 
 -- name: SearchInvoices :many
 SELECT i.id, i.supplier_id, i.storage_id, i.branch_id, i.total_amount, i.status, i.date, i.created_at, i.updated_at, i.deleted_at
 FROM invoices i
 JOIN suppliers s ON i.supplier_id = s.id AND s.deleted_at = 0
-WHERE i.deleted_at = 0 
-AND i.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+WHERE i.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 AND (
     s.name ILIKE '%' || $1 || '%' OR
     s.phone_number ILIKE '%' || $1 || '%'

@@ -312,6 +312,57 @@ func (s *ShipmentS) DeleteShipment(ctx context.Context, id string) error {
 	if err != nil {
 		return fmt.Errorf("invalid shipment id: %w", err)
 	}
+
+	// Reverse stock: add back quantities that were deducted when confirmed
+	shipment, err := s.repo.Tenant(ctx).GetShipmentByID(ctx, shipmentID)
+	if err == nil && shipment.Status == "confirmed" && shipment.StorageID.Valid {
+		items, _ := s.repo.Tenant(ctx).GetShipmentItemsByShipmentID(ctx, shipmentID)
+		storageID := shipment.StorageID
+		srcType := "shipment_deleted"
+		zero := pgtype.Numeric{}
+		_ = zero.Scan("0")
+		for _, item := range items {
+			if !item.StockBefore.Valid {
+				continue
+			}
+			stockID, err := s.repo.Tenant(ctx).EnsureIngredientStockByStorage(ctx, pg.EnsureIngredientStockByStorageParams{
+				ID:           uuid.New(),
+				IngredientID: item.IngredientID,
+				StorageID:    storageID,
+			})
+			if err != nil {
+				continue
+			}
+			locked, err := s.repo.Tenant(ctx).GetStockByIngredientAndStorageForUpdate(ctx, pg.GetStockByIngredientAndStorageForUpdateParams{
+				IngredientID: item.IngredientID,
+				StorageID:    storageID,
+			})
+			if err != nil {
+				continue
+			}
+			updated, err := s.repo.Tenant(ctx).AddToIngredientStock(ctx, pg.AddToIngredientStockParams{
+				ID:       stockID,
+				Quantity: item.Quantity,
+			})
+			if err != nil {
+				continue
+			}
+			_ = s.repo.Tenant(ctx).InsertIngredientStockMovement(ctx, pg.InsertIngredientStockMovementParams{
+				ID:           uuid.New(),
+				StorageID:    uuid.UUID(storageID.Bytes),
+				IngredientID: item.IngredientID,
+				EventType:    "shipment_deleted_in",
+				QtyIn:        item.Quantity,
+				QtyOut:       zero,
+				StockBefore:  locked.Quantity,
+				StockAfter:   updated.Quantity,
+				PricePerUnit: item.PricePerUnit,
+				SourceType:   &srcType,
+				SourceID:     &shipmentID,
+			})
+		}
+	}
+
 	return s.repo.Tenant(ctx).DeleteShipment(ctx, shipmentID)
 }
 
@@ -436,10 +487,14 @@ func (s *ShipmentS) recalcShipmentTotal(ctx context.Context, shipmentID uuid.UUI
 // ── helpers ──────────────────────────────────────────────────────────────────
 
 func shipmentToResponse(row pg.Shipment) *model.ShipmentResponse {
+	shipStatus := model.ShipmentStatus(row.Status)
+	if row.DeletedAt != nil && *row.DeletedAt > 0 {
+		shipStatus = "deleted"
+	}
 	r := &model.ShipmentResponse{
 		ID:          row.ID.String(),
 		Number:      row.Number,
-		Status:      model.ShipmentStatus(row.Status),
+		Status:      shipStatus,
 		TotalAmount: pgNumericToStr(row.TotalAmount),
 		PaidAmount:  pgNumericToStr(row.PaidAmount),
 	}

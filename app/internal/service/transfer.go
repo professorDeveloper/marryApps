@@ -542,6 +542,11 @@ func toTransferResponse(t pg.Transfer) *model.TransferResponse {
 		updatedAt = &t.UpdatedAt.Time
 	}
 
+	transferStatus := string(t.Status)
+	if t.DeletedAt > 0 {
+		transferStatus = "deleted"
+	}
+
 	return &model.TransferResponse{
 		ID:            t.ID.String(),
 		Number:        t.Number,
@@ -551,7 +556,7 @@ func toTransferResponse(t pg.Transfer) *model.TransferResponse {
 		ToStorageID:   t.ToStorageID.String(),
 		ActGroupID:    actGroupID,
 		Description:   t.Description,
-		Status:        string(t.Status),
+		Status:        transferStatus,
 		Date:          date,
 		TotalAmount:   numericToStr(t.TotalAmount),
 		CreatedAt:     createdAt,

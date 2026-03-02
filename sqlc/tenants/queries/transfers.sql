@@ -14,8 +14,7 @@ WHERE id = $1 AND deleted_at = 0
 
 -- name: GetAllTransfers :many
 SELECT * FROM transfers
-WHERE deleted_at = 0
-  AND (NULLIF(current_setting('app.branch_id', true), '') IS NULL
+WHERE (NULLIF(current_setting('app.branch_id', true), '') IS NULL
        OR from_branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
        OR to_branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid)
 ORDER BY created_at DESC

@@ -826,6 +826,10 @@ func (s *DeductionS) GetAllDeductions(ctx context.Context, limit, offset int32) 
 			s := dd.DescriptionI18n.String()
 			descI18nStr = &s
 		}
+		deductStatus := model.DeductionStatus(dd.Status)
+		if dd.DeletedAt > 0 {
+			deductStatus = "deleted"
+		}
 		resp = append(resp, &model.DeductionResponse{
 			ID:              dd.ID.String(),
 			Number:          dd.Number,
@@ -834,7 +838,7 @@ func (s *DeductionS) GetAllDeductions(ctx context.Context, limit, offset int32) 
 			StorageID:       dd.StorageID.String(),
 			Description:     dd.Description,
 			DescriptionI18n: descI18nStr,
-			Status:          model.DeductionStatus(dd.Status),
+			Status:          deductStatus,
 			Balance:         numericToString(dd.Balance),
 			CreatedAt:       timestampToTime(dd.CreatedAt),
 			UpdatedAt:       timestampToTime(dd.UpdatedAt),
@@ -947,6 +951,58 @@ func (s *DeductionS) DeleteDeduction(ctx context.Context, id string) error {
 	deductionID, err := uuid.Parse(id)
 	if err != nil {
 		return fmt.Errorf("invalid id: %w", err)
+	}
+
+	// Reverse stock: add back quantities that were deducted when deduction was created
+	if deduction, err := s.repo.Tenant(ctx).GetDeductionByID(ctx, deductionID); err == nil && deduction.DeletedAt == 0 {
+		storagePg := pgtype.UUID{Bytes: deduction.StorageID, Valid: true}
+		srcType := "deduction_deleted"
+		zero := pgtype.Numeric{}
+		_ = zero.Scan("0")
+		items, _ := s.repo.Tenant(ctx).GetDeductionItemsByDeductionID(ctx, deductionID)
+		for _, item := range items {
+			breakdowns, _ := s.repo.Tenant(ctx).GetDeductionItemIngredientsByDeductionItemID(ctx, item.ID)
+			for _, b := range breakdowns {
+				if numericToString(b.Quantity) == "0" {
+					continue
+				}
+				stockID, err := s.repo.Tenant(ctx).EnsureIngredientStockByStorage(ctx, pg.EnsureIngredientStockByStorageParams{
+					ID:           uuid.New(),
+					IngredientID: b.IngredientID,
+					StorageID:    storagePg,
+				})
+				if err != nil {
+					continue
+				}
+				locked, err := s.repo.Tenant(ctx).GetStockByIngredientAndStorageForUpdate(ctx, pg.GetStockByIngredientAndStorageForUpdateParams{
+					IngredientID: b.IngredientID,
+					StorageID:    storagePg,
+				})
+				if err != nil {
+					continue
+				}
+				updated, err := s.repo.Tenant(ctx).AddToIngredientStock(ctx, pg.AddToIngredientStockParams{
+					ID:       stockID,
+					Quantity: b.Quantity,
+				})
+				if err != nil {
+					continue
+				}
+				_ = s.repo.Tenant(ctx).InsertIngredientStockMovement(ctx, pg.InsertIngredientStockMovementParams{
+					ID:           uuid.New(),
+					StorageID:    deduction.StorageID,
+					IngredientID: b.IngredientID,
+					EventType:    "deduction_deleted_in",
+					QtyIn:        b.Quantity,
+					QtyOut:       zero,
+					StockBefore:  locked.Quantity,
+					StockAfter:   updated.Quantity,
+					PricePerUnit: b.PricePerUnit,
+					SourceType:   &srcType,
+					SourceID:     &deductionID,
+				})
+			}
+		}
 	}
 
 	if err := s.repo.Tenant(ctx).DeleteDeduction(ctx, deductionID); err != nil {

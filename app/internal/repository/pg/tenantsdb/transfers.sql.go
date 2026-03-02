@@ -291,8 +291,7 @@ func (q *Queries) EnsureIngredientStockByStorageWithBranch(ctx context.Context, 
 
 const getAllTransfers = `-- name: GetAllTransfers :many
 SELECT id, number, from_branch_id, to_branch_id, from_storage_id, to_storage_id, act_group_id, description, status, date, total_amount, created_at, updated_at, deleted_at FROM transfers
-WHERE deleted_at = 0
-  AND (NULLIF(current_setting('app.branch_id', true), '') IS NULL
+WHERE (NULLIF(current_setting('app.branch_id', true), '') IS NULL
        OR from_branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
        OR to_branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid)
 ORDER BY created_at DESC

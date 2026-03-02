@@ -526,6 +526,10 @@ func (s *InventoryS) DeleteInventory(ctx context.Context, id string) error {
 	if err != nil {
 		return fmt.Errorf("invalid inventory id: %w", err)
 	}
+	// Block deletion if stock adjustments have already been applied
+	if inv, err := s.repo.Tenant(ctx).GetInventoryForApply(ctx, inventoryID); err == nil && inv.AppliedAt.Valid {
+		return fmt.Errorf("cannot delete an applied inventory")
+	}
 	if err := s.repo.Tenant(ctx).DeleteInventory(ctx, inventoryID); err != nil {
 		return fmt.Errorf("failed to delete inventory: %w", err)
 	}
@@ -585,6 +589,7 @@ func toInventoryResponse(inv any) *model.InventoryResponse {
 		remainingAmount pgtype.Numeric
 		createdAt       pgtype.Timestamptz
 		updatedAt       pgtype.Timestamptz
+		deletedAt       int64
 	)
 
 	switch row := inv.(type) {
@@ -601,6 +606,7 @@ func toInventoryResponse(inv any) *model.InventoryResponse {
 		remainingAmount = row.RemainingAmount
 		createdAt = row.CreatedAt
 		updatedAt = row.UpdatedAt
+		deletedAt = row.DeletedAt
 	case pg.CreateInventoryRow:
 		id = row.ID
 		number = row.Number
@@ -640,6 +646,7 @@ func toInventoryResponse(inv any) *model.InventoryResponse {
 		remainingAmount = row.RemainingAmount
 		createdAt = row.CreatedAt
 		updatedAt = row.UpdatedAt
+		deletedAt = row.DeletedAt
 	case pg.GetInventoriesFilteredRow:
 		id = row.ID
 		number = row.Number
@@ -653,6 +660,7 @@ func toInventoryResponse(inv any) *model.InventoryResponse {
 		remainingAmount = row.RemainingAmount
 		createdAt = row.CreatedAt
 		updatedAt = row.UpdatedAt
+		deletedAt = row.DeletedAt
 	case pg.UpdateInventoryRow:
 		id = row.ID
 		number = row.Number
@@ -705,8 +713,13 @@ func toInventoryResponse(inv any) *model.InventoryResponse {
 		remainingAmount = row.RemainingAmount
 		createdAt = row.CreatedAt
 		updatedAt = row.UpdatedAt
+		deletedAt = row.DeletedAt
 	default:
 		return nil
+	}
+
+	if deletedAt > 0 {
+		status = "deleted"
 	}
 
 	resp := &model.InventoryResponse{

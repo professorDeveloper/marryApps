@@ -688,6 +688,10 @@ func separationActToResponse(row pg.SeparationAct) *model.SeparationActResponse 
 }
 
 func separationActRowToResponse(row pg.ListSeparationActsRow) *model.SeparationActResponse {
+	actStatus := model.SeparationActStatus(row.Status)
+	if row.DeletedAt != nil && *row.DeletedAt > 0 {
+		actStatus = "deleted"
+	}
 	r := &model.SeparationActResponse{
 		ID:                 row.ID.String(),
 		Number:             row.Number,
@@ -695,7 +699,7 @@ func separationActRowToResponse(row pg.ListSeparationActsRow) *model.SeparationA
 		SourceQuantity:     pgNumericToStr(row.SourceQuantity),
 		SourceStockBefore:  pgNumericToStr(row.SourceStockBefore),
 		SourceStockAfter:   pgNumericToStr(row.SourceStockAfter),
-		Status:             model.SeparationActStatus(row.Status),
+		Status:             actStatus,
 		TotalAmount:        pgNumericToStr(row.TotalAmount),
 	}
 	waste := pgNumericToStr(row.WasteQuantity)
