@@ -309,6 +309,24 @@ func (h *Handler) UpsertInventoryItems(c echo.Context) error {
 	))
 }
 
+// UpdateInventoryItemsBatch upserts multiple inventory items in one request
+// @Summary Update inventory items batch
+// @Description Upsert (create/update) counted quantities for multiple ingredients in an existing inventory. Blocked if inventory is already applied.
+// @Tags inventory_items
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path string true "Inventory ID"
+// @Param input body model.UpsertInventoryItemsRequest true "Inventory items batch update data"
+// @Success 200 {array} model.InventoryItemComputedResponse "Inventory items updated successfully"
+// @Failure 400 {object} model.ErrorResponse "Invalid request or inventory already applied"
+// @Failure 401 {object} model.ErrorResponse "Unauthorized"
+// @Failure 500 {object} model.ErrorResponse "Internal server error"
+// @Router /api/v1/inventories/{id}/items/batch [put]
+func (h *Handler) UpdateInventoryItemsBatch(c echo.Context) error {
+	return h.UpsertInventoryItems(c)
+}
+
 // GetInventoryItems retrieves computed inventory items for an inventory
 // @Summary Get inventory items
 // @Description Retrieve computed inventory items for an inventory (system qty from stock, counted qty, difference, amounts)

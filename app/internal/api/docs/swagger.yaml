@@ -12575,6 +12575,50 @@ paths:
       summary: Upsert inventory items
       tags:
       - inventory_items
+  /api/v1/inventories/{id}/items/batch:
+    put:
+      consumes:
+      - application/json
+      description: Upsert (create/update) counted quantities for multiple ingredients
+        in an existing inventory. Blocked if inventory is already applied.
+      parameters:
+      - description: Inventory ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Inventory items batch update data
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/model.UpsertInventoryItemsRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Inventory items updated successfully
+          schema:
+            items:
+              $ref: '#/definitions/model.InventoryItemComputedResponse'
+            type: array
+        "400":
+          description: Invalid request or inventory already applied
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update inventory items batch
+      tags:
+      - inventory_items
   /api/v1/inventories/{id}/restore:
     post:
       consumes:

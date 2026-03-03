@@ -498,7 +498,7 @@ func (h *Handler) Register(router *echo.Echo) {
 			inventories.GET("/search", h.SearchInventories, mw.CheckLanguage())
 			inventories.GET("/:id", h.GetInventory, mw.CheckLanguage())
 			inventories.POST("/:id/items", h.UpsertInventoryItems, mw.CheckLanguage())
-			inventories.PUT("/:id/items/batch", h.UpsertInventoryItems, mw.CheckLanguage())
+			inventories.PUT("/:id/items/batch", h.UpdateInventoryItemsBatch, mw.CheckLanguage())
 			inventories.GET("/:id/items", h.GetInventoryItems, mw.CheckLanguage())
 			inventories.POST("/:id/calculate", h.CalculateInventory, mw.CheckLanguage())
 			inventories.POST("/:id/apply", h.ApplyInventory, mw.CheckLanguage())
