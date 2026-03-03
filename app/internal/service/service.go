@@ -282,7 +282,6 @@ type InventoryI interface {
 	UpdateInventoryItem(ctx context.Context, inventoryItemID string, req *model.UpdateInventoryItemRequest) (*model.InventoryItemResponse, error)
 	DeleteInventoryItem(ctx context.Context, inventoryItemID string) error
 	CalculateInventory(ctx context.Context, inventoryID string) (*model.InventoryResponse, error)
-	ApplyInventory(ctx context.Context, inventoryID string) (*model.InventoryResponse, error)
 	CreateInventoryBatch(ctx context.Context, req *model.CreateInventoryBatchRequest) (*model.CreateInventoryBatchResponse, error)
 }
 
@@ -300,6 +299,8 @@ type DeductionI interface {
 	UpdateDeduction(ctx context.Context, id string, req *model.UpdateDeductionRequest) (*model.DeductionResponse, error)
 	DeleteDeduction(ctx context.Context, id string) error
 	RestoreDeduction(ctx context.Context, id string) (*model.DeductionResponse, error)
+	UpsertDeductionItems(ctx context.Context, deductionID string, req *model.UpsertDeductionItemsRequest) (*model.DeductionResponse, error)
+	DeleteDeductionItem(ctx context.Context, deductionID, itemID string) (*model.DeductionResponse, error)
 }
 
 type InvoiceI interface {

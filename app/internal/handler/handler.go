@@ -501,7 +501,6 @@ func (h *Handler) Register(router *echo.Echo) {
 			inventories.PUT("/:id/items/batch", h.UpdateInventoryItemsBatch, mw.CheckLanguage())
 			inventories.GET("/:id/items", h.GetInventoryItems, mw.CheckLanguage())
 			inventories.POST("/:id/calculate", h.CalculateInventory, mw.CheckLanguage())
-			inventories.POST("/:id/apply", h.ApplyInventory, mw.CheckLanguage())
 			inventories.PUT("/:id", h.UpdateInventory, mw.CheckLanguage())
 			inventories.DELETE("/:id", h.DeleteInventory, mw.CheckLanguage())
 			inventories.POST("/:id/restore", h.RestoreInventory, mw.CheckLanguage())
@@ -515,6 +514,8 @@ func (h *Handler) Register(router *echo.Echo) {
 			deductions.PUT("/:id", h.UpdateDeduction, mw.CheckLanguage())
 			deductions.DELETE("/:id", h.DeleteDeduction, mw.CheckLanguage())
 			deductions.POST("/:id/restore", h.RestoreDeduction, mw.CheckLanguage())
+			deductions.PUT("/:id/items/batch", h.UpsertDeductionItems, mw.CheckLanguage())
+			deductions.DELETE("/:id/items/:itemId", h.DeleteDeductionItem, mw.CheckLanguage())
 
 			deductionGroups := deductions.Group("/group")
 			{

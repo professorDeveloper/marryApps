@@ -390,36 +390,6 @@ func (h *Handler) CalculateInventory(c echo.Context) error {
 }
 
 // ApplyInventory applies inventory count to ingredient stock and records stock movements
-// @Summary Apply inventory
-// @Description Apply inventory count to ingredient_stock for the inventory storage and record surplus/shortage movements
-// @Tags inventories
-// @Accept json
-// @Produce json
-// @Security BearerAuth
-// @Param id path string true "Inventory ID"
-// @Success 200 {object} model.InventoryResponse "Inventory applied successfully"
-// @Failure 400 {object} model.ErrorResponse "Invalid inventory ID"
-// @Failure 401 {object} model.ErrorResponse "Unauthorized"
-// @Failure 500 {object} model.ErrorResponse "Internal server error"
-// @Router /api/v1/inventories/{id}/apply [post]
-func (h *Handler) ApplyInventory(c echo.Context) error {
-	id := c.Param("id")
-	if id == "" {
-		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("invalid request", "id is required", http.StatusBadRequest))
-	}
-
-	resp, err := h.service.Inventory().ApplyInventory(c.Request().Context(), id)
-	if err != nil {
-		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("Operation failed", err.Error(), http.StatusInternalServerError))
-	}
-
-	return c.JSON(http.StatusOK, model.NewSuccessResponse(
-		"Inventory applied successfully",
-		resp,
-		http.StatusOK,
-	))
-}
-
 // GetInventory retrieves an inventory by ID
 // @Summary Get inventory by ID
 // @Description Retrieve a specific inventory by its ID

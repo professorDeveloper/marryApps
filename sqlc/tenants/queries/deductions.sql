@@ -86,6 +86,37 @@ FROM deduction_item_ingredients
 WHERE deduction_item_id = $1 AND deleted_at = 0
 ORDER BY created_at ASC;
 
+-- name: GetDeductionItemByID :one
+SELECT id, deduction_id, ingredient_id, good_id, compound_id, quantity, created_at, updated_at, deleted_at
+FROM deduction_items
+WHERE id = $1 AND deleted_at = 0;
+
+-- name: DeleteDeductionItemByID :exec
+UPDATE deduction_items
+SET deleted_at = EXTRACT(EPOCH FROM NOW())::BIGINT,
+    updated_at = NOW()
+WHERE id = $1 AND deleted_at = 0;
+
+-- name: DeleteDeductionItemIngredientsByItemID :exec
+UPDATE deduction_item_ingredients
+SET deleted_at = EXTRACT(EPOCH FROM NOW())::BIGINT,
+    updated_at = NOW()
+WHERE deduction_item_id = $1 AND deleted_at = 0;
+
+-- name: DeleteDeductionItemsByDeductionID :exec
+UPDATE deduction_items
+SET deleted_at = EXTRACT(EPOCH FROM NOW())::BIGINT,
+    updated_at = NOW()
+WHERE deduction_id = $1 AND deleted_at = 0;
+
+-- name: DeleteDeductionItemIngredientsByDeductionID :exec
+UPDATE deduction_item_ingredients
+SET deleted_at = EXTRACT(EPOCH FROM NOW())::BIGINT,
+    updated_at = NOW()
+WHERE deduction_item_id IN (
+  SELECT id FROM deduction_items WHERE deduction_id = $1
+) AND deleted_at = 0;
+
 -- name: UpdateDeductionBalanceFromItems :one
 UPDATE deductions d
 SET balance = COALESCE((

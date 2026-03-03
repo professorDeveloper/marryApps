@@ -121,9 +121,10 @@ type StockMovementForReversalRow struct {
 
 func (q *Queries) GetStockMovementsBySourceID(ctx context.Context, sourceID uuid.UUID) ([]StockMovementForReversalRow, error) {
 	const sql = `
-		SELECT ingredient_id, storage_id, stock_before
+		SELECT DISTINCT ON (ingredient_id) ingredient_id, storage_id, stock_before
 		FROM ingredient_stock_movements
 		WHERE source_id = $1 AND source_type = 'inventory'
+		ORDER BY ingredient_id, created_at ASC
 	`
 
 	rows, err := q.db.Query(ctx, sql, sourceID)

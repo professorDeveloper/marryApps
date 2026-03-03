@@ -3855,6 +3855,16 @@ definitions:
       username:
         type: string
     type: object
+  model.UpsertDeductionItemsRequest:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/model.CreateDeductionItemRequest'
+        minItems: 1
+        type: array
+    required:
+    - items
+    type: object
   model.UpsertInventoryItemRequest:
     properties:
       counted_quantity:
@@ -8315,6 +8325,90 @@ paths:
       summary: Update deduction
       tags:
       - deductions
+  /api/v1/deductions/{id}/items/{itemId}:
+    delete:
+      consumes:
+      - application/json
+      description: Removes a single item from a deduction and adds its deducted quantities
+        back to stock
+      parameters:
+      - description: Deduction ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Deduction Item ID
+        in: path
+        name: itemId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Updated deduction
+          schema:
+            $ref: '#/definitions/model.DeductionResponse'
+        "400":
+          description: Invalid request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: Not found
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete deduction item
+      tags:
+      - deductions
+  /api/v1/deductions/{id}/items/batch:
+    put:
+      consumes:
+      - application/json
+      description: Replaces all deduction items for the given deduction. Previous
+        stock deductions are reversed, then new quantities are applied. Returns warnings
+        if any ingredient has insufficient stock.
+      parameters:
+      - description: Deduction ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: New deduction items
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/model.UpsertDeductionItemsRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Updated deduction with new items
+          schema:
+            $ref: '#/definitions/model.DeductionResponse'
+        "400":
+          description: Invalid request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: Deduction not found
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Batch update deduction items
+      tags:
+      - deductions
   /api/v1/deductions/{id}/restore:
     post:
       consumes:
@@ -12420,42 +12514,6 @@ paths:
       security:
       - BearerAuth: []
       summary: Update inventory
-      tags:
-      - inventories
-  /api/v1/inventories/{id}/apply:
-    post:
-      consumes:
-      - application/json
-      description: Apply inventory count to ingredient_stock for the inventory storage
-        and record surplus/shortage movements
-      parameters:
-      - description: Inventory ID
-        in: path
-        name: id
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Inventory applied successfully
-          schema:
-            $ref: '#/definitions/model.InventoryResponse'
-        "400":
-          description: Invalid inventory ID
-          schema:
-            $ref: '#/definitions/model.ErrorResponse'
-        "401":
-          description: Unauthorized
-          schema:
-            $ref: '#/definitions/model.ErrorResponse'
-        "500":
-          description: Internal server error
-          schema:
-            $ref: '#/definitions/model.ErrorResponse'
-      security:
-      - BearerAuth: []
-      summary: Apply inventory
       tags:
       - inventories
   /api/v1/inventories/{id}/calculate:
