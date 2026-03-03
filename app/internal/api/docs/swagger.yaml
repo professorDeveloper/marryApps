@@ -3886,6 +3886,46 @@ definitions:
     required:
     - items
     type: object
+  model.UpsertInvoiceDetailEntry:
+    properties:
+      ingredient_id:
+        example: e2g30c86-9h7e-6647-1636-3d23effg1f1
+        type: string
+      price:
+        example: "500000"
+        type: string
+      price_per_unit:
+        example: "10000"
+        type: string
+      quantity:
+        example: "50"
+        type: string
+    required:
+    - ingredient_id
+    - price
+    - price_per_unit
+    - quantity
+    type: object
+  model.UpsertInvoiceDetailsRequest:
+    properties:
+      details:
+        items:
+          $ref: '#/definitions/model.UpsertInvoiceDetailEntry'
+        minItems: 1
+        type: array
+    required:
+    - details
+    type: object
+  model.UpsertInvoiceDetailsResponse:
+    properties:
+      details:
+        items:
+          $ref: '#/definitions/model.InvoiceDetailResponse'
+        type: array
+      success:
+        example: 2
+        type: integer
+    type: object
   model.UpsertOutgoingInvoiceItemRequest:
     properties:
       ingredient_id:
@@ -13713,6 +13753,53 @@ paths:
       security:
       - BearerAuth: []
       summary: Get invoice with details
+      tags:
+      - Invoices
+  /api/v1/invoices/{id}/details/batch:
+    put:
+      consumes:
+      - application/json
+      description: Replace all details of an invoice. Reverses old stock additions
+        and applies new quantities.
+      parameters:
+      - default: uz
+        description: Language (uz, ru, en)
+        in: query
+        name: lang
+        type: string
+      - description: Invoice ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: New invoice details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.UpsertInvoiceDetailsRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.UpsertInvoiceDetailsResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Batch update invoice details
       tags:
       - Invoices
   /api/v1/invoices/{id}/mark-arrived:

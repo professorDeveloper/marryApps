@@ -801,3 +801,41 @@ func (h *Handler) GetInvoiceStatsByDateRange(c echo.Context) error {
 		http.StatusOK,
 	))
 }
+
+// UpsertInvoiceDetails replaces all invoice details and adjusts stock accordingly
+// @Summary Batch update invoice details
+// @Description Replace all details of an invoice. Reverses old stock additions and applies new quantities.
+// @Tags Invoices
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param lang query string false "Language (uz, ru, en)" default(uz)
+// @Param id path string true "Invoice ID"
+// @Param request body model.UpsertInvoiceDetailsRequest true "New invoice details"
+// @Success 200 {object} model.UpsertInvoiceDetailsResponse
+// @Failure 400 {object} model.ErrorResponse
+// @Failure 401 {object} model.ErrorResponse
+// @Failure 500 {object} model.ErrorResponse
+// @Router /api/v1/invoices/{id}/details/batch [put]
+func (h *Handler) UpsertInvoiceDetails(c echo.Context) error {
+	id := c.Param("id")
+	if id == "" {
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("invalid request", "invoice id is required", http.StatusBadRequest))
+	}
+
+	var req model.UpsertInvoiceDetailsRequest
+	if err := c.Bind(&req); err != nil {
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("invalid request", err.Error(), http.StatusBadRequest))
+	}
+
+	resp, err := h.service.Invoice().UpsertInvoiceDetails(c.Request().Context(), id, &req)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("Operation failed", err.Error(), http.StatusInternalServerError))
+	}
+
+	return c.JSON(http.StatusOK, model.NewSuccessResponse(
+		"Invoice details updated successfully",
+		resp,
+		http.StatusOK,
+	))
+}

@@ -15408,6 +15408,77 @@
                 }
             }
         },
+        "/api/v1/invoices/{id}/details/batch": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Replace all details of an invoice. Reverses old stock additions and applies new quantities.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Invoices"
+                ],
+                "summary": "Batch update invoice details",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "default": "uz",
+                        "description": "Language (uz, ru, en)",
+                        "name": "lang",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Invoice ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "New invoice details",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.UpsertInvoiceDetailsRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.UpsertInvoiceDetailsResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/invoices/{id}/mark-arrived": {
             "post": {
                 "security": [
@@ -28790,6 +28861,63 @@
                     "items": {
                         "$ref": "#/definitions/model.UpsertInventoryItemRequest"
                     }
+                }
+            }
+        },
+        "model.UpsertInvoiceDetailEntry": {
+            "type": "object",
+            "required": [
+                "ingredient_id",
+                "price",
+                "price_per_unit",
+                "quantity"
+            ],
+            "properties": {
+                "ingredient_id": {
+                    "type": "string",
+                    "example": "e2g30c86-9h7e-6647-1636-3d23effg1f1"
+                },
+                "price": {
+                    "type": "string",
+                    "example": "500000"
+                },
+                "price_per_unit": {
+                    "type": "string",
+                    "example": "10000"
+                },
+                "quantity": {
+                    "type": "string",
+                    "example": "50"
+                }
+            }
+        },
+        "model.UpsertInvoiceDetailsRequest": {
+            "type": "object",
+            "required": [
+                "details"
+            ],
+            "properties": {
+                "details": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                        "$ref": "#/definitions/model.UpsertInvoiceDetailEntry"
+                    }
+                }
+            }
+        },
+        "model.UpsertInvoiceDetailsResponse": {
+            "type": "object",
+            "properties": {
+                "details": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.InvoiceDetailResponse"
+                    }
+                },
+                "success": {
+                    "type": "integer",
+                    "example": 2
                 }
             }
         },

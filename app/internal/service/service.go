@@ -337,6 +337,7 @@ type InvoiceI interface {
 	DeleteInvoiceDetail(ctx context.Context, id string) error
 	RestoreInvoiceDetail(ctx context.Context, id string) error
 	DeleteInvoiceDetailsByInvoiceID(ctx context.Context, invoiceID string) error
+	UpsertInvoiceDetails(ctx context.Context, invoiceID string, req *model.UpsertInvoiceDetailsRequest) (*model.UpsertInvoiceDetailsResponse, error)
 	CountInvoiceDetails(ctx context.Context) (int64, error)
 	CountInvoiceDetailsByInvoice(ctx context.Context, invoiceID string) (int64, error)
 	GetInvoiceDetailWithIngredient(ctx context.Context, id string) (*model.InvoiceDetailWithIngredientResponse, error)

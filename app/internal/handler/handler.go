@@ -554,6 +554,7 @@ func (h *Handler) Register(router *echo.Echo) {
 			invoices.DELETE("/:id", h.DeleteInvoice, mw.CheckLanguage())
 			invoices.POST("/:id/restore", h.RestoreInvoice, mw.CheckLanguage())
 			invoices.GET("/:id/details", h.GetInvoiceWithDetails, mw.CheckLanguage())
+			invoices.PUT("/:id/details/batch", h.UpsertInvoiceDetails, mw.CheckLanguage())
 			invoices.GET("/stats/supplier", h.GetInvoiceStatsBySupplier, mw.CheckLanguage())
 			invoices.GET("/stats/date-range", h.GetInvoiceStatsByDateRange, mw.CheckLanguage())
 		}

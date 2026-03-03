@@ -156,6 +156,22 @@ type InvoiceDetailWithIngredientResponse struct {
 	IngredientPicture *string    `json:"ingredient_picture,omitempty" example:"http://example.com/tomato.jpg"`
 }
 
+type UpsertInvoiceDetailEntry struct {
+	IngredientID string `json:"ingredient_id" validate:"required" example:"e2g30c86-9h7e-6647-1636-3d23effg1f1"`
+	Quantity     string `json:"quantity" validate:"required" example:"50"`
+	Price        string `json:"price" validate:"required" example:"500000"`
+	PricePerUnit string `json:"price_per_unit" validate:"required" example:"10000"`
+}
+
+type UpsertInvoiceDetailsRequest struct {
+	Details []UpsertInvoiceDetailEntry `json:"details" validate:"required,min=1,dive"`
+}
+
+type UpsertInvoiceDetailsResponse struct {
+	Success int                     `json:"success" example:"2"`
+	Details []InvoiceDetailResponse `json:"details"`
+}
+
 type InvoiceStatsBySupplierResponse struct {
 	SupplierName     string     `json:"supplier_name" example:"ABC Supplier"`
 	InvoiceCount     int64      `json:"invoice_count" example:"10"`
