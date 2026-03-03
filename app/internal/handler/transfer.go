@@ -199,6 +199,40 @@ func (h *Handler) DeleteTransfer(c echo.Context) error {
 	return c.NoContent(http.StatusNoContent)
 }
 
+// UpsertTransferItems replaces all items of a transfer in one call, reversing old stock and applying new quantities.
+// @Summary Batch update transfer items
+// @Description Replaces all transfer items. Old stock changes are reversed, then new quantities are applied.
+// @Tags Transfers
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path string true "Transfer ID"
+// @Param input body model.UpsertTransferItemsRequest true "New transfer items"
+// @Success 200 {object} model.TransferResponse "Updated transfer with new items"
+// @Failure 400 {object} model.ErrorResponse
+// @Failure 404 {object} model.ErrorResponse
+// @Failure 500 {object} model.ErrorResponse
+// @Router /api/v1/transfers/{id}/items/batch [put]
+func (h *Handler) UpsertTransferItems(c echo.Context) error {
+	id := c.Param("id")
+	if id == "" {
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("transfer id is required", "missing path parameter: id", http.StatusBadRequest))
+	}
+
+	var req model.UpsertTransferItemsRequest
+	if err := c.Bind(&req); err != nil {
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("invalid request body", err.Error(), http.StatusBadRequest))
+	}
+
+	resp, err := h.service.Transfer().UpsertTransferItems(c.Request().Context(), id, req)
+	if err != nil {
+		log.Printf("UpsertTransferItems failed: %v", err)
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("failed to update transfer items", err.Error(), http.StatusInternalServerError))
+	}
+
+	return c.JSON(http.StatusOK, model.NewSuccessResponse("Transfer items updated successfully", resp, http.StatusOK))
+}
+
 // DeleteTransferItem removes a single item and reverses its stock
 // @Summary Delete transfer item
 // @Description Delete a single transfer item and reverse its stock change

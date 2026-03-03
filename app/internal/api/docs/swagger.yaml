@@ -3957,6 +3957,16 @@ definitions:
     required:
     - items
     type: object
+  model.UpsertTransferItemsRequest:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/model.CreateTransferItemEntry'
+        minItems: 1
+        type: array
+    required:
+    - items
+    type: object
   model.UserResponse:
     properties:
       branch_id:
@@ -18327,6 +18337,48 @@ paths:
       security:
       - BearerAuth: []
       summary: Get transfer by ID
+      tags:
+      - Transfers
+  /api/v1/transfers/{id}/items/batch:
+    put:
+      consumes:
+      - application/json
+      description: Replaces all transfer items. Old stock changes are reversed, then
+        new quantities are applied.
+      parameters:
+      - description: Transfer ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: New transfer items
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/model.UpsertTransferItemsRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Updated transfer with new items
+          schema:
+            $ref: '#/definitions/model.TransferResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Batch update transfer items
       tags:
       - Transfers
   /api/v1/transfers/batch:

@@ -414,6 +414,7 @@ type TransferI interface {
 	GetAllTransfers(ctx context.Context, limit, offset int32) ([]model.TransferResponse, error)
 	DeleteTransfer(ctx context.Context, transferID string) error
 	DeleteTransferItem(ctx context.Context, itemID string) error
+	UpsertTransferItems(ctx context.Context, transferID string, req model.UpsertTransferItemsRequest) (*model.TransferResponse, error)
 }
 
 type CashRegisterI interface {

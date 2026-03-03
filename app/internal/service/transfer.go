@@ -276,36 +276,37 @@ func (s *TransferS) DeleteTransfer(ctx context.Context, transferID string) error
 		return fmt.Errorf("transfer not found: %w", err)
 	}
 
-	// If transfer was active, reverse stock changes
-	if transfer.Status == pg.TransferStatusActive {
-		items, err := q.GetTransferItemsByTransferID(ctx, id)
-		if err != nil {
-			return fmt.Errorf("failed to fetch items: %w", err)
-		}
+	// Reverse stock changes for all items
+	items, err := q.GetTransferItemsByTransferID(ctx, id)
+	if err != nil {
+		return fmt.Errorf("failed to fetch items: %w", err)
+	}
 
-		fromStorageUUID := pgtype.UUID{Bytes: transfer.FromStorageID, Valid: true}
-		toStorageUUID := pgtype.UUID{Bytes: transfer.ToStorageID, Valid: true}
+	fromStorageUUID := pgtype.UUID{Bytes: transfer.FromStorageID, Valid: true}
+	toStorageUUID := pgtype.UUID{Bytes: transfer.ToStorageID, Valid: true}
 
-		for _, item := range items {
-			// Add back to sender's stock
+	for _, item := range items {
+		// Add back to sender's stock
+		senderStockID := s.getStockID(ctx, q, item.IngredientID, fromStorageUUID)
+		if senderStockID != uuid.Nil {
 			_, err := q.AddStockByID(ctx, pg.AddStockByIDParams{
-				ID:       s.getStockID(ctx, q, item.IngredientID, fromStorageUUID),
+				ID:       senderStockID,
 				Quantity: item.Quantity,
 			})
 			if err != nil {
 				log.Printf("failed to reverse sender stock for ingredient %s: %v", item.IngredientID, err)
 			}
+		}
 
-			// Deduct from receiver's stock
-			receiverStockID := s.getStockID(ctx, q, item.IngredientID, toStorageUUID)
-			if receiverStockID != uuid.Nil {
-				_, err := q.DeductStockByID(ctx, pg.DeductStockByIDParams{
-					ID:       receiverStockID,
-					Quantity: item.Quantity,
-				})
-				if err != nil {
-					log.Printf("failed to reverse receiver stock for ingredient %s: %v", item.IngredientID, err)
-				}
+		// Deduct from receiver's stock
+		receiverStockID := s.getStockID(ctx, q, item.IngredientID, toStorageUUID)
+		if receiverStockID != uuid.Nil {
+			_, err := q.DeductStockByID(ctx, pg.DeductStockByIDParams{
+				ID:       receiverStockID,
+				Quantity: item.Quantity,
+			})
+			if err != nil {
+				log.Printf("failed to reverse receiver stock for ingredient %s: %v", item.IngredientID, err)
 			}
 		}
 	}
@@ -342,28 +343,26 @@ func (s *TransferS) DeleteTransferItem(ctx context.Context, itemID string) error
 		return fmt.Errorf("transfer not found: %w", err)
 	}
 
-	// Reverse stock if transfer is active
-	if transfer.Status == pg.TransferStatusActive {
-		fromStorageUUID := pgtype.UUID{Bytes: transfer.FromStorageID, Valid: true}
-		toStorageUUID := pgtype.UUID{Bytes: transfer.ToStorageID, Valid: true}
+	// Always reverse stock
+	fromStorageUUID := pgtype.UUID{Bytes: transfer.FromStorageID, Valid: true}
+	toStorageUUID := pgtype.UUID{Bytes: transfer.ToStorageID, Valid: true}
 
-		// Add back to sender
-		senderStockID := s.getStockID(ctx, q, item.IngredientID, fromStorageUUID)
-		if senderStockID != uuid.Nil {
-			_, _ = q.AddStockByID(ctx, pg.AddStockByIDParams{
-				ID:       senderStockID,
-				Quantity: item.Quantity,
-			})
-		}
+	// Add back to sender
+	senderStockID := s.getStockID(ctx, q, item.IngredientID, fromStorageUUID)
+	if senderStockID != uuid.Nil {
+		_, _ = q.AddStockByID(ctx, pg.AddStockByIDParams{
+			ID:       senderStockID,
+			Quantity: item.Quantity,
+		})
+	}
 
-		// Deduct from receiver
-		receiverStockID := s.getStockID(ctx, q, item.IngredientID, toStorageUUID)
-		if receiverStockID != uuid.Nil {
-			_, _ = q.DeductStockByID(ctx, pg.DeductStockByIDParams{
-				ID:       receiverStockID,
-				Quantity: item.Quantity,
-			})
-		}
+	// Deduct from receiver
+	receiverStockID := s.getStockID(ctx, q, item.IngredientID, toStorageUUID)
+	if receiverStockID != uuid.Nil {
+		_, _ = q.DeductStockByID(ctx, pg.DeductStockByIDParams{
+			ID:       receiverStockID,
+			Quantity: item.Quantity,
+		})
 	}
 
 	// Soft delete item
@@ -375,6 +374,65 @@ func (s *TransferS) DeleteTransferItem(ctx context.Context, itemID string) error
 	_ = q.RecalculateTransferTotal(ctx, item.TransferID)
 
 	return nil
+}
+
+// UpsertTransferItems replaces all items of a transfer: reverses old stock, soft-deletes old items, creates new ones.
+func (s *TransferS) UpsertTransferItems(ctx context.Context, transferID string, req model.UpsertTransferItemsRequest) (*model.TransferResponse, error) {
+	id, err := uuid.Parse(transferID)
+	if err != nil {
+		return nil, fmt.Errorf("invalid transfer_id: %w", err)
+	}
+	if len(req.Items) == 0 {
+		return nil, fmt.Errorf("at least one item is required")
+	}
+
+	q := s.repo.Tenant(ctx)
+
+	transfer, err := q.GetTransferByID(ctx, id)
+	if err != nil {
+		return nil, fmt.Errorf("transfer not found: %w", err)
+	}
+
+	// Step 1: Reverse stock for all existing items
+	existing, err := q.GetTransferItemsByTransferID(ctx, id)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch existing items: %w", err)
+	}
+
+	fromStorageUUID := pgtype.UUID{Bytes: transfer.FromStorageID, Valid: true}
+	toStorageUUID := pgtype.UUID{Bytes: transfer.ToStorageID, Valid: true}
+
+	for _, item := range existing {
+		senderStockID := s.getStockID(ctx, q, item.IngredientID, fromStorageUUID)
+		if senderStockID != uuid.Nil {
+			_, _ = q.AddStockByID(ctx, pg.AddStockByIDParams{
+				ID:       senderStockID,
+				Quantity: item.Quantity,
+			})
+		}
+		receiverStockID := s.getStockID(ctx, q, item.IngredientID, toStorageUUID)
+		if receiverStockID != uuid.Nil {
+			_, _ = q.DeductStockByID(ctx, pg.DeductStockByIDParams{
+				ID:       receiverStockID,
+				Quantity: item.Quantity,
+			})
+		}
+	}
+
+	// Step 2: Soft-delete all existing items
+	if err := q.DeleteTransferItemsByTransferID(ctx, id); err != nil {
+		return nil, fmt.Errorf("failed to delete existing items: %w", err)
+	}
+
+	// Step 3: Create new items
+	if _, err := s.processTransferItems(ctx, q, id, transfer.FromStorageID, transfer.ToStorageID, transfer.ToBranchID, req.Items); err != nil {
+		return nil, err
+	}
+
+	// Step 4: Recalculate total and return
+	_ = q.RecalculateTransferTotal(ctx, id)
+
+	return s.GetTransferByID(ctx, transferID)
 }
 
 // processTransferItems handles stock deduction/addition for each item.

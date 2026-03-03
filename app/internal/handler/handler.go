@@ -631,6 +631,7 @@ func (h *Handler) Register(router *echo.Echo) {
 			transfers.GET("/:id", h.GetTransferByID, mw.CheckLanguage())
 			transfers.DELETE("/:id", h.DeleteTransfer, mw.CheckLanguage())
 			transfers.DELETE("/items/:id", h.DeleteTransferItem, mw.CheckLanguage())
+			transfers.PUT("/:id/items/batch", h.UpsertTransferItems, mw.CheckLanguage())
 		}
 
 		// Shipment endpoints (outgoing stock removal)
