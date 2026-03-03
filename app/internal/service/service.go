@@ -424,6 +424,15 @@ type CashRegisterI interface {
 	RestoreCashRegister(ctx context.Context, id uuid.UUID) error
 }
 
+type CashRegisterShiftI interface {
+	OpenShift(ctx context.Context, req model.OpenCashRegisterShiftRequest) (*model.CashRegisterShiftResponse, error)
+	CloseShift(ctx context.Context, id string, req model.CloseCashRegisterShiftRequest) (*model.CashRegisterShiftResponse, error)
+	GetShift(ctx context.Context, id string) (*model.CashRegisterShiftResponse, error)
+	GetActiveShift(ctx context.Context, cashRegisterID string) (*model.CashRegisterShiftResponse, error)
+	ListShifts(ctx context.Context, cashRegisterID, cashierID, status *string, limit, offset int32) ([]*model.CashRegisterShiftResponse, int64, error)
+	DeleteShift(ctx context.Context, id string) error
+}
+
 type GroupTransactionI interface {
 	CreateGroupTransaction(ctx context.Context, req *model.CreateGroupTransactionRequest) (*model.GroupTransactionResponse, error)
 	GetGroupTransactionByID(ctx context.Context, id string) (*model.GroupTransactionResponse, error)
@@ -473,6 +482,7 @@ type I interface {
 	Deduction() DeductionI
 	Transfer() TransferI
 	Cash() CashRegisterI
+	CashRegisterShift() CashRegisterShiftI
 	GroupTransaction() GroupTransactionI
 	Transaction() TransactionI
 	Shipment() ShipmentI
@@ -505,8 +515,9 @@ type Service struct {
 	calculation  CalculationI
 	deduction    DeductionI
 	transfer     TransferI
-	cash             CashRegisterI
-	groupTransaction GroupTransactionI
+	cash              CashRegisterI
+	cashRegisterShift CashRegisterShiftI
+	groupTransaction  GroupTransactionI
 	transaction      TransactionI
 	shipment         ShipmentI
 	outgoingInvoice  OutgoingInvoiceI
@@ -539,8 +550,9 @@ func New(cfg *config.Config, repo *repository.Repository, clickClient *paymentCl
 		calculation:  NewCalculationS(repo),
 		deduction:    NewDeductionS(repo),
 		transfer:     NewTransferS(repo),
-		cash:             NewCashRegisterS(repo),
-		groupTransaction: NewGroupTransactionS(repo),
+		cash:              NewCashRegisterS(repo),
+		cashRegisterShift: NewCashRegisterShiftS(repo),
+		groupTransaction:  NewGroupTransactionS(repo),
 		transaction:      NewTransactionS(repo),
 		shipment:         NewShipmentS(repo),
 		outgoingInvoice:  NewOutgoingInvoiceS(repo),
@@ -642,6 +654,10 @@ func (s *Service) Transfer() TransferI {
 
 func (s *Service) Cash() CashRegisterI {
 	return s.cash
+}
+
+func (s *Service) CashRegisterShift() CashRegisterShiftI {
+	return s.cashRegisterShift
 }
 
 func (s *Service) GroupTransaction() GroupTransactionI {

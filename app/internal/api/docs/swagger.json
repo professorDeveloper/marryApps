@@ -2405,6 +2405,309 @@
                 }
             }
         },
+        "/api/v1/cash-register-shifts": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns a paginated list of cash register shifts. Filter by cash_register_id, cashier_id, or status (open/closed).",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "CashRegisterShifts"
+                ],
+                "summary": "List cash register shifts",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Filter by cash register ID",
+                        "name": "cash_register_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by cashier ID",
+                        "name": "cashier_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by status: open or closed",
+                        "name": "status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 20,
+                        "description": "Limit",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 0,
+                        "description": "Offset",
+                        "name": "offset",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Opens a new shift for a cash register. Only one active shift per cash register is allowed.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "CashRegisterShifts"
+                ],
+                "summary": "Open cash register shift",
+                "parameters": [
+                    {
+                        "description": "Open shift request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.OpenCashRegisterShiftRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/model.CashRegisterShiftResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/cash-register-shifts/active": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns the currently open shift for the given cash register.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "CashRegisterShifts"
+                ],
+                "summary": "Get active shift",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Cash Register ID",
+                        "name": "cash_register_id",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.CashRegisterShiftResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/cash-register-shifts/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns a single cash register shift by its ID.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "CashRegisterShifts"
+                ],
+                "summary": "Get cash register shift",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Shift ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.CashRegisterShiftResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Soft-deletes a cash register shift by ID.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "CashRegisterShifts"
+                ],
+                "summary": "Delete cash register shift",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Shift ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.SuccessResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/cash-register-shifts/{id}/close": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Closes an open shift by recording closing cash and card amounts.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "CashRegisterShifts"
+                ],
+                "summary": "Close cash register shift",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Shift ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Close shift request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.CloseCashRegisterShiftRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.CashRegisterShiftResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/cash-registers": {
             "get": {
                 "security": [
@@ -22974,6 +23277,53 @@
                 }
             }
         },
+        "model.CashRegisterShiftResponse": {
+            "type": "object",
+            "properties": {
+                "branch_id": {
+                    "type": "string"
+                },
+                "cash_register_id": {
+                    "type": "string"
+                },
+                "cashier_id": {
+                    "type": "string"
+                },
+                "closed_at": {
+                    "type": "string"
+                },
+                "closing_card": {
+                    "type": "string"
+                },
+                "closing_cash": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "notes": {
+                    "type": "string"
+                },
+                "opened_at": {
+                    "type": "string"
+                },
+                "opening_card": {
+                    "type": "string"
+                },
+                "opening_cash": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
         "model.CashReportGroupRow": {
             "type": "object",
             "properties": {
@@ -23147,6 +23497,26 @@
                 },
                 "total": {
                     "type": "integer"
+                }
+            }
+        },
+        "model.CloseCashRegisterShiftRequest": {
+            "type": "object",
+            "required": [
+                "closing_cash"
+            ],
+            "properties": {
+                "closing_card": {
+                    "type": "string",
+                    "example": "3000.00"
+                },
+                "closing_cash": {
+                    "type": "string",
+                    "example": "5000.00"
+                },
+                "notes": {
+                    "type": "string",
+                    "example": "End of day shift"
                 }
             }
         },
@@ -26045,6 +26415,32 @@
                     "description": "payment_type: cash or card",
                     "type": "string",
                     "example": "cash"
+                }
+            }
+        },
+        "model.OpenCashRegisterShiftRequest": {
+            "type": "object",
+            "required": [
+                "cash_register_id",
+                "cashier_id",
+                "opening_cash"
+            ],
+            "properties": {
+                "cash_register_id": {
+                    "type": "string",
+                    "example": "uuid"
+                },
+                "cashier_id": {
+                    "type": "string",
+                    "example": "uuid"
+                },
+                "opening_card": {
+                    "type": "string",
+                    "example": "0.00"
+                },
+                "opening_cash": {
+                    "type": "string",
+                    "example": "0.00"
                 }
             }
         },

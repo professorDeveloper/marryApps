@@ -206,6 +206,37 @@ definitions:
         example: "2021-01-01T00:00:00Z"
         type: string
     type: object
+  model.CashRegisterShiftResponse:
+    properties:
+      branch_id:
+        type: string
+      cash_register_id:
+        type: string
+      cashier_id:
+        type: string
+      closed_at:
+        type: string
+      closing_card:
+        type: string
+      closing_cash:
+        type: string
+      created_at:
+        type: string
+      id:
+        type: string
+      notes:
+        type: string
+      opened_at:
+        type: string
+      opening_card:
+        type: string
+      opening_cash:
+        type: string
+      status:
+        type: string
+      updated_at:
+        type: string
+    type: object
   model.CashReportGroupRow:
     properties:
       card_total:
@@ -324,6 +355,20 @@ definitions:
         type: array
       total:
         type: integer
+    type: object
+  model.CloseCashRegisterShiftRequest:
+    properties:
+      closing_card:
+        example: "3000.00"
+        type: string
+      closing_cash:
+        example: "5000.00"
+        type: string
+      notes:
+        example: End of day shift
+        type: string
+    required:
+    - closing_cash
     type: object
   model.CompoundCalculationItem:
     properties:
@@ -2370,6 +2415,25 @@ definitions:
         type: string
     required:
     - customer_paid_amount
+    type: object
+  model.OpenCashRegisterShiftRequest:
+    properties:
+      cash_register_id:
+        example: uuid
+        type: string
+      cashier_id:
+        example: uuid
+        type: string
+      opening_card:
+        example: "0.00"
+        type: string
+      opening_cash:
+        example: "0.00"
+        type: string
+    required:
+    - cash_register_id
+    - cashier_id
+    - opening_cash
     type: object
   model.OrderItemResponse:
     properties:
@@ -5431,6 +5495,201 @@ paths:
       summary: Preview calculations (no DB writes)
       tags:
       - Calculations
+  /api/v1/cash-register-shifts:
+    get:
+      description: Returns a paginated list of cash register shifts. Filter by cash_register_id,
+        cashier_id, or status (open/closed).
+      parameters:
+      - description: Filter by cash register ID
+        in: query
+        name: cash_register_id
+        type: string
+      - description: Filter by cashier ID
+        in: query
+        name: cashier_id
+        type: string
+      - description: 'Filter by status: open or closed'
+        in: query
+        name: status
+        type: string
+      - default: 20
+        description: Limit
+        in: query
+        name: limit
+        type: integer
+      - default: 0
+        description: Offset
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: List cash register shifts
+      tags:
+      - CashRegisterShifts
+    post:
+      consumes:
+      - application/json
+      description: Opens a new shift for a cash register. Only one active shift per
+        cash register is allowed.
+      parameters:
+      - description: Open shift request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.OpenCashRegisterShiftRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/model.CashRegisterShiftResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Open cash register shift
+      tags:
+      - CashRegisterShifts
+  /api/v1/cash-register-shifts/{id}:
+    delete:
+      description: Soft-deletes a cash register shift by ID.
+      parameters:
+      - description: Shift ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.SuccessResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete cash register shift
+      tags:
+      - CashRegisterShifts
+    get:
+      description: Returns a single cash register shift by its ID.
+      parameters:
+      - description: Shift ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.CashRegisterShiftResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get cash register shift
+      tags:
+      - CashRegisterShifts
+  /api/v1/cash-register-shifts/{id}/close:
+    post:
+      consumes:
+      - application/json
+      description: Closes an open shift by recording closing cash and card amounts.
+      parameters:
+      - description: Shift ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Close shift request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.CloseCashRegisterShiftRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.CashRegisterShiftResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Close cash register shift
+      tags:
+      - CashRegisterShifts
+  /api/v1/cash-register-shifts/active:
+    get:
+      description: Returns the currently open shift for the given cash register.
+      parameters:
+      - description: Cash Register ID
+        in: query
+        name: cash_register_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.CashRegisterShiftResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get active shift
+      tags:
+      - CashRegisterShifts
   /api/v1/cash-registers:
     get:
       description: Retrieve all cash registers for the current branch

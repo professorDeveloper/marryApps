@@ -583,6 +583,17 @@ func (h *Handler) Register(router *echo.Echo) {
 			cashRegisters.POST("/:id/restore", h.RestoreCashRegister, mw.CheckLanguage())
 		}
 
+		// Cash register shift endpoints
+		cashRegisterShifts := api.Group("/cash-register-shifts", mw.CheckAuth(h.cfg), mw.TenantMiddleware(h.repo))
+		{
+			cashRegisterShifts.POST("", h.OpenCashRegisterShift, mw.CheckLanguage())
+			cashRegisterShifts.GET("", h.ListCashRegisterShifts, mw.CheckLanguage())
+			cashRegisterShifts.GET("/active", h.GetActiveCashRegisterShift, mw.CheckLanguage())
+			cashRegisterShifts.GET("/:id", h.GetCashRegisterShift, mw.CheckLanguage())
+			cashRegisterShifts.POST("/:id/close", h.CloseCashRegisterShift, mw.CheckLanguage())
+			cashRegisterShifts.DELETE("/:id", h.DeleteCashRegisterShift, mw.CheckLanguage())
+		}
+
 		// Group transaction management endpoints
 		groupTransactions := api.Group("/group-transactions", mw.CheckAuth(h.cfg), mw.TenantMiddleware(h.repo))
 		{

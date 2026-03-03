@@ -39,7 +39,7 @@ CREATE INDEX idx_branches_deleted ON branches(deleted_at);
 CREATE TABLE IF NOT EXISTS shifts (
   id           UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
   name         TEXT        NOT NULL,
-  role         TEXT        CHECK (role IN ('admin', 'user', 'cashier', 'superadmin', 'kitchen', 'waiter', 'manager')),
+  role         TEXT        CHECK (role IN ('admin', 'user', 'superadmin', 'kitchen', 'waiter', 'manager')),
   working_days TEXT,
   open_time    BIGINT,
   close_time   BIGINT,

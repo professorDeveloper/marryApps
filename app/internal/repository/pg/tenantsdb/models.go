@@ -609,6 +609,23 @@ type CashRegister struct {
 	DeletedAt *int64             `json:"deleted_at"`
 }
 
+type CashRegisterShift struct {
+	ID             uuid.UUID          `json:"id"`
+	CashRegisterID uuid.UUID          `json:"cash_register_id"`
+	CashierID      uuid.UUID          `json:"cashier_id"`
+	BranchID       uuid.UUID          `json:"branch_id"`
+	OpenedAt       time.Time          `json:"opened_at"`
+	ClosedAt       pgtype.Timestamptz `json:"closed_at"`
+	OpeningCash    pgtype.Numeric     `json:"opening_cash"`
+	OpeningCard    pgtype.Numeric     `json:"opening_card"`
+	ClosingCash    pgtype.Numeric     `json:"closing_cash"`
+	ClosingCard    pgtype.Numeric     `json:"closing_card"`
+	Notes          *string            `json:"notes"`
+	CreatedAt      pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
+	DeletedAt      *int64             `json:"deleted_at"`
+}
+
 type Category struct {
 	ID           uuid.UUID          `json:"id"`
 	Name         string             `json:"name"`
