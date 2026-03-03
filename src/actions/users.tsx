@@ -1,5 +1,5 @@
 import type { SWRConfiguration } from 'swr';
-import type { IUser, IUserFormData, IUserResponse, IUserRegisterData } from 'src/types/user';
+import type { IUser, IUserFormData, IUserRegisterData } from 'src/types/user';
 
 import useSWR, { mutate } from 'swr';
 import { useMemo, useCallback } from 'react';
@@ -22,6 +22,66 @@ interface BackendResponse<T> {
     code: number;
 }
 
+function normalizeUser(rawUser: any): IUser {
+    return {
+        ...rawUser,
+        full_name: rawUser?.full_name ?? rawUser?.fullName ?? '',
+        phone_number: rawUser?.phone_number ?? rawUser?.phoneNumber ?? '',
+        brand_id: rawUser?.brand_id ?? rawUser?.brandId ?? '',
+        branch_id: rawUser?.branch_id ?? rawUser?.branchId ?? '',
+        pincode: rawUser?.pincode ?? rawUser?.pinCode ?? '',
+        terminal: rawUser?.terminal ?? rawUser?.terminal_name ?? '',
+        status:
+            rawUser?.status ??
+            (typeof rawUser?.is_active === 'boolean'
+                ? (rawUser.is_active ? 'active' : 'inactive')
+                : undefined),
+    };
+}
+
+function extractUserPayload(input: any): any {
+    if (!input) return undefined;
+
+    if (Array.isArray(input)) {
+        return input[0];
+    }
+
+    if (typeof input !== 'object') {
+        return undefined;
+    }
+
+    if (input.user && typeof input.user === 'object') return input.user;
+    if (input.item && typeof input.item === 'object') return input.item;
+    if (input.result && typeof input.result === 'object') return extractUserPayload(input.result);
+    if (input.data && typeof input.data === 'object') return extractUserPayload(input.data);
+
+    // If this object already looks like a user record, return it directly.
+    if ('id' in input || 'username' in input || 'full_name' in input || 'fullName' in input) {
+        return input;
+    }
+
+    return undefined;
+}
+
+function getBrandIdFromToken(): string {
+    const token =
+        sessionStorage.getItem('jwt_access_token')
+        || sessionStorage.getItem('accessToken')
+        || localStorage.getItem('accessToken');
+
+    if (!token) return '';
+
+    try {
+        const [, payload] = token.split('.');
+        if (!payload) return '';
+        const normalized = payload.replace(/-/g, '+').replace(/_/g, '/');
+        const decoded = JSON.parse(atob(normalized));
+        return decoded?.brand_id || decoded?.brandId || '';
+    } catch {
+        return '';
+    }
+}
+
 
 /**
  * Get users by role
@@ -38,14 +98,7 @@ export function useGetUsersByRole(role: string, useStaffApi = false) {
     const users = useMemo(() => {
         const rawUsers = Array.isArray(data) ? data : (data?.data || []);
 
-        return rawUsers.map((user: any) => ({
-            ...user,
-            status:
-                user.status ??
-                (typeof user.is_active === 'boolean'
-                    ? (user.is_active ? 'active' : 'inactive')
-                    : undefined),
-        }));
+        return rawUsers.map((user: any) => normalizeUser(user));
     }, [data]);
 
     const memoizedValue = useMemo(
@@ -94,20 +147,27 @@ export function useGetUsers() {
 export function useGetUser(userId: string) {
     const url = userId ? endpoints.users.details(userId) : '';
 
-    const { data, isLoading, error, isValidating } = useSWR<BackendResponse<IUser>>(
+    const { data, isLoading, error, isValidating } = useSWR<BackendResponse<IUser> | IUser | { data?: IUser }>(
         url,
         fetcher,
         { ...swrOptions }
     );
 
+    const user = useMemo(() => {
+        if (!data) return undefined;
+        const rawUser = extractUserPayload(data);
+        if (!rawUser) return undefined;
+        return normalizeUser(rawUser);
+    }, [data]);
+
     const memoizedValue = useMemo(
         () => ({
-            user: data?.data,
+            user,
             userLoading: isLoading,
             userError: error,
             userValidating: isValidating,
         }),
-        [data, error, isLoading, isValidating]
+        [user, error, isLoading, isValidating]
     );
 
     return memoizedValue;
@@ -119,10 +179,18 @@ export function useGetUser(userId: string) {
 export function useCreateUser() {
     const callback = useCallback(
         async (formData: IUserFormData) => {
+            const tokenBrandId = getBrandIdFromToken();
+
             // Transform form data to register API format
             const registerData: IUserRegisterData = {
-                // Login qilgan vaqtda saqlangan brand_id ni ishlatamiz
-                brand_id: formData.brand_id || localStorage.getItem('brand_id') || '',
+                // Token ichidagi brand_id ustuvor (UUID id emas, haqiqiy tenant kodi bo'lishi uchun)
+                brand_id: tokenBrandId || formData.brand_id || localStorage.getItem('brand_id') || '',
+                // selectedBranchId ustuvor, bo'lmasa tokendan kelgan branch_id ishlatiladi
+                branch_id:
+                    formData.branch_id
+                    || localStorage.getItem('selectedBranchId')
+                    || localStorage.getItem('branch_id')
+                    || '',
                 fullName: formData.full_name || formData.fullName || '',
                 username: formData.username,
                 password: formData.password || Math.random().toString(36).slice(-8), // Generate random if not provided

@@ -87,7 +87,7 @@ export async function setSession(accessToken: string | null, brandId?: string) {
       }
 
       // Persist tenant scope for request headers
-      const resolvedBrandId = brandId || decodedToken?.brand_id || decodedToken?.brandId;
+      const resolvedBrandId = decodedToken?.brand_id || decodedToken?.brandId || brandId;
       const resolvedBranchId = decodedToken?.branch_id || decodedToken?.branchId;
       const resolvedRole = decodedToken?.role;
 

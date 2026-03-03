@@ -20,7 +20,7 @@ export interface EmployeeEditViewAdminProps {
     isNew?: boolean;
 }
 
-function buildBasicInfoSection(): CardSection {
+function buildBasicInfoSection(isNew: boolean): CardSection {
     return {
         id: 'basic',
         title: 'users.basicTitle',
@@ -46,13 +46,13 @@ function buildBasicInfoSection(): CardSection {
                 type: 'text',
                 defaultValue: '',
             },
-            // {
-            //     key: 'password',
-            //     label: 'users.password',
-            //     type: 'text',
-            //     required: true,
-            //     defaultValue: '',
-            // },
+            {
+                key: 'password',
+                label: 'users.password',
+                type: 'text',
+                required: isNew,
+                defaultValue: '',
+            },
         ],
     };
 }
@@ -83,18 +83,19 @@ export function EmployeeEditViewAdmin({ userId, isNew = false }: EmployeeEditVie
                 if (!formData.username || !formData.username.trim()) {
                     throw new Error(t('users.usernameRequired'));
                 }
-                // if (!formData.password) {
-                //     throw new Error(t('users.passwordRequired'));
-                // }
+                if (isNew && !formData.password) {
+                    throw new Error(t('users.passwordRequired'));
+                }
 
                 const userData: IUserFormData = {
                     full_name: formData.full_name,
                     username: formData.username,
-                    password: formData.password,
                     role: 'admin',
                     phone_number: formData.phone_number,
                     // Login qilgan vaqtda saqlangan brand_id ni olamiz
                     brand_id: localStorage.getItem('brand_id') || 'default_brand',
+                    branch_id: localStorage.getItem('selectedBranchId') || localStorage.getItem('branch_id') || '',
+                    ...(formData.password ? { password: formData.password } : {}),
                 };
 
                 if (isNew) {
@@ -133,7 +134,7 @@ export function EmployeeEditViewAdmin({ userId, isNew = false }: EmployeeEditVie
     }, [userId, deleteUser, router]);
 
     // Build sections
-    const BASIC_INFO_SECTION_T = translateSection(buildBasicInfoSection(), t);
+    const BASIC_INFO_SECTION_T = translateSection(buildBasicInfoSection(isNew), t);
 
     const config: GenericEditViewConfig = {
         title: isNew ? t('users.new') : t('users.edit'),

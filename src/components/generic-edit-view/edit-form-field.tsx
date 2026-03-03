@@ -11,9 +11,11 @@ import Select from '@mui/material/Select';
 import Switch from '@mui/material/Switch';
 import MenuItem from '@mui/material/MenuItem';
 import TextField from '@mui/material/TextField';
+import Typography from '@mui/material/Typography';
 import InputLabel from '@mui/material/InputLabel';
 import FormControl from '@mui/material/FormControl';
 import FormControlLabel from '@mui/material/FormControlLabel';
+import CheckRoundedIcon from '@mui/icons-material/CheckRounded';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { ImageUploadField } from './image-upload-field';
 
@@ -100,7 +102,7 @@ export const EditFormField: FC<EditFormFieldProps> = ({ field, value, onChange }
 
         return (
             <Box>
-                <Box sx={{ mb: 1 }}>
+                <Box sx={{ mb: 1.5 }}>
                     <label style={{ fontSize: '0.875rem', fontWeight: 500 }}>
                         {field.label}
                     </label>
@@ -109,31 +111,63 @@ export const EditFormField: FC<EditFormFieldProps> = ({ field, value, onChange }
                     sx={{
                         display: 'grid',
                         gridTemplateColumns: 'repeat(12, 1fr)',
-                        gap: 1,
+                        gap: 1.2,
                     }}
                 >
                     {colors.map((color) => (
                         <Box
                             key={color}
+                            component="button"
+                            type="button"
+                            aria-label={`${field.label}: ${color}`}
+                            aria-pressed={selectedColor === color}
                             onClick={() => {
                                 onChange(color);
                             }}
                             sx={{
-                                width: '70%',
+                                width: '100%',
                                 aspectRatio: '1/1',
                                 bgcolor: color,
                                 borderRadius: 1,
                                 cursor: 'pointer',
-                                border: selectedColor === color ? '3px solid #333' : '1px solid #ddd',
-                                transition: 'all 0.2s',
+                                border: 'none',
+                                p: 0,
+                                m: 0,
+                                position: 'relative',
+                                transition: 'transform 0.15s ease, box-shadow 0.15s ease',
+                                boxShadow:
+                                    selectedColor === color
+                                        ? '0 0 0 2px #fff, 0 0 0 4px #111827'
+                                        : '0 0 0 1px rgba(17, 24, 39, 0.2)',
                                 '&:hover': {
-                                    transform: 'scale(1.1)',
+                                    transform: 'translateY(-1px)',
+                                },
+                                '&:focus-visible': {
+                                    outline: '2px solid #111827',
+                                    outlineOffset: 2,
                                 },
                             }}
                             title={color}
-                        />
+                        >
+                            {selectedColor === color && (
+                                <CheckRoundedIcon
+                                    sx={{
+                                        position: 'absolute',
+                                        top: '50%',
+                                        left: '50%',
+                                        transform: 'translate(-50%, -50%)',
+                                        fontSize: 18,
+                                        color: '#fff',
+                                        filter: 'drop-shadow(0 1px 1px rgba(0,0,0,0.45))',
+                                    }}
+                                />
+                            )}
+                        </Box>
                     ))}
                 </Box>
+                <Typography variant="caption" sx={{ mt: 1.5, display: 'block', color: 'text.secondary' }}>
+                    {selectedColor || '-'}
+                </Typography>
             </Box>
         );
     }

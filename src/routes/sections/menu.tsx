@@ -41,6 +41,8 @@ import { ShipmentsEditView } from 'src/sections/warehouse/shipments-edit-view';
 import { ShipmentsListView } from 'src/sections/warehouse/shipments-list-view';
 import { OutgoingInvoicesEditView } from 'src/sections/warehouse/outgoing-invoices-edit-view';
 import { OutgoingInvoicesListView } from 'src/sections/warehouse/outgoing-invoices-list-view';
+import { SeparationActsEditView } from 'src/sections/warehouse/separation-acts-edit-view';
+import { SeparationActsListView } from 'src/sections/warehouse/separation-acts-list-view';
 import { ManagementListView } from 'src/sections/settings/manegment-list-view';
 import { RestaurantInfoListView } from 'src/sections/settings/restaurant-info';
 import { InventoryListView } from 'src/sections/warehouse/inventory-list-view';
@@ -48,6 +50,8 @@ import { InventoryEditView } from 'src/sections/warehouse/inventory-edit-view';
 import { DeductionsListView } from 'src/sections/warehouse/deductions-list-view';
 import { DeductionsEditView } from 'src/sections/warehouse/deductions-edit-view';
 import { IngredientListView } from 'src/sections/warehouse/ingredients-list-view';
+import { OrdersCreateView } from 'src/sections/warehouse/orders-create-view';
+import { OrdersManagementView } from 'src/sections/warehouse/orders-management-view';
 import { CategoryEditViewWrapper } from 'src/sections/category/category-edit-view';
 import { TransactionsEditView } from 'src/sections/cashbox/transactions-edit-view';
 import { GoodsReportsListView } from 'src/sections/reports/goods-reports-list-view';
@@ -163,6 +167,9 @@ export const dashboardRoutes: RouteObject[] = [
           { path: 'warehouse/expenses-invoices', element: <OutgoingInvoicesListView /> },
           { path: 'warehouse/expenses-invoices/new', element: <OutgoingInvoicesEditView /> },
           { path: 'warehouse/expenses-invoices/:id/edit', element: <OutgoingInvoicesEditView /> },
+          { path: 'warehouse/separations-acts', element: <SeparationActsListView /> },
+          { path: 'warehouse/separations-acts/new', element: <SeparationActsEditView /> },
+          { path: 'warehouse/separations-acts/:id/edit', element: <SeparationActsEditView /> },
           { path: 'warehouse/locations', element: <LocationsListView /> },
           { path: 'warehouse/locations/new', element: <LocationsEditView isNew /> },
           { path: 'warehouse/locations/:id/edit', element: <LocationsEditView /> },
@@ -188,6 +195,8 @@ export const dashboardRoutes: RouteObject[] = [
           { path: 'warehouse/deduction-groups', element: <DeductionGroupsListView /> },
           { path: 'warehouse/deduction-groups/new', element: <DeductionGroupEditView isNew /> },
           { path: 'warehouse/deduction-groups/:id/edit', element: <DeductionGroupEditView /> },
+          { path: 'warehouse/orders', element: <OrdersManagementView /> },
+          { path: 'warehouse/orders/new', element: <OrdersCreateView /> },
           { path: 'reports', element: <ReportsListView /> },
           { path: 'reports/new', element: <ReportsEditView isNew /> },
           { path: 'reports/:id/edit', element: <ReportsEditView /> },

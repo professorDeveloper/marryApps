@@ -146,6 +146,7 @@ export function EmployeeEditView({ userId, isNew = false, role }: EmployeeEditVi
                     terminal: formData.terminal,
                     // Login qilgan vaqtda saqlangan brand_id ni olamiz
                     brand_id: localStorage.getItem('brand_id') || 'default_brand',
+                    branch_id: localStorage.getItem('selectedBranchId') || localStorage.getItem('branch_id') || '',
                 };
 
                 if (isNew) {

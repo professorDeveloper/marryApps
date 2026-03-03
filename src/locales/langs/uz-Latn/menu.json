@@ -348,7 +348,9 @@
       "locations": "Joylashuvlar",
       "suppliers": "Yetkazib beruvchilar",
       "shipments": "Jo‘natmalar",
-      "expensesInvoices": "Chiqim fakturalari"
+      "expensesInvoices": "Chiqim fakturalari",
+      "separationActs": "Ajratish aktlari",
+      "orders": "Buyurtmalar boshqaruvi"
     },
     "reports": {
       "title": "Hisobotlar",
@@ -445,6 +447,7 @@
     "role": "Rol",
     "status": "Holati",
     "phoneNumber": "Telefon raqami",
+    "branch": "Filial",
     "pincode": "PIN kod",
     "terminal": "Terminal",
     "createdAt": "Yaratilgan",
@@ -455,6 +458,7 @@
     "usernameRequired": "Foydalanuvchi nomi majburiydir",
     "passwordRequired": "Parol majburiydir",
     "roleRequired": "Rol tanlash majburiydir",
+    "branchRequired": "Filial tanlash majburiydir",
     "pincodeRequired": "PIN kod majburiydir",
     "statusRequired": "Holat tanlash majburiydir",
     "statusActive": "Faol",
@@ -487,6 +491,7 @@
     "success": "Muvaffaqiyatli",
     "save": "Saqlash",
     "cancel": "Bekor qilish",
+    "back": "Orqaga",
     "delete": "O'chirish",
     "edit": "Tahrir qilish",
     "view": "Ko'rish",
@@ -600,7 +605,7 @@
     "colorCode": "Rang kodi",
     "pictureUrl": "Surat URL",
     "id": "ID",
-    "add": "Maxsulot qo'shish",
+    "add": "Ombor qo'shish",
     "addGroup": "Maxsulot guruhlarini qo'shish",
     "edit": "Maxsulot tahrir qilish",
     "new": "Yangi maxsulot",
@@ -944,6 +949,35 @@
       "itemsAdded": "Ombor menusi elementlari muvaffaqiyat qo'shildi"
     }
   },
+  "order": {
+    "create": "Buyurtma yaratish",
+    "type": "Turi",
+    "status": "Holati",
+    "table": "Stol",
+    "tableOption": "Stol #{{number}} (sig'imi: {{capacity}})",
+    "scheduledAt": "Rejalashtirilgan vaqt",
+    "reschedule": "Vaqtni o'zgartirish",
+    "waiter": "Ofitsiant",
+    "cashier": "Kassir",
+    "guestCount": "Mehmonlar soni",
+    "items": "Pozitsiyalar",
+    "good": "Taom",
+    "quantity": "Soni",
+    "addItem": "Pozitsiya qo'shish",
+    "scenarios": {
+      "dineInWithFood": "Stol va ovqat buyurtmasi",
+      "tableOnly": "Faqat stol broni",
+      "takeawayWithFood": "Faqat ovqat buyurtmasi"
+    },
+    "helpers": {
+      "dineInWithFood": "Stol, ofitsiant, mehmonlar soni, vaqt va taomlar majburiy",
+      "tableOnly": "Stol, mehmonlar soni va vaqt majburiy. Taom hozircha shart emas",
+      "takeawayWithFood": "Takeaway turi, kassir, vaqt va taomlar majburiy"
+    },
+    "errors": {
+      "requiredFields": "Majburiy maydonlar to'ldirilmagan"
+    }
+  },
   "ingredientReports": {
     "title": "Maxsulotlar hisobotlari",
     "list": "Maxsulotlar hisobotlari",
@@ -1191,6 +1225,39 @@
       "itemDeleted": "Chiqim fakturasi elementi o'chirildi",
       "updated": "Chiqim fakturasi muvaffaqiyatli yangilandi",
       "itemsAdded": "Chiqim fakturasi elementlari muvaffaqiyatli qo'shildi"
+    }
+  },
+  "separationActs": {
+    "create": "Ajratish aktini yaratish",
+    "view": "Ajratish aktini ko'rish",
+    "act": "Ajratish akti",
+    "items": "Elementlar",
+    "totals": "Jami",
+    "total": "Jami",
+    "totalAmount": "Umumiy summa",
+    "group": "Guruh",
+    "sourceIngredient": "Asosiy ingredient",
+    "sourceQuantity": "Asosiy miqdor",
+    "sourceIngredientRequired": "Iltimos, asosiy ingredientni tanlang",
+    "sourceQuantityRequired": "Asosiy miqdor 0 dan katta bo'lishi kerak",
+    "notFound": "Ajratish akti topilmadi",
+    "messages": {
+      "fetchFailed": "Ajratish aktlari yuklanmadi",
+      "createFailed": "Ajratish aktini yaratib bo'lmadi",
+      "fetchOneFailed": "Ajratish aktini yuklab bo'lmadi",
+      "confirmFailed": "Ajratish aktini tasdiqlab bo'lmadi",
+      "cancelFailed": "Ajratish aktini bekor qilib bo'lmadi",
+      "deleteFailed": "Ajratish aktini o'chirib bo'lmadi",
+      "itemDeleteFailed": "Ajratish akti elementini o'chirib bo'lmadi",
+      "updateFailed": "Ajratish aktini yangilab bo'lmadi",
+      "itemsAddFailed": "Ajratish akti elementlarini qo'shib bo'lmadi",
+      "created": "Ajratish akti muvaffaqiyatli yaratildi",
+      "confirmed": "Ajratish akti tasdiqlandi",
+      "cancelled": "Ajratish akti bekor qilindi",
+      "deleted": "Ajratish akti o'chirildi",
+      "itemDeleted": "Ajratish akti elementi o'chirildi",
+      "updated": "Ajratish akti muvaffaqiyatli yangilandi",
+      "itemsAdded": "Ajratish akti elementlari muvaffaqiyatli qo'shildi"
     }
   }
 }

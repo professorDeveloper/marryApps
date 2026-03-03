@@ -98,6 +98,8 @@ export function EmployeeEditViewUser({ userId, isNew = false }: EmployeeEditView
     const updateUser = useUpdateUser();
     const deleteUser = useDeleteUser();
 
+    const ownBranchId = localStorage.getItem('branch_id') || '';
+
     // Handle form submission
     const handleSubmit = useCallback(
         async (formData: Record<string, any>) => {
@@ -115,6 +117,9 @@ export function EmployeeEditViewUser({ userId, isNew = false }: EmployeeEditView
             if (!formData.pincode) {
                 throw new Error(t('users.pincodeRequired'));
             }
+            if (!ownBranchId) {
+                throw new Error(t('users.branchRequired'));
+            }
 
             const userData: IUserFormData = {
                 full_name: formData.full_name,
@@ -126,6 +131,8 @@ export function EmployeeEditViewUser({ userId, isNew = false }: EmployeeEditView
                 terminal: formData.terminal,
                 // Login qilgan vaqtda saqlangan brand_id ni olamiz
                 brand_id: localStorage.getItem('brand_id') || 'default_brand',
+                // Xodim doimo joriy foydalanuvchining branch'iga biriktiriladi
+                branch_id: ownBranchId,
             };
 
             try {
@@ -146,7 +153,7 @@ export function EmployeeEditViewUser({ userId, isNew = false }: EmployeeEditView
                 throw new Error(translatedMessage);
             }
         },
-        [isNew, userId, createUser, updateUser, router, t]
+        [isNew, userId, createUser, updateUser, router, t, ownBranchId]
     );
 
     // Handle delete

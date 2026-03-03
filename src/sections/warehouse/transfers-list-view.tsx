@@ -32,6 +32,9 @@ interface BackendResponse<T> {
   code: number;
 }
 
+type BranchDetailsResponse = BackendResponse<Branch> | Branch;
+type StoragesByBranchResponse = BackendResponse<Storage[]> | Storage[] | { data?: BackendResponse<Storage[]> | Storage[] };
+
 export function TransfersListView() {
   const { t } = useTranslation('menu');
   const { getTransfers, deleteTransfer, getTransferGroups } = useTransfersAPI();
@@ -64,6 +67,79 @@ export function TransfersListView() {
         })),
       ]);
 
+      const baseBranchesMap = (branchesData.data || []).reduce(
+        (acc, item) => ({ ...acc, [item.id]: item.name || item.id }),
+        {} as Record<string, string>
+      );
+
+      const missingBranchIds = Array.from(
+        new Set(
+          transfersData.flatMap((transfer) => [transfer.from_branch_id, transfer.to_branch_id])
+        )
+      ).filter((branchId) => branchId && !baseBranchesMap[branchId]);
+
+      let resolvedBranchesMap: Record<string, string> = {};
+
+      if (missingBranchIds.length) {
+        const resolvedEntries = await Promise.all(
+          missingBranchIds.map(async (branchId) => {
+            try {
+              const response = await fetcher<BranchDetailsResponse>(endpoints.branches.details(branchId));
+              const branch = (response as BackendResponse<Branch>)?.data ?? (response as Branch);
+              return [branchId, branch?.name || branchId] as const;
+            } catch {
+              return [branchId, branchId] as const;
+            }
+          })
+        );
+
+        resolvedBranchesMap = resolvedEntries.reduce(
+          (acc, [branchId, branchName]) => ({ ...acc, [branchId]: branchName }),
+          {} as Record<string, string>
+        );
+      }
+
+      const branchIdsFromTransfers = Array.from(
+        new Set(
+          transfersData.flatMap((transfer) => [transfer.from_branch_id, transfer.to_branch_id])
+        )
+      ).filter(Boolean);
+
+      const parseStoragesResponse = (response: StoragesByBranchResponse): Storage[] => {
+        if (Array.isArray(response)) return response;
+        if (response && 'data' in response && Array.isArray(response.data)) return response.data;
+        if (
+          response &&
+          'data' in response &&
+          response.data &&
+          typeof response.data === 'object' &&
+          'data' in response.data &&
+          Array.isArray((response.data as BackendResponse<Storage[]>).data)
+        ) {
+          return (response.data as BackendResponse<Storage[]>).data;
+        }
+        return [];
+      };
+
+      let storagesFromBranches: Storage[] = [];
+      if (branchIdsFromTransfers.length) {
+        const storagesByBranchResponses = await Promise.all(
+          branchIdsFromTransfers.map((branchId) =>
+            fetcher<StoragesByBranchResponse>(endpoints.storage.byBranch(branchId)).catch(() => [])
+          )
+        );
+
+        storagesFromBranches = storagesByBranchResponses.flatMap((response) =>
+          parseStoragesResponse(response as StoragesByBranchResponse)
+        );
+      }
+
+      const baseStorages = Array.isArray(storagesData.data) ? storagesData.data : [];
+      const storagesMapMerged = [...baseStorages, ...storagesFromBranches].reduce(
+        (acc, item) => ({ ...acc, [item.id]: item.name || item.id }),
+        {} as Record<string, string>
+      );
+
       setRows(transfersData);
       setGroupsMap(
         (groupsData || []).reduce(
@@ -72,16 +148,13 @@ export function TransfersListView() {
         )
       );
       setBranchesMap(
-        (branchesData.data || []).reduce(
-          (acc, item) => ({ ...acc, [item.id]: item.name || item.id }),
-          {} as Record<string, string>
-        )
+        {
+          ...baseBranchesMap,
+          ...resolvedBranchesMap,
+        }
       );
       setStoragesMap(
-        (storagesData.data || []).reduce(
-          (acc, item) => ({ ...acc, [item.id]: item.name || item.id }),
-          {} as Record<string, string>
-        )
+        storagesMapMerged
       );
     } finally {
       setLoading(false);
