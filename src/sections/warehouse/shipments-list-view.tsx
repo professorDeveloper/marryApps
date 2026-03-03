@@ -117,16 +117,19 @@ export function ShipmentsListView() {
   const [viewLoading, setViewLoading] = useState(false);
   const [viewData, setViewData] = useState<ShipmentBatchApiResponse | null>(null);
 
-  const openViewModal = useCallback(async (shipmentId: string) => {
-    setViewOpen(true);
-    setViewLoading(true);
-    try {
-      const details = await getShipmentById(shipmentId);
-      setViewData(details);
-    } finally {
-      setViewLoading(false);
-    }
-  }, [getShipmentById]);
+  const openViewModal = useCallback(
+    async (shipmentId: string) => {
+      setViewOpen(true);
+      setViewLoading(true);
+      try {
+        const details = await getShipmentById(shipmentId);
+        setViewData(details);
+      } finally {
+        setViewLoading(false);
+      }
+    },
+    [getShipmentById]
+  );
 
   const loadBaseData = useCallback(async () => {
     const [storagesData, suppliersData, ingredientsData] = await Promise.all([
@@ -227,8 +230,45 @@ export function ShipmentsListView() {
       },
       {
         field: 'status',
-        headerName: t('deductions.status', 'Status'),
+        headerName: t('invoices.status', 'Status'),
         width: 120,
+        renderCell: (params) => {
+          const status = params.row.status?.toLowerCase();
+          let color = 'default';
+          if (status === 'draft') color = 'default';
+          if (status === 'active') color = 'success';
+          if (status === 'deleted') color = 'error';
+          return (
+            <span
+              style={{
+                padding: '4px 12px',
+                borderRadius: '4px',
+                fontSize: '14px',
+                fontWeight: 700,
+                marginTop: '10px',
+                marginBottom: '10px',
+                backgroundColor:
+                  color === 'warning'
+                    ? '#FFF3CD'
+                    : color === 'success'
+                      ? '#D4EDDA'
+                      : color === 'error'
+                        ? '#F8D7DA'
+                        : '#E2E3E5',
+                color:
+                  color === 'warning'
+                    ? '#856404'
+                    : color === 'success'
+                      ? '#155724'
+                      : color === 'error'
+                        ? '#721C24'
+                        : '#383D41',
+              }}
+            >
+              {status}
+            </span>
+          );
+        },
       },
       {
         field: 'total_amount',
@@ -276,7 +316,10 @@ export function ShipmentsListView() {
     [storagesMap, suppliersMap, t, router]
   );
 
-  const startDateValue = useMemo(() => toPickerDate(draftFilters.start_date), [draftFilters.start_date]);
+  const startDateValue = useMemo(
+    () => toPickerDate(draftFilters.start_date),
+    [draftFilters.start_date]
+  );
   const endDateValue = useMemo(() => toPickerDate(draftFilters.end_date), [draftFilters.end_date]);
 
   return (
@@ -485,8 +528,12 @@ export function ShipmentsListView() {
                       <TableCell>{shipment.number}</TableCell>
                       <TableCell>{new Date(shipment.date).toLocaleString()}</TableCell>
                       <TableCell>{shipment.status}</TableCell>
-                      <TableCell>{storagesMap[shipment.storage_id] || shipment.storage_id}</TableCell>
-                      <TableCell>{suppliersMap[shipment.supplier_id] || shipment.supplier_id}</TableCell>
+                      <TableCell>
+                        {storagesMap[shipment.storage_id] || shipment.storage_id}
+                      </TableCell>
+                      <TableCell>
+                        {suppliersMap[shipment.supplier_id] || shipment.supplier_id}
+                      </TableCell>
                       <TableCell>{shipment.description || '-'}</TableCell>
                     </TableRow>
                   </TableBody>
@@ -510,7 +557,9 @@ export function ShipmentsListView() {
                     {items.map((item, index) => (
                       <TableRow key={item.id || `${item.ingredient_id}-${index}`}>
                         <TableCell>{index + 1}</TableCell>
-                        <TableCell>{ingredientsMap[item.ingredient_id] || item.ingredient_id}</TableCell>
+                        <TableCell>
+                          {ingredientsMap[item.ingredient_id] || item.ingredient_id}
+                        </TableCell>
                         <TableCell>{item.quantity}</TableCell>
                         <TableCell>{item.price_per_unit}</TableCell>
                         <TableCell>{item.total_amount}</TableCell>

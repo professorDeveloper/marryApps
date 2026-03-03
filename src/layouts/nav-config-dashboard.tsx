@@ -85,7 +85,7 @@ export const getNavData = (t: TFunction): NavSectionProps['data'] => [
           { title: t('overview.warehouse.expensesInvoices', 'Expenses invoices'), path: paths.warehouse.outgoingInvoices.root },
           { title: t('overview.warehouse.separationActs', 'Separation acts'), path: paths.warehouse.separationActs.root },
           { title: t('invoices.title', 'Invoices'), path: paths.warehouse.invoices.root },
-          { title: t('ingredientStock.title', 'Ingredient Stock'), path: paths.warehouse.ingredientStock.root },
+          // { title: t('ingredientStock.title', 'Ingredient Stock'), path: paths.warehouse.ingredientStock.root },
           { title: t('deductions.title', 'Deductions'), path: paths.warehouse.deductions.root },
           { title: t('deductions.groups', 'Deduction Groups'), path: paths.warehouse.deductionGroups.root },
           { title: t('overview.warehouse.orders', 'Order Management'), path: paths.warehouse.orders.root },

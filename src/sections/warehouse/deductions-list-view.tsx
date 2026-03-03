@@ -18,8 +18,17 @@ import { useDeductionsAPI, Deduction, DeductionGroup } from 'src/hooks/use-deduc
 import { useRouter } from 'src/routes/hooks';
 import { paths } from 'src/routes/paths';
 import { fetcher, endpoints } from 'src/lib/axios';
+import {
+    DeductionsDetailsModal,
+    type DeductionDetailsData,
+} from './deductions-details-modal';
 
 interface Storage {
+    id: string;
+    name: string;
+}
+
+interface Ingredient {
     id: string;
     name: string;
 }
@@ -34,22 +43,47 @@ export function DeductionsListView() {
     const { t } = useTranslation('menu');
     const theme = useTheme();
     const router = useRouter();
-    const { getDeductions, deleteDeduction, getDeductionGroups } = useDeductionsAPI();
+    const { getDeductions, getDeductionById, deleteDeduction, getDeductionGroups } = useDeductionsAPI();
     const [deductions, setDeductions] = useState<Deduction[]>([]);
     const [groups, setGroups] = useState<DeductionGroup[]>([]);
     const [storages, setStorages] = useState<Storage[]>([]);
+    const [ingredientsMap, setIngredientsMap] = useState<Record<string, string>>({});
     const [loading, setLoading] = useState(true);
     const [selectedDeleteId, setSelectedDeleteId] = useState<string | null>(null);
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+    const [viewOpen, setViewOpen] = useState(false);
+    const [viewLoading, setViewLoading] = useState(false);
+    const [viewData, setViewData] = useState<DeductionDetailsData | null>(null);
+
+    const storagesMap = useMemo(
+        () =>
+            storages.reduce(
+                (acc, storage) => ({ ...acc, [storage.id]: storage.name || storage.id }),
+                {} as Record<string, string>
+            ),
+        [storages]
+    );
+
+    const groupsMap = useMemo(
+        () =>
+            groups.reduce(
+                (acc, group) => ({ ...acc, [group.id]: group.name || group.id }),
+                {} as Record<string, string>
+            ),
+        [groups]
+    );
 
     // Fetch deductions and groups
     const fetchData = useCallback(async () => {
         setLoading(true);
         try {
             // Load groups and storages FIRST (in parallel)
-            const [groupsData, storagesData] = await Promise.all([
+            const [groupsData, storagesData, ingredientsData] = await Promise.all([
                 getDeductionGroups(),
                 fetcher<BackendResponse<Storage[]>>(endpoints.storage.list).catch(() => ({
+                    data: [],
+                })),
+                fetcher<BackendResponse<Ingredient[]>>(endpoints.ingredient.list).catch(() => ({
                     data: [],
                 })),
             ]);
@@ -57,9 +91,16 @@ export function DeductionsListView() {
             // Update state - handle both empty and valid responses
             const finalGroups = Array.isArray(groupsData) ? groupsData : [];
             const finalStorages = Array.isArray(storagesData?.data) ? storagesData.data : [];
+            const finalIngredients = Array.isArray(ingredientsData?.data) ? ingredientsData.data : [];
 
             setGroups(finalGroups);
             setStorages(finalStorages);
+            setIngredientsMap(
+                finalIngredients.reduce(
+                    (acc, ingredient) => ({ ...acc, [ingredient.id]: ingredient.name || ingredient.id }),
+                    {} as Record<string, string>
+                )
+            );
 
             const storageIdSet = new Set(finalStorages.map((s) => s.id));
 
@@ -97,28 +138,6 @@ export function DeductionsListView() {
         fetchData();
     }
 
-    // Get group name by ID
-    const getGroupName = (row: Deduction): string => {
-        // Try to use backend-provided group_name first
-        if (row.group_name) {
-            return row.group_name;
-        }
-        // Fallback: search in groups array
-        const group = groups.find((g) => g.id === row.act_group_id);
-        return group?.name || '-';
-    };
-
-    // Get storage name by ID
-    const getStorageName = (row: Deduction): string => {
-        // Try to use backend-provided storage_name first
-        if (row.storage_name) {
-            return row.storage_name;
-        }
-        // Fallback: search in storages array
-        const storage = storages.find((s) => s.id === row.storage_id);
-        return storage?.name || '-';
-    };
-
     // Handle delete deduction
     const handleDeleteClick = (id: string) => {
         setSelectedDeleteId(id);
@@ -142,6 +161,26 @@ export function DeductionsListView() {
         setDeleteDialogOpen(false);
         setSelectedDeleteId(null);
     };
+
+    const openViewModal = useCallback(
+        async (deductionId: string) => {
+            setViewOpen(true);
+            setViewLoading(true);
+            setViewData(null);
+            try {
+                const details = await getDeductionById(deductionId);
+                setViewData((details as DeductionDetailsData) || null);
+            } finally {
+                setViewLoading(false);
+            }
+        },
+        [getDeductionById]
+    );
+
+    const closeViewModal = useCallback(() => {
+        setViewOpen(false);
+        setViewData(null);
+    }, []);
 
     // Format date
     const formatDate = (dateString: string): string => {
@@ -170,14 +209,14 @@ export function DeductionsListView() {
                 headerName: t('deductions.storage', 'Storage'),
                 flex: 1,
                 minWidth: 180,
-                renderCell: (params) => getStorageName(params.row),
+                renderCell: (params) => params.row.storage_name || storagesMap[params.row.storage_id] || '-',
             },
             {
                 field: 'act_group_id',
                 headerName: t('deductions.group', 'Group'),
                 flex: 1,
                 minWidth: 150,
-                renderCell: (params) => getGroupName(params.row),
+                renderCell: (params) => params.row.group_name || groupsMap[params.row.act_group_id] || '-',
             },
             {
                 field: 'description',
@@ -252,20 +291,26 @@ export function DeductionsListView() {
                         // showInMenu
                         label={t('common.edit', 'Edit')}
                         icon={<Iconify icon="solar:pen-bold" />}
-                        onClick={() => router.push(paths.warehouse.deductions.details(String(params.id)))}
+                        onClick={(event) => {
+                            event.stopPropagation();
+                            router.push(paths.warehouse.deductions.details(String(params.id)));
+                        }}
                     />,
                     <CustomGridActionsCellItem
                         key="delete"
                         // showInMenu
                         label={t('common.delete', 'Delete')}
                         icon={<Iconify icon="solar:trash-bin-trash-bold" />}
-                        onClick={() => handleDeleteClick(String(params.id))}
+                        onClick={(event) => {
+                            event.stopPropagation();
+                            handleDeleteClick(String(params.id));
+                        }}
                         style={{ color: theme.vars.palette.error.main }}
                     />,
                 ],
             },
         ],
-        [t, theme]
+        [t, theme, router, storagesMap, groupsMap]
     );
 
     return (
@@ -287,9 +332,9 @@ export function DeductionsListView() {
                     href: paths.warehouse.deductions.new,
                 }}
                 onDeleteRow={handleDeleteClick}
-            // onRowClick={(id: string) => {
-            //     router.push(paths.warehouse.deductions.details(id));
-            // }}
+                onRowClick={(id: string) => {
+                    openViewModal(id);
+                }}
             />
 
             {/* Delete Confirmation Dialog */}
@@ -307,6 +352,16 @@ export function DeductionsListView() {
                     </Button>
                 </DialogActions>
             </Dialog>
+
+            <DeductionsDetailsModal
+                isOpen={viewOpen}
+                onClose={closeViewModal}
+                loading={viewLoading}
+                data={viewData}
+                storagesMap={storagesMap}
+                groupsMap={groupsMap}
+                ingredientsMap={ingredientsMap}
+            />
         </>
     );
 }

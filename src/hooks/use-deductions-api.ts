@@ -14,6 +14,13 @@ export interface DeductionItem {
     quantity: string;
 }
 
+export interface DeductionBatchItemInput {
+    compound_id?: string;
+    good_id?: string;
+    ingredient_id?: string;
+    quantity: string;
+}
+
 export interface Deduction {
     id: string;
     number: number;
@@ -28,6 +35,7 @@ export interface Deduction {
     storage_name?: string;  // Optional field from backend
     group_name?: string;    // Optional field from backend
     items?: DeductionItem[]; // Optional items array
+    warnings?: string[];
 }
 
 export interface DeductionGroup {
@@ -59,6 +67,10 @@ export interface UseDeductionsAPIReturn {
         id: string,
         data: Partial<Deduction>
     ) => Promise<Deduction>;
+    updateDeductionItemsBatch: (
+        id: string,
+        items: DeductionBatchItemInput[]
+    ) => Promise<Deduction | null>;
     deleteDeduction: (id: string) => Promise<void>;
     getDeductionGroups: () => Promise<DeductionGroup[]>;
     createDeductionGroup: (data: { name: string }) => Promise<DeductionGroup>;
@@ -71,6 +83,19 @@ export interface UseDeductionsAPIReturn {
 // ============================================================================
 
 export function useDeductionsAPI(): UseDeductionsAPIReturn {
+    const isBackendResponse = <T,>(value: unknown): value is BackendResponse<T> =>
+        !!value && typeof value === 'object' && 'data' in (value as Record<string, unknown>);
+    const normalizeDeductionBatchItems = (items: DeductionBatchItemInput[]): DeductionBatchItemInput[] =>
+        items.map((item) => {
+            const ingredientId = item.ingredient_id;
+            return {
+                compound_id: item.compound_id,
+                good_id: item.good_id,
+                ingredient_id: ingredientId,
+                quantity: String(item.quantity),
+            };
+        });
+
     /**
      * Barcha deductions'ni oladi
      */
@@ -164,6 +189,42 @@ export function useDeductionsAPI(): UseDeductionsAPIReturn {
                     'Failed to update deduction';
                 toast.error(message);
                 throw error;
+            }
+        },
+        []
+    );
+
+    /**
+     * Deduction item'larini batch yangilaydi
+     */
+    const updateDeductionItemsBatch = useCallback(
+        async (
+            id: string,
+            items: DeductionBatchItemInput[]
+        ): Promise<Deduction | null> => {
+            try {
+                const normalizedItems = normalizeDeductionBatchItems(items);
+                const response = await putter<BackendResponse<Deduction> | Deduction>(
+                    endpoints.deductions.updateItemsBatch(id),
+                    { items: normalizedItems }
+                );
+                const deduction = isBackendResponse<Deduction>(response)
+                    ? response.data
+                    : response;
+
+                toast.success('Deduction items successfully updated');
+                if (Array.isArray(deduction?.warnings) && deduction.warnings.length > 0) {
+                    deduction.warnings.forEach((warning) => toast.warning(warning));
+                }
+
+                return deduction || null;
+            } catch (error) {
+                const axiosError = error as AxiosError<any>;
+                const message =
+                    axiosError?.response?.data?.message ||
+                    'Failed to update deduction items';
+                toast.error(message);
+                return null;
             }
         },
         []
@@ -281,6 +342,7 @@ export function useDeductionsAPI(): UseDeductionsAPIReturn {
         getDeductionById,
         createDeduction,
         updateDeduction,
+        updateDeductionItemsBatch,
         deleteDeduction,
         getDeductionGroups,
         createDeductionGroup,

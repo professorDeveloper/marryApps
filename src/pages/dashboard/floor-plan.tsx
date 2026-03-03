@@ -1,4 +1,4 @@
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router';
 import { Box, Container } from '@mui/material';
 
 import { CONFIG } from 'src/global-config';

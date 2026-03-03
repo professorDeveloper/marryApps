@@ -77,13 +77,7 @@ function buildStatusSection(): CardSection {
                 type: 'text',
                 required: true,
                 defaultValue: '',
-            },
-            {
-                key: 'terminal',
-                label: 'users.terminal',
-                type: 'text',
-                defaultValue: '',
-            },
+            }
         ],
     };
 }

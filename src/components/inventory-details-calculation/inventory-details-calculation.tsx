@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import {
     Box,
@@ -22,7 +22,12 @@ import { fetcher, endpoints, deleter } from 'src/lib/axios';
 import { toast } from 'sonner';
 import { useInventoryAPI } from 'src/hooks/use-inventory-api';
 import { paths } from 'src/routes/paths';
-import type { IInventoryItem, IInventoryItemInput } from 'src/types/inventory';
+import type {
+    IInventory,
+    IInventoryFormData,
+    IInventoryItem,
+    IInventoryItemInput,
+} from 'src/types/inventory';
 
 // --- TYPES ---
 interface Ingredient {
@@ -37,10 +42,12 @@ interface Ingredient {
 }
 
 interface InventoryDetailsCalculationProps {
-    inventoryId: string;
+    inventoryId?: string;
+    formData?: IInventoryFormData;
     onSuccess?: () => void;
     onDetailsChange?: (details: any[]) => void;
     onApplySuccess?: (items: IInventoryItem[]) => void;
+    onBatchCreateSuccess?: (inventory: IInventory, items: IInventoryItem[]) => void;
     isNewInventory?: boolean;
     persistedDetails?: IInventoryItem[];
 }
@@ -60,16 +67,18 @@ const formatNumber = (num: number): number => {
 
 export function InventoryDetailsCalculation({
     inventoryId,
+    formData,
     onSuccess,
     onDetailsChange,
     onApplySuccess,
+    onBatchCreateSuccess,
     isNewInventory,
     persistedDetails,
 }: InventoryDetailsCalculationProps) {
     const { t } = useTranslation('menu');
     const theme = useTheme();
     const navigate = useNavigate();
-    const { getInventoryItems, createInventoryItemsBatch, applyInventory } = useInventoryAPI();
+    const { createInventoryBatch, updateInventoryItemsBatch, applyInventory } = useInventoryAPI();
     // Left panel (available ingredients)
     const [ingredients, setIngredients] = useState<Ingredient[]>([]);
     const [loading, setLoading] = useState(true);
@@ -89,6 +98,7 @@ export function InventoryDetailsCalculation({
     const [inventoryItems, setInventoryItems] = useState<IInventoryItem[]>([]);
     // Track last successfully applied payload to avoid duplicate apply calls
     const [lastAppliedPayloadKey, setLastAppliedPayloadKey] = useState('');
+    const [resolvedInventoryId, setResolvedInventoryId] = useState(inventoryId || '');
 
     // Load ingredients
     useEffect(() => {
@@ -109,6 +119,12 @@ export function InventoryDetailsCalculation({
 
         loadData();
     }, [t]);
+
+    useEffect(() => {
+        if (inventoryId) {
+            setResolvedInventoryId(inventoryId);
+        }
+    }, [inventoryId]);
 
     // Restore persisted details when component mounts
     useEffect(() => {
@@ -237,10 +253,47 @@ export function InventoryDetailsCalculation({
                 return true;
             }
 
-            const result = await createInventoryItemsBatch(inventoryId, itemsData);
+            let result: IInventoryItem[] | null = null;
+            let currentInventoryId = resolvedInventoryId;
+            let createdByBatch = false;
+
+            if (isNewInventory && !currentInventoryId) {
+                if (!formData?.storage_id) {
+                    toast.error(t('inventory.selectStorage') || 'Please select storage');
+                    return false;
+                }
+
+                const batchResult = await createInventoryBatch({
+                    date: formData.date || new Date().toISOString().split('T')[0],
+                    status: formData.status || 'active',
+                    storage_id: formData.storage_id,
+                    description: formData.description || '',
+                    items: itemsData,
+                });
+
+                if (!batchResult) {
+                    return false;
+                }
+
+                createdByBatch = true;
+                currentInventoryId = batchResult.inventory.id;
+                setResolvedInventoryId(currentInventoryId);
+                result = batchResult.items;
+
+                if (onBatchCreateSuccess) {
+                    onBatchCreateSuccess(batchResult.inventory, batchResult.items);
+                }
+            } else {
+                if (!currentInventoryId) {
+                    toast.error('Inventory ID is required');
+                    return false;
+                }
+
+                result = await updateInventoryItemsBatch(currentInventoryId, itemsData);
+            }
 
             if (result) {
-                toast.success(t('success.created'));
+                toast.success(createdByBatch ? t('success.created') : t('success.updated'));
                 setInventoryItems(result);
 
                 // Store inventory_item_ids for deletion later
@@ -254,14 +307,16 @@ export function InventoryDetailsCalculation({
                     onDetailsChange(result);
                 }
 
-                // Apply inventory (call /api/v1/inventories/{id}/apply)
-                const applyResult = await applyInventory(inventoryId);
-                if (applyResult) {
-                    toast.success(t('success.applied') || 'Inventory applied successfully');
-                    // Pass POST response data to parent - don't fetch again via GET
-                    if (onApplySuccess) {
-                        onApplySuccess(result);
-                    }
+                // Apply inventory only for edit flow
+                if (!isNewInventory && currentInventoryId) {
+                    const applyResult = await applyInventory(currentInventoryId);
+                    if (applyResult) {
+                        toast.success(t('success.applied') || 'Inventory applied successfully');
+                        // Pass POST response data to parent - don't fetch again via GET
+                        if (onApplySuccess) {
+                            onApplySuccess(result);
+                        }
+                    }   
                 }
 
                 if (onSuccess) {

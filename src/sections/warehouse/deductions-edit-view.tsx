@@ -70,7 +70,13 @@ export function DeductionsEditView({ isNew = false }: DeductionsEditViewProps) {
     const { t } = useTranslation('menu');
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
-    const { getDeductionById, createDeduction, updateDeduction, getDeductionGroups } = useDeductionsAPI();
+    const {
+        getDeductionById,
+        createDeduction,
+        updateDeduction,
+        updateDeductionItemsBatch,
+        getDeductionGroups,
+    } = useDeductionsAPI();
     // Tab state
     const [activeTab, setActiveTab] = useState(0);
     // Form state
@@ -280,7 +286,9 @@ export function DeductionsEditView({ isNew = false }: DeductionsEditViewProps) {
             setLoading(true);
 
             let result;
-            if (isNew && !createdDeductionId && !id) {
+            const targetDeductionId = createdDeductionId || id;
+
+            if (isNew && !targetDeductionId) {
                 // Create new deduction from items tab (Details tab was not saved yet)
                 console.log('Creating NEW deduction with items...');
                 result = await createDeduction(payload);
@@ -293,28 +301,14 @@ export function DeductionsEditView({ isNew = false }: DeductionsEditViewProps) {
                     // Redirect to deductions list
                     navigate(paths.warehouse.deductions.root);
                 }
-            } else if (createdDeductionId) {
-                // Update existing created deduction
-                console.log('Updating CREATED deduction:', createdDeductionId);
-                result = await updateDeduction(createdDeductionId, payload);
-                console.log('Update result:', result);
+            } else if (targetDeductionId) {
+                // Edit flow: update only items through batch endpoint
+                console.log('Updating deduction items batch:', targetDeductionId);
+                result = await updateDeductionItemsBatch(targetDeductionId, itemsRef.current);
 
                 if (result) {
                     setDeduction(result);
                     toast.success(t('deductions.updated', 'Deduction updated successfully'));
-                    // Redirect to deductions list
-                    navigate(paths.warehouse.deductions.root);
-                }
-            } else if (id) {
-                // Update existing deduction
-                console.log('Updating EXISTING deduction:', id);
-                result = await updateDeduction(id, payload);
-                console.log('Update result:', result);
-
-                if (result) {
-                    setDeduction(result);
-                    toast.success(t('deductions.updated', 'Deduction updated successfully'));
-                    // Redirect to deductions list
                     navigate(paths.warehouse.deductions.root);
                 }
             }
@@ -324,7 +318,7 @@ export function DeductionsEditView({ isNew = false }: DeductionsEditViewProps) {
         } finally {
             setLoading(false);
         }
-    }, [isNew, createdDeductionId, id, formData, createDeduction, updateDeduction, navigate, t]);
+    }, [isNew, createdDeductionId, id, formData, createDeduction, updateDeductionItemsBatch, navigate, t]);
 
     // Tab change handler
     const handleTabChange = useCallback(

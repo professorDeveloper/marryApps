@@ -12,6 +12,91 @@ import type {
     BackendResponse,
 } from 'src/types/inventory';
 
+interface IInventoryBatchCreatePayload extends IInventoryFormData {
+    items: IInventoryItemInput[];
+    description_i18n?: string;
+}
+
+interface IInventoryBatchCreateResult {
+    inventory: IInventory;
+    items: IInventoryItem[];
+}
+
+const normalizeInventoryItemsResponse = (
+    response: BackendResponse<IInventoryItem[]> | IInventoryItem[] | null | undefined
+): IInventoryItem[] => {
+    if (!response) return [];
+    if (Array.isArray(response)) return response;
+    return response.data || [];
+};
+
+const buildFallbackInventory = (
+    inventoryId: string,
+    formData: IInventoryFormData
+): IInventory => ({
+    id: inventoryId,
+    number: 0,
+    date: formData.date,
+    storage_id: formData.storage_id,
+    description: formData.description || '',
+    status: formData.status,
+    surplus_amount: '0',
+    shortage_amount: '0',
+    remaining_amount: '0',
+    created_at: '',
+    updated_at: '',
+});
+
+const normalizeInventoryBatchCreateResponse = (
+    response: unknown,
+    formData: IInventoryFormData
+): IInventoryBatchCreateResult | null => {
+    if (Array.isArray(response)) {
+        const items = response as IInventoryItem[];
+        const inferredId = items[0]?.inventory_id;
+        if (!inferredId) return null;
+        return {
+            inventory: buildFallbackInventory(inferredId, formData),
+            items,
+        };
+    }
+
+    if (!response || typeof response !== 'object') return null;
+
+    const envelope = response as Record<string, unknown>;
+    const rawData =
+        envelope.data && typeof envelope.data === 'object'
+            ? (envelope.data as Record<string, unknown>)
+            : envelope;
+
+    const items = Array.isArray(rawData.items)
+        ? (rawData.items as IInventoryItem[])
+        : Array.isArray(rawData.inventory_items)
+            ? (rawData.inventory_items as IInventoryItem[])
+            : [];
+
+    const inventoryFromPayload =
+        rawData.inventory && typeof rawData.inventory === 'object'
+            ? (rawData.inventory as IInventory)
+            : rawData.id && typeof rawData.id === 'string'
+                ? (rawData as unknown as IInventory)
+                : null;
+
+    if (inventoryFromPayload) {
+        return { inventory: inventoryFromPayload, items };
+    }
+
+    const inferredId =
+        (typeof rawData.inventory_id === 'string' ? rawData.inventory_id : null) ||
+        items[0]?.inventory_id;
+
+    if (!inferredId) return null;
+
+    return {
+        inventory: buildFallbackInventory(inferredId, formData),
+        items,
+    };
+};
 
 export function useInventoryAPI() {
     /**
@@ -148,18 +233,75 @@ export function useInventoryAPI() {
             items: IInventoryItemInput[]
         ): Promise<IInventoryItem[] | null> => {
             try {
-                const response = await poster<BackendResponse<IInventoryItem[]>>(
+                const response = await poster<BackendResponse<IInventoryItem[]> | IInventoryItem[]>(
                     endpoints.inventory.createItems?.(inventoryId) ||
                     `/api/v1/inventories/${inventoryId}/items`,
                     { items }
                 );
                 toast.success('Inventory items successfully created');
-                return response.data || null;
+                return normalizeInventoryItemsResponse(response);
             } catch (error) {
                 const axiosError = error as AxiosError<any>;
                 const message =
                     axiosError?.response?.data?.message ||
                     'Failed to create inventory items';
+                toast.error(message);
+                return null;
+            }
+        },
+        []
+    );
+
+    /**
+     * Inventory va item'larni bitta so'rovda yaratadi
+     */
+    const createInventoryBatch = useCallback(
+        async (data: IInventoryBatchCreatePayload): Promise<IInventoryBatchCreateResult | null> => {
+            try {
+                const response = await poster<unknown>(
+                    endpoints.inventory.batch,
+                    data
+                );
+
+                const normalized = normalizeInventoryBatchCreateResponse(response, data);
+                if (!normalized) {
+                    toast.error('Failed to parse inventory batch response');
+                    return null;
+                }
+
+                toast.success('Inventory successfully created');
+                return normalized;
+            } catch (error) {
+                const axiosError = error as AxiosError<any>;
+                const message =
+                    axiosError?.response?.data?.message || 'Failed to create inventory batch';
+                toast.error(message);
+                return null;
+            }
+        },
+        []
+    );
+
+    /**
+     * Inventory items'ni batch yangilaydi
+     */
+    const updateInventoryItemsBatch = useCallback(
+        async (
+            inventoryId: string,
+            items: IInventoryItemInput[]
+        ): Promise<IInventoryItem[] | null> => {
+            try {
+                const response = await putter<BackendResponse<IInventoryItem[]> | IInventoryItem[]>(
+                    endpoints.inventory.updateItemsBatch(inventoryId),
+                    { items }
+                );
+                toast.success('Inventory items successfully updated');
+                return normalizeInventoryItemsResponse(response);
+            } catch (error) {
+                const axiosError = error as AxiosError<any>;
+                const message =
+                    axiosError?.response?.data?.message ||
+                    'Failed to update inventory items';
                 toast.error(message);
                 return null;
             }
@@ -239,10 +381,12 @@ export function useInventoryAPI() {
         getInventories,
         getInventoryById,
         createInventory,
+        createInventoryBatch,
         updateInventory,
         deleteInventory,
         getInventoryItems,
         createInventoryItemsBatch,
+        updateInventoryItemsBatch,
         updateInventoryItem,
         deleteInventoryItem,
         applyInventory,

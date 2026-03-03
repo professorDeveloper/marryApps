@@ -25,7 +25,6 @@ import DeleteIcon from '@mui/icons-material/Delete';
 
 import { fetcher, endpoints } from 'src/lib/axios';
 import { toast } from 'src/components/snackbar';
-import { useDeductionsAPI } from 'src/hooks/use-deductions-api';
 
 // ============================================================================
 // TYPES
@@ -96,8 +95,6 @@ export function DeductionsDetailsCalculation({
 }: DeductionsDetailsCalculationProps) {
     const { t } = useTranslation('menu');
     const theme = useTheme();
-
-    const { updateDeduction } = useDeductionsAPI();
 
     // State
     const [ingredients, setIngredients] = useState<Ingredient[]>([]);
@@ -231,55 +228,30 @@ export function DeductionsDetailsCalculation({
             return;
         }
 
-        if (!isNewDeduction) {
-            // For existing deductions, require deductionId
-            if (!deductionId) {
-                toast.error(t('deductions.deductionIdRequired', 'Deduction must be saved first'));
-                return;
-            }
+        if (!parentFormData?.storage_id) {
+            toast.error(t('deductions.storageRequired', 'Please select storage in Details tab'));
+            return;
+        }
 
-            setSaving(true);
+        if (!parentFormData?.act_group_id) {
+            toast.error(t('deductions.groupRequired', 'Please select group in Details tab'));
+            return;
+        }
 
-            try {
-                const items: DeductionItem[] = transferredItems.map((item) => ({
-                    ingredient_id: item.id,
-                    quantity: quantities[item.id] || '0',
-                }));
+        // For existing deductions, ensure deductionId exists before delegating save
+        if (!isNewDeduction && !deductionId) {
+            toast.error(t('deductions.deductionIdRequired', 'Deduction must be saved first'));
+            return;
+        }
 
-                // Prepare complete payload with all form data
-                const payload = parentFormData ? {
-                    date: parentFormData.date,
-                    status: parentFormData.status,
-                    storage_id: parentFormData.storage_id,
-                    description: parentFormData.description,
-                    act_group_id: parentFormData.act_group_id,
-                    items,
-                } : {
-                    items,
-                };
-
-                console.log('Saving deduction with payload:', payload);
-                await updateDeduction(deductionId, payload as any);
-
-                toast.success(t('deductions.itemsAdded', 'Items added successfully'));
-                onSuccess?.();
-            } catch (error) {
-                console.error('Save failed:', error);
-                toast.error(t('deductions.saveFailed', 'Failed to save items'));
-            } finally {
-                setSaving(false);
-            }
-        } else {
-            // For new deductions, call onSuccess which will handle create/update in parent
-            setSaving(true);
-            try {
-                onSuccess?.();
-            } catch (error) {
-                console.error('Save failed:', error);
-                toast.error(t('deductions.saveFailed', 'Failed to save items'));
-            } finally {
-                setSaving(false);
-            }
+        setSaving(true);
+        try {
+            await onSuccess?.();
+        } catch (error) {
+            console.error('Save failed:', error);
+            toast.error(t('deductions.saveFailed', 'Failed to save items'));
+        } finally {
+            setSaving(false);
         }
     };
 

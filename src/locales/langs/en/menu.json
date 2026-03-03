@@ -355,7 +355,7 @@
       "storage": "Storage",
       "inventories": "Inventory",
       "stocks": "Stocks",
-      "invoiceDetails": "Invoice details",
+      "invoiceDetails": "Invoice",
       "ingredients": "Ingredients",
       "ingredient-group": "Ingredient groups",
       "ingredientStock": "Ingredient stock",
@@ -519,7 +519,7 @@
       "supplierNameRequired": "Supplier name is required"
     },
     "invoiceDetails": {
-      "title": "Invoice details",
+      "title": "Invoice",
       "supplier": "Supplier",
       "product": "Product",
       "supplierName": "Supplier name",

@@ -46,7 +46,7 @@ export function InventoryEditView({ isNew = false }: InventoryEditViewProps) {
     const navigate = useNavigate();
     const { storages } = useGetStorages();
 
-    const { getInventoryById, createInventory, updateInventory, getInventoryItems } = useInventoryAPI();
+    const { getInventoryById, updateInventory, getInventoryItems } = useInventoryAPI();
 
     // Tab state
     const [activeTab, setActiveTab] = useState(0);
@@ -134,15 +134,10 @@ export function InventoryEditView({ isNew = false }: InventoryEditViewProps) {
 
             try {
                 if (isNew && !createdInventoryId) {
-                    const result = await createInventory(data as IInventoryFormData);
-                    if (result) {
-                        setCreatedInventoryId(result.id);
-                        setInventory(result);
-                        setFormData(data);
-                        toast.success(t('success.created'));
-                        // Switch to calculation tab
-                        setActiveTab(1);
-                    }
+                    // New flow: inventory and items are created together in Tab 2 (/inventories/batch)
+                    setFormData(data);
+                    setActiveTab(1);
+                    toast.info(t('inventory.itemsToCount') || 'Please add inventory items');
                 } else if (createdInventoryId) {
                     const result = await updateInventory(createdInventoryId, data as IInventoryFormData);
                     if (result) {
@@ -161,7 +156,7 @@ export function InventoryEditView({ isNew = false }: InventoryEditViewProps) {
                 throw error;
             }
         },
-        [isNew, id, createdInventoryId, createInventory, updateInventory, t]
+        [isNew, id, createdInventoryId, updateInventory, t]
     );
 
     // Handle delete
@@ -278,7 +273,7 @@ export function InventoryEditView({ isNew = false }: InventoryEditViewProps) {
                             label={t('inventory.items')}
                             id="inventory-tab-1"
                             aria-controls="inventory-tabpanel-1"
-                            disabled={!effectiveInventoryId}
+                            disabled={!isNew && !effectiveInventoryId}
                         />
                     </Tabs>
                 </Box>
@@ -297,15 +292,21 @@ export function InventoryEditView({ isNew = false }: InventoryEditViewProps) {
 
                 {/* Tab 1: Calculation/Items */}
                 <TabPanel value={activeTab} index={1}>
-                    {effectiveInventoryId ? (
+                    {isNew || effectiveInventoryId ? (
                         <Stack spacing={3}>
                             <InventoryDetailsCalculation
                                 inventoryId={effectiveInventoryId}
+                                formData={formData as IInventoryFormData}
                                 isNewInventory={isNew}
                                 persistedDetails={inventoryItems}
                                 onDetailsChange={(details) => setInventoryItems(details)}
                                 onSuccess={() => {
                                     toast.success(t('success.itemsAdded'));
+                                }}
+                                onBatchCreateSuccess={(createdInventory, createdItems) => {
+                                    setCreatedInventoryId(createdInventory.id);
+                                    setInventory(createdInventory);
+                                    setInventoryItems(createdItems);
                                 }}
                                 onApplySuccess={(updatedItems: any) => {
                                     // Update inventory items with the POST response data

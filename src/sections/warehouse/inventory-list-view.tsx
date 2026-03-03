@@ -25,7 +25,7 @@ function RenderCellStatus({ params }: { params: any }) {
         active: { label: 'Active', color: '#22c55e' },
         completed: { label: 'Completed', color: '#3b82f6' },
         draft: { label: 'Draft', color: '#6b7280' },
-        cancelled: { label: 'Cancelled', color: '#ef4444' },
+        deleted: { label: 'Deleted', color: '#ef4444' },
     };
 
     const config = statusConfig[status] || statusConfig.draft;
