@@ -176,17 +176,12 @@ func (s *InventoryS) GetInventoriesFiltered(ctx context.Context, dateFrom, dateT
 }
 
 func (s *InventoryS) GetAllInventoryItems(ctx context.Context, inventoryID *string, limit, offset int32) ([]*model.InventoryItemResponse, error) {
-	var (
-		items []pg.InventoryItem
-		err   error
-	)
-
 	if inventoryID != nil && *inventoryID != "" {
 		invID, err := uuid.Parse(*inventoryID)
 		if err != nil {
 			return nil, fmt.Errorf("invalid inventory id: %w", err)
 		}
-		items, err = s.repo.Tenant(ctx).GetInventoryItemsByInventoryID(ctx, pg.GetInventoryItemsByInventoryIDParams{
+		items, err := s.repo.Tenant(ctx).GetInventoryItemsByInventoryID(ctx, pg.GetInventoryItemsByInventoryIDParams{
 			InventoryID: invID,
 			Limit:       limit,
 			Offset:      offset,
@@ -194,13 +189,17 @@ func (s *InventoryS) GetAllInventoryItems(ctx context.Context, inventoryID *stri
 		if err != nil {
 			return nil, fmt.Errorf("failed to get inventory items: %w", err)
 		}
-	} else {
-		items, err = s.repo.Tenant(ctx).GetAllInventoryItems(ctx, pg.GetAllInventoryItemsParams{Limit: limit, Offset: offset})
-		if err != nil {
-			return nil, fmt.Errorf("failed to get inventory items: %w", err)
+		resp := make([]*model.InventoryItemResponse, 0, len(items))
+		for _, item := range items {
+			resp = append(resp, toInventoryItemResponse(item))
 		}
+		return resp, nil
 	}
 
+	items, err := s.repo.Tenant(ctx).GetAllInventoryItems(ctx, pg.GetAllInventoryItemsParams{Limit: limit, Offset: offset})
+	if err != nil {
+		return nil, fmt.Errorf("failed to get inventory items: %w", err)
+	}
 	resp := make([]*model.InventoryItemResponse, 0, len(items))
 	for _, item := range items {
 		resp = append(resp, toInventoryItemResponse(item))
@@ -850,16 +849,40 @@ func toInventoryItemComputedResponse(row pg.GetInventoryItemsComputedAllRow) *mo
 	}
 }
 
-func toInventoryItemResponse(item pg.InventoryItem) *model.InventoryItemResponse {
-	resp := &model.InventoryItemResponse{
-		ID:              item.ID.String(),
-		InventoryID:     item.InventoryID.String(),
-		IngredientID:    item.IngredientID.String(),
-		CountedQuantity: numericToString(item.CountedQuantity),
+func toInventoryItemResponse(row any) *model.InventoryItemResponse {
+	var (
+		id              uuid.UUID
+		inventoryID     uuid.UUID
+		ingredientID    uuid.UUID
+		countedQuantity pgtype.Numeric
+		createdAt       pgtype.Timestamptz
+		updatedAt       pgtype.Timestamptz
+	)
+
+	switch r := row.(type) {
+	case pg.InventoryItem:
+		id, inventoryID, ingredientID = r.ID, r.InventoryID, r.IngredientID
+		countedQuantity, createdAt, updatedAt = r.CountedQuantity, r.CreatedAt, r.UpdatedAt
+	case pg.GetAllInventoryItemsRow:
+		id, inventoryID, ingredientID = r.ID, r.InventoryID, r.IngredientID
+		countedQuantity, createdAt, updatedAt = r.CountedQuantity, r.CreatedAt, r.UpdatedAt
+	case pg.GetInventoryItemsByInventoryIDRow:
+		id, inventoryID, ingredientID = r.ID, r.InventoryID, r.IngredientID
+		countedQuantity, createdAt, updatedAt = r.CountedQuantity, r.CreatedAt, r.UpdatedAt
+	case pg.UpdateInventoryItemRow:
+		id, inventoryID, ingredientID = r.ID, r.InventoryID, r.IngredientID
+		countedQuantity, createdAt, updatedAt = r.CountedQuantity, r.CreatedAt, r.UpdatedAt
+	default:
+		return nil
 	}
 
-	resp.CreatedAt = timestampToTime(item.CreatedAt)
-	resp.UpdatedAt = timestampToTime(item.UpdatedAt)
-
+	resp := &model.InventoryItemResponse{
+		ID:              id.String(),
+		InventoryID:     inventoryID.String(),
+		IngredientID:    ingredientID.String(),
+		CountedQuantity: numericToString(countedQuantity),
+	}
+	resp.CreatedAt = timestampToTime(createdAt)
+	resp.UpdatedAt = timestampToTime(updatedAt)
 	return resp
 }

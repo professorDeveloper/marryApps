@@ -23,6 +23,7 @@ sql:
       - "../../app/migrations/tenants/18_separation_acts.up.sql"
       - "../../app/migrations/tenants/19_order_reservations.up.sql"
       - "../../app/migrations/tenants/20_cash_register_shifts.up.sql"
+      - "../../app/migrations/tenants/21_inventory_system_quantity.up.sql"
 
 
     gen:

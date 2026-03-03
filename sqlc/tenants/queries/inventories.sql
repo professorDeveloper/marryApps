@@ -154,17 +154,25 @@ WHERE deleted_at = 0
 
 -- UpsertInventoryItem creates or updates counted quantity for an ingredient in an inventory
 -- name: UpsertInventoryItem :one
-INSERT INTO inventory_items (id, inventory_id, ingredient_id, counted_quantity)
-VALUES ($1, $2, $3, $4)
+INSERT INTO inventory_items (id, inventory_id, ingredient_id, counted_quantity, system_quantity)
+VALUES ($1, $2, $3, $4,
+  COALESCE((
+    SELECT st.quantity
+    FROM ingredient_stock st
+    JOIN inventories inv ON inv.id = $2
+    WHERE st.ingredient_id = $3
+      AND st.storage_id = inv.storage_id
+      AND st.deleted_at = 0
+  ), 0))
 ON CONFLICT (inventory_id, ingredient_id)
 DO UPDATE SET
   counted_quantity = EXCLUDED.counted_quantity,
   updated_at = NOW(),
   deleted_at = 0
-RETURNING id, inventory_id, ingredient_id, counted_quantity, created_at, updated_at, deleted_at;
+RETURNING id, inventory_id, ingredient_id, counted_quantity, system_quantity, created_at, updated_at, deleted_at;
 
 -- name: GetInventoryItemByID :one
-SELECT id, inventory_id, ingredient_id, counted_quantity, created_at, updated_at, deleted_at
+SELECT id, inventory_id, ingredient_id, counted_quantity, system_quantity, created_at, updated_at, deleted_at
 FROM inventory_items
 WHERE inventory_items.id = $1 AND inventory_items.deleted_at = 0
   AND EXISTS (
@@ -175,7 +183,7 @@ WHERE inventory_items.id = $1 AND inventory_items.deleted_at = 0
   );
 
 -- name: GetAllInventoryItems :many
-SELECT id, inventory_id, ingredient_id, counted_quantity, created_at, updated_at, deleted_at
+SELECT id, inventory_id, ingredient_id, counted_quantity, system_quantity, created_at, updated_at, deleted_at
 FROM inventory_items
 WHERE inventory_items.deleted_at = 0
   AND EXISTS (
@@ -188,7 +196,7 @@ ORDER BY created_at DESC
 LIMIT $1 OFFSET $2;
 
 -- name: GetInventoryItemsByInventoryID :many
-SELECT id, inventory_id, ingredient_id, counted_quantity, created_at, updated_at, deleted_at
+SELECT id, inventory_id, ingredient_id, counted_quantity, system_quantity, created_at, updated_at, deleted_at
 FROM inventory_items
 WHERE inventory_id = $1 AND inventory_items.deleted_at = 0
   AND EXISTS (
@@ -211,7 +219,7 @@ WHERE inventory_items.id = $1 AND inventory_items.deleted_at = 0
     WHERE inv.id = inventory_items.inventory_id
       AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
   )
-RETURNING id, inventory_id, ingredient_id, counted_quantity, created_at, updated_at, deleted_at;
+RETURNING id, inventory_id, ingredient_id, counted_quantity, system_quantity, created_at, updated_at, deleted_at;
 
 -- name: DeleteInventoryItem :exec
 UPDATE inventory_items
@@ -234,12 +242,12 @@ SELECT
   ing.measurement as ingredient_measurement,
   ing.picture_url as ingredient_picture_url,
   ing.color_code as ingredient_color_code,
-  COALESCE(st.quantity, 0::numeric) as system_quantity,
+  ii.system_quantity as system_quantity,
   ii.counted_quantity as counted_quantity,
-  (ii.counted_quantity - COALESCE(st.quantity, 0::numeric))::numeric(15,6) as difference_quantity,
+  (ii.counted_quantity - ii.system_quantity)::numeric(15,6) as difference_quantity,
   ing.price_per_unit as price_per_unit,
-  (GREATEST((ii.counted_quantity - COALESCE(st.quantity, 0::numeric)), 0::numeric) * ing.price_per_unit)::numeric(15,2) as surplus_amount,
-  (GREATEST((COALESCE(st.quantity, 0::numeric) - ii.counted_quantity), 0::numeric) * ing.price_per_unit)::numeric(15,2) as shortage_amount,
+  (GREATEST((ii.counted_quantity - ii.system_quantity), 0::numeric) * ing.price_per_unit)::numeric(15,2) as surplus_amount,
+  (GREATEST((ii.system_quantity - ii.counted_quantity), 0::numeric) * ing.price_per_unit)::numeric(15,2) as shortage_amount,
   (ii.counted_quantity::numeric * ing.price_per_unit)::numeric(15,2) as remaining_amount
 FROM inventories inv
 JOIN inventory_items ii
@@ -248,10 +256,6 @@ JOIN inventory_items ii
 JOIN ingredients ing
   ON ing.id = ii.ingredient_id
   AND ing.deleted_at = 0
-LEFT JOIN ingredient_stock st
-  ON st.ingredient_id = ing.id
-  AND st.storage_id = inv.storage_id
-  AND st.deleted_at = 0
 WHERE inv.id = $1 AND inv.deleted_at = 0
   AND EXISTS (
     SELECT 1 FROM storages s
@@ -267,8 +271,8 @@ SELECT
   COALESCE(SUM(t.remaining_amount), 0)::numeric(15,2) as remaining_amount
 FROM (
   SELECT
-    (GREATEST((ii.counted_quantity - COALESCE(st.quantity, 0::numeric)), 0::numeric) * ing.price_per_unit)::numeric(15,2) as surplus_amount,
-    (GREATEST((COALESCE(st.quantity, 0::numeric) - ii.counted_quantity), 0::numeric) * ing.price_per_unit)::numeric(15,2) as shortage_amount,
+    (GREATEST((ii.counted_quantity - ii.system_quantity), 0::numeric) * ing.price_per_unit)::numeric(15,2) as surplus_amount,
+    (GREATEST((ii.system_quantity - ii.counted_quantity), 0::numeric) * ing.price_per_unit)::numeric(15,2) as shortage_amount,
     (ii.counted_quantity::numeric * ing.price_per_unit)::numeric(15,2) as remaining_amount
   FROM inventories inv
   JOIN inventory_items ii
@@ -277,10 +281,6 @@ FROM (
   JOIN ingredients ing
     ON ing.id = ii.ingredient_id
     AND ing.deleted_at = 0
-  LEFT JOIN ingredient_stock st
-    ON st.ingredient_id = ing.id
-    AND st.storage_id = inv.storage_id
-    AND st.deleted_at = 0
   WHERE inv.id = $1 AND inv.deleted_at = 0
 ) t;
 
