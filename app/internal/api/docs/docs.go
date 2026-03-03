@@ -12776,6 +12776,57 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/inventories/batch": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Creates an inventory and upserts its items in a single request",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "inventories"
+                ],
+                "summary": "Create inventory with items",
+                "parameters": [
+                    {
+                        "description": "Inventory batch creation data",
+                        "name": "input",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.CreateInventoryBatchRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/model.CreateInventoryBatchResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/inventories/search": {
             "get": {
                 "security": [
@@ -24407,6 +24458,56 @@ const docTemplate = `{
                 "storage_id": {
                     "type": "string",
                     "example": "123e4567-e89b-12d3-a456-426614174000"
+                }
+            }
+        },
+        "model.CreateInventoryBatchRequest": {
+            "type": "object",
+            "required": [
+                "date",
+                "items",
+                "storage_id"
+            ],
+            "properties": {
+                "date": {
+                    "type": "string",
+                    "example": "2024-01-01"
+                },
+                "description": {
+                    "type": "string",
+                    "example": "Monthly inventory"
+                },
+                "description_i18n": {
+                    "type": "string"
+                },
+                "items": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                        "$ref": "#/definitions/model.UpsertInventoryItemRequest"
+                    }
+                },
+                "status": {
+                    "type": "string",
+                    "example": "active"
+                },
+                "storage_id": {
+                    "type": "string",
+                    "example": "d1f29b75-8g6d-5536-0525-2c12deeef0e0"
+                }
+            }
+        },
+        "model.CreateInventoryBatchResponse": {
+            "type": "object",
+            "properties": {
+                "inventory": {
+                    "$ref": "#/definitions/model.InventoryResponse"
+                },
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.InventoryItemComputedResponse"
+                    }
                 }
             }
         },

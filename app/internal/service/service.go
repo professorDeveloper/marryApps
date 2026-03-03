@@ -283,6 +283,7 @@ type InventoryI interface {
 	DeleteInventoryItem(ctx context.Context, inventoryItemID string) error
 	CalculateInventory(ctx context.Context, inventoryID string) (*model.InventoryResponse, error)
 	ApplyInventory(ctx context.Context, inventoryID string) (*model.InventoryResponse, error)
+	CreateInventoryBatch(ctx context.Context, req *model.CreateInventoryBatchRequest) (*model.CreateInventoryBatchResponse, error)
 }
 
 type DeductionI interface {

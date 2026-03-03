@@ -46,6 +46,30 @@ func (h *Handler) CreateInventory(c echo.Context) error {
 	))
 }
 
+// CreateInventoryBatch creates an inventory with items in one request
+// @Summary Create inventory with items
+// @Description Creates an inventory and upserts its items in a single request
+// @Tags inventories
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param input body model.CreateInventoryBatchRequest true "Inventory batch creation data"
+// @Success 201 {object} model.CreateInventoryBatchResponse
+// @Failure 400 {object} model.ErrorResponse
+// @Failure 500 {object} model.ErrorResponse
+// @Router /api/v1/inventories/batch [post]
+func (h *Handler) CreateInventoryBatch(c echo.Context) error {
+	var req model.CreateInventoryBatchRequest
+	if err := c.Bind(&req); err != nil {
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("invalid request", err.Error(), http.StatusBadRequest))
+	}
+	resp, err := h.service.Inventory().CreateInventoryBatch(c.Request().Context(), &req)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("Operation failed", err.Error(), http.StatusInternalServerError))
+	}
+	return c.JSON(http.StatusCreated, model.NewSuccessResponse("Inventory created successfully", resp, http.StatusCreated))
+}
+
 // GetAllInventories retrieves inventories with pagination
 // @Summary Get inventories
 // @Description Retrieve inventories with pagination (limit/offset)
@@ -462,7 +486,7 @@ func (h *Handler) DeleteInventory(c echo.Context) error {
 	id := c.Param("id")
 
 	if err := h.service.Inventory().DeleteInventory(c.Request().Context(), id); err != nil {
-		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("Operation failed", err.Error(), http.StatusInternalServerError))
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("Operation failed", err.Error(), http.StatusBadRequest))
 	}
 
 	return c.JSON(http.StatusNoContent, nil)

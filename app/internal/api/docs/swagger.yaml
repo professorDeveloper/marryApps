@@ -1003,6 +1003,41 @@ definitions:
         example: 123e4567-e89b-12d3-a456-426614174000
         type: string
     type: object
+  model.CreateInventoryBatchRequest:
+    properties:
+      date:
+        example: "2024-01-01"
+        type: string
+      description:
+        example: Monthly inventory
+        type: string
+      description_i18n:
+        type: string
+      items:
+        items:
+          $ref: '#/definitions/model.UpsertInventoryItemRequest'
+        minItems: 1
+        type: array
+      status:
+        example: active
+        type: string
+      storage_id:
+        example: d1f29b75-8g6d-5536-0525-2c12deeef0e0
+        type: string
+    required:
+    - date
+    - items
+    - storage_id
+    type: object
+  model.CreateInventoryBatchResponse:
+    properties:
+      inventory:
+        $ref: '#/definitions/model.InventoryResponse'
+      items:
+        items:
+          $ref: '#/definitions/model.InventoryItemComputedResponse'
+        type: array
+    type: object
   model.CreateInventoryRequest:
     properties:
       date:
@@ -12573,6 +12608,38 @@ paths:
       security:
       - BearerAuth: []
       summary: Restore inventory
+      tags:
+      - inventories
+  /api/v1/inventories/batch:
+    post:
+      consumes:
+      - application/json
+      description: Creates an inventory and upserts its items in a single request
+      parameters:
+      - description: Inventory batch creation data
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/model.CreateInventoryBatchRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/model.CreateInventoryBatchResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create inventory with items
       tags:
       - inventories
   /api/v1/inventories/search:

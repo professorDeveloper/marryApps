@@ -63,6 +63,31 @@ func (s *InventoryS) CreateInventory(ctx context.Context, req *model.CreateInven
 	return toInventoryResponse(created), nil
 }
 
+func (s *InventoryS) CreateInventoryBatch(ctx context.Context, req *model.CreateInventoryBatchRequest) (*model.CreateInventoryBatchResponse, error) {
+	inv, err := s.CreateInventory(ctx, &model.CreateInventoryRequest{
+		Date:            req.Date,
+		StorageID:       req.StorageID,
+		Description:     req.Description,
+		DescriptionI18n: req.DescriptionI18n,
+		Status:          req.Status,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	items, err := s.UpsertInventoryItems(ctx, inv.ID, &model.UpsertInventoryItemsRequest{
+		Items: req.Items,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return &model.CreateInventoryBatchResponse{
+		Inventory: inv,
+		Items:     items,
+	}, nil
+}
+
 func (s *InventoryS) GetInventoryByID(ctx context.Context, id string) (*model.InventoryResponse, error) {
 	inventoryID, err := uuid.Parse(id)
 	if err != nil {
@@ -259,6 +284,10 @@ func (s *InventoryS) UpsertInventoryItems(ctx context.Context, inventoryID strin
 
 	if _, err := s.repo.Tenant(ctx).GetInventoryByID(ctx, invID); err != nil {
 		return nil, fmt.Errorf("failed to get inventory: %w", err)
+	}
+
+	if inv, err := s.repo.Tenant(ctx).GetInventoryForApply(ctx, invID); err == nil && inv.AppliedAt.Valid {
+		return nil, fmt.Errorf("cannot modify an applied inventory")
 	}
 
 	for _, item := range req.Items {
@@ -526,10 +555,61 @@ func (s *InventoryS) DeleteInventory(ctx context.Context, id string) error {
 	if err != nil {
 		return fmt.Errorf("invalid inventory id: %w", err)
 	}
-	// Block deletion if stock adjustments have already been applied
-	if inv, err := s.repo.Tenant(ctx).GetInventoryForApply(ctx, inventoryID); err == nil && inv.AppliedAt.Valid {
-		return fmt.Errorf("cannot delete an applied inventory")
+
+	inv, err := s.repo.Tenant(ctx).GetInventoryForApply(ctx, inventoryID)
+	if err != nil {
+		return fmt.Errorf("inventory not found: %w", err)
 	}
+
+	if inv.AppliedAt.Valid {
+		// Reverse stock: restore each ingredient back to its pre-apply quantity
+		movements, err := s.repo.Tenant(ctx).GetStockMovementsBySourceID(ctx, inventoryID)
+		if err != nil {
+			return fmt.Errorf("failed to fetch stock movements for reversal: %w", err)
+		}
+
+		zero := pgtype.Numeric{}
+		_ = zero.Scan("0")
+		sourceType := "inventory"
+
+		for _, mv := range movements {
+			storagePg := pgtype.UUID{Bytes: mv.StorageID, Valid: true}
+
+			locked, err := s.repo.Tenant(ctx).GetStockByIngredientAndStorageForUpdate(ctx, pg.GetStockByIngredientAndStorageForUpdateParams{
+				IngredientID: mv.IngredientID,
+				StorageID:    storagePg,
+			})
+			if err != nil {
+				return fmt.Errorf("failed to lock stock for reversal: %w", err)
+			}
+
+			restored, err := s.repo.Tenant(ctx).UpdateIngredientStock(ctx, pg.UpdateIngredientStockParams{
+				ID:       locked.ID,
+				Quantity: mv.StockBefore,
+			})
+			if err != nil {
+				return fmt.Errorf("failed to restore stock: %w", err)
+			}
+
+			srcID := inventoryID
+			if err := s.repo.Tenant(ctx).InsertIngredientStockMovement(ctx, pg.InsertIngredientStockMovementParams{
+				ID:           uuid.New(),
+				StorageID:    mv.StorageID,
+				IngredientID: mv.IngredientID,
+				EventType:    "inventory_deleted",
+				QtyIn:        zero,
+				QtyOut:       zero,
+				StockBefore:  locked.Quantity,
+				StockAfter:   restored.Quantity,
+				PricePerUnit: zero,
+				SourceType:   &sourceType,
+				SourceID:     &srcID,
+			}); err != nil {
+				return fmt.Errorf("failed to log reversal movement: %w", err)
+			}
+		}
+	}
+
 	if err := s.repo.Tenant(ctx).DeleteInventory(ctx, inventoryID); err != nil {
 		return fmt.Errorf("failed to delete inventory: %w", err)
 	}
