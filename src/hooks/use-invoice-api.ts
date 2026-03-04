@@ -37,6 +37,18 @@ export interface InvoiceBatchPayload {
     details: Partial<InvoiceDetail>[];
 }
 
+export interface InvoiceDetailsBatchItemInput {
+    ingredient_id: string;
+    quantity: string;
+    price_per_unit: string;
+    price: string;
+}
+
+export interface InvoiceDetailsBatchUpdateResponse {
+    details: InvoiceDetail[];
+    success?: number;
+}
+
 export interface BackendResponse<T> {
     status: string;
     message: string;
@@ -55,6 +67,10 @@ export interface UseInvoiceAPIReturn {
     updateInvoiceDetail: (id: string, data: Partial<InvoiceDetail>) => Promise<InvoiceDetail>;
     deleteInvoiceDetail: (id: string) => Promise<void>;
     createInvoiceBatch: (payload: InvoiceBatchPayload) => Promise<Invoice>;
+    updateInvoiceDetailsBatch: (
+        id: string,
+        details: InvoiceDetailsBatchItemInput[]
+    ) => Promise<InvoiceDetailsBatchUpdateResponse>;
     getIngredients: () => Promise<any[]>;
 }
 
@@ -63,6 +79,9 @@ export interface UseInvoiceAPIReturn {
 // ============================================================================
 
 export function useInvoiceAPI(): UseInvoiceAPIReturn {
+    const isBackendResponse = <T,>(value: unknown): value is BackendResponse<T> =>
+        !!value && typeof value === 'object' && 'data' in (value as Record<string, unknown>);
+
     /**
      * Barcha invoices'ni oladi
      */
@@ -245,6 +264,36 @@ export function useInvoiceAPI(): UseInvoiceAPIReturn {
         }
     }, []);
 
+    /**
+     * Mavjud invoice detail'larini batch yangilaydi
+     */
+    const updateInvoiceDetailsBatch = useCallback(
+        async (
+            id: string,
+            details: InvoiceDetailsBatchItemInput[]
+        ): Promise<InvoiceDetailsBatchUpdateResponse> => {
+            try {
+                const response = await putter<
+                    BackendResponse<InvoiceDetailsBatchUpdateResponse> | InvoiceDetailsBatchUpdateResponse
+                >(endpoints.invoice.updateDetailsBatch(id), { details });
+
+                const normalized = isBackendResponse<InvoiceDetailsBatchUpdateResponse>(response)
+                    ? response.data
+                    : response;
+
+                toast.success('Invoice details updated successfully');
+                return normalized;
+            } catch (error) {
+                const axiosError = error as AxiosError<any>;
+                const message =
+                    axiosError?.response?.data?.message || 'Failed to update invoice details batch';
+                toast.error(message);
+                throw error;
+            }
+        },
+        []
+    );
+
     return {
         getInvoices,
         getInvoiceById,
@@ -256,6 +305,7 @@ export function useInvoiceAPI(): UseInvoiceAPIReturn {
         updateInvoiceDetail,
         deleteInvoiceDetail,
         createInvoiceBatch,
+        updateInvoiceDetailsBatch,
         getIngredients,
     };
 }

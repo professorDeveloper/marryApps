@@ -79,7 +79,7 @@ export function TransactionsListView() {
       );
       setStoragesMap(
         (storagesData.data || []).reduce(
-          (acc, item) => ({ ...acc, [item.id]: item.name || item.id }),
+          (acc, item) => ({ ...acc, [item.id]: item.name || '-' }),
           {} as Record<string, string>
         )
       );
@@ -126,7 +126,7 @@ export function TransactionsListView() {
         headerName: t('deductions.storage', 'From Storage'),
         flex: 1,
         minWidth: 180,
-        renderCell: (params) => storagesMap[params.row.from_storage_id] || params.row.from_storage_id,
+        renderCell: (params) => storagesMap[params.row.from_storage_id] || '-',
       },
       {
         field: 'to_storage_id',

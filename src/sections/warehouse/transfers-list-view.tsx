@@ -179,47 +179,64 @@ export function TransfersListView() {
         field: 'number',
         headerName: t('deductions.number', 'Number'),
         width: 90,
+        renderCell: (params) => params.row.number ?? t('common.notFound', 'Not found'),
       },
       {
         field: 'from_branch_id',
         headerName: t('warehouse.branch', 'From branch'),
         flex: 1,
         minWidth: 170,
-        renderCell: (params) => branchesMap[params.row.from_branch_id] || params.row.from_branch_id,
+        renderCell: (params) => {
+          if (!params.row.from_branch_id) return t('common.notFound', 'Not found');
+          return branchesMap[params.row.from_branch_id] || t('common.notFound', 'Not found');
+        },
       },
       {
         field: 'to_branch_id',
         headerName: t('warehouse.branch', 'To branch'),
         flex: 1,
         minWidth: 170,
-        renderCell: (params) => branchesMap[params.row.to_branch_id] || params.row.to_branch_id,
+        renderCell: (params) => {
+          if (!params.row.to_branch_id) return t('common.notFound', 'Not found');
+          return branchesMap[params.row.to_branch_id] || t('common.notFound', 'Not found');
+        },
       },
       {
         field: 'from_storage_id',
         headerName: t('deductions.storage', 'From storage'),
         flex: 1,
         minWidth: 180,
-        renderCell: (params) => storagesMap[params.row.from_storage_id] || params.row.from_storage_id,
+        renderCell: (params) => {
+          if (!params.row.from_storage_id) return t('common.notFound', 'Not found');
+          return storagesMap[params.row.from_storage_id] || t('common.notFound', 'Not found');
+        },
       },
       {
         field: 'to_storage_id',
         headerName: t('warehouse.storage', 'To storage'),
         flex: 1,
         minWidth: 180,
-        renderCell: (params) => storagesMap[params.row.to_storage_id] || params.row.to_storage_id,
+        renderCell: (params) => {
+          if (!params.row.to_storage_id) return t('common.notFound', 'Not found');
+          return storagesMap[params.row.to_storage_id] || t('common.notFound', 'Not found');
+        },
       },
       {
         field: 'act_group_id',
         headerName: t('deductions.group', 'Group'),
         flex: 1,
         minWidth: 150,
-        renderCell: (params) => groupsMap[params.row.act_group_id] || params.row.act_group_id,
+        renderCell: (params) => {
+          if (!params.row.act_group_id) return t('common.notFound', 'Not found');
+          return groupsMap[params.row.act_group_id] || t('common.notFound', 'Not found');
+        },
       },
         {
                 field: 'status',
                 headerName: t('invoices.status', 'Status'),
                 width: 120,
                 renderCell: (params) => {
+                    if (!params.row.status) return t('common.notFound', 'Not found');
                     const status = params.row.status?.toLowerCase();
                     let color = 'default';
                     if (status === 'draft') color = 'default';
@@ -261,13 +278,23 @@ export function TransfersListView() {
         field: 'total_amount',
         headerName: t('deductions.balance', 'Total'),
         width: 140,
-        renderCell: (params) => Number(params.row.total_amount || 0).toLocaleString(),
+        renderCell: (params) => {
+          if (!params.row.total_amount && params.row.total_amount !== 0) return t('common.notFound', 'Not found');
+          return Number(params.row.total_amount).toLocaleString();
+        },
       },
       {
         field: 'date',
         headerName: t('deductions.date', 'Date'),
         width: 140,
-        renderCell: (params) => new Date(params.row.date).toLocaleDateString(),
+        renderCell: (params) => {
+          if (!params.row.date) return t('common.notFound', 'Not found');
+          try {
+            return new Date(params.row.date).toLocaleDateString();
+          } catch {
+            return t('common.notFound', 'Not found');
+          }
+        },
       },
       {
         type: 'actions',

@@ -1,5 +1,5 @@
 import type { AxiosError } from 'axios';
-import type { Transfer, TransferBatchPayload } from 'src/types/transfers';
+import type { Transfer, TransferBatchPayload, TransferBatchItemInput } from 'src/types/transfers';
 
 import { useCallback } from 'react';
 import { toast } from 'sonner';
@@ -39,6 +39,9 @@ export interface ActGroup {
 }
 
 export function useTransfersAPI() {
+  const isBackendResponse = <T,>(value: unknown): value is BackendResponse<T> =>
+    !!value && typeof value === 'object' && 'data' in (value as Record<string, unknown>);
+
   const getTransfers = useCallback(async (): Promise<Transfer[]> => {
     try {
       const response = await fetcher<BackendResponse<Transfer[]>>(endpoints.transfers.list);
@@ -104,6 +107,27 @@ export function useTransfersAPI() {
     }
   }, []);
 
+  const updateTransferItemsBatch = useCallback(
+    async (id: string, items: TransferBatchItemInput[]): Promise<Transfer> => {
+      try {
+        const response = await putter<BackendResponse<Transfer> | Transfer>(
+          endpoints.transfers.updateItemsBatch(id),
+          { items }
+        );
+        const transfer = isBackendResponse<Transfer>(response) ? response.data : response;
+        toast.success('Transfer items updated successfully');
+        return transfer;
+      } catch (error) {
+        const axiosError = error as AxiosError<{ message?: string }>;
+        const message =
+          axiosError?.response?.data?.message || 'Failed to update transfer items';
+        toast.error(message);
+        throw error;
+      }
+    },
+    []
+  );
+
   const deleteTransfer = useCallback(async (id: string): Promise<void> => {
     try {
       await deleter(endpoints.transfers.delete(id));
@@ -134,6 +158,7 @@ export function useTransfersAPI() {
     createTransfer,
     createTransferBatch,
     updateTransfer,
+    updateTransferItemsBatch,
     deleteTransfer,
     getTransferGroups,
   };

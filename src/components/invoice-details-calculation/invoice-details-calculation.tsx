@@ -86,8 +86,8 @@ const formatNumber = (num: number): number => {
 export function InvoiceDetailsCalculation({ invoiceId, invoiceData, onSuccess, onDetailsChange, isNewInvoice, persistedDetails, formData, onSaveInvoice }: InvoiceDetailsCalculationProps) {
     const { t } = useTranslation('menu');
     const theme = useTheme();
-    const { getIngredients, createInvoiceDetailsBatch } = useInvoiceDetailsAPI();
-    const { createInvoiceBatch } = useInvoiceAPI();
+    const { getIngredients } = useInvoiceDetailsAPI();
+    const { updateInvoiceDetailsBatch } = useInvoiceAPI();
     const router = useRouter();
 
     // Tab state
@@ -454,10 +454,9 @@ export function InvoiceDetailsCalculation({ invoiceId, invoiceData, onSuccess, o
             setLoading(true);
             const batchData = transferredItems.map((item) => ({
                 ingredient_id: item.id,
-                invoice_id: invoiceId !== 'new' ? invoiceId : undefined,
-                quantity: item.quantity.toString(),
-                price_per_unit: item.price_per_unit.toString(),
-                price: item.price.toString(),
+                quantity: String(item.quantity ?? 0),
+                price_per_unit: String(item.price_per_unit ?? 0),
+                price: String(item.price ?? 0),
             }));
 
             // If this is a new invoice, validate and save with invoice info
@@ -491,9 +490,14 @@ export function InvoiceDetailsCalculation({ invoiceId, invoiceData, onSuccess, o
                 }
             }
 
-            // If this is an existing invoice, use the batch endpoint that creates details
+            // If this is an existing invoice, replace details via invoice batch update endpoint
             if (!isNewInvoice) {
-                await createInvoiceDetailsBatch(batchData);
+                if (!invoiceId || invoiceId === 'new') {
+                    toast.error(t('warehouse.invoiceDetails.fillInvoiceInfoFirst', 'Invoice ID is required'));
+                    return;
+                }
+
+                await updateInvoiceDetailsBatch(invoiceId, batchData);
                 setTransferredIds([]);
                 setQuantities({});
                 setPrices({});

@@ -65,7 +65,13 @@ export function TransfersEditView({ isNew = false }: TransfersEditViewProps) {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
 
-  const { getTransferById, createTransferBatch, updateTransfer, getTransferGroups } = useTransfersAPI();
+  const {
+    getTransferById,
+    createTransferBatch,
+    updateTransfer,
+    updateTransferItemsBatch,
+    getTransferGroups,
+  } = useTransfersAPI();
 
   const [activeTab, setActiveTab] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -305,11 +311,7 @@ export function TransfersEditView({ isNew = false }: TransfersEditViewProps) {
     };
   }, [formData.to_branch_id, formData.to_storage_id, getStoragesByBranch]);
 
-  const saveByBatch = useCallback(async () => {
-    if (!itemsRef.current.length) {
-      setActiveTab(1);
-      throw new Error(t('deductions.itemsRequired', 'Please add at least one item'));
-    }
+  const validateBaseFields = useCallback(() => {
     if (!formData.from_branch_id || !formData.to_branch_id) {
       setActiveTab(0);
       throw new Error(t('warehouse.branch', 'Please select branches'));
@@ -322,19 +324,26 @@ export function TransfersEditView({ isNew = false }: TransfersEditViewProps) {
       setActiveTab(0);
       throw new Error(t('deductions.groupRequired', 'Please select group'));
     }
+  }, [formData.act_group_id, formData.from_branch_id, formData.from_storage_id, formData.to_branch_id, formData.to_storage_id, t]);
 
-    const payload = {
-      act_group_id: formData.act_group_id,
-      description: formData.description || '',
-      to_branch_id: formData.to_branch_id,
-      to_storage_id: formData.to_storage_id,
-      from_branch_id: formData.from_branch_id,
-      from_storage_id: formData.from_storage_id,
-      items: itemsRef.current,
-    };
+  const handleSubmit = useCallback(async () => {
+    validateBaseFields();
 
     if (isNew && !effectiveTransferId) {
-      await createTransferBatch(payload);
+      if (!itemsRef.current.length) {
+        setActiveTab(1);
+        throw new Error(t('deductions.itemsRequired', 'Please add at least one item'));
+      }
+
+      await createTransferBatch({
+        act_group_id: formData.act_group_id,
+        description: formData.description || '',
+        to_branch_id: formData.to_branch_id,
+        to_storage_id: formData.to_storage_id,
+        from_branch_id: formData.from_branch_id,
+        from_storage_id: formData.from_storage_id,
+        items: itemsRef.current,
+      });
       toast.success(t('common.createSuccess', 'Created successfully'));
       goToTransfers();
       return;
@@ -342,12 +351,12 @@ export function TransfersEditView({ isNew = false }: TransfersEditViewProps) {
 
     if (effectiveTransferId) {
       await updateTransfer(effectiveTransferId, {
-        act_group_id: payload.act_group_id,
-        description: payload.description,
-        to_branch_id: payload.to_branch_id,
-        to_storage_id: payload.to_storage_id,
-        from_branch_id: payload.from_branch_id,
-        from_storage_id: payload.from_storage_id,
+        act_group_id: formData.act_group_id,
+        description: formData.description || '',
+        to_branch_id: formData.to_branch_id,
+        to_storage_id: formData.to_storage_id,
+        from_branch_id: formData.from_branch_id,
+        from_storage_id: formData.from_storage_id,
         status: formData.status,
         date: formData.date,
       });
@@ -362,20 +371,52 @@ export function TransfersEditView({ isNew = false }: TransfersEditViewProps) {
     isNew,
     t,
     updateTransfer,
+    validateBaseFields,
   ]);
-
-  const handleSubmit = useCallback(async () => {
-    await saveByBatch();
-  }, [saveByBatch]);
 
   const handleItemsSave = useCallback(async () => {
     try {
       setSavingItems(true);
-      await saveByBatch();
+      validateBaseFields();
+
+      if (!itemsRef.current.length) {
+        setActiveTab(1);
+        throw new Error(t('deductions.itemsRequired', 'Please add at least one item'));
+      }
+
+      if (isNew && !effectiveTransferId) {
+        await createTransferBatch({
+          act_group_id: formData.act_group_id,
+          description: formData.description || '',
+          to_branch_id: formData.to_branch_id,
+          to_storage_id: formData.to_storage_id,
+          from_branch_id: formData.from_branch_id,
+          from_storage_id: formData.from_storage_id,
+          items: itemsRef.current,
+        });
+        toast.success(t('common.createSuccess', 'Created successfully'));
+        goToTransfers();
+        return;
+      }
+
+      if (effectiveTransferId) {
+        await updateTransferItemsBatch(effectiveTransferId, itemsRef.current);
+        toast.success(t('common.updateSuccess', 'Updated successfully'));
+        goToTransfers();
+      }
     } finally {
       setSavingItems(false);
     }
-  }, [saveByBatch]);
+  }, [
+    createTransferBatch,
+    effectiveTransferId,
+    formData,
+    goToTransfers,
+    isNew,
+    t,
+    updateTransferItemsBatch,
+    validateBaseFields,
+  ]);
 
   const groupOptions = useMemo(
     () => groups.map((group) => ({ value: group.id, label: group.name })),
