@@ -212,9 +212,23 @@ WHERE ingredient_id = $1 AND storage_id = $2 AND deleted_at = 0
 FOR UPDATE;
 
 -- EnsureIngredientStockByStorage ensures a stock row exists for (ingredient_id, storage_id)
+-- If no row exists, initializes quantity from the last recorded stock_after in movements
+-- (so that a re-created row picks up the correct running balance, e.g. -100)
 -- name: EnsureIngredientStockByStorage :one
 INSERT INTO ingredient_stock (id, ingredient_id, storage_id, branch_id, quantity, deleted_at)
-VALUES ($1, $2, $3, NULLIF(current_setting('app.branch_id', true), '')::uuid, 0, 0)
+SELECT
+  $1,
+  $2,
+  $3,
+  NULLIF(current_setting('app.branch_id', true), '')::uuid,
+  COALESCE((
+    SELECT stock_after
+    FROM ingredient_stock_movements
+    WHERE ingredient_id = $2 AND storage_id = $3
+    ORDER BY created_at DESC, id DESC
+    LIMIT 1
+  ), 0),
+  0
 ON CONFLICT (ingredient_id, storage_id)
 DO UPDATE SET deleted_at = 0, updated_at = NOW(),
   branch_id = COALESCE(ingredient_stock.branch_id, NULLIF(current_setting('app.branch_id', true), '')::uuid)
