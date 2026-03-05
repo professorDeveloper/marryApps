@@ -9,7 +9,7 @@ import { paths } from 'src/routes/paths';
 import { useRouter } from 'src/routes/hooks';
 import { endpoints } from 'src/lib/axios';
 import { useTranslationsAPI } from 'src/hooks/use-translations-api';
-import { useGetCompound, useDeleteCompound, useUpdateCompound, useCreateCompoundWithCalculations, useCreateCompound } from 'src/hooks/use-compounds';
+import { useGetCompound, useDeleteCompound, useUpdateCompound, useCreateCompoundWithCalculations } from 'src/hooks/use-compounds';
 import { useGetDepartments } from 'src/actions/departments';
 import { toast } from 'src/components/snackbar';
 import { GenericEditView } from 'src/components/generic-edit-view';
@@ -137,8 +137,6 @@ export function CompoundEditView({ compoundId, isNew = false }: CompoundEditView
     const [activeTab, setActiveTab] = useState(0);
     // Store form data at parent level to preserve across tab changes
     const [formData, setFormData] = useState<Record<string, any>>({});
-    // Track the created compound ID for new items
-    const [createdCompoundId, setCreatedCompoundId] = useState<string | undefined>(undefined);
     // Track pending calculations when entity is created
     const pendingCalculationsRef = useRef<{
         ingredient_calculations?: Array<{ ingredient_id: string; quantity: string }>;
@@ -152,12 +150,11 @@ export function CompoundEditView({ compoundId, isNew = false }: CompoundEditView
     const { deleteCompound } = useDeleteCompound();
     const { createTranslation, updateTranslation } = useTranslationsAPI();
     const { createCompoundWithCalculations } = useCreateCompoundWithCalculations();
-    const { createCompound } = useCreateCompound();
 
     const loading = !isNew && compoundLoading;
 
-    // Effective compound ID - either from props, fetched compound, or newly created
-    const effectiveCompoundId = compoundId || compound?.id || createdCompoundId;
+    // Effective compound ID - either from props or fetched compound
+    const effectiveCompoundId = compoundId || compound?.id;
 
     // Initialize form data when compound is loaded
     useEffect(() => {
@@ -195,8 +192,7 @@ export function CompoundEditView({ compoundId, isNew = false }: CompoundEditView
     const handleSubmit = useCallback(
         async (submitFormData: Record<string, any>) => {
             try {
-                if (isNew && !createdCompoundId) {
-                    // For new compounds, create it immediately with basic info
+                if (isNew) {
                     let name_i18n = submitFormData.name_i18n;
                     if (!name_i18n && (submitFormData.name_en || submitFormData.name_ru)) {
                         // Create translation if provided
@@ -231,69 +227,19 @@ export function CompoundEditView({ compoundId, isNew = false }: CompoundEditView
                         description_i18n = descriptionTranslationResult.id;
                     }
 
-                    const payload = {
-                        name: submitFormData.name,
-                        name_i18n,
-                        description: submitFormData.description || '',
-                        description_i18n,
-                        price: String(submitFormData.price || '0'),
-                        quantity: Number(submitFormData.quantity),
-                        measurement: submitFormData.measurement,
-                        department_id: submitFormData.department_id,
-                        picture_url: submitFormData.picture_url || null,
-                    };
+                    const pendingCalculations = pendingCalculationsRef.current;
 
-                    const result = await createCompound(payload) as any;
+                    await createCompoundWithCalculations({
+                        compound: {
+                            ...submitFormData,
+                            name_i18n,
+                            description_i18n,
+                        },
+                        ingredient_calculations: pendingCalculations?.ingredient_calculations,
+                        compound_calculations: pendingCalculations?.compound_calculations,
+                    });
 
-                    if (result?.id) {
-                        setCreatedCompoundId(result.id);
-                        setFormData(submitFormData);
-                        toast.success(t('success.created', 'Successfully created'));
-                        router.push(paths.menu.semifinished.root);
-                    } else {
-                        toast.error(t('error.createFailed'));
-                    }
-                } else if (createdCompoundId) {
-                    // Compound was already created in Tab 2, now update it with form data
-                    let name_i18n = submitFormData.name_i18n;
-                    if (!name_i18n && (submitFormData.name_en || submitFormData.name_ru)) {
-                        // Create translation if provided
-                        const translationData: any = {
-                            en: submitFormData.name_en || submitFormData.name || '',
-                            ru: submitFormData.name_ru || submitFormData.name || '',
-                            uz: submitFormData.name || '', // Primary name is always Uzbek
-                        };
-
-                        const translationResult = await createTranslation(translationData);
-                        name_i18n = translationResult.id;
-                    }
-
-                    // Create description translation if provided
-                    let description_i18n: string | undefined = submitFormData.description_i18n;
-                    if (!description_i18n && (submitFormData.description_en || submitFormData.description_ru)) {
-                        const descriptionTranslationData: any = {
-                            en: submitFormData.description_en || submitFormData.description || '',
-                            ru: submitFormData.description_ru || submitFormData.description || '',
-                            uz: submitFormData.description || '',
-                        };
-                        const descriptionTranslationResult = await createTranslation(descriptionTranslationData);
-                        description_i18n = descriptionTranslationResult.id;
-                    }
-
-                    const payload = {
-                        name: submitFormData.name,
-                        name_i18n,
-                        description: submitFormData.description || '',
-                        description_i18n,
-                        price: String(submitFormData.price),
-                        quantity: Number(submitFormData.quantity),
-                        measurement: submitFormData.measurement,
-                        department_id: submitFormData.department_id,
-                        picture_url: submitFormData.picture_url || null,
-                    };
-                    await updateCompound(createdCompoundId, payload);
-                    toast.success(t('success.updated', 'Successfully updated'));
-                    // Redirect to list
+                    toast.success(t('success.created', 'Successfully created'));
                     router.push(paths.menu.semifinished.root);
                 } else if (compoundId) {
                     // Update existing compound with translation
@@ -357,7 +303,7 @@ export function CompoundEditView({ compoundId, isNew = false }: CompoundEditView
                 );
             }
         },
-        [router, isNew, compoundId, createdCompoundId, updateCompound, t, createTranslation, updateTranslation, createCompound]
+        [router, isNew, compoundId, updateCompound, t, createTranslation, updateTranslation, createCompoundWithCalculations]
     );
 
     // Handle delete
@@ -495,54 +441,6 @@ export function CompoundEditView({ compoundId, isNew = false }: CompoundEditView
                             onCalculationsReady={(calculations) => {
                                 // Store calculations for when save is clicked
                                 pendingCalculationsRef.current = calculations;
-                            }}
-                            onSaveWithGood={async (calculationsData) => {
-                                try {
-                                    // Always create translation for new compounds
-                                    const translationData: any = {
-                                        en: formData.name_en || formData.name || '',
-                                        ru: formData.name_ru || formData.name || '',
-                                        uz: formData.name || '', // Primary name is always Uzbek
-                                    };
-
-                                    const translationResult = await createTranslation(translationData);
-                                    const name_i18n = translationResult.id;
-
-                                    // Create description translation if provided
-                                    let description_i18n: string | undefined = formData.description_i18n;
-                                    if (!description_i18n && (formData.description_en || formData.description_ru)) {
-                                        const descriptionTranslationData: any = {
-                                            en: formData.description_en || formData.description || '',
-                                            ru: formData.description_ru || formData.description || '',
-                                            uz: formData.description || '',
-                                        };
-                                        const descriptionTranslationResult = await createTranslation(descriptionTranslationData);
-                                        description_i18n = descriptionTranslationResult.id;
-                                    }
-
-                                    // Save compound with calculations using new API
-                                    const result = await createCompoundWithCalculations({
-                                        compound: {
-                                            ...formData,
-                                            name_i18n,
-                                            description_i18n,
-                                        },
-                                        ingredient_calculations: calculationsData.ingredient_calculations,
-                                        compound_calculations: calculationsData.compound_calculations,
-                                    }) as any;
-
-                                    const newCompoundId = result?.compound?.id || result?.data?.compound?.id;
-                                    if (newCompoundId) {
-                                        setCreatedCompoundId(newCompoundId);
-                                        pendingCalculationsRef.current = null;
-                                        toast.success(t('success.created', 'Successfully created'));
-                                        // Do NOT redirect - stay on this page so user can continue editing
-                                    }
-                                } catch (error) {
-                                    console.error("Error saving compound with calculations:", error);
-                                    toast.error(t('error.createFailed'));
-                                    throw error;
-                                }
                             }}
                         />
                     </Stack>
