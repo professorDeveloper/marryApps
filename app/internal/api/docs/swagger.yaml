@@ -11522,6 +11522,11 @@ paths:
         in: query
         name: offset
         type: integer
+      - description: 'Expand FK relations (comma-separated: ingredient_id, storage_id,
+          branch_id)'
+        in: query
+        name: expand
+        type: string
       produces:
       - application/json
       responses:
@@ -11624,6 +11629,11 @@ paths:
         in: path
         name: id
         required: true
+        type: string
+      - description: 'Expand FK relations (comma-separated: ingredient_id, storage_id,
+          branch_id)'
+        in: query
+        name: expand
         type: string
       produces:
       - application/json
@@ -11835,6 +11845,11 @@ paths:
         in: query
         name: offset
         type: integer
+      - description: 'Expand FK relations (comma-separated: ingredient_id, storage_id,
+          branch_id)'
+        in: query
+        name: expand
+        type: string
       produces:
       - application/json
       responses:
@@ -11927,6 +11942,11 @@ paths:
         in: query
         name: offset
         type: integer
+      - description: 'Expand FK relations (comma-separated: ingredient_id, storage_id,
+          branch_id)'
+        in: query
+        name: expand
+        type: string
       produces:
       - application/json
       responses:
@@ -11969,6 +11989,10 @@ paths:
         in: query
         name: offset
         type: integer
+      - description: 'Expand FK relations (comma-separated: group_id, name_i18n)'
+        in: query
+        name: expand
+        type: string
       produces:
       - application/json
       responses:
@@ -12045,6 +12069,10 @@ paths:
         in: query
         name: offset
         type: integer
+      - description: 'Expand FK relations (comma-separated: group_id, name_i18n)'
+        in: query
+        name: expand
+        type: string
       produces:
       - application/json
       responses:
@@ -12086,6 +12114,10 @@ paths:
       - description: 'Language code (uz, ru, en - default: uz)'
         in: query
         name: lang
+        type: string
+      - description: 'Expand FK relations (comma-separated: group_id, name_i18n)'
+        in: query
+        name: expand
         type: string
       produces:
       - application/json
@@ -12160,6 +12192,10 @@ paths:
         in: path
         name: id
         required: true
+        type: string
+      - description: 'Expand FK relations (comma-separated: group_id, name_i18n)'
+        in: query
+        name: expand
         type: string
       produces:
       - application/json

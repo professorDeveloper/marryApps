@@ -281,6 +281,7 @@ func (h *Handler) CreateIngredient(c echo.Context) error {
 // @Produce json
 // @Security BearerAuth
 // @Param id path string true "Ingredient ID"
+// @Param expand query string false "Expand FK relations (comma-separated: group_id, name_i18n)"
 // @Success 200 {object} model.IngredientResponse "Ingredient details"
 // @Failure 400 {object} model.ErrorResponse "Invalid ingredient ID"
 // @Failure 401 {object} model.ErrorResponse "Unauthorized"
@@ -305,6 +306,12 @@ func (h *Handler) GetIngredientByID(c echo.Context) error {
 		return c.JSON(http.StatusNotFound, model.NewErrorResponse("ingredient not found", "see logs for details", http.StatusNotFound))
 	}
 
+	if m, expanded, err := h.expandSingleResponse(c, ingredient, "ingredients"); expanded {
+		if err != nil {
+			return err
+		}
+		return c.JSON(http.StatusOK, model.NewSuccessResponse("Ingredient retrieved successfully", m, http.StatusOK))
+	}
 	return c.JSON(http.StatusOK, model.NewSuccessResponse("Ingredient retrieved successfully", ingredient, http.StatusOK))
 }
 
@@ -317,6 +324,7 @@ func (h *Handler) GetIngredientByID(c echo.Context) error {
 // @Security BearerAuth
 // @Param limit query int false "Limit results (default: 20)" default(20)
 // @Param offset query int false "Offset for pagination (default: 0)" default(0)
+// @Param expand query string false "Expand FK relations (comma-separated: group_id, name_i18n)"
 // @Success 200 {array} model.IngredientResponse "List of all ingredients"
 // @Failure 401 {object} model.ErrorResponse "Unauthorized"
 // @Failure 500 {object} model.ErrorResponse "Internal server error"
@@ -345,6 +353,12 @@ func (h *Handler) GetAllIngredients(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("failed to fetch ingredients", "see logs for details", http.StatusInternalServerError))
 	}
 
+	if maps, expanded, err := h.expandListResponse(c, ingredients, "ingredients"); expanded {
+		if err != nil {
+			return err
+		}
+		return c.JSON(http.StatusOK, model.NewSuccessResponse("Data retrieved successfully", maps, http.StatusOK))
+	}
 	return c.JSON(http.StatusOK, model.NewSuccessResponse("Data retrieved successfully", ingredients, http.StatusOK))
 }
 
@@ -549,6 +563,7 @@ func (h *Handler) CreateIngredientStock(c echo.Context) error {
 // @Produce json
 // @Security BearerAuth
 // @Param id path string true "Ingredient Stock ID"
+// @Param expand query string false "Expand FK relations (comma-separated: ingredient_id, storage_id, branch_id)"
 // @Success 200 {object} model.IngredientStockResponse "Ingredient stock details"
 // @Failure 400 {object} model.ErrorResponse "Invalid stock ID"
 // @Failure 401 {object} model.ErrorResponse "Unauthorized"
@@ -573,6 +588,12 @@ func (h *Handler) GetIngredientStockByID(c echo.Context) error {
 		return c.JSON(http.StatusNotFound, model.NewErrorResponse("ingredient stock not found", "see logs for details", http.StatusNotFound))
 	}
 
+	if m, expanded, err := h.expandSingleResponse(c, stock, "ingredient_stock"); expanded {
+		if err != nil {
+			return err
+		}
+		return c.JSON(http.StatusOK, model.NewSuccessResponse("Ingredient stock retrieved successfully", m, http.StatusOK))
+	}
 	return c.JSON(http.StatusOK, model.NewSuccessResponse("Ingredient stock retrieved successfully", stock, http.StatusOK))
 }
 
@@ -628,6 +649,7 @@ func (h *Handler) GetStockByIngredientAndBranch(c echo.Context) error {
 // @Security BearerAuth
 // @Param limit query int false "Limit results (default: 20)" default(20)
 // @Param offset query int false "Offset for pagination (default: 0)" default(0)
+// @Param expand query string false "Expand FK relations (comma-separated: ingredient_id, storage_id, branch_id)"
 // @Success 200 {array} model.IngredientStockResponse "List of all ingredient stock"
 // @Failure 401 {object} model.ErrorResponse "Unauthorized"
 // @Failure 500 {object} model.ErrorResponse "Internal server error"
@@ -656,6 +678,12 @@ func (h *Handler) GetAllIngredientStock(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("failed to fetch ingredient stock", "see logs for details", http.StatusInternalServerError))
 	}
 
+	if maps, expanded, err := h.expandListResponse(c, stocks, "ingredient_stock"); expanded {
+		if err != nil {
+			return err
+		}
+		return c.JSON(http.StatusOK, model.NewSuccessResponse("Data retrieved successfully", maps, http.StatusOK))
+	}
 	return c.JSON(http.StatusOK, model.NewSuccessResponse("Data retrieved successfully", stocks, http.StatusOK))
 }
 
@@ -669,6 +697,7 @@ func (h *Handler) GetAllIngredientStock(c echo.Context) error {
 // @Param branchId path string true "Branch ID"
 // @Param limit query int false "Limit results (default: 20)" default(20)
 // @Param offset query int false "Offset for pagination (default: 0)" default(0)
+// @Param expand query string false "Expand FK relations (comma-separated: ingredient_id, storage_id, branch_id)"
 // @Success 200 {array} model.IngredientStockResponse "List of ingredient stock for the branch"
 // @Failure 400 {object} model.ErrorResponse "Invalid branch ID"
 // @Failure 401 {object} model.ErrorResponse "Unauthorized"
@@ -706,6 +735,12 @@ func (h *Handler) GetStockByBranchID(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("failed to fetch ingredient stock", "see logs for details", http.StatusInternalServerError))
 	}
 
+	if maps, expanded, err := h.expandListResponse(c, stocks, "ingredient_stock"); expanded {
+		if err != nil {
+			return err
+		}
+		return c.JSON(http.StatusOK, model.NewSuccessResponse("Data retrieved successfully", maps, http.StatusOK))
+	}
 	return c.JSON(http.StatusOK, model.NewSuccessResponse("Data retrieved successfully", stocks, http.StatusOK))
 }
 
@@ -719,6 +754,7 @@ func (h *Handler) GetStockByBranchID(c echo.Context) error {
 // @Param ingredientId path string true "Ingredient ID"
 // @Param limit query int false "Limit results (default: 20)" default(20)
 // @Param offset query int false "Offset for pagination (default: 0)" default(0)
+// @Param expand query string false "Expand FK relations (comma-separated: ingredient_id, storage_id, branch_id)"
 // @Success 200 {array} model.IngredientStockResponse "List of stock for the ingredient"
 // @Failure 400 {object} model.ErrorResponse "Invalid ingredient ID"
 // @Failure 401 {object} model.ErrorResponse "Unauthorized"
@@ -756,6 +792,12 @@ func (h *Handler) GetStockByIngredientID(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("failed to fetch ingredient stock", "see logs for details", http.StatusInternalServerError))
 	}
 
+	if maps, expanded, err := h.expandListResponse(c, stocks, "ingredient_stock"); expanded {
+		if err != nil {
+			return err
+		}
+		return c.JSON(http.StatusOK, model.NewSuccessResponse("Data retrieved successfully", maps, http.StatusOK))
+	}
 	return c.JSON(http.StatusOK, model.NewSuccessResponse("Data retrieved successfully", stocks, http.StatusOK))
 }
 
@@ -1053,6 +1095,7 @@ func (h *Handler) GetAllIngredientGroupsWithLang(c echo.Context) error {
 // @Security BearerAuth
 // @Param id path string true "Ingredient ID"
 // @Param lang query string false "Language code (uz, ru, en - default: uz)"
+// @Param expand query string false "Expand FK relations (comma-separated: group_id, name_i18n)"
 // @Success 200 {object} model.IngredientResponse "Ingredient details"
 // @Failure 400 {object} model.ErrorResponse "Invalid request parameters"
 // @Failure 401 {object} model.ErrorResponse "Unauthorized"
@@ -1081,6 +1124,12 @@ func (h *Handler) GetIngredientByIDWithLang(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("failed to get ingredient", "see logs for details", http.StatusInternalServerError))
 	}
 
+	if m, expanded, err := h.expandSingleResponse(c, ingredient, "ingredients"); expanded {
+		if err != nil {
+			return err
+		}
+		return c.JSON(http.StatusOK, model.NewSuccessResponse("Ingredient retrieved successfully", m, http.StatusOK))
+	}
 	return c.JSON(http.StatusOK, model.NewSuccessResponse("Ingredient retrieved successfully", ingredient, http.StatusOK))
 }
 
@@ -1094,6 +1143,7 @@ func (h *Handler) GetIngredientByIDWithLang(c echo.Context) error {
 // @Param lang query string false "Language code (uz, ru, en - default: uz)"
 // @Param limit query int false "Limit (default: 20)"
 // @Param offset query int false "Offset (default: 0)"
+// @Param expand query string false "Expand FK relations (comma-separated: group_id, name_i18n)"
 // @Success 200 {array} model.IngredientResponse "Ingredients retrieved successfully"
 // @Failure 400 {object} model.ErrorResponse "Invalid request parameters"
 // @Failure 401 {object} model.ErrorResponse "Unauthorized"
@@ -1131,5 +1181,11 @@ func (h *Handler) GetAllIngredientsWithLang(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("failed to get ingredients", "see logs for details", http.StatusInternalServerError))
 	}
 
+	if maps, expanded, err := h.expandListResponse(c, ingredients, "ingredients"); expanded {
+		if err != nil {
+			return err
+		}
+		return c.JSON(http.StatusOK, model.NewSuccessResponse("Ingredients retrieved successfully", maps, http.StatusOK))
+	}
 	return c.JSON(http.StatusOK, model.NewSuccessResponse("Ingredients retrieved successfully", ingredients, http.StatusOK))
 }

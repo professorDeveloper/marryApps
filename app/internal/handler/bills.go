@@ -13,6 +13,57 @@ import (
 	pg "gitlab.yurtal.tech/company/maryai/back/internal/repository/pg"
 )
 
+// expandListResponse converts a slice-typed value to []map[string]any and applies expand.
+// Returns (maps, true, nil) when expand was applied; (nil, false, nil) when no expand param.
+// On error writes a JSON error response and returns (nil, true, err).
+func (h *Handler) expandListResponse(c echo.Context, data any, table string) ([]map[string]any, bool, error) {
+	expandFields := pg.ParseExpandFields(c.QueryParam("expand"))
+	if len(expandFields) == 0 {
+		return nil, false, nil
+	}
+	maps, err := structToMapSlice(data)
+	if err != nil {
+		_ = c.JSON(http.StatusInternalServerError, model.NewErrorResponse("failed to process data", err.Error(), http.StatusInternalServerError))
+		return nil, true, err
+	}
+	ctx := c.Request().Context()
+	if err := h.repo.TenantExpand(ctx).ExpandRows(ctx, table, maps, expandFields); err != nil {
+		if errors.Is(err, pg.ErrInvalidExpandField) {
+			_ = c.JSON(http.StatusBadRequest, model.NewErrorResponse("invalid expand field", err.Error(), http.StatusBadRequest))
+		} else {
+			_ = c.JSON(http.StatusInternalServerError, model.NewErrorResponse("failed to expand relations", err.Error(), http.StatusInternalServerError))
+		}
+		return nil, true, err
+	}
+	return maps, true, nil
+}
+
+// expandSingleResponse converts a single struct to map[string]any and applies expand.
+// Returns (m, true, nil) when expand was applied; (nil, false, nil) when no expand param.
+// On error writes a JSON error response and returns (nil, true, err).
+func (h *Handler) expandSingleResponse(c echo.Context, data any, table string) (map[string]any, bool, error) {
+	expandFields := pg.ParseExpandFields(c.QueryParam("expand"))
+	if len(expandFields) == 0 {
+		return nil, false, nil
+	}
+	m, err := structToMap(data)
+	if err != nil {
+		_ = c.JSON(http.StatusInternalServerError, model.NewErrorResponse("failed to process data", err.Error(), http.StatusInternalServerError))
+		return nil, true, err
+	}
+	rows := []map[string]any{m}
+	ctx := c.Request().Context()
+	if err := h.repo.TenantExpand(ctx).ExpandRows(ctx, table, rows, expandFields); err != nil {
+		if errors.Is(err, pg.ErrInvalidExpandField) {
+			_ = c.JSON(http.StatusBadRequest, model.NewErrorResponse("invalid expand field", err.Error(), http.StatusBadRequest))
+		} else {
+			_ = c.JSON(http.StatusInternalServerError, model.NewErrorResponse("failed to expand relations", err.Error(), http.StatusInternalServerError))
+		}
+		return nil, true, err
+	}
+	return rows[0], true, nil
+}
+
 func parseBillTimeParam(v string) (*time.Time, error) {
 	if v == "" {
 		return nil, nil
