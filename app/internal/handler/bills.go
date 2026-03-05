@@ -1,6 +1,8 @@
 package handler
 
 import (
+	"encoding/json"
+	"errors"
 	"net/http"
 	"strconv"
 	"time"
@@ -8,6 +10,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 	"gitlab.yurtal.tech/company/maryai/back/internal/model"
+	pg "gitlab.yurtal.tech/company/maryai/back/internal/repository/pg"
 )
 
 func parseBillTimeParam(v string) (*time.Time, error) {
@@ -23,9 +26,43 @@ func parseBillTimeParam(v string) (*time.Time, error) {
 	return nil, strconv.ErrSyntax
 }
 
-// GetBills retrieves bills list with filters
+// ============================================
+// HELPER FUNCTION: Convert struct to map
+// ============================================
+// This helper converts your bill struct to map[string]any for expand processing
+func structToMapSlice(s any) ([]map[string]any, error) {
+	data, err := json.Marshal(s)
+	if err != nil {
+		return nil, err
+	}
+
+	var m []map[string]any
+	if err := json.Unmarshal(data, &m); err != nil {
+		return nil, err
+	}
+
+	return m, nil
+}
+
+func structToMap(s any) (map[string]any, error) {
+	data, err := json.Marshal(s)
+	if err != nil {
+		return nil, err
+	}
+
+	var m map[string]any
+	if err := json.Unmarshal(data, &m); err != nil {
+		return nil, err
+	}
+
+	return m, nil
+}
+
+// ============================================
+// GetBills WITH EXPAND SUPPORT
+// ============================================
 // @Summary Get bills
-// @Description List bills (orders) with bill snapshots and filters
+// @Description List bills (orders) with bill snapshots and filters, supports expand
 // @Tags reports
 // @Produce json
 // @Security BearerAuth
@@ -40,6 +77,7 @@ func parseBillTimeParam(v string) (*time.Time, error) {
 // @Param table_id query string false "Table ID (UUID)"
 // @Param limit query int false "Limit" default(20)
 // @Param offset query int false "Offset" default(0)
+// @Param expand query string false "Expand relations (comma-separated: user_id, hall_id, table_id, etc)"
 // @Success 200 {object} model.SuccessResponse
 // @Failure 400 {object} model.ErrorResponse
 // @Failure 401 {object} model.ErrorResponse
@@ -145,7 +183,10 @@ func (h *Handler) GetBills(c echo.Context) error {
 		req.TableID = &v
 	}
 
-	rows, err := h.service.Order().GetBills(c.Request().Context(), req)
+	// ============================================
+	// STEP 1: Fetch data from service
+	// ============================================
+	resp, err := h.service.Order().GetBills(c.Request().Context(), req)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse(
 			"failed to get bills",
@@ -153,21 +194,77 @@ func (h *Handler) GetBills(c echo.Context) error {
 			http.StatusInternalServerError,
 		))
 	}
+
+	// ============================================
+	// STEP 2: Parse expand query parameter
+	// ============================================
+	expandParam := c.QueryParam("expand")
+	expandFields := pg.ParseExpandFields(expandParam)
+
+	// ============================================
+	// STEP 3: Apply expand if requested (on items only)
+	// ============================================
+	if len(expandFields) > 0 {
+		itemMaps, err := structToMapSlice(resp.Items)
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, model.NewErrorResponse(
+				"failed to process bills",
+				err.Error(),
+				http.StatusInternalServerError,
+			))
+		}
+
+		ctx := c.Request().Context()
+		expandMgr := h.repo.TenantExpand(ctx)
+
+		if err := expandMgr.ExpandRows(ctx, "orders", itemMaps, expandFields); err != nil {
+			if errors.Is(err, pg.ErrInvalidExpandField) {
+				return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+					"invalid expand field",
+					err.Error(),
+					http.StatusBadRequest,
+				))
+			}
+			return c.JSON(http.StatusInternalServerError, model.NewErrorResponse(
+				"failed to expand relations",
+				err.Error(),
+				http.StatusInternalServerError,
+			))
+		}
+
+		return c.JSON(http.StatusOK, model.NewSuccessResponse(
+			"Bills retrieved successfully",
+			map[string]any{
+				"total":  resp.Total,
+				"limit":  resp.Limit,
+				"offset": resp.Offset,
+				"items":  itemMaps,
+			},
+			http.StatusOK,
+		))
+	}
+
+	// ============================================
+	// STEP 4: Return normal response (no expand)
+	// ============================================
 	return c.JSON(http.StatusOK, model.NewSuccessResponse(
 		"Bills retrieved successfully",
-		rows,
+		resp,
 		http.StatusOK,
 	))
 }
 
-// GetBillDetails retrieves a single bill details by id
+// ============================================
+// GetBillDetails WITH EXPAND SUPPORT
+// ============================================
 // @Summary Get bill details
-// @Description Get full bill details including items
+// @Description Get full bill details including items, supports expand
 // @Tags reports
 // @Produce json
 // @Security BearerAuth
 // @Param lang query string false "Language (uz, ru, en)" default(uz)
 // @Param id path string true "Bill ID (UUID)"
+// @Param expand query string false "Expand relations (comma-separated: user_id, hall_id, etc)"
 // @Success 200 {object} model.SuccessResponse
 // @Failure 400 {object} model.ErrorResponse
 // @Failure 401 {object} model.ErrorResponse
@@ -190,6 +287,9 @@ func (h *Handler) GetBillDetails(c echo.Context) error {
 		))
 	}
 
+	// ============================================
+	// STEP 1: Fetch single bill
+	// ============================================
 	bill, err := h.service.Order().GetBillDetails(c.Request().Context(), billID)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse(
@@ -198,9 +298,100 @@ func (h *Handler) GetBillDetails(c echo.Context) error {
 			http.StatusInternalServerError,
 		))
 	}
+
+	// ============================================
+	// STEP 2: Convert to map
+	// ============================================
+	billMap, err := structToMap(bill)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse(
+			"failed to process bill",
+			err.Error(),
+			http.StatusInternalServerError,
+		))
+	}
+
+	// ============================================
+	// STEP 3: Wrap in slice (required by ExpandRows)
+	// ============================================
+	rows := []map[string]any{billMap}
+
+	// ============================================
+	// STEP 4: Parse expand query parameter
+	// ============================================
+	expandParam := c.QueryParam("expand")
+	expandFields := pg.ParseExpandFields(expandParam)
+
+	// ============================================
+	// STEP 5: Apply expand if requested
+	// ============================================
+	if len(expandFields) > 0 {
+		ctx := c.Request().Context()
+		expandMgr := h.repo.TenantExpand(ctx)
+
+		if err := expandMgr.ExpandRows(ctx, "orders", rows, expandFields); err != nil {
+			if errors.Is(err, pg.ErrInvalidExpandField) {
+				return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+					"invalid expand field",
+					err.Error(),
+					http.StatusBadRequest,
+				))
+			}
+			return c.JSON(http.StatusInternalServerError, model.NewErrorResponse(
+				"failed to expand relations",
+				err.Error(),
+				http.StatusInternalServerError,
+			))
+		}
+	}
+
+	// ============================================
+	// STEP 6: Unwrap from slice and return
+	// ============================================
 	return c.JSON(http.StatusOK, model.NewSuccessResponse(
 		"Bill details retrieved successfully",
-		bill,
+		rows[0],  // ← Unwrap from slice
 		http.StatusOK,
 	))
 }
+
+// ============================================
+// API USAGE EXAMPLES
+// ============================================
+/*
+WITHOUT EXPAND:
+GET /api/v1/bills
+GET /api/v1/bills/uuid-123
+
+WITH EXPAND:
+GET /api/v1/bills?expand=user_id
+GET /api/v1/bills?expand=user_id,hall_id
+GET /api/v1/bills?expand=user_id,table_id
+GET /api/v1/bills/uuid-123?expand=user_id
+
+RESPONSE FORMAT:
+{
+  "code": 200,
+  "message": "Bills retrieved successfully",
+  "data": [
+    {
+      "id": "uuid-123",
+      "bill_no": 1,
+      "user_id": 5,
+      "hall_id": 10,
+      "status": "paid",
+      "_expand": {
+        "user_id": {
+          "id": 5,
+          "name": "John Doe",
+          "email": "john@example.com"
+        },
+        "hall_id": {
+          "id": 10,
+          "name": "Main Hall"
+        }
+      }
+    }
+  ]
+}
+*/

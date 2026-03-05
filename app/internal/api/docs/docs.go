@@ -749,7 +749,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "List bills (orders) with bill snapshots and filters",
+                "description": "List bills (orders) with bill snapshots and filters, supports expand",
                 "produces": [
                     "application/json"
                 ],
@@ -826,6 +826,12 @@ const docTemplate = `{
                         "description": "Offset",
                         "name": "offset",
                         "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Expand relations (comma-separated: user_id, hall_id, table_id, etc)",
+                        "name": "expand",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -863,7 +869,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Get full bill details including items",
+                "description": "Get full bill details including items, supports expand",
                 "produces": [
                     "application/json"
                 ],
@@ -885,6 +891,12 @@ const docTemplate = `{
                         "name": "id",
                         "in": "path",
                         "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Expand relations (comma-separated: user_id, hall_id, etc)",
+                        "name": "expand",
+                        "in": "query"
                     }
                 ],
                 "responses": {

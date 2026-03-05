@@ -4524,7 +4524,7 @@ paths:
       - auth
   /api/v1/bills:
     get:
-      description: List bills (orders) with bill snapshots and filters
+      description: List bills (orders) with bill snapshots and filters, supports expand
       parameters:
       - default: uz
         description: Language (uz, ru, en)
@@ -4573,6 +4573,11 @@ paths:
         in: query
         name: offset
         type: integer
+      - description: 'Expand relations (comma-separated: user_id, hall_id, table_id,
+          etc)'
+        in: query
+        name: expand
+        type: string
       produces:
       - application/json
       responses:
@@ -4599,7 +4604,7 @@ paths:
       - reports
   /api/v1/bills/{id}:
     get:
-      description: Get full bill details including items
+      description: Get full bill details including items, supports expand
       parameters:
       - default: uz
         description: Language (uz, ru, en)
@@ -4610,6 +4615,10 @@ paths:
         in: path
         name: id
         required: true
+        type: string
+      - description: 'Expand relations (comma-separated: user_id, hall_id, etc)'
+        in: query
+        name: expand
         type: string
       produces:
       - application/json
