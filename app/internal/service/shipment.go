@@ -3,6 +3,8 @@ package service
 import (
 	"context"
 	"fmt"
+	"math/big"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -552,9 +554,27 @@ func pgNumericToStr(n pgtype.Numeric) string {
 	if !n.Valid {
 		return "0"
 	}
-	f, err := n.Float64Value()
-	if err != nil || !f.Valid {
+	if n.NaN {
 		return "0"
 	}
-	return fmt.Sprintf("%g", f.Float64)
+	if n.Int == nil {
+		return "0"
+	}
+	// Use big.Rat for exact decimal representation (no scientific notation)
+	rat := new(big.Rat).SetInt(n.Int)
+	if n.Exp > 0 {
+		mul := new(big.Int).Exp(big.NewInt(10), big.NewInt(int64(n.Exp)), nil)
+		rat.Mul(rat, new(big.Rat).SetInt(mul))
+	} else if n.Exp < 0 {
+		div := new(big.Int).Exp(big.NewInt(10), big.NewInt(int64(-n.Exp)), nil)
+		rat.Quo(rat, new(big.Rat).SetInt(div))
+	}
+	// Format as decimal string without scientific notation
+	s := rat.FloatString(10) // up to 10 decimal places
+	// Trim trailing zeros after decimal point
+	if strings.Contains(s, ".") {
+		s = strings.TrimRight(s, "0")
+		s = strings.TrimRight(s, ".")
+	}
+	return s
 }
