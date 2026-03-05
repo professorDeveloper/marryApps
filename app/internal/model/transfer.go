@@ -64,6 +64,10 @@ type CreateTransferItemsRequest struct {
 	Items      []CreateTransferItemEntry `json:"items" validate:"required,min=1"`
 }
 
+type UpsertTransferItemsRequest struct {
+	Items []CreateTransferItemEntry `json:"items" validate:"required,min=1"`
+}
+
 // ==================== BATCH ====================
 
 type CreateTransferBatchRequest struct {

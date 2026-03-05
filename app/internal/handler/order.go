@@ -44,19 +44,25 @@ func (h *Handler) CreateOrder(c echo.Context) error {
 		req.WaiterID = &userID
 	}
 
-	if req.TableID == "" {
+	orderTypeStr := "dine_in"
+	if req.OrderType != nil && *req.OrderType == "takeaway" {
+		orderTypeStr = "takeaway"
+	}
+	if orderTypeStr != "takeaway" && req.TableID == "" {
 		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
 			"table_id is required",
 			"missing required field: table_id",
 			http.StatusBadRequest,
 		))
 	}
-	if _, err := uuid.Parse(req.TableID); err != nil {
-		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
-			"invalid table_id format",
-			err.Error(),
-			http.StatusBadRequest,
-		))
+	if req.TableID != "" {
+		if _, err := uuid.Parse(req.TableID); err != nil {
+			return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+				"invalid table_id format",
+				err.Error(),
+				http.StatusBadRequest,
+			))
+		}
 	}
 	if req.WaiterID != nil && *req.WaiterID != "" {
 		if _, err := uuid.Parse(*req.WaiterID); err != nil {
@@ -1865,3 +1871,115 @@ func (h *Handler) RestoreOrderItem(c echo.Context) error {
 // 	}
 // 	return c.JSON(http.StatusOK, items)
 // }
+
+// ActivateOrder manually activates a reserved/rescheduled order
+// @Summary Activate reserved order
+// @Description Manually activate a reserved or rescheduled order (sets status to open)
+// @Tags Orders
+// @Produce json
+// @Security BearerAuth
+// @Param lang query string false "Language (uz, ru, en)" default(uz)
+// @Param id path string true "Order ID"
+// @Success 200 {object} model.SuccessResponse
+// @Failure 400 {object} model.ErrorResponse
+// @Failure 401 {object} model.ErrorResponse
+// @Failure 500 {object} model.ErrorResponse
+// @Router /api/v1/orders/{id}/activate [post]
+func (h *Handler) ActivateOrder(c echo.Context) error {
+	orderID := c.Param("id")
+	if orderID == "" {
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"order id is required",
+			"missing path parameter: id",
+			http.StatusBadRequest,
+		))
+	}
+	if _, err := uuid.Parse(orderID); err != nil {
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"invalid order id format",
+			err.Error(),
+			http.StatusBadRequest,
+		))
+	}
+
+	order, err := h.service.Order().ActivateOrder(c.Request().Context(), orderID)
+	if err != nil {
+		log.Printf("ActivateOrder failed: %v", err)
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse(
+			"failed to activate order",
+			err.Error(),
+			http.StatusInternalServerError,
+		))
+	}
+
+	return c.JSON(http.StatusOK, model.NewSuccessResponse(
+		"Order activated successfully",
+		order,
+		http.StatusOK,
+	))
+}
+
+// RescheduleOrder reschedules a reserved/rescheduled order to a new time
+// @Summary Reschedule order
+// @Description Move a reservation to a new scheduled time with an optional comment
+// @Tags Orders
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param lang query string false "Language (uz, ru, en)" default(uz)
+// @Param id path string true "Order ID"
+// @Param body body model.RescheduleOrderRequest true "Reschedule request"
+// @Success 200 {object} model.SuccessResponse
+// @Failure 400 {object} model.ErrorResponse
+// @Failure 401 {object} model.ErrorResponse
+// @Failure 500 {object} model.ErrorResponse
+// @Router /api/v1/orders/{id}/reschedule [post]
+func (h *Handler) RescheduleOrder(c echo.Context) error {
+	orderID := c.Param("id")
+	if orderID == "" {
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"order id is required",
+			"missing path parameter: id",
+			http.StatusBadRequest,
+		))
+	}
+	if _, err := uuid.Parse(orderID); err != nil {
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"invalid order id format",
+			err.Error(),
+			http.StatusBadRequest,
+		))
+	}
+
+	var req model.RescheduleOrderRequest
+	if err := c.Bind(&req); err != nil {
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"invalid request body",
+			err.Error(),
+			http.StatusBadRequest,
+		))
+	}
+	if req.ScheduledAt == "" {
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"scheduled_at is required",
+			"scheduled_at must be a valid RFC3339 timestamp",
+			http.StatusBadRequest,
+		))
+	}
+
+	order, err := h.service.Order().RescheduleOrder(c.Request().Context(), orderID, req)
+	if err != nil {
+		log.Printf("RescheduleOrder failed: %v", err)
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse(
+			"failed to reschedule order",
+			err.Error(),
+			http.StatusInternalServerError,
+		))
+	}
+
+	return c.JSON(http.StatusOK, model.NewSuccessResponse(
+		"Order rescheduled successfully",
+		order,
+		http.StatusOK,
+	))
+}

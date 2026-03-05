@@ -423,3 +423,70 @@ func (h *Handler) RestoreDeduction(c echo.Context) error {
 
 	return c.JSON(http.StatusOK, model.NewSuccessResponse("Deduction restored successfully", resp, http.StatusOK))
 }
+
+// UpsertDeductionItems replaces all items of a deduction in one call, reversing the previous stock impact and applying the new one.
+// @Summary Batch update deduction items
+// @Description Replaces all deduction items for the given deduction. Previous stock deductions are reversed, then new quantities are applied. Returns warnings if any ingredient has insufficient stock.
+// @Tags deductions
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path string true "Deduction ID"
+// @Param input body model.UpsertDeductionItemsRequest true "New deduction items"
+// @Success 200 {object} model.DeductionResponse "Updated deduction with new items"
+// @Failure 400 {object} model.ErrorResponse "Invalid request"
+// @Failure 404 {object} model.ErrorResponse "Deduction not found"
+// @Failure 500 {object} model.ErrorResponse "Internal server error"
+// @Router /api/v1/deductions/{id}/items/batch [put]
+func (h *Handler) UpsertDeductionItems(c echo.Context) error {
+	id := c.Param("id")
+	if _, err := uuid.Parse(id); err != nil {
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("invalid deduction id", err.Error(), http.StatusBadRequest))
+	}
+
+	var req model.UpsertDeductionItemsRequest
+	if err := c.Bind(&req); err != nil {
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("invalid request format", err.Error(), http.StatusBadRequest))
+	}
+
+	resp, err := h.service.Deduction().UpsertDeductionItems(c.Request().Context(), id, &req)
+	if err != nil {
+		log.Printf("UpsertDeductionItems failed for id %s: %v", id, err)
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("failed to update deduction items", err.Error(), http.StatusInternalServerError))
+	}
+
+	return c.JSON(http.StatusOK, model.NewSuccessResponse("Deduction items updated successfully", resp, http.StatusOK))
+}
+
+// DeleteDeductionItem removes a single deduction item and reverses its stock impact
+// @Summary Delete deduction item
+// @Description Removes a single item from a deduction and adds its deducted quantities back to stock
+// @Tags deductions
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path string true "Deduction ID"
+// @Param itemId path string true "Deduction Item ID"
+// @Success 200 {object} model.DeductionResponse "Updated deduction"
+// @Failure 400 {object} model.ErrorResponse "Invalid request"
+// @Failure 404 {object} model.ErrorResponse "Not found"
+// @Failure 500 {object} model.ErrorResponse "Internal server error"
+// @Router /api/v1/deductions/{id}/items/{itemId} [delete]
+func (h *Handler) DeleteDeductionItem(c echo.Context) error {
+	id := c.Param("id")
+	itemId := c.Param("itemId")
+	if _, err := uuid.Parse(id); err != nil {
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("invalid deduction id", err.Error(), http.StatusBadRequest))
+	}
+	if _, err := uuid.Parse(itemId); err != nil {
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("invalid item id", err.Error(), http.StatusBadRequest))
+	}
+
+	resp, err := h.service.Deduction().DeleteDeductionItem(c.Request().Context(), id, itemId)
+	if err != nil {
+		log.Printf("DeleteDeductionItem failed: %v", err)
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("failed to delete deduction item", err.Error(), http.StatusInternalServerError))
+	}
+
+	return c.JSON(http.StatusOK, model.NewSuccessResponse("Deduction item deleted successfully", resp, http.StatusOK))
+}

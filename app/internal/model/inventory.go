@@ -50,6 +50,20 @@ type UpsertInventoryItemsRequest struct {
 	Items []UpsertInventoryItemRequest `json:"items" validate:"required,min=1,dive"`
 }
 
+type CreateInventoryBatchRequest struct {
+	Date            string                      `json:"date" validate:"required" example:"2024-01-01"`
+	StorageID       string                      `json:"storage_id" validate:"required" example:"d1f29b75-8g6d-5536-0525-2c12deeef0e0"`
+	Description     *string                     `json:"description,omitempty" example:"Monthly inventory"`
+	DescriptionI18n *string                     `json:"description_i18n,omitempty"`
+	Status          *string                     `json:"status,omitempty" example:"active"`
+	Items           []UpsertInventoryItemRequest `json:"items" validate:"required,min=1,dive"`
+}
+
+type CreateInventoryBatchResponse struct {
+	Inventory *InventoryResponse             `json:"inventory"`
+	Items     []*InventoryItemComputedResponse `json:"items"`
+}
+
 type InventoryItemComputedResponse struct {
 	InventoryItemID       *string `json:"inventory_item_id,omitempty" example:"123e4567-e89b-12d3-a456-426614174000"`
 	InventoryID           string  `json:"inventory_id" example:"123e4567-e89b-12d3-a456-426614174000"`

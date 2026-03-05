@@ -185,11 +185,18 @@ WHERE deleted_at = 0
 ORDER BY created_at DESC;
 
 -- name: GetAllUsersPaginated :many
-SELECT * FROM users 
+SELECT * FROM users
 WHERE deleted_at = 0
   AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 ORDER BY created_at DESC
 LIMIT $1 OFFSET $2;
+
+-- name: GetStaffUsers :many
+SELECT * FROM users
+WHERE deleted_at = 0
+  AND role NOT IN ('admin', 'superadmin')
+  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+ORDER BY full_name ASC;
 
 -- name: GetUsersByRole :many
 SELECT * FROM users 

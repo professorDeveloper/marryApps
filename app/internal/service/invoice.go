@@ -362,6 +362,15 @@ func (s *InvoiceS) DeleteInvoice(ctx context.Context, id string) error {
 		return fmt.Errorf("invalid invoice id: %w", err)
 	}
 
+	// Reverse stock: remove quantities that were added when each invoice detail was created
+	inv, err := s.repo.Tenant(ctx).GetInvoiceByID(ctx, invoiceID)
+	if err == nil && inv.StorageID.Valid && inv.Status.InvoiceStatus != "cancelled" {
+		details, _ := s.repo.Tenant(ctx).GetInvoiceDetailsByInvoiceID(ctx, invoiceID)
+		for _, d := range details {
+			_ = s.applyInvoiceStockMovement(ctx, inv.StorageID, d.IngredientID, zeroNumeric(), d.Quantity, "invoice_deleted_out", d.PricePerUnit, invoiceID)
+		}
+	}
+
 	if err := s.repo.Tenant(ctx).DeleteInvoice(ctx, invoiceID); err != nil {
 		return fmt.Errorf("failed to delete invoice: %w", err)
 	}
@@ -1227,6 +1236,92 @@ func zeroNumeric() pgtype.Numeric {
 	return z
 }
 
+// UpsertInvoiceDetails replaces all details for an invoice, reversing old stock and applying new quantities
+func (s *InvoiceS) UpsertInvoiceDetails(ctx context.Context, invoiceID string, req *model.UpsertInvoiceDetailsRequest) (*model.UpsertInvoiceDetailsResponse, error) {
+	invoiceUUID, err := uuid.Parse(invoiceID)
+	if err != nil {
+		return nil, fmt.Errorf("invalid invoice id: %w", err)
+	}
+
+	invoice, err := s.repo.Tenant(ctx).GetInvoiceByID(ctx, invoiceUUID)
+	if err != nil {
+		return nil, fmt.Errorf("invoice not found: %w", err)
+	}
+	if !invoice.StorageID.Valid {
+		return nil, fmt.Errorf("invoice storage_id is required to update stock")
+	}
+
+	// Step 1: reverse stock for all existing details
+	existing, err := s.repo.Tenant(ctx).GetInvoiceDetailsByInvoiceID(ctx, invoiceUUID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get existing invoice details: %w", err)
+	}
+	for _, d := range existing {
+		if err := s.applyInvoiceStockMovement(ctx, invoice.StorageID, d.IngredientID, zeroNumeric(), d.Quantity, "invoice_batch_update_out", d.PricePerUnit, invoiceUUID); err != nil {
+			return nil, fmt.Errorf("failed to reverse stock for ingredient %s: %w", d.IngredientID, err)
+		}
+	}
+
+	// Step 2: soft-delete all existing details
+	if err := s.repo.Tenant(ctx).DeleteInvoiceDetailsByInvoiceID(ctx, invoiceUUID); err != nil {
+		return nil, fmt.Errorf("failed to delete existing invoice details: %w", err)
+	}
+
+	// Step 3: create new details and add stock
+	response := &model.UpsertInvoiceDetailsResponse{
+		Details: make([]model.InvoiceDetailResponse, 0, len(req.Details)),
+	}
+
+	for i, item := range req.Details {
+		ingredientUUID, err := uuid.Parse(item.IngredientID)
+		if err != nil {
+			return nil, fmt.Errorf("item %d: invalid ingredient_id: %w", i+1, err)
+		}
+
+		qty := pgtype.Numeric{}
+		if err := qty.Scan(item.Quantity); err != nil {
+			return nil, fmt.Errorf("item %d: invalid quantity: %w", i+1, err)
+		}
+
+		price := pgtype.Numeric{}
+		if err := price.Scan(item.Price); err != nil {
+			return nil, fmt.Errorf("item %d: invalid price: %w", i+1, err)
+		}
+
+		pricePerUnit := pgtype.Numeric{}
+		if err := pricePerUnit.Scan(item.PricePerUnit); err != nil {
+			return nil, fmt.Errorf("item %d: invalid price_per_unit: %w", i+1, err)
+		}
+
+		detail, err := s.repo.Tenant(ctx).CreateInvoiceDetail(ctx, pg.CreateInvoiceDetailParams{
+			ID:           uuid.New(),
+			InvoiceID:    invoiceUUID,
+			IngredientID: ingredientUUID,
+			Quantity:     qty,
+			Price:        price,
+			PricePerUnit: pricePerUnit,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("item %d: failed to create invoice detail: %w", i+1, err)
+		}
+
+		_, _ = s.repo.Tenant(ctx).UpdateIngredientPriceAndQuantity(ctx, pg.UpdateIngredientPriceAndQuantityParams{
+			ID:           ingredientUUID,
+			PricePerUnit: pricePerUnit,
+		})
+		_ = s.repo.Tenant(ctx).EnsureIngredientVisibilityForCurrentBranch(ctx, ingredientUUID)
+
+		if err := s.applyInvoiceStockMovement(ctx, invoice.StorageID, ingredientUUID, qty, zeroNumeric(), "invoice_batch_update_in", pricePerUnit, invoiceUUID); err != nil {
+			return nil, fmt.Errorf("item %d: failed to add stock: %w", i+1, err)
+		}
+
+		response.Details = append(response.Details, *toInvoiceDetailResponse(detail))
+	}
+
+	response.Success = len(response.Details)
+	return response, nil
+}
+
 // DeleteInvoiceDetailsByInvoiceID deletes all details for an invoice
 func (s *InvoiceS) DeleteInvoiceDetailsByInvoiceID(ctx context.Context, invoiceID string) error {
 	invUUID, err := uuid.Parse(invoiceID)
@@ -1295,11 +1390,16 @@ func toInvoiceResponse(inv pg.Invoice) *model.InvoiceResponse {
 	createdAt := inv.CreatedAt
 	updatedAt := inv.UpdatedAt
 
+	responseStatus := model.InvoiceStatus(status.InvoiceStatus)
+	if inv.DeletedAt != nil && *inv.DeletedAt > 0 {
+		responseStatus = "deleted"
+	}
+
 	response := &model.InvoiceResponse{
 		ID:          id.String(),
 		SupplierID:  supplierID.String(),
 		TotalAmount: numericToString(totalAmount),
-		Status:      model.InvoiceStatus(status.InvoiceStatus),
+		Status:      responseStatus,
 	}
 
 	if storageID.Valid {

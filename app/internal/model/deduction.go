@@ -42,6 +42,10 @@ type CreateDeductionRequest struct {
 	Items           []CreateDeductionItemRequest `json:"items" validate:"required,min=1,dive"`
 }
 
+type UpsertDeductionItemsRequest struct {
+	Items []CreateDeductionItemRequest `json:"items" validate:"required,min=1,dive"`
+}
+
 type UpdateDeductionRequest struct {
 	Date            *string `json:"date,omitempty" example:"2024-01-01"`
 	ActGroupID      *string `json:"act_group_id,omitempty" example:"123e4567-e89b-12d3-a456-426614174000"`

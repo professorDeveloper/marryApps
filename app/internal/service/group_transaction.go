@@ -115,11 +115,13 @@ func (s *GroupTransactionS) SearchGroupTransactions(ctx context.Context, query s
 }
 
 func toGroupTransactionResponse(row pg.GroupTransaction) *model.GroupTransactionResponse {
+	isDeleted := row.DeletedAt != nil && *row.DeletedAt > 0
 	return &model.GroupTransactionResponse{
 		ID:        row.ID.String(),
 		Name:      row.Name,
 		BranchID:  uuidToStr(row.BranchID),
 		CreatedAt: timestampToTime(row.CreatedAt),
 		UpdatedAt: timestampToTime(row.UpdatedAt),
+		IsDeleted: isDeleted,
 	}
 }

@@ -14,7 +14,6 @@ WHERE id = $1
 SELECT id, name, branch_id, created_at, updated_at, deleted_at
 FROM group_transactions
 WHERE branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-  AND deleted_at = 0
 ORDER BY created_at DESC
 LIMIT $1 OFFSET $2;
 
@@ -45,7 +44,6 @@ RETURNING id, name, branch_id, created_at, updated_at, deleted_at;
 SELECT id, name, branch_id, created_at, updated_at, deleted_at
 FROM group_transactions
 WHERE branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-  AND deleted_at = 0
   AND (LOWER(name) LIKE LOWER('%' || $1 || '%'))
 ORDER BY created_at DESC
 LIMIT $2 OFFSET $3;

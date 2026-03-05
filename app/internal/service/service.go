@@ -282,7 +282,7 @@ type InventoryI interface {
 	UpdateInventoryItem(ctx context.Context, inventoryItemID string, req *model.UpdateInventoryItemRequest) (*model.InventoryItemResponse, error)
 	DeleteInventoryItem(ctx context.Context, inventoryItemID string) error
 	CalculateInventory(ctx context.Context, inventoryID string) (*model.InventoryResponse, error)
-	ApplyInventory(ctx context.Context, inventoryID string) (*model.InventoryResponse, error)
+	CreateInventoryBatch(ctx context.Context, req *model.CreateInventoryBatchRequest) (*model.CreateInventoryBatchResponse, error)
 }
 
 type DeductionI interface {
@@ -299,6 +299,8 @@ type DeductionI interface {
 	UpdateDeduction(ctx context.Context, id string, req *model.UpdateDeductionRequest) (*model.DeductionResponse, error)
 	DeleteDeduction(ctx context.Context, id string) error
 	RestoreDeduction(ctx context.Context, id string) (*model.DeductionResponse, error)
+	UpsertDeductionItems(ctx context.Context, deductionID string, req *model.UpsertDeductionItemsRequest) (*model.DeductionResponse, error)
+	DeleteDeductionItem(ctx context.Context, deductionID, itemID string) (*model.DeductionResponse, error)
 }
 
 type InvoiceI interface {
@@ -335,6 +337,7 @@ type InvoiceI interface {
 	DeleteInvoiceDetail(ctx context.Context, id string) error
 	RestoreInvoiceDetail(ctx context.Context, id string) error
 	DeleteInvoiceDetailsByInvoiceID(ctx context.Context, invoiceID string) error
+	UpsertInvoiceDetails(ctx context.Context, invoiceID string, req *model.UpsertInvoiceDetailsRequest) (*model.UpsertInvoiceDetailsResponse, error)
 	CountInvoiceDetails(ctx context.Context) (int64, error)
 	CountInvoiceDetailsByInvoice(ctx context.Context, invoiceID string) (int64, error)
 	GetInvoiceDetailWithIngredient(ctx context.Context, id string) (*model.InvoiceDetailWithIngredientResponse, error)
@@ -359,6 +362,8 @@ type OrderI interface {
 	MarkOrderServed(ctx context.Context, orderID string) (*model.OrderResponse, error)
 	DeleteOrder(ctx context.Context, orderID string) error
 	RestoreOrder(ctx context.Context, orderID string) error
+	ActivateOrder(ctx context.Context, orderID string) (*model.OrderResponse, error)
+	RescheduleOrder(ctx context.Context, orderID string, req model.RescheduleOrderRequest) (*model.OrderResponse, error)
 
 	GetBills(ctx context.Context, req model.GetBillsRequest) (*model.BillListResponse, error)
 	GetBillDetails(ctx context.Context, billID string) (*model.BillDetails, error)
@@ -410,6 +415,7 @@ type TransferI interface {
 	GetAllTransfers(ctx context.Context, limit, offset int32) ([]model.TransferResponse, error)
 	DeleteTransfer(ctx context.Context, transferID string) error
 	DeleteTransferItem(ctx context.Context, itemID string) error
+	UpsertTransferItems(ctx context.Context, transferID string, req model.UpsertTransferItemsRequest) (*model.TransferResponse, error)
 }
 
 type CashRegisterI interface {
@@ -420,6 +426,15 @@ type CashRegisterI interface {
 	UpdateCashRegister(ctx context.Context, id uuid.UUID, req model.CashRegisterRequest) (model.CashRegisterResponse, error)
 	DeleteCashRegister(ctx context.Context, id uuid.UUID) error
 	RestoreCashRegister(ctx context.Context, id uuid.UUID) error
+}
+
+type CashRegisterShiftI interface {
+	OpenShift(ctx context.Context, req model.OpenCashRegisterShiftRequest) (*model.CashRegisterShiftResponse, error)
+	CloseShift(ctx context.Context, id string, req model.CloseCashRegisterShiftRequest) (*model.CashRegisterShiftResponse, error)
+	GetShift(ctx context.Context, id string) (*model.CashRegisterShiftResponse, error)
+	GetActiveShift(ctx context.Context, cashRegisterID string) (*model.CashRegisterShiftResponse, error)
+	ListShifts(ctx context.Context, cashRegisterID, cashierID, status *string, limit, offset int32) ([]*model.CashRegisterShiftResponse, int64, error)
+	DeleteShift(ctx context.Context, id string) error
 }
 
 type GroupTransactionI interface {
@@ -471,6 +486,7 @@ type I interface {
 	Deduction() DeductionI
 	Transfer() TransferI
 	Cash() CashRegisterI
+	CashRegisterShift() CashRegisterShiftI
 	GroupTransaction() GroupTransactionI
 	Transaction() TransactionI
 	Shipment() ShipmentI
@@ -503,8 +519,9 @@ type Service struct {
 	calculation  CalculationI
 	deduction    DeductionI
 	transfer     TransferI
-	cash             CashRegisterI
-	groupTransaction GroupTransactionI
+	cash              CashRegisterI
+	cashRegisterShift CashRegisterShiftI
+	groupTransaction  GroupTransactionI
 	transaction      TransactionI
 	shipment         ShipmentI
 	outgoingInvoice  OutgoingInvoiceI
@@ -537,8 +554,9 @@ func New(cfg *config.Config, repo *repository.Repository, clickClient *paymentCl
 		calculation:  NewCalculationS(repo),
 		deduction:    NewDeductionS(repo),
 		transfer:     NewTransferS(repo),
-		cash:             NewCashRegisterS(repo),
-		groupTransaction: NewGroupTransactionS(repo),
+		cash:              NewCashRegisterS(repo),
+		cashRegisterShift: NewCashRegisterShiftS(repo),
+		groupTransaction:  NewGroupTransactionS(repo),
 		transaction:      NewTransactionS(repo),
 		shipment:         NewShipmentS(repo),
 		outgoingInvoice:  NewOutgoingInvoiceS(repo),
@@ -640,6 +658,10 @@ func (s *Service) Transfer() TransferI {
 
 func (s *Service) Cash() CashRegisterI {
 	return s.cash
+}
+
+func (s *Service) CashRegisterShift() CashRegisterShiftI {
+	return s.cashRegisterShift
 }
 
 func (s *Service) GroupTransaction() GroupTransactionI {

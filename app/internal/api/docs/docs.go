@@ -749,7 +749,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "List bills (orders) with bill snapshots and filters",
+                "description": "List bills (orders) with bill snapshots and filters, supports expand",
                 "produces": [
                     "application/json"
                 ],
@@ -775,6 +775,12 @@ const docTemplate = `{
                         "type": "string",
                         "description": "End date/time (RFC3339 or YYYY-MM-DD)",
                         "name": "end",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Bill number to search within the date range",
+                        "name": "bill_no",
                         "in": "query"
                     },
                     {
@@ -820,6 +826,12 @@ const docTemplate = `{
                         "description": "Offset",
                         "name": "offset",
                         "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Expand relations (comma-separated: user_id, hall_id, table_id, etc)",
+                        "name": "expand",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -857,7 +869,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Get full bill details including items",
+                "description": "Get full bill details including items, supports expand",
                 "produces": [
                     "application/json"
                 ],
@@ -879,6 +891,12 @@ const docTemplate = `{
                         "name": "id",
                         "in": "path",
                         "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Expand relations (comma-separated: user_id, hall_id, etc)",
+                        "name": "expand",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -2395,6 +2413,309 @@ const docTemplate = `{
                     },
                     "500": {
                         "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/cash-register-shifts": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns a paginated list of cash register shifts. Filter by cash_register_id, cashier_id, or status (open/closed).",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "CashRegisterShifts"
+                ],
+                "summary": "List cash register shifts",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Filter by cash register ID",
+                        "name": "cash_register_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by cashier ID",
+                        "name": "cashier_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by status: open or closed",
+                        "name": "status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 20,
+                        "description": "Limit",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 0,
+                        "description": "Offset",
+                        "name": "offset",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Opens a new shift for a cash register. Only one active shift per cash register is allowed.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "CashRegisterShifts"
+                ],
+                "summary": "Open cash register shift",
+                "parameters": [
+                    {
+                        "description": "Open shift request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.OpenCashRegisterShiftRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/model.CashRegisterShiftResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/cash-register-shifts/active": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns the currently open shift for the given cash register.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "CashRegisterShifts"
+                ],
+                "summary": "Get active shift",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Cash Register ID",
+                        "name": "cash_register_id",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.CashRegisterShiftResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/cash-register-shifts/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns a single cash register shift by its ID.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "CashRegisterShifts"
+                ],
+                "summary": "Get cash register shift",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Shift ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.CashRegisterShiftResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Soft-deletes a cash register shift by ID.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "CashRegisterShifts"
+                ],
+                "summary": "Delete cash register shift",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Shift ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.SuccessResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/cash-register-shifts/{id}/close": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Closes an open shift by recording closing cash and card amounts.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "CashRegisterShifts"
+                ],
+                "summary": "Close cash register shift",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Shift ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Close shift request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.CloseCashRegisterShiftRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.CashRegisterShiftResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
                         "schema": {
                             "$ref": "#/definitions/model.ErrorResponse"
                         }
@@ -6692,6 +7013,132 @@ const docTemplate = `{
                     },
                     "401": {
                         "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/deductions/{id}/items/batch": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Replaces all deduction items for the given deduction. Previous stock deductions are reversed, then new quantities are applied. Returns warnings if any ingredient has insufficient stock.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "deductions"
+                ],
+                "summary": "Batch update deduction items",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Deduction ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "New deduction items",
+                        "name": "input",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.UpsertDeductionItemsRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Updated deduction with new items",
+                        "schema": {
+                            "$ref": "#/definitions/model.DeductionResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Deduction not found",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/deductions/{id}/items/{itemId}": {
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Removes a single item from a deduction and adds its deducted quantities back to stock",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "deductions"
+                ],
+                "summary": "Delete deduction item",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Deduction ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Deduction Item ID",
+                        "name": "itemId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Updated deduction",
+                        "schema": {
+                            "$ref": "#/definitions/model.DeductionResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not found",
                         "schema": {
                             "$ref": "#/definitions/model.ErrorResponse"
                         }
@@ -11025,6 +11472,12 @@ const docTemplate = `{
                         "description": "Offset for pagination (default: 0)",
                         "name": "offset",
                         "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Expand FK relations (comma-separated: ingredient_id, storage_id, branch_id)",
+                        "name": "expand",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -11145,6 +11598,12 @@ const docTemplate = `{
                         "default": 0,
                         "description": "Offset for pagination (default: 0)",
                         "name": "offset",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Expand FK relations (comma-separated: ingredient_id, storage_id, branch_id)",
+                        "name": "expand",
                         "in": "query"
                     }
                 ],
@@ -11286,6 +11745,12 @@ const docTemplate = `{
                         "description": "Offset for pagination (default: 0)",
                         "name": "offset",
                         "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Expand FK relations (comma-separated: ingredient_id, storage_id, branch_id)",
+                        "name": "expand",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -11344,6 +11809,12 @@ const docTemplate = `{
                         "name": "id",
                         "in": "path",
                         "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Expand FK relations (comma-separated: ingredient_id, storage_id, branch_id)",
+                        "name": "expand",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -11716,6 +12187,12 @@ const docTemplate = `{
                         "description": "Offset for pagination (default: 0)",
                         "name": "offset",
                         "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Expand FK relations (comma-separated: group_id, name_i18n)",
+                        "name": "expand",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -11834,6 +12311,12 @@ const docTemplate = `{
                         "description": "Offset (default: 0)",
                         "name": "offset",
                         "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Expand FK relations (comma-separated: group_id, name_i18n)",
+                        "name": "expand",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -11898,6 +12381,12 @@ const docTemplate = `{
                         "description": "Language code (uz, ru, en - default: uz)",
                         "name": "lang",
                         "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Expand FK relations (comma-separated: group_id, name_i18n)",
+                        "name": "expand",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -11959,6 +12448,12 @@ const docTemplate = `{
                         "name": "id",
                         "in": "path",
                         "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Expand FK relations (comma-separated: group_id, name_i18n)",
+                        "name": "expand",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -12467,6 +12962,57 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/inventories/batch": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Creates an inventory and upserts its items in a single request",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "inventories"
+                ],
+                "summary": "Create inventory with items",
+                "parameters": [
+                    {
+                        "description": "Inventory batch creation data",
+                        "name": "input",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.CreateInventoryBatchRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/model.CreateInventoryBatchResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/inventories/search": {
             "get": {
                 "security": [
@@ -12715,61 +13261,6 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/v1/inventories/{id}/apply": {
-            "post": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Apply inventory count to ingredient_stock for the inventory storage and record surplus/shortage movements",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "inventories"
-                ],
-                "summary": "Apply inventory",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Inventory ID",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Inventory applied successfully",
-                        "schema": {
-                            "$ref": "#/definitions/model.InventoryResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "Invalid inventory ID",
-                        "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal server error",
-                        "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
-                        }
-                    }
-                }
-            }
-        },
         "/api/v1/inventories/{id}/calculate": {
             "post": {
                 "security": [
@@ -12929,6 +13420,73 @@ const docTemplate = `{
                     },
                     "400": {
                         "description": "Invalid request data",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/inventories/{id}/items/batch": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Upsert (create/update) counted quantities for multiple ingredients in an existing inventory. Blocked if inventory is already applied.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "inventory_items"
+                ],
+                "summary": "Update inventory items batch",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Inventory ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Inventory items batch update data",
+                        "name": "input",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.UpsertInventoryItemsRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Inventory items updated successfully",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/model.InventoryItemComputedResponse"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request or inventory already applied",
                         "schema": {
                             "$ref": "#/definitions/model.ErrorResponse"
                         }
@@ -14913,6 +15471,77 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/invoices/{id}/details/batch": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Replace all details of an invoice. Reverses old stock additions and applies new quantities.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Invoices"
+                ],
+                "summary": "Batch update invoice details",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "default": "uz",
+                        "description": "Language (uz, ru, en)",
+                        "name": "lang",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Invoice ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "New invoice details",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.UpsertInvoiceDetailsRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.UpsertInvoiceDetailsResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/invoices/{id}/mark-arrived": {
             "post": {
                 "security": [
@@ -16728,6 +17357,65 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/orders/{id}/activate": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Manually activate a reserved or rescheduled order (sets status to open)",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Orders"
+                ],
+                "summary": "Activate reserved order",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "default": "uz",
+                        "description": "Language (uz, ru, en)",
+                        "name": "lang",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Order ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.SuccessResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/orders/{id}/assign-cashier/{cashierId}": {
             "post": {
                 "security": [
@@ -17156,6 +17844,77 @@ const docTemplate = `{
                         "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/model.OrderResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/orders/{id}/reschedule": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Move a reservation to a new scheduled time with an optional comment",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Orders"
+                ],
+                "summary": "Reschedule order",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "default": "uz",
+                        "description": "Language (uz, ru, en)",
+                        "name": "lang",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Order ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Reschedule request",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.RescheduleOrderRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.SuccessResponse"
                         }
                     },
                     "400": {
@@ -21566,6 +22325,70 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/transfers/{id}/items/batch": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Replaces all transfer items. Old stock changes are reversed, then new quantities are applied.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Transfers"
+                ],
+                "summary": "Batch update transfer items",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Transfer ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "New transfer items",
+                        "name": "input",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.UpsertTransferItemsRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Updated transfer with new items",
+                        "schema": {
+                            "$ref": "#/definitions/model.TransferResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/translations": {
             "get": {
                 "security": [
@@ -22841,6 +23664,53 @@ const docTemplate = `{
                 }
             }
         },
+        "model.CashRegisterShiftResponse": {
+            "type": "object",
+            "properties": {
+                "branch_id": {
+                    "type": "string"
+                },
+                "cash_register_id": {
+                    "type": "string"
+                },
+                "cashier_id": {
+                    "type": "string"
+                },
+                "closed_at": {
+                    "type": "string"
+                },
+                "closing_card": {
+                    "type": "string"
+                },
+                "closing_cash": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "notes": {
+                    "type": "string"
+                },
+                "opened_at": {
+                    "type": "string"
+                },
+                "opening_card": {
+                    "type": "string"
+                },
+                "opening_cash": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
         "model.CashReportGroupRow": {
             "type": "object",
             "properties": {
@@ -23014,6 +23884,26 @@ const docTemplate = `{
                 },
                 "total": {
                     "type": "integer"
+                }
+            }
+        },
+        "model.CloseCashRegisterShiftRequest": {
+            "type": "object",
+            "required": [
+                "closing_cash"
+            ],
+            "properties": {
+                "closing_card": {
+                    "type": "string",
+                    "example": "3000.00"
+                },
+                "closing_cash": {
+                    "type": "string",
+                    "example": "5000.00"
+                },
+                "notes": {
+                    "type": "string",
+                    "example": "End of day shift"
                 }
             }
         },
@@ -23904,6 +24794,56 @@ const docTemplate = `{
                 }
             }
         },
+        "model.CreateInventoryBatchRequest": {
+            "type": "object",
+            "required": [
+                "date",
+                "items",
+                "storage_id"
+            ],
+            "properties": {
+                "date": {
+                    "type": "string",
+                    "example": "2024-01-01"
+                },
+                "description": {
+                    "type": "string",
+                    "example": "Monthly inventory"
+                },
+                "description_i18n": {
+                    "type": "string"
+                },
+                "items": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                        "$ref": "#/definitions/model.UpsertInventoryItemRequest"
+                    }
+                },
+                "status": {
+                    "type": "string",
+                    "example": "active"
+                },
+                "storage_id": {
+                    "type": "string",
+                    "example": "d1f29b75-8g6d-5536-0525-2c12deeef0e0"
+                }
+            }
+        },
+        "model.CreateInventoryBatchResponse": {
+            "type": "object",
+            "properties": {
+                "inventory": {
+                    "$ref": "#/definitions/model.InventoryResponse"
+                },
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.InventoryItemComputedResponse"
+                    }
+                }
+            }
+        },
         "model.CreateInventoryRequest": {
             "type": "object",
             "required": [
@@ -24130,9 +25070,6 @@ const docTemplate = `{
         },
         "model.CreateOrderRequest": {
             "type": "object",
-            "required": [
-                "table_id"
-            ],
             "properties": {
                 "cashier_id": {
                     "type": "string",
@@ -24150,6 +25087,14 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/model.CreateOrderItemInline"
                     }
+                },
+                "order_type": {
+                    "type": "string",
+                    "example": "dine_in"
+                },
+                "scheduled_at": {
+                    "type": "string",
+                    "example": "2024-01-01T15:00:00Z"
                 },
                 "status": {
                     "type": "string",
@@ -25106,6 +26051,9 @@ const docTemplate = `{
                     "type": "string",
                     "example": "c0f18a64-7f5c-4425-9414-1b01cddee9d9"
                 },
+                "is_deleted": {
+                    "type": "boolean"
+                },
                 "name": {
                     "type": "string",
                     "example": "Group A"
@@ -25907,6 +26855,32 @@ const docTemplate = `{
                 }
             }
         },
+        "model.OpenCashRegisterShiftRequest": {
+            "type": "object",
+            "required": [
+                "cash_register_id",
+                "cashier_id",
+                "opening_cash"
+            ],
+            "properties": {
+                "cash_register_id": {
+                    "type": "string",
+                    "example": "uuid"
+                },
+                "cashier_id": {
+                    "type": "string",
+                    "example": "uuid"
+                },
+                "opening_card": {
+                    "type": "string",
+                    "example": "0.00"
+                },
+                "opening_cash": {
+                    "type": "string",
+                    "example": "0.00"
+                }
+            }
+        },
         "model.OrderItemResponse": {
             "type": "object",
             "properties": {
@@ -25985,6 +26959,16 @@ const docTemplate = `{
                     "type": "string",
                     "example": "c0f18a64-7f5c-4425-9414-1b01cddee9d9"
                 },
+                "order_type": {
+                    "type": "string",
+                    "example": "dine_in"
+                },
+                "reschedule_comment": {
+                    "type": "string"
+                },
+                "scheduled_at": {
+                    "type": "string"
+                },
                 "status": {
                     "allOf": [
                         {
@@ -26018,7 +27002,9 @@ const docTemplate = `{
                 "ready",
                 "served",
                 "paid",
-                "cancelled"
+                "cancelled",
+                "reserved",
+                "rescheduled"
             ],
             "x-enum-varnames": [
                 "OrderStatusOpen",
@@ -26026,7 +27012,9 @@ const docTemplate = `{
                 "OrderStatusReady",
                 "OrderStatusServed",
                 "OrderStatusPaid",
-                "OrderStatusCancelled"
+                "OrderStatusCancelled",
+                "OrderStatusReserved",
+                "OrderStatusRescheduled"
             ]
         },
         "model.OutgoingInvoiceItemResponse": {
@@ -26275,6 +27263,22 @@ const docTemplate = `{
                 "quantity": {
                     "type": "integer",
                     "example": 50
+                }
+            }
+        },
+        "model.RescheduleOrderRequest": {
+            "type": "object",
+            "required": [
+                "scheduled_at"
+            ],
+            "properties": {
+                "comment": {
+                    "type": "string",
+                    "example": "Customer called to reschedule"
+                },
+                "scheduled_at": {
+                    "type": "string",
+                    "example": "2024-01-01T18:00:00Z"
                 }
             }
         },
@@ -27877,6 +28881,21 @@ const docTemplate = `{
                 }
             }
         },
+        "model.UpsertDeductionItemsRequest": {
+            "type": "object",
+            "required": [
+                "items"
+            ],
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                        "$ref": "#/definitions/model.CreateDeductionItemRequest"
+                    }
+                }
+            }
+        },
         "model.UpsertInventoryItemRequest": {
             "type": "object",
             "required": [
@@ -27905,6 +28924,63 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/model.UpsertInventoryItemRequest"
                     }
+                }
+            }
+        },
+        "model.UpsertInvoiceDetailEntry": {
+            "type": "object",
+            "required": [
+                "ingredient_id",
+                "price",
+                "price_per_unit",
+                "quantity"
+            ],
+            "properties": {
+                "ingredient_id": {
+                    "type": "string",
+                    "example": "e2g30c86-9h7e-6647-1636-3d23effg1f1"
+                },
+                "price": {
+                    "type": "string",
+                    "example": "500000"
+                },
+                "price_per_unit": {
+                    "type": "string",
+                    "example": "10000"
+                },
+                "quantity": {
+                    "type": "string",
+                    "example": "50"
+                }
+            }
+        },
+        "model.UpsertInvoiceDetailsRequest": {
+            "type": "object",
+            "required": [
+                "details"
+            ],
+            "properties": {
+                "details": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                        "$ref": "#/definitions/model.UpsertInvoiceDetailEntry"
+                    }
+                }
+            }
+        },
+        "model.UpsertInvoiceDetailsResponse": {
+            "type": "object",
+            "properties": {
+                "details": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.InvoiceDetailResponse"
+                    }
+                },
+                "success": {
+                    "type": "integer",
+                    "example": 2
                 }
             }
         },
@@ -28007,6 +29083,21 @@ const docTemplate = `{
                     "minItems": 1,
                     "items": {
                         "$ref": "#/definitions/model.UpsertShipmentItemRequest"
+                    }
+                }
+            }
+        },
+        "model.UpsertTransferItemsRequest": {
+            "type": "object",
+            "required": [
+                "items"
+            ],
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                        "$ref": "#/definitions/model.CreateTransferItemEntry"
                     }
                 }
             }

@@ -88,8 +88,7 @@ func (q *Queries) ConfirmSeparationAct(ctx context.Context, arg ConfirmSeparatio
 
 const countSeparationActs = `-- name: CountSeparationActs :one
 SELECT COUNT(*) FROM separation_acts
-WHERE deleted_at = 0
-  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+WHERE branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
   AND (NULLIF($1::text, '')::uuid IS NULL OR storage_id           = NULLIF($1::text, '')::uuid)
   AND (NULLIF($2::text, '')::uuid IS NULL OR group_id             = NULLIF($2::text, '')::uuid)
   AND (NULLIF($3::text, '')::uuid IS NULL OR source_ingredient_id = NULLIF($3::text, '')::uuid)
@@ -307,8 +306,7 @@ SELECT
      WHERE sai.separation_act_id = sa.id AND sai.deleted_at = 0), 0
   ))::NUMERIC(18,6) AS waste_quantity
 FROM separation_acts sa
-WHERE sa.deleted_at = 0
-  AND sa.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+WHERE sa.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
   AND (NULLIF($1::text, '')::uuid IS NULL OR sa.storage_id           = NULLIF($1::text, '')::uuid)
   AND (NULLIF($2::text, '')::uuid IS NULL OR sa.group_id             = NULLIF($2::text, '')::uuid)
   AND (NULLIF($3::text, '')::uuid IS NULL OR sa.source_ingredient_id = NULLIF($3::text, '')::uuid)

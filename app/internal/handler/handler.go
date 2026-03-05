@@ -251,6 +251,8 @@ func (h *Handler) Register(router *echo.Echo) {
 			orders.POST("/:id/cooking", h.MarkOrderCooking, mw.CheckLanguage())
 			orders.POST("/:id/ready", h.MarkOrderReady, mw.CheckLanguage())
 			orders.POST("/:id/served", h.MarkOrderServed, mw.CheckLanguage())
+			orders.POST("/:id/activate", h.ActivateOrder, mw.CheckLanguage())
+			orders.POST("/:id/reschedule", h.RescheduleOrder, mw.CheckLanguage())
 
 			orders.GET("/status/:status", h.GetOrdersByStatus, mw.CheckLanguage())
 			orders.GET("/table/:tableId", h.GetOrdersByTableID, mw.CheckLanguage())
@@ -491,13 +493,14 @@ func (h *Handler) Register(router *echo.Echo) {
 		inventories := api.Group("/inventories", mw.CheckAuth(h.cfg), mw.TenantMiddleware(h.repo))
 		{
 			inventories.POST("", h.CreateInventory, mw.CheckLanguage())
+			inventories.POST("/batch", h.CreateInventoryBatch, mw.CheckLanguage())
 			inventories.GET("", h.GetAllInventories, mw.CheckLanguage())
+			inventories.GET("/search", h.SearchInventories, mw.CheckLanguage())
 			inventories.GET("/:id", h.GetInventory, mw.CheckLanguage())
 			inventories.POST("/:id/items", h.UpsertInventoryItems, mw.CheckLanguage())
+			inventories.PUT("/:id/items/batch", h.UpdateInventoryItemsBatch, mw.CheckLanguage())
 			inventories.GET("/:id/items", h.GetInventoryItems, mw.CheckLanguage())
 			inventories.POST("/:id/calculate", h.CalculateInventory, mw.CheckLanguage())
-			inventories.POST("/:id/apply", h.ApplyInventory, mw.CheckLanguage())
-			inventories.GET("/search", h.SearchInventories, mw.CheckLanguage())
 			inventories.PUT("/:id", h.UpdateInventory, mw.CheckLanguage())
 			inventories.DELETE("/:id", h.DeleteInventory, mw.CheckLanguage())
 			inventories.POST("/:id/restore", h.RestoreInventory, mw.CheckLanguage())
@@ -511,6 +514,8 @@ func (h *Handler) Register(router *echo.Echo) {
 			deductions.PUT("/:id", h.UpdateDeduction, mw.CheckLanguage())
 			deductions.DELETE("/:id", h.DeleteDeduction, mw.CheckLanguage())
 			deductions.POST("/:id/restore", h.RestoreDeduction, mw.CheckLanguage())
+			deductions.PUT("/:id/items/batch", h.UpsertDeductionItems, mw.CheckLanguage())
+			deductions.DELETE("/:id/items/:itemId", h.DeleteDeductionItem, mw.CheckLanguage())
 
 			deductionGroups := deductions.Group("/group")
 			{
@@ -549,6 +554,7 @@ func (h *Handler) Register(router *echo.Echo) {
 			invoices.DELETE("/:id", h.DeleteInvoice, mw.CheckLanguage())
 			invoices.POST("/:id/restore", h.RestoreInvoice, mw.CheckLanguage())
 			invoices.GET("/:id/details", h.GetInvoiceWithDetails, mw.CheckLanguage())
+			invoices.PUT("/:id/details/batch", h.UpsertInvoiceDetails, mw.CheckLanguage())
 			invoices.GET("/stats/supplier", h.GetInvoiceStatsBySupplier, mw.CheckLanguage())
 			invoices.GET("/stats/date-range", h.GetInvoiceStatsByDateRange, mw.CheckLanguage())
 		}
@@ -579,6 +585,17 @@ func (h *Handler) Register(router *echo.Echo) {
 			cashRegisters.PUT("/:id", h.UpdateCashRegister, mw.CheckLanguage())
 			cashRegisters.DELETE("/:id", h.DeleteCashRegister, mw.CheckLanguage())
 			cashRegisters.POST("/:id/restore", h.RestoreCashRegister, mw.CheckLanguage())
+		}
+
+		// Cash register shift endpoints
+		cashRegisterShifts := api.Group("/cash-register-shifts", mw.CheckAuth(h.cfg), mw.TenantMiddleware(h.repo))
+		{
+			cashRegisterShifts.POST("", h.OpenCashRegisterShift, mw.CheckLanguage())
+			cashRegisterShifts.GET("", h.ListCashRegisterShifts, mw.CheckLanguage())
+			cashRegisterShifts.GET("/active", h.GetActiveCashRegisterShift, mw.CheckLanguage())
+			cashRegisterShifts.GET("/:id", h.GetCashRegisterShift, mw.CheckLanguage())
+			cashRegisterShifts.POST("/:id/close", h.CloseCashRegisterShift, mw.CheckLanguage())
+			cashRegisterShifts.DELETE("/:id", h.DeleteCashRegisterShift, mw.CheckLanguage())
 		}
 
 		// Group transaction management endpoints
@@ -615,6 +632,7 @@ func (h *Handler) Register(router *echo.Echo) {
 			transfers.GET("/:id", h.GetTransferByID, mw.CheckLanguage())
 			transfers.DELETE("/:id", h.DeleteTransfer, mw.CheckLanguage())
 			transfers.DELETE("/items/:id", h.DeleteTransferItem, mw.CheckLanguage())
+			transfers.PUT("/:id/items/batch", h.UpsertTransferItems, mw.CheckLanguage())
 		}
 
 		// Shipment endpoints (outgoing stock removal)

@@ -101,20 +101,27 @@ func (s *OrderS) AddOrderItems(ctx context.Context, orderID string, req model.Ad
 }
 
 func (s *OrderS) CreateOrder(ctx context.Context, req model.CreateOrderRequest) (*model.OrderResponse, error) {
-	if req.TableID == "" {
-		return nil, fmt.Errorf("table_id is required")
+	orderType := "dine_in"
+	if req.OrderType != nil && *req.OrderType == "takeaway" {
+		orderType = "takeaway"
 	}
 
-	tableUUID, err := uuid.Parse(req.TableID)
-	if err != nil {
-		return nil, fmt.Errorf("invalid table_id: %w", err)
-	}
-
-	if _, err := s.repo.Tenant(ctx).GetCafeTableByID(ctx, tableUUID); err != nil {
-		if err == pgx.ErrNoRows {
-			return nil, fmt.Errorf("cafe table not found")
+	tableUUID := uuid.Nil
+	if orderType == "dine_in" {
+		if req.TableID == "" {
+			return nil, fmt.Errorf("table_id is required for dine_in orders")
 		}
-		return nil, fmt.Errorf("failed to fetch cafe table: %w", err)
+		id, err := uuid.Parse(req.TableID)
+		if err != nil {
+			return nil, fmt.Errorf("invalid table_id: %w", err)
+		}
+		tableUUID = id
+		if _, err := s.repo.Tenant(ctx).GetCafeTableByID(ctx, tableUUID); err != nil {
+			if err == pgx.ErrNoRows {
+				return nil, fmt.Errorf("cafe table not found")
+			}
+			return nil, fmt.Errorf("failed to fetch cafe table: %w", err)
+		}
 	}
 
 	waiterUUID := pgtype.UUID{}
@@ -135,38 +142,55 @@ func (s *OrderS) CreateOrder(ctx context.Context, req model.CreateOrderRequest) 
 		cashierUUID = pgtype.UUID{Bytes: id, Valid: true}
 	}
 
-	status := pg.NullOrderStatus{}
-	if req.Status != nil && *req.Status != "" {
+	// Determine initial status
+	status := pg.NullOrderStatus{OrderStatus: pg.OrderStatus(model.OrderStatusOpen), Valid: true}
+	if req.ScheduledAt != nil && *req.ScheduledAt != "" {
+		status = pg.NullOrderStatus{OrderStatus: pg.OrderStatus(model.OrderStatusReserved), Valid: true}
+	} else if req.Status != nil && *req.Status != "" {
 		status = pg.NullOrderStatus{OrderStatus: pg.OrderStatus(*req.Status), Valid: true}
-	} else {
-		status = pg.NullOrderStatus{OrderStatus: pg.OrderStatus(model.OrderStatusOpen), Valid: true}
+	}
+
+	scheduledAtPg := pgtype.Timestamptz{}
+	if req.ScheduledAt != nil && *req.ScheduledAt != "" {
+		if t, err := time.Parse(time.RFC3339, *req.ScheduledAt); err == nil {
+			scheduledAtPg = pgtype.Timestamptz{Time: t, Valid: true}
+		}
 	}
 
 	// Totals must be computed from order_items + service/discount logic.
-	// Client-provided total_amount is ignored.
 	var totalAmount pgtype.Numeric
 	if err := totalAmount.Scan("0"); err != nil {
 		return nil, fmt.Errorf("failed to init total_amount: %w", err)
 	}
 
+	tableIDPg := pgtype.UUID{}
+	if tableUUID != uuid.Nil {
+		tableIDPg = pgtype.UUID{Bytes: tableUUID, Valid: true}
+	}
+
 	createdOrder, err := s.repo.Tenant(ctx).CreateOrder(ctx, pg.CreateOrderParams{
 		ID:          uuid.New(),
-		TableID:     pgtype.UUID{Bytes: tableUUID, Valid: true},
+		TableID:     tableIDPg,
 		WaiterID:    waiterUUID,
 		CashierID:   cashierUUID,
 		Status:      status,
 		GuestCount:  req.GuestCount,
 		TotalAmount: totalAmount,
 		Comment:     req.Comment,
+		OrderType:   orderType,
+		ScheduledAt: scheduledAtPg,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to create order: %w", err)
 	}
 	orderForResponse := any(createdOrder)
 
-	// Mark the table as busy
-	if _, err := s.repo.Tenant(ctx).SetTableBusy(ctx, tableUUID); err != nil {
-		return nil, fmt.Errorf("failed to set table busy: %w", err)
+	// Mark the table as busy only for immediately-active dine-in orders.
+	// Reserved orders keep the table free until the reservation activates.
+	if orderType == "dine_in" && tableUUID != uuid.Nil && !scheduledAtPg.Valid {
+		if _, err := s.repo.Tenant(ctx).SetTableBusy(ctx, tableUUID); err != nil {
+			return nil, fmt.Errorf("failed to set table busy: %w", err)
+		}
 	}
 
 	billNo, err := s.repo.Tenant(ctx).NextDailyBillNo(ctx)
@@ -174,9 +198,14 @@ func (s *OrderS) CreateOrder(ctx context.Context, req model.CreateOrderRequest) 
 		return nil, fmt.Errorf("failed to generate bill number: %w", err)
 	}
 
-	servicePercent, err := s.repo.Tenant(ctx).GetDefaultServicePercentByTable(ctx, tableUUID)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get default service percent: %w", err)
+	var servicePercent pgtype.Numeric
+	if orderType == "dine_in" && tableUUID != uuid.Nil {
+		servicePercent, err = s.repo.Tenant(ctx).GetDefaultServicePercentByTable(ctx, tableUUID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get default service percent: %w", err)
+		}
+	} else {
+		_ = servicePercent.Scan("0")
 	}
 
 	if err := s.repo.Tenant(ctx).InitOrderBillFields(ctx, createdOrder.ID, billNo, servicePercent); err != nil {
@@ -244,6 +273,15 @@ func (s *OrderS) GetOrderByID(ctx context.Context, orderID string) (*model.Order
 }
 
 func (s *OrderS) GetAllOrders(ctx context.Context, limit, offset int32) ([]model.OrderResponse, error) {
+	// Lazy-activate reservations whose scheduled time has arrived, then mark dine-in tables busy.
+	if activated, err := s.repo.Tenant(ctx).ActivateReservedOrders(ctx); err == nil {
+		for _, row := range activated {
+			if row.OrderType == "dine_in" && row.TableID.Valid {
+				_, _ = s.repo.Tenant(ctx).SetTableBusy(ctx, row.TableID.Bytes)
+			}
+		}
+	}
+
 	orders, err := s.repo.Tenant(ctx).GetAllOrders(ctx, pg.GetAllOrdersParams{Limit: limit, Offset: offset})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get orders: %w", err)
@@ -600,6 +638,16 @@ func (s *OrderS) MarkOrderCooking(ctx context.Context, orderID string) (*model.O
 	if err != nil {
 		return nil, fmt.Errorf("invalid order id: %w", err)
 	}
+	// Takeaway orders must be paid before kitchen can start
+	existing, err := s.repo.Tenant(ctx).GetOrderByID(ctx, id)
+	if err != nil {
+		return nil, fmt.Errorf("order not found: %w", err)
+	}
+	if existing.OrderType == "takeaway" {
+		if !existing.Status.Valid || existing.Status.OrderStatus != pg.OrderStatus(model.OrderStatusPaid) {
+			return nil, fmt.Errorf("takeaway orders must be paid before cooking can start")
+		}
+	}
 	order, err := s.repo.Tenant(ctx).MarkOrderCooking(ctx, id)
 	if err != nil {
 		return nil, fmt.Errorf("failed to mark order cooking: %w", err)
@@ -633,6 +681,42 @@ func (s *OrderS) MarkOrderServed(ctx context.Context, orderID string) (*model.Or
 		return nil, fmt.Errorf("failed to close bill: %w", err)
 	}
 
+	return toOrderResponse(order), nil
+}
+
+func (s *OrderS) ActivateOrder(ctx context.Context, orderID string) (*model.OrderResponse, error) {
+	id, err := uuid.Parse(orderID)
+	if err != nil {
+		return nil, fmt.Errorf("invalid order id: %w", err)
+	}
+	order, err := s.repo.Tenant(ctx).ActivateOrder(ctx, id)
+	if err != nil {
+		return nil, fmt.Errorf("failed to activate order: %w", err)
+	}
+	// Mark the table busy now that the dine-in reservation has activated.
+	if order.OrderType == "dine_in" && order.TableID.Valid {
+		_, _ = s.repo.Tenant(ctx).SetTableBusy(ctx, order.TableID.Bytes)
+	}
+	return toOrderResponse(order), nil
+}
+
+func (s *OrderS) RescheduleOrder(ctx context.Context, orderID string, req model.RescheduleOrderRequest) (*model.OrderResponse, error) {
+	id, err := uuid.Parse(orderID)
+	if err != nil {
+		return nil, fmt.Errorf("invalid order id: %w", err)
+	}
+	scheduledAt, err := time.Parse(time.RFC3339, req.ScheduledAt)
+	if err != nil {
+		return nil, fmt.Errorf("invalid scheduled_at format (use RFC3339): %w", err)
+	}
+	order, err := s.repo.Tenant(ctx).RescheduleOrder(ctx, pg.RescheduleOrderParams{
+		ID:                id,
+		ScheduledAt:       pgtype.Timestamptz{Time: scheduledAt, Valid: true},
+		RescheduleComment: req.Comment,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to reschedule order: %w", err)
+	}
 	return toOrderResponse(order), nil
 }
 
@@ -678,6 +762,7 @@ func (s *OrderS) GetBills(ctx context.Context, req model.GetBillsRequest) (*mode
 	params := pg.GetBillsParams{
 		Start:       startEnd(req.Start),
 		End:         startEnd(req.End),
+		BillNo:      req.BillNo,
 		BillStatus:  req.BillStatus,
 		PaymentType: req.PaymentType,
 		WaiterID:    waiterUUID,
@@ -714,10 +799,14 @@ func (s *OrderS) GetBills(ctx context.Context, req model.GetBillsRequest) (*mode
 			s := r.WaiterID.String()
 			waiterIDStr = &s
 		}
+		billStatus := r.BillStatus
+		if r.DeletedAt > 0 {
+			billStatus = "deleted"
+		}
 		items = append(items, model.BillListItem{
 			ID:              r.ID.String(),
 			BillNo:          r.BillNo,
-			BillStatus:      r.BillStatus,
+			BillStatus:      billStatus,
 			OpenedAt:        openedAt,
 			ClosedAt:        closedAt,
 			WaiterID:        waiterIDStr,
@@ -1314,6 +1403,15 @@ type KitchenQueueItem struct {
 }
 
 func (s *OrderS) GetKitchenQueue(ctx context.Context) ([]KitchenQueueItem, error) {
+	// Lazy-activate reservations whose scheduled time has arrived, then mark dine-in tables busy.
+	if activated, err := s.repo.Tenant(ctx).ActivateReservedOrders(ctx); err == nil {
+		for _, row := range activated {
+			if row.OrderType == "dine_in" && row.TableID.Valid {
+				_, _ = s.repo.Tenant(ctx).SetTableBusy(ctx, row.TableID.Bytes)
+			}
+		}
+	}
+
 	rows, err := s.repo.Tenant(ctx).GetKitchenQueue(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get kitchen queue: %w", err)
@@ -1328,16 +1426,19 @@ func (s *OrderS) GetKitchenQueue(ctx context.Context) ([]KitchenQueueItem, error
 
 func toOrderResponse(o any) *model.OrderResponse {
 	var (
-		id         uuid.UUID
-		tableID    pgtype.UUID
-		waiterIDPg pgtype.UUID
-		cashierIDPg pgtype.UUID
-		statusPg   pg.NullOrderStatus
-		guestCount *int32
-		totalAmount pgtype.Numeric
-		comment    *string
-		createdAtPg pgtype.Timestamptz
-		updatedAtPg pgtype.Timestamptz
+		id                uuid.UUID
+		tableID           pgtype.UUID
+		waiterIDPg        pgtype.UUID
+		cashierIDPg       pgtype.UUID
+		statusPg          pg.NullOrderStatus
+		guestCount        *int32
+		totalAmount       pgtype.Numeric
+		comment           *string
+		orderType         string
+		scheduledAtTs     pgtype.Timestamptz
+		rescheduleComment *string
+		createdAtPg       pgtype.Timestamptz
+		updatedAtPg       pgtype.Timestamptz
 	)
 
 	switch row := o.(type) {
@@ -1350,6 +1451,9 @@ func toOrderResponse(o any) *model.OrderResponse {
 		guestCount = row.GuestCount
 		totalAmount = row.TotalAmount
 		comment = row.Comment
+		orderType = row.OrderType
+		scheduledAtTs = row.ScheduledAt
+		rescheduleComment = row.RescheduleComment
 		createdAtPg = row.CreatedAt
 		updatedAtPg = row.UpdatedAt
 	case pg.CreateOrderRow:
@@ -1361,6 +1465,9 @@ func toOrderResponse(o any) *model.OrderResponse {
 		guestCount = row.GuestCount
 		totalAmount = row.TotalAmount
 		comment = row.Comment
+		orderType = row.OrderType
+		scheduledAtTs = row.ScheduledAt
+		rescheduleComment = row.RescheduleComment
 		createdAtPg = row.CreatedAt
 		updatedAtPg = row.UpdatedAt
 	case pg.GetOrderByIDRow:
@@ -1372,6 +1479,9 @@ func toOrderResponse(o any) *model.OrderResponse {
 		guestCount = row.GuestCount
 		totalAmount = row.TotalAmount
 		comment = row.Comment
+		orderType = row.OrderType
+		scheduledAtTs = row.ScheduledAt
+		rescheduleComment = row.RescheduleComment
 		createdAtPg = row.CreatedAt
 		updatedAtPg = row.UpdatedAt
 	case pg.GetAllOrdersRow:
@@ -1383,6 +1493,9 @@ func toOrderResponse(o any) *model.OrderResponse {
 		guestCount = row.GuestCount
 		totalAmount = row.TotalAmount
 		comment = row.Comment
+		orderType = row.OrderType
+		scheduledAtTs = row.ScheduledAt
+		rescheduleComment = row.RescheduleComment
 		createdAtPg = row.CreatedAt
 		updatedAtPg = row.UpdatedAt
 	case pg.GetOrdersByStatusRow:
@@ -1394,6 +1507,9 @@ func toOrderResponse(o any) *model.OrderResponse {
 		guestCount = row.GuestCount
 		totalAmount = row.TotalAmount
 		comment = row.Comment
+		orderType = row.OrderType
+		scheduledAtTs = row.ScheduledAt
+		rescheduleComment = row.RescheduleComment
 		createdAtPg = row.CreatedAt
 		updatedAtPg = row.UpdatedAt
 	case pg.GetOrdersByWaiterIDRow:
@@ -1405,6 +1521,9 @@ func toOrderResponse(o any) *model.OrderResponse {
 		guestCount = row.GuestCount
 		totalAmount = row.TotalAmount
 		comment = row.Comment
+		orderType = row.OrderType
+		scheduledAtTs = row.ScheduledAt
+		rescheduleComment = row.RescheduleComment
 		createdAtPg = row.CreatedAt
 		updatedAtPg = row.UpdatedAt
 	case pg.GetOrdersByTableIDRow:
@@ -1416,6 +1535,9 @@ func toOrderResponse(o any) *model.OrderResponse {
 		guestCount = row.GuestCount
 		totalAmount = row.TotalAmount
 		comment = row.Comment
+		orderType = row.OrderType
+		scheduledAtTs = row.ScheduledAt
+		rescheduleComment = row.RescheduleComment
 		createdAtPg = row.CreatedAt
 		updatedAtPg = row.UpdatedAt
 	case pg.UpdateOrderRow:
@@ -1427,6 +1549,9 @@ func toOrderResponse(o any) *model.OrderResponse {
 		guestCount = row.GuestCount
 		totalAmount = row.TotalAmount
 		comment = row.Comment
+		orderType = row.OrderType
+		scheduledAtTs = row.ScheduledAt
+		rescheduleComment = row.RescheduleComment
 		createdAtPg = row.CreatedAt
 		updatedAtPg = row.UpdatedAt
 	case pg.UpdateOrderStatusRow:
@@ -1438,6 +1563,9 @@ func toOrderResponse(o any) *model.OrderResponse {
 		guestCount = row.GuestCount
 		totalAmount = row.TotalAmount
 		comment = row.Comment
+		orderType = row.OrderType
+		scheduledAtTs = row.ScheduledAt
+		rescheduleComment = row.RescheduleComment
 		createdAtPg = row.CreatedAt
 		updatedAtPg = row.UpdatedAt
 	case pg.AssignWaiterToOrderRow:
@@ -1449,6 +1577,9 @@ func toOrderResponse(o any) *model.OrderResponse {
 		guestCount = row.GuestCount
 		totalAmount = row.TotalAmount
 		comment = row.Comment
+		orderType = row.OrderType
+		scheduledAtTs = row.ScheduledAt
+		rescheduleComment = row.RescheduleComment
 		createdAtPg = row.CreatedAt
 		updatedAtPg = row.UpdatedAt
 	case pg.AssignCashierToOrderRow:
@@ -1460,6 +1591,9 @@ func toOrderResponse(o any) *model.OrderResponse {
 		guestCount = row.GuestCount
 		totalAmount = row.TotalAmount
 		comment = row.Comment
+		orderType = row.OrderType
+		scheduledAtTs = row.ScheduledAt
+		rescheduleComment = row.RescheduleComment
 		createdAtPg = row.CreatedAt
 		updatedAtPg = row.UpdatedAt
 	case pg.CancelOrderRow:
@@ -1471,6 +1605,9 @@ func toOrderResponse(o any) *model.OrderResponse {
 		guestCount = row.GuestCount
 		totalAmount = row.TotalAmount
 		comment = row.Comment
+		orderType = row.OrderType
+		scheduledAtTs = row.ScheduledAt
+		rescheduleComment = row.RescheduleComment
 		createdAtPg = row.CreatedAt
 		updatedAtPg = row.UpdatedAt
 	case pg.MarkOrderCookingRow:
@@ -1482,6 +1619,9 @@ func toOrderResponse(o any) *model.OrderResponse {
 		guestCount = row.GuestCount
 		totalAmount = row.TotalAmount
 		comment = row.Comment
+		orderType = row.OrderType
+		scheduledAtTs = row.ScheduledAt
+		rescheduleComment = row.RescheduleComment
 		createdAtPg = row.CreatedAt
 		updatedAtPg = row.UpdatedAt
 	case pg.MarkOrderReadyRow:
@@ -1493,6 +1633,9 @@ func toOrderResponse(o any) *model.OrderResponse {
 		guestCount = row.GuestCount
 		totalAmount = row.TotalAmount
 		comment = row.Comment
+		orderType = row.OrderType
+		scheduledAtTs = row.ScheduledAt
+		rescheduleComment = row.RescheduleComment
 		createdAtPg = row.CreatedAt
 		updatedAtPg = row.UpdatedAt
 	case pg.MarkOrderServedRow:
@@ -1504,6 +1647,9 @@ func toOrderResponse(o any) *model.OrderResponse {
 		guestCount = row.GuestCount
 		totalAmount = row.TotalAmount
 		comment = row.Comment
+		orderType = row.OrderType
+		scheduledAtTs = row.ScheduledAt
+		rescheduleComment = row.RescheduleComment
 		createdAtPg = row.CreatedAt
 		updatedAtPg = row.UpdatedAt
 	case pg.MarkOrderPaidRow:
@@ -1515,6 +1661,37 @@ func toOrderResponse(o any) *model.OrderResponse {
 		guestCount = row.GuestCount
 		totalAmount = row.TotalAmount
 		comment = row.Comment
+		orderType = row.OrderType
+		scheduledAtTs = row.ScheduledAt
+		rescheduleComment = row.RescheduleComment
+		createdAtPg = row.CreatedAt
+		updatedAtPg = row.UpdatedAt
+	case pg.ActivateOrderRow:
+		id = row.ID
+		tableID = row.TableID
+		waiterIDPg = row.WaiterID
+		cashierIDPg = row.CashierID
+		statusPg = pg.NullOrderStatus(row.Status)
+		guestCount = row.GuestCount
+		totalAmount = row.TotalAmount
+		comment = row.Comment
+		orderType = row.OrderType
+		scheduledAtTs = row.ScheduledAt
+		rescheduleComment = row.RescheduleComment
+		createdAtPg = row.CreatedAt
+		updatedAtPg = row.UpdatedAt
+	case pg.RescheduleOrderRow:
+		id = row.ID
+		tableID = row.TableID
+		waiterIDPg = row.WaiterID
+		cashierIDPg = row.CashierID
+		statusPg = pg.NullOrderStatus(row.Status)
+		guestCount = row.GuestCount
+		totalAmount = row.TotalAmount
+		comment = row.Comment
+		orderType = row.OrderType
+		scheduledAtTs = row.ScheduledAt
+		rescheduleComment = row.RescheduleComment
 		createdAtPg = row.CreatedAt
 		updatedAtPg = row.UpdatedAt
 	default:
@@ -1549,22 +1726,31 @@ func toOrderResponse(o any) *model.OrderResponse {
 		updatedAt = &t
 	}
 
+	var scheduledAt *time.Time
+	if scheduledAtTs.Valid {
+		t := scheduledAtTs.Time
+		scheduledAt = &t
+	}
+
 	status := model.OrderStatusOpen
 	if statusPg.Valid {
 		status = model.OrderStatus(statusPg.OrderStatus)
 	}
 
 	return &model.OrderResponse{
-		ID:          id.String(),
-		TableID:     tableID.String(),
-		WaiterID:    waiterID,
-		CashierID:   cashierID,
-		Status:      status,
-		GuestCount:  guestCount,
-		TotalAmount: numericToString(totalAmount),
-		Comment:     comment,
-		CreatedAt:   createdAt,
-		UpdatedAt:   updatedAt,
+		ID:                id.String(),
+		TableID:           tableID.String(),
+		WaiterID:          waiterID,
+		CashierID:         cashierID,
+		Status:            status,
+		GuestCount:        guestCount,
+		TotalAmount:       numericToString(totalAmount),
+		Comment:           comment,
+		OrderType:         orderType,
+		ScheduledAt:       scheduledAt,
+		RescheduleComment: rescheduleComment,
+		CreatedAt:         createdAt,
+		UpdatedAt:         updatedAt,
 	}
 }
 

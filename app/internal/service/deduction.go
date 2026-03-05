@@ -826,6 +826,10 @@ func (s *DeductionS) GetAllDeductions(ctx context.Context, limit, offset int32) 
 			s := dd.DescriptionI18n.String()
 			descI18nStr = &s
 		}
+		deductStatus := model.DeductionStatus(dd.Status)
+		if dd.DeletedAt > 0 {
+			deductStatus = "deleted"
+		}
 		resp = append(resp, &model.DeductionResponse{
 			ID:              dd.ID.String(),
 			Number:          dd.Number,
@@ -834,7 +838,7 @@ func (s *DeductionS) GetAllDeductions(ctx context.Context, limit, offset int32) 
 			StorageID:       dd.StorageID.String(),
 			Description:     dd.Description,
 			DescriptionI18n: descI18nStr,
-			Status:          model.DeductionStatus(dd.Status),
+			Status:          deductStatus,
 			Balance:         numericToString(dd.Balance),
 			CreatedAt:       timestampToTime(dd.CreatedAt),
 			UpdatedAt:       timestampToTime(dd.UpdatedAt),
@@ -949,6 +953,58 @@ func (s *DeductionS) DeleteDeduction(ctx context.Context, id string) error {
 		return fmt.Errorf("invalid id: %w", err)
 	}
 
+	// Reverse stock: add back quantities that were deducted when deduction was created
+	if deduction, err := s.repo.Tenant(ctx).GetDeductionByID(ctx, deductionID); err == nil && deduction.DeletedAt == 0 {
+		storagePg := pgtype.UUID{Bytes: deduction.StorageID, Valid: true}
+		srcType := "deduction_deleted"
+		zero := pgtype.Numeric{}
+		_ = zero.Scan("0")
+		items, _ := s.repo.Tenant(ctx).GetDeductionItemsByDeductionID(ctx, deductionID)
+		for _, item := range items {
+			breakdowns, _ := s.repo.Tenant(ctx).GetDeductionItemIngredientsByDeductionItemID(ctx, item.ID)
+			for _, b := range breakdowns {
+				if numericToString(b.Quantity) == "0" {
+					continue
+				}
+				stockID, err := s.repo.Tenant(ctx).EnsureIngredientStockByStorage(ctx, pg.EnsureIngredientStockByStorageParams{
+					ID:           uuid.New(),
+					IngredientID: b.IngredientID,
+					StorageID:    storagePg,
+				})
+				if err != nil {
+					continue
+				}
+				locked, err := s.repo.Tenant(ctx).GetStockByIngredientAndStorageForUpdate(ctx, pg.GetStockByIngredientAndStorageForUpdateParams{
+					IngredientID: b.IngredientID,
+					StorageID:    storagePg,
+				})
+				if err != nil {
+					continue
+				}
+				updated, err := s.repo.Tenant(ctx).AddToIngredientStock(ctx, pg.AddToIngredientStockParams{
+					ID:       stockID,
+					Quantity: b.Quantity,
+				})
+				if err != nil {
+					continue
+				}
+				_ = s.repo.Tenant(ctx).InsertIngredientStockMovement(ctx, pg.InsertIngredientStockMovementParams{
+					ID:           uuid.New(),
+					StorageID:    deduction.StorageID,
+					IngredientID: b.IngredientID,
+					EventType:    "deduction_deleted_in",
+					QtyIn:        b.Quantity,
+					QtyOut:       zero,
+					StockBefore:  locked.Quantity,
+					StockAfter:   updated.Quantity,
+					PricePerUnit: b.PricePerUnit,
+					SourceType:   &srcType,
+					SourceID:     &deductionID,
+				})
+			}
+		}
+	}
+
 	if err := s.repo.Tenant(ctx).DeleteDeduction(ctx, deductionID); err != nil {
 		return fmt.Errorf("failed to delete deduction: %w", err)
 	}
@@ -967,6 +1023,240 @@ func (s *DeductionS) RestoreDeduction(ctx context.Context, id string) (*model.De
 	}
 
 	return s.GetDeductionByID(ctx, id)
+}
+
+func (s *DeductionS) UpsertDeductionItems(ctx context.Context, id string, req *model.UpsertDeductionItemsRequest) (*model.DeductionResponse, error) {
+	deductionID, err := uuid.Parse(id)
+	if err != nil {
+		return nil, fmt.Errorf("invalid id: %w", err)
+	}
+
+	deduction, err := s.repo.Tenant(ctx).GetDeductionByID(ctx, deductionID)
+	if err != nil {
+		return nil, fmt.Errorf("deduction not found: %w", err)
+	}
+
+	storagePg := pgtype.UUID{Bytes: deduction.StorageID, Valid: true}
+
+	// Step 1: Reverse stock for all existing items
+	zero := pgtype.Numeric{}
+	_ = zero.Scan("0")
+	srcType := "deduction_updated"
+	items, _ := s.repo.Tenant(ctx).GetDeductionItemsByDeductionID(ctx, deductionID)
+	for _, item := range items {
+		breakdowns, _ := s.repo.Tenant(ctx).GetDeductionItemIngredientsByDeductionItemID(ctx, item.ID)
+		for _, b := range breakdowns {
+			if numericToString(b.Quantity) == "0" {
+				continue
+			}
+			_, _ = s.repo.Tenant(ctx).EnsureIngredientStockByStorage(ctx, pg.EnsureIngredientStockByStorageParams{
+				ID:           uuid.New(),
+				IngredientID: b.IngredientID,
+				StorageID:    storagePg,
+			})
+			locked, err := s.repo.Tenant(ctx).GetStockByIngredientAndStorageForUpdate(ctx, pg.GetStockByIngredientAndStorageForUpdateParams{
+				IngredientID: b.IngredientID,
+				StorageID:    storagePg,
+			})
+			if err != nil {
+				continue
+			}
+			updated, err := s.repo.Tenant(ctx).AddToIngredientStock(ctx, pg.AddToIngredientStockParams{
+				ID:       locked.ID,
+				Quantity: b.Quantity,
+			})
+			if err != nil {
+				continue
+			}
+			_ = s.repo.Tenant(ctx).InsertIngredientStockMovement(ctx, pg.InsertIngredientStockMovementParams{
+				ID:           uuid.New(),
+				StorageID:    deduction.StorageID,
+				IngredientID: b.IngredientID,
+				EventType:    "deduction_updated_in",
+				QtyIn:        b.Quantity,
+				QtyOut:       zero,
+				StockBefore:  locked.Quantity,
+				StockAfter:   updated.Quantity,
+				PricePerUnit: b.PricePerUnit,
+				SourceType:   &srcType,
+				SourceID:     &deductionID,
+			})
+		}
+	}
+
+	// Step 2: Soft-delete all existing items and their ingredient breakdowns
+	_ = s.repo.Tenant(ctx).DeleteDeductionItemIngredientsByDeductionID(ctx, deductionID)
+	_ = s.repo.Tenant(ctx).DeleteDeductionItemsByDeductionID(ctx, deductionID)
+
+	// Step 3: Create new items (mirrors CreateDeduction item loop)
+	warnings := make([]string, 0)
+	for _, it := range req.Items {
+		qtyNum := pgtype.Numeric{}
+		if err := qtyNum.Scan(it.Quantity); err != nil {
+			return nil, fmt.Errorf("invalid item quantity: %w", err)
+		}
+
+		refs := 0
+		if it.IngredientID != nil && *it.IngredientID != "" {
+			refs++
+		}
+		if it.GoodID != nil && *it.GoodID != "" {
+			refs++
+		}
+		if it.CompoundID != nil && *it.CompoundID != "" {
+			refs++
+		}
+		if refs != 1 {
+			return nil, fmt.Errorf("each item must have exactly one of ingredient_id or good_id or compound_id")
+		}
+
+		var ingID, goodID, compID pgtype.UUID
+		if it.IngredientID != nil && *it.IngredientID != "" {
+			u, err := uuid.Parse(*it.IngredientID)
+			if err != nil {
+				return nil, fmt.Errorf("invalid ingredient_id: %w", err)
+			}
+			ingID = pgtype.UUID{Bytes: u, Valid: true}
+		}
+		if it.GoodID != nil && *it.GoodID != "" {
+			u, err := uuid.Parse(*it.GoodID)
+			if err != nil {
+				return nil, fmt.Errorf("invalid good_id: %w", err)
+			}
+			goodID = pgtype.UUID{Bytes: u, Valid: true}
+		}
+		if it.CompoundID != nil && *it.CompoundID != "" {
+			u, err := uuid.Parse(*it.CompoundID)
+			if err != nil {
+				return nil, fmt.Errorf("invalid compound_id: %w", err)
+			}
+			compID = pgtype.UUID{Bytes: u, Valid: true}
+		}
+
+		row, err := s.repo.Tenant(ctx).CreateDeductionItem(ctx, pg.CreateDeductionItemParams{
+			ID:           uuid.New(),
+			DeductionID:  deductionID,
+			IngredientID: ingID,
+			GoodID:       goodID,
+			CompoundID:   compID,
+			Quantity:     qtyNum,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("failed to create deduction item: %w", err)
+		}
+
+		var usages []ingredientUsage
+		switch {
+		case row.IngredientID.Valid:
+			usages = []ingredientUsage{{ingredientID: row.IngredientID.Bytes, quantity: row.Quantity}}
+		case row.GoodID.Valid:
+			usages, err = s.expandGoodToIngredients(ctx, row.GoodID.Bytes, row.Quantity)
+		case row.CompoundID.Valid:
+			usages, err = s.expandCompoundToIngredients(ctx, row.CompoundID.Bytes, row.Quantity, map[uuid.UUID]bool{})
+		default:
+			err = fmt.Errorf("deduction item must reference ingredient or good or compound")
+		}
+		if err != nil {
+			return nil, err
+		}
+
+		for _, u := range usages {
+			requestedQty := u.quantity
+			_, _ = s.repo.Tenant(ctx).EnsureIngredientStockByStorage(ctx, pg.EnsureIngredientStockByStorageParams{
+				ID:           uuid.New(),
+				IngredientID: u.ingredientID,
+				StorageID:    storagePg,
+			})
+			stock, err := s.repo.Tenant(ctx).GetStockByIngredientAndStorageForUpdate(ctx, pg.GetStockByIngredientAndStorageForUpdateParams{
+				IngredientID: u.ingredientID,
+				StorageID:    storagePg,
+			})
+			if err != nil {
+				return nil, fmt.Errorf("failed to lock ingredient stock: %w", err)
+			}
+			ingredient, err := s.repo.Tenant(ctx).GetIngredientByID(ctx, u.ingredientID)
+			if err != nil {
+				return nil, fmt.Errorf("failed to fetch ingredient: %w", err)
+			}
+			if !ingredient.PricePerUnit.Valid {
+				return nil, fmt.Errorf("ingredient has no price")
+			}
+
+			stockBefore := stock.Quantity
+			missing, err := subNumericClampZero(requestedQty, stockBefore, 6)
+			if err != nil {
+				return nil, err
+			}
+			actualDeduct, err := subNumericClampZero(requestedQty, missing, 6)
+			if err != nil {
+				return nil, err
+			}
+
+			updatedQty := stockBefore
+			var updatedStock *pg.IngredientStock
+			if numericToString(actualDeduct) != "0" {
+				updated, err := s.repo.Tenant(ctx).RemoveFromIngredientStock(ctx, pg.RemoveFromIngredientStockParams{
+					ID:       stock.ID,
+					Quantity: actualDeduct,
+				})
+				if err != nil {
+					return nil, fmt.Errorf("failed to remove from ingredient stock: %w", err)
+				}
+				updatedQty = updated.Quantity
+				updatedStock = &updated
+			}
+
+			if numericToString(missing) != "0" {
+				warnings = append(warnings, fmt.Sprintf("insufficient stock for ingredient %s: requested %s, available %s", u.ingredientID.String(), numericToString(requestedQty), numericToString(stockBefore)))
+			}
+
+			price := ingredient.PricePerUnit
+			if numericToString(actualDeduct) == "0" {
+				price = pgtype.Numeric{}
+				_ = price.Scan("0")
+			}
+
+			if _, err := s.repo.Tenant(ctx).CreateDeductionItemIngredient(ctx, pg.CreateDeductionItemIngredientParams{
+				ID:              uuid.New(),
+				DeductionItemID: row.ID,
+				IngredientID:    u.ingredientID,
+				Quantity:        actualDeduct,
+				StockBefore:     stockBefore,
+				StockAfter:      updatedQty,
+				PricePerUnit:    price,
+			}); err != nil {
+				return nil, fmt.Errorf("failed to create deduction item ingredient: %w", err)
+			}
+
+			if updatedStock != nil {
+				srcTypeNew := "deduction"
+				srcID := deductionID
+				_ = s.repo.Tenant(ctx).InsertIngredientStockMovement(ctx, pg.InsertIngredientStockMovementParams{
+					ID:           uuid.New(),
+					StorageID:    deduction.StorageID,
+					IngredientID: u.ingredientID,
+					EventType:    "deduction_out",
+					QtyIn:        zero,
+					QtyOut:       actualDeduct,
+					StockBefore:  stockBefore,
+					StockAfter:   updatedStock.Quantity,
+					PricePerUnit: price,
+					SourceType:   &srcTypeNew,
+					SourceID:     &srcID,
+				})
+			}
+		}
+	}
+
+	// Step 4: Recalculate balance
+	_, _ = s.repo.Tenant(ctx).UpdateDeductionBalanceFromItems(ctx, deductionID)
+
+	resp, err := s.GetDeductionByID(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	resp.Warnings = warnings
+	return resp, nil
 }
 
 func (s *DeductionS) PreviewDeductionCost(ctx context.Context, req *model.CreateDeductionRequest) (string, error) {
@@ -1039,6 +1329,91 @@ func (s *DeductionS) PreviewDeductionCost(ctx context.Context, req *model.Create
 	}
 
 	return total.FloatString(2), nil
+}
+
+func (s *DeductionS) DeleteDeductionItem(ctx context.Context, deductionID, itemID string) (*model.DeductionResponse, error) {
+	dedID, err := uuid.Parse(deductionID)
+	if err != nil {
+		return nil, fmt.Errorf("invalid deduction id: %w", err)
+	}
+	itemUUID, err := uuid.Parse(itemID)
+	if err != nil {
+		return nil, fmt.Errorf("invalid item id: %w", err)
+	}
+
+	deduction, err := s.repo.Tenant(ctx).GetDeductionByID(ctx, dedID)
+	if err != nil {
+		return nil, fmt.Errorf("deduction not found: %w", err)
+	}
+
+	item, err := s.repo.Tenant(ctx).GetDeductionItemByID(ctx, itemUUID)
+	if err != nil {
+		return nil, fmt.Errorf("deduction item not found: %w", err)
+	}
+	if item.DeductionID != dedID {
+		return nil, fmt.Errorf("item does not belong to this deduction")
+	}
+
+	// Reverse stock for this item's ingredient breakdowns
+	storagePg := pgtype.UUID{Bytes: deduction.StorageID, Valid: true}
+	srcType := "deduction_item_deleted"
+	zero := pgtype.Numeric{}
+	_ = zero.Scan("0")
+
+	breakdowns, _ := s.repo.Tenant(ctx).GetDeductionItemIngredientsByDeductionItemID(ctx, itemUUID)
+	for _, b := range breakdowns {
+		if numericToString(b.Quantity) == "0" {
+			continue
+		}
+		stockID, err := s.repo.Tenant(ctx).EnsureIngredientStockByStorage(ctx, pg.EnsureIngredientStockByStorageParams{
+			ID:           uuid.New(),
+			IngredientID: b.IngredientID,
+			StorageID:    storagePg,
+		})
+		if err != nil {
+			continue
+		}
+		locked, err := s.repo.Tenant(ctx).GetStockByIngredientAndStorageForUpdate(ctx, pg.GetStockByIngredientAndStorageForUpdateParams{
+			IngredientID: b.IngredientID,
+			StorageID:    storagePg,
+		})
+		if err != nil {
+			continue
+		}
+		updated, err := s.repo.Tenant(ctx).AddToIngredientStock(ctx, pg.AddToIngredientStockParams{
+			ID:       stockID,
+			Quantity: b.Quantity,
+		})
+		if err != nil {
+			continue
+		}
+		_ = s.repo.Tenant(ctx).InsertIngredientStockMovement(ctx, pg.InsertIngredientStockMovementParams{
+			ID:           uuid.New(),
+			StorageID:    deduction.StorageID,
+			IngredientID: b.IngredientID,
+			EventType:    "deduction_item_deleted_in",
+			QtyIn:        b.Quantity,
+			QtyOut:       zero,
+			StockBefore:  locked.Quantity,
+			StockAfter:   updated.Quantity,
+			PricePerUnit: b.PricePerUnit,
+			SourceType:   &srcType,
+			SourceID:     &dedID,
+		})
+	}
+
+	// Soft-delete ingredient breakdowns then the item itself
+	_ = s.repo.Tenant(ctx).DeleteDeductionItemIngredientsByItemID(ctx, itemUUID)
+	if err := s.repo.Tenant(ctx).DeleteDeductionItemByID(ctx, itemUUID); err != nil {
+		return nil, fmt.Errorf("failed to delete deduction item: %w", err)
+	}
+
+	// Recalculate balance
+	if _, err := s.repo.Tenant(ctx).UpdateDeductionBalanceFromItems(ctx, dedID); err != nil {
+		return nil, fmt.Errorf("failed to update balance: %w", err)
+	}
+
+	return s.GetDeductionByID(ctx, deductionID)
 }
 
 func parseLimitOffset(limitStr, offsetStr string) (int32, int32) {

@@ -175,10 +175,59 @@ func (q *Queries) DeleteDeduction(ctx context.Context, id uuid.UUID) error {
 	return err
 }
 
+const deleteDeductionItemByID = `-- name: DeleteDeductionItemByID :exec
+UPDATE deduction_items
+SET deleted_at = EXTRACT(EPOCH FROM NOW())::BIGINT,
+    updated_at = NOW()
+WHERE id = $1 AND deleted_at = 0
+`
+
+func (q *Queries) DeleteDeductionItemByID(ctx context.Context, id uuid.UUID) error {
+	_, err := q.db.Exec(ctx, deleteDeductionItemByID, id)
+	return err
+}
+
+const deleteDeductionItemIngredientsByDeductionID = `-- name: DeleteDeductionItemIngredientsByDeductionID :exec
+UPDATE deduction_item_ingredients
+SET deleted_at = EXTRACT(EPOCH FROM NOW())::BIGINT,
+    updated_at = NOW()
+WHERE deduction_item_id IN (
+  SELECT id FROM deduction_items WHERE deduction_id = $1
+) AND deleted_at = 0
+`
+
+func (q *Queries) DeleteDeductionItemIngredientsByDeductionID(ctx context.Context, deductionID uuid.UUID) error {
+	_, err := q.db.Exec(ctx, deleteDeductionItemIngredientsByDeductionID, deductionID)
+	return err
+}
+
+const deleteDeductionItemIngredientsByItemID = `-- name: DeleteDeductionItemIngredientsByItemID :exec
+UPDATE deduction_item_ingredients
+SET deleted_at = EXTRACT(EPOCH FROM NOW())::BIGINT,
+    updated_at = NOW()
+WHERE deduction_item_id = $1 AND deleted_at = 0
+`
+
+func (q *Queries) DeleteDeductionItemIngredientsByItemID(ctx context.Context, deductionItemID uuid.UUID) error {
+	_, err := q.db.Exec(ctx, deleteDeductionItemIngredientsByItemID, deductionItemID)
+	return err
+}
+
+const deleteDeductionItemsByDeductionID = `-- name: DeleteDeductionItemsByDeductionID :exec
+UPDATE deduction_items
+SET deleted_at = EXTRACT(EPOCH FROM NOW())::BIGINT,
+    updated_at = NOW()
+WHERE deduction_id = $1 AND deleted_at = 0
+`
+
+func (q *Queries) DeleteDeductionItemsByDeductionID(ctx context.Context, deductionID uuid.UUID) error {
+	_, err := q.db.Exec(ctx, deleteDeductionItemsByDeductionID, deductionID)
+	return err
+}
+
 const getAllDeductions = `-- name: GetAllDeductions :many
 SELECT id, number, date, act_group_id, storage_id, description, description_i18n, status, balance, created_at, updated_at, deleted_at
 FROM deductions
-WHERE deleted_at = 0
 ORDER BY date DESC, number DESC
 LIMIT $1 OFFSET $2
 `
@@ -240,6 +289,29 @@ func (q *Queries) GetDeductionByID(ctx context.Context, id uuid.UUID) (Deduction
 		&i.DescriptionI18n,
 		&i.Status,
 		&i.Balance,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
+	)
+	return i, err
+}
+
+const getDeductionItemByID = `-- name: GetDeductionItemByID :one
+SELECT id, deduction_id, ingredient_id, good_id, compound_id, quantity, created_at, updated_at, deleted_at
+FROM deduction_items
+WHERE id = $1 AND deleted_at = 0
+`
+
+func (q *Queries) GetDeductionItemByID(ctx context.Context, id uuid.UUID) (DeductionItem, error) {
+	row := q.db.QueryRow(ctx, getDeductionItemByID, id)
+	var i DeductionItem
+	err := row.Scan(
+		&i.ID,
+		&i.DeductionID,
+		&i.IngredientID,
+		&i.GoodID,
+		&i.CompoundID,
+		&i.Quantity,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,

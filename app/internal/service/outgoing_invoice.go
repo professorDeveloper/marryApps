@@ -323,6 +323,57 @@ func (s *OutgoingInvoiceS) DeleteOutgoingInvoice(ctx context.Context, id string)
 	if err != nil {
 		return fmt.Errorf("invalid invoice id: %w", err)
 	}
+
+	// Reverse stock: add back quantities that were deducted when confirmed
+	invoice, err := s.repo.Tenant(ctx).GetOutgoingInvoiceByID(ctx, invoiceID)
+	if err == nil && invoice.Status == "confirmed" && invoice.StorageID.Valid {
+		items, _ := s.repo.Tenant(ctx).GetOutgoingInvoiceItemsByInvoiceID(ctx, invoiceID)
+		storageID := invoice.StorageID
+		srcType := "outgoing_invoice_deleted"
+		zero := pgtype.Numeric{}
+		_ = zero.Scan("0")
+		for _, item := range items {
+			if !item.StockBefore.Valid {
+				continue
+			}
+			stockID, err := s.repo.Tenant(ctx).EnsureIngredientStockByStorage(ctx, pg.EnsureIngredientStockByStorageParams{
+				ID:           uuid.New(),
+				IngredientID: item.IngredientID,
+				StorageID:    storageID,
+			})
+			if err != nil {
+				continue
+			}
+			locked, err := s.repo.Tenant(ctx).GetStockByIngredientAndStorageForUpdate(ctx, pg.GetStockByIngredientAndStorageForUpdateParams{
+				IngredientID: item.IngredientID,
+				StorageID:    storageID,
+			})
+			if err != nil {
+				continue
+			}
+			updated, err := s.repo.Tenant(ctx).AddToIngredientStock(ctx, pg.AddToIngredientStockParams{
+				ID:       stockID,
+				Quantity: item.Quantity,
+			})
+			if err != nil {
+				continue
+			}
+			_ = s.repo.Tenant(ctx).InsertIngredientStockMovement(ctx, pg.InsertIngredientStockMovementParams{
+				ID:           uuid.New(),
+				StorageID:    uuid.UUID(storageID.Bytes),
+				IngredientID: item.IngredientID,
+				EventType:    "outgoing_invoice_deleted_in",
+				QtyIn:        item.Quantity,
+				QtyOut:       zero,
+				StockBefore:  locked.Quantity,
+				StockAfter:   updated.Quantity,
+				PricePerUnit: item.PricePerUnit,
+				SourceType:   &srcType,
+				SourceID:     &invoiceID,
+			})
+		}
+	}
+
 	return s.repo.Tenant(ctx).DeleteOutgoingInvoice(ctx, invoiceID)
 }
 
@@ -447,10 +498,14 @@ func (s *OutgoingInvoiceS) recalcInvoiceTotal(ctx context.Context, invoiceID uui
 // ── helpers ──────────────────────────────────────────────────────────────────
 
 func outgoingInvoiceToResponse(row pg.OutgoingInvoice) *model.OutgoingInvoiceResponse {
+	outStatus := model.OutgoingInvoiceStatus(row.Status)
+	if row.DeletedAt != nil && *row.DeletedAt > 0 {
+		outStatus = "deleted"
+	}
 	r := &model.OutgoingInvoiceResponse{
 		ID:          row.ID.String(),
 		Number:      row.Number,
-		Status:      model.OutgoingInvoiceStatus(row.Status),
+		Status:      outStatus,
 		TotalAmount: pgNumericToStr(row.TotalAmount),
 	}
 	if row.Date.Valid {

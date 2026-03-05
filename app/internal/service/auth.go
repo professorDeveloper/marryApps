@@ -898,7 +898,7 @@ func (s *AuthS) GetUsersByRole(ctx context.Context, role string) ([]model.UserRe
 }
 
 func (s *AuthS) GetAllStaff(ctx context.Context) ([]model.UserResponse, error) {
-	users, err := s.repo.Tenant(ctx).GetAllUsers(ctx)
+	users, err := s.repo.Tenant(ctx).GetStaffUsers(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get staff: %w", err)
 	}

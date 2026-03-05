@@ -16,4 +16,5 @@ type GroupTransactionResponse struct {
 	BranchID  *string    `json:"branch_id,omitempty" example:"c0f18a64-7f5c-4425-9414-1b01cddee9d9"`
 	CreatedAt *time.Time `json:"created_at,omitempty"`
 	UpdatedAt *time.Time `json:"updated_at,omitempty"`
+	IsDeleted bool       `json:"is_deleted"`
 }

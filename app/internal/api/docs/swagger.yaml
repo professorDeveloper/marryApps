@@ -206,6 +206,37 @@ definitions:
         example: "2021-01-01T00:00:00Z"
         type: string
     type: object
+  model.CashRegisterShiftResponse:
+    properties:
+      branch_id:
+        type: string
+      cash_register_id:
+        type: string
+      cashier_id:
+        type: string
+      closed_at:
+        type: string
+      closing_card:
+        type: string
+      closing_cash:
+        type: string
+      created_at:
+        type: string
+      id:
+        type: string
+      notes:
+        type: string
+      opened_at:
+        type: string
+      opening_card:
+        type: string
+      opening_cash:
+        type: string
+      status:
+        type: string
+      updated_at:
+        type: string
+    type: object
   model.CashReportGroupRow:
     properties:
       card_total:
@@ -324,6 +355,20 @@ definitions:
         type: array
       total:
         type: integer
+    type: object
+  model.CloseCashRegisterShiftRequest:
+    properties:
+      closing_card:
+        example: "3000.00"
+        type: string
+      closing_cash:
+        example: "5000.00"
+        type: string
+      notes:
+        example: End of day shift
+        type: string
+    required:
+    - closing_cash
     type: object
   model.CompoundCalculationItem:
     properties:
@@ -958,6 +1003,41 @@ definitions:
         example: 123e4567-e89b-12d3-a456-426614174000
         type: string
     type: object
+  model.CreateInventoryBatchRequest:
+    properties:
+      date:
+        example: "2024-01-01"
+        type: string
+      description:
+        example: Monthly inventory
+        type: string
+      description_i18n:
+        type: string
+      items:
+        items:
+          $ref: '#/definitions/model.UpsertInventoryItemRequest'
+        minItems: 1
+        type: array
+      status:
+        example: active
+        type: string
+      storage_id:
+        example: d1f29b75-8g6d-5536-0525-2c12deeef0e0
+        type: string
+    required:
+    - date
+    - items
+    - storage_id
+    type: object
+  model.CreateInventoryBatchResponse:
+    properties:
+      inventory:
+        $ref: '#/definitions/model.InventoryResponse'
+      items:
+        items:
+          $ref: '#/definitions/model.InventoryItemComputedResponse'
+        type: array
+    type: object
   model.CreateInventoryRequest:
     properties:
       date:
@@ -1129,6 +1209,12 @@ definitions:
         items:
           $ref: '#/definitions/model.CreateOrderItemInline'
         type: array
+      order_type:
+        example: dine_in
+        type: string
+      scheduled_at:
+        example: "2024-01-01T15:00:00Z"
+        type: string
       status:
         example: open
         type: string
@@ -1138,8 +1224,6 @@ definitions:
       waiter_id:
         example: a1b2c3d4-e5f6-4a5b-8c9d-e0f1a2b3c4d5
         type: string
-    required:
-    - table_id
     type: object
   model.CreateOutgoingInvoiceBatchRequest:
     properties:
@@ -1800,6 +1884,8 @@ definitions:
       id:
         example: c0f18a64-7f5c-4425-9414-1b01cddee9d9
         type: string
+      is_deleted:
+        type: boolean
       name:
         example: Group A
         type: string
@@ -2365,6 +2451,25 @@ definitions:
     required:
     - customer_paid_amount
     type: object
+  model.OpenCashRegisterShiftRequest:
+    properties:
+      cash_register_id:
+        example: uuid
+        type: string
+      cashier_id:
+        example: uuid
+        type: string
+      opening_card:
+        example: "0.00"
+        type: string
+      opening_cash:
+        example: "0.00"
+        type: string
+    required:
+    - cash_register_id
+    - cashier_id
+    - opening_cash
+    type: object
   model.OrderItemResponse:
     properties:
       comment:
@@ -2420,6 +2525,13 @@ definitions:
       id:
         example: c0f18a64-7f5c-4425-9414-1b01cddee9d9
         type: string
+      order_type:
+        example: dine_in
+        type: string
+      reschedule_comment:
+        type: string
+      scheduled_at:
+        type: string
       status:
         allOf:
         - $ref: '#/definitions/model.OrderStatus'
@@ -2444,6 +2556,8 @@ definitions:
     - served
     - paid
     - cancelled
+    - reserved
+    - rescheduled
     type: string
     x-enum-varnames:
     - OrderStatusOpen
@@ -2452,6 +2566,8 @@ definitions:
     - OrderStatusServed
     - OrderStatusPaid
     - OrderStatusCancelled
+    - OrderStatusReserved
+    - OrderStatusRescheduled
   model.OutgoingInvoiceItemResponse:
     properties:
       created_at:
@@ -2619,6 +2735,17 @@ definitions:
         type: integer
     required:
     - quantity
+    type: object
+  model.RescheduleOrderRequest:
+    properties:
+      comment:
+        example: Customer called to reschedule
+        type: string
+      scheduled_at:
+        example: "2024-01-01T18:00:00Z"
+        type: string
+    required:
+    - scheduled_at
     type: object
   model.SeparationActItemResponse:
     properties:
@@ -3728,6 +3855,16 @@ definitions:
       username:
         type: string
     type: object
+  model.UpsertDeductionItemsRequest:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/model.CreateDeductionItemRequest'
+        minItems: 1
+        type: array
+    required:
+    - items
+    type: object
   model.UpsertInventoryItemRequest:
     properties:
       counted_quantity:
@@ -3748,6 +3885,46 @@ definitions:
         type: array
     required:
     - items
+    type: object
+  model.UpsertInvoiceDetailEntry:
+    properties:
+      ingredient_id:
+        example: e2g30c86-9h7e-6647-1636-3d23effg1f1
+        type: string
+      price:
+        example: "500000"
+        type: string
+      price_per_unit:
+        example: "10000"
+        type: string
+      quantity:
+        example: "50"
+        type: string
+    required:
+    - ingredient_id
+    - price
+    - price_per_unit
+    - quantity
+    type: object
+  model.UpsertInvoiceDetailsRequest:
+    properties:
+      details:
+        items:
+          $ref: '#/definitions/model.UpsertInvoiceDetailEntry'
+        minItems: 1
+        type: array
+    required:
+    - details
+    type: object
+  model.UpsertInvoiceDetailsResponse:
+    properties:
+      details:
+        items:
+          $ref: '#/definitions/model.InvoiceDetailResponse'
+        type: array
+      success:
+        example: 2
+        type: integer
     type: object
   model.UpsertOutgoingInvoiceItemRequest:
     properties:
@@ -3815,6 +3992,16 @@ definitions:
       items:
         items:
           $ref: '#/definitions/model.UpsertShipmentItemRequest'
+        minItems: 1
+        type: array
+    required:
+    - items
+    type: object
+  model.UpsertTransferItemsRequest:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/model.CreateTransferItemEntry'
         minItems: 1
         type: array
     required:
@@ -4337,7 +4524,7 @@ paths:
       - auth
   /api/v1/bills:
     get:
-      description: List bills (orders) with bill snapshots and filters
+      description: List bills (orders) with bill snapshots and filters, supports expand
       parameters:
       - default: uz
         description: Language (uz, ru, en)
@@ -4352,6 +4539,10 @@ paths:
         in: query
         name: end
         type: string
+      - description: Bill number to search within the date range
+        in: query
+        name: bill_no
+        type: integer
       - description: Bill status (opened, closed, paid)
         in: query
         name: bill_status
@@ -4382,6 +4573,11 @@ paths:
         in: query
         name: offset
         type: integer
+      - description: 'Expand relations (comma-separated: user_id, hall_id, table_id,
+          etc)'
+        in: query
+        name: expand
+        type: string
       produces:
       - application/json
       responses:
@@ -4408,7 +4604,7 @@ paths:
       - reports
   /api/v1/bills/{id}:
     get:
-      description: Get full bill details including items
+      description: Get full bill details including items, supports expand
       parameters:
       - default: uz
         description: Language (uz, ru, en)
@@ -4419,6 +4615,10 @@ paths:
         in: path
         name: id
         required: true
+        type: string
+      - description: 'Expand relations (comma-separated: user_id, hall_id, etc)'
+        in: query
+        name: expand
         type: string
       produces:
       - application/json
@@ -5399,6 +5599,201 @@ paths:
       summary: Preview calculations (no DB writes)
       tags:
       - Calculations
+  /api/v1/cash-register-shifts:
+    get:
+      description: Returns a paginated list of cash register shifts. Filter by cash_register_id,
+        cashier_id, or status (open/closed).
+      parameters:
+      - description: Filter by cash register ID
+        in: query
+        name: cash_register_id
+        type: string
+      - description: Filter by cashier ID
+        in: query
+        name: cashier_id
+        type: string
+      - description: 'Filter by status: open or closed'
+        in: query
+        name: status
+        type: string
+      - default: 20
+        description: Limit
+        in: query
+        name: limit
+        type: integer
+      - default: 0
+        description: Offset
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: List cash register shifts
+      tags:
+      - CashRegisterShifts
+    post:
+      consumes:
+      - application/json
+      description: Opens a new shift for a cash register. Only one active shift per
+        cash register is allowed.
+      parameters:
+      - description: Open shift request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.OpenCashRegisterShiftRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/model.CashRegisterShiftResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Open cash register shift
+      tags:
+      - CashRegisterShifts
+  /api/v1/cash-register-shifts/{id}:
+    delete:
+      description: Soft-deletes a cash register shift by ID.
+      parameters:
+      - description: Shift ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.SuccessResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete cash register shift
+      tags:
+      - CashRegisterShifts
+    get:
+      description: Returns a single cash register shift by its ID.
+      parameters:
+      - description: Shift ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.CashRegisterShiftResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get cash register shift
+      tags:
+      - CashRegisterShifts
+  /api/v1/cash-register-shifts/{id}/close:
+    post:
+      consumes:
+      - application/json
+      description: Closes an open shift by recording closing cash and card amounts.
+      parameters:
+      - description: Shift ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Close shift request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.CloseCashRegisterShiftRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.CashRegisterShiftResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Close cash register shift
+      tags:
+      - CashRegisterShifts
+  /api/v1/cash-register-shifts/active:
+    get:
+      description: Returns the currently open shift for the given cash register.
+      parameters:
+      - description: Cash Register ID
+        in: query
+        name: cash_register_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.CashRegisterShiftResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get active shift
+      tags:
+      - CashRegisterShifts
   /api/v1/cash-registers:
     get:
       description: Retrieve all cash registers for the current branch
@@ -7987,6 +8382,90 @@ paths:
       security:
       - BearerAuth: []
       summary: Update deduction
+      tags:
+      - deductions
+  /api/v1/deductions/{id}/items/{itemId}:
+    delete:
+      consumes:
+      - application/json
+      description: Removes a single item from a deduction and adds its deducted quantities
+        back to stock
+      parameters:
+      - description: Deduction ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Deduction Item ID
+        in: path
+        name: itemId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Updated deduction
+          schema:
+            $ref: '#/definitions/model.DeductionResponse'
+        "400":
+          description: Invalid request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: Not found
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete deduction item
+      tags:
+      - deductions
+  /api/v1/deductions/{id}/items/batch:
+    put:
+      consumes:
+      - application/json
+      description: Replaces all deduction items for the given deduction. Previous
+        stock deductions are reversed, then new quantities are applied. Returns warnings
+        if any ingredient has insufficient stock.
+      parameters:
+      - description: Deduction ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: New deduction items
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/model.UpsertDeductionItemsRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Updated deduction with new items
+          schema:
+            $ref: '#/definitions/model.DeductionResponse'
+        "400":
+          description: Invalid request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: Deduction not found
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Batch update deduction items
       tags:
       - deductions
   /api/v1/deductions/{id}/restore:
@@ -11043,6 +11522,11 @@ paths:
         in: query
         name: offset
         type: integer
+      - description: 'Expand FK relations (comma-separated: ingredient_id, storage_id,
+          branch_id)'
+        in: query
+        name: expand
+        type: string
       produces:
       - application/json
       responses:
@@ -11145,6 +11629,11 @@ paths:
         in: path
         name: id
         required: true
+        type: string
+      - description: 'Expand FK relations (comma-separated: ingredient_id, storage_id,
+          branch_id)'
+        in: query
+        name: expand
         type: string
       produces:
       - application/json
@@ -11356,6 +11845,11 @@ paths:
         in: query
         name: offset
         type: integer
+      - description: 'Expand FK relations (comma-separated: ingredient_id, storage_id,
+          branch_id)'
+        in: query
+        name: expand
+        type: string
       produces:
       - application/json
       responses:
@@ -11448,6 +11942,11 @@ paths:
         in: query
         name: offset
         type: integer
+      - description: 'Expand FK relations (comma-separated: ingredient_id, storage_id,
+          branch_id)'
+        in: query
+        name: expand
+        type: string
       produces:
       - application/json
       responses:
@@ -11490,6 +11989,10 @@ paths:
         in: query
         name: offset
         type: integer
+      - description: 'Expand FK relations (comma-separated: group_id, name_i18n)'
+        in: query
+        name: expand
+        type: string
       produces:
       - application/json
       responses:
@@ -11566,6 +12069,10 @@ paths:
         in: query
         name: offset
         type: integer
+      - description: 'Expand FK relations (comma-separated: group_id, name_i18n)'
+        in: query
+        name: expand
+        type: string
       produces:
       - application/json
       responses:
@@ -11607,6 +12114,10 @@ paths:
       - description: 'Language code (uz, ru, en - default: uz)'
         in: query
         name: lang
+        type: string
+      - description: 'Expand FK relations (comma-separated: group_id, name_i18n)'
+        in: query
+        name: expand
         type: string
       produces:
       - application/json
@@ -11681,6 +12192,10 @@ paths:
         in: path
         name: id
         required: true
+        type: string
+      - description: 'Expand FK relations (comma-separated: group_id, name_i18n)'
+        in: query
+        name: expand
         type: string
       produces:
       - application/json
@@ -12096,42 +12611,6 @@ paths:
       summary: Update inventory
       tags:
       - inventories
-  /api/v1/inventories/{id}/apply:
-    post:
-      consumes:
-      - application/json
-      description: Apply inventory count to ingredient_stock for the inventory storage
-        and record surplus/shortage movements
-      parameters:
-      - description: Inventory ID
-        in: path
-        name: id
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Inventory applied successfully
-          schema:
-            $ref: '#/definitions/model.InventoryResponse'
-        "400":
-          description: Invalid inventory ID
-          schema:
-            $ref: '#/definitions/model.ErrorResponse'
-        "401":
-          description: Unauthorized
-          schema:
-            $ref: '#/definitions/model.ErrorResponse'
-        "500":
-          description: Internal server error
-          schema:
-            $ref: '#/definitions/model.ErrorResponse'
-      security:
-      - BearerAuth: []
-      summary: Apply inventory
-      tags:
-      - inventories
   /api/v1/inventories/{id}/calculate:
     post:
       consumes:
@@ -12249,6 +12728,50 @@ paths:
       summary: Upsert inventory items
       tags:
       - inventory_items
+  /api/v1/inventories/{id}/items/batch:
+    put:
+      consumes:
+      - application/json
+      description: Upsert (create/update) counted quantities for multiple ingredients
+        in an existing inventory. Blocked if inventory is already applied.
+      parameters:
+      - description: Inventory ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Inventory items batch update data
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/model.UpsertInventoryItemsRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Inventory items updated successfully
+          schema:
+            items:
+              $ref: '#/definitions/model.InventoryItemComputedResponse'
+            type: array
+        "400":
+          description: Invalid request or inventory already applied
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update inventory items batch
+      tags:
+      - inventory_items
   /api/v1/inventories/{id}/restore:
     post:
       consumes:
@@ -12282,6 +12805,38 @@ paths:
       security:
       - BearerAuth: []
       summary: Restore inventory
+      tags:
+      - inventories
+  /api/v1/inventories/batch:
+    post:
+      consumes:
+      - application/json
+      description: Creates an inventory and upserts its items in a single request
+      parameters:
+      - description: Inventory batch creation data
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/model.CreateInventoryBatchRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/model.CreateInventoryBatchResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create inventory with items
       tags:
       - inventories
   /api/v1/inventories/search:
@@ -13243,6 +13798,53 @@ paths:
       security:
       - BearerAuth: []
       summary: Get invoice with details
+      tags:
+      - Invoices
+  /api/v1/invoices/{id}/details/batch:
+    put:
+      consumes:
+      - application/json
+      description: Replace all details of an invoice. Reverses old stock additions
+        and applies new quantities.
+      parameters:
+      - default: uz
+        description: Language (uz, ru, en)
+        in: query
+        name: lang
+        type: string
+      - description: Invoice ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: New invoice details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.UpsertInvoiceDetailsRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.UpsertInvoiceDetailsResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Batch update invoice details
       tags:
       - Invoices
   /api/v1/invoices/{id}/mark-arrived:
@@ -14610,6 +15212,45 @@ paths:
       summary: Update order
       tags:
       - Orders
+  /api/v1/orders/{id}/activate:
+    post:
+      description: Manually activate a reserved or rescheduled order (sets status
+        to open)
+      parameters:
+      - default: uz
+        description: Language (uz, ru, en)
+        in: query
+        name: lang
+        type: string
+      - description: Order ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.SuccessResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Activate reserved order
+      tags:
+      - Orders
   /api/v1/orders/{id}/assign-cashier/{cashierId}:
     post:
       description: Assign a cashier to an order
@@ -14902,6 +15543,52 @@ paths:
       security:
       - BearerAuth: []
       summary: Mark order ready
+      tags:
+      - Orders
+  /api/v1/orders/{id}/reschedule:
+    post:
+      consumes:
+      - application/json
+      description: Move a reservation to a new scheduled time with an optional comment
+      parameters:
+      - default: uz
+        description: Language (uz, ru, en)
+        in: query
+        name: lang
+        type: string
+      - description: Order ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Reschedule request
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/model.RescheduleOrderRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.SuccessResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Reschedule order
       tags:
       - Orders
   /api/v1/orders/{id}/restore:
@@ -17782,6 +18469,48 @@ paths:
       security:
       - BearerAuth: []
       summary: Get transfer by ID
+      tags:
+      - Transfers
+  /api/v1/transfers/{id}/items/batch:
+    put:
+      consumes:
+      - application/json
+      description: Replaces all transfer items. Old stock changes are reversed, then
+        new quantities are applied.
+      parameters:
+      - description: Transfer ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: New transfer items
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/model.UpsertTransferItemsRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Updated transfer with new items
+          schema:
+            $ref: '#/definitions/model.TransferResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Batch update transfer items
       tags:
       - Transfers
   /api/v1/transfers/batch:

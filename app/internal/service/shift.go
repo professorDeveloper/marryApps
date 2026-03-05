@@ -196,8 +196,8 @@ type ShiftResponse struct {
 	Name        string  `json:"name"`
 	Role        *string `json:"role"`
 	WorkingDays *string `json:"working_days"`
-	OpenTime    *int64  `json:"open_time"`
-	CloseTime   *int64  `json:"close_time"`
+	OpenTime    *string `json:"open_time"`
+	CloseTime   *string `json:"close_time"`
 	BranchID    string  `json:"branch_id,omitempty"`
 }
 
@@ -217,10 +217,23 @@ func toShiftResponse(shift pg.Shift) *ShiftResponse {
 		Name:        shift.Name,
 		Role:        role,
 		WorkingDays: shift.WorkingDays,
-		OpenTime:    shift.OpenTime,
-		CloseTime:   shift.CloseTime,
+		OpenTime:    secondsToTimeStr(shift.OpenTime),
+		CloseTime:   secondsToTimeStr(shift.CloseTime),
 		BranchID:    branchID,
 	}
+}
+
+// secondsToTimeStr converts seconds since midnight back to "HH:MM:SS".
+func secondsToTimeStr(secs *int64) *string {
+	if secs == nil {
+		return nil
+	}
+	total := *secs
+	h := total / 3600
+	m := (total % 3600) / 60
+	s := total % 60
+	str := fmt.Sprintf("%02d:%02d:%02d", h, m, s)
+	return &str
 }
 
 // parseTimeToSeconds parses "HH:MM:SS" or "HH:MM" into seconds since midnight.

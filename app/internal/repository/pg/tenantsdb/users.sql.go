@@ -353,7 +353,7 @@ func (q *Queries) GetAllUsers(ctx context.Context) ([]User, error) {
 }
 
 const getAllUsersPaginated = `-- name: GetAllUsersPaginated :many
-SELECT id, full_name, username, role, email, shift_id, pincode, hash_password, brand_id, branch_id, phone_number, fcm_token, is_active, created_at, updated_at, deleted_at FROM users 
+SELECT id, full_name, username, role, email, shift_id, pincode, hash_password, brand_id, branch_id, phone_number, fcm_token, is_active, created_at, updated_at, deleted_at FROM users
 WHERE deleted_at = 0
   AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 ORDER BY created_at DESC
@@ -972,6 +972,51 @@ func (q *Queries) GetShiftsWithUserCounts(ctx context.Context) ([]GetShiftsWithU
 			&i.UpdatedAt,
 			&i.DeletedAt,
 			&i.UserCount,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getStaffUsers = `-- name: GetStaffUsers :many
+SELECT id, full_name, username, role, email, shift_id, pincode, hash_password, brand_id, branch_id, phone_number, fcm_token, is_active, created_at, updated_at, deleted_at FROM users
+WHERE deleted_at = 0
+  AND role NOT IN ('admin', 'superadmin')
+  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+ORDER BY full_name ASC
+`
+
+func (q *Queries) GetStaffUsers(ctx context.Context) ([]User, error) {
+	rows, err := q.db.Query(ctx, getStaffUsers)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []User
+	for rows.Next() {
+		var i User
+		if err := rows.Scan(
+			&i.ID,
+			&i.FullName,
+			&i.Username,
+			&i.Role,
+			&i.Email,
+			&i.ShiftID,
+			&i.Pincode,
+			&i.HashPassword,
+			&i.BrandID,
+			&i.BranchID,
+			&i.PhoneNumber,
+			&i.FcmToken,
+			&i.IsActive,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.DeletedAt,
 		); err != nil {
 			return nil, err
 		}

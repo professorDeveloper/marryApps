@@ -112,3 +112,34 @@ func (q *Queries) GetIngredientStockByIDForUpdate(ctx context.Context, id uuid.U
 	}
 	return out, nil
 }
+
+type StockMovementForReversalRow struct {
+	IngredientID uuid.UUID
+	StorageID    uuid.UUID
+	StockBefore  pgtype.Numeric
+}
+
+func (q *Queries) GetStockMovementsBySourceID(ctx context.Context, sourceID uuid.UUID) ([]StockMovementForReversalRow, error) {
+	const sql = `
+		SELECT DISTINCT ON (ingredient_id) ingredient_id, storage_id, stock_before
+		FROM ingredient_stock_movements
+		WHERE source_id = $1 AND source_type = 'inventory'
+		ORDER BY ingredient_id, created_at ASC
+	`
+
+	rows, err := q.db.Query(ctx, sql, sourceID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var items []StockMovementForReversalRow
+	for rows.Next() {
+		var row StockMovementForReversalRow
+		if err := rows.Scan(&row.IngredientID, &row.StorageID, &row.StockBefore); err != nil {
+			return nil, err
+		}
+		items = append(items, row)
+	}
+	return items, rows.Err()
+}

@@ -71,8 +71,7 @@ func (q *Queries) ConfirmOutgoingInvoice(ctx context.Context, id uuid.UUID) (Out
 
 const countOutgoingInvoices = `-- name: CountOutgoingInvoices :one
 SELECT COUNT(*) FROM outgoing_invoices
-WHERE deleted_at = 0
-  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+WHERE branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
   AND (NULLIF($1::text, '')::uuid IS NULL OR storage_id = NULLIF($1::text, '')::uuid)
   AND (NULLIF($2::text, '')::uuid IS NULL OR group_id   = NULLIF($2::text, '')::uuid)
   AND (NULLIF($3::text, '')::outgoing_invoice_status IS NULL OR status = NULLIF($3::text, '')::outgoing_invoice_status)
@@ -264,8 +263,7 @@ func (q *Queries) GetOutgoingInvoiceItemsByInvoiceID(ctx context.Context, outgoi
 const listOutgoingInvoices = `-- name: ListOutgoingInvoices :many
 SELECT id, number, date, storage_id, group_id, branch_id, description, status, total_amount, created_at, updated_at, deleted_at
 FROM outgoing_invoices
-WHERE deleted_at = 0
-  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+WHERE branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
   AND (NULLIF($1::text, '')::uuid IS NULL OR storage_id = NULLIF($1::text, '')::uuid)
   AND (NULLIF($2::text, '')::uuid IS NULL OR group_id   = NULLIF($2::text, '')::uuid)
   AND (NULLIF($3::text, '')::outgoing_invoice_status IS NULL OR status = NULLIF($3::text, '')::outgoing_invoice_status)
