@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"log"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgtype"
@@ -119,11 +120,14 @@ func withSavepoint(ctx context.Context, name string, fn func() error) {
 	tx, ok := repository.TenantTxFromContext(ctx)
 	if !ok {
 		// No transaction in context — just run best-effort
-		_ = fn()
+		if err := fn(); err != nil {
+			log.Printf("withSavepoint[%s] (no-tx) error: %v", name, err)
+		}
 		return
 	}
 	_, _ = tx.Exec(ctx, "SAVEPOINT "+name)
 	if err := fn(); err != nil {
+		log.Printf("withSavepoint[%s] error: %v", name, err)
 		_, _ = tx.Exec(ctx, "ROLLBACK TO SAVEPOINT "+name)
 	}
 	_, _ = tx.Exec(ctx, "RELEASE SAVEPOINT "+name)
