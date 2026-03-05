@@ -345,7 +345,7 @@
       "shipments": "Отгрузки",
       "expensesInvoices": "Расходные накладные",
       "separationActs": "Акты разделки",
-      "orders": "Управление заказами"
+      "orders": "Предзаказ"
     },
     "reports": {
       "title": "Отчеты",

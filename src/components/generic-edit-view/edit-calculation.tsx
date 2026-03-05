@@ -119,13 +119,10 @@ type SubTabType = 'ingredients' | 'semifinished';
 const ProductCalculator = ({ compoundId, mealId, onEntityCreated, onCalculationsReady, onSaveWithGood, onUpdateWithGood }: ProductCalculatorProps) => {
     const { t } = useTranslation('menu');
     const theme = useTheme();
-
     const entityType = compoundId ? 'compound' : mealId ? 'meal' : undefined;
     const entityId = compoundId || mealId;
-
     // Sub-tab state
     const [activeSubTab, setActiveSubTab] = useState<SubTabType>('ingredients');
-
     // --- INGREDIENTS TAB STATE ---
     const [ingredients, setIngredients] = useState<Product[]>([]);
     const [ingredientGroups, setIngredientGroups] = useState<IngredientGroup[]>([]);
@@ -293,30 +290,6 @@ const ProductCalculator = ({ compoundId, mealId, onEntityCreated, onCalculations
     // Load existing ingredient calculations
     useEffect(() => {
         if (!entityId) {
-            if (transferredIds.length > 0) {
-                setPendingCalculations(prev => [
-                    ...prev.filter(p => p.compound_to_add_id),
-                    ...transferredIds.map(id => ({
-                        ingredient_id: id,
-                        quantity: quantities[id]
-                    }))
-                ]);
-                // Notify parent about pending calculations
-                if (onCalculationsReady) {
-                    const ingredientCalcs = transferredIds.map(id => ({
-                        ingredient_id: id,
-                        quantity: String(quantities[id])
-                    }));
-                    const compoundCalcs = sfTransferredIds.map(id => ({
-                        compound_id: id,
-                        quantity: String(sfQuantities[id])
-                    }));
-                    onCalculationsReady({
-                        ingredient_calculations: ingredientCalcs.length > 0 ? ingredientCalcs : undefined,
-                        compound_calculations: compoundCalcs.length > 0 ? compoundCalcs : undefined,
-                    });
-                }
-            }
             prevCalculationsRef.current = '';
             return;
         }
@@ -367,6 +340,47 @@ const ProductCalculator = ({ compoundId, mealId, onEntityCreated, onCalculations
             setPendingCalculations(prev => prev.filter(p => p.compound_to_add_id));
         }
     }, [entityId, ingredientCalculations, calculationsLoading]);
+
+    // Keep parent in sync for new entities so Save can send a single combined payload.
+    useEffect(() => {
+        if (entityId) return;
+
+        const ingredientPending = transferredIds
+            .map((id) => ({
+                ingredient_id: id,
+                quantity: quantities[id]
+            }))
+            .filter((calc) => Number.isFinite(calc.quantity) && calc.quantity > 0);
+
+        const compoundPending = sfTransferredIds
+            .map((id) => ({
+                compound_to_add_id: id,
+                quantity: sfQuantities[id]
+            }))
+            .filter((calc) => Number.isFinite(calc.quantity) && calc.quantity > 0);
+
+        setPendingCalculations([
+            ...ingredientPending,
+            ...compoundPending,
+        ]);
+
+        if (onCalculationsReady) {
+            onCalculationsReady({
+                ingredient_calculations: ingredientPending.length > 0
+                    ? ingredientPending.map((calc) => ({
+                        ingredient_id: calc.ingredient_id!,
+                        quantity: String(calc.quantity),
+                    }))
+                    : undefined,
+                compound_calculations: compoundPending.length > 0
+                    ? compoundPending.map((calc) => ({
+                        compound_id: calc.compound_to_add_id!,
+                        quantity: String(calc.quantity),
+                    }))
+                    : undefined,
+            });
+        }
+    }, [entityId, transferredIds, quantities, sfTransferredIds, sfQuantities, onCalculationsReady]);
 
     // Load existing compound calculations
     useEffect(() => {
