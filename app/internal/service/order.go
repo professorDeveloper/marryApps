@@ -523,37 +523,36 @@ func (s *OrderS) MarkOrderPaid(ctx context.Context, orderID string, cashierID st
 	}
 
 	// Auto-create income transaction — best-effort, must not abort the main transaction
-	if cashRegisterID != nil && *cashRegisterID != "" {
-		crID, parseErr := uuid.Parse(*cashRegisterID)
-		if parseErr == nil {
-			withSavepoint(ctx, "sp_create_tx", func() error {
-				bill, billErr := s.repo.Tenant(ctx).GetBillDetails(ctx, oID)
-				if billErr != nil {
-					return billErr
-				}
-				descStr := fmt.Sprintf("Bill payment #%d", bill.BillNo)
-				txParams := pg.CreateTransactionParams{
-					ID:                 uuid.New(),
-					Type:               pg.TransactionTypeBillPayment,
-					CashRegisterID:     pgtype.UUID{Bytes: crID, Valid: true},
-					Amount:             bill.GrandTotal,
-					Description:        &descStr,
-					Date:               time.Now(),
-					UserID:             pgtype.UUID{Bytes: cID, Valid: true},
-					CustomerPaidAmount: derefNumeric(bill.CustomerPaidAmount),
-					ChangeAmount:       derefNumeric(bill.ChangeAmount),
-				}
-				if paymentType != nil && *paymentType != "" {
-					txParams.PayType = pg.NullPaymentType{
-						PaymentType: pg.PaymentType(*paymentType),
-						Valid:        true,
-					}
-				}
-				_, err := s.repo.Tenant(ctx).CreateTransaction(ctx, txParams)
-				return err
-			})
+	withSavepoint(ctx, "sp_create_tx", func() error {
+		bill, billErr := s.repo.Tenant(ctx).GetBillDetails(ctx, oID)
+		if billErr != nil {
+			return billErr
 		}
-	}
+		descStr := fmt.Sprintf("Bill payment #%d", bill.BillNo)
+		txParams := pg.CreateTransactionParams{
+			ID:                 uuid.New(),
+			Type:               pg.TransactionTypeBillPayment,
+			Amount:             bill.GrandTotal,
+			Description:        &descStr,
+			Date:               time.Now(),
+			UserID:             pgtype.UUID{Bytes: cID, Valid: true},
+			CustomerPaidAmount: derefNumeric(bill.CustomerPaidAmount),
+			ChangeAmount:       derefNumeric(bill.ChangeAmount),
+		}
+		if cashRegisterID != nil && *cashRegisterID != "" {
+			if crID, parseErr := uuid.Parse(*cashRegisterID); parseErr == nil {
+				txParams.CashRegisterID = pgtype.UUID{Bytes: crID, Valid: true}
+			}
+		}
+		if paymentType != nil && *paymentType != "" {
+			txParams.PayType = pg.NullPaymentType{
+				PaymentType: pg.PaymentType(*paymentType),
+				Valid:        true,
+			}
+		}
+		_, err := s.repo.Tenant(ctx).CreateTransaction(ctx, txParams)
+		return err
+	})
 
 	order, err := s.repo.Tenant(ctx).GetOrderByID(ctx, oID)
 	if err != nil {
