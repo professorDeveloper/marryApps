@@ -233,6 +233,26 @@ func (h *Handler) GetBills(c echo.Context) error {
 		}
 		req.TableID = &v
 	}
+	if v := c.QueryParam("cash_register_id"); v != "" {
+		if _, err := uuid.Parse(v); err != nil {
+			return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+				"invalid cash_register_id format",
+				err.Error(),
+				http.StatusBadRequest,
+			))
+		}
+		req.CashRegisterID = &v
+	}
+	if v := c.QueryParam("cashier_id"); v != "" {
+		if _, err := uuid.Parse(v); err != nil {
+			return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+				"invalid cashier_id format",
+				err.Error(),
+				http.StatusBadRequest,
+			))
+		}
+		req.CashierID = &v
+	}
 
 	// ============================================
 	// STEP 1: Fetch data from service

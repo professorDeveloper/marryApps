@@ -15,6 +15,8 @@ type BillListRow struct {
 	BillClosedAt    pgtype.Timestamptz `json:"bill_closed_at"`
 	WaiterID        pgtype.UUID        `json:"waiter_id"`
 	WaiterName      *string            `json:"waiter_name"`
+	CashierID       pgtype.UUID        `json:"cashier_id"`
+	CashRegisterID  pgtype.UUID        `json:"cash_register_id"`
 	TableNumber     *int32             `json:"table_number"`
 	HallName        *string            `json:"hall_name"`
 	GuestCount      *int32             `json:"guest_count"`
@@ -34,12 +36,14 @@ type GetBillsParams struct {
 	Start *pgtype.Timestamptz
 	End   *pgtype.Timestamptz
 
-	BillNo      *int32
-	BillStatus  *string
-	PaymentType *string
-	WaiterID    *uuid.UUID
-	HallID      *uuid.UUID
-	TableID     *uuid.UUID
+	BillNo         *int32
+	BillStatus     *string
+	PaymentType    *string
+	WaiterID       *uuid.UUID
+	HallID         *uuid.UUID
+	TableID        *uuid.UUID
+	CashRegisterID *uuid.UUID
+	CashierID      *uuid.UUID
 
 	Limit  int32
 	Offset int32
@@ -60,6 +64,7 @@ type BillDetailsRow struct {
 	WaiterName      *string            `json:"waiter_name"`
 	CashierID       pgtype.UUID        `json:"cashier_id"`
 	CashierName     *string            `json:"cashier_name"`
+	CashRegisterID  pgtype.UUID        `json:"cash_register_id"`
 	GuestCount      *int32             `json:"guest_count"`
 	FoodCost        pgtype.Numeric     `json:"food_cost"`
 	FoodTotal       pgtype.Numeric     `json:"food_total"`
@@ -300,6 +305,8 @@ func (q *Queries) GetBills(ctx context.Context, arg GetBillsParams) ([]BillListR
 			o.bill_closed_at,
 			o.waiter_id,
 			w.full_name AS waiter_name,
+			o.cashier_id,
+			o.cash_register_id,
 			ct.number AS table_number,
 			h.name AS hall_name,
 			o.guest_count,
@@ -330,6 +337,8 @@ func (q *Queries) GetBills(ctx context.Context, arg GetBillsParams) ([]BillListR
 			AND ($6::uuid IS NULL OR ct.hall_id = $6)
 			AND ($7::uuid IS NULL OR o.table_id = $7)
 			AND ($10::int IS NULL OR o.bill_no = $10)
+			AND ($11::uuid IS NULL OR o.cash_register_id = $11)
+			AND ($12::uuid IS NULL OR o.cashier_id = $12)
 		ORDER BY o.bill_opened_at DESC
 		LIMIT $8 OFFSET $9
 	`
@@ -355,7 +364,7 @@ func (q *Queries) GetBills(ctx context.Context, arg GetBillsParams) ([]BillListR
 		table = *arg.TableID
 	}
 
-	rows, err := q.db.Query(ctx, sql, start, end, arg.BillStatus, arg.PaymentType, waiter, hall, table, arg.Limit, arg.Offset, arg.BillNo)
+	rows, err := q.db.Query(ctx, sql, start, end, arg.BillStatus, arg.PaymentType, waiter, hall, table, arg.Limit, arg.Offset, arg.BillNo, arg.CashRegisterID, arg.CashierID)
 	if err != nil {
 		return nil, err
 	}
@@ -372,6 +381,8 @@ func (q *Queries) GetBills(ctx context.Context, arg GetBillsParams) ([]BillListR
 			&r.BillClosedAt,
 			&r.WaiterID,
 			&r.WaiterName,
+			&r.CashierID,
+			&r.CashRegisterID,
 			&r.TableNumber,
 			&r.HallName,
 			&r.GuestCount,
@@ -410,6 +421,8 @@ func (q *Queries) CountBills(ctx context.Context, arg GetBillsParams) (int64, er
 			AND ($6::uuid IS NULL OR ct.hall_id = $6)
 			AND ($7::uuid IS NULL OR o.table_id = $7)
 			AND ($8::int IS NULL OR o.bill_no = $8)
+			AND ($9::uuid IS NULL OR o.cash_register_id = $9)
+			AND ($10::uuid IS NULL OR o.cashier_id = $10)
 	`
 
 	var start any
@@ -433,7 +446,7 @@ func (q *Queries) CountBills(ctx context.Context, arg GetBillsParams) (int64, er
 		table = *arg.TableID
 	}
 
-	row := q.db.QueryRow(ctx, sql, start, end, arg.BillStatus, arg.PaymentType, waiter, hall, table, arg.BillNo)
+	row := q.db.QueryRow(ctx, sql, start, end, arg.BillStatus, arg.PaymentType, waiter, hall, table, arg.BillNo, arg.CashRegisterID, arg.CashierID)
 	var count int64
 	if err := row.Scan(&count); err != nil {
 		return 0, err
@@ -458,6 +471,7 @@ func (q *Queries) GetBillDetails(ctx context.Context, orderID uuid.UUID) (BillDe
 			w.full_name AS waiter_name,
 			o.cashier_id,
 			c.full_name AS cashier_name,
+			o.cash_register_id,
 			o.guest_count,
 			o.food_cost,
 			o.food_total,
@@ -495,6 +509,7 @@ func (q *Queries) GetBillDetails(ctx context.Context, orderID uuid.UUID) (BillDe
 		&out.WaiterName,
 		&out.CashierID,
 		&out.CashierName,
+		&out.CashRegisterID,
 		&out.GuestCount,
 		&out.FoodCost,
 		&out.FoodTotal,

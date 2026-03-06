@@ -6,12 +6,14 @@ type GetBillsRequest struct {
 	Start *time.Time `json:"start,omitempty"`
 	End   *time.Time `json:"end,omitempty"`
 
-	BillNo      *int32  `json:"bill_no,omitempty"`
-	BillStatus  *string `json:"bill_status,omitempty"`
-	PaymentType *string `json:"payment_type,omitempty"`
-	WaiterID    *string `json:"waiter_id,omitempty"`
-	HallID      *string `json:"hall_id,omitempty"`
-	TableID     *string `json:"table_id,omitempty"`
+	BillNo         *int32  `json:"bill_no,omitempty"`
+	BillStatus     *string `json:"bill_status,omitempty"`
+	PaymentType    *string `json:"payment_type,omitempty"`
+	WaiterID       *string `json:"waiter_id,omitempty"`
+	CashierID      *string `json:"cashier_id,omitempty"`
+	HallID         *string `json:"hall_id,omitempty"`
+	TableID        *string `json:"table_id,omitempty"`
+	CashRegisterID *string `json:"cash_register_id,omitempty"`
 
 	Limit  int32 `json:"limit"`
 	Offset int32 `json:"offset"`
@@ -25,6 +27,8 @@ type BillListItem struct {
 	ClosedAt        *time.Time `json:"closed_at,omitempty"`
 	WaiterID        *string    `json:"waiter_id,omitempty"`
 	WaiterName      *string    `json:"waiter_name,omitempty"`
+	CashierID       *string    `json:"cashier_id,omitempty"`
+	CashRegisterID  *string    `json:"cash_register_id,omitempty"`
 	TableNumber     *int32     `json:"table_number,omitempty"`
 	HallName        *string    `json:"hall_name,omitempty"`
 	GuestCount      *int32     `json:"guest_count,omitempty"`
@@ -71,6 +75,7 @@ type BillDetails struct {
 	WaiterName      *string    `json:"waiter_name,omitempty"`
 	CashierID       *string    `json:"cashier_id,omitempty"`
 	CashierName     *string    `json:"cashier_name,omitempty"`
+	CashRegisterID  *string    `json:"cash_register_id,omitempty"`
 	GuestCount      *int32     `json:"guest_count,omitempty"`
 	FoodCost        string     `json:"food_cost"`
 	FoodTotal       string     `json:"food_total"`

@@ -770,6 +770,22 @@ func (s *OrderS) GetBills(ctx context.Context, req model.GetBillsRequest) (*mode
 		}
 		tableUUID = &u
 	}
+	var cashRegisterUUID *uuid.UUID
+	if req.CashRegisterID != nil && *req.CashRegisterID != "" {
+		u, err := uuid.Parse(*req.CashRegisterID)
+		if err != nil {
+			return nil, fmt.Errorf("invalid cash_register_id: %w", err)
+		}
+		cashRegisterUUID = &u
+	}
+	var cashierUUID *uuid.UUID
+	if req.CashierID != nil && *req.CashierID != "" {
+		u, err := uuid.Parse(*req.CashierID)
+		if err != nil {
+			return nil, fmt.Errorf("invalid cashier_id: %w", err)
+		}
+		cashierUUID = &u
+	}
 
 	limit := req.Limit
 	if limit <= 0 {
@@ -777,16 +793,18 @@ func (s *OrderS) GetBills(ctx context.Context, req model.GetBillsRequest) (*mode
 	}
 
 	params := pg.GetBillsParams{
-		Start:       startEnd(req.Start),
-		End:         startEnd(req.End),
-		BillNo:      req.BillNo,
-		BillStatus:  req.BillStatus,
-		PaymentType: req.PaymentType,
-		WaiterID:    waiterUUID,
-		HallID:      hallUUID,
-		TableID:     tableUUID,
-		Limit:       limit,
-		Offset:      req.Offset,
+		Start:          startEnd(req.Start),
+		End:            startEnd(req.End),
+		BillNo:         req.BillNo,
+		BillStatus:     req.BillStatus,
+		PaymentType:    req.PaymentType,
+		WaiterID:       waiterUUID,
+		HallID:         hallUUID,
+		TableID:        tableUUID,
+		CashRegisterID: cashRegisterUUID,
+		CashierID:      cashierUUID,
+		Limit:          limit,
+		Offset:         req.Offset,
 	}
 
 	total, err := s.repo.Tenant(ctx).CountBills(ctx, params)
@@ -816,6 +834,16 @@ func (s *OrderS) GetBills(ctx context.Context, req model.GetBillsRequest) (*mode
 			s := r.WaiterID.String()
 			waiterIDStr = &s
 		}
+		var cashierIDStr *string
+		if r.CashierID.Valid {
+			s := r.CashierID.String()
+			cashierIDStr = &s
+		}
+		var cashRegIDStr *string
+		if r.CashRegisterID.Valid {
+			s := r.CashRegisterID.String()
+			cashRegIDStr = &s
+		}
 		billStatus := r.BillStatus
 		if r.DeletedAt > 0 {
 			billStatus = "deleted"
@@ -828,6 +856,8 @@ func (s *OrderS) GetBills(ctx context.Context, req model.GetBillsRequest) (*mode
 			ClosedAt:        closedAt,
 			WaiterID:        waiterIDStr,
 			WaiterName:      r.WaiterName,
+			CashierID:       cashierIDStr,
+			CashRegisterID:  cashRegIDStr,
 			TableNumber:     r.TableNumber,
 			HallName:        r.HallName,
 			GuestCount:      r.GuestCount,
@@ -897,6 +927,11 @@ func (s *OrderS) GetBillDetails(ctx context.Context, billID string) (*model.Bill
 		s := h.CashierID.String()
 		cashierIDStr = &s
 	}
+	var cashRegIDStr *string
+	if h.CashRegisterID.Valid {
+		s := h.CashRegisterID.String()
+		cashRegIDStr = &s
+	}
 
 	outItems := make([]model.BillItem, 0, len(items))
 	for _, it := range items {
@@ -926,6 +961,7 @@ func (s *OrderS) GetBillDetails(ctx context.Context, billID string) (*model.Bill
 		WaiterName:      h.WaiterName,
 		CashierID:       cashierIDStr,
 		CashierName:     h.CashierName,
+		CashRegisterID:  cashRegIDStr,
 		GuestCount:      h.GuestCount,
 		FoodCost:        numericToString(h.FoodCost),
 		FoodTotal:       numericToString(h.FoodTotal),
