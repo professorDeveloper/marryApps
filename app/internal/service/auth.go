@@ -347,12 +347,18 @@ func (s *AuthS) Login(ctx context.Context, req model.LoginRequest, jwtCfg *confi
 		}
 	}
 
+	var cashRegisterID *string
+	if user.CashRegisterID.Valid {
+		s := user.CashRegisterID.String()
+		cashRegisterID = &s
+	}
+
 	accessToken, err := utils.CreateJWTWithClaims(
 		time.Duration(jwtCfg.AccessToken.ExpiresIn)*time.Second,
 		user.ID,
 		brandID,
 		branchID,
-		nil,
+		cashRegisterID,
 		role,
 		false,
 		jwtCfg.SecretKey,
@@ -365,7 +371,7 @@ func (s *AuthS) Login(ctx context.Context, req model.LoginRequest, jwtCfg *confi
 		user.ID,
 		brandID,
 		branchID,
-		nil,
+		cashRegisterID,
 		role,
 		false,
 		jwtCfg.SecretKey,
