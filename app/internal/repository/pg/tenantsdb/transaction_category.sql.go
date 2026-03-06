@@ -15,7 +15,7 @@ import (
 
 const countTransactions = `-- name: CountTransactions :one
 SELECT COUNT(*) FROM transactions
-WHERE branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+WHERE branch_id IS NOT DISTINCT FROM NULLIF(current_setting('app.branch_id', true), '')::uuid
   AND deleted_at = 0
 `
 
@@ -114,7 +114,7 @@ const deleteTransaction = `-- name: DeleteTransaction :exec
 UPDATE transactions
 SET deleted_at = EXTRACT(EPOCH FROM NOW())::BIGINT
 WHERE id = $1
-  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  AND branch_id IS NOT DISTINCT FROM NULLIF(current_setting('app.branch_id', true), '')::uuid
   AND deleted_at = 0
 `
 
@@ -131,7 +131,7 @@ SELECT id, type,
        created_at, updated_at, deleted_at,
        customer_paid_amount, change_amount
 FROM transactions
-WHERE branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+WHERE branch_id IS NOT DISTINCT FROM NULLIF(current_setting('app.branch_id', true), '')::uuid
   AND deleted_at = 0
 ORDER BY date DESC
 LIMIT $1 OFFSET $2
@@ -191,7 +191,7 @@ SELECT id, type,
        customer_paid_amount, change_amount
 FROM transactions
 WHERE id = $1
-  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  AND branch_id IS NOT DISTINCT FROM NULLIF(current_setting('app.branch_id', true), '')::uuid
   AND deleted_at = 0
 `
 
@@ -233,7 +233,7 @@ SELECT
 FROM transactions t
 LEFT JOIN group_transactions gt
   ON gt.id = t.group_transaction_id AND gt.deleted_at = 0
-WHERE t.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+WHERE t.branch_id IS NOT DISTINCT FROM NULLIF(current_setting('app.branch_id', true), '')::uuid
   AND t.deleted_at = 0
   AND t.date >= $1::timestamptz
   AND t.date <= $2::timestamptz
@@ -294,7 +294,7 @@ SELECT
     type = 'expense' OR type = 'transfer_expense'
   ), 0::numeric) AS expense_total
 FROM transactions
-WHERE branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+WHERE branch_id IS NOT DISTINCT FROM NULLIF(current_setting('app.branch_id', true), '')::uuid
   AND deleted_at = 0
   AND date < $1::timestamptz
   AND ($2::uuid IS NULL OR cash_register_id = $2::uuid)
@@ -326,7 +326,7 @@ SELECT
   COALESCE(SUM(amount) FILTER (WHERE pay_type = 'card'), 0::numeric) AS card_total,
   COALESCE(SUM(amount), 0::numeric)                                  AS total
 FROM transactions
-WHERE branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+WHERE branch_id IS NOT DISTINCT FROM NULLIF(current_setting('app.branch_id', true), '')::uuid
   AND deleted_at = 0
   AND date >= $1::timestamptz
   AND date <= $2::timestamptz
@@ -383,7 +383,7 @@ SELECT id, type,
        created_at, updated_at, deleted_at,
        customer_paid_amount, change_amount
 FROM transactions
-WHERE branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+WHERE branch_id IS NOT DISTINCT FROM NULLIF(current_setting('app.branch_id', true), '')::uuid
   AND cash_register_id = $1
   AND deleted_at = 0
 ORDER BY date DESC
@@ -444,7 +444,7 @@ SELECT id, type,
        created_at, updated_at, deleted_at,
        customer_paid_amount, change_amount
 FROM transactions
-WHERE branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+WHERE branch_id IS NOT DISTINCT FROM NULLIF(current_setting('app.branch_id', true), '')::uuid
   AND date >= $1
   AND date <= $2
   AND deleted_at = 0
@@ -512,7 +512,7 @@ SELECT id, type,
        created_at, updated_at, deleted_at,
        customer_paid_amount, change_amount
 FROM transactions
-WHERE branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+WHERE branch_id IS NOT DISTINCT FROM NULLIF(current_setting('app.branch_id', true), '')::uuid
   AND group_transaction_id = $1
   AND deleted_at = 0
 ORDER BY date DESC
@@ -573,7 +573,7 @@ SELECT id, type,
        created_at, updated_at, deleted_at,
        customer_paid_amount, change_amount
 FROM transactions
-WHERE branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+WHERE branch_id IS NOT DISTINCT FROM NULLIF(current_setting('app.branch_id', true), '')::uuid
   AND type = $1
   AND deleted_at = 0
 ORDER BY date DESC
@@ -634,7 +634,7 @@ SET amount      = $2,
     date        = $5,
     updated_at  = NOW()
 WHERE id = $1
-  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  AND branch_id IS NOT DISTINCT FROM NULLIF(current_setting('app.branch_id', true), '')::uuid
   AND deleted_at = 0
 RETURNING id, type,
           cash_register_id,
