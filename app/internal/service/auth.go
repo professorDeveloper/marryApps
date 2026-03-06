@@ -890,23 +890,30 @@ func toUserResponse(u pg.User) model.UserResponse {
 		branchID = &br
 	}
 
+	var cashRegisterID *string
+	if u.CashRegisterID.Valid {
+		s := u.CashRegisterID.String()
+		cashRegisterID = &s
+	}
+
 	if roleStr, ok := roleToString(u.Role); ok {
 		role = &roleStr
 	}
 
 	return model.UserResponse{
-		ID:          u.ID.String(),
-		FullName:    fullName,
-		Username:    username,
-		Role:        role,
-		IsActive:    u.IsActive,
-		Email:       email,
-		PhoneNumber: u.PhoneNumber,
-		ShiftID:     shiftID,
-		BrandID:     brandID,
-		BranchID:    branchID,
-		CreatedAt:   createdAt,
-		UpdatedAt:   updatedAt,
+		ID:             u.ID.String(),
+		FullName:       fullName,
+		Username:       username,
+		Role:           role,
+		IsActive:       u.IsActive,
+		Email:          email,
+		PhoneNumber:    u.PhoneNumber,
+		ShiftID:        shiftID,
+		BrandID:        brandID,
+		BranchID:       branchID,
+		CashRegisterID: cashRegisterID,
+		CreatedAt:      createdAt,
+		UpdatedAt:      updatedAt,
 	}
 }
 

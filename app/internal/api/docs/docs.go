@@ -29124,6 +29124,10 @@ const docTemplate = `{
                     "type": "string",
                     "example": "123e4567-e89b-12d3-a456-426614174000"
                 },
+                "cash_register_id": {
+                    "type": "string",
+                    "example": "123e4567-e89b-12d3-a456-426614174000"
+                },
                 "created_at": {
                     "type": "string",
                     "example": "2021-01-01T00:00:00Z"
