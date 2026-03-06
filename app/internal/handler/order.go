@@ -43,6 +43,12 @@ func (h *Handler) CreateOrder(c echo.Context) error {
 	if role == "waiter" && userID != "" {
 		req.WaiterID = &userID
 	}
+	if role == "cashier" && userID != "" {
+		req.CashierID = &userID
+		if cr, _ := c.Get("cash_register_id").(string); cr != "" && req.CashRegisterID == nil {
+			req.CashRegisterID = &cr
+		}
+	}
 
 	orderTypeStr := "dine_in"
 	if req.OrderType != nil && *req.OrderType == "takeaway" {
@@ -672,29 +678,22 @@ func (h *Handler) MarkOrderPaid(c echo.Context) error {
 		))
 	}
 
-	cashierID := ""
-	if req.CashierID != nil && *req.CashierID != "" {
-		cashierID = *req.CashierID
-	} else {
-		cashierID, _ = c.Get("user_id").(string)
-	}
-
+	// Always override cashier_id and cash_register_id from JWT token
+	cashierID, _ := c.Get("user_id").(string)
 	if cashierID == "" {
 		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
 			"cashier_id is required",
-			"missing required field: cashier_id",
-			http.StatusBadRequest,
-		))
-	}
-	if _, err := uuid.Parse(cashierID); err != nil {
-		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
-			"invalid cashier_id format",
-			err.Error(),
+			"missing user_id in token",
 			http.StatusBadRequest,
 		))
 	}
 
-	order, err := h.service.Order().MarkOrderPaid(c.Request().Context(), orderID, cashierID, req.CashRegisterID, req.PaymentType, req.DiscountPercent, req.DiscountAmount, req.DiscountComment, &req.CustomerPaidAmount)
+	var cashRegisterID *string
+	if cr, _ := c.Get("cash_register_id").(string); cr != "" {
+		cashRegisterID = &cr
+	}
+
+	order, err := h.service.Order().MarkOrderPaid(c.Request().Context(), orderID, cashierID, cashRegisterID, req.PaymentType, req.DiscountPercent, req.DiscountAmount, req.DiscountComment, &req.CustomerPaidAmount)
 	if err != nil {
 		log.Printf("MarkOrderPaid failed for order %s: %v", orderID, err)
 		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse(

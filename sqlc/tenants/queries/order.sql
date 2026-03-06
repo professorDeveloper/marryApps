@@ -1,7 +1,7 @@
 -- name: CreateOrder :one
-INSERT INTO orders (id, table_id, waiter_id, cashier_id, status, guest_count, total_amount, comment, order_type, scheduled_at, branch_id)
+INSERT INTO orders (id, table_id, waiter_id, cashier_id, cash_register_id, status, guest_count, total_amount, comment, order_type, scheduled_at, branch_id)
 VALUES (
-    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
+    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11,
     COALESCE(
         (SELECT h.branch_id FROM cafe_tables ct JOIN halls h ON h.id = ct.hall_id WHERE ct.id = $2),
         (SELECT s.branch_id FROM users u JOIN shifts s ON s.id = u.shift_id WHERE u.id = $3),
@@ -9,11 +9,11 @@ VALUES (
         NULLIF(current_setting('app.branch_id', true), '')::uuid
     )
 )
-RETURNING id, table_id, waiter_id, cashier_id, branch_id, status, guest_count, total_amount, comment,
+RETURNING id, table_id, waiter_id, cashier_id, cash_register_id, branch_id, status, guest_count, total_amount, comment,
           order_type, scheduled_at, reschedule_comment, created_at, updated_at, deleted_at;
 
 -- name: GetOrderByID :one
-SELECT id, table_id, waiter_id, cashier_id, branch_id, status, guest_count, total_amount, comment,
+SELECT id, table_id, waiter_id, cashier_id, cash_register_id, branch_id, status, guest_count, total_amount, comment,
        order_type, scheduled_at, reschedule_comment, created_at, updated_at, deleted_at
 FROM orders
 WHERE orders.id = $1
@@ -21,7 +21,7 @@ WHERE orders.id = $1
   AND deleted_at = 0;
 
 -- name: GetAllOrders :many
-SELECT id, table_id, waiter_id, cashier_id, branch_id, status, guest_count, total_amount, comment,
+SELECT id, table_id, waiter_id, cashier_id, cash_register_id, branch_id, status, guest_count, total_amount, comment,
        order_type, scheduled_at, reschedule_comment, created_at, updated_at, deleted_at
 FROM orders
 WHERE deleted_at = 0
@@ -30,7 +30,7 @@ ORDER BY created_at DESC
 LIMIT $1 OFFSET $2;
 
 -- name: GetOrdersByStatus :many
-SELECT id, table_id, waiter_id, cashier_id, branch_id, status, guest_count, total_amount, comment,
+SELECT id, table_id, waiter_id, cashier_id, cash_register_id, branch_id, status, guest_count, total_amount, comment,
        order_type, scheduled_at, reschedule_comment, created_at, updated_at, deleted_at
 FROM orders
 WHERE status = $1
@@ -40,7 +40,7 @@ ORDER BY created_at DESC
 LIMIT $2 OFFSET $3;
 
 -- name: GetOrdersByTableID :many
-SELECT id, table_id, waiter_id, cashier_id, branch_id, status, guest_count, total_amount, comment,
+SELECT id, table_id, waiter_id, cashier_id, cash_register_id, branch_id, status, guest_count, total_amount, comment,
        order_type, scheduled_at, reschedule_comment, created_at, updated_at, deleted_at
 FROM orders
 WHERE table_id = $1
@@ -49,7 +49,7 @@ WHERE table_id = $1
 ORDER BY created_at DESC;
 
 -- name: GetOrdersByWaiterID :many
-SELECT id, table_id, waiter_id, cashier_id, branch_id, status, guest_count, total_amount, comment,
+SELECT id, table_id, waiter_id, cashier_id, cash_register_id, branch_id, status, guest_count, total_amount, comment,
        order_type, scheduled_at, reschedule_comment, created_at, updated_at, deleted_at
 FROM orders
 WHERE waiter_id = $1
@@ -61,7 +61,7 @@ LIMIT $2 OFFSET $3;
 
 
 -- name: GetOrdersByDateRange :many
-SELECT id, table_id, waiter_id, cashier_id, branch_id, status, guest_count, total_amount, comment,
+SELECT id, table_id, waiter_id, cashier_id, cash_register_id, branch_id, status, guest_count, total_amount, comment,
        order_type, scheduled_at, reschedule_comment, created_at, updated_at, deleted_at
 FROM orders
 WHERE created_at >= $1

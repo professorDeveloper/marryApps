@@ -173,13 +173,14 @@ func (q *Queries) RecalculateOrderTotalsFromItems(ctx context.Context, orderID u
 }
 
 type PayOrderBillParams struct {
-	OrderID             uuid.UUID
-	CashierID           uuid.UUID
-	PaymentType         *string
-	DiscountPercent     *pgtype.Numeric
-	DiscountAmount      *pgtype.Numeric
-	DiscountComment     *string
-	CustomerPaidAmount  *pgtype.Numeric // optional — cash handed by customer
+	OrderID            uuid.UUID
+	CashierID          uuid.UUID
+	CashRegisterID     pgtype.UUID
+	PaymentType        *string
+	DiscountPercent    *pgtype.Numeric
+	DiscountAmount     *pgtype.Numeric
+	DiscountComment    *string
+	CustomerPaidAmount *pgtype.Numeric // optional — cash handed by customer
 }
 
 func (q *Queries) PayOrderBill(ctx context.Context, arg PayOrderBillParams) error {
@@ -214,8 +215,8 @@ func (q *Queries) PayOrderBill(ctx context.Context, arg PayOrderBillParams) erro
 			SELECT
 				base_total,
 				CASE
-					WHEN $5::numeric IS NOT NULL THEN ROUND($5::numeric, 2)
-					WHEN $4::numeric IS NOT NULL THEN ROUND((base_total * $4::numeric / 100.0), 2)
+					WHEN $6::numeric IS NOT NULL THEN ROUND($6::numeric, 2)
+					WHEN $5::numeric IS NOT NULL THEN ROUND((base_total * $5::numeric / 100.0), 2)
 					ELSE 0::numeric(15,2)
 				END AS discount_amount
 			FROM base_calc
@@ -235,27 +236,33 @@ func (q *Queries) PayOrderBill(ctx context.Context, arg PayOrderBillParams) erro
 			food_total = f.food_total,
 			food_cost = f.food_cost,
 			service_amount = f.service_amount,
-			payment_type = CASE WHEN $3::text IS NULL OR $3::text = '' THEN o.payment_type ELSE $3::payment_type END,
-			discount_percent = $4,
+			payment_type = CASE WHEN $4::text IS NULL OR $4::text = '' THEN o.payment_type ELSE $4::payment_type END,
+			discount_percent = $5,
 			discount_amount = f.discount_amount,
-			discount_comment = $6,
+			discount_comment = $7,
 			grand_total = f.grand_total,
 			total_amount = f.grand_total,
-			customer_paid_amount = $7,
+			customer_paid_amount = $8,
 			change_amount = CASE
-				WHEN $7::numeric IS NOT NULL THEN GREATEST($7::numeric - f.grand_total, 0)
+				WHEN $8::numeric IS NOT NULL THEN GREATEST($8::numeric - f.grand_total, 0)
 				ELSE NULL
 			END,
 			bill_status = 'paid',
 			bill_closed_at = COALESCE(o.bill_closed_at, NOW()),
 			paid_at = NOW(),
 			cashier_id = $2,
+			cash_register_id = COALESCE($3::uuid, o.cash_register_id),
 			status = 'paid'
 		FROM final_calc f
 		WHERE o.id = $1 AND o.deleted_at = 0
 	`
+	var cashRegisterID *uuid.UUID
+	if arg.CashRegisterID.Valid {
+		id := uuid.UUID(arg.CashRegisterID.Bytes)
+		cashRegisterID = &id
+	}
 	_, err := q.db.Exec(ctx, sql,
-		arg.OrderID, arg.CashierID, arg.PaymentType,
+		arg.OrderID, arg.CashierID, cashRegisterID, arg.PaymentType,
 		arg.DiscountPercent, arg.DiscountAmount, arg.DiscountComment,
 		arg.CustomerPaidAmount,
 	)

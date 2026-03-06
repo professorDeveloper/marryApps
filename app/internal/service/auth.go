@@ -196,17 +196,28 @@ func (s *AuthS) Register(ctx context.Context, req model.RegisterRequest) error {
 		log.Printf("User will be created with brand_id: %s", tenantBrandUUID.String())
 	}
 
+	cashRegUUID := pgtype.UUID{}
+	if req.CashRegisterID != nil && *req.CashRegisterID != "" {
+		if id, err := uuid.Parse(*req.CashRegisterID); err == nil {
+			cashRegUUID = pgtype.UUID{Bytes: id, Valid: true}
+		}
+	}
+	if role == "cashier" && !cashRegUUID.Valid {
+		return fmt.Errorf("cash_register_id is required for cashier role")
+	}
+
 	userParams := pg.CreateUserParams{
-		ID:           uuid.New(),
-		FullName:     &fullName,
-		Role:         userRole,
-		Email:        nil,
-		Pincode:      pincodePtr,
-		PhoneNumber:  &req.PhoneNumber,
-		HashPassword: hashPassword,
-		Username:     &username,
-		BrandID:      brandID,
-		BranchID:     branchUUID,
+		ID:             uuid.New(),
+		FullName:       &fullName,
+		Role:           userRole,
+		Email:          nil,
+		Pincode:        pincodePtr,
+		PhoneNumber:    &req.PhoneNumber,
+		HashPassword:   hashPassword,
+		Username:       &username,
+		BrandID:        brandID,
+		BranchID:       branchUUID,
+		CashRegisterID: cashRegUUID,
 	}
 
 	if role != "superadmin" && brandIDSlug != "" {
@@ -341,6 +352,7 @@ func (s *AuthS) Login(ctx context.Context, req model.LoginRequest, jwtCfg *confi
 		user.ID,
 		brandID,
 		branchID,
+		nil,
 		role,
 		false,
 		jwtCfg.SecretKey,
@@ -353,6 +365,7 @@ func (s *AuthS) Login(ctx context.Context, req model.LoginRequest, jwtCfg *confi
 		user.ID,
 		brandID,
 		branchID,
+		nil,
 		role,
 		false,
 		jwtCfg.SecretKey,
@@ -475,11 +488,18 @@ func (s *AuthS) LoginWithPincode(ctx context.Context, req model.PincodeLoginRequ
 		}
 	}
 
+	var cashRegisterID *string
+	if user.CashRegisterID.Valid {
+		s := user.CashRegisterID.String()
+		cashRegisterID = &s
+	}
+
 	accessToken, err := utils.CreateJWTWithClaims(
 		time.Duration(jwtCfg.AccessToken.ExpiresIn)*time.Second,
 		user.ID,
 		brandID,
 		branchID,
+		cashRegisterID,
 		role,
 		false,
 		jwtCfg.SecretKey,
@@ -492,6 +512,7 @@ func (s *AuthS) LoginWithPincode(ctx context.Context, req model.PincodeLoginRequ
 		user.ID,
 		brandID,
 		branchID,
+		cashRegisterID,
 		role,
 		false,
 		jwtCfg.SecretKey,
@@ -562,6 +583,7 @@ func (s *AuthS) LoginGlobal(ctx context.Context, req model.LoginRequest, jwtCfg 
 		u.ID,
 		nil,
 		nil,
+		nil,
 		u.Role,
 		true,
 		jwtCfg.SecretKey,
@@ -572,6 +594,7 @@ func (s *AuthS) LoginGlobal(ctx context.Context, req model.LoginRequest, jwtCfg 
 	refreshToken, err := utils.CreateJWTWithClaims(
 		time.Duration(jwtCfg.RefreshToken.ExpiresIn)*time.Second,
 		u.ID,
+		nil,
 		nil,
 		nil,
 		u.Role,
@@ -627,6 +650,7 @@ func (s *AuthS) Refresh(ctx context.Context, req model.RefreshRequest, jwtCfg *c
 			claims.UserID,
 			nil,
 			nil,
+			nil,
 			role,
 			true,
 			jwtCfg.SecretKey,
@@ -637,6 +661,7 @@ func (s *AuthS) Refresh(ctx context.Context, req model.RefreshRequest, jwtCfg *c
 		refreshToken, err := utils.CreateJWTWithClaims(
 			time.Duration(jwtCfg.RefreshToken.ExpiresIn)*time.Second,
 			claims.UserID,
+			nil,
 			nil,
 			nil,
 			role,
@@ -699,6 +724,7 @@ func (s *AuthS) Refresh(ctx context.Context, req model.RefreshRequest, jwtCfg *c
 		user.ID,
 		brandID,
 		branchID,
+		nil,
 		role,
 		false,
 		jwtCfg.SecretKey,
@@ -711,6 +737,7 @@ func (s *AuthS) Refresh(ctx context.Context, req model.RefreshRequest, jwtCfg *c
 		user.ID,
 		brandID,
 		branchID,
+		nil,
 		role,
 		false,
 		jwtCfg.SecretKey,

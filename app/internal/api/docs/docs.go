@@ -25071,6 +25071,10 @@ const docTemplate = `{
         "model.CreateOrderRequest": {
             "type": "object",
             "properties": {
+                "cash_register_id": {
+                    "type": "string",
+                    "example": "uuid-of-cash-register"
+                },
                 "cashier_id": {
                     "type": "string",
                     "example": "a1b2c3d4-e5f6-4a5b-8c9d-e0f1a2b3c4d5"
@@ -26821,7 +26825,6 @@ const docTemplate = `{
             ],
             "properties": {
                 "cash_register_id": {
-                    "description": "cash_register_id: if provided, auto-creates an income transaction",
                     "type": "string",
                     "example": "uuid"
                 },
@@ -26941,6 +26944,10 @@ const docTemplate = `{
         "model.OrderResponse": {
             "type": "object",
             "properties": {
+                "cash_register_id": {
+                    "type": "string",
+                    "example": "a1b2c3d4-e5f6-4a5b-8c9d-e0f1a2b3c4d5"
+                },
                 "cashier_id": {
                     "type": "string",
                     "example": "a1b2c3d4-e5f6-4a5b-8c9d-e0f1a2b3c4d5"
@@ -27219,6 +27226,10 @@ const docTemplate = `{
                 "brand_id": {
                     "type": "string",
                     "example": "my_restaurant"
+                },
+                "cash_register_id": {
+                    "type": "string",
+                    "example": "123e4567-e89b-12d3-a456-426614174000"
                 },
                 "fullName": {
                     "type": "string",

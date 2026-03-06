@@ -1197,6 +1197,9 @@ definitions:
     type: object
   model.CreateOrderRequest:
     properties:
+      cash_register_id:
+        example: uuid-of-cash-register
+        type: string
       cashier_id:
         example: a1b2c3d4-e5f6-4a5b-8c9d-e0f1a2b3c4d5
         type: string
@@ -2422,7 +2425,6 @@ definitions:
   model.MarkOrderPaidRequest:
     properties:
       cash_register_id:
-        description: 'cash_register_id: if provided, auto-creates an income transaction'
         example: uuid
         type: string
       cashier_id:
@@ -2512,6 +2514,9 @@ definitions:
     - OrderItemStatusCancelled
   model.OrderResponse:
     properties:
+      cash_register_id:
+        example: a1b2c3d4-e5f6-4a5b-8c9d-e0f1a2b3c4d5
+        type: string
       cashier_id:
         example: a1b2c3d4-e5f6-4a5b-8c9d-e0f1a2b3c4d5
         type: string
@@ -2703,6 +2708,9 @@ definitions:
         type: string
       brand_id:
         example: my_restaurant
+        type: string
+      cash_register_id:
+        example: 123e4567-e89b-12d3-a456-426614174000
         type: string
       fullName:
         example: Javohir Khasanov

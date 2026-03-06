@@ -142,6 +142,15 @@ func (s *OrderS) CreateOrder(ctx context.Context, req model.CreateOrderRequest) 
 		cashierUUID = pgtype.UUID{Bytes: id, Valid: true}
 	}
 
+	cashRegisterUUID := pgtype.UUID{}
+	if req.CashRegisterID != nil && *req.CashRegisterID != "" {
+		id, err := uuid.Parse(*req.CashRegisterID)
+		if err != nil {
+			return nil, fmt.Errorf("invalid cash_register_id: %w", err)
+		}
+		cashRegisterUUID = pgtype.UUID{Bytes: id, Valid: true}
+	}
+
 	// Determine initial status
 	status := pg.NullOrderStatus{OrderStatus: pg.OrderStatus(model.OrderStatusOpen), Valid: true}
 	if req.ScheduledAt != nil && *req.ScheduledAt != "" {
@@ -169,16 +178,17 @@ func (s *OrderS) CreateOrder(ctx context.Context, req model.CreateOrderRequest) 
 	}
 
 	createdOrder, err := s.repo.Tenant(ctx).CreateOrder(ctx, pg.CreateOrderParams{
-		ID:          uuid.New(),
-		TableID:     tableIDPg,
-		WaiterID:    waiterUUID,
-		CashierID:   cashierUUID,
-		Status:      status,
-		GuestCount:  req.GuestCount,
-		TotalAmount: totalAmount,
-		Comment:     req.Comment,
-		OrderType:   orderType,
-		ScheduledAt: scheduledAtPg,
+		ID:             uuid.New(),
+		TableID:        tableIDPg,
+		WaiterID:       waiterUUID,
+		CashierID:      cashierUUID,
+		CashRegisterID: cashRegisterUUID,
+		Status:         status,
+		GuestCount:     req.GuestCount,
+		TotalAmount:    totalAmount,
+		Comment:        req.Comment,
+		OrderType:      orderType,
+		ScheduledAt:    scheduledAtPg,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to create order: %w", err)
@@ -502,9 +512,17 @@ func (s *OrderS) MarkOrderPaid(ctx context.Context, orderID string, cashierID st
 		return nil, fmt.Errorf("failed to fetch order: %w", err)
 	}
 
+	crUUID := pgtype.UUID{}
+	if cashRegisterID != nil && *cashRegisterID != "" {
+		if id, err := uuid.Parse(*cashRegisterID); err == nil {
+			crUUID = pgtype.UUID{Bytes: id, Valid: true}
+		}
+	}
+
 	if err := s.repo.Tenant(ctx).PayOrderBill(ctx, pg.PayOrderBillParams{
 		OrderID:            oID,
 		CashierID:          cID,
+		CashRegisterID:     crUUID,
 		PaymentType:        paymentType,
 		DiscountPercent:    discPercentNum,
 		DiscountAmount:     discAmountNum,
@@ -1429,6 +1447,7 @@ func toOrderResponse(o any) *model.OrderResponse {
 		tableID           pgtype.UUID
 		waiterIDPg        pgtype.UUID
 		cashierIDPg       pgtype.UUID
+		cashRegisterIDPg  pgtype.UUID
 		statusPg          pg.NullOrderStatus
 		guestCount        *int32
 		totalAmount       pgtype.Numeric
@@ -1446,6 +1465,7 @@ func toOrderResponse(o any) *model.OrderResponse {
 		tableID = row.TableID
 		waiterIDPg = row.WaiterID
 		cashierIDPg = row.CashierID
+		cashRegisterIDPg = row.CashRegisterID
 		statusPg = row.Status
 		guestCount = row.GuestCount
 		totalAmount = row.TotalAmount
@@ -1460,6 +1480,7 @@ func toOrderResponse(o any) *model.OrderResponse {
 		tableID = row.TableID
 		waiterIDPg = row.WaiterID
 		cashierIDPg = row.CashierID
+		cashRegisterIDPg = row.CashRegisterID
 		statusPg = pg.NullOrderStatus(row.Status)
 		guestCount = row.GuestCount
 		totalAmount = row.TotalAmount
@@ -1474,6 +1495,7 @@ func toOrderResponse(o any) *model.OrderResponse {
 		tableID = row.TableID
 		waiterIDPg = row.WaiterID
 		cashierIDPg = row.CashierID
+		cashRegisterIDPg = row.CashRegisterID
 		statusPg = pg.NullOrderStatus(row.Status)
 		guestCount = row.GuestCount
 		totalAmount = row.TotalAmount
@@ -1488,6 +1510,7 @@ func toOrderResponse(o any) *model.OrderResponse {
 		tableID = row.TableID
 		waiterIDPg = row.WaiterID
 		cashierIDPg = row.CashierID
+		cashRegisterIDPg = row.CashRegisterID
 		statusPg = pg.NullOrderStatus(row.Status)
 		guestCount = row.GuestCount
 		totalAmount = row.TotalAmount
@@ -1502,6 +1525,7 @@ func toOrderResponse(o any) *model.OrderResponse {
 		tableID = row.TableID
 		waiterIDPg = row.WaiterID
 		cashierIDPg = row.CashierID
+		cashRegisterIDPg = row.CashRegisterID
 		statusPg = pg.NullOrderStatus(row.Status)
 		guestCount = row.GuestCount
 		totalAmount = row.TotalAmount
@@ -1516,6 +1540,7 @@ func toOrderResponse(o any) *model.OrderResponse {
 		tableID = row.TableID
 		waiterIDPg = row.WaiterID
 		cashierIDPg = row.CashierID
+		cashRegisterIDPg = row.CashRegisterID
 		statusPg = pg.NullOrderStatus(row.Status)
 		guestCount = row.GuestCount
 		totalAmount = row.TotalAmount
@@ -1530,6 +1555,7 @@ func toOrderResponse(o any) *model.OrderResponse {
 		tableID = row.TableID
 		waiterIDPg = row.WaiterID
 		cashierIDPg = row.CashierID
+		cashRegisterIDPg = row.CashRegisterID
 		statusPg = pg.NullOrderStatus(row.Status)
 		guestCount = row.GuestCount
 		totalAmount = row.TotalAmount
@@ -1713,6 +1739,12 @@ func toOrderResponse(o any) *model.OrderResponse {
 		cashierID = &s
 	}
 
+	var cashRegisterID *string
+	if cashRegisterIDPg.Valid {
+		s := cashRegisterIDPg.String()
+		cashRegisterID = &s
+	}
+
 	var createdAt *time.Time
 	if createdAtPg.Valid {
 		t := createdAtPg.Time
@@ -1741,6 +1773,7 @@ func toOrderResponse(o any) *model.OrderResponse {
 		TableID:           tableID.String(),
 		WaiterID:          waiterID,
 		CashierID:         cashierID,
+		CashRegisterID:    cashRegisterID,
 		Status:            status,
 		GuestCount:        guestCount,
 		TotalAmount:       numericToString(totalAmount),

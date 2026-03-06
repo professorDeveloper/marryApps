@@ -392,9 +392,9 @@ func (q *Queries) CountOrdersByStatus(ctx context.Context, status NullOrderStatu
 }
 
 const createOrder = `-- name: CreateOrder :one
-INSERT INTO orders (id, table_id, waiter_id, cashier_id, status, guest_count, total_amount, comment, order_type, scheduled_at, branch_id)
+INSERT INTO orders (id, table_id, waiter_id, cashier_id, cash_register_id, status, guest_count, total_amount, comment, order_type, scheduled_at, branch_id)
 VALUES (
-    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
+    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11,
     COALESCE(
         (SELECT h.branch_id FROM cafe_tables ct JOIN halls h ON h.id = ct.hall_id WHERE ct.id = $2),
         (SELECT s.branch_id FROM users u JOIN shifts s ON s.id = u.shift_id WHERE u.id = $3),
@@ -402,21 +402,22 @@ VALUES (
         NULLIF(current_setting('app.branch_id', true), '')::uuid
     )
 )
-RETURNING id, table_id, waiter_id, cashier_id, branch_id, status, guest_count, total_amount, comment,
+RETURNING id, table_id, waiter_id, cashier_id, cash_register_id, branch_id, status, guest_count, total_amount, comment,
           order_type, scheduled_at, reschedule_comment, created_at, updated_at, deleted_at
 `
 
 type CreateOrderParams struct {
-	ID          uuid.UUID          `json:"id"`
-	TableID     pgtype.UUID        `json:"table_id"`
-	WaiterID    pgtype.UUID        `json:"waiter_id"`
-	CashierID   pgtype.UUID        `json:"cashier_id"`
-	Status      NullOrderStatus    `json:"status"`
-	GuestCount  *int32             `json:"guest_count"`
-	TotalAmount pgtype.Numeric     `json:"total_amount"`
-	Comment     *string            `json:"comment"`
-	OrderType   string             `json:"order_type"`
-	ScheduledAt pgtype.Timestamptz `json:"scheduled_at"`
+	ID             uuid.UUID          `json:"id"`
+	TableID        pgtype.UUID        `json:"table_id"`
+	WaiterID       pgtype.UUID        `json:"waiter_id"`
+	CashierID      pgtype.UUID        `json:"cashier_id"`
+	CashRegisterID pgtype.UUID        `json:"cash_register_id"`
+	Status         NullOrderStatus    `json:"status"`
+	GuestCount     *int32             `json:"guest_count"`
+	TotalAmount    pgtype.Numeric     `json:"total_amount"`
+	Comment        *string            `json:"comment"`
+	OrderType      string             `json:"order_type"`
+	ScheduledAt    pgtype.Timestamptz `json:"scheduled_at"`
 }
 
 type CreateOrderRow struct {
@@ -424,6 +425,7 @@ type CreateOrderRow struct {
 	TableID           pgtype.UUID        `json:"table_id"`
 	WaiterID          pgtype.UUID        `json:"waiter_id"`
 	CashierID         pgtype.UUID        `json:"cashier_id"`
+	CashRegisterID    pgtype.UUID        `json:"cash_register_id"`
 	BranchID          pgtype.UUID        `json:"branch_id"`
 	Status            NullOrderStatus    `json:"status"`
 	GuestCount        *int32             `json:"guest_count"`
@@ -443,6 +445,7 @@ func (q *Queries) CreateOrder(ctx context.Context, arg CreateOrderParams) (Creat
 		arg.TableID,
 		arg.WaiterID,
 		arg.CashierID,
+		arg.CashRegisterID,
 		arg.Status,
 		arg.GuestCount,
 		arg.TotalAmount,
@@ -456,6 +459,7 @@ func (q *Queries) CreateOrder(ctx context.Context, arg CreateOrderParams) (Creat
 		&i.TableID,
 		&i.WaiterID,
 		&i.CashierID,
+		&i.CashRegisterID,
 		&i.BranchID,
 		&i.Status,
 		&i.GuestCount,
@@ -612,7 +616,7 @@ func (q *Queries) GetAllOrderItems(ctx context.Context, arg GetAllOrderItemsPara
 }
 
 const getAllOrders = `-- name: GetAllOrders :many
-SELECT id, table_id, waiter_id, cashier_id, branch_id, status, guest_count, total_amount, comment,
+SELECT id, table_id, waiter_id, cashier_id, cash_register_id, branch_id, status, guest_count, total_amount, comment,
        order_type, scheduled_at, reschedule_comment, created_at, updated_at, deleted_at
 FROM orders
 WHERE deleted_at = 0
@@ -631,6 +635,7 @@ type GetAllOrdersRow struct {
 	TableID           pgtype.UUID        `json:"table_id"`
 	WaiterID          pgtype.UUID        `json:"waiter_id"`
 	CashierID         pgtype.UUID        `json:"cashier_id"`
+	CashRegisterID    pgtype.UUID        `json:"cash_register_id"`
 	BranchID          pgtype.UUID        `json:"branch_id"`
 	Status            NullOrderStatus    `json:"status"`
 	GuestCount        *int32             `json:"guest_count"`
@@ -658,6 +663,7 @@ func (q *Queries) GetAllOrders(ctx context.Context, arg GetAllOrdersParams) ([]G
 			&i.TableID,
 			&i.WaiterID,
 			&i.CashierID,
+			&i.CashRegisterID,
 			&i.BranchID,
 			&i.Status,
 			&i.GuestCount,
@@ -761,7 +767,7 @@ func (q *Queries) GetKitchenQueue(ctx context.Context) ([]GetKitchenQueueRow, er
 }
 
 const getOrderByID = `-- name: GetOrderByID :one
-SELECT id, table_id, waiter_id, cashier_id, branch_id, status, guest_count, total_amount, comment,
+SELECT id, table_id, waiter_id, cashier_id, cash_register_id, branch_id, status, guest_count, total_amount, comment,
        order_type, scheduled_at, reschedule_comment, created_at, updated_at, deleted_at
 FROM orders
 WHERE orders.id = $1
@@ -774,6 +780,7 @@ type GetOrderByIDRow struct {
 	TableID           pgtype.UUID        `json:"table_id"`
 	WaiterID          pgtype.UUID        `json:"waiter_id"`
 	CashierID         pgtype.UUID        `json:"cashier_id"`
+	CashRegisterID    pgtype.UUID        `json:"cash_register_id"`
 	BranchID          pgtype.UUID        `json:"branch_id"`
 	Status            NullOrderStatus    `json:"status"`
 	GuestCount        *int32             `json:"guest_count"`
@@ -795,6 +802,7 @@ func (q *Queries) GetOrderByID(ctx context.Context, id uuid.UUID) (GetOrderByIDR
 		&i.TableID,
 		&i.WaiterID,
 		&i.CashierID,
+		&i.CashRegisterID,
 		&i.BranchID,
 		&i.Status,
 		&i.GuestCount,
@@ -1026,7 +1034,7 @@ func (q *Queries) GetOrderWithDetails(ctx context.Context, id uuid.UUID) (GetOrd
 }
 
 const getOrdersByDateRange = `-- name: GetOrdersByDateRange :many
-SELECT id, table_id, waiter_id, cashier_id, branch_id, status, guest_count, total_amount, comment,
+SELECT id, table_id, waiter_id, cashier_id, cash_register_id, branch_id, status, guest_count, total_amount, comment,
        order_type, scheduled_at, reschedule_comment, created_at, updated_at, deleted_at
 FROM orders
 WHERE created_at >= $1
@@ -1049,6 +1057,7 @@ type GetOrdersByDateRangeRow struct {
 	TableID           pgtype.UUID        `json:"table_id"`
 	WaiterID          pgtype.UUID        `json:"waiter_id"`
 	CashierID         pgtype.UUID        `json:"cashier_id"`
+	CashRegisterID    pgtype.UUID        `json:"cash_register_id"`
 	BranchID          pgtype.UUID        `json:"branch_id"`
 	Status            NullOrderStatus    `json:"status"`
 	GuestCount        *int32             `json:"guest_count"`
@@ -1081,6 +1090,7 @@ func (q *Queries) GetOrdersByDateRange(ctx context.Context, arg GetOrdersByDateR
 			&i.TableID,
 			&i.WaiterID,
 			&i.CashierID,
+			&i.CashRegisterID,
 			&i.BranchID,
 			&i.Status,
 			&i.GuestCount,
@@ -1104,7 +1114,7 @@ func (q *Queries) GetOrdersByDateRange(ctx context.Context, arg GetOrdersByDateR
 }
 
 const getOrdersByStatus = `-- name: GetOrdersByStatus :many
-SELECT id, table_id, waiter_id, cashier_id, branch_id, status, guest_count, total_amount, comment,
+SELECT id, table_id, waiter_id, cashier_id, cash_register_id, branch_id, status, guest_count, total_amount, comment,
        order_type, scheduled_at, reschedule_comment, created_at, updated_at, deleted_at
 FROM orders
 WHERE status = $1
@@ -1125,6 +1135,7 @@ type GetOrdersByStatusRow struct {
 	TableID           pgtype.UUID        `json:"table_id"`
 	WaiterID          pgtype.UUID        `json:"waiter_id"`
 	CashierID         pgtype.UUID        `json:"cashier_id"`
+	CashRegisterID    pgtype.UUID        `json:"cash_register_id"`
 	BranchID          pgtype.UUID        `json:"branch_id"`
 	Status            NullOrderStatus    `json:"status"`
 	GuestCount        *int32             `json:"guest_count"`
@@ -1152,6 +1163,7 @@ func (q *Queries) GetOrdersByStatus(ctx context.Context, arg GetOrdersByStatusPa
 			&i.TableID,
 			&i.WaiterID,
 			&i.CashierID,
+			&i.CashRegisterID,
 			&i.BranchID,
 			&i.Status,
 			&i.GuestCount,
@@ -1175,7 +1187,7 @@ func (q *Queries) GetOrdersByStatus(ctx context.Context, arg GetOrdersByStatusPa
 }
 
 const getOrdersByTableID = `-- name: GetOrdersByTableID :many
-SELECT id, table_id, waiter_id, cashier_id, branch_id, status, guest_count, total_amount, comment,
+SELECT id, table_id, waiter_id, cashier_id, cash_register_id, branch_id, status, guest_count, total_amount, comment,
        order_type, scheduled_at, reschedule_comment, created_at, updated_at, deleted_at
 FROM orders
 WHERE table_id = $1
@@ -1189,6 +1201,7 @@ type GetOrdersByTableIDRow struct {
 	TableID           pgtype.UUID        `json:"table_id"`
 	WaiterID          pgtype.UUID        `json:"waiter_id"`
 	CashierID         pgtype.UUID        `json:"cashier_id"`
+	CashRegisterID    pgtype.UUID        `json:"cash_register_id"`
 	BranchID          pgtype.UUID        `json:"branch_id"`
 	Status            NullOrderStatus    `json:"status"`
 	GuestCount        *int32             `json:"guest_count"`
@@ -1216,6 +1229,7 @@ func (q *Queries) GetOrdersByTableID(ctx context.Context, tableID pgtype.UUID) (
 			&i.TableID,
 			&i.WaiterID,
 			&i.CashierID,
+			&i.CashRegisterID,
 			&i.BranchID,
 			&i.Status,
 			&i.GuestCount,
@@ -1239,7 +1253,7 @@ func (q *Queries) GetOrdersByTableID(ctx context.Context, tableID pgtype.UUID) (
 }
 
 const getOrdersByWaiterID = `-- name: GetOrdersByWaiterID :many
-SELECT id, table_id, waiter_id, cashier_id, branch_id, status, guest_count, total_amount, comment,
+SELECT id, table_id, waiter_id, cashier_id, cash_register_id, branch_id, status, guest_count, total_amount, comment,
        order_type, scheduled_at, reschedule_comment, created_at, updated_at, deleted_at
 FROM orders
 WHERE waiter_id = $1
@@ -1260,6 +1274,7 @@ type GetOrdersByWaiterIDRow struct {
 	TableID           pgtype.UUID        `json:"table_id"`
 	WaiterID          pgtype.UUID        `json:"waiter_id"`
 	CashierID         pgtype.UUID        `json:"cashier_id"`
+	CashRegisterID    pgtype.UUID        `json:"cash_register_id"`
 	BranchID          pgtype.UUID        `json:"branch_id"`
 	Status            NullOrderStatus    `json:"status"`
 	GuestCount        *int32             `json:"guest_count"`
@@ -1287,6 +1302,7 @@ func (q *Queries) GetOrdersByWaiterID(ctx context.Context, arg GetOrdersByWaiter
 			&i.TableID,
 			&i.WaiterID,
 			&i.CashierID,
+			&i.CashRegisterID,
 			&i.BranchID,
 			&i.Status,
 			&i.GuestCount,

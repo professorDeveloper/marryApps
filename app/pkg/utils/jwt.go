@@ -9,24 +9,26 @@ import (
 )
 
 type JWTClaims struct {
-	UserID   uuid.UUID `json:"user_id"`
-	BrandID  *string   `json:"brand_id,omitempty"`
-	BranchID *string   `json:"branch_id,omitempty"`
-	Role     string    `json:"role"`
-	IsGlobal bool      `json:"is_global"`
+	UserID         uuid.UUID `json:"user_id"`
+	BrandID        *string   `json:"brand_id,omitempty"`
+	BranchID       *string   `json:"branch_id,omitempty"`
+	CashRegisterID *string   `json:"cash_register_id,omitempty"`
+	Role           string    `json:"role"`
+	IsGlobal       bool      `json:"is_global"`
 	jwt.StandardClaims
 }
 
-func CreateJWTWithClaims(ttl time.Duration, userID uuid.UUID, brandID *string, branchID *string, role string, isGlobal bool, secretKey string) (string, error) {
+func CreateJWTWithClaims(ttl time.Duration, userID uuid.UUID, brandID *string, branchID *string, cashRegisterID *string, role string, isGlobal bool, secretKey string) (string, error) {
 	now := time.Now().UTC()
 	expiresAt := now.Add(ttl)
 
 	claims := JWTClaims{
-		UserID:   userID,
-		BrandID:  brandID,
-		BranchID: branchID,
-		Role:     role,
-		IsGlobal: isGlobal,
+		UserID:         userID,
+		BrandID:        brandID,
+		BranchID:       branchID,
+		CashRegisterID: cashRegisterID,
+		Role:           role,
+		IsGlobal:       isGlobal,
 		StandardClaims: jwt.StandardClaims{
 			Subject:   userID.String(),
 			ExpiresAt: expiresAt.Unix(),

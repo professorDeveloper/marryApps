@@ -44,9 +44,10 @@ type Order struct {
 }
 
 type CreateOrderRequest struct {
-	TableID     string                  `json:"table_id,omitempty"   example:"a1b2c3d4-e5f6-4a5b-8c9d-e0f1a2b3c4d5"`
-	WaiterID    *string                 `json:"waiter_id,omitempty"  example:"a1b2c3d4-e5f6-4a5b-8c9d-e0f1a2b3c4d5"`
-	CashierID   *string                 `json:"cashier_id,omitempty" example:"a1b2c3d4-e5f6-4a5b-8c9d-e0f1a2b3c4d5"`
+	TableID        string                  `json:"table_id,omitempty"        example:"a1b2c3d4-e5f6-4a5b-8c9d-e0f1a2b3c4d5"`
+	WaiterID       *string                 `json:"waiter_id,omitempty"       example:"a1b2c3d4-e5f6-4a5b-8c9d-e0f1a2b3c4d5"`
+	CashierID      *string                 `json:"cashier_id,omitempty"      example:"a1b2c3d4-e5f6-4a5b-8c9d-e0f1a2b3c4d5"`
+	CashRegisterID *string                 `json:"cash_register_id,omitempty" example:"uuid-of-cash-register"`
 	Status      *string                 `json:"status,omitempty"     example:"open"`
 	GuestCount  *int32                  `json:"guest_count,omitempty" example:"2"`
 	Comment     *string                 `json:"comment,omitempty"`
@@ -86,8 +87,9 @@ type UpdateOrderStatusRequest struct {
 type OrderResponse struct {
 	ID               string      `json:"id"                          example:"c0f18a64-7f5c-4425-9414-1b01cddee9d9"`
 	TableID          string      `json:"table_id"                    example:"a1b2c3d4-e5f6-4a5b-8c9d-e0f1a2b3c4d5"`
-	WaiterID         *string     `json:"waiter_id,omitempty"         example:"a1b2c3d4-e5f6-4a5b-8c9d-e0f1a2b3c4d5"`
-	CashierID        *string     `json:"cashier_id,omitempty"        example:"a1b2c3d4-e5f6-4a5b-8c9d-e0f1a2b3c4d5"`
+	WaiterID         *string     `json:"waiter_id,omitempty"          example:"a1b2c3d4-e5f6-4a5b-8c9d-e0f1a2b3c4d5"`
+	CashierID        *string     `json:"cashier_id,omitempty"         example:"a1b2c3d4-e5f6-4a5b-8c9d-e0f1a2b3c4d5"`
+	CashRegisterID   *string     `json:"cash_register_id,omitempty"   example:"a1b2c3d4-e5f6-4a5b-8c9d-e0f1a2b3c4d5"`
 	Status           OrderStatus `json:"status"                      example:"open"`
 	GuestCount       *int32      `json:"guest_count,omitempty"       example:"2"`
 	TotalAmount      string      `json:"total_amount"                example:"100000"`
@@ -155,8 +157,7 @@ type OrderItemResponse struct {
 }
 
 type MarkOrderPaidRequest struct {
-	CashierID *string `json:"cashier_id,omitempty" example:"a1b2c3d4-e5f6-4a5b-8c9d-e0f1a2b3c4d5"`
-	// cash_register_id: if provided, auto-creates an income transaction
+	CashierID      *string `json:"cashier_id,omitempty"       example:"a1b2c3d4-e5f6-4a5b-8c9d-e0f1a2b3c4d5"`
 	CashRegisterID *string `json:"cash_register_id,omitempty" example:"uuid"`
 	// payment_type: cash or card
 	PaymentType *string `json:"payment_type,omitempty" example:"cash"`

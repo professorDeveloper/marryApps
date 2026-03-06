@@ -951,6 +951,7 @@ type Order struct {
 	OrderType          string             `json:"order_type"`
 	ScheduledAt        pgtype.Timestamptz `json:"scheduled_at"`
 	RescheduleComment  *string            `json:"reschedule_comment"`
+	CashRegisterID     pgtype.UUID        `json:"cash_register_id"`
 }
 
 type OrderItem struct {
@@ -1181,22 +1182,23 @@ type Translation struct {
 }
 
 type User struct {
-	ID           uuid.UUID          `json:"id"`
-	FullName     *string            `json:"full_name"`
-	Username     *string            `json:"username"`
-	Role         string             `json:"role"`
-	Email        *string            `json:"email"`
-	ShiftID      pgtype.UUID        `json:"shift_id"`
-	Pincode      *string            `json:"pincode"`
-	HashPassword *string            `json:"hash_password"`
-	BrandID      pgtype.UUID        `json:"brand_id"`
-	BranchID     pgtype.UUID        `json:"branch_id"`
-	PhoneNumber  *string            `json:"phone_number"`
-	FcmToken     *string            `json:"fcm_token"`
-	IsActive     bool               `json:"is_active"`
-	CreatedAt    pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
-	DeletedAt    *int64             `json:"deleted_at"`
+	ID             uuid.UUID          `json:"id"`
+	FullName       *string            `json:"full_name"`
+	Username       *string            `json:"username"`
+	Role           string             `json:"role"`
+	Email          *string            `json:"email"`
+	ShiftID        pgtype.UUID        `json:"shift_id"`
+	Pincode        *string            `json:"pincode"`
+	HashPassword   *string            `json:"hash_password"`
+	BrandID        pgtype.UUID        `json:"brand_id"`
+	BranchID       pgtype.UUID        `json:"branch_id"`
+	PhoneNumber    *string            `json:"phone_number"`
+	FcmToken       *string            `json:"fcm_token"`
+	IsActive       bool               `json:"is_active"`
+	CreatedAt      pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
+	DeletedAt      *int64             `json:"deleted_at"`
+	CashRegisterID pgtype.UUID        `json:"cash_register_id"`
 }
 
 type UserPayment struct {

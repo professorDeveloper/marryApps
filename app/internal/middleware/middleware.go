@@ -114,6 +114,11 @@ func CheckAuth(cfg *config.Config) echo.MiddlewareFunc {
 			} else {
 				c.Set("branch_id", "")
 			}
+			if claims.CashRegisterID != nil {
+				c.Set("cash_register_id", *claims.CashRegisterID)
+			} else {
+				c.Set("cash_register_id", "")
+			}
 
 			role := claims.Role
 			if role == "" {

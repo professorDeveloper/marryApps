@@ -11,11 +11,13 @@ INSERT INTO users (
     brand_id,
     phone_number,
     is_active,
-    branch_id
+    branch_id,
+    cash_register_id
 )
 VALUES (
     $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11,
-    COALESCE((SELECT branch_id FROM shifts WHERE id = $6), sqlc.arg(branch_id))
+    COALESCE((SELECT branch_id FROM shifts WHERE id = $6), sqlc.arg(branch_id)),
+    sqlc.narg('cash_register_id')::uuid
 )
 RETURNING *;
 
