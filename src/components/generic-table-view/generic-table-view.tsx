@@ -293,7 +293,7 @@ export function GenericTableView<T extends Record<string, any>>({
             loading={loading}
             getRowHeight={() => 'auto'}
             getRowId={(row) => row?.[idField]}
-            pageSizeOptions={[10, 20, 50, 100, 500, { value: -1, label: 'Hammasi' }]}
+            pageSizeOptions={[10, 20, 50, 100, 500]}
             initialState={{ pagination: { paginationModel: { pageSize: 20 } } }}
             columnVisibilityModel={columnVisibilityModel}
             onColumnVisibilityModelChange={(newModel) => setColumnVisibilityModel(newModel)}
