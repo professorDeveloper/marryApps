@@ -24,7 +24,7 @@ const buildQueryString = (params: IGoodsReportsFilterParams): string => {
   if (params.hall_id) queryParams.append('hall_id', params.hall_id);
   if (params.table_id) queryParams.append('table_id', params.table_id);
 
-  queryParams.append('limit', String(params.limit ?? 20));
+  queryParams.append('limit', String(params.limit ?? 500));
   queryParams.append('offset', String(params.offset ?? 0));
 
   const queryString = queryParams.toString();

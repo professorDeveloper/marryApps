@@ -22,7 +22,7 @@ interface BackendResponse<T> {
 const emptyListResponse: OrdersListResponse = {
   data: [],
   total: 0,
-  limit: 20,
+  limit: 500,
   offset: 0,
 };
 

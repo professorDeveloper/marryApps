@@ -18,13 +18,13 @@ import { toast } from 'src/components/snackbar';
 
 const normalizeListResponse = (payload: unknown): ShipmentListResponse => {
   if (!payload || typeof payload !== 'object') {
-    return { data: [], limit: 20, offset: 0, total: 0 };
+    return { data: [], limit: 500, offset: 0, total: 0 };
   }
 
   const obj = payload as Record<string, unknown>;
   return {
     data: Array.isArray(obj.data) ? (obj.data as ShipmentListResponse['data']) : [],
-    limit: typeof obj.limit === 'number' ? obj.limit : 20,
+    limit: typeof obj.limit === 'number' ? obj.limit : 500,
     offset: typeof obj.offset === 'number' ? obj.offset : 0,
     total: typeof obj.total === 'number' ? obj.total : 0,
   };
@@ -72,7 +72,7 @@ export function useShipmentsAPI() {
         const axiosError = error as AxiosError<{ message?: string }>;
         const message = axiosError?.response?.data?.message || t('shipments.messages.fetchFailed', 'Failed to fetch shipments');
         toast.error(message);
-        return { data: [], limit: 20, offset: 0, total: 0 };
+        return { data: [], limit: 500, offset: 0, total: 0 };
       }
     },
     [t]

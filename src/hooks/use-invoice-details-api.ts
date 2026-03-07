@@ -45,20 +45,75 @@ export interface UseInvoiceDetailsAPIReturn {
 // ============================================================================
 
 export function useInvoiceDetailsAPI(): UseInvoiceDetailsAPIReturn {
+    const MAX_LIST_ITEMS = 500;
+
+    const extractListAndMeta = <T,>(payload: unknown): { items: T[]; total?: number } => {
+        if (!payload || typeof payload !== 'object') return { items: [] };
+
+        const obj = payload as Record<string, unknown>;
+
+        if (Array.isArray(obj.data)) {
+            return {
+                items: obj.data as T[],
+                total: typeof obj.total === 'number' ? obj.total : undefined,
+            };
+        }
+
+        if (obj.data && typeof obj.data === 'object') {
+            const nested = obj.data as Record<string, unknown>;
+            if (Array.isArray(nested.data)) {
+                return {
+                    items: nested.data as T[],
+                    total:
+                        typeof nested.total === 'number'
+                            ? nested.total
+                            : typeof obj.total === 'number'
+                                ? obj.total
+                                : undefined,
+                };
+            }
+        }
+
+        return { items: [] };
+    };
+
     /**
      * Barcha invoice details'ni oladi
      */
     const getInvoiceDetails = useCallback(async (): Promise<InvoiceDetail[]> => {
         try {
-            const response = await fetcher<BackendResponse<InvoiceDetail[]>>(endpoints.invoice.detailsList);
-            return response.data || [];
+            const result: InvoiceDetail[] = [];
+            let offset = 0;
+
+            while (result.length < MAX_LIST_ITEMS) {
+                const response = await fetcher<unknown>([
+                    endpoints.invoice.detailsList,
+                    { params: { limit: MAX_LIST_ITEMS, offset } },
+                ]);
+
+                const { items, total } = extractListAndMeta<InvoiceDetail>(response);
+                if (!items.length) break;
+
+                result.push(...items);
+
+                const reachedTotal =
+                    typeof total === 'number' ? offset + items.length >= total : false;
+
+                if (reachedTotal || items.length >= MAX_LIST_ITEMS || result.length >= MAX_LIST_ITEMS) {
+                    break;
+                }
+
+                offset += items.length;
+            }
+
+            return result.slice(0, MAX_LIST_ITEMS);
         } catch (error) {
             const axiosError = error as AxiosError<any>;
             const message = axiosError?.response?.data?.message || 'Failed to fetch invoice details';
             toast.error(message);
             return [];
         }
-    }, []);
+    }, [MAX_LIST_ITEMS]);
 
     /**
      * ID orqali invoice detail'ni oladi
@@ -224,15 +279,38 @@ export function useInvoiceDetailsAPI(): UseInvoiceDetailsAPIReturn {
      */
     const getInvoices = useCallback(async (): Promise<any[]> => {
         try {
-            const response = await fetcher<BackendResponse<any[]>>(endpoints.invoice.list);
-            return response.data || [];
+            const result: any[] = [];
+            let offset = 0;
+
+            while (result.length < MAX_LIST_ITEMS) {
+                const response = await fetcher<unknown>([
+                    endpoints.invoice.list,
+                    { params: { limit: MAX_LIST_ITEMS, offset } },
+                ]);
+
+                const { items, total } = extractListAndMeta<any>(response);
+                if (!items.length) break;
+
+                result.push(...items);
+
+                const reachedTotal =
+                    typeof total === 'number' ? offset + items.length >= total : false;
+
+                if (reachedTotal || items.length >= MAX_LIST_ITEMS || result.length >= MAX_LIST_ITEMS) {
+                    break;
+                }
+
+                offset += items.length;
+            }
+
+            return result.slice(0, MAX_LIST_ITEMS);
         } catch (error) {
             const axiosError = error as AxiosError<any>;
             const message = axiosError?.response?.data?.message || 'Failed to fetch invoices';
             toast.error(message);
             return [];
         }
-    }, []);
+    }, [MAX_LIST_ITEMS]);
 
     return {
         getInvoiceDetails,

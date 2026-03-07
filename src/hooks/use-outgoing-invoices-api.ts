@@ -18,14 +18,14 @@ import { toast } from 'src/components/snackbar';
 
 const normalizeListResponse = (payload: unknown): OutgoingInvoiceListResponse => {
   if (!payload || typeof payload !== 'object') {
-    return { data: [], total_sum: '0', limit: 20, offset: 0, total: 0 };
+    return { data: [], total_sum: '0', limit: 500, offset: 0, total: 0 };
   }
 
   const obj = payload as Record<string, unknown>;
   return {
     data: Array.isArray(obj.data) ? (obj.data as OutgoingInvoiceListResponse['data']) : [],
     total_sum: typeof obj.total_sum === 'string' ? obj.total_sum : '0',
-    limit: typeof obj.limit === 'number' ? obj.limit : 20,
+    limit: typeof obj.limit === 'number' ? obj.limit : 500,
     offset: typeof obj.offset === 'number' ? obj.offset : 0,
     total: typeof obj.total === 'number' ? obj.total : 0,
   };
@@ -75,7 +75,7 @@ export function useOutgoingInvoicesAPI() {
           axiosError?.response?.data?.message
           || t('outgoingInvoices.messages.fetchFailed', 'Failed to fetch outgoing invoices');
         toast.error(message);
-        return { data: [], total_sum: '0', limit: 20, offset: 0, total: 0 };
+        return { data: [], total_sum: '0', limit: 500, offset: 0, total: 0 };
       }
     },
     [t]

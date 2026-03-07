@@ -60,7 +60,7 @@ const initialFilters: ShipmentFilters = {
   storage_id: '',
   supplier_id: '',
   status: '',
-  limit: 20,
+  limit: 500,
   offset: 0,
 };
 

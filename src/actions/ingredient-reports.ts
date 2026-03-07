@@ -29,7 +29,7 @@ const buildQueryString = (params: Partial<IIngredientReportsFilterParams>): stri
     if (params.end) queryParams.append('end', params.end);
     if (params.ingredient_id) queryParams.append('ingredient_id', params.ingredient_id);
 
-    queryParams.append('limit', String(params.limit ?? 20));
+    queryParams.append('limit', String(params.limit ?? 500));
     queryParams.append('offset', String(params.offset ?? 0));
 
     const queryString = queryParams.toString();

@@ -64,7 +64,7 @@ const initialFilters: OutgoingInvoiceFilters = {
   storage_id: '',
   group_id: '',
   status: '',
-  limit: 20,
+  limit: 500,
   offset: 0,
 };
 

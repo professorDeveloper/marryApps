@@ -65,7 +65,7 @@ const initialFilters: SeparationActFilters = {
   group_id: '',
   ingredient_id: '',
   status: '',
-  limit: 20,
+  limit: 500,
   offset: 0,
 };
 

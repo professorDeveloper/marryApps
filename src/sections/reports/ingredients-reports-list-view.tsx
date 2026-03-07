@@ -49,7 +49,7 @@ export function IngredientReportsListView() {
         start: '',
         end: '',
         ingredient_id: '',
-        limit: 20,
+        limit: 500,
         offset: 0,
     });
 
@@ -352,7 +352,7 @@ export function IngredientReportsListView() {
             start: '',
             end: '',
             ingredient_id: '',
-            limit: 20,
+            limit: 500,
             offset: 0,
         });
     }, []);

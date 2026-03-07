@@ -57,6 +57,37 @@ axiosInstance.interceptors.request.use((config) => {
     (config.headers as any)['X-Branch-ID'] = String(branchId);
   }
 
+  // Force pagination defaults for legacy list endpoints that are still called without params.
+  const forcedListEndpoints = new Set([
+    '/api/v1/departments',
+    '/api/v1/categories',
+    '/api/v1/compounds',
+    '/api/v1/goods',
+    '/api/v1/storages',
+    '/api/v1/ingredient-groups',
+    '/api/v1/ingredients',
+    '/api/v1/transfers',
+    '/api/v1/suppliers',
+    '/api/v1/deductions',
+    '/api/v1/deductions/group',
+    '/api/v1/orders',
+  ]);
+
+  const method = (config.method || 'get').toLowerCase();
+  const rawUrl = config.url || '';
+  const [pathOnly, queryString = ''] = rawUrl.split('?');
+  const hasLimitInUrl = new URLSearchParams(queryString).has('limit');
+  const paramsObj = (config.params || {}) as Record<string, unknown>;
+  const hasLimitInParams = Object.prototype.hasOwnProperty.call(paramsObj, 'limit');
+
+  if (method === 'get' && forcedListEndpoints.has(pathOnly) && !hasLimitInUrl && !hasLimitInParams) {
+    config.params = {
+      ...paramsObj,
+      limit: 500,
+      offset: typeof paramsObj.offset === 'number' ? paramsObj.offset : 0,
+    };
+  }
+
   return config;
 });
 

@@ -59,7 +59,7 @@ export function BillsListView() {
         waiter_id: '',
         hall_id: '',
         table_id: '',
-        limit: 20,
+        limit: 500,
         offset: 0,
     });
 
@@ -447,7 +447,7 @@ export function BillsListView() {
             waiter_id: '',
             hall_id: '',
             table_id: '',
-            limit: 20,
+            limit: 500,
             offset: 0,
         });
     }, [startDate, endDate]);

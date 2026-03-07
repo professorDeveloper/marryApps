@@ -20,7 +20,7 @@ const normalizeListResponse = (payload: unknown): SeparationActsListResponse => 
   if (!payload || typeof payload !== 'object') {
     return {
       data: [],
-      limit: 20,
+      limit: 500,
       offset: 0,
       total: 0,
       total_amount: '0',
@@ -31,7 +31,7 @@ const normalizeListResponse = (payload: unknown): SeparationActsListResponse => 
   const obj = payload as Record<string, unknown>;
   return {
     data: Array.isArray(obj.data) ? (obj.data as SeparationActsListResponse['data']) : [],
-    limit: typeof obj.limit === 'number' ? obj.limit : 20,
+    limit: typeof obj.limit === 'number' ? obj.limit : 500,
     offset: typeof obj.offset === 'number' ? obj.offset : 0,
     total: typeof obj.total === 'number' ? obj.total : 0,
     total_amount: typeof obj.total_amount === 'string' ? obj.total_amount : '0',
@@ -85,7 +85,7 @@ export function useSeparationActsAPI() {
         toast.error(message);
         return {
           data: [],
-          limit: 20,
+          limit: 500,
           offset: 0,
           total: 0,
           total_amount: '0',
