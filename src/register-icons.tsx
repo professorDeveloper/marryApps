@@ -10,6 +10,7 @@ export const iconSets = Object.entries(allIcons).reduce((acc, [key, value]) => {
   const [prefix, iconName] = key.split(':');
   const existingPrefix = acc.find((item) => item.prefix === prefix);
 
+  
   if (existingPrefix) {
     existingPrefix.icons[iconName] = value;
   } else {
