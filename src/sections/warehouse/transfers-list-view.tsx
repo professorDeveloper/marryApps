@@ -5,6 +5,8 @@ import { useMemo, useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import Button from '@mui/material/Button';
+import Box from '@mui/material/Box';
+import TextField from '@mui/material/TextField';
 import { Dialog, DialogTitle, DialogActions, DialogContent } from '@mui/material';
 
 import { paths } from 'src/routes/paths';
@@ -46,6 +48,9 @@ export function TransfersListView() {
   const [groupsMap, setGroupsMap] = useState<Record<string, string>>({});
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [openConfirm, setOpenConfirm] = useState(false);
+  const [draftFilters, setDraftFilters] = useState({
+    status: '',
+  });
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -165,6 +170,15 @@ export function TransfersListView() {
     loadData();
   }, [loadData]);
 
+  const filteredRows = useMemo(() => {
+    return rows.filter((row) => {
+      if (draftFilters.status && row.status !== draftFilters.status) {
+        return false;
+      }
+      return true;
+    });
+  }, [rows, draftFilters]);
+
   const handleDelete = useCallback(async () => {
     if (!deleteId) return;
     await deleteTransfer(deleteId);
@@ -231,49 +245,49 @@ export function TransfersListView() {
           return groupsMap[params.row.act_group_id] || t('common.notFound', 'Not found');
         },
       },
-        {
-                field: 'status',
-                headerName: t('invoices.status', 'Status'),
-                width: 120,
-                renderCell: (params) => {
-                    if (!params.row.status) return t('common.notFound', 'Not found');
-                    const status = params.row.status?.toLowerCase();
-                    let color = 'default';
-                    if (status === 'draft') color = 'default';
-                    if (status === 'active') color = 'success';
-                    if (status === 'deleted') color = 'error';
-                    return (
-                        <span
-                            style={{
-                                padding: '4px 12px',
-                                borderRadius: '4px',
-                                fontSize: '14px',
-                                fontWeight: 700,
-                                marginTop: '10px',
-                                marginBottom: '10px',
-                                backgroundColor:
-                                    color === 'warning'
-                                        ? '#FFF3CD'
-                                        : color === 'success'
-                                            ? '#D4EDDA'
-                                            : color === 'error'
-                                                ? '#F8D7DA'
-                                                : '#E2E3E5',
-                                color:
-                                    color === 'warning'
-                                        ? '#856404'
-                                        : color === 'success'
-                                            ? '#155724'
-                                            : color === 'error'
-                                                ? '#721C24'
-                                                : '#383D41',
-                            }}
-                        >
-                            {status}
-                        </span>
-                    );
-                },
-            },
+      {
+        field: 'status',
+        headerName: t('invoices.status', 'Status'),
+        width: 120,
+        renderCell: (params) => {
+          if (!params.row.status) return t('common.notFound', 'Not found');
+          const status = params.row.status?.toLowerCase();
+          let color = 'default';
+          if (status === 'draft') color = 'warning';
+          if (status === 'active') color = 'success';
+          if (status === 'deleted') color = 'error';
+          return (
+            <span
+              style={{
+                padding: '4px 12px',
+                borderRadius: '4px',
+                fontSize: '14px',
+                fontWeight: 700,
+                marginTop: '10px',
+                marginBottom: '10px',
+                backgroundColor:
+                  color === 'warning'
+                    ? '#FFF3CD'
+                    : color === 'success'
+                      ? '#D4EDDA'
+                      : color === 'error'
+                        ? '#F8D7DA'
+                        : '#E2E3E5',
+                color:
+                  color === 'warning'
+                    ? '#856404'
+                    : color === 'success'
+                      ? '#155724'
+                      : color === 'error'
+                        ? '#721C24'
+                        : '#383D41',
+              }}
+            >
+              {status}
+            </span>
+          );
+        },
+      },
       {
         field: 'total_amount',
         headerName: t('deductions.balance', 'Total'),
@@ -330,7 +344,7 @@ export function TransfersListView() {
   return (
     <>
       <GenericTableView
-        data={rows}
+        data={filteredRows}
         columns={columns}
         loading={loading}
         breadcrumbs={{
@@ -345,6 +359,39 @@ export function TransfersListView() {
           label: t('common.add', 'Add'),
           href: paths.warehouse.transfers.new,
         }}
+        renderFilters={() => (
+          <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+            <TextField
+              select
+              size="small"
+              label={t('deductions.status', 'Status')}
+              SelectProps={{ native: true }}
+              value={draftFilters.status || ''}
+              onChange={(e) =>
+                setDraftFilters((prev) => ({
+                  ...prev,
+                  status: e.target.value,
+                }))
+              }
+              InputLabelProps={{ shrink: true }}
+              sx={{ minWidth: 150 }}
+            >
+              <option value="">{t('ingredientReports.all', 'All')}</option>
+              <option value="active">{t('deductions.active', 'Active')}</option>
+              <option value="draft">{t('deductions.draft', 'Draft')}</option>
+              <option value="deleted">{t('deductions.deleted', 'Deleted')}</option>
+            </TextField>
+            <Button
+              variant="outlined"
+              size="small"
+              startIcon={<Iconify icon="solar:restart-bold" />}
+              onClick={() => setDraftFilters({ status: '' })}
+              sx={{ minWidth: 'auto' }}
+            >
+              {t('deductions.reset', 'Reset') || 'Reset'}
+            </Button>
+          </Box>
+        )}
       />
 
       <Dialog open={openConfirm} onClose={() => setOpenConfirm(false)} maxWidth="xs" fullWidth>

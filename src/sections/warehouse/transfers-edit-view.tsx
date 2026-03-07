@@ -500,6 +500,7 @@ export function TransfersEditView({ isNew = false }: TransfersEditViewProps) {
               options: [
                 { value: 'active', label: t('deductions.active', 'Active') },
                 { value: 'deleted', label: t('deductions.deleted', 'Deleted') },
+                { value: 'draft', label: t('deductions.draft', 'Draft') }
               ],
               defaultValue: 'active',
             },

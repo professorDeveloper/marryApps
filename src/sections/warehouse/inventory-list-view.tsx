@@ -23,8 +23,7 @@ function RenderCellStatus({ params }: { params: any }) {
 
     const statusConfig: Record<string, { label: string; color: string }> = {
         active: { label: 'Active', color: '#22c55e' },
-        completed: { label: 'Completed', color: '#3b82f6' },
-        draft: { label: 'Draft', color: '#6b7280' },
+        draft: { label: 'Draft', color: '#f59e0b' },
         deleted: { label: 'Deleted', color: '#ef4444' },
     };
 
@@ -126,7 +125,7 @@ export function InventoryListView() {
             {
                 field: 'storage_id',
                 headerName: t('inventory.storage'),
-                width: 170,
+                width: 200,
                 flex: 1,
                 valueGetter: (_value, row) =>
                     row.storage_id ? storageNameById.get(row.storage_id) || row.storage_id : '-',

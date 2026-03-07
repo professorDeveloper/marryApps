@@ -224,7 +224,7 @@ export function InventoryEditView({ isNew = false }: InventoryEditViewProps) {
                         type: 'select' as const,
                         options: [
                             { value: 'active', label: t('inventory.active') },
-                            // { value: 'draft', label: t('inventory.draft') },
+                            { value: 'draft', label: t('inventory.draft') },
                             { value: 'deleted', label: t('inventory.deleted') },
                             // { value: 'cancelled', label: t('inventory.cancelled') },
                         ],

@@ -542,7 +542,7 @@ export function InvoiceDetailsCalculation({ invoiceId, invoiceData, onSuccess, o
                 sx={{
                     borderColor: 'divider',
                     px: 3,
-                    width: '100%',
+                    width: '50%',
                 }}
             >
                 <Tab
