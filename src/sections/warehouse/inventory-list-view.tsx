@@ -155,6 +155,7 @@ export function InventoryListView() {
                             minimumFractionDigits: 2,
                         })
                         : '0.00',
+                        
             },
             {
                 field: 'shortage_amount',
