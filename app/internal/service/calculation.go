@@ -388,17 +388,13 @@ func (c *CalculationS) PreviewCalculations(ctx context.Context, req *model.Previ
 			return nil, fmt.Errorf("failed to fetch ingredient: %w", err)
 		}
 
-		if !ingredient.PricePerUnit.Valid {
-			return nil, fmt.Errorf("ingredient has no price - please add ingredient to invoice first")
-		}
-
-		priceStr := numericToStr(ingredient.PricePerUnit)
-		priceFloat, err := strconv.ParseFloat(priceStr, 64)
-		if err != nil {
-			return nil, fmt.Errorf("invalid ingredient price: %w", err)
-		}
-		if priceFloat == 0 {
-			return nil, fmt.Errorf("ingredient has no price - please add ingredient to invoice first")
+		var priceFloat float64
+		if ingredient.PricePerUnit.Valid {
+			priceStr := numericToStr(ingredient.PricePerUnit)
+			priceFloat, err = strconv.ParseFloat(priceStr, 64)
+			if err != nil {
+				return nil, fmt.Errorf("invalid ingredient price: %w", err)
+			}
 		}
 
 		lineTotal := qtyFloat * priceFloat
@@ -529,20 +525,14 @@ func (c *CalculationS) createCalculationInternal(ctx context.Context, goodID, co
 		return nil, fmt.Errorf("failed to fetch ingredient: %w", err)
 	}
 
-	// Get price_per_unit from ingredient (updated when invoices arrive)
-	if !ingredient.PricePerUnit.Valid {
-		return nil, fmt.Errorf("ingredient has no price - please add ingredient to invoice first")
-	}
-
-	// Extract price per unit from ingredient
-	ingredientPrice := numericToStr(ingredient.PricePerUnit)
-	ingredientPriceFloat, err := strconv.ParseFloat(ingredientPrice, 64)
-	if err != nil {
-		return nil, fmt.Errorf("invalid ingredient price: %w", err)
-	}
-
-	if ingredientPriceFloat == 0 {
-		return nil, fmt.Errorf("ingredient has no price - please add ingredient to invoice first")
+	// Get price_per_unit from ingredient (0 if not yet set via invoice)
+	var ingredientPriceFloat float64
+	if ingredient.PricePerUnit.Valid {
+		ingredientPrice := numericToStr(ingredient.PricePerUnit)
+		ingredientPriceFloat, err = strconv.ParseFloat(ingredientPrice, 64)
+		if err != nil {
+			return nil, fmt.Errorf("invalid ingredient price: %w", err)
+		}
 	}
 
 	// Calculate total cost: quantity * price_per_unit
@@ -565,7 +555,7 @@ func (c *CalculationS) createCalculationInternal(ctx context.Context, goodID, co
 		ComponentCompoundID: pgtype.UUID{Valid: false},
 		Quantity:            stringToNumeric(quantity),
 		MeasurementUnit:     measurementUnit,
-		PricePerUnit:        stringToNumeric(ingredientPrice),
+		PricePerUnit:        stringToNumeric(fmt.Sprintf("%.2f", ingredientPriceFloat)),
 		TotalCost:           stringToNumeric(fmt.Sprintf("%.2f", totalCostCalc)),
 	})
 	if err != nil {
