@@ -121,21 +121,21 @@ type HallI interface {
 type IngredientI interface {
 	CreateIngredientGroup(ctx context.Context, name string, nameI18n *uuid.UUID, pictureUrl *string, colorCode *string) (*model.IngredientGroupResponse, error)
 	GetIngredientGroupByID(ctx context.Context, groupID string) (*model.IngredientGroupResponse, error)
-	GetAllIngredientGroups(ctx context.Context, limit, offset int32) ([]model.IngredientGroupResponse, error)
+	GetAllIngredientGroups(ctx context.Context, limit, offset int32) ([]model.IngredientGroupResponse, int64, error)
 	SearchIngredientGroups(ctx context.Context, query string, limit, offset int32) ([]model.IngredientGroupResponse, error)
 	GetIngredientGroupByIDWithLang(ctx context.Context, groupID string, lang string) (*model.IngredientGroupResponse, error)
-	GetAllIngredientGroupsWithLang(ctx context.Context, lang string, limit, offset int32) ([]model.IngredientGroupResponse, error)
+	GetAllIngredientGroupsWithLang(ctx context.Context, lang string, limit, offset int32) ([]model.IngredientGroupResponse, int64, error)
 	UpdateIngredientGroup(ctx context.Context, groupID string, name *string, nameI18n *string, pictureUrl *string, colorCode *string) (*model.IngredientGroupResponse, error)
 	DeleteIngredientGroup(ctx context.Context, groupID string) error
 	RestoreIngredientGroup(ctx context.Context, groupID string) error
 
 	CreateIngredient(ctx context.Context, name string, nameI18n *uuid.UUID, groupID *string, measurement *string, pictureUrl *string, colorCode *string) (*model.IngredientResponse, error)
 	GetIngredientByID(ctx context.Context, ingredientID string) (*model.IngredientResponse, error)
-	GetAllIngredients(ctx context.Context, limit, offset int32) ([]model.IngredientResponse, error)
+	GetAllIngredients(ctx context.Context, limit, offset int32) ([]model.IngredientResponse, int64, error)
 	SearchIngredients(ctx context.Context, query string, limit, offset int32) ([]model.IngredientResponse, error)
 	GetIngredientByIDWithLang(ctx context.Context, ingredientID string, lang string) (*model.IngredientResponse, error)
-	GetAllIngredientsWithLang(ctx context.Context, lang string, limit, offset int32) ([]model.IngredientResponse, error)
-	GetIngredientsByGroupID(ctx context.Context, groupID string, limit, offset int32) ([]model.IngredientResponse, error)
+	GetAllIngredientsWithLang(ctx context.Context, lang string, limit, offset int32) ([]model.IngredientResponse, int64, error)
+	GetIngredientsByGroupID(ctx context.Context, groupID string, limit, offset int32) ([]model.IngredientResponse, int64, error)
 	UpdateIngredient(ctx context.Context, ingredientID string, name *string, nameI18n *string, groupID *string, measurement *string, pictureUrl *string, brandID *string, colorCode *string, pricePerUnit *string) (*model.IngredientResponse, error)
 	DeleteIngredient(ctx context.Context, ingredientID string) error
 	RestoreIngredient(ctx context.Context, ingredientID string) error
@@ -143,9 +143,9 @@ type IngredientI interface {
 	CreateIngredientStock(ctx context.Context, ingredientID string, quantity string, branchID *string, storageID *string) (*model.IngredientStockResponse, error)
 	GetIngredientStockByID(ctx context.Context, stockID string) (*model.IngredientStockResponse, error)
 	GetStockByIngredientAndBranch(ctx context.Context, ingredientID, branchID string) (*model.IngredientStockResponse, error)
-	GetAllIngredientStock(ctx context.Context, limit, offset int32) ([]model.IngredientStockResponse, error)
-	GetStockByBranchID(ctx context.Context, branchID string, limit, offset int32) ([]model.IngredientStockResponse, error)
-	GetStockByIngredientID(ctx context.Context, ingredientID string, limit, offset int32) ([]model.IngredientStockResponse, error)
+	GetAllIngredientStock(ctx context.Context, limit, offset int32) ([]model.IngredientStockResponse, int64, error)
+	GetStockByBranchID(ctx context.Context, branchID string, limit, offset int32) ([]model.IngredientStockResponse, int64, error)
+	GetStockByIngredientID(ctx context.Context, ingredientID string, limit, offset int32) ([]model.IngredientStockResponse, int64, error)
 	UpdateIngredientStock(ctx context.Context, stockID string, quantity string) (*model.IngredientStockResponse, error)
 	AddToIngredientStock(ctx context.Context, stockID string, quantity string) (*model.IngredientStockResponse, error)
 	RemoveFromIngredientStock(ctx context.Context, stockID string, quantity string) (*model.IngredientStockResponse, error)

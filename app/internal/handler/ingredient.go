@@ -121,18 +121,24 @@ func (h *Handler) GetAllIngredientGroups(c echo.Context) error {
 	}
 
 	var groups []model.IngredientGroupResponse
+	var total int32
 	var err error
 	if search != "" {
 		groups, err = h.service.Ingredient().SearchIngredientGroups(c.Request().Context(), search, limit, offset)
+		if err == nil {
+			total = int32(len(groups))
+		}
 	} else {
-		groups, err = h.service.Ingredient().GetAllIngredientGroups(c.Request().Context(), limit, offset)
+		var t int64
+		groups, t, err = h.service.Ingredient().GetAllIngredientGroups(c.Request().Context(), limit, offset)
+		total = int32(t)
 	}
 	if err != nil {
 		log.Printf("GetAllIngredientGroups failed: %v", err)
 		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("failed to fetch ingredient groups", "see logs for details", http.StatusInternalServerError))
 	}
 
-	return c.JSON(http.StatusOK, model.NewSuccessResponse("Data retrieved successfully", groups, http.StatusOK))
+	return c.JSON(http.StatusOK, model.NewPaginatedResponse("Data retrieved successfully", groups, total, limit, offset, http.StatusOK))
 }
 
 // UpdateIngredientGroup updates an existing ingredient group
@@ -358,11 +364,17 @@ func (h *Handler) GetAllIngredients(c echo.Context) error {
 	}
 
 	var ingredients []model.IngredientResponse
+	var total int32
 	var err error
 	if search != "" {
 		ingredients, err = h.service.Ingredient().SearchIngredients(c.Request().Context(), search, limit, offset)
+		if err == nil {
+			total = int32(len(ingredients))
+		}
 	} else {
-		ingredients, err = h.service.Ingredient().GetAllIngredients(c.Request().Context(), limit, offset)
+		var t int64
+		ingredients, t, err = h.service.Ingredient().GetAllIngredients(c.Request().Context(), limit, offset)
+		total = int32(t)
 	}
 	if err != nil {
 		log.Printf("GetAllIngredients failed: %v", err)
@@ -373,9 +385,9 @@ func (h *Handler) GetAllIngredients(c echo.Context) error {
 		if err != nil {
 			return err
 		}
-		return c.JSON(http.StatusOK, model.NewSuccessResponse("Data retrieved successfully", maps, http.StatusOK))
+		return c.JSON(http.StatusOK, model.NewPaginatedResponse("Data retrieved successfully", maps, total, limit, offset, http.StatusOK))
 	}
-	return c.JSON(http.StatusOK, model.NewSuccessResponse("Data retrieved successfully", ingredients, http.StatusOK))
+	return c.JSON(http.StatusOK, model.NewPaginatedResponse("Data retrieved successfully", ingredients, total, limit, offset, http.StatusOK))
 }
 
 // GetIngredientsByGroupID retrieves ingredients by group ID
@@ -419,13 +431,19 @@ func (h *Handler) GetIngredientsByGroupID(c echo.Context) error {
 		}
 	}
 
-	ingredients, err := h.service.Ingredient().GetIngredientsByGroupID(c.Request().Context(), groupID, limit, offset)
+	ingredients, total64, err := h.service.Ingredient().GetIngredientsByGroupID(c.Request().Context(), groupID, limit, offset)
 	if err != nil {
 		log.Printf("GetIngredientsByGroupID failed for group_id %s: %v", groupID, err)
 		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("failed to fetch ingredients", "see logs for details", http.StatusInternalServerError))
 	}
 
-	return c.JSON(http.StatusOK, model.NewSuccessResponse("Data retrieved successfully", ingredients, http.StatusOK))
+	if maps, expanded, err := h.expandListResponse(c, ingredients, "ingredients"); expanded {
+		if err != nil {
+			return err
+		}
+		return c.JSON(http.StatusOK, model.NewPaginatedResponse("Data retrieved successfully", maps, int32(total64), limit, offset, http.StatusOK))
+	}
+	return c.JSON(http.StatusOK, model.NewPaginatedResponse("Data retrieved successfully", ingredients, int32(total64), limit, offset, http.StatusOK))
 }
 
 // UpdateIngredient updates an existing ingredient
@@ -688,7 +706,7 @@ func (h *Handler) GetAllIngredientStock(c echo.Context) error {
 		}
 	}
 
-	stocks, err := h.service.Ingredient().GetAllIngredientStock(c.Request().Context(), limit, offset)
+	stocks, total64, err := h.service.Ingredient().GetAllIngredientStock(c.Request().Context(), limit, offset)
 	if err != nil {
 		log.Printf("GetAllIngredientStock failed: %v", err)
 		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("failed to fetch ingredient stock", "see logs for details", http.StatusInternalServerError))
@@ -698,9 +716,9 @@ func (h *Handler) GetAllIngredientStock(c echo.Context) error {
 		if err != nil {
 			return err
 		}
-		return c.JSON(http.StatusOK, model.NewSuccessResponse("Data retrieved successfully", maps, http.StatusOK))
+		return c.JSON(http.StatusOK, model.NewPaginatedResponse("Data retrieved successfully", maps, int32(total64), limit, offset, http.StatusOK))
 	}
-	return c.JSON(http.StatusOK, model.NewSuccessResponse("Data retrieved successfully", stocks, http.StatusOK))
+	return c.JSON(http.StatusOK, model.NewPaginatedResponse("Data retrieved successfully", stocks, int32(total64), limit, offset, http.StatusOK))
 }
 
 // GetStockByBranchID retrieves stock by branch ID
@@ -745,7 +763,7 @@ func (h *Handler) GetStockByBranchID(c echo.Context) error {
 		}
 	}
 
-	stocks, err := h.service.Ingredient().GetStockByBranchID(c.Request().Context(), branchID, limit, offset)
+	stocks, total64, err := h.service.Ingredient().GetStockByBranchID(c.Request().Context(), branchID, limit, offset)
 	if err != nil {
 		log.Printf("GetStockByBranchID failed for branch_id %s: %v", branchID, err)
 		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("failed to fetch ingredient stock", "see logs for details", http.StatusInternalServerError))
@@ -755,9 +773,9 @@ func (h *Handler) GetStockByBranchID(c echo.Context) error {
 		if err != nil {
 			return err
 		}
-		return c.JSON(http.StatusOK, model.NewSuccessResponse("Data retrieved successfully", maps, http.StatusOK))
+		return c.JSON(http.StatusOK, model.NewPaginatedResponse("Data retrieved successfully", maps, int32(total64), limit, offset, http.StatusOK))
 	}
-	return c.JSON(http.StatusOK, model.NewSuccessResponse("Data retrieved successfully", stocks, http.StatusOK))
+	return c.JSON(http.StatusOK, model.NewPaginatedResponse("Data retrieved successfully", stocks, int32(total64), limit, offset, http.StatusOK))
 }
 
 // GetStockByIngredientID retrieves stock by ingredient ID
@@ -802,7 +820,7 @@ func (h *Handler) GetStockByIngredientID(c echo.Context) error {
 		}
 	}
 
-	stocks, err := h.service.Ingredient().GetStockByIngredientID(c.Request().Context(), ingredientID, limit, offset)
+	stocks, total64, err := h.service.Ingredient().GetStockByIngredientID(c.Request().Context(), ingredientID, limit, offset)
 	if err != nil {
 		log.Printf("GetStockByIngredientID failed for ingredient_id %s: %v", ingredientID, err)
 		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("failed to fetch ingredient stock", "see logs for details", http.StatusInternalServerError))
@@ -812,9 +830,9 @@ func (h *Handler) GetStockByIngredientID(c echo.Context) error {
 		if err != nil {
 			return err
 		}
-		return c.JSON(http.StatusOK, model.NewSuccessResponse("Data retrieved successfully", maps, http.StatusOK))
+		return c.JSON(http.StatusOK, model.NewPaginatedResponse("Data retrieved successfully", maps, int32(total64), limit, offset, http.StatusOK))
 	}
-	return c.JSON(http.StatusOK, model.NewSuccessResponse("Data retrieved successfully", stocks, http.StatusOK))
+	return c.JSON(http.StatusOK, model.NewPaginatedResponse("Data retrieved successfully", stocks, int32(total64), limit, offset, http.StatusOK))
 }
 
 // UpdateIngredientStock updates ingredient stock quantity
@@ -1091,13 +1109,13 @@ func (h *Handler) GetAllIngredientGroupsWithLang(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("invalid language code", "valid values: uz, ru, en", http.StatusBadRequest))
 	}
 
-	groups, err := h.service.Ingredient().GetAllIngredientGroupsWithLang(c.Request().Context(), lang, limit, offset)
+	groups, total64, err := h.service.Ingredient().GetAllIngredientGroupsWithLang(c.Request().Context(), lang, limit, offset)
 	if err != nil {
 		log.Printf("GetAllIngredientGroupsWithLang failed: %v", err)
 		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("failed to get ingredient groups", "see logs for details", http.StatusInternalServerError))
 	}
 
-	return c.JSON(http.StatusOK, model.NewSuccessResponse("Ingredient groups retrieved successfully", groups, http.StatusOK))
+	return c.JSON(http.StatusOK, model.NewPaginatedResponse("Ingredient groups retrieved successfully", groups, int32(total64), limit, offset, http.StatusOK))
 }
 
 // ==================== INGREDIENTS WITH LANGUAGE HANDLERS ====================
@@ -1191,7 +1209,7 @@ func (h *Handler) GetAllIngredientsWithLang(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("invalid language code", "valid values: uz, ru, en", http.StatusBadRequest))
 	}
 
-	ingredients, err := h.service.Ingredient().GetAllIngredientsWithLang(c.Request().Context(), lang, limit, offset)
+	ingredients, total64, err := h.service.Ingredient().GetAllIngredientsWithLang(c.Request().Context(), lang, limit, offset)
 	if err != nil {
 		log.Printf("GetAllIngredientsWithLang failed: %v", err)
 		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("failed to get ingredients", "see logs for details", http.StatusInternalServerError))
@@ -1201,7 +1219,7 @@ func (h *Handler) GetAllIngredientsWithLang(c echo.Context) error {
 		if err != nil {
 			return err
 		}
-		return c.JSON(http.StatusOK, model.NewSuccessResponse("Ingredients retrieved successfully", maps, http.StatusOK))
+		return c.JSON(http.StatusOK, model.NewPaginatedResponse("Ingredients retrieved successfully", maps, int32(total64), limit, offset, http.StatusOK))
 	}
-	return c.JSON(http.StatusOK, model.NewSuccessResponse("Ingredients retrieved successfully", ingredients, http.StatusOK))
+	return c.JSON(http.StatusOK, model.NewPaginatedResponse("Ingredients retrieved successfully", ingredients, int32(total64), limit, offset, http.StatusOK))
 }

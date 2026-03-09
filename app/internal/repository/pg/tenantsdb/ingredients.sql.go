@@ -105,6 +105,34 @@ func (q *Queries) CountIngredientStock(ctx context.Context) (int64, error) {
 	return count, err
 }
 
+const countIngredientStockByBranchID = `-- name: CountIngredientStockByBranchID :one
+SELECT COUNT(*) FROM ingredient_stock
+WHERE branch_id = $1 AND deleted_at = 0
+  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+`
+
+// CountIngredientStockByBranchID counts total stock entries for a branch
+func (q *Queries) CountIngredientStockByBranchID(ctx context.Context, branchID pgtype.UUID) (int64, error) {
+	row := q.db.QueryRow(ctx, countIngredientStockByBranchID, branchID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
+const countIngredientStockByIngredientID = `-- name: CountIngredientStockByIngredientID :one
+SELECT COUNT(*) FROM ingredient_stock
+WHERE ingredient_id = $1 AND deleted_at = 0
+  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+`
+
+// CountIngredientStockByIngredientID counts total stock entries for an ingredient
+func (q *Queries) CountIngredientStockByIngredientID(ctx context.Context, ingredientID uuid.UUID) (int64, error) {
+	row := q.db.QueryRow(ctx, countIngredientStockByIngredientID, ingredientID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const countIngredients = `-- name: CountIngredients :one
 SELECT COUNT(*)
 FROM ingredients i
@@ -117,6 +145,24 @@ WHERE i.deleted_at = 0
 // CountIngredients counts total ingredients visible to current branch
 func (q *Queries) CountIngredients(ctx context.Context) (int64, error) {
 	row := q.db.QueryRow(ctx, countIngredients)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
+const countIngredientsByGroupID = `-- name: CountIngredientsByGroupID :one
+SELECT COUNT(*)
+FROM ingredients i
+JOIN ingredient_visibility iv ON iv.ingredient_id = i.id
+  AND iv.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  AND iv.is_visible = true
+WHERE i.group_id = $1
+  AND i.deleted_at = 0
+`
+
+// CountIngredientsByGroupID counts total ingredients for a group visible to current branch
+func (q *Queries) CountIngredientsByGroupID(ctx context.Context, groupID pgtype.UUID) (int64, error) {
+	row := q.db.QueryRow(ctx, countIngredientsByGroupID, groupID)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
