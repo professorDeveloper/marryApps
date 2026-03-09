@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useRef } from 'react';
+import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
     Box,
@@ -83,7 +83,20 @@ const formatNumber = (num: number): number => {
     return Math.round(num * 100) / 100;
 };
 
-export function InvoiceDetailsCalculation({ invoiceId, invoiceData, onSuccess, onDetailsChange, isNewInvoice, persistedDetails, formData, onSaveInvoice }: InvoiceDetailsCalculationProps) {
+const parseInputNumber = (value: string): number | null => {
+    if (value.trim() === '') {
+        return null;
+    }
+
+    const parsedValue = parseFloat(value);
+    if (!Number.isFinite(parsedValue)) {
+        return null;
+    }
+
+    return formatNumber(parsedValue);
+};
+
+export function InvoiceDetailsCalculation({ invoiceId, onSuccess, onDetailsChange, isNewInvoice, persistedDetails, formData, onSaveInvoice }: InvoiceDetailsCalculationProps) {
     const { t } = useTranslation('menu');
     const theme = useTheme();
     const { getIngredients } = useInvoiceDetailsAPI();
@@ -115,6 +128,45 @@ export function InvoiceDetailsCalculation({ invoiceId, invoiceData, onSuccess, o
     const [rightSelectedIds, setRightSelectedIds] = useState<string[]>([]);
 
     const prevCalculationsRef = useRef<string>('');
+    const calculateDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const [isCalculating, setIsCalculating] = useState(false);
+
+    const markCalculating = useCallback(() => {
+        setIsCalculating(true);
+        if (calculateDebounceRef.current) {
+            clearTimeout(calculateDebounceRef.current);
+        }
+
+        calculateDebounceRef.current = setTimeout(() => {
+            setIsCalculating(false);
+        }, 180);
+    }, []);
+
+    useEffect(
+        () => () => {
+            if (calculateDebounceRef.current) {
+                clearTimeout(calculateDebounceRef.current);
+            }
+        },
+        []
+    );
+
+    const localBatchData = useMemo(() => {
+        if (transferredIds.length === 0) {
+            return [];
+        }
+
+        return [...transferredIds]
+            .sort()
+            .map((id) => ({
+                ingredient_id: id,
+                quantity: quantities[id] ?? 0,
+                price_per_unit: pricesPerUnit[id] ?? 0,
+                price: prices[id] ?? 0,
+            }));
+    }, [transferredIds, quantities, pricesPerUnit, prices]);
+
+    const localBatchSnapshot = useMemo(() => JSON.stringify(localBatchData), [localBatchData]);
 
     // Load ingredients
     useEffect(() => {
@@ -134,66 +186,81 @@ export function InvoiceDetailsCalculation({ invoiceId, invoiceData, onSuccess, o
         loadData();
     }, [getIngredients, t]);
 
-    // Restore persisted details when component mounts or persistedDetails changes
+    // Restore persisted details when external state changes, but ignore local echo updates.
     useEffect(() => {
-        // Don't run if details are still being edited
         if (!persistedDetails) return;
 
-        // Always clear state first to prevent duplicates
-        setSelectedIds([]);
+        const incomingById = new Map<string, any>();
+        persistedDetails.forEach((detail) => {
+            const ingredientId = String(detail.ingredient_id || detail.id || '');
+            if (!ingredientId || incomingById.has(ingredientId)) {
+                return;
+            }
 
-        if (persistedDetails.length > 0) {
-            const newTransferredIds: string[] = [];
-            const newQuantities: Record<string, number> = {};
-            const newPricesPerUnit: Record<string, number> = {};
-            const newPrices: Record<string, number> = {};
-
-            persistedDetails.forEach((detail) => {
-                const ingredientId = detail.ingredient_id || detail.id;
-
-                // Prevent duplicates - only add if not already present
-                if (!newTransferredIds.includes(ingredientId)) {
-                    newTransferredIds.push(ingredientId);
-                    newQuantities[ingredientId] = detail.quantity;
-                    newPricesPerUnit[ingredientId] = detail.price_per_unit;
-                    newPrices[ingredientId] = detail.price;
-                }
+            incomingById.set(ingredientId, {
+                ingredient_id: ingredientId,
+                quantity: Number(detail.quantity) || 0,
+                price_per_unit: Number(detail.price_per_unit) || 0,
+                price: Number(detail.price) || 0,
             });
+        });
 
-            setTransferredIds(newTransferredIds);
-            setQuantities(newQuantities);
-            setPricesPerUnit(newPricesPerUnit);
-            setPrices(newPrices);
-            setShowCalculation(true);
-        } else if (persistedDetails.length === 0) {
-            // Clear details if persistedDetails is empty (after successful batch submission)
+        const incomingSnapshot = JSON.stringify(
+            [...incomingById.values()].sort((a, b) => a.ingredient_id.localeCompare(b.ingredient_id))
+        );
+
+        if (incomingSnapshot === prevCalculationsRef.current || incomingSnapshot === localBatchSnapshot) {
+            return;
+        }
+
+        if (incomingById.size === 0) {
+            if (transferredIds.length === 0) {
+                return;
+            }
+
             setTransferredIds([]);
             setQuantities({});
             setPricesPerUnit({});
             setPrices({});
             setShowCalculation(false);
+            return;
         }
-    }, [persistedDetails]);
+
+        const newTransferredIds: string[] = [];
+        const newQuantities: Record<string, number> = {};
+        const newPricesPerUnit: Record<string, number> = {};
+        const newPrices: Record<string, number> = {};
+
+        incomingById.forEach((detail, ingredientId) => {
+            newTransferredIds.push(ingredientId);
+            newQuantities[ingredientId] = detail.quantity;
+            newPricesPerUnit[ingredientId] = detail.price_per_unit;
+            newPrices[ingredientId] = detail.price;
+        });
+
+        setTransferredIds(newTransferredIds);
+        setQuantities(newQuantities);
+        setPricesPerUnit(newPricesPerUnit);
+        setPrices(newPrices);
+        setShowCalculation(true);
+        if (selectedIds.length > 0) {
+            setSelectedIds([]);
+        }
+    }, [persistedDetails, localBatchSnapshot, transferredIds.length, selectedIds.length]);
 
     // Update parent whenever details change (for persistence)
     useEffect(() => {
-        if (isNewInvoice && onDetailsChange && transferredIds.length > 0) {
-            const batchData = transferredIds.map((id) => ({
-                ingredient_id: id,
-                quantity: quantities[id],
-                price_per_unit: pricesPerUnit[id] || 0,
-                price: prices[id] || 0,
-            }));
-
-            // Only call if data actually changed (prevent infinite loops)
-            const lastCall = prevCalculationsRef.current;
-            const currentCall = JSON.stringify(batchData);
-            if (lastCall !== currentCall) {
-                prevCalculationsRef.current = currentCall;
-                onDetailsChange(batchData);
-            }
+        if (!isNewInvoice || !onDetailsChange) {
+            return;
         }
-    }, [transferredIds, quantities, prices, pricesPerUnit, isNewInvoice, onDetailsChange]);
+
+        // Only call if data actually changed (prevent infinite loops)
+        const lastCall = prevCalculationsRef.current;
+        if (lastCall !== localBatchSnapshot) {
+            prevCalculationsRef.current = localBatchSnapshot;
+            onDetailsChange(localBatchData);
+        }
+    }, [isNewInvoice, onDetailsChange, localBatchData, localBatchSnapshot]);
 
     // Handle toggle checkbox in left panel
     const handleToggle = (id: string) => {
@@ -215,13 +282,19 @@ export function InvoiceDetailsCalculation({ invoiceId, invoiceData, onSuccess, o
 
     // Handle quantity change
     const handleQuantityChange = (id: string, value: string) => {
-        const qty = formatNumber(parseFloat(value));
-        setQuantities((prev) => ({
-            ...prev,
-            [id]: qty,
-        }));
+        markCalculating();
+        const qty = parseInputNumber(value);
+        setQuantities((prev) => {
+            const next = { ...prev };
+            if (qty === null) {
+                delete next[id];
+            } else {
+                next[id] = qty;
+            }
+            return next;
+        });
 
-        // if (qty === 0) return;
+        if (qty === null || qty <= 0) return;
 
         const pricePerUnit = pricesPerUnit[id];
         const totalPrice = prices[id];
@@ -246,13 +319,19 @@ export function InvoiceDetailsCalculation({ invoiceId, invoiceData, onSuccess, o
 
     // Handle price per unit change
     const handlePricePerUnitChange = (id: string, value: string) => {
-        const pricePerUnit = formatNumber(parseFloat(value) || 0);
-        setPricesPerUnit((prev) => ({
-            ...prev,
-            [id]: pricePerUnit,
-        }));
+        markCalculating();
+        const pricePerUnit = parseInputNumber(value);
+        setPricesPerUnit((prev) => {
+            const next = { ...prev };
+            if (pricePerUnit === null) {
+                delete next[id];
+            } else {
+                next[id] = pricePerUnit;
+            }
+            return next;
+        });
 
-        if (pricePerUnit === 0) return;
+        if (pricePerUnit === null || pricePerUnit === 0) return;
 
         const qty = quantities[id] || 0;
         const totalPrice = prices[id] || 0;
@@ -277,13 +356,19 @@ export function InvoiceDetailsCalculation({ invoiceId, invoiceData, onSuccess, o
 
     // Handle total price change
     const handleTotalPriceChange = (id: string, value: string) => {
-        const totalPrice = formatNumber(parseFloat(value) || 0);
-        setPrices((prev) => ({
-            ...prev,
-            [id]: totalPrice,
-        }));
+        markCalculating();
+        const totalPrice = parseInputNumber(value);
+        setPrices((prev) => {
+            const next = { ...prev };
+            if (totalPrice === null) {
+                delete next[id];
+            } else {
+                next[id] = totalPrice;
+            }
+            return next;
+        });
 
-        if (totalPrice === 0) return;
+        if (totalPrice === null || totalPrice === 0) return;
 
         const qty = quantities[id] || 0;
         const pricePerUnit = pricesPerUnit[id] || 0;
@@ -667,6 +752,14 @@ export function InvoiceDetailsCalculation({ invoiceId, invoiceData, onSuccess, o
                                 <Typography variant="subtitle1" sx={{ fontWeight: 'bold', mb: 2 }}>
                                     {t('warehouse.invoiceDetails.selectedItems', 'Selected Items')}
                                 </Typography>
+                                {isCalculating && (
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                                        <CircularProgress size={14} />
+                                        <Typography variant="caption" color="text.secondary">
+                                            {t('warehouse.invoiceDetails.calculating', 'Calculating...')}
+                                        </Typography>
+                                    </Box>
+                                )}
 
                                 {/* Search */}
                                 <TextField

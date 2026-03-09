@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'react-router';
 import { Box, Tabs, Tab, CircularProgress } from '@mui/material';
 import { useTranslation } from 'react-i18next';
@@ -101,10 +101,10 @@ export function InvoicesEditViewTabs() {
     };
 
     // Called when user adds details in Tab 2
-    const handleDetailsChange = (details: any[]) => {
+    const handleDetailsChange = useCallback((details: any[]) => {
         setDetailsData(details);
         console.log('Details updated:', details);
-    };
+    }, []);
 
     // Called when user submits invoice info in Tab 1 - this is where batch API is called
     const handleInvoiceSubmit = async (formData: Record<string, any>, details?: any[]) => {
