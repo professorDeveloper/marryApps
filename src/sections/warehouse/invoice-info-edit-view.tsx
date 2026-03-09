@@ -26,8 +26,9 @@ interface InvoiceInfoEditViewProps {
 }
 
 const ALLOWED_STATUSES = ['pending', 'draft', 'deleted'] as const;
-const normalizeStatus = (value: unknown) =>
-    ALLOWED_STATUSES.includes(value as (typeof ALLOWED_STATUSES)[number]) ? value : 'pending';
+type InvoiceStatus = (typeof ALLOWED_STATUSES)[number];
+const normalizeStatus = (value: unknown): InvoiceStatus =>
+    ALLOWED_STATUSES.includes(value as InvoiceStatus) ? (value as InvoiceStatus) : 'pending';
 
 export function InvoiceInfoEditView({
     isNew = false,
