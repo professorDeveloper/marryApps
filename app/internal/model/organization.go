@@ -71,6 +71,9 @@ type UpdateDepartmentRequest struct {
 	ColorCode  *string `json:"color_code"`
 	PictureUrl *string `json:"picture_url"`
 	StorageID  *string `json:"storage_id"`
+	Uz         *string `json:"uz,omitempty"`
+	Ru         *string `json:"ru,omitempty"`
+	En         *string `json:"en,omitempty"`
 }
 
 type DepartmentResponse struct {
@@ -80,6 +83,9 @@ type DepartmentResponse struct {
 	ColorCode  *string    `json:"color_code"`
 	PictureUrl *string    `json:"picture_url"`
 	StorageID  string     `json:"storage_id"`
+	Uz         *string    `json:"uz,omitempty"`
+	Ru         *string    `json:"ru,omitempty"`
+	En         *string    `json:"en,omitempty"`
 	CreatedAt  *time.Time `json:"created_at"`
 	UpdatedAt  *time.Time `json:"updated_at"`
 }

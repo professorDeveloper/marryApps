@@ -1625,6 +1625,8 @@ definitions:
         type: string
       created_at:
         type: string
+      en:
+        type: string
       id:
         type: string
       name:
@@ -1633,9 +1635,13 @@ definitions:
         type: string
       picture_url:
         type: string
+      ru:
+        type: string
       storage_id:
         type: string
       updated_at:
+        type: string
+      uz:
         type: string
     type: object
   model.DownloadRequest:
@@ -3428,13 +3434,19 @@ definitions:
     properties:
       color_code:
         type: string
+      en:
+        type: string
       name:
         type: string
       name_i18n:
         type: string
       picture_url:
         type: string
+      ru:
+        type: string
       storage_id:
+        type: string
+      uz:
         type: string
     type: object
   model.UpdateGoodDetailQuantityRequest:
@@ -8751,7 +8763,7 @@ paths:
     get:
       consumes:
       - application/json
-      description: Retrieve all departments with pagination
+      description: Retrieve all departments with pagination and optional search
       parameters:
       - description: 'Limit (default: 20)'
         in: query
@@ -8761,6 +8773,14 @@ paths:
         in: query
         name: offset
         type: integer
+      - description: Search by name
+        in: query
+        name: search
+        type: string
+      - description: 'Expand FK relations (comma-separated: storage_id, name_i18n)'
+        in: query
+        name: expand
+        type: string
       produces:
       - application/json
       responses:
@@ -8837,6 +8857,10 @@ paths:
         in: query
         name: offset
         type: integer
+      - description: 'Expand FK relations (comma-separated: storage_id, name_i18n)'
+        in: query
+        name: expand
+        type: string
       produces:
       - application/json
       responses:
@@ -8878,6 +8902,10 @@ paths:
       - description: 'Language code (uz, ru, en - default: uz)'
         in: query
         name: lang
+        type: string
+      - description: 'Expand FK relations (comma-separated: storage_id, name_i18n)'
+        in: query
+        name: expand
         type: string
       produces:
       - application/json
@@ -9003,6 +9031,10 @@ paths:
         in: path
         name: id
         required: true
+        type: string
+      - description: 'Expand FK relations (comma-separated: storage_id, name_i18n)'
+        in: query
+        name: expand
         type: string
       produces:
       - application/json
@@ -9179,6 +9211,10 @@ paths:
         in: query
         name: offset
         type: integer
+      - description: 'Expand FK relations (comma-separated: storage_id, name_i18n)'
+        in: query
+        name: expand
+        type: string
       produces:
       - application/json
       responses:

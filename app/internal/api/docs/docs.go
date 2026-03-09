@@ -7214,7 +7214,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Retrieve all departments with pagination",
+                "description": "Retrieve all departments with pagination and optional search",
                 "consumes": [
                     "application/json"
                 ],
@@ -7236,6 +7236,18 @@ const docTemplate = `{
                         "type": "integer",
                         "description": "Offset (default: 0)",
                         "name": "offset",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Search by name",
+                        "name": "search",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Expand FK relations (comma-separated: storage_id, name_i18n)",
+                        "name": "expand",
                         "in": "query"
                     }
                 ],
@@ -7355,6 +7367,12 @@ const docTemplate = `{
                         "description": "Offset (default: 0)",
                         "name": "offset",
                         "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Expand FK relations (comma-separated: storage_id, name_i18n)",
+                        "name": "expand",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -7418,6 +7436,12 @@ const docTemplate = `{
                         "type": "string",
                         "description": "Language code (uz, ru, en - default: uz)",
                         "name": "lang",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Expand FK relations (comma-separated: storage_id, name_i18n)",
+                        "name": "expand",
                         "in": "query"
                     }
                 ],
@@ -7562,6 +7586,12 @@ const docTemplate = `{
                         "description": "Offset (default: 0)",
                         "name": "offset",
                         "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Expand FK relations (comma-separated: storage_id, name_i18n)",
+                        "name": "expand",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -7696,6 +7726,12 @@ const docTemplate = `{
                         "name": "id",
                         "in": "path",
                         "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Expand FK relations (comma-separated: storage_id, name_i18n)",
+                        "name": "expand",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -25726,6 +25762,9 @@ const docTemplate = `{
                 "created_at": {
                     "type": "string"
                 },
+                "en": {
+                    "type": "string"
+                },
                 "id": {
                     "type": "string"
                 },
@@ -25738,10 +25777,16 @@ const docTemplate = `{
                 "picture_url": {
                     "type": "string"
                 },
+                "ru": {
+                    "type": "string"
+                },
                 "storage_id": {
                     "type": "string"
                 },
                 "updated_at": {
+                    "type": "string"
+                },
+                "uz": {
                     "type": "string"
                 }
             }
@@ -28318,6 +28363,9 @@ const docTemplate = `{
                 "color_code": {
                     "type": "string"
                 },
+                "en": {
+                    "type": "string"
+                },
                 "name": {
                     "type": "string"
                 },
@@ -28327,7 +28375,13 @@ const docTemplate = `{
                 "picture_url": {
                     "type": "string"
                 },
+                "ru": {
+                    "type": "string"
+                },
                 "storage_id": {
+                    "type": "string"
+                },
+                "uz": {
                     "type": "string"
                 }
             }

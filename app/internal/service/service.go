@@ -95,11 +95,11 @@ type StorageI interface {
 type DepartmentI interface {
 	CreateDepartment(ctx context.Context, name string, nameI18n *string, colorCode *string, pictureUrl *string, storageID *string) (*model.DepartmentResponse, error)
 	GetDepartmentByID(ctx context.Context, departmentID string) (*model.DepartmentResponse, error)
-	GetAllDepartments(ctx context.Context, limit, offset int32) ([]*model.DepartmentResponse, error)
+	GetAllDepartments(ctx context.Context, limit, offset int32) ([]*model.DepartmentResponse, int32, error)
 	GetDepartmentByIDWithLang(ctx context.Context, departmentID string, lang string) (*model.DepartmentResponse, error)
-	GetAllDepartmentsWithLang(ctx context.Context, lang string, limit, offset int32) ([]*model.DepartmentResponse, error)
-	GetDepartmentsByStorageID(ctx context.Context, storageID string, limit, offset int32) ([]*model.DepartmentResponse, error)
-	UpdateDepartment(ctx context.Context, departmentID string, name *string, nameI18n *string, colorCode *string, pictureUrl *string, storageID *string) (*model.DepartmentResponse, error)
+	GetAllDepartmentsWithLang(ctx context.Context, lang string, limit, offset int32) ([]*model.DepartmentResponse, int32, error)
+	GetDepartmentsByStorageID(ctx context.Context, storageID string, limit, offset int32) ([]*model.DepartmentResponse, int32, error)
+	UpdateDepartment(ctx context.Context, departmentID string, name *string, nameI18n *string, colorCode *string, pictureUrl *string, storageID *string, uz *string, ru *string, en *string) (*model.DepartmentResponse, error)
 	DeleteDepartment(ctx context.Context, departmentID string) error
 	RestoreDepartment(ctx context.Context, departmentID string) (*model.DepartmentResponse, error)
 	SearchDepartments(ctx context.Context, query string, limit, offset int32) ([]*model.DepartmentResponse, error)

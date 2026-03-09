@@ -7211,7 +7211,7 @@
                         "BearerAuth": []
                     }
                 ],
-                "description": "Retrieve all departments with pagination",
+                "description": "Retrieve all departments with pagination and optional search",
                 "consumes": [
                     "application/json"
                 ],
@@ -7233,6 +7233,18 @@
                         "type": "integer",
                         "description": "Offset (default: 0)",
                         "name": "offset",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Search by name",
+                        "name": "search",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Expand FK relations (comma-separated: storage_id, name_i18n)",
+                        "name": "expand",
                         "in": "query"
                     }
                 ],
@@ -7352,6 +7364,12 @@
                         "description": "Offset (default: 0)",
                         "name": "offset",
                         "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Expand FK relations (comma-separated: storage_id, name_i18n)",
+                        "name": "expand",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -7415,6 +7433,12 @@
                         "type": "string",
                         "description": "Language code (uz, ru, en - default: uz)",
                         "name": "lang",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Expand FK relations (comma-separated: storage_id, name_i18n)",
+                        "name": "expand",
                         "in": "query"
                     }
                 ],
@@ -7559,6 +7583,12 @@
                         "description": "Offset (default: 0)",
                         "name": "offset",
                         "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Expand FK relations (comma-separated: storage_id, name_i18n)",
+                        "name": "expand",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -7693,6 +7723,12 @@
                         "name": "id",
                         "in": "path",
                         "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Expand FK relations (comma-separated: storage_id, name_i18n)",
+                        "name": "expand",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -25723,6 +25759,9 @@
                 "created_at": {
                     "type": "string"
                 },
+                "en": {
+                    "type": "string"
+                },
                 "id": {
                     "type": "string"
                 },
@@ -25735,10 +25774,16 @@
                 "picture_url": {
                     "type": "string"
                 },
+                "ru": {
+                    "type": "string"
+                },
                 "storage_id": {
                     "type": "string"
                 },
                 "updated_at": {
+                    "type": "string"
+                },
+                "uz": {
                     "type": "string"
                 }
             }
@@ -28315,6 +28360,9 @@
                 "color_code": {
                     "type": "string"
                 },
+                "en": {
+                    "type": "string"
+                },
                 "name": {
                     "type": "string"
                 },
@@ -28324,7 +28372,13 @@
                 "picture_url": {
                     "type": "string"
                 },
+                "ru": {
+                    "type": "string"
+                },
                 "storage_id": {
+                    "type": "string"
+                },
+                "uz": {
                     "type": "string"
                 }
             }
