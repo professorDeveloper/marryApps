@@ -899,7 +899,6 @@ func (c *CalculationS) GetCompoundWithCalculations(ctx context.Context, compound
 		return nil, fmt.Errorf("failed to retrieve compound: %w", err)
 	}
 
-	// Get calculations
 	calcPtrs, err := c.GetCalculationsByCompoundID(ctx, compoundID)
 	if err != nil {
 		log.Printf("GetCalculationsByCompoundID failed: %v", err)

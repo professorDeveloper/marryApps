@@ -109,6 +109,7 @@ func (h *Handler) GetCompoundByID(c echo.Context) error {
 // @Security BearerAuth
 // @Param limit query int false "Limit (default: 20)"
 // @Param offset query int false "Offset (default: 0)"
+// @Param expand query string false "Expand related fields"
 // @Success 200 {array} model.CompoundResponse "Compounds found"
 // @Failure 401 {object} model.ErrorResponse "Unauthorized"
 // @Failure 500 {object} model.ErrorResponse "Internal server error"
@@ -129,13 +130,20 @@ func (h *Handler) GetAllCompounds(c echo.Context) error {
 		}
 	}
 
-	compounds, err := h.service.Compound().GetAllCompounds(c.Request().Context(), limit, offset)
+	compounds, total, err := h.service.Compound().GetAllCompounds(c.Request().Context(), limit, offset)
 	if err != nil {
 		log.Printf("GetAllCompounds failed: %v", err)
 		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("failed to retrieve compounds", err.Error(), http.StatusInternalServerError))
 	}
 
-	return c.JSON(http.StatusOK, model.NewSuccessResponse("Data retrieved successfully", compounds, http.StatusOK))
+	if maps, expanded, err := h.expandListResponse(c, compounds, "compounds"); expanded {
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("expand failed", err.Error(), http.StatusInternalServerError))
+		}
+		return c.JSON(http.StatusOK, model.NewPaginatedResponse("Data retrieved successfully", maps, int32(total), limit, offset, http.StatusOK))
+	}
+
+	return c.JSON(http.StatusOK, model.NewPaginatedResponse("Data retrieved successfully", compounds, int32(total), limit, offset, http.StatusOK))
 }
 
 // GetCompoundsByDepartmentID retrieves compounds by department ID
@@ -748,6 +756,7 @@ func (h *Handler) GetCompoundByIDWithLang(c echo.Context) error {
 // @Param lang query string false "Language code (uz, ru, en - default: uz)"
 // @Param limit query int false "Limit (default: 20)"
 // @Param offset query int false "Offset (default: 0)"
+// @Param expand query string false "Expand related fields"
 // @Success 200 {array} model.CompoundResponse "Compounds retrieved successfully"
 // @Failure 400 {object} model.ErrorResponse "Invalid request parameters"
 // @Failure 401 {object} model.ErrorResponse "Unauthorized"
@@ -779,11 +788,18 @@ func (h *Handler) GetAllCompoundsWithLang(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("invalid language code", "valid values: uz, ru, en", http.StatusBadRequest))
 	}
 
-	compounds, err := h.service.Compound().GetAllCompoundsWithLang(c.Request().Context(), lang, limit, offset)
+	compounds, total, err := h.service.Compound().GetAllCompoundsWithLang(c.Request().Context(), lang, limit, offset)
 	if err != nil {
 		log.Printf("GetAllCompoundsWithLang failed: %v", err)
 		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("failed to get compounds", "see logs for details", http.StatusInternalServerError))
 	}
 
-	return c.JSON(http.StatusOK, model.NewSuccessResponse("Compounds retrieved successfully", compounds, http.StatusOK))
+	if maps, expanded, err := h.expandListResponse(c, compounds, "compounds"); expanded {
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("expand failed", err.Error(), http.StatusInternalServerError))
+		}
+		return c.JSON(http.StatusOK, model.NewPaginatedResponse("Compounds retrieved successfully", maps, int32(total), limit, offset, http.StatusOK))
+	}
+
+	return c.JSON(http.StatusOK, model.NewPaginatedResponse("Compounds retrieved successfully", compounds, int32(total), limit, offset, http.StatusOK))
 }

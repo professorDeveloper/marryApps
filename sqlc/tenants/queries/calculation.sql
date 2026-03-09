@@ -72,3 +72,25 @@ FROM calculation
 WHERE deleted_at = 0
 ORDER BY created_at DESC
 LIMIT $1 OFFSET $2;
+
+-- name: GetCalculationsByGoodIDPaginated :many
+SELECT id, good_id, compound_id, ingredient_id, component_compound_id, quantity, measurement_unit, price_per_unit, total_cost, created_at, updated_at, deleted_at
+FROM calculation
+WHERE good_id = $1 AND deleted_at = 0
+ORDER BY created_at DESC
+LIMIT $2 OFFSET $3;
+
+-- name: CountCalculationsByGoodID :one
+SELECT COUNT(*) FROM calculation
+WHERE good_id = $1 AND deleted_at = 0;
+
+-- name: GetCalculationsByCompoundIDPaginated :many
+SELECT id, good_id, compound_id, ingredient_id, component_compound_id, quantity, measurement_unit, price_per_unit, total_cost, created_at, updated_at, deleted_at
+FROM calculation
+WHERE compound_id = $1 AND deleted_at = 0
+ORDER BY created_at DESC
+LIMIT $2 OFFSET $3;
+
+-- name: CountCalculationsByCompoundID :one
+SELECT COUNT(*) FROM calculation
+WHERE compound_id = $1 AND deleted_at = 0;

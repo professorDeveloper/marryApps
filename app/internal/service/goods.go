@@ -180,21 +180,27 @@ func (g *GoodsS) GetGoodByID(ctx context.Context, goodID string) (*model.GoodRes
 }
 
 // GetAllGoods retrieves all goods with pagination
-func (g *GoodsS) GetAllGoods(ctx context.Context, limit, offset int32) ([]*model.GoodResponse, error) {
+func (g *GoodsS) GetAllGoods(ctx context.Context, limit, offset int32) ([]*model.GoodResponse, int64, error) {
+	total, err := g.repo.Tenant(ctx).CountGoods(ctx)
+	if err != nil {
+		log.Printf("CountGoods failed: %v", err)
+		total = 0
+	}
+
 	goods, err := g.repo.Tenant(ctx).GetAllGoods(ctx, pg.GetAllGoodsParams{
 		Limit:  limit,
 		Offset: offset,
 	})
 	if err != nil {
 		log.Printf("GetAllGoods failed: %v", err)
-		return nil, fmt.Errorf("failed to retrieve goods: %w", err)
+		return nil, 0, fmt.Errorf("failed to retrieve goods: %w", err)
 	}
 
 	var responses []*model.GoodResponse
 	for _, good := range goods {
 		responses = append(responses, goodToResponseAny(good))
 	}
-	return responses, nil
+	return responses, total, nil
 }
 
 // GetGoodsByCategory retrieves goods by category
@@ -787,7 +793,13 @@ func (g *GoodsS) GetGoodByIDWithLang(ctx context.Context, goodID string, lang st
 }
 
 // GetAllGoodsWithLang retrieves all goods with language support
-func (g *GoodsS) GetAllGoodsWithLang(ctx context.Context, lang string, limit, offset int32) ([]*model.GoodResponse, error) {
+func (g *GoodsS) GetAllGoodsWithLang(ctx context.Context, lang string, limit, offset int32) ([]*model.GoodResponse, int64, error) {
+	total, err := g.repo.Tenant(ctx).CountGoods(ctx)
+	if err != nil {
+		log.Printf("CountGoods (WithLang) failed: %v", err)
+		total = 0
+	}
+
 	goods, err := g.repo.Tenant(ctx).GetAllGoodsWithLanguage(ctx, pg.GetAllGoodsWithLanguageParams{
 		Column1: lang,
 		Limit:   limit,
@@ -795,12 +807,12 @@ func (g *GoodsS) GetAllGoodsWithLang(ctx context.Context, lang string, limit, of
 	})
 	if err != nil {
 		log.Printf("GetAllGoodsWithLang failed: %v", err)
-		return nil, fmt.Errorf("failed to get goods: %w", err)
+		return nil, 0, fmt.Errorf("failed to get goods: %w", err)
 	}
 
 	var responses []*model.GoodResponse
 	for _, good := range goods {
 		responses = append(responses, goodToResponseAny(good))
 	}
-	return responses, nil
+	return responses, total, nil
 }

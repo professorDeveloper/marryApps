@@ -216,21 +216,27 @@ func (c *CompoundS) GetCompoundByID(ctx context.Context, compoundID string) (*mo
 	return compoundToResponseAny(compound), nil
 }
 
-func (c *CompoundS) GetAllCompounds(ctx context.Context, limit, offset int32) ([]*model.CompoundResponse, error) {
+func (c *CompoundS) GetAllCompounds(ctx context.Context, limit, offset int32) ([]*model.CompoundResponse, int64, error) {
+	total, err := c.repo.Tenant(ctx).CountCompounds(ctx)
+	if err != nil {
+		log.Printf("CountCompounds failed: %v", err)
+		total = 0
+	}
+
 	compounds, err := c.repo.Tenant(ctx).GetAllCompounds(ctx, pg.GetAllCompoundsParams{
 		Limit:  limit,
 		Offset: offset,
 	})
 	if err != nil {
 		log.Printf("GetAllCompounds failed: %v", err)
-		return nil, fmt.Errorf("failed to retrieve compounds: %w", err)
+		return nil, 0, fmt.Errorf("failed to retrieve compounds: %w", err)
 	}
 
 	var responses []*model.CompoundResponse
 	for _, comp := range compounds {
 		responses = append(responses, compoundToResponseAny(comp))
 	}
-	return responses, nil
+	return responses, total, nil
 }
 
 func (c *CompoundS) GetCompoundsByDepartmentID(ctx context.Context, departmentID string, limit, offset int32) ([]*model.CompoundResponse, error) {
@@ -918,7 +924,13 @@ func (c *CompoundS) GetCompoundByIDWithLang(ctx context.Context, compoundID stri
 }
 
 // GetAllCompoundsWithLang retrieves all compounds with language support
-func (c *CompoundS) GetAllCompoundsWithLang(ctx context.Context, lang string, limit, offset int32) ([]*model.CompoundResponse, error) {
+func (c *CompoundS) GetAllCompoundsWithLang(ctx context.Context, lang string, limit, offset int32) ([]*model.CompoundResponse, int64, error) {
+	total, err := c.repo.Tenant(ctx).CountCompounds(ctx)
+	if err != nil {
+		log.Printf("CountCompounds (WithLang) failed: %v", err)
+		total = 0
+	}
+
 	compounds, err := c.repo.Tenant(ctx).GetAllCompoundsWithLanguage(ctx, pg.GetAllCompoundsWithLanguageParams{
 		Column1: lang,
 		Limit:   limit,
@@ -926,12 +938,12 @@ func (c *CompoundS) GetAllCompoundsWithLang(ctx context.Context, lang string, li
 	})
 	if err != nil {
 		log.Printf("GetAllCompoundsWithLang failed: %v", err)
-		return nil, fmt.Errorf("failed to get compounds: %w", err)
+		return nil, 0, fmt.Errorf("failed to get compounds: %w", err)
 	}
 
 	var responses []*model.CompoundResponse
 	for _, compound := range compounds {
 		responses = append(responses, compoundToResponseAny(compound))
 	}
-	return responses, nil
+	return responses, total, nil
 }

@@ -12,6 +12,30 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const countCalculationsByCompoundID = `-- name: CountCalculationsByCompoundID :one
+SELECT COUNT(*) FROM calculation
+WHERE compound_id = $1 AND deleted_at = 0
+`
+
+func (q *Queries) CountCalculationsByCompoundID(ctx context.Context, compoundID pgtype.UUID) (int64, error) {
+	row := q.db.QueryRow(ctx, countCalculationsByCompoundID, compoundID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
+const countCalculationsByGoodID = `-- name: CountCalculationsByGoodID :one
+SELECT COUNT(*) FROM calculation
+WHERE good_id = $1 AND deleted_at = 0
+`
+
+func (q *Queries) CountCalculationsByGoodID(ctx context.Context, goodID pgtype.UUID) (int64, error) {
+	row := q.db.QueryRow(ctx, countCalculationsByGoodID, goodID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const createCalculation = `-- name: CreateCalculation :one
 INSERT INTO calculation (id, good_id, compound_id, ingredient_id, component_compound_id, quantity, measurement_unit, price_per_unit, total_cost)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
@@ -205,6 +229,53 @@ func (q *Queries) GetCalculationsByCompoundID(ctx context.Context, compoundID pg
 	return items, nil
 }
 
+const getCalculationsByCompoundIDPaginated = `-- name: GetCalculationsByCompoundIDPaginated :many
+SELECT id, good_id, compound_id, ingredient_id, component_compound_id, quantity, measurement_unit, price_per_unit, total_cost, created_at, updated_at, deleted_at
+FROM calculation
+WHERE compound_id = $1 AND deleted_at = 0
+ORDER BY created_at DESC
+LIMIT $2 OFFSET $3
+`
+
+type GetCalculationsByCompoundIDPaginatedParams struct {
+	CompoundID pgtype.UUID `json:"compound_id"`
+	Limit      int32       `json:"limit"`
+	Offset     int32       `json:"offset"`
+}
+
+func (q *Queries) GetCalculationsByCompoundIDPaginated(ctx context.Context, arg GetCalculationsByCompoundIDPaginatedParams) ([]Calculation, error) {
+	rows, err := q.db.Query(ctx, getCalculationsByCompoundIDPaginated, arg.CompoundID, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Calculation
+	for rows.Next() {
+		var i Calculation
+		if err := rows.Scan(
+			&i.ID,
+			&i.GoodID,
+			&i.CompoundID,
+			&i.IngredientID,
+			&i.ComponentCompoundID,
+			&i.Quantity,
+			&i.MeasurementUnit,
+			&i.PricePerUnit,
+			&i.TotalCost,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.DeletedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getCalculationsByGoodID = `-- name: GetCalculationsByGoodID :many
 SELECT id, good_id, compound_id, ingredient_id, component_compound_id, quantity, measurement_unit, price_per_unit, total_cost, created_at, updated_at, deleted_at
 FROM calculation
@@ -214,6 +285,53 @@ ORDER BY created_at DESC
 
 func (q *Queries) GetCalculationsByGoodID(ctx context.Context, goodID pgtype.UUID) ([]Calculation, error) {
 	rows, err := q.db.Query(ctx, getCalculationsByGoodID, goodID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Calculation
+	for rows.Next() {
+		var i Calculation
+		if err := rows.Scan(
+			&i.ID,
+			&i.GoodID,
+			&i.CompoundID,
+			&i.IngredientID,
+			&i.ComponentCompoundID,
+			&i.Quantity,
+			&i.MeasurementUnit,
+			&i.PricePerUnit,
+			&i.TotalCost,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.DeletedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getCalculationsByGoodIDPaginated = `-- name: GetCalculationsByGoodIDPaginated :many
+SELECT id, good_id, compound_id, ingredient_id, component_compound_id, quantity, measurement_unit, price_per_unit, total_cost, created_at, updated_at, deleted_at
+FROM calculation
+WHERE good_id = $1 AND deleted_at = 0
+ORDER BY created_at DESC
+LIMIT $2 OFFSET $3
+`
+
+type GetCalculationsByGoodIDPaginatedParams struct {
+	GoodID pgtype.UUID `json:"good_id"`
+	Limit  int32       `json:"limit"`
+	Offset int32       `json:"offset"`
+}
+
+func (q *Queries) GetCalculationsByGoodIDPaginated(ctx context.Context, arg GetCalculationsByGoodIDPaginatedParams) ([]Calculation, error) {
+	rows, err := q.db.Query(ctx, getCalculationsByGoodIDPaginated, arg.GoodID, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
