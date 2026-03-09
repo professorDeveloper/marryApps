@@ -130,7 +130,7 @@ func (h *Handler) GetAllStorages(c echo.Context) error {
 		}
 	}
 
-	storages, err := h.service.Storage().GetAllStorages(c.Request().Context(), limit, offset)
+	storages, total, err := h.service.Storage().GetAllStorages(c.Request().Context(), limit, offset)
 	if err != nil {
 		log.Printf("GetAllStorages failed: %v", err)
 		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("failed to fetch storages", "see logs for details", http.StatusInternalServerError))
@@ -140,10 +140,10 @@ func (h *Handler) GetAllStorages(c echo.Context) error {
 		if err != nil {
 			return nil
 		}
-		return c.JSON(http.StatusOK, model.NewSuccessResponse("Data retrieved successfully", maps, http.StatusOK))
+		return c.JSON(http.StatusOK, model.NewPaginatedResponse("Data retrieved successfully", maps, total, limit, offset, http.StatusOK))
 	}
 
-	return c.JSON(http.StatusOK, model.NewSuccessResponse("Data retrieved successfully", storages, http.StatusOK))
+	return c.JSON(http.StatusOK, model.NewPaginatedResponse("Data retrieved successfully", storages, total, limit, offset, http.StatusOK))
 }
 
 // GetStoragesByBranchID retrieves storages by branch ID
@@ -190,7 +190,7 @@ func (h *Handler) GetStoragesByBranchID(c echo.Context) error {
 		}
 	}
 
-	storages, err := h.service.Storage().GetStoragesByBranchID(c.Request().Context(), branchID, limit, offset)
+	storages, total, err := h.service.Storage().GetStoragesByBranchID(c.Request().Context(), branchID, limit, offset)
 	if err != nil {
 		log.Printf("GetStoragesByBranchID failed for branch %s: %v", branchID, err)
 		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("failed to fetch storages by branch", "see logs for details", http.StatusInternalServerError))
@@ -200,10 +200,10 @@ func (h *Handler) GetStoragesByBranchID(c echo.Context) error {
 		if err != nil {
 			return nil
 		}
-		return c.JSON(http.StatusOK, model.NewSuccessResponse("Data retrieved successfully", maps, http.StatusOK))
+		return c.JSON(http.StatusOK, model.NewPaginatedResponse("Data retrieved successfully", maps, total, limit, offset, http.StatusOK))
 	}
 
-	return c.JSON(http.StatusOK, model.NewSuccessResponse("Data retrieved successfully", storages, http.StatusOK))
+	return c.JSON(http.StatusOK, model.NewPaginatedResponse("Data retrieved successfully", storages, total, limit, offset, http.StatusOK))
 }
 
 // UpdateStorage updates a storage
@@ -457,7 +457,7 @@ func (h *Handler) GetAllStoragesWithLang(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("invalid language code", "valid values: uz, ru, en", http.StatusBadRequest))
 	}
 
-	storages, err := h.service.Storage().GetAllStoragesWithLang(c.Request().Context(), lang, limit, offset)
+	storages, total, err := h.service.Storage().GetAllStoragesWithLang(c.Request().Context(), lang, limit, offset)
 	if err != nil {
 		log.Printf("GetAllStoragesWithLang failed: %v", err)
 		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("failed to fetch storages", "see logs for details", http.StatusInternalServerError))
@@ -467,8 +467,8 @@ func (h *Handler) GetAllStoragesWithLang(c echo.Context) error {
 		if err != nil {
 			return nil
 		}
-		return c.JSON(http.StatusOK, model.NewSuccessResponse("Storages retrieved successfully", maps, http.StatusOK))
+		return c.JSON(http.StatusOK, model.NewPaginatedResponse("Storages retrieved successfully", maps, total, limit, offset, http.StatusOK))
 	}
 
-	return c.JSON(http.StatusOK, model.NewSuccessResponse("Storages retrieved successfully", storages, http.StatusOK))
+	return c.JSON(http.StatusOK, model.NewPaginatedResponse("Storages retrieved successfully", storages, total, limit, offset, http.StatusOK))
 }
