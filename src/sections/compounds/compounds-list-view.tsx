@@ -1,7 +1,7 @@
 import type { GridColDef } from '@mui/x-data-grid';
 import type { ICompound } from 'src/types/compounds';
 import { useTranslation } from 'react-i18next';
-import { useMemo, useState, useCallback } from 'react';
+import { useMemo, useState, useCallback, useEffect } from 'react';
 import Box from '@mui/material/Box';
 import Avatar from '@mui/material/Avatar';
 import { useTheme } from '@mui/material/styles';
@@ -235,8 +235,19 @@ export function HalfMeals() {
     const theme = useTheme();
     const { t } = useTranslation('menu');
 
+    const [searchQuery, setSearchQuery] = useState('');
+    const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
+
+    useEffect(() => {
+        const timeout = setTimeout(() => {
+            setDebouncedSearchQuery(searchQuery);
+        }, 400);
+
+        return () => clearTimeout(timeout);
+    }, [searchQuery]);
+
     // SWR hooks
-    const { compounds, compoundsLoading, mutate } = useGetCompounds();
+    const { compounds, compoundsLoading, mutate } = useGetCompounds(debouncedSearchQuery);
     const { departments } = useGetDepartments();
     const { deleteCompound } = useDeleteCompound();
     const { deleteCompounds } = useDeleteCompounds();
@@ -423,6 +434,7 @@ export function HalfMeals() {
                         openModal(compound);
                     }
                 }}
+                onQuickFilterChange={setSearchQuery}
             />
 
             {/* Compound Item View Modal */}

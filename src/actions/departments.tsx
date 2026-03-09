@@ -103,8 +103,7 @@ function enrichDepartments(
 /**
  * Get all departments
  */
-export function useGetDepartments() {
-  const url = endpoints.department.list;
+export function useGetDepartments(searchQuery?: string) {
   const { i18n } = useTranslation();
 
   // Get storages for enrichment
@@ -123,17 +122,27 @@ export function useGetDepartments() {
     return translationsData.data || [];
   }, [translationsData]);
 
-  const { data, isLoading, error, isValidating } = useSWR<BackendResponse<IDepartmentItem[]>>(
-    url,
+  const normalizedQuery = searchQuery?.trim() || '';
+  const swrKey = normalizedQuery
+    ? [endpoints.department.search, { params: { q: normalizedQuery } }]
+    : endpoints.department.list;
+
+  const { data, isLoading, error, isValidating } = useSWR<BackendResponse<IDepartmentItem[]> | IDepartmentItem[]>(
+    swrKey,
     fetcher,
     { ...swrOptions }
   );
 
   const enrichedDepartments = useMemo(() => {
-    const departments = data?.data || [];
+    let departments: IDepartmentItem[] = [];
+    if (Array.isArray(data)) {
+      departments = data;
+    } else if (Array.isArray(data?.data)) {
+      departments = data.data;
+    }
     const currentLang = i18n.resolvedLanguage || 'en';
     return enrichDepartments(departments, storages, translations, currentLang);
-  }, [data?.data, storages, translations, i18n.resolvedLanguage]);
+  }, [data, storages, translations, i18n.resolvedLanguage]);
 
   const memoizedValue = useMemo(
     () => ({
@@ -412,8 +421,7 @@ export function useGetCategoriesByDepartment(departmentId: string) {
 /**
  * Get all storages
  */
-export function useGetStorages() {
-  const url = endpoints.storage.list;
+export function useGetStorages(searchQuery?: string) {
   const { i18n } = useTranslation();
 
   // Get translations
@@ -429,8 +437,13 @@ export function useGetStorages() {
     return translationsData.data || [];
   }, [translationsData]);
 
+  const normalizedQuery = searchQuery?.trim() || '';
+  const swrKey = normalizedQuery
+    ? [endpoints.storage.search, { params: { q: normalizedQuery } }]
+    : endpoints.storage.list;
+
   const { data, isLoading, error, isValidating } = useSWR<BackendResponse<IStorageItem[]> | IStorageItem[]>(
-    url,
+    swrKey,
     fetcher,
     { ...swrOptions }
   );

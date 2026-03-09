@@ -49,12 +49,22 @@ export function InvoiceDetailsStandaloneListView() {
     const [selectedDeleteId, setSelectedDeleteId] = useState<string | null>(null);
     const [selectedDeleteType, setSelectedDeleteType] = useState<'invoice' | 'detail' | null>(null);
     const [selectedInvoice, setSelectedInvoice] = useState<any | null>(null);
+    const [searchQuery, setSearchQuery] = useState('');
+    const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
+
+    useEffect(() => {
+        const timeout = setTimeout(() => {
+            setDebouncedSearchQuery(searchQuery);
+        }, 400);
+
+        return () => clearTimeout(timeout);
+    }, [searchQuery]);
 
     useEffect(() => {
         const fetchData = async () => {
             setLoading(true);
             try {
-                const fetchedInvoices = await getInvoices();
+                const fetchedInvoices = await getInvoices(debouncedSearchQuery);
                 const suppliers = await getSuppliers();
                 const storages = await getStorages();
                 const details = await getInvoiceDetails();
@@ -93,7 +103,7 @@ export function InvoiceDetailsStandaloneListView() {
         };
 
         fetchData();
-    }, [getInvoiceDetails, getInvoices, getIngredients, getSuppliers, getStorages]);
+    }, [debouncedSearchQuery, getInvoiceDetails, getInvoices, getIngredients, getSuppliers, getStorages]);
 
     const handleDeleteClick = (id: string, type: 'invoice' | 'detail') => {
         setSelectedDeleteId(id);
@@ -193,8 +203,8 @@ export function InvoiceDetailsStandaloneListView() {
                     const status = params.row.status?.toLowerCase();
                     let color = 'default';
                     if (status === 'pending') color = 'warning';
-                    if (status === 'completed') color = 'success';
-                    if (status === 'cancelled') color = 'error';
+                    if (status === 'draft') color = 'default';
+                    if (status === 'deleted') color = 'error';
                     return (
                         <span
                             style={{
@@ -358,6 +368,7 @@ export function InvoiceDetailsStandaloneListView() {
                         handleViewClick(invoice);
                     }
                 }}
+                onQuickFilterChange={setSearchQuery}
             />
 
             <Dialog open={deleteDialogOpen} onClose={handleDeleteCancel}>

@@ -187,8 +187,7 @@ function enrichCompound(
 /**
  * Get all compounds with enriched department names and translations
  */
-export function useGetCompounds() {
-    const url = endpoints.compound.list;
+export function useGetCompounds(searchQuery?: string) {
     const { i18n } = useTranslation();
 
     // Get departments for enrichment
@@ -201,9 +200,14 @@ export function useGetCompounds() {
         { ...swrOptions }
     );
 
+    const normalizedQuery = searchQuery?.trim() || '';
+    const swrKey = normalizedQuery
+        ? [endpoints.compound.search, { params: { q: normalizedQuery } }]
+        : endpoints.compound.list;
+
     const { data, isLoading, error, isValidating, mutate: mutateCompounds } = useSWR<
         BackendResponse<ICompound[]> | ICompound[]
-    >(url, fetcher, { ...swrOptions });
+    >(swrKey, fetcher, { ...swrOptions });
 
     const translations = useMemo(() => {
         if (!translationsData) return [];

@@ -37,7 +37,7 @@ export interface UseInvoiceDetailsAPIReturn {
     createInvoiceDetailsBatch: (data: Array<Partial<InvoiceDetail>>) => Promise<InvoiceDetail[]>;
     createInvoiceBatch: (data: any) => Promise<any>;
     getIngredients: () => Promise<any[]>;
-    getInvoices: () => Promise<any[]>;
+    getInvoices: (searchQuery?: string) => Promise<any[]>;
 }
 
 // ============================================================================
@@ -277,8 +277,19 @@ export function useInvoiceDetailsAPI(): UseInvoiceDetailsAPIReturn {
     /**
      * Barcha invoices'ni oladi
      */
-    const getInvoices = useCallback(async (): Promise<any[]> => {
+    const getInvoices = useCallback(async (searchQuery?: string): Promise<any[]> => {
         try {
+            const normalizedQuery = searchQuery?.trim() || '';
+
+            if (normalizedQuery) {
+                const response = await fetcher<unknown>([
+                    endpoints.invoice.search,
+                    { params: { q: normalizedQuery, limit: MAX_LIST_ITEMS, offset: 0 } },
+                ]);
+                const { items } = extractListAndMeta<any>(response);
+                return items.slice(0, MAX_LIST_ITEMS);
+            }
+
             const result: any[] = [];
             let offset = 0;
 

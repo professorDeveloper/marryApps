@@ -499,8 +499,8 @@ export function TransfersEditView({ isNew = false }: TransfersEditViewProps) {
               type: 'select' as const,
               options: [
                 { value: 'active', label: t('deductions.active', 'Active') },
-                { value: 'deleted', label: t('deductions.deleted', 'Deleted') },
-                { value: 'draft', label: t('deductions.draft', 'Draft') }
+                { value: 'draft', label: t('deductions.draft', 'Draft') },
+                { value: 'deleted', label: t('deductions.deleted', 'Deleted') }
               ],
               defaultValue: 'active',
             },
@@ -552,6 +552,8 @@ export function TransfersEditView({ isNew = false }: TransfersEditViewProps) {
               onItemsChange={handleItemsChange}
               onSave={handleItemsSave}
               saving={savingItems}
+              sourceBranchId={formData.from_branch_id}
+              sourceStorageId={formData.from_storage_id}
             />
           </Stack>
         </TabPanel>

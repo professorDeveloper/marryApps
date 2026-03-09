@@ -194,6 +194,7 @@ export const endpoints = {
   },
   category: {
     list: '/api/v1/categories',
+    search: '/api/v1/categories/search',
     details: (id: string) => `/api/v1/categories/${id}`,
     create: '/api/v1/categories',
     update: (id: string) => `/api/v1/categories/${id}`,
@@ -216,6 +217,7 @@ export const endpoints = {
   },
   department: {
     list: '/api/v1/departments',
+    search: '/api/v1/departments/search',
     details: (id: string) => `/api/v1/departments/${id}`,
     create: '/api/v1/departments',
     update: (id: string) => `/api/v1/departments/${id}`,
@@ -224,6 +226,7 @@ export const endpoints = {
   },
   compound: {
     list: '/api/v1/compounds',
+    search: '/api/v1/compounds/search',
     details: (id: string) => `/api/v1/compounds/${id}`,
     withCalculations: (id: string) => `/api/v1/compounds/${id}/with-calculations`,
     create: '/api/v1/compounds',
@@ -236,6 +239,7 @@ export const endpoints = {
   },
   storage: {
     list: '/api/v1/storages',
+    search: '/api/v1/storages/search',
     byBranch: (branchId: string) => `/api/v1/storages/branch/${branchId}`,
     details: (id: string) => `/api/v1/storages/${id}`,
     create: '/api/v1/storages',
@@ -244,6 +248,7 @@ export const endpoints = {
   },
   meals: {
     list: '/api/v1/goods',
+    search: '/api/v1/goods/search',
     details: (id: string) => `/api/v1/goods/${id}`,
     withCalculations: (id: string) => `/api/v1/goods/${id}/with-calculations`,
     create: '/api/v1/goods',
@@ -304,6 +309,7 @@ export const endpoints = {
   },
   invoice: {
     list: '/api/v1/invoices',
+    search: '/api/v1/invoices/search',
     details: (id: string) => `/api/v1/invoices/${id}`,
     create: '/api/v1/invoices',
     update: (id: string) => `/api/v1/invoices/${id}`,
@@ -335,6 +341,7 @@ export const endpoints = {
   },
   inventory: {
     list: '/api/v1/inventories',
+    search: '/api/v1/inventories/search',
     details: (id: string) => `/api/v1/inventories/${id}`,
     create: '/api/v1/inventories',
     batch: '/api/v1/inventories/batch',

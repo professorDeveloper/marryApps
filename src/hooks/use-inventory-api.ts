@@ -134,8 +134,19 @@ export function useInventoryAPI() {
     /**
      * Barcha inventories'ni oladi
      */
-    const getInventories = useCallback(async (): Promise<IInventory[]> => {
+    const getInventories = useCallback(async (searchQuery?: string): Promise<IInventory[]> => {
         try {
+            const normalizedQuery = searchQuery?.trim() || '';
+
+            if (normalizedQuery) {
+                const response = await fetcher<unknown>([
+                    endpoints.inventory.search,
+                    { params: { q: normalizedQuery, limit: MAX_LIST_ITEMS, offset: 0 } },
+                ]);
+                const { items } = extractListAndMeta<IInventory>(response);
+                return items.slice(0, MAX_LIST_ITEMS);
+            }
+
             const result: IInventory[] = [];
             let offset = 0;
 

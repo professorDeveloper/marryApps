@@ -65,8 +65,11 @@ function enrichIngredients(
 /**
  * Get all ingredients
  */
-export function useGetIngredients() {
-    const url = endpoints.ingredient.list;
+export function useGetIngredients(searchQuery?: string) {
+    const normalizedQuery = searchQuery?.trim() || '';
+    const url = normalizedQuery
+        ? [endpoints.ingredient.list, { params: { search: normalizedQuery } }]
+        : endpoints.ingredient.list;
     const { ingredientGroups } = useGetIngredientGroups();
 
     const { data, isLoading, error, isValidating } = useSWR<IIngredientResponse>(

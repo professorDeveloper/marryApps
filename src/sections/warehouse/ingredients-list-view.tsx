@@ -206,7 +206,9 @@ export function IngredientListView() {
     const { t } = useTranslation('menu');
     const theme = useTheme();
     const router = useRouter();
-    const { ingredients, ingredientsLoading } = useGetIngredients();
+    const [searchQuery, setSearchQuery] = useState('');
+    const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
+    const { ingredients, ingredientsLoading } = useGetIngredients(debouncedSearchQuery);
     const { ingredientGroups } = useGetIngredientGroups();
     const { deleteIngredient } = useDeleteIngredient();
     const { stocks } = useGetIngredientStocks();
@@ -215,6 +217,14 @@ export function IngredientListView() {
     const [selectedIngredient, setSelectedIngredient] = useState<IIngredientItem | null>(null);
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [ingredientToDelete, setIngredientToDelete] = useState<string | null>(null);
+
+    useEffect(() => {
+        const timeout = setTimeout(() => {
+            setDebouncedSearchQuery(searchQuery);
+        }, 400);
+
+        return () => clearTimeout(timeout);
+    }, [searchQuery]);
 
     // Columns configuration
     const columns = useMemo<GridColDef[]>(
@@ -450,6 +460,7 @@ export function IngredientListView() {
                         handleViewIngredient(ingredient);
                     }
                 }}
+                onQuickFilterChange={setSearchQuery}
             />
 
             <GenericViewModal

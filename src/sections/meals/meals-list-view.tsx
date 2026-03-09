@@ -1,7 +1,7 @@
 import type { GridColDef } from '@mui/x-data-grid';
 import type { IMealsItem } from 'src/types/meals';
 import { useTranslation } from 'react-i18next';
-import { useMemo, useState, useCallback } from 'react';
+import { useMemo, useState, useCallback, useEffect } from 'react';
 import { useTheme } from '@mui/material/styles';
 import { Button, Dialog, DialogTitle, DialogActions, DialogContent, Box, Avatar, ListItemText } from '@mui/material';
 import {
@@ -200,9 +200,19 @@ function renderMealsSpecifications(item: IMealsItem, t: any) {
 export function Meals() {
     const theme = useTheme();
     const { t, i18n } = useTranslation('menu');
+    const [searchQuery, setSearchQuery] = useState('');
+    const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
+
+    useEffect(() => {
+        const timeout = setTimeout(() => {
+            setDebouncedSearchQuery(searchQuery);
+        }, 400);
+
+        return () => clearTimeout(timeout);
+    }, [searchQuery]);
 
     // SWR hooks
-    const { meals, mealsLoading, mutate } = useGetMeals();
+    const { meals, mealsLoading, mutate } = useGetMeals(debouncedSearchQuery);
     const { deleteMeal } = useDeleteMeal();
     const { deleteMeals } = useDeleteMeals();
     const { categories } = useGetCategories();
@@ -439,6 +449,7 @@ export function Meals() {
                         openModal(meal);
                     }
                 }}
+                onQuickFilterChange={setSearchQuery}
             />
 
             {/* Meals Item View Modal */}

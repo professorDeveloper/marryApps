@@ -290,13 +290,23 @@ export function CategoryListView() {
   const theme = useTheme();
   const { t } = useTranslation('menu');
 
-  // API hooks
-  const { categories, categoriesLoading } = useGetCategories();
-  const { deleteCategory } = useDeleteCategory();
-
   // State
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [categoryToDelete, setCategoryToDelete] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
+
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery);
+    }, 400);
+
+    return () => clearTimeout(timeout);
+  }, [searchQuery]);
+
+  // API hooks
+  const { categories, categoriesLoading } = useGetCategories(debouncedSearchQuery);
+  const { deleteCategory } = useDeleteCategory();
 
   // View modal hook
   const { isOpen, selectedData, openModal, closeModal } = useGenericViewModal<ICategory>();
@@ -424,6 +434,7 @@ export function CategoryListView() {
             openModal(category);
           }
         }}
+        onQuickFilterChange={setSearchQuery}
       />
 
       {/* Category View Modal */}

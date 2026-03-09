@@ -25,6 +25,10 @@ interface InvoiceInfoEditViewProps {
     onSwitchToDetailsTab?: () => void; // Callback to switch to details tab when validation fails
 }
 
+const ALLOWED_STATUSES = ['pending', 'draft', 'deleted'] as const;
+const normalizeStatus = (value: unknown) =>
+    ALLOWED_STATUSES.includes(value as (typeof ALLOWED_STATUSES)[number]) ? value : 'pending';
+
 export function InvoiceInfoEditView({
     isNew = false,
     onInvoiceCreated,
@@ -41,7 +45,7 @@ export function InvoiceInfoEditView({
     const { t } = useTranslate('menu');
     const router = useRouter();
     const { id: urlId } = useParams<{ id?: string }>();
-    const { createInvoice } = useInvoiceAPI();
+    const { createInvoice, updateInvoice, deleteInvoice } = useInvoiceAPI();
     const { getSuppliers } = useSupplierAPI();
     const { getStorages } = useStorageAPI();
     const [invoiceData, setInvoiceData] = useState<Record<string, any> | null>(null);
@@ -119,7 +123,7 @@ export function InvoiceInfoEditView({
                         supplier_id: formData.supplier_id,
                         storage_id: formData.storage_id,
                         total_amount: formData.total_amount?.toString() || '0',
-                        status: formData.status || 'pending',
+                        status: normalizeStatus(formData.status),
                         date: formData.date || new Date().toISOString(),
                     }, detailsData);
                     return;
@@ -142,7 +146,7 @@ export function InvoiceInfoEditView({
                         supplier_id: formData.supplier_id,
                         storage_id: formData.storage_id,
                         total_amount: formData.total_amount?.toString() || '0',
-                        status: formData.status || 'pending',
+                        status: normalizeStatus(formData.status),
                         date: formData.date || new Date().toISOString(),
                     });
                     return;
@@ -154,7 +158,7 @@ export function InvoiceInfoEditView({
                         supplier_id: formData.supplier_id,
                         storage_id: formData.storage_id,
                         total_amount: formData.total_amount?.toString() || '0',
-                        status: formData.status || 'pending',
+                        status: normalizeStatus(formData.status),
                         date: formData.date || new Date().toISOString(),
                     });
                     toast.success(t('warehouse.invoices.created'));
@@ -164,19 +168,33 @@ export function InvoiceInfoEditView({
                     }
                     // Only redirect if not in tab mode
                     if (!skipRedirect && !onInvoiceCreated) {
-                        router.push(paths.warehouse.invoices.root);
+                        router.push(paths.warehouse.invoiceDetails.root);
                     }
+                }
+                if (!isNew) {
+                    const invoiceId = currentInvoiceId || urlId;
+                    if (!invoiceId) {
+                        throw new Error('Invoice ID is required');
+                    }
+                    await updateInvoice(invoiceId, {
+                        supplier_id: formData.supplier_id,
+                        storage_id: formData.storage_id,
+                        total_amount: formData.total_amount?.toString() || '0',
+                        status: normalizeStatus(formData.status),
+                        date: formData.date || new Date().toISOString(),
+                    });
+                    toast.success(t('common.updateSuccess'));
                 }
 
                 if (!onInvoiceCreated && !skipRedirect) {
-                    router.push(paths.warehouse.invoices.root);
+                    router.push(paths.warehouse.invoiceDetails.root);
                 }
             } catch (error) {
                 console.error('Error saving invoice:', error);
                 throw error;
             }
         },
-        [isNew, useBatchFlow, createInvoice, router, onInvoiceCreated, onInvoiceDataChange, onInvoiceSubmit, detailsData, skipRedirect, currentInvoiceId, urlId, t, onSwitchToDetailsTab]
+        [isNew, useBatchFlow, createInvoice, updateInvoice, router, onInvoiceCreated, onInvoiceDataChange, onInvoiceSubmit, detailsData, skipRedirect, currentInvoiceId, urlId, t, onSwitchToDetailsTab]
     );
 
     const BASIC: CardSection = {
@@ -219,8 +237,8 @@ export function InvoiceInfoEditView({
                 defaultValue: 'pending',
                 options: [
                     { value: 'pending', label: t('warehouse.invoices.statuses.pending') },
-                    // { value: 'completed', label: t('warehouse.invoices.statuses.completed') },
-                    { value: 'cancelled', label: t('warehouse.invoices.statuses.cancelled') },
+                    { value: 'draft', label: t('common.draft', 'Draft') },
+                    { value: 'deleted', label: t('common.deleted', 'Deleted') },
                 ],
             },
             // {
@@ -243,6 +261,15 @@ export function InvoiceInfoEditView({
         ],
         sections: [BASIC],
         onSubmit: handleSubmit,
+        onDelete: async () => {
+            const invoiceId = currentInvoiceId || urlId;
+            if (!invoiceId) {
+                throw new Error('Invoice ID is required');
+            }
+            await deleteInvoice(invoiceId);
+            toast.success(t('common.deleteSuccess'));
+            router.push(paths.warehouse.invoiceDetails.root);
+        },
     };
 
     // Use persisted form data if available, otherwise use invoice data

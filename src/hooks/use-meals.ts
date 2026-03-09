@@ -202,8 +202,7 @@ function enrichMeal(
 /**
  * Get all meals with enriched category, department names and translations
  */
-export function useGetMeals() {
-    const url = endpoints.meals.list;
+export function useGetMeals(searchQuery?: string) {
     const { i18n } = useTranslation();
 
     // Get categories and departments for enrichment
@@ -217,9 +216,14 @@ export function useGetMeals() {
         { ...swrOptions }
     );
 
+    const normalizedQuery = searchQuery?.trim() || '';
+    const swrKey = normalizedQuery
+        ? [endpoints.meals.search, { params: { query: normalizedQuery } }]
+        : endpoints.meals.list;
+
     const { data, isLoading, error, isValidating, mutate: mutateMeals } = useSWR<
         BackendResponse<IMealAPIResponse[]> | IMealAPIResponse[]
-    >(url, fetcher, { ...swrOptions });
+    >(swrKey, fetcher, { ...swrOptions });
 
     const translations = useMemo(() => {
         if (!translationsData) return [];

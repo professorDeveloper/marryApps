@@ -381,7 +381,7 @@ export function TransfersListView() {
               <option value="draft">{t('deductions.draft', 'Draft')}</option>
               <option value="deleted">{t('deductions.deleted', 'Deleted')}</option>
             </TextField>
-            <Button
+            {/* <Button
               variant="outlined"
               size="small"
               startIcon={<Iconify icon="solar:restart-bold" />}
@@ -389,7 +389,7 @@ export function TransfersListView() {
               sx={{ minWidth: 'auto' }}
             >
               {t('deductions.reset', 'Reset') || 'Reset'}
-            </Button>
+            </Button> */}
           </Box>
         )}
       />
