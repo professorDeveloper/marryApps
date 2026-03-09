@@ -1,12 +1,13 @@
 // src/components/generic-table-view/generic-table-view.tsx
 import type {
   GridColDef,
+  GridFilterModel,
   GridRowSelectionModel,
   GridColumnVisibilityModel,
 } from '@mui/x-data-grid';
 
 import { useBoolean, useSetState } from 'minimal-shared/hooks';
-import { useMemo, useState, useEffect, useCallback } from 'react';
+import { useMemo, useRef, useState, useEffect, useCallback } from 'react';
 
 import Card from '@mui/material/Card';
 import Button from '@mui/material/Button';
@@ -95,6 +96,9 @@ export interface GenericTableConfig<T = any> {
 
   // Custom filters render function
   renderFilters?: () => React.ReactNode;
+
+  // Optional quick filter callback for server-side search
+  onQuickFilterChange?: (value: string) => void;
 }
 
 export function GenericTableView<T extends Record<string, any>>({
@@ -116,6 +120,7 @@ export function GenericTableView<T extends Record<string, any>>({
   hideFilters = false,
   hideCheckboxes = false,
   renderFilters,
+  onQuickFilterChange,
 }: GenericTableConfig<T>) {
   const confirmDialog = useBoolean();
   const toolbarOptions = useToolbarSettings();
@@ -131,6 +136,7 @@ export function GenericTableView<T extends Record<string, any>>({
 
   const [columnVisibilityModel, setColumnVisibilityModel] =
     useState<GridColumnVisibilityModel>(hideColumns);
+  const quickFilterValueRef = useRef('');
 
   useEffect(() => {
     setTableData(data);
@@ -237,6 +243,70 @@ export function GenericTableView<T extends Record<string, any>>({
     />
   );
 
+  const defaultToolbarPropsRef = useRef({
+    filters,
+    canReset,
+    filteredResults: dataFiltered.length,
+    selectedRowCount: selectedRows.ids.size,
+    onOpenConfirmDeleteRows: confirmDialog.onTrue,
+    filterOptions,
+    settings: toolbarOptions.settings,
+    onChangeSettings: toolbarOptions.onChangeSettings,
+    hideFilters,
+  });
+
+  defaultToolbarPropsRef.current = {
+    filters,
+    canReset,
+    filteredResults: dataFiltered.length,
+    selectedRowCount: selectedRows.ids.size,
+    onOpenConfirmDeleteRows: confirmDialog.onTrue,
+    filterOptions,
+    settings: toolbarOptions.settings,
+    onChangeSettings: toolbarOptions.onChangeSettings,
+    hideFilters,
+  };
+
+  const DefaultToolbarSlot = useCallback(() => {
+    const current = defaultToolbarPropsRef.current;
+
+    return (
+      <GenericTableToolbar
+        filters={current.filters}
+        canReset={current.canReset}
+        filteredResults={current.filteredResults}
+        selectedRowCount={current.selectedRowCount}
+        onOpenConfirmDeleteRows={current.onOpenConfirmDeleteRows}
+        filterOptions={current.filterOptions}
+        settings={current.settings}
+        onChangeSettings={current.onChangeSettings}
+        hideFilters={current.hideFilters}
+      />
+    );
+  }, []);
+
+  const ToolbarSlot = useMemo(
+    () => renderToolbar || DefaultToolbarSlot,
+    [renderToolbar, DefaultToolbarSlot]
+  );
+
+  const handleFilterModelChange = useCallback(
+    (model: GridFilterModel) => {
+      if (!onQuickFilterChange) return;
+
+      const nextQuickFilter = (model.quickFilterValues || [])
+        .map((value) => String(value))
+        .join(' ')
+        .trim();
+
+      if (quickFilterValueRef.current !== nextQuickFilter) {
+        quickFilterValueRef.current = nextQuickFilter;
+        onQuickFilterChange(nextQuickFilter);
+      }
+    },
+    [onQuickFilterChange]
+  );
+
   return (
     <>
       <DashboardContent
@@ -297,6 +367,7 @@ export function GenericTableView<T extends Record<string, any>>({
             initialState={{ pagination: { paginationModel: { pageSize: 20 } } }}
             columnVisibilityModel={columnVisibilityModel}
             onColumnVisibilityModelChange={(newModel) => setColumnVisibilityModel(newModel)}
+            onFilterModelChange={handleFilterModelChange}
             onRowSelectionModelChange={(newSelectionModel) => setSelectedRows(newSelectionModel)}
             onRowClick={(params) => {
               if (onRowClick && !hideCheckboxes) {
@@ -306,19 +377,7 @@ export function GenericTableView<T extends Record<string, any>>({
             slots={{
               noRowsOverlay: () => <EmptyContent title="Ishlab chiqish jarayonida" />,
               noResultsOverlay: () => <EmptyContent title="Natija topilmadi" />,
-              toolbar: renderToolbar || (() => (
-                <GenericTableToolbar
-                  filters={filters}
-                  canReset={canReset}
-                  filteredResults={dataFiltered.length}
-                  selectedRowCount={selectedRows.ids.size}
-                  onOpenConfirmDeleteRows={confirmDialog.onTrue}
-                  filterOptions={filterOptions}
-                  settings={toolbarOptions.settings}
-                  onChangeSettings={toolbarOptions.onChangeSettings}
-                  hideFilters={hideFilters}
-                />
-              )),
+              toolbar: ToolbarSlot,
             }}
             slotProps={{
               columnsManagement: {

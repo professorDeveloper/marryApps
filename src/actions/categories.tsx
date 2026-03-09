@@ -137,8 +137,7 @@ function enrichCategories(
 /**
  * Get all categories
  */
-export function useGetCategories() {
-    const url = endpoints.category.list;
+export function useGetCategories(searchQuery?: string) {
     const { i18n } = useTranslation();
 
     // Get storages and departments for enrichment
@@ -152,8 +151,13 @@ export function useGetCategories() {
         { ...swrOptions }
     );
 
-    const { data, isLoading, error, isValidating } = useSWR<BackendResponse<ICategory[]>>(
-        url,
+    const normalizedQuery = searchQuery?.trim() || '';
+    const swrKey = normalizedQuery
+        ? [endpoints.category.search, { params: { q: normalizedQuery } }]
+        : endpoints.category.list;
+
+    const { data, isLoading, error, isValidating } = useSWR<BackendResponse<ICategory[]> | ICategory[]>(
+        swrKey,
         fetcher,
         { ...swrOptions }
     );
@@ -165,9 +169,14 @@ export function useGetCategories() {
     }, [translationsData]);
 
     const enrichedCategories = useMemo(() => {
-        const categories = data?.data || [];
+        let categories: ICategory[] = [];
+        if (Array.isArray(data)) {
+            categories = data;
+        } else if (Array.isArray(data?.data)) {
+            categories = data.data;
+        }
         return enrichCategories(categories, storages, departments, translations, i18n.resolvedLanguage);
-    }, [data?.data, storages, departments, translations, i18n.resolvedLanguage]);
+    }, [data, storages, departments, translations, i18n.resolvedLanguage]);
 
     const memoizedValue = useMemo(
         () => ({

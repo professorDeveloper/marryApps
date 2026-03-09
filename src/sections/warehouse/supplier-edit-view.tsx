@@ -24,7 +24,7 @@ export function SupplierEditView({
     const { t } = useTranslate('menu');
     const router = useRouter();
     const { id: urlId } = useParams<{ id?: string }>();
-    const { createSupplier, getSupplierById, updateSupplier } = useSupplierAPI();
+    const { createSupplier, getSupplierById, updateSupplier, deleteSuppliers } = useSupplierAPI();
     const [supplierData, setSupplierData] = useState<Record<string, any> | null>(null);
     const [loading, setLoading] = useState(false);
 
@@ -134,6 +134,14 @@ export function SupplierEditView({
         ],
         sections: [BASIC],
         onSubmit: handleSubmit,
+        onDelete: async () => {
+            const supplierId = urlId || currentSupplierId;
+            if (!supplierId) {
+                throw new Error('Supplier ID is required');
+            }
+            await deleteSuppliers([supplierId]);
+            router.push(paths.warehouse.suppliers.root);
+        },
     };
 
     return (

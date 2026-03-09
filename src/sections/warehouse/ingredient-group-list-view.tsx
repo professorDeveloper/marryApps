@@ -122,13 +122,23 @@ export function IngredientGroupListView() {
   const { t } = useTranslation('menu');
   const theme = useTheme();
   const router = useRouter();
-  const { ingredientGroups, ingredientGroupsLoading } = useGetIngredientGroups();
+  const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
+  const { ingredientGroups, ingredientGroupsLoading } = useGetIngredientGroups(debouncedSearchQuery);
   const { deleteIngredientGroup } = useDeleteIngredientGroup();
 
   const [viewModalOpen, setViewModalOpen] = useState(false);
   const [selectedGroup, setSelectedGroup] = useState<IIngredientGroupItem | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [groupToDelete, setGroupToDelete] = useState<string | null>(null);
+
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery);
+    }, 400);
+
+    return () => clearTimeout(timeout);
+  }, [searchQuery]);
 
   const columns = useMemo<GridColDef[]>(() => [
     {
@@ -290,6 +300,7 @@ export function IngredientGroupListView() {
             handleViewGroup(group);
           }
         }}
+        onQuickFilterChange={setSearchQuery}
       />
 
       <GenericViewModal

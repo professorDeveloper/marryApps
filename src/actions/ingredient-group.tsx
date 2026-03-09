@@ -20,8 +20,11 @@ const swrOptions: SWRConfiguration = {
 /**
  * Get all ingredient groups
  */
-export function useGetIngredientGroups() {
-  const url = endpoints.ingredientGroups.list;
+export function useGetIngredientGroups(searchQuery?: string) {
+  const normalizedQuery = searchQuery?.trim() || '';
+  const url = normalizedQuery
+    ? [endpoints.ingredientGroups.list, { params: { search: normalizedQuery } }]
+    : endpoints.ingredientGroups.list;
 
   const { data, isLoading, error, isValidating } = useSWR<IIngredientGroupResponse>(
     url,

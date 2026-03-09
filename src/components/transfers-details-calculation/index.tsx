@@ -28,6 +28,14 @@ interface Ingredient {
   price_per_unit: string;
 }
 
+interface IngredientStock {
+  id: string;
+  ingredient_id: string;
+  quantity: string;
+  branch_id?: string;
+  storage_id?: string;
+}
+
 interface BackendResponse<T> {
   status: string;
   message: string;
@@ -45,6 +53,8 @@ interface TransfersDetailsCalculationProps {
   onItemsChange?: (items: TransferItemInput[]) => void;
   onSave?: () => Promise<void>;
   saving?: boolean;
+  sourceBranchId?: string;
+  sourceStorageId?: string;
 }
 
 const formatPrice = (price: number) =>
@@ -78,12 +88,16 @@ export function TransfersDetailsCalculation({
   onItemsChange,
   onSave,
   saving = false,
+  sourceBranchId,
+  sourceStorageId,
 }: TransfersDetailsCalculationProps) {
   const { t } = useTranslation('menu');
   const theme = useTheme();
 
   const [loading, setLoading] = useState(true);
+  const [stockLoading, setStockLoading] = useState(false);
   const [ingredients, setIngredients] = useState<Ingredient[]>([]);
+  const [stockByIngredient, setStockByIngredient] = useState<Record<string, string>>({});
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [transferredIds, setTransferredIds] = useState<string[]>([]);
   const [quantities, setQuantities] = useState<Record<string, string>>({});
@@ -106,6 +120,44 @@ export function TransfersDetailsCalculation({
 
     loadIngredients();
   }, [t]);
+
+  useEffect(() => {
+    const loadIngredientStock = async () => {
+      try {
+        setStockLoading(true);
+        const response = await fetcher<BackendResponse<IngredientStock[]> | IngredientStock[]>(
+          endpoints.ingredientStock.list
+        );
+        const stockItems = Array.isArray(response)
+          ? response
+          : Array.isArray(response?.data)
+            ? response.data
+            : [];
+
+        const filtered = stockItems.filter((stock) => {
+          const matchBranch = sourceBranchId ? stock.branch_id === sourceBranchId : true;
+          const matchStorage = sourceStorageId ? stock.storage_id === sourceStorageId : true;
+          return matchBranch && matchStorage;
+        });
+
+        const nextStockByIngredient = filtered.reduce((acc, stock) => {
+          const prev = parseFloat(acc[stock.ingredient_id] || '0') || 0;
+          const current = parseFloat(stock.quantity || '0') || 0;
+          acc[stock.ingredient_id] = (prev + current).toString();
+          return acc;
+        }, {} as Record<string, string>);
+
+        setStockByIngredient(nextStockByIngredient);
+      } catch (error) {
+        console.error(error);
+        setStockByIngredient({});
+      } finally {
+        setStockLoading(false);
+      }
+    };
+
+    loadIngredientStock();
+  }, [sourceBranchId, sourceStorageId]);
 
   const itemsRef = useRef<TransferItemInput[]>([]);
 
@@ -256,7 +308,8 @@ export function TransfersDetailsCalculation({
             >
               <Box sx={{ width: '50%' }}>{t('calculation.productName', 'Product')}</Box>
               <Box sx={{ width: '20%' }}>{t('calculation.unit', 'Unit')}</Box>
-              <Box sx={{ width: '30%', textAlign: 'right' }}>{t('calculation.price', 'Price')}</Box>
+              <Box sx={{ width: '15%', textAlign: 'center' }}>{t('calculation.quantity', 'Qty')}</Box>
+              <Box sx={{ width: '15%', textAlign: 'right' }}>{t('calculation.price', 'Price')}</Box>
             </Box>
             <Divider />
             <Box sx={{ maxHeight: 420, overflowY: 'auto' }}>
@@ -294,7 +347,12 @@ export function TransfersDetailsCalculation({
                         {ingredient.measurement}
                       </Typography>
                     </Box>
-                    <Box sx={{ width: '30%', textAlign: 'right' }}>
+                    <Box sx={{ width: '15%', textAlign: 'center' }}>
+                      <Typography variant="caption" color="text.secondary">
+                        {stockLoading ? '...' : stockByIngredient[ingredient.id] ?? '0'}
+                      </Typography>
+                    </Box>
+                    <Box sx={{ width: '15%', textAlign: 'right' }}>
                       <Typography variant="caption">{formatPrice(Number(ingredient.price_per_unit))}</Typography>
                     </Box>
                   </Box>
@@ -355,8 +413,9 @@ export function TransfersDetailsCalculation({
               }}
             >
               <Box sx={{ width: '40%' }}>{t('calculation.productName', 'Product')}</Box>
-              <Box sx={{ width: '30%' }}>{t('calculation.unitOfMeasurement', 'Unit')}</Box>
-              <Box sx={{ width: '20%', textAlign: 'center' }}>{t('calculation.quantity', 'Qty')}</Box>
+              <Box sx={{ width: '20%' }}>{t('calculation.unitOfMeasurement', 'Unit')}</Box>
+              <Box sx={{ width: '15%', textAlign: 'center' }}>{t('calculation.inStock', 'In stock')}</Box>
+              <Box sx={{ width: '15%', textAlign: 'center' }}>{t('calculation.quantity', 'Qty')}</Box>
               <Box sx={{ width: '10%' }} />
             </Box>
             <Divider />
@@ -379,12 +438,17 @@ export function TransfersDetailsCalculation({
                     <Box sx={{ width: '40%' }}>
                       <Typography variant="body2">{ingredient.name}</Typography>
                     </Box>
-                    <Box sx={{ width: '30%' }}>
+                    <Box sx={{ width: '20%' }}>
                       <Typography variant="caption" color="text.secondary">
                         {ingredient.measurement}
                       </Typography>
                     </Box>
-                    <Box sx={{ width: '20%' }}>
+                    <Box sx={{ width: '15%', textAlign: 'center' }}>
+                      <Typography variant="caption" color="text.secondary">
+                        {stockLoading ? '...' : stockByIngredient[ingredient.id] ?? '0'}
+                      </Typography>
+                    </Box>
+                    <Box sx={{ width: '15%' }}>
                       <TextField
                         size="small"
                         type="number"

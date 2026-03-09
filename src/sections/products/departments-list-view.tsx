@@ -325,9 +325,20 @@ export function ProductListView() {
   const [selectedDepartment, setSelectedDepartment] = useState<IDepartmentItem | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [departmentToDelete, setDepartmentToDelete] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
 
-  // Get departments from API
-  const { departments, departmentsLoading, departmentsError } = useGetDepartments();
+  // Debounce quick filter input before hitting search API
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery);
+    }, 400);
+
+    return () => clearTimeout(timeout);
+  }, [searchQuery]);
+
+  // Get departments from API (supports server-side search)
+  const { departments, departmentsLoading, departmentsError } = useGetDepartments(debouncedSearchQuery);
 
   // Pre-load storages to ensure data is cached
   useGetStorages();
@@ -486,6 +497,7 @@ export function ProductListView() {
             handleViewDepartment(department);
           }
         }}
+        onQuickFilterChange={setSearchQuery}
       />
 
       <GenericViewModal

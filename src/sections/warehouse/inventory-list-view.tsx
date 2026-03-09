@@ -63,6 +63,16 @@ export function InventoryListView() {
     const [loading, setLoading] = useState(true);
     const [deleteId, setDeleteId] = useState<string | null>(null);
     const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+    const [searchQuery, setSearchQuery] = useState('');
+    const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
+
+    useEffect(() => {
+        const timeout = setTimeout(() => {
+            setDebouncedSearchQuery(searchQuery);
+        }, 400);
+
+        return () => clearTimeout(timeout);
+    }, [searchQuery]);
 
     // Create storage name map
     const storageNameById = useMemo(
@@ -73,14 +83,14 @@ export function InventoryListView() {
     const loadInventories = useCallback(async () => {
         try {
             setLoading(true);
-            const data = await getInventories();
+            const data = await getInventories(debouncedSearchQuery);
             setInventories(data);
         } catch (error) {
             console.error('Error loading inventories:', error);
         } finally {
             setLoading(false);
         }
-    }, [getInventories]);
+    }, [debouncedSearchQuery, getInventories]);
 
     useEffect(() => {
         loadInventories();
@@ -126,17 +136,17 @@ export function InventoryListView() {
                 field: 'storage_id',
                 headerName: t('inventory.storage'),
                 width: 200,
-                flex: 1,
+                flex: 0.5,
                 valueGetter: (_value, row) =>
                     row.storage_id ? storageNameById.get(row.storage_id) || row.storage_id : '-',
             },
-            // {
-            //     field: 'description',
-            //     headerName: t('inventory.description'),
-            //     flex: 1,
-            //     minWidth: 200,
-            //     valueGetter: (_value, row) => row.description || '-',
-            // },
+            {
+                field: 'description',
+                headerName: t('inventory.description'),
+                flex: 1,
+                minWidth: 200,
+                valueGetter: (_value, row) => row.description || '-',
+            },
             {
                 field: 'status',
                 headerName: t('inventory.status'),
@@ -240,6 +250,7 @@ export function InventoryListView() {
                     setDeleteId(id);
                     setDeleteConfirmOpen(true);
                 }}
+                onQuickFilterChange={setSearchQuery}
             />
 
             <Dialog

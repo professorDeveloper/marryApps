@@ -119,12 +119,22 @@ export function WarehouseListView() {
     },
   };
   const router = useRouter();
-  const { storages, storagesLoading } = useGetStorages();
+  const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
+  const { storages, storagesLoading } = useGetStorages(debouncedSearchQuery);
   const { branches } = useGetBranches();
   const { deleteStorage } = useDeleteStorage();
 
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [storageToDelete, setStorageToDelete] = useState<string | null>(null);
+
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery);
+    }, 400);
+
+    return () => clearTimeout(timeout);
+  }, [searchQuery]);
 
   const branchNameById = useMemo(() => {
     const map = new Map<string, string>();
@@ -251,6 +261,7 @@ export function WarehouseListView() {
             }
           }
         }}
+        onQuickFilterChange={setSearchQuery}
       />
 
       <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)} maxWidth="sm" fullWidth>
