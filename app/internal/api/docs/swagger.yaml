@@ -11006,7 +11006,7 @@ paths:
     get:
       consumes:
       - application/json
-      description: Retrieve all ingredient groups with pagination
+      description: Retrieve all ingredient groups with pagination and optional search
       parameters:
       - default: 20
         description: 'Limit results (default: 20)'
@@ -11018,6 +11018,10 @@ paths:
         in: query
         name: offset
         type: integer
+      - description: Search by name
+        in: query
+        name: search
+        type: string
       produces:
       - application/json
       responses:
@@ -11996,7 +12000,7 @@ paths:
     get:
       consumes:
       - application/json
-      description: Retrieve all ingredients with pagination
+      description: Retrieve all ingredients with pagination and optional search
       parameters:
       - default: 20
         description: 'Limit results (default: 20)'
@@ -12008,6 +12012,10 @@ paths:
         in: query
         name: offset
         type: integer
+      - description: Search by name
+        in: query
+        name: search
+        type: string
       - description: 'Expand FK relations (comma-separated: group_id, name_i18n)'
         in: query
         name: expand

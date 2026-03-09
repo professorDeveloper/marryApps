@@ -10643,7 +10643,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Retrieve all ingredient groups with pagination",
+                "description": "Retrieve all ingredient groups with pagination and optional search",
                 "consumes": [
                     "application/json"
                 ],
@@ -10667,6 +10667,12 @@ const docTemplate = `{
                         "default": 0,
                         "description": "Offset for pagination (default: 0)",
                         "name": "offset",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Search by name",
+                        "name": "search",
                         "in": "query"
                     }
                 ],
@@ -12162,7 +12168,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Retrieve all ingredients with pagination",
+                "description": "Retrieve all ingredients with pagination and optional search",
                 "consumes": [
                     "application/json"
                 ],
@@ -12186,6 +12192,12 @@ const docTemplate = `{
                         "default": 0,
                         "description": "Offset for pagination (default: 0)",
                         "name": "offset",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Search by name",
+                        "name": "search",
                         "in": "query"
                     },
                     {

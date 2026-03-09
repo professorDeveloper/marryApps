@@ -89,13 +89,14 @@ func (h *Handler) GetIngredientGroupByID(c echo.Context) error {
 
 // GetAllIngredientGroups retrieves all ingredient groups
 // @Summary Get all ingredient groups
-// @Description Retrieve all ingredient groups with pagination
+// @Description Retrieve all ingredient groups with pagination and optional search
 // @Tags ingredient-groups
 // @Accept json
 // @Produce json
 // @Security BearerAuth
 // @Param limit query int false "Limit results (default: 20)" default(20)
 // @Param offset query int false "Offset for pagination (default: 0)" default(0)
+// @Param search query string false "Search by name"
 // @Success 200 {array} model.IngredientGroupResponse "List of all ingredient groups"
 // @Failure 401 {object} model.ErrorResponse "Unauthorized"
 // @Failure 500 {object} model.ErrorResponse "Internal server error"
@@ -103,6 +104,7 @@ func (h *Handler) GetIngredientGroupByID(c echo.Context) error {
 func (h *Handler) GetAllIngredientGroups(c echo.Context) error {
 	limitStr := c.QueryParam("limit")
 	offsetStr := c.QueryParam("offset")
+	search := c.QueryParam("search")
 
 	limit := int32(20)
 	offset := int32(0)
@@ -118,7 +120,13 @@ func (h *Handler) GetAllIngredientGroups(c echo.Context) error {
 		}
 	}
 
-	groups, err := h.service.Ingredient().GetAllIngredientGroups(c.Request().Context(), limit, offset)
+	var groups []model.IngredientGroupResponse
+	var err error
+	if search != "" {
+		groups, err = h.service.Ingredient().SearchIngredientGroups(c.Request().Context(), search, limit, offset)
+	} else {
+		groups, err = h.service.Ingredient().GetAllIngredientGroups(c.Request().Context(), limit, offset)
+	}
 	if err != nil {
 		log.Printf("GetAllIngredientGroups failed: %v", err)
 		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("failed to fetch ingredient groups", "see logs for details", http.StatusInternalServerError))
@@ -317,13 +325,14 @@ func (h *Handler) GetIngredientByID(c echo.Context) error {
 
 // GetAllIngredients retrieves all ingredients
 // @Summary Get all ingredients
-// @Description Retrieve all ingredients with pagination
+// @Description Retrieve all ingredients with pagination and optional search
 // @Tags ingredients
 // @Accept json
 // @Produce json
 // @Security BearerAuth
 // @Param limit query int false "Limit results (default: 20)" default(20)
 // @Param offset query int false "Offset for pagination (default: 0)" default(0)
+// @Param search query string false "Search by name"
 // @Param expand query string false "Expand FK relations (comma-separated: group_id, name_i18n)"
 // @Success 200 {array} model.IngredientResponse "List of all ingredients"
 // @Failure 401 {object} model.ErrorResponse "Unauthorized"
@@ -332,6 +341,7 @@ func (h *Handler) GetIngredientByID(c echo.Context) error {
 func (h *Handler) GetAllIngredients(c echo.Context) error {
 	limitStr := c.QueryParam("limit")
 	offsetStr := c.QueryParam("offset")
+	search := c.QueryParam("search")
 
 	limit := int32(20)
 	offset := int32(0)
@@ -347,7 +357,13 @@ func (h *Handler) GetAllIngredients(c echo.Context) error {
 		}
 	}
 
-	ingredients, err := h.service.Ingredient().GetAllIngredients(c.Request().Context(), limit, offset)
+	var ingredients []model.IngredientResponse
+	var err error
+	if search != "" {
+		ingredients, err = h.service.Ingredient().SearchIngredients(c.Request().Context(), search, limit, offset)
+	} else {
+		ingredients, err = h.service.Ingredient().GetAllIngredients(c.Request().Context(), limit, offset)
+	}
 	if err != nil {
 		log.Printf("GetAllIngredients failed: %v", err)
 		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("failed to fetch ingredients", "see logs for details", http.StatusInternalServerError))

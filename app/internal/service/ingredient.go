@@ -120,6 +120,24 @@ func (i *IngredientS) GetAllIngredientGroups(ctx context.Context, limit, offset 
 	return responses, nil
 }
 
+// SearchIngredientGroups searches ingredient groups by name
+func (i *IngredientS) SearchIngredientGroups(ctx context.Context, query string, limit, offset int32) ([]model.IngredientGroupResponse, error) {
+	groups, err := i.repo.Tenant(ctx).SearchIngredientGroups(ctx, pg.SearchIngredientGroupsParams{
+		Column1: &query,
+		Limit:   limit,
+		Offset:  offset,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to search ingredient groups: %w", err)
+	}
+
+	var responses []model.IngredientGroupResponse
+	for _, g := range groups {
+		responses = append(responses, *mapIngredientGroupToResponse(g.ID, g.Name, g.NameI18n, g.PictureUrl, g.ColorCode, g.CreatedAt, g.UpdatedAt))
+	}
+	return responses, nil
+}
+
 // UpdateIngredientGroup updates an ingredient group
 func (i *IngredientS) UpdateIngredientGroup(ctx context.Context, groupID string, name *string, nameI18n *string, pictureUrl *string, colorCode *string) (*model.IngredientGroupResponse, error) {
 	id, err := uuid.Parse(groupID)
@@ -422,6 +440,27 @@ func (i *IngredientS) GetAllIngredients(ctx context.Context, limit, offset int32
 		}
 	}
 
+	return responses, nil
+}
+
+// SearchIngredients searches ingredients by name
+func (i *IngredientS) SearchIngredients(ctx context.Context, query string, limit, offset int32) ([]model.IngredientResponse, error) {
+	ingredients, err := i.repo.Tenant(ctx).SearchIngredients(ctx, pg.SearchIngredientsParams{
+		Column1: &query,
+		Limit:   limit,
+		Offset:  offset,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to search ingredients: %w", err)
+	}
+
+	var responses []model.IngredientResponse
+	for _, ing := range ingredients {
+		resp := mapIngredientToResponse(ing)
+		if resp != nil {
+			responses = append(responses, *resp)
+		}
+	}
 	return responses, nil
 }
 
