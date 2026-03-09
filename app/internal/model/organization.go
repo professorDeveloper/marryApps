@@ -50,6 +50,9 @@ type StorageResponse struct {
 	NameI18n   *string    `json:"name_i18n"`
 	PictureUrl *string    `json:"picture_url"`
 	ColorCode  *string    `json:"color_code"`
+	Uz         *string    `json:"uz,omitempty"`
+	Ru         *string    `json:"ru,omitempty"`
+	En         *string    `json:"en,omitempty"`
 	CreatedAt  *time.Time `json:"created_at"`
 	UpdatedAt  *time.Time `json:"updated_at"`
 }

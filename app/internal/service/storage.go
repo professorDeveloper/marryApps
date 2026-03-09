@@ -192,29 +192,31 @@ func (s *StorageS) UpdateStorage(ctx context.Context, storageID string, name *st
 	}
 
 	// Update translation fields if provided
+	var finalUz, finalRu, finalEn *string
 	if uz != nil || ru != nil || en != nil {
 		if storage.NameI18n.Valid {
-			_, err = s.repo.Tenant(ctx).UpdateTranslation(ctx, pg.UpdateTranslationParams{
+			tr, trErr := s.repo.Tenant(ctx).UpdateTranslation(ctx, pg.UpdateTranslationParams{
 				ID: storage.NameI18n.Bytes,
 				Uz: uz,
 				Ru: ru,
 				En: en,
 			})
-			if err != nil {
-				return nil, fmt.Errorf("failed to update translation: %w", err)
+			if trErr != nil {
+				return nil, fmt.Errorf("failed to update translation: %w", trErr)
 			}
+			finalUz, finalRu, finalEn = tr.Uz, tr.Ru, tr.En
 		} else {
-			// Create a new translation row and link it to the storage
 			translationID := uuid.New()
-			_, err = s.repo.Tenant(ctx).CreateTranslation(ctx, pg.CreateTranslationParams{
+			tr, trErr := s.repo.Tenant(ctx).CreateTranslation(ctx, pg.CreateTranslationParams{
 				ID: translationID,
 				Uz: uz,
 				Ru: ru,
 				En: en,
 			})
-			if err != nil {
-				return nil, fmt.Errorf("failed to create translation: %w", err)
+			if trErr != nil {
+				return nil, fmt.Errorf("failed to create translation: %w", trErr)
 			}
+			finalUz, finalRu, finalEn = tr.Uz, tr.Ru, tr.En
 			storage, err = s.repo.Tenant(ctx).UpdateStorage(ctx, pg.UpdateStorageParams{
 				ID:         id,
 				Name:       storage.Name,
@@ -229,7 +231,11 @@ func (s *StorageS) UpdateStorage(ctx context.Context, storageID string, name *st
 		}
 	}
 
-	return mapStorageToResponse(storage.ID, storage.Name, storage.BranchID, storage.NameI18n, storage.PictureUrl, storage.ColorCode, storage.CreatedAt, storage.UpdatedAt), nil
+	resp := mapStorageToResponse(storage.ID, storage.Name, storage.BranchID, storage.NameI18n, storage.PictureUrl, storage.ColorCode, storage.CreatedAt, storage.UpdatedAt)
+	resp.Uz = finalUz
+	resp.Ru = finalRu
+	resp.En = finalEn
+	return resp, nil
 }
 
 // DeleteStorage soft deletes a storage

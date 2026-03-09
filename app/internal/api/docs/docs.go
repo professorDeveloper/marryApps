@@ -27628,6 +27628,9 @@ const docTemplate = `{
                 "created_at": {
                     "type": "string"
                 },
+                "en": {
+                    "type": "string"
+                },
                 "id": {
                     "type": "string"
                 },
@@ -27640,7 +27643,13 @@ const docTemplate = `{
                 "picture_url": {
                     "type": "string"
                 },
+                "ru": {
+                    "type": "string"
+                },
                 "updated_at": {
+                    "type": "string"
+                },
+                "uz": {
                     "type": "string"
                 }
             }
