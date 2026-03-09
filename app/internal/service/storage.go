@@ -121,7 +121,7 @@ func (s *StorageS) GetStoragesByBranchID(ctx context.Context, branchID string, l
 }
 
 // UpdateStorage updates a storage
-func (s *StorageS) UpdateStorage(ctx context.Context, storageID string, name *string, branchID *string, nameI18n *string, pictureUrl *string, colorCode *string) (*model.StorageResponse, error) {
+func (s *StorageS) UpdateStorage(ctx context.Context, storageID string, name *string, branchID *string, nameI18n *string, pictureUrl *string, colorCode *string, uz *string, ru *string, en *string) (*model.StorageResponse, error) {
 	id, err := uuid.Parse(storageID)
 	if err != nil {
 		return nil, fmt.Errorf("invalid storage ID: %w", err)
@@ -179,6 +179,44 @@ func (s *StorageS) UpdateStorage(ctx context.Context, storageID string, name *st
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to update storage: %w", err)
+	}
+
+	// Update translation fields if provided
+	if uz != nil || ru != nil || en != nil {
+		if storage.NameI18n.Valid {
+			_, err = s.repo.Tenant(ctx).UpdateTranslation(ctx, pg.UpdateTranslationParams{
+				ID: storage.NameI18n.Bytes,
+				Uz: uz,
+				Ru: ru,
+				En: en,
+			})
+			if err != nil {
+				return nil, fmt.Errorf("failed to update translation: %w", err)
+			}
+		} else {
+			// Create a new translation row and link it to the storage
+			translationID := uuid.New()
+			_, err = s.repo.Tenant(ctx).CreateTranslation(ctx, pg.CreateTranslationParams{
+				ID: translationID,
+				Uz: uz,
+				Ru: ru,
+				En: en,
+			})
+			if err != nil {
+				return nil, fmt.Errorf("failed to create translation: %w", err)
+			}
+			storage, err = s.repo.Tenant(ctx).UpdateStorage(ctx, pg.UpdateStorageParams{
+				ID:         id,
+				Name:       storage.Name,
+				BranchID:   storage.BranchID,
+				NameI18n:   pgtype.UUID{Bytes: translationID, Valid: true},
+				PictureUrl: storage.PictureUrl,
+				ColorCode:  storage.ColorCode,
+			})
+			if err != nil {
+				return nil, fmt.Errorf("failed to link translation: %w", err)
+			}
+		}
 	}
 
 	return mapStorageToResponse(storage.ID, storage.Name, storage.BranchID, storage.NameI18n, storage.PictureUrl, storage.ColorCode, storage.CreatedAt, storage.UpdatedAt), nil

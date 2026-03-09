@@ -20348,6 +20348,12 @@ const docTemplate = `{
                         "description": "Offset for pagination (default: 0)",
                         "name": "offset",
                         "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Comma-separated relations to expand (e.g. name_i18n)",
+                        "name": "expand",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -20466,6 +20472,12 @@ const docTemplate = `{
                         "description": "Offset (default: 0)",
                         "name": "offset",
                         "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Comma-separated relations to expand (e.g. name_i18n)",
+                        "name": "expand",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -20529,6 +20541,12 @@ const docTemplate = `{
                         "type": "string",
                         "description": "Language code (uz, ru, en - default: uz)",
                         "name": "lang",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Comma-separated relations to expand (e.g. name_i18n)",
+                        "name": "expand",
                         "in": "query"
                     }
                 ],
@@ -20605,6 +20623,12 @@ const docTemplate = `{
                         "description": "Offset for pagination (default: 0)",
                         "name": "offset",
                         "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Comma-separated relations to expand (e.g. name_i18n)",
+                        "name": "expand",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -20677,6 +20701,12 @@ const docTemplate = `{
                         "description": "Offset for pagination (default: 0)",
                         "name": "offset",
                         "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Comma-separated relations to expand (e.g. name_i18n)",
+                        "name": "expand",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -20735,6 +20765,12 @@ const docTemplate = `{
                         "name": "id",
                         "in": "path",
                         "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Comma-separated relations to expand (e.g. name_i18n)",
+                        "name": "expand",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -25311,9 +25347,6 @@ const docTemplate = `{
         "model.CreateStorageRequest": {
             "type": "object",
             "properties": {
-                "branch_id": {
-                    "type": "string"
-                },
                 "color_code": {
                     "type": "string"
                 },
@@ -28801,10 +28834,10 @@ const docTemplate = `{
         "model.UpdateStorageRequest": {
             "type": "object",
             "properties": {
-                "branch_id": {
+                "color_code": {
                     "type": "string"
                 },
-                "color_code": {
+                "en": {
                     "type": "string"
                 },
                 "name": {
@@ -28814,6 +28847,12 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "picture_url": {
+                    "type": "string"
+                },
+                "ru": {
+                    "type": "string"
+                },
+                "uz": {
                     "type": "string"
                 }
             }

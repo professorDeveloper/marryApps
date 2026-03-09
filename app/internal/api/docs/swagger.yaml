@@ -1367,8 +1367,6 @@ definitions:
     type: object
   model.CreateStorageRequest:
     properties:
-      branch_id:
-        type: string
       color_code:
         type: string
       name:
@@ -3801,15 +3799,19 @@ definitions:
     type: object
   model.UpdateStorageRequest:
     properties:
-      branch_id:
-        type: string
       color_code:
+        type: string
+      en:
         type: string
       name:
         type: string
       name_i18n:
         type: string
       picture_url:
+        type: string
+      ru:
+        type: string
+      uz:
         type: string
     type: object
   model.UpdateSupplierRequest:
@@ -17309,6 +17311,10 @@ paths:
         in: query
         name: offset
         type: integer
+      - description: Comma-separated relations to expand (e.g. name_i18n)
+        in: query
+        name: expand
+        type: string
       produces:
       - application/json
       responses:
@@ -17385,6 +17391,10 @@ paths:
         in: query
         name: offset
         type: integer
+      - description: Comma-separated relations to expand (e.g. name_i18n)
+        in: query
+        name: expand
+        type: string
       produces:
       - application/json
       responses:
@@ -17426,6 +17436,10 @@ paths:
       - description: 'Language code (uz, ru, en - default: uz)'
         in: query
         name: lang
+        type: string
+      - description: Comma-separated relations to expand (e.g. name_i18n)
+        in: query
+        name: expand
         type: string
       produces:
       - application/json
@@ -17499,6 +17513,10 @@ paths:
         in: path
         name: id
         required: true
+        type: string
+      - description: Comma-separated relations to expand (e.g. name_i18n)
+        in: query
+        name: expand
         type: string
       produces:
       - application/json
@@ -17624,6 +17642,10 @@ paths:
         in: query
         name: offset
         type: integer
+      - description: Comma-separated relations to expand (e.g. name_i18n)
+        in: query
+        name: expand
+        type: string
       produces:
       - application/json
       responses:
@@ -17671,6 +17693,10 @@ paths:
         in: query
         name: offset
         type: integer
+      - description: Comma-separated relations to expand (e.g. name_i18n)
+        in: query
+        name: expand
+        type: string
       produces:
       - application/json
       responses:

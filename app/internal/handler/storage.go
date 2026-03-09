@@ -42,7 +42,8 @@ func (h *Handler) CreateStorage(c echo.Context) error {
 		nameI18nUUID = &id
 	}
 
-	storage, err := h.service.Storage().CreateStorage(c.Request().Context(), *req.Name, req.BranchID, nameI18nUUID, req.PictureUrl, req.ColorCode)
+	branchID, _ := c.Get("branch_id").(string)
+	storage, err := h.service.Storage().CreateStorage(c.Request().Context(), *req.Name, branchID, nameI18nUUID, req.PictureUrl, req.ColorCode)
 	if err != nil {
 		log.Printf("CreateStorage failed: %v", err)
 		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("failed to create storage", "see logs for details", http.StatusInternalServerError))
@@ -59,6 +60,7 @@ func (h *Handler) CreateStorage(c echo.Context) error {
 // @Produce json
 // @Security BearerAuth
 // @Param id path string true "Storage ID"
+// @Param expand query string false "Comma-separated relations to expand (e.g. name_i18n)"
 // @Success 200 {object} model.StorageResponse "Storage details"
 // @Failure 400 {object} model.ErrorResponse "Invalid storage ID"
 // @Failure 401 {object} model.ErrorResponse "Unauthorized"
@@ -85,6 +87,13 @@ func (h *Handler) GetStorageByID(c echo.Context) error {
 		return c.JSON(http.StatusNotFound, model.NewErrorResponse("storage not found", "see logs for details", http.StatusNotFound))
 	}
 
+	if m, expanded, err := h.expandSingleResponse(c, storage, "storages"); expanded {
+		if err != nil {
+			return nil
+		}
+		return c.JSON(http.StatusOK, model.NewSuccessResponse("Storage retrieved successfully", m, http.StatusOK))
+	}
+
 	return c.JSON(http.StatusOK, model.NewSuccessResponse("Storage retrieved successfully", storage, http.StatusOK))
 }
 
@@ -97,6 +106,7 @@ func (h *Handler) GetStorageByID(c echo.Context) error {
 // @Security BearerAuth
 // @Param limit query int false "Limit results (default: 20)" default(20)
 // @Param offset query int false "Offset for pagination (default: 0)" default(0)
+// @Param expand query string false "Comma-separated relations to expand (e.g. name_i18n)"
 // @Success 200 {array} model.StorageResponse "List of all storages"
 // @Failure 401 {object} model.ErrorResponse "Unauthorized"
 // @Failure 500 {object} model.ErrorResponse "Internal server error"
@@ -126,6 +136,13 @@ func (h *Handler) GetAllStorages(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("failed to fetch storages", "see logs for details", http.StatusInternalServerError))
 	}
 
+	if maps, expanded, err := h.expandListResponse(c, storages, "storages"); expanded {
+		if err != nil {
+			return nil
+		}
+		return c.JSON(http.StatusOK, model.NewSuccessResponse("Data retrieved successfully", maps, http.StatusOK))
+	}
+
 	return c.JSON(http.StatusOK, model.NewSuccessResponse("Data retrieved successfully", storages, http.StatusOK))
 }
 
@@ -139,6 +156,7 @@ func (h *Handler) GetAllStorages(c echo.Context) error {
 // @Param branchId path string true "Branch ID"
 // @Param limit query int false "Limit results (default: 20)" default(20)
 // @Param offset query int false "Offset for pagination (default: 0)" default(0)
+// @Param expand query string false "Comma-separated relations to expand (e.g. name_i18n)"
 // @Success 200 {array} model.StorageResponse "List of storages for the branch"
 // @Failure 400 {object} model.ErrorResponse "Invalid branch ID"
 // @Failure 401 {object} model.ErrorResponse "Unauthorized"
@@ -178,6 +196,13 @@ func (h *Handler) GetStoragesByBranchID(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("failed to fetch storages by branch", "see logs for details", http.StatusInternalServerError))
 	}
 
+	if maps, expanded, err := h.expandListResponse(c, storages, "storages"); expanded {
+		if err != nil {
+			return nil
+		}
+		return c.JSON(http.StatusOK, model.NewSuccessResponse("Data retrieved successfully", maps, http.StatusOK))
+	}
+
 	return c.JSON(http.StatusOK, model.NewSuccessResponse("Data retrieved successfully", storages, http.StatusOK))
 }
 
@@ -211,7 +236,7 @@ func (h *Handler) UpdateStorage(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("invalid request format", "see logs for details", http.StatusBadRequest))
 	}
 
-	storage, err := h.service.Storage().UpdateStorage(c.Request().Context(), storageID, req.Name, req.BranchID, req.NameI18n, req.PictureUrl, req.ColorCode)
+	storage, err := h.service.Storage().UpdateStorage(c.Request().Context(), storageID, req.Name, nil, req.NameI18n, req.PictureUrl, req.ColorCode, req.Uz, req.Ru, req.En)
 	if err != nil {
 		log.Printf("UpdateStorage failed for id %s: %v", storageID, err)
 		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("failed to update storage", "see logs for details", http.StatusInternalServerError))
@@ -292,6 +317,7 @@ func (h *Handler) RestoreStorage(c echo.Context) error {
 // @Param q query string true "Search query"
 // @Param limit query int false "Limit results (default: 20)" default(20)
 // @Param offset query int false "Offset for pagination (default: 0)" default(0)
+// @Param expand query string false "Comma-separated relations to expand (e.g. name_i18n)"
 // @Success 200 {array} model.StorageResponse "List of matching storages"
 // @Failure 400 {object} model.ErrorResponse "Invalid parameters"
 // @Failure 401 {object} model.ErrorResponse "Unauthorized"
@@ -327,6 +353,13 @@ func (h *Handler) SearchStorages(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("failed to search storages", "see logs for details", http.StatusInternalServerError))
 	}
 
+	if maps, expanded, err := h.expandListResponse(c, storages, "storages"); expanded {
+		if err != nil {
+			return nil
+		}
+		return c.JSON(http.StatusOK, model.NewSuccessResponse("Data retrieved successfully", maps, http.StatusOK))
+	}
+
 	return c.JSON(http.StatusOK, model.NewSuccessResponse("Data retrieved successfully", storages, http.StatusOK))
 }
 
@@ -339,6 +372,7 @@ func (h *Handler) SearchStorages(c echo.Context) error {
 // @Security BearerAuth
 // @Param id path string true "Storage ID"
 // @Param lang query string false "Language code (uz, ru, en - default: uz)"
+// @Param expand query string false "Comma-separated relations to expand (e.g. name_i18n)"
 // @Success 200 {object} model.StorageResponse "Storage details"
 // @Failure 400 {object} model.ErrorResponse "Invalid request parameters"
 // @Failure 401 {object} model.ErrorResponse "Unauthorized"
@@ -371,6 +405,13 @@ func (h *Handler) GetStorageByIDWithLang(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("failed to fetch storage", "see logs for details", http.StatusInternalServerError))
 	}
 
+	if m, expanded, err := h.expandSingleResponse(c, storage, "storages"); expanded {
+		if err != nil {
+			return nil
+		}
+		return c.JSON(http.StatusOK, model.NewSuccessResponse("Storage retrieved successfully", m, http.StatusOK))
+	}
+
 	return c.JSON(http.StatusOK, model.NewSuccessResponse("Storage retrieved successfully", storage, http.StatusOK))
 }
 
@@ -384,6 +425,7 @@ func (h *Handler) GetStorageByIDWithLang(c echo.Context) error {
 // @Param lang query string false "Language code (uz, ru, en - default: uz)"
 // @Param limit query int false "Limit (default: 20)"
 // @Param offset query int false "Offset (default: 0)"
+// @Param expand query string false "Comma-separated relations to expand (e.g. name_i18n)"
 // @Success 200 {array} model.StorageResponse "Storages retrieved successfully"
 // @Failure 400 {object} model.ErrorResponse "Invalid request parameters"
 // @Failure 401 {object} model.ErrorResponse "Unauthorized"
@@ -419,6 +461,13 @@ func (h *Handler) GetAllStoragesWithLang(c echo.Context) error {
 	if err != nil {
 		log.Printf("GetAllStoragesWithLang failed: %v", err)
 		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("failed to fetch storages", "see logs for details", http.StatusInternalServerError))
+	}
+
+	if maps, expanded, err := h.expandListResponse(c, storages, "storages"); expanded {
+		if err != nil {
+			return nil
+		}
+		return c.JSON(http.StatusOK, model.NewSuccessResponse("Storages retrieved successfully", maps, http.StatusOK))
 	}
 
 	return c.JSON(http.StatusOK, model.NewSuccessResponse("Storages retrieved successfully", storages, http.StatusOK))

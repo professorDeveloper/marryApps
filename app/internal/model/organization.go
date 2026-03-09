@@ -28,7 +28,6 @@ type BranchResponse struct {
 
 type CreateStorageRequest struct {
 	Name       *string `json:"name"`
-	BranchID   string  `json:"branch_id"`
 	NameI18n   *string `json:"name_i18n"`
 	PictureUrl *string `json:"picture_url"`
 	ColorCode  *string `json:"color_code"`
@@ -36,10 +35,12 @@ type CreateStorageRequest struct {
 
 type UpdateStorageRequest struct {
 	Name       *string `json:"name"`
-	BranchID   *string `json:"branch_id"`
 	NameI18n   *string `json:"name_i18n"`
 	PictureUrl *string `json:"picture_url"`
 	ColorCode  *string `json:"color_code"`
+	Uz         *string `json:"uz,omitempty"`
+	Ru         *string `json:"ru,omitempty"`
+	En         *string `json:"en,omitempty"`
 }
 
 type StorageResponse struct {

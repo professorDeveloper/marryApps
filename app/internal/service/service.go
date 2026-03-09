@@ -86,7 +86,7 @@ type StorageI interface {
 	GetStorageByIDWithLang(ctx context.Context, storageID string, lang string) (*model.StorageResponse, error)
 	GetAllStoragesWithLang(ctx context.Context, lang string, limit, offset int32) ([]model.StorageResponse, error)
 	GetStoragesByBranchID(ctx context.Context, branchID string, limit, offset int32) ([]model.StorageResponse, error)
-	UpdateStorage(ctx context.Context, storageID string, name *string, branchID *string, nameI18n *string, pictureUrl *string, colorCode *string) (*model.StorageResponse, error)
+	UpdateStorage(ctx context.Context, storageID string, name *string, branchID *string, nameI18n *string, pictureUrl *string, colorCode *string, uz *string, ru *string, en *string) (*model.StorageResponse, error)
 	DeleteStorage(ctx context.Context, storageID string) error
 	RestoreStorage(ctx context.Context, storageID string) error
 	SearchStorages(ctx context.Context, query string, limit, offset int32) ([]model.StorageResponse, error)
