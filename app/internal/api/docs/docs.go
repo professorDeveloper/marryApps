@@ -959,6 +959,12 @@ const docTemplate = `{
                         "description": "Offset for pagination (default: 0)",
                         "name": "offset",
                         "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Expand related fields",
+                        "name": "expand",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -1076,6 +1082,12 @@ const docTemplate = `{
                         "type": "integer",
                         "description": "Offset (default: 0)",
                         "name": "offset",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Expand related fields",
+                        "name": "expand",
                         "in": "query"
                     }
                 ],
@@ -1516,6 +1528,12 @@ const docTemplate = `{
                         "description": "Offset",
                         "name": "offset",
                         "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Expand related fields",
+                        "name": "expand",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -1835,6 +1853,12 @@ const docTemplate = `{
                         "description": "Offset",
                         "name": "offset",
                         "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Expand related fields",
+                        "name": "expand",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -1987,6 +2011,12 @@ const docTemplate = `{
                         "default": 0,
                         "description": "Offset",
                         "name": "offset",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Expand related fields",
+                        "name": "expand",
                         "in": "query"
                     }
                 ],
@@ -3161,6 +3191,12 @@ const docTemplate = `{
                         "description": "Offset (default: 0)",
                         "name": "offset",
                         "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Expand related fields",
+                        "name": "expand",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -3278,6 +3314,12 @@ const docTemplate = `{
                         "type": "integer",
                         "description": "Offset (default: 0)",
                         "name": "offset",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Expand related fields",
+                        "name": "expand",
                         "in": "query"
                     }
                 ],
@@ -3416,6 +3458,12 @@ const docTemplate = `{
                         "description": "Offset (default: 0)",
                         "name": "offset",
                         "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Expand related fields",
+                        "name": "expand",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -3486,6 +3534,12 @@ const docTemplate = `{
                         "description": "Offset (default: 0)",
                         "name": "offset",
                         "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Expand related fields",
+                        "name": "expand",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -3548,6 +3602,12 @@ const docTemplate = `{
                         "type": "integer",
                         "description": "Offset (default: 0)",
                         "name": "offset",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Expand related fields",
+                        "name": "expand",
                         "in": "query"
                     }
                 ],
@@ -3682,6 +3742,12 @@ const docTemplate = `{
                         "type": "integer",
                         "description": "Offset (default: 0)",
                         "name": "offset",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Expand related fields",
+                        "name": "expand",
                         "in": "query"
                     }
                 ],
@@ -10099,6 +10165,12 @@ const docTemplate = `{
                         "description": "Offset (default: 0)",
                         "name": "offset",
                         "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Expand related fields",
+                        "name": "expand",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -10217,6 +10289,12 @@ const docTemplate = `{
                         "description": "Offset (default: 0)",
                         "name": "offset",
                         "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Expand related fields",
+                        "name": "expand",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -10293,6 +10371,12 @@ const docTemplate = `{
                         "description": "Offset (default: 0)",
                         "name": "offset",
                         "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Expand related fields",
+                        "name": "expand",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -10361,6 +10445,12 @@ const docTemplate = `{
                         "type": "integer",
                         "description": "Offset (default: 0)",
                         "name": "offset",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Expand related fields",
+                        "name": "expand",
                         "in": "query"
                     }
                 ],

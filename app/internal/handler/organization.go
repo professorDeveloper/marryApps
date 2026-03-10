@@ -101,6 +101,7 @@ func (h *Handler) GetBranchByID(c echo.Context) error {
 // @Security BearerAuth
 // @Param limit query int false "Limit results (default: 20)" default(20)
 // @Param offset query int false "Offset for pagination (default: 0)" default(0)
+// @Param expand query string false "Expand related fields"
 // @Success 200 {array} model.BranchResponse "List of all branches"
 // @Failure 401 {object} model.ErrorResponse "Unauthorized"
 // @Failure 500 {object} model.ErrorResponse "Internal server error"
@@ -124,13 +125,20 @@ func (h *Handler) GetAllBranches(c echo.Context) error {
 		}
 	}
 
-	branches, err := h.service.Organization().GetAllBranches(c.Request().Context(), limit, offset)
+	branches, total, err := h.service.Organization().GetAllBranches(c.Request().Context(), limit, offset)
 	if err != nil {
 		log.Printf("GetAllBranches failed: %v", err)
 		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("failed to fetch branches", "see logs for details", http.StatusInternalServerError))
 	}
 
-	return c.JSON(http.StatusOK, model.NewSuccessResponse("Data retrieved successfully", branches, http.StatusOK))
+	if maps, expanded, err := h.expandListResponse(c, branches, "branches"); expanded {
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("expand failed", err.Error(), http.StatusInternalServerError))
+		}
+		return c.JSON(http.StatusOK, model.NewPaginatedResponse("Data retrieved successfully", maps, int32(total), limit, offset, http.StatusOK))
+	}
+
+	return c.JSON(http.StatusOK, model.NewPaginatedResponse("Data retrieved successfully", branches, int32(total), limit, offset, http.StatusOK))
 }
 
 // DeleteBranch deletes a branch
@@ -512,6 +520,7 @@ func (h *Handler) GetBranchByIDWithLang(c echo.Context) error {
 // @Param lang query string false "Language code (uz, ru, en - default: uz)"
 // @Param limit query int false "Limit (default: 20)"
 // @Param offset query int false "Offset (default: 0)"
+// @Param expand query string false "Expand related fields"
 // @Success 200 {array} model.BranchResponse "Branches retrieved successfully"
 // @Failure 400 {object} model.ErrorResponse "Invalid request parameters"
 // @Failure 401 {object} model.ErrorResponse "Unauthorized"
@@ -543,11 +552,18 @@ func (h *Handler) GetAllBranchesWithLang(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("invalid language code", "valid values: uz, ru, en", http.StatusBadRequest))
 	}
 
-	branches, err := h.service.Organization().GetAllBranchesWithLang(c.Request().Context(), lang, limit, offset)
+	branches, total, err := h.service.Organization().GetAllBranchesWithLang(c.Request().Context(), lang, limit, offset)
 	if err != nil {
 		log.Printf("GetAllBranchesWithLang failed: %v", err)
 		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("failed to fetch branches", "see logs for details", http.StatusInternalServerError))
 	}
 
-	return c.JSON(http.StatusOK, model.NewSuccessResponse("Branches retrieved successfully", branches, http.StatusOK))
+	if maps, expanded, err := h.expandListResponse(c, branches, "branches"); expanded {
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("expand failed", err.Error(), http.StatusInternalServerError))
+		}
+		return c.JSON(http.StatusOK, model.NewPaginatedResponse("Branches retrieved successfully", maps, int32(total), limit, offset, http.StatusOK))
+	}
+
+	return c.JSON(http.StatusOK, model.NewPaginatedResponse("Branches retrieved successfully", branches, int32(total), limit, offset, http.StatusOK))
 }

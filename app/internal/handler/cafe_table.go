@@ -97,6 +97,7 @@ func (h *Handler) GetCafeTableByID(c echo.Context) error {
 // @Security BearerAuth
 // @Param limit query int false "Limit" default(10) example:"10"
 // @Param offset query int false "Offset" default(0) example:"0"
+// @Param expand query string false "Expand related fields"
 // @Success 200 {array} model.CafeTableResponse
 // @Failure 400 {object} model.ErrorResponse
 // @Router /api/v1/cafe-tables [get]
@@ -144,6 +145,7 @@ func (h *Handler) GetAllCafeTables(c echo.Context) error {
 // @Param hall_id path string true "Hall ID" example:"a1b2c3d4-e5f6-4a5b-8c9d-e0f1a2b3c4d5"
 // @Param limit query int false "Limit" default(10) example:"10"
 // @Param offset query int false "Offset" default(0) example:"0"
+// @Param expand query string false "Expand related fields"
 // @Success 200 {array} model.CafeTableResponse
 // @Failure 400 {object} model.ErrorResponse
 // @Router /api/v1/cafe-tables/hall/{hall_id} [get]
@@ -200,6 +202,7 @@ func (h *Handler) GetCafeTablesByHallID(c echo.Context) error {
 // @Param status path string true "Status" example:"available" enum:"available,occupied,reserved"
 // @Param limit query int false "Limit" default(10) example:"10"
 // @Param offset query int false "Offset" default(0) example:"0"
+// @Param expand query string false "Expand related fields"
 // @Success 200 {array} model.CafeTableResponse
 // @Failure 400 {object} model.ErrorResponse
 // @Router /api/v1/cafe-tables/status/{status} [get]

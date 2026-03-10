@@ -121,6 +121,7 @@ func (h *Handler) GetHallByID(c echo.Context) error {
 // @Security BearerAuth
 // @Param limit query int false "Limit (default: 20)"
 // @Param offset query int false "Offset (default: 0)"
+// @Param expand query string false "Expand related fields"
 // @Success 200 {array} model.HallResponse "Halls found"
 // @Failure 401 {object} model.ErrorResponse "Unauthorized"
 // @Failure 500 {object} model.ErrorResponse "Internal server error"
@@ -171,6 +172,7 @@ func (h *Handler) GetAllHalls(c echo.Context) error {
 // @Param lang query string false "Language code (uz, ru, en - default: uz)"
 // @Param limit query int false "Limit (default: 20)"
 // @Param offset query int false "Offset (default: 0)"
+// @Param expand query string false "Expand related fields"
 // @Success 200 {array} model.HallResponse "Halls retrieved successfully"
 // @Failure 400 {object} model.ErrorResponse "Invalid request parameters"
 // @Failure 401 {object} model.ErrorResponse "Unauthorized"
@@ -236,6 +238,7 @@ func (h *Handler) GetAllHallsWithLang(c echo.Context) error {
 // @Param lang query string false "Language code (uz, ru, en - default: uz)"
 // @Param limit query int false "Limit (default: 20)"
 // @Param offset query int false "Offset (default: 0)"
+// @Param expand query string false "Expand related fields"
 // @Failure 401 {object} model.ErrorResponse "Unauthorized"
 // @Failure 500 {object} model.ErrorResponse "Internal server error"
 // @Router /api/v1/halls/branch/{branchId} [get]
@@ -295,6 +298,7 @@ func (h *Handler) GetHallsByBranchID(c echo.Context) error {
 // @Param lang query string false "Language code (uz, ru, en - default: uz)"
 // @Param limit query int false "Limit (default: 20)"
 // @Param offset query int false "Offset (default: 0)"
+// @Param expand query string false "Expand related fields"
 // @Success 200 {array} model.HallResponse "Halls retrieved successfully"
 // @Failure 400 {object} model.ErrorResponse "Invalid request parameters"
 // @Failure 401 {object} model.ErrorResponse "Unauthorized"

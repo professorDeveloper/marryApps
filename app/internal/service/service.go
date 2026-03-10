@@ -65,9 +65,9 @@ type ShiftI interface {
 type OrganizationI interface {
 	CreateBranch(ctx context.Context, name string, nameI18nUUID *uuid.UUID, address *string, phone *string) (*model.BranchResponse, error)
 	GetBranchByID(ctx context.Context, branchID string) (*model.BranchResponse, error)
-	GetAllBranches(ctx context.Context, limit, offset int32) ([]model.BranchResponse, error)
+	GetAllBranches(ctx context.Context, limit, offset int32) ([]model.BranchResponse, int64, error)
 	GetBranchByIDWithLang(ctx context.Context, branchID string, lang string) (*model.BranchResponse, error)
-	GetAllBranchesWithLang(ctx context.Context, lang string, limit, offset int32) ([]model.BranchResponse, error)
+	GetAllBranchesWithLang(ctx context.Context, lang string, limit, offset int32) ([]model.BranchResponse, int64, error)
 	UpdateBranch(ctx context.Context, branchID string, name, nameI18n, address, phone *string) (*model.BranchResponse, error)
 	DeleteBranch(ctx context.Context, branchID string) error
 	RestoreBranch(ctx context.Context, branchID string) error

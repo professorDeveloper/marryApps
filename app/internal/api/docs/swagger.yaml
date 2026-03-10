@@ -4691,6 +4691,10 @@ paths:
         in: query
         name: offset
         type: integer
+      - description: Expand related fields
+        in: query
+        name: expand
+        type: string
       produces:
       - application/json
       responses:
@@ -4766,6 +4770,10 @@ paths:
         in: query
         name: offset
         type: integer
+      - description: Expand related fields
+        in: query
+        name: expand
+        type: string
       produces:
       - application/json
       responses:
@@ -5050,6 +5058,10 @@ paths:
         in: query
         name: offset
         type: integer
+      - description: Expand related fields
+        in: query
+        name: expand
+        type: string
       produces:
       - application/json
       responses:
@@ -5477,6 +5489,10 @@ paths:
         in: query
         name: offset
         type: integer
+      - description: Expand related fields
+        in: query
+        name: expand
+        type: string
       produces:
       - application/json
       responses:
@@ -5575,6 +5591,10 @@ paths:
         in: query
         name: offset
         type: integer
+      - description: Expand related fields
+        in: query
+        name: expand
+        type: string
       produces:
       - application/json
       responses:
@@ -6101,6 +6121,10 @@ paths:
         in: query
         name: offset
         type: integer
+      - description: Expand related fields
+        in: query
+        name: expand
+        type: string
       produces:
       - application/json
       responses:
@@ -6177,6 +6201,10 @@ paths:
         in: query
         name: offset
         type: integer
+      - description: Expand related fields
+        in: query
+        name: expand
+        type: string
       produces:
       - application/json
       responses:
@@ -6474,6 +6502,10 @@ paths:
         in: query
         name: offset
         type: integer
+      - description: Expand related fields
+        in: query
+        name: expand
+        type: string
       produces:
       - application/json
       responses:
@@ -6519,6 +6551,10 @@ paths:
         in: query
         name: offset
         type: integer
+      - description: Expand related fields
+        in: query
+        name: expand
+        type: string
       produces:
       - application/json
       responses:
@@ -6559,6 +6595,10 @@ paths:
         in: query
         name: offset
         type: integer
+      - description: Expand related fields
+        in: query
+        name: expand
+        type: string
       produces:
       - application/json
       responses:
@@ -6645,6 +6685,10 @@ paths:
         in: query
         name: offset
         type: integer
+      - description: Expand related fields
+        in: query
+        name: expand
+        type: string
       produces:
       - application/json
       responses:
@@ -10663,6 +10707,10 @@ paths:
         in: query
         name: offset
         type: integer
+      - description: Expand related fields
+        in: query
+        name: expand
+        type: string
       produces:
       - application/json
       responses:
@@ -10740,6 +10788,10 @@ paths:
         in: query
         name: offset
         type: integer
+      - description: Expand related fields
+        in: query
+        name: expand
+        type: string
       produces:
       - application/json
       responses:
@@ -10790,6 +10842,10 @@ paths:
         in: query
         name: offset
         type: integer
+      - description: Expand related fields
+        in: query
+        name: expand
+        type: string
       produces:
       - application/json
       responses:
@@ -10993,6 +11049,10 @@ paths:
         in: query
         name: offset
         type: integer
+      - description: Expand related fields
+        in: query
+        name: expand
+        type: string
       produces:
       - application/json
       responses:
