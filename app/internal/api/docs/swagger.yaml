@@ -13125,6 +13125,10 @@ paths:
         in: query
         name: offset
         type: integer
+      - description: Expand related fields
+        in: query
+        name: expand
+        type: string
       produces:
       - application/json
       responses:
@@ -13522,6 +13526,10 @@ paths:
         in: query
         name: offset
         type: integer
+      - description: Expand related fields
+        in: query
+        name: expand
+        type: string
       produces:
       - application/json
       responses:
@@ -13572,6 +13580,10 @@ paths:
         in: query
         name: offset
         type: integer
+      - description: Expand related fields
+        in: query
+        name: expand
+        type: string
       produces:
       - application/json
       responses:
@@ -13641,6 +13653,10 @@ paths:
       - description: Filter by status (pending, arrived, received, cancelled)
         in: query
         name: status
+        type: string
+      - description: Expand related fields
+        in: query
+        name: expand
         type: string
       produces:
       - application/json

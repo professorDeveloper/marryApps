@@ -95,6 +95,23 @@ func (q *Queries) CountInvoiceDetails(ctx context.Context) (int64, error) {
 	return count, err
 }
 
+const countInvoiceDetailsByIngredient = `-- name: CountInvoiceDetailsByIngredient :one
+SELECT COUNT(*) FROM invoice_detailed
+WHERE ingredient_id = $1 AND deleted_at = 0
+  AND EXISTS (
+    SELECT 1 FROM invoices i
+    WHERE i.id = invoice_detailed.invoice_id
+      AND i.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  )
+`
+
+func (q *Queries) CountInvoiceDetailsByIngredient(ctx context.Context, ingredientID uuid.UUID) (int64, error) {
+	row := q.db.QueryRow(ctx, countInvoiceDetailsByIngredient, ingredientID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const countInvoiceDetailsByInvoice = `-- name: CountInvoiceDetailsByInvoice :one
 SELECT COUNT(*) FROM invoice_detailed
 WHERE invoice_id = $1 AND deleted_at = 0
@@ -595,10 +612,17 @@ WHERE invoice_id = $1 AND deleted_at = 0
       AND i.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
   )
 ORDER BY created_at ASC
+LIMIT $2 OFFSET $3
 `
 
-func (q *Queries) GetInvoiceDetailsByInvoiceID(ctx context.Context, invoiceID uuid.UUID) ([]InvoiceDetailed, error) {
-	rows, err := q.db.Query(ctx, getInvoiceDetailsByInvoiceID, invoiceID)
+type GetInvoiceDetailsByInvoiceIDParams struct {
+	InvoiceID uuid.UUID `json:"invoice_id"`
+	Limit     int32     `json:"limit"`
+	Offset    int32     `json:"offset"`
+}
+
+func (q *Queries) GetInvoiceDetailsByInvoiceID(ctx context.Context, arg GetInvoiceDetailsByInvoiceIDParams) ([]InvoiceDetailed, error) {
+	rows, err := q.db.Query(ctx, getInvoiceDetailsByInvoiceID, arg.InvoiceID, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}

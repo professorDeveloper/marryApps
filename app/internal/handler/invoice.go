@@ -59,6 +59,7 @@ func (h *Handler) CreateSupplierInvoice(c echo.Context) error {
 // @Param supplier_id query string false "Filter by supplier ID"
 // @Param ingredient_id query string false "Filter by ingredient ID (invoices containing this ingredient)"
 // @Param status query string false "Filter by status (pending, arrived, received, cancelled)"
+// @Param expand query string false "Expand related fields"
 // @Success 200 {array} model.InvoiceResponse
 // @Failure 400 {object} model.ErrorResponse
 // @Failure 401 {object} model.ErrorResponse
@@ -100,6 +101,12 @@ func (h *Handler) GetAllInvoices(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("Operation failed", err.Error(), http.StatusInternalServerError))
 	}
 
+	if maps, expanded, err := h.expandListResponse(c, resp, "invoices"); expanded {
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("Operation failed", err.Error(), http.StatusInternalServerError))
+		}
+		return c.JSON(http.StatusOK, model.NewPaginatedResponse("Invoices retrieved successfully", maps, int32(total), limit, offset, http.StatusOK))
+	}
 	return c.JSON(http.StatusOK, model.NewPaginatedResponse("Invoices retrieved successfully", resp, int32(total), limit, offset, http.StatusOK))
 }
 

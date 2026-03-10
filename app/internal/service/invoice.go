@@ -241,7 +241,7 @@ func (s *InvoiceS) UpdateInvoice(ctx context.Context, id string, req *model.Upda
 	}
 
 	if storageID.Valid && currentInvoice.StorageID.Valid && storageID.Bytes != currentInvoice.StorageID.Bytes {
-		details, err := s.repo.Tenant(ctx).GetInvoiceDetailsByInvoiceID(ctx, invoiceID)
+		details, err := s.repo.Tenant(ctx).GetInvoiceDetailsByInvoiceID(ctx, pg.GetInvoiceDetailsByInvoiceIDParams{InvoiceID: invoiceID, Limit: 10000, Offset: 0})
 		if err != nil {
 			return nil, fmt.Errorf("failed to get invoice details: %w", err)
 		}
@@ -291,7 +291,7 @@ func (s *InvoiceS) DeleteInvoice(ctx context.Context, id string) error {
 	// Reverse stock: remove quantities that were added when each invoice detail was created
 	inv, err := s.repo.Tenant(ctx).GetInvoiceByID(ctx, invoiceID)
 	if err == nil && inv.StorageID.Valid && inv.Status.InvoiceStatus != "cancelled" {
-		details, _ := s.repo.Tenant(ctx).GetInvoiceDetailsByInvoiceID(ctx, invoiceID)
+		details, _ := s.repo.Tenant(ctx).GetInvoiceDetailsByInvoiceID(ctx, pg.GetInvoiceDetailsByInvoiceIDParams{InvoiceID: invoiceID, Limit: 10000, Offset: 0})
 		for _, d := range details {
 			_ = s.applyInvoiceStockMovement(ctx, inv.StorageID, d.IngredientID, zeroNumeric(), d.Quantity, "invoice_deleted_out", d.PricePerUnit, invoiceID)
 		}
@@ -632,13 +632,18 @@ func (s *InvoiceS) GetInvoiceDetailByID(ctx context.Context, id string) (*model.
 }
 
 // GetAllInvoiceDetails retrieves all invoice details with pagination
-func (s *InvoiceS) GetAllInvoiceDetails(ctx context.Context, limit, offset int32) ([]*model.InvoiceDetailResponse, error) {
+func (s *InvoiceS) GetAllInvoiceDetails(ctx context.Context, limit, offset int32) ([]*model.InvoiceDetailResponse, int64, error) {
+	total, err := s.repo.Tenant(ctx).CountInvoiceDetails(ctx)
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to count invoice details: %w", err)
+	}
+
 	details, err := s.repo.Tenant(ctx).GetAllInvoiceDetails(ctx, pg.GetAllInvoiceDetailsParams{
 		Limit:  limit,
 		Offset: offset,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to get invoice details: %w", err)
+		return nil, 0, fmt.Errorf("failed to get invoice details: %w", err)
 	}
 
 	var responses []*model.InvoiceDetailResponse
@@ -646,19 +651,28 @@ func (s *InvoiceS) GetAllInvoiceDetails(ctx context.Context, limit, offset int32
 		responses = append(responses, toInvoiceDetailResponse(detail))
 	}
 
-	return responses, nil
+	return responses, total, nil
 }
 
 // GetInvoiceDetailsByInvoiceID retrieves details for a specific invoice
-func (s *InvoiceS) GetInvoiceDetailsByInvoiceID(ctx context.Context, invoiceID string) ([]*model.InvoiceDetailResponse, error) {
+func (s *InvoiceS) GetInvoiceDetailsByInvoiceID(ctx context.Context, invoiceID string, limit, offset int32) ([]*model.InvoiceDetailResponse, int64, error) {
 	invUUID, err := uuid.Parse(invoiceID)
 	if err != nil {
-		return nil, fmt.Errorf("invalid invoice id: %w", err)
+		return nil, 0, fmt.Errorf("invalid invoice id: %w", err)
 	}
 
-	details, err := s.repo.Tenant(ctx).GetInvoiceDetailsByInvoiceID(ctx, invUUID)
+	total, err := s.repo.Tenant(ctx).CountInvoiceDetailsByInvoice(ctx, invUUID)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get invoice details by invoice id: %w", err)
+		return nil, 0, fmt.Errorf("failed to count invoice details by invoice id: %w", err)
+	}
+
+	details, err := s.repo.Tenant(ctx).GetInvoiceDetailsByInvoiceID(ctx, pg.GetInvoiceDetailsByInvoiceIDParams{
+		InvoiceID: invUUID,
+		Limit:     limit,
+		Offset:    offset,
+	})
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to get invoice details by invoice id: %w", err)
 	}
 
 	var responses []*model.InvoiceDetailResponse
@@ -666,14 +680,19 @@ func (s *InvoiceS) GetInvoiceDetailsByInvoiceID(ctx context.Context, invoiceID s
 		responses = append(responses, toInvoiceDetailResponse(detail))
 	}
 
-	return responses, nil
+	return responses, total, nil
 }
 
 // GetInvoiceDetailsByIngredientID retrieves details for a specific ingredient
-func (s *InvoiceS) GetInvoiceDetailsByIngredientID(ctx context.Context, ingredientID string, limit, offset int32) ([]*model.InvoiceDetailResponse, error) {
+func (s *InvoiceS) GetInvoiceDetailsByIngredientID(ctx context.Context, ingredientID string, limit, offset int32) ([]*model.InvoiceDetailResponse, int64, error) {
 	ingUUID, err := uuid.Parse(ingredientID)
 	if err != nil {
-		return nil, fmt.Errorf("invalid ingredient id: %w", err)
+		return nil, 0, fmt.Errorf("invalid ingredient id: %w", err)
+	}
+
+	total, err := s.repo.Tenant(ctx).CountInvoiceDetailsByIngredient(ctx, ingUUID)
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to count invoice details by ingredient id: %w", err)
 	}
 
 	details, err := s.repo.Tenant(ctx).GetInvoiceDetailsByIngredientID(ctx, pg.GetInvoiceDetailsByIngredientIDParams{
@@ -682,7 +701,7 @@ func (s *InvoiceS) GetInvoiceDetailsByIngredientID(ctx context.Context, ingredie
 		Offset:       offset,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to get invoice details by ingredient id: %w", err)
+		return nil, 0, fmt.Errorf("failed to get invoice details by ingredient id: %w", err)
 	}
 
 	var responses []*model.InvoiceDetailResponse
@@ -690,7 +709,7 @@ func (s *InvoiceS) GetInvoiceDetailsByIngredientID(ctx context.Context, ingredie
 		responses = append(responses, toInvoiceDetailResponse(detail))
 	}
 
-	return responses, nil
+	return responses, total, nil
 }
 
 // UpdateInvoiceDetail updates an invoice detail
@@ -1089,7 +1108,7 @@ func (s *InvoiceS) UpsertInvoiceDetails(ctx context.Context, invoiceID string, r
 	}
 
 	// Step 1: reverse stock for all existing details
-	existing, err := s.repo.Tenant(ctx).GetInvoiceDetailsByInvoiceID(ctx, invoiceUUID)
+	existing, err := s.repo.Tenant(ctx).GetInvoiceDetailsByInvoiceID(ctx, pg.GetInvoiceDetailsByInvoiceIDParams{InvoiceID: invoiceUUID, Limit: 10000, Offset: 0})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get existing invoice details: %w", err)
 	}

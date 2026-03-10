@@ -200,7 +200,8 @@ WHERE invoice_id = $1 AND deleted_at = 0
     WHERE i.id = invoice_detailed.invoice_id
       AND i.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
   )
-ORDER BY created_at ASC;
+ORDER BY created_at ASC
+LIMIT $2 OFFSET $3;
 
 -- name: GetInvoiceDetailsByIngredientID :many
 SELECT id, invoice_id, ingredient_id, quantity, price, price_per_unit, created_at, updated_at, deleted_at
@@ -297,6 +298,15 @@ WHERE deleted_at = 0
 -- name: CountInvoiceDetailsByInvoice :one
 SELECT COUNT(*) FROM invoice_detailed
 WHERE invoice_id = $1 AND deleted_at = 0
+  AND EXISTS (
+    SELECT 1 FROM invoices i
+    WHERE i.id = invoice_detailed.invoice_id
+      AND i.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  );
+
+-- name: CountInvoiceDetailsByIngredient :one
+SELECT COUNT(*) FROM invoice_detailed
+WHERE ingredient_id = $1 AND deleted_at = 0
   AND EXISTS (
     SELECT 1 FROM invoices i
     WHERE i.id = invoice_detailed.invoice_id
