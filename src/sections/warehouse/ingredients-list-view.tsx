@@ -1,4 +1,4 @@
-import type { GridColDef } from '@mui/x-data-grid';
+import type { GridColDef, GridPaginationModel } from '@mui/x-data-grid';
 import type { IIngredientItem } from 'src/types/ingredients';
 import { useTranslation } from 'react-i18next';
 import { useMemo, useState, useCallback, useEffect } from 'react';
@@ -16,7 +16,7 @@ import {
 } from '@mui/material';
 import { paths } from 'src/routes/paths';
 import { useRouter } from 'src/routes/hooks';
-import { useGetIngredients, useDeleteIngredient, useGetIngredientGroups } from 'src/actions/ingredients';
+import { useGetIngredients, useDeleteIngredient } from 'src/actions/ingredients';
 import { useGetIngredientStocks } from 'src/actions/ingredient-stock';
 import { toast } from 'src/components/snackbar';
 import { Iconify } from 'src/components/iconify';
@@ -208,10 +208,19 @@ export function IngredientListView() {
     const router = useRouter();
     const [searchQuery, setSearchQuery] = useState('');
     const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
-    const { ingredients, ingredientsLoading } = useGetIngredients(debouncedSearchQuery);
-    const { ingredientGroups } = useGetIngredientGroups();
+    const [paginationModel, setPaginationModel] = useState<GridPaginationModel>({
+        page: 0,
+        pageSize: 20,
+    });
+    const { ingredients, ingredientsLoading, ingredientsTotal } = useGetIngredients(
+        debouncedSearchQuery,
+        {
+            limit: paginationModel.pageSize,
+            offset: paginationModel.page * paginationModel.pageSize,
+        }
+    );
     const { deleteIngredient } = useDeleteIngredient();
-    const { stocks } = useGetIngredientStocks();
+    const { stocks } = useGetIngredientStocks({ includeIngredientMeta: false });
 
     const [viewModalOpen, setViewModalOpen] = useState(false);
     const [selectedIngredient, setSelectedIngredient] = useState<IIngredientItem | null>(null);
@@ -225,6 +234,9 @@ export function IngredientListView() {
 
         return () => clearTimeout(timeout);
     }, [searchQuery]);
+    useEffect(() => {
+        setPaginationModel((prev) => ({ ...prev, page: 0 }));
+    }, [debouncedSearchQuery]);
 
     // Columns configuration
     const columns = useMemo<GridColDef[]>(
@@ -373,8 +385,9 @@ export function IngredientListView() {
                         {t('warehouse.group')}
                     </Typography>
                     <Typography variant="body2">
-                        {ingredientGroups.find((g) => g.id === ingredient.group_id)?.name ||
+                        {ingredient._expand?.group_id?.name ||
                             ingredient.group_name ||
+                            ingredient.group_id ||
                             '-'}
                     </Typography>
                 </Box>
@@ -418,7 +431,7 @@ export function IngredientListView() {
                 )}
             </Box>
         );
-    }, [t, ingredientGroups, stocks]);
+    }, [t, stocks]);
 
     return (
         <>
@@ -426,6 +439,11 @@ export function IngredientListView() {
                 data={Array.isArray(ingredients) ? ingredients : []}
                 loading={ingredientsLoading}
                 columns={columns}
+                paginationMode="server"
+                rowCount={ingredientsTotal || 0}
+                paginationModel={paginationModel}
+                onPaginationModelChange={setPaginationModel}
+                pageSizeOptions={[10, 20, 50, 100]}
                 breadcrumbs={{
                     heading: t('warehouse.ingredients'),
                     links: [

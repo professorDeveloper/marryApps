@@ -45,9 +45,10 @@ function enrichIngredientStocks(
 /**
  * Get all ingredient stocks
  */
-export function useGetIngredientStocks() {
+export function useGetIngredientStocks(options?: { includeIngredientMeta?: boolean }) {
     const url = endpoints.ingredientStock.list;
-    const { ingredients } = useGetIngredientsForStock();
+    const includeIngredientMeta = options?.includeIngredientMeta !== false;
+    const { ingredients } = useGetIngredientsForStock(includeIngredientMeta);
 
     const { data, isLoading, error, isValidating } = useSWR<IIngredientStockResponse>(
         url,
@@ -110,11 +111,11 @@ export function useGetIngredientStock(stockId: string) {
 /**
  * Helper hook to get ingredients for enrichment
  */
-function useGetIngredientsForStock() {
+function useGetIngredientsForStock(enabled: boolean) {
     const url = endpoints.ingredient.list;
 
     const { data } = useSWR<{ data: IIngredientItem[] }>(
-        url,
+        enabled ? url : null,
         fetcher,
         { ...swrOptions }
     );

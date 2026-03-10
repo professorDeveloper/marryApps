@@ -83,6 +83,10 @@ export type IDepartmentItem = {
   created_at: string;
   updated_at: string;
   storage_name?: string; // Enriched from storage
+  _expand?: {
+    name_i18n?: ITranslationItem;
+    storage_id?: IStorageItem;
+  };
 };
 
 export type IDepartmentFormData = {
@@ -121,6 +125,18 @@ export type IStorageItem = {
   picture_url: string;
   created_at: string;
   updated_at: string;
+  _expand?: {
+    name_i18n?: ITranslationItem;
+    branch_id?: {
+      id: string;
+      name?: string;
+      name_i18n?: string | null;
+      address?: string;
+      phone?: string;
+      created_at?: string;
+      updated_at?: string;
+    };
+  };
 };
 
 export type IStorageFormData = {

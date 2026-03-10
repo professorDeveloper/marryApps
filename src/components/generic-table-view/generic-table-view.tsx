@@ -4,6 +4,7 @@ import type {
   GridFilterModel,
   GridRowSelectionModel,
   GridColumnVisibilityModel,
+  GridPaginationModel,
 } from '@mui/x-data-grid';
 
 import { useBoolean, useSetState } from 'minimal-shared/hooks';
@@ -99,6 +100,13 @@ export interface GenericTableConfig<T = any> {
 
   // Optional quick filter callback for server-side search
   onQuickFilterChange?: (value: string) => void;
+
+  // Server-side pagination (optional)
+  paginationMode?: 'client' | 'server';
+  rowCount?: number;
+  paginationModel?: GridPaginationModel;
+  onPaginationModelChange?: (model: GridPaginationModel) => void;
+  pageSizeOptions?: number[];
 }
 
 export function GenericTableView<T extends Record<string, any>>({
@@ -121,6 +129,11 @@ export function GenericTableView<T extends Record<string, any>>({
   hideCheckboxes = false,
   renderFilters,
   onQuickFilterChange,
+  paginationMode,
+  rowCount,
+  paginationModel,
+  onPaginationModelChange,
+  pageSizeOptions,
 }: GenericTableConfig<T>) {
   const confirmDialog = useBoolean();
   const toolbarOptions = useToolbarSettings();
@@ -290,6 +303,8 @@ export function GenericTableView<T extends Record<string, any>>({
     [renderToolbar, DefaultToolbarSlot]
   );
 
+  const useControlledPagination = Boolean(paginationModel && onPaginationModelChange);
+
   const handleFilterModelChange = useCallback(
     (model: GridFilterModel) => {
       if (!onQuickFilterChange) return;
@@ -363,8 +378,14 @@ export function GenericTableView<T extends Record<string, any>>({
             loading={loading}
             getRowHeight={() => 'auto'}
             getRowId={(row) => row?.[idField]}
-            pageSizeOptions={[10, 20, 50, 100, 500]}
-            initialState={{ pagination: { paginationModel: { pageSize: 20 } } }}
+            pageSizeOptions={pageSizeOptions || [10, 20, 50, 100, 500]}
+            paginationMode={paginationMode}
+            rowCount={typeof rowCount === 'number' ? rowCount : undefined}
+            paginationModel={useControlledPagination ? paginationModel : undefined}
+            onPaginationModelChange={useControlledPagination ? onPaginationModelChange : undefined}
+            initialState={
+              useControlledPagination ? undefined : { pagination: { paginationModel: { pageSize: 20 } } }
+            }
             columnVisibilityModel={columnVisibilityModel}
             onColumnVisibilityModelChange={(newModel) => setColumnVisibilityModel(newModel)}
             onFilterModelChange={handleFilterModelChange}

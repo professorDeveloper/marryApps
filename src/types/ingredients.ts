@@ -10,6 +10,19 @@ export interface IIngredientItem {
     created_at: string;
     updated_at: string;
     group_name?: string; // Enriched from ingredient groups
+    _expand?: {
+        group_id?: IIngredientGroup;
+        name_i18n?: {
+            id: string;
+            en?: string;
+            ru?: string;
+            uz?: string;
+            'uz-Latn'?: string;
+            'uz-Cyrl'?: string;
+            created_at?: string;
+            updated_at?: string;
+        };
+    };
 }
 
 export interface IIngredientFormData {
@@ -40,6 +53,15 @@ export interface IIngredientResponse {
     status: string;
     message: string;
     data: IIngredientItem[];
+    pagination?: {
+        total?: number;
+        limit?: number;
+        offset?: number;
+        total_pages?: number;
+    };
+    total?: number;
+    limit?: number;
+    offset?: number;
     code: number;
 }
 

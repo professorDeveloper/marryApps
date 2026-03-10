@@ -36,6 +36,15 @@ interface BackendResponse<T> {
   message: string;
   data: T;
   code: number;
+  pagination?: {
+    total?: number;
+    limit?: number;
+    offset?: number;
+    total_pages?: number;
+  };
+  total?: number;
+  limit?: number;
+  offset?: number;
 }
 
 /**
@@ -75,7 +84,9 @@ function enrichDepartments(
   };
 
   return departmentsData.map((dept) => {
-    const translation = dept.name_i18n ? translationMap.get(dept.name_i18n) : null;
+    const translation =
+      dept._expand?.name_i18n || (dept.name_i18n ? translationMap.get(dept.name_i18n) : null);
+    const expandedStorageName = dept._expand?.storage_id?.name;
 
     // Get translated name based on current language
     let displayName = dept.name;
@@ -95,7 +106,7 @@ function enrichDepartments(
     return {
       ...dept,
       name: displayName,
-      storage_name: storageMap.get(dept.storage_id) || '-',
+      storage_name: expandedStorageName || storageMap.get(dept.storage_id) || '-',
     };
   });
 }
@@ -103,29 +114,24 @@ function enrichDepartments(
 /**
  * Get all departments
  */
-export function useGetDepartments(searchQuery?: string) {
+export function useGetDepartments(
+  searchQuery?: string,
+  options?: { limit?: number; offset?: number; expand?: string }
+) {
   const { i18n } = useTranslation();
 
-  // Get storages for enrichment
-  const { storages } = useGetStorages();
-
-  // Get translations
-  const { data: translationsData } = useSWR<BackendResponse<ITranslationItem[]>>(
-    endpoints.translations.list,
-    fetcher,
-    { ...swrOptions }
-  );
-
-  const translations = useMemo(() => {
-    if (!translationsData) return [];
-    if (Array.isArray(translationsData)) return translationsData;
-    return translationsData.data || [];
-  }, [translationsData]);
+  const expand = options?.expand || 'storage_id,name_i18n';
 
   const normalizedQuery = searchQuery?.trim() || '';
+  const params = {
+    ...(normalizedQuery ? { q: normalizedQuery } : {}),
+    ...(typeof options?.limit === 'number' ? { limit: options?.limit } : {}),
+    ...(typeof options?.offset === 'number' ? { offset: options?.offset } : {}),
+    expand,
+  };
   const swrKey = normalizedQuery
-    ? [endpoints.department.search, { params: { q: normalizedQuery } }]
-    : endpoints.department.list;
+    ? [endpoints.department.search, { params }]
+    : [endpoints.department.list, { params }];
 
   const { data, isLoading, error, isValidating } = useSWR<BackendResponse<IDepartmentItem[]> | IDepartmentItem[]>(
     swrKey,
@@ -133,26 +139,79 @@ export function useGetDepartments(searchQuery?: string) {
     { ...swrOptions }
   );
 
-  const enrichedDepartments = useMemo(() => {
-    let departments: IDepartmentItem[] = [];
+  const departments = useMemo(() => {
     if (Array.isArray(data)) {
-      departments = data;
-    } else if (Array.isArray(data?.data)) {
-      departments = data.data;
+      return data;
     }
+    if (Array.isArray(data?.data)) {
+      return data.data;
+    }
+    return [];
+  }, [data]);
+
+  const pagination = useMemo(() => {
+    if (!data || Array.isArray(data)) {
+      const fallbackTotal = departments.length;
+      return {
+        total: fallbackTotal,
+        limit: fallbackTotal,
+        offset: 0,
+        total_pages: fallbackTotal > 0 ? 1 : 0,
+      };
+    }
+
+    const paginationData = data.pagination || {};
+    const total =
+      typeof paginationData.total === 'number'
+        ? paginationData.total
+        : typeof data.total === 'number'
+          ? data.total
+          : departments.length;
+    const limit =
+      typeof paginationData.limit === 'number'
+        ? paginationData.limit
+        : typeof data.limit === 'number'
+          ? data.limit
+          : departments.length;
+    const offset =
+      typeof paginationData.offset === 'number'
+        ? paginationData.offset
+        : typeof data.offset === 'number'
+          ? data.offset
+          : 0;
+    const total_pages =
+      typeof paginationData.total_pages === 'number'
+        ? paginationData.total_pages
+        : limit > 0
+          ? Math.ceil(total / limit)
+          : 0;
+
+    return {
+      total,
+      limit,
+      offset,
+      total_pages,
+    };
+  }, [data, departments.length]);
+
+  const enrichedDepartments = useMemo(() => {
     const currentLang = i18n.resolvedLanguage || 'en';
-    return enrichDepartments(departments, storages, translations, currentLang);
-  }, [data, storages, translations, i18n.resolvedLanguage]);
+    return enrichDepartments(departments, [], [], currentLang);
+  }, [departments, i18n.resolvedLanguage]);
 
   const memoizedValue = useMemo(
     () => ({
       departments: enrichedDepartments,
+      departmentsTotal: pagination.total,
+      departmentsLimit: pagination.limit,
+      departmentsOffset: pagination.offset,
+      departmentsTotalPages: pagination.total_pages,
       departmentsLoading: isLoading,
       departmentsError: error,
       departmentsValidating: isValidating,
       departmentsEmpty: !isLoading && !isValidating && !enrichedDepartments.length,
     }),
-    [enrichedDepartments, error, isLoading, isValidating]
+    [enrichedDepartments, pagination, error, isLoading, isValidating]
   );
 
   return memoizedValue;
@@ -421,26 +480,22 @@ export function useGetCategoriesByDepartment(departmentId: string) {
 /**
  * Get all storages
  */
-export function useGetStorages(searchQuery?: string) {
+export function useGetStorages(
+  searchQuery?: string,
+  options?: { limit?: number; offset?: number; expand?: string }
+) {
   const { i18n } = useTranslation();
 
-  // Get translations
-  const { data: translationsData } = useSWR<BackendResponse<ITranslationItem[]>>(
-    endpoints.translations.list,
-    fetcher,
-    { ...swrOptions }
-  );
-
-  const translations = useMemo(() => {
-    if (!translationsData) return [];
-    if (Array.isArray(translationsData)) return translationsData;
-    return translationsData.data || [];
-  }, [translationsData]);
-
   const normalizedQuery = searchQuery?.trim() || '';
+  const params = {
+    ...(normalizedQuery ? { q: normalizedQuery } : {}),
+    ...(typeof options?.limit === 'number' ? { limit: options.limit } : {}),
+    ...(typeof options?.offset === 'number' ? { offset: options.offset } : {}),
+    expand: options?.expand || 'name_i18n,branch_id',
+  };
   const swrKey = normalizedQuery
-    ? [endpoints.storage.search, { params: { q: normalizedQuery } }]
-    : endpoints.storage.list;
+    ? [endpoints.storage.search, { params }]
+    : [endpoints.storage.list, { params }];
 
   const { data, isLoading, error, isValidating } = useSWR<BackendResponse<IStorageItem[]> | IStorageItem[]>(
     swrKey,
@@ -480,7 +535,7 @@ export function useGetStorages(searchQuery?: string) {
 
     // Enrich storages with translations
     return storageList.map((storage) => {
-      const translation = storage.name_i18n ? translations.find((t) => t.id === storage.name_i18n) : null;
+      const translation = storage._expand?.name_i18n || null;
 
       let displayName = storage.name;
       if (translation) {
@@ -499,17 +554,66 @@ export function useGetStorages(searchQuery?: string) {
         name: displayName,
       };
     });
-  }, [data, translations, i18n.resolvedLanguage]);
+  }, [data, i18n.resolvedLanguage]);
+
+  const pagination = useMemo(() => {
+    if (!data || Array.isArray(data)) {
+      const fallbackTotal = storages.length;
+      return {
+        total: fallbackTotal,
+        limit: fallbackTotal,
+        offset: 0,
+        total_pages: fallbackTotal > 0 ? 1 : 0,
+      };
+    }
+
+    const paginationData = data.pagination || {};
+    const total =
+      typeof paginationData.total === 'number'
+        ? paginationData.total
+        : typeof data.total === 'number'
+          ? data.total
+          : storages.length;
+    const limit =
+      typeof paginationData.limit === 'number'
+        ? paginationData.limit
+        : typeof data.limit === 'number'
+          ? data.limit
+          : storages.length;
+    const offset =
+      typeof paginationData.offset === 'number'
+        ? paginationData.offset
+        : typeof data.offset === 'number'
+          ? data.offset
+          : 0;
+    const total_pages =
+      typeof paginationData.total_pages === 'number'
+        ? paginationData.total_pages
+        : limit > 0
+          ? Math.ceil(total / limit)
+          : 0;
+
+    return {
+      total,
+      limit,
+      offset,
+      total_pages,
+    };
+  }, [data, storages.length]);
 
   const memoizedValue = useMemo(
     () => ({
       storages,
+      storagesTotal: pagination.total,
+      storagesLimit: pagination.limit,
+      storagesOffset: pagination.offset,
+      storagesTotalPages: pagination.total_pages,
       storagesLoading: isLoading,
       storagesError: error,
       storagesValidating: isValidating,
       storagesEmpty: !isLoading && !isValidating && !storages.length,
     }),
-    [storages, error, isLoading, isValidating]
+    [storages, pagination, error, isLoading, isValidating]
   );
 
   return memoizedValue;

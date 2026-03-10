@@ -58,19 +58,31 @@ function enrichIngredients(
 
     return ingredientsData.map((ingredient) => ({
         ...ingredient,
-        group_name: groupMap.get(ingredient.group_id) || ingredient.group_id || '-',
+        group_name:
+            ingredient._expand?.group_id?.name ||
+            groupMap.get(ingredient.group_id) ||
+            ingredient.group_id ||
+            '-',
     }));
 }
 
 /**
  * Get all ingredients
  */
-export function useGetIngredients(searchQuery?: string) {
+export function useGetIngredients(
+    searchQuery?: string,
+    options?: { limit?: number; offset?: number; expand?: string }
+) {
     const normalizedQuery = searchQuery?.trim() || '';
+    const params = {
+        ...(normalizedQuery ? { search: normalizedQuery } : {}),
+        ...(typeof options?.limit === 'number' ? { limit: options.limit } : {}),
+        ...(typeof options?.offset === 'number' ? { offset: options.offset } : {}),
+        expand: options?.expand || 'group_id,name_i18n',
+    };
     const url = normalizedQuery
-        ? [endpoints.ingredient.list, { params: { search: normalizedQuery } }]
-        : endpoints.ingredient.list;
-    const { ingredientGroups } = useGetIngredientGroups();
+        ? [endpoints.ingredient.list, { params }]
+        : [endpoints.ingredient.list, { params }];
 
     const { data, isLoading, error, isValidating } = useSWR<IIngredientResponse>(
         url,
@@ -80,18 +92,52 @@ export function useGetIngredients(searchQuery?: string) {
 
     const enrichedIngredients = useMemo(() => {
         const ingredients = data?.data || [];
-        return enrichIngredients(ingredients, ingredientGroups);
-    }, [data?.data, ingredientGroups]);
+        return enrichIngredients(ingredients, []);
+    }, [data?.data]);
+
+    const pagination = useMemo(() => {
+        const paginationData = data?.pagination || {};
+        const total =
+            typeof paginationData.total === 'number'
+                ? paginationData.total
+                : typeof data?.total === 'number'
+                    ? data?.total
+                    : enrichedIngredients.length;
+        const limit =
+            typeof paginationData.limit === 'number'
+                ? paginationData.limit
+                : typeof data?.limit === 'number'
+                    ? data?.limit
+                    : enrichedIngredients.length;
+        const offset =
+            typeof paginationData.offset === 'number'
+                ? paginationData.offset
+                : typeof data?.offset === 'number'
+                    ? data?.offset
+                    : 0;
+        const total_pages =
+            typeof paginationData.total_pages === 'number'
+                ? paginationData.total_pages
+                : limit > 0
+                    ? Math.ceil(total / limit)
+                    : 0;
+
+        return { total, limit, offset, total_pages };
+    }, [data?.pagination, data?.total, data?.limit, data?.offset, enrichedIngredients.length]);
 
     const memoizedValue = useMemo(
         () => ({
             ingredients: enrichedIngredients,
+            ingredientsTotal: pagination.total,
+            ingredientsLimit: pagination.limit,
+            ingredientsOffset: pagination.offset,
+            ingredientsTotalPages: pagination.total_pages,
             ingredientsLoading: isLoading,
             ingredientsError: error,
             ingredientsValidating: isValidating,
             ingredientsEmpty: !isLoading && !isValidating && !enrichedIngredients.length,
         }),
-        [enrichedIngredients, error, isLoading, isValidating]
+        [enrichedIngredients, pagination, error, isLoading, isValidating]
     );
 
     return memoizedValue;
@@ -102,7 +148,6 @@ export function useGetIngredients(searchQuery?: string) {
  */
 export function useGetIngredient(ingredientId: string) {
     const url = ingredientId ? endpoints.ingredient.details(ingredientId) : '';
-    const { ingredientGroups } = useGetIngredientGroups();
 
     const { data, isLoading, error, isValidating } = useSWR<IIngredientResponse>(
         url,
@@ -114,8 +159,8 @@ export function useGetIngredient(ingredientId: string) {
         if (!data?.data) return null;
         const ingredient = Array.isArray(data.data) ? data.data[0] : data.data;
         if (!ingredient) return null;
-        return enrichIngredients([ingredient], ingredientGroups)[0];
-    }, [data?.data, ingredientGroups]);
+        return enrichIngredients([ingredient], [])[0];
+    }, [data?.data]);
 
     const memoizedValue = useMemo(
         () => ({

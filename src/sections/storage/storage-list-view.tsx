@@ -1,4 +1,4 @@
-import type { GridColDef } from '@mui/x-data-grid';
+import type { GridColDef, GridPaginationModel } from '@mui/x-data-grid';
 import { useMemo, useCallback, useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Avatar, Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, ListItemText } from '@mui/material';
@@ -9,7 +9,6 @@ import { CustomGridActionsCellItem } from 'src/components/custom-data-grid';
 import { GenericTableView } from 'src/components/generic-table-view';
 import { toast } from 'src/components/snackbar';
 import { useDeleteStorage, useGetStorages } from 'src/actions/departments';
-import { useGetBranches } from 'src/actions/branches';
 import { getFullImageUrl } from 'src/utils/image-url';
 import { getAvatarColor, getInitials } from 'src/utils/avatar';
 
@@ -121,8 +120,14 @@ export function WarehouseListView() {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
-  const { storages, storagesLoading } = useGetStorages(debouncedSearchQuery);
-  const { branches } = useGetBranches();
+  const [paginationModel, setPaginationModel] = useState<GridPaginationModel>({
+    page: 0,
+    pageSize: 20,
+  });
+  const { storages, storagesLoading, storagesTotal } = useGetStorages(debouncedSearchQuery, {
+    limit: paginationModel.pageSize,
+    offset: paginationModel.page * paginationModel.pageSize,
+  });
   const { deleteStorage } = useDeleteStorage();
 
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -135,16 +140,9 @@ export function WarehouseListView() {
 
     return () => clearTimeout(timeout);
   }, [searchQuery]);
-
-  const branchNameById = useMemo(() => {
-    const map = new Map<string, string>();
-    (branches || []).forEach((b) => {
-      if (b.id) {
-        map.set(b.id, b.name || b.id);
-      }
-    });
-    return map;
-  }, [branches]);
+  useEffect(() => {
+    setPaginationModel((prev) => ({ ...prev, page: 0 }));
+  }, [debouncedSearchQuery]);
 
   const handleEdit = useCallback(
     (id: string) => {
@@ -181,7 +179,7 @@ export function WarehouseListView() {
         headerName: t('warehouse.branch', 'Branch'),
         width: 220,
         valueGetter: (_value, row) =>
-          row.branch_id ? branchNameById.get(row.branch_id) || row.branch_id : '-',
+          row?._expand?.branch_id?.name || row.branch_id || '-',
       },
       {
         field: 'color_code',
@@ -227,7 +225,7 @@ export function WarehouseListView() {
         ],
       },
     ],
-    [branchNameById, handleEdit, t]
+    [handleEdit, t]
   );
 
   return (
@@ -236,6 +234,11 @@ export function WarehouseListView() {
         data={Array.isArray(storages) ? storages : []}
         loading={storagesLoading}
         columns={columns}
+        paginationMode="server"
+        rowCount={storagesTotal || 0}
+        paginationModel={paginationModel}
+        onPaginationModelChange={setPaginationModel}
+        pageSizeOptions={[10, 20, 50, 100]}
         breadcrumbs={{
           heading: t('overview.warehouse.storage', 'Storage'),
           links: [

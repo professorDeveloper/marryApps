@@ -1,4 +1,4 @@
-import type { GridColDef } from '@mui/x-data-grid';
+import type { GridColDef, GridPaginationModel } from '@mui/x-data-grid';
 import type { IDepartmentItem } from 'src/types/departments.tsx';
 import { useTranslation } from 'react-i18next';
 import { useMemo, useState, useCallback, useEffect } from 'react';
@@ -6,7 +6,7 @@ import { useTheme } from '@mui/material/styles';
 import { Avatar, Button, Dialog, DialogTitle, DialogActions, DialogContent, Box, ListItemText } from '@mui/material';
 import { paths } from 'src/routes/paths';
 import { useRouter } from 'src/routes/hooks';
-import { useGetStorages, useGetDepartments, useDeleteDepartment, useGetCategoriesByDepartment } from 'src/actions/departments';
+import { useGetDepartments, useDeleteDepartment, useGetCategoriesByDepartment } from 'src/actions/departments';
 import { toast } from 'src/components/snackbar';
 import { Iconify } from 'src/components/iconify';
 import { GenericTableView } from 'src/components/generic-table-view';
@@ -327,6 +327,10 @@ export function ProductListView() {
   const [departmentToDelete, setDepartmentToDelete] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
+  const [paginationModel, setPaginationModel] = useState<GridPaginationModel>({
+    page: 0,
+    pageSize: 20,
+  });
 
   // Debounce quick filter input before hitting search API
   useEffect(() => {
@@ -338,10 +342,17 @@ export function ProductListView() {
   }, [searchQuery]);
 
   // Get departments from API (supports server-side search)
-  const { departments, departmentsLoading, departmentsError } = useGetDepartments(debouncedSearchQuery);
+  const { departments, departmentsLoading, departmentsError, departmentsTotal } = useGetDepartments(
+    debouncedSearchQuery,
+    {
+      limit: paginationModel.pageSize,
+      offset: paginationModel.page * paginationModel.pageSize,
+    }
+  );
 
-  // Pre-load storages to ensure data is cached
-  useGetStorages();
+  useEffect(() => {
+    setPaginationModel((prev) => ({ ...prev, page: 0 }));
+  }, [debouncedSearchQuery]);
 
   // Columns configuration
   const columns = useMemo<GridColDef[]>(
@@ -464,6 +475,11 @@ export function ProductListView() {
         data={Array.isArray(departments) ? departments : []}
         loading={departmentsLoading}
         columns={columns}
+        paginationMode="server"
+        rowCount={departmentsTotal || 0}
+        paginationModel={paginationModel}
+        onPaginationModelChange={setPaginationModel}
+        pageSizeOptions={[10, 20, 50, 100]}
         breadcrumbs={{
           heading: t('departments.title'),
           links: [
