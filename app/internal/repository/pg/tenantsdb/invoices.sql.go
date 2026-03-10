@@ -40,6 +40,44 @@ func (q *Queries) CancelInvoice(ctx context.Context, id uuid.UUID) (Invoice, err
 	return i, err
 }
 
+const countFilteredInvoices = `-- name: CountFilteredInvoices :one
+SELECT COUNT(*) FROM invoices i
+WHERE i.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  AND i.deleted_at = 0
+  AND ($1::timestamp IS NULL OR i.date >= $1)
+  AND ($2::timestamp IS NULL OR i.date <= $2)
+  AND (NULLIF($3::text, '')::uuid IS NULL OR i.storage_id = NULLIF($3::text, '')::uuid)
+  AND (NULLIF($4::text, '')::uuid IS NULL OR i.supplier_id = NULLIF($4::text, '')::uuid)
+  AND ($5 = '' OR i.status::text = $5)
+  AND (NULLIF($6::text, '')::uuid IS NULL OR EXISTS (
+    SELECT 1 FROM invoice_detailed id_t
+    WHERE id_t.invoice_id = i.id AND id_t.ingredient_id = NULLIF($6::text, '')::uuid AND id_t.deleted_at = 0
+  ))
+`
+
+type CountFilteredInvoicesParams struct {
+	Column1 pgtype.Timestamp `json:"column_1"`
+	Column2 pgtype.Timestamp `json:"column_2"`
+	Column3 string           `json:"column_3"`
+	Column4 string           `json:"column_4"`
+	Column5 interface{}      `json:"column_5"`
+	Column6 string           `json:"column_6"`
+}
+
+func (q *Queries) CountFilteredInvoices(ctx context.Context, arg CountFilteredInvoicesParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countFilteredInvoices,
+		arg.Column1,
+		arg.Column2,
+		arg.Column3,
+		arg.Column4,
+		arg.Column5,
+		arg.Column6,
+	)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const countInvoiceDetails = `-- name: CountInvoiceDetails :one
 SELECT COUNT(*) FROM invoice_detailed
 WHERE deleted_at = 0
@@ -290,6 +328,75 @@ type GetAllInvoicesParams struct {
 
 func (q *Queries) GetAllInvoices(ctx context.Context, arg GetAllInvoicesParams) ([]Invoice, error) {
 	rows, err := q.db.Query(ctx, getAllInvoices, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Invoice
+	for rows.Next() {
+		var i Invoice
+		if err := rows.Scan(
+			&i.ID,
+			&i.SupplierID,
+			&i.StorageID,
+			&i.BranchID,
+			&i.TotalAmount,
+			&i.Status,
+			&i.Date,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.DeletedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getFilteredInvoices = `-- name: GetFilteredInvoices :many
+SELECT i.id, i.supplier_id, i.storage_id, i.branch_id, i.total_amount, i.status, i.date, i.created_at, i.updated_at, i.deleted_at
+FROM invoices i
+WHERE i.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  AND i.deleted_at = 0
+  AND ($1::timestamp IS NULL OR i.date >= $1)
+  AND ($2::timestamp IS NULL OR i.date <= $2)
+  AND (NULLIF($3::text, '')::uuid IS NULL OR i.storage_id = NULLIF($3::text, '')::uuid)
+  AND (NULLIF($4::text, '')::uuid IS NULL OR i.supplier_id = NULLIF($4::text, '')::uuid)
+  AND ($5 = '' OR i.status::text = $5)
+  AND (NULLIF($6::text, '')::uuid IS NULL OR EXISTS (
+    SELECT 1 FROM invoice_detailed id_t
+    WHERE id_t.invoice_id = i.id AND id_t.ingredient_id = NULLIF($6::text, '')::uuid AND id_t.deleted_at = 0
+  ))
+ORDER BY i.date DESC
+LIMIT $7 OFFSET $8
+`
+
+type GetFilteredInvoicesParams struct {
+	Column1 pgtype.Timestamp `json:"column_1"`
+	Column2 pgtype.Timestamp `json:"column_2"`
+	Column3 string           `json:"column_3"`
+	Column4 string           `json:"column_4"`
+	Column5 interface{}      `json:"column_5"`
+	Column6 string           `json:"column_6"`
+	Limit   int32            `json:"limit"`
+	Offset  int32            `json:"offset"`
+}
+
+func (q *Queries) GetFilteredInvoices(ctx context.Context, arg GetFilteredInvoicesParams) ([]Invoice, error) {
+	rows, err := q.db.Query(ctx, getFilteredInvoices,
+		arg.Column1,
+		arg.Column2,
+		arg.Column3,
+		arg.Column4,
+		arg.Column5,
+		arg.Column6,
+		arg.Limit,
+		arg.Offset,
+	)
 	if err != nil {
 		return nil, err
 	}

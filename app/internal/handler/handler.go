@@ -541,22 +541,14 @@ func (h *Handler) Register(router *echo.Echo) {
 			invoices.POST("", h.CreateSupplierInvoice, mw.CheckLanguage())
 			invoices.POST("/batch", h.CreateInvoiceWithDetails, mw.CheckLanguage())
 			invoices.GET("", h.GetAllInvoices, mw.CheckLanguage())
-			invoices.GET("/:id", h.GetInvoice, mw.CheckLanguage())
-			invoices.GET("/status/:status", h.GetInvoicesByStatus, mw.CheckLanguage())
-			invoices.GET("/supplier/:supplier_id", h.GetInvoicesBySupplier, mw.CheckLanguage())
-			invoices.GET("/date-range", h.GetInvoicesByDateRange, mw.CheckLanguage())
 			invoices.GET("/search", h.SearchInvoices, mw.CheckLanguage())
+			invoices.GET("/:id", h.GetInvoice, mw.CheckLanguage())
 			invoices.PUT("/:id", h.UpdateInvoice, mw.CheckLanguage())
 			invoices.PATCH("/:id/status", h.UpdateInvoiceStatus, mw.CheckLanguage())
-			invoices.POST("/:id/mark-arrived", h.MarkInvoiceArrived, mw.CheckLanguage())
-			invoices.POST("/:id/mark-received", h.MarkInvoiceReceived, mw.CheckLanguage())
-			invoices.POST("/:id/cancel", h.CancelInvoice, mw.CheckLanguage())
 			invoices.DELETE("/:id", h.DeleteInvoice, mw.CheckLanguage())
 			invoices.POST("/:id/restore", h.RestoreInvoice, mw.CheckLanguage())
 			invoices.GET("/:id/details", h.GetInvoiceWithDetails, mw.CheckLanguage())
 			invoices.PUT("/:id/details/batch", h.UpsertInvoiceDetails, mw.CheckLanguage())
-			invoices.GET("/stats/supplier", h.GetInvoiceStatsBySupplier, mw.CheckLanguage())
-			invoices.GET("/stats/date-range", h.GetInvoiceStatsByDateRange, mw.CheckLanguage())
 		}
 
 		// Invoice detail endpoints

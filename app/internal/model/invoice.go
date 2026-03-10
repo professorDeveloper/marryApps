@@ -2,6 +2,15 @@ package model
 
 import "time"
 
+type InvoiceFilter struct {
+	DateFrom     *string // "2024-01-01" or RFC3339
+	DateTo       *string
+	StorageID    string
+	SupplierID   string
+	IngredientID string
+	Status       string
+}
+
 type InvoiceStatus string
 
 const (

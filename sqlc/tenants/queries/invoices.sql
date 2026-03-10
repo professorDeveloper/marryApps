@@ -113,6 +113,37 @@ WHERE invoices.id = $1
 SELECT COUNT(*) FROM invoices
 WHERE branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid;
 
+-- name: GetFilteredInvoices :many
+SELECT i.id, i.supplier_id, i.storage_id, i.branch_id, i.total_amount, i.status, i.date, i.created_at, i.updated_at, i.deleted_at
+FROM invoices i
+WHERE i.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  AND i.deleted_at = 0
+  AND ($1::timestamp IS NULL OR i.date >= $1)
+  AND ($2::timestamp IS NULL OR i.date <= $2)
+  AND (NULLIF($3::text, '')::uuid IS NULL OR i.storage_id = NULLIF($3::text, '')::uuid)
+  AND (NULLIF($4::text, '')::uuid IS NULL OR i.supplier_id = NULLIF($4::text, '')::uuid)
+  AND ($5 = '' OR i.status::text = $5)
+  AND (NULLIF($6::text, '')::uuid IS NULL OR EXISTS (
+    SELECT 1 FROM invoice_detailed id_t
+    WHERE id_t.invoice_id = i.id AND id_t.ingredient_id = NULLIF($6::text, '')::uuid AND id_t.deleted_at = 0
+  ))
+ORDER BY i.date DESC
+LIMIT $7 OFFSET $8;
+
+-- name: CountFilteredInvoices :one
+SELECT COUNT(*) FROM invoices i
+WHERE i.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  AND i.deleted_at = 0
+  AND ($1::timestamp IS NULL OR i.date >= $1)
+  AND ($2::timestamp IS NULL OR i.date <= $2)
+  AND (NULLIF($3::text, '')::uuid IS NULL OR i.storage_id = NULLIF($3::text, '')::uuid)
+  AND (NULLIF($4::text, '')::uuid IS NULL OR i.supplier_id = NULLIF($4::text, '')::uuid)
+  AND ($5 = '' OR i.status::text = $5)
+  AND (NULLIF($6::text, '')::uuid IS NULL OR EXISTS (
+    SELECT 1 FROM invoice_detailed id_t
+    WHERE id_t.invoice_id = i.id AND id_t.ingredient_id = NULLIF($6::text, '')::uuid AND id_t.deleted_at = 0
+  ));
+
 -- name: CountInvoicesByStatus :one
 SELECT COUNT(*) FROM invoices
 WHERE status = $1

@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"math/big"
-	"strconv"
 	"strings"
 	"time"
 
@@ -103,56 +102,57 @@ func (s *InvoiceS) GetInvoiceByID(ctx context.Context, id string) (*model.Invoic
 }
 
 // GetAllInvoices retrieves all invoices with pagination
-func (s *InvoiceS) GetAllInvoices(ctx context.Context, limit, offset int32) ([]*model.InvoiceResponse, error) {
-	invoices, err := s.repo.Tenant(ctx).GetAllInvoices(ctx, pg.GetAllInvoicesParams{
-		Limit:  limit,
-		Offset: offset,
-	})
-	if err != nil {
-		return nil, fmt.Errorf("failed to get invoices: %w", err)
-	}
-
-	var responses []*model.InvoiceResponse
-	for _, invoice := range invoices {
-		responses = append(responses, toInvoiceResponse(invoice))
-	}
-
-	return responses, nil
-}
-
-// GetInvoicesByStatus retrieves invoices by status
-func (s *InvoiceS) GetInvoicesByStatus(ctx context.Context, status string, limit, offset int32) ([]*model.InvoiceResponse, error) {
-	invoiceStatus := pg.NullInvoiceStatus{
-		InvoiceStatus: pg.InvoiceStatus(status),
-		Valid:         true,
-	}
-
-	invoices, err := s.repo.Tenant(ctx).GetInvoicesByStatus(ctx, pg.GetInvoicesByStatusParams{
-		Status: invoiceStatus,
-		Limit:  limit,
-		Offset: offset,
-	})
-	if err != nil {
-		return nil, fmt.Errorf("failed to get invoices by status: %w", err)
-	}
-
-	var responses []*model.InvoiceResponse
-	for _, invoice := range invoices {
-		responses = append(responses, toInvoiceResponse(invoice))
-	}
-
-	return responses, nil
-}
-
-// GetInvoicesBySupplier retrieves invoices by supplier name
-func (s *InvoiceS) GetInvoicesBySupplier(ctx context.Context, supplierName string, limit, offset int32) ([]*model.InvoiceResponse, error) {
-	invoices, err := s.repo.Tenant(ctx).GetInvoicesBySupplier(ctx, pg.GetInvoicesBySupplierParams{
-		Column1: &supplierName,
+func (s *InvoiceS) GetAllInvoices(ctx context.Context, filter model.InvoiceFilter, limit, offset int32) ([]*model.InvoiceResponse, int64, error) {
+	params := pg.GetFilteredInvoicesParams{
 		Limit:   limit,
 		Offset:  offset,
-	})
+		Column3: filter.StorageID,
+		Column4: filter.SupplierID,
+		Column5: filter.Status,
+		Column6: filter.IngredientID,
+	}
+
+	if filter.DateFrom != nil && *filter.DateFrom != "" {
+		t, err := time.Parse("2006-01-02", *filter.DateFrom)
+		if err != nil {
+			t, err = time.Parse(time.RFC3339, *filter.DateFrom)
+			if err != nil {
+				return nil, 0, fmt.Errorf("invalid date_from: %w", err)
+			}
+		}
+		params.Column1 = pgtype.Timestamp{Time: t, Valid: true}
+	}
+
+	if filter.DateTo != nil && *filter.DateTo != "" {
+		t, err := time.Parse("2006-01-02", *filter.DateTo)
+		if err != nil {
+			t, err = time.Parse(time.RFC3339, *filter.DateTo)
+			if err != nil {
+				return nil, 0, fmt.Errorf("invalid date_to: %w", err)
+			}
+		}
+		// include the full end day
+		t = t.Add(24*time.Hour - time.Second)
+		params.Column2 = pgtype.Timestamp{Time: t, Valid: true}
+	}
+
+	countParams := pg.CountFilteredInvoicesParams{
+		Column1: params.Column1,
+		Column2: params.Column2,
+		Column3: params.Column3,
+		Column4: params.Column4,
+		Column5: params.Column5,
+		Column6: params.Column6,
+	}
+
+	total, err := s.repo.Tenant(ctx).CountFilteredInvoices(ctx, countParams)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get invoices by supplier: %w", err)
+		return nil, 0, fmt.Errorf("failed to count invoices: %w", err)
+	}
+
+	invoices, err := s.repo.Tenant(ctx).GetFilteredInvoices(ctx, params)
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to get invoices: %w", err)
 	}
 
 	var responses []*model.InvoiceResponse
@@ -160,36 +160,7 @@ func (s *InvoiceS) GetInvoicesBySupplier(ctx context.Context, supplierName strin
 		responses = append(responses, toInvoiceResponse(invoice))
 	}
 
-	return responses, nil
-}
-
-// GetInvoicesByDateRange retrieves invoices within a date range
-func (s *InvoiceS) GetInvoicesByDateRange(ctx context.Context, startDate, endDate time.Time, limit, offset int32) ([]*model.InvoiceResponse, error) {
-	startTS := pgtype.Timestamp{
-		Time:  startDate,
-		Valid: true,
-	}
-	endTS := pgtype.Timestamp{
-		Time:  endDate,
-		Valid: true,
-	}
-
-	invoices, err := s.repo.Tenant(ctx).GetInvoicesByDateRange(ctx, pg.GetInvoicesByDateRangeParams{
-		Date:   startTS,
-		Date_2: endTS,
-		Limit:  limit,
-		Offset: offset,
-	})
-	if err != nil {
-		return nil, fmt.Errorf("failed to get invoices by date range: %w", err)
-	}
-
-	var responses []*model.InvoiceResponse
-	for _, invoice := range invoices {
-		responses = append(responses, toInvoiceResponse(invoice))
-	}
-
-	return responses, nil
+	return responses, total, nil
 }
 
 // UpdateInvoice updates an invoice
@@ -310,51 +281,6 @@ func (s *InvoiceS) UpdateInvoiceStatus(ctx context.Context, id string, status st
 	return toInvoiceResponse(invoice), nil
 }
 
-// MarkInvoiceArrived marks an invoice as arrived
-func (s *InvoiceS) MarkInvoiceArrived(ctx context.Context, id string) (*model.InvoiceResponse, error) {
-	invoiceID, err := uuid.Parse(id)
-	if err != nil {
-		return nil, fmt.Errorf("invalid invoice id: %w", err)
-	}
-
-	invoice, err := s.repo.Tenant(ctx).MarkInvoiceArrived(ctx, invoiceID)
-	if err != nil {
-		return nil, fmt.Errorf("failed to mark invoice as arrived: %w", err)
-	}
-
-	return toInvoiceResponse(invoice), nil
-}
-
-// MarkInvoiceReceived marks an invoice as received
-func (s *InvoiceS) MarkInvoiceReceived(ctx context.Context, id string) (*model.InvoiceResponse, error) {
-	invoiceID, err := uuid.Parse(id)
-	if err != nil {
-		return nil, fmt.Errorf("invalid invoice id: %w", err)
-	}
-
-	invoice, err := s.repo.Tenant(ctx).MarkInvoiceReceived(ctx, invoiceID)
-	if err != nil {
-		return nil, fmt.Errorf("failed to mark invoice as received: %w", err)
-	}
-
-	return toInvoiceResponse(invoice), nil
-}
-
-// CancelInvoice cancels an invoice
-func (s *InvoiceS) CancelInvoice(ctx context.Context, id string) (*model.InvoiceResponse, error) {
-	invoiceID, err := uuid.Parse(id)
-	if err != nil {
-		return nil, fmt.Errorf("invalid invoice id: %w", err)
-	}
-
-	invoice, err := s.repo.Tenant(ctx).CancelInvoice(ctx, invoiceID)
-	if err != nil {
-		return nil, fmt.Errorf("failed to cancel invoice: %w", err)
-	}
-
-	return toInvoiceResponse(invoice), nil
-}
-
 // DeleteInvoice soft deletes an invoice
 func (s *InvoiceS) DeleteInvoice(ctx context.Context, id string) error {
 	invoiceID, err := uuid.Parse(id)
@@ -392,31 +318,6 @@ func (s *InvoiceS) RestoreInvoice(ctx context.Context, id string) error {
 	return nil
 }
 
-// CountInvoices counts all invoices
-func (s *InvoiceS) CountInvoices(ctx context.Context) (int64, error) {
-	count, err := s.repo.Tenant(ctx).CountInvoices(ctx)
-	if err != nil {
-		return 0, fmt.Errorf("failed to count invoices: %w", err)
-	}
-
-	return count, nil
-}
-
-// CountInvoicesByStatus counts invoices by status
-func (s *InvoiceS) CountInvoicesByStatus(ctx context.Context, status string) (int64, error) {
-	invoiceStatus := pg.NullInvoiceStatus{
-		InvoiceStatus: pg.InvoiceStatus(status),
-		Valid:         true,
-	}
-
-	count, err := s.repo.Tenant(ctx).CountInvoicesByStatus(ctx, invoiceStatus)
-	if err != nil {
-		return 0, fmt.Errorf("failed to count invoices by status: %w", err)
-	}
-
-	return count, nil
-}
-
 // SearchInvoices searches invoices
 func (s *InvoiceS) SearchInvoices(ctx context.Context, query string, limit, offset int32) ([]*model.InvoiceResponse, error) {
 	invoices, err := s.repo.Tenant(ctx).SearchInvoices(ctx, pg.SearchInvoicesParams{
@@ -449,70 +350,6 @@ func (s *InvoiceS) GetInvoiceWithDetails(ctx context.Context, id string) (*model
 	}
 
 	return toInvoiceWithDetailsResponse(invoice), nil
-}
-
-// GetInvoiceStatsBySupplier retrieves statistics by supplier
-func (s *InvoiceS) GetInvoiceStatsBySupplier(ctx context.Context, limit, offset int32) ([]*model.InvoiceStatsBySupplierResponse, error) {
-	stats, err := s.repo.Tenant(ctx).GetInvoiceStatsBySupplier(ctx, pg.GetInvoiceStatsBySupplierParams{
-		Limit:  limit,
-		Offset: offset,
-	})
-	if err != nil {
-		return nil, fmt.Errorf("failed to get invoice stats by supplier: %w", err)
-	}
-
-	var responses []*model.InvoiceStatsBySupplierResponse
-	for _, stat := range stats {
-		response := &model.InvoiceStatsBySupplierResponse{
-			SupplierName:     stat.SupplierName,
-			InvoiceCount:     stat.InvoiceCount,
-			TotalSpent:       strconv.FormatInt(stat.TotalSpent, 10),
-			AvgInvoiceAmount: strconv.FormatFloat(stat.AvgInvoiceAmount, 'f', 2, 64),
-		}
-
-		// LastOrderDate is interface{}, need to convert it
-		if stat.LastOrderDate != nil {
-			if ts, ok := stat.LastOrderDate.(time.Time); ok {
-				response.LastOrderDate = &ts
-			}
-		}
-
-		responses = append(responses, response)
-	}
-
-	return responses, nil
-}
-
-// GetInvoiceStatsByDateRange retrieves statistics for a date range
-func (s *InvoiceS) GetInvoiceStatsByDateRange(ctx context.Context, startDate, endDate time.Time) (*model.InvoiceStatsByDateRangeResponse, error) {
-	startTS := pgtype.Timestamp{
-		Time:  startDate,
-		Valid: true,
-	}
-	endTS := pgtype.Timestamp{
-		Time:  endDate,
-		Valid: true,
-	}
-
-	stats, err := s.repo.Tenant(ctx).GetInvoiceStatsByDateRange(ctx, pg.GetInvoiceStatsByDateRangeParams{
-		Date:   startTS,
-		Date_2: endTS,
-	})
-	if err != nil {
-		return nil, fmt.Errorf("failed to get invoice stats by date range: %w", err)
-	}
-
-	response := &model.InvoiceStatsByDateRangeResponse{
-		InvoiceCount:     stats.InvoiceCount,
-		TotalSpent:       strconv.FormatInt(stats.TotalSpent, 10),
-		AvgInvoiceAmount: strconv.FormatFloat(stats.AvgInvoiceAmount, 'f', 2, 64),
-		PendingCount:     stats.PendingCount,
-		ArrivedCount:     stats.ArrivedCount,
-		ReceivedCount:    stats.ReceivedCount,
-		CancelledCount:   stats.CancelledCount,
-	}
-
-	return response, nil
 }
 
 // ==================== INVOICE DETAIL METHODS ====================
