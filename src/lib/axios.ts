@@ -66,6 +66,7 @@ axiosInstance.interceptors.request.use((config) => {
     '/api/v1/storages',
     '/api/v1/ingredient-groups',
     '/api/v1/ingredients',
+    '/api/v1/ingredient-stock',
     '/api/v1/transfers',
     '/api/v1/suppliers',
     '/api/v1/deductions',
