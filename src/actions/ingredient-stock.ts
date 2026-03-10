@@ -80,7 +80,7 @@ export function useGetIngredientStocks(options?: { includeIngredientMeta?: boole
  */
 export function useGetIngredientStock(stockId: string) {
     const url = stockId ? endpoints.ingredientStock.details(stockId) : '';
-    const { ingredients } = useGetIngredientsForStock();
+    const { ingredients } = useGetIngredientsForStock(!!stockId);
 
     const { data, isLoading, error, isValidating } = useSWR<IIngredientStockResponse>(
         url,
