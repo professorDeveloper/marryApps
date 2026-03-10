@@ -6,7 +6,7 @@ import { useTheme } from '@mui/material/styles';
 import { Avatar, Button, Dialog, DialogTitle, DialogActions, DialogContent, Box, ListItemText } from '@mui/material';
 import { paths } from 'src/routes/paths';
 import { useRouter } from 'src/routes/hooks';
-import { useGetDepartments, useDeleteDepartment, useGetCategoriesByDepartment } from 'src/actions/departments';
+import { useGetDepartments, useDeleteDepartment, useGetCategoriesByDepartment, useGetStorages } from 'src/actions/departments';
 import { toast } from 'src/components/snackbar';
 import { Iconify } from 'src/components/iconify';
 import { GenericTableView } from 'src/components/generic-table-view';
