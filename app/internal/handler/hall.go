@@ -141,7 +141,7 @@ func (h *Handler) GetAllHalls(c echo.Context) error {
 		}
 	}
 
-	halls, err := h.service.Hall().GetAllHalls(c.Request().Context(), limit, offset)
+	halls, total, err := h.service.Hall().GetAllHalls(c.Request().Context(), limit, offset)
 	if err != nil {
 		log.Printf("GetAllHalls failed: %v", err)
 		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse(
@@ -151,11 +151,14 @@ func (h *Handler) GetAllHalls(c echo.Context) error {
 		))
 	}
 
-	return c.JSON(http.StatusOK, model.NewSuccessResponse(
-		"Halls retrieved successfully",
-		halls,
-		http.StatusOK,
-	))
+	if maps, expanded, err := h.expandListResponse(c, halls, "halls"); expanded {
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("expand failed", err.Error(), http.StatusInternalServerError))
+		}
+		return c.JSON(http.StatusOK, model.NewPaginatedResponse("Halls retrieved successfully", maps, int32(total), limit, offset, http.StatusOK))
+	}
+
+	return c.JSON(http.StatusOK, model.NewPaginatedResponse("Halls retrieved successfully", halls, int32(total), limit, offset, http.StatusOK))
 }
 
 // GetAllHallsWithLang retrieves all halls with language support
@@ -203,7 +206,7 @@ func (h *Handler) GetAllHallsWithLang(c echo.Context) error {
 		}
 	}
 
-	halls, err := h.service.Hall().GetAllHallsWithLang(c.Request().Context(), lang, limit, offset)
+	halls, total, err := h.service.Hall().GetAllHallsWithLang(c.Request().Context(), lang, limit, offset)
 	if err != nil {
 		log.Printf("GetAllHallsWithLang failed: %v", err)
 		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse(
@@ -213,11 +216,14 @@ func (h *Handler) GetAllHallsWithLang(c echo.Context) error {
 		))
 	}
 
-	return c.JSON(http.StatusOK, model.NewSuccessResponse(
-		"Halls retrieved successfully",
-		halls,
-		http.StatusOK,
-	))
+	if maps, expanded, err := h.expandListResponse(c, halls, "halls"); expanded {
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("expand failed", err.Error(), http.StatusInternalServerError))
+		}
+		return c.JSON(http.StatusOK, model.NewPaginatedResponse("Halls retrieved successfully", maps, int32(total), limit, offset, http.StatusOK))
+	}
+
+	return c.JSON(http.StatusOK, model.NewPaginatedResponse("Halls retrieved successfully", halls, int32(total), limit, offset, http.StatusOK))
 }
 
 // GetAllHallsByBranchId retrieves all halls with braches - language support
@@ -258,7 +264,7 @@ func (h *Handler) GetHallsByBranchID(c echo.Context) error {
 		}
 	}
 
-	halls, err := h.service.Hall().GetHallsByBranchID(c.Request().Context(), branchID, limit, offset)
+	halls, total, err := h.service.Hall().GetHallsByBranchID(c.Request().Context(), branchID, limit, offset)
 	if err != nil {
 		log.Printf("GetHallsByBranchID failed for branch ID %s: %v", branchID, err)
 		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse(
@@ -268,11 +274,14 @@ func (h *Handler) GetHallsByBranchID(c echo.Context) error {
 		))
 	}
 
-	return c.JSON(http.StatusOK, model.NewSuccessResponse(
-		"Halls retrieved successfully",
-		halls,
-		http.StatusOK,
-	))
+	if maps, expanded, err := h.expandListResponse(c, halls, "halls"); expanded {
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("expand failed", err.Error(), http.StatusInternalServerError))
+		}
+		return c.JSON(http.StatusOK, model.NewPaginatedResponse("Halls retrieved successfully", maps, int32(total), limit, offset, http.StatusOK))
+	}
+
+	return c.JSON(http.StatusOK, model.NewPaginatedResponse("Halls retrieved successfully", halls, int32(total), limit, offset, http.StatusOK))
 }
 
 // GetHallsByBranchIDWithLang retrieves halls by branch ID with language support
@@ -330,7 +339,7 @@ func (h *Handler) GetHallsByBranchIDWithLang(c echo.Context) error {
 		}
 	}
 
-	halls, err := h.service.Hall().GetHallsByBranchIDWithLang(c.Request().Context(), branchID, lang, limit, offset)
+	halls, total, err := h.service.Hall().GetHallsByBranchIDWithLang(c.Request().Context(), branchID, lang, limit, offset)
 	if err != nil {
 		log.Printf("GetHallsByBranchIDWithLang failed for branch ID %s: %v", branchID, err)
 		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse(
@@ -340,11 +349,14 @@ func (h *Handler) GetHallsByBranchIDWithLang(c echo.Context) error {
 		))
 	}
 
-	return c.JSON(http.StatusOK, model.NewSuccessResponse(
-		"Halls retrieved successfully",
-		halls,
-		http.StatusOK,
-	))
+	if maps, expanded, err := h.expandListResponse(c, halls, "halls"); expanded {
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("expand failed", err.Error(), http.StatusInternalServerError))
+		}
+		return c.JSON(http.StatusOK, model.NewPaginatedResponse("Halls retrieved successfully", maps, int32(total), limit, offset, http.StatusOK))
+	}
+
+	return c.JSON(http.StatusOK, model.NewPaginatedResponse("Halls retrieved successfully", halls, int32(total), limit, offset, http.StatusOK))
 }
 
 // UpdateHall updates a hall

@@ -128,7 +128,7 @@ func (h *Handler) GetAllCategories(c echo.Context) error {
 		}
 	}
 
-	categories, err := h.service.Category().GetAllCategories(c.Request().Context(), limit, offset)
+	categories, total, err := h.service.Category().GetAllCategories(c.Request().Context(), limit, offset)
 	if err != nil {
 		log.Printf("GetAllCategories failed: %v", err)
 		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse(
@@ -138,11 +138,14 @@ func (h *Handler) GetAllCategories(c echo.Context) error {
 		))
 	}
 
-	return c.JSON(http.StatusOK, model.NewSuccessResponse(
-		"Categories retrieved successfully",
-		categories,
-		http.StatusOK,
-	))
+	if maps, expanded, err := h.expandListResponse(c, categories, "categories"); expanded {
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("expand failed", err.Error(), http.StatusInternalServerError))
+		}
+		return c.JSON(http.StatusOK, model.NewPaginatedResponse("Categories retrieved successfully", maps, int32(total), limit, offset, http.StatusOK))
+	}
+
+	return c.JSON(http.StatusOK, model.NewPaginatedResponse("Categories retrieved successfully", categories, int32(total), limit, offset, http.StatusOK))
 }
 
 // GetCategoriesByDepartmentID retrieves categories by department ID
@@ -181,13 +184,20 @@ func (h *Handler) GetCategoriesByDepartmentID(c echo.Context) error {
 		}
 	}
 
-	categories, err := h.service.Category().GetCategoriesByDepartmentID(c.Request().Context(), departmentID, limit, offset)
+	categories, total, err := h.service.Category().GetCategoriesByDepartmentID(c.Request().Context(), departmentID, limit, offset)
 	if err != nil {
 		log.Printf("GetCategoriesByDepartmentID failed: %v", err)
 		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("failed to retrieve categories", "see logs for details", http.StatusInternalServerError))
 	}
 
-	return c.JSON(http.StatusOK, model.NewSuccessResponse("Data retrieved successfully", categories, http.StatusOK))
+	if maps, expanded, err := h.expandListResponse(c, categories, "categories"); expanded {
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("expand failed", err.Error(), http.StatusInternalServerError))
+		}
+		return c.JSON(http.StatusOK, model.NewPaginatedResponse("Data retrieved successfully", maps, int32(total), limit, offset, http.StatusOK))
+	}
+
+	return c.JSON(http.StatusOK, model.NewPaginatedResponse("Data retrieved successfully", categories, int32(total), limit, offset, http.StatusOK))
 }
 
 // GetCategoriesByStorageID retrieves categories by storage ID
@@ -226,13 +236,20 @@ func (h *Handler) GetCategoriesByStorageID(c echo.Context) error {
 		}
 	}
 
-	categories, err := h.service.Category().GetCategoriesByStorageID(c.Request().Context(), storageID, limit, offset)
+	categories, total, err := h.service.Category().GetCategoriesByStorageID(c.Request().Context(), storageID, limit, offset)
 	if err != nil {
 		log.Printf("GetCategoriesByStorageID failed: %v", err)
 		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("failed to retrieve categories", "see logs for details", http.StatusInternalServerError))
 	}
 
-	return c.JSON(http.StatusOK, model.NewSuccessResponse("Data retrieved successfully", categories, http.StatusOK))
+	if maps, expanded, err := h.expandListResponse(c, categories, "categories"); expanded {
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("expand failed", err.Error(), http.StatusInternalServerError))
+		}
+		return c.JSON(http.StatusOK, model.NewPaginatedResponse("Data retrieved successfully", maps, int32(total), limit, offset, http.StatusOK))
+	}
+
+	return c.JSON(http.StatusOK, model.NewPaginatedResponse("Data retrieved successfully", categories, int32(total), limit, offset, http.StatusOK))
 }
 
 // GetCategoriesByParentID retrieves subcategories by parent ID
@@ -271,13 +288,20 @@ func (h *Handler) GetCategoriesByParentID(c echo.Context) error {
 		}
 	}
 
-	categories, err := h.service.Category().GetCategoriesByParentID(c.Request().Context(), parentID, limit, offset)
+	categories, total, err := h.service.Category().GetCategoriesByParentID(c.Request().Context(), parentID, limit, offset)
 	if err != nil {
 		log.Printf("GetCategoriesByParentID failed: %v", err)
 		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("failed to retrieve subcategories", "see logs for details", http.StatusInternalServerError))
 	}
 
-	return c.JSON(http.StatusOK, model.NewSuccessResponse("Data retrieved successfully", categories, http.StatusOK))
+	if maps, expanded, err := h.expandListResponse(c, categories, "categories"); expanded {
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("expand failed", err.Error(), http.StatusInternalServerError))
+		}
+		return c.JSON(http.StatusOK, model.NewPaginatedResponse("Data retrieved successfully", maps, int32(total), limit, offset, http.StatusOK))
+	}
+
+	return c.JSON(http.StatusOK, model.NewPaginatedResponse("Data retrieved successfully", categories, int32(total), limit, offset, http.StatusOK))
 }
 
 // GetRootCategories retrieves root categories (no parent)
@@ -309,13 +333,20 @@ func (h *Handler) GetRootCategories(c echo.Context) error {
 		}
 	}
 
-	categories, err := h.service.Category().GetRootCategories(c.Request().Context(), limit, offset)
+	categories, total, err := h.service.Category().GetRootCategories(c.Request().Context(), limit, offset)
 	if err != nil {
 		log.Printf("GetRootCategories failed: %v", err)
 		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("failed to retrieve root categories", "see logs for details", http.StatusInternalServerError))
 	}
 
-	return c.JSON(http.StatusOK, model.NewSuccessResponse("Data retrieved successfully", categories, http.StatusOK))
+	if maps, expanded, err := h.expandListResponse(c, categories, "categories"); expanded {
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("expand failed", err.Error(), http.StatusInternalServerError))
+		}
+		return c.JSON(http.StatusOK, model.NewPaginatedResponse("Data retrieved successfully", maps, int32(total), limit, offset, http.StatusOK))
+	}
+
+	return c.JSON(http.StatusOK, model.NewPaginatedResponse("Data retrieved successfully", categories, int32(total), limit, offset, http.StatusOK))
 }
 
 // UpdateCategory updates a category
@@ -537,11 +568,18 @@ func (h *Handler) GetAllCategoriesWithLang(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("invalid language code", "valid values: uz, ru, en", http.StatusBadRequest))
 	}
 
-	categories, err := h.service.Category().GetAllCategoriesWithLang(c.Request().Context(), lang, limit, offset)
+	categories, total, err := h.service.Category().GetAllCategoriesWithLang(c.Request().Context(), lang, limit, offset)
 	if err != nil {
 		log.Printf("GetAllCategoriesWithLang failed: %v", err)
 		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("failed to get categories", err.Error(), http.StatusInternalServerError))
 	}
 
-	return c.JSON(http.StatusOK, model.NewSuccessResponse("Categories retrieved successfully", categories, http.StatusOK))
+	if maps, expanded, err := h.expandListResponse(c, categories, "categories"); expanded {
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("expand failed", err.Error(), http.StatusInternalServerError))
+		}
+		return c.JSON(http.StatusOK, model.NewPaginatedResponse("Categories retrieved successfully", maps, int32(total), limit, offset, http.StatusOK))
+	}
+
+	return c.JSON(http.StatusOK, model.NewPaginatedResponse("Categories retrieved successfully", categories, int32(total), limit, offset, http.StatusOK))
 }

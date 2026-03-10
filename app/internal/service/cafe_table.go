@@ -100,13 +100,18 @@ func (s *CafeTableS) GetCafeTableByID(ctx context.Context, tableID string) (*mod
 }
 
 // GetAllCafeTables retrieves all cafe tables with pagination
-func (s *CafeTableS) GetAllCafeTables(ctx context.Context, limit, offset int32) ([]model.CafeTableResponse, error) {
+func (s *CafeTableS) GetAllCafeTables(ctx context.Context, limit, offset int32) ([]model.CafeTableResponse, int64, error) {
+	total, err := s.repo.Tenant(ctx).CountCafeTables(ctx)
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to count cafe tables: %w", err)
+	}
+
 	tables, err := s.repo.Tenant(ctx).GetAllCafeTables(ctx, pg.GetAllCafeTablesParams{
 		Limit:  limit,
 		Offset: offset,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to get cafe tables: %w", err)
+		return nil, 0, fmt.Errorf("failed to get cafe tables: %w", err)
 	}
 
 	var responses []model.CafeTableResponse
@@ -114,24 +119,29 @@ func (s *CafeTableS) GetAllCafeTables(ctx context.Context, limit, offset int32) 
 		responses = append(responses, *toCafeTableResponse(t))
 	}
 
-	return responses, nil
+	return responses, total, nil
 }
 
-func (s *CafeTableS) GetCafeTablesByHallID(ctx context.Context, hallID string, limit, offset int32) ([]model.CafeTableResponse, error) {
+func (s *CafeTableS) GetCafeTablesByHallID(ctx context.Context, hallID string, limit, offset int32) ([]model.CafeTableResponse, int64, error) {
 	hID, err := uuid.Parse(hallID)
 	if err != nil {
-		return nil, fmt.Errorf("invalid hall ID: %w", err)
+		return nil, 0, fmt.Errorf("invalid hall ID: %w", err)
+	}
+
+	total, err := s.repo.Tenant(ctx).CountCafeTablesByHall(ctx, hID)
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to count cafe tables by hall: %w", err)
 	}
 
 	tables, err := s.repo.Tenant(ctx).GetCafeTablesByHallID(ctx, hID)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get cafe tables by hall: %w", err)
+		return nil, 0, fmt.Errorf("failed to get cafe tables by hall: %w", err)
 	}
 
 	start := offset
 	end := offset + limit
 	if int32(len(tables)) < start {
-		return []model.CafeTableResponse{}, nil
+		return []model.CafeTableResponse{}, total, nil
 	}
 	if int32(len(tables)) < end {
 		end = int32(len(tables))
@@ -142,18 +152,23 @@ func (s *CafeTableS) GetCafeTablesByHallID(ctx context.Context, hallID string, l
 		responses = append(responses, *toCafeTableResponse(t))
 	}
 
-	return responses, nil
+	return responses, total, nil
 }
 
 // GetCafeTablesByStatus retrieves tables with a specific status
-func (s *CafeTableS) GetCafeTablesByStatus(ctx context.Context, status string, limit, offset int32) ([]model.CafeTableResponse, error) {
+func (s *CafeTableS) GetCafeTablesByStatus(ctx context.Context, status string, limit, offset int32) ([]model.CafeTableResponse, int64, error) {
 	if status == "" {
-		return nil, fmt.Errorf("status is required")
+		return nil, 0, fmt.Errorf("status is required")
 	}
 
 	nullStatus := pg.NullTableStatus{
 		TableStatus: pg.TableStatus(status),
 		Valid:       true,
+	}
+
+	total, err := s.repo.Tenant(ctx).CountCafeTablesByStatus(ctx, nullStatus)
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to count cafe tables by status: %w", err)
 	}
 
 	tables, err := s.repo.Tenant(ctx).GetCafeTablesByStatus(ctx, pg.GetCafeTablesByStatusParams{
@@ -162,7 +177,7 @@ func (s *CafeTableS) GetCafeTablesByStatus(ctx context.Context, status string, l
 		Offset: offset,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to get cafe tables by status: %w", err)
+		return nil, 0, fmt.Errorf("failed to get cafe tables by status: %w", err)
 	}
 
 	var responses []model.CafeTableResponse
@@ -170,7 +185,7 @@ func (s *CafeTableS) GetCafeTablesByStatus(ctx context.Context, status string, l
 		responses = append(responses, *toCafeTableResponse(t))
 	}
 
-	return responses, nil
+	return responses, total, nil
 }
 
 // GetCafeTablesByHallAndStatus retrieves tables by hall and status

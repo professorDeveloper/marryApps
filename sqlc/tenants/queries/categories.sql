@@ -260,6 +260,15 @@ WHERE parent = $1 AND deleted_at = 0
     )
   );
 
+-- name: CountCategoriesByStorage :one
+SELECT COUNT(*) FROM categories
+WHERE storage_id = $1 AND deleted_at = 0
+  AND EXISTS (
+    SELECT 1 FROM storages s
+    WHERE s.id = $1
+      AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  );
+
 -- name: CountRootCategories :one
 SELECT COUNT(*) FROM categories
 WHERE parent IS NULL AND deleted_at = 0

@@ -22,7 +22,7 @@ import (
 type BrandI interface {
 	CreateBrand(ctx context.Context, name string) (*model.BrandResponse, error)
 	GetBrand(ctx context.Context, brandID uuid.UUID) (*model.BrandResponse, error)
-	ListBrands(ctx context.Context, limit, offset int32) ([]model.BrandResponse, error)
+	ListBrands(ctx context.Context, limit, offset int32) ([]model.BrandResponse, int64, error)
 	UpdateBrand(ctx context.Context, brandID uuid.UUID, name *string) (*model.BrandResponse, error)
 	DeleteBrand(ctx context.Context, brandID uuid.UUID) error
 	InitializeTenantSchema(ctx context.Context, brandID uuid.UUID) error
@@ -137,7 +137,7 @@ func (s *BrandS) GetBrand(ctx context.Context, brandID uuid.UUID) (*model.BrandR
 	}, nil
 }
 
-func (s *BrandS) ListBrands(ctx context.Context, limit, offset int32) ([]model.BrandResponse, error) {
+func (s *BrandS) ListBrands(ctx context.Context, limit, offset int32) ([]model.BrandResponse, int64, error) {
 	if limit <= 0 {
 		limit = 10
 	}
@@ -148,13 +148,19 @@ func (s *BrandS) ListBrands(ctx context.Context, limit, offset int32) ([]model.B
 		offset = 0
 	}
 
+	total, err := s.repo.Main(ctx).CountBrands(ctx)
+	if err != nil {
+		log.Printf("Failed to count brands: %v", err)
+		return nil, 0, fmt.Errorf("failed to count brands: %w", err)
+	}
+
 	brands, err := s.repo.Main(ctx).ListBrands(ctx, pgmain.ListBrandsParams{
 		Limit:  limit,
 		Offset: offset,
 	})
 	if err != nil {
 		log.Printf("Failed to list brands: %v", err)
-		return nil, fmt.Errorf("failed to list brands: %w", err)
+		return nil, 0, fmt.Errorf("failed to list brands: %w", err)
 	}
 
 	var responses []model.BrandResponse
@@ -168,7 +174,7 @@ func (s *BrandS) ListBrands(ctx context.Context, limit, offset int32) ([]model.B
 		})
 	}
 
-	return responses, nil
+	return responses, total, nil
 }
 
 func (s *BrandS) UpdateBrand(ctx context.Context, brandID uuid.UUID, name *string) (*model.BrandResponse, error) {

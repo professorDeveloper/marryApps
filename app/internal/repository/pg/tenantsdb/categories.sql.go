@@ -80,6 +80,23 @@ func (q *Queries) CountCategoriesByParent(ctx context.Context, parent pgtype.UUI
 	return count, err
 }
 
+const countCategoriesByStorage = `-- name: CountCategoriesByStorage :one
+SELECT COUNT(*) FROM categories
+WHERE storage_id = $1 AND deleted_at = 0
+  AND EXISTS (
+    SELECT 1 FROM storages s
+    WHERE s.id = $1
+      AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  )
+`
+
+func (q *Queries) CountCategoriesByStorage(ctx context.Context, storageID pgtype.UUID) (int64, error) {
+	row := q.db.QueryRow(ctx, countCategoriesByStorage, storageID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const countRootCategories = `-- name: CountRootCategories :one
 SELECT COUNT(*) FROM categories
 WHERE parent IS NULL AND deleted_at = 0
