@@ -2,7 +2,6 @@ package handler
 
 import (
 	"net/http"
-	"strconv"
 
 	"github.com/labstack/echo/v4"
 	"gitlab.yurtal.tech/company/maryai/back/internal/model"
@@ -112,7 +111,8 @@ func (h *Handler) GetActiveCashRegisterShift(c echo.Context) error {
 // @Param status query string false "Filter by status: open or closed"
 // @Param limit query int false "Limit" default(20)
 // @Param offset query int false "Offset" default(0)
-// @Success 200 {object} map[string]interface{}
+// @Param expand query string false "Expand related fields"
+// @Success 200 {array} model.CashRegisterShiftResponse
 // @Failure 500 {object} model.ErrorResponse
 // @Router /api/v1/cash-register-shifts [get]
 func (h *Handler) ListCashRegisterShifts(c echo.Context) error {
@@ -127,29 +127,21 @@ func (h *Handler) ListCashRegisterShifts(c echo.Context) error {
 		status = &v
 	}
 
-	limit := int32(20)
-	offset := int32(0)
-	if v := c.QueryParam("limit"); v != "" {
-		if n, err := strconv.Atoi(v); err == nil {
-			limit = int32(n)
-		}
-	}
-	if v := c.QueryParam("offset"); v != "" {
-		if n, err := strconv.Atoi(v); err == nil {
-			offset = int32(n)
-		}
-	}
+	limit, offset := parseLimitOffset(c)
 
 	shifts, total, err := h.service.CashRegisterShift().ListShifts(c.Request().Context(), cashRegisterID, cashierID, status, limit, offset)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("failed to list shifts", err.Error(), http.StatusInternalServerError))
 	}
-	return c.JSON(http.StatusOK, map[string]interface{}{
-		"data":   shifts,
-		"total":  total,
-		"limit":  limit,
-		"offset": offset,
-	})
+
+	if maps, expanded, err := h.expandListResponse(c, shifts, "cash_register_shifts"); expanded {
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("expand failed", err.Error(), http.StatusInternalServerError))
+		}
+		return c.JSON(http.StatusOK, model.NewPaginatedResponse("Shifts retrieved successfully", maps, int32(total), limit, offset, http.StatusOK))
+	}
+
+	return c.JSON(http.StatusOK, model.NewPaginatedResponse("Shifts retrieved successfully", shifts, int32(total), limit, offset, http.StatusOK))
 }
 
 // DeleteCashRegisterShift soft-deletes a cash register shift.

@@ -2497,14 +2497,22 @@ const docTemplate = `{
                         "description": "Offset",
                         "name": "offset",
                         "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Expand related fields",
+                        "name": "expand",
+                        "in": "query"
                     }
                 ],
                 "responses": {
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/model.CashRegisterShiftResponse"
+                            }
                         }
                     },
                     "500": {
@@ -2760,7 +2768,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Retrieve all cash registers for the current branch",
+                "description": "Retrieve all cash registers for the current branch with optional search filter",
                 "produces": [
                     "application/json"
                 ],
@@ -2769,6 +2777,12 @@ const docTemplate = `{
                 ],
                 "summary": "Get all cash registers",
                 "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Filter by name",
+                        "name": "search",
+                        "in": "query"
+                    },
                     {
                         "type": "integer",
                         "default": 20,
@@ -2781,6 +2795,12 @@ const docTemplate = `{
                         "default": 0,
                         "description": "Offset for pagination (default: 0)",
                         "name": "offset",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Expand related fields",
+                        "name": "expand",
                         "in": "query"
                     }
                 ],

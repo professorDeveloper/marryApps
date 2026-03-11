@@ -75,45 +75,37 @@ func (h *Handler) GetCashRegister(c echo.Context) error {
 
 // GetAllCashRegisters godoc
 // @Summary Get all cash registers
-// @Description Retrieve all cash registers for the current branch
+// @Description Retrieve all cash registers for the current branch with optional search filter
 // @Tags cash-registers
 // @Produce json
 // @Security BearerAuth
+// @Param search query string false "Filter by name"
 // @Param limit query int false "Limit results (default: 20)" default(20)
 // @Param offset query int false "Offset for pagination (default: 0)" default(0)
+// @Param expand query string false "Expand related fields"
 // @Success 200 {array} model.CashRegisterResponse "Cash registers retrieved successfully"
 // @Failure 401 {object} model.ErrorResponse "Unauthorized"
 // @Failure 500 {object} model.ErrorResponse "Internal server error"
 // @Router /api/v1/cash-registers [get]
 func (h *Handler) GetAllCashRegisters(c echo.Context) error {
-	limitStr := c.QueryParam("limit")
-	offsetStr := c.QueryParam("offset")
-
-	limit := int32(20)
-	offset := int32(0)
-
-	if limitStr != "" {
-		var l int32
-		if _, err := fmt.Sscanf(limitStr, "%d", &l); err == nil && l > 0 {
-			limit = l
-		}
-	}
-
-	if offsetStr != "" {
-		var o int32
-		if _, err := fmt.Sscanf(offsetStr, "%d", &o); err == nil && o >= 0 {
-			offset = o
-		}
-	}
+	search := c.QueryParam("search")
+	limit, offset := parseLimitOffset(c)
 
 	ctx := c.Request().Context()
-	cashRegisters, err := h.service.Cash().GetAllCashRegisters(ctx, limit, offset)
+	cashRegisters, total, err := h.service.Cash().GetAllCashRegisters(ctx, search, limit, offset)
 	if err != nil {
 		log.Printf("Failed to get cash registers: %v", err)
 		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("Failed to get cash registers", err.Error(), http.StatusInternalServerError))
 	}
 
-	return c.JSON(http.StatusOK, model.NewSuccessResponse("Cash registers retrieved successfully", cashRegisters, http.StatusOK))
+	if maps, expanded, err := h.expandListResponse(c, cashRegisters, "cash_registers"); expanded {
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("expand failed", err.Error(), http.StatusInternalServerError))
+		}
+		return c.JSON(http.StatusOK, model.NewPaginatedResponse("Cash registers retrieved successfully", maps, int32(total), limit, offset, http.StatusOK))
+	}
+
+	return c.JSON(http.StatusOK, model.NewPaginatedResponse("Cash registers retrieved successfully", cashRegisters, int32(total), limit, offset, http.StatusOK))
 }
 
 // GetCashRegistersByBranchID godoc

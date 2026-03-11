@@ -16,8 +16,9 @@ WHERE id = $1 AND deleted_at = 0
 SELECT * FROM cash_registers
 WHERE deleted_at = 0
   AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  AND (NULLIF($1::text, '') IS NULL OR name ILIKE '%' || $1 || '%')
 ORDER BY created_at DESC
-LIMIT $1 OFFSET $2;
+LIMIT $2 OFFSET $3;
 
 -- name: UpdateCashRegister :one
 UPDATE cash_registers SET
@@ -51,4 +52,5 @@ LIMIT $2 OFFSET $3;
 -- name: CountCashRegisters :one
 SELECT COUNT(*) FROM cash_registers
 WHERE deleted_at = 0
-  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid;
+  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  AND (NULLIF($1::text, '') IS NULL OR name ILIKE '%' || $1 || '%');

@@ -57,15 +57,22 @@ func (s *CashRegisterS) GetCashRegisterByID(ctx context.Context, id uuid.UUID) (
 	return toCashRegisterResponse(cashRegister), nil
 }
 
-// GetAllCashRegisters retrieves all cash registers for a branch with pagination
-func (s *CashRegisterS) GetAllCashRegisters(ctx context.Context, limit, offset int32) ([]model.CashRegisterResponse, error) {
+// GetAllCashRegisters retrieves all cash registers for a branch with optional search and pagination
+func (s *CashRegisterS) GetAllCashRegisters(ctx context.Context, search string, limit, offset int32) ([]model.CashRegisterResponse, int64, error) {
+	total, err := s.repo.Tenant(ctx).CountCashRegisters(ctx, search)
+	if err != nil {
+		log.Printf("Failed to count cash registers: %v", err)
+		return nil, 0, fmt.Errorf("failed to count cash registers: %w", err)
+	}
+
 	cashRegisters, err := s.repo.Tenant(ctx).GetAllCashRegisters(ctx, pg.GetAllCashRegistersParams{
-		Limit:  limit,
-		Offset: offset,
+		Column1: search,
+		Limit:   limit,
+		Offset:  offset,
 	})
 	if err != nil {
 		log.Printf("Failed to get cash registers: %v", err)
-		return nil, fmt.Errorf("failed to get cash registers: %w", err)
+		return nil, 0, fmt.Errorf("failed to get cash registers: %w", err)
 	}
 
 	responses := make([]model.CashRegisterResponse, len(cashRegisters))
@@ -73,7 +80,7 @@ func (s *CashRegisterS) GetAllCashRegisters(ctx context.Context, limit, offset i
 		responses[i] = toCashRegisterResponse(cr)
 	}
 
-	return responses, nil
+	return responses, total, nil
 }
 
 // UpdateCashRegister updates a cash register

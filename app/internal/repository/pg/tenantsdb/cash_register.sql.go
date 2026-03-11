@@ -15,10 +15,11 @@ const countCashRegisters = `-- name: CountCashRegisters :one
 SELECT COUNT(*) FROM cash_registers
 WHERE deleted_at = 0
   AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  AND (NULLIF($1::text, '') IS NULL OR name ILIKE '%' || $1 || '%')
 `
 
-func (q *Queries) CountCashRegisters(ctx context.Context) (int64, error) {
-	row := q.db.QueryRow(ctx, countCashRegisters)
+func (q *Queries) CountCashRegisters(ctx context.Context, dollar_1 string) (int64, error) {
+	row := q.db.QueryRow(ctx, countCashRegisters, dollar_1)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -58,17 +59,19 @@ const getAllCashRegisters = `-- name: GetAllCashRegisters :many
 SELECT id, name, branch_id, created_at, updated_at, deleted_at FROM cash_registers
 WHERE deleted_at = 0
   AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  AND (NULLIF($1::text, '') IS NULL OR name ILIKE '%' || $1 || '%')
 ORDER BY created_at DESC
-LIMIT $1 OFFSET $2
+LIMIT $2 OFFSET $3
 `
 
 type GetAllCashRegistersParams struct {
-	Limit  int32 `json:"limit"`
-	Offset int32 `json:"offset"`
+	Column1 string `json:"column_1"`
+	Limit   int32  `json:"limit"`
+	Offset  int32  `json:"offset"`
 }
 
 func (q *Queries) GetAllCashRegisters(ctx context.Context, arg GetAllCashRegistersParams) ([]CashRegister, error) {
-	rows, err := q.db.Query(ctx, getAllCashRegisters, arg.Limit, arg.Offset)
+	rows, err := q.db.Query(ctx, getAllCashRegisters, arg.Column1, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
