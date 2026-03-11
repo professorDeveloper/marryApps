@@ -92,9 +92,9 @@ func (h *Handler) GetGood(c echo.Context) error {
 	))
 }
 
-// GetAllGoods retrieves all goods with pagination
+// GetAllGoods retrieves all goods with pagination and optional filters
 // @Summary Get all goods
-// @Description Get all goods with pagination
+// @Description Get all goods with pagination and optional filters
 // @Tags Goods
 // @Produce json
 // @Security BearerAuth
@@ -102,6 +102,10 @@ func (h *Handler) GetGood(c echo.Context) error {
 // @Param limit query int false "Limit" default(20)
 // @Param offset query int false "Offset" default(0)
 // @Param expand query string false "Expand related fields"
+// @Param category_id query string false "Filter by category ID"
+// @Param department_id query string false "Filter by department ID"
+// @Param storage_id query string false "Filter by storage ID"
+// @Param search query string false "Search by name"
 // @Success 200 {object} []model.GoodResponse
 // @Failure 400 {object} model.ErrorResponse
 // @Failure 401 {object} model.ErrorResponse
@@ -122,7 +126,21 @@ func (h *Handler) GetAllGoods(c echo.Context) error {
 		}
 	}
 
-	goods, total, err := h.service.Goods().GetAllGoods(c.Request().Context(), limit, offset)
+	categoryID := c.QueryParam("category_id")
+	departmentID := c.QueryParam("department_id")
+	storageID := c.QueryParam("storage_id")
+	search := c.QueryParam("search")
+	lang := c.QueryParam("lang")
+
+	var goods []*model.GoodResponse
+	var total int64
+	var err error
+
+	if categoryID != "" || departmentID != "" || storageID != "" || search != "" {
+		goods, total, err = h.service.Goods().GetAllGoodsFiltered(c.Request().Context(), categoryID, departmentID, storageID, search, lang, limit, offset)
+	} else {
+		goods, total, err = h.service.Goods().GetAllGoods(c.Request().Context(), limit, offset)
+	}
 	if err != nil {
 		log.Printf("GetAllGoods failed: %v", err)
 		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse(
@@ -827,7 +845,7 @@ func (h *Handler) GetGoodByIDWithLang(c echo.Context) error {
 	return c.JSON(http.StatusOK, model.NewSuccessResponse("Good retrieved successfully", good, http.StatusOK))
 }
 
-// GetAllGoodsWithLang retrieves all goods/menu items with language support
+// GetAllGoodsWithLang retrieves all goods/menu items with language support and optional filters
 // @Summary Get all goods with language support
 // @Description Retrieve all goods/menu items with names and descriptions translated to specified language
 // @Tags Goods
@@ -838,6 +856,10 @@ func (h *Handler) GetGoodByIDWithLang(c echo.Context) error {
 // @Param limit query int false "Limit (default: 20)"
 // @Param offset query int false "Offset (default: 0)"
 // @Param expand query string false "Expand related fields"
+// @Param category_id query string false "Filter by category ID"
+// @Param department_id query string false "Filter by department ID"
+// @Param storage_id query string false "Filter by storage ID"
+// @Param search query string false "Search by name"
 // @Success 200 {array} model.GoodResponse "Goods retrieved successfully"
 // @Failure 400 {object} model.ErrorResponse "Invalid request parameters"
 // @Failure 401 {object} model.ErrorResponse "Unauthorized"
@@ -869,7 +891,20 @@ func (h *Handler) GetAllGoodsWithLang(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("invalid language code", "valid values: uz, ru, en", http.StatusBadRequest))
 	}
 
-	goods, total, err := h.service.Goods().GetAllGoodsWithLang(c.Request().Context(), lang, limit, offset)
+	categoryID := c.QueryParam("category_id")
+	departmentID := c.QueryParam("department_id")
+	storageID := c.QueryParam("storage_id")
+	search := c.QueryParam("search")
+
+	var goods []*model.GoodResponse
+	var total int64
+	var err error
+
+	if categoryID != "" || departmentID != "" || storageID != "" || search != "" {
+		goods, total, err = h.service.Goods().GetAllGoodsFiltered(c.Request().Context(), categoryID, departmentID, storageID, search, lang, limit, offset)
+	} else {
+		goods, total, err = h.service.Goods().GetAllGoodsWithLang(c.Request().Context(), lang, limit, offset)
+	}
 	if err != nil {
 		log.Printf("GetAllGoodsWithLang failed: %v", err)
 		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("failed to get goods", "see logs for details", http.StatusInternalServerError))

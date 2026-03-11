@@ -1313,3 +1313,182 @@ LIMIT $2 OFFSET $3;
 -- LEFT JOIN compounds c ON gd.compound_id = c.id AND c.deleted_at = 0
 -- WHERE gd.good_id = $1 AND gd.deleted_at = 0
 -- ORDER BY gd.created_at ASC;
+
+-- ==================== FILTERED GOODS ====================
+
+-- name: GetGoodsFiltered :many
+SELECT goods.id, goods.name, goods.description, goods.name_i18n, goods.description_i18n, goods.category_id, goods.department_id, goods.picture_url, goods.color_code, goods.price, goods.cook_time, goods.cost_price, goods.profit, goods.profit_margin, goods.created_at, goods.updated_at, goods.deleted_at
+FROM goods
+WHERE goods.deleted_at = 0
+  AND (
+    (goods.department_id IS NULL OR EXISTS (
+      SELECT 1 FROM departments d
+      JOIN storages s ON s.id = d.storage_id
+      WHERE d.id = goods.department_id
+        AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+    ))
+    AND (
+      goods.category_id IS NULL OR (
+        EXISTS (
+          SELECT 1 FROM categories c
+          JOIN storages s ON s.id = c.storage_id
+          WHERE c.id = goods.category_id
+            AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+        )
+        OR EXISTS (
+          SELECT 1 FROM categories c
+          JOIN departments d ON d.id = c.department_id
+          JOIN storages s ON s.id = d.storage_id
+          WHERE c.id = goods.category_id
+            AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+        )
+      )
+    )
+    AND (goods.department_id IS NOT NULL OR goods.category_id IS NOT NULL)
+  )
+  AND (($1::uuid = '00000000-0000-0000-0000-000000000000') OR goods.category_id = $1)
+  AND (($2::uuid = '00000000-0000-0000-0000-000000000000') OR goods.department_id = $2)
+  AND (($3::uuid = '00000000-0000-0000-0000-000000000000') OR EXISTS (
+    SELECT 1 FROM departments d2
+    JOIN storages s2 ON s2.id = d2.storage_id
+    WHERE d2.id = goods.department_id AND s2.id = $3
+    UNION ALL
+    SELECT 1 FROM categories c2
+    JOIN storages s2 ON s2.id = c2.storage_id
+    WHERE c2.id = goods.category_id AND s2.id = $3
+    UNION ALL
+    SELECT 1 FROM categories c2
+    JOIN departments d2 ON d2.id = c2.department_id
+    JOIN storages s2 ON s2.id = d2.storage_id
+    WHERE c2.id = goods.category_id AND s2.id = $3
+  ))
+  AND ($4 = '' OR goods.name ILIKE '%' || $4 || '%')
+ORDER BY goods.created_at DESC
+LIMIT $5 OFFSET $6;
+
+-- name: CountGoodsFiltered :one
+SELECT COUNT(*)
+FROM goods
+WHERE goods.deleted_at = 0
+  AND (
+    (goods.department_id IS NULL OR EXISTS (
+      SELECT 1 FROM departments d
+      JOIN storages s ON s.id = d.storage_id
+      WHERE d.id = goods.department_id
+        AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+    ))
+    AND (
+      goods.category_id IS NULL OR (
+        EXISTS (
+          SELECT 1 FROM categories c
+          JOIN storages s ON s.id = c.storage_id
+          WHERE c.id = goods.category_id
+            AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+        )
+        OR EXISTS (
+          SELECT 1 FROM categories c
+          JOIN departments d ON d.id = c.department_id
+          JOIN storages s ON s.id = d.storage_id
+          WHERE c.id = goods.category_id
+            AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+        )
+      )
+    )
+    AND (goods.department_id IS NOT NULL OR goods.category_id IS NOT NULL)
+  )
+  AND (($1::uuid = '00000000-0000-0000-0000-000000000000') OR goods.category_id = $1)
+  AND (($2::uuid = '00000000-0000-0000-0000-000000000000') OR goods.department_id = $2)
+  AND (($3::uuid = '00000000-0000-0000-0000-000000000000') OR EXISTS (
+    SELECT 1 FROM departments d2
+    JOIN storages s2 ON s2.id = d2.storage_id
+    WHERE d2.id = goods.department_id AND s2.id = $3
+    UNION ALL
+    SELECT 1 FROM categories c2
+    JOIN storages s2 ON s2.id = c2.storage_id
+    WHERE c2.id = goods.category_id AND s2.id = $3
+    UNION ALL
+    SELECT 1 FROM categories c2
+    JOIN departments d2 ON d2.id = c2.department_id
+    JOIN storages s2 ON s2.id = d2.storage_id
+    WHERE c2.id = goods.category_id AND s2.id = $3
+  ))
+  AND ($4 = '' OR goods.name ILIKE '%' || $4 || '%');
+
+-- name: GetGoodsFilteredWithLanguage :many
+SELECT
+    g.id,
+    COALESCE(CASE
+        WHEN $1::text = 'uz' THEN tn.uz
+        WHEN $1::text = 'ru' THEN tn.ru
+        WHEN $1::text = 'en' THEN tn.en
+        ELSE g.name
+    END, g.name) as name,
+    COALESCE(CASE
+        WHEN $1::text = 'uz' THEN td.uz
+        WHEN $1::text = 'ru' THEN td.ru
+        WHEN $1::text = 'en' THEN td.en
+        ELSE g.description
+    END, g.description) as description,
+    g.name_i18n,
+    g.description_i18n,
+    g.category_id,
+    g.department_id,
+    g.picture_url,
+    g.color_code,
+    g.price,
+    g.cook_time,
+    g.cost_price,
+    g.profit,
+    g.profit_margin,
+    g.created_at,
+    g.updated_at,
+    g.deleted_at
+FROM goods g
+LEFT JOIN translations tn ON g.name_i18n = tn.id AND tn.deleted_at = 0
+LEFT JOIN translations td ON g.description_i18n = td.id AND td.deleted_at = 0
+WHERE g.deleted_at = 0
+  AND (
+    (g.department_id IS NULL OR EXISTS (
+      SELECT 1 FROM departments d
+      JOIN storages s ON s.id = d.storage_id
+      WHERE d.id = g.department_id
+        AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+    ))
+    AND (
+      g.category_id IS NULL OR (
+        EXISTS (
+          SELECT 1 FROM categories c
+          JOIN storages s ON s.id = c.storage_id
+          WHERE c.id = g.category_id
+            AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+        )
+        OR EXISTS (
+          SELECT 1 FROM categories c
+          JOIN departments d ON d.id = c.department_id
+          JOIN storages s ON s.id = d.storage_id
+          WHERE c.id = g.category_id
+            AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+        )
+      )
+    )
+    AND (g.department_id IS NOT NULL OR g.category_id IS NOT NULL)
+  )
+  AND (($2::uuid = '00000000-0000-0000-0000-000000000000') OR g.category_id = $2)
+  AND (($3::uuid = '00000000-0000-0000-0000-000000000000') OR g.department_id = $3)
+  AND (($4::uuid = '00000000-0000-0000-0000-000000000000') OR EXISTS (
+    SELECT 1 FROM departments d2
+    JOIN storages s2 ON s2.id = d2.storage_id
+    WHERE d2.id = g.department_id AND s2.id = $4
+    UNION ALL
+    SELECT 1 FROM categories c2
+    JOIN storages s2 ON s2.id = c2.storage_id
+    WHERE c2.id = g.category_id AND s2.id = $4
+    UNION ALL
+    SELECT 1 FROM categories c2
+    JOIN departments d2 ON d2.id = c2.department_id
+    JOIN storages s2 ON s2.id = d2.storage_id
+    WHERE c2.id = g.category_id AND s2.id = $4
+  ))
+  AND ($5 = '' OR g.name ILIKE '%' || $5 || '%')
+ORDER BY g.created_at DESC
+LIMIT $6 OFFSET $7;

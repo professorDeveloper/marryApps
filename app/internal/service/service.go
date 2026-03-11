@@ -215,6 +215,7 @@ type GoodsI interface {
 	CreateGood(ctx context.Context, name string, description *string, nameI18n, descriptionI18n, categoryID, departmentID *string, price string, cookTime *int32, pictureUrl *string, colorCode *string) (*model.GoodResponse, error)
 	GetGoodByID(ctx context.Context, goodID string) (*model.GoodResponse, error)
 	GetAllGoods(ctx context.Context, limit, offset int32) ([]*model.GoodResponse, int64, error)
+	GetAllGoodsFiltered(ctx context.Context, categoryID, departmentID, storageID, search, lang string, limit, offset int32) ([]*model.GoodResponse, int64, error)
 	GetGoodByIDWithLang(ctx context.Context, goodID string, lang string) (*model.GoodResponse, error)
 	GetAllGoodsWithLang(ctx context.Context, lang string, limit, offset int32) ([]*model.GoodResponse, int64, error)
 	GetGoodsByCategory(ctx context.Context, categoryID string, limit, offset int32) ([]*model.GoodResponse, error)

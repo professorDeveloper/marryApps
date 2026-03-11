@@ -203,6 +203,81 @@ func (g *GoodsS) GetAllGoods(ctx context.Context, limit, offset int32) ([]*model
 	return responses, total, nil
 }
 
+// GetAllGoodsFiltered retrieves goods with optional filters: categoryID, departmentID, storageID, search, lang
+func (g *GoodsS) GetAllGoodsFiltered(ctx context.Context, categoryID, departmentID, storageID, search, lang string, limit, offset int32) ([]*model.GoodResponse, int64, error) {
+	zeroUUID := uuid.UUID{}
+
+	catUUID := zeroUUID
+	if categoryID != "" {
+		if id, err := uuid.Parse(categoryID); err == nil {
+			catUUID = id
+		}
+	}
+
+	deptUUID := zeroUUID
+	if departmentID != "" {
+		if id, err := uuid.Parse(departmentID); err == nil {
+			deptUUID = id
+		}
+	}
+
+	storUUID := zeroUUID
+	if storageID != "" {
+		if id, err := uuid.Parse(storageID); err == nil {
+			storUUID = id
+		}
+	}
+
+	total, err := g.repo.Tenant(ctx).CountGoodsFiltered(ctx, pg.CountGoodsFilteredParams{
+		Column1: catUUID,
+		Column2: deptUUID,
+		Column3: storUUID,
+		Column4: search,
+	})
+	if err != nil {
+		log.Printf("CountGoodsFiltered failed: %v", err)
+		total = 0
+	}
+
+	var responses []*model.GoodResponse
+	if lang != "" && lang != "uz" {
+		goods, err := g.repo.Tenant(ctx).GetGoodsFilteredWithLanguage(ctx, pg.GetGoodsFilteredWithLanguageParams{
+			Column1: lang,
+			Column2: catUUID,
+			Column3: deptUUID,
+			Column4: storUUID,
+			Column5: search,
+			Limit:   limit,
+			Offset:  offset,
+		})
+		if err != nil {
+			log.Printf("GetGoodsFilteredWithLanguage failed: %v", err)
+			return nil, 0, fmt.Errorf("failed to retrieve goods: %w", err)
+		}
+		for _, good := range goods {
+			responses = append(responses, goodToResponseAny(good))
+		}
+	} else {
+		goods, err := g.repo.Tenant(ctx).GetGoodsFiltered(ctx, pg.GetGoodsFilteredParams{
+			Column1: catUUID,
+			Column2: deptUUID,
+			Column3: storUUID,
+			Column4: search,
+			Limit:   limit,
+			Offset:  offset,
+		})
+		if err != nil {
+			log.Printf("GetGoodsFiltered failed: %v", err)
+			return nil, 0, fmt.Errorf("failed to retrieve goods: %w", err)
+		}
+		for _, good := range goods {
+			responses = append(responses, goodToResponseAny(good))
+		}
+	}
+
+	return responses, total, nil
+}
+
 // GetGoodsByCategory retrieves goods by category
 func (g *GoodsS) GetGoodsByCategory(ctx context.Context, categoryID string, limit, offset int32) ([]*model.GoodResponse, error) {
 	id, err := uuid.Parse(categoryID)

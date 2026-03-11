@@ -9515,7 +9515,7 @@ paths:
       - Good Details
   /api/v1/goods:
     get:
-      description: Get all goods with pagination
+      description: Get all goods with pagination and optional filters
       parameters:
       - default: uz
         description: Language (uz, ru, en)
@@ -9535,6 +9535,22 @@ paths:
       - description: Expand related fields
         in: query
         name: expand
+        type: string
+      - description: Filter by category ID
+        in: query
+        name: category_id
+        type: string
+      - description: Filter by department ID
+        in: query
+        name: department_id
+        type: string
+      - description: Filter by storage ID
+        in: query
+        name: storage_id
+        type: string
+      - description: Search by name
+        in: query
+        name: search
         type: string
       produces:
       - application/json
@@ -9624,6 +9640,22 @@ paths:
       - description: Expand related fields
         in: query
         name: expand
+        type: string
+      - description: Filter by category ID
+        in: query
+        name: category_id
+        type: string
+      - description: Filter by department ID
+        in: query
+        name: department_id
+        type: string
+      - description: Filter by storage ID
+        in: query
+        name: storage_id
+        type: string
+      - description: Search by name
+        in: query
+        name: search
         type: string
       produces:
       - application/json
