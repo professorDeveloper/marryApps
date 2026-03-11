@@ -3,7 +3,7 @@ import type { IMealsItem } from 'src/types/meals';
 import { useTranslation } from 'react-i18next';
 import { useMemo, useState, useCallback, useEffect } from 'react';
 import { useTheme } from '@mui/material/styles';
-import { Button, Dialog, DialogTitle, DialogActions, DialogContent, Box, Avatar, ListItemText } from '@mui/material';
+import { Button, Dialog, DialogTitle, DialogActions, DialogContent, Box, Avatar, ListItemText, TextField } from '@mui/material';
 import {
     Table,
     TableBody,
@@ -27,6 +27,14 @@ import { GenericTableView } from 'src/components/generic-table-view';
 import { formatPrice } from 'src/components/generic-view-view/modal-formatters';
 import { useGetCategories } from 'src/actions/categories';
 import { useGetDepartments } from 'src/actions/departments';
+import { useStorageAPI } from 'src/hooks/use-storage-api';
+
+const initialFilters = {
+    category_id: '',
+    department_id: '',
+    storage_id: '',
+    query: '',
+};
 
 
 function MealCalculationsTable({ mealId }: { mealId: string }) {
@@ -193,15 +201,22 @@ function renderMealsSpecifications(item: IMealsItem, t: any) {
     return <SpecificationsTable rows={specs} />;
 }
 
-// ============================================================================
-// MAIN COMPONENT
-// ============================================================================
-
 export function Meals() {
     const theme = useTheme();
     const { t, i18n } = useTranslation('menu');
     const [searchQuery, setSearchQuery] = useState('');
     const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
+    const [filters, setFilters] = useState(initialFilters);
+    const [draftFilters, setDraftFilters] = useState(initialFilters);
+    const [storages, setStorages] = useState<any[]>([]);
+
+    // SWR hooks
+    const { meals, mealsLoading, mutate } = useGetMeals(filters);
+    const { deleteMeal } = useDeleteMeal();
+    const { deleteMeals } = useDeleteMeals();
+    const { categories } = useGetCategories();
+    const { departments } = useGetDepartments();
+    const { getStorages } = useStorageAPI();
 
     useEffect(() => {
         const timeout = setTimeout(() => {
@@ -211,12 +226,28 @@ export function Meals() {
         return () => clearTimeout(timeout);
     }, [searchQuery]);
 
-    // SWR hooks
-    const { meals, mealsLoading, mutate } = useGetMeals(debouncedSearchQuery);
-    const { deleteMeal } = useDeleteMeal();
-    const { deleteMeals } = useDeleteMeals();
-    const { categories } = useGetCategories();
-    const { departments } = useGetDepartments();
+    useEffect(() => {
+        setDraftFilters((prev) => ({
+            ...prev,
+            query: debouncedSearchQuery,
+        }));
+    }, [debouncedSearchQuery]);
+
+    useEffect(() => {
+        setFilters((prev) => ({
+            ...prev,
+            ...draftFilters,
+        }));
+    }, [draftFilters]);
+
+    useEffect(() => {
+        const loadStorages = async () => {
+            const data = await getStorages();
+            setStorages(data || []);
+        };
+
+        loadStorages();
+    }, [getStorages]);
 
     // State
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -426,6 +457,95 @@ export function Meals() {
                 data={meals}
                 loading={mealsLoading}
                 columns={columns}
+                renderFilters={() => (
+                    <Box
+                        sx={{
+                            display: 'grid',
+                            gridTemplateColumns: {
+                                xs: '1fr',
+                                sm: '1fr 1fr',
+                                md: 'repeat(3, 1fr)',
+                                lg: 'repeat(4, 1fr)',
+                            },
+                            gap: 1.5,
+                        }}
+                    >
+                        <TextField
+                            select
+                            size="small"
+                            label={t('mealsProducts.category')}
+                            SelectProps={{ native: true }}
+                            value={draftFilters.category_id || ''}
+                            onChange={(e) =>
+                                setDraftFilters((prev) => ({
+                                    ...prev,
+                                    category_id: e.target.value,
+                                }))
+                            }
+                            InputLabelProps={{ shrink: true }}
+                        >
+                            <option value="">{t('ingredientReports.all', 'All')}</option>
+                            {categories.map((category: any) => (
+                                <option key={category.id} value={category.id}>
+                                    {category.name || category.id}
+                                </option>
+                            ))}
+                        </TextField>
+                        <TextField
+                            select
+                            size="small"
+                            label={t('mealsProducts.department')}
+                            SelectProps={{ native: true }}
+                            value={draftFilters.department_id || ''}
+                            onChange={(e) =>
+                                setDraftFilters((prev) => ({
+                                    ...prev,
+                                    department_id: e.target.value,
+                                }))
+                            }
+                            InputLabelProps={{ shrink: true }}
+                        >
+                            <option value="">{t('ingredientReports.all', 'All')}</option>
+                            {departments.map((department: any) => (
+                                <option key={department.id} value={department.id}>
+                                    {department.name || department.id}
+                                </option>
+                            ))}
+                        </TextField>
+                        {/* <TextField
+                            select
+                            size="small"
+                            label={t('invoices.storage', 'Storage')}
+                            SelectProps={{ native: true }}
+                            value={draftFilters.storage_id || ''}
+                            onChange={(e) =>
+                                setDraftFilters((prev) => ({
+                                    ...prev,
+                                    storage_id: e.target.value,
+                                }))
+                            }
+                            InputLabelProps={{ shrink: true }}
+                        >
+                            <option value="">{t('ingredientReports.all', 'All')}</option>
+                            {storages.map((storage: any) => (
+                                <option key={storage.id} value={storage.id}>
+                                    {storage.name || storage.id}
+                                </option>
+                            ))}
+                        </TextField> */}
+                        <Box sx={{ display: 'flex', gap: 1 }}>
+                            <Button
+                                variant="outlined"
+                                size="small"
+                                startIcon={<Iconify icon="solar:restart-bold" />}
+                                onClick={() => setDraftFilters(initialFilters)}
+                                sx={{ flex: 1 }}
+                            >
+                                {t('ingredientReports.reset', 'Reset')}
+                            </Button>
+                        </Box>
+                    </Box>
+                )}
                 breadcrumbs={{
                     heading: t('mealsProducts.title'),
                     links: [

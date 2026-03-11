@@ -56,6 +56,13 @@ export interface IMealWithCalculations {
     profit_margin: string;
 }
 
+export interface MealsFilters {
+    query?: string;
+    category_id?: string;
+    department_id?: string;
+    storage_id?: string;
+}
+
 // ============================================================================
 // HELPER FUNCTIONS
 // ============================================================================
@@ -202,7 +209,7 @@ function enrichMeal(
 /**
  * Get all meals with enriched category, department names and translations
  */
-export function useGetMeals(searchQuery?: string) {
+export function useGetMeals(searchQuery?: string | MealsFilters) {
     const { i18n } = useTranslation();
 
     // Get categories and departments for enrichment
@@ -216,10 +223,18 @@ export function useGetMeals(searchQuery?: string) {
         { ...swrOptions }
     );
 
-    const normalizedQuery = searchQuery?.trim() || '';
+    const filters: MealsFilters =
+        typeof searchQuery === 'string' ? { query: searchQuery } : (searchQuery || {});
+    const normalizedQuery = filters.query?.trim() || '';
+    const params: Record<string, string> = {};
+
+    if (filters.category_id) params.category_id = filters.category_id;
+    if (filters.department_id) params.department_id = filters.department_id;
+    if (filters.storage_id) params.storage_id = filters.storage_id;
+
     const swrKey = normalizedQuery
-        ? [endpoints.meals.search, { params: { query: normalizedQuery } }]
-        : endpoints.meals.list;
+        ? [endpoints.meals.search, { params: { ...params, query: normalizedQuery } }]
+        : [endpoints.meals.list, { params }];
 
     const { data, isLoading, error, isValidating, mutate: mutateMeals } = useSWR<
         BackendResponse<IMealAPIResponse[]> | IMealAPIResponse[]

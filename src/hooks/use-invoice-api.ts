@@ -32,6 +32,19 @@ export interface InvoiceDetail {
     ingredient_name?: string; // Enriched field
 }
 
+export interface InvoiceListFilters {
+    date_from?: string;
+    date_to?: string;
+    storage_id?: string;
+    supplier_id?: string;
+    ingredient_id?: string;
+    status?: string;
+    expand?: string;
+    q?: string;
+    limit?: number;
+    offset?: number;
+}
+
 export interface InvoiceBatchPayload {
     invoice: Partial<Invoice>;
     details: Partial<InvoiceDetail>[];
@@ -57,7 +70,7 @@ export interface BackendResponse<T> {
 }
 
 export interface UseInvoiceAPIReturn {
-    getInvoices: () => Promise<Invoice[]>;
+    getInvoices: (filters?: InvoiceListFilters) => Promise<Invoice[]>;
     getInvoiceById: (id: string) => Promise<Invoice | null>;
     createInvoice: (data: Partial<Invoice>) => Promise<Invoice>;
     updateInvoice: (id: string, data: Partial<Invoice>) => Promise<Invoice>;
@@ -80,6 +93,31 @@ export interface UseInvoiceAPIReturn {
 
 export function useInvoiceAPI(): UseInvoiceAPIReturn {
     const MAX_LIST_ITEMS = 500;
+
+    const buildListParams = (filters?: InvoiceListFilters): Record<string, string | number> => {
+        if (!filters) return {};
+
+        const params: Record<string, string | number> = {};
+
+        const assignIfPresent = (key: keyof InvoiceListFilters, value?: string | number) => {
+            if (value === undefined || value === null) return;
+            if (typeof value === 'string' && value.trim() === '') return;
+            params[key] = value;
+        };
+
+        assignIfPresent('date_from', filters.date_from);
+        assignIfPresent('date_to', filters.date_to);
+        assignIfPresent('storage_id', filters.storage_id);
+        assignIfPresent('supplier_id', filters.supplier_id);
+        assignIfPresent('ingredient_id', filters.ingredient_id);
+        assignIfPresent('status', filters.status);
+        assignIfPresent('expand', filters.expand);
+        assignIfPresent('q', filters.q);
+        assignIfPresent('limit', filters.limit);
+        assignIfPresent('offset', filters.offset);
+
+        return params;
+    };
 
     const isBackendResponse = <T,>(value: unknown): value is BackendResponse<T> =>
         !!value && typeof value === 'object' && 'data' in (value as Record<string, unknown>);
@@ -117,15 +155,45 @@ export function useInvoiceAPI(): UseInvoiceAPIReturn {
     /**
      * Barcha invoices'ni oladi
      */
-    const getInvoices = useCallback(async (): Promise<Invoice[]> => {
+    const getInvoices = useCallback(async (filters?: InvoiceListFilters): Promise<Invoice[]> => {
         try {
+            const params = buildListParams(filters);
+            const searchQuery = typeof params.q === 'string' ? params.q.trim() : '';
+            if (searchQuery) {
+                delete params.q;
+                const response = await fetcher<unknown>([
+                    endpoints.invoice.search,
+                    {
+                        params: {
+                            ...params,
+                            q: searchQuery,
+                            limit: typeof params.limit === 'number' ? params.limit : MAX_LIST_ITEMS,
+                            offset: typeof params.offset === 'number' ? params.offset : 0,
+                        },
+                    },
+                ]);
+
+                const { items } = extractListAndMeta<Invoice>(response);
+                return items.slice(0, MAX_LIST_ITEMS);
+            }
+
+            if (typeof params.limit === 'number') {
+                const response = await fetcher<unknown>([
+                    endpoints.invoice.list,
+                    { params },
+                ]);
+
+                const { items } = extractListAndMeta<Invoice>(response);
+                return items.slice(0, MAX_LIST_ITEMS);
+            }
+
             const result: Invoice[] = [];
-            let offset = 0;
+            let offset = typeof params.offset === 'number' ? params.offset : 0;
 
             while (result.length < MAX_LIST_ITEMS) {
                 const response = await fetcher<unknown>([
                     endpoints.invoice.list,
-                    { params: { limit: MAX_LIST_ITEMS, offset } },
+                    { params: { ...params, limit: MAX_LIST_ITEMS, offset } },
                 ]);
 
                 const { items, total } = extractListAndMeta<Invoice>(response);

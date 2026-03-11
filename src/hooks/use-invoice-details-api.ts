@@ -27,6 +27,19 @@ export interface BackendResponse<T> {
     code: number;
 }
 
+export interface InvoiceListFilters {
+    date_from?: string;
+    date_to?: string;
+    storage_id?: string;
+    supplier_id?: string;
+    ingredient_id?: string;
+    status?: string;
+    expand?: string;
+    q?: string;
+    limit?: number;
+    offset?: number;
+}
+
 export interface UseInvoiceDetailsAPIReturn {
     getInvoiceDetails: () => Promise<InvoiceDetail[]>;
     getInvoiceDetailById: (id: string) => Promise<InvoiceDetail | null>;
@@ -37,7 +50,7 @@ export interface UseInvoiceDetailsAPIReturn {
     createInvoiceDetailsBatch: (data: Array<Partial<InvoiceDetail>>) => Promise<InvoiceDetail[]>;
     createInvoiceBatch: (data: any) => Promise<any>;
     getIngredients: () => Promise<any[]>;
-    getInvoices: (searchQuery?: string) => Promise<any[]>;
+    getInvoices: (filters?: InvoiceListFilters) => Promise<any[]>;
 }
 
 // ============================================================================
@@ -46,6 +59,31 @@ export interface UseInvoiceDetailsAPIReturn {
 
 export function useInvoiceDetailsAPI(): UseInvoiceDetailsAPIReturn {
     const MAX_LIST_ITEMS = 500;
+
+    const buildListParams = (filters?: InvoiceListFilters): Record<string, string | number> => {
+        if (!filters) return {};
+
+        const params: Record<string, string | number> = {};
+
+        const assignIfPresent = (key: keyof InvoiceListFilters, value?: string | number) => {
+            if (value === undefined || value === null) return;
+            if (typeof value === 'string' && value.trim() === '') return;
+            params[key] = value;
+        };
+
+        assignIfPresent('date_from', filters.date_from);
+        assignIfPresent('date_to', filters.date_to);
+        assignIfPresent('storage_id', filters.storage_id);
+        assignIfPresent('supplier_id', filters.supplier_id);
+        assignIfPresent('ingredient_id', filters.ingredient_id);
+        assignIfPresent('status', filters.status);
+        assignIfPresent('expand', filters.expand);
+        assignIfPresent('q', filters.q);
+        assignIfPresent('limit', filters.limit);
+        assignIfPresent('offset', filters.offset);
+
+        return params;
+    };
 
     const extractListAndMeta = <T,>(payload: unknown): { items: T[]; total?: number } => {
         if (!payload || typeof payload !== 'object') return { items: [] };
@@ -277,26 +315,45 @@ export function useInvoiceDetailsAPI(): UseInvoiceDetailsAPIReturn {
     /**
      * Barcha invoices'ni oladi
      */
-    const getInvoices = useCallback(async (searchQuery?: string): Promise<any[]> => {
+    const getInvoices = useCallback(async (filters?: InvoiceListFilters): Promise<any[]> => {
         try {
-            const normalizedQuery = searchQuery?.trim() || '';
+            const params = buildListParams(filters);
+            const searchQuery = typeof params.q === 'string' ? params.q.trim() : '';
 
-            if (normalizedQuery) {
+            if (searchQuery) {
+                delete params.q;
                 const response = await fetcher<unknown>([
                     endpoints.invoice.search,
-                    { params: { q: normalizedQuery, limit: MAX_LIST_ITEMS, offset: 0 } },
+                    {
+                        params: {
+                            ...params,
+                            q: searchQuery,
+                            limit: typeof params.limit === 'number' ? params.limit : MAX_LIST_ITEMS,
+                            offset: typeof params.offset === 'number' ? params.offset : 0,
+                        },
+                    },
                 ]);
                 const { items } = extractListAndMeta<any>(response);
                 return items.slice(0, MAX_LIST_ITEMS);
             }
 
+            if (typeof params.limit === 'number') {
+                const response = await fetcher<unknown>([
+                    endpoints.invoice.list,
+                    { params },
+                ]);
+
+                const { items } = extractListAndMeta<any>(response);
+                return items.slice(0, MAX_LIST_ITEMS);
+            }
+
             const result: any[] = [];
-            let offset = 0;
+            let offset = typeof params.offset === 'number' ? params.offset : 0;
 
             while (result.length < MAX_LIST_ITEMS) {
                 const response = await fetcher<unknown>([
                     endpoints.invoice.list,
-                    { params: { limit: MAX_LIST_ITEMS, offset } },
+                    { params: { ...params, limit: MAX_LIST_ITEMS, offset } },
                 ]);
 
                 const { items, total } = extractListAndMeta<any>(response);

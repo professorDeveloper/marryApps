@@ -1,7 +1,11 @@
 import type { GridColDef } from '@mui/x-data-grid';
+import type { InvoiceListFilters } from 'src/hooks/use-invoice-details-api';
+
+import dayjs from 'dayjs';
 import { useMemo, useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Dialog, DialogTitle, DialogContent, DialogActions, Button, Box } from '@mui/material';
+import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+import { Dialog, DialogTitle, DialogContent, DialogActions, Button, Box, TextField } from '@mui/material';
 import { paths } from 'src/routes/paths';
 import { useInvoiceDetailsAPI } from 'src/hooks/use-invoice-details-api';
 import { useInvoiceAPI } from 'src/hooks/use-invoice-api';
@@ -27,6 +31,68 @@ interface InvoiceDetailWithInvoiceInfo {
     invoice_date?: string;
 }
 
+const getTodayUtcBoundary = (endOfDay = false): string => {
+    const now = dayjs();
+    const date = new Date(
+        Date.UTC(
+            now.year(),
+            now.month(),
+            now.date(),
+            endOfDay ? 23 : 0,
+            endOfDay ? 59 : 0,
+            endOfDay ? 59 : 0
+        )
+    );
+
+    return date.toISOString().replace('.000Z', 'Z');
+};
+
+const getTomorrowUtcBoundary = (endOfDay = false): string => {
+    const now = dayjs().add(1, 'day');
+    const date = new Date(
+        Date.UTC(
+            now.year(),
+            now.month(),
+            now.date(),
+            endOfDay ? 23 : 0,
+            endOfDay ? 59 : 0,
+            endOfDay ? 59 : 0
+        )
+    );
+
+    return date.toISOString().replace('.000Z', 'Z');
+};
+
+const initialFilters: InvoiceListFilters = {
+    date_from: getTodayUtcBoundary(),
+    date_to: getTomorrowUtcBoundary(true),
+    storage_id: '',
+    supplier_id: '',
+    ingredient_id: '',
+    status: '',
+    expand: '',
+    q: '',
+    limit: 1000,
+    offset: 0,
+};
+
+const toUtcDayBoundary = (value: dayjs.Dayjs, endOfDay = false): string => {
+    const date = new Date(
+        Date.UTC(
+            value.year(),
+            value.month(),
+            value.date(),
+            endOfDay ? 23 : 0,
+            endOfDay ? 59 : 0,
+            endOfDay ? 59 : 0
+        )
+    );
+
+    return date.toISOString().replace('.000Z', 'Z');
+};
+
+const toPickerDate = (value?: string): dayjs.Dayjs | null => (value ? dayjs(value.slice(0, 10)) : null);
+
 export function InvoiceDetailsStandaloneListView() {
     const { t } = useTranslation('menu');
     const theme = {
@@ -44,6 +110,9 @@ export function InvoiceDetailsStandaloneListView() {
     const { getStorages } = useStorageAPI();
     const [invoices, setInvoices] = useState<any[]>([]);
     const [allDetails, setAllDetails] = useState<InvoiceDetailWithInvoiceInfo[]>([]);
+    const [suppliers, setSuppliers] = useState<any[]>([]);
+    const [storages, setStorages] = useState<any[]>([]);
+    const [ingredients, setIngredients] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [selectedDeleteId, setSelectedDeleteId] = useState<string | null>(null);
@@ -51,6 +120,8 @@ export function InvoiceDetailsStandaloneListView() {
     const [selectedInvoice, setSelectedInvoice] = useState<any | null>(null);
     const [searchQuery, setSearchQuery] = useState('');
     const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
+    const [filters, setFilters] = useState<InvoiceListFilters>(initialFilters);
+    const [draftFilters, setDraftFilters] = useState<InvoiceListFilters>(initialFilters);
 
     useEffect(() => {
         const timeout = setTimeout(() => {
@@ -64,16 +135,20 @@ export function InvoiceDetailsStandaloneListView() {
         const fetchData = async () => {
             setLoading(true);
             try {
-                const fetchedInvoices = await getInvoices(debouncedSearchQuery);
-                const suppliers = await getSuppliers();
-                const storages = await getStorages();
+                const fetchedInvoices = await getInvoices(filters);
+                const suppliersData = await getSuppliers();
+                const storagesData = await getStorages();
                 const details = await getInvoiceDetails();
-                const ingredients = await getIngredients();
+                const ingredientsData = await getIngredients();
+
+                setSuppliers(suppliersData || []);
+                setStorages(storagesData || []);
+                setIngredients(ingredientsData || []);
 
                 // Enrich invoices with supplier and storage information
                 const enrichedInvoices = fetchedInvoices.map((invoice: any) => {
-                    const supplier = suppliers.find((s: any) => s.id === invoice.supplier_id);
-                    const storage = storages.find((st: any) => st.id === invoice.storage_id);
+                    const supplier = (suppliersData || []).find((s: any) => s.id === invoice.supplier_id);
+                    const storage = (storagesData || []).find((st: any) => st.id === invoice.storage_id);
                     return {
                         ...invoice,
                         supplier_name: supplier?.name || 'Unknown',
@@ -85,7 +160,7 @@ export function InvoiceDetailsStandaloneListView() {
                 // Enrich details with invoice and ingredient information
                 const enrichedDetails = details.map((detail) => {
                     const invoice = enrichedInvoices.find((inv) => inv.id === detail.invoice_id);
-                    const ingredient = ingredients.find((ing) => ing.id === detail.ingredient_id);
+                    const ingredient = (ingredientsData || []).find((ing: any) => ing.id === detail.ingredient_id);
                     return {
                         ...detail,
                         quantity: Number(detail.quantity),
@@ -103,7 +178,22 @@ export function InvoiceDetailsStandaloneListView() {
         };
 
         fetchData();
-    }, [debouncedSearchQuery, getInvoiceDetails, getInvoices, getIngredients, getSuppliers, getStorages]);
+    }, [filters, getInvoiceDetails, getInvoices, getIngredients, getSuppliers, getStorages]);
+
+    useEffect(() => {
+        setDraftFilters((prev) => ({
+            ...prev,
+            q: debouncedSearchQuery,
+        }));
+    }, [debouncedSearchQuery]);
+
+    useEffect(() => {
+        setFilters((prev) => ({
+            ...prev,
+            ...draftFilters,
+            offset: 0,
+        }));
+    }, [draftFilters]);
 
     const handleDeleteClick = (id: string, type: 'invoice' | 'detail') => {
         setSelectedDeleteId(id);
@@ -346,6 +436,8 @@ export function InvoiceDetailsStandaloneListView() {
     );
 
     const filteredDetails = allDetails.filter((detail) => detail.invoice_id === selectedInvoice?.id);
+    const startDateValue = useMemo(() => toPickerDate(draftFilters.date_from), [draftFilters.date_from]);
+    const endDateValue = useMemo(() => toPickerDate(draftFilters.date_to), [draftFilters.date_to]);
 
     return (
         <>
@@ -353,6 +445,154 @@ export function InvoiceDetailsStandaloneListView() {
                 data={invoices}
                 loading={loading}
                 columns={invoiceColumns}
+                renderFilters={() => (
+                    <Box
+                        sx={{
+                            display: 'grid',
+                            gridTemplateColumns: {
+                                xs: '1fr',
+                                sm: '1fr 1fr',
+                                md: 'repeat(3, 1fr)',
+                                lg: 'repeat(4, 1fr)',
+                            },
+                            gap: 1.5,
+                        }}
+                    >
+                        <DatePicker
+                            label={t('ingredientReports.startDate', 'Start date')}
+                            value={startDateValue}
+                            onChange={(value) =>
+                                setDraftFilters((prev) => ({
+                                    ...prev,
+                                    date_from: value ? toUtcDayBoundary(value) : '',
+                                }))
+                            }
+                            format="DD.MM.YYYY"
+                            slotProps={{
+                                textField: {
+                                    fullWidth: true,
+                                    size: 'small',
+                                    inputProps: { readOnly: true },
+                                    sx: { cursor: 'pointer' },
+                                },
+                            }}
+                        />
+                        <DatePicker
+                            label={t('ingredientReports.endDate', 'End date')}
+                            value={endDateValue}
+                            onChange={(value) =>
+                                setDraftFilters((prev) => ({
+                                    ...prev,
+                                    date_to: value ? toUtcDayBoundary(value, true) : '',
+                                }))
+                            }
+                            format="DD.MM.YYYY"
+                            slotProps={{
+                                textField: {
+                                    fullWidth: true,
+                                    size: 'small',
+                                    inputProps: { readOnly: true },
+                                    sx: { cursor: 'pointer' },
+                                },
+                            }}
+                        />
+                        <TextField
+                            select
+                            size="small"
+                            label={t('invoices.storage', 'Storage')}
+                            SelectProps={{ native: true }}
+                            value={draftFilters.storage_id || ''}
+                            onChange={(e) =>
+                                setDraftFilters((prev) => ({
+                                    ...prev,
+                                    storage_id: e.target.value,
+                                }))
+                            }
+                            InputLabelProps={{ shrink: true }}
+                        >
+                            <option value="">{t('ingredientReports.all', 'All')}</option>
+                            {storages.map((storage) => (
+                                <option key={storage.id} value={storage.id}>
+                                    {storage.name || storage.id}
+                                </option>
+                            ))}
+                        </TextField>
+                        <TextField
+                            select
+                            size="small"
+                            label={t('invoices.name', 'Supplier')}
+                            SelectProps={{ native: true }}
+                            value={draftFilters.supplier_id || ''}
+                            onChange={(e) =>
+                                setDraftFilters((prev) => ({
+                                    ...prev,
+                                    supplier_id: e.target.value,
+                                }))
+                            }
+                            InputLabelProps={{ shrink: true }}
+                        >
+                            <option value="">{t('ingredientReports.all', 'All')}</option>
+                            {suppliers.map((supplier) => (
+                                <option key={supplier.id} value={supplier.id}>
+                                    {supplier.name || supplier.id}
+                                </option>
+                            ))}
+                        </TextField>
+                        <TextField
+                            select
+                            size="small"
+                            label={t('ingredient', 'Ingredient')}
+                            SelectProps={{ native: true }}
+                            value={draftFilters.ingredient_id || ''}
+                            onChange={(e) =>
+                                setDraftFilters((prev) => ({
+                                    ...prev,
+                                    ingredient_id: e.target.value,
+                                }))
+                            }
+                            InputLabelProps={{ shrink: true }}
+                        >
+                            <option value="">{t('ingredientReports.all', 'All')}</option>
+                            {ingredients.map((ingredient) => (
+                                <option key={ingredient.id} value={ingredient.id}>
+                                    {ingredient.name || ingredient.id}
+                                </option>
+                            ))}
+                        </TextField>
+                        <TextField
+                            select
+                            size="small"
+                            label={t('invoices.status', 'Status')}
+                            SelectProps={{ native: true }}
+                            value={draftFilters.status || ''}
+                            onChange={(e) =>
+                                setDraftFilters((prev) => ({
+                                    ...prev,
+                                    status: e.target.value,
+                                }))
+                            }
+                            InputLabelProps={{ shrink: true }}
+                        >
+                            <option value="">{t('ingredientReports.all', 'All')}</option>
+                            <option value="pending">{t('warehouse.invoices.statuses.pending', 'Pending')}</option>
+                            <option value="arrived">{t('warehouse.invoices.statuses.arrived', 'Arrived')}</option>
+                            <option value="received">{t('warehouse.invoices.statuses.received', 'Received')}</option>
+                            <option value="cancelled">{t('warehouse.invoices.statuses.cancelled', 'Cancelled')}</option>
+                        </TextField>
+                      
+                        <Box sx={{ display: 'flex', gap: 1 }}>
+                            <Button
+                                variant="outlined"
+                                size="small"
+                                startIcon={<Iconify icon="solar:restart-bold" />}
+                                onClick={() => setDraftFilters(initialFilters)}
+                                sx={{ flex: 1 }}
+                            >
+                                {t('ingredientReports.reset', 'Reset')}
+                            </Button>
+                        </Box>
+                    </Box>
+                )}
                 breadcrumbs={{
                     heading: t('overview.warehouse.invoiceDetails', 'Kirimlar'),
                     links: [
