@@ -52,6 +52,20 @@ func (q *Queries) CloseAttendance(ctx context.Context, arg CloseAttendanceParams
 	return i, err
 }
 
+const countStaffUsers = `-- name: CountStaffUsers :one
+SELECT COUNT(*) FROM users
+WHERE deleted_at = 0
+  AND role NOT IN ('admin', 'superadmin')
+  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+`
+
+func (q *Queries) CountStaffUsers(ctx context.Context) (int64, error) {
+	row := q.db.QueryRow(ctx, countStaffUsers)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const countUsers = `-- name: CountUsers :one
 SELECT COUNT(*) FROM users 
 WHERE deleted_at = 0
@@ -1000,6 +1014,58 @@ ORDER BY full_name ASC
 
 func (q *Queries) GetStaffUsers(ctx context.Context) ([]User, error) {
 	rows, err := q.db.Query(ctx, getStaffUsers)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []User
+	for rows.Next() {
+		var i User
+		if err := rows.Scan(
+			&i.ID,
+			&i.FullName,
+			&i.Username,
+			&i.Role,
+			&i.Email,
+			&i.ShiftID,
+			&i.Pincode,
+			&i.HashPassword,
+			&i.BrandID,
+			&i.BranchID,
+			&i.PhoneNumber,
+			&i.FcmToken,
+			&i.IsActive,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.DeletedAt,
+			&i.CashRegisterID,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getStaffUsersPaginated = `-- name: GetStaffUsersPaginated :many
+SELECT id, full_name, username, role, email, shift_id, pincode, hash_password, brand_id, branch_id, phone_number, fcm_token, is_active, created_at, updated_at, deleted_at, cash_register_id FROM users
+WHERE deleted_at = 0
+  AND role NOT IN ('admin', 'superadmin')
+  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+ORDER BY full_name ASC
+LIMIT $1 OFFSET $2
+`
+
+type GetStaffUsersPaginatedParams struct {
+	Limit  int32 `json:"limit"`
+	Offset int32 `json:"offset"`
+}
+
+func (q *Queries) GetStaffUsersPaginated(ctx context.Context, arg GetStaffUsersPaginatedParams) ([]User, error) {
+	rows, err := q.db.Query(ctx, getStaffUsersPaginated, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}

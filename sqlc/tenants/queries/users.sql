@@ -200,6 +200,20 @@ WHERE deleted_at = 0
   AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 ORDER BY full_name ASC;
 
+-- name: GetStaffUsersPaginated :many
+SELECT * FROM users
+WHERE deleted_at = 0
+  AND role NOT IN ('admin', 'superadmin')
+  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+ORDER BY full_name ASC
+LIMIT $1 OFFSET $2;
+
+-- name: CountStaffUsers :one
+SELECT COUNT(*) FROM users
+WHERE deleted_at = 0
+  AND role NOT IN ('admin', 'superadmin')
+  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid;
+
 -- name: GetUsersByRole :many
 SELECT * FROM users 
 WHERE role = $1 AND deleted_at = 0

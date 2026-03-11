@@ -27,11 +27,8 @@ type AuthI interface {
 	GetUserByID(ctx context.Context, userID string) (model.UserResponse, error)
 	UpdateUser(ctx context.Context, req model.UpdateUserRequest, userID string) (model.UserResponse, error)
 	// Additional methods for QR ordering system
-	GetUsersByRole(ctx context.Context, role string) ([]model.UserResponse, error)
-	GetAllStaff(ctx context.Context) ([]model.UserResponse, error)
-	GetKitchenStaff(ctx context.Context) ([]model.UserResponse, error)
-	GetWaiters(ctx context.Context) ([]model.UserResponse, error)
-	GetCashiers(ctx context.Context) ([]model.UserResponse, error)
+	GetUsersByRole(ctx context.Context, role string, limit, offset int32) ([]model.UserResponse, int64, error)
+	GetKitchenStaff(ctx context.Context, limit, offset int32) ([]model.UserResponse, int64, error)
 	DeleteUser(ctx context.Context, userID string) error
 	RestoreUser(ctx context.Context, userID string) error
 	SearchUsers(ctx context.Context, query string, limit, offset int32) ([]model.UserResponse, error)

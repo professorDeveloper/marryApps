@@ -923,43 +923,32 @@ func toUserResponse(u pg.User) model.UserResponse {
 	}
 }
 
-func (s *AuthS) GetUsersByRole(ctx context.Context, role string) ([]model.UserResponse, error) {
+func (s *AuthS) GetUsersByRole(ctx context.Context, role string, limit, offset int32) ([]model.UserResponse, int64, error) {
 	role = strings.TrimSpace(strings.ToLower(role))
-	users, err := s.repo.Tenant(ctx).GetUsersByRole(ctx, role)
+
+	total, err := s.repo.Tenant(ctx).CountUsersByRole(ctx, role)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get users by role: %w", err)
+		return nil, 0, fmt.Errorf("failed to count users by role: %w", err)
+	}
+
+	users, err := s.repo.Tenant(ctx).GetUsersByRolePaginated(ctx, pg.GetUsersByRolePaginatedParams{
+		Role:   role,
+		Limit:  limit,
+		Offset: offset,
+	})
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to get users by role: %w", err)
 	}
 
 	var responses []model.UserResponse
 	for _, user := range users {
 		responses = append(responses, toUserResponse(user))
 	}
-	return responses, nil
+	return responses, total, nil
 }
 
-func (s *AuthS) GetAllStaff(ctx context.Context) ([]model.UserResponse, error) {
-	users, err := s.repo.Tenant(ctx).GetStaffUsers(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get staff: %w", err)
-	}
-
-	var responses []model.UserResponse
-	for _, user := range users {
-		responses = append(responses, toUserResponse(user))
-	}
-	return responses, nil
-}
-
-func (s *AuthS) GetKitchenStaff(ctx context.Context) ([]model.UserResponse, error) {
-	return s.GetUsersByRole(ctx, "kitchen")
-}
-
-func (s *AuthS) GetWaiters(ctx context.Context) ([]model.UserResponse, error) {
-	return s.GetUsersByRole(ctx, "waiter")
-}
-
-func (s *AuthS) GetCashiers(ctx context.Context) ([]model.UserResponse, error) {
-	return s.GetUsersByRole(ctx, "cashier")
+func (s *AuthS) GetKitchenStaff(ctx context.Context, limit, offset int32) ([]model.UserResponse, int64, error) {
+	return s.GetUsersByRole(ctx, "kitchen", limit, offset)
 }
 
 func (s *AuthS) DeleteUser(ctx context.Context, userID string) error {

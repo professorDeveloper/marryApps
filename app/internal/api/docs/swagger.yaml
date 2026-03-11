@@ -18892,18 +18892,33 @@ paths:
     get:
       consumes:
       - application/json
-      description: Retrieve all users with a specific role (requires authentication)
+      description: Retrieve all users with a specific role with pagination and optional
+        expand
       parameters:
       - description: User role (admin, manager, cashier, waiter, kitchen, user, superadmin)
         in: query
         name: role
         required: true
         type: string
+      - default: 20
+        description: 'Limit results (default: 20)'
+        in: query
+        name: limit
+        type: integer
+      - default: 0
+        description: 'Offset for pagination (default: 0)'
+        in: query
+        name: offset
+        type: integer
+      - description: Expand related fields (e.g. shift,branch)
+        in: query
+        name: expand
+        type: string
       produces:
       - application/json
       responses:
         "200":
-          description: List of users with the specified role
+          description: Paginated list of users
           schema:
             items:
               $ref: '#/definitions/model.UserResponse'
@@ -18916,48 +18931,41 @@ paths:
           description: Unauthorized
           schema:
             $ref: '#/definitions/model.ErrorResponse'
-      security:
-      - BearerAuth: []
-      summary: Get users by role
-      tags:
-      - users
-  /api/v1/users/cashiers:
-    get:
-      consumes:
-      - application/json
-      description: Retrieve all cashier staff members
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: List of cashiers
-          schema:
-            items:
-              $ref: '#/definitions/model.UserResponse'
-            type: array
-        "401":
-          description: Unauthorized
-          schema:
-            $ref: '#/definitions/model.ErrorResponse'
         "500":
           description: Internal server error
           schema:
             $ref: '#/definitions/model.ErrorResponse'
       security:
       - BearerAuth: []
-      summary: Get cashiers
+      summary: Get users by role
       tags:
       - users
   /api/v1/users/kitchen-staff:
     get:
       consumes:
       - application/json
-      description: Retrieve all kitchen staff members
+      description: Retrieve all kitchen staff members with pagination and optional
+        expand
+      parameters:
+      - default: 20
+        description: 'Limit results (default: 20)'
+        in: query
+        name: limit
+        type: integer
+      - default: 0
+        description: 'Offset for pagination (default: 0)'
+        in: query
+        name: offset
+        type: integer
+      - description: Expand related fields (e.g. shift,branch)
+        in: query
+        name: expand
+        type: string
       produces:
       - application/json
       responses:
         "200":
-          description: List of kitchen staff
+          description: Paginated list of kitchen staff
           schema:
             items:
               $ref: '#/definitions/model.UserResponse'
@@ -19020,60 +19028,6 @@ paths:
       security:
       - BearerAuth: []
       summary: Search users
-      tags:
-      - users
-  /api/v1/users/staff:
-    get:
-      consumes:
-      - application/json
-      description: Retrieve all staff members (non-user role employees)
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: List of all staff members
-          schema:
-            items:
-              $ref: '#/definitions/model.UserResponse'
-            type: array
-        "401":
-          description: Unauthorized
-          schema:
-            $ref: '#/definitions/model.ErrorResponse'
-        "500":
-          description: Internal server error
-          schema:
-            $ref: '#/definitions/model.ErrorResponse'
-      security:
-      - BearerAuth: []
-      summary: Get all staff members
-      tags:
-      - users
-  /api/v1/users/waiters:
-    get:
-      consumes:
-      - application/json
-      description: Retrieve all waiter staff members
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: List of waiters
-          schema:
-            items:
-              $ref: '#/definitions/model.UserResponse'
-            type: array
-        "401":
-          description: Unauthorized
-          schema:
-            $ref: '#/definitions/model.ErrorResponse'
-        "500":
-          description: Internal server error
-          schema:
-            $ref: '#/definitions/model.ErrorResponse'
-      security:
-      - BearerAuth: []
-      summary: Get waiters
       tags:
       - users
 schemes:

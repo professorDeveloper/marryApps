@@ -13,6 +13,19 @@ import (
 	pg "gitlab.yurtal.tech/company/maryai/back/internal/repository/pg"
 )
 
+// parseLimitOffset parses limit and offset query params with defaults of 20 and 0.
+func parseLimitOffset(c echo.Context) (limit, offset int32) {
+	limit = 20
+	offset = 0
+	if l, err := strconv.ParseInt(c.QueryParam("limit"), 10, 32); err == nil && l > 0 {
+		limit = int32(l)
+	}
+	if o, err := strconv.ParseInt(c.QueryParam("offset"), 10, 32); err == nil && o >= 0 {
+		offset = int32(o)
+	}
+	return
+}
+
 // expandListResponse converts a slice-typed value to []map[string]any and applies expand.
 // Returns (maps, true, nil) when expand was applied; (nil, false, nil) when no expand param.
 // On error writes a JSON error response and returns (nil, true, err).
