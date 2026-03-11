@@ -84,7 +84,7 @@ axiosInstance.interceptors.request.use((config) => {
   if (method === 'get' && forcedListEndpoints.has(pathOnly) && !hasLimitInUrl && !hasLimitInParams) {
     config.params = {
       ...paramsObj,
-      limit: 500,
+      limit: 1000,
       offset: typeof paramsObj.offset === 'number' ? paramsObj.offset : 0,
     };
   }

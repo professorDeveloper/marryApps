@@ -18,7 +18,7 @@ import { toast } from 'src/components/snackbar';
 
 const normalizeListResponse = (payload: unknown): ShipmentListResponse => {
   if (!payload || typeof payload !== 'object') {
-    return { data: [], limit: 500, offset: 0, total: 0 };
+    return { data: [], limit: 1000, offset: 0, total: 0 };
   }
 
   const obj = payload as Record<string, unknown>;
@@ -72,7 +72,7 @@ export function useShipmentsAPI() {
         const axiosError = error as AxiosError<{ message?: string }>;
         const message = axiosError?.response?.data?.message || t('shipments.messages.fetchFailed', 'Failed to fetch shipments');
         toast.error(message);
-        return { data: [], limit: 500, offset: 0, total: 0 };
+        return { data: [], limit: 1000, offset: 0, total: 0 };
       }
     },
     [t]

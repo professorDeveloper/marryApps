@@ -48,7 +48,7 @@ export function GoodsReportsListView() {
     waiter_id: '',
     hall_id: '',
     table_id: '',
-    limit: 500,
+    limit: 1000,
     offset: 0,
   });
 
@@ -176,7 +176,7 @@ export function GoodsReportsListView() {
       waiter_id: '',
       hall_id: '',
       table_id: '',
-      limit: 500,
+      limit: 1000,
       offset: 0,  
     }));
   }, []);

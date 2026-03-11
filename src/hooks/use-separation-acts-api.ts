@@ -20,7 +20,7 @@ const normalizeListResponse = (payload: unknown): SeparationActsListResponse => 
   if (!payload || typeof payload !== 'object') {
     return {
       data: [],
-      limit: 500,
+      limit: 1000,
       offset: 0,
       total: 0,
       total_amount: '0',
@@ -85,7 +85,7 @@ export function useSeparationActsAPI() {
         toast.error(message);
         return {
           data: [],
-          limit: 500,
+          limit: 1000,
           offset: 0,
           total: 0,
           total_amount: '0',

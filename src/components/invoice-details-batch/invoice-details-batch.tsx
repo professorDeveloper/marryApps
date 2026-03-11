@@ -152,9 +152,6 @@ export function InvoiceDetailsBatch({ invoiceId, storageId, supplierId, onSucces
     const handlePricePerUnitChange = (value: string) => {
         setPricePerUnit(value);
     };
-// sidebardagi warehouse bolimi uchun yangi expenses invoices ushbu loyihadagi shipment sahifasi kabi yangi api ulab berishing kerak ui va api logikalari deyarli bir xil 
-// va bu apida ham confirm va cancel apilari bor, Iltimos ui va logika hammasi shipment bilan bir xil bolsin    
-// Handle remove item
 
     const handleRemoveItem = (index: number) => {
         setBatchItems(batchItems.filter((_, i) => i !== index));
