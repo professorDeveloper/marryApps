@@ -6352,6 +6352,12 @@ const docTemplate = `{
                         "name": "id",
                         "in": "path",
                         "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Comma-separated list of fields to expand (e.g. ingredients,compounds)",
+                        "name": "expand",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -9703,6 +9709,12 @@ const docTemplate = `{
                         "name": "id",
                         "in": "path",
                         "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Comma-separated list of fields to expand (e.g. ingredients,compounds)",
+                        "name": "expand",
+                        "in": "query"
                     }
                 ],
                 "responses": {

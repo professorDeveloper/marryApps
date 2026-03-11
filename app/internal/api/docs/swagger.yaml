@@ -7803,6 +7803,10 @@ paths:
         name: id
         required: true
         type: string
+      - description: Comma-separated list of fields to expand (e.g. ingredients,compounds)
+        in: query
+        name: expand
+        type: string
       produces:
       - application/json
       responses:
@@ -9996,6 +10000,10 @@ paths:
         in: path
         name: id
         required: true
+        type: string
+      - description: Comma-separated list of fields to expand (e.g. ingredients,compounds)
+        in: query
+        name: expand
         type: string
       produces:
       - application/json
