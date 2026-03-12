@@ -10,7 +10,7 @@ import { paths } from 'src/routes/paths';
 import { useGenericViewModal } from 'src/hooks/use-generic-view-modal';
 import { getInitials, getAvatarColor } from 'src/utils/avatar';
 import { getFullImageUrl } from 'src/utils/image-url';
-import { useGetCategories, useDeleteCategory, useGetGoodsByCategory } from 'src/actions/categories';
+import { useGetCategoriesPage, useDeleteCategory, useGetGoodsByCategory } from 'src/actions/categories';
 import { toast } from 'src/components/snackbar';
 import { Iconify } from 'src/components/iconify';
 import { GenericTableView } from 'src/components/generic-table-view';
@@ -238,7 +238,10 @@ function RenderCellStorage({ params }: { params: any }) {
  */
 function RenderCellDepartment({ params }: { params: any }) {
   const category = params.row as ICategory;
-  const departmentName = category.department_name || '-';
+  const departmentName =
+    category?._expand?.department_id?.name ||
+    category.department_name ||
+    '-';
   return <span>{departmentName}</span>;
 }
 
@@ -295,6 +298,7 @@ export function CategoryListView() {
   const [categoryToDelete, setCategoryToDelete] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
+  const [paginationModel, setPaginationModel] = useState({ page: 0, pageSize: 20 });
 
   useEffect(() => {
     const timeout = setTimeout(() => {
@@ -304,8 +308,16 @@ export function CategoryListView() {
     return () => clearTimeout(timeout);
   }, [searchQuery]);
 
+  useEffect(() => {
+    setPaginationModel((prev) => ({ ...prev, page: 0 }));
+  }, [debouncedSearchQuery]);
+
   // API hooks
-  const { categories, categoriesLoading } = useGetCategories(debouncedSearchQuery);
+  const { categories, categoriesLoading, pagination } = useGetCategoriesPage({
+    search: debouncedSearchQuery,
+    limit: paginationModel.pageSize,
+    offset: paginationModel.page * paginationModel.pageSize,
+  });
   const { deleteCategory } = useDeleteCategory();
 
   // View modal hook
@@ -408,6 +420,11 @@ export function CategoryListView() {
         data={categories}
         loading={categoriesLoading}
         columns={columns}
+        paginationMode="server"
+        rowCount={pagination?.total || 0}
+        paginationModel={paginationModel}
+        onPaginationModelChange={setPaginationModel}
+        pageSizeOptions={[10, 20, 50, 100]}
         breadcrumbs={{
           heading: t('categories.title'),
           links: [

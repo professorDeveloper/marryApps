@@ -19,8 +19,12 @@ import {
 } from '@mui/material';
 import { paths } from 'src/routes/paths';
 import { useGenericViewModal } from 'src/hooks/use-generic-view-modal';
-import { useGetCompounds, useDeleteCompound, useDeleteCompounds, useGetCompoundWithCalculations } from 'src/hooks/use-compounds';
-import { useGetDepartments } from 'src/actions/departments';
+import {
+    useGetCompoundsPage,
+    useDeleteCompound,
+    useDeleteCompounds,
+    useGetCompoundWithCalculations,
+} from 'src/hooks/use-compounds';
 import { useImageUrl } from 'src/hooks/use-image-url';
 import { getInitials, getAvatarColor } from 'src/utils/avatar';
 import { toast } from 'src/components/snackbar';
@@ -102,12 +106,16 @@ function RenderCellPrice({ params }: { params: any }) {
 /**
  * Compound calculations table renderer
  */
-function CompoundCalculationsTable({ compoundId }: { compoundId: string }) {
+function CompoundCalculationsTable({
+    compoundId,
+    compounds,
+}: {
+    compoundId: string;
+    compounds: ICompound[];
+}) {
     const { t } = useTranslation('menu');
     const { compoundWithCalculations, loading } = useGetCompoundWithCalculations(compoundId);
     const { ingredients } = useGetIngredients();
-    const { compounds } = useGetCompounds();
-
     // Create maps for quick name lookup
     const ingredientMap = useMemo(() => {
         const map = new Map<string, string>();
@@ -237,6 +245,7 @@ export function HalfMeals() {
 
     const [searchQuery, setSearchQuery] = useState('');
     const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
+    const [paginationModel, setPaginationModel] = useState({ page: 0, pageSize: 20 });
 
     useEffect(() => {
         const timeout = setTimeout(() => {
@@ -246,9 +255,17 @@ export function HalfMeals() {
         return () => clearTimeout(timeout);
     }, [searchQuery]);
 
+    useEffect(() => {
+        setPaginationModel((prev) => ({ ...prev, page: 0 }));
+    }, [debouncedSearchQuery]);
+
     // SWR hooks
-    const { compounds, compoundsLoading, mutate } = useGetCompounds(debouncedSearchQuery);
-    const { departments } = useGetDepartments();
+    const { compounds, compoundsLoading, mutate, pagination } = useGetCompoundsPage({
+        search: debouncedSearchQuery,
+        limit: paginationModel.pageSize,
+        offset: paginationModel.page * paginationModel.pageSize,
+        expand: 'department_id,name_i18n,description_i18n',
+    });
     const { deleteCompound } = useDeleteCompound();
     const { deleteCompounds } = useDeleteCompounds();
 
@@ -257,15 +274,6 @@ export function HalfMeals() {
 
     // View modal
     const { isOpen, selectedData, openModal, closeModal } = useGenericViewModal<ICompound>();
-
-    // Convert departments array to map for filtering
-    const departmentsMap = useMemo(() => {
-        const deptMap: Record<string, string> = {};
-        departments.forEach((dept: any) => {
-            deptMap[dept.id] = dept.name;
-        });
-        return deptMap;
-    }, [departments]);
 
     // Measurement options with translations
     const _measurementOptions = useMemo(
@@ -277,15 +285,19 @@ export function HalfMeals() {
         [t]
     );
 
-    // Department options for filtering
-    const departmentOptions = useMemo(
-        () =>
-            departments.map((dept: any) => ({
-                value: dept.id,
-                label: dept.name,
-            })),
-        [departments]
-    );
+    // Department options for filtering (derived from expanded compounds to avoid extra API call)
+    const departmentOptions = useMemo(() => {
+        const map = new Map<string, string>();
+        compounds.forEach((comp: any) => {
+            const dept = comp?._expand?.department_id;
+            if (dept?.id && dept?.name) {
+                map.set(dept.id, dept.name);
+            } else if (comp?.department_id && comp?.department_name) {
+                map.set(comp.department_id, comp.department_name);
+            }
+        });
+        return Array.from(map.entries()).map(([value, label]) => ({ value, label }));
+    }, [compounds]);
 
     // Columns config
     const columns = useMemo<GridColDef[]>(
@@ -406,6 +418,11 @@ export function HalfMeals() {
                 data={compounds}
                 loading={compoundsLoading}
                 columns={columns}
+                paginationMode="server"
+                rowCount={pagination?.total || 0}
+                paginationModel={paginationModel}
+                onPaginationModelChange={setPaginationModel}
+                pageSizeOptions={[10, 20, 50, 100]}
                 breadcrumbs={{
                     heading: t('semifinishedProducts.title'),
                     links: [
@@ -450,7 +467,7 @@ export function HalfMeals() {
                             {/* <Box sx={{ mb: 2, fontWeight: 600, fontSize: 16 }}>
                                 {t('common.calculations')}
                             </Box> */}
-                            <CompoundCalculationsTable compoundId={item.id} />
+                            <CompoundCalculationsTable compoundId={item.id} compounds={compounds} />
                         </Box>
                     </Box>
                 )}

@@ -2,7 +2,7 @@ import type { GridColDef } from '@mui/x-data-grid';
 import type { InvoiceListFilters } from 'src/hooks/use-invoice-details-api';
 
 import dayjs from 'dayjs';
-import { useMemo, useState, useEffect, useCallback } from 'react';
+import { useMemo, useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { Dialog, DialogTitle, DialogContent, DialogActions, Button, Box, TextField } from '@mui/material';
@@ -16,6 +16,7 @@ import { CustomGridActionsCellItem } from 'src/components/custom-data-grid';
 import { GenericTableView } from 'src/components/generic-table-view';
 import { GenericViewModal } from 'src/components/generic-view-view';
 import { DataGrid } from '@mui/x-data-grid';
+import { fetcher } from 'src/lib/axios';
 
 interface InvoiceDetailWithInvoiceInfo {
     id: string;
@@ -70,9 +71,9 @@ const initialFilters: InvoiceListFilters = {
     supplier_id: '',
     ingredient_id: '',
     status: '',
-    expand: '',
+    expand: 'supplier_id,storage_id',
     q: '',
-    limit: 1000,
+    limit: 20,
     offset: 0,
 };
 
@@ -93,6 +94,18 @@ const toUtcDayBoundary = (value: dayjs.Dayjs, endOfDay = false): string => {
 
 const toPickerDate = (value?: string): dayjs.Dayjs | null => (value ? dayjs(value.slice(0, 10)) : null);
 
+let staticDataCache: {
+    suppliers: any[];
+    storages: any[];
+    ingredients: any[];
+} | null = null;
+
+let staticDataPromise: Promise<{
+    suppliers: any[];
+    storages: any[];
+    ingredients: any[];
+}> | null = null;
+
 export function InvoiceDetailsStandaloneListView() {
     const { t } = useTranslation('menu');
     const theme = {
@@ -104,15 +117,15 @@ export function InvoiceDetailsStandaloneListView() {
             },
         },
     };
-    const { getInvoiceDetails, deleteInvoiceDetails, getInvoices, getIngredients } = useInvoiceDetailsAPI();
+    const { deleteInvoiceDetails, getIngredients, getInvoicesPage } = useInvoiceDetailsAPI();
     const { deleteInvoices } = useInvoiceAPI();
     const { getSuppliers } = useSupplierAPI();
     const { getStorages } = useStorageAPI();
-    const [invoices, setInvoices] = useState<any[]>([]);
-    const [allDetails, setAllDetails] = useState<InvoiceDetailWithInvoiceInfo[]>([]);
+    const [rawInvoices, setRawInvoices] = useState<any[]>([]);
     const [suppliers, setSuppliers] = useState<any[]>([]);
     const [storages, setStorages] = useState<any[]>([]);
     const [ingredients, setIngredients] = useState<any[]>([]);
+    const [selectedInvoiceDetails, setSelectedInvoiceDetails] = useState<InvoiceDetailWithInvoiceInfo[]>([]);
     const [loading, setLoading] = useState(true);
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [selectedDeleteId, setSelectedDeleteId] = useState<string | null>(null);
@@ -122,6 +135,9 @@ export function InvoiceDetailsStandaloneListView() {
     const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
     const [filters, setFilters] = useState<InvoiceListFilters>(initialFilters);
     const [draftFilters, setDraftFilters] = useState<InvoiceListFilters>(initialFilters);
+    const [rowCount, setRowCount] = useState(0);
+    const [paginationModel, setPaginationModel] = useState({ page: 0, pageSize: 20 });
+    const lastInvoicesKeyRef = useRef('');
 
     useEffect(() => {
         const timeout = setTimeout(() => {
@@ -132,53 +148,73 @@ export function InvoiceDetailsStandaloneListView() {
     }, [searchQuery]);
 
     useEffect(() => {
-        const fetchData = async () => {
+        const fetchStaticData = async () => {
+            try {
+                if (staticDataCache) {
+                    setSuppliers(staticDataCache.suppliers);
+                    setStorages(staticDataCache.storages);
+                    setIngredients(staticDataCache.ingredients);
+                    return;
+                }
+
+                if (!staticDataPromise) {
+                    staticDataPromise = Promise.all([
+                        getSuppliers(),
+                        getStorages(),
+                        getIngredients(),
+                    ]).then(([suppliersData, storagesData, ingredientsData]) => ({
+                        suppliers: suppliersData || [],
+                        storages: storagesData || [],
+                        ingredients: ingredientsData || [],
+                    }));
+                }
+
+                const resolved = await staticDataPromise;
+                staticDataCache = resolved;
+
+                setSuppliers(resolved.suppliers);
+                setStorages(resolved.storages);
+                setIngredients(resolved.ingredients);
+            } catch {
+                setSuppliers([]);
+                setStorages([]);
+                setIngredients([]);
+            }
+        };
+
+        fetchStaticData();
+    }, [getSuppliers, getStorages, getIngredients]);
+
+    useEffect(() => {
+        const fetchInvoices = async () => {
+            const key = JSON.stringify({
+                date_from: filters.date_from,
+                date_to: filters.date_to,
+                storage_id: filters.storage_id,
+                supplier_id: filters.supplier_id,
+                ingredient_id: filters.ingredient_id,
+                status: filters.status,
+                q: filters.q,
+                expand: filters.expand,
+                limit: filters.limit,
+                offset: filters.offset,
+            });
+
+            if (lastInvoicesKeyRef.current === key) return;
+            lastInvoicesKeyRef.current = key;
+
             setLoading(true);
             try {
-                const fetchedInvoices = await getInvoices(filters);
-                const suppliersData = await getSuppliers();
-                const storagesData = await getStorages();
-                const details = await getInvoiceDetails();
-                const ingredientsData = await getIngredients();
-
-                setSuppliers(suppliersData || []);
-                setStorages(storagesData || []);
-                setIngredients(ingredientsData || []);
-
-                // Enrich invoices with supplier and storage information
-                const enrichedInvoices = fetchedInvoices.map((invoice: any) => {
-                    const supplier = (suppliersData || []).find((s: any) => s.id === invoice.supplier_id);
-                    const storage = (storagesData || []).find((st: any) => st.id === invoice.storage_id);
-                    return {
-                        ...invoice,
-                        supplier_name: supplier?.name || 'Unknown',
-                        supplier_phone: supplier?.phone_number || '',
-                        storage_name: storage?.name || 'Unknown',
-                    };
-                });
-
-                // Enrich details with invoice and ingredient information
-                const enrichedDetails = details.map((detail) => {
-                    const invoice = enrichedInvoices.find((inv) => inv.id === detail.invoice_id);
-                    const ingredient = (ingredientsData || []).find((ing: any) => ing.id === detail.ingredient_id);
-                    return {
-                        ...detail,
-                        quantity: Number(detail.quantity),
-                        invoice_supplier_name: invoice?.supplier_name || 'Unknown',
-                        invoice_date: invoice?.date || '',
-                        ingredient_name: ingredient?.name || detail.ingredient_id,
-                    };
-                });
-
-                setInvoices(enrichedInvoices);
-                setAllDetails(enrichedDetails);
+                const response = await getInvoicesPage(filters);
+                setRowCount(response.total || 0);
+                setRawInvoices(response.items || []);
             } finally {
                 setLoading(false);
             }
         };
 
-        fetchData();
-    }, [filters, getInvoiceDetails, getInvoices, getIngredients, getSuppliers, getStorages]);
+        fetchInvoices();
+    }, [filters, getInvoicesPage]);
 
     useEffect(() => {
         setDraftFilters((prev) => ({
@@ -188,12 +224,42 @@ export function InvoiceDetailsStandaloneListView() {
     }, [debouncedSearchQuery]);
 
     useEffect(() => {
+        setPaginationModel((prev) => ({ ...prev, page: 0 }));
         setFilters((prev) => ({
             ...prev,
             ...draftFilters,
             offset: 0,
+            limit: paginationModel.pageSize,
         }));
     }, [draftFilters]);
+
+    const handlePaginationModelChange = (model: { page: number; pageSize: number }) => {
+        setPaginationModel(model);
+        setFilters((prev) => ({
+            ...prev,
+            limit: model.pageSize,
+            offset: model.page * model.pageSize,
+        }));
+    };
+
+    const invoices = useMemo(() => {
+        const supplierMap = new Map(suppliers.map((s: any) => [s.id, s]));
+        const storageMap = new Map(storages.map((s: any) => [s.id, s]));
+
+        return rawInvoices.map((invoice: any) => {
+            const expandedSupplier = invoice?._expand?.supplier_id;
+            const expandedStorage = invoice?._expand?.storage_id;
+            const supplier = expandedSupplier || supplierMap.get(invoice.supplier_id);
+            const storage = expandedStorage || storageMap.get(invoice.storage_id);
+
+            return {
+                ...invoice,
+                supplier_name: supplier?.name || 'Unknown',
+                supplier_phone: supplier?.phone_number || '',
+                storage_name: storage?.name || 'Unknown',
+            };
+        });
+    }, [rawInvoices, suppliers, storages]);
 
     const handleDeleteClick = (id: string, type: 'invoice' | 'detail') => {
         setSelectedDeleteId(id);
@@ -205,28 +271,13 @@ export function InvoiceDetailsStandaloneListView() {
         if (selectedDeleteId && selectedDeleteType) {
             if (selectedDeleteType === 'invoice') {
                 await deleteInvoices([selectedDeleteId]);
-                setInvoices((prev) => prev.filter((row) => row.id !== selectedDeleteId));
-                setAllDetails((prev) => prev.filter((detail) => detail.invoice_id !== selectedDeleteId));
+                setRawInvoices((prev) => prev.filter((row) => row.id !== selectedDeleteId));
+                setSelectedInvoiceDetails((prev) =>
+                    prev.filter((detail) => detail.invoice_id !== selectedDeleteId)
+                );
             } else if (selectedDeleteType === 'detail') {
                 await deleteInvoiceDetails([selectedDeleteId]);
-                setAllDetails((prev) => prev.filter((row) => row.id !== selectedDeleteId));
-                // Refresh the invoice details to ensure data consistency
-                const details = await getInvoiceDetails();
-                const suppliers = await getSuppliers();
-                const ingredients = await getIngredients();
-
-                const enrichedDetails = details.map((detail) => {
-                    const invoice = invoices.find((inv: any) => inv.id === detail.invoice_id);
-                    const ingredient = ingredients.find((ing: any) => ing.id === detail.ingredient_id);
-                    return {
-                        ...detail,
-                        quantity: Number(detail.quantity),
-                        invoice_supplier_name: invoice?.supplier_name || 'Unknown',
-                        invoice_date: invoice?.date || '',
-                        ingredient_name: ingredient?.name || detail.ingredient_id,
-                    };
-                });
-                setAllDetails(enrichedDetails);
+                setSelectedInvoiceDetails((prev) => prev.filter((row) => row.id !== selectedDeleteId));
             }
             setDeleteDialogOpen(false);
             setSelectedDeleteId(null);
@@ -240,12 +291,39 @@ export function InvoiceDetailsStandaloneListView() {
         setSelectedDeleteType(null);
     };
 
-    const handleViewClick = (invoice: any) => {
+    const handleViewClick = async (invoice: any) => {
         setSelectedInvoice(invoice);
+        setSelectedInvoiceDetails([]);
+        try {
+            const response = await fetcher<any>(`/api/v1/invoice-details/invoice/${invoice.id}`);
+            const details = Array.isArray(response?.data)
+                ? response.data
+                : Array.isArray(response?.data?.data)
+                    ? response.data.data
+                    : Array.isArray(response)
+                        ? response
+                        : [];
+
+            const enrichedDetails = details.map((detail: any) => {
+                const ingredient = ingredients.find((ing: any) => ing.id === detail.ingredient_id);
+                return {
+                    ...detail,
+                    quantity: Number(detail.quantity),
+                    invoice_supplier_name: invoice?.supplier_name || 'Unknown',
+                    invoice_date: invoice?.date || '',
+                    ingredient_name: ingredient?.name || detail.ingredient_id,
+                };
+            });
+
+            setSelectedInvoiceDetails(enrichedDetails);
+        } catch {
+            setSelectedInvoiceDetails([]);
+        }
     };
 
     const handleModalClose = () => {
         setSelectedInvoice(null);
+        setSelectedInvoiceDetails([]);
     };
 
     const invoiceColumns = useMemo<GridColDef[]>(
@@ -370,7 +448,9 @@ export function InvoiceDetailsStandaloneListView() {
                 headerName: '№',
                 width: 80,
                 renderCell: (params) => {
-                    const filtered = allDetails.filter((d) => d.invoice_id === selectedInvoice?.id);
+                    const filtered = selectedInvoiceDetails.filter(
+                        (d) => d.invoice_id === selectedInvoice?.id
+                    );
                     const index = filtered.findIndex((row) => row.id === params.row.id);
                     return index + 1;
                 },
@@ -432,10 +512,12 @@ export function InvoiceDetailsStandaloneListView() {
             //     ],
             // },
         ],
-        [t, selectedInvoice, allDetails]
+        [t, selectedInvoice, selectedInvoiceDetails]
     );
 
-    const filteredDetails = allDetails.filter((detail) => detail.invoice_id === selectedInvoice?.id);
+    const filteredDetails = selectedInvoiceDetails.filter(
+        (detail) => detail.invoice_id === selectedInvoice?.id
+    );
     const startDateValue = useMemo(() => toPickerDate(draftFilters.date_from), [draftFilters.date_from]);
     const endDateValue = useMemo(() => toPickerDate(draftFilters.date_to), [draftFilters.date_to]);
 
@@ -445,6 +527,11 @@ export function InvoiceDetailsStandaloneListView() {
                 data={invoices}
                 loading={loading}
                 columns={invoiceColumns}
+                paginationMode="server"
+                rowCount={rowCount}
+                paginationModel={paginationModel}
+                onPaginationModelChange={handlePaginationModelChange}
+                pageSizeOptions={[10, 20, 50, 100]}
                 renderFilters={() => (
                     <Box
                         sx={{

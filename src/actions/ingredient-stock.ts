@@ -76,6 +76,52 @@ export function useGetIngredientStocks(options?: { includeIngredientMeta?: boole
 }
 
 /**
+ * Get ingredient stocks with server-side pagination
+ */
+export function useGetIngredientStocksPage(params?: {
+    limit?: number;
+    offset?: number;
+    expand?: string;
+}) {
+    const limit = typeof params?.limit === 'number' ? params?.limit : 20;
+    const offset = typeof params?.offset === 'number' ? params?.offset : 0;
+    const expand = params?.expand || 'ingredient_id,storage_id,branch_id';
+
+    const url = [
+        endpoints.ingredientStock.list,
+        {
+            params: {
+                limit,
+                offset,
+                expand,
+            },
+        },
+    ];
+
+    const { data, isLoading, error, isValidating } = useSWR<IIngredientStockResponse>(
+        url,
+        fetcher,
+        { ...swrOptions }
+    );
+
+    const stocks = useMemo(() => (Array.isArray(data?.data) ? data?.data : []), [data?.data]);
+
+    const memoizedValue = useMemo(
+        () => ({
+            stocks,
+            stocksLoading: isLoading,
+            stocksError: error,
+            stocksValidating: isValidating,
+            stocksEmpty: !isLoading && !isValidating && !stocks.length,
+            pagination: data?.pagination,
+        }),
+        [stocks, data?.pagination, error, isLoading, isValidating]
+    );
+
+    return memoizedValue;
+}
+
+/**
  * Get single ingredient stock by ID
  */
 export function useGetIngredientStock(stockId: string) {

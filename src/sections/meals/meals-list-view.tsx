@@ -15,7 +15,7 @@ import {
     CircularProgress,
 } from '@mui/material';
 import { paths } from 'src/routes/paths';
-import { useGetMeals, useDeleteMeal, useDeleteMeals, useGetMealWithCalculations } from 'src/hooks/use-meals';
+import { useGetMealsPage, useDeleteMeal, useDeleteMeals, useGetMealWithCalculations } from 'src/hooks/use-meals';
 import { useGenericViewModal } from 'src/hooks/use-generic-view-modal';
 import { useImageUrl } from 'src/hooks/use-image-url';
 import { useGetIngredients } from 'src/actions/ingredients';
@@ -25,9 +25,6 @@ import { CustomGridActionsCellItem } from 'src/components/custom-data-grid';
 import { GenericViewModal, SpecificationsTable } from 'src/components/generic-view-view';
 import { GenericTableView } from 'src/components/generic-table-view';
 import { formatPrice } from 'src/components/generic-view-view/modal-formatters';
-import { useGetCategories } from 'src/actions/categories';
-import { useGetDepartments } from 'src/actions/departments';
-import { useStorageAPI } from 'src/hooks/use-storage-api';
 
 const initialFilters = {
     category_id: '',
@@ -41,8 +38,6 @@ function MealCalculationsTable({ mealId }: { mealId: string }) {
     const { t, i18n } = useTranslation('menu');
     const { mealWithCalculations, loading } = useGetMealWithCalculations(mealId);
     const { ingredients } = useGetIngredients();
-    const { meals } = useGetMeals();
-
     // Create maps for quick name lookup with translations
     const ingredientMap = useMemo(() => {
         const map = new Map<string, string>();
@@ -208,15 +203,17 @@ export function Meals() {
     const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
     const [filters, setFilters] = useState(initialFilters);
     const [draftFilters, setDraftFilters] = useState(initialFilters);
-    const [storages, setStorages] = useState<any[]>([]);
+    const [paginationModel, setPaginationModel] = useState({ page: 0, pageSize: 20 });
 
     // SWR hooks
-    const { meals, mealsLoading, mutate } = useGetMeals(filters);
+    const { meals, mealsLoading, mutate, pagination } = useGetMealsPage({
+        ...filters,
+        limit: paginationModel.pageSize,
+        offset: paginationModel.page * paginationModel.pageSize,
+        expand: 'category_id,department_id,name_i18n',
+    });
     const { deleteMeal } = useDeleteMeal();
     const { deleteMeals } = useDeleteMeals();
-    const { categories } = useGetCategories();
-    const { departments } = useGetDepartments();
-    const { getStorages } = useStorageAPI();
 
     useEffect(() => {
         const timeout = setTimeout(() => {
@@ -241,13 +238,8 @@ export function Meals() {
     }, [draftFilters]);
 
     useEffect(() => {
-        const loadStorages = async () => {
-            const data = await getStorages();
-            setStorages(data || []);
-        };
-
-        loadStorages();
-    }, [getStorages]);
+        setPaginationModel((prev) => ({ ...prev, page: 0 }));
+    }, [draftFilters]);
 
     // State
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -258,43 +250,53 @@ export function Meals() {
         const map = new Map<string, string>();
         const currentLang = i18n.language || 'uz';
 
-        categories.forEach((cat: any) => {
-            let displayName = cat.name || '-';
+        meals.forEach((meal: any) => {
+            const cat = meal?._expand?.category_id;
+            if (!cat?.id) return;
 
-            // Get translated name based on current language
-            if (currentLang === 'en' && cat.name_en) {
-                displayName = cat.name_en;
-            } else if (currentLang === 'ru' && cat.name_ru) {
-                displayName = cat.name_ru;
-            } else if ((currentLang === 'uz' || currentLang === 'uz-Latn' || currentLang === 'uz-Cyrl') && cat.name_uz) {
+            let displayName = cat.name || '-';
+            if (currentLang === 'en' && cat.name_en) displayName = cat.name_en;
+            else if (currentLang === 'ru' && cat.name_ru) displayName = cat.name_ru;
+            else if (
+                (currentLang === 'uz' || currentLang === 'uz-Latn' || currentLang === 'uz-Cyrl') &&
+                cat.name_uz
+            )
                 displayName = cat.name_uz;
-            }
 
             map.set(cat.id, displayName);
         });
         return map;
-    }, [categories, i18n.language]);
+    }, [meals, i18n.language]);
 
     const departmentMap = useMemo(() => {
         const map = new Map<string, string>();
         const currentLang = i18n.language || 'uz';
 
-        departments.forEach((dept: any) => {
-            let displayName = dept.name || '-';
+        meals.forEach((meal: any) => {
+            const dept = meal?._expand?.department_id;
+            if (!dept?.id) return;
 
-            // Get translated name based on current language
-            if (currentLang === 'en' && dept.name_en) {
-                displayName = dept.name_en;
-            } else if (currentLang === 'ru' && dept.name_ru) {
-                displayName = dept.name_ru;
-            } else if ((currentLang === 'uz' || currentLang === 'uz-Latn' || currentLang === 'uz-Cyrl') && dept.name_uz) {
+            let displayName = dept.name || '-';
+            if (currentLang === 'en' && dept.name_en) displayName = dept.name_en;
+            else if (currentLang === 'ru' && dept.name_ru) displayName = dept.name_ru;
+            else if (
+                (currentLang === 'uz' || currentLang === 'uz-Latn' || currentLang === 'uz-Cyrl') &&
+                dept.name_uz
+            )
                 displayName = dept.name_uz;
-            }
 
             map.set(dept.id, displayName);
         });
         return map;
-    }, [departments, i18n.language]);
+    }, [meals, i18n.language]);
+
+    const categoryOptions = useMemo(() => {
+        return Array.from(categoryMap.entries()).map(([id, name]) => ({ id, name }));
+    }, [categoryMap]);
+
+    const departmentOptions = useMemo(() => {
+        return Array.from(departmentMap.entries()).map(([id, name]) => ({ id, name }));
+    }, [departmentMap]);
 
     // View modal hook'i
     const { isOpen, selectedData, openModal, closeModal } = useGenericViewModal<IMealsItem>();
@@ -457,6 +459,11 @@ export function Meals() {
                 data={meals}
                 loading={mealsLoading}
                 columns={columns}
+                paginationMode="server"
+                rowCount={pagination?.total || 0}
+                paginationModel={paginationModel}
+                onPaginationModelChange={setPaginationModel}
+                pageSizeOptions={[10, 20, 50, 100]}
                 renderFilters={() => (
                     <Box
                         sx={{
@@ -485,7 +492,7 @@ export function Meals() {
                             InputLabelProps={{ shrink: true }}
                         >
                             <option value="">{t('ingredientReports.all', 'All')}</option>
-                            {categories.map((category: any) => (
+                            {categoryOptions.map((category: any) => (
                                 <option key={category.id} value={category.id}>
                                     {category.name || category.id}
                                 </option>
@@ -506,7 +513,7 @@ export function Meals() {
                             InputLabelProps={{ shrink: true }}
                         >
                             <option value="">{t('ingredientReports.all', 'All')}</option>
-                            {departments.map((department: any) => (
+                            {departmentOptions.map((department: any) => (
                                 <option key={department.id} value={department.id}>
                                     {department.name || department.id}
                                 </option>

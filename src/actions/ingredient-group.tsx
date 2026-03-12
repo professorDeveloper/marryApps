@@ -47,6 +47,50 @@ export function useGetIngredientGroups(searchQuery?: string) {
 }
 
 /**
+ * Get ingredient groups with server-side pagination
+ */
+export function useGetIngredientGroupsPage(params?: {
+  search?: string;
+  limit?: number;
+  offset?: number;
+}) {
+  const normalizedQuery = params?.search?.trim() || '';
+  const limit = typeof params?.limit === 'number' ? params?.limit : 20;
+  const offset = typeof params?.offset === 'number' ? params?.offset : 0;
+
+  const url = [
+    endpoints.ingredientGroups.list,
+    {
+      params: {
+        search: normalizedQuery || undefined,
+        limit,
+        offset,
+      },
+    },
+  ];
+
+  const { data, isLoading, error, isValidating } = useSWR<IIngredientGroupResponse>(
+    url,
+    fetcher,
+    swrOptions
+  );
+
+  const memoizedValue = useMemo(
+    () => ({
+      ingredientGroups: (data?.data as IIngredientGroupItem[]) || [],
+      ingredientGroupsLoading: isLoading,
+      ingredientGroupsError: error,
+      ingredientGroupsValidating: isValidating,
+      ingredientGroupsEmpty: !isLoading && !isValidating && !data?.data?.length,
+      pagination: data?.pagination,
+    }),
+    [data?.data, data?.pagination, error, isLoading, isValidating]
+  );
+
+  return memoizedValue;
+}
+
+/**
  * Get single ingredient group by ID
  */
 export function useGetIngredientGroup(groupId: string) {

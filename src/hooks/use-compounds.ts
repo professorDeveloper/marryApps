@@ -18,6 +18,12 @@ interface BackendResponse<T> {
     status: string;
     message: string;
     data: T;
+    pagination?: {
+        total: number;
+        limit: number;
+        offset: number;
+        total_pages: number;
+    };
     code: number;
 }
 
@@ -42,6 +48,16 @@ export interface ICompoundWithCalculations {
     total_cost: string;
     profit: string;
     profit_margin: string;
+}
+
+interface ICompoundPageResult {
+    compounds: any[];
+    compoundsLoading: boolean;
+    compoundsError: any;
+    compoundsValidating: boolean;
+    compoundsEmpty: boolean;
+    pagination?: BackendResponse<ICompound[]>['pagination'];
+    mutate: () => Promise<any>;
 }
 
 // ============================================================================
@@ -111,6 +127,59 @@ function enrichCompounds(
             name: localizedName,
             ...translationFields,
             department_name: departmentMap.get(compound.department_id) || '-',
+        };
+    });
+}
+
+/**
+ * Enrich compounds with expand payload (no extra API calls)
+ */
+function enrichCompoundsFromExpand(
+    compoundsData: ICompound[],
+    currentLanguage: string = 'uz'
+): any[] {
+    const getLangKey = (lang: string): keyof ITranslationItem => {
+        const langMap: Record<string, keyof ITranslationItem> = {
+            'uz': 'uz',
+            'uz-Latn': 'uz-Latn',
+            'uz-Cyrl': 'uz-Cyrl',
+            'ru': 'ru',
+            'en': 'en',
+        };
+        return (langMap[lang] || 'uz') as keyof ITranslationItem;
+    };
+
+    return compoundsData.map((compound: any) => {
+        const expandedDept = compound?._expand?.department_id;
+        const expandedName = compound?._expand?.name_i18n;
+        const expandedDescription = compound?._expand?.description_i18n;
+
+        let localizedName = compound.name;
+        if (expandedName) {
+            const langKey = getLangKey(currentLanguage);
+            localizedName =
+                expandedName[langKey] ||
+                expandedName.uz ||
+                expandedName.en ||
+                compound.name;
+        }
+
+        let localizedDescription = compound.description || '';
+        if (expandedDescription) {
+            const langKey = getLangKey(currentLanguage);
+            localizedDescription =
+                expandedDescription[langKey] ||
+                expandedDescription.uz ||
+                expandedDescription.en ||
+                compound.description ||
+                '';
+        }
+
+        return {
+            ...compound,
+            name: localizedName,
+            description: localizedDescription,
+            department_name: expandedDept?.name || compound.department_name || '-',
         };
     });
 }
@@ -240,6 +309,51 @@ export function useGetCompounds(searchQuery?: string) {
     );
 
     return memoizedValue;
+}
+
+/**
+ * Get compounds with server-side pagination using expand (no extra API calls)
+ */
+export function useGetCompoundsPage(params?: {
+    search?: string;
+    limit?: number;
+    offset?: number;
+    expand?: string;
+}): ICompoundPageResult {
+    const { i18n } = useTranslation();
+    const normalizedQuery = params?.search?.trim() || '';
+    const limit = typeof params?.limit === 'number' ? params?.limit : 20;
+    const offset = typeof params?.offset === 'number' ? params?.offset : 0;
+    const expand = params?.expand || 'department_id,name_i18n,description_i18n';
+
+    const swrKey = normalizedQuery
+        ? [endpoints.compound.search, { params: { q: normalizedQuery, limit, offset, expand } }]
+        : [endpoints.compound.list, { params: { limit, offset, expand } }];
+
+    const { data, isLoading, error, isValidating, mutate: mutateCompounds } = useSWR<
+        BackendResponse<ICompound[]> | ICompound[]
+    >(swrKey, fetcher, { ...swrOptions });
+
+    const compoundsData = useMemo(() => {
+        if (Array.isArray(data)) return data;
+        if (data?.data && Array.isArray(data.data)) return data.data;
+        return [];
+    }, [data]);
+
+    const enrichedCompounds = useMemo(
+        () => enrichCompoundsFromExpand(compoundsData, i18n.resolvedLanguage),
+        [compoundsData, i18n.resolvedLanguage]
+    );
+
+    return {
+        compounds: enrichedCompounds,
+        compoundsLoading: isLoading,
+        compoundsError: error,
+        compoundsValidating: isValidating,
+        compoundsEmpty: !isLoading && !isValidating && enrichedCompounds.length === 0,
+        pagination: (data as BackendResponse<ICompound[]>)?.pagination,
+        mutate: mutateCompounds,
+    };
 }
 
 /**

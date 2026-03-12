@@ -19,5 +19,11 @@ export interface IIngredientStockResponse {
     status: string;
     message: string;
     data: IIngredientStock | IIngredientStock[];
+    pagination?: {
+        total: number;
+        limit: number;
+        offset: number;
+        total_pages: number;
+    };
     code: number;
 }

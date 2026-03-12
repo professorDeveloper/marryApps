@@ -15,7 +15,7 @@ import { CustomGridActionsCellItem } from 'src/components/custom-data-grid';
 import { GenericTableView } from 'src/components/generic-table-view';
 import { toast } from 'src/components/snackbar';
 import {
-    useGetIngredientStocks,
+    useGetIngredientStocksPage,
     useUpdateIngredientStock,
     useDeleteIngredientStock,
 } from 'src/actions/ingredient-stock';
@@ -23,7 +23,12 @@ import { paths } from 'src/routes/paths';
 
 function IngredientStockListView() {
     const { t } = useTranslation('menu');
-    const { stocks, stocksLoading } = useGetIngredientStocks();
+    const [paginationModel, setPaginationModel] = useState({ page: 0, pageSize: 20 });
+    const { stocks, stocksLoading, pagination } = useGetIngredientStocksPage({
+        limit: paginationModel.pageSize,
+        offset: paginationModel.page * paginationModel.pageSize,
+        expand: 'ingredient_id,storage_id,branch_id',
+    });
     const { updateStock } = useUpdateIngredientStock();
     const { deleteStock } = useDeleteIngredientStock();
 
@@ -137,12 +142,30 @@ function IngredientStockListView() {
         [t]
     );
 
+    const enrichedStocks = useMemo(() => {
+        return (Array.isArray(stocks) ? stocks : []).map((stock: any) => {
+            const expandedIngredient = stock?._expand?.ingredient_id;
+            const expandedStorage = stock?._expand?.storage_id;
+            return {
+                ...stock,
+                ingredient_name: expandedIngredient?.name || stock.ingredient_name || stock.ingredient_id,
+                measurement: expandedIngredient?.measurement || stock.measurement || '-',
+                storage_name: expandedStorage?.name || stock.storage_name || stock.storage_id,
+            };
+        });
+    }, [stocks]);
+
     return (
         <>
             <GenericTableView
-                data={stocks}
+                data={enrichedStocks}
                 loading={stocksLoading}
                 columns={columns}
+                paginationMode="server"
+                rowCount={pagination?.total || 0}
+                paginationModel={paginationModel}
+                onPaginationModelChange={setPaginationModel}
+                pageSizeOptions={[10, 20, 50, 100]}
                 breadcrumbs={{
                     heading: t('ingredientStock.title'),
                     links: [

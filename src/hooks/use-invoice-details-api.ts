@@ -40,6 +40,13 @@ export interface InvoiceListFilters {
     offset?: number;
 }
 
+export interface InvoiceListResponse<T = any> {
+    items: T[];
+    total: number;
+    limit?: number;
+    offset?: number;
+}
+
 export interface UseInvoiceDetailsAPIReturn {
     getInvoiceDetails: () => Promise<InvoiceDetail[]>;
     getInvoiceDetailById: (id: string) => Promise<InvoiceDetail | null>;
@@ -51,6 +58,7 @@ export interface UseInvoiceDetailsAPIReturn {
     createInvoiceBatch: (data: any) => Promise<any>;
     getIngredients: () => Promise<any[]>;
     getInvoices: (filters?: InvoiceListFilters) => Promise<any[]>;
+    getInvoicesPage: (filters?: InvoiceListFilters) => Promise<InvoiceListResponse>;
 }
 
 // ============================================================================
@@ -113,6 +121,40 @@ export function useInvoiceDetailsAPI(): UseInvoiceDetailsAPIReturn {
         }
 
         return { items: [] };
+    };
+
+    const extractListAndPagination = <T,>(
+        payload: unknown
+    ): { items: T[]; total: number; limit?: number; offset?: number } => {
+        const { items, total } = extractListAndMeta<T>(payload);
+        if (!payload || typeof payload !== 'object') {
+            return { items, total: typeof total === 'number' ? total : items.length };
+        }
+
+        const obj = payload as Record<string, unknown>;
+        const pagination =
+            obj.pagination && typeof obj.pagination === 'object'
+                ? (obj.pagination as Record<string, unknown>)
+                : undefined;
+
+        const totalFromPagination =
+            pagination && typeof pagination.total === 'number' ? pagination.total : undefined;
+        const limitFromPagination =
+            pagination && typeof pagination.limit === 'number' ? pagination.limit : undefined;
+        const offsetFromPagination =
+            pagination && typeof pagination.offset === 'number' ? pagination.offset : undefined;
+
+        return {
+            items,
+            total:
+                typeof totalFromPagination === 'number'
+                    ? totalFromPagination
+                    : typeof total === 'number'
+                        ? total
+                        : items.length,
+            limit: limitFromPagination,
+            offset: offsetFromPagination,
+        };
     };
 
     /**
@@ -380,6 +422,54 @@ export function useInvoiceDetailsAPI(): UseInvoiceDetailsAPIReturn {
         }
     }, [MAX_LIST_ITEMS]);
 
+    /**
+     * Server-side pagination bilan invoices'ni oladi
+     */
+    const getInvoicesPage = useCallback(
+        async (filters?: InvoiceListFilters): Promise<InvoiceListResponse> => {
+            try {
+                const params = buildListParams(filters);
+                const searchQuery = typeof params.q === 'string' ? params.q.trim() : '';
+
+                if (searchQuery) {
+                    delete params.q;
+                    const response = await fetcher<unknown>([
+                        endpoints.invoice.search,
+                        {
+                            params: {
+                                ...params,
+                                q: searchQuery,
+                                limit: typeof params.limit === 'number' ? params.limit : 20,
+                                offset: typeof params.offset === 'number' ? params.offset : 0,
+                            },
+                        },
+                    ]);
+
+                    return extractListAndPagination<any>(response);
+                }
+
+                const response = await fetcher<unknown>([
+                    endpoints.invoice.list,
+                    {
+                        params: {
+                            ...params,
+                            limit: typeof params.limit === 'number' ? params.limit : 20,
+                            offset: typeof params.offset === 'number' ? params.offset : 0,
+                        },
+                    },
+                ]);
+
+                return extractListAndPagination<any>(response);
+            } catch (error) {
+                const axiosError = error as AxiosError<any>;
+                const message = axiosError?.response?.data?.message || 'Failed to fetch invoices';
+                toast.error(message);
+                return { items: [], total: 0 };
+            }
+        },
+        []
+    );
+
     return {
         getInvoiceDetails,
         getInvoiceDetailById,
@@ -391,5 +481,6 @@ export function useInvoiceDetailsAPI(): UseInvoiceDetailsAPIReturn {
         createInvoiceBatch,
         getIngredients,
         getInvoices,
+        getInvoicesPage,
     };
 }
