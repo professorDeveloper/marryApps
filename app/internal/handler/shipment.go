@@ -2,15 +2,14 @@ package handler
 
 import (
 	"net/http"
-	"strconv"
 
 	"github.com/labstack/echo/v4"
 	"gitlab.yurtal.tech/company/maryai/back/internal/model"
 )
 
-// CreateShipment creates a new shipment (draft)
+// CreateShipment creates a new shipment
 // @Summary Create shipment
-// @Description Create a new shipment in draft status. Add items, then confirm to deduct stock.
+// @Description Create a new shipment. Use status="draft" (default) or status="active". If active, stock is deducted immediately.
 // @Tags Shipments
 // @Accept json
 // @Produce json
@@ -52,31 +51,25 @@ func (h *Handler) GetShipment(c echo.Context) error {
 	return c.JSON(http.StatusOK, model.NewSuccessResponse("ok", resp, http.StatusOK))
 }
 
-// ListShipments returns shipments with filters and pagination
+// ListShipments returns shipments with filters, pagination, expand, and total amount sum
 // @Summary List shipments
-// @Description List shipments filtered by storage, supplier, status, date range
+// @Description List shipments filtered by storage, supplier, status, date range. Returns pagination info and total_amount_sum for the filtered range.
 // @Tags Shipments
 // @Produce json
 // @Security BearerAuth
 // @Param storage_id  query string false "Filter by storage UUID"
 // @Param supplier_id query string false "Filter by supplier UUID"
-// @Param status      query string false "Filter by status (draft/confirmed/cancelled)"
+// @Param status      query string false "Filter by status (draft/active/cancelled)"
 // @Param start_date  query string false "Start date (RFC3339)"
 // @Param end_date    query string false "End date (RFC3339)"
 // @Param limit       query int    false "Limit"  default(20)
 // @Param offset      query int    false "Offset" default(0)
-// @Success 200 {object} []model.ShipmentResponse
+// @Param expand      query string false "Expand related fields"
+// @Success 200 {array} model.ShipmentResponse
 // @Failure 500 {object} model.ErrorResponse
 // @Router /api/v1/shipments [get]
 func (h *Handler) ListShipments(c echo.Context) error {
-	limit := int32(20)
-	offset := int32(0)
-	if l, err := strconv.Atoi(c.QueryParam("limit")); err == nil && l > 0 {
-		limit = int32(l)
-	}
-	if o, err := strconv.Atoi(c.QueryParam("offset")); err == nil && o >= 0 {
-		offset = int32(o)
-	}
+	limit, offset := parseLimitOffset(c)
 
 	var storageID, supplierID, status, startDate, endDate *string
 	if v := c.QueryParam("storage_id"); v != "" {
@@ -95,21 +88,44 @@ func (h *Handler) ListShipments(c echo.Context) error {
 		endDate = &v
 	}
 
-	rows, total, err := h.service.Shipment().ListShipments(c.Request().Context(), storageID, supplierID, status, startDate, endDate, limit, offset)
+	rows, total, totalAmountSum, err := h.service.Shipment().ListShipments(c.Request().Context(), storageID, supplierID, status, startDate, endDate, limit, offset)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("failed to list shipments", err.Error(), http.StatusInternalServerError))
 	}
-	return c.JSON(http.StatusOK, map[string]interface{}{
-		"data":   rows,
-		"total":  total,
-		"limit":  limit,
-		"offset": offset,
-	})
+
+	buildResp := func(data interface{}) map[string]interface{} {
+		totalPages := int32(0)
+		if limit > 0 {
+			totalPages = (int32(total) + limit - 1) / limit
+		}
+		return map[string]interface{}{
+			"status":  "success",
+			"message": "Shipments retrieved successfully",
+			"data":    data,
+			"pagination": map[string]interface{}{
+				"total":       total,
+				"limit":       limit,
+				"offset":      offset,
+				"total_pages": totalPages,
+			},
+			"total_amount_sum": totalAmountSum,
+			"code":             http.StatusOK,
+		}
+	}
+
+	if maps, expanded, err := h.expandListResponse(c, rows, "shipments"); expanded {
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("expand failed", err.Error(), http.StatusInternalServerError))
+		}
+		return c.JSON(http.StatusOK, buildResp(maps))
+	}
+
+	return c.JSON(http.StatusOK, buildResp(rows))
 }
 
-// UpdateShipment updates a draft shipment header
+// UpdateShipment updates a shipment header and/or status
 // @Summary Update shipment
-// @Description Update storage, supplier, date, description. Only works on draft shipments.
+// @Description Update storage, supplier, date, description, and/or status. Setting status="active" deducts stock (draft→active). Setting status="draft" reverses stock (active→draft).
 // @Tags Shipments
 // @Accept json
 // @Produce json
@@ -133,49 +149,9 @@ func (h *Handler) UpdateShipment(c echo.Context) error {
 	return c.JSON(http.StatusOK, model.NewSuccessResponse("Shipment updated", resp, http.StatusOK))
 }
 
-// ConfirmShipment confirms a draft shipment and deducts ingredient stock
-// @Summary Confirm shipment
-// @Description Confirms shipment (draft→confirmed). Deducts each item's quantity from ingredient_stock. Stock can go negative.
-// @Tags Shipments
-// @Produce json
-// @Security BearerAuth
-// @Param id path string true "Shipment ID"
-// @Success 200 {object} model.ShipmentResponse
-// @Failure 400 {object} model.ErrorResponse
-// @Failure 500 {object} model.ErrorResponse
-// @Router /api/v1/shipments/{id}/confirm [post]
-func (h *Handler) ConfirmShipment(c echo.Context) error {
-	id := c.Param("id")
-	resp, err := h.service.Shipment().ConfirmShipment(c.Request().Context(), id)
-	if err != nil {
-		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("failed to confirm shipment", err.Error(), http.StatusBadRequest))
-	}
-	return c.JSON(http.StatusOK, model.NewSuccessResponse("Shipment confirmed, stock deducted", resp, http.StatusOK))
-}
-
-// CancelShipment cancels a draft shipment
-// @Summary Cancel shipment
-// @Description Cancels a draft shipment (no stock change)
-// @Tags Shipments
-// @Produce json
-// @Security BearerAuth
-// @Param id path string true "Shipment ID"
-// @Success 200 {object} model.ShipmentResponse
-// @Failure 400 {object} model.ErrorResponse
-// @Failure 500 {object} model.ErrorResponse
-// @Router /api/v1/shipments/{id}/cancel [post]
-func (h *Handler) CancelShipment(c echo.Context) error {
-	id := c.Param("id")
-	resp, err := h.service.Shipment().CancelShipment(c.Request().Context(), id)
-	if err != nil {
-		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("failed to cancel shipment", err.Error(), http.StatusBadRequest))
-	}
-	return c.JSON(http.StatusOK, model.NewSuccessResponse("Shipment cancelled", resp, http.StatusOK))
-}
-
-// DeleteShipment soft-deletes a draft shipment
+// DeleteShipment soft-deletes a shipment
 // @Summary Delete shipment
-// @Description Soft-deletes a shipment. Only draft shipments can be deleted.
+// @Description Soft-deletes a shipment. If the shipment was active, ingredient stock is reversed.
 // @Tags Shipments
 // @Produce json
 // @Security BearerAuth
@@ -193,7 +169,7 @@ func (h *Handler) DeleteShipment(c echo.Context) error {
 
 // CreateShipmentBatch creates a shipment with multiple items in one call
 // @Summary Create shipment with items (batch)
-// @Description Creates a shipment header and upserts all provided items in a single request. Returns full shipment with stock preview.
+// @Description Creates a shipment header and upserts all provided items in a single request. Use status="draft" (default) or status="active" to immediately deduct stock.
 // @Tags Shipments
 // @Accept json
 // @Produce json
@@ -215,7 +191,33 @@ func (h *Handler) CreateShipmentBatch(c echo.Context) error {
 	return c.JSON(http.StatusCreated, model.NewSuccessResponse("Shipment created with items", resp, http.StatusCreated))
 }
 
-// UpsertShipmentItem adds or updates one or more ingredient items in an active shipment
+// UpdateShipmentBatch updates a shipment header and replaces its items in one call
+// @Summary Update shipment with items (batch)
+// @Description Updates a shipment header and upserts all provided items in a single request.
+// @Tags Shipments
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path string true "Shipment ID"
+// @Param request body model.UpdateShipmentBatchRequest true "Batch update"
+// @Success 200 {object} model.ShipmentWithItemsResponse
+// @Failure 400 {object} model.ErrorResponse
+// @Failure 500 {object} model.ErrorResponse
+// @Router /api/v1/shipments/{id}/batch [put]
+func (h *Handler) UpdateShipmentBatch(c echo.Context) error {
+	id := c.Param("id")
+	var req model.UpdateShipmentBatchRequest
+	if err := c.Bind(&req); err != nil {
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("invalid request", err.Error(), http.StatusBadRequest))
+	}
+	resp, err := h.service.Shipment().UpdateShipmentBatch(c.Request().Context(), id, &req)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("failed to update shipment batch", err.Error(), http.StatusInternalServerError))
+	}
+	return c.JSON(http.StatusOK, model.NewSuccessResponse("Shipment updated with items", resp, http.StatusOK))
+}
+
+// UpsertShipmentItem adds or updates one or more ingredient items in a shipment
 // @Summary Upsert shipment items
 // @Description Add/update multiple ingredient items. Each item is upserted (insert or update by ingredient_id). Returns items with live stock preview.
 // @Tags Shipments
@@ -241,9 +243,9 @@ func (h *Handler) UpsertShipmentItem(c echo.Context) error {
 	return c.JSON(http.StatusOK, model.NewSuccessResponse("Items saved", resp, http.StatusOK))
 }
 
-// DeleteShipmentItem removes an item from a draft shipment
+// DeleteShipmentItem removes an item from a shipment
 // @Summary Delete shipment item
-// @Description Remove an ingredient item from a draft shipment
+// @Description Remove an ingredient item from a shipment
 // @Tags Shipments
 // @Produce json
 // @Security BearerAuth

@@ -19546,7 +19546,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "List shipments filtered by storage, supplier, status, date range",
+                "description": "List shipments filtered by storage, supplier, status, date range. Returns pagination info and total_amount_sum for the filtered range.",
                 "produces": [
                     "application/json"
                 ],
@@ -19569,7 +19569,7 @@ const docTemplate = `{
                     },
                     {
                         "type": "string",
-                        "description": "Filter by status (draft/confirmed/cancelled)",
+                        "description": "Filter by status (draft/active/cancelled)",
                         "name": "status",
                         "in": "query"
                     },
@@ -19598,6 +19598,12 @@ const docTemplate = `{
                         "description": "Offset",
                         "name": "offset",
                         "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Expand related fields",
+                        "name": "expand",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -19624,7 +19630,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Create a new shipment in draft status. Add items, then confirm to deduct stock.",
+                "description": "Create a new shipment. Use status=\"draft\" (default) or status=\"active\". If active, stock is deducted immediately.",
                 "consumes": [
                     "application/json"
                 ],
@@ -19675,7 +19681,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Creates a shipment header and upserts all provided items in a single request. Returns full shipment with stock preview.",
+                "description": "Creates a shipment header and upserts all provided items in a single request. Use status=\"draft\" (default) or status=\"active\" to immediately deduct stock.",
                 "consumes": [
                     "application/json"
                 ],
@@ -19770,7 +19776,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Update storage, supplier, date, description. Only works on draft shipments.",
+                "description": "Update storage, supplier, date, description, and/or status. Setting status=\"active\" deducts stock (draft→active). Setting status=\"draft\" reverses stock (active→draft).",
                 "consumes": [
                     "application/json"
                 ],
@@ -19826,7 +19832,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Soft-deletes a shipment. Only draft shipments can be deleted.",
+                "description": "Soft-deletes a shipment. If the shipment was active, ingredient stock is reversed.",
                 "produces": [
                     "application/json"
                 ],
@@ -19859,21 +19865,24 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/v1/shipments/{id}/cancel": {
-            "post": {
+        "/api/v1/shipments/{id}/batch": {
+            "put": {
                 "security": [
                     {
                         "BearerAuth": []
                     }
                 ],
-                "description": "Cancels a draft shipment (no stock change)",
+                "description": "Updates a shipment header and upserts all provided items in a single request.",
+                "consumes": [
+                    "application/json"
+                ],
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
                     "Shipments"
                 ],
-                "summary": "Cancel shipment",
+                "summary": "Update shipment with items (batch)",
                 "parameters": [
                     {
                         "type": "string",
@@ -19881,59 +19890,22 @@ const docTemplate = `{
                         "name": "id",
                         "in": "path",
                         "required": true
+                    },
+                    {
+                        "description": "Batch update",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.UpdateShipmentBatchRequest"
+                        }
                     }
                 ],
                 "responses": {
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/model.ShipmentResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
-                        }
-                    }
-                }
-            }
-        },
-        "/api/v1/shipments/{id}/confirm": {
-            "post": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Confirms shipment (draft→confirmed). Deducts each item's quantity from ingredient_stock. Stock can go negative.",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Shipments"
-                ],
-                "summary": "Confirm shipment",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Shipment ID",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/model.ShipmentResponse"
+                            "$ref": "#/definitions/model.ShipmentWithItemsResponse"
                         }
                     },
                     "400": {
@@ -20019,7 +19991,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Remove an ingredient item from a draft shipment",
+                "description": "Remove an ingredient item from a shipment",
                 "produces": [
                     "application/json"
                 ],
@@ -24977,6 +24949,10 @@ const docTemplate = `{
                         "$ref": "#/definitions/model.UpsertShipmentItemRequest"
                     }
                 },
+                "status": {
+                    "type": "string",
+                    "example": "draft"
+                },
                 "storage_id": {
                     "type": "string"
                 },
@@ -24995,6 +24971,10 @@ const docTemplate = `{
                 "description": {
                     "type": "string",
                     "example": "Expired goods return"
+                },
+                "status": {
+                    "type": "string",
+                    "example": "draft"
                 },
                 "storage_id": {
                     "type": "string",
@@ -27147,11 +27127,9 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "stock_after": {
-                    "description": "active: live projected (current-qty); confirmed: actual after deduction",
                     "type": "string"
                 },
                 "stock_before": {
-                    "description": "active: live current stock; confirmed: actual before deduction",
                     "type": "string"
                 },
                 "total_amount": {
@@ -28442,6 +28420,34 @@ const docTemplate = `{
                 }
             }
         },
+        "model.UpdateShipmentBatchRequest": {
+            "type": "object",
+            "required": [
+                "items"
+            ],
+            "properties": {
+                "date": {
+                    "type": "string",
+                    "example": "2026-01-24T00:00:00Z"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "items": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                        "$ref": "#/definitions/model.UpsertShipmentItemRequest"
+                    }
+                },
+                "storage_id": {
+                    "type": "string"
+                },
+                "supplier_id": {
+                    "type": "string"
+                }
+            }
+        },
         "model.UpdateShipmentRequest": {
             "type": "object",
             "properties": {
@@ -28452,6 +28458,10 @@ const docTemplate = `{
                 "description": {
                     "type": "string",
                     "example": "Expired goods return"
+                },
+                "status": {
+                    "type": "string",
+                    "example": "active"
                 },
                 "storage_id": {
                     "type": "string",

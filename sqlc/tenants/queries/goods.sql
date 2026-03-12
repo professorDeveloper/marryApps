@@ -1350,17 +1350,7 @@ WHERE goods.deleted_at = 0
   AND (($2::uuid = '00000000-0000-0000-0000-000000000000') OR goods.department_id = $2)
   AND (($3::uuid = '00000000-0000-0000-0000-000000000000') OR EXISTS (
     SELECT 1 FROM departments d2
-    JOIN storages s2 ON s2.id = d2.storage_id
-    WHERE d2.id = goods.department_id AND s2.id = $3
-    UNION ALL
-    SELECT 1 FROM categories c2
-    JOIN storages s2 ON s2.id = c2.storage_id
-    WHERE c2.id = goods.category_id AND s2.id = $3
-    UNION ALL
-    SELECT 1 FROM categories c2
-    JOIN departments d2 ON d2.id = c2.department_id
-    JOIN storages s2 ON s2.id = d2.storage_id
-    WHERE c2.id = goods.category_id AND s2.id = $3
+    WHERE d2.id = goods.department_id AND d2.storage_id = $3
   ))
   AND ($4 = '' OR goods.name ILIKE '%' || $4 || '%')
 ORDER BY goods.created_at DESC
@@ -1400,17 +1390,7 @@ WHERE goods.deleted_at = 0
   AND (($2::uuid = '00000000-0000-0000-0000-000000000000') OR goods.department_id = $2)
   AND (($3::uuid = '00000000-0000-0000-0000-000000000000') OR EXISTS (
     SELECT 1 FROM departments d2
-    JOIN storages s2 ON s2.id = d2.storage_id
-    WHERE d2.id = goods.department_id AND s2.id = $3
-    UNION ALL
-    SELECT 1 FROM categories c2
-    JOIN storages s2 ON s2.id = c2.storage_id
-    WHERE c2.id = goods.category_id AND s2.id = $3
-    UNION ALL
-    SELECT 1 FROM categories c2
-    JOIN departments d2 ON d2.id = c2.department_id
-    JOIN storages s2 ON s2.id = d2.storage_id
-    WHERE c2.id = goods.category_id AND s2.id = $3
+    WHERE d2.id = goods.department_id AND d2.storage_id = $3
   ))
   AND ($4 = '' OR goods.name ILIKE '%' || $4 || '%');
 
@@ -1477,17 +1457,7 @@ WHERE g.deleted_at = 0
   AND (($3::uuid = '00000000-0000-0000-0000-000000000000') OR g.department_id = $3)
   AND (($4::uuid = '00000000-0000-0000-0000-000000000000') OR EXISTS (
     SELECT 1 FROM departments d2
-    JOIN storages s2 ON s2.id = d2.storage_id
-    WHERE d2.id = g.department_id AND s2.id = $4
-    UNION ALL
-    SELECT 1 FROM categories c2
-    JOIN storages s2 ON s2.id = c2.storage_id
-    WHERE c2.id = g.category_id AND s2.id = $4
-    UNION ALL
-    SELECT 1 FROM categories c2
-    JOIN departments d2 ON d2.id = c2.department_id
-    JOIN storages s2 ON s2.id = d2.storage_id
-    WHERE c2.id = g.category_id AND s2.id = $4
+    WHERE d2.id = g.department_id AND d2.storage_id = $4
   ))
   AND ($5 = '' OR g.name ILIKE '%' || $5 || '%')
 ORDER BY g.created_at DESC

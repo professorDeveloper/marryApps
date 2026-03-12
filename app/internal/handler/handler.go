@@ -632,9 +632,8 @@ func (h *Handler) Register(router *echo.Echo) {
 			shipments.GET("", h.ListShipments, mw.CheckLanguage())
 			shipments.GET("/:id", h.GetShipment, mw.CheckLanguage())
 			shipments.PUT("/:id", h.UpdateShipment, mw.CheckLanguage())
+			shipments.PUT("/:id/batch", h.UpdateShipmentBatch, mw.CheckLanguage())
 			shipments.DELETE("/:id", h.DeleteShipment, mw.CheckLanguage())
-			shipments.POST("/:id/confirm", h.ConfirmShipment, mw.CheckLanguage())
-			shipments.POST("/:id/cancel", h.CancelShipment, mw.CheckLanguage())
 			shipments.POST("/:id/items", h.UpsertShipmentItem, mw.CheckLanguage())
 			shipments.DELETE("/:id/items/:item_id", h.DeleteShipmentItem, mw.CheckLanguage())
 		}

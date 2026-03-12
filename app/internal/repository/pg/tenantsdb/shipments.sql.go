@@ -12,11 +12,41 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const activateShipment = `-- name: ActivateShipment :one
+UPDATE shipments
+SET status     = 'active',
+    updated_at = NOW()
+WHERE id = $1 AND deleted_at = 0 AND status = 'draft'
+  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+RETURNING id, number, date, storage_id, supplier_id, branch_id, description, status, total_amount, paid_amount, created_at, updated_at, deleted_at
+`
+
+func (q *Queries) ActivateShipment(ctx context.Context, id uuid.UUID) (Shipment, error) {
+	row := q.db.QueryRow(ctx, activateShipment, id)
+	var i Shipment
+	err := row.Scan(
+		&i.ID,
+		&i.Number,
+		&i.Date,
+		&i.StorageID,
+		&i.SupplierID,
+		&i.BranchID,
+		&i.Description,
+		&i.Status,
+		&i.TotalAmount,
+		&i.PaidAmount,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
+	)
+	return i, err
+}
+
 const cancelShipment = `-- name: CancelShipment :one
 UPDATE shipments
 SET status     = 'cancelled',
     updated_at = NOW()
-WHERE id = $1 AND deleted_at = 0 AND status = 'active'
+WHERE id = $1 AND deleted_at = 0 AND status IN ('draft', 'active')
   AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 RETURNING id, number, date, storage_id, supplier_id, branch_id, description, status, total_amount, paid_amount, created_at, updated_at, deleted_at
 `
@@ -42,38 +72,10 @@ func (q *Queries) CancelShipment(ctx context.Context, id uuid.UUID) (Shipment, e
 	return i, err
 }
 
-const confirmShipment = `-- name: ConfirmShipment :one
-UPDATE shipments
-SET updated_at = NOW()
-WHERE id = $1 AND deleted_at = 0 AND status = 'active'
-  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-RETURNING id, number, date, storage_id, supplier_id, branch_id, description, status, total_amount, paid_amount, created_at, updated_at, deleted_at
-`
-
-func (q *Queries) ConfirmShipment(ctx context.Context, id uuid.UUID) (Shipment, error) {
-	row := q.db.QueryRow(ctx, confirmShipment, id)
-	var i Shipment
-	err := row.Scan(
-		&i.ID,
-		&i.Number,
-		&i.Date,
-		&i.StorageID,
-		&i.SupplierID,
-		&i.BranchID,
-		&i.Description,
-		&i.Status,
-		&i.TotalAmount,
-		&i.PaidAmount,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-		&i.DeletedAt,
-	)
-	return i, err
-}
-
 const countShipments = `-- name: CountShipments :one
 SELECT COUNT(*) FROM shipments
-WHERE branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+WHERE deleted_at = 0
+  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
   AND (NULLIF($1::text, '')::uuid IS NULL OR storage_id  = NULLIF($1::text, '')::uuid)
   AND (NULLIF($2::text, '')::uuid IS NULL OR supplier_id = NULLIF($2::text, '')::uuid)
   AND (NULLIF($3::text, '')::shipment_status IS NULL OR status = NULLIF($3::text, '')::shipment_status)
@@ -109,7 +111,7 @@ INSERT INTO shipments (
 VALUES (
   gen_random_uuid(), $1, $2, $3,
   NULLIF(current_setting('app.branch_id', true), '')::uuid,
-  $4, 'active'
+  $4, $5::shipment_status
 )
 RETURNING id, number, date, storage_id, supplier_id, branch_id, description, status, total_amount, paid_amount, created_at, updated_at, deleted_at
 `
@@ -119,6 +121,7 @@ type CreateShipmentParams struct {
 	StorageID   pgtype.UUID      `json:"storage_id"`
 	SupplierID  pgtype.UUID      `json:"supplier_id"`
 	Description *string          `json:"description"`
+	Column5     ShipmentStatus   `json:"column_5"`
 }
 
 func (q *Queries) CreateShipment(ctx context.Context, arg CreateShipmentParams) (Shipment, error) {
@@ -127,7 +130,38 @@ func (q *Queries) CreateShipment(ctx context.Context, arg CreateShipmentParams) 
 		arg.StorageID,
 		arg.SupplierID,
 		arg.Description,
+		arg.Column5,
 	)
+	var i Shipment
+	err := row.Scan(
+		&i.ID,
+		&i.Number,
+		&i.Date,
+		&i.StorageID,
+		&i.SupplierID,
+		&i.BranchID,
+		&i.Description,
+		&i.Status,
+		&i.TotalAmount,
+		&i.PaidAmount,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
+	)
+	return i, err
+}
+
+const deactivateShipment = `-- name: DeactivateShipment :one
+UPDATE shipments
+SET status     = 'draft',
+    updated_at = NOW()
+WHERE id = $1 AND deleted_at = 0 AND status = 'active'
+  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+RETURNING id, number, date, storage_id, supplier_id, branch_id, description, status, total_amount, paid_amount, created_at, updated_at, deleted_at
+`
+
+func (q *Queries) DeactivateShipment(ctx context.Context, id uuid.UUID) (Shipment, error) {
+	row := q.db.QueryRow(ctx, deactivateShipment, id)
 	var i Shipment
 	err := row.Scan(
 		&i.ID,
@@ -151,7 +185,7 @@ const deleteShipment = `-- name: DeleteShipment :exec
 UPDATE shipments
 SET deleted_at = EXTRACT(EPOCH FROM NOW())::BIGINT,
     updated_at = NOW()
-WHERE id = $1 AND deleted_at = 0 AND status = 'active'
+WHERE id = $1 AND deleted_at = 0
   AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 `
 
@@ -267,7 +301,8 @@ func (q *Queries) GetShipmentItemsByShipmentID(ctx context.Context, shipmentID u
 const listShipments = `-- name: ListShipments :many
 SELECT id, number, date, storage_id, supplier_id, branch_id, description, status, total_amount, paid_amount, created_at, updated_at, deleted_at
 FROM shipments
-WHERE branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+WHERE deleted_at = 0
+  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
   AND (NULLIF($1::text, '')::uuid IS NULL OR storage_id  = NULLIF($1::text, '')::uuid)
   AND (NULLIF($2::text, '')::uuid IS NULL OR supplier_id = NULLIF($2::text, '')::uuid)
   AND (NULLIF($3::text, '')::shipment_status IS NULL OR status = NULLIF($3::text, '')::shipment_status)
@@ -329,6 +364,38 @@ func (q *Queries) ListShipments(ctx context.Context, arg ListShipmentsParams) ([
 	return items, nil
 }
 
+const sumShipmentsTotalAmount = `-- name: SumShipmentsTotalAmount :one
+SELECT COALESCE(SUM(total_amount), 0)::numeric FROM shipments
+WHERE deleted_at = 0
+  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  AND (NULLIF($1::text, '')::uuid IS NULL OR storage_id  = NULLIF($1::text, '')::uuid)
+  AND (NULLIF($2::text, '')::uuid IS NULL OR supplier_id = NULLIF($2::text, '')::uuid)
+  AND (NULLIF($3::text, '')::shipment_status IS NULL OR status = NULLIF($3::text, '')::shipment_status)
+  AND ($4::timestamp IS NULL OR date >= $4)
+  AND ($5::timestamp IS NULL OR date <= $5)
+`
+
+type SumShipmentsTotalAmountParams struct {
+	Column1 string           `json:"column_1"`
+	Column2 string           `json:"column_2"`
+	Column3 string           `json:"column_3"`
+	Column4 pgtype.Timestamp `json:"column_4"`
+	Column5 pgtype.Timestamp `json:"column_5"`
+}
+
+func (q *Queries) SumShipmentsTotalAmount(ctx context.Context, arg SumShipmentsTotalAmountParams) (pgtype.Numeric, error) {
+	row := q.db.QueryRow(ctx, sumShipmentsTotalAmount,
+		arg.Column1,
+		arg.Column2,
+		arg.Column3,
+		arg.Column4,
+		arg.Column5,
+	)
+	var column_1 pgtype.Numeric
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
 const updateShipment = `-- name: UpdateShipment :one
 UPDATE shipments
 SET date        = COALESCE($2, date),
@@ -336,7 +403,7 @@ SET date        = COALESCE($2, date),
     supplier_id = COALESCE($4, supplier_id),
     description = COALESCE($5, description),
     updated_at  = NOW()
-WHERE id = $1 AND deleted_at = 0 AND status = 'active'
+WHERE id = $1 AND deleted_at = 0
   AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 RETURNING id, number, date, storage_id, supplier_id, branch_id, description, status, total_amount, paid_amount, created_at, updated_at, deleted_at
 `
