@@ -33,7 +33,7 @@ const buildQueryString = (params: IBillsFilterParams): string => {
     if (params.hall_id) queryParams.append('hall_id', params.hall_id);
     if (params.table_id) queryParams.append('table_id', params.table_id);
 
-    queryParams.append('limit', String(params.limit ?? 500));
+    queryParams.append('limit', String(params.limit ?? 20));
     queryParams.append('offset', String(params.offset ?? 0));
 
     const queryString = queryParams.toString();
@@ -58,6 +58,15 @@ export function useGetBills(params?: IBillsFilterParams) {
         return Array.isArray(data.data.items) ? data.data.items : [];
     }, [data]);
 
+    const pagination = useMemo(() => {
+        if (!data?.data) return undefined;
+        return {
+            total: data.data.total ?? bills.length,
+            limit: data.data.limit ?? params?.limit ?? 20,
+            offset: data.data.offset ?? params?.offset ?? 0,
+        };
+    }, [data, bills.length, params?.limit, params?.offset]);
+
     const total = useMemo(() => {
         if (!data?.data) return bills.length;
         return data.data.total ?? bills.length;
@@ -71,8 +80,9 @@ export function useGetBills(params?: IBillsFilterParams) {
             billsError: error,
             billsValidating: isValidating,
             billsEmpty: !isLoading && !isValidating && !bills.length,
+            pagination,
         }),
-        [bills, total, error, isLoading, isValidating]
+        [bills, total, error, isLoading, isValidating, pagination]
     );
 
     return memoizedValue;

@@ -16,6 +16,7 @@ import {
 } from '@mui/material';
 import { paths } from 'src/routes/paths';
 import { useGetMealsPage, useDeleteMeal, useDeleteMeals, useGetMealWithCalculations } from 'src/hooks/use-meals';
+import { useGetCompounds } from 'src/hooks/use-compounds';
 import { useGenericViewModal } from 'src/hooks/use-generic-view-modal';
 import { useImageUrl } from 'src/hooks/use-image-url';
 import { useGetIngredients } from 'src/actions/ingredients';
@@ -38,6 +39,7 @@ function MealCalculationsTable({ mealId }: { mealId: string }) {
     const { t, i18n } = useTranslation('menu');
     const { mealWithCalculations, loading } = useGetMealWithCalculations(mealId);
     const { ingredients } = useGetIngredients();
+    const { compounds } = useGetCompounds();
     // Create maps for quick name lookup with translations
     const ingredientMap = useMemo(() => {
         const map = new Map<string, string>();
@@ -59,6 +61,14 @@ function MealCalculationsTable({ mealId }: { mealId: string }) {
         });
         return map;
     }, [ingredients, i18n.language]);
+
+    const compoundMap = useMemo(() => {
+        const map = new Map<string, string>();
+        compounds.forEach((compound: any) => {
+            map.set(compound.id, compound.name || '-');
+        });
+        return map;
+    }, [compounds]);
 
     // Remove duplicate calculations - keep only unique ingredient_id or component_compound_id
     // HOOKS MUST BE CALLED BEFORE ANY EARLY RETURNS!
@@ -117,7 +127,9 @@ function MealCalculationsTable({ mealId }: { mealId: string }) {
                         {uniqueCalculations.map((calc, index) => {
                             const itemName = calc.ingredient_id
                                 ? ingredientMap.get(calc.ingredient_id) || calc.ingredient_id
-                                : '-';
+                                : calc.component_compound_id
+                                    ? compoundMap.get(calc.component_compound_id) || calc.component_compound_id
+                                    : '-';
 
                             return (
                                 <TableRow key={calc.ingredient_id || calc.component_compound_id || calc.id}>
@@ -182,6 +194,13 @@ function renderMealsSpecifications(item: IMealsItem, t: any) {
             value: item.department?.name || item.department_id || '-',
         },
         { label: t('mealsProducts.price'), value: `${item.price?.toLocaleString()} so'm` },
+        {
+            label: t('mealsProducts.costPrice'),
+            value:
+                item.cost_price || item.cost_price === 0
+                    ? `${item.cost_price.toLocaleString()} so'm`
+                    : '-',
+        },
         { label: t('mealsProducts.cookingTime'), value: `${item.cook_time} min` },
         {
             label: t('mealsProducts.createdAt'),
@@ -387,6 +406,16 @@ export function Meals() {
                 width: 120,
                 type: 'number',
                 renderCell: (params) => `${params.value?.toLocaleString()} ${t('mealsProducts.som')}`,
+            },
+            {
+                field: 'cost_price',
+                headerName: t('mealsProducts.costPrice'),
+                width: 140,
+                type: 'number',
+                renderCell: (params) =>
+                    params.value || params.value === 0
+                        ? `${params.value?.toLocaleString()} ${t('mealsProducts.som')}`
+                        : '-',
             },
             {
                 field: 'cook_time',

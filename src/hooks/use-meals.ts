@@ -114,6 +114,13 @@ function enrichMeals(
         } else if (typeof meal.price === 'number') {
             parsedPrice = meal.price;
         }
+        let parsedCostPrice: number | undefined;
+        if (typeof meal.cost_price === 'string') {
+            const num = parseFloat(meal.cost_price);
+            parsedCostPrice = isNaN(num) ? undefined : num;
+        } else if (typeof meal.cost_price === 'number') {
+            parsedCostPrice = meal.cost_price;
+        }
 
         // Get localized names from translation
         let name_en = meal.name;
@@ -133,6 +140,7 @@ function enrichMeals(
         return {
             ...meal,
             price: parsedPrice,
+            cost_price: parsedCostPrice,
             coverUrl: meal.picture_url || '',
             name_en,
             name_ru,
@@ -179,6 +187,13 @@ function enrichMealsFromExpand(
         } else if (typeof meal.price === 'number') {
             parsedPrice = meal.price;
         }
+        let parsedCostPrice: number | undefined;
+        if (typeof meal.cost_price === 'string') {
+            const num = parseFloat(meal.cost_price);
+            parsedCostPrice = isNaN(num) ? undefined : num;
+        } else if (typeof meal.cost_price === 'number') {
+            parsedCostPrice = meal.cost_price;
+        }
 
         const expandedCategory = meal?._expand?.category_id;
         const expandedDepartment = meal?._expand?.department_id;
@@ -195,6 +210,7 @@ function enrichMealsFromExpand(
             ...meal,
             name: localizedName,
             price: parsedPrice,
+            cost_price: parsedCostPrice,
             coverUrl: meal.picture_url || '',
             name_en: expandedName?.en || meal.name,
             name_ru: expandedName?.ru || meal.name,
@@ -254,6 +270,14 @@ function enrichMeal(
             typeof mealData.price === 'string'
                 ? parseFloat(mealData.price)
                 : mealData.price,
+        cost_price: (() => {
+            if (typeof mealData.cost_price === 'string') {
+                const num = parseFloat(mealData.cost_price);
+                return isNaN(num) ? undefined : num;
+            }
+            if (typeof mealData.cost_price === 'number') return mealData.cost_price;
+            return undefined;
+        })(),
         coverUrl: mealData.picture_url || '',
         name_en,
         name_ru,

@@ -59,9 +59,10 @@ export function BillsListView() {
         waiter_id: '',
         hall_id: '',
         table_id: '',
-        limit: 1000,
+        limit: 20,
         offset: 0,
     });
+    const [paginationModel, setPaginationModel] = useState({ page: 0, pageSize: 20 });
 
     const [startDate, setStartDate] = useState<dayjs.Dayjs | null>(null);
     const [endDate, setEndDate] = useState<dayjs.Dayjs | null>(null);
@@ -75,7 +76,7 @@ export function BillsListView() {
     }, []);
 
     // Get bills with applied filters
-    const { bills, billsLoading } = useGetBills(
+    const { bills, billsLoading, pagination } = useGetBills(
         Object.fromEntries(Object.entries(filters).filter(([, v]) => v !== ''))
     );
 
@@ -436,6 +437,7 @@ export function BillsListView() {
             ...newFilters,
             offset: 0,
         }));
+        setPaginationModel((prev) => ({ ...prev, page: 0 }));
     }, []);
 
     const handleResetFilters = useCallback(() => {
@@ -447,10 +449,11 @@ export function BillsListView() {
             waiter_id: '',
             hall_id: '',
             table_id: '',
-            limit: 1000,
+            limit: paginationModel.pageSize,
             offset: 0,
         });
-    }, [startDate, endDate]);
+        setPaginationModel((prev) => ({ ...prev, page: 0 }));
+    }, [startDate, endDate, paginationModel.pageSize]);
 
     const handleStatusChange = useCallback(
         (status: string) => {
@@ -487,7 +490,16 @@ export function BillsListView() {
             end: endDate ? toUtcDayBoundary(endDate, true) : '',
             offset: 0,
         }));
+        setPaginationModel((prev) => ({ ...prev, page: 0 }));
     }, [startDate, endDate]);
+
+    useEffect(() => {
+        setFilters((prev) => ({
+            ...prev,
+            limit: paginationModel.pageSize,
+            offset: paginationModel.page * paginationModel.pageSize,
+        }));
+    }, [paginationModel.page, paginationModel.pageSize]);
 
     const renderFiltersContent = () => (
         <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: 'repeat(4, 1fr)', lg: 'repeat(7, 1fr)' }, gap: 1.5 }}>
@@ -621,6 +633,11 @@ export function BillsListView() {
                 data={bills}
                 loading={billsLoading}
                 columns={columns}
+                paginationMode="server"
+                rowCount={pagination?.total || 0}
+                paginationModel={paginationModel}
+                onPaginationModelChange={setPaginationModel}
+                pageSizeOptions={[10, 20, 50, 100]}
                 breadcrumbs={{
                     heading: t('bills.title') || 'Bills',
                     links: [
