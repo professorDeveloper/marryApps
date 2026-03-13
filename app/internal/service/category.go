@@ -30,7 +30,6 @@ func timestampToTime(ts pgtype.Timestamptz) *time.Time {
 	return &ts.Time
 }
 
-// Generic function to map any category row to response
 func mapCategoryToResponse(id uuid.UUID, name string, nameI18n, departmentID, storageID, parent pgtype.UUID, pictureUrl, colorCode *string, createdAt, updatedAt pgtype.Timestamptz) *model.CategoryResponse {
 	return &model.CategoryResponse{
 		ID:           id.String(),
@@ -54,7 +53,7 @@ func NewCategoryS(repo *repository.Repository) *CategoryS {
 	return &CategoryS{repo: repo}
 }
 
-func (c *CategoryS) CreateCategory(ctx context.Context, name string, nameI18n, departmentID, storageID, parent *string, pictureUrl, colorCode *string) (*model.CategoryResponse, error) {
+func (c *CategoryS) CreateCategory(ctx context.Context, name string, nameI18n, departmentID, parent *string, pictureUrl, colorCode *string) (*model.CategoryResponse, error) {
 	if name == "" {
 		return nil, fmt.Errorf("category name is required")
 	}
@@ -71,37 +70,27 @@ func (c *CategoryS) CreateCategory(ctx context.Context, name string, nameI18n, d
 
 	deptID := pgtype.UUID{}
 	if departmentID != nil && *departmentID != "" {
-		id, err := uuid.Parse(*departmentID)
+		did, err := uuid.Parse(*departmentID)
 		if err != nil {
 			return nil, fmt.Errorf("invalid department_id: %w", err)
 		}
-		deptID = pgtype.UUID{Bytes: id, Valid: true}
-	}
-
-	storageUUID := pgtype.UUID{}
-	if storageID != nil && *storageID != "" {
-		id, err := uuid.Parse(*storageID)
-		if err != nil {
-			return nil, fmt.Errorf("invalid storage_id: %w", err)
-		}
-		storageUUID = pgtype.UUID{Bytes: id, Valid: true}
+		deptID = pgtype.UUID{Bytes: did, Valid: true}
 	}
 
 	parentUUID := pgtype.UUID{}
 	if parent != nil && *parent != "" {
-		id, err := uuid.Parse(*parent)
+		pid, err := uuid.Parse(*parent)
 		if err != nil {
 			return nil, fmt.Errorf("invalid parent: %w", err)
 		}
-		parentUUID = pgtype.UUID{Bytes: id, Valid: true}
+		parentUUID = pgtype.UUID{Bytes: pid, Valid: true}
 	}
 
-	category, err := c.repo.Tenant(ctx).CreateCategory(ctx, pg.CreateCategoryParams{
+	row, err := c.repo.Tenant(ctx).CreateCategory(ctx, pg.CreateCategoryParams{
 		ID:           id,
 		Name:         name,
 		NameI18n:     nameI18nUUID,
 		DepartmentID: deptID,
-		StorageID:    storageUUID,
 		Parent:       parentUUID,
 		PictureUrl:   pictureUrl,
 		ColorCode:    colorCode,
@@ -111,7 +100,7 @@ func (c *CategoryS) CreateCategory(ctx context.Context, name string, nameI18n, d
 		return nil, fmt.Errorf("failed to create category: %w", err)
 	}
 
-	return mapCategoryToResponse(category.ID, category.Name, category.NameI18n, category.DepartmentID, category.StorageID, category.Parent, category.PictureUrl, category.ColorCode, category.CreatedAt, category.UpdatedAt), nil
+	return mapCategoryToResponse(row.ID, row.Name, row.NameI18n, row.DepartmentID, row.StorageID, row.Parent, row.PictureUrl, row.ColorCode, row.CreatedAt, row.UpdatedAt), nil
 }
 
 func (c *CategoryS) GetCategoryByID(ctx context.Context, categoryID string) (*model.CategoryResponse, error) {
@@ -120,7 +109,7 @@ func (c *CategoryS) GetCategoryByID(ctx context.Context, categoryID string) (*mo
 		return nil, fmt.Errorf("invalid category ID: %w", err)
 	}
 
-	category, err := c.repo.Tenant(ctx).GetCategoryByID(ctx, id)
+	row, err := c.repo.Tenant(ctx).GetCategoryByID(ctx, id)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return nil, fmt.Errorf("category not found")
@@ -129,7 +118,7 @@ func (c *CategoryS) GetCategoryByID(ctx context.Context, categoryID string) (*mo
 		return nil, fmt.Errorf("failed to retrieve category: %w", err)
 	}
 
-	return mapCategoryToResponse(category.ID, category.Name, category.NameI18n, category.DepartmentID, category.StorageID, category.Parent, category.PictureUrl, category.ColorCode, category.CreatedAt, category.UpdatedAt), nil
+	return mapCategoryToResponse(row.ID, row.Name, row.NameI18n, row.DepartmentID, row.StorageID, row.Parent, row.PictureUrl, row.ColorCode, row.CreatedAt, row.UpdatedAt), nil
 }
 
 func (c *CategoryS) GetAllCategories(ctx context.Context, limit, offset int32) ([]*model.CategoryResponse, int64, error) {
@@ -139,7 +128,7 @@ func (c *CategoryS) GetAllCategories(ctx context.Context, limit, offset int32) (
 		return nil, 0, fmt.Errorf("failed to count categories: %w", err)
 	}
 
-	categories, err := c.repo.Tenant(ctx).GetAllCategories(ctx, pg.GetAllCategoriesParams{
+	rows, err := c.repo.Tenant(ctx).GetAllCategories(ctx, pg.GetAllCategoriesParams{
 		Limit:  limit,
 		Offset: offset,
 	})
@@ -149,8 +138,8 @@ func (c *CategoryS) GetAllCategories(ctx context.Context, limit, offset int32) (
 	}
 
 	var responses []*model.CategoryResponse
-	for _, cat := range categories {
-		responses = append(responses, mapCategoryToResponse(cat.ID, cat.Name, cat.NameI18n, cat.DepartmentID, cat.StorageID, cat.Parent, cat.PictureUrl, cat.ColorCode, cat.CreatedAt, cat.UpdatedAt))
+	for _, row := range rows {
+		responses = append(responses, mapCategoryToResponse(row.ID, row.Name, row.NameI18n, row.DepartmentID, row.StorageID, row.Parent, row.PictureUrl, row.ColorCode, row.CreatedAt, row.UpdatedAt))
 	}
 	return responses, total, nil
 }
@@ -161,14 +150,16 @@ func (c *CategoryS) GetCategoriesByDepartmentID(ctx context.Context, departmentI
 		return nil, 0, fmt.Errorf("invalid department ID: %w", err)
 	}
 
-	total, err := c.repo.Tenant(ctx).CountCategoriesByDepartment(ctx, pgtype.UUID{Bytes: id, Valid: true})
+	deptUUID := pgtype.UUID{Bytes: id, Valid: true}
+
+	total, err := c.repo.Tenant(ctx).CountCategoriesByDepartment(ctx, deptUUID)
 	if err != nil {
 		log.Printf("CountCategoriesByDepartment failed: %v", err)
 		return nil, 0, fmt.Errorf("failed to count categories: %w", err)
 	}
 
-	categories, err := c.repo.Tenant(ctx).GetCategoriesByDepartmentID(ctx, pg.GetCategoriesByDepartmentIDParams{
-		DepartmentID: pgtype.UUID{Bytes: id, Valid: true},
+	rows, err := c.repo.Tenant(ctx).GetCategoriesByDepartmentID(ctx, pg.GetCategoriesByDepartmentIDParams{
+		DepartmentID: deptUUID,
 		Limit:        limit,
 		Offset:       offset,
 	})
@@ -178,8 +169,8 @@ func (c *CategoryS) GetCategoriesByDepartmentID(ctx context.Context, departmentI
 	}
 
 	var responses []*model.CategoryResponse
-	for _, cat := range categories {
-		responses = append(responses, mapCategoryToResponse(cat.ID, cat.Name, cat.NameI18n, cat.DepartmentID, cat.StorageID, cat.Parent, cat.PictureUrl, cat.ColorCode, cat.CreatedAt, cat.UpdatedAt))
+	for _, row := range rows {
+		responses = append(responses, mapCategoryToResponse(row.ID, row.Name, row.NameI18n, row.DepartmentID, row.StorageID, row.Parent, row.PictureUrl, row.ColorCode, row.CreatedAt, row.UpdatedAt))
 	}
 	return responses, total, nil
 }
@@ -190,14 +181,16 @@ func (c *CategoryS) GetCategoriesByStorageID(ctx context.Context, storageID stri
 		return nil, 0, fmt.Errorf("invalid storage ID: %w", err)
 	}
 
-	total, err := c.repo.Tenant(ctx).CountCategoriesByStorage(ctx, pgtype.UUID{Bytes: id, Valid: true})
+	storUUID := pgtype.UUID{Bytes: id, Valid: true}
+
+	total, err := c.repo.Tenant(ctx).CountCategoriesByStorage(ctx, storUUID)
 	if err != nil {
 		log.Printf("CountCategoriesByStorage failed: %v", err)
 		return nil, 0, fmt.Errorf("failed to count categories: %w", err)
 	}
 
-	categories, err := c.repo.Tenant(ctx).GetCategoriesByStorageID(ctx, pg.GetCategoriesByStorageIDParams{
-		StorageID: pgtype.UUID{Bytes: id, Valid: true},
+	rows, err := c.repo.Tenant(ctx).GetCategoriesByStorageID(ctx, pg.GetCategoriesByStorageIDParams{
+		StorageID: storUUID,
 		Limit:     limit,
 		Offset:    offset,
 	})
@@ -207,8 +200,8 @@ func (c *CategoryS) GetCategoriesByStorageID(ctx context.Context, storageID stri
 	}
 
 	var responses []*model.CategoryResponse
-	for _, cat := range categories {
-		responses = append(responses, mapCategoryToResponse(cat.ID, cat.Name, cat.NameI18n, cat.DepartmentID, cat.StorageID, cat.Parent, cat.PictureUrl, cat.ColorCode, cat.CreatedAt, cat.UpdatedAt))
+	for _, row := range rows {
+		responses = append(responses, mapCategoryToResponse(row.ID, row.Name, row.NameI18n, row.DepartmentID, row.StorageID, row.Parent, row.PictureUrl, row.ColorCode, row.CreatedAt, row.UpdatedAt))
 	}
 	return responses, total, nil
 }
@@ -225,7 +218,7 @@ func (c *CategoryS) GetCategoriesByParentID(ctx context.Context, parentID string
 		return nil, 0, fmt.Errorf("failed to count subcategories: %w", err)
 	}
 
-	categories, err := c.repo.Tenant(ctx).GetCategoriesByParentID(ctx, pg.GetCategoriesByParentIDParams{
+	rows, err := c.repo.Tenant(ctx).GetCategoriesByParentID(ctx, pg.GetCategoriesByParentIDParams{
 		Parent: pgtype.UUID{Bytes: id, Valid: true},
 		Limit:  limit,
 		Offset: offset,
@@ -236,8 +229,8 @@ func (c *CategoryS) GetCategoriesByParentID(ctx context.Context, parentID string
 	}
 
 	var responses []*model.CategoryResponse
-	for _, cat := range categories {
-		responses = append(responses, mapCategoryToResponse(cat.ID, cat.Name, cat.NameI18n, cat.DepartmentID, cat.StorageID, cat.Parent, cat.PictureUrl, cat.ColorCode, cat.CreatedAt, cat.UpdatedAt))
+	for _, row := range rows {
+		responses = append(responses, mapCategoryToResponse(row.ID, row.Name, row.NameI18n, row.DepartmentID, row.StorageID, row.Parent, row.PictureUrl, row.ColorCode, row.CreatedAt, row.UpdatedAt))
 	}
 	return responses, total, nil
 }
@@ -249,7 +242,7 @@ func (c *CategoryS) GetRootCategories(ctx context.Context, limit, offset int32) 
 		return nil, 0, fmt.Errorf("failed to count root categories: %w", err)
 	}
 
-	categories, err := c.repo.Tenant(ctx).GetRootCategories(ctx, pg.GetRootCategoriesParams{
+	rows, err := c.repo.Tenant(ctx).GetRootCategories(ctx, pg.GetRootCategoriesParams{
 		Limit:  limit,
 		Offset: offset,
 	})
@@ -259,13 +252,13 @@ func (c *CategoryS) GetRootCategories(ctx context.Context, limit, offset int32) 
 	}
 
 	var responses []*model.CategoryResponse
-	for _, cat := range categories {
-		responses = append(responses, mapCategoryToResponse(cat.ID, cat.Name, cat.NameI18n, cat.DepartmentID, cat.StorageID, cat.Parent, cat.PictureUrl, cat.ColorCode, cat.CreatedAt, cat.UpdatedAt))
+	for _, row := range rows {
+		responses = append(responses, mapCategoryToResponse(row.ID, row.Name, row.NameI18n, row.DepartmentID, row.StorageID, row.Parent, row.PictureUrl, row.ColorCode, row.CreatedAt, row.UpdatedAt))
 	}
 	return responses, total, nil
 }
 
-func (c *CategoryS) UpdateCategory(ctx context.Context, categoryID string, name, nameI18n, departmentID, storageID, parent *string, pictureUrl *string, colorCode *string) (*model.CategoryResponse, error) {
+func (c *CategoryS) UpdateCategory(ctx context.Context, categoryID string, name, nameI18n, departmentID, parent *string, pictureUrl *string, colorCode *string) (*model.CategoryResponse, error) {
 	id, err := uuid.Parse(categoryID)
 	if err != nil {
 		return nil, fmt.Errorf("invalid category ID: %w", err)
@@ -302,15 +295,6 @@ func (c *CategoryS) UpdateCategory(ctx context.Context, categoryID string, name,
 		finalDeptID = pgtype.UUID{Bytes: deptID, Valid: true}
 	}
 
-	finalStorageID := existing.StorageID
-	if storageID != nil && *storageID != "" {
-		storID, err := uuid.Parse(*storageID)
-		if err != nil {
-			return nil, fmt.Errorf("invalid storage_id: %w", err)
-		}
-		finalStorageID = pgtype.UUID{Bytes: storID, Valid: true}
-	}
-
 	finalParent := existing.Parent
 	if parent != nil && *parent != "" {
 		parentID, err := uuid.Parse(*parent)
@@ -330,12 +314,11 @@ func (c *CategoryS) UpdateCategory(ctx context.Context, categoryID string, name,
 		finalColorCode = colorCode
 	}
 
-	category, err := c.repo.Tenant(ctx).UpdateCategory(ctx, pg.UpdateCategoryParams{
+	row, err := c.repo.Tenant(ctx).UpdateCategory(ctx, pg.UpdateCategoryParams{
 		ID:           id,
 		Name:         finalName,
 		NameI18n:     finalNameI18n,
 		DepartmentID: finalDeptID,
-		StorageID:    finalStorageID,
 		Parent:       finalParent,
 		PictureUrl:   finalPictureUrl,
 		ColorCode:    finalColorCode,
@@ -345,7 +328,7 @@ func (c *CategoryS) UpdateCategory(ctx context.Context, categoryID string, name,
 		return nil, fmt.Errorf("failed to update category: %w", err)
 	}
 
-	return mapCategoryToResponse(category.ID, category.Name, category.NameI18n, category.DepartmentID, category.StorageID, category.Parent, category.PictureUrl, category.ColorCode, category.CreatedAt, category.UpdatedAt), nil
+	return mapCategoryToResponse(row.ID, row.Name, row.NameI18n, row.DepartmentID, row.StorageID, row.Parent, row.PictureUrl, row.ColorCode, row.CreatedAt, row.UpdatedAt), nil
 }
 
 func (c *CategoryS) DeleteCategory(ctx context.Context, categoryID string) error {
@@ -380,9 +363,8 @@ func (c *CategoryS) SearchCategories(ctx context.Context, query string, limit, o
 		return nil, fmt.Errorf("search query is required")
 	}
 
-	q := query
-	categories, err := c.repo.Tenant(ctx).SearchCategories(ctx, pg.SearchCategoriesParams{
-		Column1: &q,
+	rows, err := c.repo.Tenant(ctx).SearchCategories(ctx, pg.SearchCategoriesParams{
+		Column1: &query,
 		Limit:   limit,
 		Offset:  offset,
 	})
@@ -392,20 +374,19 @@ func (c *CategoryS) SearchCategories(ctx context.Context, query string, limit, o
 	}
 
 	var responses []*model.CategoryResponse
-	for _, cat := range categories {
-		responses = append(responses, mapCategoryToResponse(cat.ID, cat.Name, cat.NameI18n, cat.DepartmentID, cat.StorageID, cat.Parent, cat.PictureUrl, cat.ColorCode, cat.CreatedAt, cat.UpdatedAt))
+	for _, row := range rows {
+		responses = append(responses, mapCategoryToResponse(row.ID, row.Name, row.NameI18n, row.DepartmentID, row.StorageID, row.Parent, row.PictureUrl, row.ColorCode, row.CreatedAt, row.UpdatedAt))
 	}
 	return responses, nil
 }
 
-// GetCategoryByIDWithLang retrieves category by ID with language support
 func (c *CategoryS) GetCategoryByIDWithLang(ctx context.Context, categoryID string, lang string) (*model.CategoryResponse, error) {
 	id, err := uuid.Parse(categoryID)
 	if err != nil {
 		return nil, fmt.Errorf("invalid category ID: %w", err)
 	}
 
-	category, err := c.repo.Tenant(ctx).GetCategoryByIDWithLanguage(ctx, pg.GetCategoryByIDWithLanguageParams{
+	row, err := c.repo.Tenant(ctx).GetCategoryByIDWithLanguage(ctx, pg.GetCategoryByIDWithLanguageParams{
 		ID:      id,
 		Column2: lang,
 	})
@@ -414,10 +395,9 @@ func (c *CategoryS) GetCategoryByIDWithLang(ctx context.Context, categoryID stri
 		return nil, fmt.Errorf("failed to get category: %w", err)
 	}
 
-	return mapCategoryToResponse(category.ID, category.Name, category.NameI18n, category.DepartmentID, category.StorageID, category.Parent, category.PictureUrl, category.ColorCode, category.CreatedAt, category.UpdatedAt), nil
+	return mapCategoryToResponse(row.ID, row.Name, row.NameI18n, row.DepartmentID, row.StorageID, row.Parent, row.PictureUrl, row.ColorCode, row.CreatedAt, row.UpdatedAt), nil
 }
 
-// GetAllCategoriesWithLang retrieves all categories with language support
 func (c *CategoryS) GetAllCategoriesWithLang(ctx context.Context, lang string, limit, offset int32) ([]*model.CategoryResponse, int64, error) {
 	total, err := c.repo.Tenant(ctx).CountCategories(ctx)
 	if err != nil {
@@ -425,7 +405,7 @@ func (c *CategoryS) GetAllCategoriesWithLang(ctx context.Context, lang string, l
 		return nil, 0, fmt.Errorf("failed to count categories: %w", err)
 	}
 
-	categories, err := c.repo.Tenant(ctx).GetAllCategoriesWithLanguage(ctx, pg.GetAllCategoriesWithLanguageParams{
+	rows, err := c.repo.Tenant(ctx).GetAllCategoriesWithLanguage(ctx, pg.GetAllCategoriesWithLanguageParams{
 		Column1: lang,
 		Limit:   limit,
 		Offset:  offset,
@@ -436,8 +416,8 @@ func (c *CategoryS) GetAllCategoriesWithLang(ctx context.Context, lang string, l
 	}
 
 	var responses []*model.CategoryResponse
-	for _, cat := range categories {
-		responses = append(responses, mapCategoryToResponse(cat.ID, cat.Name, cat.NameI18n, cat.DepartmentID, cat.StorageID, cat.Parent, cat.PictureUrl, cat.ColorCode, cat.CreatedAt, cat.UpdatedAt))
+	for _, row := range rows {
+		responses = append(responses, mapCategoryToResponse(row.ID, row.Name, row.NameI18n, row.DepartmentID, row.StorageID, row.Parent, row.PictureUrl, row.ColorCode, row.CreatedAt, row.UpdatedAt))
 	}
 	return responses, total, nil
 }

@@ -26,6 +26,7 @@ sql:
       - "../../app/migrations/tenants/21_inventory_system_quantity.up.sql"
       - "../../app/migrations/tenants/22_user_cash_register.up.sql"
       - "../../app/migrations/tenants/23_order_cash_register.up.sql"
+      - "../../app/migrations/tenants/24_category_remove_storage.up.sql"
 
 
     gen:

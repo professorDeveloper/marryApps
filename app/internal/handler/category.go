@@ -41,7 +41,7 @@ func (h *Handler) CreateCategory(c echo.Context) error {
 		))
 	}
 
-	category, err := h.service.Category().CreateCategory(c.Request().Context(), req.Name, req.NameI18n, req.DepartmentID, req.StorageID, req.Parent, req.PictureUrl, req.ColorCode)
+	category, err := h.service.Category().CreateCategory(c.Request().Context(), req.Name, req.NameI18n, req.DepartmentID, req.Parent, req.PictureUrl, req.ColorCode)
 	if err != nil {
 		log.Printf("CreateCategory failed: %v", err)
 		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse(
@@ -381,7 +381,7 @@ func (h *Handler) UpdateCategory(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("Invalid request format", "malformed JSON", http.StatusBadRequest))
 	}
 
-	category, err := h.service.Category().UpdateCategory(c.Request().Context(), categoryID, req.Name, req.NameI18n, req.DepartmentID, req.StorageID, req.Parent, req.PictureUrl, req.ColorCode)
+	category, err := h.service.Category().UpdateCategory(c.Request().Context(), categoryID, req.Name, req.NameI18n, req.DepartmentID, req.Parent, req.PictureUrl, req.ColorCode)
 	if err != nil {
 		log.Printf("UpdateCategory failed for ID %s: %v", categoryID, err)
 		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("Failed to update category", "see logs for details", http.StatusInternalServerError))

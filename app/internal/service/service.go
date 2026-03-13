@@ -155,7 +155,7 @@ type IngredientI interface {
 }
 
 type CategoryI interface {
-	CreateCategory(ctx context.Context, name string, nameI18n, departmentID, storageID, parent *string, pictureUrl *string, colorCode *string) (*model.CategoryResponse, error)
+	CreateCategory(ctx context.Context, name string, nameI18n, departmentID, parent *string, pictureUrl *string, colorCode *string) (*model.CategoryResponse, error)
 	GetCategoryByID(ctx context.Context, categoryID string) (*model.CategoryResponse, error)
 	GetAllCategories(ctx context.Context, limit, offset int32) ([]*model.CategoryResponse, int64, error)
 	GetCategoryByIDWithLang(ctx context.Context, categoryID string, lang string) (*model.CategoryResponse, error)
@@ -164,7 +164,7 @@ type CategoryI interface {
 	GetCategoriesByStorageID(ctx context.Context, storageID string, limit, offset int32) ([]*model.CategoryResponse, int64, error)
 	GetCategoriesByParentID(ctx context.Context, parentID string, limit, offset int32) ([]*model.CategoryResponse, int64, error)
 	GetRootCategories(ctx context.Context, limit, offset int32) ([]*model.CategoryResponse, int64, error)
-	UpdateCategory(ctx context.Context, categoryID string, name, nameI18n, departmentID, storageID, parent *string, pictureUrl *string, colorCode *string) (*model.CategoryResponse, error)
+	UpdateCategory(ctx context.Context, categoryID string, name, nameI18n, departmentID, parent *string, pictureUrl *string, colorCode *string) (*model.CategoryResponse, error)
 	DeleteCategory(ctx context.Context, categoryID string) error
 	RestoreCategory(ctx context.Context, categoryID string) (*model.CategoryResponse, error)
 	SearchCategories(ctx context.Context, query string, limit, offset int32) ([]*model.CategoryResponse, error)

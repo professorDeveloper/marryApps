@@ -203,7 +203,6 @@ func seedTenantDB(ctx context.Context, db pg.DBTX) error {
 			PictureUrl:   nil,
 			NameI18n:     pgtype.UUID{Valid: false},
 			DepartmentID: pgtype.UUID{Bytes: deptIDs[deptIdx], Valid: true},
-			StorageID:    pgtype.UUID{Bytes: storageIDs[deptIdx], Valid: true},
 			Parent:       pgtype.UUID{Valid: false},
 			ColorCode:    &color,
 		})

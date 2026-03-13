@@ -633,7 +633,6 @@ type Category struct {
 	ColorCode    *string            `json:"color_code"`
 	NameI18n     pgtype.UUID        `json:"name_i18n"`
 	DepartmentID pgtype.UUID        `json:"department_id"`
-	StorageID    pgtype.UUID        `json:"storage_id"`
 	Parent       pgtype.UUID        `json:"parent"`
 	CreatedAt    pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`

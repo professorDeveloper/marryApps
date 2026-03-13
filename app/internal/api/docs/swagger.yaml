@@ -632,9 +632,6 @@ definitions:
       picture_url:
         example: https://example.com/image.jpg
         type: string
-      storage_id:
-        example: 123e4567-e89b-12d3-a456-426614174000
-        type: string
     type: object
   model.CreateCompoundCalculationRequest:
     properties:
@@ -3291,9 +3288,6 @@ definitions:
         type: string
       picture_url:
         example: https://example.com/image.jpg
-        type: string
-      storage_id:
-        example: 123e4567-e89b-12d3-a456-426614174000
         type: string
     type: object
   model.UpdateCompoundDetailRequest:
