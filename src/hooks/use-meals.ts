@@ -515,6 +515,14 @@ export function useCreateMeal() {
                         typeof mealData.price === 'string'
                             ? parseFloat(mealData.price)
                             : mealData.price,
+                    cost_price: (() => {
+                        if (typeof mealData.cost_price === 'string') {
+                            const num = parseFloat(mealData.cost_price);
+                            return isNaN(num) ? undefined : num;
+                        }
+                        if (typeof mealData.cost_price === 'number') return mealData.cost_price;
+                        return undefined;
+                    })(),
                     coverUrl: mealData.picture_url || '',
                 };
 
@@ -574,6 +582,14 @@ export function useUpdateMeal() {
                         typeof mealData.price === 'string'
                             ? parseFloat(mealData.price)
                             : mealData.price,
+                    cost_price: (() => {
+                        if (typeof mealData.cost_price === 'string') {
+                            const num = parseFloat(mealData.cost_price);
+                            return isNaN(num) ? undefined : num;
+                        }
+                        if (typeof mealData.cost_price === 'number') return mealData.cost_price;
+                        return undefined;
+                    })(),
                     coverUrl: mealData.picture_url || '',
                 };
 

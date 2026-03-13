@@ -29,6 +29,28 @@ export interface UseMealsAPIReturn {
 }
 
 // ============================================================================
+// HELPERS
+// ============================================================================
+
+const parseNumberOrZero = (value: unknown): number => {
+    if (typeof value === 'number') return value;
+    if (typeof value === 'string') {
+        const num = parseFloat(value);
+        return Number.isNaN(num) ? 0 : num;
+    }
+    return 0;
+};
+
+const parseNumberOrUndefined = (value: unknown): number | undefined => {
+    if (typeof value === 'number') return value;
+    if (typeof value === 'string') {
+        const num = parseFloat(value);
+        return Number.isNaN(num) ? undefined : num;
+    }
+    return undefined;
+};
+
+// ============================================================================
 // HOOK
 // ============================================================================
 
@@ -82,18 +104,10 @@ export function useMealsAPI(): UseMealsAPIReturn {
 
             // Meals'ni enrich qiladi
             const enrichedMeals: IMealsItem[] = mealsData.map((meal) => {
-                // Parse price safely
-                let parsedPrice: number = 0;
-                if (typeof meal.price === 'string') {
-                    const num = parseFloat(meal.price);
-                    parsedPrice = isNaN(num) ? 0 : num;
-                } else if (typeof meal.price === 'number') {
-                    parsedPrice = meal.price;
-                }
-
                 return {
                     ...meal,
-                    price: parsedPrice,
+                    price: parseNumberOrZero(meal.price),
+                    cost_price: parseNumberOrUndefined(meal.cost_price),
                     coverUrl: meal.picture_url || '',
                     category: meal.category_id ? {
                         id: meal.category_id,
@@ -170,7 +184,8 @@ export function useMealsAPI(): UseMealsAPIReturn {
 
                 const enriched: IMealsItem = {
                     ...mealData,
-                    price: typeof mealData.price === 'string' ? parseFloat(mealData.price) : mealData.price,
+                    price: parseNumberOrZero(mealData.price),
+                    cost_price: parseNumberOrUndefined(mealData.cost_price),
                     coverUrl: mealData.picture_url || '',
                     category: mealData.category_id ? {
                         id: mealData.category_id,
@@ -224,7 +239,8 @@ export function useMealsAPI(): UseMealsAPIReturn {
 
                 const enriched: IMealsItem = {
                     ...mealData,
-                    price: typeof mealData.price === 'string' ? parseFloat(mealData.price) : mealData.price,
+                    price: parseNumberOrZero(mealData.price),
+                    cost_price: parseNumberOrUndefined(mealData.cost_price),
                     coverUrl: mealData.picture_url || '',
                 };
 
@@ -272,7 +288,8 @@ export function useMealsAPI(): UseMealsAPIReturn {
 
                 const enriched: IMealsItem = {
                     ...mealData,
-                    price: typeof mealData.price === 'string' ? parseFloat(mealData.price) : mealData.price,
+                    price: parseNumberOrZero(mealData.price),
+                    cost_price: parseNumberOrUndefined(mealData.cost_price),
                     coverUrl: mealData.picture_url || '',
                 };
 
