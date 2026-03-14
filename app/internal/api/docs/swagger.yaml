@@ -432,14 +432,14 @@ definitions:
     type: object
   model.CompoundResponse:
     properties:
+      branch_id:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
       color_code:
         example: '#FF5733'
         type: string
       created_at:
         example: "2022-01-01T00:00:00Z"
-        type: string
-      department_id:
-        example: 123e4567-e89b-12d3-a456-426614174000
         type: string
       description:
         example: Base dough for all pizzas
@@ -448,6 +448,9 @@ definitions:
         example: 123e4567-e89b-12d3-a456-426614174000
         type: string
       id:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+      ingredient_group_id:
         example: 123e4567-e89b-12d3-a456-426614174000
         type: string
       measurement:
@@ -671,13 +674,13 @@ definitions:
       color_code:
         example: '#FF5733'
         type: string
-      department_id:
-        example: 123e4567-e89b-12d3-a456-426614174000
-        type: string
       description:
         example: Base dough for all pizzas
         type: string
       description_i18n:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+      ingredient_group_id:
         example: 123e4567-e89b-12d3-a456-426614174000
         type: string
       measurement:
@@ -850,9 +853,6 @@ definitions:
       cook_time:
         example: 30
         type: integer
-      department_id:
-        example: 123e4567-e89b-12d3-a456-426614174000
-        type: string
       description:
         example: Classic Italian pizza with tomatoes and mozzarella
         type: string
@@ -1768,6 +1768,9 @@ definitions:
     type: object
   model.GoodResponse:
     properties:
+      branch_id:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
       category_id:
         example: 123e4567-e89b-12d3-a456-426614174000
         type: string
@@ -1783,9 +1786,6 @@ definitions:
         type: string
       created_at:
         example: "2022-01-01T00:00:00Z"
-        type: string
-      department_id:
-        example: 123e4567-e89b-12d3-a456-426614174000
         type: string
       description:
         example: Classic Italian pizza with tomatoes and mozzarella
@@ -3307,13 +3307,13 @@ definitions:
       color_code:
         example: '#FF5733'
         type: string
-      department_id:
-        example: 123e4567-e89b-12d3-a456-426614174000
-        type: string
       description:
         example: Base dough for all pizzas
         type: string
       description_i18n:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+      ingredient_group_id:
         example: 123e4567-e89b-12d3-a456-426614174000
         type: string
       measurement:
@@ -3450,9 +3450,6 @@ definitions:
       cook_time:
         example: 30
         type: integer
-      department_id:
-        example: 123e4567-e89b-12d3-a456-426614174000
-        type: string
       description:
         example: Classic Italian pizza with tomatoes and mozzarella
         type: string

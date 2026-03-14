@@ -19,32 +19,7 @@ WHERE deleted_at = 0
     SELECT 1 FROM goods g
     WHERE g.id = goods_details.good_id
       AND g.deleted_at = 0
-      AND (
-        (g.department_id IS NULL OR EXISTS (
-          SELECT 1 FROM departments d
-          JOIN storages s ON s.id = d.storage_id
-          WHERE d.id = g.department_id
-            AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-        ))
-        AND (
-          g.category_id IS NULL OR (
-            EXISTS (
-              SELECT 1 FROM categories c
-              JOIN storages s ON s.id = c.storage_id
-              WHERE c.id = g.category_id
-                AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-            )
-            OR EXISTS (
-              SELECT 1 FROM categories c
-              JOIN departments d ON d.id = c.department_id
-              JOIN storages s ON s.id = d.storage_id
-              WHERE c.id = g.category_id
-                AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-            )
-          )
-        )
-        AND (g.department_id IS NOT NULL OR g.category_id IS NOT NULL)
-      )
+      AND g.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
   )
 `
 
@@ -62,32 +37,7 @@ WHERE goods_details.good_id = $1 AND deleted_at = 0
     SELECT 1 FROM goods g
     WHERE g.id = $1
       AND g.deleted_at = 0
-      AND (
-        (g.department_id IS NULL OR EXISTS (
-          SELECT 1 FROM departments d
-          JOIN storages s ON s.id = d.storage_id
-          WHERE d.id = g.department_id
-            AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-        ))
-        AND (
-          g.category_id IS NULL OR (
-            EXISTS (
-              SELECT 1 FROM categories c
-              JOIN storages s ON s.id = c.storage_id
-              WHERE c.id = g.category_id
-                AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-            )
-            OR EXISTS (
-              SELECT 1 FROM categories c
-              JOIN departments d ON d.id = c.department_id
-              JOIN storages s ON s.id = d.storage_id
-              WHERE c.id = g.category_id
-                AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-            )
-          )
-        )
-        AND (g.department_id IS NOT NULL OR g.category_id IS NOT NULL)
-      )
+      AND g.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
   )
 `
 
@@ -101,32 +51,7 @@ func (q *Queries) CountGoodDetailsByGood(ctx context.Context, goodID uuid.UUID) 
 const countGoods = `-- name: CountGoods :one
 SELECT COUNT(*) FROM goods
 WHERE deleted_at = 0
-  AND (
-    (goods.department_id IS NULL OR EXISTS (
-      SELECT 1 FROM departments d
-      JOIN storages s ON s.id = d.storage_id
-      WHERE d.id = goods.department_id
-        AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-    ))
-    AND (
-      goods.category_id IS NULL OR (
-        EXISTS (
-          SELECT 1 FROM categories c
-          JOIN storages s ON s.id = c.storage_id
-          WHERE c.id = goods.category_id
-            AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-        )
-        OR EXISTS (
-          SELECT 1 FROM categories c
-          JOIN departments d ON d.id = c.department_id
-          JOIN storages s ON s.id = d.storage_id
-          WHERE c.id = goods.category_id
-            AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-        )
-      )
-    )
-    AND (goods.department_id IS NOT NULL OR goods.category_id IS NOT NULL)
-  )
+  AND goods.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 `
 
 func (q *Queries) CountGoods(ctx context.Context) (int64, error) {
@@ -139,32 +64,7 @@ func (q *Queries) CountGoods(ctx context.Context) (int64, error) {
 const countGoodsByCategory = `-- name: CountGoodsByCategory :one
 SELECT COUNT(*) FROM goods
 WHERE category_id = $1 AND deleted_at = 0
-  AND (
-    (goods.department_id IS NULL OR EXISTS (
-      SELECT 1 FROM departments d
-      JOIN storages s ON s.id = d.storage_id
-      WHERE d.id = goods.department_id
-        AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-    ))
-    AND (
-      goods.category_id IS NULL OR (
-        EXISTS (
-          SELECT 1 FROM categories c
-          JOIN storages s ON s.id = c.storage_id
-          WHERE c.id = goods.category_id
-            AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-        )
-        OR EXISTS (
-          SELECT 1 FROM categories c
-          JOIN departments d ON d.id = c.department_id
-          JOIN storages s ON s.id = d.storage_id
-          WHERE c.id = goods.category_id
-            AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-        )
-      )
-    )
-    AND (goods.department_id IS NOT NULL OR goods.category_id IS NOT NULL)
-  )
+  AND goods.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 `
 
 func (q *Queries) CountGoodsByCategory(ctx context.Context, categoryID pgtype.UUID) (int64, error) {
@@ -174,132 +74,31 @@ func (q *Queries) CountGoodsByCategory(ctx context.Context, categoryID pgtype.UU
 	return count, err
 }
 
-const countGoodsByDepartment = `-- name: CountGoodsByDepartment :one
-SELECT COUNT(*) FROM goods
-WHERE goods.department_id = $1 AND deleted_at = 0
-  AND (
-    (goods.department_id IS NULL OR EXISTS (
-      SELECT 1 FROM departments d
-      JOIN storages s ON s.id = d.storage_id
-      WHERE d.id = goods.department_id
-        AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-    ))
-    AND (
-      goods.category_id IS NULL OR (
-        EXISTS (
-          SELECT 1 FROM categories c
-          JOIN storages s ON s.id = c.storage_id
-          WHERE c.id = goods.category_id
-            AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-        )
-        OR EXISTS (
-          SELECT 1 FROM categories c
-          JOIN departments d ON d.id = c.department_id
-          JOIN storages s ON s.id = d.storage_id
-          WHERE c.id = goods.category_id
-            AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-        )
-      )
-    )
-    AND (goods.department_id IS NOT NULL OR goods.category_id IS NOT NULL)
-  )
-`
-
-func (q *Queries) CountGoodsByDepartment(ctx context.Context, departmentID pgtype.UUID) (int64, error) {
-	row := q.db.QueryRow(ctx, countGoodsByDepartment, departmentID)
-	var count int64
-	err := row.Scan(&count)
-	return count, err
-}
-
 const countGoodsFiltered = `-- name: CountGoodsFiltered :one
 SELECT COUNT(*)
 FROM goods
 WHERE goods.deleted_at = 0
-  AND (
-    (goods.department_id IS NULL OR EXISTS (
-      SELECT 1 FROM departments d
-      JOIN storages s ON s.id = d.storage_id
-      WHERE d.id = goods.department_id
-        AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-    ))
-    AND (
-      goods.category_id IS NULL OR (
-        EXISTS (
-          SELECT 1 FROM categories c
-          JOIN storages s ON s.id = c.storage_id
-          WHERE c.id = goods.category_id
-            AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-        )
-        OR EXISTS (
-          SELECT 1 FROM categories c
-          JOIN departments d ON d.id = c.department_id
-          JOIN storages s ON s.id = d.storage_id
-          WHERE c.id = goods.category_id
-            AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-        )
-      )
-    )
-    AND (goods.department_id IS NOT NULL OR goods.category_id IS NOT NULL)
-  )
+  AND goods.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
   AND (($1::uuid = '00000000-0000-0000-0000-000000000000') OR goods.category_id = $1)
-  AND (($2::uuid = '00000000-0000-0000-0000-000000000000') OR goods.department_id = $2)
-  AND (($3::uuid = '00000000-0000-0000-0000-000000000000') OR EXISTS (
-    SELECT 1 FROM departments d2
-    WHERE d2.id = goods.department_id AND d2.storage_id = $3
-  ))
-  AND ($4 = '' OR goods.name ILIKE '%' || $4 || '%')
+  AND ($2 = '' OR goods.name ILIKE '%' || $2 || '%')
 `
 
 type CountGoodsFilteredParams struct {
 	Column1 uuid.UUID   `json:"column_1"`
-	Column2 uuid.UUID   `json:"column_2"`
-	Column3 uuid.UUID   `json:"column_3"`
-	Column4 interface{} `json:"column_4"`
+	Column2 interface{} `json:"column_2"`
 }
 
 func (q *Queries) CountGoodsFiltered(ctx context.Context, arg CountGoodsFilteredParams) (int64, error) {
-	row := q.db.QueryRow(ctx, countGoodsFiltered,
-		arg.Column1,
-		arg.Column2,
-		arg.Column3,
-		arg.Column4,
-	)
+	row := q.db.QueryRow(ctx, countGoodsFiltered, arg.Column1, arg.Column2)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
 }
 
 const createGood = `-- name: CreateGood :one
-INSERT INTO goods (id, name, description, name_i18n, description_i18n, category_id, department_id, picture_url, color_code, price, cook_time)
-SELECT $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11
-WHERE (
-    ($7 IS NULL OR EXISTS (
-        SELECT 1 FROM departments d
-        JOIN storages s ON s.id = d.storage_id
-        WHERE d.id = $7
-          AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-    ))
-    AND (
-        $6 IS NULL OR (
-            EXISTS (
-                SELECT 1 FROM categories c
-                JOIN storages s ON s.id = c.storage_id
-                WHERE c.id = $6
-                  AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-            )
-            OR EXISTS (
-                SELECT 1 FROM categories c
-                JOIN departments d ON d.id = c.department_id
-                JOIN storages s ON s.id = d.storage_id
-                WHERE c.id = $6
-                  AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-            )
-        )
-    )
-    AND ($7 IS NOT NULL OR $6 IS NOT NULL)
-)
-RETURNING goods.id, goods.name, goods.description, goods.name_i18n, goods.description_i18n, goods.category_id, goods.department_id, goods.picture_url, goods.color_code, goods.price, goods.cook_time, goods.cost_price, goods.profit, goods.profit_margin, goods.created_at, goods.updated_at, goods.deleted_at
+INSERT INTO goods (id, name, description, name_i18n, description_i18n, category_id, branch_id, picture_url, color_code, price, cook_time)
+VALUES ($1, $2, $3, $4, $5, $6, NULLIF(current_setting('app.branch_id', true), '')::uuid, $7, $8, $9, $10)
+RETURNING goods.id, goods.name, goods.description, goods.name_i18n, goods.description_i18n, goods.category_id, goods.branch_id, goods.picture_url, goods.color_code, goods.price, goods.cook_time, goods.cost_price, goods.profit, goods.profit_margin, goods.created_at, goods.updated_at, goods.deleted_at
 `
 
 type CreateGoodParams struct {
@@ -309,14 +108,33 @@ type CreateGoodParams struct {
 	NameI18n        pgtype.UUID    `json:"name_i18n"`
 	DescriptionI18n pgtype.UUID    `json:"description_i18n"`
 	CategoryID      pgtype.UUID    `json:"category_id"`
-	DepartmentID    pgtype.UUID    `json:"department_id"`
 	PictureUrl      *string        `json:"picture_url"`
 	ColorCode       *string        `json:"color_code"`
 	Price           pgtype.Numeric `json:"price"`
 	CookTime        *int32         `json:"cook_time"`
 }
 
-func (q *Queries) CreateGood(ctx context.Context, arg CreateGoodParams) (Good, error) {
+type CreateGoodRow struct {
+	ID              uuid.UUID          `json:"id"`
+	Name            string             `json:"name"`
+	Description     *string            `json:"description"`
+	NameI18n        pgtype.UUID        `json:"name_i18n"`
+	DescriptionI18n pgtype.UUID        `json:"description_i18n"`
+	CategoryID      pgtype.UUID        `json:"category_id"`
+	BranchID        pgtype.UUID        `json:"branch_id"`
+	PictureUrl      *string            `json:"picture_url"`
+	ColorCode       *string            `json:"color_code"`
+	Price           pgtype.Numeric     `json:"price"`
+	CookTime        *int32             `json:"cook_time"`
+	CostPrice       pgtype.Numeric     `json:"cost_price"`
+	Profit          pgtype.Numeric     `json:"profit"`
+	ProfitMargin    pgtype.Numeric     `json:"profit_margin"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
+	DeletedAt       *int64             `json:"deleted_at"`
+}
+
+func (q *Queries) CreateGood(ctx context.Context, arg CreateGoodParams) (CreateGoodRow, error) {
 	row := q.db.QueryRow(ctx, createGood,
 		arg.ID,
 		arg.Name,
@@ -324,13 +142,12 @@ func (q *Queries) CreateGood(ctx context.Context, arg CreateGoodParams) (Good, e
 		arg.NameI18n,
 		arg.DescriptionI18n,
 		arg.CategoryID,
-		arg.DepartmentID,
 		arg.PictureUrl,
 		arg.ColorCode,
 		arg.Price,
 		arg.CookTime,
 	)
-	var i Good
+	var i CreateGoodRow
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
@@ -338,7 +155,7 @@ func (q *Queries) CreateGood(ctx context.Context, arg CreateGoodParams) (Good, e
 		&i.NameI18n,
 		&i.DescriptionI18n,
 		&i.CategoryID,
-		&i.DepartmentID,
+		&i.BranchID,
 		&i.PictureUrl,
 		&i.ColorCode,
 		&i.Price,
@@ -361,32 +178,7 @@ WHERE (
       SELECT 1 FROM goods g
       WHERE g.id = $2
         AND g.deleted_at = 0
-        AND (
-          (g.department_id IS NULL OR EXISTS (
-            SELECT 1 FROM departments d
-            JOIN storages s ON s.id = d.storage_id
-            WHERE d.id = g.department_id
-              AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-          ))
-          AND (
-            g.category_id IS NULL OR (
-              EXISTS (
-                SELECT 1 FROM categories c
-                JOIN storages s ON s.id = c.storage_id
-                WHERE c.id = g.category_id
-                  AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-              )
-              OR EXISTS (
-                SELECT 1 FROM categories c
-                JOIN departments d ON d.id = c.department_id
-                JOIN storages s ON s.id = d.storage_id
-                WHERE c.id = g.category_id
-                  AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-              )
-            )
-          )
-          AND (g.department_id IS NOT NULL OR g.category_id IS NOT NULL)
-        )
+        AND g.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
     )
     AND (
       $3 IS NULL OR EXISTS (
@@ -398,10 +190,8 @@ WHERE (
     AND (
       $4 IS NULL OR EXISTS (
         SELECT 1 FROM compounds c
-        JOIN departments d ON d.id = c.department_id
-        JOIN storages s ON s.id = d.storage_id
         WHERE c.id = $4
-          AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+          AND c.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
       )
     )
 )
@@ -445,32 +235,7 @@ const deleteGood = `-- name: DeleteGood :exec
 UPDATE goods
 SET deleted_at = EXTRACT(EPOCH FROM NOW())::BIGINT
 WHERE goods.id = $1 AND deleted_at = 0
-  AND (
-    (goods.department_id IS NULL OR EXISTS (
-      SELECT 1 FROM departments d
-      JOIN storages s ON s.id = d.storage_id
-      WHERE d.id = goods.department_id
-        AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-    ))
-    AND (
-      goods.category_id IS NULL OR (
-        EXISTS (
-          SELECT 1 FROM categories c
-          JOIN storages s ON s.id = c.storage_id
-          WHERE c.id = goods.category_id
-            AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-        )
-        OR EXISTS (
-          SELECT 1 FROM categories c
-          JOIN departments d ON d.id = c.department_id
-          JOIN storages s ON s.id = d.storage_id
-          WHERE c.id = goods.category_id
-            AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-        )
-      )
-    )
-    AND (goods.department_id IS NOT NULL OR goods.category_id IS NOT NULL)
-  )
+  AND goods.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 `
 
 func (q *Queries) DeleteGood(ctx context.Context, id uuid.UUID) error {
@@ -486,32 +251,7 @@ WHERE goods_details.id = $1 AND deleted_at = 0
     SELECT 1 FROM goods g
     WHERE g.id = goods_details.good_id
       AND g.deleted_at = 0
-      AND (
-        (g.department_id IS NULL OR EXISTS (
-          SELECT 1 FROM departments d
-          JOIN storages s ON s.id = d.storage_id
-          WHERE d.id = g.department_id
-            AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-        ))
-        AND (
-          g.category_id IS NULL OR (
-            EXISTS (
-              SELECT 1 FROM categories c
-              JOIN storages s ON s.id = c.storage_id
-              WHERE c.id = g.category_id
-                AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-            )
-            OR EXISTS (
-              SELECT 1 FROM categories c
-              JOIN departments d ON d.id = c.department_id
-              JOIN storages s ON s.id = d.storage_id
-              WHERE c.id = g.category_id
-                AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-            )
-          )
-        )
-        AND (g.department_id IS NOT NULL OR g.category_id IS NOT NULL)
-      )
+      AND g.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
   )
 `
 
@@ -528,32 +268,7 @@ WHERE goods_details.good_id = $1 AND deleted_at = 0
     SELECT 1 FROM goods g
     WHERE g.id = $1
       AND g.deleted_at = 0
-      AND (
-        (g.department_id IS NULL OR EXISTS (
-          SELECT 1 FROM departments d
-          JOIN storages s ON s.id = d.storage_id
-          WHERE d.id = g.department_id
-            AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-        ))
-        AND (
-          g.category_id IS NULL OR (
-            EXISTS (
-              SELECT 1 FROM categories c
-              JOIN storages s ON s.id = c.storage_id
-              WHERE c.id = g.category_id
-                AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-            )
-            OR EXISTS (
-              SELECT 1 FROM categories c
-              JOIN departments d ON d.id = c.department_id
-              JOIN storages s ON s.id = d.storage_id
-              WHERE c.id = g.category_id
-                AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-            )
-          )
-        )
-        AND (g.department_id IS NOT NULL OR g.category_id IS NOT NULL)
-      )
+      AND g.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
   )
 `
 
@@ -570,32 +285,7 @@ WHERE deleted_at = 0
     SELECT 1 FROM goods g
     WHERE g.id = goods_details.good_id
       AND g.deleted_at = 0
-      AND (
-        (g.department_id IS NULL OR EXISTS (
-          SELECT 1 FROM departments d
-          JOIN storages s ON s.id = d.storage_id
-          WHERE d.id = g.department_id
-            AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-        ))
-        AND (
-          g.category_id IS NULL OR (
-            EXISTS (
-              SELECT 1 FROM categories c
-              JOIN storages s ON s.id = c.storage_id
-              WHERE c.id = g.category_id
-                AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-            )
-            OR EXISTS (
-              SELECT 1 FROM categories c
-              JOIN departments d ON d.id = c.department_id
-              JOIN storages s ON s.id = d.storage_id
-              WHERE c.id = g.category_id
-                AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-            )
-          )
-        )
-        AND (g.department_id IS NOT NULL OR g.category_id IS NOT NULL)
-      )
+      AND g.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
   )
 ORDER BY created_at DESC
 LIMIT $1 OFFSET $2
@@ -637,35 +327,10 @@ func (q *Queries) GetAllGoodDetails(ctx context.Context, arg GetAllGoodDetailsPa
 }
 
 const getAllGoods = `-- name: GetAllGoods :many
-SELECT goods.id, goods.name, goods.description, goods.name_i18n, goods.description_i18n, goods.category_id, goods.department_id, goods.picture_url, goods.color_code, goods.price, goods.cook_time, goods.cost_price, goods.profit, goods.profit_margin, goods.created_at, goods.updated_at, goods.deleted_at
+SELECT goods.id, goods.name, goods.description, goods.name_i18n, goods.description_i18n, goods.category_id, goods.branch_id, goods.picture_url, goods.color_code, goods.price, goods.cook_time, goods.cost_price, goods.profit, goods.profit_margin, goods.created_at, goods.updated_at, goods.deleted_at
 FROM goods
 WHERE deleted_at = 0
-  AND (
-    (goods.department_id IS NULL OR EXISTS (
-      SELECT 1 FROM departments d
-      JOIN storages s ON s.id = d.storage_id
-      WHERE d.id = goods.department_id
-        AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-    ))
-    AND (
-      goods.category_id IS NULL OR (
-        EXISTS (
-          SELECT 1 FROM categories c
-          JOIN storages s ON s.id = c.storage_id
-          WHERE c.id = goods.category_id
-            AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-        )
-        OR EXISTS (
-          SELECT 1 FROM categories c
-          JOIN departments d ON d.id = c.department_id
-          JOIN storages s ON s.id = d.storage_id
-          WHERE c.id = goods.category_id
-            AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-        )
-      )
-    )
-    AND (goods.department_id IS NOT NULL OR goods.category_id IS NOT NULL)
-  )
+  AND goods.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 ORDER BY created_at DESC
 LIMIT $1 OFFSET $2
 `
@@ -675,15 +340,35 @@ type GetAllGoodsParams struct {
 	Offset int32 `json:"offset"`
 }
 
-func (q *Queries) GetAllGoods(ctx context.Context, arg GetAllGoodsParams) ([]Good, error) {
+type GetAllGoodsRow struct {
+	ID              uuid.UUID          `json:"id"`
+	Name            string             `json:"name"`
+	Description     *string            `json:"description"`
+	NameI18n        pgtype.UUID        `json:"name_i18n"`
+	DescriptionI18n pgtype.UUID        `json:"description_i18n"`
+	CategoryID      pgtype.UUID        `json:"category_id"`
+	BranchID        pgtype.UUID        `json:"branch_id"`
+	PictureUrl      *string            `json:"picture_url"`
+	ColorCode       *string            `json:"color_code"`
+	Price           pgtype.Numeric     `json:"price"`
+	CookTime        *int32             `json:"cook_time"`
+	CostPrice       pgtype.Numeric     `json:"cost_price"`
+	Profit          pgtype.Numeric     `json:"profit"`
+	ProfitMargin    pgtype.Numeric     `json:"profit_margin"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
+	DeletedAt       *int64             `json:"deleted_at"`
+}
+
+func (q *Queries) GetAllGoods(ctx context.Context, arg GetAllGoodsParams) ([]GetAllGoodsRow, error) {
 	rows, err := q.db.Query(ctx, getAllGoods, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []Good
+	var items []GetAllGoodsRow
 	for rows.Next() {
-		var i Good
+		var i GetAllGoodsRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.Name,
@@ -691,7 +376,7 @@ func (q *Queries) GetAllGoods(ctx context.Context, arg GetAllGoodsParams) ([]Goo
 			&i.NameI18n,
 			&i.DescriptionI18n,
 			&i.CategoryID,
-			&i.DepartmentID,
+			&i.BranchID,
 			&i.PictureUrl,
 			&i.ColorCode,
 			&i.Price,
@@ -714,15 +399,15 @@ func (q *Queries) GetAllGoods(ctx context.Context, arg GetAllGoodsParams) ([]Goo
 }
 
 const getAllGoodsWithLanguage = `-- name: GetAllGoodsWithLanguage :many
-SELECT 
+SELECT
     g.id,
-    COALESCE(CASE 
+    COALESCE(CASE
         WHEN $1::text = 'uz' THEN tn.uz
         WHEN $1::text = 'ru' THEN tn.ru
         WHEN $1::text = 'en' THEN tn.en
         ELSE g.name
     END, g.name) as name,
-    COALESCE(CASE 
+    COALESCE(CASE
         WHEN $1::text = 'uz' THEN td.uz
         WHEN $1::text = 'ru' THEN td.ru
         WHEN $1::text = 'en' THEN td.en
@@ -731,7 +416,7 @@ SELECT
     g.name_i18n,
     g.description_i18n,
     g.category_id,
-    g.department_id,
+    g.branch_id,
     g.picture_url,
     g.color_code,
     g.price,
@@ -746,32 +431,7 @@ FROM goods g
 LEFT JOIN translations tn ON g.name_i18n = tn.id AND tn.deleted_at = 0
 LEFT JOIN translations td ON g.description_i18n = td.id AND td.deleted_at = 0
 WHERE g.deleted_at = 0
-  AND (
-    (g.department_id IS NULL OR EXISTS (
-      SELECT 1 FROM departments d
-      JOIN storages s ON s.id = d.storage_id
-      WHERE d.id = g.department_id
-        AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-    ))
-    AND (
-      g.category_id IS NULL OR (
-        EXISTS (
-          SELECT 1 FROM categories c
-          JOIN storages s ON s.id = c.storage_id
-          WHERE c.id = g.category_id
-            AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-        )
-        OR EXISTS (
-          SELECT 1 FROM categories c
-          JOIN departments d ON d.id = c.department_id
-          JOIN storages s ON s.id = d.storage_id
-          WHERE c.id = g.category_id
-            AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-        )
-      )
-    )
-    AND (g.department_id IS NOT NULL OR g.category_id IS NOT NULL)
-  )
+  AND g.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 ORDER BY g.created_at DESC
 LIMIT $2 OFFSET $3
 `
@@ -782,15 +442,35 @@ type GetAllGoodsWithLanguageParams struct {
 	Offset  int32  `json:"offset"`
 }
 
-func (q *Queries) GetAllGoodsWithLanguage(ctx context.Context, arg GetAllGoodsWithLanguageParams) ([]Good, error) {
+type GetAllGoodsWithLanguageRow struct {
+	ID              uuid.UUID          `json:"id"`
+	Name            string             `json:"name"`
+	Description     *string            `json:"description"`
+	NameI18n        pgtype.UUID        `json:"name_i18n"`
+	DescriptionI18n pgtype.UUID        `json:"description_i18n"`
+	CategoryID      pgtype.UUID        `json:"category_id"`
+	BranchID        pgtype.UUID        `json:"branch_id"`
+	PictureUrl      *string            `json:"picture_url"`
+	ColorCode       *string            `json:"color_code"`
+	Price           pgtype.Numeric     `json:"price"`
+	CookTime        *int32             `json:"cook_time"`
+	CostPrice       pgtype.Numeric     `json:"cost_price"`
+	Profit          pgtype.Numeric     `json:"profit"`
+	ProfitMargin    pgtype.Numeric     `json:"profit_margin"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
+	DeletedAt       *int64             `json:"deleted_at"`
+}
+
+func (q *Queries) GetAllGoodsWithLanguage(ctx context.Context, arg GetAllGoodsWithLanguageParams) ([]GetAllGoodsWithLanguageRow, error) {
 	rows, err := q.db.Query(ctx, getAllGoodsWithLanguage, arg.Column1, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []Good
+	var items []GetAllGoodsWithLanguageRow
 	for rows.Next() {
-		var i Good
+		var i GetAllGoodsWithLanguageRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.Name,
@@ -798,7 +478,7 @@ func (q *Queries) GetAllGoodsWithLanguage(ctx context.Context, arg GetAllGoodsWi
 			&i.NameI18n,
 			&i.DescriptionI18n,
 			&i.CategoryID,
-			&i.DepartmentID,
+			&i.BranchID,
 			&i.PictureUrl,
 			&i.ColorCode,
 			&i.Price,
@@ -821,40 +501,35 @@ func (q *Queries) GetAllGoodsWithLanguage(ctx context.Context, arg GetAllGoodsWi
 }
 
 const getGoodByID = `-- name: GetGoodByID :one
-SELECT goods.id, goods.name, goods.description, goods.name_i18n, goods.description_i18n, goods.category_id, goods.department_id, goods.picture_url, goods.color_code, goods.price, goods.cook_time, goods.cost_price, goods.profit, goods.profit_margin, goods.created_at, goods.updated_at, goods.deleted_at
+SELECT goods.id, goods.name, goods.description, goods.name_i18n, goods.description_i18n, goods.category_id, goods.branch_id, goods.picture_url, goods.color_code, goods.price, goods.cook_time, goods.cost_price, goods.profit, goods.profit_margin, goods.created_at, goods.updated_at, goods.deleted_at
 FROM goods
 WHERE goods.id = $1 AND deleted_at = 0
-  AND (
-    (goods.department_id IS NULL OR EXISTS (
-      SELECT 1 FROM departments d
-      JOIN storages s ON s.id = d.storage_id
-      WHERE d.id = goods.department_id
-        AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-    ))
-    AND (
-      goods.category_id IS NULL OR (
-        EXISTS (
-          SELECT 1 FROM categories c
-          JOIN storages s ON s.id = c.storage_id
-          WHERE c.id = goods.category_id
-            AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-        )
-        OR EXISTS (
-          SELECT 1 FROM categories c
-          JOIN departments d ON d.id = c.department_id
-          JOIN storages s ON s.id = d.storage_id
-          WHERE c.id = goods.category_id
-            AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-        )
-      )
-    )
-    AND (goods.department_id IS NOT NULL OR goods.category_id IS NOT NULL)
-  )
+  AND goods.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 `
 
-func (q *Queries) GetGoodByID(ctx context.Context, id uuid.UUID) (Good, error) {
+type GetGoodByIDRow struct {
+	ID              uuid.UUID          `json:"id"`
+	Name            string             `json:"name"`
+	Description     *string            `json:"description"`
+	NameI18n        pgtype.UUID        `json:"name_i18n"`
+	DescriptionI18n pgtype.UUID        `json:"description_i18n"`
+	CategoryID      pgtype.UUID        `json:"category_id"`
+	BranchID        pgtype.UUID        `json:"branch_id"`
+	PictureUrl      *string            `json:"picture_url"`
+	ColorCode       *string            `json:"color_code"`
+	Price           pgtype.Numeric     `json:"price"`
+	CookTime        *int32             `json:"cook_time"`
+	CostPrice       pgtype.Numeric     `json:"cost_price"`
+	Profit          pgtype.Numeric     `json:"profit"`
+	ProfitMargin    pgtype.Numeric     `json:"profit_margin"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
+	DeletedAt       *int64             `json:"deleted_at"`
+}
+
+func (q *Queries) GetGoodByID(ctx context.Context, id uuid.UUID) (GetGoodByIDRow, error) {
 	row := q.db.QueryRow(ctx, getGoodByID, id)
-	var i Good
+	var i GetGoodByIDRow
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
@@ -862,7 +537,7 @@ func (q *Queries) GetGoodByID(ctx context.Context, id uuid.UUID) (Good, error) {
 		&i.NameI18n,
 		&i.DescriptionI18n,
 		&i.CategoryID,
-		&i.DepartmentID,
+		&i.BranchID,
 		&i.PictureUrl,
 		&i.ColorCode,
 		&i.Price,
@@ -878,15 +553,15 @@ func (q *Queries) GetGoodByID(ctx context.Context, id uuid.UUID) (Good, error) {
 }
 
 const getGoodByIDWithLanguage = `-- name: GetGoodByIDWithLanguage :one
-SELECT 
+SELECT
     g.id,
-    COALESCE(CASE 
+    COALESCE(CASE
         WHEN $2::text = 'uz' THEN tn.uz
         WHEN $2::text = 'ru' THEN tn.ru
         WHEN $2::text = 'en' THEN tn.en
         ELSE g.name
     END, g.name) as name,
-    COALESCE(CASE 
+    COALESCE(CASE
         WHEN $2::text = 'uz' THEN td.uz
         WHEN $2::text = 'ru' THEN td.ru
         WHEN $2::text = 'en' THEN td.en
@@ -895,7 +570,7 @@ SELECT
     g.name_i18n,
     g.description_i18n,
     g.category_id,
-    g.department_id,
+    g.branch_id,
     g.picture_url,
     g.color_code,
     g.price,
@@ -910,32 +585,7 @@ FROM goods g
 LEFT JOIN translations tn ON g.name_i18n = tn.id AND tn.deleted_at = 0
 LEFT JOIN translations td ON g.description_i18n = td.id AND td.deleted_at = 0
 WHERE g.id = $1 AND g.deleted_at = 0
-  AND (
-    (g.department_id IS NULL OR EXISTS (
-      SELECT 1 FROM departments d
-      JOIN storages s ON s.id = d.storage_id
-      WHERE d.id = g.department_id
-        AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-    ))
-    AND (
-      g.category_id IS NULL OR (
-        EXISTS (
-          SELECT 1 FROM categories c
-          JOIN storages s ON s.id = c.storage_id
-          WHERE c.id = g.category_id
-            AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-        )
-        OR EXISTS (
-          SELECT 1 FROM categories c
-          JOIN departments d ON d.id = c.department_id
-          JOIN storages s ON s.id = d.storage_id
-          WHERE c.id = g.category_id
-            AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-        )
-      )
-    )
-    AND (g.department_id IS NOT NULL OR g.category_id IS NOT NULL)
-  )
+  AND g.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 `
 
 type GetGoodByIDWithLanguageParams struct {
@@ -943,9 +593,29 @@ type GetGoodByIDWithLanguageParams struct {
 	Column2 string    `json:"column_2"`
 }
 
-func (q *Queries) GetGoodByIDWithLanguage(ctx context.Context, arg GetGoodByIDWithLanguageParams) (Good, error) {
+type GetGoodByIDWithLanguageRow struct {
+	ID              uuid.UUID          `json:"id"`
+	Name            string             `json:"name"`
+	Description     *string            `json:"description"`
+	NameI18n        pgtype.UUID        `json:"name_i18n"`
+	DescriptionI18n pgtype.UUID        `json:"description_i18n"`
+	CategoryID      pgtype.UUID        `json:"category_id"`
+	BranchID        pgtype.UUID        `json:"branch_id"`
+	PictureUrl      *string            `json:"picture_url"`
+	ColorCode       *string            `json:"color_code"`
+	Price           pgtype.Numeric     `json:"price"`
+	CookTime        *int32             `json:"cook_time"`
+	CostPrice       pgtype.Numeric     `json:"cost_price"`
+	Profit          pgtype.Numeric     `json:"profit"`
+	ProfitMargin    pgtype.Numeric     `json:"profit_margin"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
+	DeletedAt       *int64             `json:"deleted_at"`
+}
+
+func (q *Queries) GetGoodByIDWithLanguage(ctx context.Context, arg GetGoodByIDWithLanguageParams) (GetGoodByIDWithLanguageRow, error) {
 	row := q.db.QueryRow(ctx, getGoodByIDWithLanguage, arg.ID, arg.Column2)
-	var i Good
+	var i GetGoodByIDWithLanguageRow
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
@@ -953,7 +623,7 @@ func (q *Queries) GetGoodByIDWithLanguage(ctx context.Context, arg GetGoodByIDWi
 		&i.NameI18n,
 		&i.DescriptionI18n,
 		&i.CategoryID,
-		&i.DepartmentID,
+		&i.BranchID,
 		&i.PictureUrl,
 		&i.ColorCode,
 		&i.Price,
@@ -976,32 +646,7 @@ WHERE goods_details.id = $1 AND deleted_at = 0
     SELECT 1 FROM goods g
     WHERE g.id = goods_details.good_id
       AND g.deleted_at = 0
-      AND (
-        (g.department_id IS NULL OR EXISTS (
-          SELECT 1 FROM departments d
-          JOIN storages s ON s.id = d.storage_id
-          WHERE d.id = g.department_id
-            AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-        ))
-        AND (
-          g.category_id IS NULL OR (
-            EXISTS (
-              SELECT 1 FROM categories c
-              JOIN storages s ON s.id = c.storage_id
-              WHERE c.id = g.category_id
-                AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-            )
-            OR EXISTS (
-              SELECT 1 FROM categories c
-              JOIN departments d ON d.id = c.department_id
-              JOIN storages s ON s.id = d.storage_id
-              WHERE c.id = g.category_id
-                AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-            )
-          )
-        )
-        AND (g.department_id IS NOT NULL OR g.category_id IS NOT NULL)
-      )
+      AND g.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
   )
 `
 
@@ -1028,41 +673,14 @@ FROM goods_details
 WHERE compound_id = $1 AND deleted_at = 0
   AND EXISTS (
     SELECT 1 FROM compounds c
-    JOIN departments d ON d.id = c.department_id
-    JOIN storages s ON s.id = d.storage_id
     WHERE c.id = $1
-      AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+      AND c.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
   )
   AND EXISTS (
     SELECT 1 FROM goods g
     WHERE g.id = goods_details.good_id
       AND g.deleted_at = 0
-      AND (
-        (g.department_id IS NULL OR EXISTS (
-          SELECT 1 FROM departments d
-          JOIN storages s ON s.id = d.storage_id
-          WHERE d.id = g.department_id
-            AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-        ))
-        AND (
-          g.category_id IS NULL OR (
-            EXISTS (
-              SELECT 1 FROM categories c
-              JOIN storages s ON s.id = c.storage_id
-              WHERE c.id = g.category_id
-                AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-            )
-            OR EXISTS (
-              SELECT 1 FROM categories c
-              JOIN departments d ON d.id = c.department_id
-              JOIN storages s ON s.id = d.storage_id
-              WHERE c.id = g.category_id
-                AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-            )
-          )
-        )
-        AND (g.department_id IS NOT NULL OR g.category_id IS NOT NULL)
-      )
+      AND g.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
   )
 ORDER BY created_at DESC
 LIMIT $2 OFFSET $3
@@ -1112,32 +730,7 @@ WHERE goods_details.good_id = $1 AND deleted_at = 0
     SELECT 1 FROM goods g
     WHERE g.id = $1
       AND g.deleted_at = 0
-      AND (
-        (g.department_id IS NULL OR EXISTS (
-          SELECT 1 FROM departments d
-          JOIN storages s ON s.id = d.storage_id
-          WHERE d.id = g.department_id
-            AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-        ))
-        AND (
-          g.category_id IS NULL OR (
-            EXISTS (
-              SELECT 1 FROM categories c
-              JOIN storages s ON s.id = c.storage_id
-              WHERE c.id = g.category_id
-                AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-            )
-            OR EXISTS (
-              SELECT 1 FROM categories c
-              JOIN departments d ON d.id = c.department_id
-              JOIN storages s ON s.id = d.storage_id
-              WHERE c.id = g.category_id
-                AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-            )
-          )
-        )
-        AND (g.department_id IS NOT NULL OR g.category_id IS NOT NULL)
-      )
+      AND g.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
   )
 ORDER BY created_at ASC
 `
@@ -1185,32 +778,7 @@ WHERE ingredient_id = $1 AND deleted_at = 0
     SELECT 1 FROM goods g
     WHERE g.id = goods_details.good_id
       AND g.deleted_at = 0
-      AND (
-        (g.department_id IS NULL OR EXISTS (
-          SELECT 1 FROM departments d
-          JOIN storages s ON s.id = d.storage_id
-          WHERE d.id = g.department_id
-            AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-        ))
-        AND (
-          g.category_id IS NULL OR (
-            EXISTS (
-              SELECT 1 FROM categories c
-              JOIN storages s ON s.id = c.storage_id
-              WHERE c.id = g.category_id
-                AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-            )
-            OR EXISTS (
-              SELECT 1 FROM categories c
-              JOIN departments d ON d.id = c.department_id
-              JOIN storages s ON s.id = d.storage_id
-              WHERE c.id = g.category_id
-                AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-            )
-          )
-        )
-        AND (g.department_id IS NOT NULL OR g.category_id IS NOT NULL)
-      )
+      AND g.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
   )
 ORDER BY created_at DESC
 LIMIT $2 OFFSET $3
@@ -1253,7 +821,7 @@ func (q *Queries) GetGoodDetailsByIngredientID(ctx context.Context, arg GetGoodD
 }
 
 const getGoodWithRelations = `-- name: GetGoodWithRelations :one
-SELECT 
+SELECT
     g.id,
     g.name,
     g.description,
@@ -1267,38 +835,11 @@ SELECT
     g.profit_margin,
     g.created_at,
     g.updated_at,
-    c.name as category_name,
-    d.name as department_name
+    c.name as category_name
 FROM goods g
 LEFT JOIN categories c ON g.category_id = c.id AND c.deleted_at = 0
-LEFT JOIN departments d ON g.department_id = d.id AND d.deleted_at = 0
 WHERE g.id = $1 AND g.deleted_at = 0
-  AND (
-    (g.department_id IS NULL OR EXISTS (
-      SELECT 1 FROM departments d2
-      JOIN storages s2 ON s2.id = d2.storage_id
-      WHERE d2.id = g.department_id
-        AND s2.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-    ))
-    AND (
-      g.category_id IS NULL OR (
-        EXISTS (
-          SELECT 1 FROM categories c2
-          JOIN storages s2 ON s2.id = c2.storage_id
-          WHERE c2.id = g.category_id
-            AND s2.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-        )
-        OR EXISTS (
-          SELECT 1 FROM categories c2
-          JOIN departments d2 ON d2.id = c2.department_id
-          JOIN storages s2 ON s2.id = d2.storage_id
-          WHERE c2.id = g.category_id
-            AND s2.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-        )
-      )
-    )
-    AND (g.department_id IS NOT NULL OR g.category_id IS NOT NULL)
-  )
+  AND g.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 `
 
 type GetGoodWithRelationsRow struct {
@@ -1316,7 +857,6 @@ type GetGoodWithRelationsRow struct {
 	CreatedAt       pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
 	CategoryName    *string            `json:"category_name"`
-	DepartmentName  *string            `json:"department_name"`
 }
 
 func (q *Queries) GetGoodWithRelations(ctx context.Context, id uuid.UUID) (GetGoodWithRelationsRow, error) {
@@ -1337,41 +877,15 @@ func (q *Queries) GetGoodWithRelations(ctx context.Context, id uuid.UUID) (GetGo
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.CategoryName,
-		&i.DepartmentName,
 	)
 	return i, err
 }
 
 const getGoodsByCategoryID = `-- name: GetGoodsByCategoryID :many
-SELECT goods.id, goods.name, goods.description, goods.name_i18n, goods.description_i18n, goods.category_id, goods.department_id, goods.picture_url, goods.color_code, goods.price, goods.cook_time, goods.cost_price, goods.profit, goods.profit_margin, goods.created_at, goods.updated_at, goods.deleted_at
+SELECT goods.id, goods.name, goods.description, goods.name_i18n, goods.description_i18n, goods.category_id, goods.branch_id, goods.picture_url, goods.color_code, goods.price, goods.cook_time, goods.cost_price, goods.profit, goods.profit_margin, goods.created_at, goods.updated_at, goods.deleted_at
 FROM goods
 WHERE category_id = $1 AND deleted_at = 0
-  AND (
-    (goods.department_id IS NULL OR EXISTS (
-      SELECT 1 FROM departments d
-      JOIN storages s ON s.id = d.storage_id
-      WHERE d.id = goods.department_id
-        AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-    ))
-    AND (
-      goods.category_id IS NULL OR (
-        EXISTS (
-          SELECT 1 FROM categories c
-          JOIN storages s ON s.id = c.storage_id
-          WHERE c.id = goods.category_id
-            AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-        )
-        OR EXISTS (
-          SELECT 1 FROM categories c
-          JOIN departments d ON d.id = c.department_id
-          JOIN storages s ON s.id = d.storage_id
-          WHERE c.id = goods.category_id
-            AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-        )
-      )
-    )
-    AND (goods.department_id IS NOT NULL OR goods.category_id IS NOT NULL)
-  )
+  AND goods.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 ORDER BY name ASC
 LIMIT $2 OFFSET $3
 `
@@ -1382,15 +896,35 @@ type GetGoodsByCategoryIDParams struct {
 	Offset     int32       `json:"offset"`
 }
 
-func (q *Queries) GetGoodsByCategoryID(ctx context.Context, arg GetGoodsByCategoryIDParams) ([]Good, error) {
+type GetGoodsByCategoryIDRow struct {
+	ID              uuid.UUID          `json:"id"`
+	Name            string             `json:"name"`
+	Description     *string            `json:"description"`
+	NameI18n        pgtype.UUID        `json:"name_i18n"`
+	DescriptionI18n pgtype.UUID        `json:"description_i18n"`
+	CategoryID      pgtype.UUID        `json:"category_id"`
+	BranchID        pgtype.UUID        `json:"branch_id"`
+	PictureUrl      *string            `json:"picture_url"`
+	ColorCode       *string            `json:"color_code"`
+	Price           pgtype.Numeric     `json:"price"`
+	CookTime        *int32             `json:"cook_time"`
+	CostPrice       pgtype.Numeric     `json:"cost_price"`
+	Profit          pgtype.Numeric     `json:"profit"`
+	ProfitMargin    pgtype.Numeric     `json:"profit_margin"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
+	DeletedAt       *int64             `json:"deleted_at"`
+}
+
+func (q *Queries) GetGoodsByCategoryID(ctx context.Context, arg GetGoodsByCategoryIDParams) ([]GetGoodsByCategoryIDRow, error) {
 	rows, err := q.db.Query(ctx, getGoodsByCategoryID, arg.CategoryID, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []Good
+	var items []GetGoodsByCategoryIDRow
 	for rows.Next() {
-		var i Good
+		var i GetGoodsByCategoryIDRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.Name,
@@ -1398,85 +932,7 @@ func (q *Queries) GetGoodsByCategoryID(ctx context.Context, arg GetGoodsByCatego
 			&i.NameI18n,
 			&i.DescriptionI18n,
 			&i.CategoryID,
-			&i.DepartmentID,
-			&i.PictureUrl,
-			&i.ColorCode,
-			&i.Price,
-			&i.CookTime,
-			&i.CostPrice,
-			&i.Profit,
-			&i.ProfitMargin,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-			&i.DeletedAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const getGoodsByDepartmentID = `-- name: GetGoodsByDepartmentID :many
-SELECT goods.id, goods.name, goods.description, goods.name_i18n, goods.description_i18n, goods.category_id, goods.department_id, goods.picture_url, goods.color_code, goods.price, goods.cook_time, goods.cost_price, goods.profit, goods.profit_margin, goods.created_at, goods.updated_at, goods.deleted_at
-FROM goods
-WHERE goods.department_id = $1 AND deleted_at = 0
-  AND (
-    (goods.department_id IS NULL OR EXISTS (
-      SELECT 1 FROM departments d
-      JOIN storages s ON s.id = d.storage_id
-      WHERE d.id = goods.department_id
-        AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-    ))
-    AND (
-      goods.category_id IS NULL OR (
-        EXISTS (
-          SELECT 1 FROM categories c
-          JOIN storages s ON s.id = c.storage_id
-          WHERE c.id = goods.category_id
-            AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-        )
-        OR EXISTS (
-          SELECT 1 FROM categories c
-          JOIN departments d ON d.id = c.department_id
-          JOIN storages s ON s.id = d.storage_id
-          WHERE c.id = goods.category_id
-            AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-        )
-      )
-    )
-    AND (goods.department_id IS NOT NULL OR goods.category_id IS NOT NULL)
-  )
-ORDER BY name ASC
-LIMIT $2 OFFSET $3
-`
-
-type GetGoodsByDepartmentIDParams struct {
-	DepartmentID pgtype.UUID `json:"department_id"`
-	Limit        int32       `json:"limit"`
-	Offset       int32       `json:"offset"`
-}
-
-func (q *Queries) GetGoodsByDepartmentID(ctx context.Context, arg GetGoodsByDepartmentIDParams) ([]Good, error) {
-	rows, err := q.db.Query(ctx, getGoodsByDepartmentID, arg.DepartmentID, arg.Limit, arg.Offset)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []Good
-	for rows.Next() {
-		var i Good
-		if err := rows.Scan(
-			&i.ID,
-			&i.Name,
-			&i.Description,
-			&i.NameI18n,
-			&i.DescriptionI18n,
-			&i.CategoryID,
-			&i.DepartmentID,
+			&i.BranchID,
 			&i.PictureUrl,
 			&i.ColorCode,
 			&i.Price,
@@ -1499,35 +955,10 @@ func (q *Queries) GetGoodsByDepartmentID(ctx context.Context, arg GetGoodsByDepa
 }
 
 const getGoodsByPriceRange = `-- name: GetGoodsByPriceRange :many
-SELECT goods.id, goods.name, goods.description, goods.name_i18n, goods.description_i18n, goods.category_id, goods.department_id, goods.picture_url, goods.color_code, goods.price, goods.cook_time, goods.cost_price, goods.profit, goods.profit_margin, goods.created_at, goods.updated_at, goods.deleted_at
+SELECT goods.id, goods.name, goods.description, goods.name_i18n, goods.description_i18n, goods.category_id, goods.branch_id, goods.picture_url, goods.color_code, goods.price, goods.cook_time, goods.cost_price, goods.profit, goods.profit_margin, goods.created_at, goods.updated_at, goods.deleted_at
 FROM goods
 WHERE price >= $1 AND price <= $2 AND deleted_at = 0
-  AND (
-    (goods.department_id IS NULL OR EXISTS (
-      SELECT 1 FROM departments d
-      JOIN storages s ON s.id = d.storage_id
-      WHERE d.id = goods.department_id
-        AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-    ))
-    AND (
-      goods.category_id IS NULL OR (
-        EXISTS (
-          SELECT 1 FROM categories c
-          JOIN storages s ON s.id = c.storage_id
-          WHERE c.id = goods.category_id
-            AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-        )
-        OR EXISTS (
-          SELECT 1 FROM categories c
-          JOIN departments d ON d.id = c.department_id
-          JOIN storages s ON s.id = d.storage_id
-          WHERE c.id = goods.category_id
-            AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-        )
-      )
-    )
-    AND (goods.department_id IS NOT NULL OR goods.category_id IS NOT NULL)
-  )
+  AND goods.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 ORDER BY price ASC
 LIMIT $3 OFFSET $4
 `
@@ -1539,7 +970,27 @@ type GetGoodsByPriceRangeParams struct {
 	Offset  int32          `json:"offset"`
 }
 
-func (q *Queries) GetGoodsByPriceRange(ctx context.Context, arg GetGoodsByPriceRangeParams) ([]Good, error) {
+type GetGoodsByPriceRangeRow struct {
+	ID              uuid.UUID          `json:"id"`
+	Name            string             `json:"name"`
+	Description     *string            `json:"description"`
+	NameI18n        pgtype.UUID        `json:"name_i18n"`
+	DescriptionI18n pgtype.UUID        `json:"description_i18n"`
+	CategoryID      pgtype.UUID        `json:"category_id"`
+	BranchID        pgtype.UUID        `json:"branch_id"`
+	PictureUrl      *string            `json:"picture_url"`
+	ColorCode       *string            `json:"color_code"`
+	Price           pgtype.Numeric     `json:"price"`
+	CookTime        *int32             `json:"cook_time"`
+	CostPrice       pgtype.Numeric     `json:"cost_price"`
+	Profit          pgtype.Numeric     `json:"profit"`
+	ProfitMargin    pgtype.Numeric     `json:"profit_margin"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
+	DeletedAt       *int64             `json:"deleted_at"`
+}
+
+func (q *Queries) GetGoodsByPriceRange(ctx context.Context, arg GetGoodsByPriceRangeParams) ([]GetGoodsByPriceRangeRow, error) {
 	rows, err := q.db.Query(ctx, getGoodsByPriceRange,
 		arg.Price,
 		arg.Price_2,
@@ -1550,9 +1001,9 @@ func (q *Queries) GetGoodsByPriceRange(ctx context.Context, arg GetGoodsByPriceR
 		return nil, err
 	}
 	defer rows.Close()
-	var items []Good
+	var items []GetGoodsByPriceRangeRow
 	for rows.Next() {
-		var i Good
+		var i GetGoodsByPriceRangeRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.Name,
@@ -1560,7 +1011,7 @@ func (q *Queries) GetGoodsByPriceRange(ctx context.Context, arg GetGoodsByPriceR
 			&i.NameI18n,
 			&i.DescriptionI18n,
 			&i.CategoryID,
-			&i.DepartmentID,
+			&i.BranchID,
 			&i.PictureUrl,
 			&i.ColorCode,
 			&i.Price,
@@ -1584,90 +1035,48 @@ func (q *Queries) GetGoodsByPriceRange(ctx context.Context, arg GetGoodsByPriceR
 
 const getGoodsFiltered = `-- name: GetGoodsFiltered :many
 
-
-
-SELECT goods.id, goods.name, goods.description, goods.name_i18n, goods.description_i18n, goods.category_id, goods.department_id, goods.picture_url, goods.color_code, goods.price, goods.cook_time, goods.cost_price, goods.profit, goods.profit_margin, goods.created_at, goods.updated_at, goods.deleted_at
+SELECT goods.id, goods.name, goods.description, goods.name_i18n, goods.description_i18n, goods.category_id, goods.branch_id, goods.picture_url, goods.color_code, goods.price, goods.cook_time, goods.cost_price, goods.profit, goods.profit_margin, goods.created_at, goods.updated_at, goods.deleted_at
 FROM goods
 WHERE goods.deleted_at = 0
-  AND (
-    (goods.department_id IS NULL OR EXISTS (
-      SELECT 1 FROM departments d
-      JOIN storages s ON s.id = d.storage_id
-      WHERE d.id = goods.department_id
-        AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-    ))
-    AND (
-      goods.category_id IS NULL OR (
-        EXISTS (
-          SELECT 1 FROM categories c
-          JOIN storages s ON s.id = c.storage_id
-          WHERE c.id = goods.category_id
-            AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-        )
-        OR EXISTS (
-          SELECT 1 FROM categories c
-          JOIN departments d ON d.id = c.department_id
-          JOIN storages s ON s.id = d.storage_id
-          WHERE c.id = goods.category_id
-            AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-        )
-      )
-    )
-    AND (goods.department_id IS NOT NULL OR goods.category_id IS NOT NULL)
-  )
+  AND goods.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
   AND (($1::uuid = '00000000-0000-0000-0000-000000000000') OR goods.category_id = $1)
-  AND (($2::uuid = '00000000-0000-0000-0000-000000000000') OR goods.department_id = $2)
-  AND (($3::uuid = '00000000-0000-0000-0000-000000000000') OR EXISTS (
-    SELECT 1 FROM departments d2
-    WHERE d2.id = goods.department_id AND d2.storage_id = $3
-  ))
-  AND ($4 = '' OR goods.name ILIKE '%' || $4 || '%')
+  AND ($2 = '' OR goods.name ILIKE '%' || $2 || '%')
 ORDER BY goods.created_at DESC
-LIMIT $5 OFFSET $6
+LIMIT $3 OFFSET $4
 `
 
 type GetGoodsFilteredParams struct {
 	Column1 uuid.UUID   `json:"column_1"`
-	Column2 uuid.UUID   `json:"column_2"`
-	Column3 uuid.UUID   `json:"column_3"`
-	Column4 interface{} `json:"column_4"`
+	Column2 interface{} `json:"column_2"`
 	Limit   int32       `json:"limit"`
 	Offset  int32       `json:"offset"`
 }
 
-// -- ==================== RECIPE & INGREDIENT TRACKING ====================
-// -- name: GetGoodRecipeWithIngredients :many
-// SELECT
-//
-//	gd.id,
-//	gd.good_id,
-//	gd.ingredient_id,
-//	gd.compound_id,
-//	gd.quantity,
-//	gd.measurement,
-//	CASE
-//	    WHEN gd.ingredient_id IS NOT NULL THEN i.name
-//	    WHEN gd.compound_id IS NOT NULL THEN c.name
-//	END as item_name,
-//	CASE
-//	    WHEN gd.ingredient_id IS NOT NULL THEN 'ingredient'
-//	    WHEN gd.compound_id IS NOT NULL THEN 'compound'
-//	END as item_type,
-//	i.picture_url as ingredient_picture,
-//	c.price as compound_price
-//
-// FROM goods_details gd
-// LEFT JOIN ingredients i ON gd.ingredient_id = i.id AND i.deleted_at = 0
-// LEFT JOIN compounds c ON gd.compound_id = c.id AND c.deleted_at = 0
-// WHERE gd.good_id = $1 AND gd.deleted_at = 0
-// ORDER BY gd.created_at ASC;
+type GetGoodsFilteredRow struct {
+	ID              uuid.UUID          `json:"id"`
+	Name            string             `json:"name"`
+	Description     *string            `json:"description"`
+	NameI18n        pgtype.UUID        `json:"name_i18n"`
+	DescriptionI18n pgtype.UUID        `json:"description_i18n"`
+	CategoryID      pgtype.UUID        `json:"category_id"`
+	BranchID        pgtype.UUID        `json:"branch_id"`
+	PictureUrl      *string            `json:"picture_url"`
+	ColorCode       *string            `json:"color_code"`
+	Price           pgtype.Numeric     `json:"price"`
+	CookTime        *int32             `json:"cook_time"`
+	CostPrice       pgtype.Numeric     `json:"cost_price"`
+	Profit          pgtype.Numeric     `json:"profit"`
+	ProfitMargin    pgtype.Numeric     `json:"profit_margin"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
+	DeletedAt       *int64             `json:"deleted_at"`
+}
+
 // ==================== FILTERED GOODS ====================
-func (q *Queries) GetGoodsFiltered(ctx context.Context, arg GetGoodsFilteredParams) ([]Good, error) {
+func (q *Queries) GetGoodsFiltered(ctx context.Context, arg GetGoodsFilteredParams) ([]GetGoodsFilteredRow, error) {
 	rows, err := q.db.Query(ctx, getGoodsFiltered,
 		arg.Column1,
 		arg.Column2,
-		arg.Column3,
-		arg.Column4,
 		arg.Limit,
 		arg.Offset,
 	)
@@ -1675,9 +1084,9 @@ func (q *Queries) GetGoodsFiltered(ctx context.Context, arg GetGoodsFilteredPara
 		return nil, err
 	}
 	defer rows.Close()
-	var items []Good
+	var items []GetGoodsFilteredRow
 	for rows.Next() {
-		var i Good
+		var i GetGoodsFilteredRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.Name,
@@ -1685,7 +1094,7 @@ func (q *Queries) GetGoodsFiltered(ctx context.Context, arg GetGoodsFilteredPara
 			&i.NameI18n,
 			&i.DescriptionI18n,
 			&i.CategoryID,
-			&i.DepartmentID,
+			&i.BranchID,
 			&i.PictureUrl,
 			&i.ColorCode,
 			&i.Price,
@@ -1725,7 +1134,7 @@ SELECT
     g.name_i18n,
     g.description_i18n,
     g.category_id,
-    g.department_id,
+    g.branch_id,
     g.picture_url,
     g.color_code,
     g.price,
@@ -1740,60 +1149,46 @@ FROM goods g
 LEFT JOIN translations tn ON g.name_i18n = tn.id AND tn.deleted_at = 0
 LEFT JOIN translations td ON g.description_i18n = td.id AND td.deleted_at = 0
 WHERE g.deleted_at = 0
-  AND (
-    (g.department_id IS NULL OR EXISTS (
-      SELECT 1 FROM departments d
-      JOIN storages s ON s.id = d.storage_id
-      WHERE d.id = g.department_id
-        AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-    ))
-    AND (
-      g.category_id IS NULL OR (
-        EXISTS (
-          SELECT 1 FROM categories c
-          JOIN storages s ON s.id = c.storage_id
-          WHERE c.id = g.category_id
-            AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-        )
-        OR EXISTS (
-          SELECT 1 FROM categories c
-          JOIN departments d ON d.id = c.department_id
-          JOIN storages s ON s.id = d.storage_id
-          WHERE c.id = g.category_id
-            AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-        )
-      )
-    )
-    AND (g.department_id IS NOT NULL OR g.category_id IS NOT NULL)
-  )
+  AND g.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
   AND (($2::uuid = '00000000-0000-0000-0000-000000000000') OR g.category_id = $2)
-  AND (($3::uuid = '00000000-0000-0000-0000-000000000000') OR g.department_id = $3)
-  AND (($4::uuid = '00000000-0000-0000-0000-000000000000') OR EXISTS (
-    SELECT 1 FROM departments d2
-    WHERE d2.id = g.department_id AND d2.storage_id = $4
-  ))
-  AND ($5 = '' OR g.name ILIKE '%' || $5 || '%')
+  AND ($3 = '' OR g.name ILIKE '%' || $3 || '%')
 ORDER BY g.created_at DESC
-LIMIT $6 OFFSET $7
+LIMIT $4 OFFSET $5
 `
 
 type GetGoodsFilteredWithLanguageParams struct {
 	Column1 string      `json:"column_1"`
 	Column2 uuid.UUID   `json:"column_2"`
-	Column3 uuid.UUID   `json:"column_3"`
-	Column4 uuid.UUID   `json:"column_4"`
-	Column5 interface{} `json:"column_5"`
+	Column3 interface{} `json:"column_3"`
 	Limit   int32       `json:"limit"`
 	Offset  int32       `json:"offset"`
 }
 
-func (q *Queries) GetGoodsFilteredWithLanguage(ctx context.Context, arg GetGoodsFilteredWithLanguageParams) ([]Good, error) {
+type GetGoodsFilteredWithLanguageRow struct {
+	ID              uuid.UUID          `json:"id"`
+	Name            string             `json:"name"`
+	Description     *string            `json:"description"`
+	NameI18n        pgtype.UUID        `json:"name_i18n"`
+	DescriptionI18n pgtype.UUID        `json:"description_i18n"`
+	CategoryID      pgtype.UUID        `json:"category_id"`
+	BranchID        pgtype.UUID        `json:"branch_id"`
+	PictureUrl      *string            `json:"picture_url"`
+	ColorCode       *string            `json:"color_code"`
+	Price           pgtype.Numeric     `json:"price"`
+	CookTime        *int32             `json:"cook_time"`
+	CostPrice       pgtype.Numeric     `json:"cost_price"`
+	Profit          pgtype.Numeric     `json:"profit"`
+	ProfitMargin    pgtype.Numeric     `json:"profit_margin"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
+	DeletedAt       *int64             `json:"deleted_at"`
+}
+
+func (q *Queries) GetGoodsFilteredWithLanguage(ctx context.Context, arg GetGoodsFilteredWithLanguageParams) ([]GetGoodsFilteredWithLanguageRow, error) {
 	rows, err := q.db.Query(ctx, getGoodsFilteredWithLanguage,
 		arg.Column1,
 		arg.Column2,
 		arg.Column3,
-		arg.Column4,
-		arg.Column5,
 		arg.Limit,
 		arg.Offset,
 	)
@@ -1801,9 +1196,9 @@ func (q *Queries) GetGoodsFilteredWithLanguage(ctx context.Context, arg GetGoods
 		return nil, err
 	}
 	defer rows.Close()
-	var items []Good
+	var items []GetGoodsFilteredWithLanguageRow
 	for rows.Next() {
-		var i Good
+		var i GetGoodsFilteredWithLanguageRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.Name,
@@ -1811,7 +1206,7 @@ func (q *Queries) GetGoodsFilteredWithLanguage(ctx context.Context, arg GetGoods
 			&i.NameI18n,
 			&i.DescriptionI18n,
 			&i.CategoryID,
-			&i.DepartmentID,
+			&i.BranchID,
 			&i.PictureUrl,
 			&i.ColorCode,
 			&i.Price,
@@ -1834,7 +1229,7 @@ func (q *Queries) GetGoodsFilteredWithLanguage(ctx context.Context, arg GetGoods
 }
 
 const getPopularGoods = `-- name: GetPopularGoods :many
-SELECT 
+SELECT
     g.id,
     g.name,
     g.picture_url,
@@ -1845,32 +1240,7 @@ SELECT
 FROM goods g
 LEFT JOIN order_items oi ON g.id = oi.good_id AND oi.deleted_at = 0
 WHERE g.deleted_at = 0
-  AND (
-    (g.department_id IS NULL OR EXISTS (
-      SELECT 1 FROM departments d
-      JOIN storages s ON s.id = d.storage_id
-      WHERE d.id = g.department_id
-        AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-    ))
-    AND (
-      g.category_id IS NULL OR (
-        EXISTS (
-          SELECT 1 FROM categories c
-          JOIN storages s ON s.id = c.storage_id
-          WHERE c.id = g.category_id
-            AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-        )
-        OR EXISTS (
-          SELECT 1 FROM categories c
-          JOIN departments d ON d.id = c.department_id
-          JOIN storages s ON s.id = d.storage_id
-          WHERE c.id = g.category_id
-            AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-        )
-      )
-    )
-    AND (g.department_id IS NOT NULL OR g.category_id IS NOT NULL)
-  )
+  AND g.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 GROUP BY g.id, g.name, g.picture_url, g.price, g.cook_time
 ORDER BY order_count DESC
 LIMIT $1 OFFSET $2
@@ -1923,32 +1293,7 @@ const restoreGood = `-- name: RestoreGood :exec
 UPDATE goods
 SET deleted_at = 0
 WHERE goods.id = $1 AND deleted_at != 0
-  AND (
-    (goods.department_id IS NULL OR EXISTS (
-      SELECT 1 FROM departments d
-      JOIN storages s ON s.id = d.storage_id
-      WHERE d.id = goods.department_id
-        AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-    ))
-    AND (
-      goods.category_id IS NULL OR (
-        EXISTS (
-          SELECT 1 FROM categories c
-          JOIN storages s ON s.id = c.storage_id
-          WHERE c.id = goods.category_id
-            AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-        )
-        OR EXISTS (
-          SELECT 1 FROM categories c
-          JOIN departments d ON d.id = c.department_id
-          JOIN storages s ON s.id = d.storage_id
-          WHERE c.id = goods.category_id
-            AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-        )
-      )
-    )
-    AND (goods.department_id IS NOT NULL OR goods.category_id IS NOT NULL)
-  )
+  AND goods.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 `
 
 func (q *Queries) RestoreGood(ctx context.Context, id uuid.UUID) error {
@@ -1964,32 +1309,7 @@ WHERE goods_details.id = $1 AND deleted_at != 0
     SELECT 1 FROM goods g
     WHERE g.id = goods_details.good_id
       AND g.deleted_at = 0
-      AND (
-        (g.department_id IS NULL OR EXISTS (
-          SELECT 1 FROM departments d
-          JOIN storages s ON s.id = d.storage_id
-          WHERE d.id = g.department_id
-            AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-        ))
-        AND (
-          g.category_id IS NULL OR (
-            EXISTS (
-              SELECT 1 FROM categories c
-              JOIN storages s ON s.id = c.storage_id
-              WHERE c.id = g.category_id
-                AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-            )
-            OR EXISTS (
-              SELECT 1 FROM categories c
-              JOIN departments d ON d.id = c.department_id
-              JOIN storages s ON s.id = d.storage_id
-              WHERE c.id = g.category_id
-                AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-            )
-          )
-        )
-        AND (g.department_id IS NOT NULL OR g.category_id IS NOT NULL)
-      )
+      AND g.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
   )
 `
 
@@ -1999,36 +1319,11 @@ func (q *Queries) RestoreGoodDetail(ctx context.Context, id uuid.UUID) error {
 }
 
 const searchGoods = `-- name: SearchGoods :many
-SELECT goods.id, goods.name, goods.description, goods.name_i18n, goods.description_i18n, goods.category_id, goods.department_id, goods.picture_url, goods.price, goods.cook_time, goods.cost_price, goods.profit, goods.profit_margin, goods.created_at, goods.updated_at, goods.deleted_at
+SELECT goods.id, goods.name, goods.description, goods.name_i18n, goods.description_i18n, goods.category_id, goods.picture_url, goods.price, goods.cook_time, goods.cost_price, goods.profit, goods.profit_margin, goods.created_at, goods.updated_at, goods.deleted_at
 FROM goods
-WHERE deleted_at = 0 
+WHERE deleted_at = 0
 AND (name ILIKE '%' || $1 || '%' OR description ILIKE '%' || $1 || '%')
-  AND (
-    (goods.department_id IS NULL OR EXISTS (
-      SELECT 1 FROM departments d
-      JOIN storages s ON s.id = d.storage_id
-      WHERE d.id = goods.department_id
-        AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-    ))
-    AND (
-      goods.category_id IS NULL OR (
-        EXISTS (
-          SELECT 1 FROM categories c
-          JOIN storages s ON s.id = c.storage_id
-          WHERE c.id = goods.category_id
-            AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-        )
-        OR EXISTS (
-          SELECT 1 FROM categories c
-          JOIN departments d ON d.id = c.department_id
-          JOIN storages s ON s.id = d.storage_id
-          WHERE c.id = goods.category_id
-            AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-        )
-      )
-    )
-    AND (goods.department_id IS NOT NULL OR goods.category_id IS NOT NULL)
-  )
+  AND goods.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 ORDER BY name ASC
 LIMIT $2 OFFSET $3
 `
@@ -2046,7 +1341,6 @@ type SearchGoodsRow struct {
 	NameI18n        pgtype.UUID        `json:"name_i18n"`
 	DescriptionI18n pgtype.UUID        `json:"description_i18n"`
 	CategoryID      pgtype.UUID        `json:"category_id"`
-	DepartmentID    pgtype.UUID        `json:"department_id"`
 	PictureUrl      *string            `json:"picture_url"`
 	Price           pgtype.Numeric     `json:"price"`
 	CookTime        *int32             `json:"cook_time"`
@@ -2074,7 +1368,6 @@ func (q *Queries) SearchGoods(ctx context.Context, arg SearchGoodsParams) ([]Sea
 			&i.NameI18n,
 			&i.DescriptionI18n,
 			&i.CategoryID,
-			&i.DepartmentID,
 			&i.PictureUrl,
 			&i.Price,
 			&i.CookTime,
@@ -2102,65 +1395,14 @@ SET name = COALESCE($2, name),
     name_i18n = COALESCE($4, name_i18n),
     description_i18n = COALESCE($5, description_i18n),
     category_id = COALESCE($6, category_id),
-    department_id = COALESCE($7, department_id),
-    picture_url = COALESCE($8, picture_url),
-    color_code = COALESCE($9, color_code),
-    price = COALESCE($10, price),
-    cook_time = COALESCE($11, cook_time),
+    picture_url = COALESCE($7, picture_url),
+    color_code = COALESCE($8, color_code),
+    price = COALESCE($9, price),
+    cook_time = COALESCE($10, cook_time),
     updated_at = NOW()
 WHERE goods.id = $1 AND deleted_at = 0
-  AND (
-    (goods.department_id IS NULL OR EXISTS (
-      SELECT 1 FROM departments d
-      JOIN storages s ON s.id = d.storage_id
-      WHERE d.id = goods.department_id
-        AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-    ))
-    AND (
-      goods.category_id IS NULL OR (
-        EXISTS (
-          SELECT 1 FROM categories c
-          JOIN storages s ON s.id = c.storage_id
-          WHERE c.id = goods.category_id
-            AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-        )
-        OR EXISTS (
-          SELECT 1 FROM categories c
-          JOIN departments d ON d.id = c.department_id
-          JOIN storages s ON s.id = d.storage_id
-          WHERE c.id = goods.category_id
-            AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-        )
-      )
-    )
-    AND (goods.department_id IS NOT NULL OR goods.category_id IS NOT NULL)
-  )
-  AND (
-    $7 IS NULL OR EXISTS (
-      SELECT 1 FROM departments d2
-      JOIN storages s2 ON s2.id = d2.storage_id
-      WHERE d2.id = $7
-        AND s2.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-    )
-  )
-  AND (
-    $6 IS NULL OR (
-      EXISTS (
-        SELECT 1 FROM categories c2
-        JOIN storages s2 ON s2.id = c2.storage_id
-        WHERE c2.id = $6
-          AND s2.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-      )
-      OR EXISTS (
-        SELECT 1 FROM categories c2
-        JOIN departments d2 ON d2.id = c2.department_id
-        JOIN storages s2 ON s2.id = d2.storage_id
-        WHERE c2.id = $6
-          AND s2.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-      )
-    )
-  )
-RETURNING goods.id, goods.name, goods.description, goods.name_i18n, goods.description_i18n, goods.category_id, goods.department_id, goods.picture_url, goods.color_code, goods.price, goods.cook_time, goods.cost_price, goods.profit, goods.profit_margin, goods.created_at, goods.updated_at, goods.deleted_at
+  AND goods.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+RETURNING goods.id, goods.name, goods.description, goods.name_i18n, goods.description_i18n, goods.category_id, goods.branch_id, goods.picture_url, goods.color_code, goods.price, goods.cook_time, goods.cost_price, goods.profit, goods.profit_margin, goods.created_at, goods.updated_at, goods.deleted_at
 `
 
 type UpdateGoodParams struct {
@@ -2170,14 +1412,33 @@ type UpdateGoodParams struct {
 	NameI18n        pgtype.UUID    `json:"name_i18n"`
 	DescriptionI18n pgtype.UUID    `json:"description_i18n"`
 	CategoryID      pgtype.UUID    `json:"category_id"`
-	DepartmentID    pgtype.UUID    `json:"department_id"`
 	PictureUrl      *string        `json:"picture_url"`
 	ColorCode       *string        `json:"color_code"`
 	Price           pgtype.Numeric `json:"price"`
 	CookTime        *int32         `json:"cook_time"`
 }
 
-func (q *Queries) UpdateGood(ctx context.Context, arg UpdateGoodParams) (Good, error) {
+type UpdateGoodRow struct {
+	ID              uuid.UUID          `json:"id"`
+	Name            string             `json:"name"`
+	Description     *string            `json:"description"`
+	NameI18n        pgtype.UUID        `json:"name_i18n"`
+	DescriptionI18n pgtype.UUID        `json:"description_i18n"`
+	CategoryID      pgtype.UUID        `json:"category_id"`
+	BranchID        pgtype.UUID        `json:"branch_id"`
+	PictureUrl      *string            `json:"picture_url"`
+	ColorCode       *string            `json:"color_code"`
+	Price           pgtype.Numeric     `json:"price"`
+	CookTime        *int32             `json:"cook_time"`
+	CostPrice       pgtype.Numeric     `json:"cost_price"`
+	Profit          pgtype.Numeric     `json:"profit"`
+	ProfitMargin    pgtype.Numeric     `json:"profit_margin"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
+	DeletedAt       *int64             `json:"deleted_at"`
+}
+
+func (q *Queries) UpdateGood(ctx context.Context, arg UpdateGoodParams) (UpdateGoodRow, error) {
 	row := q.db.QueryRow(ctx, updateGood,
 		arg.ID,
 		arg.Name,
@@ -2185,13 +1446,12 @@ func (q *Queries) UpdateGood(ctx context.Context, arg UpdateGoodParams) (Good, e
 		arg.NameI18n,
 		arg.DescriptionI18n,
 		arg.CategoryID,
-		arg.DepartmentID,
 		arg.PictureUrl,
 		arg.ColorCode,
 		arg.Price,
 		arg.CookTime,
 	)
-	var i Good
+	var i UpdateGoodRow
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
@@ -2199,7 +1459,7 @@ func (q *Queries) UpdateGood(ctx context.Context, arg UpdateGoodParams) (Good, e
 		&i.NameI18n,
 		&i.DescriptionI18n,
 		&i.CategoryID,
-		&i.DepartmentID,
+		&i.BranchID,
 		&i.PictureUrl,
 		&i.ColorCode,
 		&i.Price,
@@ -2221,33 +1481,8 @@ SET cost_price = $2,
     profit_margin = $4,
     updated_at = NOW()
 WHERE goods.id = $1 AND deleted_at = 0
-  AND (
-    (goods.department_id IS NULL OR EXISTS (
-      SELECT 1 FROM departments d
-      JOIN storages s ON s.id = d.storage_id
-      WHERE d.id = goods.department_id
-        AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-    ))
-    AND (
-      goods.category_id IS NULL OR (
-        EXISTS (
-          SELECT 1 FROM categories c
-          JOIN storages s ON s.id = c.storage_id
-          WHERE c.id = goods.category_id
-            AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-        )
-        OR EXISTS (
-          SELECT 1 FROM categories c
-          JOIN departments d ON d.id = c.department_id
-          JOIN storages s ON s.id = d.storage_id
-          WHERE c.id = goods.category_id
-            AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-        )
-      )
-    )
-    AND (goods.department_id IS NOT NULL OR goods.category_id IS NOT NULL)
-  )
-RETURNING goods.id, goods.name, goods.description, goods.name_i18n, goods.description_i18n, goods.category_id, goods.department_id, goods.picture_url, goods.color_code, goods.price, goods.cook_time, goods.cost_price, goods.profit, goods.profit_margin, goods.created_at, goods.updated_at, goods.deleted_at
+  AND goods.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+RETURNING goods.id, goods.name, goods.description, goods.name_i18n, goods.description_i18n, goods.category_id, goods.branch_id, goods.picture_url, goods.color_code, goods.price, goods.cook_time, goods.cost_price, goods.profit, goods.profit_margin, goods.created_at, goods.updated_at, goods.deleted_at
 `
 
 type UpdateGoodCostFieldsParams struct {
@@ -2257,14 +1492,34 @@ type UpdateGoodCostFieldsParams struct {
 	ProfitMargin pgtype.Numeric `json:"profit_margin"`
 }
 
-func (q *Queries) UpdateGoodCostFields(ctx context.Context, arg UpdateGoodCostFieldsParams) (Good, error) {
+type UpdateGoodCostFieldsRow struct {
+	ID              uuid.UUID          `json:"id"`
+	Name            string             `json:"name"`
+	Description     *string            `json:"description"`
+	NameI18n        pgtype.UUID        `json:"name_i18n"`
+	DescriptionI18n pgtype.UUID        `json:"description_i18n"`
+	CategoryID      pgtype.UUID        `json:"category_id"`
+	BranchID        pgtype.UUID        `json:"branch_id"`
+	PictureUrl      *string            `json:"picture_url"`
+	ColorCode       *string            `json:"color_code"`
+	Price           pgtype.Numeric     `json:"price"`
+	CookTime        *int32             `json:"cook_time"`
+	CostPrice       pgtype.Numeric     `json:"cost_price"`
+	Profit          pgtype.Numeric     `json:"profit"`
+	ProfitMargin    pgtype.Numeric     `json:"profit_margin"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
+	DeletedAt       *int64             `json:"deleted_at"`
+}
+
+func (q *Queries) UpdateGoodCostFields(ctx context.Context, arg UpdateGoodCostFieldsParams) (UpdateGoodCostFieldsRow, error) {
 	row := q.db.QueryRow(ctx, updateGoodCostFields,
 		arg.ID,
 		arg.CostPrice,
 		arg.Profit,
 		arg.ProfitMargin,
 	)
-	var i Good
+	var i UpdateGoodCostFieldsRow
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
@@ -2272,7 +1527,7 @@ func (q *Queries) UpdateGoodCostFields(ctx context.Context, arg UpdateGoodCostFi
 		&i.NameI18n,
 		&i.DescriptionI18n,
 		&i.CategoryID,
-		&i.DepartmentID,
+		&i.BranchID,
 		&i.PictureUrl,
 		&i.ColorCode,
 		&i.Price,
@@ -2300,64 +1555,14 @@ WHERE goods_details.id = $1 AND deleted_at = 0
     SELECT 1 FROM goods g
     WHERE g.id = goods_details.good_id
       AND g.deleted_at = 0
-      AND (
-        (g.department_id IS NULL OR EXISTS (
-          SELECT 1 FROM departments d
-          JOIN storages s ON s.id = d.storage_id
-          WHERE d.id = g.department_id
-            AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-        ))
-        AND (
-          g.category_id IS NULL OR (
-            EXISTS (
-              SELECT 1 FROM categories c
-              JOIN storages s ON s.id = c.storage_id
-              WHERE c.id = g.category_id
-                AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-            )
-            OR EXISTS (
-              SELECT 1 FROM categories c
-              JOIN departments d ON d.id = c.department_id
-              JOIN storages s ON s.id = d.storage_id
-              WHERE c.id = g.category_id
-                AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-            )
-          )
-        )
-        AND (g.department_id IS NOT NULL OR g.category_id IS NOT NULL)
-      )
+      AND g.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
   )
   AND (
     $2 IS NULL OR EXISTS (
       SELECT 1 FROM goods g2
       WHERE g2.id = $2
         AND g2.deleted_at = 0
-        AND (
-          (g2.department_id IS NULL OR EXISTS (
-            SELECT 1 FROM departments d2
-            JOIN storages s2 ON s2.id = d2.storage_id
-            WHERE d2.id = g2.department_id
-              AND s2.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-          ))
-          AND (
-            g2.category_id IS NULL OR (
-              EXISTS (
-                SELECT 1 FROM categories c2
-                JOIN storages s2 ON s2.id = c2.storage_id
-                WHERE c2.id = g2.category_id
-                  AND s2.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-              )
-              OR EXISTS (
-                SELECT 1 FROM categories c2
-                JOIN departments d2 ON d2.id = c2.department_id
-                JOIN storages s2 ON s2.id = d2.storage_id
-                WHERE c2.id = g2.category_id
-                  AND s2.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-              )
-            )
-          )
-          AND (g2.department_id IS NOT NULL OR g2.category_id IS NOT NULL)
-        )
+        AND g2.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
     )
   )
   AND (
@@ -2370,10 +1575,8 @@ WHERE goods_details.id = $1 AND deleted_at = 0
   AND (
     $4 IS NULL OR EXISTS (
       SELECT 1 FROM compounds c
-      JOIN departments d ON d.id = c.department_id
-      JOIN storages s ON s.id = d.storage_id
       WHERE c.id = $4
-        AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+        AND c.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
     )
   )
 RETURNING goods_details.id, goods_details.good_id, goods_details.ingredient_id, goods_details.compound_id, goods_details.measurement, goods_details.quantity, goods_details.created_at, goods_details.updated_at, goods_details.deleted_at
@@ -2421,32 +1624,7 @@ WHERE goods_details.id = $1 AND deleted_at = 0
     SELECT 1 FROM goods g
     WHERE g.id = goods_details.good_id
       AND g.deleted_at = 0
-      AND (
-        (g.department_id IS NULL OR EXISTS (
-          SELECT 1 FROM departments d
-          JOIN storages s ON s.id = d.storage_id
-          WHERE d.id = g.department_id
-            AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-        ))
-        AND (
-          g.category_id IS NULL OR (
-            EXISTS (
-              SELECT 1 FROM categories c
-              JOIN storages s ON s.id = c.storage_id
-              WHERE c.id = g.category_id
-                AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-            )
-            OR EXISTS (
-              SELECT 1 FROM categories c
-              JOIN departments d ON d.id = c.department_id
-              JOIN storages s ON s.id = d.storage_id
-              WHERE c.id = g.category_id
-                AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-            )
-          )
-        )
-        AND (g.department_id IS NOT NULL OR g.category_id IS NOT NULL)
-      )
+      AND g.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
   )
 RETURNING goods_details.id, goods_details.good_id, goods_details.ingredient_id, goods_details.compound_id, goods_details.measurement, goods_details.quantity, goods_details.created_at, goods_details.updated_at, goods_details.deleted_at
 `
@@ -2478,33 +1656,8 @@ UPDATE goods
 SET price = $2,
     updated_at = NOW()
 WHERE goods.id = $1 AND deleted_at = 0
-  AND (
-    (goods.department_id IS NULL OR EXISTS (
-      SELECT 1 FROM departments d
-      JOIN storages s ON s.id = d.storage_id
-      WHERE d.id = goods.department_id
-        AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-    ))
-    AND (
-      goods.category_id IS NULL OR (
-        EXISTS (
-          SELECT 1 FROM categories c
-          JOIN storages s ON s.id = c.storage_id
-          WHERE c.id = goods.category_id
-            AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-        )
-        OR EXISTS (
-          SELECT 1 FROM categories c
-          JOIN departments d ON d.id = c.department_id
-          JOIN storages s ON s.id = d.storage_id
-          WHERE c.id = goods.category_id
-            AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-        )
-      )
-    )
-    AND (goods.department_id IS NOT NULL OR goods.category_id IS NOT NULL)
-  )
-RETURNING goods.id, goods.name, goods.description, goods.name_i18n, goods.description_i18n, goods.category_id, goods.department_id, goods.picture_url, goods.color_code, goods.price, goods.cook_time, goods.cost_price, goods.profit, goods.profit_margin, goods.created_at, goods.updated_at, goods.deleted_at
+  AND goods.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+RETURNING goods.id, goods.name, goods.description, goods.name_i18n, goods.description_i18n, goods.category_id, goods.branch_id, goods.picture_url, goods.color_code, goods.price, goods.cook_time, goods.cost_price, goods.profit, goods.profit_margin, goods.created_at, goods.updated_at, goods.deleted_at
 `
 
 type UpdateGoodPriceParams struct {
@@ -2512,9 +1665,29 @@ type UpdateGoodPriceParams struct {
 	Price pgtype.Numeric `json:"price"`
 }
 
-func (q *Queries) UpdateGoodPrice(ctx context.Context, arg UpdateGoodPriceParams) (Good, error) {
+type UpdateGoodPriceRow struct {
+	ID              uuid.UUID          `json:"id"`
+	Name            string             `json:"name"`
+	Description     *string            `json:"description"`
+	NameI18n        pgtype.UUID        `json:"name_i18n"`
+	DescriptionI18n pgtype.UUID        `json:"description_i18n"`
+	CategoryID      pgtype.UUID        `json:"category_id"`
+	BranchID        pgtype.UUID        `json:"branch_id"`
+	PictureUrl      *string            `json:"picture_url"`
+	ColorCode       *string            `json:"color_code"`
+	Price           pgtype.Numeric     `json:"price"`
+	CookTime        *int32             `json:"cook_time"`
+	CostPrice       pgtype.Numeric     `json:"cost_price"`
+	Profit          pgtype.Numeric     `json:"profit"`
+	ProfitMargin    pgtype.Numeric     `json:"profit_margin"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
+	DeletedAt       *int64             `json:"deleted_at"`
+}
+
+func (q *Queries) UpdateGoodPrice(ctx context.Context, arg UpdateGoodPriceParams) (UpdateGoodPriceRow, error) {
 	row := q.db.QueryRow(ctx, updateGoodPrice, arg.ID, arg.Price)
-	var i Good
+	var i UpdateGoodPriceRow
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
@@ -2522,7 +1695,7 @@ func (q *Queries) UpdateGoodPrice(ctx context.Context, arg UpdateGoodPriceParams
 		&i.NameI18n,
 		&i.DescriptionI18n,
 		&i.CategoryID,
-		&i.DepartmentID,
+		&i.BranchID,
 		&i.PictureUrl,
 		&i.ColorCode,
 		&i.Price,

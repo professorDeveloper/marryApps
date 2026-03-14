@@ -17,21 +17,21 @@ import (
 )
 
 // Compound row fields for converting different row types to response
-// Note: Compounds don't have cost_price, profit, profit_margin - they're intermediate products
 type compoundRowFields struct {
-	ID              uuid.UUID
-	Name            string
-	NameI18n        pgtype.UUID
-	Description     *string
-	DescriptionI18n pgtype.UUID
-	Quantity        *int32
-	Measurement     pg.NullMeasurementType
-	Price           pgtype.Numeric
-	DepartmentID    pgtype.UUID
-	PictureUrl      *string
-	ColorCode       *string
-	CreatedAt       pgtype.Timestamptz
-	UpdatedAt       pgtype.Timestamptz
+	ID                uuid.UUID
+	Name              string
+	NameI18n          pgtype.UUID
+	Description       *string
+	DescriptionI18n   pgtype.UUID
+	Quantity          *int32
+	Measurement       pg.NullMeasurementType
+	Price             pgtype.Numeric
+	BranchID          pgtype.UUID
+	IngredientGroupID pgtype.UUID
+	PictureUrl        *string
+	ColorCode         *string
+	CreatedAt         pgtype.Timestamptz
+	UpdatedAt         pgtype.Timestamptz
 }
 
 // Helper function to convert any compound row type to response
@@ -43,7 +43,80 @@ func compoundToResponseAny(row any) *model.CompoundResponse {
 		f = compoundRowFields{
 			ID: v.ID, Name: v.Name, NameI18n: v.NameI18n, Description: v.Description,
 			DescriptionI18n: v.DescriptionI18n, Quantity: v.Quantity, Measurement: v.Measurement,
-			Price: v.Price, DepartmentID: v.DepartmentID, PictureUrl: v.PictureUrl, ColorCode: v.ColorCode,
+			Price: v.Price, BranchID: v.BranchID, IngredientGroupID: v.IngredientGroupID,
+			PictureUrl: v.PictureUrl, ColorCode: v.ColorCode,
+			CreatedAt: v.CreatedAt, UpdatedAt: v.UpdatedAt,
+		}
+	case pg.CreateCompoundRow:
+		f = compoundRowFields{
+			ID: v.ID, Name: v.Name, NameI18n: v.NameI18n, Description: v.Description,
+			DescriptionI18n: v.DescriptionI18n, Quantity: v.Quantity, Measurement: v.Measurement,
+			Price: v.Price, BranchID: v.BranchID, IngredientGroupID: v.IngredientGroupID,
+			PictureUrl: v.PictureUrl, ColorCode: v.ColorCode,
+			CreatedAt: v.CreatedAt, UpdatedAt: v.UpdatedAt,
+		}
+	case pg.GetCompoundByIDRow:
+		f = compoundRowFields{
+			ID: v.ID, Name: v.Name, NameI18n: v.NameI18n, Description: v.Description,
+			DescriptionI18n: v.DescriptionI18n, Quantity: v.Quantity, Measurement: v.Measurement,
+			Price: v.Price, BranchID: v.BranchID, IngredientGroupID: v.IngredientGroupID,
+			PictureUrl: v.PictureUrl, ColorCode: v.ColorCode,
+			CreatedAt: v.CreatedAt, UpdatedAt: v.UpdatedAt,
+		}
+	case pg.GetAllCompoundsRow:
+		f = compoundRowFields{
+			ID: v.ID, Name: v.Name, NameI18n: v.NameI18n, Description: v.Description,
+			DescriptionI18n: v.DescriptionI18n, Quantity: v.Quantity, Measurement: v.Measurement,
+			Price: v.Price, BranchID: v.BranchID, IngredientGroupID: v.IngredientGroupID,
+			PictureUrl: v.PictureUrl, ColorCode: v.ColorCode,
+			CreatedAt: v.CreatedAt, UpdatedAt: v.UpdatedAt,
+		}
+	case pg.UpdateCompoundRow:
+		f = compoundRowFields{
+			ID: v.ID, Name: v.Name, NameI18n: v.NameI18n, Description: v.Description,
+			DescriptionI18n: v.DescriptionI18n, Quantity: v.Quantity, Measurement: v.Measurement,
+			Price: v.Price, BranchID: v.BranchID, IngredientGroupID: v.IngredientGroupID,
+			PictureUrl: v.PictureUrl, ColorCode: v.ColorCode,
+			CreatedAt: v.CreatedAt, UpdatedAt: v.UpdatedAt,
+		}
+	case pg.UpdateCompoundPriceRow:
+		f = compoundRowFields{
+			ID: v.ID, Name: v.Name, NameI18n: v.NameI18n, Description: v.Description,
+			DescriptionI18n: v.DescriptionI18n, Quantity: v.Quantity, Measurement: v.Measurement,
+			Price: v.Price, BranchID: v.BranchID, IngredientGroupID: v.IngredientGroupID,
+			PictureUrl: v.PictureUrl, ColorCode: v.ColorCode,
+			CreatedAt: v.CreatedAt, UpdatedAt: v.UpdatedAt,
+		}
+	case pg.UpdateCompoundCostFieldsRow:
+		f = compoundRowFields{
+			ID: v.ID, Name: v.Name, NameI18n: v.NameI18n, Description: v.Description,
+			DescriptionI18n: v.DescriptionI18n, Quantity: v.Quantity, Measurement: v.Measurement,
+			Price: v.Price, BranchID: v.BranchID, IngredientGroupID: v.IngredientGroupID,
+			PictureUrl: v.PictureUrl, ColorCode: v.ColorCode,
+			CreatedAt: v.CreatedAt, UpdatedAt: v.UpdatedAt,
+		}
+	case pg.SearchCompoundsRow:
+		f = compoundRowFields{
+			ID: v.ID, Name: v.Name, NameI18n: v.NameI18n, Description: v.Description,
+			DescriptionI18n: v.DescriptionI18n, Quantity: v.Quantity, Measurement: v.Measurement,
+			Price: v.Price, BranchID: v.BranchID, IngredientGroupID: v.IngredientGroupID,
+			PictureUrl: v.PictureUrl, ColorCode: v.ColorCode,
+			CreatedAt: v.CreatedAt, UpdatedAt: v.UpdatedAt,
+		}
+	case pg.GetCompoundByIDWithLanguageRow:
+		f = compoundRowFields{
+			ID: v.ID, Name: v.Name, NameI18n: v.NameI18n, Description: v.Description,
+			DescriptionI18n: v.DescriptionI18n, Quantity: v.Quantity, Measurement: v.Measurement,
+			Price: v.Price, BranchID: v.BranchID, IngredientGroupID: v.IngredientGroupID,
+			PictureUrl: v.PictureUrl, ColorCode: v.ColorCode,
+			CreatedAt: v.CreatedAt, UpdatedAt: v.UpdatedAt,
+		}
+	case pg.GetAllCompoundsWithLanguageRow:
+		f = compoundRowFields{
+			ID: v.ID, Name: v.Name, NameI18n: v.NameI18n, Description: v.Description,
+			DescriptionI18n: v.DescriptionI18n, Quantity: v.Quantity, Measurement: v.Measurement,
+			Price: v.Price, BranchID: v.BranchID, IngredientGroupID: v.IngredientGroupID,
+			PictureUrl: v.PictureUrl, ColorCode: v.ColorCode,
 			CreatedAt: v.CreatedAt, UpdatedAt: v.UpdatedAt,
 		}
 	default:
@@ -56,19 +129,20 @@ func compoundToResponseAny(row any) *model.CompoundResponse {
 	}
 
 	return &model.CompoundResponse{
-		ID:              f.ID.String(),
-		Name:            f.Name,
-		NameI18n:        uuidToStr(f.NameI18n),
-		Description:     f.Description,
-		DescriptionI18n: uuidToStr(f.DescriptionI18n),
-		Quantity:        qty,
-		Measurement:     toMeasurementString(f.Measurement),
-		Price:           toPriceString(f.Price),
-		DepartmentID:    uuidToStr(f.DepartmentID),
-		PictureUrl:      f.PictureUrl,
-		ColorCode:       f.ColorCode,
-		CreatedAt:       timestampToTime(f.CreatedAt),
-		UpdatedAt:       timestampToTime(f.UpdatedAt),
+		ID:                f.ID.String(),
+		Name:              f.Name,
+		NameI18n:          uuidToStr(f.NameI18n),
+		Description:       f.Description,
+		DescriptionI18n:   uuidToStr(f.DescriptionI18n),
+		Quantity:          qty,
+		Measurement:       toMeasurementString(f.Measurement),
+		Price:             toPriceString(f.Price),
+		BranchID:          uuidToStr(f.BranchID),
+		IngredientGroupID: uuidToStr(f.IngredientGroupID),
+		PictureUrl:        f.PictureUrl,
+		ColorCode:         f.ColorCode,
+		CreatedAt:         timestampToTime(f.CreatedAt),
+		UpdatedAt:         timestampToTime(f.UpdatedAt),
 	}
 }
 
@@ -133,7 +207,7 @@ func NewCompoundS(repo *repository.Repository) *CompoundS {
 	return &CompoundS{repo: repo}
 }
 
-func (c *CompoundS) CreateCompound(ctx context.Context, name string, nameI18n, description, descriptionI18n, measurement, departmentID *string, quantity int32, price *string, pictureUrl *string, colorCode *string) (*model.CompoundResponse, error) {
+func (c *CompoundS) CreateCompound(ctx context.Context, name string, nameI18n, description, descriptionI18n, measurement *string, quantity int32, price *string, pictureUrl *string, colorCode *string, ingredientGroupID *string) (*model.CompoundResponse, error) {
 	if name == "" {
 		return nil, fmt.Errorf("compound name is required")
 	}
@@ -157,15 +231,6 @@ func (c *CompoundS) CreateCompound(ctx context.Context, name string, nameI18n, d
 		descriptionI18nUUID = pgtype.UUID{Bytes: i18nID, Valid: true}
 	}
 
-	deptID := pgtype.UUID{}
-	if departmentID != nil && *departmentID != "" {
-		deptUUID, err := uuid.Parse(*departmentID)
-		if err != nil {
-			return nil, fmt.Errorf("invalid department_id: %w", err)
-		}
-		deptID = pgtype.UUID{Bytes: deptUUID, Valid: true}
-	}
-
 	numPrice := pgtype.Numeric{}
 	if price != nil && *price != "" {
 		numPrice.Scan(*price)
@@ -177,18 +242,27 @@ func (c *CompoundS) CreateCompound(ctx context.Context, name string, nameI18n, d
 		measurementType.Valid = true
 	}
 
+	ingredientGroupUUID := pgtype.UUID{}
+	if ingredientGroupID != nil && *ingredientGroupID != "" {
+		igID, err := uuid.Parse(*ingredientGroupID)
+		if err != nil {
+			return nil, fmt.Errorf("invalid ingredient_group_id: %w", err)
+		}
+		ingredientGroupUUID = pgtype.UUID{Bytes: igID, Valid: true}
+	}
+
 	compound, err := c.repo.Tenant(ctx).CreateCompound(ctx, pg.CreateCompoundParams{
-		ID:              id,
-		Name:            name,
-		NameI18n:        nameI18nUUID,
-		Description:     description,
-		DescriptionI18n: descriptionI18nUUID,
-		Quantity:        &quantity,
-		Measurement:     measurementType,
-		Price:           numPrice,
-		DepartmentID:    deptID,
-		PictureUrl:      pictureUrl,
-		ColorCode:       colorCode,
+		ID:                id,
+		Name:              name,
+		NameI18n:          nameI18nUUID,
+		Description:       description,
+		DescriptionI18n:   descriptionI18nUUID,
+		Quantity:          &quantity,
+		Measurement:       measurementType,
+		Price:             numPrice,
+		PictureUrl:        pictureUrl,
+		ColorCode:         colorCode,
+		IngredientGroupID: ingredientGroupUUID,
 	})
 	if err != nil {
 		log.Printf("CreateCompound failed: %v", err)
@@ -239,30 +313,8 @@ func (c *CompoundS) GetAllCompounds(ctx context.Context, limit, offset int32) ([
 	return responses, total, nil
 }
 
-func (c *CompoundS) GetCompoundsByDepartmentID(ctx context.Context, departmentID string, limit, offset int32) ([]*model.CompoundResponse, error) {
-	id, err := uuid.Parse(departmentID)
-	if err != nil {
-		return nil, fmt.Errorf("invalid department ID: %w", err)
-	}
 
-	compounds, err := c.repo.Tenant(ctx).GetCompoundsByDepartmentID(ctx, pg.GetCompoundsByDepartmentIDParams{
-		DepartmentID: pgtype.UUID{Bytes: id, Valid: true},
-		Limit:        limit,
-		Offset:       offset,
-	})
-	if err != nil {
-		log.Printf("GetCompoundsByDepartmentID failed: %v", err)
-		return nil, fmt.Errorf("failed to retrieve compounds: %w", err)
-	}
-
-	var responses []*model.CompoundResponse
-	for _, comp := range compounds {
-		responses = append(responses, compoundToResponseAny(comp))
-	}
-	return responses, nil
-}
-
-func (c *CompoundS) UpdateCompound(ctx context.Context, compoundID string, name, nameI18n, description, descriptionI18n, measurement, departmentID *string, quantity *int32, price *string, pictureUrl *string, colorCode *string) (*model.CompoundResponse, error) {
+func (c *CompoundS) UpdateCompound(ctx context.Context, compoundID string, name, nameI18n, description, descriptionI18n, measurement *string, quantity *int32, price *string, pictureUrl *string, colorCode *string, ingredientGroupID *string) (*model.CompoundResponse, error) {
 	id, err := uuid.Parse(compoundID)
 	if err != nil {
 		return nil, fmt.Errorf("invalid compound ID: %w", err)
@@ -322,15 +374,6 @@ func (c *CompoundS) UpdateCompound(ctx context.Context, compoundID string, name,
 		finalPrice.Scan(*price)
 	}
 
-	finalDeptID := existing.DepartmentID
-	if departmentID != nil && *departmentID != "" {
-		deptID, err := uuid.Parse(*departmentID)
-		if err != nil {
-			return nil, fmt.Errorf("invalid department_id: %w", err)
-		}
-		finalDeptID = pgtype.UUID{Bytes: deptID, Valid: true}
-	}
-
 	finalPictureUrl := existing.PictureUrl
 	if pictureUrl != nil {
 		finalPictureUrl = pictureUrl
@@ -341,18 +384,27 @@ func (c *CompoundS) UpdateCompound(ctx context.Context, compoundID string, name,
 		finalColorCode = colorCode
 	}
 
+	finalIngredientGroupID := existing.IngredientGroupID
+	if ingredientGroupID != nil && *ingredientGroupID != "" {
+		igID, err := uuid.Parse(*ingredientGroupID)
+		if err != nil {
+			return nil, fmt.Errorf("invalid ingredient_group_id: %w", err)
+		}
+		finalIngredientGroupID = pgtype.UUID{Bytes: igID, Valid: true}
+	}
+
 	compound, err := c.repo.Tenant(ctx).UpdateCompound(ctx, pg.UpdateCompoundParams{
-		ID:              id,
-		Name:            finalName,
-		NameI18n:        finalNameI18n,
-		Description:     finalDescription,
-		DescriptionI18n: finalDescriptionI18n,
-		Quantity:        finalQuantity,
-		Measurement:     finalMeasurement,
-		Price:           finalPrice,
-		DepartmentID:    finalDeptID,
-		PictureUrl:      finalPictureUrl,
-		ColorCode:       finalColorCode,
+		ID:                id,
+		Name:              finalName,
+		NameI18n:          finalNameI18n,
+		Description:       finalDescription,
+		DescriptionI18n:   finalDescriptionI18n,
+		Quantity:          finalQuantity,
+		Measurement:       finalMeasurement,
+		Price:             finalPrice,
+		PictureUrl:        finalPictureUrl,
+		ColorCode:         finalColorCode,
+		IngredientGroupID: finalIngredientGroupID,
 	})
 	if err != nil {
 		log.Printf("UpdateCompound failed: %v", err)

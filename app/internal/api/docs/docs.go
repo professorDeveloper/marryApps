@@ -23663,6 +23663,10 @@ const docTemplate = `{
         "model.CompoundResponse": {
             "type": "object",
             "properties": {
+                "branch_id": {
+                    "type": "string",
+                    "example": "123e4567-e89b-12d3-a456-426614174000"
+                },
                 "color_code": {
                     "type": "string",
                     "example": "#FF5733"
@@ -23670,10 +23674,6 @@ const docTemplate = `{
                 "created_at": {
                     "type": "string",
                     "example": "2022-01-01T00:00:00Z"
-                },
-                "department_id": {
-                    "type": "string",
-                    "example": "123e4567-e89b-12d3-a456-426614174000"
                 },
                 "description": {
                     "type": "string",
@@ -23684,6 +23684,10 @@ const docTemplate = `{
                     "example": "123e4567-e89b-12d3-a456-426614174000"
                 },
                 "id": {
+                    "type": "string",
+                    "example": "123e4567-e89b-12d3-a456-426614174000"
+                },
+                "ingredient_group_id": {
                     "type": "string",
                     "example": "123e4567-e89b-12d3-a456-426614174000"
                 },
@@ -23998,15 +24002,15 @@ const docTemplate = `{
                     "type": "string",
                     "example": "#FF5733"
                 },
-                "department_id": {
-                    "type": "string",
-                    "example": "123e4567-e89b-12d3-a456-426614174000"
-                },
                 "description": {
                     "type": "string",
                     "example": "Base dough for all pizzas"
                 },
                 "description_i18n": {
+                    "type": "string",
+                    "example": "123e4567-e89b-12d3-a456-426614174000"
+                },
+                "ingredient_group_id": {
                     "type": "string",
                     "example": "123e4567-e89b-12d3-a456-426614174000"
                 },
@@ -24250,10 +24254,6 @@ const docTemplate = `{
                 "cook_time": {
                     "type": "integer",
                     "example": 30
-                },
-                "department_id": {
-                    "type": "string",
-                    "example": "123e4567-e89b-12d3-a456-426614174000"
                 },
                 "description": {
                     "type": "string",
@@ -25554,6 +25554,10 @@ const docTemplate = `{
         "model.GoodResponse": {
             "type": "object",
             "properties": {
+                "branch_id": {
+                    "type": "string",
+                    "example": "123e4567-e89b-12d3-a456-426614174000"
+                },
                 "category_id": {
                     "type": "string",
                     "example": "123e4567-e89b-12d3-a456-426614174000"
@@ -25574,10 +25578,6 @@ const docTemplate = `{
                 "created_at": {
                     "type": "string",
                     "example": "2022-01-01T00:00:00Z"
-                },
-                "department_id": {
-                    "type": "string",
-                    "example": "123e4567-e89b-12d3-a456-426614174000"
                 },
                 "description": {
                     "type": "string",
@@ -27773,15 +27773,15 @@ const docTemplate = `{
                     "type": "string",
                     "example": "#FF5733"
                 },
-                "department_id": {
-                    "type": "string",
-                    "example": "123e4567-e89b-12d3-a456-426614174000"
-                },
                 "description": {
                     "type": "string",
                     "example": "Base dough for all pizzas"
                 },
                 "description_i18n": {
+                    "type": "string",
+                    "example": "123e4567-e89b-12d3-a456-426614174000"
+                },
+                "ingredient_group_id": {
                     "type": "string",
                     "example": "123e4567-e89b-12d3-a456-426614174000"
                 },
@@ -27976,10 +27976,6 @@ const docTemplate = `{
                 "cook_time": {
                     "type": "integer",
                     "example": 30
-                },
-                "department_id": {
-                    "type": "string",
-                    "example": "123e4567-e89b-12d3-a456-426614174000"
                 },
                 "description": {
                     "type": "string",

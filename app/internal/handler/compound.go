@@ -42,7 +42,7 @@ func (h *Handler) CreateCompound(c echo.Context) error {
 	}
 
 	quantity := int32(req.Quantity)
-	compound, err := h.service.Compound().CreateCompound(c.Request().Context(), req.Name, req.NameI18n, req.Description, req.DescriptionI18n, req.Measurement, req.DepartmentID, quantity, nil, req.PictureUrl, req.ColorCode)
+	compound, err := h.service.Compound().CreateCompound(c.Request().Context(), req.Name, req.NameI18n, req.Description, req.DescriptionI18n, req.Measurement, quantity, nil, req.PictureUrl, req.ColorCode, req.IngredientGroupID)
 	if err != nil {
 		log.Printf("CreateCompound failed: %v", err)
 		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse(
@@ -162,33 +162,7 @@ func (h *Handler) GetAllCompounds(c echo.Context) error {
 // @Failure 500 {object} model.ErrorResponse "Internal server error"
 // @Router /api/v1/compounds/department/{departmentId} [get]
 func (h *Handler) GetCompoundsByDepartmentID(c echo.Context) error {
-	departmentID := c.Param("departmentId")
-	if departmentID == "" {
-		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("department id is required", "missing path parameter: departmentId", http.StatusBadRequest))
-	}
-
-	var limit int32 = 20
-	var offset int32 = 0
-
-	if limitStr := c.QueryParam("limit"); limitStr != "" {
-		if l, err := strconv.ParseInt(limitStr, 10, 32); err == nil && l > 0 {
-			limit = int32(l)
-		}
-	}
-
-	if offsetStr := c.QueryParam("offset"); offsetStr != "" {
-		if o, err := strconv.ParseInt(offsetStr, 10, 32); err == nil && o >= 0 {
-			offset = int32(o)
-		}
-	}
-
-	compounds, err := h.service.Compound().GetCompoundsByDepartmentID(c.Request().Context(), departmentID, limit, offset)
-	if err != nil {
-		log.Printf("GetCompoundsByDepartmentID failed: %v", err)
-		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("failed to retrieve compounds", err.Error(), http.StatusInternalServerError))
-	}
-
-	return c.JSON(http.StatusOK, model.NewSuccessResponse("Data retrieved successfully", compounds, http.StatusOK))
+	return c.JSON(http.StatusGone, model.NewErrorResponse("Endpoint deprecated", "Use GET /api/v1/compounds with filters instead", http.StatusGone))
 }
 
 // UpdateCompound updates a compound
@@ -224,7 +198,7 @@ func (h *Handler) UpdateCompound(c echo.Context) error {
 		quantity = &q
 	}
 
-	compound, err := h.service.Compound().UpdateCompound(c.Request().Context(), compoundID, req.Name, req.NameI18n, req.Description, req.DescriptionI18n, req.Measurement, req.DepartmentID, quantity, nil, req.PictureUrl, req.ColorCode)
+	compound, err := h.service.Compound().UpdateCompound(c.Request().Context(), compoundID, req.Name, req.NameI18n, req.Description, req.DescriptionI18n, req.Measurement, quantity, nil, req.PictureUrl, req.ColorCode, req.IngredientGroupID)
 	if err != nil {
 		log.Printf("UpdateCompound failed for ID %s: %v", compoundID, err)
 		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("failed to update compound", err.Error(), http.StatusInternalServerError))
@@ -466,11 +440,11 @@ func (h *Handler) CreateCompoundWithCalculations(c echo.Context) error {
 		req.Compound.Description,
 		req.Compound.DescriptionI18n,
 		req.Compound.Measurement,
-		req.Compound.DepartmentID,
 		quantity,
 		nil, // price will be auto-calculated from calculations
 		req.Compound.PictureUrl,
 		req.Compound.ColorCode,
+		req.Compound.IngredientGroupID,
 	)
 	if err != nil {
 		log.Printf("CreateCompoundWithCalculations: failed to create compound: %v", err)
@@ -630,11 +604,11 @@ func (h *Handler) UpdateCompoundWithCalculations(c echo.Context) error {
 		req.Compound.Description,
 		req.Compound.DescriptionI18n,
 		req.Compound.Measurement,
-		req.Compound.DepartmentID,
 		qty32,
 		nil,
 		req.Compound.PictureUrl,
 		req.Compound.ColorCode,
+		req.Compound.IngredientGroupID,
 	)
 	if err != nil {
 		log.Printf("UpdateCompoundWithCalculations: failed to update compound: %v", err)

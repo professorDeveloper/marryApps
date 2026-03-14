@@ -46,10 +46,8 @@ SELECT COUNT(*) FROM compounds_details
 WHERE deleted_at = 0
   AND EXISTS (
     SELECT 1 FROM compounds c
-    JOIN departments d ON d.id = c.department_id
-    JOIN storages s ON s.id = d.storage_id
     WHERE c.id = compounds_details.compound_id
-      AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+      AND c.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
   )
 `
 
@@ -65,10 +63,8 @@ SELECT COUNT(*) FROM compounds_details
 WHERE compound_id = $1 AND deleted_at = 0
   AND EXISTS (
     SELECT 1 FROM compounds c
-    JOIN departments d ON d.id = c.department_id
-    JOIN storages s ON s.id = d.storage_id
     WHERE c.id = $1
-      AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+      AND c.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
   )
 `
 
@@ -118,12 +114,7 @@ func (q *Queries) CountCompoundStockByCompound(ctx context.Context, compoundID u
 const countCompounds = `-- name: CountCompounds :one
 SELECT COUNT(*) FROM compounds
 WHERE deleted_at = 0
-  AND EXISTS (
-    SELECT 1 FROM departments d
-    JOIN storages s ON s.id = d.storage_id
-    WHERE d.id = compounds.department_id
-      AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-  )
+  AND compounds.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 `
 
 func (q *Queries) CountCompounds(ctx context.Context) (int64, error) {
@@ -133,51 +124,48 @@ func (q *Queries) CountCompounds(ctx context.Context) (int64, error) {
 	return count, err
 }
 
-const countCompoundsByDepartment = `-- name: CountCompoundsByDepartment :one
-SELECT COUNT(*) FROM compounds
-WHERE department_id = $1 AND deleted_at = 0
-  AND EXISTS (
-    SELECT 1 FROM departments d
-    JOIN storages s ON s.id = d.storage_id
-    WHERE d.id = $1
-      AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-  )
-`
-
-func (q *Queries) CountCompoundsByDepartment(ctx context.Context, departmentID pgtype.UUID) (int64, error) {
-	row := q.db.QueryRow(ctx, countCompoundsByDepartment, departmentID)
-	var count int64
-	err := row.Scan(&count)
-	return count, err
-}
-
 const createCompound = `-- name: CreateCompound :one
-INSERT INTO compounds (id, name, name_i18n, description, description_i18n, quantity, picture_url, color_code, measurement, price, department_id)
-SELECT $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11
-WHERE EXISTS (
-  SELECT 1 FROM departments d
-  JOIN storages s ON s.id = d.storage_id
-  WHERE d.id = $11
-    AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-)
-RETURNING compounds.id, compounds.name, compounds.name_i18n, compounds.description, compounds.description_i18n, compounds.quantity, compounds.picture_url, compounds.color_code, compounds.measurement, compounds.price, compounds.department_id, compounds.cost_price, compounds.profit, compounds.profit_margin, compounds.created_at, compounds.updated_at, compounds.deleted_at
+INSERT INTO compounds (id, name, name_i18n, description, description_i18n, quantity, picture_url, color_code, measurement, price, branch_id, ingredient_group_id)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NULLIF(current_setting('app.branch_id', true), '')::uuid, $11)
+RETURNING compounds.id, compounds.name, compounds.name_i18n, compounds.description, compounds.description_i18n, compounds.quantity, compounds.picture_url, compounds.color_code, compounds.measurement, compounds.price, compounds.branch_id, compounds.ingredient_group_id, compounds.cost_price, compounds.profit, compounds.profit_margin, compounds.created_at, compounds.updated_at, compounds.deleted_at
 `
 
 type CreateCompoundParams struct {
-	ID              uuid.UUID           `json:"id"`
-	Name            string              `json:"name"`
-	NameI18n        pgtype.UUID         `json:"name_i18n"`
-	Description     *string             `json:"description"`
-	DescriptionI18n pgtype.UUID         `json:"description_i18n"`
-	Quantity        *int32              `json:"quantity"`
-	PictureUrl      *string             `json:"picture_url"`
-	ColorCode       *string             `json:"color_code"`
-	Measurement     NullMeasurementType `json:"measurement"`
-	Price           pgtype.Numeric      `json:"price"`
-	DepartmentID    pgtype.UUID         `json:"department_id"`
+	ID                uuid.UUID           `json:"id"`
+	Name              string              `json:"name"`
+	NameI18n          pgtype.UUID         `json:"name_i18n"`
+	Description       *string             `json:"description"`
+	DescriptionI18n   pgtype.UUID         `json:"description_i18n"`
+	Quantity          *int32              `json:"quantity"`
+	PictureUrl        *string             `json:"picture_url"`
+	ColorCode         *string             `json:"color_code"`
+	Measurement       NullMeasurementType `json:"measurement"`
+	Price             pgtype.Numeric      `json:"price"`
+	IngredientGroupID pgtype.UUID         `json:"ingredient_group_id"`
 }
 
-func (q *Queries) CreateCompound(ctx context.Context, arg CreateCompoundParams) (Compound, error) {
+type CreateCompoundRow struct {
+	ID                uuid.UUID           `json:"id"`
+	Name              string              `json:"name"`
+	NameI18n          pgtype.UUID         `json:"name_i18n"`
+	Description       *string             `json:"description"`
+	DescriptionI18n   pgtype.UUID         `json:"description_i18n"`
+	Quantity          *int32              `json:"quantity"`
+	PictureUrl        *string             `json:"picture_url"`
+	ColorCode         *string             `json:"color_code"`
+	Measurement       NullMeasurementType `json:"measurement"`
+	Price             pgtype.Numeric      `json:"price"`
+	BranchID          pgtype.UUID         `json:"branch_id"`
+	IngredientGroupID pgtype.UUID         `json:"ingredient_group_id"`
+	CostPrice         pgtype.Numeric      `json:"cost_price"`
+	Profit            pgtype.Numeric      `json:"profit"`
+	ProfitMargin      pgtype.Numeric      `json:"profit_margin"`
+	CreatedAt         pgtype.Timestamptz  `json:"created_at"`
+	UpdatedAt         pgtype.Timestamptz  `json:"updated_at"`
+	DeletedAt         *int64              `json:"deleted_at"`
+}
+
+func (q *Queries) CreateCompound(ctx context.Context, arg CreateCompoundParams) (CreateCompoundRow, error) {
 	row := q.db.QueryRow(ctx, createCompound,
 		arg.ID,
 		arg.Name,
@@ -189,9 +177,9 @@ func (q *Queries) CreateCompound(ctx context.Context, arg CreateCompoundParams) 
 		arg.ColorCode,
 		arg.Measurement,
 		arg.Price,
-		arg.DepartmentID,
+		arg.IngredientGroupID,
 	)
-	var i Compound
+	var i CreateCompoundRow
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
@@ -203,7 +191,8 @@ func (q *Queries) CreateCompound(ctx context.Context, arg CreateCompoundParams) 
 		&i.ColorCode,
 		&i.Measurement,
 		&i.Price,
-		&i.DepartmentID,
+		&i.BranchID,
+		&i.IngredientGroupID,
 		&i.CostPrice,
 		&i.Profit,
 		&i.ProfitMargin,
@@ -221,10 +210,8 @@ SELECT $1, $2, $3, $4
 WHERE (
     EXISTS (
       SELECT 1 FROM compounds c
-      JOIN departments d ON d.id = c.department_id
-      JOIN storages s ON s.id = d.storage_id
       WHERE c.id = $2
-        AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+        AND c.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
     )
     AND EXISTS (
       SELECT 1 FROM ingredients i
@@ -302,12 +289,7 @@ const deleteCompound = `-- name: DeleteCompound :exec
 UPDATE compounds
 SET deleted_at = EXTRACT(EPOCH FROM NOW())::BIGINT
 WHERE compounds.id = $1 AND deleted_at = 0
-  AND EXISTS (
-    SELECT 1 FROM departments d
-    JOIN storages s ON s.id = d.storage_id
-    WHERE d.id = compounds.department_id
-      AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-  )
+  AND compounds.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 `
 
 func (q *Queries) DeleteCompound(ctx context.Context, id uuid.UUID) error {
@@ -321,10 +303,8 @@ SET deleted_at = EXTRACT(EPOCH FROM NOW())::BIGINT
 WHERE compounds_details.id = $1 AND deleted_at = 0
   AND EXISTS (
     SELECT 1 FROM compounds c
-    JOIN departments d ON d.id = c.department_id
-    JOIN storages s ON s.id = d.storage_id
     WHERE c.id = compounds_details.compound_id
-      AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+      AND c.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
   )
 `
 
@@ -339,10 +319,8 @@ SET deleted_at = EXTRACT(EPOCH FROM NOW())::BIGINT
 WHERE compound_id = $1 AND deleted_at = 0
   AND EXISTS (
     SELECT 1 FROM compounds c
-    JOIN departments d ON d.id = c.department_id
-    JOIN storages s ON s.id = d.storage_id
     WHERE c.id = $1
-      AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+      AND c.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
   )
 `
 
@@ -369,10 +347,8 @@ FROM compounds_details
 WHERE deleted_at = 0
   AND EXISTS (
     SELECT 1 FROM compounds c
-    JOIN departments d ON d.id = c.department_id
-    JOIN storages s ON s.id = d.storage_id
     WHERE c.id = compounds_details.compound_id
-      AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+      AND c.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
   )
 ORDER BY created_at DESC
 LIMIT $1 OFFSET $2
@@ -454,15 +430,10 @@ func (q *Queries) GetAllCompoundStock(ctx context.Context, arg GetAllCompoundSto
 }
 
 const getAllCompounds = `-- name: GetAllCompounds :many
-SELECT compounds.id, compounds.name, compounds.name_i18n, compounds.description, compounds.description_i18n, compounds.quantity, compounds.picture_url, compounds.color_code, compounds.measurement, compounds.price, compounds.department_id, compounds.cost_price, compounds.profit, compounds.profit_margin, compounds.created_at, compounds.updated_at, compounds.deleted_at
+SELECT compounds.id, compounds.name, compounds.name_i18n, compounds.description, compounds.description_i18n, compounds.quantity, compounds.picture_url, compounds.color_code, compounds.measurement, compounds.price, compounds.branch_id, compounds.ingredient_group_id, compounds.cost_price, compounds.profit, compounds.profit_margin, compounds.created_at, compounds.updated_at, compounds.deleted_at
 FROM compounds
 WHERE deleted_at = 0
-  AND EXISTS (
-    SELECT 1 FROM departments d
-    JOIN storages s ON s.id = d.storage_id
-    WHERE d.id = compounds.department_id
-      AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-  )
+  AND compounds.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 ORDER BY created_at DESC
 LIMIT $1 OFFSET $2
 `
@@ -472,15 +443,36 @@ type GetAllCompoundsParams struct {
 	Offset int32 `json:"offset"`
 }
 
-func (q *Queries) GetAllCompounds(ctx context.Context, arg GetAllCompoundsParams) ([]Compound, error) {
+type GetAllCompoundsRow struct {
+	ID                uuid.UUID           `json:"id"`
+	Name              string              `json:"name"`
+	NameI18n          pgtype.UUID         `json:"name_i18n"`
+	Description       *string             `json:"description"`
+	DescriptionI18n   pgtype.UUID         `json:"description_i18n"`
+	Quantity          *int32              `json:"quantity"`
+	PictureUrl        *string             `json:"picture_url"`
+	ColorCode         *string             `json:"color_code"`
+	Measurement       NullMeasurementType `json:"measurement"`
+	Price             pgtype.Numeric      `json:"price"`
+	BranchID          pgtype.UUID         `json:"branch_id"`
+	IngredientGroupID pgtype.UUID         `json:"ingredient_group_id"`
+	CostPrice         pgtype.Numeric      `json:"cost_price"`
+	Profit            pgtype.Numeric      `json:"profit"`
+	ProfitMargin      pgtype.Numeric      `json:"profit_margin"`
+	CreatedAt         pgtype.Timestamptz  `json:"created_at"`
+	UpdatedAt         pgtype.Timestamptz  `json:"updated_at"`
+	DeletedAt         *int64              `json:"deleted_at"`
+}
+
+func (q *Queries) GetAllCompounds(ctx context.Context, arg GetAllCompoundsParams) ([]GetAllCompoundsRow, error) {
 	rows, err := q.db.Query(ctx, getAllCompounds, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []Compound
+	var items []GetAllCompoundsRow
 	for rows.Next() {
-		var i Compound
+		var i GetAllCompoundsRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.Name,
@@ -492,7 +484,8 @@ func (q *Queries) GetAllCompounds(ctx context.Context, arg GetAllCompoundsParams
 			&i.ColorCode,
 			&i.Measurement,
 			&i.Price,
-			&i.DepartmentID,
+			&i.BranchID,
+			&i.IngredientGroupID,
 			&i.CostPrice,
 			&i.Profit,
 			&i.ProfitMargin,
@@ -511,16 +504,16 @@ func (q *Queries) GetAllCompounds(ctx context.Context, arg GetAllCompoundsParams
 }
 
 const getAllCompoundsWithLanguage = `-- name: GetAllCompoundsWithLanguage :many
-SELECT 
+SELECT
     c.id,
-    COALESCE(CASE 
+    COALESCE(CASE
         WHEN $1::text = 'uz' THEN tn.uz
         WHEN $1::text = 'ru' THEN tn.ru
         WHEN $1::text = 'en' THEN tn.en
         ELSE c.name
     END, c.name) as name,
     c.name_i18n,
-    COALESCE(CASE 
+    COALESCE(CASE
         WHEN $1::text = 'uz' THEN td.uz
         WHEN $1::text = 'ru' THEN td.ru
         WHEN $1::text = 'en' THEN td.en
@@ -532,7 +525,8 @@ SELECT
     c.color_code,
     c.measurement,
     c.price,
-    c.department_id,
+    c.branch_id,
+    c.ingredient_group_id,
     c.cost_price,
     c.profit,
     c.profit_margin,
@@ -543,12 +537,7 @@ FROM compounds c
 LEFT JOIN translations tn ON c.name_i18n = tn.id AND tn.deleted_at = 0
 LEFT JOIN translations td ON c.description_i18n = td.id AND td.deleted_at = 0
 WHERE c.deleted_at = 0
-  AND EXISTS (
-    SELECT 1 FROM departments d
-    JOIN storages s ON s.id = d.storage_id
-    WHERE d.id = c.department_id
-      AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-  )
+  AND c.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 ORDER BY c.created_at DESC
 LIMIT $2 OFFSET $3
 `
@@ -559,15 +548,36 @@ type GetAllCompoundsWithLanguageParams struct {
 	Offset  int32  `json:"offset"`
 }
 
-func (q *Queries) GetAllCompoundsWithLanguage(ctx context.Context, arg GetAllCompoundsWithLanguageParams) ([]Compound, error) {
+type GetAllCompoundsWithLanguageRow struct {
+	ID                uuid.UUID           `json:"id"`
+	Name              string              `json:"name"`
+	NameI18n          pgtype.UUID         `json:"name_i18n"`
+	Description       *string             `json:"description"`
+	DescriptionI18n   pgtype.UUID         `json:"description_i18n"`
+	Quantity          *int32              `json:"quantity"`
+	PictureUrl        *string             `json:"picture_url"`
+	ColorCode         *string             `json:"color_code"`
+	Measurement       NullMeasurementType `json:"measurement"`
+	Price             pgtype.Numeric      `json:"price"`
+	BranchID          pgtype.UUID         `json:"branch_id"`
+	IngredientGroupID pgtype.UUID         `json:"ingredient_group_id"`
+	CostPrice         pgtype.Numeric      `json:"cost_price"`
+	Profit            pgtype.Numeric      `json:"profit"`
+	ProfitMargin      pgtype.Numeric      `json:"profit_margin"`
+	CreatedAt         pgtype.Timestamptz  `json:"created_at"`
+	UpdatedAt         pgtype.Timestamptz  `json:"updated_at"`
+	DeletedAt         *int64              `json:"deleted_at"`
+}
+
+func (q *Queries) GetAllCompoundsWithLanguage(ctx context.Context, arg GetAllCompoundsWithLanguageParams) ([]GetAllCompoundsWithLanguageRow, error) {
 	rows, err := q.db.Query(ctx, getAllCompoundsWithLanguage, arg.Column1, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []Compound
+	var items []GetAllCompoundsWithLanguageRow
 	for rows.Next() {
-		var i Compound
+		var i GetAllCompoundsWithLanguageRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.Name,
@@ -579,7 +589,8 @@ func (q *Queries) GetAllCompoundsWithLanguage(ctx context.Context, arg GetAllCom
 			&i.ColorCode,
 			&i.Measurement,
 			&i.Price,
-			&i.DepartmentID,
+			&i.BranchID,
+			&i.IngredientGroupID,
 			&i.CostPrice,
 			&i.Profit,
 			&i.ProfitMargin,
@@ -598,20 +609,36 @@ func (q *Queries) GetAllCompoundsWithLanguage(ctx context.Context, arg GetAllCom
 }
 
 const getCompoundByID = `-- name: GetCompoundByID :one
-SELECT compounds.id, compounds.name, compounds.name_i18n, compounds.description, compounds.description_i18n, compounds.quantity, compounds.picture_url, compounds.color_code, compounds.measurement, compounds.price, compounds.department_id, compounds.cost_price, compounds.profit, compounds.profit_margin, compounds.created_at, compounds.updated_at, compounds.deleted_at
+SELECT compounds.id, compounds.name, compounds.name_i18n, compounds.description, compounds.description_i18n, compounds.quantity, compounds.picture_url, compounds.color_code, compounds.measurement, compounds.price, compounds.branch_id, compounds.ingredient_group_id, compounds.cost_price, compounds.profit, compounds.profit_margin, compounds.created_at, compounds.updated_at, compounds.deleted_at
 FROM compounds
 WHERE compounds.id = $1 AND deleted_at = 0
-  AND EXISTS (
-    SELECT 1 FROM departments d
-    JOIN storages s ON s.id = d.storage_id
-    WHERE d.id = compounds.department_id
-      AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-  )
+  AND compounds.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 `
 
-func (q *Queries) GetCompoundByID(ctx context.Context, id uuid.UUID) (Compound, error) {
+type GetCompoundByIDRow struct {
+	ID                uuid.UUID           `json:"id"`
+	Name              string              `json:"name"`
+	NameI18n          pgtype.UUID         `json:"name_i18n"`
+	Description       *string             `json:"description"`
+	DescriptionI18n   pgtype.UUID         `json:"description_i18n"`
+	Quantity          *int32              `json:"quantity"`
+	PictureUrl        *string             `json:"picture_url"`
+	ColorCode         *string             `json:"color_code"`
+	Measurement       NullMeasurementType `json:"measurement"`
+	Price             pgtype.Numeric      `json:"price"`
+	BranchID          pgtype.UUID         `json:"branch_id"`
+	IngredientGroupID pgtype.UUID         `json:"ingredient_group_id"`
+	CostPrice         pgtype.Numeric      `json:"cost_price"`
+	Profit            pgtype.Numeric      `json:"profit"`
+	ProfitMargin      pgtype.Numeric      `json:"profit_margin"`
+	CreatedAt         pgtype.Timestamptz  `json:"created_at"`
+	UpdatedAt         pgtype.Timestamptz  `json:"updated_at"`
+	DeletedAt         *int64              `json:"deleted_at"`
+}
+
+func (q *Queries) GetCompoundByID(ctx context.Context, id uuid.UUID) (GetCompoundByIDRow, error) {
 	row := q.db.QueryRow(ctx, getCompoundByID, id)
-	var i Compound
+	var i GetCompoundByIDRow
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
@@ -623,7 +650,8 @@ func (q *Queries) GetCompoundByID(ctx context.Context, id uuid.UUID) (Compound, 
 		&i.ColorCode,
 		&i.Measurement,
 		&i.Price,
-		&i.DepartmentID,
+		&i.BranchID,
+		&i.IngredientGroupID,
 		&i.CostPrice,
 		&i.Profit,
 		&i.ProfitMargin,
@@ -635,16 +663,16 @@ func (q *Queries) GetCompoundByID(ctx context.Context, id uuid.UUID) (Compound, 
 }
 
 const getCompoundByIDWithLanguage = `-- name: GetCompoundByIDWithLanguage :one
-SELECT 
+SELECT
     c.id,
-    COALESCE(CASE 
+    COALESCE(CASE
         WHEN $2::text = 'uz' THEN tn.uz
         WHEN $2::text = 'ru' THEN tn.ru
         WHEN $2::text = 'en' THEN tn.en
         ELSE c.name
     END, c.name) as name,
     c.name_i18n,
-    COALESCE(CASE 
+    COALESCE(CASE
         WHEN $2::text = 'uz' THEN td.uz
         WHEN $2::text = 'ru' THEN td.ru
         WHEN $2::text = 'en' THEN td.en
@@ -656,7 +684,8 @@ SELECT
     c.color_code,
     c.measurement,
     c.price,
-    c.department_id,
+    c.branch_id,
+    c.ingredient_group_id,
     c.cost_price,
     c.profit,
     c.profit_margin,
@@ -667,12 +696,7 @@ FROM compounds c
 LEFT JOIN translations tn ON c.name_i18n = tn.id AND tn.deleted_at = 0
 LEFT JOIN translations td ON c.description_i18n = td.id AND td.deleted_at = 0
 WHERE c.id = $1 AND c.deleted_at = 0
-  AND EXISTS (
-    SELECT 1 FROM departments d
-    JOIN storages s ON s.id = d.storage_id
-    WHERE d.id = c.department_id
-      AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-  )
+  AND c.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 `
 
 type GetCompoundByIDWithLanguageParams struct {
@@ -680,9 +704,30 @@ type GetCompoundByIDWithLanguageParams struct {
 	Column2 string    `json:"column_2"`
 }
 
-func (q *Queries) GetCompoundByIDWithLanguage(ctx context.Context, arg GetCompoundByIDWithLanguageParams) (Compound, error) {
+type GetCompoundByIDWithLanguageRow struct {
+	ID                uuid.UUID           `json:"id"`
+	Name              string              `json:"name"`
+	NameI18n          pgtype.UUID         `json:"name_i18n"`
+	Description       *string             `json:"description"`
+	DescriptionI18n   pgtype.UUID         `json:"description_i18n"`
+	Quantity          *int32              `json:"quantity"`
+	PictureUrl        *string             `json:"picture_url"`
+	ColorCode         *string             `json:"color_code"`
+	Measurement       NullMeasurementType `json:"measurement"`
+	Price             pgtype.Numeric      `json:"price"`
+	BranchID          pgtype.UUID         `json:"branch_id"`
+	IngredientGroupID pgtype.UUID         `json:"ingredient_group_id"`
+	CostPrice         pgtype.Numeric      `json:"cost_price"`
+	Profit            pgtype.Numeric      `json:"profit"`
+	ProfitMargin      pgtype.Numeric      `json:"profit_margin"`
+	CreatedAt         pgtype.Timestamptz  `json:"created_at"`
+	UpdatedAt         pgtype.Timestamptz  `json:"updated_at"`
+	DeletedAt         *int64              `json:"deleted_at"`
+}
+
+func (q *Queries) GetCompoundByIDWithLanguage(ctx context.Context, arg GetCompoundByIDWithLanguageParams) (GetCompoundByIDWithLanguageRow, error) {
 	row := q.db.QueryRow(ctx, getCompoundByIDWithLanguage, arg.ID, arg.Column2)
-	var i Compound
+	var i GetCompoundByIDWithLanguageRow
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
@@ -694,7 +739,8 @@ func (q *Queries) GetCompoundByIDWithLanguage(ctx context.Context, arg GetCompou
 		&i.ColorCode,
 		&i.Measurement,
 		&i.Price,
-		&i.DepartmentID,
+		&i.BranchID,
+		&i.IngredientGroupID,
 		&i.CostPrice,
 		&i.Profit,
 		&i.ProfitMargin,
@@ -711,10 +757,8 @@ FROM compounds_details
 WHERE compounds_details.id = $1 AND deleted_at = 0
   AND EXISTS (
     SELECT 1 FROM compounds c
-    JOIN departments d ON d.id = c.department_id
-    JOIN storages s ON s.id = d.storage_id
     WHERE c.id = compounds_details.compound_id
-      AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+      AND c.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
   )
 `
 
@@ -734,7 +778,7 @@ func (q *Queries) GetCompoundDetailByID(ctx context.Context, id uuid.UUID) (Comp
 }
 
 const getCompoundDetailWithIngredient = `-- name: GetCompoundDetailWithIngredient :one
-SELECT 
+SELECT
     cd.id,
     cd.compound_id,
     cd.ingredient_id,
@@ -748,10 +792,8 @@ LEFT JOIN ingredients i ON cd.ingredient_id = i.id AND i.deleted_at = 0
 WHERE cd.id = $1 AND cd.deleted_at = 0
   AND EXISTS (
     SELECT 1 FROM compounds c
-    JOIN departments d ON d.id = c.department_id
-    JOIN storages s ON s.id = d.storage_id
     WHERE c.id = cd.compound_id
-      AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+      AND c.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
   )
 `
 
@@ -788,10 +830,8 @@ FROM compounds_details
 WHERE compound_id = $1 AND deleted_at = 0
   AND EXISTS (
     SELECT 1 FROM compounds c
-    JOIN departments d ON d.id = c.department_id
-    JOIN storages s ON s.id = d.storage_id
     WHERE c.id = $1
-      AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+      AND c.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
   )
 ORDER BY created_at DESC
 `
@@ -835,10 +875,8 @@ WHERE ingredient_id = $1 AND deleted_at = 0
   )
   AND EXISTS (
     SELECT 1 FROM compounds c
-    JOIN departments d ON d.id = c.department_id
-    JOIN storages s ON s.id = d.storage_id
     WHERE c.id = compounds_details.compound_id
-      AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+      AND c.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
   )
 ORDER BY created_at DESC
 LIMIT $2 OFFSET $3
@@ -879,7 +917,7 @@ func (q *Queries) GetCompoundDetailsByIngredientID(ctx context.Context, arg GetC
 }
 
 const getCompoundDetailsWithIngredients = `-- name: GetCompoundDetailsWithIngredients :many
-SELECT 
+SELECT
     cd.id,
     cd.compound_id,
     cd.ingredient_id,
@@ -894,10 +932,8 @@ LEFT JOIN ingredients i ON cd.ingredient_id = i.id AND i.deleted_at = 0
 WHERE cd.compound_id = $1 AND cd.deleted_at = 0
   AND EXISTS (
     SELECT 1 FROM compounds c
-    JOIN departments d ON d.id = c.department_id
-    JOIN storages s ON s.id = d.storage_id
     WHERE c.id = $1
-      AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+      AND c.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
   )
 ORDER BY cd.created_at DESC
 `
@@ -1053,7 +1089,7 @@ func (q *Queries) GetCompoundStockByID(ctx context.Context, id uuid.UUID) (Compo
 }
 
 const getCompoundWithDepartment = `-- name: GetCompoundWithDepartment :one
-SELECT 
+SELECT
     c.id,
     c.name,
     c.name_i18n,
@@ -1063,41 +1099,35 @@ SELECT
     c.picture_url,
     c.measurement,
     c.price,
-    c.department_id,
+    c.branch_id,
+    c.ingredient_group_id,
     c.cost_price,
     c.profit,
     c.profit_margin,
     c.created_at,
-    c.updated_at,
-    d.name as department_name
+    c.updated_at
 FROM compounds c
-LEFT JOIN departments d ON c.department_id = d.id AND d.deleted_at = 0
 WHERE c.id = $1 AND c.deleted_at = 0
-  AND EXISTS (
-    SELECT 1 FROM departments d2
-    JOIN storages s2 ON s2.id = d2.storage_id
-    WHERE d2.id = c.department_id
-      AND s2.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-  )
+  AND c.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 `
 
 type GetCompoundWithDepartmentRow struct {
-	ID              uuid.UUID           `json:"id"`
-	Name            string              `json:"name"`
-	NameI18n        pgtype.UUID         `json:"name_i18n"`
-	Description     *string             `json:"description"`
-	DescriptionI18n pgtype.UUID         `json:"description_i18n"`
-	Quantity        *int32              `json:"quantity"`
-	PictureUrl      *string             `json:"picture_url"`
-	Measurement     NullMeasurementType `json:"measurement"`
-	Price           pgtype.Numeric      `json:"price"`
-	DepartmentID    pgtype.UUID         `json:"department_id"`
-	CostPrice       pgtype.Numeric      `json:"cost_price"`
-	Profit          pgtype.Numeric      `json:"profit"`
-	ProfitMargin    pgtype.Numeric      `json:"profit_margin"`
-	CreatedAt       pgtype.Timestamptz  `json:"created_at"`
-	UpdatedAt       pgtype.Timestamptz  `json:"updated_at"`
-	DepartmentName  *string             `json:"department_name"`
+	ID                uuid.UUID           `json:"id"`
+	Name              string              `json:"name"`
+	NameI18n          pgtype.UUID         `json:"name_i18n"`
+	Description       *string             `json:"description"`
+	DescriptionI18n   pgtype.UUID         `json:"description_i18n"`
+	Quantity          *int32              `json:"quantity"`
+	PictureUrl        *string             `json:"picture_url"`
+	Measurement       NullMeasurementType `json:"measurement"`
+	Price             pgtype.Numeric      `json:"price"`
+	BranchID          pgtype.UUID         `json:"branch_id"`
+	IngredientGroupID pgtype.UUID         `json:"ingredient_group_id"`
+	CostPrice         pgtype.Numeric      `json:"cost_price"`
+	Profit            pgtype.Numeric      `json:"profit"`
+	ProfitMargin      pgtype.Numeric      `json:"profit_margin"`
+	CreatedAt         pgtype.Timestamptz  `json:"created_at"`
+	UpdatedAt         pgtype.Timestamptz  `json:"updated_at"`
 }
 
 func (q *Queries) GetCompoundWithDepartment(ctx context.Context, id uuid.UUID) (GetCompoundWithDepartmentRow, error) {
@@ -1113,73 +1143,15 @@ func (q *Queries) GetCompoundWithDepartment(ctx context.Context, id uuid.UUID) (
 		&i.PictureUrl,
 		&i.Measurement,
 		&i.Price,
-		&i.DepartmentID,
+		&i.BranchID,
+		&i.IngredientGroupID,
 		&i.CostPrice,
 		&i.Profit,
 		&i.ProfitMargin,
 		&i.CreatedAt,
 		&i.UpdatedAt,
-		&i.DepartmentName,
 	)
 	return i, err
-}
-
-const getCompoundsByDepartmentID = `-- name: GetCompoundsByDepartmentID :many
-SELECT compounds.id, compounds.name, compounds.name_i18n, compounds.description, compounds.description_i18n, compounds.quantity, compounds.picture_url, compounds.color_code, compounds.measurement, compounds.price, compounds.department_id, compounds.cost_price, compounds.profit, compounds.profit_margin, compounds.created_at, compounds.updated_at, compounds.deleted_at
-FROM compounds
-WHERE department_id = $1 AND deleted_at = 0
-  AND EXISTS (
-    SELECT 1 FROM departments d
-    JOIN storages s ON s.id = d.storage_id
-    WHERE d.id = $1
-      AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-  )
-ORDER BY created_at DESC
-LIMIT $2 OFFSET $3
-`
-
-type GetCompoundsByDepartmentIDParams struct {
-	DepartmentID pgtype.UUID `json:"department_id"`
-	Limit        int32       `json:"limit"`
-	Offset       int32       `json:"offset"`
-}
-
-func (q *Queries) GetCompoundsByDepartmentID(ctx context.Context, arg GetCompoundsByDepartmentIDParams) ([]Compound, error) {
-	rows, err := q.db.Query(ctx, getCompoundsByDepartmentID, arg.DepartmentID, arg.Limit, arg.Offset)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []Compound
-	for rows.Next() {
-		var i Compound
-		if err := rows.Scan(
-			&i.ID,
-			&i.Name,
-			&i.NameI18n,
-			&i.Description,
-			&i.DescriptionI18n,
-			&i.Quantity,
-			&i.PictureUrl,
-			&i.ColorCode,
-			&i.Measurement,
-			&i.Price,
-			&i.DepartmentID,
-			&i.CostPrice,
-			&i.Profit,
-			&i.ProfitMargin,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-			&i.DeletedAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
 }
 
 const getStockByCompoundAndBranch = `-- name: GetStockByCompoundAndBranch :one
@@ -1211,9 +1183,9 @@ func (q *Queries) GetStockByCompoundAndBranch(ctx context.Context, arg GetStockB
 
 const removeFromCompoundStock = `-- name: RemoveFromCompoundStock :one
 UPDATE compound_stock
-SET quantity = CASE 
-    WHEN quantity - $2 < 0 THEN 0 
-    ELSE quantity - $2 
+SET quantity = CASE
+    WHEN quantity - $2 < 0 THEN 0
+    ELSE quantity - $2
   END,
     updated_at = NOW()
 WHERE id = $1 AND deleted_at = 0
@@ -1245,12 +1217,7 @@ const restoreCompound = `-- name: RestoreCompound :exec
 UPDATE compounds
 SET deleted_at = 0
 WHERE compounds.id = $1 AND deleted_at != 0
-  AND EXISTS (
-    SELECT 1 FROM departments d
-    JOIN storages s ON s.id = d.storage_id
-    WHERE d.id = compounds.department_id
-      AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-  )
+  AND compounds.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 `
 
 func (q *Queries) RestoreCompound(ctx context.Context, id uuid.UUID) error {
@@ -1264,10 +1231,8 @@ SET deleted_at = 0
 WHERE compounds_details.id = $1 AND deleted_at != 0
   AND EXISTS (
     SELECT 1 FROM compounds c
-    JOIN departments d ON d.id = c.department_id
-    JOIN storages s ON s.id = d.storage_id
     WHERE c.id = compounds_details.compound_id
-      AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+      AND c.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
   )
 `
 
@@ -1289,16 +1254,11 @@ func (q *Queries) RestoreCompoundStock(ctx context.Context, id uuid.UUID) error 
 }
 
 const searchCompounds = `-- name: SearchCompounds :many
-SELECT compounds.id, compounds.name, compounds.name_i18n, compounds.description, compounds.description_i18n, compounds.quantity, compounds.picture_url, compounds.color_code, compounds.measurement, compounds.price, compounds.department_id, compounds.cost_price, compounds.profit, compounds.profit_margin, compounds.created_at, compounds.updated_at, compounds.deleted_at
+SELECT compounds.id, compounds.name, compounds.name_i18n, compounds.description, compounds.description_i18n, compounds.quantity, compounds.picture_url, compounds.color_code, compounds.measurement, compounds.price, compounds.branch_id, compounds.ingredient_group_id, compounds.cost_price, compounds.profit, compounds.profit_margin, compounds.created_at, compounds.updated_at, compounds.deleted_at
 FROM compounds
-WHERE deleted_at = 0 
+WHERE deleted_at = 0
 AND (name ILIKE '%' || $1 || '%' OR description ILIKE '%' || $1 || '%')
-  AND EXISTS (
-    SELECT 1 FROM departments d
-    JOIN storages s ON s.id = d.storage_id
-    WHERE d.id = compounds.department_id
-      AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-  )
+  AND compounds.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 ORDER BY created_at DESC
 LIMIT $2 OFFSET $3
 `
@@ -1309,15 +1269,36 @@ type SearchCompoundsParams struct {
 	Offset  int32   `json:"offset"`
 }
 
-func (q *Queries) SearchCompounds(ctx context.Context, arg SearchCompoundsParams) ([]Compound, error) {
+type SearchCompoundsRow struct {
+	ID                uuid.UUID           `json:"id"`
+	Name              string              `json:"name"`
+	NameI18n          pgtype.UUID         `json:"name_i18n"`
+	Description       *string             `json:"description"`
+	DescriptionI18n   pgtype.UUID         `json:"description_i18n"`
+	Quantity          *int32              `json:"quantity"`
+	PictureUrl        *string             `json:"picture_url"`
+	ColorCode         *string             `json:"color_code"`
+	Measurement       NullMeasurementType `json:"measurement"`
+	Price             pgtype.Numeric      `json:"price"`
+	BranchID          pgtype.UUID         `json:"branch_id"`
+	IngredientGroupID pgtype.UUID         `json:"ingredient_group_id"`
+	CostPrice         pgtype.Numeric      `json:"cost_price"`
+	Profit            pgtype.Numeric      `json:"profit"`
+	ProfitMargin      pgtype.Numeric      `json:"profit_margin"`
+	CreatedAt         pgtype.Timestamptz  `json:"created_at"`
+	UpdatedAt         pgtype.Timestamptz  `json:"updated_at"`
+	DeletedAt         *int64              `json:"deleted_at"`
+}
+
+func (q *Queries) SearchCompounds(ctx context.Context, arg SearchCompoundsParams) ([]SearchCompoundsRow, error) {
 	rows, err := q.db.Query(ctx, searchCompounds, arg.Column1, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []Compound
+	var items []SearchCompoundsRow
 	for rows.Next() {
-		var i Compound
+		var i SearchCompoundsRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.Name,
@@ -1329,7 +1310,8 @@ func (q *Queries) SearchCompounds(ctx context.Context, arg SearchCompoundsParams
 			&i.ColorCode,
 			&i.Measurement,
 			&i.Price,
-			&i.DepartmentID,
+			&i.BranchID,
+			&i.IngredientGroupID,
 			&i.CostPrice,
 			&i.Profit,
 			&i.ProfitMargin,
@@ -1358,41 +1340,49 @@ SET name = COALESCE($2, name),
     color_code = COALESCE($8, color_code),
     measurement = COALESCE($9, measurement),
     price = COALESCE($10, price),
-    department_id = COALESCE($11, department_id),
+    ingredient_group_id = COALESCE($11, ingredient_group_id),
     updated_at = NOW()
 WHERE compounds.id = $1 AND deleted_at = 0
-  AND EXISTS (
-    SELECT 1 FROM departments d
-    JOIN storages s ON s.id = d.storage_id
-    WHERE d.id = compounds.department_id
-      AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-  )
-  AND (
-    $11 IS NULL OR EXISTS (
-      SELECT 1 FROM departments d2
-      JOIN storages s2 ON s2.id = d2.storage_id
-      WHERE d2.id = $11
-        AND s2.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-    )
-  )
-RETURNING compounds.id, compounds.name, compounds.name_i18n, compounds.description, compounds.description_i18n, compounds.quantity, compounds.picture_url, compounds.color_code, compounds.measurement, compounds.price, compounds.department_id, compounds.cost_price, compounds.profit, compounds.profit_margin, compounds.created_at, compounds.updated_at, compounds.deleted_at
+  AND compounds.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+RETURNING compounds.id, compounds.name, compounds.name_i18n, compounds.description, compounds.description_i18n, compounds.quantity, compounds.picture_url, compounds.color_code, compounds.measurement, compounds.price, compounds.branch_id, compounds.ingredient_group_id, compounds.cost_price, compounds.profit, compounds.profit_margin, compounds.created_at, compounds.updated_at, compounds.deleted_at
 `
 
 type UpdateCompoundParams struct {
-	ID              uuid.UUID           `json:"id"`
-	Name            string              `json:"name"`
-	NameI18n        pgtype.UUID         `json:"name_i18n"`
-	Description     *string             `json:"description"`
-	DescriptionI18n pgtype.UUID         `json:"description_i18n"`
-	Quantity        *int32              `json:"quantity"`
-	PictureUrl      *string             `json:"picture_url"`
-	ColorCode       *string             `json:"color_code"`
-	Measurement     NullMeasurementType `json:"measurement"`
-	Price           pgtype.Numeric      `json:"price"`
-	DepartmentID    pgtype.UUID         `json:"department_id"`
+	ID                uuid.UUID           `json:"id"`
+	Name              string              `json:"name"`
+	NameI18n          pgtype.UUID         `json:"name_i18n"`
+	Description       *string             `json:"description"`
+	DescriptionI18n   pgtype.UUID         `json:"description_i18n"`
+	Quantity          *int32              `json:"quantity"`
+	PictureUrl        *string             `json:"picture_url"`
+	ColorCode         *string             `json:"color_code"`
+	Measurement       NullMeasurementType `json:"measurement"`
+	Price             pgtype.Numeric      `json:"price"`
+	IngredientGroupID pgtype.UUID         `json:"ingredient_group_id"`
 }
 
-func (q *Queries) UpdateCompound(ctx context.Context, arg UpdateCompoundParams) (Compound, error) {
+type UpdateCompoundRow struct {
+	ID                uuid.UUID           `json:"id"`
+	Name              string              `json:"name"`
+	NameI18n          pgtype.UUID         `json:"name_i18n"`
+	Description       *string             `json:"description"`
+	DescriptionI18n   pgtype.UUID         `json:"description_i18n"`
+	Quantity          *int32              `json:"quantity"`
+	PictureUrl        *string             `json:"picture_url"`
+	ColorCode         *string             `json:"color_code"`
+	Measurement       NullMeasurementType `json:"measurement"`
+	Price             pgtype.Numeric      `json:"price"`
+	BranchID          pgtype.UUID         `json:"branch_id"`
+	IngredientGroupID pgtype.UUID         `json:"ingredient_group_id"`
+	CostPrice         pgtype.Numeric      `json:"cost_price"`
+	Profit            pgtype.Numeric      `json:"profit"`
+	ProfitMargin      pgtype.Numeric      `json:"profit_margin"`
+	CreatedAt         pgtype.Timestamptz  `json:"created_at"`
+	UpdatedAt         pgtype.Timestamptz  `json:"updated_at"`
+	DeletedAt         *int64              `json:"deleted_at"`
+}
+
+func (q *Queries) UpdateCompound(ctx context.Context, arg UpdateCompoundParams) (UpdateCompoundRow, error) {
 	row := q.db.QueryRow(ctx, updateCompound,
 		arg.ID,
 		arg.Name,
@@ -1404,9 +1394,9 @@ func (q *Queries) UpdateCompound(ctx context.Context, arg UpdateCompoundParams) 
 		arg.ColorCode,
 		arg.Measurement,
 		arg.Price,
-		arg.DepartmentID,
+		arg.IngredientGroupID,
 	)
-	var i Compound
+	var i UpdateCompoundRow
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
@@ -1418,7 +1408,8 @@ func (q *Queries) UpdateCompound(ctx context.Context, arg UpdateCompoundParams) 
 		&i.ColorCode,
 		&i.Measurement,
 		&i.Price,
-		&i.DepartmentID,
+		&i.BranchID,
+		&i.IngredientGroupID,
 		&i.CostPrice,
 		&i.Profit,
 		&i.ProfitMargin,
@@ -1436,13 +1427,8 @@ SET cost_price = $2,
     profit_margin = $4,
     updated_at = NOW()
 WHERE compounds.id = $1 AND deleted_at = 0
-  AND EXISTS (
-    SELECT 1 FROM departments d
-    JOIN storages s ON s.id = d.storage_id
-    WHERE d.id = compounds.department_id
-      AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-  )
-RETURNING compounds.id, compounds.name, compounds.name_i18n, compounds.description, compounds.description_i18n, compounds.quantity, compounds.picture_url, compounds.color_code, compounds.measurement, compounds.price, compounds.department_id, compounds.cost_price, compounds.profit, compounds.profit_margin, compounds.created_at, compounds.updated_at, compounds.deleted_at
+  AND compounds.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+RETURNING compounds.id, compounds.name, compounds.name_i18n, compounds.description, compounds.description_i18n, compounds.quantity, compounds.picture_url, compounds.color_code, compounds.measurement, compounds.price, compounds.branch_id, compounds.ingredient_group_id, compounds.cost_price, compounds.profit, compounds.profit_margin, compounds.created_at, compounds.updated_at, compounds.deleted_at
 `
 
 type UpdateCompoundCostFieldsParams struct {
@@ -1452,14 +1438,35 @@ type UpdateCompoundCostFieldsParams struct {
 	ProfitMargin pgtype.Numeric `json:"profit_margin"`
 }
 
-func (q *Queries) UpdateCompoundCostFields(ctx context.Context, arg UpdateCompoundCostFieldsParams) (Compound, error) {
+type UpdateCompoundCostFieldsRow struct {
+	ID                uuid.UUID           `json:"id"`
+	Name              string              `json:"name"`
+	NameI18n          pgtype.UUID         `json:"name_i18n"`
+	Description       *string             `json:"description"`
+	DescriptionI18n   pgtype.UUID         `json:"description_i18n"`
+	Quantity          *int32              `json:"quantity"`
+	PictureUrl        *string             `json:"picture_url"`
+	ColorCode         *string             `json:"color_code"`
+	Measurement       NullMeasurementType `json:"measurement"`
+	Price             pgtype.Numeric      `json:"price"`
+	BranchID          pgtype.UUID         `json:"branch_id"`
+	IngredientGroupID pgtype.UUID         `json:"ingredient_group_id"`
+	CostPrice         pgtype.Numeric      `json:"cost_price"`
+	Profit            pgtype.Numeric      `json:"profit"`
+	ProfitMargin      pgtype.Numeric      `json:"profit_margin"`
+	CreatedAt         pgtype.Timestamptz  `json:"created_at"`
+	UpdatedAt         pgtype.Timestamptz  `json:"updated_at"`
+	DeletedAt         *int64              `json:"deleted_at"`
+}
+
+func (q *Queries) UpdateCompoundCostFields(ctx context.Context, arg UpdateCompoundCostFieldsParams) (UpdateCompoundCostFieldsRow, error) {
 	row := q.db.QueryRow(ctx, updateCompoundCostFields,
 		arg.ID,
 		arg.CostPrice,
 		arg.Profit,
 		arg.ProfitMargin,
 	)
-	var i Compound
+	var i UpdateCompoundCostFieldsRow
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
@@ -1471,7 +1478,8 @@ func (q *Queries) UpdateCompoundCostFields(ctx context.Context, arg UpdateCompou
 		&i.ColorCode,
 		&i.Measurement,
 		&i.Price,
-		&i.DepartmentID,
+		&i.BranchID,
+		&i.IngredientGroupID,
 		&i.CostPrice,
 		&i.Profit,
 		&i.ProfitMargin,
@@ -1491,18 +1499,14 @@ SET compound_id = COALESCE($2, compound_id),
 WHERE compounds_details.id = $1 AND deleted_at = 0
   AND EXISTS (
     SELECT 1 FROM compounds c
-    JOIN departments d ON d.id = c.department_id
-    JOIN storages s ON s.id = d.storage_id
     WHERE c.id = compounds_details.compound_id
-      AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+      AND c.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
   )
   AND (
     $2 IS NULL OR EXISTS (
       SELECT 1 FROM compounds c2
-      JOIN departments d2 ON d2.id = c2.department_id
-      JOIN storages s2 ON s2.id = d2.storage_id
       WHERE c2.id = $2
-        AND s2.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+        AND c2.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
     )
   )
   AND (
@@ -1547,13 +1551,8 @@ UPDATE compounds
 SET price = $2,
     updated_at = NOW()
 WHERE compounds.id = $1 AND deleted_at = 0
-  AND EXISTS (
-    SELECT 1 FROM departments d
-    JOIN storages s ON s.id = d.storage_id
-    WHERE d.id = compounds.department_id
-      AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-  )
-RETURNING compounds.id, compounds.name, compounds.name_i18n, compounds.description, compounds.description_i18n, compounds.quantity, compounds.picture_url, compounds.color_code, compounds.measurement, compounds.price, compounds.department_id, compounds.cost_price, compounds.profit, compounds.profit_margin, compounds.created_at, compounds.updated_at, compounds.deleted_at
+  AND compounds.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+RETURNING compounds.id, compounds.name, compounds.name_i18n, compounds.description, compounds.description_i18n, compounds.quantity, compounds.picture_url, compounds.color_code, compounds.measurement, compounds.price, compounds.branch_id, compounds.ingredient_group_id, compounds.cost_price, compounds.profit, compounds.profit_margin, compounds.created_at, compounds.updated_at, compounds.deleted_at
 `
 
 type UpdateCompoundPriceParams struct {
@@ -1561,9 +1560,30 @@ type UpdateCompoundPriceParams struct {
 	Price pgtype.Numeric `json:"price"`
 }
 
-func (q *Queries) UpdateCompoundPrice(ctx context.Context, arg UpdateCompoundPriceParams) (Compound, error) {
+type UpdateCompoundPriceRow struct {
+	ID                uuid.UUID           `json:"id"`
+	Name              string              `json:"name"`
+	NameI18n          pgtype.UUID         `json:"name_i18n"`
+	Description       *string             `json:"description"`
+	DescriptionI18n   pgtype.UUID         `json:"description_i18n"`
+	Quantity          *int32              `json:"quantity"`
+	PictureUrl        *string             `json:"picture_url"`
+	ColorCode         *string             `json:"color_code"`
+	Measurement       NullMeasurementType `json:"measurement"`
+	Price             pgtype.Numeric      `json:"price"`
+	BranchID          pgtype.UUID         `json:"branch_id"`
+	IngredientGroupID pgtype.UUID         `json:"ingredient_group_id"`
+	CostPrice         pgtype.Numeric      `json:"cost_price"`
+	Profit            pgtype.Numeric      `json:"profit"`
+	ProfitMargin      pgtype.Numeric      `json:"profit_margin"`
+	CreatedAt         pgtype.Timestamptz  `json:"created_at"`
+	UpdatedAt         pgtype.Timestamptz  `json:"updated_at"`
+	DeletedAt         *int64              `json:"deleted_at"`
+}
+
+func (q *Queries) UpdateCompoundPrice(ctx context.Context, arg UpdateCompoundPriceParams) (UpdateCompoundPriceRow, error) {
 	row := q.db.QueryRow(ctx, updateCompoundPrice, arg.ID, arg.Price)
-	var i Compound
+	var i UpdateCompoundPriceRow
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
@@ -1575,7 +1595,8 @@ func (q *Queries) UpdateCompoundPrice(ctx context.Context, arg UpdateCompoundPri
 		&i.ColorCode,
 		&i.Measurement,
 		&i.Price,
-		&i.DepartmentID,
+		&i.BranchID,
+		&i.IngredientGroupID,
 		&i.CostPrice,
 		&i.Profit,
 		&i.ProfitMargin,

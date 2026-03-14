@@ -34,7 +34,7 @@ func (h *Handler) CreateGood(c echo.Context) error {
 		))
 	}
 
-	resp, err := h.service.Goods().CreateGood(c.Request().Context(), req.Name, req.Description, req.NameI18n, req.DescriptionI18n, req.CategoryID, req.DepartmentID, req.Price, req.CookTime, req.PictureUrl, req.ColorCode)
+	resp, err := h.service.Goods().CreateGood(c.Request().Context(), req.Name, req.Description, req.NameI18n, req.DescriptionI18n, req.CategoryID, req.Price, req.CookTime, req.PictureUrl, req.ColorCode)
 	if err != nil {
 		log.Printf("CreateGood failed: %v", err)
 		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse(
@@ -127,8 +127,6 @@ func (h *Handler) GetAllGoods(c echo.Context) error {
 	}
 
 	categoryID := c.QueryParam("category_id")
-	departmentID := c.QueryParam("department_id")
-	storageID := c.QueryParam("storage_id")
 	search := c.QueryParam("search")
 	lang := c.QueryParam("lang")
 
@@ -136,8 +134,8 @@ func (h *Handler) GetAllGoods(c echo.Context) error {
 	var total int64
 	var err error
 
-	if categoryID != "" || departmentID != "" || storageID != "" || search != "" {
-		goods, total, err = h.service.Goods().GetAllGoodsFiltered(c.Request().Context(), categoryID, departmentID, storageID, search, lang, limit, offset)
+	if categoryID != "" || search != "" {
+		goods, total, err = h.service.Goods().GetAllGoodsFiltered(c.Request().Context(), categoryID, search, lang, limit, offset)
 	} else {
 		goods, total, err = h.service.Goods().GetAllGoods(c.Request().Context(), limit, offset)
 	}
@@ -219,31 +217,7 @@ func (h *Handler) GetGoodsByCategory(c echo.Context) error {
 // @Failure 500 {object} model.ErrorResponse
 // @Router /api/v1/departments/{department_id}/goods [get]
 func (h *Handler) GetGoodsByDepartment(c echo.Context) error {
-	departmentID := c.Param("department_id")
-	if departmentID == "" {
-		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("department_id is required", "see logs for details", http.StatusInternalServerError))
-	}
-
-	limit := int32(20)
-	if l := c.QueryParam("limit"); l != "" {
-		if val, err := strconv.Atoi(l); err == nil {
-			limit = int32(val)
-		}
-	}
-
-	offset := int32(0)
-	if o := c.QueryParam("offset"); o != "" {
-		if val, err := strconv.Atoi(o); err == nil {
-			offset = int32(val)
-		}
-	}
-
-	resp, err := h.service.Goods().GetGoodsByDepartment(c.Request().Context(), departmentID, limit, offset)
-	if err != nil {
-		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("Operation failed", err.Error(), http.StatusInternalServerError))
-	}
-
-	return c.JSON(http.StatusOK, resp)
+	return c.JSON(http.StatusGone, model.NewErrorResponse("Endpoint deprecated", "Use GET /api/v1/goods with category_id filter instead", http.StatusGone))
 }
 
 // GetGoodsByPriceRange retrieves goods within a price range
@@ -319,7 +293,7 @@ func (h *Handler) UpdateGood(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("invalid request", "see logs for details", http.StatusInternalServerError))
 	}
 
-	resp, err := h.service.Goods().UpdateGood(c.Request().Context(), id, req.Name, req.Description, req.NameI18n, req.DescriptionI18n, req.CategoryID, req.DepartmentID, req.Price, req.CookTime, req.PictureUrl, req.ColorCode)
+	resp, err := h.service.Goods().UpdateGood(c.Request().Context(), id, req.Name, req.Description, req.NameI18n, req.DescriptionI18n, req.CategoryID, req.Price, req.CookTime, req.PictureUrl, req.ColorCode)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("Operation failed", err.Error(), http.StatusInternalServerError))
 	}
@@ -568,7 +542,6 @@ func (h *Handler) CreateGoodWithCalculations(c echo.Context) error {
 		req.Good.NameI18n,
 		req.Good.DescriptionI18n,
 		req.Good.CategoryID,
-		req.Good.DepartmentID,
 		req.Good.Price,
 		req.Good.CookTime,
 		req.Good.PictureUrl,
@@ -725,7 +698,6 @@ func (h *Handler) UpdateGoodWithCalculations(c echo.Context) error {
 		req.Good.NameI18n,
 		req.Good.DescriptionI18n,
 		req.Good.CategoryID,
-		req.Good.DepartmentID,
 		req.Good.Price,
 		req.Good.CookTime,
 		req.Good.PictureUrl,
@@ -892,16 +864,14 @@ func (h *Handler) GetAllGoodsWithLang(c echo.Context) error {
 	}
 
 	categoryID := c.QueryParam("category_id")
-	departmentID := c.QueryParam("department_id")
-	storageID := c.QueryParam("storage_id")
 	search := c.QueryParam("search")
 
 	var goods []*model.GoodResponse
 	var total int64
 	var err error
 
-	if categoryID != "" || departmentID != "" || storageID != "" || search != "" {
-		goods, total, err = h.service.Goods().GetAllGoodsFiltered(c.Request().Context(), categoryID, departmentID, storageID, search, lang, limit, offset)
+	if categoryID != "" || search != "" {
+		goods, total, err = h.service.Goods().GetAllGoodsFiltered(c.Request().Context(), categoryID, search, lang, limit, offset)
 	} else {
 		goods, total, err = h.service.Goods().GetAllGoodsWithLang(c.Request().Context(), lang, limit, offset)
 	}

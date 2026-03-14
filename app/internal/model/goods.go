@@ -8,7 +8,6 @@ type CreateGoodRequest struct {
 	NameI18n        *string `json:"name_i18n,omitempty" example:"123e4567-e89b-12d3-a456-426614174000"`
 	DescriptionI18n *string `json:"description_i18n,omitempty" example:"123e4567-e89b-12d3-a456-426614174000"`
 	CategoryID      *string `json:"category_id,omitempty" example:"123e4567-e89b-12d3-a456-426614174000"`
-	DepartmentID    *string `json:"department_id,omitempty" example:"123e4567-e89b-12d3-a456-426614174000"`
 	PictureUrl      *string `json:"picture_url,omitempty" example:"https://example.com/pizza-margherita.jpg"`
 	ColorCode       *string `json:"color_code,omitempty" example:"#FF5733"`
 	Price           string  `json:"price" binding:"required" example:"15000.00"`
@@ -21,7 +20,6 @@ type UpdateGoodRequest struct {
 	NameI18n        *string `json:"name_i18n,omitempty" example:"123e4567-e89b-12d3-a456-426614174000"`
 	DescriptionI18n *string `json:"description_i18n,omitempty" example:"123e4567-e89b-12d3-a456-426614174000"`
 	CategoryID      *string `json:"category_id,omitempty" example:"123e4567-e89b-12d3-a456-426614174000"`
-	DepartmentID    *string `json:"department_id,omitempty" example:"123e4567-e89b-12d3-a456-426614174000"`
 	PictureUrl      *string `json:"picture_url,omitempty" example:"https://example.com/pizza-margherita.jpg"`
 	ColorCode       *string `json:"color_code,omitempty" example:"#FF5733"`
 	Price           *string `json:"price,omitempty" example:"15000.00"`
@@ -39,7 +37,7 @@ type GoodResponse struct {
 	NameI18n        *string `json:"name_i18n,omitempty" example:"123e4567-e89b-12d3-a456-426614174000"`
 	DescriptionI18n *string `json:"description_i18n,omitempty" example:"123e4567-e89b-12d3-a456-426614174000"`
 	CategoryID      *string `json:"category_id,omitempty" example:"123e4567-e89b-12d3-a456-426614174000"`
-	DepartmentID    *string `json:"department_id,omitempty" example:"123e4567-e89b-12d3-a456-426614174000"`
+	BranchID        *string `json:"branch_id,omitempty" example:"123e4567-e89b-12d3-a456-426614174000"`
 	PictureUrl      *string `json:"picture_url,omitempty" example:"https://example.com/pizza-margherita.jpg"`
 	ColorCode       *string `json:"color_code,omitempty" example:"#FF5733"`
 	Price           string  `json:"price" example:"15000.00"`
