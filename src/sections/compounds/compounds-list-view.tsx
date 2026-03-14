@@ -225,7 +225,7 @@ function renderCompoundSpecifications(item: ICompound, t: any) {
             label: t('semifinishedProducts.measurement'),
             value: t(`semifinishedProducts.${item.measurement}`, item.measurement),
         },
-        { label: t('semifinishedProducts.department'), value: item.department_name || '-' },
+        { label: t('ingredients.group'), value: item.ingredient_group_name || '-' },
         { label: t('semifinishedProducts.quantity'), value: item.quantity },
         { label: t('semifinishedProducts.price'), value: formatPrice(Number(item.price)) },
         { label: t('semifinishedProducts.createdAt'), value: formatDate(item.created_at) },
@@ -264,7 +264,7 @@ export function HalfMeals() {
         search: debouncedSearchQuery,
         limit: paginationModel.pageSize,
         offset: paginationModel.page * paginationModel.pageSize,
-        expand: 'department_id,name_i18n,description_i18n',
+        expand: 'ingredient_group_id,name_i18n,description_i18n',
     });
     const { deleteCompound } = useDeleteCompound();
     const { deleteCompounds } = useDeleteCompounds();
@@ -285,15 +285,15 @@ export function HalfMeals() {
         [t]
     );
 
-    // Department options for filtering (derived from expanded compounds to avoid extra API call)
-    const departmentOptions = useMemo(() => {
+    // Ingredient group options for filtering (derived from expanded compounds to avoid extra API call)
+    const ingredientGroupOptions = useMemo(() => {
         const map = new Map<string, string>();
         compounds.forEach((comp: any) => {
-            const dept = comp?._expand?.department_id;
-            if (dept?.id && dept?.name) {
-                map.set(dept.id, dept.name);
-            } else if (comp?.department_id && comp?.department_name) {
-                map.set(comp.department_id, comp.department_name);
+            const group = comp?._expand?.ingredient_group_id;
+            if (group?.id && group?.name) {
+                map.set(group.id, group.name);
+            } else if (comp?.ingredient_group_id && comp?.ingredient_group_name) {
+                map.set(comp.ingredient_group_id, comp.ingredient_group_name);
             }
         });
         return Array.from(map.entries()).map(([value, label]) => ({ value, label }));
@@ -436,10 +436,10 @@ export function HalfMeals() {
                     href: paths.menu.semifinished.new,
                 }}
                 filterOptions={{
-                    department_id: departmentOptions,
+                    ingredient_group_id: ingredientGroupOptions,
                 }}
                 initialFilters={{
-                    department_id: [],
+                    ingredient_group_id: [],
                 }}
                 hideColumns={{}}
                 hideColumnsTogglable={['actions']}

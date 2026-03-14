@@ -10,7 +10,7 @@ import { useRouter } from 'src/routes/hooks';
 import { endpoints } from 'src/lib/axios';
 import { useTranslationsAPI } from 'src/hooks/use-translations-api';
 import { useGetCompound, useDeleteCompound, useUpdateCompound, useCreateCompoundWithCalculations } from 'src/hooks/use-compounds';
-import { useGetDepartments } from 'src/actions/departments';
+import { useGetIngredientGroups } from 'src/actions/ingredient-group';
 import { toast } from 'src/components/snackbar';
 import { GenericEditView } from 'src/components/generic-edit-view';
 import { CustomBreadcrumbs } from 'src/components/custom-breadcrumbs';
@@ -70,8 +70,8 @@ const BASIC_INFO_SECTION: CardSection = {
             defaultValue: '',
         },
         {
-            key: 'department_id',
-            label: 'semifinishedProducts.department',
+            key: 'ingredient_group_id',
+            label: 'ingredients.group',
             type: 'text',
             required: true,
         },
@@ -145,7 +145,7 @@ export function CompoundEditView({ compoundId, isNew = false }: CompoundEditView
 
     // SWR hooks
     const { compound, compoundLoading } = useGetCompound(isNew ? '' : compoundId || '');
-    const { departments } = useGetDepartments();
+    const { ingredientGroups } = useGetIngredientGroups();
     const { updateCompound } = useUpdateCompound();
     const { deleteCompound } = useDeleteCompound();
     const { createTranslation, updateTranslation } = useTranslationsAPI();
@@ -177,7 +177,7 @@ export function CompoundEditView({ compoundId, isNew = false }: CompoundEditView
                 description: '',
                 description_en: '',
                 description_ru: '',
-                department_id: '',
+                ingredient_group_id: '',
                 price: '',
                 quantity: '',
                 measurement: 'kg',
@@ -285,7 +285,7 @@ export function CompoundEditView({ compoundId, isNew = false }: CompoundEditView
                         price: String(submitFormData.price),
                         quantity: Number(submitFormData.quantity),
                         measurement: submitFormData.measurement,
-                        department_id: submitFormData.department_id,
+                        ingredient_group_id: submitFormData.ingredient_group_id,
                         picture_url: submitFormData.picture_url || null,
                     };
                     await updateCompound(compoundId, payload);
@@ -324,17 +324,17 @@ export function CompoundEditView({ compoundId, isNew = false }: CompoundEditView
     const BASIC_INFO_SECTION_T = translateSection(BASIC_INFO_SECTION, t);
     const PRICING_SECTION_T = translateSection(PRICING_SECTION, t);
 
-    // Add department options dynamically
+    // Add ingredient group options dynamically
     const BASIC_INFO_WITH_DEPS = {
         ...BASIC_INFO_SECTION_T,
         fields: BASIC_INFO_SECTION_T.fields?.map((field) => {
-            if (field.key === 'department_id') {
+            if (field.key === 'ingredient_group_id') {
                 return {
                     ...field,
                     type: 'select' as const,
-                    options: departments.map((dept: any) => ({
-                        value: dept.id,
-                        label: dept.name,
+                    options: ingredientGroups.map((group: any) => ({
+                        value: group.id,
+                        label: group.name,
                     })),
                 };
             }

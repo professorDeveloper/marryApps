@@ -5,7 +5,7 @@
 export type ISemifinishedTableFilters = {
     status?: string[];
     name?: string;
-    departmentId?: string;
+    ingredientGroupId?: string;
 };
 
 export type ICompound = {
@@ -21,8 +21,8 @@ export type ICompound = {
     measurement: string;
     picture_url?: string | null;
     price: string | number;
-    department_id: string;
-    department_name?: string; // Will be fetched from department API
+    ingredient_group_id: string;
+    ingredient_group_name?: string; // Will be fetched from ingredient groups API
     created_at: string;
     updated_at: string;
 };
