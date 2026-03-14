@@ -226,7 +226,7 @@ export const endpoints = {
     categories: (departmentId: string) => `/api/v1/categories/department/${departmentId}`,
   },
   compound: {
-    list: '/api/v1/compounds',
+    list: '/api/v1/compounds-lang',
     search: '/api/v1/compounds/search',
     details: (id: string) => `/api/v1/compounds/${id}`,
     withCalculations: (id: string) => `/api/v1/compounds/${id}/with-calculations`,
@@ -248,7 +248,7 @@ export const endpoints = {
     delete: (id: string) => `/api/v1/storages/${id}`,
   },
   meals: {
-    list: '/api/v1/goods',
+    list: '/api/v1/goods-lang',
     search: '/api/v1/goods/search',
     details: (id: string) => `/api/v1/goods/${id}`,
     withCalculations: (id: string) => `/api/v1/goods/${id}/with-calculations`,

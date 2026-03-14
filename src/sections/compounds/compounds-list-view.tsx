@@ -322,12 +322,12 @@ export function HalfMeals() {
                 width: 140,
                 renderCell: (params) => <RenderCellPrice params={params} />,
             },
-            {
-                field: 'department_name',
-                headerName: t('semifinishedProducts.department'),
-                width: 150,
-                type: 'string',
-            },
+            // {
+            //     field: 'department_name',
+            //     headerName: t('semifinishedProducts.department'),
+            //     width: 150,
+            //     type: 'string',
+            // },
             {
                 field: 'quantity',
                 headerName: t('semifinishedProducts.quantity'),

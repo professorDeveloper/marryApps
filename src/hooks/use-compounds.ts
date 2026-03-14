@@ -324,7 +324,12 @@ export function useGetCompoundsPage(params?: {
     const normalizedQuery = params?.search?.trim() || '';
     const limit = typeof params?.limit === 'number' ? params?.limit : 20;
     const offset = typeof params?.offset === 'number' ? params?.offset : 0;
-    const expand = params?.expand || 'department_id,name_i18n,description_i18n';
+    const rawExpand = params?.expand || 'name_i18n,description_i18n';
+    const expand = rawExpand
+        .split(',')
+        .map((item) => item.trim())
+        .filter((item) => item && item !== 'department_id')
+        .join(',');
 
     const swrKey = normalizedQuery
         ? [endpoints.compound.search, { params: { q: normalizedQuery, limit, offset, expand } }]

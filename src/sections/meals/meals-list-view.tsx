@@ -390,16 +390,16 @@ export function Meals() {
                     return categoryMap.get(params.value) || params.row.category?.name || params.value || '-';
                 },
             },
-            {
-                field: 'department_id',
-                headerName: t('mealsProducts.department'),
-                width: 150,
-                type: 'string',
-                renderCell: (params) => {
-                    // Use the translated department name from departmentMap
-                    return departmentMap.get(params.value) || params.row.department?.name || params.value || '-';
-                },
-            },
+            // {
+            //     field: 'department_id',
+            //     headerName: t('mealsProducts.department'),
+            //     width: 150,
+            //     type: 'string',
+            //     renderCell: (params) => {
+            //         // Use the translated department name from departmentMap
+            //         return departmentMap.get(params.value) || params.row.department?.name || params.value || '-';
+            //     },
+            // },
             {
                 field: 'price',
                 headerName: t('mealsProducts.price'),

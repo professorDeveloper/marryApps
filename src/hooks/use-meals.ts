@@ -377,7 +377,12 @@ export function useGetMealsPage(filters?: MealsFilters) {
     const normalizedQuery = filters?.query?.trim() || '';
     const limit = typeof filters?.limit === 'number' ? filters?.limit : 20;
     const offset = typeof filters?.offset === 'number' ? filters?.offset : 0;
-    const expand = filters?.expand || 'category_id,department_id,name_i18n';
+    const rawExpand = filters?.expand || 'category_id,name_i18n';
+    const expand = rawExpand
+        .split(',')
+        .map((item) => item.trim())
+        .filter((item) => item && item !== 'department_id')
+        .join(',');
 
     const params: Record<string, string | number> = {
         limit,

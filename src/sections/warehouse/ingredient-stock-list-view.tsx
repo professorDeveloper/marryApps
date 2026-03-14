@@ -112,32 +112,32 @@ function IngredientStockListView() {
                 minWidth: 150,
                 renderCell: (params) => new Date(params.value).toLocaleDateString(),
             },
-            {
-                field: 'actions',
-                type: 'actions',
-                headerName: t('actions'),
-                // flex: 0.8,
-                width: 100,
-                sortable: false,
-                filterable: false,
-                getActions: (params) => [
-                    // <CustomGridActionsCellItem
-                    //     key="edit"
-                    //     icon={<Iconify icon="solar:pen-bold" />}
-                    //     label={t('edit')}
-                    //     onClick={() => handleEditOpen(params.row)}
-                    //     showInMenu
-                    // />,
-                    <CustomGridActionsCellItem
-                        key="delete"
-                        icon={<Iconify icon="solar:trash-bin-trash-bold" />}
-                        label={t('delete')}
-                        onClick={() => handleDeleteOpen(params.row.id)}
-                        style={{ color: '#FB6633' }}
-                        // showInMenu
-                    />,
-                ],
-            },
+            // {
+            //     field: 'actions',
+            //     type: 'actions',
+            //     headerName: t('actions'),
+            //     // flex: 0.8,
+            //     width: 100,
+            //     sortable: false,
+            //     filterable: false,
+            //     getActions: (params) => [
+            //         // <CustomGridActionsCellItem
+            //         //     key="edit"
+            //         //     icon={<Iconify icon="solar:pen-bold" />}
+            //         //     label={t('edit')}
+            //         //     onClick={() => handleEditOpen(params.row)}
+            //         //     showInMenu
+            //         // />,
+            //         <CustomGridActionsCellItem
+            //             key="delete"
+            //             icon={<Iconify icon="solar:trash-bin-trash-bold" />}
+            //             label={t('delete')}
+            //             onClick={() => handleDeleteOpen(params.row.id)}
+            //             style={{ color: '#FB6633' }}
+            //             // showInMenu
+            //         />,
+            //     ],
+            // },
         ],
         [t]
     );
