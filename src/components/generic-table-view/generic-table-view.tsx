@@ -322,6 +322,8 @@ export function GenericTableView<T extends Record<string, any>>({
     [onQuickFilterChange]
   );
 
+  const gridHeight = 'clamp(320px, 70vh, 800px)';
+
   return (
     <>
       <DashboardContent
@@ -363,8 +365,9 @@ export function GenericTableView<T extends Record<string, any>>({
           sx={{
             display: 'flex',
             flexDirection: 'column',
-            height: 'auto',
+            height: gridHeight,
             minHeight: 0,
+            overflow: 'hidden',
           }}
         >
           <DataGrid
@@ -409,6 +412,8 @@ export function GenericTableView<T extends Record<string, any>>({
               },
             }}
             sx={{
+              flex: 1,
+              minHeight: 0,
               border: 0,
               '& .MuiDataGrid-root': {
                 border: 0,
