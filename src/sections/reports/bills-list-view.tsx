@@ -21,6 +21,7 @@ import { Iconify } from 'src/components/iconify';
 import { CustomGridActionsCellItem } from 'src/components/custom-data-grid';
 import { RenderCellItem, GenericTableView } from 'src/components/generic-table-view';
 import { GenericViewModal } from 'src/components/generic-view-view/GenericViewModal';
+import { NoDataTooltip } from 'src/components/no-data-tooltip';
 
 const toUtcDayBoundary = (value: dayjs.Dayjs, endOfDay = false): string => {
     const date = new Date(
@@ -38,6 +39,7 @@ const toUtcDayBoundary = (value: dayjs.Dayjs, endOfDay = false): string => {
 
 export function BillsListView() {
     const { t, i18n } = useTranslation('menu');
+    const noDataText = t('noDataAvailable', "Tushunarli ma'lumot mavjud emas");
 
     // Modal state
     const [selectedBillId, setSelectedBillId] = useState<string | null>(null);
@@ -103,6 +105,9 @@ export function BillsListView() {
         }),
         [waiters, halls, t]
     );
+
+    const isWaitersEmpty = filterOptions.waiter_id.length === 0;
+    const isHallsEmpty = filterOptions.hall_id.length === 0;
 
     // Render bill details modal content
     const renderBillDetailsContent = useCallback((billData: any) => {
@@ -546,7 +551,9 @@ export function BillsListView() {
                 fullWidth
                 InputLabelProps={{ shrink: true }}
             >
-                <option value="">{t('ingredientReports.all') || 'All'}</option>
+                <option value="" disabled hidden>
+                    {t('ingredientReports.all') || 'All'}
+                </option>
                 {filterOptions.bill_status.map((option) => (
                     <option key={option.value} value={option.value}>
                         {option.label}
@@ -565,7 +572,9 @@ export function BillsListView() {
                 fullWidth
                 InputLabelProps={{ shrink: true }}
             >
-                <option value="">{t('ingredientReports.all') || 'All'}</option>
+                <option value="" disabled hidden>
+                    {t('ingredientReports.all') || 'All'}
+                </option>
                 {filterOptions.payment_type.map((option) => (
                     <option key={option.value} value={option.value}>
                         {option.label}
@@ -574,42 +583,52 @@ export function BillsListView() {
             </TextField>
 
             {/* Waiter */}
-            <TextField
-                select
-                label={t('bills.waiter') || 'Waiter'}
-                value={filters.waiter_id}
-                onChange={(e) => handleWaiterChange(e.target.value)}
-                SelectProps={{ native: true }}
-                size="small"
-                fullWidth
-                InputLabelProps={{ shrink: true }}
-            >
-                <option value="">{t('ingredientReports.all') || 'All'}</option>
-                {filterOptions.waiter_id.map((option) => (
-                    <option key={option.value} value={option.value}>
-                        {option.label}
+            <NoDataTooltip enabled={isWaitersEmpty} title={noDataText}>
+                <TextField
+                    select
+                    label={t('bills.waiter') || 'Waiter'}
+                    value={filters.waiter_id}
+                    onChange={(e) => handleWaiterChange(e.target.value)}
+                    SelectProps={{ native: true }}
+                    size="small"
+                    fullWidth
+                    InputLabelProps={{ shrink: true }}
+                    disabled={isWaitersEmpty}
+                >
+                    <option value="" disabled hidden>
+                        {t('ingredientReports.all') || 'All'}
                     </option>
-                ))}
-            </TextField>
+                    {filterOptions.waiter_id.map((option) => (
+                        <option key={option.value} value={option.value}>
+                            {option.label}
+                        </option>
+                    ))}
+                </TextField>
+            </NoDataTooltip>
 
             {/* Hall */}
-            <TextField
-                select
-                label={t('bills.hall') || 'Hall'}
-                value={filters.hall_id}
-                onChange={(e) => handleHallChange(e.target.value)}
-                SelectProps={{ native: true }}
-                size="small"
-                fullWidth
-                InputLabelProps={{ shrink: true }}
-            >
-                <option value="">{t('ingredientReports.all') || 'All'}</option>
-                {filterOptions.hall_id.map((option) => (
-                    <option key={option.value} value={option.value}>
-                        {option.label}
+            <NoDataTooltip enabled={isHallsEmpty} title={noDataText}>
+                <TextField
+                    select
+                    label={t('bills.hall') || 'Hall'}
+                    value={filters.hall_id}
+                    onChange={(e) => handleHallChange(e.target.value)}
+                    SelectProps={{ native: true }}
+                    size="small"
+                    fullWidth
+                    InputLabelProps={{ shrink: true }}
+                    disabled={isHallsEmpty}
+                >
+                    <option value="" disabled hidden>
+                        {t('ingredientReports.all') || 'All'}
                     </option>
-                ))}
-            </TextField>
+                    {filterOptions.hall_id.map((option) => (
+                        <option key={option.value} value={option.value}>
+                            {option.label}
+                        </option>
+                    ))}
+                </TextField>
+            </NoDataTooltip>
 
             {/* Action Buttons */}
             <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>

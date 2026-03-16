@@ -41,6 +41,7 @@
   "error": "Error",
   "success": "Success",
   "noData": "No data",
+  "noDataAvailable": "No data available",
   "search": "Search",
   "filter": "Filter",
   "sort": "Sort",

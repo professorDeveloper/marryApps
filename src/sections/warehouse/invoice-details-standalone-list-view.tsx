@@ -15,6 +15,7 @@ import { Iconify } from 'src/components/iconify';
 import { CustomGridActionsCellItem } from 'src/components/custom-data-grid';
 import { GenericTableView } from 'src/components/generic-table-view';
 import { GenericViewModal } from 'src/components/generic-view-view';
+import { NoDataTooltip } from 'src/components/no-data-tooltip';
 import { DataGrid } from '@mui/x-data-grid';
 import { fetcher } from 'src/lib/axios';
 
@@ -108,6 +109,7 @@ let staticDataPromise: Promise<{
 
 export function InvoiceDetailsStandaloneListView() {
     const { t } = useTranslation('menu');
+    const noDataText = t('noDataAvailable', "Tushunarli ma'lumot mavjud emas");
     const theme = {
         vars: {
             palette: {
@@ -125,6 +127,10 @@ export function InvoiceDetailsStandaloneListView() {
     const [suppliers, setSuppliers] = useState<any[]>([]);
     const [storages, setStorages] = useState<any[]>([]);
     const [ingredients, setIngredients] = useState<any[]>([]);
+
+    const isSuppliersEmpty = suppliers.length === 0;
+    const isStoragesEmpty = storages.length === 0;
+    const isIngredientsEmpty = ingredients.length === 0;
     const [selectedInvoiceDetails, setSelectedInvoiceDetails] = useState<InvoiceDetailWithInvoiceInfo[]>([]);
     const [loading, setLoading] = useState(true);
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -538,11 +544,16 @@ export function InvoiceDetailsStandaloneListView() {
                             display: 'grid',
                             gridTemplateColumns: {
                                 xs: '1fr',
-                                sm: '1fr 1fr',
-                                md: 'repeat(3, 1fr)',
-                                lg: 'repeat(4, 1fr)',
+                                sm: 'repeat(2, minmax(220px, 1fr))',
+                                md: 'repeat(3, minmax(220px, 1fr))',
+                                lg: 'repeat(4, minmax(220px, 1fr))',
                             },
-                            gap: 1.5,
+                            gap: 2,
+                            alignItems: 'end',
+                            '& .MuiFormControl-root, & .MuiTextField-root': {
+                                minWidth: 220,
+                                width: '100%',
+                            },
                         }}
                     >
                         <DatePicker
@@ -583,69 +594,84 @@ export function InvoiceDetailsStandaloneListView() {
                                 },
                             }}
                         />
-                        <TextField
-                            select
-                            size="small"
-                            label={t('invoices.storage', 'Storage')}
-                            SelectProps={{ native: true }}
-                            value={draftFilters.storage_id || ''}
-                            onChange={(e) =>
-                                setDraftFilters((prev) => ({
-                                    ...prev,
-                                    storage_id: e.target.value,
-                                }))
-                            }
-                            InputLabelProps={{ shrink: true }}
-                        >
-                            <option value="">{t('ingredientReports.all', 'All')}</option>
-                            {storages.map((storage) => (
-                                <option key={storage.id} value={storage.id}>
-                                    {storage.name || storage.id}
+                        <NoDataTooltip enabled={isStoragesEmpty} title={noDataText}>
+                            <TextField
+                                select
+                                size="small"
+                                label={t('invoices.storage', 'Storage')}
+                                SelectProps={{ native: true }}
+                                value={draftFilters.storage_id || ''}
+                                onChange={(e) =>
+                                    setDraftFilters((prev) => ({
+                                        ...prev,
+                                        storage_id: e.target.value,
+                                    }))
+                                }
+                                InputLabelProps={{ shrink: true }}
+                                disabled={isStoragesEmpty}
+                            >
+                                <option value="" disabled hidden>
+                                    {t('ingredientReports.all', 'All')}
                                 </option>
-                            ))}
-                        </TextField>
-                        <TextField
-                            select
-                            size="small"
-                            label={t('invoices.name', 'Supplier')}
-                            SelectProps={{ native: true }}
-                            value={draftFilters.supplier_id || ''}
-                            onChange={(e) =>
-                                setDraftFilters((prev) => ({
-                                    ...prev,
-                                    supplier_id: e.target.value,
-                                }))
-                            }
-                            InputLabelProps={{ shrink: true }}
-                        >
-                            <option value="">{t('ingredientReports.all', 'All')}</option>
-                            {suppliers.map((supplier) => (
-                                <option key={supplier.id} value={supplier.id}>
-                                    {supplier.name || supplier.id}
+                                {storages.map((storage) => (
+                                    <option key={storage.id} value={storage.id}>
+                                        {storage.name || storage.id}
+                                    </option>
+                                ))}
+                            </TextField>
+                        </NoDataTooltip>
+                        <NoDataTooltip enabled={isSuppliersEmpty} title={noDataText}>
+                            <TextField
+                                select
+                                size="small"
+                                label={t('invoices.name', 'Supplier')}
+                                SelectProps={{ native: true }}
+                                value={draftFilters.supplier_id || ''}
+                                onChange={(e) =>
+                                    setDraftFilters((prev) => ({
+                                        ...prev,
+                                        supplier_id: e.target.value,
+                                    }))
+                                }
+                                InputLabelProps={{ shrink: true }}
+                                disabled={isSuppliersEmpty}
+                            >
+                                <option value="" disabled hidden>
+                                    {t('ingredientReports.all', 'All')}
                                 </option>
-                            ))}
-                        </TextField>
-                        <TextField
-                            select
-                            size="small"
-                            label={t('ingredient', 'Ingredient')}
-                            SelectProps={{ native: true }}
-                            value={draftFilters.ingredient_id || ''}
-                            onChange={(e) =>
-                                setDraftFilters((prev) => ({
-                                    ...prev,
-                                    ingredient_id: e.target.value,
-                                }))
-                            }
-                            InputLabelProps={{ shrink: true }}
-                        >
-                            <option value="">{t('ingredientReports.all', 'All')}</option>
-                            {ingredients.map((ingredient) => (
-                                <option key={ingredient.id} value={ingredient.id}>
-                                    {ingredient.name || ingredient.id}
+                                {suppliers.map((supplier) => (
+                                    <option key={supplier.id} value={supplier.id}>
+                                        {supplier.name || supplier.id}
+                                    </option>
+                                ))}
+                            </TextField>
+                        </NoDataTooltip>
+                        <NoDataTooltip enabled={isIngredientsEmpty} title={noDataText}>
+                            <TextField
+                                select
+                                size="small"
+                                label={t('ingredient', 'Ingredient')}
+                                SelectProps={{ native: true }}
+                                value={draftFilters.ingredient_id || ''}
+                                onChange={(e) =>
+                                    setDraftFilters((prev) => ({
+                                        ...prev,
+                                        ingredient_id: e.target.value,
+                                    }))
+                                }
+                                InputLabelProps={{ shrink: true }}
+                                disabled={isIngredientsEmpty}
+                            >
+                                <option value="" disabled hidden>
+                                    {t('ingredientReports.all', 'All')}
                                 </option>
-                            ))}
-                        </TextField>
+                                {ingredients.map((ingredient) => (
+                                    <option key={ingredient.id} value={ingredient.id}>
+                                        {ingredient.name || ingredient.id}
+                                    </option>
+                                ))}
+                            </TextField>
+                        </NoDataTooltip>
                         <TextField
                             select
                             size="small"
@@ -660,7 +686,9 @@ export function InvoiceDetailsStandaloneListView() {
                             }
                             InputLabelProps={{ shrink: true }}
                         >
-                            <option value="">{t('ingredientReports.all', 'All')}</option>
+                            <option value="" disabled hidden>
+                                {t('ingredientReports.all', 'All')}
+                            </option>
                             <option value="pending">{t('warehouse.invoices.statuses.pending', 'Pending')}</option>
                             <option value="arrived">{t('warehouse.invoices.statuses.arrived', 'Arrived')}</option>
                             <option value="received">{t('warehouse.invoices.statuses.received', 'Received')}</option>

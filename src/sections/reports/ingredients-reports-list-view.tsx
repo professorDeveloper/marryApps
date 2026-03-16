@@ -21,6 +21,7 @@ import { useGetStorages } from 'src/actions/departments';
 import { Iconify } from 'src/components/iconify';
 import { GenericTableView } from 'src/components/generic-table-view';
 import { GenericViewModal } from 'src/components/generic-view-view/GenericViewModal';
+import { NoDataTooltip } from 'src/components/no-data-tooltip';
 
 const toUtcDayBoundary = (value: dayjs.Dayjs, endOfDay = false): string => {
     const date = new Date(
@@ -38,6 +39,7 @@ const toUtcDayBoundary = (value: dayjs.Dayjs, endOfDay = false): string => {
 
 export function IngredientReportsListView() {
     const { t } = useTranslation('menu');
+    const noDataText = t('noDataAvailable', "Tushunarli ma'lumot mavjud emas");
 
     // Get filter options from APIs
     const { ingredients } = useGetIngredients();
@@ -118,6 +120,9 @@ export function IngredientReportsListView() {
         }),
         [ingredients, storages]
     );
+
+    const isStoragesEmpty = filterOptions.storage_id.length === 0;
+    const isIngredientsEmpty = filterOptions.ingredient_id.length === 0;
 
     const handleOpenAmountsModal = useCallback((row: any) => {
         setSelectedAmountsData(row);
@@ -375,30 +380,35 @@ export function IngredientReportsListView() {
     const renderFiltersContent = () => (
         <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: 'repeat(4, 1fr)', lg: 'repeat(5, 1fr)' }, gap: 1.5 }}>
             {/* Storage - Required */}
-            <TextField
-                select
-                label={t('ingredientReports.storage') || 'Storage'}
-                value={selectedStorageId}
-                onChange={(e) => handleStorageChange(e.target.value)}
-                SelectProps={{ native: true }}
-                size="small"
-                fullWidth
-                InputLabelProps={{ shrink: true }}
-                sx={{
-                    '& .MuiOutlinedInput-root': {
-                        '&.Mui-focused fieldset': {
-                            borderColor: '#1890FF',
+            <NoDataTooltip enabled={isStoragesEmpty} title={noDataText}>
+                <TextField
+                    select
+                    label={t('ingredientReports.storage') || 'Storage'}
+                    value={selectedStorageId}
+                    onChange={(e) => handleStorageChange(e.target.value)}
+                    SelectProps={{ native: true }}
+                    size="small"
+                    fullWidth
+                    InputLabelProps={{ shrink: true }}
+                    sx={{
+                        '& .MuiOutlinedInput-root': {
+                            '&.Mui-focused fieldset': {
+                                borderColor: '#1890FF',
+                            },
                         },
-                    },
-                }}
-            >
-                <option value="">{t('common.select') || 'Select Storage'}</option>
-                {filterOptions.storage_id.map((option) => (
-                    <option key={option.value} value={option.value}>
-                        {option.label}
+                    }}
+                    disabled={isStoragesEmpty}
+                >
+                    <option value="" disabled hidden>
+                        {t('common.select') || 'Select Storage'}
                     </option>
-                ))}
-            </TextField>
+                    {filterOptions.storage_id.map((option) => (
+                        <option key={option.value} value={option.value}>
+                            {option.label}
+                        </option>
+                    ))}
+                </TextField>
+            </NoDataTooltip>
 
             {/* Start Date - Required */}
             <DatePicker
@@ -434,23 +444,28 @@ export function IngredientReportsListView() {
             />
 
             {/* Ingredient - Optional */}
-            <TextField
-                select
-                label={t('ingredientReports.ingredient') || 'Ingredient'}
-                value={filters.ingredient_id}
-                onChange={(e) => handleIngredientChange(e.target.value)}
-                SelectProps={{ native: true }}
-                size="small"
-                fullWidth
-                InputLabelProps={{ shrink: true }}
-            >
-                <option value="">{t('ingredientReports.all') || 'All'}</option>
-                {filterOptions.ingredient_id.map((option) => (
-                    <option key={option.value} value={option.value}>
-                        {option.label}
+            <NoDataTooltip enabled={isIngredientsEmpty} title={noDataText}>
+                <TextField
+                    select
+                    label={t('ingredientReports.ingredient') || 'Ingredient'}
+                    value={filters.ingredient_id}
+                    onChange={(e) => handleIngredientChange(e.target.value)}
+                    SelectProps={{ native: true }}
+                    size="small"
+                    fullWidth
+                    InputLabelProps={{ shrink: true }}
+                    disabled={isIngredientsEmpty}
+                >
+                    <option value="" disabled hidden>
+                        {t('ingredientReports.all') || 'All'}
                     </option>
-                ))}
-            </TextField>
+                    {filterOptions.ingredient_id.map((option) => (
+                        <option key={option.value} value={option.value}>
+                            {option.label}
+                        </option>
+                    ))}
+                </TextField>
+            </NoDataTooltip>
 
             {/* Action Buttons */}
             {/* <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>

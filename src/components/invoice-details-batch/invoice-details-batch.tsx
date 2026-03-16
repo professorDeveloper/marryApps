@@ -25,6 +25,7 @@ import {
 } from '@mui/material';
 import { toast } from 'sonner';
 import { Iconify } from 'src/components/iconify';
+import { NoDataTooltip } from 'src/components/no-data-tooltip';
 import { useInvoiceDetailsAPI } from 'src/hooks/use-invoice-details-api';
 import { IngredientEditView } from 'src/sections/warehouse/ingredients-edit-view';
 
@@ -58,6 +59,7 @@ export function InvoiceDetailsBatch({ invoiceId, storageId, supplierId, onSucces
     const { t } = useTranslation('menu');
     const theme = useTheme();
     const { getIngredients, createInvoiceDetailsBatch, createInvoiceBatch } = useInvoiceDetailsAPI();
+    const noDataText = t('noDataAvailable', "Tushunarli ma'lumot mavjud emas");
     // Tab state
     const [currentTab, setCurrentTab] = useState(0);
 
@@ -226,6 +228,9 @@ export function InvoiceDetailsBatch({ invoiceId, storageId, supplierId, onSucces
         return ingredients.filter((ing) => !usedIds.has(ing.id));
     }, [ingredients, batchItems, editingIndex]);
 
+    const isIngredientsEmpty = ingredientOptions.length === 0;
+    const isIngredientSelectDisabled = loading || isIngredientsEmpty;
+
     const handleRefreshIngredients = async () => {
         try {
             setLoading(true);
@@ -281,24 +286,28 @@ export function InvoiceDetailsBatch({ invoiceId, storageId, supplierId, onSucces
                                 }}
                             >
                                 {/* Ingredient Select */}
-                                <TextField
-                                    select
-                                    label={t('warehouse.invoiceDetails.product')}
-                                    value={selectedIngredient}
-                                    onChange={(e) => setSelectedIngredient(e.target.value)}
-                                    SelectProps={{
-                                        native: true,
-                                    }}
-                                    fullWidth
-                                    disabled={loading || ingredientOptions.length === 0}
-                                >
-                                    <option value="">{t('warehouse.invoiceDetails.selectProduct')}</option>
-                                    {ingredientOptions.map((ing) => (
-                                        <option key={ing.id} value={ing.id}>
-                                            {ing.name}
+                                <NoDataTooltip enabled={isIngredientsEmpty} title={noDataText}>
+                                    <TextField
+                                        select
+                                        label={t('warehouse.invoiceDetails.product')}
+                                        value={selectedIngredient}
+                                        onChange={(e) => setSelectedIngredient(e.target.value)}
+                                        SelectProps={{
+                                            native: true,
+                                        }}
+                                        fullWidth
+                                        disabled={isIngredientSelectDisabled}
+                                    >
+                                        <option value="" disabled hidden>
+                                            {t('warehouse.invoiceDetails.selectProduct')}
                                         </option>
-                                    ))}
-                                </TextField>
+                                        {ingredientOptions.map((ing) => (
+                                            <option key={ing.id} value={ing.id}>
+                                                {ing.name}
+                                            </option>
+                                        ))}
+                                    </TextField>
+                                </NoDataTooltip>
 
                                 {/* Quantity Input */}
                                 <TextField

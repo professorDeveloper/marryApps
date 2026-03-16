@@ -328,7 +328,6 @@ export function HalfMeals() {
             //     width: 150,
             //     type: 'string',
             // },
-            
             {
                 field: 'quantity',
                 headerName: t('semifinishedProducts.quantity'),

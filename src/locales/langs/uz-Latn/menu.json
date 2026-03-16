@@ -38,6 +38,7 @@
   "error": "Xato",
   "success": "Muvaffaqiyat",
   "noData": "Ma'lumot yo'q",
+  "noDataAvailable": "Ma'lumot mavjud emas",
   "search": "Qidirish",
   "filter": "Filtr",
   "sort": "Tartiblash",

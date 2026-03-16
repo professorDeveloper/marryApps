@@ -26,6 +26,7 @@ import { CustomGridActionsCellItem } from 'src/components/custom-data-grid';
 import { GenericViewModal, SpecificationsTable } from 'src/components/generic-view-view';
 import { GenericTableView } from 'src/components/generic-table-view';
 import { formatPrice } from 'src/components/generic-view-view/modal-formatters';
+import { NoDataTooltip } from 'src/components/no-data-tooltip';
 
 const initialFilters = {
     category_id: '',
@@ -218,6 +219,7 @@ function renderMealsSpecifications(item: IMealsItem, t: any) {
 export function Meals() {
     const theme = useTheme();
     const { t, i18n } = useTranslation('menu');
+    const noDataText = t('noDataAvailable', "Tushunarli ma'lumot mavjud emas");
     const [searchQuery, setSearchQuery] = useState('');
     const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
     const [filters, setFilters] = useState(initialFilters);
@@ -316,6 +318,9 @@ export function Meals() {
     const departmentOptions = useMemo(() => {
         return Array.from(departmentMap.entries()).map(([id, name]) => ({ id, name }));
     }, [departmentMap]);
+
+    const isCategoryEmpty = categoryOptions.length === 0;
+    const isDepartmentEmpty = departmentOptions.length === 0;
 
     // View modal hook'i
     const { isOpen, selectedData, openModal, closeModal } = useGenericViewModal<IMealsItem>();
@@ -499,55 +504,70 @@ export function Meals() {
                             display: 'grid',
                             gridTemplateColumns: {
                                 xs: '1fr',
-                                sm: '1fr 1fr',
-                                md: 'repeat(3, 1fr)',
-                                lg: 'repeat(4, 1fr)',
+                                sm: 'repeat(2, minmax(220px, 1fr))',
+                                md: 'repeat(3, minmax(220px, 1fr))',
+                                lg: 'repeat(4, minmax(220px, 1fr))',
                             },
-                            gap: 1.5,
+                            gap: 2,
+                            alignItems: 'end',
+                            '& .MuiFormControl-root, & .MuiTextField-root': {
+                                minWidth: 220,
+                                width: '100%',
+                            },
                         }}
                     >
-                        <TextField
-                            select
-                            size="small"
-                            label={t('mealsProducts.category')}
-                            SelectProps={{ native: true }}
-                            value={draftFilters.category_id || ''}
-                            onChange={(e) =>
-                                setDraftFilters((prev) => ({
-                                    ...prev,
-                                    category_id: e.target.value,
-                                }))
-                            }
-                            InputLabelProps={{ shrink: true }}
-                        >
-                            <option value="">{t('ingredientReports.all', 'All')}</option>
-                            {categoryOptions.map((category: any) => (
-                                <option key={category.id} value={category.id}>
-                                    {category.name || category.id}
+                        <NoDataTooltip enabled={isCategoryEmpty} title={noDataText}>
+                            <TextField
+                                select
+                                size="small"
+                                label={t('mealsProducts.category')}
+                                SelectProps={{ native: true }}
+                                value={draftFilters.category_id || ''}
+                                onChange={(e) =>
+                                    setDraftFilters((prev) => ({
+                                        ...prev,
+                                        category_id: e.target.value,
+                                    }))
+                                }
+                                InputLabelProps={{ shrink: true }}
+                                disabled={isCategoryEmpty}
+                            >
+                                <option value="" disabled hidden>
+                                    {t('ingredientReports.all', 'All')}
                                 </option>
-                            ))}
-                        </TextField>
-                        <TextField
-                            select
-                            size="small"
-                            label={t('mealsProducts.department')}
-                            SelectProps={{ native: true }}
-                            value={draftFilters.department_id || ''}
-                            onChange={(e) =>
-                                setDraftFilters((prev) => ({
-                                    ...prev,
-                                    department_id: e.target.value,
-                                }))
-                            }
-                            InputLabelProps={{ shrink: true }}
-                        >
-                            <option value="">{t('ingredientReports.all', 'All')}</option>
-                            {departmentOptions.map((department: any) => (
-                                <option key={department.id} value={department.id}>
-                                    {department.name || department.id}
+                                {categoryOptions.map((category: any) => (
+                                    <option key={category.id} value={category.id}>
+                                        {category.name || category.id}
+                                    </option>
+                                ))}
+                            </TextField>
+                        </NoDataTooltip>
+                        <NoDataTooltip enabled={isDepartmentEmpty} title={noDataText}>
+                            <TextField
+                                select
+                                size="small"
+                                label={t('mealsProducts.department')}
+                                SelectProps={{ native: true }}
+                                value={draftFilters.department_id || ''}
+                                onChange={(e) =>
+                                    setDraftFilters((prev) => ({
+                                        ...prev,
+                                        department_id: e.target.value,
+                                    }))
+                                }
+                                InputLabelProps={{ shrink: true }}
+                                disabled={isDepartmentEmpty}
+                            >
+                                <option value="" disabled hidden>
+                                    {t('ingredientReports.all', 'All')}
                                 </option>
-                            ))}
-                        </TextField>
+                                {departmentOptions.map((department: any) => (
+                                    <option key={department.id} value={department.id}>
+                                        {department.name || department.id}
+                                    </option>
+                                ))}
+                            </TextField>
+                        </NoDataTooltip>
                         {/* <TextField
                             select
                             size="small"
@@ -562,7 +582,9 @@ export function Meals() {
                             }
                             InputLabelProps={{ shrink: true }}
                         >
-                            <option value="">{t('ingredientReports.all', 'All')}</option>
+                            <option value="" disabled hidden>
+                                {t('ingredientReports.all', 'All')}
+                            </option>
                             {storages.map((storage: any) => (
                                 <option key={storage.id} value={storage.id}>
                                     {storage.name || storage.id}
