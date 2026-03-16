@@ -403,6 +403,162 @@ func (q *Queries) GetCalculationsByIngredientID(ctx context.Context, ingredientI
 	return items, nil
 }
 
+const getCompoundIDsByIngredient = `-- name: GetCompoundIDsByIngredient :many
+SELECT DISTINCT compound_id FROM calculation
+WHERE ingredient_id = $1 AND compound_id IS NOT NULL AND deleted_at = 0
+`
+
+func (q *Queries) GetCompoundIDsByIngredient(ctx context.Context, ingredientID pgtype.UUID) ([]pgtype.UUID, error) {
+	rows, err := q.db.Query(ctx, getCompoundIDsByIngredient, ingredientID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []pgtype.UUID
+	for rows.Next() {
+		var compound_id pgtype.UUID
+		if err := rows.Scan(&compound_id); err != nil {
+			return nil, err
+		}
+		items = append(items, compound_id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getDynamicCompoundCostFromChildCompounds = `-- name: GetDynamicCompoundCostFromChildCompounds :one
+SELECT COALESCE(SUM(c.quantity * comp.price), 0) AS total_cost
+FROM calculation c
+JOIN compounds comp ON c.component_compound_id = comp.id AND comp.deleted_at = 0
+WHERE c.compound_id = $1 AND c.component_compound_id IS NOT NULL AND c.deleted_at = 0
+`
+
+func (q *Queries) GetDynamicCompoundCostFromChildCompounds(ctx context.Context, compoundID pgtype.UUID) (interface{}, error) {
+	row := q.db.QueryRow(ctx, getDynamicCompoundCostFromChildCompounds, compoundID)
+	var total_cost interface{}
+	err := row.Scan(&total_cost)
+	return total_cost, err
+}
+
+const getDynamicCompoundCostFromIngredients = `-- name: GetDynamicCompoundCostFromIngredients :one
+SELECT COALESCE(SUM(c.quantity * i.price_per_unit), 0) AS total_cost
+FROM calculation c
+JOIN ingredients i ON c.ingredient_id = i.id AND i.deleted_at = 0
+WHERE c.compound_id = $1 AND c.ingredient_id IS NOT NULL AND c.deleted_at = 0
+`
+
+func (q *Queries) GetDynamicCompoundCostFromIngredients(ctx context.Context, compoundID pgtype.UUID) (interface{}, error) {
+	row := q.db.QueryRow(ctx, getDynamicCompoundCostFromIngredients, compoundID)
+	var total_cost interface{}
+	err := row.Scan(&total_cost)
+	return total_cost, err
+}
+
+const getDynamicGoodCostFromChildCompounds = `-- name: GetDynamicGoodCostFromChildCompounds :one
+SELECT COALESCE(SUM(c.quantity * comp.price), 0) AS total_cost
+FROM calculation c
+JOIN compounds comp ON c.component_compound_id = comp.id AND comp.deleted_at = 0
+WHERE c.good_id = $1 AND c.component_compound_id IS NOT NULL AND c.deleted_at = 0
+`
+
+func (q *Queries) GetDynamicGoodCostFromChildCompounds(ctx context.Context, goodID pgtype.UUID) (interface{}, error) {
+	row := q.db.QueryRow(ctx, getDynamicGoodCostFromChildCompounds, goodID)
+	var total_cost interface{}
+	err := row.Scan(&total_cost)
+	return total_cost, err
+}
+
+const getDynamicGoodCostFromIngredients = `-- name: GetDynamicGoodCostFromIngredients :one
+SELECT COALESCE(SUM(c.quantity * i.price_per_unit), 0) AS total_cost
+FROM calculation c
+JOIN ingredients i ON c.ingredient_id = i.id AND i.deleted_at = 0
+WHERE c.good_id = $1 AND c.ingredient_id IS NOT NULL AND c.deleted_at = 0
+`
+
+func (q *Queries) GetDynamicGoodCostFromIngredients(ctx context.Context, goodID pgtype.UUID) (interface{}, error) {
+	row := q.db.QueryRow(ctx, getDynamicGoodCostFromIngredients, goodID)
+	var total_cost interface{}
+	err := row.Scan(&total_cost)
+	return total_cost, err
+}
+
+const getGoodIDsByIngredient = `-- name: GetGoodIDsByIngredient :many
+SELECT DISTINCT good_id FROM calculation
+WHERE ingredient_id = $1 AND good_id IS NOT NULL AND deleted_at = 0
+`
+
+func (q *Queries) GetGoodIDsByIngredient(ctx context.Context, ingredientID pgtype.UUID) ([]pgtype.UUID, error) {
+	rows, err := q.db.Query(ctx, getGoodIDsByIngredient, ingredientID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []pgtype.UUID
+	for rows.Next() {
+		var good_id pgtype.UUID
+		if err := rows.Scan(&good_id); err != nil {
+			return nil, err
+		}
+		items = append(items, good_id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getParentCompoundIDsByChildCompound = `-- name: GetParentCompoundIDsByChildCompound :many
+SELECT DISTINCT compound_id FROM calculation
+WHERE component_compound_id = $1 AND compound_id IS NOT NULL AND deleted_at = 0
+`
+
+func (q *Queries) GetParentCompoundIDsByChildCompound(ctx context.Context, componentCompoundID pgtype.UUID) ([]pgtype.UUID, error) {
+	rows, err := q.db.Query(ctx, getParentCompoundIDsByChildCompound, componentCompoundID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []pgtype.UUID
+	for rows.Next() {
+		var compound_id pgtype.UUID
+		if err := rows.Scan(&compound_id); err != nil {
+			return nil, err
+		}
+		items = append(items, compound_id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getParentGoodIDsByChildCompound = `-- name: GetParentGoodIDsByChildCompound :many
+SELECT DISTINCT good_id FROM calculation
+WHERE component_compound_id = $1 AND good_id IS NOT NULL AND deleted_at = 0
+`
+
+func (q *Queries) GetParentGoodIDsByChildCompound(ctx context.Context, componentCompoundID pgtype.UUID) ([]pgtype.UUID, error) {
+	rows, err := q.db.Query(ctx, getParentGoodIDsByChildCompound, componentCompoundID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []pgtype.UUID
+	for rows.Next() {
+		var good_id pgtype.UUID
+		if err := rows.Scan(&good_id); err != nil {
+			return nil, err
+		}
+		items = append(items, good_id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getTotalCostByCompoundID = `-- name: GetTotalCostByCompoundID :one
 SELECT COALESCE(SUM(total_cost), 0) as total_cost
 FROM calculation
@@ -483,4 +639,42 @@ func (q *Queries) UpdateCalculation(ctx context.Context, arg UpdateCalculationPa
 		&i.DeletedAt,
 	)
 	return i, err
+}
+
+const updateCalculationsByChildCompoundPrice = `-- name: UpdateCalculationsByChildCompoundPrice :exec
+UPDATE calculation
+SET price_per_unit = $2,
+    total_cost     = quantity * $2,
+    updated_at     = NOW()
+WHERE component_compound_id = $1 AND deleted_at = 0
+`
+
+type UpdateCalculationsByChildCompoundPriceParams struct {
+	ComponentCompoundID pgtype.UUID    `json:"component_compound_id"`
+	PricePerUnit        pgtype.Numeric `json:"price_per_unit"`
+}
+
+func (q *Queries) UpdateCalculationsByChildCompoundPrice(ctx context.Context, arg UpdateCalculationsByChildCompoundPriceParams) error {
+	_, err := q.db.Exec(ctx, updateCalculationsByChildCompoundPrice, arg.ComponentCompoundID, arg.PricePerUnit)
+	return err
+}
+
+const updateCalculationsByIngredientPrice = `-- name: UpdateCalculationsByIngredientPrice :exec
+
+UPDATE calculation
+SET price_per_unit = $2,
+    total_cost     = quantity * $2,
+    updated_at     = NOW()
+WHERE ingredient_id = $1 AND deleted_at = 0
+`
+
+type UpdateCalculationsByIngredientPriceParams struct {
+	IngredientID pgtype.UUID    `json:"ingredient_id"`
+	PricePerUnit pgtype.Numeric `json:"price_per_unit"`
+}
+
+// Dynamic price recalculation queries -----------------------------------------
+func (q *Queries) UpdateCalculationsByIngredientPrice(ctx context.Context, arg UpdateCalculationsByIngredientPriceParams) error {
+	_, err := q.db.Exec(ctx, updateCalculationsByIngredientPrice, arg.IngredientID, arg.PricePerUnit)
+	return err
 }

@@ -411,6 +411,8 @@ func (s *InvoiceS) CreateInvoiceDetail(ctx context.Context, invoiceID string, re
 	})
 	if err != nil {
 		fmt.Printf("Warning: failed to update ingredient price_per_unit: %v\n", err)
+	} else {
+		triggerPriceRecalculation(ctx, s.repo, ingredientUUID)
 	}
 
 	// Auto-set visibility for current branch on invoice receive
@@ -560,6 +562,8 @@ func (s *InvoiceS) CreateInvoiceDetailsBatch(ctx context.Context, invoiceID stri
 		})
 		if err != nil {
 			fmt.Printf("Warning: failed to update ingredient price_per_unit for item %d: %v\n", i+1, err)
+		} else {
+			triggerPriceRecalculation(ctx, s.repo, ingredientUUID)
 		}
 
 		// Auto-set visibility for current branch on invoice receive
@@ -811,6 +815,7 @@ func (s *InvoiceS) UpdateInvoiceDetail(ctx context.Context, id string, req *mode
 			ID:           updateIngredientID,
 			PricePerUnit: updatePricePerUnit,
 		})
+		triggerPriceRecalculation(ctx, s.repo, updateIngredientID)
 	}
 
 	sourceID := currentDetail.InvoiceID
@@ -1165,6 +1170,7 @@ func (s *InvoiceS) UpsertInvoiceDetails(ctx context.Context, invoiceID string, r
 			ID:           ingredientUUID,
 			PricePerUnit: pricePerUnit,
 		})
+		triggerPriceRecalculation(ctx, s.repo, ingredientUUID)
 		_ = s.repo.Tenant(ctx).EnsureIngredientVisibilityForCurrentBranch(ctx, ingredientUUID)
 
 		if err := s.applyInvoiceStockMovement(ctx, invoice.StorageID, ingredientUUID, qty, zeroNumeric(), "invoice_batch_update_in", pricePerUnit, invoiceUUID); err != nil {
@@ -1543,6 +1549,7 @@ func (s *InvoiceS) CreateInvoiceWithDetails(ctx context.Context, req *model.Crea
 		if err != nil {
 			return nil, fmt.Errorf("item %d: failed to update ingredient price_per_unit: %w", i+1, err)
 		}
+		triggerPriceRecalculation(ctx, s.repo, ingredientUUID)
 
 		// Auto-set visibility for current branch on invoice receive
 		_ = s.repo.Tenant(ctx).EnsureIngredientVisibilityForCurrentBranch(ctx, ingredientUUID)

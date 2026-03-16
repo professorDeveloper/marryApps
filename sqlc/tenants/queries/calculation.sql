@@ -94,3 +94,59 @@ LIMIT $2 OFFSET $3;
 -- name: CountCalculationsByCompoundID :one
 SELECT COUNT(*) FROM calculation
 WHERE compound_id = $1 AND deleted_at = 0;
+
+-- Dynamic price recalculation queries -----------------------------------------
+
+-- name: UpdateCalculationsByIngredientPrice :exec
+UPDATE calculation
+SET price_per_unit = $2,
+    total_cost     = quantity * $2,
+    updated_at     = NOW()
+WHERE ingredient_id = $1 AND deleted_at = 0;
+
+-- name: UpdateCalculationsByChildCompoundPrice :exec
+UPDATE calculation
+SET price_per_unit = $2,
+    total_cost     = quantity * $2,
+    updated_at     = NOW()
+WHERE component_compound_id = $1 AND deleted_at = 0;
+
+-- name: GetCompoundIDsByIngredient :many
+SELECT DISTINCT compound_id FROM calculation
+WHERE ingredient_id = $1 AND compound_id IS NOT NULL AND deleted_at = 0;
+
+-- name: GetGoodIDsByIngredient :many
+SELECT DISTINCT good_id FROM calculation
+WHERE ingredient_id = $1 AND good_id IS NOT NULL AND deleted_at = 0;
+
+-- name: GetParentCompoundIDsByChildCompound :many
+SELECT DISTINCT compound_id FROM calculation
+WHERE component_compound_id = $1 AND compound_id IS NOT NULL AND deleted_at = 0;
+
+-- name: GetParentGoodIDsByChildCompound :many
+SELECT DISTINCT good_id FROM calculation
+WHERE component_compound_id = $1 AND good_id IS NOT NULL AND deleted_at = 0;
+
+-- name: GetDynamicCompoundCostFromIngredients :one
+SELECT COALESCE(SUM(c.quantity * i.price_per_unit), 0) AS total_cost
+FROM calculation c
+JOIN ingredients i ON c.ingredient_id = i.id AND i.deleted_at = 0
+WHERE c.compound_id = $1 AND c.ingredient_id IS NOT NULL AND c.deleted_at = 0;
+
+-- name: GetDynamicCompoundCostFromChildCompounds :one
+SELECT COALESCE(SUM(c.quantity * comp.price), 0) AS total_cost
+FROM calculation c
+JOIN compounds comp ON c.component_compound_id = comp.id AND comp.deleted_at = 0
+WHERE c.compound_id = $1 AND c.component_compound_id IS NOT NULL AND c.deleted_at = 0;
+
+-- name: GetDynamicGoodCostFromIngredients :one
+SELECT COALESCE(SUM(c.quantity * i.price_per_unit), 0) AS total_cost
+FROM calculation c
+JOIN ingredients i ON c.ingredient_id = i.id AND i.deleted_at = 0
+WHERE c.good_id = $1 AND c.ingredient_id IS NOT NULL AND c.deleted_at = 0;
+
+-- name: GetDynamicGoodCostFromChildCompounds :one
+SELECT COALESCE(SUM(c.quantity * comp.price), 0) AS total_cost
+FROM calculation c
+JOIN compounds comp ON c.component_compound_id = comp.id AND comp.deleted_at = 0
+WHERE c.good_id = $1 AND c.component_compound_id IS NOT NULL AND c.deleted_at = 0;
