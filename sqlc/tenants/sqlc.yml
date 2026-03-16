@@ -29,6 +29,8 @@ sql:
       - "../../app/migrations/tenants/24_category_remove_storage.up.sql"
       - "../../app/migrations/tenants/25_goods_compounds_branch_id.up.sql"
       - "../../app/migrations/tenants/26_compounds_ingredient_group.up.sql"
+      - "../../app/migrations/tenants/27_compound_quantity_numeric.up.sql"
+      - "../../app/migrations/tenants/28_invoice_status_deleted.up.sql"
 
 
     gen:

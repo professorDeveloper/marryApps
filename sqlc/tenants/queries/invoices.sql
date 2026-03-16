@@ -73,6 +73,7 @@ UPDATE invoices
 SET status = 'arrived',
     updated_at = NOW()
 WHERE invoices.id = $1
+  AND status = 'pending'
   AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
   AND deleted_at = 0
 RETURNING id, supplier_id, storage_id, branch_id, total_amount, status, date, created_at, updated_at, deleted_at;
@@ -91,6 +92,17 @@ UPDATE invoices
 SET status = 'cancelled',
     updated_at = NOW()
 WHERE invoices.id = $1
+  AND status = 'pending'
+  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  AND deleted_at = 0
+RETURNING id, supplier_id, storage_id, branch_id, total_amount, status, date, created_at, updated_at, deleted_at;
+
+-- name: MarkInvoiceDeleted :one
+UPDATE invoices
+SET status = 'deleted',
+    updated_at = NOW()
+WHERE invoices.id = $1
+  AND status = 'arrived'
   AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
   AND deleted_at = 0
 RETURNING id, supplier_id, storage_id, branch_id, total_amount, status, date, created_at, updated_at, deleted_at;

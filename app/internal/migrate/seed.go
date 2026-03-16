@@ -432,7 +432,7 @@ func seedTenantDB(ctx context.Context, db pg.DBTX) error {
 			NameI18n:        pgtype.UUID{Valid: false},
 			Description:     nil,
 			DescriptionI18n: pgtype.UUID{Valid: false},
-			Quantity:        nil,
+			Quantity:        pgtype.Numeric{},
 			PictureUrl:      nil,
 			ColorCode:       nil,
 			Measurement:     pg.NullMeasurementType{MeasurementType: pg.MeasurementType(comp.measurement), Valid: true},

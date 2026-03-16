@@ -23,7 +23,7 @@ type compoundRowFields struct {
 	NameI18n          pgtype.UUID
 	Description       *string
 	DescriptionI18n   pgtype.UUID
-	Quantity          *int32
+	Quantity          pgtype.Numeric
 	Measurement       pg.NullMeasurementType
 	Price             pgtype.Numeric
 	BranchID          pgtype.UUID
@@ -123,10 +123,7 @@ func compoundToResponseAny(row any) *model.CompoundResponse {
 		return nil
 	}
 
-	qty := int64(0)
-	if f.Quantity != nil {
-		qty = int64(*f.Quantity)
-	}
+	qtyF, _ := strconv.ParseFloat(numericToStr(f.Quantity), 64)
 
 	return &model.CompoundResponse{
 		ID:                f.ID.String(),
@@ -134,7 +131,7 @@ func compoundToResponseAny(row any) *model.CompoundResponse {
 		NameI18n:          uuidToStr(f.NameI18n),
 		Description:       f.Description,
 		DescriptionI18n:   uuidToStr(f.DescriptionI18n),
-		Quantity:          qty,
+		Quantity:          qtyF,
 		Measurement:       toMeasurementString(f.Measurement),
 		Price:             toPriceString(f.Price),
 		BranchID:          uuidToStr(f.BranchID),
@@ -207,7 +204,7 @@ func NewCompoundS(repo *repository.Repository) *CompoundS {
 	return &CompoundS{repo: repo}
 }
 
-func (c *CompoundS) CreateCompound(ctx context.Context, name string, nameI18n, description, descriptionI18n, measurement *string, quantity int32, price *string, pictureUrl *string, colorCode *string, ingredientGroupID *string) (*model.CompoundResponse, error) {
+func (c *CompoundS) CreateCompound(ctx context.Context, name string, nameI18n, description, descriptionI18n, measurement *string, quantity float64, price *string, pictureUrl *string, colorCode *string, ingredientGroupID *string) (*model.CompoundResponse, error) {
 	if name == "" {
 		return nil, fmt.Errorf("compound name is required")
 	}
@@ -257,7 +254,7 @@ func (c *CompoundS) CreateCompound(ctx context.Context, name string, nameI18n, d
 		NameI18n:          nameI18nUUID,
 		Description:       description,
 		DescriptionI18n:   descriptionI18nUUID,
-		Quantity:          &quantity,
+		Quantity:          stringToNumeric(fmt.Sprintf("%g", quantity)),
 		Measurement:       measurementType,
 		Price:             numPrice,
 		PictureUrl:        pictureUrl,
@@ -314,7 +311,7 @@ func (c *CompoundS) GetAllCompounds(ctx context.Context, limit, offset int32) ([
 }
 
 
-func (c *CompoundS) UpdateCompound(ctx context.Context, compoundID string, name, nameI18n, description, descriptionI18n, measurement *string, quantity *int32, price *string, pictureUrl *string, colorCode *string, ingredientGroupID *string) (*model.CompoundResponse, error) {
+func (c *CompoundS) UpdateCompound(ctx context.Context, compoundID string, name, nameI18n, description, descriptionI18n, measurement *string, quantity *float64, price *string, pictureUrl *string, colorCode *string, ingredientGroupID *string) (*model.CompoundResponse, error) {
 	id, err := uuid.Parse(compoundID)
 	if err != nil {
 		return nil, fmt.Errorf("invalid compound ID: %w", err)
@@ -358,7 +355,7 @@ func (c *CompoundS) UpdateCompound(ctx context.Context, compoundID string, name,
 
 	finalQuantity := existing.Quantity
 	if quantity != nil {
-		finalQuantity = quantity
+		finalQuantity = stringToNumeric(fmt.Sprintf("%g", *quantity))
 	}
 
 	finalMeasurement := existing.Measurement

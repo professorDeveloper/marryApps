@@ -172,12 +172,12 @@ type CategoryI interface {
 
 type CompoundI interface {
 	// Compound methods
-	CreateCompound(ctx context.Context, name string, nameI18n, description, descriptionI18n, measurement *string, quantity int32, price *string, pictureUrl *string, colorCode *string, ingredientGroupID *string) (*model.CompoundResponse, error)
+	CreateCompound(ctx context.Context, name string, nameI18n, description, descriptionI18n, measurement *string, quantity float64, price *string, pictureUrl *string, colorCode *string, ingredientGroupID *string) (*model.CompoundResponse, error)
 	GetCompoundByID(ctx context.Context, compoundID string) (*model.CompoundResponse, error)
 	GetAllCompounds(ctx context.Context, limit, offset int32) ([]*model.CompoundResponse, int64, error)
 	GetCompoundByIDWithLang(ctx context.Context, compoundID string, lang string) (*model.CompoundResponse, error)
 	GetAllCompoundsWithLang(ctx context.Context, lang string, limit, offset int32) ([]*model.CompoundResponse, int64, error)
-	UpdateCompound(ctx context.Context, compoundID string, name, nameI18n, description, descriptionI18n, measurement *string, quantity *int32, price *string, pictureUrl *string, colorCode *string, ingredientGroupID *string) (*model.CompoundResponse, error)
+	UpdateCompound(ctx context.Context, compoundID string, name, nameI18n, description, descriptionI18n, measurement *string, quantity *float64, price *string, pictureUrl *string, colorCode *string, ingredientGroupID *string) (*model.CompoundResponse, error)
 	DeleteCompound(ctx context.Context, compoundID string) error
 	RestoreCompound(ctx context.Context, compoundID string) (*model.CompoundResponse, error)
 	SearchCompounds(ctx context.Context, query string, limit, offset int32) ([]*model.CompoundResponse, error)

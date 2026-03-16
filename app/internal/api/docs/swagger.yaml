@@ -470,8 +470,8 @@ definitions:
         example: "500.50"
         type: string
       quantity:
-        example: 10
-        type: integer
+        example: 0.7
+        type: number
       updated_at:
         example: "2022-01-01T00:00:00Z"
         type: string
@@ -696,8 +696,8 @@ definitions:
         example: https://example.com/pizza-dough.jpg
         type: string
       quantity:
-        example: 10
-        type: integer
+        example: 0.7
+        type: number
     required:
     - name
     type: object
@@ -3329,8 +3329,8 @@ definitions:
         example: https://example.com/pizza-dough.jpg
         type: string
       quantity:
-        example: 10
-        type: integer
+        example: 0.7
+        type: number
     type: object
   model.UpdateCompoundStockRequest:
     properties:
@@ -3911,11 +3911,27 @@ definitions:
     type: object
   model.UpsertInvoiceDetailsRequest:
     properties:
+      date:
+        example: "2024-01-01T00:00:00Z"
+        type: string
       details:
         items:
           $ref: '#/definitions/model.UpsertInvoiceDetailEntry'
         minItems: 1
         type: array
+      status:
+        description: Optional invoice-level fields to update alongside details
+        example: arrived
+        type: string
+      storage_id:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+      supplier_id:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+      total_amount:
+        example: "600000"
+        type: string
     required:
     - details
     type: object
@@ -13971,8 +13987,11 @@ paths:
     put:
       consumes:
       - application/json
-      description: Replace all details of an invoice. Reverses old stock additions
-        and applies new quantities.
+      description: Replace all details of an invoice. Optionally update invoice-level
+        fields (status, supplier_id, storage_id, total_amount, date). Stock is applied
+        only when invoice status is or becomes 'arrived'. Setting status to 'arrived'
+        applies stock; it was already 'arrived', old stock is reversed and new stock
+        applied.
       parameters:
       - default: uz
         description: Language (uz, ru, en)
@@ -13984,7 +14003,7 @@ paths:
         name: id
         required: true
         type: string
-      - description: New invoice details
+      - description: Invoice fields (optional) + new details
         in: body
         name: request
         required: true

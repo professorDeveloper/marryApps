@@ -65,6 +65,7 @@ const (
 	InvoiceStatusArrived   InvoiceStatus = "arrived"
 	InvoiceStatusReceived  InvoiceStatus = "received"
 	InvoiceStatusCancelled InvoiceStatus = "cancelled"
+	InvoiceStatusDeleted   InvoiceStatus = "deleted"
 )
 
 func (e *InvoiceStatus) Scan(src interface{}) error {
@@ -655,7 +656,7 @@ type Compound struct {
 	NameI18n          pgtype.UUID         `json:"name_i18n"`
 	Description       *string             `json:"description"`
 	DescriptionI18n   pgtype.UUID         `json:"description_i18n"`
-	Quantity          *int32              `json:"quantity"`
+	Quantity          pgtype.Numeric      `json:"quantity"`
 	PictureUrl        *string             `json:"picture_url"`
 	ColorCode         *string             `json:"color_code"`
 	Measurement       NullMeasurementType `json:"measurement"`

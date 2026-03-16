@@ -15351,7 +15351,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Replace all details of an invoice. Reverses old stock additions and applies new quantities.",
+                "description": "Replace all details of an invoice. Optionally update invoice-level fields (status, supplier_id, storage_id, total_amount, date). Stock is applied only when invoice status is or becomes 'arrived'. Setting status to 'arrived' applies stock; it was already 'arrived', old stock is reversed and new stock applied.",
                 "consumes": [
                     "application/json"
                 ],
@@ -15378,7 +15378,7 @@ const docTemplate = `{
                         "required": true
                     },
                     {
-                        "description": "New invoice details",
+                        "description": "Invoice fields (optional) + new details",
                         "name": "request",
                         "in": "body",
                         "required": true,
@@ -23713,8 +23713,8 @@ const docTemplate = `{
                     "example": "500.50"
                 },
                 "quantity": {
-                    "type": "integer",
-                    "example": 10
+                    "type": "number",
+                    "example": 0.7
                 },
                 "updated_at": {
                     "type": "string",
@@ -24031,8 +24031,8 @@ const docTemplate = `{
                     "example": "https://example.com/pizza-dough.jpg"
                 },
                 "quantity": {
-                    "type": "integer",
-                    "example": 10
+                    "type": "number",
+                    "example": 0.7
                 }
             }
         },
@@ -27802,8 +27802,8 @@ const docTemplate = `{
                     "example": "https://example.com/pizza-dough.jpg"
                 },
                 "quantity": {
-                    "type": "integer",
-                    "example": 10
+                    "type": "number",
+                    "example": 0.7
                 }
             }
         },
@@ -28640,12 +28640,33 @@ const docTemplate = `{
                 "details"
             ],
             "properties": {
+                "date": {
+                    "type": "string",
+                    "example": "2024-01-01T00:00:00Z"
+                },
                 "details": {
                     "type": "array",
                     "minItems": 1,
                     "items": {
                         "$ref": "#/definitions/model.UpsertInvoiceDetailEntry"
                     }
+                },
+                "status": {
+                    "description": "Optional invoice-level fields to update alongside details",
+                    "type": "string",
+                    "example": "arrived"
+                },
+                "storage_id": {
+                    "type": "string",
+                    "example": "123e4567-e89b-12d3-a456-426614174000"
+                },
+                "supplier_id": {
+                    "type": "string",
+                    "example": "123e4567-e89b-12d3-a456-426614174000"
+                },
+                "total_amount": {
+                    "type": "string",
+                    "example": "600000"
                 }
             }
         },

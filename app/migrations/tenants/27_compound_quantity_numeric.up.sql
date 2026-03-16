@@ -1,0 +1,1 @@
+ALTER TABLE compounds ALTER COLUMN quantity TYPE NUMERIC USING quantity::NUMERIC;

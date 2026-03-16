@@ -17,6 +17,7 @@ UPDATE invoices
 SET status = 'cancelled',
     updated_at = NOW()
 WHERE invoices.id = $1
+  AND status = 'pending'
   AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
   AND deleted_at = 0
 RETURNING id, supplier_id, storage_id, branch_id, total_amount, status, date, created_at, updated_at, deleted_at
@@ -984,6 +985,7 @@ UPDATE invoices
 SET status = 'arrived',
     updated_at = NOW()
 WHERE invoices.id = $1
+  AND status = 'pending'
   AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
   AND deleted_at = 0
 RETURNING id, supplier_id, storage_id, branch_id, total_amount, status, date, created_at, updated_at, deleted_at
@@ -991,6 +993,35 @@ RETURNING id, supplier_id, storage_id, branch_id, total_amount, status, date, cr
 
 func (q *Queries) MarkInvoiceArrived(ctx context.Context, id uuid.UUID) (Invoice, error) {
 	row := q.db.QueryRow(ctx, markInvoiceArrived, id)
+	var i Invoice
+	err := row.Scan(
+		&i.ID,
+		&i.SupplierID,
+		&i.StorageID,
+		&i.BranchID,
+		&i.TotalAmount,
+		&i.Status,
+		&i.Date,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
+	)
+	return i, err
+}
+
+const markInvoiceDeleted = `-- name: MarkInvoiceDeleted :one
+UPDATE invoices
+SET status = 'deleted',
+    updated_at = NOW()
+WHERE invoices.id = $1
+  AND status = 'arrived'
+  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  AND deleted_at = 0
+RETURNING id, supplier_id, storage_id, branch_id, total_amount, status, date, created_at, updated_at, deleted_at
+`
+
+func (q *Queries) MarkInvoiceDeleted(ctx context.Context, id uuid.UUID) (Invoice, error) {
+	row := q.db.QueryRow(ctx, markInvoiceDeleted, id)
 	var i Invoice
 	err := row.Scan(
 		&i.ID,

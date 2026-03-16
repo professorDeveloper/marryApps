@@ -7,7 +7,7 @@ type CreateCompoundRequest struct {
 	NameI18n          *string `json:"name_i18n,omitempty" example:"123e4567-e89b-12d3-a456-426614174000"`
 	Description       *string `json:"description,omitempty" example:"Base dough for all pizzas"`
 	DescriptionI18n   *string `json:"description_i18n,omitempty" example:"123e4567-e89b-12d3-a456-426614174000"`
-	Quantity          int64   `json:"quantity" example:"10"`
+	Quantity          float64 `json:"quantity" example:"0.7"`
 	Measurement       *string `json:"measurement,omitempty" example:"kg"`
 	PictureUrl        *string `json:"picture_url,omitempty" example:"https://example.com/pizza-dough.jpg"`
 	ColorCode         *string `json:"color_code,omitempty" example:"#FF5733"`
@@ -19,7 +19,7 @@ type UpdateCompoundRequest struct {
 	NameI18n          *string `json:"name_i18n,omitempty" example:"123e4567-e89b-12d3-a456-426614174000"`
 	Description       *string `json:"description,omitempty" example:"Base dough for all pizzas"`
 	DescriptionI18n   *string `json:"description_i18n,omitempty" example:"123e4567-e89b-12d3-a456-426614174000"`
-	Quantity          *int64  `json:"quantity,omitempty" example:"10"`
+	Quantity          *float64 `json:"quantity,omitempty" example:"0.7"`
 	Measurement       *string `json:"measurement,omitempty" example:"kg"`
 	PictureUrl        *string `json:"picture_url,omitempty" example:"https://example.com/pizza-dough.jpg"`
 	ColorCode         *string `json:"color_code,omitempty" example:"#FF5733"`
@@ -32,7 +32,7 @@ type CompoundResponse struct {
 	NameI18n        *string `json:"name_i18n,omitempty" example:"123e4567-e89b-12d3-a456-426614174000"`
 	Description     *string `json:"description,omitempty" example:"Base dough for all pizzas"`
 	DescriptionI18n *string `json:"description_i18n,omitempty" example:"123e4567-e89b-12d3-a456-426614174000"`
-	Quantity        int64   `json:"quantity" example:"10"`
+	Quantity        float64 `json:"quantity" example:"0.7"`
 	Measurement     *string `json:"measurement,omitempty" example:"kg"`
 	PictureUrl      *string `json:"picture_url,omitempty" example:"https://example.com/pizza-dough.jpg"`
 	ColorCode       *string `json:"color_code,omitempty" example:"#FF5733"`

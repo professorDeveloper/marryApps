@@ -41,8 +41,7 @@ func (h *Handler) CreateCompound(c echo.Context) error {
 		))
 	}
 
-	quantity := int32(req.Quantity)
-	compound, err := h.service.Compound().CreateCompound(c.Request().Context(), req.Name, req.NameI18n, req.Description, req.DescriptionI18n, req.Measurement, quantity, nil, req.PictureUrl, req.ColorCode, req.IngredientGroupID)
+	compound, err := h.service.Compound().CreateCompound(c.Request().Context(), req.Name, req.NameI18n, req.Description, req.DescriptionI18n, req.Measurement, req.Quantity, nil, req.PictureUrl, req.ColorCode, req.IngredientGroupID)
 	if err != nil {
 		log.Printf("CreateCompound failed: %v", err)
 		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse(
@@ -192,13 +191,7 @@ func (h *Handler) UpdateCompound(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("invalid request format", err.Error(), http.StatusBadRequest))
 	}
 
-	var quantity *int32
-	if req.Quantity != nil {
-		q := int32(*req.Quantity)
-		quantity = &q
-	}
-
-	compound, err := h.service.Compound().UpdateCompound(c.Request().Context(), compoundID, req.Name, req.NameI18n, req.Description, req.DescriptionI18n, req.Measurement, quantity, nil, req.PictureUrl, req.ColorCode, req.IngredientGroupID)
+	compound, err := h.service.Compound().UpdateCompound(c.Request().Context(), compoundID, req.Name, req.NameI18n, req.Description, req.DescriptionI18n, req.Measurement, req.Quantity, nil, req.PictureUrl, req.ColorCode, req.IngredientGroupID)
 	if err != nil {
 		log.Printf("UpdateCompound failed for ID %s: %v", compoundID, err)
 		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("failed to update compound", err.Error(), http.StatusInternalServerError))
@@ -432,7 +425,6 @@ func (h *Handler) CreateCompoundWithCalculations(c echo.Context) error {
 	ctx := c.Request().Context()
 
 	// Step 1: Create the compound
-	quantity := int32(req.Compound.Quantity)
 	compoundResp, err := h.service.Compound().CreateCompound(
 		ctx,
 		req.Compound.Name,
@@ -440,7 +432,7 @@ func (h *Handler) CreateCompoundWithCalculations(c echo.Context) error {
 		req.Compound.Description,
 		req.Compound.DescriptionI18n,
 		req.Compound.Measurement,
-		quantity,
+		req.Compound.Quantity,
 		nil, // price will be auto-calculated from calculations
 		req.Compound.PictureUrl,
 		req.Compound.ColorCode,
@@ -590,12 +582,6 @@ func (h *Handler) UpdateCompoundWithCalculations(c echo.Context) error {
 
 	ctx := c.Request().Context()
 
-	var qty32 *int32
-	if req.Compound.Quantity != nil {
-		q := int32(*req.Compound.Quantity)
-		qty32 = &q
-	}
-
 	compoundResp, err := h.service.Compound().UpdateCompound(
 		ctx,
 		compoundID,
@@ -604,7 +590,7 @@ func (h *Handler) UpdateCompoundWithCalculations(c echo.Context) error {
 		req.Compound.Description,
 		req.Compound.DescriptionI18n,
 		req.Compound.Measurement,
-		qty32,
+		req.Compound.Quantity,
 		nil,
 		req.Compound.PictureUrl,
 		req.Compound.ColorCode,

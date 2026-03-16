@@ -452,16 +452,16 @@ func (h *Handler) CreateInvoiceWithDetails(c echo.Context) error {
 }
 
 
-// UpsertInvoiceDetails replaces all invoice details and adjusts stock accordingly
+// UpsertInvoiceDetails replaces all invoice details and optionally updates invoice fields (status, supplier, etc.)
 // @Summary Batch update invoice details
-// @Description Replace all details of an invoice. Reverses old stock additions and applies new quantities.
+// @Description Replace all details of an invoice. Optionally update invoice-level fields (status, supplier_id, storage_id, total_amount, date). Stock is applied only when invoice status is or becomes 'arrived'. Setting status to 'arrived' applies stock; it was already 'arrived', old stock is reversed and new stock applied.
 // @Tags Invoices
 // @Accept json
 // @Produce json
 // @Security BearerAuth
 // @Param lang query string false "Language (uz, ru, en)" default(uz)
 // @Param id path string true "Invoice ID"
-// @Param request body model.UpsertInvoiceDetailsRequest true "New invoice details"
+// @Param request body model.UpsertInvoiceDetailsRequest true "Invoice fields (optional) + new details"
 // @Success 200 {object} model.UpsertInvoiceDetailsResponse
 // @Failure 400 {object} model.ErrorResponse
 // @Failure 401 {object} model.ErrorResponse

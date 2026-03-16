@@ -136,7 +136,7 @@ type CreateCompoundParams struct {
 	NameI18n          pgtype.UUID         `json:"name_i18n"`
 	Description       *string             `json:"description"`
 	DescriptionI18n   pgtype.UUID         `json:"description_i18n"`
-	Quantity          *int32              `json:"quantity"`
+	Quantity          pgtype.Numeric      `json:"quantity"`
 	PictureUrl        *string             `json:"picture_url"`
 	ColorCode         *string             `json:"color_code"`
 	Measurement       NullMeasurementType `json:"measurement"`
@@ -150,7 +150,7 @@ type CreateCompoundRow struct {
 	NameI18n          pgtype.UUID         `json:"name_i18n"`
 	Description       *string             `json:"description"`
 	DescriptionI18n   pgtype.UUID         `json:"description_i18n"`
-	Quantity          *int32              `json:"quantity"`
+	Quantity          pgtype.Numeric      `json:"quantity"`
 	PictureUrl        *string             `json:"picture_url"`
 	ColorCode         *string             `json:"color_code"`
 	Measurement       NullMeasurementType `json:"measurement"`
@@ -449,7 +449,7 @@ type GetAllCompoundsRow struct {
 	NameI18n          pgtype.UUID         `json:"name_i18n"`
 	Description       *string             `json:"description"`
 	DescriptionI18n   pgtype.UUID         `json:"description_i18n"`
-	Quantity          *int32              `json:"quantity"`
+	Quantity          pgtype.Numeric      `json:"quantity"`
 	PictureUrl        *string             `json:"picture_url"`
 	ColorCode         *string             `json:"color_code"`
 	Measurement       NullMeasurementType `json:"measurement"`
@@ -554,7 +554,7 @@ type GetAllCompoundsWithLanguageRow struct {
 	NameI18n          pgtype.UUID         `json:"name_i18n"`
 	Description       *string             `json:"description"`
 	DescriptionI18n   pgtype.UUID         `json:"description_i18n"`
-	Quantity          *int32              `json:"quantity"`
+	Quantity          pgtype.Numeric      `json:"quantity"`
 	PictureUrl        *string             `json:"picture_url"`
 	ColorCode         *string             `json:"color_code"`
 	Measurement       NullMeasurementType `json:"measurement"`
@@ -621,7 +621,7 @@ type GetCompoundByIDRow struct {
 	NameI18n          pgtype.UUID         `json:"name_i18n"`
 	Description       *string             `json:"description"`
 	DescriptionI18n   pgtype.UUID         `json:"description_i18n"`
-	Quantity          *int32              `json:"quantity"`
+	Quantity          pgtype.Numeric      `json:"quantity"`
 	PictureUrl        *string             `json:"picture_url"`
 	ColorCode         *string             `json:"color_code"`
 	Measurement       NullMeasurementType `json:"measurement"`
@@ -710,7 +710,7 @@ type GetCompoundByIDWithLanguageRow struct {
 	NameI18n          pgtype.UUID         `json:"name_i18n"`
 	Description       *string             `json:"description"`
 	DescriptionI18n   pgtype.UUID         `json:"description_i18n"`
-	Quantity          *int32              `json:"quantity"`
+	Quantity          pgtype.Numeric      `json:"quantity"`
 	PictureUrl        *string             `json:"picture_url"`
 	ColorCode         *string             `json:"color_code"`
 	Measurement       NullMeasurementType `json:"measurement"`
@@ -1117,7 +1117,7 @@ type GetCompoundWithDepartmentRow struct {
 	NameI18n          pgtype.UUID         `json:"name_i18n"`
 	Description       *string             `json:"description"`
 	DescriptionI18n   pgtype.UUID         `json:"description_i18n"`
-	Quantity          *int32              `json:"quantity"`
+	Quantity          pgtype.Numeric      `json:"quantity"`
 	PictureUrl        *string             `json:"picture_url"`
 	Measurement       NullMeasurementType `json:"measurement"`
 	Price             pgtype.Numeric      `json:"price"`
@@ -1275,7 +1275,7 @@ type SearchCompoundsRow struct {
 	NameI18n          pgtype.UUID         `json:"name_i18n"`
 	Description       *string             `json:"description"`
 	DescriptionI18n   pgtype.UUID         `json:"description_i18n"`
-	Quantity          *int32              `json:"quantity"`
+	Quantity          pgtype.Numeric      `json:"quantity"`
 	PictureUrl        *string             `json:"picture_url"`
 	ColorCode         *string             `json:"color_code"`
 	Measurement       NullMeasurementType `json:"measurement"`
@@ -1353,7 +1353,7 @@ type UpdateCompoundParams struct {
 	NameI18n          pgtype.UUID         `json:"name_i18n"`
 	Description       *string             `json:"description"`
 	DescriptionI18n   pgtype.UUID         `json:"description_i18n"`
-	Quantity          *int32              `json:"quantity"`
+	Quantity          pgtype.Numeric      `json:"quantity"`
 	PictureUrl        *string             `json:"picture_url"`
 	ColorCode         *string             `json:"color_code"`
 	Measurement       NullMeasurementType `json:"measurement"`
@@ -1367,7 +1367,7 @@ type UpdateCompoundRow struct {
 	NameI18n          pgtype.UUID         `json:"name_i18n"`
 	Description       *string             `json:"description"`
 	DescriptionI18n   pgtype.UUID         `json:"description_i18n"`
-	Quantity          *int32              `json:"quantity"`
+	Quantity          pgtype.Numeric      `json:"quantity"`
 	PictureUrl        *string             `json:"picture_url"`
 	ColorCode         *string             `json:"color_code"`
 	Measurement       NullMeasurementType `json:"measurement"`
@@ -1444,7 +1444,7 @@ type UpdateCompoundCostFieldsRow struct {
 	NameI18n          pgtype.UUID         `json:"name_i18n"`
 	Description       *string             `json:"description"`
 	DescriptionI18n   pgtype.UUID         `json:"description_i18n"`
-	Quantity          *int32              `json:"quantity"`
+	Quantity          pgtype.Numeric      `json:"quantity"`
 	PictureUrl        *string             `json:"picture_url"`
 	ColorCode         *string             `json:"color_code"`
 	Measurement       NullMeasurementType `json:"measurement"`
@@ -1566,7 +1566,7 @@ type UpdateCompoundPriceRow struct {
 	NameI18n          pgtype.UUID         `json:"name_i18n"`
 	Description       *string             `json:"description"`
 	DescriptionI18n   pgtype.UUID         `json:"description_i18n"`
-	Quantity          *int32              `json:"quantity"`
+	Quantity          pgtype.Numeric      `json:"quantity"`
 	PictureUrl        *string             `json:"picture_url"`
 	ColorCode         *string             `json:"color_code"`
 	Measurement       NullMeasurementType `json:"measurement"`
