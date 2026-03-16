@@ -514,6 +514,7 @@
       "info": "Information",
       "statuses": {
         "pending": "Pending",
+        "arrived": "Arrived",
         "completed": "Completed",
         "cancelled": "Cancelled"
       },
@@ -1193,6 +1194,7 @@
     "ingredients_group": "Ingredients Group",
     "ingredient": "Ingredient",
     "quantity": "Quantity",
+    "pricePerUnit": "Price per unit",
     "storage": "Storage",
     "measurement": "Measurement",
     "created_at": "Created Date",

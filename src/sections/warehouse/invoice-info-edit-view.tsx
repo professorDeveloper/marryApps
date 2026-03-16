@@ -25,7 +25,7 @@ interface InvoiceInfoEditViewProps {
     onSwitchToDetailsTab?: () => void; // Callback to switch to details tab when validation fails
 }
 
-const ALLOWED_STATUSES = ['pending', 'draft', 'deleted'] as const;
+const ALLOWED_STATUSES = ['pending', 'draft', 'arrived', 'deleted'] as const;
 type InvoiceStatus = (typeof ALLOWED_STATUSES)[number];
 const normalizeStatus = (value: unknown): InvoiceStatus =>
     ALLOWED_STATUSES.includes(value as InvoiceStatus) ? (value as InvoiceStatus) : 'pending';
@@ -237,6 +237,7 @@ export function InvoiceInfoEditView({
                 required: true,
                 defaultValue: 'pending',
                 options: [
+                    { value: 'arrived', label: t('warehouse.invoices.statuses.arrived', 'Arrived') },
                     { value: 'pending', label: t('warehouse.invoices.statuses.pending') },
                     { value: 'draft', label: t('common.draft', 'Draft') },
                     { value: 'deleted', label: t('common.deleted', 'Deleted') },

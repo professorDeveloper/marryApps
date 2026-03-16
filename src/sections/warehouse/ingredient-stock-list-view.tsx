@@ -106,6 +106,20 @@ function IngredientStockListView() {
                 minWidth: 100,
             },
             {
+                field: 'price_per_unit',
+                headerName: t('ingredientStock.pricePerUnit', 'Price per unit'),
+                flex: 0.9,
+                minWidth: 130,
+                align: 'left',
+                headerAlign: 'left',
+            },
+            {
+                field: 'storage_name',
+                headerName: t('ingredientStock.storage', 'Storage'),
+                flex: 1,
+                minWidth: 140,
+            },
+            {
                 field: 'created_at',
                 headerName: t('ingredientStock.created_at'),
                 // flex: 1,
@@ -150,6 +164,7 @@ function IngredientStockListView() {
                 ...stock,
                 ingredient_name: expandedIngredient?.name || stock.ingredient_name || stock.ingredient_id,
                 measurement: expandedIngredient?.measurement || stock.measurement || '-',
+                price_per_unit: expandedIngredient?.price_per_unit ?? stock.price_per_unit ?? '-',
                 storage_name: expandedStorage?.name || stock.storage_name || stock.storage_id,
             };
         });

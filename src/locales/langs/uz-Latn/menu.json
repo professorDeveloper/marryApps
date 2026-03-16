@@ -1,4 +1,4 @@
-{
+﻿{
   "app": "Menyu",
   "job": "Ish",
   "user": "Foydalanuvchi",
@@ -533,6 +533,7 @@
       "edit": "Kirimni tahrirlash",
       "statuses": {
         "pending": "Kutilmoqda",
+        "arrived": "Keldi",
         "completed": "Tamomlandi",
         "cancelled": "Bekor qilindi"
       },
@@ -1079,6 +1080,7 @@
     "ingredients_group": "Maxsulotlar guruhi",
     "ingredient": "Maxsulot",
     "quantity": "Miqdor",
+    "pricePerUnit": "Birlik narxi",
     "storage": "Ombor",
     "measurement": "O'lchov",
     "created_at": "Yaratilgan sana",
@@ -1262,3 +1264,4 @@
     }
   }
 }
+
