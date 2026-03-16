@@ -380,11 +380,7 @@ func (c *CalculationS) CreateCalculationWithCompound(ctx context.Context, goodID
 		return nil, fmt.Errorf("invalid compound price: %w", err)
 	}
 
-	if compoundPriceFloat == 0 {
-		return nil, fmt.Errorf("compound has no price - please add ingredients first")
-	}
-
-	// Calculate total cost: quantity × compound.price
+	// Calculate total cost: quantity × compound.price (may be 0 if no ingredients yet)
 	totalCostCalc := compoundPriceFloat * quantityFloat
 
 	// Create calculation record linking good to compound
@@ -562,10 +558,6 @@ func (c *CalculationS) PreviewCalculations(ctx context.Context, req *model.Previ
 		if err != nil {
 			return nil, fmt.Errorf("invalid compound price: %w", err)
 		}
-		if priceFloat == 0 {
-			return nil, fmt.Errorf("compound has no price - please add ingredients first")
-		}
-
 		lineTotal := qtyFloat * priceFloat
 		totalCost += lineTotal
 
