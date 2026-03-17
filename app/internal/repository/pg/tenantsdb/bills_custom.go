@@ -639,7 +639,8 @@ func (q *Queries) GetStorageByGoodID(ctx context.Context, goodID uuid.UUID) (pgt
 	const sql = `
 		SELECT d.storage_id
 		FROM goods g
-		LEFT JOIN departments d ON g.department_id = d.id AND d.deleted_at = 0
+		JOIN categories c ON g.category_id = c.id AND c.deleted_at = 0
+		JOIN departments d ON c.department_id = d.id AND d.deleted_at = 0
 		WHERE g.id = $1 AND g.deleted_at = 0
 	`
 	row := q.db.QueryRow(ctx, sql, goodID)
