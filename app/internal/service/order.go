@@ -460,9 +460,13 @@ func (s *OrderS) UpdateOrderStatus(ctx context.Context, orderID string, status s
 	}
 	currentStatus := string(existing.Status.OrderStatus)
 
-	// Terminal statuses cannot be changed
-	if currentStatus == string(pg.OrderStatusPaid) || currentStatus == string(pg.OrderStatusCancelled) {
-		return nil, fmt.Errorf("cannot change status of a %s order", currentStatus)
+	// cancelled is always terminal
+	if currentStatus == string(pg.OrderStatusCancelled) {
+		return nil, fmt.Errorf("cannot change status of a cancelled order")
+	}
+	// paid is terminal for dine_in; takeaway continues paid → cooking → ready
+	if currentStatus == string(pg.OrderStatusPaid) && existing.OrderType != "takeaway" {
+		return nil, fmt.Errorf("cannot change status of a paid order")
 	}
 
 	st := pg.NullOrderStatus{OrderStatus: pg.OrderStatus(status), Valid: true}
