@@ -524,3 +524,5 @@ AND a.deleted_at = 0
 AND a.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 GROUP BY a.open_date
 ORDER BY a.open_date DESC;
+
+-- name: GetStaffUsers :many

@@ -285,9 +285,9 @@ func (h *Handler) GetUsersByRole(c echo.Context) error {
 	return c.JSON(http.StatusOK, model.NewPaginatedResponse("Data retrieved successfully", users, int32(total), limit, offset, http.StatusOK))
 }
 
-// GetKitchenStaff retrieves kitchen staff
-// @Summary Get kitchen staff
-// @Description Retrieve all kitchen staff members with pagination and optional expand
+// GetStaffes retrieves all staff (excluding admin and superadmin)
+// @Summary Get staff users
+// @Description Retrieve all staff members (excluding admin/superadmin) with pagination
 // @Tags users
 // @Accept json
 // @Produce json
@@ -295,10 +295,10 @@ func (h *Handler) GetUsersByRole(c echo.Context) error {
 // @Param limit query int false "Limit results (default: 20)" default(20)
 // @Param offset query int false "Offset for pagination (default: 0)" default(0)
 // @Param expand query string false "Expand related fields (e.g. shift,branch)"
-// @Success 200 {array} model.UserResponse "Paginated list of kitchen staff"
+// @Success 200 {array} model.UserResponse "Paginated list of staff"
 // @Failure 401 {object} model.ErrorResponse "Unauthorized"
 // @Failure 500 {object} model.ErrorResponse "Internal server error"
-// @Router /api/v1/users/kitchen-staff [get]
+// @Router /api/v1/users/staff [get]
 func (h *Handler) GetKitchenStaff(c echo.Context) error {
 	limit, offset := parseLimitOffset(c)
 

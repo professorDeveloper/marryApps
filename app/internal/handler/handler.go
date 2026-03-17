@@ -59,7 +59,7 @@ func (h *Handler) Register(router *echo.Echo) {
 		users := api.Group("/users", mw.CheckAuth(h.cfg), mw.TenantMiddleware(h.repo))
 		{
 			users.GET("/by-role", h.GetUsersByRole, mw.CheckLanguage())
-			users.GET("/kitchen-staff", h.GetKitchenStaff, mw.CheckLanguage())
+			users.GET("/staff", h.GetKitchenStaff, mw.CheckLanguage())
 			users.GET("/search", h.SearchUsers, mw.CheckLanguage())
 			users.PUT("/:id", h.UpdateUserByID, mw.CheckLanguage())
 			users.DELETE("/:id", h.DeleteUser, mw.CheckLanguage())

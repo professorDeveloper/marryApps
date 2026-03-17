@@ -948,7 +948,22 @@ func (s *AuthS) GetUsersByRole(ctx context.Context, role string, limit, offset i
 }
 
 func (s *AuthS) GetKitchenStaff(ctx context.Context, limit, offset int32) ([]model.UserResponse, int64, error) {
-	return s.GetUsersByRole(ctx, "kitchen", limit, offset)
+	total, err := s.repo.Tenant(ctx).CountStaffUsers(ctx)
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to count staff: %w", err)
+	}
+	users, err := s.repo.Tenant(ctx).GetStaffUsersPaginated(ctx, pg.GetStaffUsersPaginatedParams{
+		Limit:  limit,
+		Offset: offset,
+	})
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to get staff: %w", err)
+	}
+	var responses []model.UserResponse
+	for _, u := range users {
+		responses = append(responses, toUserResponse(u))
+	}
+	return responses, total, nil
 }
 
 func (s *AuthS) DeleteUser(ctx context.Context, userID string) error {
