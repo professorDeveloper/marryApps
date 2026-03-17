@@ -4,13 +4,14 @@ import type { CardSection, GenericEditViewConfig } from 'src/components/generic-
 
 import { useParams } from 'react-router';
 import { useTranslation } from 'react-i18next';
-import { useMemo, useCallback } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Box } from '@mui/material';
 
 import { paths } from 'src/routes/paths';
 import { useRouter } from 'src/routes/hooks';
 
 import { useGetUser, useCreateUser, useUpdateUser, useDeleteUser } from 'src/actions/users';
+import { useTransactionsAPI } from 'src/hooks/use-transactions-api';
 
 import { GenericEditView } from 'src/components/generic-edit-view';
 import { CustomBreadcrumbs } from 'src/components/custom-breadcrumbs';
@@ -65,7 +66,7 @@ function buildBasicInfoSection(): CardSection {
     };
 }
 
-function buildStatusSection(): CardSection {
+function buildStatusSection(cashRegisterOptions: { value: string; label: string }[]): CardSection {
     return {
         id: 'status',
         title: 'users.statusTitle',
@@ -77,7 +78,15 @@ function buildStatusSection(): CardSection {
                 type: 'text',
                 required: true,
                 defaultValue: '',
-            }
+            },
+            {
+                key: 'cash_register_id',
+                label: 'cashbox.cashiers.title',
+                type: 'select',
+                required: false,
+                options: cashRegisterOptions,
+                defaultValue: '',
+            },
         ],
     };
 }
@@ -91,8 +100,38 @@ export function EmployeeEditViewUser({ userId, isNew = false }: EmployeeEditView
     const createUser = useCreateUser();
     const updateUser = useUpdateUser();
     const deleteUser = useDeleteUser();
+    const { getCashRegistersByBranch } = useTransactionsAPI();
+
+    const [cashRegisterOptions, setCashRegisterOptions] = useState<{ value: string; label: string }[]>([]);
 
     const ownBranchId = localStorage.getItem('branch_id') || '';
+
+    useEffect(() => {
+        let isActive = true;
+
+        const loadCashRegisters = async () => {
+            if (!ownBranchId) {
+                setCashRegisterOptions([]);
+                return;
+            }
+
+            const registers = await getCashRegistersByBranch(ownBranchId);
+            if (!isActive) return;
+
+            setCashRegisterOptions(
+                registers.map((item) => ({
+                    value: item.id,
+                    label: item.name || item.id,
+                }))
+            );
+        };
+
+        loadCashRegisters();
+
+        return () => {
+            isActive = false;
+        };
+    }, [getCashRegistersByBranch, ownBranchId]);
 
     // Handle form submission
     const handleSubmit = useCallback(
@@ -114,6 +153,9 @@ export function EmployeeEditViewUser({ userId, isNew = false }: EmployeeEditView
             if (!ownBranchId) {
                 throw new Error(t('users.branchRequired'));
             }
+            if (isNew && formData.role === 'cashier' && !formData.cash_register_id) {
+                throw new Error(t('users.cashRegisterRequired', 'Cash register is required'));
+            }
 
             const userData: IUserFormData = {
                 full_name: formData.full_name,
@@ -123,6 +165,7 @@ export function EmployeeEditViewUser({ userId, isNew = false }: EmployeeEditView
                 phone_number: formData.phone_number,
                 pincode: formData.pincode,
                 terminal: formData.terminal,
+                cash_register_id: formData.role === 'cashier' ? formData.cash_register_id : undefined,
                 // Login qilgan vaqtda saqlangan brand_id ni olamiz
                 brand_id: localStorage.getItem('brand_id') || 'default_brand',
                 // Xodim doimo joriy foydalanuvchining branch'iga biriktiriladi
@@ -169,7 +212,7 @@ export function EmployeeEditViewUser({ userId, isNew = false }: EmployeeEditView
 
     // Build sections
     const BASIC_INFO_SECTION_T = translateSection(buildBasicInfoSection(), t);
-    const STATUS_SECTION_T = translateSection(buildStatusSection(), t);
+    const STATUS_SECTION_T = translateSection(buildStatusSection(cashRegisterOptions), t);
 
     const config: GenericEditViewConfig = {
         title: isNew ? t('users.new') : t('users.edit'),

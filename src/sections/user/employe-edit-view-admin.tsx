@@ -4,7 +4,7 @@ import type { CardSection, GenericEditViewConfig } from 'src/components/generic-
 
 import { useParams } from 'react-router';
 import { useTranslation } from 'react-i18next';
-import { useMemo, useState, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { Box } from '@mui/material';
 
 import { paths } from 'src/routes/paths';
@@ -69,6 +69,7 @@ export function EmployeeEditViewAdmin({ userId, isNew = false }: EmployeeEditVie
 
     const [isSaving, setIsSaving] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
+    const ownBranchId = localStorage.getItem('selectedBranchId') || localStorage.getItem('branch_id') || '';
 
     // Handle form submission
     const handleSubmit = useCallback(
@@ -86,15 +87,19 @@ export function EmployeeEditViewAdmin({ userId, isNew = false }: EmployeeEditVie
                 if (isNew && !formData.password) {
                     throw new Error(t('users.passwordRequired'));
                 }
+                // if (isNew && !formData.cash_register_id) {
+                //     throw new Error(t('users.cashRegisterRequired', 'Cash register is required'));
+                // }
 
                 const userData: IUserFormData = {
                     full_name: formData.full_name,
                     username: formData.username,
                     role: 'admin',
                     phone_number: formData.phone_number,
+                    // cash_register_id: formData.cash_register_id,
                     // Login qilgan vaqtda saqlangan brand_id ni olamiz
                     brand_id: localStorage.getItem('brand_id') || 'default_brand',
-                    branch_id: localStorage.getItem('selectedBranchId') || localStorage.getItem('branch_id') || '',
+                    branch_id: ownBranchId,
                     ...(formData.password ? { password: formData.password } : {}),
                 };
 
