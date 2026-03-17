@@ -449,15 +449,20 @@ func (s *OrderS) UpdateOrderStatus(ctx context.Context, orderID string, status s
 		return nil, fmt.Errorf("invalid order id: %w", err)
 	}
 
-	if status == string(model.OrderStatusServed) {
-		existing, err := s.repo.Tenant(ctx).GetOrderByID(ctx, id)
-		if err != nil {
-			return nil, fmt.Errorf("failed to get order: %w", err)
-		}
-		if existing.Status.Valid && string(existing.Status.OrderStatus) == string(model.OrderStatusServed) {
-			return toOrderResponse(existing), nil
-		}
-		return s.MarkOrderServed(ctx, orderID)
+	// Block paid — must go through MarkOrderPaid (payment endpoint)
+	if status == string(pg.OrderStatusPaid) {
+		return nil, fmt.Errorf("use the payment endpoint to mark an order as paid")
+	}
+
+	existing, err := s.repo.Tenant(ctx).GetOrderByID(ctx, id)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get order: %w", err)
+	}
+	currentStatus := string(existing.Status.OrderStatus)
+
+	// Terminal statuses cannot be changed
+	if currentStatus == string(pg.OrderStatusPaid) || currentStatus == string(pg.OrderStatusCancelled) {
+		return nil, fmt.Errorf("cannot change status of a %s order", currentStatus)
 	}
 
 	st := pg.NullOrderStatus{OrderStatus: pg.OrderStatus(status), Valid: true}
@@ -1356,12 +1361,96 @@ func (s *OrderS) UpdateOrderItemStatus(ctx context.Context, itemID string, statu
 		return nil, fmt.Errorf("invalid order item id: %w", err)
 	}
 
+	existing, err := s.repo.Tenant(ctx).GetOrderItemByID(ctx, id)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get order item: %w", err)
+	}
+	currentStatus := string(existing.Status.OrderItemsStatus)
+
+	// Terminal status — cannot change
+	if currentStatus == string(pg.OrderItemsStatusCancelled) {
+		return nil, fmt.Errorf("cannot change status of a cancelled order item")
+	}
+
 	st := pg.NullOrderItemsStatus{OrderItemsStatus: pg.OrderItemsStatus(status), Valid: true}
 	item, err := s.repo.Tenant(ctx).UpdateOrderItemStatus(ctx, pg.UpdateOrderItemStatusParams{ID: id, Status: st})
 	if err != nil {
 		return nil, fmt.Errorf("failed to update order item status: %w", err)
 	}
+
+	// Deduct stock when kitchen starts cooking
+	if currentStatus == string(pg.OrderItemsStatusPending) && status == string(pg.OrderItemsStatusCooking) {
+		if err := s.deductStockForOrderItem(ctx, existing.GoodID, existing.Quantity); err != nil {
+			log.Printf("UpdateOrderItemStatus: stock deduction failed for item %s: %v", itemID, err)
+		}
+	}
+
 	return toOrderItemResponse(item), nil
+}
+
+// deductStockForOrderItem resolves the storage from good→category→department,
+// then recursively collects all ingredients and deducts from ingredient_stock.
+func (s *OrderS) deductStockForOrderItem(ctx context.Context, goodID uuid.UUID, qty int32) error {
+	storageID, err := s.repo.Tenant(ctx).GetStorageIDByGoodID(ctx, goodID)
+	if err != nil {
+		return fmt.Errorf("failed to resolve storage for good %s: %w", goodID, err)
+	}
+	if !storageID.Valid {
+		return fmt.Errorf("good %s has no storage (check category→department→storage chain)", goodID)
+	}
+
+	ingredients := map[uuid.UUID]float64{}
+	s.collectIngredients(ctx, goodID, float64(qty), true, ingredients)
+
+	for ingID, amount := range ingredients {
+		stockID, err := s.repo.Tenant(ctx).EnsureIngredientStockByStorage(ctx, pg.EnsureIngredientStockByStorageParams{
+			ID:           uuid.New(),
+			IngredientID: ingID,
+			StorageID:    storageID,
+		})
+		if err != nil {
+			log.Printf("deductStock: EnsureIngredientStockByStorage failed for ingredient %s: %v", ingID, err)
+			continue
+		}
+
+		amountNum := stringToNumeric(strconv.FormatFloat(amount, 'f', -1, 64))
+		if _, err := s.repo.Tenant(ctx).RemoveFromIngredientStock(ctx, pg.RemoveFromIngredientStockParams{
+			ID:       stockID,
+			Quantity: amountNum,
+		}); err != nil {
+			log.Printf("deductStock: RemoveFromIngredientStock failed for ingredient %s: %v", ingID, err)
+		}
+	}
+	return nil
+}
+
+// collectIngredients recursively resolves all leaf ingredients from a good or compound,
+// multiplying quantities down the tree. Results accumulated in `out` map (ingredientID → total qty).
+func (s *OrderS) collectIngredients(ctx context.Context, id uuid.UUID, multiplier float64, isGood bool, out map[uuid.UUID]float64) {
+	idUUID := pgtype.UUID{Bytes: id, Valid: true}
+	var rows []pg.Calculation
+	var err error
+	if isGood {
+		rows, err = s.repo.Tenant(ctx).GetCalculationsByGoodID(ctx, idUUID)
+	} else {
+		rows, err = s.repo.Tenant(ctx).GetCalculationsByCompoundID(ctx, idUUID)
+	}
+	if err != nil {
+		log.Printf("collectIngredients: failed to get calculations: %v", err)
+		return
+	}
+
+	for _, row := range rows {
+		rowQty, _ := strconv.ParseFloat(numericToStr(row.Quantity), 64)
+		effectiveQty := rowQty * multiplier
+
+		if row.IngredientID.Valid {
+			out[row.IngredientID.Bytes] += effectiveQty
+		} else if row.ComponentCompoundID.Valid {
+			compID := row.ComponentCompoundID.Bytes
+			s.collectIngredients(ctx, compID, effectiveQty, false, out)
+		}
+	}
 }
 
 func (s *OrderS) DeleteOrderItem(ctx context.Context, itemID string) error {

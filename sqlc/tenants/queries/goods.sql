@@ -473,3 +473,11 @@ WHERE g.deleted_at = 0
   AND ($3 = '' OR g.name ILIKE '%' || $3 || '%')
 ORDER BY g.created_at DESC
 LIMIT $4 OFFSET $5;
+
+-- name: GetStorageIDByGoodID :one
+SELECT d.storage_id
+FROM goods g
+JOIN categories c ON g.category_id = c.id AND c.deleted_at = 0
+JOIN departments d ON c.department_id = d.id AND d.deleted_at = 0
+WHERE g.id = $1 AND g.deleted_at = 0
+  AND g.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid;
