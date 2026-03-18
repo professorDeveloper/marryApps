@@ -17,6 +17,7 @@ import type { GenericEditViewProps } from './types';
 import { buildInitialFormData } from './utils';
 import EditFormSection from './EditFormSection';
 import { ImageUploadField } from 'src/index-image-upload';
+import { FormActionButtons } from './FormActionButtons';
 
 export const GenericEditView: FC<GenericEditViewProps> = ({
     config,
@@ -46,7 +47,7 @@ export const GenericEditView: FC<GenericEditViewProps> = ({
     // Initialize react-hook-form with memoized defaults
     const methods = useForm({
         defaultValues: initialFormData,
-        mode: 'onChange', // Enable onChange mode for better performance
+        mode: 'onBlur', // Enable onBlur mode for better performance
     });
 
     // Update loading state efficiently
@@ -95,33 +96,13 @@ export const GenericEditView: FC<GenericEditViewProps> = ({
     const imageFieldKey = useMemo(() => config.leftSidecard?.fields?.[0]?.key || 'picture_url', [config.leftSidecard]);
     const hasLeftSidecard = useMemo(() => !!config.leftSidecard, [config.leftSidecard]);
 
-    // Memoize action buttons to prevent recreation
-    const renderActionButtons = useMemo(() => () => (
-        <Stack direction="column" spacing={2} sx={{ mt: 3 }}>
-            <Button
-                sx={{ backgroundColor: '#FB6633', color: '#FFFFFF' }}
-                type="submit"
-                disabled={isLoading || methods.formState.isSubmitting}
-                startIcon={<Iconify icon="solar:check-circle-bold" />}
-            >
-                {isLoading ? t('loading') : t('save')}
-            </Button>
-            {!isNew && config.showDeleteButton !== false && (
-                <Button
-                    variant="outlined"
-                    color="error"
-                    onClick={() => setDeleteDialogOpen(true)}
-                    disabled={isLoading}
-                    startIcon={<Iconify icon="solar:trash-bin-trash-bold" />}
-                >
-                    {t('delete')}
-                </Button>
-            )}
-            <Button variant="outlined" onClick={() => router.back()}>
-                {t('cancel')}
-            </Button>
-        </Stack>
-    ), [isLoading, methods.formState.isSubmitting, isNew, config.showDeleteButton, t, router]);
+    const actionButtonProps = useMemo(() => ({
+        isNew,
+        isLoading,
+        showDeleteButton: config.showDeleteButton,
+        onDelete: () => setDeleteDialogOpen(true),
+    }), [isNew, isLoading, config.showDeleteButton]);
+
 
     // Memoize sections to prevent recreation
     const renderedSections = useMemo(() => config.sections.map((section) => (
@@ -162,14 +143,21 @@ export const GenericEditView: FC<GenericEditViewProps> = ({
                                         />
                                     )}
                                 />
-                                {renderActionButtons()}
+                                <FormActionButtons {...actionButtonProps} /> {/* ✅ */}
                             </Box>
                         )}
 
                         <Box>
                             {error && <Alert severity="error" sx={{ mb: 3 }}>{error}</Alert>}
                             {renderedSections}
-                            {!hasLeftSidecard && renderActionButtons()}
+                            {!hasLeftSidecard && (
+                                <FormActionButtons
+                                    isNew={isNew}
+                                    isLoading={isLoading}
+                                    showDeleteButton={config.showDeleteButton}
+                                    onDelete={() => setDeleteDialogOpen(true)}
+                                />
+                            )}
                         </Box>
                     </Box>
                 </form>
