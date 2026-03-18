@@ -256,21 +256,23 @@ function enrichCompound(
 /**
  * Get all compounds with enriched ingredient group names and translations
  */
-export function useGetCompounds(searchQuery?: string) {
+export function useGetCompounds(searchQuery?: string, enabled = true) {
     const { i18n } = useTranslation();
 
     // Get ingredient groups for enrichment
-    const { ingredientGroups } = useGetIngredientGroups();
+    const { ingredientGroups } = useGetIngredientGroups(undefined, enabled);
 
     // Fetch translations
     const { data: translationsData } = useSWR<BackendResponse<ITranslationItem[]>>(
-        endpoints.translations.list,
+        enabled ? endpoints.translations.list : null,
         fetcher,
         { ...swrOptions }
     );
 
     const normalizedQuery = searchQuery?.trim() || '';
-    const swrKey = normalizedQuery
+    const swrKey = !enabled
+        ? null
+        : normalizedQuery
         ? [endpoints.compound.search, { params: { q: normalizedQuery } }]
         : endpoints.compound.list;
 
@@ -749,4 +751,3 @@ export function useCreateCompoundWithCalculations() {
 
     return { createCompoundWithCalculations };
 }
-

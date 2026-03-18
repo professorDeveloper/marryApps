@@ -54,11 +54,6 @@ function enrichCategories(
         translations?.map((t: ITranslationItem) => [t.id, t]) || []
     );
 
-    // Debug: Show available translations
-    // if (translationMap.size > 0) {
-    //     console.log('🔍 Available translations:', Array.from(translationMap.keys()).length, 'translations');
-    // }
-
     // Helper function to map i18n language codes to translation fields
     const getLangKey = (lang: string): keyof ITranslationItem => {
         const langMap: Record<string, keyof ITranslationItem> = {
@@ -104,12 +99,7 @@ function enrichCategories(
                     // Last resort: use original name
                     localizedName = cat.name;
                 }
-
-                // Debug log
-                console.log(`✅ Translation found for category "${cat.name}" (ID: ${cat.name_i18n})`);
             } else {
-                // Translation ID topilmadi - faqat uz name-ni ko'rsatish
-                console.warn(`⚠️ Translation ID not found for category "${cat.name}" (ID: ${cat.name_i18n})`);
                 translationFields = {
                     name_en: cat.name_en || '',
                     name_ru: cat.name_ru || '',
@@ -119,8 +109,6 @@ function enrichCategories(
                 localizedName = cat.name;
             }
         } else {
-            // name_i18n mavjud emas - available fieldlardan foydalanish
-            // console.info(`ℹ️ No translation ID for category "${cat.name}" - using direct fields`);
             translationFields = {
                 name_en: cat.name_en || '',
                 name_ru: cat.name_ru || '',
@@ -427,13 +415,9 @@ export function useGetGoodsByCategory(categoryId: string) {
     const goods = useMemo(() => {
         if (!data) return [];
         if (Array.isArray(data)) {
-            // Direct array response
-            console.log('Direct array response:', data);
             return data;
         }
         if ('data' in data) {
-            // Wrapped response
-            console.log('Wrapped response:', (data as BackendResponse<IGoodsItem[]>).data);
             return (data as BackendResponse<IGoodsItem[]>).data || [];
         }
         return [];
@@ -452,4 +436,3 @@ export function useGetGoodsByCategory(categoryId: string) {
 
     return memoizedValue;
 }
-

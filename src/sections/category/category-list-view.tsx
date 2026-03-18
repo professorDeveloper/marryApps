@@ -25,15 +25,10 @@ function GoodsTable({ categoryId }: { categoryId: string }) {
   const { goods, goodsLoading } = useGetGoodsByCategory(categoryId);
   const [imageUrls, setImageUrls] = useState<{ [key: string]: string | null }>({});
 
-  // Debug log
-  useEffect(() => {
-    console.log('GoodsTable - categoryId:', categoryId);
-    console.log('GoodsTable - goods:', goods);
-    console.log('GoodsTable - goodsLoading:', goodsLoading);
-  }, [categoryId, goods, goodsLoading]);
-
   // Load images for goods
   useEffect(() => {
+    let isMounted = true;
+
     const loadImages = async () => {
       const urls: { [key: string]: string | null } = {};
       for (const item of goods) {
@@ -49,12 +44,20 @@ function GoodsTable({ categoryId }: { categoryId: string }) {
           urls[item.id] = null;
         }
       }
-      setImageUrls(urls);
+      if (isMounted) {
+        setImageUrls(urls);
+      }
     };
 
     if (goods.length > 0) {
       loadImages();
+    } else {
+      setImageUrls({});
     }
+
+    return () => {
+      isMounted = false;
+    };
   }, [goods]);
 
   if (goodsLoading) {
@@ -168,23 +171,37 @@ function RenderCellCategory({ params }: { params: any }) {
 
   // Load image asynchronously if picture_url exists
   useEffect(() => {
+    let isMounted = true;
+
     if (category.picture_url) {
       const loadImage = async () => {
         try {
-          setLoading(true);
+          if (isMounted) {
+            setLoading(true);
+          }
           const url = await getFullImageUrl(category.picture_url);
-          setImageUrl(url);
+          if (isMounted) {
+            setImageUrl(url);
+          }
         } catch (error) {
           console.error('Failed to load image:', error);
-          setImageUrl(null);
+          if (isMounted) {
+            setImageUrl(null);
+          }
         } finally {
-          setLoading(false);
+          if (isMounted) {
+            setLoading(false);
+          }
         }
       };
       loadImage();
     } else {
       setImageUrl(null);
     }
+
+    return () => {
+      isMounted = false;
+    };
   }, [category.picture_url]);
 
   // If no image, show avatar with initials
@@ -289,7 +306,6 @@ function CategorySpecifications({ category, t }: { category: ICategory; t: any }
 }
 
 export function CategoryListView() {
-  console.log('CategoryListView rendered');
   const theme = useTheme();
   const { t } = useTranslation('menu');
 

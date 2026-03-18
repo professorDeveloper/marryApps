@@ -1,8 +1,9 @@
 import type { IMealsItem } from 'src/types/meals';
 import type { CardSection, GenericEditViewConfig } from 'src/components/generic-edit-view';
+import type { SyntheticEvent } from 'react';
 import { useParams } from 'react-router';
 import { useTranslation } from 'react-i18next';
-import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
+import { useState, useCallback, useMemo, useEffect, useRef, startTransition } from 'react';
 import { mutate } from 'swr';
 import { Box, Tabs, Tab } from '@mui/material';
 import { CustomBreadcrumbs } from 'src/components/custom-breadcrumbs';
@@ -104,18 +105,26 @@ const BASIC_INFO_SECTION: CardSection = {
 interface TabPanelProps {
     children?: React.ReactNode;
     index: number;
+    keepMounted?: boolean;
     value: number;
 }
 
-function TabPanel({ children, value, index }: TabPanelProps) {
-    const [hasBeenActive, setHasBeenActive] = useState(value === index);
+function TabPanel({ children, value, index, keepMounted = false }: TabPanelProps) {
+    const [hasBeenActive, setHasBeenActive] = useState(keepMounted && value === index);
 
     useEffect(() => {
-        if (value === index) setHasBeenActive(true);
-    }, [value, index]);
+        if (keepMounted && value === index) {
+            setHasBeenActive(true);
+        }
+    }, [keepMounted, value, index]);
 
-    // Hech qachon mount bo'lmagan tabni render qilma
-    if (!hasBeenActive) return null;
+    if (!keepMounted && value !== index) {
+        return null;
+    }
+
+    if (keepMounted && !hasBeenActive) {
+        return null;
+    }
 
     return (
         <div
@@ -151,6 +160,12 @@ export function MealEditView({ isNew = false }: MealEditViewProps) {
     } | null>(null);
 
     const loading = !isNew && mealLoading;
+
+    const handleTabChange = useCallback((_: SyntheticEvent, newValue: number) => {
+        startTransition(() => {
+            setActiveTab(newValue);
+        });
+    }, []);
 
     // Effective meal ID - either from URL params or fetched meal
     const effectiveMealId = mealId || meal?.id;
@@ -419,7 +434,7 @@ export function MealEditView({ isNew = false }: MealEditViewProps) {
                 <Box sx={{ display: 'flex', justifyContent: 'center', mb: 0, width: '100%' }}>
                     <Tabs
                         value={activeTab}
-                        onChange={(e, newValue) => setActiveTab(newValue)}
+                        onChange={handleTabChange}
                         sx={{
                             px: 0,
                             width: '100%',
@@ -469,7 +484,7 @@ export function MealEditView({ isNew = false }: MealEditViewProps) {
                     />
                 </TabPanel>
 
-                <TabPanel value={activeTab} index={1}>
+                <TabPanel value={activeTab} index={1} keepMounted>
                     {isNew ? (
                         <ProductCalculator
                             mealId={effectiveMealId}
