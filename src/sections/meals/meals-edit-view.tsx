@@ -107,20 +107,22 @@ interface TabPanelProps {
     value: number;
 }
 
-function TabPanel(props: TabPanelProps) {
-    const { children, value, index, ...other } = props;
+function TabPanel({ children, value, index }: TabPanelProps) {
+    const [hasBeenActive, setHasBeenActive] = useState(value === index);
+
+    useEffect(() => {
+        if (value === index) setHasBeenActive(true);
+    }, [value, index]);
+
+    // Hech qachon mount bo'lmagan tabni render qilma
+    if (!hasBeenActive) return null;
 
     return (
         <div
             role="tabpanel"
-            hidden={value !== index}
-            id={`meal-tabpanel-${index}`}
-            aria-labelledby={`meal-tab-${index}`}
-            {...other}
+            style={{ display: value === index ? 'block' : 'none' }}
         >
-            <Box sx={{ pt: 0, display: value === index ? 'block' : 'none' }}>
-                {children}
-            </Box>
+            {children}
         </div>
     );
 }

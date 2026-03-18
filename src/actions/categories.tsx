@@ -55,9 +55,9 @@ function enrichCategories(
     );
 
     // Debug: Show available translations
-    if (translationMap.size > 0) {
-        console.log('🔍 Available translations:', Array.from(translationMap.keys()).length, 'translations');
-    }
+    // if (translationMap.size > 0) {
+    //     console.log('🔍 Available translations:', Array.from(translationMap.keys()).length, 'translations');
+    // }
 
     // Helper function to map i18n language codes to translation fields
     const getLangKey = (lang: string): keyof ITranslationItem => {
@@ -120,7 +120,7 @@ function enrichCategories(
             }
         } else {
             // name_i18n mavjud emas - available fieldlardan foydalanish
-            console.info(`ℹ️ No translation ID for category "${cat.name}" - using direct fields`);
+            // console.info(`ℹ️ No translation ID for category "${cat.name}" - using direct fields`);
             translationFields = {
                 name_en: cat.name_en || '',
                 name_ru: cat.name_ru || '',
