@@ -245,6 +245,33 @@ func (h *Handler) Refresh(c echo.Context) error {
 	return c.JSON(http.StatusOK, resp)
 }
 
+// GetUserByID retrieves a user by ID
+// @Summary Get user by ID
+// @Description Retrieve a single user by their UUID
+// @Tags users
+// @Produce json
+// @Security BearerAuth
+// @Param id path string true "User ID"
+// @Success 200 {object} model.UserResponse
+// @Failure 400 {object} model.ErrorResponse
+// @Failure 404 {object} model.ErrorResponse
+// @Failure 500 {object} model.ErrorResponse
+// @Router /api/v1/users/{id} [get]
+func (h *Handler) GetUserByID(c echo.Context) error {
+	id := c.Param("id")
+	if id == "" {
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("user id is required", "missing path parameter: id", http.StatusBadRequest))
+	}
+
+	user, err := h.service.Auth().GetUserByID(c.Request().Context(), id)
+	if err != nil {
+		log.Printf("GetUserByID failed for id %s: %v", id, err)
+		return c.JSON(http.StatusNotFound, model.NewErrorResponse("user not found", err.Error(), http.StatusNotFound))
+	}
+
+	return c.JSON(http.StatusOK, model.NewSuccessResponse("Data retrieved successfully", user, http.StatusOK))
+}
+
 // GetUsersByRole retrieves users by their role
 // @Summary Get users by role
 // @Description Retrieve all users with a specific role with pagination and optional expand

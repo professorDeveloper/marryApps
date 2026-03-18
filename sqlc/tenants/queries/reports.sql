@@ -14,14 +14,15 @@ SELECT
     ELSE (AVG(oi.price - oi.cost_price) / AVG(oi.cost_price)) * 100
   END::numeric                                                             AS avg_markup_pct
 FROM order_items oi
-JOIN orders o     ON o.id      = oi.order_id AND o.deleted_at = 0 AND o.bill_status = 'paid'
-JOIN goods g      ON g.id      = oi.good_id  AND g.deleted_at = 0
+JOIN orders o           ON o.id  = oi.order_id   AND o.deleted_at = 0 AND o.bill_status = 'paid'
+JOIN goods g            ON g.id  = oi.good_id    AND g.deleted_at = 0
+LEFT JOIN categories c  ON c.id  = g.category_id AND c.deleted_at = 0
 LEFT JOIN cafe_tables ct ON ct.id = o.table_id
 WHERE oi.deleted_at = 0
   AND o.created_at >= $1
   AND o.created_at <  $2
   AND o.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-  AND (NULLIF($3::text, '') IS NULL OR g.department_id = NULLIF($3::text, '')::uuid)
+  AND (NULLIF($3::text, '') IS NULL OR c.department_id = NULLIF($3::text, '')::uuid)
   AND (NULLIF($4::text, '') IS NULL OR g.category_id   = NULLIF($4::text, '')::uuid)
   AND (NULLIF($5::text, '') IS NULL OR g.id             = NULLIF($5::text, '')::uuid)
   AND (NULLIF($6::text, '') IS NULL OR o.waiter_id      = NULLIF($6::text, '')::uuid)
@@ -45,14 +46,15 @@ SELECT
   END::numeric                                                                   AS avg_markup_pct,
   COUNT(DISTINCT g.id)::bigint                                                   AS total_count
 FROM order_items oi
-JOIN orders o     ON o.id      = oi.order_id AND o.deleted_at = 0 AND o.bill_status = 'paid'
-JOIN goods g      ON g.id      = oi.good_id  AND g.deleted_at = 0
+JOIN orders o           ON o.id  = oi.order_id   AND o.deleted_at = 0 AND o.bill_status = 'paid'
+JOIN goods g            ON g.id  = oi.good_id    AND g.deleted_at = 0
+LEFT JOIN categories c  ON c.id  = g.category_id AND c.deleted_at = 0
 LEFT JOIN cafe_tables ct ON ct.id = o.table_id
 WHERE oi.deleted_at = 0
   AND o.created_at >= $1
   AND o.created_at <  $2
   AND o.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-  AND (NULLIF($3::text, '') IS NULL OR g.department_id = NULLIF($3::text, '')::uuid)
+  AND (NULLIF($3::text, '') IS NULL OR c.department_id = NULLIF($3::text, '')::uuid)
   AND (NULLIF($4::text, '') IS NULL OR g.category_id   = NULLIF($4::text, '')::uuid)
   AND (NULLIF($5::text, '') IS NULL OR g.id             = NULLIF($5::text, '')::uuid)
   AND (NULLIF($6::text, '') IS NULL OR o.waiter_id      = NULLIF($6::text, '')::uuid)

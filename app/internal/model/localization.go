@@ -17,6 +17,13 @@ func GetLocalizedMessage(lang, key string) string {
 			"bad_request":                 "Noto'g'ri formatda so'rov yuborilgan",
 			"user_info_cannot_be_reached": "Foydalanuvchini ma'lumotlarini yangilab bo'lmadi",
 			"invalid_date_of_birth":       "Noto'g'ri tug'ilgan sana",
+			"internal_server_error":       "Ichki server xatosi",
+			"required":                    "Majburiy maydon",
+			"min":                         "Qiymat juda kichik",
+			"max":                         "Qiymat juda katta",
+			"email":                       "Noto'g'ri email format",
+			"oneof":                       "Noto'g'ri qiymat",
+			"uuid":                        "Noto'g'ri UUID format",
 		},
 		"ru": {
 			"too_many_attempts":           "Слишком много попыток",
@@ -33,6 +40,13 @@ func GetLocalizedMessage(lang, key string) string {
 			"bad_request":                 "Запрос отправлен в неверном формате",
 			"user_info_cannot_be_reached": "Не удалось обновить данные пользователя",
 			"invalid_date_of_birth":       "Неверная дата рождения",
+			"internal_server_error":       "Внутренняя ошибка сервера",
+			"required":                    "Обязательное поле",
+			"min":                         "Значение слишком маленькое",
+			"max":                         "Значение слишком большое",
+			"email":                       "Неверный формат email",
+			"oneof":                       "Недопустимое значение",
+			"uuid":                        "Неверный формат UUID",
 		},
 	}
 
