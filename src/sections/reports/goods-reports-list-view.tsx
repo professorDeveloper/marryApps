@@ -10,6 +10,8 @@ import Button from '@mui/material/Button';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+import ToggleButton from '@mui/material/ToggleButton';
+import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
 
 import { paths } from 'src/routes/paths';
 
@@ -56,6 +58,7 @@ export function GoodsReportsListView() {
 
   const [startDate, setStartDate] = useState<dayjs.Dayjs | null>(null);
   const [endDate, setEndDate] = useState<dayjs.Dayjs | null>(null);
+  const [activeRange, setActiveRange] = useState<'day' | 'week' | 'month' | 'year'>('day');
 
   const { departments } = useGetDepartments();
   const { categories } = useGetCategoriesByDepartment(filters.department_id);
@@ -73,13 +76,12 @@ export function GoodsReportsListView() {
 
   useEffect(() => {
     const today = dayjs();
-    const yesterday = today.subtract(1, 'day');
-    setStartDate(yesterday);
-    setEndDate(today);
+    setStartDate(today.startOf('day'));
+    setEndDate(today.endOf('day'));
 
     setFilters((prev) => ({
       ...prev,
-      start_date: toApiStartDateTime(yesterday),
+      start_date: toApiStartDateTime(today),
       end_date: toApiEndDateTime(today),
     }));
   }, []);
@@ -176,6 +178,27 @@ export function GoodsReportsListView() {
     }
   }, [startDate, endDate, handleFilterChange]);
 
+  const applyRange = useCallback((range: 'day' | 'week' | 'month' | 'year') => {
+    const today = dayjs();
+    let nextStart = today.startOf('day');
+    let nextEnd = today.endOf('day');
+
+    if (range === 'week') {
+      nextStart = today.startOf('week');
+      nextEnd = today.endOf('week');
+    } else if (range === 'month') {
+      nextStart = today.startOf('month');
+      nextEnd = today.endOf('month');
+    } else if (range === 'year') {
+      nextStart = today.startOf('year');
+      nextEnd = today.endOf('year');
+    }
+
+    setActiveRange(range);
+    setStartDate(nextStart);
+    setEndDate(nextEnd);
+  }, []);
+
   const handleResetFilters = useCallback(() => {
     setFilters((prev) => ({
       ...prev,
@@ -211,17 +234,54 @@ export function GoodsReportsListView() {
           display: 'grid',
           gridTemplateColumns: {
             xs: '1fr',
-            sm: '1fr 1fr',
-            md: 'repeat(4, 1fr)',
-            lg: 'repeat(5, 1fr)',
+            sm: 'auto 1fr 1fr',
+            md: 'auto repeat(4, 1fr)',
+            lg: 'auto repeat(5, 1fr)',
           },
           gap: 1.5,
+          alignItems: 'end',
         }}
       >
+        <ToggleButtonGroup
+          exclusive
+          value={activeRange}
+          onChange={(_, value) => {
+            if (!value) return;
+            applyRange(value);
+          }}
+          size="small"
+          sx={{
+            alignSelf: 'end',
+            '& .MuiToggleButton-root': {
+              textTransform: 'uppercase',
+              fontWeight: 600,
+              px: 2.5,
+              border: 'none',
+              borderRadius: 0,
+              borderBottom: '2px solid transparent',
+            },
+            '& .MuiToggleButton-root.Mui-selected': {
+              borderBottomColor: 'primary.main',
+              backgroundColor: 'transparent',
+            },
+            '& .MuiToggleButton-root:hover': {
+              backgroundColor: 'transparent',
+            },
+          }}
+        >
+          <ToggleButton value="day">D</ToggleButton>
+          <ToggleButton value="week">W</ToggleButton>
+          <ToggleButton value="month">M</ToggleButton>
+          <ToggleButton value="year">Y</ToggleButton>
+        </ToggleButtonGroup>
+
         <DatePicker
           label={t('goodsReports.startDate', 'Start date')}
           value={startDate}
-          onChange={setStartDate}
+          onChange={(value) => {
+            setStartDate(value);
+            setActiveRange('day');
+          }}
           format="DD.MM.YYYY"
           slotProps={{
             textField: {
@@ -236,7 +296,10 @@ export function GoodsReportsListView() {
         <DatePicker
           label={t('goodsReports.endDate', 'End date')}
           value={endDate}
-          onChange={setEndDate}
+          onChange={(value) => {
+            setEndDate(value);
+            setActiveRange('day');
+          }}
           format="DD.MM.YYYY"
           slotProps={{
             textField: {

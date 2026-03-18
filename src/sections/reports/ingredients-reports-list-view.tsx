@@ -12,6 +12,8 @@ import TableHead from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
 import Tooltip from '@mui/material/Tooltip';
 import CircularProgress from '@mui/material/CircularProgress';
+import ToggleButton from '@mui/material/ToggleButton';
+import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import dayjs from 'dayjs';
 import { paths } from 'src/routes/paths';
@@ -58,6 +60,7 @@ export function IngredientReportsListView() {
     const [startDate, setStartDate] = useState<dayjs.Dayjs | null>(null);
     const [endDate, setEndDate] = useState<dayjs.Dayjs | null>(null);
     const [selectedStorageId, setSelectedStorageId] = useState<string>('');
+    const [activeRange, setActiveRange] = useState<'day' | 'week' | 'month' | 'year'>('day');
 
     // Modal states
     const [openDetailsModal, setOpenDetailsModal] = useState(false);
@@ -69,9 +72,8 @@ export function IngredientReportsListView() {
     useEffect(() => {
         // Set default date range (yesterday to today)
         const today = dayjs();
-        const yesterday = today.subtract(1, 'day');
-        setStartDate(yesterday);
-        setEndDate(today);
+        setStartDate(today.startOf('day'));
+        setEndDate(today.endOf('day'));
 
         // Set default storage
         if (storages && storages.length > 0) {
@@ -82,7 +84,7 @@ export function IngredientReportsListView() {
             setFilters((prev) => ({
                 ...prev,
                 storage_id: firstStorageId,
-                start: toUtcDayBoundary(yesterday),
+                start: toUtcDayBoundary(today),
                 end: toUtcDayBoundary(today, true),
             }));
         }
@@ -351,6 +353,27 @@ export function IngredientReportsListView() {
         }
     }, [startDate, endDate, selectedStorageId, handleFilterChange]);
 
+    const applyRange = useCallback((range: 'day' | 'week' | 'month' | 'year') => {
+        const today = dayjs();
+        let nextStart = today.startOf('day');
+        let nextEnd = today.endOf('day');
+
+        if (range === 'week') {
+            nextStart = today.startOf('week');
+            nextEnd = today.endOf('week');
+        } else if (range === 'month') {
+            nextStart = today.startOf('month');
+            nextEnd = today.endOf('month');
+        } else if (range === 'year') {
+            nextStart = today.startOf('year');
+            nextEnd = today.endOf('year');
+        }
+
+        setActiveRange(range);
+        setStartDate(nextStart);
+        setEndDate(nextEnd);
+    }, []);
+
     const handleResetFilters = useCallback(() => {
         setFilters({
             storage_id: '',
@@ -378,7 +401,48 @@ export function IngredientReportsListView() {
     );
 
     const renderFiltersContent = () => (
-        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: 'repeat(4, 1fr)', lg: 'repeat(5, 1fr)' }, gap: 1.5 }}>
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+            <Box sx={{ display: 'flex', alignItems: 'flex-end', gap: 2, flexWrap: 'wrap' }}>
+                <ToggleButtonGroup
+                    exclusive
+                    value={activeRange}
+                    onChange={(_, value) => {
+                        if (!value) return;
+                        applyRange(value);
+                    }}
+                    size="small"
+                    sx={{
+                        '& .MuiToggleButton-root': {
+                            textTransform: 'uppercase',
+                            fontWeight: 600,
+                            px: 2.5,
+                            border: 'none',
+                            borderRadius: 0,
+                            borderBottom: '2px solid transparent',
+                        },
+                        '& .MuiToggleButton-root.Mui-selected': {
+                            borderBottomColor: 'primary.main',
+                            backgroundColor: 'transparent',
+                        },
+                        '& .MuiToggleButton-root:hover': {
+                            backgroundColor: 'transparent',
+                        },
+                    }}
+                >
+                    <ToggleButton value="day">D</ToggleButton>
+                    <ToggleButton value="week">W</ToggleButton>
+                    <ToggleButton value="month">M</ToggleButton>
+                    <ToggleButton value="year">Y</ToggleButton>
+                </ToggleButtonGroup>
+
+                <Box
+                    sx={{
+                        display: 'grid',
+                        gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: 'repeat(4, 1fr)', lg: 'repeat(5, 1fr)' },
+                        gap: 1.5,
+                        flex: 1,
+                    }}
+                >
             {/* Storage - Required */}
             <NoDataTooltip enabled={isStoragesEmpty} title={noDataText}>
                 <TextField
@@ -414,7 +478,10 @@ export function IngredientReportsListView() {
             <DatePicker
                 label={t('ingredientReports.startDate') || 'Start Date'}
                 value={startDate}
-                onChange={setStartDate}
+                onChange={(value) => {
+                    setStartDate(value);
+                    setActiveRange('day');
+                }}
                 format="DD.MM.YYYY"
                 slotProps={{
                     textField: {
@@ -431,7 +498,10 @@ export function IngredientReportsListView() {
             <DatePicker
                 label={t('ingredientReports.endDate') || 'End Date'}
                 value={endDate}
-                onChange={setEndDate}
+                onChange={(value) => {
+                    setEndDate(value);
+                    setActiveRange('day');
+                }}
                 format="DD.MM.YYYY"
                 slotProps={{
                     textField: {
@@ -466,6 +536,8 @@ export function IngredientReportsListView() {
                     ))}
                 </TextField>
             </NoDataTooltip>
+                </Box>
+            </Box>
 
             {/* Action Buttons */}
             {/* <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>

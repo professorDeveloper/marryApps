@@ -11,6 +11,8 @@ import TableCell from '@mui/material/TableCell';
 import TableHead from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
 import Typography from '@mui/material/Typography';
+import ToggleButton from '@mui/material/ToggleButton';
+import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import dayjs from 'dayjs';
 import { paths } from 'src/routes/paths';
@@ -68,13 +70,13 @@ export function BillsListView() {
 
     const [startDate, setStartDate] = useState<dayjs.Dayjs | null>(null);
     const [endDate, setEndDate] = useState<dayjs.Dayjs | null>(null);
+    const [activeRange, setActiveRange] = useState<'day' | 'week' | 'month' | 'year'>('day');
 
     // Set default date range to last 1 day on component mount
     useEffect(() => {
         const today = dayjs();
-        const yesterday = today.subtract(1, 'day');
-        setStartDate(yesterday);
-        setEndDate(today);
+        setStartDate(today.startOf('day'));
+        setEndDate(today.endOf('day'));
     }, []);
 
     // Get bills with applied filters
@@ -498,6 +500,27 @@ export function BillsListView() {
         setPaginationModel((prev) => ({ ...prev, page: 0 }));
     }, [startDate, endDate]);
 
+    const applyRange = useCallback((range: 'day' | 'week' | 'month' | 'year') => {
+        const today = dayjs();
+        let nextStart = today.startOf('day');
+        let nextEnd = today.endOf('day');
+
+        if (range === 'week') {
+            nextStart = today.startOf('week');
+            nextEnd = today.endOf('week');
+        } else if (range === 'month') {
+            nextStart = today.startOf('month');
+            nextEnd = today.endOf('month');
+        } else if (range === 'year') {
+            nextStart = today.startOf('year');
+            nextEnd = today.endOf('year');
+        }
+
+        setActiveRange(range);
+        setStartDate(nextStart);
+        setEndDate(nextEnd);
+    }, []);
+
     useEffect(() => {
         setFilters((prev) => ({
             ...prev,
@@ -507,12 +530,56 @@ export function BillsListView() {
     }, [paginationModel.page, paginationModel.pageSize]);
 
     const renderFiltersContent = () => (
-        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: 'repeat(4, 1fr)', lg: 'repeat(7, 1fr)' }, gap: 1.5 }}>
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5}}>
+            <Box sx={{ display: 'flex', alignItems: 'flex-end', gap: 2, flexWrap: 'wrap'}}>
+                <ToggleButtonGroup
+                    exclusive
+                    value={activeRange}
+                    onChange={(_, value) => {
+                        if (!value) return;
+                        applyRange(value);
+                    }}
+                    size="small"
+                    sx={{
+                        '& .MuiToggleButton-root': {
+                            textTransform: 'uppercase',
+                            fontWeight: 600,
+                            px: 2.5,
+                            border: 'none',
+                            borderRadius: 0,
+                            borderBottom: '2px solid transparent',
+                        },
+                        '& .MuiToggleButton-root.Mui-selected': {
+                            borderBottomColor: 'primary.main',
+                            backgroundColor: 'transparent',
+                        },
+                        '& .MuiToggleButton-root:hover': {
+                            backgroundColor: 'transparent',
+                        },
+                    }}
+                >
+                    <ToggleButton value="day">D</ToggleButton>
+                    <ToggleButton value="week">W</ToggleButton>
+                    <ToggleButton value="month">M</ToggleButton>
+                    <ToggleButton value="year">Y</ToggleButton>
+                </ToggleButtonGroup>
+
+                <Box
+                    sx={{
+                        display: 'grid',
+                        gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: 'repeat(4, 1fr)', lg: 'repeat(7, 1fr)' },
+                        gap: 1.5,
+                        flex: 1,
+                    }}
+                >
             {/* Start Date */}
             <DatePicker
                 label={t('bills.startDate') || 'Start Date'}
                 value={startDate}
-                onChange={setStartDate}
+                onChange={(value) => {
+                    setStartDate(value);
+                    setActiveRange('day');
+                }}
                 format="DD.MM.YYYY"
                 slotProps={{
                     textField: {
@@ -528,7 +595,10 @@ export function BillsListView() {
             <DatePicker
                 label={t('bills.endDate') || 'End Date'}
                 value={endDate}
-                onChange={setEndDate}
+                onChange={(value) => {
+                    setEndDate(value);
+                    setActiveRange('day');
+                }}
                 format="DD.MM.YYYY"
                 slotProps={{
                     textField: {
@@ -641,6 +711,8 @@ export function BillsListView() {
                 >
                     {t('bills.reset') || 'Reset'}
                 </Button>
+            </Box>
+                </Box>
             </Box>
         </Box>
     );
