@@ -14,6 +14,7 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY package.json bun.lockb* bun.lock* ./
 
 COPY . .
+COPY .env.staging .env
 
 RUN bun run build
 
