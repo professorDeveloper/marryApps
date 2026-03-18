@@ -223,6 +223,18 @@ type GetIngredientReportRequest struct {
 	Start        *time.Time `json:"start,omitempty"`
 	End          *time.Time `json:"end,omitempty"`
 	IngredientID *string    `json:"ingredient_id,omitempty"`
+	Limit        int32      `json:"limit"`
+	Offset       int32      `json:"offset"`
+}
+
+type IngredientReportTotals struct {
+	TotalCount          int64  `json:"total_count"`
+	TotalOrderOutAmount string `json:"total_order_out_amount"`
+}
+
+type IngredientReportResponse struct {
+	Items  []IngredientReportItem `json:"items"`
+	Totals IngredientReportTotals `json:"totals"`
 }
 
 type IngredientReportItem struct {

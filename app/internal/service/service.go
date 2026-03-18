@@ -149,7 +149,7 @@ type IngredientI interface {
 	DeleteIngredientStock(ctx context.Context, stockID string) error
 	RestoreIngredientStock(ctx context.Context, stockID string) error
 
-	GetIngredientReport(ctx context.Context, req model.GetIngredientReportRequest) ([]model.IngredientReportItem, error)
+	GetIngredientReport(ctx context.Context, req model.GetIngredientReportRequest) (*model.IngredientReportResponse, error)
 	GetIngredientReportItem(ctx context.Context, req model.GetIngredientReportRequest) (*model.IngredientReportItem, error)
 	GetIngredientReportMovements(ctx context.Context, req model.GetIngredientReportMovementsRequest) ([]model.IngredientStockMovementResponse, error)
 }

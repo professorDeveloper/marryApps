@@ -208,7 +208,7 @@ func (i *IngredientS) DeleteIngredientGroup(ctx context.Context, groupID string)
 	return nil
 }
 
-func (i *IngredientS) GetIngredientReport(ctx context.Context, req model.GetIngredientReportRequest) ([]model.IngredientReportItem, error) {
+func (i *IngredientS) GetIngredientReport(ctx context.Context, req model.GetIngredientReportRequest) (*model.IngredientReportResponse, error) {
 	storageUUID, err := uuid.Parse(req.StorageID)
 	if err != nil {
 		return nil, fmt.Errorf("invalid storage_id: %w", err)
@@ -233,19 +233,33 @@ func (i *IngredientS) GetIngredientReport(ctx context.Context, req model.GetIngr
 		ingredientUUID = &u
 	}
 
-	rows, err := i.repo.Tenant(ctx).GetIngredientReport(ctx, pg.GetIngredientReportParams{
+	limit := req.Limit
+	if limit <= 0 {
+		limit = 20
+	}
+
+	params := pg.GetIngredientReportParams{
 		StorageID:    storageUUID,
 		Start:        start,
 		End:          end,
 		IngredientID: ingredientUUID,
-	})
+		Limit:        limit,
+		Offset:       req.Offset,
+	}
+
+	totalsRow, err := i.repo.Tenant(ctx).GetIngredientReportTotals(ctx, params)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get ingredient report totals: %w", err)
+	}
+
+	rows, err := i.repo.Tenant(ctx).GetIngredientReport(ctx, params)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get ingredient report: %w", err)
 	}
 
-	out := make([]model.IngredientReportItem, 0, len(rows))
+	items := make([]model.IngredientReportItem, 0, len(rows))
 	for _, r := range rows {
-		out = append(out, model.IngredientReportItem{
+		items = append(items, model.IngredientReportItem{
 			IngredientID:   r.IngredientID.String(),
 			IngredientName: r.IngredientName,
 			Measurement:    r.Measurement,
@@ -274,21 +288,29 @@ func (i *IngredientS) GetIngredientReport(ctx context.Context, req model.GetIngr
 			ShortageAmount:     numericToStr(r.ShortageAmount),
 		})
 	}
-	return out, nil
+
+	return &model.IngredientReportResponse{
+		Items: items,
+		Totals: model.IngredientReportTotals{
+			TotalCount:          totalsRow.TotalCount,
+			TotalOrderOutAmount: numericToStr(totalsRow.TotalOrderOutAmount),
+		},
+	}, nil
 }
 
 func (i *IngredientS) GetIngredientReportItem(ctx context.Context, req model.GetIngredientReportRequest) (*model.IngredientReportItem, error) {
 	if req.IngredientID == nil || *req.IngredientID == "" {
 		return nil, fmt.Errorf("ingredient_id is required")
 	}
-	rows, err := i.GetIngredientReport(ctx, req)
+	req.Limit = 1
+	resp, err := i.GetIngredientReport(ctx, req)
 	if err != nil {
 		return nil, err
 	}
-	if len(rows) == 0 {
+	if len(resp.Items) == 0 {
 		return nil, nil
 	}
-	item := rows[0]
+	item := resp.Items[0]
 	return &item, nil
 }
 

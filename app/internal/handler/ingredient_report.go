@@ -85,11 +85,22 @@ func (h *Handler) GetIngredientReport(c echo.Context) error {
 		ingredientID = &v
 	}
 
-	rows, err := h.service.Ingredient().GetIngredientReport(c.Request().Context(), model.GetIngredientReportRequest{
+	limit := int32(20)
+	offset := int32(0)
+	if l, err2 := strconv.Atoi(c.QueryParam("limit")); err2 == nil && l > 0 {
+		limit = int32(l)
+	}
+	if o, err2 := strconv.Atoi(c.QueryParam("offset")); err2 == nil && o >= 0 {
+		offset = int32(o)
+	}
+
+	resp, err := h.service.Ingredient().GetIngredientReport(c.Request().Context(), model.GetIngredientReportRequest{
 		StorageID:    storageID,
 		Start:        start,
 		End:          end,
 		IngredientID: ingredientID,
+		Limit:        limit,
+		Offset:       offset,
 	})
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse(
@@ -99,9 +110,11 @@ func (h *Handler) GetIngredientReport(c echo.Context) error {
 		))
 	}
 
-	return c.JSON(http.StatusOK, model.NewSuccessResponse(
+	return c.JSON(http.StatusOK, model.NewPaginatedResponse(
 		"Ingredient report retrieved successfully",
-		rows,
+		resp,
+		int32(resp.Totals.TotalCount),
+		limit, offset,
 		http.StatusOK,
 	))
 }
