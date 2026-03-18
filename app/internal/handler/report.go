@@ -67,3 +67,62 @@ func (h *Handler) GoodsReport(c echo.Context) error {
 	}
 	return c.JSON(http.StatusOK, model.NewSuccessResponse("ok", resp, http.StatusOK))
 }
+
+// GoodOrdersReport returns per-order breakdown for a specific good
+// @Summary Good orders report
+// @Description Per-order breakdown for a specific good: qty, sell price, cost price, markup per order. Only paid orders.
+// @Tags reports
+// @Produce json
+// @Security BearerAuth
+// @Param id          path   string true  "Good UUID"
+// @Param start_date  query  string true  "Start date (YYYY-MM-DD)"
+// @Param end_date    query  string true  "End date (YYYY-MM-DD, inclusive)"
+// @Param waiter_id   query  string false "Filter by waiter UUID"
+// @Param hall_id     query  string false "Filter by hall UUID"
+// @Param table_id    query  string false "Filter by table UUID"
+// @Param limit       query  int    false "Limit"  default(20)
+// @Param offset      query  int    false "Offset" default(0)
+// @Success 200 {object} model.GoodOrdersReportResponse
+// @Failure 400 {object} model.ErrorResponse
+// @Failure 500 {object} model.ErrorResponse
+// @Router /api/v1/reports/goods/{id}/orders [get]
+func (h *Handler) GoodOrdersReport(c echo.Context) error {
+	goodID := c.Param("id")
+	if goodID == "" {
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("good id is required", "", http.StatusBadRequest))
+	}
+	startDate := c.QueryParam("start_date")
+	endDate := c.QueryParam("end_date")
+	if startDate == "" || endDate == "" {
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("start_date and end_date are required", "", http.StatusBadRequest))
+	}
+
+	limit := int32(20)
+	offset := int32(0)
+	if l, err := strconv.Atoi(c.QueryParam("limit")); err == nil && l > 0 {
+		limit = int32(l)
+	}
+	if o, err := strconv.Atoi(c.QueryParam("offset")); err == nil && o >= 0 {
+		offset = int32(o)
+	}
+
+	optStr := func(key string) *string {
+		if v := c.QueryParam(key); v != "" {
+			return &v
+		}
+		return nil
+	}
+
+	resp, err := h.service.Report().GoodOrdersReport(
+		c.Request().Context(),
+		goodID, startDate, endDate,
+		optStr("waiter_id"),
+		optStr("hall_id"),
+		optStr("table_id"),
+		limit, offset,
+	)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("failed to get good orders report", err.Error(), http.StatusInternalServerError))
+	}
+	return c.JSON(http.StatusOK, model.NewSuccessResponse("ok", resp, http.StatusOK))
+}

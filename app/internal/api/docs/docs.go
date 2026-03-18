@@ -18614,6 +18614,98 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/reports/goods/{id}/orders": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Per-order breakdown for a specific good: qty, sell price, cost price, markup per order. Only paid orders.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "reports"
+                ],
+                "summary": "Good orders report",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Good UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Start date (YYYY-MM-DD)",
+                        "name": "start_date",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "End date (YYYY-MM-DD, inclusive)",
+                        "name": "end_date",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by waiter UUID",
+                        "name": "waiter_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by hall UUID",
+                        "name": "hall_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by table UUID",
+                        "name": "table_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 20,
+                        "description": "Limit",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 0,
+                        "description": "Offset",
+                        "name": "offset",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.GoodOrdersReportResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/separation-acts": {
             "get": {
                 "security": [
@@ -25598,6 +25690,102 @@ const docTemplate = `{
                 "updated_at": {
                     "type": "string",
                     "example": "2022-01-01T00:00:00Z"
+                }
+            }
+        },
+        "model.GoodOrdersReportResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.GoodOrdersReportRow"
+                    }
+                },
+                "limit": {
+                    "type": "integer"
+                },
+                "offset": {
+                    "type": "integer"
+                },
+                "totals": {
+                    "$ref": "#/definitions/model.GoodOrdersReportTotals"
+                }
+            }
+        },
+        "model.GoodOrdersReportRow": {
+            "type": "object",
+            "properties": {
+                "avg_cost_price": {
+                    "type": "string"
+                },
+                "avg_markup": {
+                    "type": "string"
+                },
+                "avg_markup_pct": {
+                    "type": "string"
+                },
+                "avg_sell_price": {
+                    "type": "string"
+                },
+                "bill_no": {
+                    "type": "string"
+                },
+                "bill_status": {
+                    "type": "string"
+                },
+                "closed_at": {
+                    "type": "string"
+                },
+                "hall_name": {
+                    "type": "string"
+                },
+                "opened_at": {
+                    "type": "string"
+                },
+                "order_id": {
+                    "type": "string"
+                },
+                "table_number": {
+                    "type": "string"
+                },
+                "total_cost": {
+                    "type": "string"
+                },
+                "total_markup": {
+                    "type": "string"
+                },
+                "total_qty": {
+                    "type": "integer"
+                },
+                "total_sell": {
+                    "type": "string"
+                },
+                "waiter_name": {
+                    "type": "string"
+                }
+            }
+        },
+        "model.GoodOrdersReportTotals": {
+            "type": "object",
+            "properties": {
+                "avg_markup_pct": {
+                    "type": "string"
+                },
+                "total_cost": {
+                    "type": "string"
+                },
+                "total_markup": {
+                    "type": "string"
+                },
+                "total_orders": {
+                    "type": "integer"
+                },
+                "total_qty": {
+                    "type": "integer"
+                },
+                "total_sell": {
+                    "type": "string"
                 }
             }
         },

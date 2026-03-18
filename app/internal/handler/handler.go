@@ -673,6 +673,7 @@ func (h *Handler) Register(router *echo.Echo) {
 		reports := api.Group("/reports", mw.CheckAuth(h.cfg), mw.TenantMiddleware(h.repo))
 		{
 			reports.GET("/goods", h.GoodsReport, mw.CheckLanguage())
+			reports.GET("/goods/:id/orders", h.GoodOrdersReport, mw.CheckLanguage())
 		}
 
 		// Brand management endpoints (admin only)

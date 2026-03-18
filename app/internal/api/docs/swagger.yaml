@@ -1766,6 +1766,69 @@ definitions:
         example: "2022-01-01T00:00:00Z"
         type: string
     type: object
+  model.GoodOrdersReportResponse:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/model.GoodOrdersReportRow'
+        type: array
+      limit:
+        type: integer
+      offset:
+        type: integer
+      totals:
+        $ref: '#/definitions/model.GoodOrdersReportTotals'
+    type: object
+  model.GoodOrdersReportRow:
+    properties:
+      avg_cost_price:
+        type: string
+      avg_markup:
+        type: string
+      avg_markup_pct:
+        type: string
+      avg_sell_price:
+        type: string
+      bill_no:
+        type: string
+      bill_status:
+        type: string
+      closed_at:
+        type: string
+      hall_name:
+        type: string
+      opened_at:
+        type: string
+      order_id:
+        type: string
+      table_number:
+        type: string
+      total_cost:
+        type: string
+      total_markup:
+        type: string
+      total_qty:
+        type: integer
+      total_sell:
+        type: string
+      waiter_name:
+        type: string
+    type: object
+  model.GoodOrdersReportTotals:
+    properties:
+      avg_markup_pct:
+        type: string
+      total_cost:
+        type: string
+      total_markup:
+        type: string
+      total_orders:
+        type: integer
+      total_qty:
+        type: integer
+      total_sell:
+        type: string
+    type: object
   model.GoodResponse:
     properties:
       branch_id:
@@ -16205,6 +16268,68 @@ paths:
       security:
       - BearerAuth: []
       summary: Goods sales report
+      tags:
+      - reports
+  /api/v1/reports/goods/{id}/orders:
+    get:
+      description: 'Per-order breakdown for a specific good: qty, sell price, cost
+        price, markup per order. Only paid orders.'
+      parameters:
+      - description: Good UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Start date (YYYY-MM-DD)
+        in: query
+        name: start_date
+        required: true
+        type: string
+      - description: End date (YYYY-MM-DD, inclusive)
+        in: query
+        name: end_date
+        required: true
+        type: string
+      - description: Filter by waiter UUID
+        in: query
+        name: waiter_id
+        type: string
+      - description: Filter by hall UUID
+        in: query
+        name: hall_id
+        type: string
+      - description: Filter by table UUID
+        in: query
+        name: table_id
+        type: string
+      - default: 20
+        description: Limit
+        in: query
+        name: limit
+        type: integer
+      - default: 0
+        description: Offset
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.GoodOrdersReportResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Good orders report
       tags:
       - reports
   /api/v1/separation-acts:
