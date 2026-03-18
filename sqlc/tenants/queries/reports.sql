@@ -97,7 +97,7 @@ WHERE oi.deleted_at = 0
   AND (NULLIF($5::text, '') IS NULL OR ct.hall_id  = NULLIF($5::text, '')::uuid)
   AND (NULLIF($6::text, '') IS NULL OR o.table_id  = NULLIF($6::text, '')::uuid)
 GROUP BY o.id, o.bill_no, o.bill_status, o.bill_opened_at, o.bill_closed_at,
-         u.full_name, h.name, ct.number
+         u.full_name, cas.full_name, h.name, ct.number
 ORDER BY o.bill_opened_at DESC
 LIMIT  $7
 OFFSET $8;
