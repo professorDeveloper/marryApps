@@ -34,6 +34,9 @@ func parseReportTimeParam(v string) (*time.Time, error) {
 // @Param start query string false "Start datetime (RFC3339) or date (YYYY-MM-DD)"
 // @Param end query string false "End datetime (RFC3339) or date (YYYY-MM-DD)"
 // @Param ingredient_id query string false "Ingredient ID (optional filter)"
+// @Param limit query int false "Limit" default(20)
+// @Param offset query int false "Offset" default(0)
+// @Param expand query string false "Expand related fields"
 // @Success 200 {array} model.IngredientReportItem "Ingredient report retrieved successfully"
 // @Failure 400 {object} model.ErrorResponse "Invalid request parameters"
 // @Failure 401 {object} model.ErrorResponse "Unauthorized"
@@ -131,6 +134,7 @@ func (h *Handler) GetIngredientReport(c echo.Context) error {
 // @Param storage_id query string true "Storage ID"
 // @Param start query string false "Start datetime (RFC3339) or date (YYYY-MM-DD)"
 // @Param end query string false "End datetime (RFC3339) or date (YYYY-MM-DD)"
+// @Param expand query string false "Expand related fields"
 // @Success 200 {object} model.IngredientReportItem "Ingredient report item retrieved successfully"
 // @Failure 400 {object} model.ErrorResponse "Invalid request parameters"
 // @Failure 401 {object} model.ErrorResponse "Unauthorized"
@@ -230,6 +234,7 @@ func (h *Handler) GetIngredientReportItem(c echo.Context) error {
 // @Param end query string false "End datetime (RFC3339) or date (YYYY-MM-DD)"
 // @Param limit query int false "Limit (default: 50)"
 // @Param offset query int false "Offset (default: 0)"
+// @Param expand query string false "Expand related fields"
 // @Success 200 {array} model.IngredientStockMovementResponse "Ingredient report movements retrieved successfully"
 // @Failure 400 {object} model.ErrorResponse "Invalid request parameters"
 // @Failure 401 {object} model.ErrorResponse "Unauthorized"

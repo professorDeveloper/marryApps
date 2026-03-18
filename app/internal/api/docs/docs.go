@@ -11474,6 +11474,26 @@ const docTemplate = `{
                         "description": "Ingredient ID (optional filter)",
                         "name": "ingredient_id",
                         "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 20,
+                        "description": "Limit",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 0,
+                        "description": "Offset",
+                        "name": "offset",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Expand related fields",
+                        "name": "expand",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -11550,6 +11570,12 @@ const docTemplate = `{
                         "type": "string",
                         "description": "End datetime (RFC3339) or date (YYYY-MM-DD)",
                         "name": "end",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Expand related fields",
+                        "name": "expand",
                         "in": "query"
                     }
                 ],
@@ -11642,6 +11668,12 @@ const docTemplate = `{
                         "type": "integer",
                         "description": "Offset (default: 0)",
                         "name": "offset",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Expand related fields",
+                        "name": "expand",
                         "in": "query"
                     }
                 ],
