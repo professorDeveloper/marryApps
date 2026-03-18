@@ -59,7 +59,8 @@ export const GenericEditView: FC<GenericEditViewProps> = ({
     useEffect(() => {
         if (data && data !== prevDataRef.current) {
             const mergedData = { ...buildInitialFormData(config), ...data };
-            methods.reset(mergedData, { keepValues: true });
+            // Ensure fetched data populates the form on first load
+            methods.reset(mergedData);
             prevDataRef.current = data;
         }
     }, [data, config, methods]);
