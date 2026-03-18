@@ -1,1 +1,0 @@
-const o={lang:"Русский",description:"Стартовая точка для вашего следующего проекта основана на MUI. Простая настройка помогает вам быстрее и лучше создавать приложения."},s={documents:"Документы",projects:"Проекты",work:"Работа",education:"Образование",sports:"Спорт",meals:"Блюда"},t={demo:o,folders:s};export{t as default,o as demo,s as folders};
