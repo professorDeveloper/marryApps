@@ -821,6 +821,11 @@ func (s *OrderS) GetBills(ctx context.Context, req model.GetBillsRequest) (*mode
 		return nil, fmt.Errorf("failed to count bills: %w", err)
 	}
 
+	totalsRow, err := s.repo.Tenant(ctx).GetBillsTotals(ctx, params)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get bills totals: %w", err)
+	}
+
 	rows, err := s.repo.Tenant(ctx).GetBills(ctx, params)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get bills: %w", err)
@@ -886,6 +891,15 @@ func (s *OrderS) GetBills(ctx context.Context, req model.GetBillsRequest) (*mode
 		Limit:  limit,
 		Offset: req.Offset,
 		Items:  items,
+		Totals: model.BillsTotals{
+			TotalFoodCost:       numericToString(totalsRow.TotalFoodCost),
+			TotalGuestCount:     totalsRow.TotalGuestCount,
+			TotalGrandTotal:     numericToString(totalsRow.TotalGrandTotal),
+			TotalServiceAmount:  numericToString(totalsRow.TotalServiceAmount),
+			AvgServicePercent:   numericToString(totalsRow.AvgServicePercent),
+			TotalDiscountAmount: numericToString(totalsRow.TotalDiscountAmount),
+			AvgDiscountPercent:  numericToString(totalsRow.AvgDiscountPercent),
+		},
 	}, nil
 }
 

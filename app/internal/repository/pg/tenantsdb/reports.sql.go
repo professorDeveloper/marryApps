@@ -19,7 +19,7 @@ SELECT
   o.bill_status::text                                                           AS bill_status,
   o.bill_opened_at                                                              AS opened_at,
   o.bill_closed_at                                                              AS closed_at,
-  COALESCE(u.full_name, '')                                                     AS waiter_name,
+  COALESCE(u.full_name, cas.full_name, '')                                      AS waiter_name,
   COALESCE(h.name, '')                                                          AS hall_name,
   COALESCE(ct.number::text, '')                                                 AS table_number,
   COALESCE(SUM(oi.quantity), 0)::bigint                                         AS total_qty,
@@ -36,6 +36,7 @@ SELECT
 FROM order_items oi
 JOIN orders o            ON o.id   = oi.order_id  AND o.deleted_at = 0 AND o.bill_status = 'paid'
 LEFT JOIN users u        ON u.id   = o.waiter_id  AND u.deleted_at = 0
+LEFT JOIN users cas      ON cas.id = o.cashier_id AND cas.deleted_at = 0
 LEFT JOIN cafe_tables ct ON ct.id  = o.table_id
 LEFT JOIN halls h        ON h.id   = ct.hall_id   AND h.deleted_at = 0
 WHERE oi.deleted_at = 0

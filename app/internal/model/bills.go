@@ -43,11 +43,22 @@ type BillListItem struct {
 	Quantity        int32      `json:"quantity"`
 }
 
+type BillsTotals struct {
+	TotalFoodCost       string `json:"total_food_cost"`
+	TotalGuestCount     int64  `json:"total_guest_count"`
+	TotalGrandTotal     string `json:"total_grand_total"`
+	TotalServiceAmount  string `json:"total_service_amount"`
+	AvgServicePercent   string `json:"avg_service_percent"`
+	TotalDiscountAmount string `json:"total_discount_amount"`
+	AvgDiscountPercent  string `json:"avg_discount_percent"`
+}
+
 type BillListResponse struct {
 	Total  int64          `json:"total"`
 	Limit  int32          `json:"limit"`
 	Offset int32          `json:"offset"`
 	Items  []BillListItem `json:"items"`
+	Totals BillsTotals    `json:"totals"`
 }
 
 type BillItem struct {

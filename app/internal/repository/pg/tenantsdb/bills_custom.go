@@ -454,6 +454,76 @@ func (q *Queries) CountBills(ctx context.Context, arg GetBillsParams) (int64, er
 	return count, nil
 }
 
+type BillsTotalsRow struct {
+	TotalFoodCost       pgtype.Numeric `json:"total_food_cost"`
+	TotalGuestCount     int64          `json:"total_guest_count"`
+	TotalGrandTotal     pgtype.Numeric `json:"total_grand_total"`
+	TotalServiceAmount  pgtype.Numeric `json:"total_service_amount"`
+	AvgServicePercent   pgtype.Numeric `json:"avg_service_percent"`
+	TotalDiscountAmount pgtype.Numeric `json:"total_discount_amount"`
+	AvgDiscountPercent  pgtype.Numeric `json:"avg_discount_percent"`
+}
+
+func (q *Queries) GetBillsTotals(ctx context.Context, arg GetBillsParams) (BillsTotalsRow, error) {
+	const sql = `
+		SELECT
+			COALESCE(SUM(o.food_cost), 0)                            AS total_food_cost,
+			COALESCE(SUM(o.guest_count), 0)::bigint                  AS total_guest_count,
+			COALESCE(SUM(o.grand_total), 0)                          AS total_grand_total,
+			COALESCE(SUM(o.service_amount), 0)                       AS total_service_amount,
+			COALESCE(AVG(o.service_percent), 0)                      AS avg_service_percent,
+			COALESCE(SUM(COALESCE(o.discount_amount, 0)), 0)         AS total_discount_amount,
+			COALESCE(AVG(COALESCE(o.discount_percent, 0)), 0)        AS avg_discount_percent
+		FROM orders o
+		LEFT JOIN cafe_tables ct ON o.table_id = ct.id AND ct.deleted_at = 0
+		LEFT JOIN halls h ON ct.hall_id = h.id AND h.deleted_at = 0
+		WHERE ($1::timestamptz IS NULL OR o.bill_opened_at >= $1)
+			AND ($2::timestamptz IS NULL OR o.bill_opened_at <= $2)
+			AND ($3::text IS NULL OR o.bill_status::text = $3)
+			AND ($4::text IS NULL OR o.payment_type::text = $4)
+			AND ($5::uuid IS NULL OR o.waiter_id = $5)
+			AND ($6::uuid IS NULL OR ct.hall_id = $6)
+			AND ($7::uuid IS NULL OR o.table_id = $7)
+			AND ($8::int IS NULL OR o.bill_no = $8)
+			AND ($9::uuid IS NULL OR o.cash_register_id = $9)
+			AND ($10::uuid IS NULL OR o.cashier_id = $10)
+	`
+	var start any
+	if arg.Start != nil {
+		start = *arg.Start
+	}
+	var end any
+	if arg.End != nil {
+		end = *arg.End
+	}
+	var waiter any
+	if arg.WaiterID != nil {
+		waiter = *arg.WaiterID
+	}
+	var hall any
+	if arg.HallID != nil {
+		hall = *arg.HallID
+	}
+	var table any
+	if arg.TableID != nil {
+		table = *arg.TableID
+	}
+	row := q.db.QueryRow(ctx, sql, start, end, arg.BillStatus, arg.PaymentType, waiter, hall, table, arg.BillNo, arg.CashRegisterID, arg.CashierID)
+	var out BillsTotalsRow
+	if err := row.Scan(
+		&out.TotalFoodCost,
+		&out.TotalGuestCount,
+		&out.TotalGrandTotal,
+		&out.TotalServiceAmount,
+		&out.AvgServicePercent,
+		&out.TotalDiscountAmount,
+		&out.AvgDiscountPercent,
+	); err != nil {
+		return BillsTotalsRow{}, err
+	}
+	return out, nil
+}
+
 func (q *Queries) GetBillDetails(ctx context.Context, orderID uuid.UUID) (BillDetailsRow, error) {
 	const sql = `
 		SELECT
