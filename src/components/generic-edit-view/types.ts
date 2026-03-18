@@ -49,12 +49,63 @@ export interface GenericEditViewConfig {
     showDeleteButton?: boolean;
 }
 
+// export interface GenericEditViewProps {
+//     config: GenericEditViewConfig;
+//     data?: Record<string, any>;
+//     isNew?: boolean;
+//     loading?: boolean;
+//     // Controlled form props - if provided, form will be controlled externally
+//     formData?: Record<string, any>;
+//     onFormDataChange?: (formData: Record<string, any>) => void;
+// }
+
+// Defines the structure for a single form field
+export interface FormField {
+    key: string;
+    label: string;
+    type: 'text' | 'textarea' | 'select' | 'switch' | 'date' | 'number' | 'url' | 'image' | 'color' | 'email' | 'checkbox';
+    required?: boolean;
+    placeholder?: string;
+    multiline?: boolean;
+    rows?: number;
+    defaultValue?: any;
+    options?: { value: string | number; label: string }[];
+    validation?: (value: any) => string | null;
+    helperText?: string;
+    fullWidth?: boolean;
+    grid?: number; // 1-12 for grid layout
+    colors?: string[]; // For color picker type
+    height?: number; // For image field height
+}
+
+// Defines a section of the form, containing a title and a group of fields
+export interface CardSection {
+    id: string;
+    title: string;
+    columns?: number; // 1 or 2
+    fields: FormField[];
+}
+
+// Defines the configuration for the entire edit view
+export interface GenericEditViewConfig {
+    entityName: string;
+    title: string;
+    breadcrumbs: { name: string; href: string }[];
+    sections: CardSection[];
+    leftSidecard?: CardSection;
+    showBreadcrumbs?: boolean;
+    showDeleteButton?: boolean;
+    deleteConfirmMessage?: string;
+    onSubmit: (formData: Record<string, any>) => Promise<void>;
+    onDelete?: () => Promise<void>;
+}
+
+// Props for the main GenericEditView component
 export interface GenericEditViewProps {
     config: GenericEditViewConfig;
-    data?: Record<string, any>;
+    data?: Record<string, any> | null;
     isNew?: boolean;
     loading?: boolean;
-    // Controlled form props - if provided, form will be controlled externally
     formData?: Record<string, any>;
     onFormDataChange?: (formData: Record<string, any>) => void;
 }

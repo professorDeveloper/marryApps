@@ -1,4 +1,4 @@
-import { Helmet } from 'react-helmet-async';
+import { useEffect } from 'react';
 import { CONFIG } from 'src/global-config';
 import { DeductionsEditView } from 'src/sections/warehouse/deductions-edit-view';
 
@@ -7,12 +7,11 @@ import { DeductionsEditView } from 'src/sections/warehouse/deductions-edit-view'
 const metadata = { title: `Deduction Details | Warehouse - ${CONFIG.appName}` };
 
 export default function DeductionDetailsPage() {
+    useEffect(() => {
+        document.title = metadata.title;
+    }, []); 
     return (
         <>
-            <Helmet>
-                <title>{metadata.title}</title>
-            </Helmet>
-
             <DeductionsEditView />
         </>
     );
