@@ -42,6 +42,7 @@
     "@mui/lab": "^7.0.1-beta.20",
     "@mui/material": "^7.3.9",
     "@mui/stylis-plugin-rtl": "^7.3.6",
+    "@mui/system": "^7.3.9",
     "@mui/x-data-grid": "^8.21.0",
     "@mui/x-date-pickers": "^8.21.0",
     "@mui/x-tree-view": "^8.21.0",
