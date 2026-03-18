@@ -712,6 +712,10 @@ export function IngredientReportsListView() {
                 maxWidth="lg"
                 position="right"
                 slideDirection="left"
+                paperSx={{
+                    width: { xs: '100%', sm: '30vw' },
+                    maxWidth: { xs: '100%', sm: '30vw' },
+                }}
             />
 
             <GenericViewModal
@@ -726,6 +730,10 @@ export function IngredientReportsListView() {
                 maxWidth="sm"
                 position="right"
                 slideDirection="left"
+                paperSx={{
+                    width: { xs: '100%', sm: '30vw' },
+                    maxWidth: { xs: '100%', sm: '30vw' },
+                }}
             />
         </>
     );

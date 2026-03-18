@@ -4,6 +4,8 @@ import type { IUser, IUserFormData, IUserRegisterData } from 'src/types/user';
 import useSWR, { mutate } from 'swr';
 import { useMemo, useCallback } from 'react';
 
+import { uuidv4 } from 'minimal-shared/utils';
+
 import { poster, putter, fetcher, deleter, endpoints } from 'src/lib/axios';
 
 const swrOptions: SWRConfiguration = {
@@ -29,6 +31,7 @@ function normalizeUser(rawUser: any): IUser {
         phone_number: rawUser?.phone_number ?? rawUser?.phoneNumber ?? '',
         brand_id: rawUser?.brand_id ?? rawUser?.brandId ?? '',
         branch_id: rawUser?.branch_id ?? rawUser?.branchId ?? '',
+        cash_register_id: rawUser?.cash_register_id ?? rawUser?.cashRegisterId ?? '',
         pincode: rawUser?.pincode ?? rawUser?.pinCode ?? '',
         terminal: rawUser?.terminal ?? rawUser?.terminal_name ?? '',
         status:
@@ -183,6 +186,7 @@ export function useCreateUser() {
 
             // Transform form data to register API format
             const registerData: IUserRegisterData = {
+                id: uuidv4(),
                 // Token ichidagi brand_id ustuvor (UUID id emas, haqiqiy tenant kodi bo'lishi uchun)
                 brand_id: tokenBrandId || formData.brand_id || localStorage.getItem('brand_id') || '',
                 // selectedBranchId ustuvor, bo'lmasa tokendan kelgan branch_id ishlatiladi
@@ -198,6 +202,10 @@ export function useCreateUser() {
                 pincode: formData.pincode || '',
                 role: formData.role,
             };
+
+            if (formData.role === 'cashier' && formData.cash_register_id) {
+                registerData.cash_register_id = formData.cash_register_id;
+            }
 
             const response = await poster<IUser>(endpoints.users.register, registerData);
             // Revalidate list

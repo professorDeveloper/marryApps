@@ -451,6 +451,10 @@ export function IngredientListView() {
                 maxWidth="sm"
                 slideDirection="left"
                 position="right"
+                paperSx={{
+                    width: { xs: '100%', sm: '30vw' },
+                    maxWidth: { xs: '100%', sm: '30vw' },
+                }}
             />
 
             {/* Delete Confirmation Dialog */}

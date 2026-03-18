@@ -203,7 +203,10 @@
     "deleteConfirm": "Are you sure you want to delete this category?",
     "deleteMessage": "This action cannot be undone and cannot be reversed.",
     "cancel": "Cancel",
-    "confirm": "Confirm"
+    "confirm": "Confirm",
+    "color": "Color",
+    "created": "Created",
+    "updated": "Updated"
   },
   "semifinishedProducts": {
     "title": "Semifinished products",
@@ -474,6 +477,7 @@
     "passwordRequired": "Password is required",
     "roleRequired": "Role selection is required",
     "pincodeRequired": "Pin code is required",
+    "cashRegisterRequired": "Cash register is required",
     "statusRequired": "Status selection is required",
     "statusActive": "Active",
     "statusInactive": "Inactive",
@@ -664,7 +668,9 @@
     "created_at": "Created at",
     "actions": "Actions",
     "create": "Create",
-    "update": "Update"
+    "update": "Update",
+    "amount": "Amount",
+    "unit": "Unit"
   },
   "ingredients": {
     "title": "Ingredients",

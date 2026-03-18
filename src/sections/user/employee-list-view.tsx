@@ -305,6 +305,10 @@ export function EmployeeListView({ role, title, useStaffApi = false }: EmployeeL
                 maxWidth="sm"
                 slideDirection="left"
                 position="right"
+                paperSx={{
+                    width: { xs: '100%', sm: '40vw' },
+                    maxWidth: { xs: '100%', sm: '40vw' },
+                }}
             />
 
             {/* Delete Confirmation Dialog */}

@@ -189,7 +189,10 @@
     "deleteConfirm": "Сиз ушбу категорияни ўчиришни истайсизми?",
     "deleteMessage": "Бу ҳаракатни бекор қилиш мумкин эмас ва уни қайтариб бўлмайди.",
     "cancel": "Бекор қилиш",
-    "confirm": "Тасдиқлаш"
+    "confirm": "Тасдиқлаш",
+    "color": "Ранг",
+    "created": "Яратилган",
+    "updated": "Янгиланган"
   },
   "semifinishedProducts": {
     "title": "Ярим тайёр маҳсулотлар",
@@ -434,6 +437,7 @@
     "passwordRequired": "Пароль мажбурийдир",
     "roleRequired": "Рол танлаш мажбурийдир",
     "pincodeRequired": "PIN код мажбурийдир",
+    "cashRegisterRequired": "Касса мажбурийдир",
     "statusRequired": "Ҳолат танлаш мажбурийдир",
     "statusActive": "Фаол",
     "statusInactive": "Нофаол",
@@ -485,7 +489,9 @@
     "deleteFailed": "Failed to delete",
     "saveFailed": "Failed to save",
     "create": "Яратиш",
-    "update": "Янгилаш"
+    "update": "Янгилаш",
+    "amount": "Сумма",
+    "unit": "Единица"
   },
   "warehouse": {
     "title": "Захира",
@@ -681,7 +687,7 @@
   "halls": {
     "Halls": "Заллар",
     "title": "Залларни бошқариш",
-    "description": "Ресторан залларни яратинг ва бошқаринг (фарш режажасининг учун)",
+    "description": "Ресторан залларни яратинг ва бошқаринг",
     "createNew": "Зал яратиш",
     "noHalls": "Залнар яратилмади",
     "createFirst": "Биринчи зални яратиб, фарш ўхшашилашини бошлаб юбориңиз",
@@ -963,7 +969,7 @@
     "deductionAmount": "Ҳисобдан чиқариш суммаси",
     "surplusAmount": "Ортиқча суммаси",
     "shortageAmount": "Камомад суммаси",
-    "all": "Бармаси"
+    "all": "Барчаси"
   },
   "goodsReports": {
     "title": "Товарлар ҳисоботи",

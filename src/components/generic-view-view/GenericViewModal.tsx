@@ -1,4 +1,5 @@
 import { useMemo, forwardRef, useCallback } from 'react';
+import type { SxProps, Theme } from '@mui/material/styles';
 import {
   Box,
   Slide,
@@ -28,6 +29,7 @@ export interface GenericViewModalProps {
   slideDirection?: 'left' | 'right' | 'up' | 'down';
   position?: 'center' | 'right';
   loading?: boolean;
+  paperSx?: SxProps<Theme>;
 }
 
 const SlideUpTransition = forwardRef<unknown, SlideProps>(function Transition(
@@ -152,6 +154,7 @@ export function GenericViewModal({
   maxWidth = 'xl',
   slideDirection = 'left',
   position = 'center',
+  paperSx,
 }: GenericViewModalProps) {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
@@ -270,6 +273,7 @@ export function GenericViewModal({
               : '0 20px 60px rgba(0, 0, 0, 0.08)',
           border: (theme) =>
             theme.palette.mode === 'dark' ? `1px solid ${theme.palette.divider}` : 'none',
+          ...paperSx,
         },
       }}
       BackdropProps={{
