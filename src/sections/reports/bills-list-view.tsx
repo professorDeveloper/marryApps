@@ -78,7 +78,7 @@ export function BillsListView() {
     }, []);
 
     // Get bills with applied filters
-    const { bills, billsLoading, pagination } = useGetBills(
+    const { bills, billsLoading, pagination, totals } = useGetBills(
         Object.fromEntries(Object.entries(filters).filter(([, v]) => v !== ''))
     );
 
@@ -677,6 +677,75 @@ export function BillsListView() {
                     setOpenDetailsModal(true);
                 }}
             />
+
+            {totals && (
+                <Box sx={{ px: { xs: 2, md: 3 }, pb: { xs: 2, md: 3 } }}>
+                    <Box
+                        sx={{
+                            display: 'grid',
+                            gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: 'repeat(7, 1fr)' },
+                            gap: 1,
+                        }}
+                    >
+                        <Card sx={{ p: 1.5 }}>
+                            <Typography variant="caption" color="text.secondary">
+                                {t('bills.foodCost', 'Food Cost')}
+                            </Typography>
+                            <Typography variant="subtitle2">
+                                {Number(totals.total_food_cost || 0).toLocaleString()} so'm
+                            </Typography>
+                        </Card>
+                        <Card sx={{ p: 1.5 }}>
+                            <Typography variant="caption" color="text.secondary">
+                                {t('bills.guests', 'Guests')}
+                            </Typography>
+                            <Typography variant="subtitle2">
+                                {totals.total_guest_count ?? 0}
+                            </Typography>
+                        </Card>
+                        <Card sx={{ p: 1.5 }}>
+                            <Typography variant="caption" color="text.secondary">
+                                {t('bills.grandTotal', 'Grand Total')}
+                            </Typography>
+                            <Typography variant="subtitle2">
+                                {Number(totals.total_grand_total || 0).toLocaleString()} so'm
+                            </Typography>
+                        </Card>
+                        <Card sx={{ p: 1.5 }}>
+                            <Typography variant="caption" color="text.secondary">
+                                {t('bills.service', 'Service')}
+                            </Typography>
+                            <Typography variant="subtitle2">
+                                {Number(totals.total_service_amount || 0).toLocaleString()} so'm
+                            </Typography>
+                        </Card>
+                        <Card sx={{ p: 1.5 }}>
+                            <Typography variant="caption" color="text.secondary">
+                                {t('bills.service', 'Service')} %
+                            </Typography>
+                            <Typography variant="subtitle2">
+                                {Number(totals.avg_service_percent || 0).toLocaleString()}%
+                            </Typography>
+                        </Card>
+                        <Card sx={{ p: 1.5 }}>
+                            <Typography variant="caption" color="text.secondary">
+                                {t('bills.discount', 'Discount')}
+                            </Typography>
+                            <Typography variant="subtitle2">
+                                {Number(totals.total_discount_amount || 0).toLocaleString()} so'm
+                            </Typography>
+                        </Card>
+                        <Card sx={{ p: 1.5 }}>
+                            <Typography variant="caption" color="text.secondary">
+                                {t('bills.discount', 'Discount')} %
+                            </Typography>
+                            <Typography variant="subtitle2">
+                                {Number(totals.avg_discount_percent || 0).toLocaleString()}%
+                            </Typography>
+                        </Card>
+                    </Box>
+                </Box>
+            )}
 
             {/* Bill Details Modal - Using GenericViewModal */}
             <GenericViewModal

@@ -190,6 +190,20 @@ export function GoodsReportsListView() {
     }));
   }, []);
 
+  const handleRowClick = useCallback((id: string) => {
+    const href = paths.menu.reports.goods.details(String(id));
+    const params = new URLSearchParams();
+    if (filters.start_date) params.set('start_date', filters.start_date);
+    if (filters.end_date) params.set('end_date', filters.end_date);
+    if (filters.waiter_id) params.set('waiter_id', filters.waiter_id);
+    if (filters.hall_id) params.set('hall_id', filters.hall_id);
+    if (filters.table_id) params.set('table_id', filters.table_id);
+
+    const query = params.toString();
+    const absoluteUrl = `${window.location.origin}${href}${query ? `?${query}` : ''}`;
+    window.open(absoluteUrl, '_blank', 'noopener,noreferrer');
+  }, [filters.end_date, filters.hall_id, filters.start_date, filters.table_id, filters.waiter_id]);
+
   const renderFiltersContent = () => (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
       <Box
@@ -420,6 +434,7 @@ export function GoodsReportsListView() {
           ],
         }}
         renderFilters={renderFiltersContent}
+        onRowClick={handleRowClick}
       />
 
       {totals && (

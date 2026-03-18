@@ -1,5 +1,9 @@
 import type { SWRConfiguration } from 'swr';
-import type { IGoodsReportsResponse, IGoodsReportsFilterParams } from 'src/types/goods-reports';
+import type {
+  IGoodsReportsResponse,
+  IGoodsReportsFilterParams,
+  IGoodsReportOrdersResponse,
+} from 'src/types/goods-reports';
 
 import useSWR from 'swr';
 import { useMemo } from 'react';
@@ -37,6 +41,54 @@ export function useGetGoodsReports(params?: IGoodsReportsFilterParams) {
   const url = shouldFetch ? `${endpoints.goodsReports.list}${queryString}` : null;
 
   const { data, isLoading, error, isValidating } = useSWR<IGoodsReportsResponse>(url, fetcher, {
+    ...swrOptions,
+  });
+
+  const reports = useMemo(() => data?.data?.data || [], [data]);
+  const totals = useMemo(() => data?.data?.totals, [data]);
+
+  const memoizedValue = useMemo(
+    () => ({
+      reports,
+      totals,
+      reportsLoading: isLoading,
+      reportsError: error,
+      reportsValidating: isValidating,
+      reportsEmpty: !isLoading && !isValidating && !reports.length,
+    }),
+    [reports, totals, error, isLoading, isValidating]
+  );
+
+  return memoizedValue;
+}
+
+export function useGetGoodsReportOrders(
+  goodId: string,
+  params?: {
+    start_date?: string;
+    end_date?: string;
+    waiter_id?: string;
+    hall_id?: string;
+    table_id?: string;
+    limit?: number;
+    offset?: number;
+  }
+) {
+  const shouldFetch = Boolean(goodId);
+  const queryParams = new URLSearchParams();
+
+  if (params?.start_date) queryParams.append('start_date', params.start_date);
+  if (params?.end_date) queryParams.append('end_date', params.end_date);
+  if (params?.waiter_id) queryParams.append('waiter_id', params.waiter_id);
+  if (params?.hall_id) queryParams.append('hall_id', params.hall_id);
+  if (params?.table_id) queryParams.append('table_id', params.table_id);
+  if (typeof params?.limit === 'number') queryParams.append('limit', String(params.limit));
+  if (typeof params?.offset === 'number') queryParams.append('offset', String(params.offset));
+
+  const queryString = queryParams.toString();
+  const url = shouldFetch ? `${endpoints.goodsReports.orders(goodId)}${queryString ? `?${queryString}` : ''}` : null;
+
+  const { data, isLoading, error, isValidating } = useSWR<IGoodsReportOrdersResponse>(url, fetcher, {
     ...swrOptions,
   });
 

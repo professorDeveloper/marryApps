@@ -72,6 +72,11 @@ export function useGetBills(params?: IBillsFilterParams) {
         return data.data.total ?? bills.length;
     }, [data, bills.length]);
 
+    const totals = useMemo(() => {
+        if (!data?.data) return undefined;
+        return data.data.totals;
+    }, [data]);
+
     const memoizedValue = useMemo(
         () => ({
             bills,
@@ -81,8 +86,9 @@ export function useGetBills(params?: IBillsFilterParams) {
             billsValidating: isValidating,
             billsEmpty: !isLoading && !isValidating && !bills.length,
             pagination,
+            totals,
         }),
-        [bills, total, error, isLoading, isValidating, pagination]
+        [bills, total, error, isLoading, isValidating, pagination, totals]
     );
 
     return memoizedValue;

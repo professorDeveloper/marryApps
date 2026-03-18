@@ -45,3 +45,43 @@ export interface IGoodsReportsResponse {
   };
   code: number;
 }
+
+export interface IGoodsReportOrderItem {
+  order_id: string;
+  bill_no: string;
+  bill_status: string;
+  opened_at: string;
+  closed_at: string;
+  waiter_name: string;
+  hall_name: string;
+  table_number: string;
+  total_qty: number;
+  avg_sell_price: string;
+  total_sell: string;
+  avg_cost_price: string;
+  total_cost: string;
+  avg_markup: string;
+  total_markup: string;
+  avg_markup_pct: string;
+}
+
+export interface IGoodsReportOrdersTotals {
+  total_qty: number;
+  total_sell: string;
+  total_cost: string;
+  total_markup: string;
+  avg_markup_pct: string;
+  total_orders: number;
+}
+
+export interface IGoodsReportOrdersResponse {
+  status: string;
+  message: string;
+  data: {
+    data: IGoodsReportOrderItem[];
+    totals: IGoodsReportOrdersTotals;
+    limit: number;
+    offset: number;
+  };
+  code: number;
+}
