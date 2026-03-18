@@ -110,13 +110,14 @@ func (h *Handler) GetIngredientReport(c echo.Context) error {
 		))
 	}
 
-	return c.JSON(http.StatusOK, model.NewPaginatedResponse(
-		"Ingredient report retrieved successfully",
-		resp,
-		int32(resp.Totals.TotalCount),
-		limit, offset,
-		http.StatusOK,
-	))
+	total := int32(resp.Totals.TotalCount)
+	if maps, expanded, err := h.expandListResponse(c, resp.Items, "ingredients"); expanded {
+		if err != nil {
+			return nil
+		}
+		return c.JSON(http.StatusOK, model.NewPaginatedResponse("Ingredient report retrieved successfully", maps, total, limit, offset, http.StatusOK))
+	}
+	return c.JSON(http.StatusOK, model.NewPaginatedResponse("Ingredient report retrieved successfully", resp.Items, total, limit, offset, http.StatusOK))
 }
 
 // GetIngredientReportItem retrieves aggregated ingredient report for a single ingredient
@@ -207,11 +208,13 @@ func (h *Handler) GetIngredientReportItem(c echo.Context) error {
 		))
 	}
 
-	return c.JSON(http.StatusOK, model.NewSuccessResponse(
-		"Ingredient report item retrieved successfully",
-		item,
-		http.StatusOK,
-	))
+	if m, expanded, err := h.expandSingleResponse(c, item, "ingredients"); expanded {
+		if err != nil {
+			return nil
+		}
+		return c.JSON(http.StatusOK, model.NewSuccessResponse("Ingredient report item retrieved successfully", m, http.StatusOK))
+	}
+	return c.JSON(http.StatusOK, model.NewSuccessResponse("Ingredient report item retrieved successfully", item, http.StatusOK))
 }
 
 // GetIngredientReportMovements retrieves ingredient stock movement ledger rows for a single ingredient
@@ -324,9 +327,11 @@ func (h *Handler) GetIngredientReportMovements(c echo.Context) error {
 		))
 	}
 
-	return c.JSON(http.StatusOK, model.NewSuccessResponse(
-		"Ingredient report movements retrieved successfully",
-		rows,
-		http.StatusOK,
-	))
+	if maps, expanded, err := h.expandListResponse(c, rows, "ingredient_stock_movements"); expanded {
+		if err != nil {
+			return nil
+		}
+		return c.JSON(http.StatusOK, model.NewSuccessResponse("Ingredient report movements retrieved successfully", maps, http.StatusOK))
+	}
+	return c.JSON(http.StatusOK, model.NewSuccessResponse("Ingredient report movements retrieved successfully", rows, http.StatusOK))
 }

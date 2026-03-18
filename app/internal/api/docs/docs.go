@@ -18590,6 +18590,12 @@ const docTemplate = `{
                         "description": "Offset",
                         "name": "offset",
                         "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Expand related fields",
+                        "name": "expand",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -18681,6 +18687,12 @@ const docTemplate = `{
                         "default": 0,
                         "description": "Offset",
                         "name": "offset",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Expand related fields",
+                        "name": "expand",
                         "in": "query"
                     }
                 ],

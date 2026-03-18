@@ -24,6 +24,7 @@ import (
 // @Param table_id      query string false "Filter by table UUID"
 // @Param limit         query int    false "Limit"  default(20)
 // @Param offset        query int    false "Offset" default(0)
+// @Param expand        query string false "Expand related fields"
 // @Success 200 {object} model.GoodsReportResponse
 // @Failure 400 {object} model.ErrorResponse
 // @Failure 500 {object} model.ErrorResponse
@@ -65,7 +66,15 @@ func (h *Handler) GoodsReport(c echo.Context) error {
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("failed to get goods report", err.Error(), http.StatusInternalServerError))
 	}
-	return c.JSON(http.StatusOK, model.NewSuccessResponse("ok", resp, http.StatusOK))
+
+	total := int32(resp.Totals.TotalCount)
+	if maps, expanded, err := h.expandListResponse(c, resp.Data, "goods"); expanded {
+		if err != nil {
+			return nil
+		}
+		return c.JSON(http.StatusOK, model.NewPaginatedResponse("ok", maps, total, limit, offset, http.StatusOK))
+	}
+	return c.JSON(http.StatusOK, model.NewPaginatedResponse("ok", resp.Data, total, limit, offset, http.StatusOK))
 }
 
 // GoodOrdersReport returns per-order breakdown for a specific good
@@ -82,6 +91,7 @@ func (h *Handler) GoodsReport(c echo.Context) error {
 // @Param table_id    query  string false "Filter by table UUID"
 // @Param limit       query  int    false "Limit"  default(20)
 // @Param offset      query  int    false "Offset" default(0)
+// @Param expand      query  string false "Expand related fields"
 // @Success 200 {object} model.GoodOrdersReportResponse
 // @Failure 400 {object} model.ErrorResponse
 // @Failure 500 {object} model.ErrorResponse
@@ -124,5 +134,13 @@ func (h *Handler) GoodOrdersReport(c echo.Context) error {
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("failed to get good orders report", err.Error(), http.StatusInternalServerError))
 	}
-	return c.JSON(http.StatusOK, model.NewSuccessResponse("ok", resp, http.StatusOK))
+
+	total := int32(resp.Totals.TotalOrders)
+	if maps, expanded, err := h.expandListResponse(c, resp.Data, "orders"); expanded {
+		if err != nil {
+			return nil
+		}
+		return c.JSON(http.StatusOK, model.NewPaginatedResponse("ok", maps, total, limit, offset, http.StatusOK))
+	}
+	return c.JSON(http.StatusOK, model.NewPaginatedResponse("ok", resp.Data, total, limit, offset, http.StatusOK))
 }
