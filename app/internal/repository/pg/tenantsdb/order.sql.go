@@ -1033,6 +1033,41 @@ func (q *Queries) GetOrderWithDetails(ctx context.Context, id uuid.UUID) (GetOrd
 	return i, err
 }
 
+const getOrderWithTablePrice = `-- name: GetOrderWithTablePrice :one
+SELECT
+  o.id,
+  o.created_at,
+  o.scheduled_at,
+  o.table_id,
+  ct.price_per_hour
+FROM orders o
+JOIN cafe_tables ct ON ct.id = o.table_id AND ct.deleted_at = 0
+WHERE o.id = $1
+  AND o.deleted_at = 0
+  AND o.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+`
+
+type GetOrderWithTablePriceRow struct {
+	ID           uuid.UUID          `json:"id"`
+	CreatedAt    pgtype.Timestamptz `json:"created_at"`
+	ScheduledAt  pgtype.Timestamptz `json:"scheduled_at"`
+	TableID      pgtype.UUID        `json:"table_id"`
+	PricePerHour pgtype.Numeric     `json:"price_per_hour"`
+}
+
+func (q *Queries) GetOrderWithTablePrice(ctx context.Context, id uuid.UUID) (GetOrderWithTablePriceRow, error) {
+	row := q.db.QueryRow(ctx, getOrderWithTablePrice, id)
+	var i GetOrderWithTablePriceRow
+	err := row.Scan(
+		&i.ID,
+		&i.CreatedAt,
+		&i.ScheduledAt,
+		&i.TableID,
+		&i.PricePerHour,
+	)
+	return i, err
+}
+
 const getOrdersByDateRange = `-- name: GetOrdersByDateRange :many
 SELECT id, table_id, waiter_id, cashier_id, cash_register_id, branch_id, status, guest_count, total_amount, comment,
        order_type, scheduled_at, reschedule_comment, created_at, updated_at, deleted_at

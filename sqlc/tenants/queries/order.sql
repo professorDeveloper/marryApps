@@ -497,3 +497,16 @@ WHERE oi.status IN ('pending', 'cooking')
   AND o.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
   AND o.status NOT IN ('reserved', 'rescheduled')
 ORDER BY oi.created_at ASC;
+
+-- name: GetOrderWithTablePrice :one
+SELECT
+  o.id,
+  o.created_at,
+  o.scheduled_at,
+  o.table_id,
+  ct.price_per_hour
+FROM orders o
+JOIN cafe_tables ct ON ct.id = o.table_id AND ct.deleted_at = 0
+WHERE o.id = $1
+  AND o.deleted_at = 0
+  AND o.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid;

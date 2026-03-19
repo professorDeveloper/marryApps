@@ -21,6 +21,38 @@ type ErrorData struct {
 	Code    int    `json:"code" example:"400"`
 }
 
+// PaginatedWithTotalsResponse combines paginated data with a totals object.
+type PaginatedWithTotalsResponse[T any, U any] struct {
+	Status  string `json:"status" example:"success"`
+	Message string `json:"message"`
+	Data    T      `json:"data"`
+	Totals  U      `json:"totals"`
+	Pagination struct {
+		Total      int32 `json:"total"`
+		Limit      int32 `json:"limit"`
+		Offset     int32 `json:"offset"`
+		TotalPages int32 `json:"total_pages"`
+	} `json:"pagination"`
+	Code int `json:"code"`
+}
+
+func NewPaginatedWithTotalsResponse[T any, U any](message string, data T, totals U, total, limit, offset int32, code int) PaginatedWithTotalsResponse[T, U] {
+	resp := PaginatedWithTotalsResponse[T, U]{
+		Status:  "success",
+		Message: message,
+		Data:    data,
+		Totals:  totals,
+		Code:    code,
+	}
+	resp.Pagination.Total = total
+	resp.Pagination.Limit = limit
+	resp.Pagination.Offset = offset
+	if limit > 0 {
+		resp.Pagination.TotalPages = (total + limit - 1) / limit
+	}
+	return resp
+}
+
 type PaginatedResponse[T any] struct {
 	Status     string `json:"status" example:"success"`
 	Message    string `json:"message" example:"Data retrieved successfully"`

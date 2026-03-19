@@ -53,18 +53,19 @@ type UpdateCafeTableStatusRequest struct {
 }
 
 type CafeTableResponse struct {
-	ID        string      `json:"id" example:"c0f18a64-7f5c-4425-9414-1b01cddee9d9"`
-	HallID    string      `json:"hall_id" example:"a1b2c3d4-e5f6-4a5b-8c9d-e0f1a2b3c4d5"`
-	Number    int32       `json:"number" example:"5"`
-	Capacity  int32       `json:"capacity" example:"4"`
-	Status    TableStatus `json:"status" example:"free"`
-	PosX      int32       `json:"pos_x" example:"0"`
-	PosY      int32       `json:"pos_y" example:"0"`
-	Width     int32       `json:"width" example:"0"`
-	Height    int32       `json:"height" example:"0"`
-	Rotation  int32       `json:"rotation" example:"0"`
-	CreatedAt *time.Time  `json:"created_at,omitempty"`
-	UpdatedAt *time.Time  `json:"updated_at,omitempty"`
+	ID           string      `json:"id" example:"c0f18a64-7f5c-4425-9414-1b01cddee9d9"`
+	HallID       string      `json:"hall_id" example:"a1b2c3d4-e5f6-4a5b-8c9d-e0f1a2b3c4d5"`
+	Number       int32       `json:"number" example:"5"`
+	Capacity     int32       `json:"capacity" example:"4"`
+	Status       TableStatus `json:"status" example:"free"`
+	PosX         int32       `json:"pos_x" example:"0"`
+	PosY         int32       `json:"pos_y" example:"0"`
+	Width        int32       `json:"width" example:"0"`
+	Height       int32       `json:"height" example:"0"`
+	Rotation     int32       `json:"rotation" example:"0"`
+	PricePerHour *string     `json:"price_per_hour,omitempty"`
+	CreatedAt    *time.Time  `json:"created_at,omitempty"`
+	UpdatedAt    *time.Time  `json:"updated_at,omitempty"`
 }
 
 type TableOccupancyStats struct {

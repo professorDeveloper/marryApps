@@ -17902,6 +17902,58 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/orders/{id}/table-price": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Calculates price based on table's price_per_hour and time elapsed. Uses scheduled_at if set, otherwise created_at. Returns error if table has no hourly price.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Orders"
+                ],
+                "summary": "Get table price for order",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Order ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.TablePriceResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/outgoing-invoices": {
             "get": {
                 "security": [
@@ -23385,6 +23437,9 @@ const docTemplate = `{
                     "type": "integer",
                     "example": 0
                 },
+                "price_per_hour": {
+                    "type": "string"
+                },
                 "rotation": {
                     "type": "integer",
                     "example": 0
@@ -27679,6 +27734,29 @@ const docTemplate = `{
                 "total_tables": {
                     "type": "integer",
                     "example": 50
+                }
+            }
+        },
+        "model.TablePriceResponse": {
+            "type": "object",
+            "properties": {
+                "duration_hours": {
+                    "type": "number"
+                },
+                "duration_minutes": {
+                    "type": "number"
+                },
+                "price_per_hour": {
+                    "type": "string"
+                },
+                "started_at": {
+                    "type": "string"
+                },
+                "table_id": {
+                    "type": "string"
+                },
+                "total_price": {
+                    "type": "string"
                 }
             }
         },

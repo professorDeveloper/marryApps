@@ -112,6 +112,8 @@ definitions:
       pos_y:
         example: 0
         type: integer
+      price_per_hour:
+        type: string
       rotation:
         example: 0
         type: integer
@@ -3110,6 +3112,21 @@ definitions:
       total_tables:
         example: 50
         type: integer
+    type: object
+  model.TablePriceResponse:
+    properties:
+      duration_hours:
+        type: number
+      duration_minutes:
+        type: number
+      price_per_hour:
+        type: string
+      started_at:
+        type: string
+      table_id:
+        type: string
+      total_price:
+        type: string
     type: object
   model.TableStatus:
     enum:
@@ -15659,6 +15676,41 @@ paths:
       security:
       - BearerAuth: []
       summary: Update order status
+      tags:
+      - Orders
+  /api/v1/orders/{id}/table-price:
+    get:
+      description: Calculates price based on table's price_per_hour and time elapsed.
+        Uses scheduled_at if set, otherwise created_at. Returns error if table has
+        no hourly price.
+      parameters:
+      - description: Order ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.TablePriceResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get table price for order
       tags:
       - Orders
   /api/v1/orders/status/{status}:

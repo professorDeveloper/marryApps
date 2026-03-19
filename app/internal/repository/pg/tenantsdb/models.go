@@ -571,19 +571,20 @@ type Branch struct {
 }
 
 type CafeTable struct {
-	ID        uuid.UUID          `json:"id"`
-	HallID    uuid.UUID          `json:"hall_id"`
-	Number    int32              `json:"number"`
-	Capacity  int32              `json:"capacity"`
-	Status    NullTableStatus    `json:"status"`
-	PosX      int32              `json:"pos_x"`
-	PosY      int32              `json:"pos_y"`
-	Width     int32              `json:"width"`
-	Height    int32              `json:"height"`
-	Rotation  int32              `json:"rotation"`
-	CreatedAt pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
-	DeletedAt *int64             `json:"deleted_at"`
+	ID           uuid.UUID          `json:"id"`
+	HallID       uuid.UUID          `json:"hall_id"`
+	Number       int32              `json:"number"`
+	Capacity     int32              `json:"capacity"`
+	Status       NullTableStatus    `json:"status"`
+	PosX         int32              `json:"pos_x"`
+	PosY         int32              `json:"pos_y"`
+	Width        int32              `json:"width"`
+	Height       int32              `json:"height"`
+	Rotation     int32              `json:"rotation"`
+	CreatedAt    pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
+	DeletedAt    *int64             `json:"deleted_at"`
+	PricePerHour pgtype.Numeric     `json:"price_per_hour"`
 }
 
 type Calculation struct {

@@ -118,9 +118,9 @@ func (h *Handler) GetIngredientReport(c echo.Context) error {
 		if err != nil {
 			return nil
 		}
-		return c.JSON(http.StatusOK, model.NewPaginatedResponse("Ingredient report retrieved successfully", maps, total, limit, offset, http.StatusOK))
+		return c.JSON(http.StatusOK, model.NewPaginatedWithTotalsResponse("Ingredient report retrieved successfully", maps, resp.Totals, total, limit, offset, http.StatusOK))
 	}
-	return c.JSON(http.StatusOK, model.NewPaginatedResponse("Ingredient report retrieved successfully", resp.Items, total, limit, offset, http.StatusOK))
+	return c.JSON(http.StatusOK, model.NewPaginatedWithTotalsResponse("Ingredient report retrieved successfully", resp.Items, resp.Totals, total, limit, offset, http.StatusOK))
 }
 
 // GetIngredientReportItem retrieves aggregated ingredient report for a single ingredient

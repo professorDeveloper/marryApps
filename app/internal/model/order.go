@@ -173,3 +173,12 @@ type MarkOrderPaidRequest struct {
 type UpdateOrderItemQuantityRequest struct {
 	Quantity int32 `json:"quantity" validate:"required" example:"2"`
 }
+
+type TablePriceResponse struct {
+	TableID         string  `json:"table_id"`
+	PricePerHour    string  `json:"price_per_hour"`
+	StartedAt       string  `json:"started_at"`
+	DurationMinutes float64 `json:"duration_minutes"`
+	DurationHours   float64 `json:"duration_hours"`
+	TotalPrice      string  `json:"total_price"`
+}

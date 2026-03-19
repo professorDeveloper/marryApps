@@ -72,9 +72,9 @@ func (h *Handler) GoodsReport(c echo.Context) error {
 		if err != nil {
 			return nil
 		}
-		return c.JSON(http.StatusOK, model.NewPaginatedResponse("ok", maps, total, limit, offset, http.StatusOK))
+		return c.JSON(http.StatusOK, model.NewPaginatedWithTotalsResponse("ok", maps, resp.Totals, total, limit, offset, http.StatusOK))
 	}
-	return c.JSON(http.StatusOK, model.NewPaginatedResponse("ok", resp.Data, total, limit, offset, http.StatusOK))
+	return c.JSON(http.StatusOK, model.NewPaginatedWithTotalsResponse("ok", resp.Data, resp.Totals, total, limit, offset, http.StatusOK))
 }
 
 // GoodOrdersReport returns per-order breakdown for a specific good
@@ -140,7 +140,7 @@ func (h *Handler) GoodOrdersReport(c echo.Context) error {
 		if err != nil {
 			return nil
 		}
-		return c.JSON(http.StatusOK, model.NewPaginatedResponse("ok", maps, total, limit, offset, http.StatusOK))
+		return c.JSON(http.StatusOK, model.NewPaginatedWithTotalsResponse("ok", maps, resp.Totals, total, limit, offset, http.StatusOK))
 	}
-	return c.JSON(http.StatusOK, model.NewPaginatedResponse("ok", resp.Data, total, limit, offset, http.StatusOK))
+	return c.JSON(http.StatusOK, model.NewPaginatedWithTotalsResponse("ok", resp.Data, resp.Totals, total, limit, offset, http.StatusOK))
 }

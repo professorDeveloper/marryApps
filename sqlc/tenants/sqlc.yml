@@ -31,6 +31,7 @@ sql:
       - "../../app/migrations/tenants/26_compounds_ingredient_group.up.sql"
       - "../../app/migrations/tenants/27_compound_quantity_numeric.up.sql"
       - "../../app/migrations/tenants/28_invoice_status_deleted.up.sql"
+      - "../../app/migrations/tenants/29_cafe_tables_price_per_hour.up.sql"
 
 
     gen:
