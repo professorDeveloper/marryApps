@@ -1021,7 +1021,9 @@
     "deductionAmount": "Hisobdan chiqarish summasi",
     "surplusAmount": "Ortiqcha summasi",
     "shortageAmount": "Kamomad summasi",
-    "all": "Barchasi"
+    "all": "Barchasi",
+    "totalCount": "Umumiy soni",
+    "totalOrderOutAmount": "Umumiy chiqim summasi"
   },
   "goodsReports": {
     "title": "Tovarlar hisoboti",

@@ -1001,7 +1001,9 @@
     "deductionAmount": "Сумма списания",
     "surplusAmount": "Сумма излишка",
     "shortageAmount": "Сумма недостачи",
-    "all": "Все"
+    "all": "Все",
+    "totalCount": "Общее количество",
+    "totalOrderOutAmount": "Общая сумма расходов по заказам"
   },
   "goodsReports": {
     "title": "Отчет по блюдам",

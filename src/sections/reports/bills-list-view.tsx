@@ -621,7 +621,7 @@ export function BillsListView() {
                 fullWidth
                 InputLabelProps={{ shrink: true }}
             >
-                <option value="" disabled hidden>
+                <option value="">
                     {t('ingredientReports.all') || 'All'}
                 </option>
                 {filterOptions.bill_status.map((option) => (
@@ -642,7 +642,7 @@ export function BillsListView() {
                 fullWidth
                 InputLabelProps={{ shrink: true }}
             >
-                <option value="" disabled hidden>
+                <option value="">
                     {t('ingredientReports.all') || 'All'}
                 </option>
                 {filterOptions.payment_type.map((option) => (
@@ -665,7 +665,7 @@ export function BillsListView() {
                     InputLabelProps={{ shrink: true }}
                     disabled={isWaitersEmpty}
                 >
-                    <option value="" disabled hidden>
+                    <option value="">
                         {t('ingredientReports.all') || 'All'}
                     </option>
                     {filterOptions.waiter_id.map((option) => (
@@ -689,7 +689,7 @@ export function BillsListView() {
                     InputLabelProps={{ shrink: true }}
                     disabled={isHallsEmpty}
                 >
-                    <option value="" disabled hidden>
+                    <option value="">
                         {t('ingredientReports.all') || 'All'}
                     </option>
                     {filterOptions.hall_id.map((option) => (

@@ -1135,7 +1135,9 @@
     "deductionAmount": "Deduction Amount",
     "surplusAmount": "Surplus Amount",
     "shortageAmount": "Shortage Amount",
-    "all": "All"
+    "all": "All",
+    "totalCount": "Total Count",
+    "totalOrderOutAmount": "Total Order Out Amount"
   },
   "goodsReports": {
     "title": "Goods report",

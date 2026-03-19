@@ -339,7 +339,7 @@ export function GoodsReportsListView() {
             InputLabelProps={{ shrink: true }}
             disabled={isDepartmentsEmpty}
           >
-            <option value="" disabled hidden>
+            <option value="">
               {t('ingredientReports.all', 'All')}
             </option>
             {departments.map((department) => (
@@ -367,7 +367,7 @@ export function GoodsReportsListView() {
             InputLabelProps={{ shrink: true }}
             disabled={isCategoriesEmpty}
           >
-            <option value="" disabled hidden>
+            <option value="">
               {t('ingredientReports.all', 'All')}
             </option>
             {categories.map((category) => (
@@ -390,7 +390,7 @@ export function GoodsReportsListView() {
             InputLabelProps={{ shrink: true }}
             disabled={isGoodsEmpty}
           >
-            <option value="" disabled hidden>
+            <option value="" >
               {t('ingredientReports.all', 'All')}
             </option>
             {goods.map((good) => (
@@ -413,7 +413,7 @@ export function GoodsReportsListView() {
             InputLabelProps={{ shrink: true }}
             disabled={isWaitersEmpty}
           >
-            <option value="" disabled hidden>
+            <option value="">
               {t('ingredientReports.all', 'All')}
             </option>
             {waiters.map((waiter) => (
@@ -441,7 +441,7 @@ export function GoodsReportsListView() {
             InputLabelProps={{ shrink: true }}
             disabled={isHallsEmpty}
           >
-            <option value="" disabled hidden>
+            <option value="">
               {t('ingredientReports.all', 'All')}
             </option>
             {halls.map((hall) => (
@@ -464,7 +464,7 @@ export function GoodsReportsListView() {
             InputLabelProps={{ shrink: true }}
             disabled={isTablesEmpty}
           >
-            <option value="" disabled hidden>
+            <option value="">
               {t('ingredientReports.all', 'All')}
             </option>
             {tables.map((table) => (

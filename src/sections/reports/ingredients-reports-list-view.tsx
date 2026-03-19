@@ -530,7 +530,7 @@ export function IngredientReportsListView() {
                     InputLabelProps={{ shrink: true }}
                     disabled={isIngredientsEmpty}
                 >
-                    <option value="" disabled hidden>
+                    <option value="">
                         {t('ingredientReports.all') || 'All'}
                     </option>
                     {filterOptions.ingredient_id.map((option) => (

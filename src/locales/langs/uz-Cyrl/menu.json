@@ -969,7 +969,9 @@
     "deductionAmount": "Ҳисобдан чиқариш суммаси",
     "surplusAmount": "Ортиқча суммаси",
     "shortageAmount": "Камомад суммаси",
-    "all": "Барчаси"
+    "all": "Барчаси",
+    "totalCount": "Жами сони",
+    "totalOrderOutAmount": "Жами чиқим суммаси"
   },
   "goodsReports": {
     "title": "Товарлар ҳисоботи",
