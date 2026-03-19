@@ -530,8 +530,15 @@ export function BillsListView() {
     }, [paginationModel.page, paginationModel.pageSize]);
 
     const renderFiltersContent = () => (
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5}}>
-            <Box sx={{ display: 'flex', alignItems: 'flex-end', gap: 2, flexWrap: 'wrap'}}>
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+            <Box
+                sx={{
+                    display: 'grid',
+                    gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: 'repeat(5, 1fr)', lg: 'repeat(7, 1fr)' },
+                    gap: 1.5,
+                    alignItems: 'end',
+                }}
+            >
                 <ToggleButtonGroup
                     exclusive
                     value={activeRange}
@@ -541,6 +548,7 @@ export function BillsListView() {
                     }}
                     size="small"
                     sx={{
+                        alignSelf: 'end',
                         '& .MuiToggleButton-root': {
                             textTransform: 'uppercase',
                             fontWeight: 600,
@@ -563,160 +571,150 @@ export function BillsListView() {
                     <ToggleButton value="month">M</ToggleButton>
                     <ToggleButton value="year">Y</ToggleButton>
                 </ToggleButtonGroup>
-
-                <Box
-                    sx={{
-                        display: 'grid',
-                        gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: 'repeat(4, 1fr)', lg: 'repeat(7, 1fr)' },
-                        gap: 1.5,
-                        flex: 1,
+                {/* Start Date */}
+                <DatePicker
+                    label={t('bills.startDate') || 'Start Date'}
+                    value={startDate}
+                    onChange={(value) => {
+                        setStartDate(value);
+                        setActiveRange('day');
                     }}
-                >
-            {/* Start Date */}
-            <DatePicker
-                label={t('bills.startDate') || 'Start Date'}
-                value={startDate}
-                onChange={(value) => {
-                    setStartDate(value);
-                    setActiveRange('day');
-                }}
-                format="DD.MM.YYYY"
-                slotProps={{
-                    textField: {
-                        fullWidth: true,
-                        size: 'small',
-                        inputProps: { readOnly: true },
-                        sx: { cursor: 'pointer' },
-                    },
-                }}
-            />
+                    format="DD.MM.YYYY"
+                    slotProps={{
+                        textField: {
+                            fullWidth: true,
+                            size: 'small',
+                            inputProps: { readOnly: true },
+                            sx: { cursor: 'pointer', minWidth: 200 },
+                        },
+                    }}
+                />
 
-            {/* End Date */}
-            <DatePicker
-                label={t('bills.endDate') || 'End Date'}
-                value={endDate}
-                onChange={(value) => {
-                    setEndDate(value);
-                    setActiveRange('day');
-                }}
-                format="DD.MM.YYYY"
-                slotProps={{
-                    textField: {
-                        fullWidth: true,
-                        size: 'small',
-                        inputProps: { readOnly: true },
-                        sx: { cursor: 'pointer' },
-                    },
-                }}
-            />
+                {/* End Date */}
+                <DatePicker
+                    label={t('bills.endDate') || 'End Date'}
+                    value={endDate}
+                    onChange={(value) => {
+                        setEndDate(value);
+                        setActiveRange('day');
+                    }}
+                    format="DD.MM.YYYY"
+                    slotProps={{
+                        textField: {
+                            fullWidth: true,
+                            size: 'small',
+                            inputProps: { readOnly: true },
+                            sx: { cursor: 'pointer', minWidth: 200 },
+                        },
+                    }}
+                />
 
-            {/* Status */}
-            <TextField
-                select
-                label={t('bills.status') || 'Status'}
-                value={filters.bill_status}
-                onChange={(e) => handleStatusChange(e.target.value)}
-                SelectProps={{ native: true }}
-                size="small"
-                fullWidth
-                InputLabelProps={{ shrink: true }}
-            >
-                <option value="">
-                    {t('ingredientReports.all') || 'All'}
-                </option>
-                {filterOptions.bill_status.map((option) => (
-                    <option key={option.value} value={option.value}>
-                        {option.label}
-                    </option>
-                ))}
-            </TextField>
-
-            {/* Payment Type */}
-            <TextField
-                select
-                label={t('bills.paymentType') || 'Payment Type'}
-                value={filters.payment_type}
-                onChange={(e) => handlePaymentTypeChange(e.target.value)}
-                SelectProps={{ native: true }}
-                size="small"
-                fullWidth
-                InputLabelProps={{ shrink: true }}
-            >
-                <option value="">
-                    {t('ingredientReports.all') || 'All'}
-                </option>
-                {filterOptions.payment_type.map((option) => (
-                    <option key={option.value} value={option.value}>
-                        {option.label}
-                    </option>
-                ))}
-            </TextField>
-
-            {/* Waiter */}
-            <NoDataTooltip enabled={isWaitersEmpty} title={noDataText}>
+                {/* Status */}
                 <TextField
                     select
-                    label={t('bills.waiter') || 'Waiter'}
-                    value={filters.waiter_id}
-                    onChange={(e) => handleWaiterChange(e.target.value)}
+                    label={t('bills.status') || 'Status'}
+                    value={filters.bill_status}
+                    onChange={(e) => handleStatusChange(e.target.value)}
                     SelectProps={{ native: true }}
                     size="small"
                     fullWidth
                     InputLabelProps={{ shrink: true }}
-                    disabled={isWaitersEmpty}
                 >
                     <option value="">
                         {t('ingredientReports.all') || 'All'}
                     </option>
-                    {filterOptions.waiter_id.map((option) => (
+                    {filterOptions.bill_status.map((option) => (
                         <option key={option.value} value={option.value}>
                             {option.label}
                         </option>
                     ))}
                 </TextField>
-            </NoDataTooltip>
 
-            {/* Hall */}
-            <NoDataTooltip enabled={isHallsEmpty} title={noDataText}>
+                {/* Payment Type */}
                 <TextField
                     select
-                    label={t('bills.hall') || 'Hall'}
-                    value={filters.hall_id}
-                    onChange={(e) => handleHallChange(e.target.value)}
+                    label={t('bills.paymentType') || 'Payment Type'}
+                    value={filters.payment_type}
+                    onChange={(e) => handlePaymentTypeChange(e.target.value)}
                     SelectProps={{ native: true }}
                     size="small"
                     fullWidth
                     InputLabelProps={{ shrink: true }}
-                    disabled={isHallsEmpty}
                 >
                     <option value="">
                         {t('ingredientReports.all') || 'All'}
                     </option>
-                    {filterOptions.hall_id.map((option) => (
+                    {filterOptions.payment_type.map((option) => (
                         <option key={option.value} value={option.value}>
                             {option.label}
                         </option>
                     ))}
                 </TextField>
-            </NoDataTooltip>
 
-            {/* Action Buttons */}
-            <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                <Button
-                    variant="outlined"
-                    size="medium"
-                    startIcon={<Iconify icon="solar:restart-bold" />}
-                    onClick={handleResetFilters}
-                    sx={{ minWidth: 'auto', flex: 1 }}
-                >
-                    {t('bills.reset') || 'Reset'}
-                </Button>
-            </Box>
+                {/* Waiter */}
+                <NoDataTooltip enabled={isWaitersEmpty} title={noDataText}>
+                    <TextField
+                        select
+                        label={t('bills.waiter') || 'Waiter'}
+                        value={filters.waiter_id}
+                        onChange={(e) => handleWaiterChange(e.target.value)}
+                        SelectProps={{ native: true }}
+                        size="small"
+                        fullWidth
+                        InputLabelProps={{ shrink: true }}
+                        disabled={isWaitersEmpty}
+                    >
+                        <option value="">
+                            {t('ingredientReports.all') || 'All'}
+                        </option>
+                        {filterOptions.waiter_id.map((option) => (
+                            <option key={option.value} value={option.value}>
+                                {option.label}
+                            </option>
+                        ))}
+                    </TextField>
+                </NoDataTooltip>
+
+                {/* Hall */}
+                <NoDataTooltip enabled={isHallsEmpty} title={noDataText}>
+                    <TextField
+                        select
+                        label={t('bills.hall') || 'Hall'}
+                        value={filters.hall_id}
+                        onChange={(e) => handleHallChange(e.target.value)}
+                        SelectProps={{ native: true }}
+                        size="small"
+                        fullWidth
+                        InputLabelProps={{ shrink: true }}
+                        disabled={isHallsEmpty}
+                    >
+                        <option value="">
+                            {t('ingredientReports.all') || 'All'}
+                        </option>
+                        {filterOptions.hall_id.map((option) => (
+                            <option key={option.value} value={option.value}>
+                                {option.label}
+                            </option>
+                        ))}
+                    </TextField>
+                </NoDataTooltip>
+
+                {/* Action Buttons */}
+                <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                    <Button
+                        variant="outlined"
+                        size="medium"
+                        startIcon={<Iconify icon="solar:restart-bold" />}
+                        onClick={handleResetFilters}
+                        sx={{ minWidth: 'auto', flex: 1 }}
+                    >
+                        {t('bills.reset') || 'Reset'}
+                    </Button>
                 </Box>
             </Box>
         </Box>
     );
-
+    
     return (
         <>
             {/* Table */}
