@@ -40,6 +40,16 @@ export interface IIngredientReportsResponse {
     status: string;
     message: string;
     data: IIngredientReportItem[];
+    totals?: {
+        total_count: number;
+        total_order_out_amount: string;
+    };
+    pagination?: {
+        total: number;
+        limit: number;
+        offset: number;
+        total_pages: number;
+    };
     code: number;
 }
 

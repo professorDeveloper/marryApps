@@ -2,7 +2,6 @@ import type { GridColDef } from '@mui/x-data-grid';
 import { useMemo, useState, useCallback, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import Box from '@mui/material/Box';
-import Button from '@mui/material/Button';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import Table from '@mui/material/Table';
@@ -20,7 +19,6 @@ import { paths } from 'src/routes/paths';
 import { useGetIngredientReports, useGetIngredientReportDetail } from 'src/actions/ingredient-reports';
 import { useGetIngredients } from 'src/actions/ingredients';
 import { useGetStorages } from 'src/actions/departments';
-import { Iconify } from 'src/components/iconify';
 import { GenericTableView } from 'src/components/generic-table-view';
 import { GenericViewModal } from 'src/components/generic-view-view/GenericViewModal';
 import { NoDataTooltip } from 'src/components/no-data-tooltip';
@@ -53,9 +51,10 @@ export function IngredientReportsListView() {
         start: '',
         end: '',
         ingredient_id: '',
-        limit: 1000,
+        limit: 20,
         offset: 0,
     });
+    const [paginationModel, setPaginationModel] = useState({ page: 0, pageSize: 20 });
 
     const [startDate, setStartDate] = useState<dayjs.Dayjs | null>(null);
     const [endDate, setEndDate] = useState<dayjs.Dayjs | null>(null);
@@ -91,7 +90,7 @@ export function IngredientReportsListView() {
     }, [storages]);
 
     // Get reports with applied filters
-    const { reports, reportsLoading } = useGetIngredientReports({
+    const { reports, reportsLoading, totals, reportsPagination } = useGetIngredientReports({
         storage_id: filters.storage_id,
         start: filters.start,
         end: filters.end,
@@ -334,6 +333,10 @@ export function IngredientReportsListView() {
             ...newFilters,
             offset: 0,
         }));
+        setPaginationModel((prev) => ({
+            ...prev,
+            page: 0,
+        }));
     }, []);
 
     // Auto-apply filters when date range or storage changes
@@ -380,9 +383,10 @@ export function IngredientReportsListView() {
             start: '',
             end: '',
             ingredient_id: '',
-            limit: 1000,
+            limit: 20,
             offset: 0,
         });
+        setPaginationModel((prev) => ({ ...prev, page: 0 }));
     }, []);
 
     const handleIngredientChange = useCallback(
@@ -758,6 +762,18 @@ export function IngredientReportsListView() {
                 loading={reportsLoading}
                 columns={columns}
                 idField="ingredient_id"
+                paginationMode="server"
+                rowCount={reportsPagination?.total ?? totals?.total_count ?? 0}
+                paginationModel={paginationModel}
+                onPaginationModelChange={(model) => {
+                    setPaginationModel(model);
+                    setFilters((prev) => ({
+                        ...prev,
+                        limit: model.pageSize,
+                        offset: model.page * model.pageSize,
+                    }));
+                }}
+                pageSizeOptions={[10, 20, 50, 100]}
                 breadcrumbs={{
                     heading: t('ingredientReports.title') || 'Ingredient Reports',
                     links: [
@@ -772,6 +788,49 @@ export function IngredientReportsListView() {
                 renderFilters={renderFiltersContent}
                 onRowClick={handleAmountRowClick}
             />
+
+            {totals && (
+                <Box sx={{ px: { xs: 2, md: 5 }, pb: { xs: 2, md: 3 } }}>
+                    <Box
+                        sx={{
+                            display: 'grid',
+                            gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: 'repeat(2, 1fr)' },
+                            gap: 1,
+                        }}
+                    >
+                        <Box
+                            sx={{
+                                p: 1.5,
+                                borderRadius: 1,
+                                border: '1px solid',
+                                borderColor: 'divider',
+                                bgcolor: 'background.paper',
+                            }}
+                        >
+                            <Typography variant="caption" color="text.secondary">
+                                {t('ingredientReports.totalCount', 'Total count')}
+                            </Typography>
+                            <Typography variant="subtitle2">{totals.total_count ?? 0}</Typography>
+                        </Box>
+                        <Box
+                            sx={{
+                                p: 1.5,
+                                borderRadius: 1,
+                                border: '1px solid',
+                                borderColor: 'divider',
+                                bgcolor: 'background.paper',
+                            }}
+                        >
+                            <Typography variant="caption" color="text.secondary">
+                                {t('ingredientReports.totalOrderOutAmount', 'Total order out amount')}
+                            </Typography>
+                            <Typography variant="subtitle2">
+                                {Number(totals.total_order_out_amount || 0).toLocaleString()} so'm
+                            </Typography>
+                        </Box>
+                    </Box>
+                </Box>
+            )}
 
             {/* Ingredient Report Detail Modal */}
             <GenericViewModal

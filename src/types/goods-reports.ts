@@ -37,11 +37,13 @@ export interface IGoodsReportsFilterParams {
 export interface IGoodsReportsResponse {
   status: string;
   message: string;
-  data: {
-    data: IGoodsReportItem[];
-    totals: IGoodsReportsTotals;
+  data: IGoodsReportItem[];
+  totals: IGoodsReportsTotals;
+  pagination?: {
+    total: number;
     limit: number;
     offset: number;
+    total_pages: number;
   };
   code: number;
 }
@@ -77,11 +79,13 @@ export interface IGoodsReportOrdersTotals {
 export interface IGoodsReportOrdersResponse {
   status: string;
   message: string;
-  data: {
-    data: IGoodsReportOrderItem[];
-    totals: IGoodsReportOrdersTotals;
+  data: IGoodsReportOrderItem[];
+  totals: IGoodsReportOrdersTotals;
+  pagination?: {
+    total: number;
     limit: number;
     offset: number;
+    total_pages: number;
   };
   code: number;
 }

@@ -52,9 +52,10 @@ export function GoodsReportsListView() {
     waiter_id: '',
     hall_id: '',
     table_id: '',
-    limit: 1000,
+    limit: 20,
     offset: 0,
   });
+  const [paginationModel, setPaginationModel] = useState({ page: 0, pageSize: 20 });
 
   const [startDate, setStartDate] = useState<dayjs.Dayjs | null>(null);
   const [endDate, setEndDate] = useState<dayjs.Dayjs | null>(null);
@@ -86,7 +87,7 @@ export function GoodsReportsListView() {
     }));
   }, []);
 
-  const { reports, totals, reportsLoading } = useGetGoodsReports({
+  const { reports, totals, reportsLoading, reportsPagination } = useGetGoodsReports({
     start_date: filters.start_date,
     end_date: filters.end_date,
     department_id: filters.department_id || undefined,
@@ -158,13 +159,21 @@ export function GoodsReportsListView() {
     [t]
   );
 
-  const handleFilterChange = useCallback((newFilters: Record<string, any>) => {
-    setFilters((prev) => ({
-      ...prev,
-      ...newFilters,
-      offset: 0,
-    }));
-  }, []);
+  const handleFilterChange = useCallback(
+    (newFilters: Record<string, any>) => {
+      setFilters((prev) => ({
+        ...prev,
+        ...newFilters,
+        offset: 0,
+      }));
+
+      setPaginationModel((prev) => ({
+        ...prev,
+        page: 0,
+      }));
+    },
+    []
+  );
 
   // Auto-apply filters when date range changes
   useEffect(() => {
@@ -208,9 +217,10 @@ export function GoodsReportsListView() {
       waiter_id: '',
       hall_id: '',
       table_id: '',
-      limit: 1000,
+      limit: 20,
       offset: 0,  
     }));
+    setPaginationModel((prev) => ({ ...prev, page: 0 }));
   }, []);
 
   const handleRowClick = useCallback((id: string) => {
@@ -488,6 +498,18 @@ export function GoodsReportsListView() {
         loading={reportsLoading}
         columns={columns}
         idField="good_id"
+        paginationMode="server"
+        rowCount={reportsPagination?.total ?? totals?.total_count ?? 0}
+        paginationModel={paginationModel}
+        onPaginationModelChange={(model) => {
+          setPaginationModel(model);
+          setFilters((prev) => ({
+            ...prev,
+            limit: model.pageSize,
+            offset: model.page * model.pageSize,
+          }));
+        }}
+        pageSizeOptions={[10, 20, 50, 100]}
         breadcrumbs={{
           heading: t('overview.reports.goods', 'Goods report'),
           links: [

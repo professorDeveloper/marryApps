@@ -57,16 +57,20 @@ export function useGetIngredientReports(params?: Partial<IIngredientReportsFilte
         if (!data?.data) return [];
         return Array.isArray(data.data) ? data.data : [];
     }, [data]);
+    const totals = useMemo(() => data?.totals, [data]);
+    const pagination = useMemo(() => data?.pagination, [data]);
 
     const memoizedValue = useMemo(
         () => ({
             reports,
+            totals,
+            reportsPagination: pagination,
             reportsLoading: isLoading,
             reportsError: error,
             reportsValidating: isValidating,
             reportsEmpty: !isLoading && !isValidating && !reports.length,
         }),
-        [reports, error, isLoading, isValidating]
+        [reports, totals, pagination, error, isLoading, isValidating]
     );
 
     return memoizedValue;

@@ -44,8 +44,9 @@ export function useGetGoodsReports(params?: IGoodsReportsFilterParams) {
     ...swrOptions,
   });
 
-  const reports = useMemo(() => data?.data?.data || [], [data]);
-  const totals = useMemo(() => data?.data?.totals, [data]);
+  const reports = useMemo(() => data?.data || [], [data]);
+  const totals = useMemo(() => data?.totals, [data]);
+  const pagination = useMemo(() => data?.pagination, [data]);
 
   const memoizedValue = useMemo(
     () => ({
@@ -55,8 +56,9 @@ export function useGetGoodsReports(params?: IGoodsReportsFilterParams) {
       reportsError: error,
       reportsValidating: isValidating,
       reportsEmpty: !isLoading && !isValidating && !reports.length,
+      reportsPagination: pagination,
     }),
-    [reports, totals, error, isLoading, isValidating]
+    [reports, totals, pagination, error, isLoading, isValidating]
   );
 
   return memoizedValue;
@@ -92,8 +94,9 @@ export function useGetGoodsReportOrders(
     ...swrOptions,
   });
 
-  const reports = useMemo(() => data?.data?.data || [], [data]);
-  const totals = useMemo(() => data?.data?.totals, [data]);
+  const reports = useMemo(() => data?.data || [], [data]);
+  const totals = useMemo(() => data?.totals, [data]);
+  const pagination = useMemo(() => data?.pagination, [data]);
 
   const memoizedValue = useMemo(
     () => ({
@@ -103,8 +106,9 @@ export function useGetGoodsReportOrders(
       reportsError: error,
       reportsValidating: isValidating,
       reportsEmpty: !isLoading && !isValidating && !reports.length,
+      reportsPagination: pagination,
     }),
-    [reports, totals, error, isLoading, isValidating]
+    [reports, totals, pagination, error, isLoading, isValidating]
   );
 
   return memoizedValue;
