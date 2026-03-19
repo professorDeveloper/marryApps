@@ -1,0 +1,6 @@
+ALTER TABLE orders
+    ADD COLUMN IF NOT EXISTS table_charge NUMERIC(15,2) DEFAULT 0,
+    ADD COLUMN IF NOT EXISTS cash_amount  NUMERIC(15,2),
+    ADD COLUMN IF NOT EXISTS card_amount  NUMERIC(15,2);
+
+ALTER TYPE payment_type ADD VALUE IF NOT EXISTS 'split';

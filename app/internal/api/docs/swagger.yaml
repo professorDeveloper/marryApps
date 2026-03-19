@@ -568,8 +568,8 @@ definitions:
         example: 0
         type: integer
       price_per_hour:
-        example: 50000
-        type: number
+        example: "50000"
+        type: string
       rotation:
         example: 0
         type: integer
@@ -2458,6 +2458,16 @@ definitions:
     type: object
   model.MarkOrderPaidRequest:
     properties:
+      card_amount:
+        description: 'card_amount: card portion paid (required for split; equals customer_paid_amount
+          for card-only)'
+        example: "20000"
+        type: string
+      cash_amount:
+        description: 'cash_amount: cash portion paid (required for split; equals customer_paid_amount
+          for cash-only)'
+        example: "80000"
+        type: string
       cash_register_id:
         example: uuid
         type: string
@@ -2465,24 +2475,29 @@ definitions:
         example: a1b2c3d4-e5f6-4a5b-8c9d-e0f1a2b3c4d5
         type: string
       customer_paid_amount:
-        description: 'customer_paid_amount: how much the customer paid (required —
-          equals grand_total for card, may differ for cash)'
+        description: 'customer_paid_amount: total handed by customer (required)'
         example: "100000"
         type: string
       discount_amount:
-        description: 'discount_amount: fixed amount'
+        description: 'discount_amount: fixed flat discount (ignored if discount_percent
+          is set)'
         example: "5000"
         type: string
       discount_comment:
         example: Holiday discount
         type: string
       discount_percent:
-        description: 'discount_percent: e.g. 10 means 10%'
+        description: 'discount_percent: e.g. 10 means 10% — takes priority over discount_amount'
         example: "10"
         type: string
       payment_type:
-        description: 'payment_type: cash or card'
+        description: 'payment_type: cash, card, or split'
         example: cash
+        type: string
+      table_charge:
+        description: 'table_charge: confirmed table fee from GET /orders/:id/table-price
+          (optional; auto-calc if table has price_per_hour and this is not provided)'
+        example: "50000"
         type: string
     required:
     - customer_paid_amount
@@ -3327,8 +3342,8 @@ definitions:
         example: 0
         type: integer
       price_per_hour:
-        example: 50000
-        type: number
+        example: "50000"
+        type: string
       rotation:
         example: 0
         type: integer

@@ -235,7 +235,7 @@ type GoodsI interface {
 }
 
 type CafeTableI interface {
-	CreateCafeTable(ctx context.Context, hallID string, number int32, capacity int32, status *string, posX, posY, width, height, rotation *int32, pricePerHour *float64) (*model.CafeTableResponse, error)
+	CreateCafeTable(ctx context.Context, hallID string, number int32, capacity int32, status *string, posX, posY, width, height, rotation *int32, pricePerHour *string) (*model.CafeTableResponse, error)
 	GetCafeTableByID(ctx context.Context, tableID string) (*model.CafeTableResponse, error)
 	GetAllCafeTables(ctx context.Context, limit, offset int32) ([]model.CafeTableResponse, int64, error)
 	GetCafeTablesByHallID(ctx context.Context, hallID string, limit, offset int32) ([]model.CafeTableResponse, int64, error)
@@ -244,7 +244,7 @@ type CafeTableI interface {
 	GetAvailableTablesByHall(ctx context.Context, hallID string) ([]model.CafeTableResponse, error)
 	GetAvailableTablesByCapacity(ctx context.Context, capacity, limit, offset int32) ([]model.CafeTableResponse, error)
 	GetAvailableTablesByHallAndCapacity(ctx context.Context, hallID string, capacity int32) ([]model.CafeTableResponse, error)
-	UpdateCafeTable(ctx context.Context, tableID string, hallID *string, number *int32, capacity *int32, status *string, posX, posY, width, height, rotation *int32, pricePerHour *float64) (*model.CafeTableResponse, error)
+	UpdateCafeTable(ctx context.Context, tableID string, hallID *string, number *int32, capacity *int32, status *string, posX, posY, width, height, rotation *int32, pricePerHour *string) (*model.CafeTableResponse, error)
 	UpdateCafeTableStatus(ctx context.Context, tableID string, status string) (*model.CafeTableResponse, error)
 	SetTableFree(ctx context.Context, tableID string) (*model.CafeTableResponse, error)
 	SetTableBusy(ctx context.Context, tableID string) (*model.CafeTableResponse, error)
@@ -341,7 +341,7 @@ type OrderI interface {
 	GetOrdersByTableID(ctx context.Context, tableID string) ([]model.OrderResponse, error)
 	UpdateOrder(ctx context.Context, orderID string, req model.UpdateOrderRequest) (*model.OrderResponse, error)
 	UpdateOrderStatus(ctx context.Context, orderID string, status string) (*model.OrderResponse, error)
-	MarkOrderPaid(ctx context.Context, orderID string, cashierID string, cashRegisterID *string, paymentType *string, discountPercent *string, discountAmount *string, discountComment *string, customerPaidAmount *string) (*model.OrderResponse, error)
+	MarkOrderPaid(ctx context.Context, orderID string, cashierID string, cashRegisterID *string, paymentType *string, discountPercent *string, discountAmount *string, discountComment *string, customerPaidAmount *string, tableCharge *string, cashAmount *string, cardAmount *string) (*model.OrderResponse, error)
 	AssignWaiterToOrder(ctx context.Context, orderID string, waiterID string) (*model.OrderResponse, error)
 	AssignCashierToOrder(ctx context.Context, orderID string, cashierID string) (*model.OrderResponse, error)
 	CancelOrder(ctx context.Context, orderID string) (*model.OrderResponse, error)

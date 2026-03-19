@@ -24098,8 +24098,8 @@ const docTemplate = `{
                     "example": 0
                 },
                 "price_per_hour": {
-                    "type": "number",
-                    "example": 50000
+                    "type": "string",
+                    "example": "50000"
                 },
                 "rotation": {
                     "type": "integer",
@@ -26788,6 +26788,16 @@ const docTemplate = `{
                 "customer_paid_amount"
             ],
             "properties": {
+                "card_amount": {
+                    "description": "card_amount: card portion paid (required for split; equals customer_paid_amount for card-only)",
+                    "type": "string",
+                    "example": "20000"
+                },
+                "cash_amount": {
+                    "description": "cash_amount: cash portion paid (required for split; equals customer_paid_amount for cash-only)",
+                    "type": "string",
+                    "example": "80000"
+                },
                 "cash_register_id": {
                     "type": "string",
                     "example": "uuid"
@@ -26797,12 +26807,12 @@ const docTemplate = `{
                     "example": "a1b2c3d4-e5f6-4a5b-8c9d-e0f1a2b3c4d5"
                 },
                 "customer_paid_amount": {
-                    "description": "customer_paid_amount: how much the customer paid (required — equals grand_total for card, may differ for cash)",
+                    "description": "customer_paid_amount: total handed by customer (required)",
                     "type": "string",
                     "example": "100000"
                 },
                 "discount_amount": {
-                    "description": "discount_amount: fixed amount",
+                    "description": "discount_amount: fixed flat discount (ignored if discount_percent is set)",
                     "type": "string",
                     "example": "5000"
                 },
@@ -26811,14 +26821,19 @@ const docTemplate = `{
                     "example": "Holiday discount"
                 },
                 "discount_percent": {
-                    "description": "discount_percent: e.g. 10 means 10%",
+                    "description": "discount_percent: e.g. 10 means 10% — takes priority over discount_amount",
                     "type": "string",
                     "example": "10"
                 },
                 "payment_type": {
-                    "description": "payment_type: cash or card",
+                    "description": "payment_type: cash, card, or split",
                     "type": "string",
                     "example": "cash"
+                },
+                "table_charge": {
+                    "description": "table_charge: confirmed table fee from GET /orders/:id/table-price (optional; auto-calc if table has price_per_hour and this is not provided)",
+                    "type": "string",
+                    "example": "50000"
                 }
             }
         },
@@ -28047,8 +28062,8 @@ const docTemplate = `{
                     "example": 0
                 },
                 "price_per_hour": {
-                    "type": "number",
-                    "example": 50000
+                    "type": "string",
+                    "example": "50000"
                 },
                 "rotation": {
                     "type": "integer",

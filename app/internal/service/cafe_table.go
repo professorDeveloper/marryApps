@@ -20,7 +20,7 @@ func NewCafeTableS(repo *repository.Repository) *CafeTableS {
 	return &CafeTableS{repo: repo}
 }
 
-func (s *CafeTableS) CreateCafeTable(ctx context.Context, hallID string, number int32, capacity int32, status *string, posX, posY, width, height, rotation *int32, pricePerHour *float64) (*model.CafeTableResponse, error) {
+func (s *CafeTableS) CreateCafeTable(ctx context.Context, hallID string, number int32, capacity int32, status *string, posX, posY, width, height, rotation *int32, pricePerHour *string) (*model.CafeTableResponse, error) {
 	if hallID == "" {
 		return nil, fmt.Errorf("hall_id is required")
 	}
@@ -69,7 +69,7 @@ func (s *CafeTableS) CreateCafeTable(ctx context.Context, hallID string, number 
 
 	var pph pgtype.Numeric
 	if pricePerHour != nil {
-		pph = stringToNumeric(fmt.Sprintf("%g", *pricePerHour))
+		pph = stringToNumeric(*pricePerHour)
 	}
 
 	table, err := s.repo.Tenant(ctx).CreateCafeTable(ctx, pg.CreateCafeTableParams{
@@ -290,7 +290,7 @@ func (s *CafeTableS) GetAvailableTablesByHallAndCapacity(ctx context.Context, ha
 }
 
 // UpdateCafeTable updates a cafe table
-func (s *CafeTableS) UpdateCafeTable(ctx context.Context, tableID string, hallID *string, number *int32, capacity *int32, status *string, posX, posY, width, height, rotation *int32, pricePerHour *float64) (*model.CafeTableResponse, error) {
+func (s *CafeTableS) UpdateCafeTable(ctx context.Context, tableID string, hallID *string, number *int32, capacity *int32, status *string, posX, posY, width, height, rotation *int32, pricePerHour *string) (*model.CafeTableResponse, error) {
 	id, err := uuid.Parse(tableID)
 	if err != nil {
 		return nil, fmt.Errorf("invalid table ID: %w", err)
@@ -352,7 +352,7 @@ func (s *CafeTableS) UpdateCafeTable(ctx context.Context, tableID string, hallID
 
 	updatedPricePerHour := currentTable.PricePerHour
 	if pricePerHour != nil {
-		updatedPricePerHour = stringToNumeric(fmt.Sprintf("%g", *pricePerHour))
+		updatedPricePerHour = stringToNumeric(*pricePerHour)
 	}
 
 	table, err := s.repo.Tenant(ctx).UpdateCafeTable(ctx, pg.UpdateCafeTableParams{

@@ -761,7 +761,7 @@ func (h *Handler) MarkOrderPaid(c echo.Context) error {
 		cashRegisterID = &cr
 	}
 
-	order, err := h.service.Order().MarkOrderPaid(c.Request().Context(), orderID, cashierID, cashRegisterID, req.PaymentType, req.DiscountPercent, req.DiscountAmount, req.DiscountComment, &req.CustomerPaidAmount)
+	order, err := h.service.Order().MarkOrderPaid(c.Request().Context(), orderID, cashierID, cashRegisterID, req.PaymentType, req.DiscountPercent, req.DiscountAmount, req.DiscountComment, &req.CustomerPaidAmount, req.TableCharge, req.CashAmount, req.CardAmount)
 	if err != nil {
 		log.Printf("MarkOrderPaid failed for order %s: %v", orderID, err)
 		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse(

@@ -478,7 +478,7 @@ func (s *OrderS) UpdateOrderStatus(ctx context.Context, orderID string, status s
 	return toOrderResponse(order), nil
 }
 
-func (s *OrderS) MarkOrderPaid(ctx context.Context, orderID string, cashierID string, cashRegisterID *string, paymentType *string, discountPercent *string, discountAmount *string, discountComment *string, customerPaidAmount *string) (*model.OrderResponse, error) {
+func (s *OrderS) MarkOrderPaid(ctx context.Context, orderID string, cashierID string, cashRegisterID *string, paymentType *string, discountPercent *string, discountAmount *string, discountComment *string, customerPaidAmount *string, tableCharge *string, cashAmount *string, cardAmount *string) (*model.OrderResponse, error) {
 	oID, err := uuid.Parse(orderID)
 	if err != nil {
 		return nil, fmt.Errorf("invalid order id: %w", err)
@@ -515,6 +515,47 @@ func (s *OrderS) MarkOrderPaid(ctx context.Context, orderID string, cashierID st
 		paidAmountNum = &n
 	}
 
+	var tableChargeNum *pgtype.Numeric
+	if tableCharge != nil && *tableCharge != "" {
+		n := pgtype.Numeric{}
+		if err := n.Scan(*tableCharge); err != nil {
+			return nil, fmt.Errorf("invalid table_charge: %w", err)
+		}
+		tableChargeNum = &n
+	}
+
+	// Normalize cash/card amounts based on payment_type.
+	// SQL uses cash_amount + card_amount as total_paid for validation and change calculation.
+	pt := ""
+	if paymentType != nil {
+		pt = *paymentType
+	}
+	var cashAmountNum, cardAmountNum *pgtype.Numeric
+	switch pt {
+	case "split":
+		// Both must be provided; total_paid = cash + card
+		if cashAmount != nil && *cashAmount != "" {
+			n := pgtype.Numeric{}
+			if err := n.Scan(*cashAmount); err != nil {
+				return nil, fmt.Errorf("invalid cash_amount: %w", err)
+			}
+			cashAmountNum = &n
+		}
+		if cardAmount != nil && *cardAmount != "" {
+			n := pgtype.Numeric{}
+			if err := n.Scan(*cardAmount); err != nil {
+				return nil, fmt.Errorf("invalid card_amount: %w", err)
+			}
+			cardAmountNum = &n
+		}
+	case "card":
+		// card_amount = customer_paid_amount; cash_amount = 0
+		cardAmountNum = paidAmountNum
+	default: // "cash" or unset
+		// cash_amount = customer_paid_amount; card_amount = 0
+		cashAmountNum = paidAmountNum
+	}
+
 	// Fetch the order before paying so we have the table_id
 	orderBeforePay, err := s.repo.Tenant(ctx).GetOrderByID(ctx, oID)
 	if err != nil {
@@ -537,6 +578,9 @@ func (s *OrderS) MarkOrderPaid(ctx context.Context, orderID string, cashierID st
 		DiscountAmount:     discAmountNum,
 		DiscountComment:    discountComment,
 		CustomerPaidAmount: paidAmountNum,
+		TableCharge:        tableChargeNum,
+		CashAmount:         cashAmountNum,
+		CardAmount:         cardAmountNum,
 	}); err != nil {
 		return nil, fmt.Errorf("failed to mark order paid: %w", err)
 	}
