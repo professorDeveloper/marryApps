@@ -24097,6 +24097,10 @@ const docTemplate = `{
                     "type": "integer",
                     "example": 0
                 },
+                "price_per_hour": {
+                    "type": "number",
+                    "example": 50000
+                },
                 "rotation": {
                     "type": "integer",
                     "example": 0
@@ -28041,6 +28045,10 @@ const docTemplate = `{
                 "pos_y": {
                     "type": "integer",
                     "example": 0
+                },
+                "price_per_hour": {
+                    "type": "number",
+                    "example": 50000
                 },
                 "rotation": {
                     "type": "integer",

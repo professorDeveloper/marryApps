@@ -35,7 +35,7 @@ func (h *Handler) CreateCafeTable(c echo.Context) error {
 		status = "free"
 	}
 
-	table, err := h.service.CafeTable().CreateCafeTable(c.Request().Context(), req.HallID, req.Number, req.Capacity, &status, req.PosX, req.PosY, req.Width, req.Height, req.Rotation)
+	table, err := h.service.CafeTable().CreateCafeTable(c.Request().Context(), req.HallID, req.Number, req.Capacity, &status, req.PosX, req.PosY, req.Width, req.Height, req.Rotation, req.PricePerHour)
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
 			"Operation failed",
@@ -282,7 +282,7 @@ func (h *Handler) UpdateCafeTable(c echo.Context) error {
 		))
 	}
 
-	table, err := h.service.CafeTable().UpdateCafeTable(c.Request().Context(), tableID, req.HallID, req.Number, req.Capacity, req.Status, req.PosX, req.PosY, req.Width, req.Height, req.Rotation)
+	table, err := h.service.CafeTable().UpdateCafeTable(c.Request().Context(), tableID, req.HallID, req.Number, req.Capacity, req.Status, req.PosX, req.PosY, req.Width, req.Height, req.Rotation, req.PricePerHour)
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
 			"Operation failed",

@@ -567,6 +567,9 @@ definitions:
       pos_y:
         example: 0
         type: integer
+      price_per_hour:
+        example: 50000
+        type: number
       rotation:
         example: 0
         type: integer
@@ -3323,6 +3326,9 @@ definitions:
       pos_y:
         example: 0
         type: integer
+      price_per_hour:
+        example: 50000
+        type: number
       rotation:
         example: 0
         type: integer

@@ -1,6 +1,6 @@
 -- name: CreateCafeTable :one
-INSERT INTO cafe_tables (id, hall_id, number, capacity, status, pos_x, pos_y, width, height, rotation)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+INSERT INTO cafe_tables (id, hall_id, number, capacity, status, pos_x, pos_y, width, height, rotation, price_per_hour)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
 RETURNING id, hall_id, number, capacity, status, pos_x, pos_y, width, height, rotation, price_per_hour, created_at, updated_at, deleted_at;
 
 -- name: GetCafeTableByID :one
@@ -92,6 +92,7 @@ SET hall_id = COALESCE($2, hall_id),
     width = COALESCE($8, width),
     height = COALESCE($9, height),
     rotation = COALESCE($10, rotation),
+    price_per_hour = COALESCE($11, price_per_hour),
     updated_at = NOW()
 WHERE cafe_tables.id = $1 AND cafe_tables.deleted_at = 0
   AND EXISTS (

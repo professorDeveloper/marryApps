@@ -86,22 +86,23 @@ func (q *Queries) CountCafeTablesByStatus(ctx context.Context, status NullTableS
 }
 
 const createCafeTable = `-- name: CreateCafeTable :one
-INSERT INTO cafe_tables (id, hall_id, number, capacity, status, pos_x, pos_y, width, height, rotation)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+INSERT INTO cafe_tables (id, hall_id, number, capacity, status, pos_x, pos_y, width, height, rotation, price_per_hour)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
 RETURNING id, hall_id, number, capacity, status, pos_x, pos_y, width, height, rotation, price_per_hour, created_at, updated_at, deleted_at
 `
 
 type CreateCafeTableParams struct {
-	ID       uuid.UUID       `json:"id"`
-	HallID   uuid.UUID       `json:"hall_id"`
-	Number   int32           `json:"number"`
-	Capacity int32           `json:"capacity"`
-	Status   NullTableStatus `json:"status"`
-	PosX     int32           `json:"pos_x"`
-	PosY     int32           `json:"pos_y"`
-	Width    int32           `json:"width"`
-	Height   int32           `json:"height"`
-	Rotation int32           `json:"rotation"`
+	ID           uuid.UUID       `json:"id"`
+	HallID       uuid.UUID       `json:"hall_id"`
+	Number       int32           `json:"number"`
+	Capacity     int32           `json:"capacity"`
+	Status       NullTableStatus `json:"status"`
+	PosX         int32           `json:"pos_x"`
+	PosY         int32           `json:"pos_y"`
+	Width        int32           `json:"width"`
+	Height       int32           `json:"height"`
+	Rotation     int32           `json:"rotation"`
+	PricePerHour pgtype.Numeric  `json:"price_per_hour"`
 }
 
 type CreateCafeTableRow struct {
@@ -133,6 +134,7 @@ func (q *Queries) CreateCafeTable(ctx context.Context, arg CreateCafeTableParams
 		arg.Width,
 		arg.Height,
 		arg.Rotation,
+		arg.PricePerHour,
 	)
 	var i CreateCafeTableRow
 	err := row.Scan(
@@ -1070,6 +1072,7 @@ SET hall_id = COALESCE($2, hall_id),
     width = COALESCE($8, width),
     height = COALESCE($9, height),
     rotation = COALESCE($10, rotation),
+    price_per_hour = COALESCE($11, price_per_hour),
     updated_at = NOW()
 WHERE cafe_tables.id = $1 AND cafe_tables.deleted_at = 0
   AND EXISTS (
@@ -1081,16 +1084,17 @@ RETURNING id, hall_id, number, capacity, status, pos_x, pos_y, width, height, ro
 `
 
 type UpdateCafeTableParams struct {
-	ID       uuid.UUID       `json:"id"`
-	HallID   uuid.UUID       `json:"hall_id"`
-	Number   int32           `json:"number"`
-	Capacity int32           `json:"capacity"`
-	Status   NullTableStatus `json:"status"`
-	PosX     int32           `json:"pos_x"`
-	PosY     int32           `json:"pos_y"`
-	Width    int32           `json:"width"`
-	Height   int32           `json:"height"`
-	Rotation int32           `json:"rotation"`
+	ID           uuid.UUID       `json:"id"`
+	HallID       uuid.UUID       `json:"hall_id"`
+	Number       int32           `json:"number"`
+	Capacity     int32           `json:"capacity"`
+	Status       NullTableStatus `json:"status"`
+	PosX         int32           `json:"pos_x"`
+	PosY         int32           `json:"pos_y"`
+	Width        int32           `json:"width"`
+	Height       int32           `json:"height"`
+	Rotation     int32           `json:"rotation"`
+	PricePerHour pgtype.Numeric  `json:"price_per_hour"`
 }
 
 type UpdateCafeTableRow struct {
@@ -1122,6 +1126,7 @@ func (q *Queries) UpdateCafeTable(ctx context.Context, arg UpdateCafeTableParams
 		arg.Width,
 		arg.Height,
 		arg.Rotation,
+		arg.PricePerHour,
 	)
 	var i UpdateCafeTableRow
 	err := row.Scan(
