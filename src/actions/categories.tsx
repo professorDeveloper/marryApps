@@ -436,3 +436,38 @@ export function useGetGoodsByCategory(categoryId: string) {
 
     return memoizedValue;
 }
+
+/**
+ * Get all goods (not filtered by category)
+ */
+export function useGetGoodsAll(params?: { limit?: number; offset?: number }) {
+    const limit = typeof params?.limit === 'number' ? params.limit : 1000;
+    const offset = typeof params?.offset === 'number' ? params.offset : 0;
+    const url = [endpoints.meals.list, { params: { limit, offset } }];
+
+    const { data, isLoading, error, isValidating } = useSWR<BackendResponse<IGoodsItem[]> | IGoodsItem[]>(
+        url,
+        fetcher,
+        { ...swrOptions }
+    );
+
+    const goods = useMemo(() => {
+        if (!data) return [];
+        if (Array.isArray(data)) return data;
+        if ('data' in data) return (data as BackendResponse<IGoodsItem[]>).data || [];
+        return [];
+    }, [data]);
+
+    const memoizedValue = useMemo(
+        () => ({
+            goods,
+            goodsLoading: isLoading,
+            goodsError: error,
+            goodsValidating: isValidating,
+            goodsEmpty: !isLoading && !isValidating && !goods?.length,
+        }),
+        [goods, error, isLoading, isValidating]
+    );
+
+    return memoizedValue;
+}

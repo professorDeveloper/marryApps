@@ -17,10 +17,10 @@ import { paths } from 'src/routes/paths';
 
 import { useGetHalls } from 'src/actions/halls';
 import { useGetUsersByRole } from 'src/actions/users';
-import { useGetGoodsByCategory } from 'src/actions/categories';
+import { useGetCategories, useGetGoodsAll } from 'src/actions/categories';
 import { useGetGoodsReports } from 'src/actions/goods-reports';
 import { useGetCafeTablesByHall } from 'src/actions/cafe-tables';
-import { useGetDepartments, useGetCategoriesByDepartment } from 'src/actions/departments';
+import { useGetDepartments } from 'src/actions/departments';
 
 import { Iconify } from 'src/components/iconify';
 import { GenericTableView } from 'src/components/generic-table-view';
@@ -62,8 +62,8 @@ export function GoodsReportsListView() {
   const [activeRange, setActiveRange] = useState<'day' | 'week' | 'month' | 'year'>('day');
 
   const { departments } = useGetDepartments();
-  const { categories } = useGetCategoriesByDepartment(filters.department_id);
-  const { goods } = useGetGoodsByCategory(filters.category_id);
+  const { categories } = useGetCategories();
+  const { goods } = useGetGoodsAll();
   const { users: waiters } = useGetUsersByRole('waiter');
   const { halls } = useGetHalls();
   const { tables } = useGetCafeTablesByHall(filters.hall_id);
@@ -337,7 +337,6 @@ export function GoodsReportsListView() {
             }
             SelectProps={{ native: true }}
             InputLabelProps={{ shrink: true }}
-            disabled={isDepartmentsEmpty}
           >
             <option value="">
               {t('ingredientReports.all', 'All')}
@@ -365,7 +364,6 @@ export function GoodsReportsListView() {
             }
             SelectProps={{ native: true }}
             InputLabelProps={{ shrink: true }}
-            disabled={isCategoriesEmpty}
           >
             <option value="">
               {t('ingredientReports.all', 'All')}
@@ -388,7 +386,6 @@ export function GoodsReportsListView() {
             onChange={(e) => handleFilterChange({ good_id: e.target.value })}
             SelectProps={{ native: true }}
             InputLabelProps={{ shrink: true }}
-            disabled={isGoodsEmpty}
           >
             <option value="" >
               {t('ingredientReports.all', 'All')}
@@ -411,7 +408,6 @@ export function GoodsReportsListView() {
             onChange={(e) => handleFilterChange({ waiter_id: e.target.value })}
             SelectProps={{ native: true }}
             InputLabelProps={{ shrink: true }}
-            disabled={isWaitersEmpty}
           >
             <option value="">
               {t('ingredientReports.all', 'All')}
@@ -439,7 +435,6 @@ export function GoodsReportsListView() {
             }
             SelectProps={{ native: true }}
             InputLabelProps={{ shrink: true }}
-            disabled={isHallsEmpty}
           >
             <option value="">
               {t('ingredientReports.all', 'All')}
@@ -462,7 +457,6 @@ export function GoodsReportsListView() {
             onChange={(e) => handleFilterChange({ table_id: e.target.value })}
             SelectProps={{ native: true }}
             InputLabelProps={{ shrink: true }}
-            disabled={isTablesEmpty}
           >
             <option value="">
               {t('ingredientReports.all', 'All')}
