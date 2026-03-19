@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"fmt"
 	"log"
 	"math"
 	"net/http"
@@ -669,9 +670,9 @@ func (h *Handler) GetOrderTablePrice(c echo.Context) error {
 	if !row.PricePerHour.Valid {
 		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("this table has no hourly price set", "price_per_hour is null", http.StatusBadRequest))
 	}
-	var pricePerHourStr string
-	if err := row.PricePerHour.Scan(&pricePerHourStr); err != nil {
-		pricePerHourStr = "0"
+	pricePerHourStr := "0"
+	if v, err := row.PricePerHour.Value(); err == nil && v != nil {
+		pricePerHourStr = fmt.Sprintf("%v", v)
 	}
 	pricePerHourF, _ := strconv.ParseFloat(pricePerHourStr, 64)
 	if pricePerHourF == 0 {
