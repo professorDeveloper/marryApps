@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useRef } from 'react';
+import React, { startTransition, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
     Box,
@@ -88,14 +88,15 @@ interface CompoundProduct {
     price: string;
     measurement: string;
     quantity: number;
-    department_id: string;
-    department_name?: string;
+    ingredient_group_id: string;
+    ingredient_group_name?: string;
     price_per_unit: number;
 }
 
-const formatPrice = (price: number) => {
-    return new Intl.NumberFormat('uz-UZ').format(price);
-};
+const priceFormatter = new Intl.NumberFormat('uz-UZ');
+const INITIAL_VISIBLE_ITEMS = 100;
+
+const formatPrice = (price: number) => priceFormatter.format(price);
 
 interface ProductCalculatorProps {
     compoundId?: string;
@@ -131,17 +132,24 @@ const ProductCalculator = ({ compoundId, mealId, onEntityCreated, onCalculations
     const [transferredIds, setTransferredIds] = useState<string[]>([]);
     const [quantities, setQuantities] = useState<Record<string, number>>({});
     const [searchTerm, setSearchTerm] = useState('');
+    const deferredSearchTerm = useDeferredValue(searchTerm);
     const [showCalculation, setShowCalculation] = useState(false);
     const [selectedGroupId, setSelectedGroupId] = useState<string>('');
     const [viewModeCalculation, setViewModeCalculation] = useState(false);
+    const [visibleIngredientCount, setVisibleIngredientCount] = useState(INITIAL_VISIBLE_ITEMS);
 
     // --- SEMIFINISHED TAB STATE ---
-    const { compounds, compoundsLoading } = useGetCompounds();
     const [sfSelectedIds, setSfSelectedIds] = useState<string[]>([]);
     const [sfTransferredIds, setSfTransferredIds] = useState<string[]>([]);
     const [sfQuantities, setSfQuantities] = useState<Record<string, number>>({});
     const [sfSearchTerm, setSfSearchTerm] = useState('');
+    const deferredSfSearchTerm = useDeferredValue(sfSearchTerm);
     const [sfShowCalculation, setSfShowCalculation] = useState(false);
+    const [visibleCompoundCount, setVisibleCompoundCount] = useState(INITIAL_VISIBLE_ITEMS);
+
+    const shouldLoadCompounds =
+        activeSubTab === 'semifinished' || sfTransferredIds.length > 0 || sfSelectedIds.length > 0;
+    const { compounds, compoundsLoading } = useGetCompounds(undefined, shouldLoadCompounds);
 
     // Track pending calculations when no entityId
     const [pendingCalculations, setPendingCalculations] = useState<Array<{
@@ -188,6 +196,46 @@ const ProductCalculator = ({ compoundId, mealId, onEntityCreated, onCalculations
         ? (compoundWithCalculationsLoading || compoundCalculationsLoading)
         : (mealWithCalculationsLoading || mealCalculationsLoading);
 
+    const ingredientById = useMemo(
+        () => new Map(ingredients.map((ingredient) => [ingredient.id, ingredient])),
+        [ingredients]
+    );
+
+    const compoundById = useMemo(
+        () => new Map(compounds.map((compound) => [compound.id, compound])),
+        [compounds]
+    );
+
+    const ingredientCalculationById = useMemo(() => {
+        const calculationMap = new Map<string, ICalculation>();
+
+        ingredientCalculations.forEach((calculation) => {
+            const currentCalculation = calculationMap.get(calculation.ingredient_id);
+
+            if (!currentCalculation || calculation.updated_at > currentCalculation.updated_at) {
+                calculationMap.set(calculation.ingredient_id, calculation);
+            }
+        });
+
+        return calculationMap;
+    }, [ingredientCalculations]);
+
+    const compoundCalculationById = useMemo(() => {
+        const calculationMap = new Map<string, ICalculation>();
+
+        compoundCalculationsList.forEach((calculation) => {
+            if (!calculation.component_compound_id) return;
+
+            const currentCalculation = calculationMap.get(calculation.component_compound_id);
+
+            if (!currentCalculation || calculation.updated_at > currentCalculation.updated_at) {
+                calculationMap.set(calculation.component_compound_id, calculation);
+            }
+        });
+
+        return calculationMap;
+    }, [compoundCalculationsList]);
+
     const mutateCalculations = entityType === 'compound'
         ? mutateCompoundWithCalculations
         : mutateMealWithCalculations;
@@ -201,6 +249,15 @@ const ProductCalculator = ({ compoundId, mealId, onEntityCreated, onCalculations
     const backendProfitMargin = entityType === 'compound'
         ? compoundWithCalculations?.profit_margin
         : mealWithCalculations?.profit_margin;
+
+    const filteredIngredients = useMemo(() => {
+        const normalizedSearchTerm = deferredSearchTerm.trim().toLowerCase();
+
+        return ingredients.filter((ingredient) =>
+            ingredient.name.toLowerCase().includes(normalizedSearchTerm) &&
+            (!selectedGroupId || ingredient.group_id === selectedGroupId)
+        );
+    }, [ingredients, deferredSearchTerm, selectedGroupId]);
 
     // Create calculation - supports both ingredient and compound
     const createCalculation = async (payload: {
@@ -286,6 +343,14 @@ const ProductCalculator = ({ compoundId, mealId, onEntityCreated, onCalculations
 
         loadData();
     }, [t]);
+
+    useEffect(() => {
+        setVisibleIngredientCount(INITIAL_VISIBLE_ITEMS);
+    }, [deferredSearchTerm, selectedGroupId]);
+
+    useEffect(() => {
+        setVisibleCompoundCount(INITIAL_VISIBLE_ITEMS);
+    }, [deferredSfSearchTerm]);
 
     // Load existing ingredient calculations
     useEffect(() => {
@@ -429,8 +494,6 @@ const ProductCalculator = ({ compoundId, mealId, onEntityCreated, onCalculations
             if (!entityId || pendingCalculations.length === 0) return;
 
             try {
-                console.log('Saving pending calculations:', pendingCalculations);
-
                 for (const calc of pendingCalculations) {
                     if (calc.quantity > 0) {
                         await createCalculation({
@@ -725,10 +788,10 @@ const ProductCalculator = ({ compoundId, mealId, onEntityCreated, onCalculations
         const uniqueIds = Array.from(new Set(transferredIds));
 
         return uniqueIds.map(id => {
-            const ingredient = ingredients.find(p => p.id === id);
+            const ingredient = ingredientById.get(id);
             if (!ingredient) return null;
 
-            const calculation = ingredientCalculations?.find(calc => calc.ingredient_id === id);
+            const calculation = ingredientCalculationById.get(id);
             const pricePerUnit = calculation
                 ? parseFloat(calculation.price_per_unit)
                 : ingredient.price_per_unit;
@@ -746,17 +809,17 @@ const ProductCalculator = ({ compoundId, mealId, onEntityCreated, onCalculations
                 type: 'ingredient' as const
             };
         }).filter(row => row !== null) as Array<Product & { qty: number; total: number; type: 'ingredient' }>;
-    }, [transferredIds, quantities, ingredients, ingredientCalculations]);
+    }, [transferredIds, quantities, ingredientById, ingredientCalculationById]);
 
     // --- CALCULATED ROWS FOR SEMIFINISHED ---
     const sfCalculatedRows = useMemo(() => {
         const uniqueIds = Array.from(new Set(sfTransferredIds));
 
         return uniqueIds.map(id => {
-            const compound = compounds.find(p => p.id === id);
+            const compound = compoundById.get(id);
             if (!compound) return null;
 
-            const calculation = compoundCalculationsList?.find(calc => calc.component_compound_id === id);
+            const calculation = compoundCalculationById.get(id);
             const pricePerUnit = calculation
                 ? parseFloat(calculation.price_per_unit)
                 : parseFloat(String(compound.price || '0'));
@@ -776,7 +839,7 @@ const ProductCalculator = ({ compoundId, mealId, onEntityCreated, onCalculations
                 type: 'compound' as const
             };
         }).filter(row => row !== null) as Array<{ id: string; name: string; measurement: string; price_per_unit: number; qty: number; total: number; type: 'compound' }>;
-    }, [sfTransferredIds, sfQuantities, compounds, compoundCalculationsList]);
+    }, [sfTransferredIds, sfQuantities, compoundById, compoundCalculationById]);
 
     // Combined calculated rows for the total display
     const allCalculatedRows = useMemo(() => {
@@ -802,9 +865,19 @@ const ProductCalculator = ({ compoundId, mealId, onEntityCreated, onCalculations
     const filteredCompounds = useMemo(() => {
         return compounds.filter(c => {
             if (compoundId && c.id === compoundId) return false;
-            return c.name.toLowerCase().includes(sfSearchTerm.toLowerCase());
+            return c.name.toLowerCase().includes(deferredSfSearchTerm.trim().toLowerCase());
         });
-    }, [compounds, compoundId, sfSearchTerm]);
+    }, [compounds, compoundId, deferredSfSearchTerm]);
+
+    const visibleIngredients = useMemo(
+        () => filteredIngredients.slice(0, visibleIngredientCount),
+        [filteredIngredients, visibleIngredientCount]
+    );
+
+    const visibleCompounds = useMemo(
+        () => filteredCompounds.slice(0, visibleCompoundCount),
+        [filteredCompounds, visibleCompoundCount]
+    );
 
     return (
         <Box sx={{
@@ -829,7 +902,11 @@ const ProductCalculator = ({ compoundId, mealId, onEntityCreated, onCalculations
             }}>
                 <Typography
                     variant="subtitle1"
-                    onClick={() => setActiveSubTab('ingredients')}
+                    onClick={() => {
+                        startTransition(() => {
+                            setActiveSubTab('ingredients');
+                        });
+                    }}
                     sx={{
                         fontWeight: activeSubTab === 'ingredients' ? 'bold' : 'normal',
                         borderBottom: activeSubTab === 'ingredients' ? '2px solid' : 'none',
@@ -846,7 +923,11 @@ const ProductCalculator = ({ compoundId, mealId, onEntityCreated, onCalculations
                 </Typography>
                 <Typography
                     variant="subtitle1"
-                    onClick={() => setActiveSubTab('semifinished')}
+                    onClick={() => {
+                        startTransition(() => {
+                            setActiveSubTab('semifinished');
+                        });
+                    }}
                     sx={{
                         fontWeight: activeSubTab === 'semifinished' ? 'bold' : 'normal',
                         borderBottom: activeSubTab === 'semifinished' ? '2px solid' : 'none',
@@ -936,17 +1017,12 @@ const ProductCalculator = ({ compoundId, mealId, onEntityCreated, onCalculations
                                     <Box sx={{ p: 3, textAlign: 'center' }}>
                                         <CircularProgress size={40} />
                                     </Box>
-                                ) : ingredients.length === 0 ? (
+                                ) : filteredIngredients.length === 0 ? (
                                     <Typography sx={{ p: 3, textAlign: 'center', color: 'text.secondary' }}>
                                         {t('calculation.noProducts')}
                                     </Typography>
                                 ) : (
-                                    ingredients
-                                        .filter(p =>
-                                            p.name.toLowerCase().includes(searchTerm.toLowerCase()) &&
-                                            (!selectedGroupId || p.group_id === selectedGroupId)
-                                        )
-                                        .map((ingredient) => (
+                                    visibleIngredients.map((ingredient) => (
                                             <Box
                                                 key={ingredient.id}
                                                 sx={{
@@ -985,6 +1061,16 @@ const ProductCalculator = ({ compoundId, mealId, onEntityCreated, onCalculations
                                         ))
                                 )}
                             </Box>
+                            {!loading && filteredIngredients.length > visibleIngredientCount && (
+                                <Box sx={{ p: 1.5, textAlign: 'center', borderTop: `1px solid ${theme.vars.palette.divider}` }}>
+                                    <Button
+                                        size="small"
+                                        onClick={() => setVisibleIngredientCount((prev) => prev + INITIAL_VISIBLE_ITEMS)}
+                                    >
+                                        {t('common.showMore', 'Ko‘proq ko‘rsat')} ({filteredIngredients.length - visibleIngredientCount})
+                                    </Button>
+                                </Box>
+                            )}
                         </Paper>
                     </Box>
 
@@ -1133,10 +1219,10 @@ const ProductCalculator = ({ compoundId, mealId, onEntityCreated, onCalculations
                                     </Typography>
                                 ) : (
                                     transferredIds.map(id => {
-                                        const ingredient = ingredients.find(p => p.id === id);
+                                        const ingredient = ingredientById.get(id);
                                         if (!ingredient) return null;
 
-                                        const calculation = ingredientCalculations?.find(calc => calc.ingredient_id === id);
+                                        const calculation = ingredientCalculationById.get(id);
                                         const displayPrice = calculation
                                             ? parseFloat(calculation.price_per_unit)
                                             : ingredient.price_per_unit;
@@ -1259,7 +1345,7 @@ const ProductCalculator = ({ compoundId, mealId, onEntityCreated, onCalculations
                                         {t('calculation.noProducts')}
                                     </Typography>
                                 ) : (
-                                    filteredCompounds.map((compound) => (
+                                    visibleCompounds.map((compound) => (
                                         <Box
                                             key={compound.id}
                                             sx={{
@@ -1293,6 +1379,16 @@ const ProductCalculator = ({ compoundId, mealId, onEntityCreated, onCalculations
                                     ))
                                 )}
                             </Box>
+                            {!compoundsLoading && filteredCompounds.length > visibleCompoundCount && (
+                                <Box sx={{ p: 1.5, textAlign: 'center', borderTop: `1px solid ${theme.vars.palette.divider}` }}>
+                                    <Button
+                                        size="small"
+                                        onClick={() => setVisibleCompoundCount((prev) => prev + INITIAL_VISIBLE_ITEMS)}
+                                    >
+                                        {t('common.showMore', 'Ko‘proq ko‘rsat')} ({filteredCompounds.length - visibleCompoundCount})
+                                    </Button>
+                                </Box>
+                            )}
                         </Paper>
                     </Box>
 
@@ -1441,7 +1537,7 @@ const ProductCalculator = ({ compoundId, mealId, onEntityCreated, onCalculations
                                     </Typography>
                                 ) : (
                                     sfTransferredIds.map(id => {
-                                        const compound = compounds.find(p => p.id === id);
+                                        const compound = compoundById.get(id);
                                         if (!compound) return null;
 
                                         return (

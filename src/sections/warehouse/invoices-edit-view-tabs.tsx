@@ -207,10 +207,10 @@ export function InvoicesEditViewTabs() {
                 <TabPanel value={currentTab} index={0}>
                     <InvoiceInfoEditView
                         isNew={!id}
-                        onInvoiceSubmit={handleInvoiceSubmit}
-                        detailsData={detailsData}
+                        onInvoiceSubmit={isCreatingNew ? handleInvoiceSubmit : undefined}
+                        detailsData={isCreatingNew ? detailsData : undefined}
                         currentInvoiceId={id}
-                        skipRedirect={true}
+                        skipRedirect={isCreatingNew}
                         useBatchFlow={isCreatingNew}
                         onFormDataChange={handleFormDataChange}
                         persistedFormData={formData}

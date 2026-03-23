@@ -1,1 +1,0 @@
-const t="Приложение",o="Работа",n="Пользователь",s="Путешествие",c="Счет-фактура",a={title:"Блог",caption:"Настроенные горячие клавиши."},e="Подзаголовок",r={app:t,job:o,user:n,travel:s,invoice:c,blog:a,subheader:e};export{t as app,a as blog,r as default,c as invoice,o as job,e as subheader,s as travel,n as user};

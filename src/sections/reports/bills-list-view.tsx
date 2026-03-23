@@ -11,6 +11,8 @@ import TableCell from '@mui/material/TableCell';
 import TableHead from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
 import Typography from '@mui/material/Typography';
+import ToggleButton from '@mui/material/ToggleButton';
+import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import dayjs from 'dayjs';
 import { paths } from 'src/routes/paths';
@@ -21,6 +23,7 @@ import { Iconify } from 'src/components/iconify';
 import { CustomGridActionsCellItem } from 'src/components/custom-data-grid';
 import { RenderCellItem, GenericTableView } from 'src/components/generic-table-view';
 import { GenericViewModal } from 'src/components/generic-view-view/GenericViewModal';
+import { NoDataTooltip } from 'src/components/no-data-tooltip';
 
 const toUtcDayBoundary = (value: dayjs.Dayjs, endOfDay = false): string => {
     const date = new Date(
@@ -38,6 +41,7 @@ const toUtcDayBoundary = (value: dayjs.Dayjs, endOfDay = false): string => {
 
 export function BillsListView() {
     const { t, i18n } = useTranslation('menu');
+    const noDataText = t('noDataAvailable', "Tushunarli ma'lumot mavjud emas");
 
     // Modal state
     const [selectedBillId, setSelectedBillId] = useState<string | null>(null);
@@ -59,23 +63,24 @@ export function BillsListView() {
         waiter_id: '',
         hall_id: '',
         table_id: '',
-        limit: 1000,
+        limit: 20,
         offset: 0,
     });
+    const [paginationModel, setPaginationModel] = useState({ page: 0, pageSize: 20 });
 
     const [startDate, setStartDate] = useState<dayjs.Dayjs | null>(null);
     const [endDate, setEndDate] = useState<dayjs.Dayjs | null>(null);
+    const [activeRange, setActiveRange] = useState<'day' | 'week' | 'month' | 'year'>('day');
 
     // Set default date range to last 1 day on component mount
     useEffect(() => {
         const today = dayjs();
-        const yesterday = today.subtract(1, 'day');
-        setStartDate(yesterday);
-        setEndDate(today);
+        setStartDate(today.startOf('day'));
+        setEndDate(today.endOf('day'));
     }, []);
 
     // Get bills with applied filters
-    const { bills, billsLoading } = useGetBills(
+    const { bills, billsLoading, pagination, totals } = useGetBills(
         Object.fromEntries(Object.entries(filters).filter(([, v]) => v !== ''))
     );
 
@@ -102,6 +107,9 @@ export function BillsListView() {
         }),
         [waiters, halls, t]
     );
+
+    const isWaitersEmpty = filterOptions.waiter_id.length === 0;
+    const isHallsEmpty = filterOptions.hall_id.length === 0;
 
     // Render bill details modal content
     const renderBillDetailsContent = useCallback((billData: any) => {
@@ -436,6 +444,7 @@ export function BillsListView() {
             ...newFilters,
             offset: 0,
         }));
+        setPaginationModel((prev) => ({ ...prev, page: 0 }));
     }, []);
 
     const handleResetFilters = useCallback(() => {
@@ -447,10 +456,11 @@ export function BillsListView() {
             waiter_id: '',
             hall_id: '',
             table_id: '',
-            limit: 1000,
+            limit: paginationModel.pageSize,
             offset: 0,
         });
-    }, [startDate, endDate]);
+        setPaginationModel((prev) => ({ ...prev, page: 0 }));
+    }, [startDate, endDate, paginationModel.pageSize]);
 
     const handleStatusChange = useCallback(
         (status: string) => {
@@ -487,133 +497,224 @@ export function BillsListView() {
             end: endDate ? toUtcDayBoundary(endDate, true) : '',
             offset: 0,
         }));
+        setPaginationModel((prev) => ({ ...prev, page: 0 }));
     }, [startDate, endDate]);
 
+    const applyRange = useCallback((range: 'day' | 'week' | 'month' | 'year') => {
+        const today = dayjs();
+        let nextStart = today.startOf('day');
+        let nextEnd = today.endOf('day');
+
+        if (range === 'week') {
+            nextStart = today.startOf('week');
+            nextEnd = today.endOf('week');
+        } else if (range === 'month') {
+            nextStart = today.startOf('month');
+            nextEnd = today.endOf('month');
+        } else if (range === 'year') {
+            nextStart = today.startOf('year');
+            nextEnd = today.endOf('year');
+        }
+
+        setActiveRange(range);
+        setStartDate(nextStart);
+        setEndDate(nextEnd);
+    }, []);
+
+    useEffect(() => {
+        setFilters((prev) => ({
+            ...prev,
+            limit: paginationModel.pageSize,
+            offset: paginationModel.page * paginationModel.pageSize,
+        }));
+    }, [paginationModel.page, paginationModel.pageSize]);
+
     const renderFiltersContent = () => (
-        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: 'repeat(4, 1fr)', lg: 'repeat(7, 1fr)' }, gap: 1.5 }}>
-            {/* Start Date */}
-            <DatePicker
-                label={t('bills.startDate') || 'Start Date'}
-                value={startDate}
-                onChange={setStartDate}
-                format="DD.MM.YYYY"
-                slotProps={{
-                    textField: {
-                        fullWidth: true,
-                        size: 'small',
-                        inputProps: { readOnly: true },
-                        sx: { cursor: 'pointer' },
-                    },
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+            <Box
+                sx={{
+                    display: 'grid',
+                    gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: 'repeat(5, 1fr)', lg: 'repeat(7, 1fr)' },
+                    gap: 1.5,
+                    alignItems: 'end',
                 }}
-            />
-
-            {/* End Date */}
-            <DatePicker
-                label={t('bills.endDate') || 'End Date'}
-                value={endDate}
-                onChange={setEndDate}
-                format="DD.MM.YYYY"
-                slotProps={{
-                    textField: {
-                        fullWidth: true,
-                        size: 'small',
-                        inputProps: { readOnly: true },
-                        sx: { cursor: 'pointer' },
-                    },
-                }}
-            />
-
-            {/* Status */}
-            <TextField
-                select
-                label={t('bills.status') || 'Status'}
-                value={filters.bill_status}
-                onChange={(e) => handleStatusChange(e.target.value)}
-                SelectProps={{ native: true }}
-                size="small"
-                fullWidth
-                InputLabelProps={{ shrink: true }}
             >
-                <option value="">{t('ingredientReports.all') || 'All'}</option>
-                {filterOptions.bill_status.map((option) => (
-                    <option key={option.value} value={option.value}>
-                        {option.label}
-                    </option>
-                ))}
-            </TextField>
-
-            {/* Payment Type */}
-            <TextField
-                select
-                label={t('bills.paymentType') || 'Payment Type'}
-                value={filters.payment_type}
-                onChange={(e) => handlePaymentTypeChange(e.target.value)}
-                SelectProps={{ native: true }}
-                size="small"
-                fullWidth
-                InputLabelProps={{ shrink: true }}
-            >
-                <option value="">{t('ingredientReports.all') || 'All'}</option>
-                {filterOptions.payment_type.map((option) => (
-                    <option key={option.value} value={option.value}>
-                        {option.label}
-                    </option>
-                ))}
-            </TextField>
-
-            {/* Waiter */}
-            <TextField
-                select
-                label={t('bills.waiter') || 'Waiter'}
-                value={filters.waiter_id}
-                onChange={(e) => handleWaiterChange(e.target.value)}
-                SelectProps={{ native: true }}
-                size="small"
-                fullWidth
-                InputLabelProps={{ shrink: true }}
-            >
-                <option value="">{t('ingredientReports.all') || 'All'}</option>
-                {filterOptions.waiter_id.map((option) => (
-                    <option key={option.value} value={option.value}>
-                        {option.label}
-                    </option>
-                ))}
-            </TextField>
-
-            {/* Hall */}
-            <TextField
-                select
-                label={t('bills.hall') || 'Hall'}
-                value={filters.hall_id}
-                onChange={(e) => handleHallChange(e.target.value)}
-                SelectProps={{ native: true }}
-                size="small"
-                fullWidth
-                InputLabelProps={{ shrink: true }}
-            >
-                <option value="">{t('ingredientReports.all') || 'All'}</option>
-                {filterOptions.hall_id.map((option) => (
-                    <option key={option.value} value={option.value}>
-                        {option.label}
-                    </option>
-                ))}
-            </TextField>
-
-            {/* Action Buttons */}
-            <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                <Button
-                    variant="outlined"
-                    size="medium"
-                    startIcon={<Iconify icon="solar:restart-bold" />}
-                    onClick={handleResetFilters}
-                    sx={{ minWidth: 'auto', flex: 1 }}
+                <ToggleButtonGroup
+                    exclusive
+                    value={activeRange}
+                    onChange={(_, value) => {
+                        if (!value) return;
+                        applyRange(value);
+                    }}
+                    size="small"
+                    sx={{
+                        alignSelf: 'end',
+                        '& .MuiToggleButton-root': {
+                            textTransform: 'uppercase',
+                            fontWeight: 600,
+                            px: 2.5,
+                            border: 'none',
+                            borderRadius: 0,
+                            borderBottom: '2px solid transparent',
+                        },
+                        '& .MuiToggleButton-root.Mui-selected': {
+                            borderBottomColor: 'primary.main',
+                            backgroundColor: 'transparent',
+                        },
+                        '& .MuiToggleButton-root:hover': {
+                            backgroundColor: 'transparent',
+                        },
+                    }}
                 >
-                    {t('bills.reset') || 'Reset'}
-                </Button>
+                    <ToggleButton value="day">D</ToggleButton>
+                    <ToggleButton value="week">W</ToggleButton>
+                    <ToggleButton value="month">M</ToggleButton>
+                    <ToggleButton value="year">Y</ToggleButton>
+                </ToggleButtonGroup>
+                {/* Start Date */}
+                <DatePicker
+                    label={t('bills.startDate') || 'Start Date'}
+                    value={startDate}
+                    onChange={(value) => {
+                        setStartDate(value);
+                        setActiveRange('day');
+                    }}
+                    format="DD.MM.YYYY"
+                    slotProps={{
+                        textField: {
+                            fullWidth: true,
+                            size: 'small',
+                            inputProps: { readOnly: true },
+                            sx: { cursor: 'pointer', minWidth: 200 },
+                        },
+                    }}
+                />
+
+                {/* End Date */}
+                <DatePicker
+                    label={t('bills.endDate') || 'End Date'}
+                    value={endDate}
+                    onChange={(value) => {
+                        setEndDate(value);
+                        setActiveRange('day');
+                    }}
+                    format="DD.MM.YYYY"
+                    slotProps={{
+                        textField: {
+                            fullWidth: true,
+                            size: 'small',
+                            inputProps: { readOnly: true },
+                            sx: { cursor: 'pointer', minWidth: 200 },
+                        },
+                    }}
+                />
+
+                {/* Status */}
+                <TextField
+                    select
+                    label={t('bills.status') || 'Status'}
+                    value={filters.bill_status}
+                    onChange={(e) => handleStatusChange(e.target.value)}
+                    SelectProps={{ native: true }}
+                    size="small"
+                    fullWidth
+                    InputLabelProps={{ shrink: true }}
+                >
+                    <option value="">
+                        {t('ingredientReports.all') || 'All'}
+                    </option>
+                    {filterOptions.bill_status.map((option) => (
+                        <option key={option.value} value={option.value}>
+                            {option.label}
+                        </option>
+                    ))}
+                </TextField>
+
+                {/* Payment Type */}
+                <TextField
+                    select
+                    label={t('bills.paymentType') || 'Payment Type'}
+                    value={filters.payment_type}
+                    onChange={(e) => handlePaymentTypeChange(e.target.value)}
+                    SelectProps={{ native: true }}
+                    size="small"
+                    fullWidth
+                    InputLabelProps={{ shrink: true }}
+                >
+                    <option value="">
+                        {t('ingredientReports.all') || 'All'}
+                    </option>
+                    {filterOptions.payment_type.map((option) => (
+                        <option key={option.value} value={option.value}>
+                            {option.label}
+                        </option>
+                    ))}
+                </TextField>
+
+                {/* Waiter */}
+                <NoDataTooltip enabled={isWaitersEmpty} title={noDataText}>
+                    <TextField
+                        select
+                        label={t('bills.waiter') || 'Waiter'}
+                        value={filters.waiter_id}
+                        onChange={(e) => handleWaiterChange(e.target.value)}
+                        SelectProps={{ native: true }}
+                        size="small"
+                        fullWidth
+                        InputLabelProps={{ shrink: true }}
+                        disabled={isWaitersEmpty}
+                    >
+                        <option value="">
+                            {t('ingredientReports.all') || 'All'}
+                        </option>
+                        {filterOptions.waiter_id.map((option) => (
+                            <option key={option.value} value={option.value}>
+                                {option.label}
+                            </option>
+                        ))}
+                    </TextField>
+                </NoDataTooltip>
+
+                {/* Hall */}
+                <NoDataTooltip enabled={isHallsEmpty} title={noDataText}>
+                    <TextField
+                        select
+                        label={t('bills.hall') || 'Hall'}
+                        value={filters.hall_id}
+                        onChange={(e) => handleHallChange(e.target.value)}
+                        SelectProps={{ native: true }}
+                        size="small"
+                        fullWidth
+                        InputLabelProps={{ shrink: true }}
+                        disabled={isHallsEmpty}
+                    >
+                        <option value="">
+                            {t('ingredientReports.all') || 'All'}
+                        </option>
+                        {filterOptions.hall_id.map((option) => (
+                            <option key={option.value} value={option.value}>
+                                {option.label}
+                            </option>
+                        ))}
+                    </TextField>
+                </NoDataTooltip>
+
+                {/* Action Buttons */}
+                <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                    <Button
+                        variant="outlined"
+                        size="medium"
+                        startIcon={<Iconify icon="solar:restart-bold" />}
+                        onClick={handleResetFilters}
+                        sx={{ minWidth: 'auto', flex: 1 }}
+                    >
+                        {t('bills.reset') || 'Reset'}
+                    </Button>
+                </Box>
             </Box>
         </Box>
     );
-
+    
     return (
         <>
             {/* Table */}
@@ -621,6 +722,11 @@ export function BillsListView() {
                 data={bills}
                 loading={billsLoading}
                 columns={columns}
+                paginationMode="server"
+                rowCount={pagination?.total || 0}
+                paginationModel={paginationModel}
+                onPaginationModelChange={setPaginationModel}
+                pageSizeOptions={[10, 20, 50, 100]}
                 breadcrumbs={{
                     heading: t('bills.title') || 'Bills',
                     links: [
@@ -641,6 +747,75 @@ export function BillsListView() {
                     setOpenDetailsModal(true);
                 }}
             />
+
+            {totals && (
+                <Box sx={{ px: { xs: 2, md: 3 }, pb: { xs: 2, md: 3 } }}>
+                    <Box
+                        sx={{
+                            display: 'grid',
+                            gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: 'repeat(7, 1fr)' },
+                            gap: 1,
+                        }}
+                    >
+                        <Card sx={{ p: 1.5 }}>
+                            <Typography variant="caption" color="text.secondary">
+                                {t('bills.foodCost', 'Food Cost')}
+                            </Typography>
+                            <Typography variant="subtitle2">
+                                {Number(totals.total_food_cost || 0).toLocaleString()} so'm
+                            </Typography>
+                        </Card>
+                        <Card sx={{ p: 1.5 }}>
+                            <Typography variant="caption" color="text.secondary">
+                                {t('bills.guests', 'Guests')}
+                            </Typography>
+                            <Typography variant="subtitle2">
+                                {totals.total_guest_count ?? 0}
+                            </Typography>
+                        </Card>
+                        <Card sx={{ p: 1.5 }}>
+                            <Typography variant="caption" color="text.secondary">
+                                {t('bills.grandTotal', 'Grand Total')}
+                            </Typography>
+                            <Typography variant="subtitle2">
+                                {Number(totals.total_grand_total || 0).toLocaleString()} so'm
+                            </Typography>
+                        </Card>
+                        <Card sx={{ p: 1.5 }}>
+                            <Typography variant="caption" color="text.secondary">
+                                {t('bills.service', 'Service')}
+                            </Typography>
+                            <Typography variant="subtitle2">
+                                {Number(totals.total_service_amount || 0).toLocaleString()} so'm
+                            </Typography>
+                        </Card>
+                        <Card sx={{ p: 1.5 }}>
+                            <Typography variant="caption" color="text.secondary">
+                                {t('bills.service', 'Service')} %
+                            </Typography>
+                            <Typography variant="subtitle2">
+                                {Number(totals.avg_service_percent || 0).toLocaleString()}%
+                            </Typography>
+                        </Card>
+                        <Card sx={{ p: 1.5 }}>
+                            <Typography variant="caption" color="text.secondary">
+                                {t('bills.discount', 'Discount')}
+                            </Typography>
+                            <Typography variant="subtitle2">
+                                {Number(totals.total_discount_amount || 0).toLocaleString()} so'm
+                            </Typography>
+                        </Card>
+                        <Card sx={{ p: 1.5 }}>
+                            <Typography variant="caption" color="text.secondary">
+                                {t('bills.discount', 'Discount')} %
+                            </Typography>
+                            <Typography variant="subtitle2">
+                                {Number(totals.avg_discount_percent || 0).toLocaleString()}%
+                            </Typography>
+                        </Card>
+                    </Box>
+                </Box>
+            )}
 
             {/* Bill Details Modal - Using GenericViewModal */}
             <GenericViewModal

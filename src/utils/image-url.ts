@@ -4,6 +4,8 @@ import axiosInstance from 'src/lib/axios';
 // IMAGE URL UTILITIES
 // ============================================================================
 
+const imageUrlCache = new Map<string, Promise<string>>();
+
 /**
  * Get full image URL from object name by downloading via API
  * @param objectName - The object name returned from upload API (e.g., "c0f18a64-7f5c-4425-9414-1b01cddee9d9/{extension}")
@@ -17,21 +19,27 @@ export const getFullImageUrl = async (objectName: string | null | undefined): Pr
         return objectName;
     }
 
-    try {
-        // Download image via POST API
-        const response = await axiosInstance.post('/api/v1/media/image/download', {
-            object_name: objectName,
-        }, {
-            responseType: 'blob',
-        });
+    const cachedUrl = imageUrlCache.get(objectName);
+    if (cachedUrl) {
+        return cachedUrl;
+    }
 
-        // Create blob URL
+    const imageRequest = axiosInstance.post('/api/v1/media/image/download', {
+        object_name: objectName,
+    }, {
+        responseType: 'blob',
+    }).then((response) => {
         const blob = new Blob([response.data], { type: response.headers['content-type'] });
         return URL.createObjectURL(blob);
-    } catch (error) {
+    }).catch((error) => {
+        imageUrlCache.delete(objectName);
         console.error('Failed to download image:', error);
         return '';
-    }
+    });
+
+    imageUrlCache.set(objectName, imageRequest);
+
+    return imageRequest;
 };
 
 /**

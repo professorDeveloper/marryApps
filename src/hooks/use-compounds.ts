@@ -4,7 +4,7 @@ import type { ITranslationItem } from 'src/types/departments.tsx';
 import useSWR, { mutate } from 'swr';
 import { useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useGetDepartments } from 'src/actions/departments';
+import { useGetIngredientGroups } from 'src/actions/ingredient-group';
 import { poster, putter, deleter, fetcher, endpoints } from 'src/lib/axios';
 import { toast } from 'src/components/snackbar';
 
@@ -18,6 +18,12 @@ interface BackendResponse<T> {
     status: string;
     message: string;
     data: T;
+    pagination?: {
+        total: number;
+        limit: number;
+        offset: number;
+        total_pages: number;
+    };
     code: number;
 }
 
@@ -44,21 +50,31 @@ export interface ICompoundWithCalculations {
     profit_margin: string;
 }
 
+interface ICompoundPageResult {
+    compounds: any[];
+    compoundsLoading: boolean;
+    compoundsError: any;
+    compoundsValidating: boolean;
+    compoundsEmpty: boolean;
+    pagination?: BackendResponse<ICompound[]>['pagination'];
+    mutate: () => Promise<any>;
+}
+
 // ============================================================================
 // HELPER FUNCTIONS
 // ============================================================================
 
 /**
- * Enrich compounds with department names and translations
+ * Enrich compounds with ingredient group names and translations
  */
 function enrichCompounds(
     compoundsData: ICompound[],
-    departments: any[],
+    ingredientGroups: any[],
     translations: ITranslationItem[] = [],
     currentLanguage: string = 'uz'
 ): any[] {
-    const departmentMap = new Map(
-        departments?.map((dept: any) => [dept.id, dept.name]) || []
+    const ingredientGroupMap = new Map(
+        ingredientGroups?.map((group: any) => [group.id, group.name]) || []
     );
 
     // Create translations map for quick lookup
@@ -110,22 +126,75 @@ function enrichCompounds(
             ...compound,
             name: localizedName,
             ...translationFields,
-            department_name: departmentMap.get(compound.department_id) || '-',
+            ingredient_group_name: ingredientGroupMap.get(compound.ingredient_group_id) || '-',
         };
     });
 }
 
 /**
- * Enrich single compound with department name and translations
+ * Enrich compounds with expand payload (no extra API calls)
+ */
+function enrichCompoundsFromExpand(
+    compoundsData: ICompound[],
+    currentLanguage: string = 'uz'
+): any[] {
+    const getLangKey = (lang: string): keyof ITranslationItem => {
+        const langMap: Record<string, keyof ITranslationItem> = {
+            'uz': 'uz',
+            'uz-Latn': 'uz-Latn',
+            'uz-Cyrl': 'uz-Cyrl',
+            'ru': 'ru',
+            'en': 'en',
+        };
+        return (langMap[lang] || 'uz') as keyof ITranslationItem;
+    };
+
+    return compoundsData.map((compound: any) => {
+    const expandedGroup = compound?._expand?.ingredient_group_id;
+    const expandedName = compound?._expand?.name_i18n;
+    const expandedDescription = compound?._expand?.description_i18n;
+
+        let localizedName = compound.name;
+        if (expandedName) {
+            const langKey = getLangKey(currentLanguage);
+            localizedName =
+                expandedName[langKey] ||
+                expandedName.uz ||
+                expandedName.en ||
+                compound.name;
+        }
+
+        let localizedDescription = compound.description || '';
+        if (expandedDescription) {
+            const langKey = getLangKey(currentLanguage);
+            localizedDescription =
+                expandedDescription[langKey] ||
+                expandedDescription.uz ||
+                expandedDescription.en ||
+                compound.description ||
+                '';
+        }
+
+        return {
+            ...compound,
+            name: localizedName,
+            description: localizedDescription,
+            ingredient_group_name: expandedGroup?.name || compound.ingredient_group_name || '-',
+        };
+    });
+}
+
+/**
+ * Enrich single compound with ingredient group name and translations
  */
 function enrichCompound(
     compoundData: ICompound,
-    departments: any[],
+    ingredientGroups: any[],
     translations: ITranslationItem[] = [],
     currentLanguage: string = 'uz'
 ): any {
-    const departmentMap = new Map(
-        departments?.map((dept: any) => [dept.id, dept.name]) || []
+    const ingredientGroupMap = new Map(
+        ingredientGroups?.map((group: any) => [group.id, group.name]) || []
     );
 
     // Create translations map for quick lookup
@@ -176,7 +245,7 @@ function enrichCompound(
         ...compoundData,
         name: localizedName,
         ...translationFields,
-        department_name: departmentMap.get(compoundData.department_id) || '-',
+        ingredient_group_name: ingredientGroupMap.get(compoundData.ingredient_group_id) || '-',
     };
 }
 
@@ -185,23 +254,25 @@ function enrichCompound(
 // ============================================================================
 
 /**
- * Get all compounds with enriched department names and translations
+ * Get all compounds with enriched ingredient group names and translations
  */
-export function useGetCompounds(searchQuery?: string) {
+export function useGetCompounds(searchQuery?: string, enabled = true) {
     const { i18n } = useTranslation();
 
-    // Get departments for enrichment
-    const { departments } = useGetDepartments();
+    // Get ingredient groups for enrichment
+    const { ingredientGroups } = useGetIngredientGroups(undefined, enabled);
 
     // Fetch translations
     const { data: translationsData } = useSWR<BackendResponse<ITranslationItem[]>>(
-        endpoints.translations.list,
+        enabled ? endpoints.translations.list : null,
         fetcher,
         { ...swrOptions }
     );
 
     const normalizedQuery = searchQuery?.trim() || '';
-    const swrKey = normalizedQuery
+    const swrKey = !enabled
+        ? null
+        : normalizedQuery
         ? [endpoints.compound.search, { params: { q: normalizedQuery } }]
         : endpoints.compound.list;
 
@@ -224,8 +295,8 @@ export function useGetCompounds(searchQuery?: string) {
             compoundsData = data.data;
         }
 
-        return enrichCompounds(compoundsData, departments, translations, i18n.resolvedLanguage);
-    }, [data, departments, translations, i18n.resolvedLanguage]);
+        return enrichCompounds(compoundsData, ingredientGroups, translations, i18n.resolvedLanguage);
+    }, [data, ingredientGroups, translations, i18n.resolvedLanguage]);
 
     const memoizedValue = useMemo(
         () => ({
@@ -243,14 +314,64 @@ export function useGetCompounds(searchQuery?: string) {
 }
 
 /**
- * Get single compound by ID with enriched department name and translations
+ * Get compounds with server-side pagination using expand (no extra API calls)
+ */
+export function useGetCompoundsPage(params?: {
+    search?: string;
+    limit?: number;
+    offset?: number;
+    expand?: string;
+}): ICompoundPageResult {
+    const { i18n } = useTranslation();
+    const normalizedQuery = params?.search?.trim() || '';
+    const limit = typeof params?.limit === 'number' ? params?.limit : 20;
+    const offset = typeof params?.offset === 'number' ? params?.offset : 0;
+    const rawExpand = params?.expand || 'name_i18n,description_i18n';
+    const expand = rawExpand
+        .split(',')
+        .map((item) => item.trim())
+        .filter((item) => item)
+        .join(',');
+
+    const swrKey = normalizedQuery
+        ? [endpoints.compound.search, { params: { q: normalizedQuery, limit, offset, expand } }]
+        : [endpoints.compound.list, { params: { limit, offset, expand } }];
+
+    const { data, isLoading, error, isValidating, mutate: mutateCompounds } = useSWR<
+        BackendResponse<ICompound[]> | ICompound[]
+    >(swrKey, fetcher, { ...swrOptions });
+
+    const compoundsData = useMemo(() => {
+        if (Array.isArray(data)) return data;
+        if (data?.data && Array.isArray(data.data)) return data.data;
+        return [];
+    }, [data]);
+
+    const enrichedCompounds = useMemo(
+        () => enrichCompoundsFromExpand(compoundsData, i18n.resolvedLanguage),
+        [compoundsData, i18n.resolvedLanguage]
+    );
+
+    return {
+        compounds: enrichedCompounds,
+        compoundsLoading: isLoading,
+        compoundsError: error,
+        compoundsValidating: isValidating,
+        compoundsEmpty: !isLoading && !isValidating && enrichedCompounds.length === 0,
+        pagination: (data as BackendResponse<ICompound[]>)?.pagination,
+        mutate: mutateCompounds,
+    };
+}
+
+/**
+ * Get single compound by ID with enriched ingredient group name and translations
  */
 export function useGetCompound(compoundId: string) {
     const url = compoundId ? endpoints.compound.details(compoundId) : null;
     const { i18n } = useTranslation();
 
-    // Get departments for enrichment
-    const { departments } = useGetDepartments();
+    // Get ingredient groups for enrichment
+    const { ingredientGroups } = useGetIngredientGroups();
 
     // Fetch translations
     const { data: translationsData } = useSWR<BackendResponse<ITranslationItem[]>>(
@@ -283,8 +404,8 @@ export function useGetCompound(compoundId: string) {
 
         if (!compoundData) return undefined;
 
-        return enrichCompound(compoundData, departments, translations, i18n.resolvedLanguage);
-    }, [data, departments, translations, i18n.resolvedLanguage]);
+        return enrichCompound(compoundData, ingredientGroups, translations, i18n.resolvedLanguage);
+    }, [data, ingredientGroups, translations, i18n.resolvedLanguage]);
 
     const memoizedValue = useMemo(
         () => ({
@@ -315,7 +436,7 @@ export function useCreateCompound() {
                     price: String(formData.price),
                     quantity: Number(formData.quantity),
                     measurement: formData.measurement,
-                    department_id: formData.department_id,
+                    ingredient_group_id: formData.ingredient_group_id,
                     picture_url: formData.picture_url || null,
                 };
 
@@ -356,7 +477,7 @@ export function useUpdateCompound() {
                     price: String(formData.price),
                     quantity: Number(formData.quantity),
                     measurement: formData.measurement,
-                    department_id: formData.department_id,
+                    ingredient_group_id: formData.ingredient_group_id,
                     picture_url: formData.picture_url || null,
                 };
 
@@ -592,7 +713,7 @@ export function useCreateCompoundWithCalculations() {
                         price: String(payload.compound.price),
                         quantity: Number(payload.compound.quantity),
                         measurement: payload.compound.measurement,
-                        department_id: payload.compound.department_id,
+                        ingredient_group_id: payload.compound.ingredient_group_id,
                         picture_url: payload.compound.picture_url || null,
                     },
                     ingredient_calculations: payload.ingredient_calculations || [],
@@ -630,4 +751,3 @@ export function useCreateCompoundWithCalculations() {
 
     return { createCompoundWithCalculations };
 }
-

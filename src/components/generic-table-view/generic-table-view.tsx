@@ -150,6 +150,7 @@ export function GenericTableView<T extends Record<string, any>>({
   const [columnVisibilityModel, setColumnVisibilityModel] =
     useState<GridColumnVisibilityModel>(hideColumns);
   const quickFilterValueRef = useRef('');
+  const rowCountRef = useRef(typeof rowCount === 'number' ? rowCount : 0);
 
   useEffect(() => {
     setTableData(data);
@@ -304,6 +305,13 @@ export function GenericTableView<T extends Record<string, any>>({
   );
 
   const useControlledPagination = Boolean(paginationModel && onPaginationModelChange);
+  const effectiveRowCount = useMemo(() => {
+    if (typeof rowCount === 'number' && (!loading || rowCount > 0)) {
+      rowCountRef.current = rowCount;
+    }
+
+    return rowCountRef.current;
+  }, [loading, rowCount]);
 
   const handleFilterModelChange = useCallback(
     (model: GridFilterModel) => {
@@ -321,6 +329,8 @@ export function GenericTableView<T extends Record<string, any>>({
     },
     [onQuickFilterChange]
   );
+
+  const gridHeight = 'clamp(320px, 70vh, 800px)';
 
   return (
     <>
@@ -363,8 +373,9 @@ export function GenericTableView<T extends Record<string, any>>({
           sx={{
             display: 'flex',
             flexDirection: 'column',
-            height: 'auto',
+            height: gridHeight,
             minHeight: 0,
+            overflow: 'hidden',
           }}
         >
           <DataGrid
@@ -380,7 +391,7 @@ export function GenericTableView<T extends Record<string, any>>({
             getRowId={(row) => row?.[idField]}
             pageSizeOptions={pageSizeOptions || [10, 20, 50, 100, 500]}
             paginationMode={paginationMode}
-            rowCount={typeof rowCount === 'number' ? rowCount : undefined}
+            rowCount={paginationMode === 'server' ? effectiveRowCount : undefined}
             paginationModel={useControlledPagination ? paginationModel : undefined}
             onPaginationModelChange={useControlledPagination ? onPaginationModelChange : undefined}
             initialState={
@@ -409,6 +420,8 @@ export function GenericTableView<T extends Record<string, any>>({
               },
             }}
             sx={{
+              flex: 1,
+              minHeight: 0,
               border: 0,
               '& .MuiDataGrid-root': {
                 border: 0,

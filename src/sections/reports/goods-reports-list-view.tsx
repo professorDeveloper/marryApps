@@ -10,18 +10,21 @@ import Button from '@mui/material/Button';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+import ToggleButton from '@mui/material/ToggleButton';
+import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
 
 import { paths } from 'src/routes/paths';
 
 import { useGetHalls } from 'src/actions/halls';
 import { useGetUsersByRole } from 'src/actions/users';
-import { useGetGoodsByCategory } from 'src/actions/categories';
+import { useGetCategories, useGetGoodsAll } from 'src/actions/categories';
 import { useGetGoodsReports } from 'src/actions/goods-reports';
 import { useGetCafeTablesByHall } from 'src/actions/cafe-tables';
-import { useGetDepartments, useGetCategoriesByDepartment } from 'src/actions/departments';
+import { useGetDepartments } from 'src/actions/departments';
 
 import { Iconify } from 'src/components/iconify';
 import { GenericTableView } from 'src/components/generic-table-view';
+import { NoDataTooltip } from 'src/components/no-data-tooltip';
 
 const toApiStartDateTime = (value: dayjs.Dayjs): string => `${value.format('YYYY-MM-DD')}T00:00:00Z`;
 const toApiEndDateTime = (value: dayjs.Dayjs): string => `${value.format('YYYY-MM-DD')}T23:59:59Z`;
@@ -38,6 +41,7 @@ const formatPercent = (value: string | number | undefined) => {
 
 export function GoodsReportsListView() {
   const { t } = useTranslation('menu');
+  const noDataText = t('noDataAvailable', "Tushunarli ma'lumot mavjud emas");
 
   const [filters, setFilters] = useState({
     start_date: '',
@@ -48,34 +52,42 @@ export function GoodsReportsListView() {
     waiter_id: '',
     hall_id: '',
     table_id: '',
-    limit: 1000,
+    limit: 20,
     offset: 0,
   });
+  const [paginationModel, setPaginationModel] = useState({ page: 0, pageSize: 20 });
 
   const [startDate, setStartDate] = useState<dayjs.Dayjs | null>(null);
   const [endDate, setEndDate] = useState<dayjs.Dayjs | null>(null);
+  const [activeRange, setActiveRange] = useState<'day' | 'week' | 'month' | 'year'>('day');
 
   const { departments } = useGetDepartments();
-  const { categories } = useGetCategoriesByDepartment(filters.department_id);
-  const { goods } = useGetGoodsByCategory(filters.category_id);
+  const { categories } = useGetCategories();
+  const { goods } = useGetGoodsAll();
   const { users: waiters } = useGetUsersByRole('waiter');
   const { halls } = useGetHalls();
   const { tables } = useGetCafeTablesByHall(filters.hall_id);
 
+  const isDepartmentsEmpty = departments.length === 0;
+  const isCategoriesEmpty = categories.length === 0;
+  const isGoodsEmpty = goods.length === 0;
+  const isWaitersEmpty = waiters.length === 0;
+  const isHallsEmpty = halls.length === 0;
+  const isTablesEmpty = tables.length === 0;
+
   useEffect(() => {
     const today = dayjs();
-    const yesterday = today.subtract(1, 'day');
-    setStartDate(yesterday);
-    setEndDate(today);
+    setStartDate(today.startOf('day'));
+    setEndDate(today.endOf('day'));
 
     setFilters((prev) => ({
       ...prev,
-      start_date: toApiStartDateTime(yesterday),
+      start_date: toApiStartDateTime(today),
       end_date: toApiEndDateTime(today),
     }));
   }, []);
 
-  const { reports, totals, reportsLoading } = useGetGoodsReports({
+  const { reports, totals, reportsLoading, reportsPagination } = useGetGoodsReports({
     start_date: filters.start_date,
     end_date: filters.end_date,
     department_id: filters.department_id || undefined,
@@ -147,13 +159,21 @@ export function GoodsReportsListView() {
     [t]
   );
 
-  const handleFilterChange = useCallback((newFilters: Record<string, any>) => {
-    setFilters((prev) => ({
-      ...prev,
-      ...newFilters,
-      offset: 0,
-    }));
-  }, []);
+  const handleFilterChange = useCallback(
+    (newFilters: Record<string, any>) => {
+      setFilters((prev) => ({
+        ...prev,
+        ...newFilters,
+        offset: 0,
+      }));
+
+      setPaginationModel((prev) => ({
+        ...prev,
+        page: 0,
+      }));
+    },
+    []
+  );
 
   // Auto-apply filters when date range changes
   useEffect(() => {
@@ -167,6 +187,27 @@ export function GoodsReportsListView() {
     }
   }, [startDate, endDate, handleFilterChange]);
 
+  const applyRange = useCallback((range: 'day' | 'week' | 'month' | 'year') => {
+    const today = dayjs();
+    let nextStart = today.startOf('day');
+    let nextEnd = today.endOf('day');
+
+    if (range === 'week') {
+      nextStart = today.startOf('week');
+      nextEnd = today.endOf('week');
+    } else if (range === 'month') {
+      nextStart = today.startOf('month');
+      nextEnd = today.endOf('month');
+    } else if (range === 'year') {
+      nextStart = today.startOf('year');
+      nextEnd = today.endOf('year');
+    }
+
+    setActiveRange(range);
+    setStartDate(nextStart);
+    setEndDate(nextEnd);
+  }, []);
+
   const handleResetFilters = useCallback(() => {
     setFilters((prev) => ({
       ...prev,
@@ -176,10 +217,25 @@ export function GoodsReportsListView() {
       waiter_id: '',
       hall_id: '',
       table_id: '',
-      limit: 1000,
+      limit: 20,
       offset: 0,  
     }));
+    setPaginationModel((prev) => ({ ...prev, page: 0 }));
   }, []);
+
+  const handleRowClick = useCallback((id: string) => {
+    const href = paths.menu.reports.goods.details(String(id));
+    const params = new URLSearchParams();
+    if (filters.start_date) params.set('start_date', filters.start_date);
+    if (filters.end_date) params.set('end_date', filters.end_date);
+    if (filters.waiter_id) params.set('waiter_id', filters.waiter_id);
+    if (filters.hall_id) params.set('hall_id', filters.hall_id);
+    if (filters.table_id) params.set('table_id', filters.table_id);
+
+    const query = params.toString();
+    const absoluteUrl = `${window.location.origin}${href}${query ? `?${query}` : ''}`;
+    window.open(absoluteUrl, '_blank', 'noopener,noreferrer');
+  }, [filters.end_date, filters.hall_id, filters.start_date, filters.table_id, filters.waiter_id]);
 
   const renderFiltersContent = () => (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
@@ -188,17 +244,54 @@ export function GoodsReportsListView() {
           display: 'grid',
           gridTemplateColumns: {
             xs: '1fr',
-            sm: '1fr 1fr',
-            md: 'repeat(4, 1fr)',
-            lg: 'repeat(5, 1fr)',
+            sm: 'auto 1fr 1fr',
+            md: 'auto repeat(4, 1fr)',
+            lg: 'auto repeat(5, 1fr)',
           },
           gap: 1.5,
+          alignItems: 'end',
         }}
       >
+        <ToggleButtonGroup
+          exclusive
+          value={activeRange}
+          onChange={(_, value) => {
+            if (!value) return;
+            applyRange(value);
+          }}
+          size="small"
+          sx={{
+            alignSelf: 'end',
+            '& .MuiToggleButton-root': {
+              textTransform: 'uppercase',
+              fontWeight: 600,
+              px: 2.5,
+              border: 'none',
+              borderRadius: 0,
+              borderBottom: '2px solid transparent',
+            },
+            '& .MuiToggleButton-root.Mui-selected': {
+              borderBottomColor: 'primary.main',
+              backgroundColor: 'transparent',
+            },
+            '& .MuiToggleButton-root:hover': {
+              backgroundColor: 'transparent',
+            },
+          }}
+        >
+          <ToggleButton value="day">D</ToggleButton>
+          <ToggleButton value="week">W</ToggleButton>
+          <ToggleButton value="month">M</ToggleButton>
+          <ToggleButton value="year">Y</ToggleButton>
+        </ToggleButtonGroup>
+
         <DatePicker
           label={t('goodsReports.startDate', 'Start date')}
           value={startDate}
-          onChange={setStartDate}
+          onChange={(value) => {
+            setStartDate(value);
+            setActiveRange('day');
+          }}
           format="DD.MM.YYYY"
           slotProps={{
             textField: {
@@ -213,7 +306,10 @@ export function GoodsReportsListView() {
         <DatePicker
           label={t('goodsReports.endDate', 'End date')}
           value={endDate}
-          onChange={setEndDate}
+          onChange={(value) => {
+            setEndDate(value);
+            setActiveRange('day');
+          }}
           format="DD.MM.YYYY"
           slotProps={{
             textField: {
@@ -225,129 +321,153 @@ export function GoodsReportsListView() {
           }}
         />
 
-        <TextField
-          select
-          size="small"
-          fullWidth
-          label={t('goodsReports.department', 'Department')}
-          value={filters.department_id}
-          onChange={(e) =>
-            handleFilterChange({
-              department_id: e.target.value,
-              category_id: '',
-              good_id: '',
-            })
-          }
-          SelectProps={{ native: true }}
-          InputLabelProps={{ shrink: true }}
-        >
-          <option value="">{t('ingredientReports.all', 'All')}</option>
-          {departments.map((department) => (
-            <option key={department.id} value={department.id}>
-              {department.name}
+        <NoDataTooltip enabled={isDepartmentsEmpty} title={noDataText}>
+          <TextField
+            select
+            size="small"
+            fullWidth
+            label={t('goodsReports.department', 'Department')}
+            value={filters.department_id}
+            onChange={(e) =>
+              handleFilterChange({
+                department_id: e.target.value,
+                category_id: '',
+                good_id: '',
+              })
+            }
+            SelectProps={{ native: true }}
+            InputLabelProps={{ shrink: true }}
+          >
+            <option value="">
+              {t('ingredientReports.all', 'All')}
             </option>
-          ))}
-        </TextField>
+            {departments.map((department) => (
+              <option key={department.id} value={department.id}>
+                {department.name}
+              </option>
+            ))}
+          </TextField>
+        </NoDataTooltip>
 
-        <TextField
-          select
-          size="small"
-          fullWidth
-          label={t('goodsReports.category', 'Category')}
-          value={filters.category_id}
-          onChange={(e) =>
-            handleFilterChange({
-              category_id: e.target.value,
-              good_id: '',
-            })
-          }
-          SelectProps={{ native: true }}
-          InputLabelProps={{ shrink: true }}
-        >
-          <option value="">{t('ingredientReports.all', 'All')}</option>
-          {categories.map((category) => (
-            <option key={category.id} value={category.id}>
-              {category.name}
+        <NoDataTooltip enabled={isCategoriesEmpty} title={noDataText}>
+          <TextField
+            select
+            size="small"
+            fullWidth
+            label={t('goodsReports.category', 'Category')}
+            value={filters.category_id}
+            onChange={(e) =>
+              handleFilterChange({
+                category_id: e.target.value,
+                good_id: '',
+              })
+            }
+            SelectProps={{ native: true }}
+            InputLabelProps={{ shrink: true }}
+          >
+            <option value="">
+              {t('ingredientReports.all', 'All')}
             </option>
-          ))}
-        </TextField>
+            {categories.map((category) => (
+              <option key={category.id} value={category.id}>
+                {category.name}
+              </option>
+            ))}
+          </TextField>
+        </NoDataTooltip>
 
-        <TextField
-          select
-          size="small"
-          fullWidth
-          label={t('goodsReports.good', 'Good')}
-          value={filters.good_id}
-          onChange={(e) => handleFilterChange({ good_id: e.target.value })}
-          SelectProps={{ native: true }}
-          InputLabelProps={{ shrink: true }}
-        >
-          <option value="">{t('ingredientReports.all', 'All')}</option>
-          {goods.map((good) => (
-            <option key={good.id} value={good.id}>
-              {good.name}
+        <NoDataTooltip enabled={isGoodsEmpty} title={noDataText}>
+          <TextField
+            select
+            size="small"
+            fullWidth
+            label={t('goodsReports.good', 'Good')}
+            value={filters.good_id}
+            onChange={(e) => handleFilterChange({ good_id: e.target.value })}
+            SelectProps={{ native: true }}
+            InputLabelProps={{ shrink: true }}
+          >
+            <option value="" >
+              {t('ingredientReports.all', 'All')}
             </option>
-          ))}
-        </TextField>
+            {goods.map((good) => (
+              <option key={good.id} value={good.id}>
+                {good.name}
+              </option>
+            ))}
+          </TextField>
+        </NoDataTooltip>
 
-        <TextField
-          select
-          size="small"
-          fullWidth
-          label={t('goodsReports.waiter', 'Waiter')}
-          value={filters.waiter_id}
-          onChange={(e) => handleFilterChange({ waiter_id: e.target.value })}
-          SelectProps={{ native: true }}
-          InputLabelProps={{ shrink: true }}
-        >
-          <option value="">{t('ingredientReports.all', 'All')}</option>
-          {waiters.map((waiter) => (
-            <option key={waiter.id} value={waiter.id}>
-              {waiter.full_name || waiter.username || '-'}
+        <NoDataTooltip enabled={isWaitersEmpty} title={noDataText}>
+          <TextField
+            select
+            size="small"
+            fullWidth
+            label={t('goodsReports.waiter', 'Waiter')}
+            value={filters.waiter_id}
+            onChange={(e) => handleFilterChange({ waiter_id: e.target.value })}
+            SelectProps={{ native: true }}
+            InputLabelProps={{ shrink: true }}
+          >
+            <option value="">
+              {t('ingredientReports.all', 'All')}
             </option>
-          ))}
-        </TextField>
+            {waiters.map((waiter) => (
+              <option key={waiter.id} value={waiter.id}>
+                {waiter.full_name || waiter.username || '-'}
+              </option>
+            ))}
+          </TextField>
+        </NoDataTooltip>
 
-        <TextField
-          select
-          size="small"
-          fullWidth
-          label={t('goodsReports.hall', 'Hall')}
-          value={filters.hall_id}
-          onChange={(e) =>
-            handleFilterChange({
-              hall_id: e.target.value,
-              table_id: '',
-            })
-          }
-          SelectProps={{ native: true }}
-          InputLabelProps={{ shrink: true }}
-        >
-          <option value="">{t('ingredientReports.all', 'All')}</option>
-          {halls.map((hall) => (
-            <option key={hall.id} value={hall.id}>
-              {hall.name}
+        <NoDataTooltip enabled={isHallsEmpty} title={noDataText}>
+          <TextField
+            select
+            size="small"
+            fullWidth
+            label={t('goodsReports.hall', 'Hall')}
+            value={filters.hall_id}
+            onChange={(e) =>
+              handleFilterChange({
+                hall_id: e.target.value,
+                table_id: '',
+              })
+            }
+            SelectProps={{ native: true }}
+            InputLabelProps={{ shrink: true }}
+          >
+            <option value="">
+              {t('ingredientReports.all', 'All')}
             </option>
-          ))}
-        </TextField>
+            {halls.map((hall) => (
+              <option key={hall.id} value={hall.id}>
+                {hall.name}
+              </option>
+            ))}
+          </TextField>
+        </NoDataTooltip>
 
-        <TextField
-          select
-          size="small"
-          fullWidth
-          label={t('goodsReports.table', 'Table')}
-          value={filters.table_id}
-          onChange={(e) => handleFilterChange({ table_id: e.target.value })}
-          SelectProps={{ native: true }}
-          InputLabelProps={{ shrink: true }}
-        >
-          <option value="">{t('ingredientReports.all', 'All')}</option>
-          {tables.map((table) => (
-            <option key={table.id} value={table.id}>
-              #{table.number}
+        <NoDataTooltip enabled={isTablesEmpty} title={noDataText}>
+          <TextField
+            select
+            size="small"
+            fullWidth
+            label={t('goodsReports.table', 'Table')}
+            value={filters.table_id}
+            onChange={(e) => handleFilterChange({ table_id: e.target.value })}
+            SelectProps={{ native: true }}
+            InputLabelProps={{ shrink: true }}
+          >
+            <option value="">
+              {t('ingredientReports.all', 'All')}
             </option>
-          ))}
-        </TextField>
+            {tables.map((table) => (
+              <option key={table.id} value={table.id}>
+                #{table.number}
+              </option>
+            ))}
+          </TextField>
+        </NoDataTooltip>
 
         <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
           <Button
@@ -372,6 +492,18 @@ export function GoodsReportsListView() {
         loading={reportsLoading}
         columns={columns}
         idField="good_id"
+        paginationMode="server"
+        rowCount={reportsPagination?.total ?? totals?.total_count ?? 0}
+        paginationModel={paginationModel}
+        onPaginationModelChange={(model) => {
+          setPaginationModel(model);
+          setFilters((prev) => ({
+            ...prev,
+            limit: model.pageSize,
+            offset: model.page * model.pageSize,
+          }));
+        }}
+        pageSizeOptions={[10, 20, 50, 100]}
         breadcrumbs={{
           heading: t('overview.reports.goods', 'Goods report'),
           links: [
@@ -381,6 +513,7 @@ export function GoodsReportsListView() {
           ],
         }}
         renderFilters={renderFiltersContent}
+        onRowClick={handleRowClick}
       />
 
       {totals && (

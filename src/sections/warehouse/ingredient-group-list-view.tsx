@@ -16,7 +16,7 @@ import {
 } from '@mui/material';
 import { paths } from 'src/routes/paths';
 import { useRouter } from 'src/routes/hooks';
-import { useGetIngredientGroups, useDeleteIngredientGroup } from 'src/actions/ingredient-group';
+import { useGetIngredientGroupsPage, useDeleteIngredientGroup } from 'src/actions/ingredient-group';
 import { toast } from 'src/components/snackbar';
 import { Iconify } from 'src/components/iconify';
 import { GenericTableView } from 'src/components/generic-table-view';
@@ -124,7 +124,12 @@ export function IngredientGroupListView() {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
-  const { ingredientGroups, ingredientGroupsLoading } = useGetIngredientGroups(debouncedSearchQuery);
+  const [paginationModel, setPaginationModel] = useState({ page: 0, pageSize: 20 });
+  const { ingredientGroups, ingredientGroupsLoading, pagination } = useGetIngredientGroupsPage({
+    search: debouncedSearchQuery,
+    limit: paginationModel.pageSize,
+    offset: paginationModel.page * paginationModel.pageSize,
+  });
   const { deleteIngredientGroup } = useDeleteIngredientGroup();
 
   const [viewModalOpen, setViewModalOpen] = useState(false);
@@ -139,6 +144,10 @@ export function IngredientGroupListView() {
 
     return () => clearTimeout(timeout);
   }, [searchQuery]);
+
+  useEffect(() => {
+    setPaginationModel((prev) => ({ ...prev, page: 0 }));
+  }, [debouncedSearchQuery]);
 
   const columns = useMemo<GridColDef[]>(() => [
     {
@@ -267,6 +276,11 @@ export function IngredientGroupListView() {
         data={Array.isArray(ingredientGroups) ? ingredientGroups : []}
         loading={ingredientGroupsLoading}
         columns={columns}
+        paginationMode="server"
+        rowCount={pagination?.total || 0}
+        paginationModel={paginationModel}
+        onPaginationModelChange={setPaginationModel}
+        pageSizeOptions={[10, 20, 50, 100]}
         breadcrumbs={{
           heading: t('ingredientGroups.title'),
           links: [
@@ -312,6 +326,10 @@ export function IngredientGroupListView() {
         maxWidth="sm"
         slideDirection="left"
         position="right"
+        paperSx={{
+            width: { xs: '100%', sm: '30vw' },
+            maxWidth: { xs: '100%', sm: '30vw' },
+        }}
       />
 
       <Dialog

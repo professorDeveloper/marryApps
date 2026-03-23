@@ -28,6 +28,10 @@ function isValidAnchor(element: HTMLAnchorElement): boolean {
 function useProgressBar() {
   const pathname = usePathname();
   const currentUrlRef = useRef<string>('');
+  const originalHistoryMethodsRef = useRef<{
+    pushState: History['pushState'];
+    replaceState: History['replaceState'];
+  } | null>(null);
 
   // Initialize currentUrlRef in the browser
   useEffect(() => {
@@ -37,6 +41,11 @@ function useProgressBar() {
   }, []);
 
   useEffect(() => {
+    originalHistoryMethodsRef.current = {
+      pushState: window.history.pushState,
+      replaceState: window.history.replaceState,
+    };
+
     // Starts the progress bar if navigating to a different URL.
     const handleNavigation = (newUrl: string) => {
       try {
@@ -69,17 +78,23 @@ function useProgressBar() {
 
     // Patches a history method to intercept client-side navigations.
     const patchHistoryMethod = (method: 'pushState' | 'replaceState') => {
-      const originalMethod = window.history[method];
+      const originalMethod = originalHistoryMethodsRef.current?.[method];
+      if (!originalMethod) return;
 
-      window.history[method] = new Proxy(originalMethod, {
-        apply: (target, thisArg, args: [data: any, unused: string, url?: string | URL | null]) => {
-          const newUrl = args[2];
-          if (typeof newUrl === 'string') {
-            handleNavigation(new URL(newUrl, window.location.origin).href);
-          }
-          return target.apply(thisArg, args);
-        },
-      });
+      window.history[method] = function patchedHistoryMethod(
+        this: History,
+        data: unknown,
+        unused: string,
+        url?: string | URL | null
+      ) {
+        if (typeof url === 'string') {
+          handleNavigation(new URL(url, window.location.origin).href);
+        } else if (url instanceof URL) {
+          handleNavigation(url.href);
+        }
+
+        return originalMethod.call(this, data, unused, url);
+      };
     };
 
     patchHistoryMethod('pushState');
@@ -91,6 +106,11 @@ function useProgressBar() {
     return () => {
       document.removeEventListener('click', handleClickAnchor);
       window.removeEventListener('popstate', handlePopState);
+
+      if (originalHistoryMethodsRef.current) {
+        window.history.pushState = originalHistoryMethodsRef.current.pushState;
+        window.history.replaceState = originalHistoryMethodsRef.current.replaceState;
+      }
     };
   }, []);
 

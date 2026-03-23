@@ -75,6 +75,8 @@ export async function setSession(accessToken: string | null, brandId?: string) {
       sessionStorage.setItem(JWT_STORAGE_KEY, accessToken);
       // Backward compatibility for legacy code paths
       sessionStorage.setItem('accessToken', accessToken);
+      localStorage.setItem(JWT_STORAGE_KEY, accessToken);
+      localStorage.setItem('accessToken', accessToken);
 
       axios.defaults.headers.common.Authorization = `Bearer ${accessToken}`;
 
@@ -107,6 +109,8 @@ export async function setSession(accessToken: string | null, brandId?: string) {
     } else {
       sessionStorage.removeItem(JWT_STORAGE_KEY);
       sessionStorage.removeItem('accessToken');
+      localStorage.removeItem(JWT_STORAGE_KEY);
+      localStorage.removeItem('accessToken');
       localStorage.removeItem('brand_id');
       localStorage.removeItem('branch_id');
       localStorage.removeItem('user_role');

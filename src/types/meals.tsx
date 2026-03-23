@@ -25,6 +25,7 @@ export type IMealAPIResponse = {
     department_id: string;
     picture_url: string | null;
     price: string;
+    cost_price?: string;
     cook_time: number;
     created_at: string;
     updated_at: string;
@@ -57,6 +58,7 @@ export type IMealsItem = {
     };
     picture_url: string | null;
     price: number;
+    cost_price?: number;
     cook_time: number;
     created_at: string;
     updated_at: string;

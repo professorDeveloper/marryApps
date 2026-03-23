@@ -17,6 +17,20 @@ export type ICategory = {
     avatar?: string; // Avatar rasm URL yoki birinchi harf
     storage_name?: string; // Enriched from storage
     department_name?: string; // Enriched from department
+    _expand?: {
+        department_id?: {
+            id?: string;
+            name?: string;
+        };
+        name_i18n?: {
+            id?: string;
+            uz?: string;
+            'uz-Latn'?: string;
+            'uz-Cyrl'?: string;
+            ru?: string;
+            en?: string;
+        };
+    };
 };
 
 export type ICategoryFormData = {

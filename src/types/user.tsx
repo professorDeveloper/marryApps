@@ -15,6 +15,7 @@ export interface IUser {
     phone_number?: string;
     brand_id?: string;
     branch_id?: string;
+    cash_register_id?: string;
     pincode?: string;
     terminal?: string;
     created_at: string;
@@ -34,11 +35,14 @@ export interface IUserFormData {
     terminal?: string;
     brand_id?: string;
     branch_id?: string;
+    cash_register_id?: string;
 }
 
 export interface IUserRegisterData {
+    id: string;
     brand_id: string;
     branch_id: string;
+    cash_register_id?: string;
     fullName: string;
     username: string;
     password: string;

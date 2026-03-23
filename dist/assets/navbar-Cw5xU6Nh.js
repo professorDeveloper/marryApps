@@ -1,1 +1,0 @@
-const o="Илова",e="Иш",t="Фойдаланувчи",n="Саёҳат",s="Ҳисоб-фактура",c={title:"Блог",caption:"Созланган клавиатура ёрлиқлари."},a="Останги сарлавҳа",b={app:o,job:"Иш",user:t,travel:n,invoice:s,blog:c,subheader:a};export{o as app,c as blog,b as default,s as invoice,e as job,a as subheader,n as travel,t as user};

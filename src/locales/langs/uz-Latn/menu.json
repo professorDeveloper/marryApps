@@ -1,4 +1,4 @@
-{
+﻿{
   "app": "Menyu",
   "job": "Ish",
   "user": "Foydalanuvchi",
@@ -38,6 +38,7 @@
   "error": "Xato",
   "success": "Muvaffaqiyat",
   "noData": "Ma'lumot yo'q",
+  "noDataAvailable": "Ma'lumot mavjud emas",
   "search": "Qidirish",
   "filter": "Filtr",
   "sort": "Tartiblash",
@@ -191,7 +192,11 @@
     "deleteMessage": "Tanlangan fayllar tizimdan butunlay o‘chiriladi va ushbu amalni bekor qilish yoki fayllarni tiklash mumkin emas.",
     "cancel": "Bekor qilish",
     "nameEn": "Nomi (inglizcha)",
-    "nameRu": "Nomi (ruscha)"
+    "nameRu": "Nomi (ruscha)",
+    "nameUz": "Nomi (o'zbekcha)",
+    "color": "Rang",
+    "created": "Yaratilgan",
+    "updated": "Yangilangan"
   },
   "semifinishedProducts": {
     "title": "Yarim tayyor mahsulotlar",
@@ -460,6 +465,7 @@
     "roleRequired": "Rol tanlash majburiydir",
     "branchRequired": "Filial tanlash majburiydir",
     "pincodeRequired": "PIN kod majburiydir",
+    "cashRegisterRequired": "Kassa majburiydir",
     "statusRequired": "Holat tanlash majburiydir",
     "statusActive": "Faol",
     "statusInactive": "Nofaol",
@@ -512,7 +518,8 @@
     "created_at": "Yaratilgan vaqti",
     "actions": "Harakatlar",
     "create": "Yaratish",
-    "update": "Yangilash"
+    "update": "Yangilash",
+    "amount": "Summa"
   },
   "warehouse": {
     "title": "Ombor",
@@ -532,6 +539,7 @@
       "edit": "Kirimni tahrirlash",
       "statuses": {
         "pending": "Kutilmoqda",
+        "arrived": "Keldi",
         "completed": "Tamomlandi",
         "cancelled": "Bekor qilindi"
       },
@@ -731,7 +739,7 @@
   "halls": {
     "Halls": "Zallar",
     "title": "Zallarni boshqarish",
-    "description": "Restoran zallarni yarating va boshqaring (farsh rezhasi uchun)",
+    "description": "Restoran zallarni yarating va boshqaring",
     "createNew": "Zal yaratish",
     "noHalls": "Zallar yaratilmadi",
     "createFirst": "Birinchi zalni yaratib, farsh o'xshashilashini boshlang",
@@ -1013,7 +1021,9 @@
     "deductionAmount": "Hisobdan chiqarish summasi",
     "surplusAmount": "Ortiqcha summasi",
     "shortageAmount": "Kamomad summasi",
-    "all": "Barchasi"
+    "all": "Barchasi",
+    "totalCount": "Umumiy soni",
+    "totalOrderOutAmount": "Umumiy chiqim summasi"
   },
   "goodsReports": {
     "title": "Tovarlar hisoboti",
@@ -1078,6 +1088,7 @@
     "ingredients_group": "Maxsulotlar guruhi",
     "ingredient": "Maxsulot",
     "quantity": "Miqdor",
+    "pricePerUnit": "Birlik narxi",
     "storage": "Ombor",
     "measurement": "O'lchov",
     "created_at": "Yaratilgan sana",
@@ -1261,3 +1272,4 @@
     }
   }
 }
+

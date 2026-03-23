@@ -1,4 +1,4 @@
-{
+﻿{
   "app": "Меню",
   "job": "Иш",
   "user": "Фойдаланувчи",
@@ -29,9 +29,10 @@
   "error": "Хато",
   "success": "Муваффақият",
   "noData": "Маълумот йўқ",
+  "noDataAvailable": "Маълумот мавжуд эмас",
   "search": "Қидириш",
   "filter": "Филтр",
-  "sort": "Тартибласл",
+  "sort": "Тартиблаш",
   "delete": "Ўчириш",
   "edit": "Таҳрирлаш",
   "create": "Яратиш",
@@ -188,7 +189,10 @@
     "deleteConfirm": "Сиз ушбу категорияни ўчиришни истайсизми?",
     "deleteMessage": "Бу ҳаракатни бекор қилиш мумкин эмас ва уни қайтариб бўлмайди.",
     "cancel": "Бекор қилиш",
-    "confirm": "Тасдиқлаш"
+    "confirm": "Тасдиқлаш",
+    "color": "Ранг",
+    "created": "Яратилган",
+    "updated": "Янгиланган"
   },
   "semifinishedProducts": {
     "title": "Ярим тайёр маҳсулотлар",
@@ -433,6 +437,7 @@
     "passwordRequired": "Пароль мажбурийдир",
     "roleRequired": "Рол танлаш мажбурийдир",
     "pincodeRequired": "PIN код мажбурийдир",
+    "cashRegisterRequired": "Касса мажбурийдир",
     "statusRequired": "Ҳолат танлаш мажбурийдир",
     "statusActive": "Фаол",
     "statusInactive": "Нофаол",
@@ -484,7 +489,9 @@
     "deleteFailed": "Failed to delete",
     "saveFailed": "Failed to save",
     "create": "Яратиш",
-    "update": "Янгилаш"
+    "update": "Янгилаш",
+    "amount": "Сумма",
+    "unit": "Единица"
   },
   "warehouse": {
     "title": "Захира",
@@ -503,6 +510,7 @@
       "edit": "Киримни таҳрирлаш",
       "statuses": {
         "pending": "Кутилмокда",
+        "arrived": "Келди",
         "completed": "Тамомланди",
         "cancelled": "Бекор қилинди"
       },
@@ -679,7 +687,7 @@
   "halls": {
     "Halls": "Заллар",
     "title": "Залларни бошқариш",
-    "description": "Ресторан залларни яратинг ва бошқаринг (фарш режажасининг учун)",
+    "description": "Ресторан залларни яратинг ва бошқаринг",
     "createNew": "Зал яратиш",
     "noHalls": "Залнар яратилмади",
     "createFirst": "Биринчи зални яратиб, фарш ўхшашилашини бошлаб юбориңиз",
@@ -961,7 +969,9 @@
     "deductionAmount": "Ҳисобдан чиқариш суммаси",
     "surplusAmount": "Ортиқча суммаси",
     "shortageAmount": "Камомад суммаси",
-    "all": "Бармаси"
+    "all": "Барчаси",
+    "totalCount": "Жами сони",
+    "totalOrderOutAmount": "Жами чиқим суммаси"
   },
   "goodsReports": {
     "title": "Товарлар ҳисоботи",
@@ -1026,6 +1036,7 @@
     "ingredients_group": "Махсулотлар гуруҳи",
     "ingredient": "Махсулот",
     "quantity": "Миқдор",
+    "pricePerUnit": "Бирлик нархи",
     "storage": "Омбор",
     "measurement": "Ўлчов",
     "created_at": "Яратилган сана",
@@ -1203,3 +1214,4 @@
     }
   }
 }
+

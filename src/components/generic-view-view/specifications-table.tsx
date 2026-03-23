@@ -43,10 +43,10 @@ export function SpecificationsTable({ rows }: SpecificationsTableProps) {
         <TableContainer
             component={Paper}
             sx={{
-                backgroundColor:
+                backgroundColor: (theme) =>
                     theme.palette.mode === 'dark'
-                        ? 'rgba(255, 255, 255, 0.02)'
-                        : 'rgba(255, 255, 255, 0.3)',
+                        ? 'rgba(255, 255, 255, 0.05)'
+                        : 'rgba(0, 0, 0, 0.02)',
                 border: `1px solid ${theme.palette.divider}`,
                 backdropFilter: 'blur(4px)',
             }}
@@ -55,10 +55,10 @@ export function SpecificationsTable({ rows }: SpecificationsTableProps) {
                 <TableHead>
                     <TableRow
                         sx={{
-                            backgroundColor:
+                            backgroundColor: (theme) =>
                                 theme.palette.mode === 'dark'
                                     ? 'rgba(255, 255, 255, 0.05)'
-                                    : 'rgba(255, 255, 255, 0.4)',
+                                    : 'rgba(0, 0, 0, 0.02)',
                             borderBottom: `2px solid ${theme.palette.divider}`,
                         }}
                     >
@@ -86,16 +86,16 @@ export function SpecificationsTable({ rows }: SpecificationsTableProps) {
                             key={index}
                             sx={{
                                 '&:nth-of-type(odd)': {
-                                    backgroundColor:
+                                    backgroundColor: (theme) =>
                                         theme.palette.mode === 'dark'
-                                            ? 'rgba(255, 255, 255, 0.02)'
-                                            : 'rgba(255, 255, 255, 0.2)',
+                                            ? 'rgba(255, 255, 255, 0.05)'
+                                            : 'rgba(0, 0, 0, 0.02)',
                                 },
                                 '&:hover': {
-                                    backgroundColor:
+                                    backgroundColor: (theme) =>
                                         theme.palette.mode === 'dark'
-                                            ? 'rgba(255, 255, 255, 0.08)'
-                                            : 'rgba(255, 255, 255, 0.5)',
+                                            ? 'rgba(255, 255, 255, 0.05)'
+                                            : 'rgba(0, 0, 0, 0.02)',
                                 },
                                 transition: 'background-color 0.2s',
                             }}
@@ -111,7 +111,7 @@ export function SpecificationsTable({ rows }: SpecificationsTableProps) {
                             </TableCell>
                             <TableCell
                                 sx={{
-                                    color: theme.palette.text.primary,
+                                    color: theme.palette.text.secondary,
                                 }}
                             >
                                 {row.value}

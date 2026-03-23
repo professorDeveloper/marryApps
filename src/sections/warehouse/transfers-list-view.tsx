@@ -376,7 +376,9 @@ export function TransfersListView() {
               InputLabelProps={{ shrink: true }}
               sx={{ minWidth: 150 }}
             >
-              <option value="">{t('ingredientReports.all', 'All')}</option>
+              <option value="" disabled hidden>
+                {t('ingredientReports.all', 'All')}
+              </option>
               <option value="active">{t('deductions.active', 'Active')}</option>
               <option value="draft">{t('deductions.draft', 'Draft')}</option>
               <option value="deleted">{t('deductions.deleted', 'Deleted')}</option>

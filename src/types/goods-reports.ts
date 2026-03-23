@@ -37,11 +37,55 @@ export interface IGoodsReportsFilterParams {
 export interface IGoodsReportsResponse {
   status: string;
   message: string;
-  data: {
-    data: IGoodsReportItem[];
-    totals: IGoodsReportsTotals;
+  data: IGoodsReportItem[];
+  totals: IGoodsReportsTotals;
+  pagination?: {
+    total: number;
     limit: number;
     offset: number;
+    total_pages: number;
+  };
+  code: number;
+}
+
+export interface IGoodsReportOrderItem {
+  order_id: string;
+  bill_no: string;
+  bill_status: string;
+  opened_at: string;
+  closed_at: string;
+  waiter_name: string;
+  hall_name: string;
+  table_number: string;
+  total_qty: number;
+  avg_sell_price: string;
+  total_sell: string;
+  avg_cost_price: string;
+  total_cost: string;
+  avg_markup: string;
+  total_markup: string;
+  avg_markup_pct: string;
+}
+
+export interface IGoodsReportOrdersTotals {
+  total_qty: number;
+  total_sell: string;
+  total_cost: string;
+  total_markup: string;
+  avg_markup_pct: string;
+  total_orders: number;
+}
+
+export interface IGoodsReportOrdersResponse {
+  status: string;
+  message: string;
+  data: IGoodsReportOrderItem[];
+  totals: IGoodsReportOrdersTotals;
+  pagination?: {
+    total: number;
+    limit: number;
+    offset: number;
+    total_pages: number;
   };
   code: number;
 }

@@ -15,7 +15,7 @@ import { CustomGridActionsCellItem } from 'src/components/custom-data-grid';
 import { GenericTableView } from 'src/components/generic-table-view';
 import { toast } from 'src/components/snackbar';
 import {
-    useGetIngredientStocks,
+    useGetIngredientStocksPage,
     useUpdateIngredientStock,
     useDeleteIngredientStock,
 } from 'src/actions/ingredient-stock';
@@ -23,7 +23,12 @@ import { paths } from 'src/routes/paths';
 
 function IngredientStockListView() {
     const { t } = useTranslation('menu');
-    const { stocks, stocksLoading } = useGetIngredientStocks();
+    const [paginationModel, setPaginationModel] = useState({ page: 0, pageSize: 20 });
+    const { stocks, stocksLoading, pagination } = useGetIngredientStocksPage({
+        limit: paginationModel.pageSize,
+        offset: paginationModel.page * paginationModel.pageSize,
+        expand: 'ingredient_id,storage_id,branch_id',
+    });
     const { updateStock } = useUpdateIngredientStock();
     const { deleteStock } = useDeleteIngredientStock();
 
@@ -101,48 +106,81 @@ function IngredientStockListView() {
                 minWidth: 100,
             },
             {
+                field: 'price_per_unit',
+                headerName: t('ingredientStock.pricePerUnit', 'Price per unit'),
+                flex: 0.9,
+                minWidth: 130,
+                align: 'left',
+                headerAlign: 'left',
+            },
+            {
+                field: 'storage_name',
+                headerName: t('ingredientStock.storage', 'Storage'),
+                flex: 1,
+                minWidth: 140,
+            },
+            {
                 field: 'created_at',
                 headerName: t('ingredientStock.created_at'),
                 // flex: 1,
                 minWidth: 150,
                 renderCell: (params) => new Date(params.value).toLocaleDateString(),
             },
-            {
-                field: 'actions',
-                type: 'actions',
-                headerName: t('actions'),
-                // flex: 0.8,
-                width: 100,
-                sortable: false,
-                filterable: false,
-                getActions: (params) => [
-                    // <CustomGridActionsCellItem
-                    //     key="edit"
-                    //     icon={<Iconify icon="solar:pen-bold" />}
-                    //     label={t('edit')}
-                    //     onClick={() => handleEditOpen(params.row)}
-                    //     showInMenu
-                    // />,
-                    <CustomGridActionsCellItem
-                        key="delete"
-                        icon={<Iconify icon="solar:trash-bin-trash-bold" />}
-                        label={t('delete')}
-                        onClick={() => handleDeleteOpen(params.row.id)}
-                        style={{ color: '#FB6633' }}
-                        // showInMenu
-                    />,
-                ],
-            },
+            // {
+            //     field: 'actions',
+            //     type: 'actions',
+            //     headerName: t('actions'),
+            //     // flex: 0.8,
+            //     width: 100,
+            //     sortable: false,
+            //     filterable: false,
+            //     getActions: (params) => [
+            //         // <CustomGridActionsCellItem
+            //         //     key="edit"
+            //         //     icon={<Iconify icon="solar:pen-bold" />}
+            //         //     label={t('edit')}
+            //         //     onClick={() => handleEditOpen(params.row)}
+            //         //     showInMenu
+            //         // />,
+            //         <CustomGridActionsCellItem
+            //             key="delete"
+            //             icon={<Iconify icon="solar:trash-bin-trash-bold" />}
+            //             label={t('delete')}
+            //             onClick={() => handleDeleteOpen(params.row.id)}
+            //             style={{ color: '#FB6633' }}
+            //             // showInMenu
+            //         />,
+            //     ],
+            // },
         ],
         [t]
     );
 
+    const enrichedStocks = useMemo(() => {
+        return (Array.isArray(stocks) ? stocks : []).map((stock: any) => {
+            const expandedIngredient = stock?._expand?.ingredient_id;
+            const expandedStorage = stock?._expand?.storage_id;
+            return {
+                ...stock,
+                ingredient_name: expandedIngredient?.name || stock.ingredient_name || stock.ingredient_id,
+                measurement: expandedIngredient?.measurement || stock.measurement || '-',
+                price_per_unit: expandedIngredient?.price_per_unit ?? stock.price_per_unit ?? '-',
+                storage_name: expandedStorage?.name || stock.storage_name || stock.storage_id,
+            };
+        });
+    }, [stocks]);
+
     return (
         <>
             <GenericTableView
-                data={stocks}
+                data={enrichedStocks}
                 loading={stocksLoading}
                 columns={columns}
+                paginationMode="server"
+                rowCount={pagination?.total || 0}
+                paginationModel={paginationModel}
+                onPaginationModelChange={setPaginationModel}
+                pageSizeOptions={[10, 20, 50, 100]}
                 breadcrumbs={{
                     heading: t('ingredientStock.title'),
                     links: [

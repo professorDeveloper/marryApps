@@ -55,6 +55,7 @@ import { OrdersManagementView } from 'src/sections/warehouse/orders-management-v
 import { CategoryEditViewWrapper } from 'src/sections/category/category-edit-view';
 import { TransactionsEditView } from 'src/sections/cashbox/transactions-edit-view';
 import { GoodsReportsListView } from 'src/sections/reports/goods-reports-list-view';
+import { GoodsReportsDetailView } from 'src/sections/reports/goods-reports-detail-view';
 import { InventoryReportsListView } from 'src/sections/reports/inventory-list-view';
 import { CompoundEditViewWrapper } from 'src/sections/compounds/compounds-edit-view';
 import { InvoicesEditViewTabs } from 'src/sections/warehouse/invoices-edit-view-tabs';
@@ -207,6 +208,7 @@ export const dashboardRoutes: RouteObject[] = [
           { path: 'reports/bills', element: <BillsListView /> },
           { path: 'reports/ingredients', element: <IngredientReportsListView /> },
           { path: 'reports/goods', element: <GoodsReportsListView /> },
+          { path: 'reports/goods/:id', element: <GoodsReportsDetailView /> },
           { path: 'cashbox/cashiers', element: <CashiersPage /> },
           { path: 'cashbox/cashiers/new', element: <CashierEditView isNew /> },
           { path: 'cashbox/cashiers/:id/edit', element: <CashierEditView /> },

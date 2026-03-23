@@ -1,8 +1,9 @@
 import type { IMealsItem } from 'src/types/meals';
 import type { CardSection, GenericEditViewConfig } from 'src/components/generic-edit-view';
+import type { SyntheticEvent } from 'react';
 import { useParams } from 'react-router';
 import { useTranslation } from 'react-i18next';
-import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
+import { useState, useCallback, useMemo, useEffect, useRef, startTransition } from 'react';
 import { mutate } from 'swr';
 import { Box, Tabs, Tab } from '@mui/material';
 import { CustomBreadcrumbs } from 'src/components/custom-breadcrumbs';
@@ -104,23 +105,33 @@ const BASIC_INFO_SECTION: CardSection = {
 interface TabPanelProps {
     children?: React.ReactNode;
     index: number;
+    keepMounted?: boolean;
     value: number;
 }
 
-function TabPanel(props: TabPanelProps) {
-    const { children, value, index, ...other } = props;
+function TabPanel({ children, value, index, keepMounted = false }: TabPanelProps) {
+    const [hasBeenActive, setHasBeenActive] = useState(keepMounted && value === index);
+
+    useEffect(() => {
+        if (keepMounted && value === index) {
+            setHasBeenActive(true);
+        }
+    }, [keepMounted, value, index]);
+
+    if (!keepMounted && value !== index) {
+        return null;
+    }
+
+    if (keepMounted && !hasBeenActive) {
+        return null;
+    }
 
     return (
         <div
             role="tabpanel"
-            hidden={value !== index}
-            id={`meal-tabpanel-${index}`}
-            aria-labelledby={`meal-tab-${index}`}
-            {...other}
+            style={{ display: value === index ? 'block' : 'none' }}
         >
-            <Box sx={{ pt: 0, display: value === index ? 'block' : 'none' }}>
-                {children}
-            </Box>
+            {children}
         </div>
     );
 }
@@ -142,6 +153,7 @@ export function MealEditView({ isNew = false }: MealEditViewProps) {
     const [activeTab, setActiveTab] = useState(0);
     // Store form data at parent level to preserve across tab changes
     const [formData, setFormData] = useState<Record<string, any>>({});
+    const [formTabData, setFormTabData] = useState<Record<string, any>>();
     // Track pending calculations when entity is created
     const pendingCalculationsRef = useRef<{
         ingredient_calculations?: Array<{ ingredient_id: string; quantity: string }>;
@@ -149,6 +161,20 @@ export function MealEditView({ isNew = false }: MealEditViewProps) {
     } | null>(null);
 
     const loading = !isNew && mealLoading;
+
+    const handleTabChange = useCallback((_: SyntheticEvent, newValue: number) => {
+        if (newValue === 0) {
+            setFormTabData(
+                Object.keys(formData).length > 0
+                    ? formData
+                    : (meal || undefined)
+            );
+        }
+
+        startTransition(() => {
+            setActiveTab(newValue);
+        });
+    }, [formData, meal]);
 
     // Effective meal ID - either from URL params or fetched meal
     const effectiveMealId = mealId || meal?.id;
@@ -165,6 +191,7 @@ export function MealEditView({ isNew = false }: MealEditViewProps) {
                 ...meal,
             };
             setFormData(enrichedMeal);
+            setFormTabData(enrichedMeal);
         } else if (isNew && (!formData || Object.keys(formData).length === 0)) {
             // Initialize empty form for new meal
             const initialData: Record<string, any> = {
@@ -181,9 +208,14 @@ export function MealEditView({ isNew = false }: MealEditViewProps) {
                 picture_url: '',
             };
             setFormData(initialData);
+            setFormTabData(initialData);
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [meal, isNew]);
+
+    const handleFormDataChange = useCallback((nextFormData: Record<string, any>) => {
+        setFormData(nextFormData);
+    }, []);
 
     // Auto-set department_id when category changes
     useEffect(() => {
@@ -417,7 +449,7 @@ export function MealEditView({ isNew = false }: MealEditViewProps) {
                 <Box sx={{ display: 'flex', justifyContent: 'center', mb: 0, width: '100%' }}>
                     <Tabs
                         value={activeTab}
-                        onChange={(e, newValue) => setActiveTab(newValue)}
+                        onChange={handleTabChange}
                         sx={{
                             px: 0,
                             width: '100%',
@@ -459,15 +491,14 @@ export function MealEditView({ isNew = false }: MealEditViewProps) {
                 <TabPanel value={activeTab} index={0}>
                     <GenericEditView
                         config={config}
-                        data={meal || undefined}
-                        formData={formData}
-                        onFormDataChange={setFormData}
+                        data={formTabData || meal || undefined}
+                        onFormDataChange={handleFormDataChange}
                         isNew={isNew}
                         loading={loading}
                     />
                 </TabPanel>
 
-                <TabPanel value={activeTab} index={1}>
+                <TabPanel value={activeTab} index={1} keepMounted>
                     {isNew ? (
                         <ProductCalculator
                             mealId={effectiveMealId}

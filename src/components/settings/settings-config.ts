@@ -17,7 +17,7 @@ export const defaultSettings: SettingsState = {
   navColor: 'integrate',
   // Default: compact layout should be off
   compactLayout: false,
-  fontSize: 16,
+  fontSize: 14,
   fontFamily: themeConfig.fontFamily.primary,
   version: CONFIG.appVersion,
 };
