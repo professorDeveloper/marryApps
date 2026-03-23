@@ -13285,6 +13285,61 @@ const docTemplate = `{
                         }
                     }
                 }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Soft delete multiple inventories. Reverses stock changes for any that are active.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "inventories"
+                ],
+                "summary": "Batch delete inventories",
+                "parameters": [
+                    {
+                        "description": "List of inventory IDs to delete",
+                        "name": "input",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.DeleteInventoriesBatchRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Inventories deleted successfully",
+                        "schema": {
+                            "$ref": "#/definitions/model.SuccessResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    }
+                }
             }
         },
         "/api/v1/inventories/search": {
@@ -13720,7 +13775,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Upsert (create/update) counted quantities for multiple ingredients in an existing inventory. Blocked if inventory is already applied.",
+                "description": "Full replace of inventory items. Items in request are upserted; absent items are deleted. Stock adjusted if inventory is active.",
                 "consumes": [
                     "application/json"
                 ],
@@ -13730,7 +13785,7 @@ const docTemplate = `{
                 "tags": [
                     "inventory_items"
                 ],
-                "summary": "Update inventory items batch",
+                "summary": "Replace inventory items batch",
                 "parameters": [
                     {
                         "type": "string",
@@ -13740,7 +13795,7 @@ const docTemplate = `{
                         "required": true
                     },
                     {
-                        "description": "Inventory items batch update data",
+                        "description": "Inventory items batch data",
                         "name": "input",
                         "in": "body",
                         "required": true,
@@ -13760,7 +13815,7 @@ const docTemplate = `{
                         }
                     },
                     "400": {
-                        "description": "Invalid request or inventory already applied",
+                        "description": "Invalid request or inventory is deleted",
                         "schema": {
                             "$ref": "#/definitions/model.ErrorResponse"
                         }
@@ -25588,6 +25643,21 @@ const docTemplate = `{
                 "DeductionStatusDeleted"
             ]
         },
+        "model.DeleteInventoriesBatchRequest": {
+            "type": "object",
+            "required": [
+                "ids"
+            ],
+            "properties": {
+                "ids": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
         "model.DepartmentResponse": {
             "type": "object",
             "properties": {
@@ -29257,9 +29327,9 @@ const docTemplate = `{
 // SwaggerInfo holds exported Swagger Info so clients can modify it
 var SwaggerInfo = &swag.Spec{
 	Version:          "1.0",
-	Host:             "back.staging.maryai.yurtal.tech",
+	Host:             "localhost:8080",
 	BasePath:         "/",
-	Schemes:          []string{"https"},
+	Schemes:          []string{"http"},
 	Title:            "MaryAI API",
 	Description:      "MaryAI API server with multi-language support (uz, ru, en)",
 	InfoInstanceName: "swagger",

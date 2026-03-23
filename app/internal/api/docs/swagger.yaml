@@ -1627,6 +1627,16 @@ definitions:
     - DeductionStatusActive
     - DeductionStatusDraft
     - DeductionStatusDeleted
+  model.DeleteInventoriesBatchRequest:
+    properties:
+      ids:
+        items:
+          type: string
+        minItems: 1
+        type: array
+    required:
+    - ids
+    type: object
   model.DepartmentResponse:
     properties:
       color_code:
@@ -4169,7 +4179,7 @@ definitions:
         example: admin
         type: string
     type: object
-host: back.staging.maryai.yurtal.tech
+host: localhost:8080
 info:
   contact: {}
   description: MaryAI API server with multi-language support (uz, ru, en)
@@ -13039,15 +13049,15 @@ paths:
     put:
       consumes:
       - application/json
-      description: Upsert (create/update) counted quantities for multiple ingredients
-        in an existing inventory. Blocked if inventory is already applied.
+      description: Full replace of inventory items. Items in request are upserted;
+        absent items are deleted. Stock adjusted if inventory is active.
       parameters:
       - description: Inventory ID
         in: path
         name: id
         required: true
         type: string
-      - description: Inventory items batch update data
+      - description: Inventory items batch data
         in: body
         name: input
         required: true
@@ -13063,7 +13073,7 @@ paths:
               $ref: '#/definitions/model.InventoryItemComputedResponse'
             type: array
         "400":
-          description: Invalid request or inventory already applied
+          description: Invalid request or inventory is deleted
           schema:
             $ref: '#/definitions/model.ErrorResponse'
         "401":
@@ -13076,7 +13086,7 @@ paths:
             $ref: '#/definitions/model.ErrorResponse'
       security:
       - BearerAuth: []
-      summary: Update inventory items batch
+      summary: Replace inventory items batch
       tags:
       - inventory_items
   /api/v1/inventories/{id}/restore:
@@ -13115,6 +13125,42 @@ paths:
       tags:
       - inventories
   /api/v1/inventories/batch:
+    delete:
+      consumes:
+      - application/json
+      description: Soft delete multiple inventories. Reverses stock changes for any
+        that are active.
+      parameters:
+      - description: List of inventory IDs to delete
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/model.DeleteInventoriesBatchRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Inventories deleted successfully
+          schema:
+            $ref: '#/definitions/model.SuccessResponse'
+        "400":
+          description: Invalid request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Batch delete inventories
+      tags:
+      - inventories
     post:
       consumes:
       - application/json
@@ -19326,7 +19372,7 @@ paths:
       tags:
       - users
 schemes:
-- https
+- http
 securityDefinitions:
   BearerAuth:
     description: Type "Bearer" followed by a space and your JWT token

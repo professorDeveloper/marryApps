@@ -94,3 +94,19 @@ type InventoryItemResponse struct {
 type UpdateInventoryItemRequest struct {
 	CountedQuantity string `json:"counted_quantity" validate:"required" example:"10"`
 }
+
+type DeleteInventoriesBatchRequest struct {
+	IDs []string `json:"ids" validate:"required,min=1"`
+}
+
+type PaginationMeta struct {
+	Total      int32 `json:"total"`
+	Limit      int32 `json:"limit"`
+	Offset     int32 `json:"offset"`
+	TotalPages int32 `json:"total_pages"`
+}
+
+type PaginatedInventoriesResponse struct {
+	Data       []*InventoryResponse `json:"data"`
+	Pagination PaginationMeta       `json:"pagination"`
+}

@@ -21,6 +21,10 @@ func NewInventoryS(repo *repository.Repository) *InventoryS {
 	return &InventoryS{repo: repo}
 }
 
+// ─────────────────────────────────────────────
+//  Create
+// ─────────────────────────────────────────────
+
 func (s *InventoryS) CreateInventory(ctx context.Context, req *model.CreateInventoryRequest) (*model.InventoryResponse, error) {
 	id := uuid.New()
 
@@ -43,9 +47,12 @@ func (s *InventoryS) CreateInventory(ctx context.Context, req *model.CreateInven
 		descriptionI18n = pgtype.UUID{Bytes: i18nID, Valid: true}
 	}
 
-	status := "active"
+	status := "draft"
 	if req.Status != nil && *req.Status != "" {
 		status = *req.Status
+	}
+	if status == "deleted" {
+		return nil, fmt.Errorf("cannot create inventory with status 'deleted'")
 	}
 
 	created, err := s.repo.Tenant(ctx).CreateInventory(ctx, pg.CreateInventoryParams{
@@ -75,7 +82,7 @@ func (s *InventoryS) CreateInventoryBatch(ctx context.Context, req *model.Create
 		return nil, err
 	}
 
-	items, err := s.UpsertInventoryItems(ctx, inv.ID, &model.UpsertInventoryItemsRequest{
+	items, err := s.ReplaceInventoryItems(ctx, inv.ID, &model.UpsertInventoryItemsRequest{
 		Items: req.Items,
 	})
 	if err != nil {
@@ -87,6 +94,10 @@ func (s *InventoryS) CreateInventoryBatch(ctx context.Context, req *model.Create
 		Items:     items,
 	}, nil
 }
+
+// ─────────────────────────────────────────────
+//  Read
+// ─────────────────────────────────────────────
 
 func (s *InventoryS) GetInventoryByID(ctx context.Context, id string) (*model.InventoryResponse, error) {
 	inventoryID, err := uuid.Parse(id)
@@ -115,7 +126,7 @@ func (s *InventoryS) GetAllInventories(ctx context.Context, limit, offset int32)
 	return resp, nil
 }
 
-func (s *InventoryS) GetInventoriesFiltered(ctx context.Context, dateFrom, dateTo *time.Time, storageID, ingredientID, status *string, limit, offset int32) ([]*model.InventoryResponse, error) {
+func (s *InventoryS) GetInventoriesFiltered(ctx context.Context, dateFrom, dateTo *time.Time, storageID, ingredientID, status *string, limit, offset int32) (*model.PaginatedInventoriesResponse, error) {
 	var fromDate pgtype.Date
 	if dateFrom != nil {
 		fromDate = pgtype.Date{Time: *dateFrom, Valid: true}
@@ -144,15 +155,21 @@ func (s *InventoryS) GetInventoriesFiltered(ctx context.Context, dateFrom, dateT
 		ingredientUUID = pgtype.UUID{Bytes: id, Valid: true}
 	}
 
-	var statusVal *string
-	if status != nil && strings.TrimSpace(*status) != "" {
-		s := strings.TrimSpace(*status)
-		statusVal = &s
+	statusText := ""
+	if status != nil {
+		statusText = strings.TrimSpace(*status)
 	}
 
-	statusText := ""
-	if statusVal != nil {
-		statusText = *statusVal
+	countParams := pg.CountInventoriesFilteredParams{
+		DateFrom:     fromDate,
+		DateTo:       toDate,
+		StorageID:    storageUUID.Bytes,
+		Status:       statusText,
+		IngredientID: ingredientUUID.Bytes,
+	}
+	total, err := s.repo.Tenant(ctx).CountInventoriesFiltered(ctx, countParams)
+	if err != nil {
+		return nil, fmt.Errorf("failed to count inventories: %w", err)
 	}
 
 	invs, err := s.repo.Tenant(ctx).GetInventoriesFiltered(ctx, pg.GetInventoriesFilteredParams{
@@ -168,11 +185,25 @@ func (s *InventoryS) GetInventoriesFiltered(ctx context.Context, dateFrom, dateT
 		return nil, fmt.Errorf("failed to get inventories: %w", err)
 	}
 
-	resp := make([]*model.InventoryResponse, 0, len(invs))
+	data := make([]*model.InventoryResponse, 0, len(invs))
 	for _, inv := range invs {
-		resp = append(resp, toInventoryResponse(inv))
+		data = append(data, toInventoryResponse(inv))
 	}
-	return resp, nil
+
+	totalPages := int32(0)
+	if limit > 0 {
+		totalPages = (int32(total) + limit - 1) / limit
+	}
+
+	return &model.PaginatedInventoriesResponse{
+		Data: data,
+		Pagination: model.PaginationMeta{
+			Total:      int32(total),
+			Limit:      limit,
+			Offset:     offset,
+			TotalPages: totalPages,
+		},
+	}, nil
 }
 
 func (s *InventoryS) GetAllInventoryItems(ctx context.Context, inventoryID *string, limit, offset int32) ([]*model.InventoryItemResponse, error) {
@@ -207,235 +238,6 @@ func (s *InventoryS) GetAllInventoryItems(ctx context.Context, inventoryID *stri
 	return resp, nil
 }
 
-func (s *InventoryS) UpdateInventoryItem(ctx context.Context, inventoryItemID string, req *model.UpdateInventoryItemRequest) (*model.InventoryItemResponse, error) {
-	itemID, err := uuid.Parse(inventoryItemID)
-	if err != nil {
-		return nil, fmt.Errorf("invalid inventory item id: %w", err)
-	}
-
-	qty := pgtype.Numeric{}
-	if err := qty.Scan(req.CountedQuantity); err != nil {
-		return nil, fmt.Errorf("invalid counted_quantity: %w", err)
-	}
-
-	updated, err := s.repo.Tenant(ctx).UpdateInventoryItem(ctx, pg.UpdateInventoryItemParams{
-		ID:              itemID,
-		CountedQuantity: qty,
-	})
-	if err != nil {
-		return nil, fmt.Errorf("failed to update inventory item: %w", err)
-	}
-
-	totals, err := s.repo.Tenant(ctx).CalculateInventoryTotals(ctx, updated.InventoryID)
-	if err != nil {
-		return nil, fmt.Errorf("failed to calculate inventory totals: %w", err)
-	}
-
-	if _, err := s.repo.Tenant(ctx).UpdateInventoryAmounts(ctx, pg.UpdateInventoryAmountsParams{
-		ID:              updated.InventoryID,
-		SurplusAmount:   totals.SurplusAmount,
-		ShortageAmount:  totals.ShortageAmount,
-		RemainingAmount: totals.RemainingAmount,
-	}); err != nil {
-		return nil, fmt.Errorf("failed to update inventory amounts: %w", err)
-	}
-
-	return toInventoryItemResponse(updated), nil
-}
-
-func (s *InventoryS) DeleteInventoryItem(ctx context.Context, inventoryItemID string) error {
-	itemID, err := uuid.Parse(inventoryItemID)
-	if err != nil {
-		return fmt.Errorf("invalid inventory item id: %w", err)
-	}
-
-	item, err := s.repo.Tenant(ctx).GetInventoryItemByID(ctx, itemID)
-	if err != nil {
-		return fmt.Errorf("failed to get inventory item: %w", err)
-	}
-
-	// Reverse stock: undo the "set stock = counted_quantity" by restoring to system_quantity
-	inv, err := s.repo.Tenant(ctx).GetInventoryForApply(ctx, item.InventoryID)
-	if err != nil {
-		return fmt.Errorf("failed to get inventory: %w", err)
-	}
-	storagePg := pgtype.UUID{Bytes: inv.StorageID, Valid: true}
-
-	_, _ = s.repo.Tenant(ctx).EnsureIngredientStockByStorage(ctx, pg.EnsureIngredientStockByStorageParams{
-		ID:           uuid.New(),
-		IngredientID: item.IngredientID,
-		StorageID:    storagePg,
-	})
-	locked, err := s.repo.Tenant(ctx).GetStockByIngredientAndStorageForUpdate(ctx, pg.GetStockByIngredientAndStorageForUpdateParams{
-		IngredientID: item.IngredientID,
-		StorageID:    storagePg,
-	})
-	if err != nil {
-		return fmt.Errorf("failed to lock stock: %w", err)
-	}
-
-	zero := pgtype.Numeric{}
-	_ = zero.Scan("0")
-
-	if numericToString(locked.Quantity) != numericToString(item.SystemQuantity) {
-		restored, err := s.repo.Tenant(ctx).UpdateIngredientStock(ctx, pg.UpdateIngredientStockParams{
-			ID:       locked.ID,
-			Quantity: item.SystemQuantity,
-		})
-		if err != nil {
-			return fmt.Errorf("failed to restore stock: %w", err)
-		}
-		srcType := "inventory_item_deleted"
-		srcID := item.InventoryID
-		_ = s.repo.Tenant(ctx).InsertIngredientStockMovement(ctx, pg.InsertIngredientStockMovementParams{
-			ID:           uuid.New(),
-			StorageID:    inv.StorageID,
-			IngredientID: item.IngredientID,
-			EventType:    "inventory_item_deleted",
-			QtyIn:        zero,
-			QtyOut:       zero,
-			StockBefore:  locked.Quantity,
-			StockAfter:   restored.Quantity,
-			PricePerUnit: zero,
-			SourceType:   &srcType,
-			SourceID:     &srcID,
-		})
-	}
-
-	if err := s.repo.Tenant(ctx).DeleteInventoryItem(ctx, itemID); err != nil {
-		return fmt.Errorf("failed to delete inventory item: %w", err)
-	}
-
-	totals, err := s.repo.Tenant(ctx).CalculateInventoryTotals(ctx, item.InventoryID)
-	if err != nil {
-		return fmt.Errorf("failed to calculate inventory totals: %w", err)
-	}
-
-	if _, err := s.repo.Tenant(ctx).UpdateInventoryAmounts(ctx, pg.UpdateInventoryAmountsParams{
-		ID:              item.InventoryID,
-		SurplusAmount:   totals.SurplusAmount,
-		ShortageAmount:  totals.ShortageAmount,
-		RemainingAmount: totals.RemainingAmount,
-	}); err != nil {
-		return fmt.Errorf("failed to update inventory amounts: %w", err)
-	}
-
-	return nil
-}
-
-func (s *InventoryS) UpsertInventoryItems(ctx context.Context, inventoryID string, req *model.UpsertInventoryItemsRequest) ([]*model.InventoryItemComputedResponse, error) {
-	invID, err := uuid.Parse(inventoryID)
-	if err != nil {
-		return nil, fmt.Errorf("invalid inventory id: %w", err)
-	}
-
-	inv, err := s.repo.Tenant(ctx).GetInventoryForApply(ctx, invID)
-	if err != nil {
-		return nil, fmt.Errorf("inventory not found: %w", err)
-	}
-
-	zero := pgtype.Numeric{}
-	_ = zero.Scan("0")
-	storagePg := pgtype.UUID{Bytes: inv.StorageID, Valid: true}
-	sourceType := "inventory"
-
-	for _, item := range req.Items {
-		ingID, err := uuid.Parse(item.IngredientID)
-		if err != nil {
-			return nil, fmt.Errorf("invalid ingredient_id: %w", err)
-		}
-
-		newQty := pgtype.Numeric{}
-		if err := newQty.Scan(item.CountedQuantity); err != nil {
-			return nil, fmt.Errorf("invalid counted_quantity: %w", err)
-		}
-
-		_, _ = s.repo.Tenant(ctx).EnsureIngredientStockByStorage(ctx, pg.EnsureIngredientStockByStorageParams{
-			ID:           uuid.New(),
-			IngredientID: ingID,
-			StorageID:    storagePg,
-		})
-
-		locked, err := s.repo.Tenant(ctx).GetStockByIngredientAndStorageForUpdate(ctx, pg.GetStockByIngredientAndStorageForUpdateParams{
-			IngredientID: ingID,
-			StorageID:    storagePg,
-		})
-		if err != nil {
-			return nil, fmt.Errorf("failed to lock stock for ingredient %s: %w", ingID, err)
-		}
-
-		// Upsert item first so system_quantity captures the pre-update stock value
-		_, err = s.repo.Tenant(ctx).UpsertInventoryItem(ctx, pg.UpsertInventoryItemParams{
-			ID:              uuid.New(),
-			InventoryID:     invID,
-			IngredientID:    ingID,
-			CountedQuantity: newQty,
-		})
-		if err != nil {
-			return nil, fmt.Errorf("failed to upsert inventory item: %w", err)
-		}
-
-		// Update stock only if counted differs from current
-		if numericToString(locked.Quantity) != item.CountedQuantity {
-			updated, err := s.repo.Tenant(ctx).UpdateIngredientStock(ctx, pg.UpdateIngredientStockParams{
-				ID:       locked.ID,
-				Quantity: newQty,
-			})
-			if err != nil {
-				return nil, fmt.Errorf("failed to update stock for ingredient %s: %w", ingID, err)
-			}
-
-			eventType := "inventory_in"
-			qtyIn := newQty
-			qtyOut := zero
-			if numericToString(newQty) < numericToString(locked.Quantity) {
-				eventType = "inventory_out"
-				qtyIn = zero
-				qtyOut = locked.Quantity
-			}
-			srcID := invID
-			_ = s.repo.Tenant(ctx).InsertIngredientStockMovement(ctx, pg.InsertIngredientStockMovementParams{
-				ID:           uuid.New(),
-				StorageID:    inv.StorageID,
-				IngredientID: ingID,
-				EventType:    eventType,
-				QtyIn:        qtyIn,
-				QtyOut:       qtyOut,
-				StockBefore:  locked.Quantity,
-				StockAfter:   updated.Quantity,
-				PricePerUnit: zero,
-				SourceType:   &sourceType,
-				SourceID:     &srcID,
-			})
-		}
-	}
-
-	rows, err := s.repo.Tenant(ctx).GetInventoryItemsComputedAll(ctx, invID)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get inventory items: %w", err)
-	}
-
-	totals, err := s.repo.Tenant(ctx).CalculateInventoryTotals(ctx, invID)
-	if err != nil {
-		return nil, fmt.Errorf("failed to calculate inventory totals: %w", err)
-	}
-
-	if _, err := s.repo.Tenant(ctx).UpdateInventoryAmounts(ctx, pg.UpdateInventoryAmountsParams{
-		ID:              invID,
-		SurplusAmount:   totals.SurplusAmount,
-		ShortageAmount:  totals.ShortageAmount,
-		RemainingAmount: totals.RemainingAmount,
-	}); err != nil {
-		return nil, fmt.Errorf("failed to update inventory amounts: %w", err)
-	}
-
-	resp := make([]*model.InventoryItemComputedResponse, 0, len(rows))
-	for _, row := range rows {
-		resp = append(resp, toInventoryItemComputedResponse(row))
-	}
-	return resp, nil
-}
-
 func (s *InventoryS) GetInventoryItems(ctx context.Context, inventoryID string) ([]*model.InventoryItemComputedResponse, error) {
 	invID, err := uuid.Parse(inventoryID)
 	if err != nil {
@@ -454,34 +256,67 @@ func (s *InventoryS) GetInventoryItems(ctx context.Context, inventoryID string) 
 	return resp, nil
 }
 
-func (s *InventoryS) CalculateInventory(ctx context.Context, inventoryID string) (*model.InventoryResponse, error) {
-	invID, err := uuid.Parse(inventoryID)
+func (s *InventoryS) SearchInventories(ctx context.Context, query string, limit, offset int32) ([]*model.InventoryResponse, error) {
+	q := query
+	invs, err := s.repo.Tenant(ctx).SearchInventories(ctx, pg.SearchInventoriesParams{Column1: &q, Limit: limit, Offset: offset})
 	if err != nil {
-		return nil, fmt.Errorf("invalid inventory id: %w", err)
+		return nil, fmt.Errorf("failed to search inventories: %w", err)
 	}
 
-	totals, err := s.repo.Tenant(ctx).CalculateInventoryTotals(ctx, invID)
-	if err != nil {
-		return nil, fmt.Errorf("failed to calculate inventory totals: %w", err)
+	resp := make([]*model.InventoryResponse, 0, len(invs))
+	for _, inv := range invs {
+		resp = append(resp, toInventoryResponse(inv))
 	}
-
-	updated, err := s.repo.Tenant(ctx).UpdateInventoryAmounts(ctx, pg.UpdateInventoryAmountsParams{
-		ID:              invID,
-		SurplusAmount:   totals.SurplusAmount,
-		ShortageAmount:  totals.ShortageAmount,
-		RemainingAmount: totals.RemainingAmount,
-	})
-	if err != nil {
-		return nil, fmt.Errorf("failed to update inventory amounts: %w", err)
-	}
-
-	return toInventoryResponse(updated), nil
+	return resp, nil
 }
+
+// ─────────────────────────────────────────────
+//  Update
+// ─────────────────────────────────────────────
 
 func (s *InventoryS) UpdateInventory(ctx context.Context, id string, req *model.UpdateInventoryRequest) (*model.InventoryResponse, error) {
 	inventoryID, err := uuid.Parse(id)
 	if err != nil {
 		return nil, fmt.Errorf("invalid inventory id: %w", err)
+	}
+
+	// Lock the inventory row and read current status
+	inv, err := s.repo.Tenant(ctx).GetInventoryForApply(ctx, inventoryID)
+	if err != nil {
+		return nil, fmt.Errorf("inventory not found: %w", err)
+	}
+
+	if inv.Status == "deleted" {
+		return nil, fmt.Errorf("cannot update a deleted inventory")
+	}
+
+	// Block changing status to "deleted" via update
+	if req.Status != nil && *req.Status == "deleted" {
+		return nil, fmt.Errorf("cannot set status to 'deleted'; use the DELETE endpoint instead")
+	}
+
+	// Handle status transition with stock effects
+	if req.Status != nil && *req.Status != "" && *req.Status != inv.Status {
+		newStatus := *req.Status
+		storagePg := pgtype.UUID{Bytes: inv.StorageID, Valid: true}
+
+		items, err := s.repo.Tenant(ctx).GetInventoryItemsByInventoryIDAll(ctx, inventoryID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get inventory items: %w", err)
+		}
+
+		switch {
+		case inv.Status == "draft" && newStatus == "active":
+			if err := s.applyStockForItems(ctx, inventoryID, inv.StorageID, storagePg, items, "draft_to_active"); err != nil {
+				return nil, err
+			}
+		case inv.Status == "active" && newStatus == "draft":
+			if err := s.reverseStockForItems(ctx, inventoryID, inv.StorageID, storagePg, items, "active_to_draft"); err != nil {
+				return nil, err
+			}
+		default:
+			return nil, fmt.Errorf("invalid status transition: %s → %s", inv.Status, newStatus)
+		}
 	}
 
 	existing, err := s.repo.Tenant(ctx).GetInventoryByID(ctx, inventoryID)
@@ -545,56 +380,288 @@ func (s *InventoryS) UpdateInventory(ctx context.Context, id string, req *model.
 	return toInventoryResponse(updated), nil
 }
 
+func (s *InventoryS) UpdateInventoryItem(ctx context.Context, inventoryItemID string, req *model.UpdateInventoryItemRequest) (*model.InventoryItemResponse, error) {
+	itemID, err := uuid.Parse(inventoryItemID)
+	if err != nil {
+		return nil, fmt.Errorf("invalid inventory item id: %w", err)
+	}
+
+	qty := pgtype.Numeric{}
+	if err := qty.Scan(req.CountedQuantity); err != nil {
+		return nil, fmt.Errorf("invalid counted_quantity: %w", err)
+	}
+
+	updated, err := s.repo.Tenant(ctx).UpdateInventoryItem(ctx, pg.UpdateInventoryItemParams{
+		ID:              itemID,
+		CountedQuantity: qty,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to update inventory item: %w", err)
+	}
+
+	totals, err := s.repo.Tenant(ctx).CalculateInventoryTotals(ctx, updated.InventoryID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to calculate inventory totals: %w", err)
+	}
+
+	if _, err := s.repo.Tenant(ctx).UpdateInventoryAmounts(ctx, pg.UpdateInventoryAmountsParams{
+		ID:              updated.InventoryID,
+		SurplusAmount:   totals.SurplusAmount,
+		ShortageAmount:  totals.ShortageAmount,
+		RemainingAmount: totals.RemainingAmount,
+	}); err != nil {
+		return nil, fmt.Errorf("failed to update inventory amounts: %w", err)
+	}
+
+	return toInventoryItemResponse(updated), nil
+}
+
+// ─────────────────────────────────────────────
+//  Items batch replace
+// ─────────────────────────────────────────────
+
+// ReplaceInventoryItems is a full-replace batch: items in the request are upserted,
+// items currently in the inventory but absent from the request are deleted.
+// Stock is applied/reversed depending on the inventory's current status.
+func (s *InventoryS) ReplaceInventoryItems(ctx context.Context, inventoryID string, req *model.UpsertInventoryItemsRequest) ([]*model.InventoryItemComputedResponse, error) {
+	invID, err := uuid.Parse(inventoryID)
+	if err != nil {
+		return nil, fmt.Errorf("invalid inventory id: %w", err)
+	}
+
+	inv, err := s.repo.Tenant(ctx).GetInventoryForApply(ctx, invID)
+	if err != nil {
+		return nil, fmt.Errorf("inventory not found: %w", err)
+	}
+	if inv.Status == "deleted" {
+		return nil, fmt.Errorf("cannot edit a deleted inventory")
+	}
+
+	isActive := inv.Status == "active"
+	storagePg := pgtype.UUID{Bytes: inv.StorageID, Valid: true}
+	zero := pgtype.Numeric{}
+	_ = zero.Scan("0")
+	sourceType := "inventory"
+
+	// Build map of currently existing items keyed by ingredient_id
+	existingItems, err := s.repo.Tenant(ctx).GetInventoryItemsByInventoryIDAll(ctx, invID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load existing items: %w", err)
+	}
+	existingMap := make(map[uuid.UUID]pg.InventoryItemForProcess, len(existingItems))
+	for _, item := range existingItems {
+		existingMap[item.IngredientID] = item
+	}
+
+	// Build set of ingredient IDs present in the request
+	requestSet := make(map[uuid.UUID]bool, len(req.Items))
+	for _, item := range req.Items {
+		ingID, err := uuid.Parse(item.IngredientID)
+		if err != nil {
+			return nil, fmt.Errorf("invalid ingredient_id: %w", err)
+		}
+		requestSet[ingID] = true
+	}
+
+	// ── Upsert items present in request ──────────────────────────
+	for _, item := range req.Items {
+		ingID, _ := uuid.Parse(item.IngredientID)
+		newQty := pgtype.Numeric{}
+		if err := newQty.Scan(item.CountedQuantity); err != nil {
+			return nil, fmt.Errorf("invalid counted_quantity for ingredient %s: %w", ingID, err)
+		}
+
+		existing, exists := existingMap[ingID]
+
+		if isActive {
+			// Ensure a stock row exists
+			_, _ = s.repo.Tenant(ctx).EnsureIngredientStockByStorage(ctx, pg.EnsureIngredientStockByStorageParams{
+				ID:           uuid.New(),
+				IngredientID: ingID,
+				StorageID:    storagePg,
+			})
+
+			locked, err := s.repo.Tenant(ctx).GetStockByIngredientAndStorageForUpdate(ctx, pg.GetStockByIngredientAndStorageForUpdateParams{
+				IngredientID: ingID,
+				StorageID:    storagePg,
+			})
+			if err != nil {
+				return nil, fmt.Errorf("failed to lock stock for ingredient %s: %w", ingID, err)
+			}
+
+			if !exists {
+				// New item on active inventory:
+				// system_quantity = current stock (locked), set stock to counted
+				systemQty := locked.Quantity
+				if _, err := s.repo.Tenant(ctx).InsertInventoryItemWithSystemQty(ctx, uuid.New(), invID, ingID, newQty, systemQty); err != nil {
+					return nil, fmt.Errorf("failed to insert inventory item: %w", err)
+				}
+				// Apply delta: stock = counted (absolute set)
+				if numericToString(locked.Quantity) != item.CountedQuantity {
+					updated, err := s.repo.Tenant(ctx).UpdateIngredientStock(ctx, pg.UpdateIngredientStockParams{
+						ID:       locked.ID,
+						Quantity: newQty,
+					})
+					if err != nil {
+						return nil, fmt.Errorf("failed to update stock: %w", err)
+					}
+					eventType := "inventory_in"
+					if numericToFloat(newQty) < numericToFloat(locked.Quantity) {
+						eventType = "inventory_out"
+					}
+					srcID := invID
+					_ = s.repo.Tenant(ctx).InsertIngredientStockMovement(ctx, pg.InsertIngredientStockMovementParams{
+						ID: uuid.New(), StorageID: inv.StorageID, IngredientID: ingID,
+						EventType: eventType, QtyIn: zero, QtyOut: zero,
+						StockBefore: locked.Quantity, StockAfter: updated.Quantity,
+						PricePerUnit: zero, SourceType: &sourceType, SourceID: &srcID,
+					})
+				}
+			} else {
+				// Existing item on active inventory:
+				// Adjust stock by (new_counted - old_counted)
+				oldQty := existing.CountedQuantity
+				adjustment := numericToFloat(newQty) - numericToFloat(oldQty)
+				if adjustment != 0 {
+					newStockFloat := numericToFloat(locked.Quantity) + adjustment
+					newStockQty := pgtype.Numeric{}
+					_ = newStockQty.Scan(fmt.Sprintf("%.6f", newStockFloat))
+					updated, err := s.repo.Tenant(ctx).UpdateIngredientStock(ctx, pg.UpdateIngredientStockParams{
+						ID:       locked.ID,
+						Quantity: newStockQty,
+					})
+					if err != nil {
+						return nil, fmt.Errorf("failed to update stock: %w", err)
+					}
+					eventType := "inventory_in"
+					if adjustment < 0 {
+						eventType = "inventory_out"
+					}
+					srcID := invID
+					_ = s.repo.Tenant(ctx).InsertIngredientStockMovement(ctx, pg.InsertIngredientStockMovementParams{
+						ID: uuid.New(), StorageID: inv.StorageID, IngredientID: ingID,
+						EventType: eventType, QtyIn: zero, QtyOut: zero,
+						StockBefore: locked.Quantity, StockAfter: updated.Quantity,
+						PricePerUnit: zero, SourceType: &sourceType, SourceID: &srcID,
+					})
+				}
+				// Update counted_quantity, keep system_quantity
+				if _, err := s.repo.Tenant(ctx).UpdateInventoryItemCountedQuantity(ctx, existing.ID, newQty); err != nil {
+					return nil, fmt.Errorf("failed to update inventory item: %w", err)
+				}
+			}
+		} else {
+			// Draft: just upsert items, no stock changes
+			if _, err := s.repo.Tenant(ctx).UpsertInventoryItem(ctx, pg.UpsertInventoryItemParams{
+				ID:              uuid.New(),
+				InventoryID:     invID,
+				IngredientID:    ingID,
+				CountedQuantity: newQty,
+			}); err != nil {
+				return nil, fmt.Errorf("failed to upsert inventory item: %w", err)
+			}
+		}
+	}
+
+	// ── Delete items absent from request ─────────────────────────
+	for ingID, item := range existingMap {
+		if requestSet[ingID] {
+			continue
+		}
+
+		if isActive {
+			// Reverse the delta that was applied when this item was activated
+			_, _ = s.repo.Tenant(ctx).EnsureIngredientStockByStorage(ctx, pg.EnsureIngredientStockByStorageParams{
+				ID:           uuid.New(),
+				IngredientID: ingID,
+				StorageID:    storagePg,
+			})
+			locked, err := s.repo.Tenant(ctx).GetStockByIngredientAndStorageForUpdate(ctx, pg.GetStockByIngredientAndStorageForUpdateParams{
+				IngredientID: ingID,
+				StorageID:    storagePg,
+			})
+			if err != nil {
+				return nil, fmt.Errorf("failed to lock stock for removal: %w", err)
+			}
+			delta := numericToFloat(item.CountedQuantity) - numericToFloat(item.SystemQuantity)
+			if delta != 0 {
+				reversedFloat := numericToFloat(locked.Quantity) - delta
+				reversedQty := pgtype.Numeric{}
+				_ = reversedQty.Scan(fmt.Sprintf("%.6f", reversedFloat))
+				updated, err := s.repo.Tenant(ctx).UpdateIngredientStock(ctx, pg.UpdateIngredientStockParams{
+					ID:       locked.ID,
+					Quantity: reversedQty,
+				})
+				if err != nil {
+					return nil, fmt.Errorf("failed to reverse stock: %w", err)
+				}
+				srcID := invID
+				_ = s.repo.Tenant(ctx).InsertIngredientStockMovement(ctx, pg.InsertIngredientStockMovementParams{
+					ID: uuid.New(), StorageID: inv.StorageID, IngredientID: ingID,
+					EventType: "inventory_item_removed", QtyIn: zero, QtyOut: zero,
+					StockBefore: locked.Quantity, StockAfter: updated.Quantity,
+					PricePerUnit: zero, SourceType: &sourceType, SourceID: &srcID,
+				})
+			}
+		}
+
+		if err := s.repo.Tenant(ctx).DeleteInventoryItemByID(ctx, item.ID); err != nil {
+			return nil, fmt.Errorf("failed to delete inventory item: %w", err)
+		}
+	}
+
+	// Recalculate totals
+	totals, err := s.repo.Tenant(ctx).CalculateInventoryTotals(ctx, invID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to calculate totals: %w", err)
+	}
+	if _, err := s.repo.Tenant(ctx).UpdateInventoryAmounts(ctx, pg.UpdateInventoryAmountsParams{
+		ID:              invID,
+		SurplusAmount:   totals.SurplusAmount,
+		ShortageAmount:  totals.ShortageAmount,
+		RemainingAmount: totals.RemainingAmount,
+	}); err != nil {
+		return nil, fmt.Errorf("failed to update inventory amounts: %w", err)
+	}
+
+	rows, err := s.repo.Tenant(ctx).GetInventoryItemsComputedAll(ctx, invID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get inventory items: %w", err)
+	}
+	resp := make([]*model.InventoryItemComputedResponse, 0, len(rows))
+	for _, row := range rows {
+		resp = append(resp, toInventoryItemComputedResponse(row))
+	}
+	return resp, nil
+}
+
+// ─────────────────────────────────────────────
+//  Delete
+// ─────────────────────────────────────────────
+
 func (s *InventoryS) DeleteInventory(ctx context.Context, id string) error {
 	inventoryID, err := uuid.Parse(id)
 	if err != nil {
 		return fmt.Errorf("invalid inventory id: %w", err)
 	}
 
-	// Reverse stock: restore each ingredient to its pre-inventory quantity
-	movements, err := s.repo.Tenant(ctx).GetStockMovementsBySourceID(ctx, inventoryID)
+	inv, err := s.repo.Tenant(ctx).GetInventoryForApply(ctx, inventoryID)
 	if err != nil {
-		return fmt.Errorf("failed to fetch stock movements for reversal: %w", err)
+		return fmt.Errorf("inventory not found: %w", err)
+	}
+	if inv.Status == "deleted" {
+		return fmt.Errorf("inventory is already deleted")
 	}
 
-	zero := pgtype.Numeric{}
-	_ = zero.Scan("0")
-	sourceType := "inventory"
-
-	for _, mv := range movements {
-		storagePg := pgtype.UUID{Bytes: mv.StorageID, Valid: true}
-
-		locked, err := s.repo.Tenant(ctx).GetStockByIngredientAndStorageForUpdate(ctx, pg.GetStockByIngredientAndStorageForUpdateParams{
-			IngredientID: mv.IngredientID,
-			StorageID:    storagePg,
-		})
+	// If active, reverse stock before deleting
+	if inv.Status == "active" {
+		storagePg := pgtype.UUID{Bytes: inv.StorageID, Valid: true}
+		items, err := s.repo.Tenant(ctx).GetInventoryItemsByInventoryIDAll(ctx, inventoryID)
 		if err != nil {
-			return fmt.Errorf("failed to lock stock for reversal: %w", err)
+			return fmt.Errorf("failed to get inventory items: %w", err)
 		}
-
-		restored, err := s.repo.Tenant(ctx).UpdateIngredientStock(ctx, pg.UpdateIngredientStockParams{
-			ID:       locked.ID,
-			Quantity: mv.StockBefore,
-		})
-		if err != nil {
-			return fmt.Errorf("failed to restore stock: %w", err)
-		}
-
-		srcID := inventoryID
-		if err := s.repo.Tenant(ctx).InsertIngredientStockMovement(ctx, pg.InsertIngredientStockMovementParams{
-			ID:           uuid.New(),
-			StorageID:    mv.StorageID,
-			IngredientID: mv.IngredientID,
-			EventType:    "inventory_deleted",
-			QtyIn:        zero,
-			QtyOut:       zero,
-			StockBefore:  locked.Quantity,
-			StockAfter:   restored.Quantity,
-			PricePerUnit: zero,
-			SourceType:   &sourceType,
-			SourceID:     &srcID,
-		}); err != nil {
-			return fmt.Errorf("failed to log reversal movement: %w", err)
+		if err := s.reverseStockForItems(ctx, inventoryID, inv.StorageID, storagePg, items, "inventory_deleted"); err != nil {
+			return err
 		}
 	}
 
@@ -602,6 +669,133 @@ func (s *InventoryS) DeleteInventory(ctx context.Context, id string) error {
 		return fmt.Errorf("failed to delete inventory: %w", err)
 	}
 	return nil
+}
+
+func (s *InventoryS) DeleteInventoriesBatch(ctx context.Context, ids []string) error {
+	uuids := make([]uuid.UUID, 0, len(ids))
+	for _, id := range ids {
+		uid, err := uuid.Parse(id)
+		if err != nil {
+			return fmt.Errorf("invalid id %s: %w", id, err)
+		}
+		uuids = append(uuids, uid)
+	}
+
+	// Process each inventory individually to handle stock reversals
+	for _, uid := range uuids {
+		if err := s.DeleteInventory(ctx, uid.String()); err != nil {
+			return fmt.Errorf("failed to delete inventory %s: %w", uid, err)
+		}
+	}
+	return nil
+}
+
+func (s *InventoryS) DeleteInventoryItem(ctx context.Context, inventoryItemID string) error {
+	itemID, err := uuid.Parse(inventoryItemID)
+	if err != nil {
+		return fmt.Errorf("invalid inventory item id: %w", err)
+	}
+
+	item, err := s.repo.Tenant(ctx).GetInventoryItemByID(ctx, itemID)
+	if err != nil {
+		return fmt.Errorf("failed to get inventory item: %w", err)
+	}
+
+	inv, err := s.repo.Tenant(ctx).GetInventoryForApply(ctx, item.InventoryID)
+	if err != nil {
+		return fmt.Errorf("failed to get inventory: %w", err)
+	}
+
+	if inv.Status == "deleted" {
+		return fmt.Errorf("cannot modify items of a deleted inventory")
+	}
+
+	zero := pgtype.Numeric{}
+	_ = zero.Scan("0")
+	sourceType := "inventory"
+
+	if inv.Status == "active" {
+		storagePg := pgtype.UUID{Bytes: inv.StorageID, Valid: true}
+		_, _ = s.repo.Tenant(ctx).EnsureIngredientStockByStorage(ctx, pg.EnsureIngredientStockByStorageParams{
+			ID:           uuid.New(),
+			IngredientID: item.IngredientID,
+			StorageID:    storagePg,
+		})
+		locked, err := s.repo.Tenant(ctx).GetStockByIngredientAndStorageForUpdate(ctx, pg.GetStockByIngredientAndStorageForUpdateParams{
+			IngredientID: item.IngredientID,
+			StorageID:    storagePg,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to lock stock: %w", err)
+		}
+		delta := numericToFloat(item.CountedQuantity) - numericToFloat(item.SystemQuantity)
+		if delta != 0 {
+			reversedFloat := numericToFloat(locked.Quantity) - delta
+			reversedQty := pgtype.Numeric{}
+			_ = reversedQty.Scan(fmt.Sprintf("%.6f", reversedFloat))
+			restored, err := s.repo.Tenant(ctx).UpdateIngredientStock(ctx, pg.UpdateIngredientStockParams{
+				ID:       locked.ID,
+				Quantity: reversedQty,
+			})
+			if err != nil {
+				return fmt.Errorf("failed to restore stock: %w", err)
+			}
+			srcID := inv.ID
+			_ = s.repo.Tenant(ctx).InsertIngredientStockMovement(ctx, pg.InsertIngredientStockMovementParams{
+				ID: uuid.New(), StorageID: inv.StorageID, IngredientID: item.IngredientID,
+				EventType: "inventory_item_deleted", QtyIn: zero, QtyOut: zero,
+				StockBefore: locked.Quantity, StockAfter: restored.Quantity,
+				PricePerUnit: zero, SourceType: &sourceType, SourceID: &srcID,
+			})
+		}
+	}
+
+	if err := s.repo.Tenant(ctx).DeleteInventoryItem(ctx, itemID); err != nil {
+		return fmt.Errorf("failed to delete inventory item: %w", err)
+	}
+
+	totals, err := s.repo.Tenant(ctx).CalculateInventoryTotals(ctx, item.InventoryID)
+	if err != nil {
+		return fmt.Errorf("failed to calculate inventory totals: %w", err)
+	}
+	if _, err := s.repo.Tenant(ctx).UpdateInventoryAmounts(ctx, pg.UpdateInventoryAmountsParams{
+		ID:              item.InventoryID,
+		SurplusAmount:   totals.SurplusAmount,
+		ShortageAmount:  totals.ShortageAmount,
+		RemainingAmount: totals.RemainingAmount,
+	}); err != nil {
+		return fmt.Errorf("failed to update inventory amounts: %w", err)
+	}
+
+	return nil
+}
+
+// ─────────────────────────────────────────────
+//  Misc
+// ─────────────────────────────────────────────
+
+func (s *InventoryS) CalculateInventory(ctx context.Context, inventoryID string) (*model.InventoryResponse, error) {
+	invID, err := uuid.Parse(inventoryID)
+	if err != nil {
+		return nil, fmt.Errorf("invalid inventory id: %w", err)
+	}
+
+	totals, err := s.repo.Tenant(ctx).CalculateInventoryTotals(ctx, invID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to calculate inventory totals: %w", err)
+	}
+
+	updated, err := s.repo.Tenant(ctx).UpdateInventoryAmounts(ctx, pg.UpdateInventoryAmountsParams{
+		ID:              invID,
+		SurplusAmount:   totals.SurplusAmount,
+		ShortageAmount:  totals.ShortageAmount,
+		RemainingAmount: totals.RemainingAmount,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to update inventory amounts: %w", err)
+	}
+
+	return toInventoryResponse(updated), nil
 }
 
 func (s *InventoryS) RestoreInventory(ctx context.Context, id string) (*model.InventoryResponse, error) {
@@ -617,18 +811,125 @@ func (s *InventoryS) RestoreInventory(ctx context.Context, id string) (*model.In
 	return toInventoryResponse(inv), nil
 }
 
-func (s *InventoryS) SearchInventories(ctx context.Context, query string, limit, offset int32) ([]*model.InventoryResponse, error) {
-	q := query
-	invs, err := s.repo.Tenant(ctx).SearchInventories(ctx, pg.SearchInventoriesParams{Column1: &q, Limit: limit, Offset: offset})
-	if err != nil {
-		return nil, fmt.Errorf("failed to search inventories: %w", err)
-	}
+// UpsertInventoryItems is kept for backwards compatibility; delegates to ReplaceInventoryItems.
+func (s *InventoryS) UpsertInventoryItems(ctx context.Context, inventoryID string, req *model.UpsertInventoryItemsRequest) ([]*model.InventoryItemComputedResponse, error) {
+	return s.ReplaceInventoryItems(ctx, inventoryID, req)
+}
 
-	resp := make([]*model.InventoryResponse, 0, len(invs))
-	for _, inv := range invs {
-		resp = append(resp, toInventoryResponse(inv))
+// ─────────────────────────────────────────────
+//  Stock helpers
+// ─────────────────────────────────────────────
+
+// applyStockForItems refreshes each item's system_quantity to current stock then sets stock = counted.
+// Used when transitioning draft → active.
+func (s *InventoryS) applyStockForItems(ctx context.Context, invID uuid.UUID, storageID uuid.UUID, storagePg pgtype.UUID, items []pg.InventoryItemForProcess, eventType string) error {
+	zero := pgtype.Numeric{}
+	_ = zero.Scan("0")
+	sourceType := "inventory"
+
+	for _, item := range items {
+		// Refresh system_quantity to current stock
+		refreshed, err := s.repo.Tenant(ctx).UpdateInventoryItemSystemQuantityFromStock(ctx, item.ID)
+		if err != nil {
+			return fmt.Errorf("failed to refresh system_quantity: %w", err)
+		}
+
+		_, _ = s.repo.Tenant(ctx).EnsureIngredientStockByStorage(ctx, pg.EnsureIngredientStockByStorageParams{
+			ID:           uuid.New(),
+			IngredientID: item.IngredientID,
+			StorageID:    storagePg,
+		})
+		locked, err := s.repo.Tenant(ctx).GetStockByIngredientAndStorageForUpdate(ctx, pg.GetStockByIngredientAndStorageForUpdateParams{
+			IngredientID: item.IngredientID,
+			StorageID:    storagePg,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to lock stock: %w", err)
+		}
+
+		if numericToString(locked.Quantity) != numericToString(refreshed.CountedQuantity) {
+			updated, err := s.repo.Tenant(ctx).UpdateIngredientStock(ctx, pg.UpdateIngredientStockParams{
+				ID:       locked.ID,
+				Quantity: refreshed.CountedQuantity,
+			})
+			if err != nil {
+				return fmt.Errorf("failed to apply stock: %w", err)
+			}
+			ev := "inventory_in"
+			if numericToFloat(refreshed.CountedQuantity) < numericToFloat(locked.Quantity) {
+				ev = "inventory_out"
+			}
+			srcID := invID
+			_ = s.repo.Tenant(ctx).InsertIngredientStockMovement(ctx, pg.InsertIngredientStockMovementParams{
+				ID: uuid.New(), StorageID: storageID, IngredientID: item.IngredientID,
+				EventType: ev, QtyIn: zero, QtyOut: zero,
+				StockBefore: locked.Quantity, StockAfter: updated.Quantity,
+				PricePerUnit: zero, SourceType: &sourceType, SourceID: &srcID,
+			})
+		}
 	}
-	return resp, nil
+	return nil
+}
+
+// reverseStockForItems reverses the delta (counted - system_quantity) for each item.
+// Used when transitioning active → draft or deleting an active inventory.
+func (s *InventoryS) reverseStockForItems(ctx context.Context, invID uuid.UUID, storageID uuid.UUID, storagePg pgtype.UUID, items []pg.InventoryItemForProcess, eventType string) error {
+	zero := pgtype.Numeric{}
+	_ = zero.Scan("0")
+	sourceType := "inventory"
+
+	for _, item := range items {
+		delta := numericToFloat(item.CountedQuantity) - numericToFloat(item.SystemQuantity)
+		if delta == 0 {
+			continue
+		}
+
+		_, _ = s.repo.Tenant(ctx).EnsureIngredientStockByStorage(ctx, pg.EnsureIngredientStockByStorageParams{
+			ID:           uuid.New(),
+			IngredientID: item.IngredientID,
+			StorageID:    storagePg,
+		})
+		locked, err := s.repo.Tenant(ctx).GetStockByIngredientAndStorageForUpdate(ctx, pg.GetStockByIngredientAndStorageForUpdateParams{
+			IngredientID: item.IngredientID,
+			StorageID:    storagePg,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to lock stock: %w", err)
+		}
+
+		reversedFloat := numericToFloat(locked.Quantity) - delta
+		reversedQty := pgtype.Numeric{}
+		_ = reversedQty.Scan(fmt.Sprintf("%.6f", reversedFloat))
+
+		updated, err := s.repo.Tenant(ctx).UpdateIngredientStock(ctx, pg.UpdateIngredientStockParams{
+			ID:       locked.ID,
+			Quantity: reversedQty,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to reverse stock: %w", err)
+		}
+
+		srcID := invID
+		_ = s.repo.Tenant(ctx).InsertIngredientStockMovement(ctx, pg.InsertIngredientStockMovementParams{
+			ID: uuid.New(), StorageID: storageID, IngredientID: item.IngredientID,
+			EventType: eventType, QtyIn: zero, QtyOut: zero,
+			StockBefore: locked.Quantity, StockAfter: updated.Quantity,
+			PricePerUnit: zero, SourceType: &sourceType, SourceID: &srcID,
+		})
+	}
+	return nil
+}
+
+// ─────────────────────────────────────────────
+//  Helpers / converters
+// ─────────────────────────────────────────────
+
+func numericToFloat(n pgtype.Numeric) float64 {
+	if !n.Valid {
+		return 0
+	}
+	f, _ := n.Float64Value()
+	return f.Float64
 }
 
 func parseDateYYYYMMDD(s string) (time.Time, error) {
@@ -662,126 +963,50 @@ func toInventoryResponse(inv any) *model.InventoryResponse {
 
 	switch row := inv.(type) {
 	case pg.Inventory:
-		id = row.ID
-		number = row.Number
-		date = row.Date
-		storageID = row.StorageID
-		description = row.Description
-		descriptionI18n = row.DescriptionI18n
-		status = row.Status
-		surplusAmount = row.SurplusAmount
-		shortageAmount = row.ShortageAmount
-		remainingAmount = row.RemainingAmount
-		createdAt = row.CreatedAt
-		updatedAt = row.UpdatedAt
-		deletedAt = row.DeletedAt
+		id, number, date, storageID = row.ID, row.Number, row.Date, row.StorageID
+		description, descriptionI18n, status = row.Description, row.DescriptionI18n, row.Status
+		surplusAmount, shortageAmount, remainingAmount = row.SurplusAmount, row.ShortageAmount, row.RemainingAmount
+		createdAt, updatedAt, deletedAt = row.CreatedAt, row.UpdatedAt, row.DeletedAt
 	case pg.CreateInventoryRow:
-		id = row.ID
-		number = row.Number
-		date = row.Date
-		storageID = row.StorageID
-		description = row.Description
-		descriptionI18n = row.DescriptionI18n
-		status = row.Status
-		surplusAmount = row.SurplusAmount
-		shortageAmount = row.ShortageAmount
-		remainingAmount = row.RemainingAmount
-		createdAt = row.CreatedAt
-		updatedAt = row.UpdatedAt
+		id, number, date, storageID = row.ID, row.Number, row.Date, row.StorageID
+		description, descriptionI18n, status = row.Description, row.DescriptionI18n, row.Status
+		surplusAmount, shortageAmount, remainingAmount = row.SurplusAmount, row.ShortageAmount, row.RemainingAmount
+		createdAt, updatedAt = row.CreatedAt, row.UpdatedAt
 	case pg.GetInventoryByIDRow:
-		id = row.ID
-		number = row.Number
-		date = row.Date
-		storageID = row.StorageID
-		description = row.Description
-		descriptionI18n = row.DescriptionI18n
-		status = row.Status
-		surplusAmount = row.SurplusAmount
-		shortageAmount = row.ShortageAmount
-		remainingAmount = row.RemainingAmount
-		createdAt = row.CreatedAt
-		updatedAt = row.UpdatedAt
+		id, number, date, storageID = row.ID, row.Number, row.Date, row.StorageID
+		description, descriptionI18n, status = row.Description, row.DescriptionI18n, row.Status
+		surplusAmount, shortageAmount, remainingAmount = row.SurplusAmount, row.ShortageAmount, row.RemainingAmount
+		createdAt, updatedAt = row.CreatedAt, row.UpdatedAt
 	case pg.GetAllInventoriesRow:
-		id = row.ID
-		number = row.Number
-		date = row.Date
-		storageID = row.StorageID
-		description = row.Description
-		descriptionI18n = row.DescriptionI18n
-		status = row.Status
-		surplusAmount = row.SurplusAmount
-		shortageAmount = row.ShortageAmount
-		remainingAmount = row.RemainingAmount
-		createdAt = row.CreatedAt
-		updatedAt = row.UpdatedAt
-		deletedAt = row.DeletedAt
+		id, number, date, storageID = row.ID, row.Number, row.Date, row.StorageID
+		description, descriptionI18n, status = row.Description, row.DescriptionI18n, row.Status
+		surplusAmount, shortageAmount, remainingAmount = row.SurplusAmount, row.ShortageAmount, row.RemainingAmount
+		createdAt, updatedAt, deletedAt = row.CreatedAt, row.UpdatedAt, row.DeletedAt
 	case pg.GetInventoriesFilteredRow:
-		id = row.ID
-		number = row.Number
-		date = row.Date
-		storageID = row.StorageID
-		description = row.Description
-		descriptionI18n = row.DescriptionI18n
-		status = row.Status
-		surplusAmount = row.SurplusAmount
-		shortageAmount = row.ShortageAmount
-		remainingAmount = row.RemainingAmount
-		createdAt = row.CreatedAt
-		updatedAt = row.UpdatedAt
-		deletedAt = row.DeletedAt
+		id, number, date, storageID = row.ID, row.Number, row.Date, row.StorageID
+		description, descriptionI18n, status = row.Description, row.DescriptionI18n, row.Status
+		surplusAmount, shortageAmount, remainingAmount = row.SurplusAmount, row.ShortageAmount, row.RemainingAmount
+		createdAt, updatedAt, deletedAt = row.CreatedAt, row.UpdatedAt, row.DeletedAt
 	case pg.UpdateInventoryRow:
-		id = row.ID
-		number = row.Number
-		date = row.Date
-		storageID = row.StorageID
-		description = row.Description
-		descriptionI18n = row.DescriptionI18n
-		status = row.Status
-		surplusAmount = row.SurplusAmount
-		shortageAmount = row.ShortageAmount
-		remainingAmount = row.RemainingAmount
-		createdAt = row.CreatedAt
-		updatedAt = row.UpdatedAt
+		id, number, date, storageID = row.ID, row.Number, row.Date, row.StorageID
+		description, descriptionI18n, status = row.Description, row.DescriptionI18n, row.Status
+		surplusAmount, shortageAmount, remainingAmount = row.SurplusAmount, row.ShortageAmount, row.RemainingAmount
+		createdAt, updatedAt = row.CreatedAt, row.UpdatedAt
 	case pg.UpdateInventoryAmountsRow:
-		id = row.ID
-		number = row.Number
-		date = row.Date
-		storageID = row.StorageID
-		description = row.Description
-		descriptionI18n = row.DescriptionI18n
-		status = row.Status
-		surplusAmount = row.SurplusAmount
-		shortageAmount = row.ShortageAmount
-		remainingAmount = row.RemainingAmount
-		createdAt = row.CreatedAt
-		updatedAt = row.UpdatedAt
+		id, number, date, storageID = row.ID, row.Number, row.Date, row.StorageID
+		description, descriptionI18n, status = row.Description, row.DescriptionI18n, row.Status
+		surplusAmount, shortageAmount, remainingAmount = row.SurplusAmount, row.ShortageAmount, row.RemainingAmount
+		createdAt, updatedAt = row.CreatedAt, row.UpdatedAt
 	case pg.RestoreInventoryRow:
-		id = row.ID
-		number = row.Number
-		date = row.Date
-		storageID = row.StorageID
-		description = row.Description
-		descriptionI18n = row.DescriptionI18n
-		status = row.Status
-		surplusAmount = row.SurplusAmount
-		shortageAmount = row.ShortageAmount
-		remainingAmount = row.RemainingAmount
-		createdAt = row.CreatedAt
-		updatedAt = row.UpdatedAt
+		id, number, date, storageID = row.ID, row.Number, row.Date, row.StorageID
+		description, descriptionI18n, status = row.Description, row.DescriptionI18n, row.Status
+		surplusAmount, shortageAmount, remainingAmount = row.SurplusAmount, row.ShortageAmount, row.RemainingAmount
+		createdAt, updatedAt = row.CreatedAt, row.UpdatedAt
 	case pg.SearchInventoriesRow:
-		id = row.ID
-		number = row.Number
-		date = row.Date
-		storageID = row.StorageID
-		description = row.Description
-		descriptionI18n = row.DescriptionI18n
-		status = row.Status
-		surplusAmount = row.SurplusAmount
-		shortageAmount = row.ShortageAmount
-		remainingAmount = row.RemainingAmount
-		createdAt = row.CreatedAt
-		updatedAt = row.UpdatedAt
-		deletedAt = row.DeletedAt
+		id, number, date, storageID = row.ID, row.Number, row.Date, row.StorageID
+		description, descriptionI18n, status = row.Description, row.DescriptionI18n, row.Status
+		surplusAmount, shortageAmount, remainingAmount = row.SurplusAmount, row.ShortageAmount, row.RemainingAmount
+		createdAt, updatedAt, deletedAt = row.CreatedAt, row.UpdatedAt, row.DeletedAt
 	default:
 		return nil
 	}
@@ -800,7 +1025,6 @@ func toInventoryResponse(inv any) *model.InventoryResponse {
 		ShortageAmount:  numericToString(shortageAmount),
 		RemainingAmount: numericToString(remainingAmount),
 	}
-
 	resp.Date = dateToTime(date)
 	resp.CreatedAt = timestampToTime(createdAt)
 	resp.UpdatedAt = timestampToTime(updatedAt)
@@ -819,7 +1043,6 @@ func toInventoryItemComputedResponse(row pg.GetInventoryItemsComputedAllRow) *mo
 		id := row.InventoryItemID.String()
 		inventoryItemID = &id
 	}
-
 	return &model.InventoryItemComputedResponse{
 		InventoryItemID:       inventoryItemID,
 		InventoryID:           row.InventoryID.String(),

@@ -268,13 +268,15 @@ type InventoryI interface {
 	CreateInventory(ctx context.Context, req *model.CreateInventoryRequest) (*model.InventoryResponse, error)
 	GetInventoryByID(ctx context.Context, id string) (*model.InventoryResponse, error)
 	GetAllInventories(ctx context.Context, limit, offset int32) ([]*model.InventoryResponse, error)
-	GetInventoriesFiltered(ctx context.Context, dateFrom, dateTo *time.Time, storageID, ingredientID, status *string, limit, offset int32) ([]*model.InventoryResponse, error)
+	GetInventoriesFiltered(ctx context.Context, dateFrom, dateTo *time.Time, storageID, ingredientID, status *string, limit, offset int32) (*model.PaginatedInventoriesResponse, error)
 	UpdateInventory(ctx context.Context, id string, req *model.UpdateInventoryRequest) (*model.InventoryResponse, error)
 	DeleteInventory(ctx context.Context, id string) error
+	DeleteInventoriesBatch(ctx context.Context, ids []string) error
 	RestoreInventory(ctx context.Context, id string) (*model.InventoryResponse, error)
 	SearchInventories(ctx context.Context, query string, limit, offset int32) ([]*model.InventoryResponse, error)
 
 	UpsertInventoryItems(ctx context.Context, inventoryID string, req *model.UpsertInventoryItemsRequest) ([]*model.InventoryItemComputedResponse, error)
+	ReplaceInventoryItems(ctx context.Context, inventoryID string, req *model.UpsertInventoryItemsRequest) ([]*model.InventoryItemComputedResponse, error)
 	GetInventoryItems(ctx context.Context, inventoryID string) ([]*model.InventoryItemComputedResponse, error)
 	GetAllInventoryItems(ctx context.Context, inventoryID *string, limit, offset int32) ([]*model.InventoryItemResponse, error)
 	UpdateInventoryItem(ctx context.Context, inventoryItemID string, req *model.UpdateInventoryItemRequest) (*model.InventoryItemResponse, error)
