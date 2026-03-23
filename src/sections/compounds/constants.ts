@@ -50,10 +50,11 @@ export const BASIC_INFO_SECTION: CardSection = {
             defaultValue: '',
         },
         {
-            key: 'department_id',
-            label: 'semifinishedProducts.department',
+            key: 'ingredient_group_id',
+            label: 'ingredients.group',
             type: 'text',
             required: true,
+            defaultValue: '',
         },
     ],
 };

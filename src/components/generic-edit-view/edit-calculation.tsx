@@ -88,8 +88,8 @@ interface CompoundProduct {
     price: string;
     measurement: string;
     quantity: number;
-    department_id: string;
-    department_name?: string;
+    ingredient_group_id: string;
+    ingredient_group_name?: string;
     price_per_unit: number;
 }
 

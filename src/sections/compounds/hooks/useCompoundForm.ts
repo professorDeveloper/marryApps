@@ -128,7 +128,7 @@ export function useCompoundForm({
                         price: String(submitFormData.price),
                         quantity: Number(submitFormData.quantity),
                         measurement: submitFormData.measurement,
-                        department_id: submitFormData.department_id,
+                        ingredient_group_id: submitFormData.ingredient_group_id,
                         picture_url: submitFormData.picture_url || null,
                     };
                     await updateCompound(compoundId, payload);

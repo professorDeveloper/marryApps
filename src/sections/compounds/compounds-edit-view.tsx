@@ -6,7 +6,7 @@ import { useParams } from 'react-router';
 
 // Hooks and Actions
 import { useGetCompound } from 'src/hooks/use-compounds';
-import { useGetDepartments } from 'src/actions/departments';
+import { useGetIngredientGroups } from 'src/actions/ingredient-group';
 import { useCompoundForm } from './hooks/useCompoundForm';
 
 // Components
@@ -34,7 +34,7 @@ export function CompoundEditView({ compoundId, isNew = false }: CompoundEditView
 
     // --- Data Fetching ---
     const { compound, compoundLoading } = useGetCompound(isNew ? '' : compoundId || '');
-    const { departments } = useGetDepartments();
+    const { ingredientGroups } = useGetIngredientGroups();
     const isDataLoading = !isNew && compoundLoading;
 
     // --- Memoize expensive translations ---
@@ -44,10 +44,10 @@ export function CompoundEditView({ compoundId, isNew = false }: CompoundEditView
         PRICING_SECTION_T: translateSection(PRICING_SECTION, t),
     }), [t]);
 
-    // --- Memoize department options ---
-    const departmentOptions = useMemo(() => 
-        departments.map((dept: any) => ({ value: dept.id, label: dept.name })),
-        [departments]
+    // --- Memoize ingredient group options ---
+    const ingredientGroupOptions = useMemo(() =>
+        ingredientGroups.map((group: any) => ({ value: group.id, label: group.name })),
+        [ingredientGroups]
     );
 
     // --- Memoize measurement options ---
@@ -76,7 +76,7 @@ export function CompoundEditView({ compoundId, isNew = false }: CompoundEditView
         else if (isNew) {
             setFormData({
                 name: '', name_en: '', name_ru: '', description: '', description_en: '', description_ru: '',
-                department_id: '', price: '', quantity: '', measurement: 'kg', picture_url: '',
+                ingredient_group_id: '', price: '', quantity: '', measurement: 'kg', picture_url: '',
             });
         }
     }, [compound, isNew, isDataLoading]);
@@ -95,15 +95,15 @@ export function CompoundEditView({ compoundId, isNew = false }: CompoundEditView
     const basicInfoWithDeps = useMemo(() => ({
         ...translatedSections.BASIC_INFO_SECTION_T,
         fields: translatedSections.BASIC_INFO_SECTION_T.fields?.map((field) =>
-            field.key === 'department_id'
+            field.key === 'ingredient_group_id'
                 ? {
                     ...field,
                     type: 'select' as const,
-                    options: departmentOptions,
+                    options: ingredientGroupOptions,
                 }
                 : field
         ),
-    }), [translatedSections.BASIC_INFO_SECTION_T, departmentOptions]);
+    }), [translatedSections.BASIC_INFO_SECTION_T, ingredientGroupOptions]);
 
     const pricingWithMeasurements = useMemo(() => ({
         ...translatedSections.PRICING_SECTION_T,

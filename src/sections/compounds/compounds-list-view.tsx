@@ -34,14 +34,13 @@ import { CustomGridActionsCellItem } from 'src/components/custom-data-grid';
 import { GenericViewModal, SpecificationsTable } from 'src/components/generic-view-view';
 import { formatDate, formatPrice } from 'src/components/generic-view-view/modal-formatters';
 import { useGetIngredients } from 'src/actions/ingredients';
+import { useGetIngredientGroups } from 'src/actions/ingredient-group';
 
 
 function RenderCellCompound({ params }: { params: any }) {
     const { row } = params;
     const name = row.name || '-';
     const { imageUrl, loading } = useImageUrl(row.picture_url);
-
-    // If no image, show avatar with initials
     const initials = getInitials(name);
     const bgColor = getAvatarColor(name);
 
@@ -266,6 +265,7 @@ export function HalfMeals() {
         offset: paginationModel.page * paginationModel.pageSize,
         expand: 'ingredient_group_id,name_i18n,description_i18n',
     });
+    const { ingredientGroups } = useGetIngredientGroups();
     const { deleteCompound } = useDeleteCompound();
     const { deleteCompounds } = useDeleteCompounds();
 
@@ -274,6 +274,18 @@ export function HalfMeals() {
 
     // View modal
     const { isOpen, selectedData, openModal, closeModal } = useGenericViewModal<ICompound>();
+
+    const ingredientGroupMap = useMemo(() => {
+        const map = new Map<string, string>();
+
+        ingredientGroups.forEach((group: any) => {
+            if (group?.id) {
+                map.set(group.id, group.name || '-');
+            }
+        });
+
+        return map;
+    }, [ingredientGroups]);
 
     // Measurement options with translations
     const _measurementOptions = useMemo(
@@ -288,6 +300,13 @@ export function HalfMeals() {
     // Ingredient group options for filtering (derived from expanded compounds to avoid extra API call)
     const ingredientGroupOptions = useMemo(() => {
         const map = new Map<string, string>();
+
+        ingredientGroups.forEach((group: any) => {
+            if (group?.id) {
+                map.set(group.id, group.name || '-');
+            }
+        });
+
         compounds.forEach((comp: any) => {
             const group = comp?._expand?.ingredient_group_id;
             if (group?.id && group?.name) {
@@ -297,7 +316,7 @@ export function HalfMeals() {
             }
         });
         return Array.from(map.entries()).map(([value, label]) => ({ value, label }));
-    }, [compounds]);
+    }, [compounds, ingredientGroups]);
 
     // Columns config
     const columns = useMemo<GridColDef[]>(
@@ -317,17 +336,20 @@ export function HalfMeals() {
                 renderCell: (params) => <RenderCellMeasurement params={params} />,
             },
             {
+                field: 'ingredient_group_name',
+                headerName: t('ingredients.group'),
+                width: 180,
+                renderCell: (params) =>
+                    params.row.ingredient_group_name ||
+                    ingredientGroupMap.get(params.row.ingredient_group_id) ||
+                    '-',
+            },
+            {
                 field: 'price',
                 headerName: t('semifinishedProducts.price'),
                 width: 140,
                 renderCell: (params) => <RenderCellPrice params={params} />,
             },
-            // {
-            //     field: 'department_name',
-            //     headerName: t('semifinishedProducts.department'),
-            //     width: 150,
-            //     type: 'string',
-            // },
             {
                 field: 'quantity',
                 headerName: t('semifinishedProducts.quantity'),
@@ -371,7 +393,7 @@ export function HalfMeals() {
                 ],
             },
         ],
-        [t, theme.vars.palette.error.main]
+        [t, theme.vars.palette.error.main, ingredientGroupMap]
     );
 
     // Handle delete confirmation

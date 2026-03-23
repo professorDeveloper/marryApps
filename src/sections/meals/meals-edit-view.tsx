@@ -153,6 +153,7 @@ export function MealEditView({ isNew = false }: MealEditViewProps) {
     const [activeTab, setActiveTab] = useState(0);
     // Store form data at parent level to preserve across tab changes
     const [formData, setFormData] = useState<Record<string, any>>({});
+    const [formTabData, setFormTabData] = useState<Record<string, any>>();
     // Track pending calculations when entity is created
     const pendingCalculationsRef = useRef<{
         ingredient_calculations?: Array<{ ingredient_id: string; quantity: string }>;
@@ -162,10 +163,18 @@ export function MealEditView({ isNew = false }: MealEditViewProps) {
     const loading = !isNew && mealLoading;
 
     const handleTabChange = useCallback((_: SyntheticEvent, newValue: number) => {
+        if (newValue === 0) {
+            setFormTabData(
+                Object.keys(formData).length > 0
+                    ? formData
+                    : (meal || undefined)
+            );
+        }
+
         startTransition(() => {
             setActiveTab(newValue);
         });
-    }, []);
+    }, [formData, meal]);
 
     // Effective meal ID - either from URL params or fetched meal
     const effectiveMealId = mealId || meal?.id;
@@ -182,6 +191,7 @@ export function MealEditView({ isNew = false }: MealEditViewProps) {
                 ...meal,
             };
             setFormData(enrichedMeal);
+            setFormTabData(enrichedMeal);
         } else if (isNew && (!formData || Object.keys(formData).length === 0)) {
             // Initialize empty form for new meal
             const initialData: Record<string, any> = {
@@ -198,9 +208,14 @@ export function MealEditView({ isNew = false }: MealEditViewProps) {
                 picture_url: '',
             };
             setFormData(initialData);
+            setFormTabData(initialData);
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [meal, isNew]);
+
+    const handleFormDataChange = useCallback((nextFormData: Record<string, any>) => {
+        setFormData(nextFormData);
+    }, []);
 
     // Auto-set department_id when category changes
     useEffect(() => {
@@ -476,9 +491,8 @@ export function MealEditView({ isNew = false }: MealEditViewProps) {
                 <TabPanel value={activeTab} index={0}>
                     <GenericEditView
                         config={config}
-                        data={meal || undefined}
-                        formData={formData}
-                        onFormDataChange={setFormData}
+                        data={formTabData || meal || undefined}
+                        onFormDataChange={handleFormDataChange}
                         isNew={isNew}
                         loading={loading}
                     />
