@@ -1,0 +1,1 @@
+import{v as t,j as s,ah as n,T as r}from"./index-B6jNZ-is.js";function d({title:a="Blank",description:e,sx:x}){const[h,o]=t.useState([]);return s.jsxs(n,{maxWidth:"xl",children:[s.jsxs(r,{variant:"h4",children:[" ",a," "]}),e&&s.jsxs(r,{sx:{mt:1},children:[" ",e," "]})]})}export{d as B};
