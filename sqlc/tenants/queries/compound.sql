@@ -1,50 +1,21 @@
 -- name: CreateCompound :one
-INSERT INTO compounds (id, name, name_i18n, description, description_i18n, quantity, picture_url, color_code, measurement, price, department_id)
-SELECT $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11
-WHERE EXISTS (
-  SELECT 1 FROM departments d
-  JOIN storages s ON s.id = d.storage_id
-  WHERE d.id = $11
-    AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-)
-RETURNING compounds.id, compounds.name, compounds.name_i18n, compounds.description, compounds.description_i18n, compounds.quantity, compounds.picture_url, compounds.color_code, compounds.measurement, compounds.price, compounds.department_id, compounds.cost_price, compounds.profit, compounds.profit_margin, compounds.created_at, compounds.updated_at, compounds.deleted_at;
+INSERT INTO compounds (id, name, name_i18n, description, description_i18n, quantity, picture_url, color_code, measurement, price, branch_id, ingredient_group_id)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NULLIF(current_setting('app.branch_id', true), '')::uuid, $11)
+RETURNING compounds.id, compounds.name, compounds.name_i18n, compounds.description, compounds.description_i18n, compounds.quantity, compounds.picture_url, compounds.color_code, compounds.measurement, compounds.price, compounds.branch_id, compounds.ingredient_group_id, compounds.cost_price, compounds.profit, compounds.profit_margin, compounds.created_at, compounds.updated_at, compounds.deleted_at;
 
 -- name: GetCompoundByID :one
-SELECT compounds.id, compounds.name, compounds.name_i18n, compounds.description, compounds.description_i18n, compounds.quantity, compounds.picture_url, compounds.color_code, compounds.measurement, compounds.price, compounds.department_id, compounds.cost_price, compounds.profit, compounds.profit_margin, compounds.created_at, compounds.updated_at, compounds.deleted_at
+SELECT compounds.id, compounds.name, compounds.name_i18n, compounds.description, compounds.description_i18n, compounds.quantity, compounds.picture_url, compounds.color_code, compounds.measurement, compounds.price, compounds.branch_id, compounds.ingredient_group_id, compounds.cost_price, compounds.profit, compounds.profit_margin, compounds.created_at, compounds.updated_at, compounds.deleted_at
 FROM compounds
 WHERE compounds.id = $1 AND deleted_at = 0
-  AND EXISTS (
-    SELECT 1 FROM departments d
-    JOIN storages s ON s.id = d.storage_id
-    WHERE d.id = compounds.department_id
-      AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-  );
+  AND compounds.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid;
 
 -- name: GetAllCompounds :many
-SELECT compounds.id, compounds.name, compounds.name_i18n, compounds.description, compounds.description_i18n, compounds.quantity, compounds.picture_url, compounds.color_code, compounds.measurement, compounds.price, compounds.department_id, compounds.cost_price, compounds.profit, compounds.profit_margin, compounds.created_at, compounds.updated_at, compounds.deleted_at
+SELECT compounds.id, compounds.name, compounds.name_i18n, compounds.description, compounds.description_i18n, compounds.quantity, compounds.picture_url, compounds.color_code, compounds.measurement, compounds.price, compounds.branch_id, compounds.ingredient_group_id, compounds.cost_price, compounds.profit, compounds.profit_margin, compounds.created_at, compounds.updated_at, compounds.deleted_at
 FROM compounds
 WHERE deleted_at = 0
-  AND EXISTS (
-    SELECT 1 FROM departments d
-    JOIN storages s ON s.id = d.storage_id
-    WHERE d.id = compounds.department_id
-      AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-  )
+  AND compounds.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 ORDER BY created_at DESC
 LIMIT $1 OFFSET $2;
-
--- name: GetCompoundsByDepartmentID :many
-SELECT compounds.id, compounds.name, compounds.name_i18n, compounds.description, compounds.description_i18n, compounds.quantity, compounds.picture_url, compounds.color_code, compounds.measurement, compounds.price, compounds.department_id, compounds.cost_price, compounds.profit, compounds.profit_margin, compounds.created_at, compounds.updated_at, compounds.deleted_at
-FROM compounds
-WHERE department_id = $1 AND deleted_at = 0
-  AND EXISTS (
-    SELECT 1 FROM departments d
-    JOIN storages s ON s.id = d.storage_id
-    WHERE d.id = $1
-      AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-  )
-ORDER BY created_at DESC
-LIMIT $2 OFFSET $3;
 
 -- name: UpdateCompound :one
 UPDATE compounds
@@ -57,37 +28,19 @@ SET name = COALESCE($2, name),
     color_code = COALESCE($8, color_code),
     measurement = COALESCE($9, measurement),
     price = COALESCE($10, price),
-    department_id = COALESCE($11, department_id),
+    ingredient_group_id = COALESCE($11, ingredient_group_id),
     updated_at = NOW()
 WHERE compounds.id = $1 AND deleted_at = 0
-  AND EXISTS (
-    SELECT 1 FROM departments d
-    JOIN storages s ON s.id = d.storage_id
-    WHERE d.id = compounds.department_id
-      AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-  )
-  AND (
-    $11 IS NULL OR EXISTS (
-      SELECT 1 FROM departments d2
-      JOIN storages s2 ON s2.id = d2.storage_id
-      WHERE d2.id = $11
-        AND s2.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-    )
-  )
-RETURNING compounds.id, compounds.name, compounds.name_i18n, compounds.description, compounds.description_i18n, compounds.quantity, compounds.picture_url, compounds.color_code, compounds.measurement, compounds.price, compounds.department_id, compounds.cost_price, compounds.profit, compounds.profit_margin, compounds.created_at, compounds.updated_at, compounds.deleted_at;
+  AND compounds.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+RETURNING compounds.id, compounds.name, compounds.name_i18n, compounds.description, compounds.description_i18n, compounds.quantity, compounds.picture_url, compounds.color_code, compounds.measurement, compounds.price, compounds.branch_id, compounds.ingredient_group_id, compounds.cost_price, compounds.profit, compounds.profit_margin, compounds.created_at, compounds.updated_at, compounds.deleted_at;
 
 -- name: UpdateCompoundPrice :one
 UPDATE compounds
 SET price = $2,
     updated_at = NOW()
 WHERE compounds.id = $1 AND deleted_at = 0
-  AND EXISTS (
-    SELECT 1 FROM departments d
-    JOIN storages s ON s.id = d.storage_id
-    WHERE d.id = compounds.department_id
-      AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-  )
-RETURNING compounds.id, compounds.name, compounds.name_i18n, compounds.description, compounds.description_i18n, compounds.quantity, compounds.picture_url, compounds.color_code, compounds.measurement, compounds.price, compounds.department_id, compounds.cost_price, compounds.profit, compounds.profit_margin, compounds.created_at, compounds.updated_at, compounds.deleted_at;
+  AND compounds.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+RETURNING compounds.id, compounds.name, compounds.name_i18n, compounds.description, compounds.description_i18n, compounds.quantity, compounds.picture_url, compounds.color_code, compounds.measurement, compounds.price, compounds.branch_id, compounds.ingredient_group_id, compounds.cost_price, compounds.profit, compounds.profit_margin, compounds.created_at, compounds.updated_at, compounds.deleted_at;
 
 -- name: UpdateCompoundCostFields :one
 UPDATE compounds
@@ -96,72 +49,37 @@ SET cost_price = $2,
     profit_margin = $4,
     updated_at = NOW()
 WHERE compounds.id = $1 AND deleted_at = 0
-  AND EXISTS (
-    SELECT 1 FROM departments d
-    JOIN storages s ON s.id = d.storage_id
-    WHERE d.id = compounds.department_id
-      AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-  )
-RETURNING compounds.id, compounds.name, compounds.name_i18n, compounds.description, compounds.description_i18n, compounds.quantity, compounds.picture_url, compounds.color_code, compounds.measurement, compounds.price, compounds.department_id, compounds.cost_price, compounds.profit, compounds.profit_margin, compounds.created_at, compounds.updated_at, compounds.deleted_at;
+  AND compounds.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+RETURNING compounds.id, compounds.name, compounds.name_i18n, compounds.description, compounds.description_i18n, compounds.quantity, compounds.picture_url, compounds.color_code, compounds.measurement, compounds.price, compounds.branch_id, compounds.ingredient_group_id, compounds.cost_price, compounds.profit, compounds.profit_margin, compounds.created_at, compounds.updated_at, compounds.deleted_at;
 
 -- name: DeleteCompound :exec
 UPDATE compounds
 SET deleted_at = EXTRACT(EPOCH FROM NOW())::BIGINT
 WHERE compounds.id = $1 AND deleted_at = 0
-  AND EXISTS (
-    SELECT 1 FROM departments d
-    JOIN storages s ON s.id = d.storage_id
-    WHERE d.id = compounds.department_id
-      AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-  );
+  AND compounds.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid;
 
 -- name: RestoreCompound :exec
 UPDATE compounds
 SET deleted_at = 0
 WHERE compounds.id = $1 AND deleted_at != 0
-  AND EXISTS (
-    SELECT 1 FROM departments d
-    JOIN storages s ON s.id = d.storage_id
-    WHERE d.id = compounds.department_id
-      AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-  );
+  AND compounds.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid;
 
 -- name: SearchCompounds :many
-SELECT compounds.id, compounds.name, compounds.name_i18n, compounds.description, compounds.description_i18n, compounds.quantity, compounds.picture_url, compounds.color_code, compounds.measurement, compounds.price, compounds.department_id, compounds.cost_price, compounds.profit, compounds.profit_margin, compounds.created_at, compounds.updated_at, compounds.deleted_at
+SELECT compounds.id, compounds.name, compounds.name_i18n, compounds.description, compounds.description_i18n, compounds.quantity, compounds.picture_url, compounds.color_code, compounds.measurement, compounds.price, compounds.branch_id, compounds.ingredient_group_id, compounds.cost_price, compounds.profit, compounds.profit_margin, compounds.created_at, compounds.updated_at, compounds.deleted_at
 FROM compounds
-WHERE deleted_at = 0 
+WHERE deleted_at = 0
 AND (name ILIKE '%' || $1 || '%' OR description ILIKE '%' || $1 || '%')
-  AND EXISTS (
-    SELECT 1 FROM departments d
-    JOIN storages s ON s.id = d.storage_id
-    WHERE d.id = compounds.department_id
-      AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-  )
+  AND compounds.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 ORDER BY created_at DESC
 LIMIT $2 OFFSET $3;
 
 -- name: CountCompounds :one
 SELECT COUNT(*) FROM compounds
 WHERE deleted_at = 0
-  AND EXISTS (
-    SELECT 1 FROM departments d
-    JOIN storages s ON s.id = d.storage_id
-    WHERE d.id = compounds.department_id
-      AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-  );
-
--- name: CountCompoundsByDepartment :one
-SELECT COUNT(*) FROM compounds
-WHERE department_id = $1 AND deleted_at = 0
-  AND EXISTS (
-    SELECT 1 FROM departments d
-    JOIN storages s ON s.id = d.storage_id
-    WHERE d.id = $1
-      AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-  );
+  AND compounds.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid;
 
 -- name: GetCompoundWithDepartment :one
-SELECT 
+SELECT
     c.id,
     c.name,
     c.name_i18n,
@@ -171,37 +89,31 @@ SELECT
     c.picture_url,
     c.measurement,
     c.price,
-    c.department_id,
+    c.branch_id,
+    c.ingredient_group_id,
     c.cost_price,
     c.profit,
     c.profit_margin,
     c.created_at,
-    c.updated_at,
-    d.name as department_name
+    c.updated_at
 FROM compounds c
-LEFT JOIN departments d ON c.department_id = d.id AND d.deleted_at = 0
 WHERE c.id = $1 AND c.deleted_at = 0
-  AND EXISTS (
-    SELECT 1 FROM departments d2
-    JOIN storages s2 ON s2.id = d2.storage_id
-    WHERE d2.id = c.department_id
-      AND s2.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-  );
+  AND c.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid;
 
 
 
 
 -- name: GetCompoundByIDWithLanguage :one
-SELECT 
+SELECT
     c.id,
-    COALESCE(CASE 
+    COALESCE(CASE
         WHEN $2::text = 'uz' THEN tn.uz
         WHEN $2::text = 'ru' THEN tn.ru
         WHEN $2::text = 'en' THEN tn.en
         ELSE c.name
     END, c.name) as name,
     c.name_i18n,
-    COALESCE(CASE 
+    COALESCE(CASE
         WHEN $2::text = 'uz' THEN td.uz
         WHEN $2::text = 'ru' THEN td.ru
         WHEN $2::text = 'en' THEN td.en
@@ -213,7 +125,8 @@ SELECT
     c.color_code,
     c.measurement,
     c.price,
-    c.department_id,
+    c.branch_id,
+    c.ingredient_group_id,
     c.cost_price,
     c.profit,
     c.profit_margin,
@@ -224,24 +137,19 @@ FROM compounds c
 LEFT JOIN translations tn ON c.name_i18n = tn.id AND tn.deleted_at = 0
 LEFT JOIN translations td ON c.description_i18n = td.id AND td.deleted_at = 0
 WHERE c.id = $1 AND c.deleted_at = 0
-  AND EXISTS (
-    SELECT 1 FROM departments d
-    JOIN storages s ON s.id = d.storage_id
-    WHERE d.id = c.department_id
-      AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-  );
+  AND c.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid;
 
 -- name: GetAllCompoundsWithLanguage :many
-SELECT 
+SELECT
     c.id,
-    COALESCE(CASE 
+    COALESCE(CASE
         WHEN $1::text = 'uz' THEN tn.uz
         WHEN $1::text = 'ru' THEN tn.ru
         WHEN $1::text = 'en' THEN tn.en
         ELSE c.name
     END, c.name) as name,
     c.name_i18n,
-    COALESCE(CASE 
+    COALESCE(CASE
         WHEN $1::text = 'uz' THEN td.uz
         WHEN $1::text = 'ru' THEN td.ru
         WHEN $1::text = 'en' THEN td.en
@@ -253,7 +161,8 @@ SELECT
     c.color_code,
     c.measurement,
     c.price,
-    c.department_id,
+    c.branch_id,
+    c.ingredient_group_id,
     c.cost_price,
     c.profit,
     c.profit_margin,
@@ -264,12 +173,7 @@ FROM compounds c
 LEFT JOIN translations tn ON c.name_i18n = tn.id AND tn.deleted_at = 0
 LEFT JOIN translations td ON c.description_i18n = td.id AND td.deleted_at = 0
 WHERE c.deleted_at = 0
-  AND EXISTS (
-    SELECT 1 FROM departments d
-    JOIN storages s ON s.id = d.storage_id
-    WHERE d.id = c.department_id
-      AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-  )
+  AND c.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 ORDER BY c.created_at DESC
 LIMIT $2 OFFSET $3;
 
@@ -281,10 +185,8 @@ SELECT $1, $2, $3, $4
 WHERE (
     EXISTS (
       SELECT 1 FROM compounds c
-      JOIN departments d ON d.id = c.department_id
-      JOIN storages s ON s.id = d.storage_id
       WHERE c.id = $2
-        AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+        AND c.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
     )
     AND EXISTS (
       SELECT 1 FROM ingredients i
@@ -300,10 +202,8 @@ FROM compounds_details
 WHERE compounds_details.id = $1 AND deleted_at = 0
   AND EXISTS (
     SELECT 1 FROM compounds c
-    JOIN departments d ON d.id = c.department_id
-    JOIN storages s ON s.id = d.storage_id
     WHERE c.id = compounds_details.compound_id
-      AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+      AND c.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
   );
 
 -- name: GetAllCompoundDetails :many
@@ -312,10 +212,8 @@ FROM compounds_details
 WHERE deleted_at = 0
   AND EXISTS (
     SELECT 1 FROM compounds c
-    JOIN departments d ON d.id = c.department_id
-    JOIN storages s ON s.id = d.storage_id
     WHERE c.id = compounds_details.compound_id
-      AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+      AND c.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
   )
 ORDER BY created_at DESC
 LIMIT $1 OFFSET $2;
@@ -326,10 +224,8 @@ FROM compounds_details
 WHERE compound_id = $1 AND deleted_at = 0
   AND EXISTS (
     SELECT 1 FROM compounds c
-    JOIN departments d ON d.id = c.department_id
-    JOIN storages s ON s.id = d.storage_id
     WHERE c.id = $1
-      AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+      AND c.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
   )
 ORDER BY created_at DESC;
 
@@ -344,10 +240,8 @@ WHERE ingredient_id = $1 AND deleted_at = 0
   )
   AND EXISTS (
     SELECT 1 FROM compounds c
-    JOIN departments d ON d.id = c.department_id
-    JOIN storages s ON s.id = d.storage_id
     WHERE c.id = compounds_details.compound_id
-      AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+      AND c.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
   )
 ORDER BY created_at DESC
 LIMIT $2 OFFSET $3;
@@ -361,18 +255,14 @@ SET compound_id = COALESCE($2, compound_id),
 WHERE compounds_details.id = $1 AND deleted_at = 0
   AND EXISTS (
     SELECT 1 FROM compounds c
-    JOIN departments d ON d.id = c.department_id
-    JOIN storages s ON s.id = d.storage_id
     WHERE c.id = compounds_details.compound_id
-      AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+      AND c.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
   )
   AND (
     $2 IS NULL OR EXISTS (
       SELECT 1 FROM compounds c2
-      JOIN departments d2 ON d2.id = c2.department_id
-      JOIN storages s2 ON s2.id = d2.storage_id
       WHERE c2.id = $2
-        AND s2.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+        AND c2.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
     )
   )
   AND (
@@ -390,10 +280,8 @@ SET deleted_at = EXTRACT(EPOCH FROM NOW())::BIGINT
 WHERE compounds_details.id = $1 AND deleted_at = 0
   AND EXISTS (
     SELECT 1 FROM compounds c
-    JOIN departments d ON d.id = c.department_id
-    JOIN storages s ON s.id = d.storage_id
     WHERE c.id = compounds_details.compound_id
-      AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+      AND c.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
   );
 
 -- name: RestoreCompoundDetail :exec
@@ -402,10 +290,8 @@ SET deleted_at = 0
 WHERE compounds_details.id = $1 AND deleted_at != 0
   AND EXISTS (
     SELECT 1 FROM compounds c
-    JOIN departments d ON d.id = c.department_id
-    JOIN storages s ON s.id = d.storage_id
     WHERE c.id = compounds_details.compound_id
-      AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+      AND c.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
   );
 
 -- name: DeleteCompoundDetailsByCompoundID :exec
@@ -414,10 +300,8 @@ SET deleted_at = EXTRACT(EPOCH FROM NOW())::BIGINT
 WHERE compound_id = $1 AND deleted_at = 0
   AND EXISTS (
     SELECT 1 FROM compounds c
-    JOIN departments d ON d.id = c.department_id
-    JOIN storages s ON s.id = d.storage_id
     WHERE c.id = $1
-      AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+      AND c.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
   );
 
 -- name: CountCompoundDetails :one
@@ -425,10 +309,8 @@ SELECT COUNT(*) FROM compounds_details
 WHERE deleted_at = 0
   AND EXISTS (
     SELECT 1 FROM compounds c
-    JOIN departments d ON d.id = c.department_id
-    JOIN storages s ON s.id = d.storage_id
     WHERE c.id = compounds_details.compound_id
-      AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+      AND c.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
   );
 
 -- name: CountCompoundDetailsByCompound :one
@@ -436,14 +318,12 @@ SELECT COUNT(*) FROM compounds_details
 WHERE compound_id = $1 AND deleted_at = 0
   AND EXISTS (
     SELECT 1 FROM compounds c
-    JOIN departments d ON d.id = c.department_id
-    JOIN storages s ON s.id = d.storage_id
     WHERE c.id = $1
-      AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+      AND c.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
   );
 
 -- name: GetCompoundDetailWithIngredient :one
-SELECT 
+SELECT
     cd.id,
     cd.compound_id,
     cd.ingredient_id,
@@ -457,14 +337,12 @@ LEFT JOIN ingredients i ON cd.ingredient_id = i.id AND i.deleted_at = 0
 WHERE cd.id = $1 AND cd.deleted_at = 0
   AND EXISTS (
     SELECT 1 FROM compounds c
-    JOIN departments d ON d.id = c.department_id
-    JOIN storages s ON s.id = d.storage_id
     WHERE c.id = cd.compound_id
-      AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+      AND c.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
   );
 
 -- name: GetCompoundDetailsWithIngredients :many
-SELECT 
+SELECT
     cd.id,
     cd.compound_id,
     cd.ingredient_id,
@@ -479,10 +357,8 @@ LEFT JOIN ingredients i ON cd.ingredient_id = i.id AND i.deleted_at = 0
 WHERE cd.compound_id = $1 AND cd.deleted_at = 0
   AND EXISTS (
     SELECT 1 FROM compounds c
-    JOIN departments d ON d.id = c.department_id
-    JOIN storages s ON s.id = d.storage_id
     WHERE c.id = $1
-      AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+      AND c.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
   )
 ORDER BY cd.created_at DESC;
 
@@ -548,9 +424,9 @@ RETURNING id, compound_id, quantity, branch_id, created_at, updated_at, deleted_
 
 -- name: RemoveFromCompoundStock :one
 UPDATE compound_stock
-SET quantity = CASE 
-    WHEN quantity - $2 < 0 THEN 0 
-    ELSE quantity - $2 
+SET quantity = CASE
+    WHEN quantity - $2 < 0 THEN 0
+    ELSE quantity - $2
   END,
     updated_at = NOW()
 WHERE id = $1 AND deleted_at = 0

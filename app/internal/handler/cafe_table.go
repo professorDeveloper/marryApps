@@ -35,7 +35,7 @@ func (h *Handler) CreateCafeTable(c echo.Context) error {
 		status = "free"
 	}
 
-	table, err := h.service.CafeTable().CreateCafeTable(c.Request().Context(), req.HallID, req.Number, req.Capacity, &status, req.PosX, req.PosY, req.Width, req.Height, req.Rotation)
+	table, err := h.service.CafeTable().CreateCafeTable(c.Request().Context(), req.HallID, req.Number, req.Capacity, &status, req.PosX, req.PosY, req.Width, req.Height, req.Rotation, req.PricePerHour)
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
 			"Operation failed",
@@ -97,6 +97,7 @@ func (h *Handler) GetCafeTableByID(c echo.Context) error {
 // @Security BearerAuth
 // @Param limit query int false "Limit" default(10) example:"10"
 // @Param offset query int false "Offset" default(0) example:"0"
+// @Param expand query string false "Expand related fields"
 // @Success 200 {array} model.CafeTableResponse
 // @Failure 400 {object} model.ErrorResponse
 // @Router /api/v1/cafe-tables [get]
@@ -115,7 +116,7 @@ func (h *Handler) GetAllCafeTables(c echo.Context) error {
 		}
 	}
 
-	tables, err := h.service.CafeTable().GetAllCafeTables(c.Request().Context(), limit, offset)
+	tables, total, err := h.service.CafeTable().GetAllCafeTables(c.Request().Context(), limit, offset)
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
 			"Operation failed",
@@ -124,11 +125,14 @@ func (h *Handler) GetAllCafeTables(c echo.Context) error {
 		))
 	}
 
-	return c.JSON(http.StatusOK, model.NewSuccessResponse(
-		"Cafe tables retrieved successfully",
-		tables,
-		http.StatusOK,
-	))
+	if maps, expanded, err := h.expandListResponse(c, tables, "cafe_tables"); expanded {
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("expand failed", err.Error(), http.StatusInternalServerError))
+		}
+		return c.JSON(http.StatusOK, model.NewPaginatedResponse("Cafe tables retrieved successfully", maps, int32(total), limit, offset, http.StatusOK))
+	}
+
+	return c.JSON(http.StatusOK, model.NewPaginatedResponse("Cafe tables retrieved successfully", tables, int32(total), limit, offset, http.StatusOK))
 }
 
 // GetCafeTablesByHallID
@@ -141,6 +145,7 @@ func (h *Handler) GetAllCafeTables(c echo.Context) error {
 // @Param hall_id path string true "Hall ID" example:"a1b2c3d4-e5f6-4a5b-8c9d-e0f1a2b3c4d5"
 // @Param limit query int false "Limit" default(10) example:"10"
 // @Param offset query int false "Offset" default(0) example:"0"
+// @Param expand query string false "Expand related fields"
 // @Success 200 {array} model.CafeTableResponse
 // @Failure 400 {object} model.ErrorResponse
 // @Router /api/v1/cafe-tables/hall/{hall_id} [get]
@@ -168,7 +173,7 @@ func (h *Handler) GetCafeTablesByHallID(c echo.Context) error {
 		}
 	}
 
-	tables, err := h.service.CafeTable().GetCafeTablesByHallID(c.Request().Context(), hallID, limit, offset)
+	tables, total, err := h.service.CafeTable().GetCafeTablesByHallID(c.Request().Context(), hallID, limit, offset)
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
 			"Operation failed",
@@ -177,11 +182,14 @@ func (h *Handler) GetCafeTablesByHallID(c echo.Context) error {
 		))
 	}
 
-	return c.JSON(http.StatusOK, model.NewSuccessResponse(
-		"Cafe tables retrieved successfully",
-		tables,
-		http.StatusOK,
-	))
+	if maps, expanded, err := h.expandListResponse(c, tables, "cafe_tables"); expanded {
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("expand failed", err.Error(), http.StatusInternalServerError))
+		}
+		return c.JSON(http.StatusOK, model.NewPaginatedResponse("Cafe tables retrieved successfully", maps, int32(total), limit, offset, http.StatusOK))
+	}
+
+	return c.JSON(http.StatusOK, model.NewPaginatedResponse("Cafe tables retrieved successfully", tables, int32(total), limit, offset, http.StatusOK))
 }
 
 // GetCafeTablesByStatus
@@ -194,6 +202,7 @@ func (h *Handler) GetCafeTablesByHallID(c echo.Context) error {
 // @Param status path string true "Status" example:"available" enum:"available,occupied,reserved"
 // @Param limit query int false "Limit" default(10) example:"10"
 // @Param offset query int false "Offset" default(0) example:"0"
+// @Param expand query string false "Expand related fields"
 // @Success 200 {array} model.CafeTableResponse
 // @Failure 400 {object} model.ErrorResponse
 // @Router /api/v1/cafe-tables/status/{status} [get]
@@ -221,7 +230,7 @@ func (h *Handler) GetCafeTablesByStatus(c echo.Context) error {
 		}
 	}
 
-	tables, err := h.service.CafeTable().GetCafeTablesByStatus(c.Request().Context(), status, limit, offset)
+	tables, total, err := h.service.CafeTable().GetCafeTablesByStatus(c.Request().Context(), status, limit, offset)
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
 			"Operation failed",
@@ -230,11 +239,14 @@ func (h *Handler) GetCafeTablesByStatus(c echo.Context) error {
 		))
 	}
 
-	return c.JSON(http.StatusOK, model.NewSuccessResponse(
-		"Cafe tables retrieved successfully",
-		tables,
-		http.StatusOK,
-	))
+	if maps, expanded, err := h.expandListResponse(c, tables, "cafe_tables"); expanded {
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("expand failed", err.Error(), http.StatusInternalServerError))
+		}
+		return c.JSON(http.StatusOK, model.NewPaginatedResponse("Cafe tables retrieved successfully", maps, int32(total), limit, offset, http.StatusOK))
+	}
+
+	return c.JSON(http.StatusOK, model.NewPaginatedResponse("Cafe tables retrieved successfully", tables, int32(total), limit, offset, http.StatusOK))
 }
 
 // UpdateCafeTable
@@ -270,7 +282,7 @@ func (h *Handler) UpdateCafeTable(c echo.Context) error {
 		))
 	}
 
-	table, err := h.service.CafeTable().UpdateCafeTable(c.Request().Context(), tableID, req.HallID, req.Number, req.Capacity, req.Status, req.PosX, req.PosY, req.Width, req.Height, req.Rotation)
+	table, err := h.service.CafeTable().UpdateCafeTable(c.Request().Context(), tableID, req.HallID, req.Number, req.Capacity, req.Status, req.PosX, req.PosY, req.Width, req.Height, req.Rotation, req.PricePerHour)
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
 			"Operation failed",

@@ -58,11 +58,9 @@ func (h *Handler) Register(router *echo.Echo) {
 		// User management endpoints
 		users := api.Group("/users", mw.CheckAuth(h.cfg), mw.TenantMiddleware(h.repo))
 		{
+			users.GET("/:id", h.GetUserByID, mw.CheckLanguage())
 			users.GET("/by-role", h.GetUsersByRole, mw.CheckLanguage())
-			users.GET("/staff", h.GetAllStaff, mw.CheckLanguage())
-			users.GET("/kitchen-staff", h.GetKitchenStaff, mw.CheckLanguage())
-			users.GET("/waiters", h.GetWaiters, mw.CheckLanguage())
-			users.GET("/cashiers", h.GetCashiers, mw.CheckLanguage())
+			users.GET("/staff", h.GetKitchenStaff, mw.CheckLanguage())
 			users.GET("/search", h.SearchUsers, mw.CheckLanguage())
 			users.PUT("/:id", h.UpdateUserByID, mw.CheckLanguage())
 			users.DELETE("/:id", h.DeleteUser, mw.CheckLanguage())
@@ -247,6 +245,7 @@ func (h *Handler) Register(router *echo.Echo) {
 
 			orders.PUT("/:id/status", h.UpdateOrderStatus, mw.CheckLanguage())
 			orders.POST("/:id/pay", h.MarkOrderPaid, mw.CheckLanguage())
+			orders.GET("/:id/table-price", h.GetOrderTablePrice, mw.CheckLanguage())
 			orders.POST("/:id/cancel", h.CancelOrder, mw.CheckLanguage())
 			orders.POST("/:id/cooking", h.MarkOrderCooking, mw.CheckLanguage())
 			orders.POST("/:id/ready", h.MarkOrderReady, mw.CheckLanguage())
@@ -541,22 +540,14 @@ func (h *Handler) Register(router *echo.Echo) {
 			invoices.POST("", h.CreateSupplierInvoice, mw.CheckLanguage())
 			invoices.POST("/batch", h.CreateInvoiceWithDetails, mw.CheckLanguage())
 			invoices.GET("", h.GetAllInvoices, mw.CheckLanguage())
-			invoices.GET("/:id", h.GetInvoice, mw.CheckLanguage())
-			invoices.GET("/status/:status", h.GetInvoicesByStatus, mw.CheckLanguage())
-			invoices.GET("/supplier/:supplier_id", h.GetInvoicesBySupplier, mw.CheckLanguage())
-			invoices.GET("/date-range", h.GetInvoicesByDateRange, mw.CheckLanguage())
 			invoices.GET("/search", h.SearchInvoices, mw.CheckLanguage())
+			invoices.GET("/:id", h.GetInvoice, mw.CheckLanguage())
 			invoices.PUT("/:id", h.UpdateInvoice, mw.CheckLanguage())
 			invoices.PATCH("/:id/status", h.UpdateInvoiceStatus, mw.CheckLanguage())
-			invoices.POST("/:id/mark-arrived", h.MarkInvoiceArrived, mw.CheckLanguage())
-			invoices.POST("/:id/mark-received", h.MarkInvoiceReceived, mw.CheckLanguage())
-			invoices.POST("/:id/cancel", h.CancelInvoice, mw.CheckLanguage())
 			invoices.DELETE("/:id", h.DeleteInvoice, mw.CheckLanguage())
 			invoices.POST("/:id/restore", h.RestoreInvoice, mw.CheckLanguage())
 			invoices.GET("/:id/details", h.GetInvoiceWithDetails, mw.CheckLanguage())
 			invoices.PUT("/:id/details/batch", h.UpsertInvoiceDetails, mw.CheckLanguage())
-			invoices.GET("/stats/supplier", h.GetInvoiceStatsBySupplier, mw.CheckLanguage())
-			invoices.GET("/stats/date-range", h.GetInvoiceStatsByDateRange, mw.CheckLanguage())
 		}
 
 		// Invoice detail endpoints
@@ -643,9 +634,8 @@ func (h *Handler) Register(router *echo.Echo) {
 			shipments.GET("", h.ListShipments, mw.CheckLanguage())
 			shipments.GET("/:id", h.GetShipment, mw.CheckLanguage())
 			shipments.PUT("/:id", h.UpdateShipment, mw.CheckLanguage())
+			shipments.PUT("/:id/batch", h.UpdateShipmentBatch, mw.CheckLanguage())
 			shipments.DELETE("/:id", h.DeleteShipment, mw.CheckLanguage())
-			shipments.POST("/:id/confirm", h.ConfirmShipment, mw.CheckLanguage())
-			shipments.POST("/:id/cancel", h.CancelShipment, mw.CheckLanguage())
 			shipments.POST("/:id/items", h.UpsertShipmentItem, mw.CheckLanguage())
 			shipments.DELETE("/:id/items/:item_id", h.DeleteShipmentItem, mw.CheckLanguage())
 		}
@@ -684,6 +674,7 @@ func (h *Handler) Register(router *echo.Echo) {
 		reports := api.Group("/reports", mw.CheckAuth(h.cfg), mw.TenantMiddleware(h.repo))
 		{
 			reports.GET("/goods", h.GoodsReport, mw.CheckLanguage())
+			reports.GET("/goods/:id/orders", h.GoodOrdersReport, mw.CheckLanguage())
 		}
 
 		// Brand management endpoints (admin only)

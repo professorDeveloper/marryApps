@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgtype"
 	"gitlab.yurtal.tech/company/maryai/back/internal/model"
 	"gitlab.yurtal.tech/company/maryai/back/internal/repository"
 	pg "gitlab.yurtal.tech/company/maryai/back/internal/repository/pg/tenantsdb"
@@ -19,7 +20,7 @@ func NewCafeTableS(repo *repository.Repository) *CafeTableS {
 	return &CafeTableS{repo: repo}
 }
 
-func (s *CafeTableS) CreateCafeTable(ctx context.Context, hallID string, number int32, capacity int32, status *string, posX, posY, width, height, rotation *int32) (*model.CafeTableResponse, error) {
+func (s *CafeTableS) CreateCafeTable(ctx context.Context, hallID string, number int32, capacity int32, status *string, posX, posY, width, height, rotation *int32, pricePerHour *string) (*model.CafeTableResponse, error) {
 	if hallID == "" {
 		return nil, fmt.Errorf("hall_id is required")
 	}
@@ -66,17 +67,23 @@ func (s *CafeTableS) CreateCafeTable(ctx context.Context, hallID string, number 
 		finalRotation = *rotation
 	}
 
+	var pph pgtype.Numeric
+	if pricePerHour != nil {
+		pph = stringToNumeric(*pricePerHour)
+	}
+
 	table, err := s.repo.Tenant(ctx).CreateCafeTable(ctx, pg.CreateCafeTableParams{
-		ID:       uuid.New(),
-		HallID:   hID,
-		Number:   number,
-		Capacity: capacity,
-		Status:   nullStatus,
-		PosX:     finalPosX,
-		PosY:     finalPosY,
-		Width:    finalWidth,
-		Height:   finalHeight,
-		Rotation: finalRotation,
+		ID:           uuid.New(),
+		HallID:       hID,
+		Number:       number,
+		Capacity:     capacity,
+		Status:       nullStatus,
+		PosX:         finalPosX,
+		PosY:         finalPosY,
+		Width:        finalWidth,
+		Height:       finalHeight,
+		Rotation:     finalRotation,
+		PricePerHour: pph,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to create cafe table: %w", err)
@@ -100,13 +107,18 @@ func (s *CafeTableS) GetCafeTableByID(ctx context.Context, tableID string) (*mod
 }
 
 // GetAllCafeTables retrieves all cafe tables with pagination
-func (s *CafeTableS) GetAllCafeTables(ctx context.Context, limit, offset int32) ([]model.CafeTableResponse, error) {
+func (s *CafeTableS) GetAllCafeTables(ctx context.Context, limit, offset int32) ([]model.CafeTableResponse, int64, error) {
+	total, err := s.repo.Tenant(ctx).CountCafeTables(ctx)
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to count cafe tables: %w", err)
+	}
+
 	tables, err := s.repo.Tenant(ctx).GetAllCafeTables(ctx, pg.GetAllCafeTablesParams{
 		Limit:  limit,
 		Offset: offset,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to get cafe tables: %w", err)
+		return nil, 0, fmt.Errorf("failed to get cafe tables: %w", err)
 	}
 
 	var responses []model.CafeTableResponse
@@ -114,24 +126,29 @@ func (s *CafeTableS) GetAllCafeTables(ctx context.Context, limit, offset int32) 
 		responses = append(responses, *toCafeTableResponse(t))
 	}
 
-	return responses, nil
+	return responses, total, nil
 }
 
-func (s *CafeTableS) GetCafeTablesByHallID(ctx context.Context, hallID string, limit, offset int32) ([]model.CafeTableResponse, error) {
+func (s *CafeTableS) GetCafeTablesByHallID(ctx context.Context, hallID string, limit, offset int32) ([]model.CafeTableResponse, int64, error) {
 	hID, err := uuid.Parse(hallID)
 	if err != nil {
-		return nil, fmt.Errorf("invalid hall ID: %w", err)
+		return nil, 0, fmt.Errorf("invalid hall ID: %w", err)
+	}
+
+	total, err := s.repo.Tenant(ctx).CountCafeTablesByHall(ctx, hID)
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to count cafe tables by hall: %w", err)
 	}
 
 	tables, err := s.repo.Tenant(ctx).GetCafeTablesByHallID(ctx, hID)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get cafe tables by hall: %w", err)
+		return nil, 0, fmt.Errorf("failed to get cafe tables by hall: %w", err)
 	}
 
 	start := offset
 	end := offset + limit
 	if int32(len(tables)) < start {
-		return []model.CafeTableResponse{}, nil
+		return []model.CafeTableResponse{}, total, nil
 	}
 	if int32(len(tables)) < end {
 		end = int32(len(tables))
@@ -142,18 +159,23 @@ func (s *CafeTableS) GetCafeTablesByHallID(ctx context.Context, hallID string, l
 		responses = append(responses, *toCafeTableResponse(t))
 	}
 
-	return responses, nil
+	return responses, total, nil
 }
 
 // GetCafeTablesByStatus retrieves tables with a specific status
-func (s *CafeTableS) GetCafeTablesByStatus(ctx context.Context, status string, limit, offset int32) ([]model.CafeTableResponse, error) {
+func (s *CafeTableS) GetCafeTablesByStatus(ctx context.Context, status string, limit, offset int32) ([]model.CafeTableResponse, int64, error) {
 	if status == "" {
-		return nil, fmt.Errorf("status is required")
+		return nil, 0, fmt.Errorf("status is required")
 	}
 
 	nullStatus := pg.NullTableStatus{
 		TableStatus: pg.TableStatus(status),
 		Valid:       true,
+	}
+
+	total, err := s.repo.Tenant(ctx).CountCafeTablesByStatus(ctx, nullStatus)
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to count cafe tables by status: %w", err)
 	}
 
 	tables, err := s.repo.Tenant(ctx).GetCafeTablesByStatus(ctx, pg.GetCafeTablesByStatusParams{
@@ -162,7 +184,7 @@ func (s *CafeTableS) GetCafeTablesByStatus(ctx context.Context, status string, l
 		Offset: offset,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to get cafe tables by status: %w", err)
+		return nil, 0, fmt.Errorf("failed to get cafe tables by status: %w", err)
 	}
 
 	var responses []model.CafeTableResponse
@@ -170,7 +192,7 @@ func (s *CafeTableS) GetCafeTablesByStatus(ctx context.Context, status string, l
 		responses = append(responses, *toCafeTableResponse(t))
 	}
 
-	return responses, nil
+	return responses, total, nil
 }
 
 // GetCafeTablesByHallAndStatus retrieves tables by hall and status
@@ -268,7 +290,7 @@ func (s *CafeTableS) GetAvailableTablesByHallAndCapacity(ctx context.Context, ha
 }
 
 // UpdateCafeTable updates a cafe table
-func (s *CafeTableS) UpdateCafeTable(ctx context.Context, tableID string, hallID *string, number *int32, capacity *int32, status *string, posX, posY, width, height, rotation *int32) (*model.CafeTableResponse, error) {
+func (s *CafeTableS) UpdateCafeTable(ctx context.Context, tableID string, hallID *string, number *int32, capacity *int32, status *string, posX, posY, width, height, rotation *int32, pricePerHour *string) (*model.CafeTableResponse, error) {
 	id, err := uuid.Parse(tableID)
 	if err != nil {
 		return nil, fmt.Errorf("invalid table ID: %w", err)
@@ -328,17 +350,23 @@ func (s *CafeTableS) UpdateCafeTable(ctx context.Context, tableID string, hallID
 		updatedRotation = *rotation
 	}
 
+	updatedPricePerHour := currentTable.PricePerHour
+	if pricePerHour != nil {
+		updatedPricePerHour = stringToNumeric(*pricePerHour)
+	}
+
 	table, err := s.repo.Tenant(ctx).UpdateCafeTable(ctx, pg.UpdateCafeTableParams{
-		ID:       id,
-		HallID:   updatedHallID,
-		Number:   updatedNumber,
-		Capacity: updatedCapacity,
-		Status:   updatedStatus,
-		PosX:     updatedPosX,
-		PosY:     updatedPosY,
-		Width:    updatedWidth,
-		Height:   updatedHeight,
-		Rotation: updatedRotation,
+		ID:           id,
+		HallID:       updatedHallID,
+		Number:       updatedNumber,
+		Capacity:     updatedCapacity,
+		Status:       updatedStatus,
+		PosX:         updatedPosX,
+		PosY:         updatedPosY,
+		Width:        updatedWidth,
+		Height:       updatedHeight,
+		Rotation:     updatedRotation,
+		PricePerHour: updatedPricePerHour,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to update cafe table: %w", err)
@@ -462,7 +490,7 @@ func (s *CafeTableS) SearchCafeTables(ctx context.Context, query string, limit, 
 	}
 
 	// Filter tables based on query (table number or other criteria)
-	var filtered []pg.CafeTable
+	var filtered []pg.GetAllCafeTablesRow
 	for _, t := range tables {
 		// Simple search by table number
 		if fmt.Sprintf("%d", t.Number) == query || query == "" {
@@ -489,34 +517,70 @@ func (s *CafeTableS) SearchCafeTables(ctx context.Context, query string, limit, 
 }
 
 // Helper function to convert database model to response model
-func toCafeTableResponse(table pg.CafeTable) *model.CafeTableResponse {
-	var createdAt *time.Time
-	if table.CreatedAt.Valid {
-		createdAt = &table.CreatedAt.Time
+func toCafeTableResponse(table any) *model.CafeTableResponse {
+	type row interface {
+		// marker
 	}
-
-	var updatedAt *time.Time
-	if table.UpdatedAt.Valid {
-		updatedAt = &table.UpdatedAt.Time
+	extract := func(
+		id, hallID uuid.UUID, number, capacity int32, status pg.NullTableStatus,
+		posX, posY, width, height, rotation int32, pricePerHour pgtype.Numeric,
+		createdAt, updatedAt pgtype.Timestamptz,
+	) *model.CafeTableResponse {
+		var ca, ua *time.Time
+		if createdAt.Valid {
+			ca = &createdAt.Time
+		}
+		if updatedAt.Valid {
+			ua = &updatedAt.Time
+		}
+		s := model.TableStatusFree
+		if status.Valid {
+			s = model.TableStatus(status.TableStatus)
+		}
+		var pph *string
+		if pricePerHour.Valid {
+			v := numericToStr(pricePerHour)
+			pph = &v
+		}
+		return &model.CafeTableResponse{
+			ID: id.String(), HallID: hallID.String(),
+			Number: number, Capacity: capacity, Status: s,
+			PosX: posX, PosY: posY, Width: width, Height: height, Rotation: rotation,
+			PricePerHour: pph, CreatedAt: ca, UpdatedAt: ua,
+		}
 	}
-
-	status := model.TableStatusFree
-	if table.Status.Valid {
-		status = model.TableStatus(table.Status.TableStatus)
-	}
-
-	return &model.CafeTableResponse{
-		ID:        table.ID.String(),
-		HallID:    table.HallID.String(),
-		Number:    table.Number,
-		Capacity:  table.Capacity,
-		Status:    status,
-		PosX:      table.PosX,
-		PosY:      table.PosY,
-		Width:     table.Width,
-		Height:    table.Height,
-		Rotation:  table.Rotation,
-		CreatedAt: createdAt,
-		UpdatedAt: updatedAt,
+	switch t := table.(type) {
+	case pg.CafeTable:
+		return extract(t.ID, t.HallID, t.Number, t.Capacity, t.Status, t.PosX, t.PosY, t.Width, t.Height, t.Rotation, t.PricePerHour, t.CreatedAt, t.UpdatedAt)
+	case pg.CreateCafeTableRow:
+		return extract(t.ID, t.HallID, t.Number, t.Capacity, t.Status, t.PosX, t.PosY, t.Width, t.Height, t.Rotation, t.PricePerHour, t.CreatedAt, t.UpdatedAt)
+	case pg.GetCafeTableByIDRow:
+		return extract(t.ID, t.HallID, t.Number, t.Capacity, t.Status, t.PosX, t.PosY, t.Width, t.Height, t.Rotation, t.PricePerHour, t.CreatedAt, t.UpdatedAt)
+	case pg.GetCafeTableByNumberRow:
+		return extract(t.ID, t.HallID, t.Number, t.Capacity, t.Status, t.PosX, t.PosY, t.Width, t.Height, t.Rotation, t.PricePerHour, t.CreatedAt, t.UpdatedAt)
+	case pg.GetAllCafeTablesRow:
+		return extract(t.ID, t.HallID, t.Number, t.Capacity, t.Status, t.PosX, t.PosY, t.Width, t.Height, t.Rotation, t.PricePerHour, t.CreatedAt, t.UpdatedAt)
+	case pg.GetCafeTablesByHallIDRow:
+		return extract(t.ID, t.HallID, t.Number, t.Capacity, t.Status, t.PosX, t.PosY, t.Width, t.Height, t.Rotation, t.PricePerHour, t.CreatedAt, t.UpdatedAt)
+	case pg.GetCafeTablesByStatusRow:
+		return extract(t.ID, t.HallID, t.Number, t.Capacity, t.Status, t.PosX, t.PosY, t.Width, t.Height, t.Rotation, t.PricePerHour, t.CreatedAt, t.UpdatedAt)
+	case pg.GetCafeTablesByHallAndStatusRow:
+		return extract(t.ID, t.HallID, t.Number, t.Capacity, t.Status, t.PosX, t.PosY, t.Width, t.Height, t.Rotation, t.PricePerHour, t.CreatedAt, t.UpdatedAt)
+	case pg.GetAvailableTablesByHallRow:
+		return extract(t.ID, t.HallID, t.Number, t.Capacity, t.Status, t.PosX, t.PosY, t.Width, t.Height, t.Rotation, t.PricePerHour, t.CreatedAt, t.UpdatedAt)
+	case pg.GetAvailableTablesByCapacityRow:
+		return extract(t.ID, t.HallID, t.Number, t.Capacity, t.Status, t.PosX, t.PosY, t.Width, t.Height, t.Rotation, t.PricePerHour, t.CreatedAt, t.UpdatedAt)
+	case pg.GetAvailableTablesByHallAndCapacityRow:
+		return extract(t.ID, t.HallID, t.Number, t.Capacity, t.Status, t.PosX, t.PosY, t.Width, t.Height, t.Rotation, t.PricePerHour, t.CreatedAt, t.UpdatedAt)
+	case pg.UpdateCafeTableRow:
+		return extract(t.ID, t.HallID, t.Number, t.Capacity, t.Status, t.PosX, t.PosY, t.Width, t.Height, t.Rotation, t.PricePerHour, t.CreatedAt, t.UpdatedAt)
+	case pg.UpdateCafeTableStatusRow:
+		return extract(t.ID, t.HallID, t.Number, t.Capacity, t.Status, t.PosX, t.PosY, t.Width, t.Height, t.Rotation, t.PricePerHour, t.CreatedAt, t.UpdatedAt)
+	case pg.SetTableFreeRow:
+		return extract(t.ID, t.HallID, t.Number, t.Capacity, t.Status, t.PosX, t.PosY, t.Width, t.Height, t.Rotation, t.PricePerHour, t.CreatedAt, t.UpdatedAt)
+	case pg.SetTableBusyRow:
+		return extract(t.ID, t.HallID, t.Number, t.Capacity, t.Status, t.PosX, t.PosY, t.Width, t.Height, t.Rotation, t.PricePerHour, t.CreatedAt, t.UpdatedAt)
+	default:
+		return nil
 	}
 }

@@ -203,7 +203,6 @@ func seedTenantDB(ctx context.Context, db pg.DBTX) error {
 			PictureUrl:   nil,
 			NameI18n:     pgtype.UUID{Valid: false},
 			DepartmentID: pgtype.UUID{Bytes: deptIDs[deptIdx], Valid: true},
-			StorageID:    pgtype.UUID{Bytes: storageIDs[deptIdx], Valid: true},
 			Parent:       pgtype.UUID{Valid: false},
 			ColorCode:    &color,
 		})
@@ -389,7 +388,6 @@ func seedTenantDB(ctx context.Context, db pg.DBTX) error {
 			NameI18n:        pgtype.UUID{Valid: false},
 			DescriptionI18n: pgtype.UUID{Valid: false},
 			CategoryID:      pgtype.UUID{Bytes: categoryIDs[good.category], Valid: true},
-			DepartmentID:    pgtype.UUID{Bytes: deptIDs[good.department], Valid: true},
 			PictureUrl:      nil,
 			ColorCode:       nil,
 			Price:           priceNum,
@@ -434,12 +432,11 @@ func seedTenantDB(ctx context.Context, db pg.DBTX) error {
 			NameI18n:        pgtype.UUID{Valid: false},
 			Description:     nil,
 			DescriptionI18n: pgtype.UUID{Valid: false},
-			Quantity:        nil,
+			Quantity:        pgtype.Numeric{},
 			PictureUrl:      nil,
 			ColorCode:       nil,
 			Measurement:     pg.NullMeasurementType{MeasurementType: pg.MeasurementType(comp.measurement), Valid: true},
 			Price:           priceNum,
-			DepartmentID:    pgtype.UUID{Bytes: deptIDs[comp.department], Valid: true},
 		})
 		if err != nil {
 			log.Printf("  ⚠️  Compound %s already exists or error: %v", comp.name, err)

@@ -133,7 +133,8 @@ func (h *Handler) CreateInvoiceDetailsBatch(c echo.Context) error {
 // @Param lang query string false "Language (uz, ru, en)" default(uz)
 // @Param limit query int false "Limit" default(20)
 // @Param offset query int false "Offset" default(0)
-// @Success 200 {object} []model.InvoiceDetailResponse
+// @Param expand query string false "Expand related fields"
+// @Success 200 {array} model.InvoiceDetailResponse
 // @Failure 400 {object} model.ErrorResponse
 // @Failure 401 {object} model.ErrorResponse
 // @Failure 500 {object} model.ErrorResponse
@@ -153,16 +154,18 @@ func (h *Handler) GetAllInvoiceDetails(c echo.Context) error {
 		}
 	}
 
-	resp, err := h.service.Invoice().GetAllInvoiceDetails(c.Request().Context(), limit, offset)
+	resp, total, err := h.service.Invoice().GetAllInvoiceDetails(c.Request().Context(), limit, offset)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("Operation failed", err.Error(), http.StatusInternalServerError))
 	}
 
-	return c.JSON(http.StatusOK, model.NewSuccessResponse(
-		"Invoice details retrieved successfully",
-		resp,
-		http.StatusOK,
-	))
+	if maps, expanded, err := h.expandListResponse(c, resp, "invoice_detailed"); expanded {
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("Operation failed", err.Error(), http.StatusInternalServerError))
+		}
+		return c.JSON(http.StatusOK, model.NewPaginatedResponse("Invoice details retrieved successfully", maps, int32(total), limit, offset, http.StatusOK))
+	}
+	return c.JSON(http.StatusOK, model.NewPaginatedResponse("Invoice details retrieved successfully", resp, int32(total), limit, offset, http.StatusOK))
 }
 
 func (h *Handler) GetInvoiceDetailsWithIngredients(c echo.Context) error {
@@ -175,7 +178,7 @@ func (h *Handler) GetInvoiceDetailsWithIngredients(c echo.Context) error {
 		))
 	}
 
-	details, err := h.service.Invoice().GetInvoiceDetailsByInvoiceID(c.Request().Context(), invoiceID)
+	details, _, err := h.service.Invoice().GetInvoiceDetailsByInvoiceID(c.Request().Context(), invoiceID, 1000, 0)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("Operation failed", err.Error(), http.StatusInternalServerError))
 	}
@@ -246,7 +249,8 @@ func (h *Handler) GetInvoiceDetail(c echo.Context) error {
 // @Param invoice_id path string true "Invoice ID"
 // @Param limit query int false "Limit" default(20)
 // @Param offset query int false "Offset" default(0)
-// @Success 200 {object} []model.InvoiceDetailResponse
+// @Param expand query string false "Expand related fields"
+// @Success 200 {array} model.InvoiceDetailResponse
 // @Failure 400 {object} model.ErrorResponse
 // @Failure 401 {object} model.ErrorResponse
 // @Failure 500 {object} model.ErrorResponse
@@ -261,16 +265,32 @@ func (h *Handler) GetInvoiceDetailsByInvoice(c echo.Context) error {
 		))
 	}
 
-	resp, err := h.service.Invoice().GetInvoiceDetailsByInvoiceID(c.Request().Context(), invoiceID)
+	limit := int32(20)
+	if l := c.QueryParam("limit"); l != "" {
+		if val, err := strconv.Atoi(l); err == nil {
+			limit = int32(val)
+		}
+	}
+
+	offset := int32(0)
+	if o := c.QueryParam("offset"); o != "" {
+		if val, err := strconv.Atoi(o); err == nil {
+			offset = int32(val)
+		}
+	}
+
+	resp, total, err := h.service.Invoice().GetInvoiceDetailsByInvoiceID(c.Request().Context(), invoiceID, limit, offset)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("Operation failed", err.Error(), http.StatusInternalServerError))
 	}
 
-	return c.JSON(http.StatusOK, model.NewSuccessResponse(
-		"Invoice details retrieved successfully",
-		resp,
-		http.StatusOK,
-	))
+	if maps, expanded, err := h.expandListResponse(c, resp, "invoice_detailed"); expanded {
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("Operation failed", err.Error(), http.StatusInternalServerError))
+		}
+		return c.JSON(http.StatusOK, model.NewPaginatedResponse("Invoice details retrieved successfully", maps, int32(total), limit, offset, http.StatusOK))
+	}
+	return c.JSON(http.StatusOK, model.NewPaginatedResponse("Invoice details retrieved successfully", resp, int32(total), limit, offset, http.StatusOK))
 }
 
 // GetInvoiceDetailsByIngredient retrieves invoice details for a specific ingredient
@@ -283,7 +303,8 @@ func (h *Handler) GetInvoiceDetailsByInvoice(c echo.Context) error {
 // @Param ingredient_id path string true "Ingredient ID"
 // @Param limit query int false "Limit" default(20)
 // @Param offset query int false "Offset" default(0)
-// @Success 200 {object} []model.InvoiceDetailResponse
+// @Param expand query string false "Expand related fields"
+// @Success 200 {array} model.InvoiceDetailResponse
 // @Failure 400 {object} model.ErrorResponse
 // @Failure 401 {object} model.ErrorResponse
 // @Failure 500 {object} model.ErrorResponse
@@ -312,16 +333,18 @@ func (h *Handler) GetInvoiceDetailsByIngredient(c echo.Context) error {
 		}
 	}
 
-	resp, err := h.service.Invoice().GetInvoiceDetailsByIngredientID(c.Request().Context(), ingredientID, limit, offset)
+	resp, total, err := h.service.Invoice().GetInvoiceDetailsByIngredientID(c.Request().Context(), ingredientID, limit, offset)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("Operation failed", err.Error(), http.StatusInternalServerError))
 	}
 
-	return c.JSON(http.StatusOK, model.NewSuccessResponse(
-		"Invoice details retrieved successfully",
-		resp,
-		http.StatusOK,
-	))
+	if maps, expanded, err := h.expandListResponse(c, resp, "invoice_detailed"); expanded {
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("Operation failed", err.Error(), http.StatusInternalServerError))
+		}
+		return c.JSON(http.StatusOK, model.NewPaginatedResponse("Invoice details retrieved successfully", maps, int32(total), limit, offset, http.StatusOK))
+	}
+	return c.JSON(http.StatusOK, model.NewPaginatedResponse("Invoice details retrieved successfully", resp, int32(total), limit, offset, http.StatusOK))
 }
 
 // UpdateInvoiceDetail updates an existing invoice detail

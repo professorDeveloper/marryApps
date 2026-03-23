@@ -245,17 +245,48 @@ func (h *Handler) Refresh(c echo.Context) error {
 	return c.JSON(http.StatusOK, resp)
 }
 
+// GetUserByID retrieves a user by ID
+// @Summary Get user by ID
+// @Description Retrieve a single user by their UUID
+// @Tags users
+// @Produce json
+// @Security BearerAuth
+// @Param id path string true "User ID"
+// @Success 200 {object} model.UserResponse
+// @Failure 400 {object} model.ErrorResponse
+// @Failure 404 {object} model.ErrorResponse
+// @Failure 500 {object} model.ErrorResponse
+// @Router /api/v1/users/{id} [get]
+func (h *Handler) GetUserByID(c echo.Context) error {
+	id := c.Param("id")
+	if id == "" {
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("user id is required", "missing path parameter: id", http.StatusBadRequest))
+	}
+
+	user, err := h.service.Auth().GetUserByID(c.Request().Context(), id)
+	if err != nil {
+		log.Printf("GetUserByID failed for id %s: %v", id, err)
+		return c.JSON(http.StatusNotFound, model.NewErrorResponse("user not found", err.Error(), http.StatusNotFound))
+	}
+
+	return c.JSON(http.StatusOK, model.NewSuccessResponse("Data retrieved successfully", user, http.StatusOK))
+}
+
 // GetUsersByRole retrieves users by their role
 // @Summary Get users by role
-// @Description Retrieve all users with a specific role (requires authentication)
+// @Description Retrieve all users with a specific role with pagination and optional expand
 // @Tags users
 // @Accept json
 // @Produce json
 // @Security BearerAuth
 // @Param role query string true "User role (admin, manager, cashier, waiter, kitchen, user, superadmin)"
-// @Success 200 {array} model.UserResponse "List of users with the specified role"
+// @Param limit query int false "Limit results (default: 20)" default(20)
+// @Param offset query int false "Offset for pagination (default: 0)" default(0)
+// @Param expand query string false "Expand related fields (e.g. shift,branch)"
+// @Success 200 {array} model.UserResponse "Paginated list of users"
 // @Failure 400 {object} model.ErrorResponse "Invalid role parameter"
 // @Failure 401 {object} model.ErrorResponse "Unauthorized"
+// @Failure 500 {object} model.ErrorResponse "Internal server error"
 // @Router /api/v1/users/by-role [get]
 func (h *Handler) GetUsersByRole(c echo.Context) error {
 	role := c.QueryParam("role")
@@ -263,97 +294,55 @@ func (h *Handler) GetUsersByRole(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("role parameter is required", "see logs for details", http.StatusBadRequest))
 	}
 
-	users, err := h.service.Auth().GetUsersByRole(c.Request().Context(), role)
+	limit, offset := parseLimitOffset(c)
+
+	users, total, err := h.service.Auth().GetUsersByRole(c.Request().Context(), role, limit, offset)
 	if err != nil {
 		log.Printf("GetUsersByRole failed: %v", err)
 		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("failed to fetch users", "see logs for details", http.StatusInternalServerError))
 	}
 
-	return c.JSON(http.StatusOK, model.NewSuccessResponse("Data retrieved successfully", users, http.StatusOK))
+	if maps, expanded, err := h.expandListResponse(c, users, "users"); expanded {
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("expand failed", err.Error(), http.StatusInternalServerError))
+		}
+		return c.JSON(http.StatusOK, model.NewPaginatedResponse("Data retrieved successfully", maps, int32(total), limit, offset, http.StatusOK))
+	}
+
+	return c.JSON(http.StatusOK, model.NewPaginatedResponse("Data retrieved successfully", users, int32(total), limit, offset, http.StatusOK))
 }
 
-// GetAllStaff retrieves all staff members
-// @Summary Get all staff members
-// @Description Retrieve all staff members (non-user role employees)
+// GetStaffes retrieves all staff (excluding admin and superadmin)
+// @Summary Get staff users
+// @Description Retrieve all staff members (excluding admin/superadmin) with pagination
 // @Tags users
 // @Accept json
 // @Produce json
 // @Security BearerAuth
-// @Success 200 {array} model.UserResponse "List of all staff members"
+// @Param limit query int false "Limit results (default: 20)" default(20)
+// @Param offset query int false "Offset for pagination (default: 0)" default(0)
+// @Param expand query string false "Expand related fields (e.g. shift,branch)"
+// @Success 200 {array} model.UserResponse "Paginated list of staff"
 // @Failure 401 {object} model.ErrorResponse "Unauthorized"
 // @Failure 500 {object} model.ErrorResponse "Internal server error"
 // @Router /api/v1/users/staff [get]
-func (h *Handler) GetAllStaff(c echo.Context) error {
-	staff, err := h.service.Auth().GetAllStaff(c.Request().Context())
-	if err != nil {
-		log.Printf("GetAllStaff failed: %v", err)
-		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("failed to fetch staff", "see logs for details", http.StatusInternalServerError))
-	}
-
-	return c.JSON(http.StatusOK, staff)
-}
-
-// GetKitchenStaff retrieves kitchen staff
-// @Summary Get kitchen staff
-// @Description Retrieve all kitchen staff members
-// @Tags users
-// @Accept json
-// @Produce json
-// @Security BearerAuth
-// @Success 200 {array} model.UserResponse "List of kitchen staff"
-// @Failure 401 {object} model.ErrorResponse "Unauthorized"
-// @Failure 500 {object} model.ErrorResponse "Internal server error"
-// @Router /api/v1/users/kitchen-staff [get]
 func (h *Handler) GetKitchenStaff(c echo.Context) error {
-	staff, err := h.service.Auth().GetKitchenStaff(c.Request().Context())
+	limit, offset := parseLimitOffset(c)
+
+	staff, total, err := h.service.Auth().GetKitchenStaff(c.Request().Context(), limit, offset)
 	if err != nil {
 		log.Printf("GetKitchenStaff failed: %v", err)
 		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("failed to fetch kitchen staff", "see logs for details", http.StatusInternalServerError))
 	}
 
-	return c.JSON(http.StatusOK, staff)
-}
-
-// GetWaiters retrieves waiter staff
-// @Summary Get waiters
-// @Description Retrieve all waiter staff members
-// @Tags users
-// @Accept json
-// @Produce json
-// @Security BearerAuth
-// @Success 200 {array} model.UserResponse "List of waiters"
-// @Failure 401 {object} model.ErrorResponse "Unauthorized"
-// @Failure 500 {object} model.ErrorResponse "Internal server error"
-// @Router /api/v1/users/waiters [get]
-func (h *Handler) GetWaiters(c echo.Context) error {
-	waiters, err := h.service.Auth().GetWaiters(c.Request().Context())
-	if err != nil {
-		log.Printf("GetWaiters failed: %v", err)
-		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("failed to fetch waiters", "see logs for details", http.StatusInternalServerError))
+	if maps, expanded, err := h.expandListResponse(c, staff, "users"); expanded {
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("expand failed", err.Error(), http.StatusInternalServerError))
+		}
+		return c.JSON(http.StatusOK, model.NewPaginatedResponse("Data retrieved successfully", maps, int32(total), limit, offset, http.StatusOK))
 	}
 
-	return c.JSON(http.StatusOK, model.NewSuccessResponse("Data retrieved successfully", waiters, http.StatusOK))
-}
-
-// GetCashiers retrieves cashier staff
-// @Summary Get cashiers
-// @Description Retrieve all cashier staff members
-// @Tags users
-// @Accept json
-// @Produce json
-// @Security BearerAuth
-// @Success 200 {array} model.UserResponse "List of cashiers"
-// @Failure 401 {object} model.ErrorResponse "Unauthorized"
-// @Failure 500 {object} model.ErrorResponse "Internal server error"
-// @Router /api/v1/users/cashiers [get]
-func (h *Handler) GetCashiers(c echo.Context) error {
-	cashiers, err := h.service.Auth().GetCashiers(c.Request().Context())
-	if err != nil {
-		log.Printf("GetCashiers failed: %v", err)
-		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("failed to fetch cashiers", "see logs for details", http.StatusInternalServerError))
-	}
-
-	return c.JSON(http.StatusOK, model.NewSuccessResponse("Data retrieved successfully", cashiers, http.StatusOK))
+	return c.JSON(http.StatusOK, model.NewPaginatedResponse("Data retrieved successfully", staff, int32(total), limit, offset, http.StatusOK))
 }
 
 // SearchUsers searches users by query

@@ -28,7 +28,6 @@ type BranchResponse struct {
 
 type CreateStorageRequest struct {
 	Name       *string `json:"name"`
-	BranchID   string  `json:"branch_id"`
 	NameI18n   *string `json:"name_i18n"`
 	PictureUrl *string `json:"picture_url"`
 	ColorCode  *string `json:"color_code"`
@@ -36,10 +35,12 @@ type CreateStorageRequest struct {
 
 type UpdateStorageRequest struct {
 	Name       *string `json:"name"`
-	BranchID   *string `json:"branch_id"`
 	NameI18n   *string `json:"name_i18n"`
 	PictureUrl *string `json:"picture_url"`
 	ColorCode  *string `json:"color_code"`
+	Uz         *string `json:"uz,omitempty"`
+	Ru         *string `json:"ru,omitempty"`
+	En         *string `json:"en,omitempty"`
 }
 
 type StorageResponse struct {
@@ -49,6 +50,9 @@ type StorageResponse struct {
 	NameI18n   *string    `json:"name_i18n"`
 	PictureUrl *string    `json:"picture_url"`
 	ColorCode  *string    `json:"color_code"`
+	Uz         *string    `json:"uz,omitempty"`
+	Ru         *string    `json:"ru,omitempty"`
+	En         *string    `json:"en,omitempty"`
 	CreatedAt  *time.Time `json:"created_at"`
 	UpdatedAt  *time.Time `json:"updated_at"`
 }
@@ -67,6 +71,9 @@ type UpdateDepartmentRequest struct {
 	ColorCode  *string `json:"color_code"`
 	PictureUrl *string `json:"picture_url"`
 	StorageID  *string `json:"storage_id"`
+	Uz         *string `json:"uz,omitempty"`
+	Ru         *string `json:"ru,omitempty"`
+	En         *string `json:"en,omitempty"`
 }
 
 type DepartmentResponse struct {
@@ -76,6 +83,9 @@ type DepartmentResponse struct {
 	ColorCode  *string    `json:"color_code"`
 	PictureUrl *string    `json:"picture_url"`
 	StorageID  string     `json:"storage_id"`
+	Uz         *string    `json:"uz,omitempty"`
+	Ru         *string    `json:"ru,omitempty"`
+	En         *string    `json:"en,omitempty"`
 	CreatedAt  *time.Time `json:"created_at"`
 	UpdatedAt  *time.Time `json:"updated_at"`
 }
@@ -213,6 +223,18 @@ type GetIngredientReportRequest struct {
 	Start        *time.Time `json:"start,omitempty"`
 	End          *time.Time `json:"end,omitempty"`
 	IngredientID *string    `json:"ingredient_id,omitempty"`
+	Limit        int32      `json:"limit"`
+	Offset       int32      `json:"offset"`
+}
+
+type IngredientReportTotals struct {
+	TotalCount          int64  `json:"total_count"`
+	TotalOrderOutAmount string `json:"total_order_out_amount"`
+}
+
+type IngredientReportResponse struct {
+	Items  []IngredientReportItem `json:"items"`
+	Totals IngredientReportTotals `json:"totals"`
 }
 
 type IngredientReportItem struct {

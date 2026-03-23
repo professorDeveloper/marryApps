@@ -149,7 +149,7 @@ func (h *Handler) ListBrands(c echo.Context) error {
 	}
 
 	ctx := c.Request().Context()
-	brands, err := h.service.Brand().ListBrands(ctx, limit, offset)
+	brands, total, err := h.service.Brand().ListBrands(ctx, limit, offset)
 	if err != nil {
 		log.Printf("Failed to list brands: %v", err)
 		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse(
@@ -159,7 +159,14 @@ func (h *Handler) ListBrands(c echo.Context) error {
 		))
 	}
 
-	return c.JSON(http.StatusOK, model.NewSuccessResponse("Data retrieved successfully", brands, http.StatusOK))
+	if maps, expanded, err := h.expandListResponse(c, brands, "brands"); expanded {
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("expand failed", err.Error(), http.StatusInternalServerError))
+		}
+		return c.JSON(http.StatusOK, model.NewPaginatedResponse("Data retrieved successfully", maps, int32(total), limit, offset, http.StatusOK))
+	}
+
+	return c.JSON(http.StatusOK, model.NewPaginatedResponse("Data retrieved successfully", brands, int32(total), limit, offset, http.StatusOK))
 }
 
 // UpdateBrand updates a brand

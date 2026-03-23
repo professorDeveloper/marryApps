@@ -777,6 +777,7 @@ func (h *Handler) DeleteCalculation(c echo.Context) error {
 // @Produce json
 // @Security BearerAuth
 // @Param id path string true "Good ID"
+// @Param expand query string false "Comma-separated list of fields to expand (e.g. ingredients,compounds)"
 // @Success 200 {object} model.GoodCalculationResponse
 // @Failure 400 {object} model.ErrorData "Bad request"
 // @Failure 401 {object} model.ErrorData "Unauthorized"
@@ -819,6 +820,7 @@ func (h *Handler) GetGoodWithCalculations(c echo.Context) error {
 // @Produce json
 // @Security BearerAuth
 // @Param id path string true "Compound ID"
+// @Param expand query string false "Comma-separated list of fields to expand (e.g. ingredients,compounds)"
 // @Success 200 {object} model.CompoundCalculationResponse
 // @Failure 400 {object} model.ErrorData "Bad request"
 // @Failure 401 {object} model.ErrorData "Unauthorized"

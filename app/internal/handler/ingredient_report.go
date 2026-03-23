@@ -34,6 +34,9 @@ func parseReportTimeParam(v string) (*time.Time, error) {
 // @Param start query string false "Start datetime (RFC3339) or date (YYYY-MM-DD)"
 // @Param end query string false "End datetime (RFC3339) or date (YYYY-MM-DD)"
 // @Param ingredient_id query string false "Ingredient ID (optional filter)"
+// @Param limit query int false "Limit" default(20)
+// @Param offset query int false "Offset" default(0)
+// @Param expand query string false "Expand related fields"
 // @Success 200 {array} model.IngredientReportItem "Ingredient report retrieved successfully"
 // @Failure 400 {object} model.ErrorResponse "Invalid request parameters"
 // @Failure 401 {object} model.ErrorResponse "Unauthorized"
@@ -85,11 +88,22 @@ func (h *Handler) GetIngredientReport(c echo.Context) error {
 		ingredientID = &v
 	}
 
-	rows, err := h.service.Ingredient().GetIngredientReport(c.Request().Context(), model.GetIngredientReportRequest{
+	limit := int32(20)
+	offset := int32(0)
+	if l, err2 := strconv.Atoi(c.QueryParam("limit")); err2 == nil && l > 0 {
+		limit = int32(l)
+	}
+	if o, err2 := strconv.Atoi(c.QueryParam("offset")); err2 == nil && o >= 0 {
+		offset = int32(o)
+	}
+
+	resp, err := h.service.Ingredient().GetIngredientReport(c.Request().Context(), model.GetIngredientReportRequest{
 		StorageID:    storageID,
 		Start:        start,
 		End:          end,
 		IngredientID: ingredientID,
+		Limit:        limit,
+		Offset:       offset,
 	})
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse(
@@ -99,11 +113,14 @@ func (h *Handler) GetIngredientReport(c echo.Context) error {
 		))
 	}
 
-	return c.JSON(http.StatusOK, model.NewSuccessResponse(
-		"Ingredient report retrieved successfully",
-		rows,
-		http.StatusOK,
-	))
+	total := int32(resp.Totals.TotalCount)
+	if maps, expanded, err := h.expandListResponse(c, resp.Items, "ingredients"); expanded {
+		if err != nil {
+			return nil
+		}
+		return c.JSON(http.StatusOK, model.NewPaginatedWithTotalsResponse("Ingredient report retrieved successfully", maps, resp.Totals, total, limit, offset, http.StatusOK))
+	}
+	return c.JSON(http.StatusOK, model.NewPaginatedWithTotalsResponse("Ingredient report retrieved successfully", resp.Items, resp.Totals, total, limit, offset, http.StatusOK))
 }
 
 // GetIngredientReportItem retrieves aggregated ingredient report for a single ingredient
@@ -117,6 +134,7 @@ func (h *Handler) GetIngredientReport(c echo.Context) error {
 // @Param storage_id query string true "Storage ID"
 // @Param start query string false "Start datetime (RFC3339) or date (YYYY-MM-DD)"
 // @Param end query string false "End datetime (RFC3339) or date (YYYY-MM-DD)"
+// @Param expand query string false "Expand related fields"
 // @Success 200 {object} model.IngredientReportItem "Ingredient report item retrieved successfully"
 // @Failure 400 {object} model.ErrorResponse "Invalid request parameters"
 // @Failure 401 {object} model.ErrorResponse "Unauthorized"
@@ -194,11 +212,13 @@ func (h *Handler) GetIngredientReportItem(c echo.Context) error {
 		))
 	}
 
-	return c.JSON(http.StatusOK, model.NewSuccessResponse(
-		"Ingredient report item retrieved successfully",
-		item,
-		http.StatusOK,
-	))
+	if m, expanded, err := h.expandSingleResponse(c, item, "ingredients"); expanded {
+		if err != nil {
+			return nil
+		}
+		return c.JSON(http.StatusOK, model.NewSuccessResponse("Ingredient report item retrieved successfully", m, http.StatusOK))
+	}
+	return c.JSON(http.StatusOK, model.NewSuccessResponse("Ingredient report item retrieved successfully", item, http.StatusOK))
 }
 
 // GetIngredientReportMovements retrieves ingredient stock movement ledger rows for a single ingredient
@@ -214,6 +234,7 @@ func (h *Handler) GetIngredientReportItem(c echo.Context) error {
 // @Param end query string false "End datetime (RFC3339) or date (YYYY-MM-DD)"
 // @Param limit query int false "Limit (default: 50)"
 // @Param offset query int false "Offset (default: 0)"
+// @Param expand query string false "Expand related fields"
 // @Success 200 {array} model.IngredientStockMovementResponse "Ingredient report movements retrieved successfully"
 // @Failure 400 {object} model.ErrorResponse "Invalid request parameters"
 // @Failure 401 {object} model.ErrorResponse "Unauthorized"
@@ -311,9 +332,11 @@ func (h *Handler) GetIngredientReportMovements(c echo.Context) error {
 		))
 	}
 
-	return c.JSON(http.StatusOK, model.NewSuccessResponse(
-		"Ingredient report movements retrieved successfully",
-		rows,
-		http.StatusOK,
-	))
+	if maps, expanded, err := h.expandListResponse(c, rows, "ingredient_stock_movements"); expanded {
+		if err != nil {
+			return nil
+		}
+		return c.JSON(http.StatusOK, model.NewSuccessResponse("Ingredient report movements retrieved successfully", maps, http.StatusOK))
+	}
+	return c.JSON(http.StatusOK, model.NewSuccessResponse("Ingredient report movements retrieved successfully", rows, http.StatusOK))
 }

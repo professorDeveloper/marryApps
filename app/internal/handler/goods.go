@@ -34,7 +34,7 @@ func (h *Handler) CreateGood(c echo.Context) error {
 		))
 	}
 
-	resp, err := h.service.Goods().CreateGood(c.Request().Context(), req.Name, req.Description, req.NameI18n, req.DescriptionI18n, req.CategoryID, req.DepartmentID, req.Price, req.CookTime, req.PictureUrl, req.ColorCode)
+	resp, err := h.service.Goods().CreateGood(c.Request().Context(), req.Name, req.Description, req.NameI18n, req.DescriptionI18n, req.CategoryID, req.Price, req.CookTime, req.PictureUrl, req.ColorCode)
 	if err != nil {
 		log.Printf("CreateGood failed: %v", err)
 		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse(
@@ -92,15 +92,20 @@ func (h *Handler) GetGood(c echo.Context) error {
 	))
 }
 
-// GetAllGoods retrieves all goods with pagination
+// GetAllGoods retrieves all goods with pagination and optional filters
 // @Summary Get all goods
-// @Description Get all goods with pagination
+// @Description Get all goods with pagination and optional filters
 // @Tags Goods
 // @Produce json
 // @Security BearerAuth
 // @Param lang query string false "Language (uz, ru, en)" default(uz)
 // @Param limit query int false "Limit" default(20)
 // @Param offset query int false "Offset" default(0)
+// @Param expand query string false "Expand related fields"
+// @Param category_id query string false "Filter by category ID"
+// @Param department_id query string false "Filter by department ID"
+// @Param storage_id query string false "Filter by storage ID"
+// @Param search query string false "Search by name"
 // @Success 200 {object} []model.GoodResponse
 // @Failure 400 {object} model.ErrorResponse
 // @Failure 401 {object} model.ErrorResponse
@@ -121,7 +126,19 @@ func (h *Handler) GetAllGoods(c echo.Context) error {
 		}
 	}
 
-	resp, err := h.service.Goods().GetAllGoods(c.Request().Context(), limit, offset)
+	categoryID := c.QueryParam("category_id")
+	search := c.QueryParam("search")
+	lang := c.QueryParam("lang")
+
+	var goods []*model.GoodResponse
+	var total int64
+	var err error
+
+	if categoryID != "" || search != "" {
+		goods, total, err = h.service.Goods().GetAllGoodsFiltered(c.Request().Context(), categoryID, search, lang, limit, offset)
+	} else {
+		goods, total, err = h.service.Goods().GetAllGoods(c.Request().Context(), limit, offset)
+	}
 	if err != nil {
 		log.Printf("GetAllGoods failed: %v", err)
 		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse(
@@ -131,11 +148,14 @@ func (h *Handler) GetAllGoods(c echo.Context) error {
 		))
 	}
 
-	return c.JSON(http.StatusOK, model.NewSuccessResponse(
-		"Goods retrieved successfully",
-		resp,
-		http.StatusOK,
-	))
+	if maps, expanded, err := h.expandListResponse(c, goods, "goods"); expanded {
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("expand failed", err.Error(), http.StatusInternalServerError))
+		}
+		return c.JSON(http.StatusOK, model.NewPaginatedResponse("Goods retrieved successfully", maps, int32(total), limit, offset, http.StatusOK))
+	}
+
+	return c.JSON(http.StatusOK, model.NewPaginatedResponse("Goods retrieved successfully", goods, int32(total), limit, offset, http.StatusOK))
 }
 
 // GetGoodsByCategory retrieves goods by category
@@ -197,31 +217,7 @@ func (h *Handler) GetGoodsByCategory(c echo.Context) error {
 // @Failure 500 {object} model.ErrorResponse
 // @Router /api/v1/departments/{department_id}/goods [get]
 func (h *Handler) GetGoodsByDepartment(c echo.Context) error {
-	departmentID := c.Param("department_id")
-	if departmentID == "" {
-		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("department_id is required", "see logs for details", http.StatusInternalServerError))
-	}
-
-	limit := int32(20)
-	if l := c.QueryParam("limit"); l != "" {
-		if val, err := strconv.Atoi(l); err == nil {
-			limit = int32(val)
-		}
-	}
-
-	offset := int32(0)
-	if o := c.QueryParam("offset"); o != "" {
-		if val, err := strconv.Atoi(o); err == nil {
-			offset = int32(val)
-		}
-	}
-
-	resp, err := h.service.Goods().GetGoodsByDepartment(c.Request().Context(), departmentID, limit, offset)
-	if err != nil {
-		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("Operation failed", err.Error(), http.StatusInternalServerError))
-	}
-
-	return c.JSON(http.StatusOK, resp)
+	return c.JSON(http.StatusGone, model.NewErrorResponse("Endpoint deprecated", "Use GET /api/v1/goods with category_id filter instead", http.StatusGone))
 }
 
 // GetGoodsByPriceRange retrieves goods within a price range
@@ -297,7 +293,7 @@ func (h *Handler) UpdateGood(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("invalid request", "see logs for details", http.StatusInternalServerError))
 	}
 
-	resp, err := h.service.Goods().UpdateGood(c.Request().Context(), id, req.Name, req.Description, req.NameI18n, req.DescriptionI18n, req.CategoryID, req.DepartmentID, req.Price, req.CookTime, req.PictureUrl, req.ColorCode)
+	resp, err := h.service.Goods().UpdateGood(c.Request().Context(), id, req.Name, req.Description, req.NameI18n, req.DescriptionI18n, req.CategoryID, req.Price, req.CookTime, req.PictureUrl, req.ColorCode)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("Operation failed", err.Error(), http.StatusInternalServerError))
 	}
@@ -546,7 +542,6 @@ func (h *Handler) CreateGoodWithCalculations(c echo.Context) error {
 		req.Good.NameI18n,
 		req.Good.DescriptionI18n,
 		req.Good.CategoryID,
-		req.Good.DepartmentID,
 		req.Good.Price,
 		req.Good.CookTime,
 		req.Good.PictureUrl,
@@ -703,7 +698,6 @@ func (h *Handler) UpdateGoodWithCalculations(c echo.Context) error {
 		req.Good.NameI18n,
 		req.Good.DescriptionI18n,
 		req.Good.CategoryID,
-		req.Good.DepartmentID,
 		req.Good.Price,
 		req.Good.CookTime,
 		req.Good.PictureUrl,
@@ -823,7 +817,7 @@ func (h *Handler) GetGoodByIDWithLang(c echo.Context) error {
 	return c.JSON(http.StatusOK, model.NewSuccessResponse("Good retrieved successfully", good, http.StatusOK))
 }
 
-// GetAllGoodsWithLang retrieves all goods/menu items with language support
+// GetAllGoodsWithLang retrieves all goods/menu items with language support and optional filters
 // @Summary Get all goods with language support
 // @Description Retrieve all goods/menu items with names and descriptions translated to specified language
 // @Tags Goods
@@ -833,6 +827,11 @@ func (h *Handler) GetGoodByIDWithLang(c echo.Context) error {
 // @Param lang query string false "Language code (uz, ru, en - default: uz)"
 // @Param limit query int false "Limit (default: 20)"
 // @Param offset query int false "Offset (default: 0)"
+// @Param expand query string false "Expand related fields"
+// @Param category_id query string false "Filter by category ID"
+// @Param department_id query string false "Filter by department ID"
+// @Param storage_id query string false "Filter by storage ID"
+// @Param search query string false "Search by name"
 // @Success 200 {array} model.GoodResponse "Goods retrieved successfully"
 // @Failure 400 {object} model.ErrorResponse "Invalid request parameters"
 // @Failure 401 {object} model.ErrorResponse "Unauthorized"
@@ -864,11 +863,29 @@ func (h *Handler) GetAllGoodsWithLang(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("invalid language code", "valid values: uz, ru, en", http.StatusBadRequest))
 	}
 
-	goods, err := h.service.Goods().GetAllGoodsWithLang(c.Request().Context(), lang, limit, offset)
+	categoryID := c.QueryParam("category_id")
+	search := c.QueryParam("search")
+
+	var goods []*model.GoodResponse
+	var total int64
+	var err error
+
+	if categoryID != "" || search != "" {
+		goods, total, err = h.service.Goods().GetAllGoodsFiltered(c.Request().Context(), categoryID, search, lang, limit, offset)
+	} else {
+		goods, total, err = h.service.Goods().GetAllGoodsWithLang(c.Request().Context(), lang, limit, offset)
+	}
 	if err != nil {
 		log.Printf("GetAllGoodsWithLang failed: %v", err)
 		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("failed to get goods", "see logs for details", http.StatusInternalServerError))
 	}
 
-	return c.JSON(http.StatusOK, model.NewSuccessResponse("Goods retrieved successfully", goods, http.StatusOK))
+	if maps, expanded, err := h.expandListResponse(c, goods, "goods"); expanded {
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("expand failed", err.Error(), http.StatusInternalServerError))
+		}
+		return c.JSON(http.StatusOK, model.NewPaginatedResponse("Goods retrieved successfully", maps, int32(total), limit, offset, http.StatusOK))
+	}
+
+	return c.JSON(http.StatusOK, model.NewPaginatedResponse("Goods retrieved successfully", goods, int32(total), limit, offset, http.StatusOK))
 }

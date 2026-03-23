@@ -1,0 +1,1 @@
+ALTER TABLE cafe_tables ADD COLUMN IF NOT EXISTS price_per_hour NUMERIC(15,2);

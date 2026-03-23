@@ -1,10 +1,10 @@
 -- name: CreateCafeTable :one
-INSERT INTO cafe_tables (id, hall_id, number, capacity, status, pos_x, pos_y, width, height, rotation)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-RETURNING id, hall_id, number, capacity, status, pos_x, pos_y, width, height, rotation, created_at, updated_at, deleted_at;
+INSERT INTO cafe_tables (id, hall_id, number, capacity, status, pos_x, pos_y, width, height, rotation, price_per_hour)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+RETURNING id, hall_id, number, capacity, status, pos_x, pos_y, width, height, rotation, price_per_hour, created_at, updated_at, deleted_at;
 
 -- name: GetCafeTableByID :one
-SELECT id, hall_id, number, capacity, status, pos_x, pos_y, width, height, rotation, created_at, updated_at, deleted_at
+SELECT id, hall_id, number, capacity, status, pos_x, pos_y, width, height, rotation, price_per_hour, created_at, updated_at, deleted_at
 FROM cafe_tables
 WHERE cafe_tables.id = $1 AND cafe_tables.deleted_at = 0
   AND EXISTS (
@@ -14,7 +14,7 @@ WHERE cafe_tables.id = $1 AND cafe_tables.deleted_at = 0
   );
 
 -- name: GetCafeTableByNumber :one
-SELECT id, hall_id, number, capacity, status, pos_x, pos_y, width, height, rotation, created_at, updated_at, deleted_at
+SELECT id, hall_id, number, capacity, status, pos_x, pos_y, width, height, rotation, price_per_hour, created_at, updated_at, deleted_at
 FROM cafe_tables
 WHERE cafe_tables.hall_id = $1 AND cafe_tables.number = $2 AND cafe_tables.deleted_at = 0
   AND EXISTS (
@@ -24,7 +24,7 @@ WHERE cafe_tables.hall_id = $1 AND cafe_tables.number = $2 AND cafe_tables.delet
   );
 
 -- name: GetAllCafeTables :many
-SELECT id, hall_id, number, capacity, status, pos_x, pos_y, width, height, rotation, created_at, updated_at, deleted_at
+SELECT id, hall_id, number, capacity, status, pos_x, pos_y, width, height, rotation, price_per_hour, created_at, updated_at, deleted_at
 FROM cafe_tables
 WHERE cafe_tables.deleted_at = 0
   AND EXISTS (
@@ -36,7 +36,7 @@ ORDER BY hall_id ASC, number ASC
 LIMIT $1 OFFSET $2;
 
 -- name: GetCafeTablesByHallID :many
-SELECT id, hall_id, number, capacity, status, pos_x, pos_y, width, height, rotation, created_at, updated_at, deleted_at
+SELECT id, hall_id, number, capacity, status, pos_x, pos_y, width, height, rotation, price_per_hour, created_at, updated_at, deleted_at
 FROM cafe_tables
 WHERE cafe_tables.hall_id = $1 AND cafe_tables.deleted_at = 0
   AND EXISTS (
@@ -47,7 +47,7 @@ WHERE cafe_tables.hall_id = $1 AND cafe_tables.deleted_at = 0
 ORDER BY number ASC;
 
 -- name: GetCafeTablesByStatus :many
-SELECT id, hall_id, number, capacity, status, pos_x, pos_y, width, height, rotation, created_at, updated_at, deleted_at
+SELECT id, hall_id, number, capacity, status, pos_x, pos_y, width, height, rotation, price_per_hour, created_at, updated_at, deleted_at
 FROM cafe_tables
 WHERE cafe_tables.status = $1 AND cafe_tables.deleted_at = 0
   AND EXISTS (
@@ -59,7 +59,7 @@ ORDER BY hall_id ASC, number ASC
 LIMIT $2 OFFSET $3;
 
 -- name: GetCafeTablesByHallAndStatus :many
-SELECT id, hall_id, number, capacity, status, pos_x, pos_y, width, height, rotation, created_at, updated_at, deleted_at
+SELECT id, hall_id, number, capacity, status, pos_x, pos_y, width, height, rotation, price_per_hour, created_at, updated_at, deleted_at
 FROM cafe_tables
 WHERE cafe_tables.hall_id = $1 AND cafe_tables.status = $2 AND cafe_tables.deleted_at = 0
   AND EXISTS (
@@ -70,7 +70,7 @@ WHERE cafe_tables.hall_id = $1 AND cafe_tables.status = $2 AND cafe_tables.delet
 ORDER BY number ASC;
 
 -- name: GetCafeTablesByCapacity :many
-SELECT id, hall_id, number, capacity, status, pos_x, pos_y, width, height, rotation, created_at, updated_at, deleted_at
+SELECT id, hall_id, number, capacity, status, pos_x, pos_y, width, height, rotation, price_per_hour, created_at, updated_at, deleted_at
 FROM cafe_tables
 WHERE cafe_tables.capacity >= $1 AND cafe_tables.deleted_at = 0
   AND EXISTS (
@@ -92,6 +92,7 @@ SET hall_id = COALESCE($2, hall_id),
     width = COALESCE($8, width),
     height = COALESCE($9, height),
     rotation = COALESCE($10, rotation),
+    price_per_hour = COALESCE($11, price_per_hour),
     updated_at = NOW()
 WHERE cafe_tables.id = $1 AND cafe_tables.deleted_at = 0
   AND EXISTS (
@@ -99,7 +100,7 @@ WHERE cafe_tables.id = $1 AND cafe_tables.deleted_at = 0
     WHERE h.id = cafe_tables.hall_id
       AND h.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
   )
-RETURNING id, hall_id, number, capacity, status, pos_x, pos_y, width, height, rotation, created_at, updated_at, deleted_at;
+RETURNING id, hall_id, number, capacity, status, pos_x, pos_y, width, height, rotation, price_per_hour, created_at, updated_at, deleted_at;
 
 -- name: UpdateCafeTableStatus :one
 UPDATE cafe_tables
@@ -111,7 +112,7 @@ WHERE cafe_tables.id = $1 AND cafe_tables.deleted_at = 0
     WHERE h.id = cafe_tables.hall_id
       AND h.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
   )
-RETURNING id, hall_id, number, capacity, status, pos_x, pos_y, width, height, rotation, created_at, updated_at, deleted_at;
+RETURNING id, hall_id, number, capacity, status, pos_x, pos_y, width, height, rotation, price_per_hour, created_at, updated_at, deleted_at;
 
 -- name: SetTableFree :one
 UPDATE cafe_tables
@@ -123,7 +124,7 @@ WHERE cafe_tables.id = $1 AND cafe_tables.deleted_at = 0
     WHERE h.id = cafe_tables.hall_id
       AND h.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
   )
-RETURNING id, hall_id, number, capacity, status, pos_x, pos_y, width, height, rotation, created_at, updated_at, deleted_at;
+RETURNING id, hall_id, number, capacity, status, pos_x, pos_y, width, height, rotation, price_per_hour, created_at, updated_at, deleted_at;
 
 -- name: SetTableBusy :one
 UPDATE cafe_tables
@@ -135,7 +136,7 @@ WHERE cafe_tables.id = $1 AND cafe_tables.deleted_at = 0
     WHERE h.id = cafe_tables.hall_id
       AND h.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
   )
-RETURNING id, hall_id, number, capacity, status, pos_x, pos_y, width, height, rotation, created_at, updated_at, deleted_at;
+RETURNING id, hall_id, number, capacity, status, pos_x, pos_y, width, height, rotation, price_per_hour, created_at, updated_at, deleted_at;
 
 -- name: DeleteCafeTable :exec
 UPDATE cafe_tables
@@ -221,7 +222,7 @@ WHERE ct.id = $1 AND ct.deleted_at = 0
 
 
 -- name: GetAvailableTablesByHall :many
-SELECT id, hall_id, number, capacity, status, pos_x, pos_y, width, height, rotation, created_at, updated_at, deleted_at
+SELECT id, hall_id, number, capacity, status, pos_x, pos_y, width, height, rotation, price_per_hour, created_at, updated_at, deleted_at
 FROM cafe_tables
 WHERE hall_id = $1 
 AND status = 'free' 
@@ -234,7 +235,7 @@ AND EXISTS (
 ORDER BY number ASC;
 
 -- name: GetAvailableTablesByCapacity :many
-SELECT id, hall_id, number, capacity, status, pos_x, pos_y, width, height, rotation, created_at, updated_at, deleted_at
+SELECT id, hall_id, number, capacity, status, pos_x, pos_y, width, height, rotation, price_per_hour, created_at, updated_at, deleted_at
 FROM cafe_tables
 WHERE capacity >= $1 
 AND status = 'free' 
@@ -248,7 +249,7 @@ ORDER BY capacity ASC, number ASC
 LIMIT $2 OFFSET $3;
 
 -- name: GetAvailableTablesByHallAndCapacity :many
-SELECT id, hall_id, number, capacity, status, pos_x, pos_y, width, height, rotation, created_at, updated_at, deleted_at
+SELECT id, hall_id, number, capacity, status, pos_x, pos_y, width, height, rotation, price_per_hour, created_at, updated_at, deleted_at
 FROM cafe_tables
 WHERE hall_id = $1 
 AND capacity >= $2 

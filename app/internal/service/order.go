@@ -142,6 +142,15 @@ func (s *OrderS) CreateOrder(ctx context.Context, req model.CreateOrderRequest) 
 		cashierUUID = pgtype.UUID{Bytes: id, Valid: true}
 	}
 
+	cashRegisterUUID := pgtype.UUID{}
+	if req.CashRegisterID != nil && *req.CashRegisterID != "" {
+		id, err := uuid.Parse(*req.CashRegisterID)
+		if err != nil {
+			return nil, fmt.Errorf("invalid cash_register_id: %w", err)
+		}
+		cashRegisterUUID = pgtype.UUID{Bytes: id, Valid: true}
+	}
+
 	// Determine initial status
 	status := pg.NullOrderStatus{OrderStatus: pg.OrderStatus(model.OrderStatusOpen), Valid: true}
 	if req.ScheduledAt != nil && *req.ScheduledAt != "" {
@@ -169,16 +178,17 @@ func (s *OrderS) CreateOrder(ctx context.Context, req model.CreateOrderRequest) 
 	}
 
 	createdOrder, err := s.repo.Tenant(ctx).CreateOrder(ctx, pg.CreateOrderParams{
-		ID:          uuid.New(),
-		TableID:     tableIDPg,
-		WaiterID:    waiterUUID,
-		CashierID:   cashierUUID,
-		Status:      status,
-		GuestCount:  req.GuestCount,
-		TotalAmount: totalAmount,
-		Comment:     req.Comment,
-		OrderType:   orderType,
-		ScheduledAt: scheduledAtPg,
+		ID:             uuid.New(),
+		TableID:        tableIDPg,
+		WaiterID:       waiterUUID,
+		CashierID:      cashierUUID,
+		CashRegisterID: cashRegisterUUID,
+		Status:         status,
+		GuestCount:     req.GuestCount,
+		TotalAmount:    totalAmount,
+		Comment:        req.Comment,
+		OrderType:      orderType,
+		ScheduledAt:    scheduledAtPg,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to create order: %w", err)
@@ -439,15 +449,24 @@ func (s *OrderS) UpdateOrderStatus(ctx context.Context, orderID string, status s
 		return nil, fmt.Errorf("invalid order id: %w", err)
 	}
 
-	if status == string(model.OrderStatusServed) {
-		existing, err := s.repo.Tenant(ctx).GetOrderByID(ctx, id)
-		if err != nil {
-			return nil, fmt.Errorf("failed to get order: %w", err)
-		}
-		if existing.Status.Valid && string(existing.Status.OrderStatus) == string(model.OrderStatusServed) {
-			return toOrderResponse(existing), nil
-		}
-		return s.MarkOrderServed(ctx, orderID)
+	// Block paid — must go through MarkOrderPaid (payment endpoint)
+	if status == string(pg.OrderStatusPaid) {
+		return nil, fmt.Errorf("use the payment endpoint to mark an order as paid")
+	}
+
+	existing, err := s.repo.Tenant(ctx).GetOrderByID(ctx, id)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get order: %w", err)
+	}
+	currentStatus := string(existing.Status.OrderStatus)
+
+	// cancelled is always terminal
+	if currentStatus == string(pg.OrderStatusCancelled) {
+		return nil, fmt.Errorf("cannot change status of a cancelled order")
+	}
+	// paid is terminal for dine_in; takeaway continues paid → cooking → ready
+	if currentStatus == string(pg.OrderStatusPaid) && existing.OrderType != "takeaway" {
+		return nil, fmt.Errorf("cannot change status of a paid order")
 	}
 
 	st := pg.NullOrderStatus{OrderStatus: pg.OrderStatus(status), Valid: true}
@@ -459,7 +478,7 @@ func (s *OrderS) UpdateOrderStatus(ctx context.Context, orderID string, status s
 	return toOrderResponse(order), nil
 }
 
-func (s *OrderS) MarkOrderPaid(ctx context.Context, orderID string, cashierID string, cashRegisterID *string, paymentType *string, discountPercent *string, discountAmount *string, discountComment *string, customerPaidAmount *string) (*model.OrderResponse, error) {
+func (s *OrderS) MarkOrderPaid(ctx context.Context, orderID string, cashierID string, cashRegisterID *string, paymentType *string, discountPercent *string, discountAmount *string, discountComment *string, customerPaidAmount *string, tableCharge *string, cashAmount *string, cardAmount *string) (*model.OrderResponse, error) {
 	oID, err := uuid.Parse(orderID)
 	if err != nil {
 		return nil, fmt.Errorf("invalid order id: %w", err)
@@ -496,20 +515,72 @@ func (s *OrderS) MarkOrderPaid(ctx context.Context, orderID string, cashierID st
 		paidAmountNum = &n
 	}
 
+	var tableChargeNum *pgtype.Numeric
+	if tableCharge != nil && *tableCharge != "" {
+		n := pgtype.Numeric{}
+		if err := n.Scan(*tableCharge); err != nil {
+			return nil, fmt.Errorf("invalid table_charge: %w", err)
+		}
+		tableChargeNum = &n
+	}
+
+	// Normalize cash/card amounts based on payment_type.
+	// SQL uses cash_amount + card_amount as total_paid for validation and change calculation.
+	pt := ""
+	if paymentType != nil {
+		pt = *paymentType
+	}
+	var cashAmountNum, cardAmountNum *pgtype.Numeric
+	switch pt {
+	case "split":
+		// Both must be provided; total_paid = cash + card
+		if cashAmount != nil && *cashAmount != "" {
+			n := pgtype.Numeric{}
+			if err := n.Scan(*cashAmount); err != nil {
+				return nil, fmt.Errorf("invalid cash_amount: %w", err)
+			}
+			cashAmountNum = &n
+		}
+		if cardAmount != nil && *cardAmount != "" {
+			n := pgtype.Numeric{}
+			if err := n.Scan(*cardAmount); err != nil {
+				return nil, fmt.Errorf("invalid card_amount: %w", err)
+			}
+			cardAmountNum = &n
+		}
+	case "card":
+		// card_amount = customer_paid_amount; cash_amount = 0
+		cardAmountNum = paidAmountNum
+	default: // "cash" or unset
+		// cash_amount = customer_paid_amount; card_amount = 0
+		cashAmountNum = paidAmountNum
+	}
+
 	// Fetch the order before paying so we have the table_id
 	orderBeforePay, err := s.repo.Tenant(ctx).GetOrderByID(ctx, oID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch order: %w", err)
 	}
 
+	crUUID := pgtype.UUID{}
+	if cashRegisterID != nil && *cashRegisterID != "" {
+		if id, err := uuid.Parse(*cashRegisterID); err == nil {
+			crUUID = pgtype.UUID{Bytes: id, Valid: true}
+		}
+	}
+
 	if err := s.repo.Tenant(ctx).PayOrderBill(ctx, pg.PayOrderBillParams{
 		OrderID:            oID,
 		CashierID:          cID,
+		CashRegisterID:     crUUID,
 		PaymentType:        paymentType,
 		DiscountPercent:    discPercentNum,
 		DiscountAmount:     discAmountNum,
 		DiscountComment:    discountComment,
 		CustomerPaidAmount: paidAmountNum,
+		TableCharge:        tableChargeNum,
+		CashAmount:         cashAmountNum,
+		CardAmount:         cardAmountNum,
 	}); err != nil {
 		return nil, fmt.Errorf("failed to mark order paid: %w", err)
 	}
@@ -752,6 +823,22 @@ func (s *OrderS) GetBills(ctx context.Context, req model.GetBillsRequest) (*mode
 		}
 		tableUUID = &u
 	}
+	var cashRegisterUUID *uuid.UUID
+	if req.CashRegisterID != nil && *req.CashRegisterID != "" {
+		u, err := uuid.Parse(*req.CashRegisterID)
+		if err != nil {
+			return nil, fmt.Errorf("invalid cash_register_id: %w", err)
+		}
+		cashRegisterUUID = &u
+	}
+	var cashierUUID *uuid.UUID
+	if req.CashierID != nil && *req.CashierID != "" {
+		u, err := uuid.Parse(*req.CashierID)
+		if err != nil {
+			return nil, fmt.Errorf("invalid cashier_id: %w", err)
+		}
+		cashierUUID = &u
+	}
 
 	limit := req.Limit
 	if limit <= 0 {
@@ -759,21 +846,28 @@ func (s *OrderS) GetBills(ctx context.Context, req model.GetBillsRequest) (*mode
 	}
 
 	params := pg.GetBillsParams{
-		Start:       startEnd(req.Start),
-		End:         startEnd(req.End),
-		BillNo:      req.BillNo,
-		BillStatus:  req.BillStatus,
-		PaymentType: req.PaymentType,
-		WaiterID:    waiterUUID,
-		HallID:      hallUUID,
-		TableID:     tableUUID,
-		Limit:       limit,
-		Offset:      req.Offset,
+		Start:          startEnd(req.Start),
+		End:            startEnd(req.End),
+		BillNo:         req.BillNo,
+		BillStatus:     req.BillStatus,
+		PaymentType:    req.PaymentType,
+		WaiterID:       waiterUUID,
+		HallID:         hallUUID,
+		TableID:        tableUUID,
+		CashRegisterID: cashRegisterUUID,
+		CashierID:      cashierUUID,
+		Limit:          limit,
+		Offset:         req.Offset,
 	}
 
 	total, err := s.repo.Tenant(ctx).CountBills(ctx, params)
 	if err != nil {
 		return nil, fmt.Errorf("failed to count bills: %w", err)
+	}
+
+	totalsRow, err := s.repo.Tenant(ctx).GetBillsTotals(ctx, params)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get bills totals: %w", err)
 	}
 
 	rows, err := s.repo.Tenant(ctx).GetBills(ctx, params)
@@ -798,6 +892,16 @@ func (s *OrderS) GetBills(ctx context.Context, req model.GetBillsRequest) (*mode
 			s := r.WaiterID.String()
 			waiterIDStr = &s
 		}
+		var cashierIDStr *string
+		if r.CashierID.Valid {
+			s := r.CashierID.String()
+			cashierIDStr = &s
+		}
+		var cashRegIDStr *string
+		if r.CashRegisterID.Valid {
+			s := r.CashRegisterID.String()
+			cashRegIDStr = &s
+		}
 		billStatus := r.BillStatus
 		if r.DeletedAt > 0 {
 			billStatus = "deleted"
@@ -810,6 +914,8 @@ func (s *OrderS) GetBills(ctx context.Context, req model.GetBillsRequest) (*mode
 			ClosedAt:        closedAt,
 			WaiterID:        waiterIDStr,
 			WaiterName:      r.WaiterName,
+			CashierID:       cashierIDStr,
+			CashRegisterID:  cashRegIDStr,
 			TableNumber:     r.TableNumber,
 			HallName:        r.HallName,
 			GuestCount:      r.GuestCount,
@@ -829,6 +935,15 @@ func (s *OrderS) GetBills(ctx context.Context, req model.GetBillsRequest) (*mode
 		Limit:  limit,
 		Offset: req.Offset,
 		Items:  items,
+		Totals: model.BillsTotals{
+			TotalFoodCost:       numericToString(totalsRow.TotalFoodCost),
+			TotalGuestCount:     totalsRow.TotalGuestCount,
+			TotalGrandTotal:     numericToString(totalsRow.TotalGrandTotal),
+			TotalServiceAmount:  numericToString(totalsRow.TotalServiceAmount),
+			AvgServicePercent:   numericToString(totalsRow.AvgServicePercent),
+			TotalDiscountAmount: numericToString(totalsRow.TotalDiscountAmount),
+			AvgDiscountPercent:  numericToString(totalsRow.AvgDiscountPercent),
+		},
 	}, nil
 }
 
@@ -879,6 +994,11 @@ func (s *OrderS) GetBillDetails(ctx context.Context, billID string) (*model.Bill
 		s := h.CashierID.String()
 		cashierIDStr = &s
 	}
+	var cashRegIDStr *string
+	if h.CashRegisterID.Valid {
+		s := h.CashRegisterID.String()
+		cashRegIDStr = &s
+	}
 
 	outItems := make([]model.BillItem, 0, len(items))
 	for _, it := range items {
@@ -908,6 +1028,7 @@ func (s *OrderS) GetBillDetails(ctx context.Context, billID string) (*model.Bill
 		WaiterName:      h.WaiterName,
 		CashierID:       cashierIDStr,
 		CashierName:     h.CashierName,
+		CashRegisterID:  cashRegIDStr,
 		GuestCount:      h.GuestCount,
 		FoodCost:        numericToString(h.FoodCost),
 		FoodTotal:       numericToString(h.FoodTotal),
@@ -917,7 +1038,10 @@ func (s *OrderS) GetBillDetails(ctx context.Context, billID string) (*model.Bill
 		DiscountAmount:  numericToString(h.DiscountAmount),
 		DiscountComment:    h.DiscountComment,
 		GrandTotal:         numericToString(h.GrandTotal),
+		TableCharge:        numericToString(h.TableCharge),
 		CustomerPaidAmount: numericPtrToStringPtr(h.CustomerPaidAmount),
+		CashAmount:         numericPtrToStringPtr(h.CashAmount),
+		CardAmount:         numericPtrToStringPtr(h.CardAmount),
 		ChangeAmount:       numericPtrToStringPtr(h.ChangeAmount),
 		Comment:            h.Comment,
 		Items:              outItems,
@@ -1302,12 +1426,96 @@ func (s *OrderS) UpdateOrderItemStatus(ctx context.Context, itemID string, statu
 		return nil, fmt.Errorf("invalid order item id: %w", err)
 	}
 
+	existing, err := s.repo.Tenant(ctx).GetOrderItemByID(ctx, id)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get order item: %w", err)
+	}
+	currentStatus := string(existing.Status.OrderItemsStatus)
+
+	// Terminal status — cannot change
+	if currentStatus == string(pg.OrderItemsStatusCancelled) {
+		return nil, fmt.Errorf("cannot change status of a cancelled order item")
+	}
+
 	st := pg.NullOrderItemsStatus{OrderItemsStatus: pg.OrderItemsStatus(status), Valid: true}
 	item, err := s.repo.Tenant(ctx).UpdateOrderItemStatus(ctx, pg.UpdateOrderItemStatusParams{ID: id, Status: st})
 	if err != nil {
 		return nil, fmt.Errorf("failed to update order item status: %w", err)
 	}
+
+	// Deduct stock when kitchen starts cooking
+	if currentStatus == string(pg.OrderItemsStatusPending) && status == string(pg.OrderItemsStatusCooking) {
+		if err := s.deductStockForOrderItem(ctx, existing.GoodID, existing.Quantity); err != nil {
+			log.Printf("UpdateOrderItemStatus: stock deduction failed for item %s: %v", itemID, err)
+		}
+	}
+
 	return toOrderItemResponse(item), nil
+}
+
+// deductStockForOrderItem resolves the storage from good→category→department,
+// then recursively collects all ingredients and deducts from ingredient_stock.
+func (s *OrderS) deductStockForOrderItem(ctx context.Context, goodID uuid.UUID, qty int32) error {
+	storageID, err := s.repo.Tenant(ctx).GetStorageIDByGoodID(ctx, goodID)
+	if err != nil {
+		return fmt.Errorf("failed to resolve storage for good %s: %w", goodID, err)
+	}
+	if !storageID.Valid {
+		return fmt.Errorf("good %s has no storage (check category→department→storage chain)", goodID)
+	}
+
+	ingredients := map[uuid.UUID]float64{}
+	s.collectIngredients(ctx, goodID, float64(qty), true, ingredients)
+
+	for ingID, amount := range ingredients {
+		stockID, err := s.repo.Tenant(ctx).EnsureIngredientStockByStorage(ctx, pg.EnsureIngredientStockByStorageParams{
+			ID:           uuid.New(),
+			IngredientID: ingID,
+			StorageID:    storageID,
+		})
+		if err != nil {
+			log.Printf("deductStock: EnsureIngredientStockByStorage failed for ingredient %s: %v", ingID, err)
+			continue
+		}
+
+		amountNum := stringToNumeric(strconv.FormatFloat(amount, 'f', -1, 64))
+		if _, err := s.repo.Tenant(ctx).RemoveFromIngredientStock(ctx, pg.RemoveFromIngredientStockParams{
+			ID:       stockID,
+			Quantity: amountNum,
+		}); err != nil {
+			log.Printf("deductStock: RemoveFromIngredientStock failed for ingredient %s: %v", ingID, err)
+		}
+	}
+	return nil
+}
+
+// collectIngredients recursively resolves all leaf ingredients from a good or compound,
+// multiplying quantities down the tree. Results accumulated in `out` map (ingredientID → total qty).
+func (s *OrderS) collectIngredients(ctx context.Context, id uuid.UUID, multiplier float64, isGood bool, out map[uuid.UUID]float64) {
+	idUUID := pgtype.UUID{Bytes: id, Valid: true}
+	var rows []pg.Calculation
+	var err error
+	if isGood {
+		rows, err = s.repo.Tenant(ctx).GetCalculationsByGoodID(ctx, idUUID)
+	} else {
+		rows, err = s.repo.Tenant(ctx).GetCalculationsByCompoundID(ctx, idUUID)
+	}
+	if err != nil {
+		log.Printf("collectIngredients: failed to get calculations: %v", err)
+		return
+	}
+
+	for _, row := range rows {
+		rowQty, _ := strconv.ParseFloat(numericToStr(row.Quantity), 64)
+		effectiveQty := rowQty * multiplier
+
+		if row.IngredientID.Valid {
+			out[row.IngredientID.Bytes] += effectiveQty
+		} else if row.ComponentCompoundID.Valid {
+			compID := row.ComponentCompoundID.Bytes
+			s.collectIngredients(ctx, compID, effectiveQty, false, out)
+		}
+	}
 }
 
 func (s *OrderS) DeleteOrderItem(ctx context.Context, itemID string) error {
@@ -1429,6 +1637,7 @@ func toOrderResponse(o any) *model.OrderResponse {
 		tableID           pgtype.UUID
 		waiterIDPg        pgtype.UUID
 		cashierIDPg       pgtype.UUID
+		cashRegisterIDPg  pgtype.UUID
 		statusPg          pg.NullOrderStatus
 		guestCount        *int32
 		totalAmount       pgtype.Numeric
@@ -1446,6 +1655,7 @@ func toOrderResponse(o any) *model.OrderResponse {
 		tableID = row.TableID
 		waiterIDPg = row.WaiterID
 		cashierIDPg = row.CashierID
+		cashRegisterIDPg = row.CashRegisterID
 		statusPg = row.Status
 		guestCount = row.GuestCount
 		totalAmount = row.TotalAmount
@@ -1460,6 +1670,7 @@ func toOrderResponse(o any) *model.OrderResponse {
 		tableID = row.TableID
 		waiterIDPg = row.WaiterID
 		cashierIDPg = row.CashierID
+		cashRegisterIDPg = row.CashRegisterID
 		statusPg = pg.NullOrderStatus(row.Status)
 		guestCount = row.GuestCount
 		totalAmount = row.TotalAmount
@@ -1474,6 +1685,7 @@ func toOrderResponse(o any) *model.OrderResponse {
 		tableID = row.TableID
 		waiterIDPg = row.WaiterID
 		cashierIDPg = row.CashierID
+		cashRegisterIDPg = row.CashRegisterID
 		statusPg = pg.NullOrderStatus(row.Status)
 		guestCount = row.GuestCount
 		totalAmount = row.TotalAmount
@@ -1488,6 +1700,7 @@ func toOrderResponse(o any) *model.OrderResponse {
 		tableID = row.TableID
 		waiterIDPg = row.WaiterID
 		cashierIDPg = row.CashierID
+		cashRegisterIDPg = row.CashRegisterID
 		statusPg = pg.NullOrderStatus(row.Status)
 		guestCount = row.GuestCount
 		totalAmount = row.TotalAmount
@@ -1502,6 +1715,7 @@ func toOrderResponse(o any) *model.OrderResponse {
 		tableID = row.TableID
 		waiterIDPg = row.WaiterID
 		cashierIDPg = row.CashierID
+		cashRegisterIDPg = row.CashRegisterID
 		statusPg = pg.NullOrderStatus(row.Status)
 		guestCount = row.GuestCount
 		totalAmount = row.TotalAmount
@@ -1516,6 +1730,7 @@ func toOrderResponse(o any) *model.OrderResponse {
 		tableID = row.TableID
 		waiterIDPg = row.WaiterID
 		cashierIDPg = row.CashierID
+		cashRegisterIDPg = row.CashRegisterID
 		statusPg = pg.NullOrderStatus(row.Status)
 		guestCount = row.GuestCount
 		totalAmount = row.TotalAmount
@@ -1530,6 +1745,7 @@ func toOrderResponse(o any) *model.OrderResponse {
 		tableID = row.TableID
 		waiterIDPg = row.WaiterID
 		cashierIDPg = row.CashierID
+		cashRegisterIDPg = row.CashRegisterID
 		statusPg = pg.NullOrderStatus(row.Status)
 		guestCount = row.GuestCount
 		totalAmount = row.TotalAmount
@@ -1713,6 +1929,12 @@ func toOrderResponse(o any) *model.OrderResponse {
 		cashierID = &s
 	}
 
+	var cashRegisterID *string
+	if cashRegisterIDPg.Valid {
+		s := cashRegisterIDPg.String()
+		cashRegisterID = &s
+	}
+
 	var createdAt *time.Time
 	if createdAtPg.Valid {
 		t := createdAtPg.Time
@@ -1741,6 +1963,7 @@ func toOrderResponse(o any) *model.OrderResponse {
 		TableID:           tableID.String(),
 		WaiterID:          waiterID,
 		CashierID:         cashierID,
+		CashRegisterID:    cashRegisterID,
 		Status:            status,
 		GuestCount:        guestCount,
 		TotalAmount:       numericToString(totalAmount),

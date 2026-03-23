@@ -27,11 +27,8 @@ type AuthI interface {
 	GetUserByID(ctx context.Context, userID string) (model.UserResponse, error)
 	UpdateUser(ctx context.Context, req model.UpdateUserRequest, userID string) (model.UserResponse, error)
 	// Additional methods for QR ordering system
-	GetUsersByRole(ctx context.Context, role string) ([]model.UserResponse, error)
-	GetAllStaff(ctx context.Context) ([]model.UserResponse, error)
-	GetKitchenStaff(ctx context.Context) ([]model.UserResponse, error)
-	GetWaiters(ctx context.Context) ([]model.UserResponse, error)
-	GetCashiers(ctx context.Context) ([]model.UserResponse, error)
+	GetUsersByRole(ctx context.Context, role string, limit, offset int32) ([]model.UserResponse, int64, error)
+	GetKitchenStaff(ctx context.Context, limit, offset int32) ([]model.UserResponse, int64, error)
 	DeleteUser(ctx context.Context, userID string) error
 	RestoreUser(ctx context.Context, userID string) error
 	SearchUsers(ctx context.Context, query string, limit, offset int32) ([]model.UserResponse, error)
@@ -65,9 +62,9 @@ type ShiftI interface {
 type OrganizationI interface {
 	CreateBranch(ctx context.Context, name string, nameI18nUUID *uuid.UUID, address *string, phone *string) (*model.BranchResponse, error)
 	GetBranchByID(ctx context.Context, branchID string) (*model.BranchResponse, error)
-	GetAllBranches(ctx context.Context, limit, offset int32) ([]model.BranchResponse, error)
+	GetAllBranches(ctx context.Context, limit, offset int32) ([]model.BranchResponse, int64, error)
 	GetBranchByIDWithLang(ctx context.Context, branchID string, lang string) (*model.BranchResponse, error)
-	GetAllBranchesWithLang(ctx context.Context, lang string, limit, offset int32) ([]model.BranchResponse, error)
+	GetAllBranchesWithLang(ctx context.Context, lang string, limit, offset int32) ([]model.BranchResponse, int64, error)
 	UpdateBranch(ctx context.Context, branchID string, name, nameI18n, address, phone *string) (*model.BranchResponse, error)
 	DeleteBranch(ctx context.Context, branchID string) error
 	RestoreBranch(ctx context.Context, branchID string) error
@@ -82,11 +79,11 @@ type OrganizationI interface {
 type StorageI interface {
 	CreateStorage(ctx context.Context, name string, branchID string, nameI18n *uuid.UUID, pictureUrl *string, colorCode *string) (*model.StorageResponse, error)
 	GetStorageByID(ctx context.Context, storageID string) (*model.StorageResponse, error)
-	GetAllStorages(ctx context.Context, limit, offset int32) ([]model.StorageResponse, error)
+	GetAllStorages(ctx context.Context, limit, offset int32) ([]model.StorageResponse, int32, error)
 	GetStorageByIDWithLang(ctx context.Context, storageID string, lang string) (*model.StorageResponse, error)
-	GetAllStoragesWithLang(ctx context.Context, lang string, limit, offset int32) ([]model.StorageResponse, error)
-	GetStoragesByBranchID(ctx context.Context, branchID string, limit, offset int32) ([]model.StorageResponse, error)
-	UpdateStorage(ctx context.Context, storageID string, name *string, branchID *string, nameI18n *string, pictureUrl *string, colorCode *string) (*model.StorageResponse, error)
+	GetAllStoragesWithLang(ctx context.Context, lang string, limit, offset int32) ([]model.StorageResponse, int32, error)
+	GetStoragesByBranchID(ctx context.Context, branchID string, limit, offset int32) ([]model.StorageResponse, int32, error)
+	UpdateStorage(ctx context.Context, storageID string, name *string, branchID *string, nameI18n *string, pictureUrl *string, colorCode *string, uz *string, ru *string, en *string) (*model.StorageResponse, error)
 	DeleteStorage(ctx context.Context, storageID string) error
 	RestoreStorage(ctx context.Context, storageID string) error
 	SearchStorages(ctx context.Context, query string, limit, offset int32) ([]model.StorageResponse, error)
@@ -95,11 +92,11 @@ type StorageI interface {
 type DepartmentI interface {
 	CreateDepartment(ctx context.Context, name string, nameI18n *string, colorCode *string, pictureUrl *string, storageID *string) (*model.DepartmentResponse, error)
 	GetDepartmentByID(ctx context.Context, departmentID string) (*model.DepartmentResponse, error)
-	GetAllDepartments(ctx context.Context, limit, offset int32) ([]*model.DepartmentResponse, error)
+	GetAllDepartments(ctx context.Context, limit, offset int32) ([]*model.DepartmentResponse, int32, error)
 	GetDepartmentByIDWithLang(ctx context.Context, departmentID string, lang string) (*model.DepartmentResponse, error)
-	GetAllDepartmentsWithLang(ctx context.Context, lang string, limit, offset int32) ([]*model.DepartmentResponse, error)
-	GetDepartmentsByStorageID(ctx context.Context, storageID string, limit, offset int32) ([]*model.DepartmentResponse, error)
-	UpdateDepartment(ctx context.Context, departmentID string, name *string, nameI18n *string, colorCode *string, pictureUrl *string, storageID *string) (*model.DepartmentResponse, error)
+	GetAllDepartmentsWithLang(ctx context.Context, lang string, limit, offset int32) ([]*model.DepartmentResponse, int32, error)
+	GetDepartmentsByStorageID(ctx context.Context, storageID string, limit, offset int32) ([]*model.DepartmentResponse, int32, error)
+	UpdateDepartment(ctx context.Context, departmentID string, name *string, nameI18n *string, colorCode *string, pictureUrl *string, storageID *string, uz *string, ru *string, en *string) (*model.DepartmentResponse, error)
 	DeleteDepartment(ctx context.Context, departmentID string) error
 	RestoreDepartment(ctx context.Context, departmentID string) (*model.DepartmentResponse, error)
 	SearchDepartments(ctx context.Context, query string, limit, offset int32) ([]*model.DepartmentResponse, error)
@@ -108,10 +105,10 @@ type DepartmentI interface {
 type HallI interface {
 	CreateHall(ctx context.Context, name string, branchID string, nameI18n *uuid.UUID, width, height *int32) (*model.HallResponse, error)
 	GetHallByID(ctx context.Context, hallID string) (*model.HallResponse, error)
-	GetAllHalls(ctx context.Context, limit, offset int32) ([]*model.HallResponse, error)
-	GetAllHallsWithLang(ctx context.Context, lang string, limit, offset int32) ([]*model.HallResponse, error)
-	GetHallsByBranchID(ctx context.Context, branchID string, limit, offset int32) ([]*model.HallResponse, error)
-	GetHallsByBranchIDWithLang(ctx context.Context, branchID string, lang string, limit, offset int32) ([]*model.HallResponse, error)
+	GetAllHalls(ctx context.Context, limit, offset int32) ([]*model.HallResponse, int64, error)
+	GetAllHallsWithLang(ctx context.Context, lang string, limit, offset int32) ([]*model.HallResponse, int64, error)
+	GetHallsByBranchID(ctx context.Context, branchID string, limit, offset int32) ([]*model.HallResponse, int64, error)
+	GetHallsByBranchIDWithLang(ctx context.Context, branchID string, lang string, limit, offset int32) ([]*model.HallResponse, int64, error)
 	UpdateHall(ctx context.Context, hallID string, name *string, branchID *string, nameI18n *string, width, height *int32) (*model.HallResponse, error)
 	DeleteHall(ctx context.Context, hallID string) error
 	RestoreHall(ctx context.Context, hallID string) (*model.HallResponse, error)
@@ -121,19 +118,21 @@ type HallI interface {
 type IngredientI interface {
 	CreateIngredientGroup(ctx context.Context, name string, nameI18n *uuid.UUID, pictureUrl *string, colorCode *string) (*model.IngredientGroupResponse, error)
 	GetIngredientGroupByID(ctx context.Context, groupID string) (*model.IngredientGroupResponse, error)
-	GetAllIngredientGroups(ctx context.Context, limit, offset int32) ([]model.IngredientGroupResponse, error)
+	GetAllIngredientGroups(ctx context.Context, limit, offset int32) ([]model.IngredientGroupResponse, int64, error)
+	SearchIngredientGroups(ctx context.Context, query string, limit, offset int32) ([]model.IngredientGroupResponse, error)
 	GetIngredientGroupByIDWithLang(ctx context.Context, groupID string, lang string) (*model.IngredientGroupResponse, error)
-	GetAllIngredientGroupsWithLang(ctx context.Context, lang string, limit, offset int32) ([]model.IngredientGroupResponse, error)
+	GetAllIngredientGroupsWithLang(ctx context.Context, lang string, limit, offset int32) ([]model.IngredientGroupResponse, int64, error)
 	UpdateIngredientGroup(ctx context.Context, groupID string, name *string, nameI18n *string, pictureUrl *string, colorCode *string) (*model.IngredientGroupResponse, error)
 	DeleteIngredientGroup(ctx context.Context, groupID string) error
 	RestoreIngredientGroup(ctx context.Context, groupID string) error
 
 	CreateIngredient(ctx context.Context, name string, nameI18n *uuid.UUID, groupID *string, measurement *string, pictureUrl *string, colorCode *string) (*model.IngredientResponse, error)
 	GetIngredientByID(ctx context.Context, ingredientID string) (*model.IngredientResponse, error)
-	GetAllIngredients(ctx context.Context, limit, offset int32) ([]model.IngredientResponse, error)
+	GetAllIngredients(ctx context.Context, limit, offset int32) ([]model.IngredientResponse, int64, error)
+	SearchIngredients(ctx context.Context, query string, limit, offset int32) ([]model.IngredientResponse, error)
 	GetIngredientByIDWithLang(ctx context.Context, ingredientID string, lang string) (*model.IngredientResponse, error)
-	GetAllIngredientsWithLang(ctx context.Context, lang string, limit, offset int32) ([]model.IngredientResponse, error)
-	GetIngredientsByGroupID(ctx context.Context, groupID string, limit, offset int32) ([]model.IngredientResponse, error)
+	GetAllIngredientsWithLang(ctx context.Context, lang string, limit, offset int32) ([]model.IngredientResponse, int64, error)
+	GetIngredientsByGroupID(ctx context.Context, groupID string, limit, offset int32) ([]model.IngredientResponse, int64, error)
 	UpdateIngredient(ctx context.Context, ingredientID string, name *string, nameI18n *string, groupID *string, measurement *string, pictureUrl *string, brandID *string, colorCode *string, pricePerUnit *string) (*model.IngredientResponse, error)
 	DeleteIngredient(ctx context.Context, ingredientID string) error
 	RestoreIngredient(ctx context.Context, ingredientID string) error
@@ -141,31 +140,31 @@ type IngredientI interface {
 	CreateIngredientStock(ctx context.Context, ingredientID string, quantity string, branchID *string, storageID *string) (*model.IngredientStockResponse, error)
 	GetIngredientStockByID(ctx context.Context, stockID string) (*model.IngredientStockResponse, error)
 	GetStockByIngredientAndBranch(ctx context.Context, ingredientID, branchID string) (*model.IngredientStockResponse, error)
-	GetAllIngredientStock(ctx context.Context, limit, offset int32) ([]model.IngredientStockResponse, error)
-	GetStockByBranchID(ctx context.Context, branchID string, limit, offset int32) ([]model.IngredientStockResponse, error)
-	GetStockByIngredientID(ctx context.Context, ingredientID string, limit, offset int32) ([]model.IngredientStockResponse, error)
+	GetAllIngredientStock(ctx context.Context, limit, offset int32) ([]model.IngredientStockResponse, int64, error)
+	GetStockByBranchID(ctx context.Context, branchID string, limit, offset int32) ([]model.IngredientStockResponse, int64, error)
+	GetStockByIngredientID(ctx context.Context, ingredientID string, limit, offset int32) ([]model.IngredientStockResponse, int64, error)
 	UpdateIngredientStock(ctx context.Context, stockID string, quantity string) (*model.IngredientStockResponse, error)
 	AddToIngredientStock(ctx context.Context, stockID string, quantity string) (*model.IngredientStockResponse, error)
 	RemoveFromIngredientStock(ctx context.Context, stockID string, quantity string) (*model.IngredientStockResponse, error)
 	DeleteIngredientStock(ctx context.Context, stockID string) error
 	RestoreIngredientStock(ctx context.Context, stockID string) error
 
-	GetIngredientReport(ctx context.Context, req model.GetIngredientReportRequest) ([]model.IngredientReportItem, error)
+	GetIngredientReport(ctx context.Context, req model.GetIngredientReportRequest) (*model.IngredientReportResponse, error)
 	GetIngredientReportItem(ctx context.Context, req model.GetIngredientReportRequest) (*model.IngredientReportItem, error)
 	GetIngredientReportMovements(ctx context.Context, req model.GetIngredientReportMovementsRequest) ([]model.IngredientStockMovementResponse, error)
 }
 
 type CategoryI interface {
-	CreateCategory(ctx context.Context, name string, nameI18n, departmentID, storageID, parent *string, pictureUrl *string, colorCode *string) (*model.CategoryResponse, error)
+	CreateCategory(ctx context.Context, name string, nameI18n, departmentID, parent *string, pictureUrl *string, colorCode *string) (*model.CategoryResponse, error)
 	GetCategoryByID(ctx context.Context, categoryID string) (*model.CategoryResponse, error)
-	GetAllCategories(ctx context.Context, limit, offset int32) ([]*model.CategoryResponse, error)
+	GetAllCategories(ctx context.Context, limit, offset int32) ([]*model.CategoryResponse, int64, error)
 	GetCategoryByIDWithLang(ctx context.Context, categoryID string, lang string) (*model.CategoryResponse, error)
-	GetAllCategoriesWithLang(ctx context.Context, lang string, limit, offset int32) ([]*model.CategoryResponse, error)
-	GetCategoriesByDepartmentID(ctx context.Context, departmentID string, limit, offset int32) ([]*model.CategoryResponse, error)
-	GetCategoriesByStorageID(ctx context.Context, storageID string, limit, offset int32) ([]*model.CategoryResponse, error)
-	GetCategoriesByParentID(ctx context.Context, parentID string, limit, offset int32) ([]*model.CategoryResponse, error)
-	GetRootCategories(ctx context.Context, limit, offset int32) ([]*model.CategoryResponse, error)
-	UpdateCategory(ctx context.Context, categoryID string, name, nameI18n, departmentID, storageID, parent *string, pictureUrl *string, colorCode *string) (*model.CategoryResponse, error)
+	GetAllCategoriesWithLang(ctx context.Context, lang string, limit, offset int32) ([]*model.CategoryResponse, int64, error)
+	GetCategoriesByDepartmentID(ctx context.Context, departmentID string, limit, offset int32) ([]*model.CategoryResponse, int64, error)
+	GetCategoriesByStorageID(ctx context.Context, storageID string, limit, offset int32) ([]*model.CategoryResponse, int64, error)
+	GetCategoriesByParentID(ctx context.Context, parentID string, limit, offset int32) ([]*model.CategoryResponse, int64, error)
+	GetRootCategories(ctx context.Context, limit, offset int32) ([]*model.CategoryResponse, int64, error)
+	UpdateCategory(ctx context.Context, categoryID string, name, nameI18n, departmentID, parent *string, pictureUrl *string, colorCode *string) (*model.CategoryResponse, error)
 	DeleteCategory(ctx context.Context, categoryID string) error
 	RestoreCategory(ctx context.Context, categoryID string) (*model.CategoryResponse, error)
 	SearchCategories(ctx context.Context, query string, limit, offset int32) ([]*model.CategoryResponse, error)
@@ -173,13 +172,12 @@ type CategoryI interface {
 
 type CompoundI interface {
 	// Compound methods
-	CreateCompound(ctx context.Context, name string, nameI18n, description, descriptionI18n, measurement, departmentID *string, quantity int32, price *string, pictureUrl *string, colorCode *string) (*model.CompoundResponse, error)
+	CreateCompound(ctx context.Context, name string, nameI18n, description, descriptionI18n, measurement *string, quantity float64, price *string, pictureUrl *string, colorCode *string, ingredientGroupID *string) (*model.CompoundResponse, error)
 	GetCompoundByID(ctx context.Context, compoundID string) (*model.CompoundResponse, error)
-	GetAllCompounds(ctx context.Context, limit, offset int32) ([]*model.CompoundResponse, error)
+	GetAllCompounds(ctx context.Context, limit, offset int32) ([]*model.CompoundResponse, int64, error)
 	GetCompoundByIDWithLang(ctx context.Context, compoundID string, lang string) (*model.CompoundResponse, error)
-	GetAllCompoundsWithLang(ctx context.Context, lang string, limit, offset int32) ([]*model.CompoundResponse, error)
-	GetCompoundsByDepartmentID(ctx context.Context, departmentID string, limit, offset int32) ([]*model.CompoundResponse, error)
-	UpdateCompound(ctx context.Context, compoundID string, name, nameI18n, description, descriptionI18n, measurement, departmentID *string, quantity *int32, price *string, pictureUrl *string, colorCode *string) (*model.CompoundResponse, error)
+	GetAllCompoundsWithLang(ctx context.Context, lang string, limit, offset int32) ([]*model.CompoundResponse, int64, error)
+	UpdateCompound(ctx context.Context, compoundID string, name, nameI18n, description, descriptionI18n, measurement *string, quantity *float64, price *string, pictureUrl *string, colorCode *string, ingredientGroupID *string) (*model.CompoundResponse, error)
 	DeleteCompound(ctx context.Context, compoundID string) error
 	RestoreCompound(ctx context.Context, compoundID string) (*model.CompoundResponse, error)
 	SearchCompounds(ctx context.Context, query string, limit, offset int32) ([]*model.CompoundResponse, error)
@@ -210,15 +208,15 @@ type CompoundI interface {
 
 type GoodsI interface {
 	// Goods methods
-	CreateGood(ctx context.Context, name string, description *string, nameI18n, descriptionI18n, categoryID, departmentID *string, price string, cookTime *int32, pictureUrl *string, colorCode *string) (*model.GoodResponse, error)
+	CreateGood(ctx context.Context, name string, description *string, nameI18n, descriptionI18n, categoryID *string, price string, cookTime *int32, pictureUrl *string, colorCode *string) (*model.GoodResponse, error)
 	GetGoodByID(ctx context.Context, goodID string) (*model.GoodResponse, error)
-	GetAllGoods(ctx context.Context, limit, offset int32) ([]*model.GoodResponse, error)
+	GetAllGoods(ctx context.Context, limit, offset int32) ([]*model.GoodResponse, int64, error)
+	GetAllGoodsFiltered(ctx context.Context, categoryID, search, lang string, limit, offset int32) ([]*model.GoodResponse, int64, error)
 	GetGoodByIDWithLang(ctx context.Context, goodID string, lang string) (*model.GoodResponse, error)
-	GetAllGoodsWithLang(ctx context.Context, lang string, limit, offset int32) ([]*model.GoodResponse, error)
+	GetAllGoodsWithLang(ctx context.Context, lang string, limit, offset int32) ([]*model.GoodResponse, int64, error)
 	GetGoodsByCategory(ctx context.Context, categoryID string, limit, offset int32) ([]*model.GoodResponse, error)
-	GetGoodsByDepartment(ctx context.Context, departmentID string, limit, offset int32) ([]*model.GoodResponse, error)
 	GetGoodsByPriceRange(ctx context.Context, minPrice, maxPrice string, limit, offset int32) ([]*model.GoodResponse, error)
-	UpdateGood(ctx context.Context, goodID string, name, description, nameI18n, descriptionI18n, categoryID, departmentID, price *string, cookTime *int32, pictureUrl *string, colorCode *string) (*model.GoodResponse, error)
+	UpdateGood(ctx context.Context, goodID string, name, description, nameI18n, descriptionI18n, categoryID, price *string, cookTime *int32, pictureUrl *string, colorCode *string) (*model.GoodResponse, error)
 	UpdateGoodPrice(ctx context.Context, goodID, price string) (*model.GoodResponse, error)
 	DeleteGood(ctx context.Context, goodID string) error
 	RestoreGood(ctx context.Context, goodID string) (*model.GoodResponse, error)
@@ -237,16 +235,16 @@ type GoodsI interface {
 }
 
 type CafeTableI interface {
-	CreateCafeTable(ctx context.Context, hallID string, number int32, capacity int32, status *string, posX, posY, width, height, rotation *int32) (*model.CafeTableResponse, error)
+	CreateCafeTable(ctx context.Context, hallID string, number int32, capacity int32, status *string, posX, posY, width, height, rotation *int32, pricePerHour *string) (*model.CafeTableResponse, error)
 	GetCafeTableByID(ctx context.Context, tableID string) (*model.CafeTableResponse, error)
-	GetAllCafeTables(ctx context.Context, limit, offset int32) ([]model.CafeTableResponse, error)
-	GetCafeTablesByHallID(ctx context.Context, hallID string, limit, offset int32) ([]model.CafeTableResponse, error)
-	GetCafeTablesByStatus(ctx context.Context, status string, limit, offset int32) ([]model.CafeTableResponse, error)
+	GetAllCafeTables(ctx context.Context, limit, offset int32) ([]model.CafeTableResponse, int64, error)
+	GetCafeTablesByHallID(ctx context.Context, hallID string, limit, offset int32) ([]model.CafeTableResponse, int64, error)
+	GetCafeTablesByStatus(ctx context.Context, status string, limit, offset int32) ([]model.CafeTableResponse, int64, error)
 	GetCafeTablesByHallAndStatus(ctx context.Context, hallID, status string) ([]model.CafeTableResponse, error)
 	GetAvailableTablesByHall(ctx context.Context, hallID string) ([]model.CafeTableResponse, error)
 	GetAvailableTablesByCapacity(ctx context.Context, capacity, limit, offset int32) ([]model.CafeTableResponse, error)
 	GetAvailableTablesByHallAndCapacity(ctx context.Context, hallID string, capacity int32) ([]model.CafeTableResponse, error)
-	UpdateCafeTable(ctx context.Context, tableID string, hallID *string, number *int32, capacity *int32, status *string, posX, posY, width, height, rotation *int32) (*model.CafeTableResponse, error)
+	UpdateCafeTable(ctx context.Context, tableID string, hallID *string, number *int32, capacity *int32, status *string, posX, posY, width, height, rotation *int32, pricePerHour *string) (*model.CafeTableResponse, error)
 	UpdateCafeTableStatus(ctx context.Context, tableID string, status string) (*model.CafeTableResponse, error)
 	SetTableFree(ctx context.Context, tableID string) (*model.CafeTableResponse, error)
 	SetTableBusy(ctx context.Context, tableID string) (*model.CafeTableResponse, error)
@@ -308,30 +306,20 @@ type InvoiceI interface {
 	CreateInvoice(ctx context.Context, req *model.CreateInvoiceRequest) (*model.InvoiceResponse, error)
 	CreateInvoiceWithDetails(ctx context.Context, req *model.CreateInvoiceWithDetailsRequest) (*model.CreateInvoiceWithDetailsResponse, error)
 	GetInvoiceByID(ctx context.Context, id string) (*model.InvoiceResponse, error)
-	GetAllInvoices(ctx context.Context, limit, offset int32) ([]*model.InvoiceResponse, error)
-	GetInvoicesByStatus(ctx context.Context, status string, limit, offset int32) ([]*model.InvoiceResponse, error)
-	GetInvoicesBySupplier(ctx context.Context, supplierName string, limit, offset int32) ([]*model.InvoiceResponse, error)
-	GetInvoicesByDateRange(ctx context.Context, startDate, endDate time.Time, limit, offset int32) ([]*model.InvoiceResponse, error)
+	GetAllInvoices(ctx context.Context, filter model.InvoiceFilter, limit, offset int32) ([]*model.InvoiceResponse, int64, error)
 	UpdateInvoice(ctx context.Context, id string, req *model.UpdateInvoiceRequest) (*model.InvoiceResponse, error)
 	UpdateInvoiceStatus(ctx context.Context, id string, status string) (*model.InvoiceResponse, error)
-	MarkInvoiceArrived(ctx context.Context, id string) (*model.InvoiceResponse, error)
-	MarkInvoiceReceived(ctx context.Context, id string) (*model.InvoiceResponse, error)
-	CancelInvoice(ctx context.Context, id string) (*model.InvoiceResponse, error)
 	DeleteInvoice(ctx context.Context, id string) error
 	RestoreInvoice(ctx context.Context, id string) error
-	CountInvoices(ctx context.Context) (int64, error)
-	CountInvoicesByStatus(ctx context.Context, status string) (int64, error)
 	SearchInvoices(ctx context.Context, query string, limit, offset int32) ([]*model.InvoiceResponse, error)
 	GetInvoiceWithDetails(ctx context.Context, id string) (*model.InvoiceGetWithDetailsResponse, error)
-	GetInvoiceStatsBySupplier(ctx context.Context, limit, offset int32) ([]*model.InvoiceStatsBySupplierResponse, error)
-	GetInvoiceStatsByDateRange(ctx context.Context, startDate, endDate time.Time) (*model.InvoiceStatsByDateRangeResponse, error)
 	// Invoice detail methods
 	CreateInvoiceDetail(ctx context.Context, invoiceID string, req *model.CreateInvoiceDetailRequest) (*model.InvoiceDetailResponse, error)
 	CreateInvoiceDetailsBatch(ctx context.Context, invoiceID string, req *model.CreateInvoiceDetailBatchRequest) (*model.InvoiceDetailBatchResponse, error)
 	GetInvoiceDetailByID(ctx context.Context, id string) (*model.InvoiceDetailResponse, error)
-	GetAllInvoiceDetails(ctx context.Context, limit, offset int32) ([]*model.InvoiceDetailResponse, error)
-	GetInvoiceDetailsByInvoiceID(ctx context.Context, invoiceID string) ([]*model.InvoiceDetailResponse, error)
-	GetInvoiceDetailsByIngredientID(ctx context.Context, ingredientID string, limit, offset int32) ([]*model.InvoiceDetailResponse, error)
+	GetAllInvoiceDetails(ctx context.Context, limit, offset int32) ([]*model.InvoiceDetailResponse, int64, error)
+	GetInvoiceDetailsByInvoiceID(ctx context.Context, invoiceID string, limit, offset int32) ([]*model.InvoiceDetailResponse, int64, error)
+	GetInvoiceDetailsByIngredientID(ctx context.Context, ingredientID string, limit, offset int32) ([]*model.InvoiceDetailResponse, int64, error)
 	UpdateInvoiceDetail(ctx context.Context, id string, req *model.UpdateInvoiceDetailRequest) (*model.InvoiceDetailResponse, error)
 	UpdateInvoiceDetailQuantity(ctx context.Context, id string, quantity string) (*model.InvoiceDetailResponse, error)
 	DeleteInvoiceDetail(ctx context.Context, id string) error
@@ -353,7 +341,7 @@ type OrderI interface {
 	GetOrdersByTableID(ctx context.Context, tableID string) ([]model.OrderResponse, error)
 	UpdateOrder(ctx context.Context, orderID string, req model.UpdateOrderRequest) (*model.OrderResponse, error)
 	UpdateOrderStatus(ctx context.Context, orderID string, status string) (*model.OrderResponse, error)
-	MarkOrderPaid(ctx context.Context, orderID string, cashierID string, cashRegisterID *string, paymentType *string, discountPercent *string, discountAmount *string, discountComment *string, customerPaidAmount *string) (*model.OrderResponse, error)
+	MarkOrderPaid(ctx context.Context, orderID string, cashierID string, cashRegisterID *string, paymentType *string, discountPercent *string, discountAmount *string, discountComment *string, customerPaidAmount *string, tableCharge *string, cashAmount *string, cardAmount *string) (*model.OrderResponse, error)
 	AssignWaiterToOrder(ctx context.Context, orderID string, waiterID string) (*model.OrderResponse, error)
 	AssignCashierToOrder(ctx context.Context, orderID string, cashierID string) (*model.OrderResponse, error)
 	CancelOrder(ctx context.Context, orderID string) (*model.OrderResponse, error)
@@ -421,7 +409,7 @@ type TransferI interface {
 type CashRegisterI interface {
 	CreateCashRegister(ctx context.Context, req model.CashRegisterRequest) (model.CashRegisterResponse, error)
 	GetCashRegisterByID(ctx context.Context, id uuid.UUID) (model.CashRegisterResponse, error)
-	GetAllCashRegisters(ctx context.Context, limit, offset int32) ([]model.CashRegisterResponse, error)
+	GetAllCashRegisters(ctx context.Context, search string, limit, offset int32) ([]model.CashRegisterResponse, int64, error)
 	GetCashRegistersByBranchID(ctx context.Context, branchID uuid.UUID, limit, offset int32) ([]model.CashRegisterResponse, error)
 	UpdateCashRegister(ctx context.Context, id uuid.UUID, req model.CashRegisterRequest) (model.CashRegisterResponse, error)
 	DeleteCashRegister(ctx context.Context, id uuid.UUID) error

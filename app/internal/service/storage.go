@@ -79,13 +79,18 @@ func (s *StorageS) GetStorageByID(ctx context.Context, storageID string) (*model
 }
 
 // GetAllStorages retrieves all storages with pagination
-func (s *StorageS) GetAllStorages(ctx context.Context, limit, offset int32) ([]model.StorageResponse, error) {
+func (s *StorageS) GetAllStorages(ctx context.Context, limit, offset int32) ([]model.StorageResponse, int32, error) {
+	total, err := s.repo.Tenant(ctx).CountStorages(ctx)
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to count storages: %w", err)
+	}
+
 	storages, err := s.repo.Tenant(ctx).GetAllStorages(ctx, pg.GetAllStoragesParams{
 		Limit:  limit,
 		Offset: offset,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to get storages: %w", err)
+		return nil, 0, fmt.Errorf("failed to get storages: %w", err)
 	}
 
 	var responses []model.StorageResponse
@@ -93,14 +98,19 @@ func (s *StorageS) GetAllStorages(ctx context.Context, limit, offset int32) ([]m
 		responses = append(responses, *mapStorageToResponse(str.ID, str.Name, str.BranchID, str.NameI18n, str.PictureUrl, str.ColorCode, str.CreatedAt, str.UpdatedAt))
 	}
 
-	return responses, nil
+	return responses, int32(total), nil
 }
 
 // GetStoragesByBranchID retrieves storages by branch ID
-func (s *StorageS) GetStoragesByBranchID(ctx context.Context, branchID string, limit, offset int32) ([]model.StorageResponse, error) {
+func (s *StorageS) GetStoragesByBranchID(ctx context.Context, branchID string, limit, offset int32) ([]model.StorageResponse, int32, error) {
 	bID, err := uuid.Parse(branchID)
 	if err != nil {
-		return nil, fmt.Errorf("invalid branch ID: %w", err)
+		return nil, 0, fmt.Errorf("invalid branch ID: %w", err)
+	}
+
+	total, err := s.repo.Tenant(ctx).CountStoragesByBranch(ctx, pgtype.UUID{Bytes: bID, Valid: true})
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to count storages by branch: %w", err)
 	}
 
 	storages, err := s.repo.Tenant(ctx).GetStoragesByBranchID(ctx, pg.GetStoragesByBranchIDParams{
@@ -109,7 +119,7 @@ func (s *StorageS) GetStoragesByBranchID(ctx context.Context, branchID string, l
 		Offset:   offset,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to get storages by branch: %w", err)
+		return nil, 0, fmt.Errorf("failed to get storages by branch: %w", err)
 	}
 
 	var responses []model.StorageResponse
@@ -117,11 +127,11 @@ func (s *StorageS) GetStoragesByBranchID(ctx context.Context, branchID string, l
 		responses = append(responses, *mapStorageToResponse(str.ID, str.Name, str.BranchID, str.NameI18n, str.PictureUrl, str.ColorCode, str.CreatedAt, str.UpdatedAt))
 	}
 
-	return responses, nil
+	return responses, int32(total), nil
 }
 
 // UpdateStorage updates a storage
-func (s *StorageS) UpdateStorage(ctx context.Context, storageID string, name *string, branchID *string, nameI18n *string, pictureUrl *string, colorCode *string) (*model.StorageResponse, error) {
+func (s *StorageS) UpdateStorage(ctx context.Context, storageID string, name *string, branchID *string, nameI18n *string, pictureUrl *string, colorCode *string, uz *string, ru *string, en *string) (*model.StorageResponse, error) {
 	id, err := uuid.Parse(storageID)
 	if err != nil {
 		return nil, fmt.Errorf("invalid storage ID: %w", err)
@@ -181,7 +191,51 @@ func (s *StorageS) UpdateStorage(ctx context.Context, storageID string, name *st
 		return nil, fmt.Errorf("failed to update storage: %w", err)
 	}
 
-	return mapStorageToResponse(storage.ID, storage.Name, storage.BranchID, storage.NameI18n, storage.PictureUrl, storage.ColorCode, storage.CreatedAt, storage.UpdatedAt), nil
+	// Update translation fields if provided
+	var finalUz, finalRu, finalEn *string
+	if uz != nil || ru != nil || en != nil {
+		if storage.NameI18n.Valid {
+			tr, trErr := s.repo.Tenant(ctx).UpdateTranslation(ctx, pg.UpdateTranslationParams{
+				ID: storage.NameI18n.Bytes,
+				Uz: uz,
+				Ru: ru,
+				En: en,
+			})
+			if trErr != nil {
+				return nil, fmt.Errorf("failed to update translation: %w", trErr)
+			}
+			finalUz, finalRu, finalEn = tr.Uz, tr.Ru, tr.En
+		} else {
+			translationID := uuid.New()
+			tr, trErr := s.repo.Tenant(ctx).CreateTranslation(ctx, pg.CreateTranslationParams{
+				ID: translationID,
+				Uz: uz,
+				Ru: ru,
+				En: en,
+			})
+			if trErr != nil {
+				return nil, fmt.Errorf("failed to create translation: %w", trErr)
+			}
+			finalUz, finalRu, finalEn = tr.Uz, tr.Ru, tr.En
+			storage, err = s.repo.Tenant(ctx).UpdateStorage(ctx, pg.UpdateStorageParams{
+				ID:         id,
+				Name:       storage.Name,
+				BranchID:   storage.BranchID,
+				NameI18n:   pgtype.UUID{Bytes: translationID, Valid: true},
+				PictureUrl: storage.PictureUrl,
+				ColorCode:  storage.ColorCode,
+			})
+			if err != nil {
+				return nil, fmt.Errorf("failed to link translation: %w", err)
+			}
+		}
+	}
+
+	resp := mapStorageToResponse(storage.ID, storage.Name, storage.BranchID, storage.NameI18n, storage.PictureUrl, storage.ColorCode, storage.CreatedAt, storage.UpdatedAt)
+	resp.Uz = finalUz
+	resp.Ru = finalRu
+	resp.En = finalEn
+	return resp, nil
 }
 
 // DeleteStorage soft deletes a storage
@@ -250,14 +304,19 @@ func (s *StorageS) GetStorageByIDWithLang(ctx context.Context, storageID string,
 }
 
 // GetAllStoragesWithLang retrieves all storages with language support
-func (s *StorageS) GetAllStoragesWithLang(ctx context.Context, lang string, limit, offset int32) ([]model.StorageResponse, error) {
+func (s *StorageS) GetAllStoragesWithLang(ctx context.Context, lang string, limit, offset int32) ([]model.StorageResponse, int32, error) {
+	total, err := s.repo.Tenant(ctx).CountStorages(ctx)
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to count storages: %w", err)
+	}
+
 	storages, err := s.repo.Tenant(ctx).GetAllStoragesWithLanguage(ctx, pg.GetAllStoragesWithLanguageParams{
 		Column1: lang,
 		Limit:   limit,
 		Offset:  offset,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to get storages: %w", err)
+		return nil, 0, fmt.Errorf("failed to get storages: %w", err)
 	}
 
 	var responses []model.StorageResponse
@@ -265,7 +324,7 @@ func (s *StorageS) GetAllStoragesWithLang(ctx context.Context, lang string, limi
 		responses = append(responses, *mapStorageToResponse(str.ID, str.Name, str.BranchID, str.NameI18n, str.PictureUrl, str.ColorCode, str.CreatedAt, str.UpdatedAt))
 	}
 
-	return responses, nil
+	return responses, int32(total), nil
 }
 
 // Helper function

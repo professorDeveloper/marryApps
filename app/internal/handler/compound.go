@@ -41,8 +41,7 @@ func (h *Handler) CreateCompound(c echo.Context) error {
 		))
 	}
 
-	quantity := int32(req.Quantity)
-	compound, err := h.service.Compound().CreateCompound(c.Request().Context(), req.Name, req.NameI18n, req.Description, req.DescriptionI18n, req.Measurement, req.DepartmentID, quantity, nil, req.PictureUrl, req.ColorCode)
+	compound, err := h.service.Compound().CreateCompound(c.Request().Context(), req.Name, req.NameI18n, req.Description, req.DescriptionI18n, req.Measurement, req.Quantity, nil, req.PictureUrl, req.ColorCode, req.IngredientGroupID)
 	if err != nil {
 		log.Printf("CreateCompound failed: %v", err)
 		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse(
@@ -109,6 +108,7 @@ func (h *Handler) GetCompoundByID(c echo.Context) error {
 // @Security BearerAuth
 // @Param limit query int false "Limit (default: 20)"
 // @Param offset query int false "Offset (default: 0)"
+// @Param expand query string false "Expand related fields"
 // @Success 200 {array} model.CompoundResponse "Compounds found"
 // @Failure 401 {object} model.ErrorResponse "Unauthorized"
 // @Failure 500 {object} model.ErrorResponse "Internal server error"
@@ -129,13 +129,20 @@ func (h *Handler) GetAllCompounds(c echo.Context) error {
 		}
 	}
 
-	compounds, err := h.service.Compound().GetAllCompounds(c.Request().Context(), limit, offset)
+	compounds, total, err := h.service.Compound().GetAllCompounds(c.Request().Context(), limit, offset)
 	if err != nil {
 		log.Printf("GetAllCompounds failed: %v", err)
 		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("failed to retrieve compounds", err.Error(), http.StatusInternalServerError))
 	}
 
-	return c.JSON(http.StatusOK, model.NewSuccessResponse("Data retrieved successfully", compounds, http.StatusOK))
+	if maps, expanded, err := h.expandListResponse(c, compounds, "compounds"); expanded {
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("expand failed", err.Error(), http.StatusInternalServerError))
+		}
+		return c.JSON(http.StatusOK, model.NewPaginatedResponse("Data retrieved successfully", maps, int32(total), limit, offset, http.StatusOK))
+	}
+
+	return c.JSON(http.StatusOK, model.NewPaginatedResponse("Data retrieved successfully", compounds, int32(total), limit, offset, http.StatusOK))
 }
 
 // GetCompoundsByDepartmentID retrieves compounds by department ID
@@ -154,33 +161,7 @@ func (h *Handler) GetAllCompounds(c echo.Context) error {
 // @Failure 500 {object} model.ErrorResponse "Internal server error"
 // @Router /api/v1/compounds/department/{departmentId} [get]
 func (h *Handler) GetCompoundsByDepartmentID(c echo.Context) error {
-	departmentID := c.Param("departmentId")
-	if departmentID == "" {
-		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("department id is required", "missing path parameter: departmentId", http.StatusBadRequest))
-	}
-
-	var limit int32 = 20
-	var offset int32 = 0
-
-	if limitStr := c.QueryParam("limit"); limitStr != "" {
-		if l, err := strconv.ParseInt(limitStr, 10, 32); err == nil && l > 0 {
-			limit = int32(l)
-		}
-	}
-
-	if offsetStr := c.QueryParam("offset"); offsetStr != "" {
-		if o, err := strconv.ParseInt(offsetStr, 10, 32); err == nil && o >= 0 {
-			offset = int32(o)
-		}
-	}
-
-	compounds, err := h.service.Compound().GetCompoundsByDepartmentID(c.Request().Context(), departmentID, limit, offset)
-	if err != nil {
-		log.Printf("GetCompoundsByDepartmentID failed: %v", err)
-		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("failed to retrieve compounds", err.Error(), http.StatusInternalServerError))
-	}
-
-	return c.JSON(http.StatusOK, model.NewSuccessResponse("Data retrieved successfully", compounds, http.StatusOK))
+	return c.JSON(http.StatusGone, model.NewErrorResponse("Endpoint deprecated", "Use GET /api/v1/compounds with filters instead", http.StatusGone))
 }
 
 // UpdateCompound updates a compound
@@ -210,13 +191,7 @@ func (h *Handler) UpdateCompound(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("invalid request format", err.Error(), http.StatusBadRequest))
 	}
 
-	var quantity *int32
-	if req.Quantity != nil {
-		q := int32(*req.Quantity)
-		quantity = &q
-	}
-
-	compound, err := h.service.Compound().UpdateCompound(c.Request().Context(), compoundID, req.Name, req.NameI18n, req.Description, req.DescriptionI18n, req.Measurement, req.DepartmentID, quantity, nil, req.PictureUrl, req.ColorCode)
+	compound, err := h.service.Compound().UpdateCompound(c.Request().Context(), compoundID, req.Name, req.NameI18n, req.Description, req.DescriptionI18n, req.Measurement, req.Quantity, nil, req.PictureUrl, req.ColorCode, req.IngredientGroupID)
 	if err != nil {
 		log.Printf("UpdateCompound failed for ID %s: %v", compoundID, err)
 		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("failed to update compound", err.Error(), http.StatusInternalServerError))
@@ -450,7 +425,6 @@ func (h *Handler) CreateCompoundWithCalculations(c echo.Context) error {
 	ctx := c.Request().Context()
 
 	// Step 1: Create the compound
-	quantity := int32(req.Compound.Quantity)
 	compoundResp, err := h.service.Compound().CreateCompound(
 		ctx,
 		req.Compound.Name,
@@ -458,11 +432,11 @@ func (h *Handler) CreateCompoundWithCalculations(c echo.Context) error {
 		req.Compound.Description,
 		req.Compound.DescriptionI18n,
 		req.Compound.Measurement,
-		req.Compound.DepartmentID,
-		quantity,
+		req.Compound.Quantity,
 		nil, // price will be auto-calculated from calculations
 		req.Compound.PictureUrl,
 		req.Compound.ColorCode,
+		req.Compound.IngredientGroupID,
 	)
 	if err != nil {
 		log.Printf("CreateCompoundWithCalculations: failed to create compound: %v", err)
@@ -608,12 +582,6 @@ func (h *Handler) UpdateCompoundWithCalculations(c echo.Context) error {
 
 	ctx := c.Request().Context()
 
-	var qty32 *int32
-	if req.Compound.Quantity != nil {
-		q := int32(*req.Compound.Quantity)
-		qty32 = &q
-	}
-
 	compoundResp, err := h.service.Compound().UpdateCompound(
 		ctx,
 		compoundID,
@@ -622,11 +590,11 @@ func (h *Handler) UpdateCompoundWithCalculations(c echo.Context) error {
 		req.Compound.Description,
 		req.Compound.DescriptionI18n,
 		req.Compound.Measurement,
-		req.Compound.DepartmentID,
-		qty32,
+		req.Compound.Quantity,
 		nil,
 		req.Compound.PictureUrl,
 		req.Compound.ColorCode,
+		req.Compound.IngredientGroupID,
 	)
 	if err != nil {
 		log.Printf("UpdateCompoundWithCalculations: failed to update compound: %v", err)
@@ -748,6 +716,7 @@ func (h *Handler) GetCompoundByIDWithLang(c echo.Context) error {
 // @Param lang query string false "Language code (uz, ru, en - default: uz)"
 // @Param limit query int false "Limit (default: 20)"
 // @Param offset query int false "Offset (default: 0)"
+// @Param expand query string false "Expand related fields"
 // @Success 200 {array} model.CompoundResponse "Compounds retrieved successfully"
 // @Failure 400 {object} model.ErrorResponse "Invalid request parameters"
 // @Failure 401 {object} model.ErrorResponse "Unauthorized"
@@ -779,11 +748,18 @@ func (h *Handler) GetAllCompoundsWithLang(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("invalid language code", "valid values: uz, ru, en", http.StatusBadRequest))
 	}
 
-	compounds, err := h.service.Compound().GetAllCompoundsWithLang(c.Request().Context(), lang, limit, offset)
+	compounds, total, err := h.service.Compound().GetAllCompoundsWithLang(c.Request().Context(), lang, limit, offset)
 	if err != nil {
 		log.Printf("GetAllCompoundsWithLang failed: %v", err)
 		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("failed to get compounds", "see logs for details", http.StatusInternalServerError))
 	}
 
-	return c.JSON(http.StatusOK, model.NewSuccessResponse("Compounds retrieved successfully", compounds, http.StatusOK))
+	if maps, expanded, err := h.expandListResponse(c, compounds, "compounds"); expanded {
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("expand failed", err.Error(), http.StatusInternalServerError))
+		}
+		return c.JSON(http.StatusOK, model.NewPaginatedResponse("Compounds retrieved successfully", maps, int32(total), limit, offset, http.StatusOK))
+	}
+
+	return c.JSON(http.StatusOK, model.NewPaginatedResponse("Compounds retrieved successfully", compounds, int32(total), limit, offset, http.StatusOK))
 }

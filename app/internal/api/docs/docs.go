@@ -959,6 +959,12 @@ const docTemplate = `{
                         "description": "Offset for pagination (default: 0)",
                         "name": "offset",
                         "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Expand related fields",
+                        "name": "expand",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -1076,6 +1082,12 @@ const docTemplate = `{
                         "type": "integer",
                         "description": "Offset (default: 0)",
                         "name": "offset",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Expand related fields",
+                        "name": "expand",
                         "in": "query"
                     }
                 ],
@@ -1516,6 +1528,12 @@ const docTemplate = `{
                         "description": "Offset",
                         "name": "offset",
                         "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Expand related fields",
+                        "name": "expand",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -1835,6 +1853,12 @@ const docTemplate = `{
                         "description": "Offset",
                         "name": "offset",
                         "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Expand related fields",
+                        "name": "expand",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -1987,6 +2011,12 @@ const docTemplate = `{
                         "default": 0,
                         "description": "Offset",
                         "name": "offset",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Expand related fields",
+                        "name": "expand",
                         "in": "query"
                     }
                 ],
@@ -2467,14 +2497,22 @@ const docTemplate = `{
                         "description": "Offset",
                         "name": "offset",
                         "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Expand related fields",
+                        "name": "expand",
+                        "in": "query"
                     }
                 ],
                 "responses": {
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/model.CashRegisterShiftResponse"
+                            }
                         }
                     },
                     "500": {
@@ -2730,7 +2768,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Retrieve all cash registers for the current branch",
+                "description": "Retrieve all cash registers for the current branch with optional search filter",
                 "produces": [
                     "application/json"
                 ],
@@ -2739,6 +2777,12 @@ const docTemplate = `{
                 ],
                 "summary": "Get all cash registers",
                 "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Filter by name",
+                        "name": "search",
+                        "in": "query"
+                    },
                     {
                         "type": "integer",
                         "default": 20,
@@ -2751,6 +2795,12 @@ const docTemplate = `{
                         "default": 0,
                         "description": "Offset for pagination (default: 0)",
                         "name": "offset",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Expand related fields",
+                        "name": "expand",
                         "in": "query"
                     }
                 ],
@@ -3161,6 +3211,12 @@ const docTemplate = `{
                         "description": "Offset (default: 0)",
                         "name": "offset",
                         "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Expand related fields",
+                        "name": "expand",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -3278,6 +3334,12 @@ const docTemplate = `{
                         "type": "integer",
                         "description": "Offset (default: 0)",
                         "name": "offset",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Expand related fields",
+                        "name": "expand",
                         "in": "query"
                     }
                 ],
@@ -3416,6 +3478,12 @@ const docTemplate = `{
                         "description": "Offset (default: 0)",
                         "name": "offset",
                         "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Expand related fields",
+                        "name": "expand",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -3486,6 +3554,12 @@ const docTemplate = `{
                         "description": "Offset (default: 0)",
                         "name": "offset",
                         "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Expand related fields",
+                        "name": "expand",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -3548,6 +3622,12 @@ const docTemplate = `{
                         "type": "integer",
                         "description": "Offset (default: 0)",
                         "name": "offset",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Expand related fields",
+                        "name": "expand",
                         "in": "query"
                     }
                 ],
@@ -3682,6 +3762,12 @@ const docTemplate = `{
                         "type": "integer",
                         "description": "Offset (default: 0)",
                         "name": "offset",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Expand related fields",
+                        "name": "expand",
                         "in": "query"
                     }
                 ],
@@ -5013,6 +5099,12 @@ const docTemplate = `{
                         "description": "Offset (default: 0)",
                         "name": "offset",
                         "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Expand related fields",
+                        "name": "expand",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -5130,6 +5222,12 @@ const docTemplate = `{
                         "type": "integer",
                         "description": "Offset (default: 0)",
                         "name": "offset",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Expand related fields",
+                        "name": "expand",
                         "in": "query"
                     }
                 ],
@@ -6274,6 +6372,12 @@ const docTemplate = `{
                         "name": "id",
                         "in": "path",
                         "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Comma-separated list of fields to expand (e.g. ingredients,compounds)",
+                        "name": "expand",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -7214,7 +7318,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Retrieve all departments with pagination",
+                "description": "Retrieve all departments with pagination and optional search",
                 "consumes": [
                     "application/json"
                 ],
@@ -7236,6 +7340,18 @@ const docTemplate = `{
                         "type": "integer",
                         "description": "Offset (default: 0)",
                         "name": "offset",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Search by name",
+                        "name": "search",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Expand FK relations (comma-separated: storage_id, name_i18n)",
+                        "name": "expand",
                         "in": "query"
                     }
                 ],
@@ -7355,6 +7471,12 @@ const docTemplate = `{
                         "description": "Offset (default: 0)",
                         "name": "offset",
                         "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Expand FK relations (comma-separated: storage_id, name_i18n)",
+                        "name": "expand",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -7418,6 +7540,12 @@ const docTemplate = `{
                         "type": "string",
                         "description": "Language code (uz, ru, en - default: uz)",
                         "name": "lang",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Expand FK relations (comma-separated: storage_id, name_i18n)",
+                        "name": "expand",
                         "in": "query"
                     }
                 ],
@@ -7562,6 +7690,12 @@ const docTemplate = `{
                         "description": "Offset (default: 0)",
                         "name": "offset",
                         "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Expand FK relations (comma-separated: storage_id, name_i18n)",
+                        "name": "expand",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -7696,6 +7830,12 @@ const docTemplate = `{
                         "name": "id",
                         "in": "path",
                         "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Expand FK relations (comma-separated: storage_id, name_i18n)",
+                        "name": "expand",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -8327,7 +8467,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Get all goods with pagination",
+                "description": "Get all goods with pagination and optional filters",
                 "produces": [
                     "application/json"
                 ],
@@ -8355,6 +8495,36 @@ const docTemplate = `{
                         "default": 0,
                         "description": "Offset",
                         "name": "offset",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Expand related fields",
+                        "name": "expand",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by category ID",
+                        "name": "category_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by department ID",
+                        "name": "department_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by storage ID",
+                        "name": "storage_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Search by name",
+                        "name": "search",
                         "in": "query"
                     }
                 ],
@@ -8486,6 +8656,36 @@ const docTemplate = `{
                         "type": "integer",
                         "description": "Offset (default: 0)",
                         "name": "offset",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Expand related fields",
+                        "name": "expand",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by category ID",
+                        "name": "category_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by department ID",
+                        "name": "department_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by storage ID",
+                        "name": "storage_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Search by name",
+                        "name": "search",
                         "in": "query"
                     }
                 ],
@@ -9529,6 +9729,12 @@ const docTemplate = `{
                         "name": "id",
                         "in": "path",
                         "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Comma-separated list of fields to expand (e.g. ingredients,compounds)",
+                        "name": "expand",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -10039,6 +10245,12 @@ const docTemplate = `{
                         "description": "Offset (default: 0)",
                         "name": "offset",
                         "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Expand related fields",
+                        "name": "expand",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -10157,6 +10369,12 @@ const docTemplate = `{
                         "description": "Offset (default: 0)",
                         "name": "offset",
                         "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Expand related fields",
+                        "name": "expand",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -10233,6 +10451,12 @@ const docTemplate = `{
                         "description": "Offset (default: 0)",
                         "name": "offset",
                         "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Expand related fields",
+                        "name": "expand",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -10301,6 +10525,12 @@ const docTemplate = `{
                         "type": "integer",
                         "description": "Offset (default: 0)",
                         "name": "offset",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Expand related fields",
+                        "name": "expand",
                         "in": "query"
                     }
                 ],
@@ -10643,7 +10873,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Retrieve all ingredient groups with pagination",
+                "description": "Retrieve all ingredient groups with pagination and optional search",
                 "consumes": [
                     "application/json"
                 ],
@@ -10667,6 +10897,12 @@ const docTemplate = `{
                         "default": 0,
                         "description": "Offset for pagination (default: 0)",
                         "name": "offset",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Search by name",
+                        "name": "search",
                         "in": "query"
                     }
                 ],
@@ -11238,6 +11474,26 @@ const docTemplate = `{
                         "description": "Ingredient ID (optional filter)",
                         "name": "ingredient_id",
                         "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 20,
+                        "description": "Limit",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 0,
+                        "description": "Offset",
+                        "name": "offset",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Expand related fields",
+                        "name": "expand",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -11314,6 +11570,12 @@ const docTemplate = `{
                         "type": "string",
                         "description": "End datetime (RFC3339) or date (YYYY-MM-DD)",
                         "name": "end",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Expand related fields",
+                        "name": "expand",
                         "in": "query"
                     }
                 ],
@@ -11406,6 +11668,12 @@ const docTemplate = `{
                         "type": "integer",
                         "description": "Offset (default: 0)",
                         "name": "offset",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Expand related fields",
+                        "name": "expand",
                         "in": "query"
                     }
                 ],
@@ -12162,7 +12430,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Retrieve all ingredients with pagination",
+                "description": "Retrieve all ingredients with pagination and optional search",
                 "consumes": [
                     "application/json"
                 ],
@@ -12186,6 +12454,12 @@ const docTemplate = `{
                         "default": 0,
                         "description": "Offset for pagination (default: 0)",
                         "name": "offset",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Search by name",
+                        "name": "search",
                         "in": "query"
                     },
                     {
@@ -13785,6 +14059,12 @@ const docTemplate = `{
                         "description": "Offset",
                         "name": "offset",
                         "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Expand related fields",
+                        "name": "expand",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -13990,6 +14270,12 @@ const docTemplate = `{
                         "description": "Offset",
                         "name": "offset",
                         "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Expand related fields",
+                        "name": "expand",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -14065,6 +14351,12 @@ const docTemplate = `{
                         "default": 0,
                         "description": "Offset",
                         "name": "offset",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Expand related fields",
+                        "name": "expand",
                         "in": "query"
                     }
                 ],
@@ -14513,7 +14805,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Get all invoices with pagination",
+                "description": "Get all invoices with optional filters: date range, storage, supplier, ingredient, status",
                 "produces": [
                     "application/json"
                 ],
@@ -14541,6 +14833,48 @@ const docTemplate = `{
                         "default": 0,
                         "description": "Offset",
                         "name": "offset",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter from date (YYYY-MM-DD or RFC3339)",
+                        "name": "date_from",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter to date (YYYY-MM-DD or RFC3339)",
+                        "name": "date_to",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by storage ID",
+                        "name": "storage_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by supplier ID",
+                        "name": "supplier_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by ingredient ID (invoices containing this ingredient)",
+                        "name": "ingredient_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by status (pending, arrived, received, cancelled)",
+                        "name": "status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Expand related fields",
+                        "name": "expand",
                         "in": "query"
                     }
                 ],
@@ -14701,89 +15035,6 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/v1/invoices/date-range": {
-            "get": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Get invoices within a specified date range",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Invoices"
-                ],
-                "summary": "Get invoices by date range",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "default": "uz",
-                        "description": "Language (uz, ru, en)",
-                        "name": "lang",
-                        "in": "query"
-                    },
-                    {
-                        "type": "string",
-                        "description": "Start date (RFC3339 format)",
-                        "name": "start_date",
-                        "in": "query",
-                        "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "End date (RFC3339 format)",
-                        "name": "end_date",
-                        "in": "query",
-                        "required": true
-                    },
-                    {
-                        "type": "integer",
-                        "default": 20,
-                        "description": "Limit",
-                        "name": "limit",
-                        "in": "query"
-                    },
-                    {
-                        "type": "integer",
-                        "default": 0,
-                        "description": "Offset",
-                        "name": "offset",
-                        "in": "query"
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/model.InvoiceResponse"
-                            }
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
-                        }
-                    }
-                }
-            }
-        },
         "/api/v1/invoices/search": {
             "get": {
                 "security": [
@@ -14812,287 +15063,6 @@ const docTemplate = `{
                         "description": "Search query (supplier name)",
                         "name": "q",
                         "in": "query",
-                        "required": true
-                    },
-                    {
-                        "type": "integer",
-                        "default": 20,
-                        "description": "Limit",
-                        "name": "limit",
-                        "in": "query"
-                    },
-                    {
-                        "type": "integer",
-                        "default": 0,
-                        "description": "Offset",
-                        "name": "offset",
-                        "in": "query"
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/model.InvoiceResponse"
-                            }
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
-                        }
-                    }
-                }
-            }
-        },
-        "/api/v1/invoices/stats/date-range": {
-            "get": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Get invoice statistics for a specific date range",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Invoices"
-                ],
-                "summary": "Get invoice stats by date range",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "default": "uz",
-                        "description": "Language (uz, ru, en)",
-                        "name": "lang",
-                        "in": "query"
-                    },
-                    {
-                        "type": "string",
-                        "description": "Start date (RFC3339 format)",
-                        "name": "start_date",
-                        "in": "query",
-                        "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "End date (RFC3339 format)",
-                        "name": "end_date",
-                        "in": "query",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/model.InvoiceStatsByDateRangeResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
-                        }
-                    }
-                }
-            }
-        },
-        "/api/v1/invoices/stats/supplier": {
-            "get": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Get invoice statistics grouped by supplier",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Invoices"
-                ],
-                "summary": "Get invoice stats by supplier",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "default": "uz",
-                        "description": "Language (uz, ru, en)",
-                        "name": "lang",
-                        "in": "query"
-                    },
-                    {
-                        "type": "integer",
-                        "default": 20,
-                        "description": "Limit",
-                        "name": "limit",
-                        "in": "query"
-                    },
-                    {
-                        "type": "integer",
-                        "default": 0,
-                        "description": "Offset",
-                        "name": "offset",
-                        "in": "query"
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/model.InvoiceStatsBySupplierResponse"
-                            }
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
-                        }
-                    }
-                }
-            }
-        },
-        "/api/v1/invoices/status/{status}": {
-            "get": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Get invoices filtered by status with pagination",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Invoices"
-                ],
-                "summary": "Get invoices by status",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "default": "uz",
-                        "description": "Language (uz, ru, en)",
-                        "name": "lang",
-                        "in": "query"
-                    },
-                    {
-                        "type": "string",
-                        "description": "Invoice status (pending, arrived, received)",
-                        "name": "status",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "type": "integer",
-                        "default": 20,
-                        "description": "Limit",
-                        "name": "limit",
-                        "in": "query"
-                    },
-                    {
-                        "type": "integer",
-                        "default": 0,
-                        "description": "Offset",
-                        "name": "offset",
-                        "in": "query"
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/model.InvoiceResponse"
-                            }
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
-                        }
-                    }
-                }
-            }
-        },
-        "/api/v1/invoices/supplier/{supplier_id}": {
-            "get": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Get invoices for a specific supplier with pagination",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Invoices"
-                ],
-                "summary": "Get invoices by supplier",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "default": "uz",
-                        "description": "Language (uz, ru, en)",
-                        "name": "lang",
-                        "in": "query"
-                    },
-                    {
-                        "type": "string",
-                        "description": "Supplier ID",
-                        "name": "supplier_id",
-                        "in": "path",
                         "required": true
                     },
                     {
@@ -15341,71 +15311,6 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/v1/invoices/{id}/cancel": {
-            "post": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Cancel an invoice and mark it as cancelled",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Invoices"
-                ],
-                "summary": "Cancel invoice",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "default": "uz",
-                        "description": "Language (uz, ru, en)",
-                        "name": "lang",
-                        "in": "query"
-                    },
-                    {
-                        "type": "string",
-                        "description": "Invoice ID",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/model.InvoiceResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
-                        }
-                    },
-                    "404": {
-                        "description": "Not Found",
-                        "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
-                        }
-                    }
-                }
-            }
-        },
         "/api/v1/invoices/{id}/details": {
             "get": {
                 "security": [
@@ -15478,7 +15383,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Replace all details of an invoice. Reverses old stock additions and applies new quantities.",
+                "description": "Replace all details of an invoice. Optionally update invoice-level fields (status, supplier_id, storage_id, total_amount, date). Stock is applied only when invoice status is or becomes 'arrived'. Setting status to 'arrived' applies stock; it was already 'arrived', old stock is reversed and new stock applied.",
                 "consumes": [
                     "application/json"
                 ],
@@ -15505,7 +15410,7 @@ const docTemplate = `{
                         "required": true
                     },
                     {
-                        "description": "New invoice details",
+                        "description": "Invoice fields (optional) + new details",
                         "name": "request",
                         "in": "body",
                         "required": true,
@@ -15529,136 +15434,6 @@ const docTemplate = `{
                     },
                     "401": {
                         "description": "Unauthorized",
-                        "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
-                        }
-                    }
-                }
-            }
-        },
-        "/api/v1/invoices/{id}/mark-arrived": {
-            "post": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Mark an invoice as arrived at the location",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Invoices"
-                ],
-                "summary": "Mark invoice arrived",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "default": "uz",
-                        "description": "Language (uz, ru, en)",
-                        "name": "lang",
-                        "in": "query"
-                    },
-                    {
-                        "type": "string",
-                        "description": "Invoice ID",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/model.InvoiceResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
-                        }
-                    },
-                    "404": {
-                        "description": "Not Found",
-                        "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
-                        }
-                    }
-                }
-            }
-        },
-        "/api/v1/invoices/{id}/mark-received": {
-            "post": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Mark an invoice as fully received and verified",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Invoices"
-                ],
-                "summary": "Mark invoice received",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "default": "uz",
-                        "description": "Language (uz, ru, en)",
-                        "name": "lang",
-                        "in": "query"
-                    },
-                    {
-                        "type": "string",
-                        "description": "Invoice ID",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/model.InvoiceResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
-                        }
-                    },
-                    "404": {
-                        "description": "Not Found",
                         "schema": {
                             "$ref": "#/definitions/model.ErrorResponse"
                         }
@@ -18127,6 +17902,58 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/orders/{id}/table-price": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Calculates price based on table's price_per_hour and time elapsed. Uses scheduled_at if set, otherwise created_at. Returns error if table has no hourly price.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Orders"
+                ],
+                "summary": "Get table price for order",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Order ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.TablePriceResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/outgoing-invoices": {
             "get": {
                 "security": [
@@ -18847,6 +18674,12 @@ const docTemplate = `{
                         "description": "Offset",
                         "name": "offset",
                         "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Expand related fields",
+                        "name": "expand",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -18854,6 +18687,104 @@ const docTemplate = `{
                         "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/model.GoodsReportResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/reports/goods/{id}/orders": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Per-order breakdown for a specific good: qty, sell price, cost price, markup per order. Only paid orders.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "reports"
+                ],
+                "summary": "Good orders report",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Good UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Start date (YYYY-MM-DD)",
+                        "name": "start_date",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "End date (YYYY-MM-DD, inclusive)",
+                        "name": "end_date",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by waiter UUID",
+                        "name": "waiter_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by hall UUID",
+                        "name": "hall_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by table UUID",
+                        "name": "table_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 20,
+                        "description": "Limit",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 0,
+                        "description": "Offset",
+                        "name": "offset",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Expand related fields",
+                        "name": "expand",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.GoodOrdersReportResponse"
                         }
                     },
                     "400": {
@@ -19803,7 +19734,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "List shipments filtered by storage, supplier, status, date range",
+                "description": "List shipments filtered by storage, supplier, status, date range. Returns pagination info and total_amount_sum for the filtered range.",
                 "produces": [
                     "application/json"
                 ],
@@ -19826,7 +19757,7 @@ const docTemplate = `{
                     },
                     {
                         "type": "string",
-                        "description": "Filter by status (draft/confirmed/cancelled)",
+                        "description": "Filter by status (draft/active/cancelled)",
                         "name": "status",
                         "in": "query"
                     },
@@ -19855,6 +19786,12 @@ const docTemplate = `{
                         "description": "Offset",
                         "name": "offset",
                         "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Expand related fields",
+                        "name": "expand",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -19881,7 +19818,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Create a new shipment in draft status. Add items, then confirm to deduct stock.",
+                "description": "Create a new shipment. Use status=\"draft\" (default) or status=\"active\". If active, stock is deducted immediately.",
                 "consumes": [
                     "application/json"
                 ],
@@ -19932,7 +19869,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Creates a shipment header and upserts all provided items in a single request. Returns full shipment with stock preview.",
+                "description": "Creates a shipment header and upserts all provided items in a single request. Use status=\"draft\" (default) or status=\"active\" to immediately deduct stock.",
                 "consumes": [
                     "application/json"
                 ],
@@ -20027,7 +19964,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Update storage, supplier, date, description. Only works on draft shipments.",
+                "description": "Update storage, supplier, date, description, and/or status. Setting status=\"active\" deducts stock (draft→active). Setting status=\"draft\" reverses stock (active→draft).",
                 "consumes": [
                     "application/json"
                 ],
@@ -20083,7 +20020,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Soft-deletes a shipment. Only draft shipments can be deleted.",
+                "description": "Soft-deletes a shipment. If the shipment was active, ingredient stock is reversed.",
                 "produces": [
                     "application/json"
                 ],
@@ -20116,21 +20053,24 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/v1/shipments/{id}/cancel": {
-            "post": {
+        "/api/v1/shipments/{id}/batch": {
+            "put": {
                 "security": [
                     {
                         "BearerAuth": []
                     }
                 ],
-                "description": "Cancels a draft shipment (no stock change)",
+                "description": "Updates a shipment header and upserts all provided items in a single request.",
+                "consumes": [
+                    "application/json"
+                ],
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
                     "Shipments"
                 ],
-                "summary": "Cancel shipment",
+                "summary": "Update shipment with items (batch)",
                 "parameters": [
                     {
                         "type": "string",
@@ -20138,59 +20078,22 @@ const docTemplate = `{
                         "name": "id",
                         "in": "path",
                         "required": true
+                    },
+                    {
+                        "description": "Batch update",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.UpdateShipmentBatchRequest"
+                        }
                     }
                 ],
                 "responses": {
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/model.ShipmentResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
-                        }
-                    }
-                }
-            }
-        },
-        "/api/v1/shipments/{id}/confirm": {
-            "post": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Confirms shipment (draft→confirmed). Deducts each item's quantity from ingredient_stock. Stock can go negative.",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Shipments"
-                ],
-                "summary": "Confirm shipment",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Shipment ID",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/model.ShipmentResponse"
+                            "$ref": "#/definitions/model.ShipmentWithItemsResponse"
                         }
                     },
                     "400": {
@@ -20276,7 +20179,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Remove an ingredient item from a draft shipment",
+                "description": "Remove an ingredient item from a shipment",
                 "produces": [
                     "application/json"
                 ],
@@ -20347,6 +20250,12 @@ const docTemplate = `{
                         "default": 0,
                         "description": "Offset for pagination (default: 0)",
                         "name": "offset",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Comma-separated relations to expand (e.g. name_i18n)",
+                        "name": "expand",
                         "in": "query"
                     }
                 ],
@@ -20466,6 +20375,12 @@ const docTemplate = `{
                         "description": "Offset (default: 0)",
                         "name": "offset",
                         "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Comma-separated relations to expand (e.g. name_i18n)",
+                        "name": "expand",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -20529,6 +20444,12 @@ const docTemplate = `{
                         "type": "string",
                         "description": "Language code (uz, ru, en - default: uz)",
                         "name": "lang",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Comma-separated relations to expand (e.g. name_i18n)",
+                        "name": "expand",
                         "in": "query"
                     }
                 ],
@@ -20605,6 +20526,12 @@ const docTemplate = `{
                         "description": "Offset for pagination (default: 0)",
                         "name": "offset",
                         "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Comma-separated relations to expand (e.g. name_i18n)",
+                        "name": "expand",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -20677,6 +20604,12 @@ const docTemplate = `{
                         "description": "Offset for pagination (default: 0)",
                         "name": "offset",
                         "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Comma-separated relations to expand (e.g. name_i18n)",
+                        "name": "expand",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -20735,6 +20668,12 @@ const docTemplate = `{
                         "name": "id",
                         "in": "path",
                         "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Comma-separated relations to expand (e.g. name_i18n)",
+                        "name": "expand",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -22901,7 +22840,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Retrieve all users with a specific role (requires authentication)",
+                "description": "Retrieve all users with a specific role with pagination and optional expand",
                 "consumes": [
                     "application/json"
                 ],
@@ -22919,11 +22858,31 @@ const docTemplate = `{
                         "name": "role",
                         "in": "query",
                         "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "default": 20,
+                        "description": "Limit results (default: 20)",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 0,
+                        "description": "Offset for pagination (default: 0)",
+                        "name": "offset",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Expand related fields (e.g. shift,branch)",
+                        "name": "expand",
+                        "in": "query"
                     }
                 ],
                 "responses": {
                     "200": {
-                        "description": "List of users with the specified role",
+                        "description": "Paginated list of users",
                         "schema": {
                             "type": "array",
                             "items": {
@@ -22935,86 +22894,6 @@ const docTemplate = `{
                         "description": "Invalid role parameter",
                         "schema": {
                             "$ref": "#/definitions/model.ErrorResponse"
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
-                        }
-                    }
-                }
-            }
-        },
-        "/api/v1/users/cashiers": {
-            "get": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Retrieve all cashier staff members",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "users"
-                ],
-                "summary": "Get cashiers",
-                "responses": {
-                    "200": {
-                        "description": "List of cashiers",
-                        "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/model.UserResponse"
-                            }
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal server error",
-                        "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
-                        }
-                    }
-                }
-            }
-        },
-        "/api/v1/users/kitchen-staff": {
-            "get": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Retrieve all kitchen staff members",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "users"
-                ],
-                "summary": "Get kitchen staff",
-                "responses": {
-                    "200": {
-                        "description": "List of kitchen staff",
-                        "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/model.UserResponse"
-                            }
                         }
                     },
                     "401": {
@@ -23111,7 +22990,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Retrieve all staff members (non-user role employees)",
+                "description": "Retrieve all staff members (excluding admin/superadmin) with pagination",
                 "consumes": [
                     "application/json"
                 ],
@@ -23121,53 +23000,32 @@ const docTemplate = `{
                 "tags": [
                     "users"
                 ],
-                "summary": "Get all staff members",
-                "responses": {
-                    "200": {
-                        "description": "List of all staff members",
-                        "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/model.UserResponse"
-                            }
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal server error",
-                        "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
-                        }
-                    }
-                }
-            }
-        },
-        "/api/v1/users/waiters": {
-            "get": {
-                "security": [
+                "summary": "Get staff users",
+                "parameters": [
                     {
-                        "BearerAuth": []
+                        "type": "integer",
+                        "default": 20,
+                        "description": "Limit results (default: 20)",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 0,
+                        "description": "Offset for pagination (default: 0)",
+                        "name": "offset",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Expand related fields (e.g. shift,branch)",
+                        "name": "expand",
+                        "in": "query"
                     }
                 ],
-                "description": "Retrieve all waiter staff members",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "users"
-                ],
-                "summary": "Get waiters",
                 "responses": {
                     "200": {
-                        "description": "List of waiters",
+                        "description": "Paginated list of staff",
                         "schema": {
                             "type": "array",
                             "items": {
@@ -23191,6 +23049,56 @@ const docTemplate = `{
             }
         },
         "/api/v1/users/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Retrieve a single user by their UUID",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "users"
+                ],
+                "summary": "Get user by ID",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "User ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.UserResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    }
+                }
+            },
             "put": {
                 "security": [
                     {
@@ -23528,6 +23436,9 @@ const docTemplate = `{
                 "pos_y": {
                     "type": "integer",
                     "example": 0
+                },
+                "price_per_hour": {
+                    "type": "string"
                 },
                 "rotation": {
                     "type": "integer",
@@ -23993,6 +23904,10 @@ const docTemplate = `{
         "model.CompoundResponse": {
             "type": "object",
             "properties": {
+                "branch_id": {
+                    "type": "string",
+                    "example": "123e4567-e89b-12d3-a456-426614174000"
+                },
                 "color_code": {
                     "type": "string",
                     "example": "#FF5733"
@@ -24000,10 +23915,6 @@ const docTemplate = `{
                 "created_at": {
                     "type": "string",
                     "example": "2022-01-01T00:00:00Z"
-                },
-                "department_id": {
-                    "type": "string",
-                    "example": "123e4567-e89b-12d3-a456-426614174000"
                 },
                 "description": {
                     "type": "string",
@@ -24014,6 +23925,10 @@ const docTemplate = `{
                     "example": "123e4567-e89b-12d3-a456-426614174000"
                 },
                 "id": {
+                    "type": "string",
+                    "example": "123e4567-e89b-12d3-a456-426614174000"
+                },
+                "ingredient_group_id": {
                     "type": "string",
                     "example": "123e4567-e89b-12d3-a456-426614174000"
                 },
@@ -24039,8 +23954,8 @@ const docTemplate = `{
                     "example": "500.50"
                 },
                 "quantity": {
-                    "type": "integer",
-                    "example": 10
+                    "type": "number",
+                    "example": 0.7
                 },
                 "updated_at": {
                     "type": "string",
@@ -24182,6 +24097,10 @@ const docTemplate = `{
                     "type": "integer",
                     "example": 0
                 },
+                "price_per_hour": {
+                    "type": "string",
+                    "example": "50000"
+                },
                 "rotation": {
                     "type": "integer",
                     "example": 0
@@ -24269,10 +24188,6 @@ const docTemplate = `{
                 "picture_url": {
                     "type": "string",
                     "example": "https://example.com/image.jpg"
-                },
-                "storage_id": {
-                    "type": "string",
-                    "example": "123e4567-e89b-12d3-a456-426614174000"
                 }
             }
         },
@@ -24332,15 +24247,15 @@ const docTemplate = `{
                     "type": "string",
                     "example": "#FF5733"
                 },
-                "department_id": {
-                    "type": "string",
-                    "example": "123e4567-e89b-12d3-a456-426614174000"
-                },
                 "description": {
                     "type": "string",
                     "example": "Base dough for all pizzas"
                 },
                 "description_i18n": {
+                    "type": "string",
+                    "example": "123e4567-e89b-12d3-a456-426614174000"
+                },
+                "ingredient_group_id": {
                     "type": "string",
                     "example": "123e4567-e89b-12d3-a456-426614174000"
                 },
@@ -24361,8 +24276,8 @@ const docTemplate = `{
                     "example": "https://example.com/pizza-dough.jpg"
                 },
                 "quantity": {
-                    "type": "integer",
-                    "example": 10
+                    "type": "number",
+                    "example": 0.7
                 }
             }
         },
@@ -24584,10 +24499,6 @@ const docTemplate = `{
                 "cook_time": {
                     "type": "integer",
                     "example": 30
-                },
-                "department_id": {
-                    "type": "string",
-                    "example": "123e4567-e89b-12d3-a456-426614174000"
                 },
                 "description": {
                     "type": "string",
@@ -25071,6 +24982,10 @@ const docTemplate = `{
         "model.CreateOrderRequest": {
             "type": "object",
             "properties": {
+                "cash_register_id": {
+                    "type": "string",
+                    "example": "uuid-of-cash-register"
+                },
                 "cashier_id": {
                     "type": "string",
                     "example": "a1b2c3d4-e5f6-4a5b-8c9d-e0f1a2b3c4d5"
@@ -25275,6 +25190,10 @@ const docTemplate = `{
                         "$ref": "#/definitions/model.UpsertShipmentItemRequest"
                     }
                 },
+                "status": {
+                    "type": "string",
+                    "example": "draft"
+                },
                 "storage_id": {
                     "type": "string"
                 },
@@ -25294,6 +25213,10 @@ const docTemplate = `{
                     "type": "string",
                     "example": "Expired goods return"
                 },
+                "status": {
+                    "type": "string",
+                    "example": "draft"
+                },
                 "storage_id": {
                     "type": "string",
                     "example": "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
@@ -25307,9 +25230,6 @@ const docTemplate = `{
         "model.CreateStorageRequest": {
             "type": "object",
             "properties": {
-                "branch_id": {
-                    "type": "string"
-                },
                 "color_code": {
                     "type": "string"
                 },
@@ -25677,6 +25597,9 @@ const docTemplate = `{
                 "created_at": {
                     "type": "string"
                 },
+                "en": {
+                    "type": "string"
+                },
                 "id": {
                     "type": "string"
                 },
@@ -25689,10 +25612,16 @@ const docTemplate = `{
                 "picture_url": {
                     "type": "string"
                 },
+                "ru": {
+                    "type": "string"
+                },
                 "storage_id": {
                     "type": "string"
                 },
                 "updated_at": {
+                    "type": "string"
+                },
+                "uz": {
                     "type": "string"
                 }
             }
@@ -25867,9 +25796,109 @@ const docTemplate = `{
                 }
             }
         },
+        "model.GoodOrdersReportResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.GoodOrdersReportRow"
+                    }
+                },
+                "limit": {
+                    "type": "integer"
+                },
+                "offset": {
+                    "type": "integer"
+                },
+                "totals": {
+                    "$ref": "#/definitions/model.GoodOrdersReportTotals"
+                }
+            }
+        },
+        "model.GoodOrdersReportRow": {
+            "type": "object",
+            "properties": {
+                "avg_cost_price": {
+                    "type": "string"
+                },
+                "avg_markup": {
+                    "type": "string"
+                },
+                "avg_markup_pct": {
+                    "type": "string"
+                },
+                "avg_sell_price": {
+                    "type": "string"
+                },
+                "bill_no": {
+                    "type": "string"
+                },
+                "bill_status": {
+                    "type": "string"
+                },
+                "closed_at": {
+                    "type": "string"
+                },
+                "hall_name": {
+                    "type": "string"
+                },
+                "opened_at": {
+                    "type": "string"
+                },
+                "order_id": {
+                    "type": "string"
+                },
+                "table_number": {
+                    "type": "string"
+                },
+                "total_cost": {
+                    "type": "string"
+                },
+                "total_markup": {
+                    "type": "string"
+                },
+                "total_qty": {
+                    "type": "integer"
+                },
+                "total_sell": {
+                    "type": "string"
+                },
+                "waiter_name": {
+                    "type": "string"
+                }
+            }
+        },
+        "model.GoodOrdersReportTotals": {
+            "type": "object",
+            "properties": {
+                "avg_markup_pct": {
+                    "type": "string"
+                },
+                "total_cost": {
+                    "type": "string"
+                },
+                "total_markup": {
+                    "type": "string"
+                },
+                "total_orders": {
+                    "type": "integer"
+                },
+                "total_qty": {
+                    "type": "integer"
+                },
+                "total_sell": {
+                    "type": "string"
+                }
+            }
+        },
         "model.GoodResponse": {
             "type": "object",
             "properties": {
+                "branch_id": {
+                    "type": "string",
+                    "example": "123e4567-e89b-12d3-a456-426614174000"
+                },
                 "category_id": {
                     "type": "string",
                     "example": "123e4567-e89b-12d3-a456-426614174000"
@@ -25890,10 +25919,6 @@ const docTemplate = `{
                 "created_at": {
                     "type": "string",
                     "example": "2022-01-01T00:00:00Z"
-                },
-                "department_id": {
-                    "type": "string",
-                    "example": "123e4567-e89b-12d3-a456-426614174000"
                 },
                 "description": {
                     "type": "string",
@@ -26707,63 +26732,6 @@ const docTemplate = `{
                 }
             }
         },
-        "model.InvoiceStatsByDateRangeResponse": {
-            "type": "object",
-            "properties": {
-                "arrived_count": {
-                    "type": "integer",
-                    "example": 15
-                },
-                "avg_invoice_amount": {
-                    "type": "string",
-                    "example": "1000000"
-                },
-                "cancelled_count": {
-                    "type": "integer",
-                    "example": 5
-                },
-                "invoice_count": {
-                    "type": "integer",
-                    "example": 50
-                },
-                "pending_count": {
-                    "type": "integer",
-                    "example": 10
-                },
-                "received_count": {
-                    "type": "integer",
-                    "example": 20
-                },
-                "total_spent": {
-                    "type": "string",
-                    "example": "50000000"
-                }
-            }
-        },
-        "model.InvoiceStatsBySupplierResponse": {
-            "type": "object",
-            "properties": {
-                "avg_invoice_amount": {
-                    "type": "string",
-                    "example": "1000000"
-                },
-                "invoice_count": {
-                    "type": "integer",
-                    "example": 10
-                },
-                "last_order_date": {
-                    "type": "string"
-                },
-                "supplier_name": {
-                    "type": "string",
-                    "example": "ABC Supplier"
-                },
-                "total_spent": {
-                    "type": "string",
-                    "example": "10000000"
-                }
-            }
-        },
         "model.InvoiceStatus": {
             "type": "string",
             "enum": [
@@ -26820,8 +26788,17 @@ const docTemplate = `{
                 "customer_paid_amount"
             ],
             "properties": {
+                "card_amount": {
+                    "description": "card_amount: card portion paid (required for split; equals customer_paid_amount for card-only)",
+                    "type": "string",
+                    "example": "20000"
+                },
+                "cash_amount": {
+                    "description": "cash_amount: cash portion paid (required for split; equals customer_paid_amount for cash-only)",
+                    "type": "string",
+                    "example": "80000"
+                },
                 "cash_register_id": {
-                    "description": "cash_register_id: if provided, auto-creates an income transaction",
                     "type": "string",
                     "example": "uuid"
                 },
@@ -26830,12 +26807,12 @@ const docTemplate = `{
                     "example": "a1b2c3d4-e5f6-4a5b-8c9d-e0f1a2b3c4d5"
                 },
                 "customer_paid_amount": {
-                    "description": "customer_paid_amount: how much the customer paid (required — equals grand_total for card, may differ for cash)",
+                    "description": "customer_paid_amount: total handed by customer (required)",
                     "type": "string",
                     "example": "100000"
                 },
                 "discount_amount": {
-                    "description": "discount_amount: fixed amount",
+                    "description": "discount_amount: fixed flat discount (ignored if discount_percent is set)",
                     "type": "string",
                     "example": "5000"
                 },
@@ -26844,14 +26821,19 @@ const docTemplate = `{
                     "example": "Holiday discount"
                 },
                 "discount_percent": {
-                    "description": "discount_percent: e.g. 10 means 10%",
+                    "description": "discount_percent: e.g. 10 means 10% — takes priority over discount_amount",
                     "type": "string",
                     "example": "10"
                 },
                 "payment_type": {
-                    "description": "payment_type: cash or card",
+                    "description": "payment_type: cash, card, or split",
                     "type": "string",
                     "example": "cash"
+                },
+                "table_charge": {
+                    "description": "table_charge: confirmed table fee from GET /orders/:id/table-price (optional; auto-calc if table has price_per_hour and this is not provided)",
+                    "type": "string",
+                    "example": "50000"
                 }
             }
         },
@@ -26941,6 +26923,10 @@ const docTemplate = `{
         "model.OrderResponse": {
             "type": "object",
             "properties": {
+                "cash_register_id": {
+                    "type": "string",
+                    "example": "a1b2c3d4-e5f6-4a5b-8c9d-e0f1a2b3c4d5"
+                },
                 "cashier_id": {
                     "type": "string",
                     "example": "a1b2c3d4-e5f6-4a5b-8c9d-e0f1a2b3c4d5"
@@ -27220,6 +27206,10 @@ const docTemplate = `{
                     "type": "string",
                     "example": "my_restaurant"
                 },
+                "cash_register_id": {
+                    "type": "string",
+                    "example": "123e4567-e89b-12d3-a456-426614174000"
+                },
                 "fullName": {
                     "type": "string",
                     "example": "Javohir Khasanov"
@@ -27489,11 +27479,9 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "stock_after": {
-                    "description": "active: live projected (current-qty); confirmed: actual after deduction",
                     "type": "string"
                 },
                 "stock_before": {
-                    "description": "active: live current stock; confirmed: actual before deduction",
                     "type": "string"
                 },
                 "total_amount": {
@@ -27584,6 +27572,9 @@ const docTemplate = `{
                 "created_at": {
                     "type": "string"
                 },
+                "en": {
+                    "type": "string"
+                },
                 "id": {
                     "type": "string"
                 },
@@ -27596,7 +27587,13 @@ const docTemplate = `{
                 "picture_url": {
                     "type": "string"
                 },
+                "ru": {
+                    "type": "string"
+                },
                 "updated_at": {
+                    "type": "string"
+                },
+                "uz": {
                     "type": "string"
                 }
             }
@@ -27756,6 +27753,29 @@ const docTemplate = `{
                 "total_tables": {
                     "type": "integer",
                     "example": 50
+                }
+            }
+        },
+        "model.TablePriceResponse": {
+            "type": "object",
+            "properties": {
+                "duration_hours": {
+                    "type": "number"
+                },
+                "duration_minutes": {
+                    "type": "number"
+                },
+                "price_per_hour": {
+                    "type": "string"
+                },
+                "started_at": {
+                    "type": "string"
+                },
+                "table_id": {
+                    "type": "string"
+                },
+                "total_price": {
+                    "type": "string"
                 }
             }
         },
@@ -28041,6 +28061,10 @@ const docTemplate = `{
                     "type": "integer",
                     "example": 0
                 },
+                "price_per_hour": {
+                    "type": "string",
+                    "example": "50000"
+                },
                 "rotation": {
                     "type": "integer",
                     "example": 0
@@ -28105,10 +28129,6 @@ const docTemplate = `{
                 "picture_url": {
                     "type": "string",
                     "example": "https://example.com/image.jpg"
-                },
-                "storage_id": {
-                    "type": "string",
-                    "example": "123e4567-e89b-12d3-a456-426614174000"
                 }
             }
         },
@@ -28136,15 +28156,15 @@ const docTemplate = `{
                     "type": "string",
                     "example": "#FF5733"
                 },
-                "department_id": {
-                    "type": "string",
-                    "example": "123e4567-e89b-12d3-a456-426614174000"
-                },
                 "description": {
                     "type": "string",
                     "example": "Base dough for all pizzas"
                 },
                 "description_i18n": {
+                    "type": "string",
+                    "example": "123e4567-e89b-12d3-a456-426614174000"
+                },
+                "ingredient_group_id": {
                     "type": "string",
                     "example": "123e4567-e89b-12d3-a456-426614174000"
                 },
@@ -28165,8 +28185,8 @@ const docTemplate = `{
                     "example": "https://example.com/pizza-dough.jpg"
                 },
                 "quantity": {
-                    "type": "integer",
-                    "example": 10
+                    "type": "number",
+                    "example": 0.7
                 }
             }
         },
@@ -28253,6 +28273,9 @@ const docTemplate = `{
                 "color_code": {
                     "type": "string"
                 },
+                "en": {
+                    "type": "string"
+                },
                 "name": {
                     "type": "string"
                 },
@@ -28262,7 +28285,13 @@ const docTemplate = `{
                 "picture_url": {
                     "type": "string"
                 },
+                "ru": {
+                    "type": "string"
+                },
                 "storage_id": {
+                    "type": "string"
+                },
+                "uz": {
                     "type": "string"
                 }
             }
@@ -28330,10 +28359,6 @@ const docTemplate = `{
                 "cook_time": {
                     "type": "integer",
                     "example": 30
-                },
-                "department_id": {
-                    "type": "string",
-                    "example": "123e4567-e89b-12d3-a456-426614174000"
                 },
                 "description": {
                     "type": "string",
@@ -28766,6 +28791,34 @@ const docTemplate = `{
                 }
             }
         },
+        "model.UpdateShipmentBatchRequest": {
+            "type": "object",
+            "required": [
+                "items"
+            ],
+            "properties": {
+                "date": {
+                    "type": "string",
+                    "example": "2026-01-24T00:00:00Z"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "items": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                        "$ref": "#/definitions/model.UpsertShipmentItemRequest"
+                    }
+                },
+                "storage_id": {
+                    "type": "string"
+                },
+                "supplier_id": {
+                    "type": "string"
+                }
+            }
+        },
         "model.UpdateShipmentRequest": {
             "type": "object",
             "properties": {
@@ -28776,6 +28829,10 @@ const docTemplate = `{
                 "description": {
                     "type": "string",
                     "example": "Expired goods return"
+                },
+                "status": {
+                    "type": "string",
+                    "example": "active"
                 },
                 "storage_id": {
                     "type": "string",
@@ -28790,10 +28847,10 @@ const docTemplate = `{
         "model.UpdateStorageRequest": {
             "type": "object",
             "properties": {
-                "branch_id": {
+                "color_code": {
                     "type": "string"
                 },
-                "color_code": {
+                "en": {
                     "type": "string"
                 },
                 "name": {
@@ -28803,6 +28860,12 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "picture_url": {
+                    "type": "string"
+                },
+                "ru": {
+                    "type": "string"
+                },
+                "uz": {
                     "type": "string"
                 }
             }
@@ -28960,12 +29023,33 @@ const docTemplate = `{
                 "details"
             ],
             "properties": {
+                "date": {
+                    "type": "string",
+                    "example": "2024-01-01T00:00:00Z"
+                },
                 "details": {
                     "type": "array",
                     "minItems": 1,
                     "items": {
                         "$ref": "#/definitions/model.UpsertInvoiceDetailEntry"
                     }
+                },
+                "status": {
+                    "description": "Optional invoice-level fields to update alongside details",
+                    "type": "string",
+                    "example": "arrived"
+                },
+                "storage_id": {
+                    "type": "string",
+                    "example": "123e4567-e89b-12d3-a456-426614174000"
+                },
+                "supplier_id": {
+                    "type": "string",
+                    "example": "123e4567-e89b-12d3-a456-426614174000"
+                },
+                "total_amount": {
+                    "type": "string",
+                    "example": "600000"
                 }
             }
         },
@@ -29113,6 +29197,10 @@ const docTemplate = `{
                     "type": "string",
                     "example": "123e4567-e89b-12d3-a456-426614174000"
                 },
+                "cash_register_id": {
+                    "type": "string",
+                    "example": "123e4567-e89b-12d3-a456-426614174000"
+                },
                 "created_at": {
                     "type": "string",
                     "example": "2021-01-01T00:00:00Z"
@@ -29169,7 +29257,7 @@ const docTemplate = `{
 // SwaggerInfo holds exported Swagger Info so clients can modify it
 var SwaggerInfo = &swag.Spec{
 	Version:          "1.0",
-	Host:             "back.maryai.yurtal.tech",
+	Host:             "back.staging.maryai.yurtal.tech",
 	BasePath:         "/",
 	Schemes:          []string{"https"},
 	Title:            "MaryAI API",

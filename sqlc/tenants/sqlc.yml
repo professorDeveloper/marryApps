@@ -24,6 +24,14 @@ sql:
       - "../../app/migrations/tenants/19_order_reservations.up.sql"
       - "../../app/migrations/tenants/20_cash_register_shifts.up.sql"
       - "../../app/migrations/tenants/21_inventory_system_quantity.up.sql"
+      - "../../app/migrations/tenants/22_user_cash_register.up.sql"
+      - "../../app/migrations/tenants/23_order_cash_register.up.sql"
+      - "../../app/migrations/tenants/24_category_remove_storage.up.sql"
+      - "../../app/migrations/tenants/25_goods_compounds_branch_id.up.sql"
+      - "../../app/migrations/tenants/26_compounds_ingredient_group.up.sql"
+      - "../../app/migrations/tenants/27_compound_quantity_numeric.up.sql"
+      - "../../app/migrations/tenants/28_invoice_status_deleted.up.sql"
+      - "../../app/migrations/tenants/29_cafe_tables_price_per_hour.up.sql"
 
 
     gen:

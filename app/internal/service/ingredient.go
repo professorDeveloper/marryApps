@@ -103,13 +103,18 @@ func (i *IngredientS) GetIngredientGroupByID(ctx context.Context, groupID string
 }
 
 // GetAllIngredientGroups retrieves all ingredient groups
-func (i *IngredientS) GetAllIngredientGroups(ctx context.Context, limit, offset int32) ([]model.IngredientGroupResponse, error) {
+func (i *IngredientS) GetAllIngredientGroups(ctx context.Context, limit, offset int32) ([]model.IngredientGroupResponse, int64, error) {
+	total, err := i.repo.Tenant(ctx).CountIngredientGroups(ctx)
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to count ingredient groups: %w", err)
+	}
+
 	groups, err := i.repo.Tenant(ctx).GetAllIngredientGroups(ctx, pg.GetAllIngredientGroupsParams{
 		Limit:  limit,
 		Offset: offset,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to get ingredient groups: %w", err)
+		return nil, 0, fmt.Errorf("failed to get ingredient groups: %w", err)
 	}
 
 	var responses []model.IngredientGroupResponse
@@ -117,6 +122,24 @@ func (i *IngredientS) GetAllIngredientGroups(ctx context.Context, limit, offset 
 		responses = append(responses, *mapIngredientGroupToResponse(g.ID, g.Name, g.NameI18n, g.PictureUrl, g.ColorCode, g.CreatedAt, g.UpdatedAt))
 	}
 
+	return responses, total, nil
+}
+
+// SearchIngredientGroups searches ingredient groups by name
+func (i *IngredientS) SearchIngredientGroups(ctx context.Context, query string, limit, offset int32) ([]model.IngredientGroupResponse, error) {
+	groups, err := i.repo.Tenant(ctx).SearchIngredientGroups(ctx, pg.SearchIngredientGroupsParams{
+		Column1: &query,
+		Limit:   limit,
+		Offset:  offset,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to search ingredient groups: %w", err)
+	}
+
+	var responses []model.IngredientGroupResponse
+	for _, g := range groups {
+		responses = append(responses, *mapIngredientGroupToResponse(g.ID, g.Name, g.NameI18n, g.PictureUrl, g.ColorCode, g.CreatedAt, g.UpdatedAt))
+	}
 	return responses, nil
 }
 
@@ -185,7 +208,7 @@ func (i *IngredientS) DeleteIngredientGroup(ctx context.Context, groupID string)
 	return nil
 }
 
-func (i *IngredientS) GetIngredientReport(ctx context.Context, req model.GetIngredientReportRequest) ([]model.IngredientReportItem, error) {
+func (i *IngredientS) GetIngredientReport(ctx context.Context, req model.GetIngredientReportRequest) (*model.IngredientReportResponse, error) {
 	storageUUID, err := uuid.Parse(req.StorageID)
 	if err != nil {
 		return nil, fmt.Errorf("invalid storage_id: %w", err)
@@ -210,19 +233,33 @@ func (i *IngredientS) GetIngredientReport(ctx context.Context, req model.GetIngr
 		ingredientUUID = &u
 	}
 
-	rows, err := i.repo.Tenant(ctx).GetIngredientReport(ctx, pg.GetIngredientReportParams{
+	limit := req.Limit
+	if limit <= 0 {
+		limit = 20
+	}
+
+	params := pg.GetIngredientReportParams{
 		StorageID:    storageUUID,
 		Start:        start,
 		End:          end,
 		IngredientID: ingredientUUID,
-	})
+		Limit:        limit,
+		Offset:       req.Offset,
+	}
+
+	totalsRow, err := i.repo.Tenant(ctx).GetIngredientReportTotals(ctx, params)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get ingredient report totals: %w", err)
+	}
+
+	rows, err := i.repo.Tenant(ctx).GetIngredientReport(ctx, params)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get ingredient report: %w", err)
 	}
 
-	out := make([]model.IngredientReportItem, 0, len(rows))
+	items := make([]model.IngredientReportItem, 0, len(rows))
 	for _, r := range rows {
-		out = append(out, model.IngredientReportItem{
+		items = append(items, model.IngredientReportItem{
 			IngredientID:   r.IngredientID.String(),
 			IngredientName: r.IngredientName,
 			Measurement:    r.Measurement,
@@ -251,21 +288,29 @@ func (i *IngredientS) GetIngredientReport(ctx context.Context, req model.GetIngr
 			ShortageAmount:     numericToStr(r.ShortageAmount),
 		})
 	}
-	return out, nil
+
+	return &model.IngredientReportResponse{
+		Items: items,
+		Totals: model.IngredientReportTotals{
+			TotalCount:          totalsRow.TotalCount,
+			TotalOrderOutAmount: numericToStr(totalsRow.TotalOrderOutAmount),
+		},
+	}, nil
 }
 
 func (i *IngredientS) GetIngredientReportItem(ctx context.Context, req model.GetIngredientReportRequest) (*model.IngredientReportItem, error) {
 	if req.IngredientID == nil || *req.IngredientID == "" {
 		return nil, fmt.Errorf("ingredient_id is required")
 	}
-	rows, err := i.GetIngredientReport(ctx, req)
+	req.Limit = 1
+	resp, err := i.GetIngredientReport(ctx, req)
 	if err != nil {
 		return nil, err
 	}
-	if len(rows) == 0 {
+	if len(resp.Items) == 0 {
 		return nil, nil
 	}
-	item := rows[0]
+	item := resp.Items[0]
 	return &item, nil
 }
 
@@ -405,13 +450,18 @@ func (i *IngredientS) GetIngredientByID(ctx context.Context, ingredientID string
 }
 
 // GetAllIngredients retrieves all ingredients
-func (i *IngredientS) GetAllIngredients(ctx context.Context, limit, offset int32) ([]model.IngredientResponse, error) {
+func (i *IngredientS) GetAllIngredients(ctx context.Context, limit, offset int32) ([]model.IngredientResponse, int64, error) {
+	total, err := i.repo.Tenant(ctx).CountIngredients(ctx)
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to count ingredients: %w", err)
+	}
+
 	ingredients, err := i.repo.Tenant(ctx).GetAllIngredients(ctx, pg.GetAllIngredientsParams{
 		Limit:  limit,
 		Offset: offset,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to get ingredients: %w", err)
+		return nil, 0, fmt.Errorf("failed to get ingredients: %w", err)
 	}
 
 	var responses []model.IngredientResponse
@@ -422,14 +472,40 @@ func (i *IngredientS) GetAllIngredients(ctx context.Context, limit, offset int32
 		}
 	}
 
+	return responses, total, nil
+}
+
+// SearchIngredients searches ingredients by name
+func (i *IngredientS) SearchIngredients(ctx context.Context, query string, limit, offset int32) ([]model.IngredientResponse, error) {
+	ingredients, err := i.repo.Tenant(ctx).SearchIngredients(ctx, pg.SearchIngredientsParams{
+		Column1: &query,
+		Limit:   limit,
+		Offset:  offset,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to search ingredients: %w", err)
+	}
+
+	var responses []model.IngredientResponse
+	for _, ing := range ingredients {
+		resp := mapIngredientToResponse(ing)
+		if resp != nil {
+			responses = append(responses, *resp)
+		}
+	}
 	return responses, nil
 }
 
 // GetIngredientsByGroupID retrieves ingredients by group ID
-func (i *IngredientS) GetIngredientsByGroupID(ctx context.Context, groupID string, limit, offset int32) ([]model.IngredientResponse, error) {
+func (i *IngredientS) GetIngredientsByGroupID(ctx context.Context, groupID string, limit, offset int32) ([]model.IngredientResponse, int64, error) {
 	id, err := uuid.Parse(groupID)
 	if err != nil {
-		return nil, fmt.Errorf("invalid group ID: %w", err)
+		return nil, 0, fmt.Errorf("invalid group ID: %w", err)
+	}
+
+	total, err := i.repo.Tenant(ctx).CountIngredientsByGroupID(ctx, pgtype.UUID{Bytes: id, Valid: true})
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to count ingredients by group: %w", err)
 	}
 
 	ingredients, err := i.repo.Tenant(ctx).GetIngredientsByGroupID(ctx, pg.GetIngredientsByGroupIDParams{
@@ -438,7 +514,7 @@ func (i *IngredientS) GetIngredientsByGroupID(ctx context.Context, groupID strin
 		Offset:  offset,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to get ingredients by group: %w", err)
+		return nil, 0, fmt.Errorf("failed to get ingredients by group: %w", err)
 	}
 
 	var responses []model.IngredientResponse
@@ -449,7 +525,7 @@ func (i *IngredientS) GetIngredientsByGroupID(ctx context.Context, groupID strin
 		}
 	}
 
-	return responses, nil
+	return responses, total, nil
 }
 
 // UpdateIngredient updates an ingredient
@@ -651,13 +727,18 @@ func (i *IngredientS) GetStockByIngredientAndBranch(ctx context.Context, ingredi
 }
 
 // GetAllIngredientStock retrieves all ingredient stock entries
-func (i *IngredientS) GetAllIngredientStock(ctx context.Context, limit, offset int32) ([]model.IngredientStockResponse, error) {
+func (i *IngredientS) GetAllIngredientStock(ctx context.Context, limit, offset int32) ([]model.IngredientStockResponse, int64, error) {
+	total, err := i.repo.Tenant(ctx).CountIngredientStock(ctx)
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to count ingredient stock: %w", err)
+	}
+
 	stocks, err := i.repo.Tenant(ctx).GetAllIngredientStock(ctx, pg.GetAllIngredientStockParams{
 		Limit:  limit,
 		Offset: offset,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to get ingredient stock: %w", err)
+		return nil, 0, fmt.Errorf("failed to get ingredient stock: %w", err)
 	}
 
 	var responses []model.IngredientStockResponse
@@ -665,14 +746,19 @@ func (i *IngredientS) GetAllIngredientStock(ctx context.Context, limit, offset i
 		responses = append(responses, *toIngredientStockResponse(s))
 	}
 
-	return responses, nil
+	return responses, total, nil
 }
 
 // GetStockByBranchID retrieves all stock for a branch
-func (i *IngredientS) GetStockByBranchID(ctx context.Context, branchID string, limit, offset int32) ([]model.IngredientStockResponse, error) {
+func (i *IngredientS) GetStockByBranchID(ctx context.Context, branchID string, limit, offset int32) ([]model.IngredientStockResponse, int64, error) {
 	bID, err := uuid.Parse(branchID)
 	if err != nil {
-		return nil, fmt.Errorf("invalid branch ID: %w", err)
+		return nil, 0, fmt.Errorf("invalid branch ID: %w", err)
+	}
+
+	total, err := i.repo.Tenant(ctx).CountIngredientStockByBranchID(ctx, pgtype.UUID{Bytes: bID, Valid: true})
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to count stock by branch: %w", err)
 	}
 
 	stocks, err := i.repo.Tenant(ctx).GetStockByBranchID(ctx, pg.GetStockByBranchIDParams{
@@ -681,7 +767,7 @@ func (i *IngredientS) GetStockByBranchID(ctx context.Context, branchID string, l
 		Offset:   offset,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to get stock by branch: %w", err)
+		return nil, 0, fmt.Errorf("failed to get stock by branch: %w", err)
 	}
 
 	var responses []model.IngredientStockResponse
@@ -689,14 +775,19 @@ func (i *IngredientS) GetStockByBranchID(ctx context.Context, branchID string, l
 		responses = append(responses, *toIngredientStockResponse(s))
 	}
 
-	return responses, nil
+	return responses, total, nil
 }
 
 // GetStockByIngredientID retrieves all stock for an ingredient
-func (i *IngredientS) GetStockByIngredientID(ctx context.Context, ingredientID string, limit, offset int32) ([]model.IngredientStockResponse, error) {
+func (i *IngredientS) GetStockByIngredientID(ctx context.Context, ingredientID string, limit, offset int32) ([]model.IngredientStockResponse, int64, error) {
 	ingID, err := uuid.Parse(ingredientID)
 	if err != nil {
-		return nil, fmt.Errorf("invalid ingredient ID: %w", err)
+		return nil, 0, fmt.Errorf("invalid ingredient ID: %w", err)
+	}
+
+	total, err := i.repo.Tenant(ctx).CountIngredientStockByIngredientID(ctx, ingID)
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to count stock by ingredient: %w", err)
 	}
 
 	stocks, err := i.repo.Tenant(ctx).GetStockByIngredientID(ctx, pg.GetStockByIngredientIDParams{
@@ -705,7 +796,7 @@ func (i *IngredientS) GetStockByIngredientID(ctx context.Context, ingredientID s
 		Offset:       offset,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to get stock by ingredient: %w", err)
+		return nil, 0, fmt.Errorf("failed to get stock by ingredient: %w", err)
 	}
 
 	var responses []model.IngredientStockResponse
@@ -713,7 +804,7 @@ func (i *IngredientS) GetStockByIngredientID(ctx context.Context, ingredientID s
 		responses = append(responses, *toIngredientStockResponse(s))
 	}
 
-	return responses, nil
+	return responses, total, nil
 }
 
 // UpdateIngredientStock updates ingredient stock quantity
@@ -1009,21 +1100,26 @@ func (i *IngredientS) GetIngredientGroupByIDWithLang(ctx context.Context, groupI
 }
 
 // GetAllIngredientGroupsWithLang retrieves all ingredient groups with language support
-func (i *IngredientS) GetAllIngredientGroupsWithLang(ctx context.Context, lang string, limit, offset int32) ([]model.IngredientGroupResponse, error) {
+func (i *IngredientS) GetAllIngredientGroupsWithLang(ctx context.Context, lang string, limit, offset int32) ([]model.IngredientGroupResponse, int64, error) {
+	total, err := i.repo.Tenant(ctx).CountIngredientGroups(ctx)
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to count ingredient groups: %w", err)
+	}
+
 	groups, err := i.repo.Tenant(ctx).GetAllIngredientGroupsWithLanguage(ctx, pg.GetAllIngredientGroupsWithLanguageParams{
 		Column1: lang,
 		Limit:   limit,
 		Offset:  offset,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to get ingredient groups: %w", err)
+		return nil, 0, fmt.Errorf("failed to get ingredient groups: %w", err)
 	}
 
 	var responses []model.IngredientGroupResponse
 	for _, group := range groups {
 		responses = append(responses, *mapIngredientGroupToResponse(group.ID, group.Name, group.NameI18n, group.PictureUrl, group.ColorCode, group.CreatedAt, group.UpdatedAt))
 	}
-	return responses, nil
+	return responses, total, nil
 }
 
 // GetIngredientByIDWithLang retrieves ingredient by ID with language support
@@ -1045,19 +1141,24 @@ func (i *IngredientS) GetIngredientByIDWithLang(ctx context.Context, ingredientI
 }
 
 // GetAllIngredientsWithLang retrieves all ingredients with language support
-func (i *IngredientS) GetAllIngredientsWithLang(ctx context.Context, lang string, limit, offset int32) ([]model.IngredientResponse, error) {
+func (i *IngredientS) GetAllIngredientsWithLang(ctx context.Context, lang string, limit, offset int32) ([]model.IngredientResponse, int64, error) {
+	total, err := i.repo.Tenant(ctx).CountIngredients(ctx)
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to count ingredients: %w", err)
+	}
+
 	ingredients, err := i.repo.Tenant(ctx).GetAllIngredientsWithLanguage(ctx, pg.GetAllIngredientsWithLanguageParams{
 		Column1: lang,
 		Limit:   limit,
 		Offset:  offset,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to get ingredients: %w", err)
+		return nil, 0, fmt.Errorf("failed to get ingredients: %w", err)
 	}
 
 	var responses []model.IngredientResponse
 	for _, ingredient := range ingredients {
 		responses = append(responses, *mapIngredientToResponse(ingredient))
 	}
-	return responses, nil
+	return responses, total, nil
 }

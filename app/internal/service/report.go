@@ -6,6 +6,7 @@ import (
 	"log"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 
 	"gitlab.yurtal.tech/company/maryai/back/internal/model"
@@ -19,6 +20,11 @@ type ReportI interface {
 		departmentID, categoryID, goodID, waiterID, hallID, tableID *string,
 		limit, offset int32,
 	) (*model.GoodsReportResponse, error)
+	GoodOrdersReport(ctx context.Context,
+		goodID, startDate, endDate string,
+		waiterID, hallID, tableID *string,
+		limit, offset int32,
+	) (*model.GoodOrdersReportResponse, error)
 }
 
 type ReportS struct {
@@ -107,6 +113,101 @@ func (s *ReportS) GoodsReport(ctx context.Context,
 			TotalMarkup:  ifaceToStr(totalsRow.TotalMarkup),
 			AvgMarkupPct: pgNumericToStr(totalsRow.AvgMarkupPct),
 			TotalCount:   totalsRow.TotalCount,
+		},
+		Limit:  limit,
+		Offset: offset,
+	}, nil
+}
+
+func (s *ReportS) GoodOrdersReport(ctx context.Context,
+	goodID, startDate, endDate string,
+	waiterID, hallID, tableID *string,
+	limit, offset int32,
+) (*model.GoodOrdersReportResponse, error) {
+	gID, err := uuid.Parse(goodID)
+	if err != nil {
+		return nil, fmt.Errorf("invalid good_id: %w", err)
+	}
+	start, err := parseReportDate(startDate)
+	if err != nil {
+		return nil, fmt.Errorf("invalid start_date: %w", err)
+	}
+	end, err := parseReportDate(endDate)
+	if err != nil {
+		return nil, fmt.Errorf("invalid end_date: %w", err)
+	}
+	if len(endDate) <= 10 {
+		end = end.AddDate(0, 0, 1)
+	}
+	startTs := pgtype.Timestamptz{Time: start, Valid: true}
+	endTs := pgtype.Timestamptz{Time: end, Valid: true}
+
+	params := pg.GoodOrdersReportParams{
+		GoodID:      gID,
+		CreatedAt:   startTs,
+		CreatedAt_2: endTs,
+		Column4:     strOrEmpty(waiterID),
+		Column5:     strOrEmpty(hallID),
+		Column6:     strOrEmpty(tableID),
+		Limit:       limit,
+		Offset:      offset,
+	}
+	totalsParams := pg.GoodOrdersReportTotalsParams{
+		GoodID:      gID,
+		CreatedAt:   startTs,
+		CreatedAt_2: endTs,
+		Column4:     strOrEmpty(waiterID),
+		Column5:     strOrEmpty(hallID),
+		Column6:     strOrEmpty(tableID),
+	}
+
+	rows, err := s.repo.Tenant(ctx).GoodOrdersReport(ctx, params)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get good orders report: %w", err)
+	}
+	totalsRow, err := s.repo.Tenant(ctx).GoodOrdersReportTotals(ctx, totalsParams)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get good orders report totals: %w", err)
+	}
+
+	data := make([]model.GoodOrdersReportRow, 0, len(rows))
+	for _, r := range rows {
+		row := model.GoodOrdersReportRow{
+			OrderID:      r.OrderID,
+			BillNo:       r.BillNo,
+			BillStatus:   r.BillStatus,
+			WaiterName:   r.WaiterName,
+			HallName:     r.HallName,
+			TableNumber:  ifaceToStr(r.TableNumber),
+			TotalQty:     r.TotalQty,
+			AvgSellPrice: pgNumericToStr(r.AvgSellPrice),
+			TotalSell:    ifaceToStr(r.TotalSell),
+			AvgCostPrice: pgNumericToStr(r.AvgCostPrice),
+			TotalCost:    ifaceToStr(r.TotalCost),
+			AvgMarkup:    pgNumericToStr(r.AvgMarkup),
+			TotalMarkup:  ifaceToStr(r.TotalMarkup),
+			AvgMarkupPct: pgNumericToStr(r.AvgMarkupPct),
+		}
+		if r.OpenedAt.Valid {
+			t := r.OpenedAt.Time.Format(time.RFC3339)
+			row.OpenedAt = &t
+		}
+		if r.ClosedAt.Valid {
+			t := r.ClosedAt.Time.Format(time.RFC3339)
+			row.ClosedAt = &t
+		}
+		data = append(data, row)
+	}
+
+	return &model.GoodOrdersReportResponse{
+		Data: data,
+		Totals: model.GoodOrdersReportTotals{
+			TotalQty:     totalsRow.TotalQty,
+			TotalSell:    ifaceToStr(totalsRow.TotalSell),
+			TotalCost:    ifaceToStr(totalsRow.TotalCost),
+			TotalMarkup:  ifaceToStr(totalsRow.TotalMarkup),
+			AvgMarkupPct: pgNumericToStr(totalsRow.AvgMarkupPct),
+			TotalOrders:  totalsRow.TotalOrders,
 		},
 		Limit:  limit,
 		Offset: offset,

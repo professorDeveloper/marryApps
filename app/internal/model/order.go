@@ -44,9 +44,10 @@ type Order struct {
 }
 
 type CreateOrderRequest struct {
-	TableID     string                  `json:"table_id,omitempty"   example:"a1b2c3d4-e5f6-4a5b-8c9d-e0f1a2b3c4d5"`
-	WaiterID    *string                 `json:"waiter_id,omitempty"  example:"a1b2c3d4-e5f6-4a5b-8c9d-e0f1a2b3c4d5"`
-	CashierID   *string                 `json:"cashier_id,omitempty" example:"a1b2c3d4-e5f6-4a5b-8c9d-e0f1a2b3c4d5"`
+	TableID        string                  `json:"table_id,omitempty"        example:"a1b2c3d4-e5f6-4a5b-8c9d-e0f1a2b3c4d5"`
+	WaiterID       *string                 `json:"waiter_id,omitempty"       example:"a1b2c3d4-e5f6-4a5b-8c9d-e0f1a2b3c4d5"`
+	CashierID      *string                 `json:"cashier_id,omitempty"      example:"a1b2c3d4-e5f6-4a5b-8c9d-e0f1a2b3c4d5"`
+	CashRegisterID *string                 `json:"cash_register_id,omitempty" example:"uuid-of-cash-register"`
 	Status      *string                 `json:"status,omitempty"     example:"open"`
 	GuestCount  *int32                  `json:"guest_count,omitempty" example:"2"`
 	Comment     *string                 `json:"comment,omitempty"`
@@ -86,8 +87,9 @@ type UpdateOrderStatusRequest struct {
 type OrderResponse struct {
 	ID               string      `json:"id"                          example:"c0f18a64-7f5c-4425-9414-1b01cddee9d9"`
 	TableID          string      `json:"table_id"                    example:"a1b2c3d4-e5f6-4a5b-8c9d-e0f1a2b3c4d5"`
-	WaiterID         *string     `json:"waiter_id,omitempty"         example:"a1b2c3d4-e5f6-4a5b-8c9d-e0f1a2b3c4d5"`
-	CashierID        *string     `json:"cashier_id,omitempty"        example:"a1b2c3d4-e5f6-4a5b-8c9d-e0f1a2b3c4d5"`
+	WaiterID         *string     `json:"waiter_id,omitempty"          example:"a1b2c3d4-e5f6-4a5b-8c9d-e0f1a2b3c4d5"`
+	CashierID        *string     `json:"cashier_id,omitempty"         example:"a1b2c3d4-e5f6-4a5b-8c9d-e0f1a2b3c4d5"`
+	CashRegisterID   *string     `json:"cash_register_id,omitempty"   example:"a1b2c3d4-e5f6-4a5b-8c9d-e0f1a2b3c4d5"`
 	Status           OrderStatus `json:"status"                      example:"open"`
 	GuestCount       *int32      `json:"guest_count,omitempty"       example:"2"`
 	TotalAmount      string      `json:"total_amount"                example:"100000"`
@@ -155,20 +157,34 @@ type OrderItemResponse struct {
 }
 
 type MarkOrderPaidRequest struct {
-	CashierID *string `json:"cashier_id,omitempty" example:"a1b2c3d4-e5f6-4a5b-8c9d-e0f1a2b3c4d5"`
-	// cash_register_id: if provided, auto-creates an income transaction
+	CashierID      *string `json:"cashier_id,omitempty"       example:"a1b2c3d4-e5f6-4a5b-8c9d-e0f1a2b3c4d5"`
 	CashRegisterID *string `json:"cash_register_id,omitempty" example:"uuid"`
-	// payment_type: cash or card
+	// payment_type: cash, card, or split
 	PaymentType *string `json:"payment_type,omitempty" example:"cash"`
-	// discount_percent: e.g. 10 means 10%
+	// discount_percent: e.g. 10 means 10% — takes priority over discount_amount
 	DiscountPercent *string `json:"discount_percent,omitempty" example:"10"`
-	// discount_amount: fixed amount
+	// discount_amount: fixed flat discount (ignored if discount_percent is set)
 	DiscountAmount  *string `json:"discount_amount,omitempty" example:"5000"`
 	DiscountComment *string `json:"discount_comment,omitempty" example:"Holiday discount"`
-	// customer_paid_amount: how much the customer paid (required — equals grand_total for card, may differ for cash)
+	// customer_paid_amount: total handed by customer (required)
 	CustomerPaidAmount string `json:"customer_paid_amount" validate:"required" example:"100000"`
+	// table_charge: confirmed table fee from GET /orders/:id/table-price (optional; auto-calc if table has price_per_hour and this is not provided)
+	TableCharge *string `json:"table_charge,omitempty" example:"50000"`
+	// cash_amount: cash portion paid (required for split; equals customer_paid_amount for cash-only)
+	CashAmount *string `json:"cash_amount,omitempty" example:"80000"`
+	// card_amount: card portion paid (required for split; equals customer_paid_amount for card-only)
+	CardAmount *string `json:"card_amount,omitempty" example:"20000"`
 }
 
 type UpdateOrderItemQuantityRequest struct {
 	Quantity int32 `json:"quantity" validate:"required" example:"2"`
+}
+
+type TablePriceResponse struct {
+	TableID         string  `json:"table_id"`
+	PricePerHour    string  `json:"price_per_hour"`
+	StartedAt       string  `json:"started_at"`
+	DurationMinutes float64 `json:"duration_minutes"`
+	DurationHours   float64 `json:"duration_hours"`
+	TotalPrice      string  `json:"total_price"`
 }

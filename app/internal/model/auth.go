@@ -42,14 +42,15 @@ type LoginResponse struct {
 }
 
 type RegisterRequest struct {
-	FullName    string  `json:"fullName" example:"Javohir Khasanov"`
-	PhoneNumber string  `json:"phoneNumber" example:"+998957749110"`
-	Username    string  `json:"username" example:"admin"`
-	Password    string  `json:"password,omitempty" example:"Password:Javohir"`
-	Pincode     string  `json:"pincode,omitempty" example:"1234"`
-	Role        string  `json:"role" example:"user"`
-	BrandID     *string `json:"brand_id,omitempty" example:"my_restaurant"`
-	BranchID    *string `json:"branch_id,omitempty" example:"123e4567-e89b-12d3-a456-426614174000"`
+	FullName       string  `json:"fullName" example:"Javohir Khasanov"`
+	PhoneNumber    string  `json:"phoneNumber" example:"+998957749110"`
+	Username       string  `json:"username" example:"admin"`
+	Password       string  `json:"password,omitempty" example:"Password:Javohir"`
+	Pincode        string  `json:"pincode,omitempty" example:"1234"`
+	Role           string  `json:"role" example:"user"`
+	BrandID        *string `json:"brand_id,omitempty" example:"my_restaurant"`
+	BranchID       *string `json:"branch_id,omitempty" example:"123e4567-e89b-12d3-a456-426614174000"`
+	CashRegisterID *string `json:"cash_register_id,omitempty" example:"123e4567-e89b-12d3-a456-426614174000"`
 }
 
 type ErrorResponse struct {
@@ -79,10 +80,11 @@ type UserResponse struct {
 	Email       *string    `json:"email,omitempty" example:"user@example.com"`
 	PhoneNumber *string    `json:"phone_number,omitempty" example:"+998901234567"`
 	ShiftID     *string    `json:"shift_id,omitempty" example:"123e4567-e89b-12d3-a456-426614174000"`
-	BrandID     *string    `json:"brand_id,omitempty" example:"123e4567-e89b-12d3-a456-426614174000"`
-	BranchID    *string    `json:"branch_id,omitempty" example:"123e4567-e89b-12d3-a456-426614174000"`
-	CreatedAt   *time.Time `json:"created_at,omitempty" example:"2021-01-01T00:00:00Z"`
-	UpdatedAt   *time.Time `json:"updated_at,omitempty" example:"2021-01-01T00:00:00Z"`
+	BrandID        *string    `json:"brand_id,omitempty"         example:"123e4567-e89b-12d3-a456-426614174000"`
+	BranchID       *string    `json:"branch_id,omitempty"        example:"123e4567-e89b-12d3-a456-426614174000"`
+	CashRegisterID *string    `json:"cash_register_id,omitempty" example:"123e4567-e89b-12d3-a456-426614174000"`
+	CreatedAt      *time.Time `json:"created_at,omitempty"       example:"2021-01-01T00:00:00Z"`
+	UpdatedAt      *time.Time `json:"updated_at,omitempty"       example:"2021-01-01T00:00:00Z"`
 }
 
 type UpdateUserRequest struct {

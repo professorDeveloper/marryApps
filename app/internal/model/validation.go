@@ -31,7 +31,7 @@ func GlobalErrorHandler(err error, c echo.Context) {
 	default:
 		log.Printf("INTERNAL ERROR: %v", err)
 		code = http.StatusInternalServerError
-		message = GetLocalizedMessage(lang, "internal_server_error")
+		message = err.Error()
 	}
 
 	if !c.Response().Committed {

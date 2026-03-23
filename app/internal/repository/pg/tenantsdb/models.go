@@ -65,6 +65,7 @@ const (
 	InvoiceStatusArrived   InvoiceStatus = "arrived"
 	InvoiceStatusReceived  InvoiceStatus = "received"
 	InvoiceStatusCancelled InvoiceStatus = "cancelled"
+	InvoiceStatusDeleted   InvoiceStatus = "deleted"
 )
 
 func (e *InvoiceStatus) Scan(src interface{}) error {
@@ -570,19 +571,20 @@ type Branch struct {
 }
 
 type CafeTable struct {
-	ID        uuid.UUID          `json:"id"`
-	HallID    uuid.UUID          `json:"hall_id"`
-	Number    int32              `json:"number"`
-	Capacity  int32              `json:"capacity"`
-	Status    NullTableStatus    `json:"status"`
-	PosX      int32              `json:"pos_x"`
-	PosY      int32              `json:"pos_y"`
-	Width     int32              `json:"width"`
-	Height    int32              `json:"height"`
-	Rotation  int32              `json:"rotation"`
-	CreatedAt pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
-	DeletedAt *int64             `json:"deleted_at"`
+	ID           uuid.UUID          `json:"id"`
+	HallID       uuid.UUID          `json:"hall_id"`
+	Number       int32              `json:"number"`
+	Capacity     int32              `json:"capacity"`
+	Status       NullTableStatus    `json:"status"`
+	PosX         int32              `json:"pos_x"`
+	PosY         int32              `json:"pos_y"`
+	Width        int32              `json:"width"`
+	Height       int32              `json:"height"`
+	Rotation     int32              `json:"rotation"`
+	CreatedAt    pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
+	DeletedAt    *int64             `json:"deleted_at"`
+	PricePerHour pgtype.Numeric     `json:"price_per_hour"`
 }
 
 type Calculation struct {
@@ -633,7 +635,6 @@ type Category struct {
 	ColorCode    *string            `json:"color_code"`
 	NameI18n     pgtype.UUID        `json:"name_i18n"`
 	DepartmentID pgtype.UUID        `json:"department_id"`
-	StorageID    pgtype.UUID        `json:"storage_id"`
 	Parent       pgtype.UUID        `json:"parent"`
 	CreatedAt    pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
@@ -651,23 +652,24 @@ type ChangeLog struct {
 }
 
 type Compound struct {
-	ID              uuid.UUID           `json:"id"`
-	Name            string              `json:"name"`
-	NameI18n        pgtype.UUID         `json:"name_i18n"`
-	Description     *string             `json:"description"`
-	DescriptionI18n pgtype.UUID         `json:"description_i18n"`
-	Quantity        *int32              `json:"quantity"`
-	PictureUrl      *string             `json:"picture_url"`
-	ColorCode       *string             `json:"color_code"`
-	Measurement     NullMeasurementType `json:"measurement"`
-	Price           pgtype.Numeric      `json:"price"`
-	DepartmentID    pgtype.UUID         `json:"department_id"`
-	CostPrice       pgtype.Numeric      `json:"cost_price"`
-	Profit          pgtype.Numeric      `json:"profit"`
-	ProfitMargin    pgtype.Numeric      `json:"profit_margin"`
-	CreatedAt       pgtype.Timestamptz  `json:"created_at"`
-	UpdatedAt       pgtype.Timestamptz  `json:"updated_at"`
-	DeletedAt       *int64              `json:"deleted_at"`
+	ID                uuid.UUID           `json:"id"`
+	Name              string              `json:"name"`
+	NameI18n          pgtype.UUID         `json:"name_i18n"`
+	Description       *string             `json:"description"`
+	DescriptionI18n   pgtype.UUID         `json:"description_i18n"`
+	Quantity          pgtype.Numeric      `json:"quantity"`
+	PictureUrl        *string             `json:"picture_url"`
+	ColorCode         *string             `json:"color_code"`
+	Measurement       NullMeasurementType `json:"measurement"`
+	Price             pgtype.Numeric      `json:"price"`
+	CostPrice         pgtype.Numeric      `json:"cost_price"`
+	Profit            pgtype.Numeric      `json:"profit"`
+	ProfitMargin      pgtype.Numeric      `json:"profit_margin"`
+	CreatedAt         pgtype.Timestamptz  `json:"created_at"`
+	UpdatedAt         pgtype.Timestamptz  `json:"updated_at"`
+	DeletedAt         *int64              `json:"deleted_at"`
+	BranchID          pgtype.UUID         `json:"branch_id"`
+	IngredientGroupID pgtype.UUID         `json:"ingredient_group_id"`
 }
 
 type CompoundStock struct {
@@ -759,7 +761,6 @@ type Good struct {
 	NameI18n        pgtype.UUID        `json:"name_i18n"`
 	DescriptionI18n pgtype.UUID        `json:"description_i18n"`
 	CategoryID      pgtype.UUID        `json:"category_id"`
-	DepartmentID    pgtype.UUID        `json:"department_id"`
 	PictureUrl      *string            `json:"picture_url"`
 	ColorCode       *string            `json:"color_code"`
 	Price           pgtype.Numeric     `json:"price"`
@@ -770,6 +771,7 @@ type Good struct {
 	CreatedAt       pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
 	DeletedAt       *int64             `json:"deleted_at"`
+	BranchID        pgtype.UUID        `json:"branch_id"`
 }
 
 type GoodsDetail struct {
@@ -951,6 +953,7 @@ type Order struct {
 	OrderType          string             `json:"order_type"`
 	ScheduledAt        pgtype.Timestamptz `json:"scheduled_at"`
 	RescheduleComment  *string            `json:"reschedule_comment"`
+	CashRegisterID     pgtype.UUID        `json:"cash_register_id"`
 }
 
 type OrderItem struct {
@@ -1181,22 +1184,23 @@ type Translation struct {
 }
 
 type User struct {
-	ID           uuid.UUID          `json:"id"`
-	FullName     *string            `json:"full_name"`
-	Username     *string            `json:"username"`
-	Role         string             `json:"role"`
-	Email        *string            `json:"email"`
-	ShiftID      pgtype.UUID        `json:"shift_id"`
-	Pincode      *string            `json:"pincode"`
-	HashPassword *string            `json:"hash_password"`
-	BrandID      pgtype.UUID        `json:"brand_id"`
-	BranchID     pgtype.UUID        `json:"branch_id"`
-	PhoneNumber  *string            `json:"phone_number"`
-	FcmToken     *string            `json:"fcm_token"`
-	IsActive     bool               `json:"is_active"`
-	CreatedAt    pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
-	DeletedAt    *int64             `json:"deleted_at"`
+	ID             uuid.UUID          `json:"id"`
+	FullName       *string            `json:"full_name"`
+	Username       *string            `json:"username"`
+	Role           string             `json:"role"`
+	Email          *string            `json:"email"`
+	ShiftID        pgtype.UUID        `json:"shift_id"`
+	Pincode        *string            `json:"pincode"`
+	HashPassword   *string            `json:"hash_password"`
+	BrandID        pgtype.UUID        `json:"brand_id"`
+	BranchID       pgtype.UUID        `json:"branch_id"`
+	PhoneNumber    *string            `json:"phone_number"`
+	FcmToken       *string            `json:"fcm_token"`
+	IsActive       bool               `json:"is_active"`
+	CreatedAt      pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
+	DeletedAt      *int64             `json:"deleted_at"`
+	CashRegisterID pgtype.UUID        `json:"cash_register_id"`
 }
 
 type UserPayment struct {

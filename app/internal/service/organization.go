@@ -54,16 +54,20 @@ func (o *OrganizationS) GetBranchByID(ctx context.Context, branchID string) (*mo
 }
 
 // GetAllBranches retrieves all branches
-func (o *OrganizationS) GetAllBranches(ctx context.Context, limit, offset int32) ([]model.BranchResponse, error) {
+func (o *OrganizationS) GetAllBranches(ctx context.Context, limit, offset int32) ([]model.BranchResponse, int64, error) {
+	total, err := o.repo.Tenant(ctx).CountBranches(ctx)
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to count branches: %w", err)
+	}
 	branches, err := o.repo.Tenant(ctx).GetAllBranches(ctx, pg.GetAllBranchesParams{Limit: limit, Offset: offset})
 	if err != nil {
-		return nil, fmt.Errorf("failed to get branches: %w", err)
+		return nil, 0, fmt.Errorf("failed to get branches: %w", err)
 	}
 	var responses []model.BranchResponse
 	for _, b := range branches {
 		responses = append(responses, *toBranchResponse(b))
 	}
-	return responses, nil
+	return responses, total, nil
 }
 
 // UpdateBranch updates a branch
@@ -332,20 +336,24 @@ func (o *OrganizationS) GetBranchByIDWithLang(ctx context.Context, branchID stri
 }
 
 // GetAllBranchesWithLang retrieves all branches with language support
-func (o *OrganizationS) GetAllBranchesWithLang(ctx context.Context, lang string, limit, offset int32) ([]model.BranchResponse, error) {
+func (o *OrganizationS) GetAllBranchesWithLang(ctx context.Context, lang string, limit, offset int32) ([]model.BranchResponse, int64, error) {
+	total, err := o.repo.Tenant(ctx).CountBranches(ctx)
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to count branches: %w", err)
+	}
 	branches, err := o.repo.Tenant(ctx).GetAllBranchesWithLanguage(ctx, pg.GetAllBranchesWithLanguageParams{
 		Column1: lang,
 		Limit:   limit,
 		Offset:  offset,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to get branches: %w", err)
+		return nil, 0, fmt.Errorf("failed to get branches: %w", err)
 	}
 	var responses []model.BranchResponse
 	for _, b := range branches {
 		responses = append(responses, *toBranchResponse(b))
 	}
-	return responses, nil
+	return responses, total, nil
 }
 
 func toTranslationResponse(t pg.Translation) *model.TranslationResponse {

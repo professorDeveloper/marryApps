@@ -85,6 +85,133 @@ func pgTypeUUIDToString(u pgtype.UUID) *string {
 	return &s
 }
 
+// getDynamicCompoundCost computes compound price from live ingredient prices + child compound prices.
+func getDynamicCompoundCost(ctx context.Context, repo *repository.Repository, compoundID pgtype.UUID) float64 {
+	ingRaw, _ := repo.Tenant(ctx).GetDynamicCompoundCostFromIngredients(ctx, compoundID)
+	childRaw, _ := repo.Tenant(ctx).GetDynamicCompoundCostFromChildCompounds(ctx, compoundID)
+	ingF, _ := strconv.ParseFloat(anyNumericToStr(ingRaw), 64)
+	childF, _ := strconv.ParseFloat(anyNumericToStr(childRaw), 64)
+	return ingF + childF
+}
+
+// getDynamicGoodCost computes good total cost from live ingredient prices + child compound prices.
+func getDynamicGoodCost(ctx context.Context, repo *repository.Repository, goodID pgtype.UUID) float64 {
+	ingRaw, _ := repo.Tenant(ctx).GetDynamicGoodCostFromIngredients(ctx, goodID)
+	childRaw, _ := repo.Tenant(ctx).GetDynamicGoodCostFromChildCompounds(ctx, goodID)
+	ingF, _ := strconv.ParseFloat(anyNumericToStr(ingRaw), 64)
+	childF, _ := strconv.ParseFloat(anyNumericToStr(childRaw), 64)
+	return ingF + childF
+}
+
+// recalcCompoundDynamic recalculates and saves a compound's price from live ingredient prices.
+func recalcCompoundDynamic(ctx context.Context, repo *repository.Repository, compoundID pgtype.UUID) {
+	total := getDynamicCompoundCost(ctx, repo, compoundID)
+	id := uuid.UUID(compoundID.Bytes)
+	_, err := repo.Tenant(ctx).UpdateCompoundPrice(ctx, pg.UpdateCompoundPriceParams{
+		ID:    id,
+		Price: stringToNumeric(fmt.Sprintf("%.2f", total)),
+	})
+	if err != nil {
+		log.Printf("recalcCompoundDynamic: failed to update compound %s: %v", id, err)
+	}
+}
+
+// recalcGoodDynamic recalculates and saves a good's cost_price, profit, profit_margin from live ingredient prices.
+func recalcGoodDynamic(ctx context.Context, repo *repository.Repository, goodID pgtype.UUID) {
+	id := uuid.UUID(goodID.Bytes)
+	good, err := repo.Tenant(ctx).GetGoodByID(ctx, id)
+	if err != nil {
+		return
+	}
+	totalCost := getDynamicGoodCost(ctx, repo, goodID)
+	sellingPrice, _ := strconv.ParseFloat(numericToStr(good.Price), 64)
+	profit := sellingPrice - totalCost
+	var profitMargin float64
+	if totalCost > 0 {
+		profitMargin = (profit / totalCost) * 100
+	}
+	_, err = repo.Tenant(ctx).UpdateGoodCostFields(ctx, pg.UpdateGoodCostFieldsParams{
+		ID:           id,
+		CostPrice:    stringToNumeric(fmt.Sprintf("%.2f", totalCost)),
+		Profit:       stringToNumeric(fmt.Sprintf("%.2f", profit)),
+		ProfitMargin: stringToNumeric(fmt.Sprintf("%.4f", profitMargin)),
+	})
+	if err != nil {
+		log.Printf("recalcGoodDynamic: failed to update good %s: %v", id, err)
+	}
+}
+
+// triggerPriceRecalculation is called after an invoice updates an ingredient's price.
+// It updates all calculation rows for the ingredient, then recalculates compound/good
+// prices that depend on it — including one cascade level for compound-of-compound.
+func triggerPriceRecalculation(ctx context.Context, repo *repository.Repository, ingredientID uuid.UUID) {
+	igUUID := pgtype.UUID{Bytes: ingredientID, Valid: true}
+
+	// Fetch current ingredient price_per_unit to use for calculation row updates
+	ing, err := repo.Tenant(ctx).GetIngredientByID(ctx, ingredientID)
+	if err != nil {
+		log.Printf("triggerPriceRecalculation: GetIngredientByID failed: %v", err)
+		return
+	}
+
+	// 1. Update all calculation rows for this ingredient with the new price
+	_ = repo.Tenant(ctx).UpdateCalculationsByIngredientPrice(ctx, pg.UpdateCalculationsByIngredientPriceParams{
+		IngredientID: igUUID,
+		PricePerUnit: ing.PricePerUnit,
+	})
+
+	// 2. Compounds directly using this ingredient → recalculate compound.price
+	compoundIDs, err := repo.Tenant(ctx).GetCompoundIDsByIngredient(ctx, igUUID)
+	if err != nil {
+		log.Printf("triggerPriceRecalculation: GetCompoundIDsByIngredient failed: %v", err)
+	}
+	for _, cID := range compoundIDs {
+		if cID.Valid {
+			recalcCompoundDynamic(ctx, repo, cID)
+		}
+	}
+
+	// 3. Cascade: parent compounds that use those compounds as children
+	for _, cID := range compoundIDs {
+		if !cID.Valid {
+			continue
+		}
+		// Get the updated child compound price
+		childPrice := getDynamicCompoundCost(ctx, repo, cID)
+		childPriceNumeric := stringToNumeric(fmt.Sprintf("%.2f", childPrice))
+
+		// Update calculation rows in parent compounds/goods that reference this child
+		_ = repo.Tenant(ctx).UpdateCalculationsByChildCompoundPrice(ctx, pg.UpdateCalculationsByChildCompoundPriceParams{
+			ComponentCompoundID: cID,
+			PricePerUnit:        childPriceNumeric,
+		})
+
+		parentIDs, _ := repo.Tenant(ctx).GetParentCompoundIDsByChildCompound(ctx, cID)
+		for _, pID := range parentIDs {
+			if pID.Valid {
+				recalcCompoundDynamic(ctx, repo, pID)
+			}
+		}
+		goodIDsViaCompound, _ := repo.Tenant(ctx).GetParentGoodIDsByChildCompound(ctx, cID)
+		for _, gID := range goodIDsViaCompound {
+			if gID.Valid {
+				recalcGoodDynamic(ctx, repo, gID)
+			}
+		}
+	}
+
+	// 4. Goods directly using this ingredient
+	goodIDs, err := repo.Tenant(ctx).GetGoodIDsByIngredient(ctx, igUUID)
+	if err != nil {
+		log.Printf("triggerPriceRecalculation: GetGoodIDsByIngredient failed: %v", err)
+	}
+	for _, gID := range goodIDs {
+		if gID.Valid {
+			recalcGoodDynamic(ctx, repo, gID)
+		}
+	}
+}
+
 func (c *CalculationS) updateCompoundPriceFromCalculations(ctx context.Context, compoundID string) error {
 	// Compound price is treated as total component cost: SUM(calculation.total_cost)
 	totalCostStr, err := c.GetTotalCostByCompoundID(ctx, compoundID)
@@ -253,11 +380,7 @@ func (c *CalculationS) CreateCalculationWithCompound(ctx context.Context, goodID
 		return nil, fmt.Errorf("invalid compound price: %w", err)
 	}
 
-	if compoundPriceFloat == 0 {
-		return nil, fmt.Errorf("compound has no price - please add ingredients first")
-	}
-
-	// Calculate total cost: quantity × compound.price
+	// Calculate total cost: quantity × compound.price (may be 0 if no ingredients yet)
 	totalCostCalc := compoundPriceFloat * quantityFloat
 
 	// Create calculation record linking good to compound
@@ -325,14 +448,8 @@ func (c *CalculationS) CreateCalculationCompoundToCompound(ctx context.Context, 
 
 	// Get the child compound's price (which is auto-calculated from its ingredients)
 	childPrice := numericToStr(childCompound.Price)
-	childPriceFloat, err := strconv.ParseFloat(childPrice, 64)
-	if err != nil {
-		return nil, fmt.Errorf("invalid child compound price: %w", err)
-	}
-
-	if childPriceFloat == 0 {
-		return nil, fmt.Errorf("child compound has no price - please add ingredients first")
-	}
+	childPriceFloat, _ := strconv.ParseFloat(childPrice, 64)
+	// price may be 0 if no ingredients added yet — that's fine, parent will recalculate later
 
 	// Calculate total cost: quantity × child_compound.price
 	totalCostCalc := childPriceFloat * quantityFloat
@@ -388,17 +505,13 @@ func (c *CalculationS) PreviewCalculations(ctx context.Context, req *model.Previ
 			return nil, fmt.Errorf("failed to fetch ingredient: %w", err)
 		}
 
-		if !ingredient.PricePerUnit.Valid {
-			return nil, fmt.Errorf("ingredient has no price - please add ingredient to invoice first")
-		}
-
-		priceStr := numericToStr(ingredient.PricePerUnit)
-		priceFloat, err := strconv.ParseFloat(priceStr, 64)
-		if err != nil {
-			return nil, fmt.Errorf("invalid ingredient price: %w", err)
-		}
-		if priceFloat == 0 {
-			return nil, fmt.Errorf("ingredient has no price - please add ingredient to invoice first")
+		var priceFloat float64
+		if ingredient.PricePerUnit.Valid {
+			priceStr := numericToStr(ingredient.PricePerUnit)
+			priceFloat, err = strconv.ParseFloat(priceStr, 64)
+			if err != nil {
+				return nil, fmt.Errorf("invalid ingredient price: %w", err)
+			}
 		}
 
 		lineTotal := qtyFloat * priceFloat
@@ -445,10 +558,6 @@ func (c *CalculationS) PreviewCalculations(ctx context.Context, req *model.Previ
 		if err != nil {
 			return nil, fmt.Errorf("invalid compound price: %w", err)
 		}
-		if priceFloat == 0 {
-			return nil, fmt.Errorf("compound has no price - please add ingredients first")
-		}
-
 		lineTotal := qtyFloat * priceFloat
 		totalCost += lineTotal
 
@@ -529,20 +638,14 @@ func (c *CalculationS) createCalculationInternal(ctx context.Context, goodID, co
 		return nil, fmt.Errorf("failed to fetch ingredient: %w", err)
 	}
 
-	// Get price_per_unit from ingredient (updated when invoices arrive)
-	if !ingredient.PricePerUnit.Valid {
-		return nil, fmt.Errorf("ingredient has no price - please add ingredient to invoice first")
-	}
-
-	// Extract price per unit from ingredient
-	ingredientPrice := numericToStr(ingredient.PricePerUnit)
-	ingredientPriceFloat, err := strconv.ParseFloat(ingredientPrice, 64)
-	if err != nil {
-		return nil, fmt.Errorf("invalid ingredient price: %w", err)
-	}
-
-	if ingredientPriceFloat == 0 {
-		return nil, fmt.Errorf("ingredient has no price - please add ingredient to invoice first")
+	// Get price_per_unit from ingredient (0 if not yet set via invoice)
+	var ingredientPriceFloat float64
+	if ingredient.PricePerUnit.Valid {
+		ingredientPrice := numericToStr(ingredient.PricePerUnit)
+		ingredientPriceFloat, err = strconv.ParseFloat(ingredientPrice, 64)
+		if err != nil {
+			return nil, fmt.Errorf("invalid ingredient price: %w", err)
+		}
 	}
 
 	// Calculate total cost: quantity * price_per_unit
@@ -565,7 +668,7 @@ func (c *CalculationS) createCalculationInternal(ctx context.Context, goodID, co
 		ComponentCompoundID: pgtype.UUID{Valid: false},
 		Quantity:            stringToNumeric(quantity),
 		MeasurementUnit:     measurementUnit,
-		PricePerUnit:        stringToNumeric(ingredientPrice),
+		PricePerUnit:        stringToNumeric(fmt.Sprintf("%.2f", ingredientPriceFloat)),
 		TotalCost:           stringToNumeric(fmt.Sprintf("%.2f", totalCostCalc)),
 	})
 	if err != nil {
@@ -909,7 +1012,6 @@ func (c *CalculationS) GetCompoundWithCalculations(ctx context.Context, compound
 		return nil, fmt.Errorf("failed to retrieve compound: %w", err)
 	}
 
-	// Get calculations
 	calcPtrs, err := c.GetCalculationsByCompoundID(ctx, compoundID)
 	if err != nil {
 		log.Printf("GetCalculationsByCompoundID failed: %v", err)

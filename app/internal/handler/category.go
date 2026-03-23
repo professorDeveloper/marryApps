@@ -41,7 +41,7 @@ func (h *Handler) CreateCategory(c echo.Context) error {
 		))
 	}
 
-	category, err := h.service.Category().CreateCategory(c.Request().Context(), req.Name, req.NameI18n, req.DepartmentID, req.StorageID, req.Parent, req.PictureUrl, req.ColorCode)
+	category, err := h.service.Category().CreateCategory(c.Request().Context(), req.Name, req.NameI18n, req.DepartmentID, req.Parent, req.PictureUrl, req.ColorCode)
 	if err != nil {
 		log.Printf("CreateCategory failed: %v", err)
 		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse(
@@ -108,6 +108,7 @@ func (h *Handler) GetCategoryByID(c echo.Context) error {
 // @Security BearerAuth
 // @Param limit query int false "Limit (default: 20)"
 // @Param offset query int false "Offset (default: 0)"
+// @Param expand query string false "Expand related fields"
 // @Success 200 {array} model.CategoryResponse "Categories found"
 // @Failure 401 {object} model.ErrorResponse "Unauthorized"
 // @Failure 500 {object} model.ErrorResponse "Internal server error"
@@ -128,7 +129,7 @@ func (h *Handler) GetAllCategories(c echo.Context) error {
 		}
 	}
 
-	categories, err := h.service.Category().GetAllCategories(c.Request().Context(), limit, offset)
+	categories, total, err := h.service.Category().GetAllCategories(c.Request().Context(), limit, offset)
 	if err != nil {
 		log.Printf("GetAllCategories failed: %v", err)
 		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse(
@@ -138,11 +139,14 @@ func (h *Handler) GetAllCategories(c echo.Context) error {
 		))
 	}
 
-	return c.JSON(http.StatusOK, model.NewSuccessResponse(
-		"Categories retrieved successfully",
-		categories,
-		http.StatusOK,
-	))
+	if maps, expanded, err := h.expandListResponse(c, categories, "categories"); expanded {
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("expand failed", err.Error(), http.StatusInternalServerError))
+		}
+		return c.JSON(http.StatusOK, model.NewPaginatedResponse("Categories retrieved successfully", maps, int32(total), limit, offset, http.StatusOK))
+	}
+
+	return c.JSON(http.StatusOK, model.NewPaginatedResponse("Categories retrieved successfully", categories, int32(total), limit, offset, http.StatusOK))
 }
 
 // GetCategoriesByDepartmentID retrieves categories by department ID
@@ -155,6 +159,7 @@ func (h *Handler) GetAllCategories(c echo.Context) error {
 // @Param departmentId path string true "Department ID"
 // @Param limit query int false "Limit (default: 20)"
 // @Param offset query int false "Offset (default: 0)"
+// @Param expand query string false "Expand related fields"
 // @Success 200 {array} model.CategoryResponse "Categories found"
 // @Failure 400 {object} model.ErrorResponse "Invalid ID format"
 // @Failure 401 {object} model.ErrorResponse "Unauthorized"
@@ -181,13 +186,20 @@ func (h *Handler) GetCategoriesByDepartmentID(c echo.Context) error {
 		}
 	}
 
-	categories, err := h.service.Category().GetCategoriesByDepartmentID(c.Request().Context(), departmentID, limit, offset)
+	categories, total, err := h.service.Category().GetCategoriesByDepartmentID(c.Request().Context(), departmentID, limit, offset)
 	if err != nil {
 		log.Printf("GetCategoriesByDepartmentID failed: %v", err)
 		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("failed to retrieve categories", "see logs for details", http.StatusInternalServerError))
 	}
 
-	return c.JSON(http.StatusOK, model.NewSuccessResponse("Data retrieved successfully", categories, http.StatusOK))
+	if maps, expanded, err := h.expandListResponse(c, categories, "categories"); expanded {
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("expand failed", err.Error(), http.StatusInternalServerError))
+		}
+		return c.JSON(http.StatusOK, model.NewPaginatedResponse("Data retrieved successfully", maps, int32(total), limit, offset, http.StatusOK))
+	}
+
+	return c.JSON(http.StatusOK, model.NewPaginatedResponse("Data retrieved successfully", categories, int32(total), limit, offset, http.StatusOK))
 }
 
 // GetCategoriesByStorageID retrieves categories by storage ID
@@ -200,6 +212,7 @@ func (h *Handler) GetCategoriesByDepartmentID(c echo.Context) error {
 // @Param storageId path string true "Storage ID"
 // @Param limit query int false "Limit (default: 20)"
 // @Param offset query int false "Offset (default: 0)"
+// @Param expand query string false "Expand related fields"
 // @Success 200 {array} model.CategoryResponse "Categories found"
 // @Failure 400 {object} model.ErrorResponse "Invalid ID format"
 // @Failure 401 {object} model.ErrorResponse "Unauthorized"
@@ -226,13 +239,20 @@ func (h *Handler) GetCategoriesByStorageID(c echo.Context) error {
 		}
 	}
 
-	categories, err := h.service.Category().GetCategoriesByStorageID(c.Request().Context(), storageID, limit, offset)
+	categories, total, err := h.service.Category().GetCategoriesByStorageID(c.Request().Context(), storageID, limit, offset)
 	if err != nil {
 		log.Printf("GetCategoriesByStorageID failed: %v", err)
 		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("failed to retrieve categories", "see logs for details", http.StatusInternalServerError))
 	}
 
-	return c.JSON(http.StatusOK, model.NewSuccessResponse("Data retrieved successfully", categories, http.StatusOK))
+	if maps, expanded, err := h.expandListResponse(c, categories, "categories"); expanded {
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("expand failed", err.Error(), http.StatusInternalServerError))
+		}
+		return c.JSON(http.StatusOK, model.NewPaginatedResponse("Data retrieved successfully", maps, int32(total), limit, offset, http.StatusOK))
+	}
+
+	return c.JSON(http.StatusOK, model.NewPaginatedResponse("Data retrieved successfully", categories, int32(total), limit, offset, http.StatusOK))
 }
 
 // GetCategoriesByParentID retrieves subcategories by parent ID
@@ -245,6 +265,7 @@ func (h *Handler) GetCategoriesByStorageID(c echo.Context) error {
 // @Param parentId path string true "Parent Category ID"
 // @Param limit query int false "Limit (default: 20)"
 // @Param offset query int false "Offset (default: 0)"
+// @Param expand query string false "Expand related fields"
 // @Success 200 {array} model.CategoryResponse "Subcategories found"
 // @Failure 400 {object} model.ErrorResponse "Invalid ID format"
 // @Failure 401 {object} model.ErrorResponse "Unauthorized"
@@ -271,13 +292,20 @@ func (h *Handler) GetCategoriesByParentID(c echo.Context) error {
 		}
 	}
 
-	categories, err := h.service.Category().GetCategoriesByParentID(c.Request().Context(), parentID, limit, offset)
+	categories, total, err := h.service.Category().GetCategoriesByParentID(c.Request().Context(), parentID, limit, offset)
 	if err != nil {
 		log.Printf("GetCategoriesByParentID failed: %v", err)
 		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("failed to retrieve subcategories", "see logs for details", http.StatusInternalServerError))
 	}
 
-	return c.JSON(http.StatusOK, model.NewSuccessResponse("Data retrieved successfully", categories, http.StatusOK))
+	if maps, expanded, err := h.expandListResponse(c, categories, "categories"); expanded {
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("expand failed", err.Error(), http.StatusInternalServerError))
+		}
+		return c.JSON(http.StatusOK, model.NewPaginatedResponse("Data retrieved successfully", maps, int32(total), limit, offset, http.StatusOK))
+	}
+
+	return c.JSON(http.StatusOK, model.NewPaginatedResponse("Data retrieved successfully", categories, int32(total), limit, offset, http.StatusOK))
 }
 
 // GetRootCategories retrieves root categories (no parent)
@@ -289,6 +317,7 @@ func (h *Handler) GetCategoriesByParentID(c echo.Context) error {
 // @Security BearerAuth
 // @Param limit query int false "Limit (default: 20)"
 // @Param offset query int false "Offset (default: 0)"
+// @Param expand query string false "Expand related fields"
 // @Success 200 {array} model.CategoryResponse "Root categories found"
 // @Failure 401 {object} model.ErrorResponse "Unauthorized"
 // @Failure 500 {object} model.ErrorResponse "Internal server error"
@@ -309,13 +338,20 @@ func (h *Handler) GetRootCategories(c echo.Context) error {
 		}
 	}
 
-	categories, err := h.service.Category().GetRootCategories(c.Request().Context(), limit, offset)
+	categories, total, err := h.service.Category().GetRootCategories(c.Request().Context(), limit, offset)
 	if err != nil {
 		log.Printf("GetRootCategories failed: %v", err)
 		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("failed to retrieve root categories", "see logs for details", http.StatusInternalServerError))
 	}
 
-	return c.JSON(http.StatusOK, model.NewSuccessResponse("Data retrieved successfully", categories, http.StatusOK))
+	if maps, expanded, err := h.expandListResponse(c, categories, "categories"); expanded {
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("expand failed", err.Error(), http.StatusInternalServerError))
+		}
+		return c.JSON(http.StatusOK, model.NewPaginatedResponse("Data retrieved successfully", maps, int32(total), limit, offset, http.StatusOK))
+	}
+
+	return c.JSON(http.StatusOK, model.NewPaginatedResponse("Data retrieved successfully", categories, int32(total), limit, offset, http.StatusOK))
 }
 
 // UpdateCategory updates a category
@@ -345,7 +381,7 @@ func (h *Handler) UpdateCategory(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("Invalid request format", "malformed JSON", http.StatusBadRequest))
 	}
 
-	category, err := h.service.Category().UpdateCategory(c.Request().Context(), categoryID, req.Name, req.NameI18n, req.DepartmentID, req.StorageID, req.Parent, req.PictureUrl, req.ColorCode)
+	category, err := h.service.Category().UpdateCategory(c.Request().Context(), categoryID, req.Name, req.NameI18n, req.DepartmentID, req.Parent, req.PictureUrl, req.ColorCode)
 	if err != nil {
 		log.Printf("UpdateCategory failed for ID %s: %v", categoryID, err)
 		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("Failed to update category", "see logs for details", http.StatusInternalServerError))
@@ -506,6 +542,7 @@ func (h *Handler) GetCategoryByIDWithLang(c echo.Context) error {
 // @Param lang query string false "Language code (uz, ru, en - default: uz)"
 // @Param limit query int false "Limit (default: 20)"
 // @Param offset query int false "Offset (default: 0)"
+// @Param expand query string false "Expand related fields"
 // @Success 200 {array} model.CategoryResponse "Categories retrieved successfully"
 // @Failure 400 {object} model.ErrorResponse "Invalid request parameters"
 // @Failure 401 {object} model.ErrorResponse "Unauthorized"
@@ -537,11 +574,18 @@ func (h *Handler) GetAllCategoriesWithLang(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("invalid language code", "valid values: uz, ru, en", http.StatusBadRequest))
 	}
 
-	categories, err := h.service.Category().GetAllCategoriesWithLang(c.Request().Context(), lang, limit, offset)
+	categories, total, err := h.service.Category().GetAllCategoriesWithLang(c.Request().Context(), lang, limit, offset)
 	if err != nil {
 		log.Printf("GetAllCategoriesWithLang failed: %v", err)
 		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("failed to get categories", err.Error(), http.StatusInternalServerError))
 	}
 
-	return c.JSON(http.StatusOK, model.NewSuccessResponse("Categories retrieved successfully", categories, http.StatusOK))
+	if maps, expanded, err := h.expandListResponse(c, categories, "categories"); expanded {
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("expand failed", err.Error(), http.StatusInternalServerError))
+		}
+		return c.JSON(http.StatusOK, model.NewPaginatedResponse("Categories retrieved successfully", maps, int32(total), limit, offset, http.StatusOK))
+	}
+
+	return c.JSON(http.StatusOK, model.NewPaginatedResponse("Categories retrieved successfully", categories, int32(total), limit, offset, http.StatusOK))
 }

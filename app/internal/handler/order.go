@@ -1,10 +1,13 @@
 package handler
 
 import (
+	"fmt"
 	"log"
+	"math"
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
@@ -42,6 +45,12 @@ func (h *Handler) CreateOrder(c echo.Context) error {
 	userID, _ := c.Get("user_id").(string)
 	if role == "waiter" && userID != "" {
 		req.WaiterID = &userID
+	}
+	if role == "cashier" && userID != "" {
+		req.CashierID = &userID
+		if cr, _ := c.Get("cash_register_id").(string); cr != "" && req.CashRegisterID == nil {
+			req.CashRegisterID = &cr
+		}
 	}
 
 	orderTypeStr := "dine_in"
@@ -630,6 +639,71 @@ func (h *Handler) UpdateOrderStatus(c echo.Context) error {
 	))
 }
 
+// GetOrderTablePrice calculates the table price for an order based on duration
+// @Summary Get table price for order
+// @Description Calculates price based on table's price_per_hour and time elapsed. Uses scheduled_at if set, otherwise created_at. Returns error if table has no hourly price.
+// @Tags Orders
+// @Produce json
+// @Security BearerAuth
+// @Param id path string true "Order ID"
+// @Success 200 {object} model.TablePriceResponse
+// @Failure 400 {object} model.ErrorResponse
+// @Failure 404 {object} model.ErrorResponse
+// @Failure 500 {object} model.ErrorResponse
+// @Router /api/v1/orders/{id}/table-price [get]
+func (h *Handler) GetOrderTablePrice(c echo.Context) error {
+	orderID := c.Param("id")
+	if orderID == "" {
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("order id is required", "missing path parameter: id", http.StatusBadRequest))
+	}
+	id, err := uuid.Parse(orderID)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("invalid order id format", err.Error(), http.StatusBadRequest))
+	}
+
+	row, err := h.repo.Tenant(c.Request().Context()).GetOrderWithTablePrice(c.Request().Context(), id)
+	if err != nil {
+		return c.JSON(http.StatusNotFound, model.NewErrorResponse("order not found or has no table", err.Error(), http.StatusNotFound))
+	}
+
+	// Check price_per_hour
+	if !row.PricePerHour.Valid {
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("this table has no hourly price set", "price_per_hour is null", http.StatusBadRequest))
+	}
+	pricePerHourStr := "0"
+	if v, err := row.PricePerHour.Value(); err == nil && v != nil {
+		pricePerHourStr = fmt.Sprintf("%v", v)
+	}
+	pricePerHourF, _ := strconv.ParseFloat(pricePerHourStr, 64)
+	if pricePerHourF == 0 {
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("this table has no hourly price set", "price_per_hour is 0", http.StatusBadRequest))
+	}
+
+	// Determine start time
+	var startedAt time.Time
+	if row.ScheduledAt.Valid && !row.ScheduledAt.Time.IsZero() {
+		startedAt = row.ScheduledAt.Time
+	} else {
+		startedAt = row.CreatedAt.Time
+	}
+
+	duration := time.Since(startedAt)
+	durationMinutes := duration.Minutes()
+	durationHours := duration.Hours()
+	totalPrice := durationHours * pricePerHourF
+
+	tableID := uuid.UUID(row.TableID.Bytes).String()
+
+	return c.JSON(http.StatusOK, model.NewSuccessResponse("Table price calculated successfully", model.TablePriceResponse{
+		TableID:         tableID,
+		PricePerHour:    pricePerHourStr,
+		StartedAt:       startedAt.Format(time.RFC3339),
+		DurationMinutes: math.Round(durationMinutes*100) / 100,
+		DurationHours:   math.Round(durationHours*10000) / 10000,
+		TotalPrice:      strconv.FormatFloat(math.Round(totalPrice*100)/100, 'f', 2, 64),
+	}, http.StatusOK))
+}
+
 // MarkOrderPaid marks an order as paid
 // @Summary Mark order paid
 // @Description Mark an order as paid
@@ -672,29 +746,22 @@ func (h *Handler) MarkOrderPaid(c echo.Context) error {
 		))
 	}
 
-	cashierID := ""
-	if req.CashierID != nil && *req.CashierID != "" {
-		cashierID = *req.CashierID
-	} else {
-		cashierID, _ = c.Get("user_id").(string)
-	}
-
+	// Always override cashier_id and cash_register_id from JWT token
+	cashierID, _ := c.Get("user_id").(string)
 	if cashierID == "" {
 		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
 			"cashier_id is required",
-			"missing required field: cashier_id",
-			http.StatusBadRequest,
-		))
-	}
-	if _, err := uuid.Parse(cashierID); err != nil {
-		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
-			"invalid cashier_id format",
-			err.Error(),
+			"missing user_id in token",
 			http.StatusBadRequest,
 		))
 	}
 
-	order, err := h.service.Order().MarkOrderPaid(c.Request().Context(), orderID, cashierID, req.CashRegisterID, req.PaymentType, req.DiscountPercent, req.DiscountAmount, req.DiscountComment, &req.CustomerPaidAmount)
+	var cashRegisterID *string
+	if cr, _ := c.Get("cash_register_id").(string); cr != "" {
+		cashRegisterID = &cr
+	}
+
+	order, err := h.service.Order().MarkOrderPaid(c.Request().Context(), orderID, cashierID, cashRegisterID, req.PaymentType, req.DiscountPercent, req.DiscountAmount, req.DiscountComment, &req.CustomerPaidAmount, req.TableCharge, req.CashAmount, req.CardAmount)
 	if err != nil {
 		log.Printf("MarkOrderPaid failed for order %s: %v", orderID, err)
 		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse(

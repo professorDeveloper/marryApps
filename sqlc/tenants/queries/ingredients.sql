@@ -319,6 +319,28 @@ SELECT COUNT(*) FROM ingredient_stock
 WHERE deleted_at = 0
   AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid;
 
+-- CountIngredientsByGroupID counts total ingredients for a group visible to current branch
+-- name: CountIngredientsByGroupID :one
+SELECT COUNT(*)
+FROM ingredients i
+JOIN ingredient_visibility iv ON iv.ingredient_id = i.id
+  AND iv.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  AND iv.is_visible = true
+WHERE i.group_id = $1
+  AND i.deleted_at = 0;
+
+-- CountIngredientStockByBranchID counts total stock entries for a branch
+-- name: CountIngredientStockByBranchID :one
+SELECT COUNT(*) FROM ingredient_stock
+WHERE branch_id = $1 AND deleted_at = 0
+  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid;
+
+-- CountIngredientStockByIngredientID counts total stock entries for an ingredient
+-- name: CountIngredientStockByIngredientID :one
+SELECT COUNT(*) FROM ingredient_stock
+WHERE ingredient_id = $1 AND deleted_at = 0
+  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid;
+
 -- ==================== WITH LANGUAGE QUERIES ====================
 
 -- name: GetIngredientGroupByIDWithLanguage :one

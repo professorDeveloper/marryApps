@@ -82,28 +82,40 @@ func (h *HallS) GetHallByID(ctx context.Context, hallID string) (*model.HallResp
 }
 
 // GetAllHalls retrieves all halls with pagination
-func (h *HallS) GetAllHalls(ctx context.Context, limit, offset int32) ([]*model.HallResponse, error) {
+func (h *HallS) GetAllHalls(ctx context.Context, limit, offset int32) ([]*model.HallResponse, int64, error) {
+	total, err := h.repo.Tenant(ctx).CountHalls(ctx)
+	if err != nil {
+		log.Printf("CountHalls failed: %v", err)
+		return nil, 0, fmt.Errorf("failed to count halls: %w", err)
+	}
+
 	halls, err := h.repo.Tenant(ctx).GetAllHalls(ctx, pg.GetAllHallsParams{
 		Limit:  limit,
 		Offset: offset,
 	})
 	if err != nil {
 		log.Printf("GetAllHalls failed: %v", err)
-		return nil, fmt.Errorf("failed to retrieve halls: %w", err)
+		return nil, 0, fmt.Errorf("failed to retrieve halls: %w", err)
 	}
 
 	var responses []*model.HallResponse
 	for _, hall := range halls {
 		responses = append(responses, toHallResponse(hall))
 	}
-	return responses, nil
+	return responses, total, nil
 }
 
 // GetHallsByBranchID retrieves halls by branch ID
-func (h *HallS) GetHallsByBranchID(ctx context.Context, branchID string, limit, offset int32) ([]*model.HallResponse, error) {
+func (h *HallS) GetHallsByBranchID(ctx context.Context, branchID string, limit, offset int32) ([]*model.HallResponse, int64, error) {
 	id, err := uuid.Parse(branchID)
 	if err != nil {
-		return nil, fmt.Errorf("invalid branch ID: %w", err)
+		return nil, 0, fmt.Errorf("invalid branch ID: %w", err)
+	}
+
+	total, err := h.repo.Tenant(ctx).CountHallsByBranch(ctx, id)
+	if err != nil {
+		log.Printf("CountHallsByBranch failed: %v", err)
+		return nil, 0, fmt.Errorf("failed to count halls: %w", err)
 	}
 
 	halls, err := h.repo.Tenant(ctx).GetHallsByBranchID(ctx, pg.GetHallsByBranchIDParams{
@@ -113,18 +125,24 @@ func (h *HallS) GetHallsByBranchID(ctx context.Context, branchID string, limit, 
 	})
 	if err != nil {
 		log.Printf("GetHallsByBranchID failed: %v", err)
-		return nil, fmt.Errorf("failed to retrieve halls: %w", err)
+		return nil, 0, fmt.Errorf("failed to retrieve halls: %w", err)
 	}
 
 	var responses []*model.HallResponse
 	for _, hall := range halls {
 		responses = append(responses, toHallResponse(hall))
 	}
-	return responses, nil
+	return responses, total, nil
 }
 
 // GetAllHallsWithLang retrieves all halls with language support
-func (h *HallS) GetAllHallsWithLang(ctx context.Context, lang string, limit, offset int32) ([]*model.HallResponse, error) {
+func (h *HallS) GetAllHallsWithLang(ctx context.Context, lang string, limit, offset int32) ([]*model.HallResponse, int64, error) {
+	total, err := h.repo.Tenant(ctx).CountHalls(ctx)
+	if err != nil {
+		log.Printf("CountHalls failed: %v", err)
+		return nil, 0, fmt.Errorf("failed to count halls: %w", err)
+	}
+
 	halls, err := h.repo.Tenant(ctx).GetAllHallsWithLanguage(ctx, pg.GetAllHallsWithLanguageParams{
 		Column1: lang,
 		Limit:   limit,
@@ -132,21 +150,27 @@ func (h *HallS) GetAllHallsWithLang(ctx context.Context, lang string, limit, off
 	})
 	if err != nil {
 		log.Printf("GetAllHallsWithLang failed: %v", err)
-		return nil, fmt.Errorf("failed to retrieve halls: %w", err)
+		return nil, 0, fmt.Errorf("failed to retrieve halls: %w", err)
 	}
 
 	var responses []*model.HallResponse
 	for _, hall := range halls {
 		responses = append(responses, toHallResponse(hall))
 	}
-	return responses, nil
+	return responses, total, nil
 }
 
 // GetHallsByBranchIDWithLang retrieves halls by branch ID with language support
-func (h *HallS) GetHallsByBranchIDWithLang(ctx context.Context, branchID string, lang string, limit, offset int32) ([]*model.HallResponse, error) {
+func (h *HallS) GetHallsByBranchIDWithLang(ctx context.Context, branchID string, lang string, limit, offset int32) ([]*model.HallResponse, int64, error) {
 	id, err := uuid.Parse(branchID)
 	if err != nil {
-		return nil, fmt.Errorf("invalid branch ID: %w", err)
+		return nil, 0, fmt.Errorf("invalid branch ID: %w", err)
+	}
+
+	total, err := h.repo.Tenant(ctx).CountHallsByBranch(ctx, id)
+	if err != nil {
+		log.Printf("CountHallsByBranch failed: %v", err)
+		return nil, 0, fmt.Errorf("failed to count halls: %w", err)
 	}
 
 	halls, err := h.repo.Tenant(ctx).GetHallsByBranchIDWithLanguage(ctx, pg.GetHallsByBranchIDWithLanguageParams{
@@ -157,14 +181,14 @@ func (h *HallS) GetHallsByBranchIDWithLang(ctx context.Context, branchID string,
 	})
 	if err != nil {
 		log.Printf("GetHallsByBranchIDWithLang failed: %v", err)
-		return nil, fmt.Errorf("failed to retrieve halls: %w", err)
+		return nil, 0, fmt.Errorf("failed to retrieve halls: %w", err)
 	}
 
 	var responses []*model.HallResponse
 	for _, hall := range halls {
 		responses = append(responses, toHallResponse(hall))
 	}
-	return responses, nil
+	return responses, total, nil
 }
 
 // UpdateHall updates a hall

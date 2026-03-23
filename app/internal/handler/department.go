@@ -62,6 +62,7 @@ func (h *Handler) CreateDepartment(c echo.Context) error {
 // @Produce json
 // @Security BearerAuth
 // @Param id path string true "Department ID"
+// @Param expand query string false "Expand FK relations (comma-separated: storage_id, name_i18n)"
 // @Success 200 {object} model.DepartmentResponse "Department found"
 // @Failure 400 {object} model.ErrorResponse "Invalid ID format"
 // @Failure 401 {object} model.ErrorResponse "Unauthorized"
@@ -88,18 +89,26 @@ func (h *Handler) GetDepartmentByID(c echo.Context) error {
 		))
 	}
 
+	if m, expanded, err := h.expandSingleResponse(c, department, "departments"); expanded {
+		if err != nil {
+			return err
+		}
+		return c.JSON(http.StatusOK, model.NewSuccessResponse("Department retrieved successfully", m, http.StatusOK))
+	}
 	return c.JSON(http.StatusOK, model.NewSuccessResponse("Department retrieved successfully", department, http.StatusOK))
 }
 
 // GetAllDepartments retrieves all departments
 // @Summary Get all departments
-// @Description Retrieve all departments with pagination
+// @Description Retrieve all departments with pagination and optional search
 // @Tags departments
 // @Accept json
 // @Produce json
 // @Security BearerAuth
 // @Param limit query int false "Limit (default: 20)"
 // @Param offset query int false "Offset (default: 0)"
+// @Param search query string false "Search by name"
+// @Param expand query string false "Expand FK relations (comma-separated: storage_id, name_i18n)"
 // @Success 200 {array} model.DepartmentResponse "Departments found"
 // @Failure 401 {object} model.ErrorResponse "Unauthorized"
 // @Failure 500 {object} model.ErrorResponse "Internal server error"
@@ -107,6 +116,7 @@ func (h *Handler) GetDepartmentByID(c echo.Context) error {
 func (h *Handler) GetAllDepartments(c echo.Context) error {
 	var limit int32 = 20
 	var offset int32 = 0
+	search := c.QueryParam("search")
 
 	if limitStr := c.QueryParam("limit"); limitStr != "" {
 		if l, err := strconv.ParseInt(limitStr, 10, 32); err == nil && l > 0 {
@@ -120,7 +130,26 @@ func (h *Handler) GetAllDepartments(c echo.Context) error {
 		}
 	}
 
-	departments, err := h.service.Department().GetAllDepartments(c.Request().Context(), limit, offset)
+	if search != "" {
+		departments, err := h.service.Department().SearchDepartments(c.Request().Context(), search, limit, offset)
+		if err != nil {
+			log.Printf("SearchDepartments failed: %v", err)
+			return c.JSON(http.StatusInternalServerError, model.NewErrorResponse(
+				"failed to search departments",
+				err.Error(),
+				http.StatusInternalServerError,
+			))
+		}
+		if maps, expanded, err := h.expandListResponse(c, departments, "departments"); expanded {
+			if err != nil {
+				return err
+			}
+			return c.JSON(http.StatusOK, model.NewSuccessResponse("Data retrieved successfully", maps, http.StatusOK))
+		}
+		return c.JSON(http.StatusOK, model.NewSuccessResponse("Data retrieved successfully", departments, http.StatusOK))
+	}
+
+	departments, total, err := h.service.Department().GetAllDepartments(c.Request().Context(), limit, offset)
 	if err != nil {
 		log.Printf("GetAllDepartments failed: %v", err)
 		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse(
@@ -130,7 +159,13 @@ func (h *Handler) GetAllDepartments(c echo.Context) error {
 		))
 	}
 
-	return c.JSON(http.StatusOK, model.NewSuccessResponse("Data retrieved successfully", departments, http.StatusOK))
+	if maps, expanded, err := h.expandListResponse(c, departments, "departments"); expanded {
+		if err != nil {
+			return err
+		}
+		return c.JSON(http.StatusOK, model.NewPaginatedResponse("Data retrieved successfully", maps, total, limit, offset, http.StatusOK))
+	}
+	return c.JSON(http.StatusOK, model.NewPaginatedResponse("Data retrieved successfully", departments, total, limit, offset, http.StatusOK))
 }
 
 // GetDepartmentsByStorageID retrieves departments by storage ID
@@ -143,6 +178,7 @@ func (h *Handler) GetAllDepartments(c echo.Context) error {
 // @Param storageId path string true "Storage ID"
 // @Param limit query int false "Limit (default: 20)"
 // @Param offset query int false "Offset (default: 0)"
+// @Param expand query string false "Expand FK relations (comma-separated: storage_id, name_i18n)"
 // @Success 200 {array} model.DepartmentResponse "Departments found"
 // @Failure 400 {object} model.ErrorResponse "Invalid ID format"
 // @Failure 401 {object} model.ErrorResponse "Unauthorized"
@@ -173,7 +209,7 @@ func (h *Handler) GetDepartmentsByStorageID(c echo.Context) error {
 		}
 	}
 
-	departments, err := h.service.Department().GetDepartmentsByStorageID(c.Request().Context(), storageID, limit, offset)
+	departments, total, err := h.service.Department().GetDepartmentsByStorageID(c.Request().Context(), storageID, limit, offset)
 	if err != nil {
 		log.Printf("GetDepartmentsByStorageID failed for storage ID %s: %v", storageID, err)
 		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse(
@@ -183,7 +219,13 @@ func (h *Handler) GetDepartmentsByStorageID(c echo.Context) error {
 		))
 	}
 
-	return c.JSON(http.StatusOK, model.NewSuccessResponse("Data retrieved successfully", departments, http.StatusOK))
+	if maps, expanded, err := h.expandListResponse(c, departments, "departments"); expanded {
+		if err != nil {
+			return err
+		}
+		return c.JSON(http.StatusOK, model.NewPaginatedResponse("Data retrieved successfully", maps, total, limit, offset, http.StatusOK))
+	}
+	return c.JSON(http.StatusOK, model.NewPaginatedResponse("Data retrieved successfully", departments, total, limit, offset, http.StatusOK))
 }
 
 // UpdateDepartment updates a department
@@ -221,7 +263,7 @@ func (h *Handler) UpdateDepartment(c echo.Context) error {
 		))
 	}
 
-	department, err := h.service.Department().UpdateDepartment(c.Request().Context(), departmentID, req.Name, req.NameI18n, req.ColorCode, req.PictureUrl, req.StorageID)
+	department, err := h.service.Department().UpdateDepartment(c.Request().Context(), departmentID, req.Name, req.NameI18n, req.ColorCode, req.PictureUrl, req.StorageID, req.Uz, req.Ru, req.En)
 	if err != nil {
 		log.Printf("UpdateDepartment failed for ID %s: %v", departmentID, err)
 		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse(
@@ -231,7 +273,7 @@ func (h *Handler) UpdateDepartment(c echo.Context) error {
 		))
 	}
 
-	return c.JSON(http.StatusOK, model.NewSuccessResponse("Department retrieved successfully", department, http.StatusOK))
+	return c.JSON(http.StatusOK, model.NewSuccessResponse("Department updated successfully", department, http.StatusOK))
 }
 
 // DeleteDepartment soft deletes a department
@@ -304,7 +346,7 @@ func (h *Handler) RestoreDepartment(c echo.Context) error {
 		))
 	}
 
-	return c.JSON(http.StatusOK, model.NewSuccessResponse("Department retrieved successfully", department, http.StatusOK))
+	return c.JSON(http.StatusOK, model.NewSuccessResponse("Department restored successfully", department, http.StatusOK))
 }
 
 // SearchDepartments searches for departments by name
@@ -369,6 +411,7 @@ func (h *Handler) SearchDepartments(c echo.Context) error {
 // @Security BearerAuth
 // @Param id path string true "Department ID"
 // @Param lang query string false "Language code (uz, ru, en - default: uz)"
+// @Param expand query string false "Expand FK relations (comma-separated: storage_id, name_i18n)"
 // @Success 200 {object} model.DepartmentResponse "Department details"
 // @Failure 400 {object} model.ErrorResponse "Invalid request parameters"
 // @Failure 401 {object} model.ErrorResponse "Unauthorized"
@@ -409,6 +452,12 @@ func (h *Handler) GetDepartmentByIDWithLang(c echo.Context) error {
 		))
 	}
 
+	if m, expanded, err := h.expandSingleResponse(c, department, "departments"); expanded {
+		if err != nil {
+			return err
+		}
+		return c.JSON(http.StatusOK, model.NewSuccessResponse("Department retrieved successfully", m, http.StatusOK))
+	}
 	return c.JSON(http.StatusOK, model.NewSuccessResponse("Department retrieved successfully", department, http.StatusOK))
 }
 
@@ -422,6 +471,7 @@ func (h *Handler) GetDepartmentByIDWithLang(c echo.Context) error {
 // @Param lang query string false "Language code (uz, ru, en - default: uz)"
 // @Param limit query int false "Limit (default: 20)"
 // @Param offset query int false "Offset (default: 0)"
+// @Param expand query string false "Expand FK relations (comma-separated: storage_id, name_i18n)"
 // @Success 200 {array} model.DepartmentResponse "Departments retrieved successfully"
 // @Failure 400 {object} model.ErrorResponse "Invalid request parameters"
 // @Failure 401 {object} model.ErrorResponse "Unauthorized"
@@ -457,7 +507,7 @@ func (h *Handler) GetAllDepartmentsWithLang(c echo.Context) error {
 		))
 	}
 
-	departments, err := h.service.Department().GetAllDepartmentsWithLang(c.Request().Context(), lang, limit, offset)
+	departments, total, err := h.service.Department().GetAllDepartmentsWithLang(c.Request().Context(), lang, limit, offset)
 	if err != nil {
 		log.Printf("GetAllDepartmentsWithLang failed: %v", err)
 		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse(
@@ -467,5 +517,11 @@ func (h *Handler) GetAllDepartmentsWithLang(c echo.Context) error {
 		))
 	}
 
-	return c.JSON(http.StatusOK, model.NewSuccessResponse("Departments retrieved successfully", departments, http.StatusOK))
+	if maps, expanded, err := h.expandListResponse(c, departments, "departments"); expanded {
+		if err != nil {
+			return err
+		}
+		return c.JSON(http.StatusOK, model.NewPaginatedResponse("Departments retrieved successfully", maps, total, limit, offset, http.StatusOK))
+	}
+	return c.JSON(http.StatusOK, model.NewPaginatedResponse("Departments retrieved successfully", departments, total, limit, offset, http.StatusOK))
 }

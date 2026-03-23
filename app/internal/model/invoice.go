@@ -2,6 +2,15 @@ package model
 
 import "time"
 
+type InvoiceFilter struct {
+	DateFrom     *string // "2024-01-01" or RFC3339
+	DateTo       *string
+	StorageID    string
+	SupplierID   string
+	IngredientID string
+	Status       string
+}
+
 type InvoiceStatus string
 
 const (
@@ -164,7 +173,13 @@ type UpsertInvoiceDetailEntry struct {
 }
 
 type UpsertInvoiceDetailsRequest struct {
-	Details []UpsertInvoiceDetailEntry `json:"details" validate:"required,min=1,dive"`
+	// Optional invoice-level fields to update alongside details
+	Status      *string `json:"status,omitempty" example:"arrived"`
+	SupplierID  *string `json:"supplier_id,omitempty" example:"123e4567-e89b-12d3-a456-426614174000"`
+	StorageID   *string `json:"storage_id,omitempty" example:"123e4567-e89b-12d3-a456-426614174000"`
+	TotalAmount *string `json:"total_amount,omitempty" example:"600000"`
+	Date        *string `json:"date,omitempty" example:"2024-01-01T00:00:00Z"`
+	Details     []UpsertInvoiceDetailEntry `json:"details" validate:"required,min=1,dive"`
 }
 
 type UpsertInvoiceDetailsResponse struct {

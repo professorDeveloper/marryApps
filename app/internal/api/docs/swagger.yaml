@@ -112,6 +112,8 @@ definitions:
       pos_y:
         example: 0
         type: integer
+      price_per_hour:
+        type: string
       rotation:
         example: 0
         type: integer
@@ -432,14 +434,14 @@ definitions:
     type: object
   model.CompoundResponse:
     properties:
+      branch_id:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
       color_code:
         example: '#FF5733'
         type: string
       created_at:
         example: "2022-01-01T00:00:00Z"
-        type: string
-      department_id:
-        example: 123e4567-e89b-12d3-a456-426614174000
         type: string
       description:
         example: Base dough for all pizzas
@@ -448,6 +450,9 @@ definitions:
         example: 123e4567-e89b-12d3-a456-426614174000
         type: string
       id:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+      ingredient_group_id:
         example: 123e4567-e89b-12d3-a456-426614174000
         type: string
       measurement:
@@ -467,8 +472,8 @@ definitions:
         example: "500.50"
         type: string
       quantity:
-        example: 10
-        type: integer
+        example: 0.7
+        type: number
       updated_at:
         example: "2022-01-01T00:00:00Z"
         type: string
@@ -562,6 +567,9 @@ definitions:
       pos_y:
         example: 0
         type: integer
+      price_per_hour:
+        example: "50000"
+        type: string
       rotation:
         example: 0
         type: integer
@@ -632,9 +640,6 @@ definitions:
       picture_url:
         example: https://example.com/image.jpg
         type: string
-      storage_id:
-        example: 123e4567-e89b-12d3-a456-426614174000
-        type: string
     type: object
   model.CreateCompoundCalculationRequest:
     properties:
@@ -674,13 +679,13 @@ definitions:
       color_code:
         example: '#FF5733'
         type: string
-      department_id:
-        example: 123e4567-e89b-12d3-a456-426614174000
-        type: string
       description:
         example: Base dough for all pizzas
         type: string
       description_i18n:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+      ingredient_group_id:
         example: 123e4567-e89b-12d3-a456-426614174000
         type: string
       measurement:
@@ -696,8 +701,8 @@ definitions:
         example: https://example.com/pizza-dough.jpg
         type: string
       quantity:
-        example: 10
-        type: integer
+        example: 0.7
+        type: number
     required:
     - name
     type: object
@@ -853,9 +858,6 @@ definitions:
       cook_time:
         example: 30
         type: integer
-      department_id:
-        example: 123e4567-e89b-12d3-a456-426614174000
-        type: string
       description:
         example: Classic Italian pizza with tomatoes and mozzarella
         type: string
@@ -1197,6 +1199,9 @@ definitions:
     type: object
   model.CreateOrderRequest:
     properties:
+      cash_register_id:
+        example: uuid-of-cash-register
+        type: string
       cashier_id:
         example: a1b2c3d4-e5f6-4a5b-8c9d-e0f1a2b3c4d5
         type: string
@@ -1340,6 +1345,9 @@ definitions:
           $ref: '#/definitions/model.UpsertShipmentItemRequest'
         minItems: 1
         type: array
+      status:
+        example: draft
+        type: string
       storage_id:
         type: string
       supplier_id:
@@ -1355,6 +1363,9 @@ definitions:
       description:
         example: Expired goods return
         type: string
+      status:
+        example: draft
+        type: string
       storage_id:
         example: a1b2c3d4-e5f6-7890-abcd-ef1234567890
         type: string
@@ -1364,8 +1375,6 @@ definitions:
     type: object
   model.CreateStorageRequest:
     properties:
-      branch_id:
-        type: string
       color_code:
         type: string
       name:
@@ -1624,6 +1633,8 @@ definitions:
         type: string
       created_at:
         type: string
+      en:
+        type: string
       id:
         type: string
       name:
@@ -1632,9 +1643,13 @@ definitions:
         type: string
       picture_url:
         type: string
+      ru:
+        type: string
       storage_id:
         type: string
       updated_at:
+        type: string
+      uz:
         type: string
     type: object
   model.DownloadRequest:
@@ -1756,8 +1771,74 @@ definitions:
         example: "2022-01-01T00:00:00Z"
         type: string
     type: object
+  model.GoodOrdersReportResponse:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/model.GoodOrdersReportRow'
+        type: array
+      limit:
+        type: integer
+      offset:
+        type: integer
+      totals:
+        $ref: '#/definitions/model.GoodOrdersReportTotals'
+    type: object
+  model.GoodOrdersReportRow:
+    properties:
+      avg_cost_price:
+        type: string
+      avg_markup:
+        type: string
+      avg_markup_pct:
+        type: string
+      avg_sell_price:
+        type: string
+      bill_no:
+        type: string
+      bill_status:
+        type: string
+      closed_at:
+        type: string
+      hall_name:
+        type: string
+      opened_at:
+        type: string
+      order_id:
+        type: string
+      table_number:
+        type: string
+      total_cost:
+        type: string
+      total_markup:
+        type: string
+      total_qty:
+        type: integer
+      total_sell:
+        type: string
+      waiter_name:
+        type: string
+    type: object
+  model.GoodOrdersReportTotals:
+    properties:
+      avg_markup_pct:
+        type: string
+      total_cost:
+        type: string
+      total_markup:
+        type: string
+      total_orders:
+        type: integer
+      total_qty:
+        type: integer
+      total_sell:
+        type: string
+    type: object
   model.GoodResponse:
     properties:
+      branch_id:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
       category_id:
         example: 123e4567-e89b-12d3-a456-426614174000
         type: string
@@ -1773,9 +1854,6 @@ definitions:
         type: string
       created_at:
         example: "2022-01-01T00:00:00Z"
-        type: string
-      department_id:
-        example: 123e4567-e89b-12d3-a456-426614174000
         type: string
       description:
         example: Classic Italian pizza with tomatoes and mozzarella
@@ -2342,47 +2420,6 @@ definitions:
       updated_at:
         type: string
     type: object
-  model.InvoiceStatsByDateRangeResponse:
-    properties:
-      arrived_count:
-        example: 15
-        type: integer
-      avg_invoice_amount:
-        example: "1000000"
-        type: string
-      cancelled_count:
-        example: 5
-        type: integer
-      invoice_count:
-        example: 50
-        type: integer
-      pending_count:
-        example: 10
-        type: integer
-      received_count:
-        example: 20
-        type: integer
-      total_spent:
-        example: "50000000"
-        type: string
-    type: object
-  model.InvoiceStatsBySupplierResponse:
-    properties:
-      avg_invoice_amount:
-        example: "1000000"
-        type: string
-      invoice_count:
-        example: 10
-        type: integer
-      last_order_date:
-        type: string
-      supplier_name:
-        example: ABC Supplier
-        type: string
-      total_spent:
-        example: "10000000"
-        type: string
-    type: object
   model.InvoiceStatus:
     enum:
     - pending
@@ -2421,32 +2458,46 @@ definitions:
     type: object
   model.MarkOrderPaidRequest:
     properties:
+      card_amount:
+        description: 'card_amount: card portion paid (required for split; equals customer_paid_amount
+          for card-only)'
+        example: "20000"
+        type: string
+      cash_amount:
+        description: 'cash_amount: cash portion paid (required for split; equals customer_paid_amount
+          for cash-only)'
+        example: "80000"
+        type: string
       cash_register_id:
-        description: 'cash_register_id: if provided, auto-creates an income transaction'
         example: uuid
         type: string
       cashier_id:
         example: a1b2c3d4-e5f6-4a5b-8c9d-e0f1a2b3c4d5
         type: string
       customer_paid_amount:
-        description: 'customer_paid_amount: how much the customer paid (required —
-          equals grand_total for card, may differ for cash)'
+        description: 'customer_paid_amount: total handed by customer (required)'
         example: "100000"
         type: string
       discount_amount:
-        description: 'discount_amount: fixed amount'
+        description: 'discount_amount: fixed flat discount (ignored if discount_percent
+          is set)'
         example: "5000"
         type: string
       discount_comment:
         example: Holiday discount
         type: string
       discount_percent:
-        description: 'discount_percent: e.g. 10 means 10%'
+        description: 'discount_percent: e.g. 10 means 10% — takes priority over discount_amount'
         example: "10"
         type: string
       payment_type:
-        description: 'payment_type: cash or card'
+        description: 'payment_type: cash, card, or split'
         example: cash
+        type: string
+      table_charge:
+        description: 'table_charge: confirmed table fee from GET /orders/:id/table-price
+          (optional; auto-calc if table has price_per_hour and this is not provided)'
+        example: "50000"
         type: string
     required:
     - customer_paid_amount
@@ -2512,6 +2563,9 @@ definitions:
     - OrderItemStatusCancelled
   model.OrderResponse:
     properties:
+      cash_register_id:
+        example: a1b2c3d4-e5f6-4a5b-8c9d-e0f1a2b3c4d5
+        type: string
       cashier_id:
         example: a1b2c3d4-e5f6-4a5b-8c9d-e0f1a2b3c4d5
         type: string
@@ -2704,6 +2758,9 @@ definitions:
       brand_id:
         example: my_restaurant
         type: string
+      cash_register_id:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
       fullName:
         example: Javohir Khasanov
         type: string
@@ -2888,11 +2945,8 @@ definitions:
       shipment_id:
         type: string
       stock_after:
-        description: 'active: live projected (current-qty); confirmed: actual after
-          deduction'
         type: string
       stock_before:
-        description: 'active: live current stock; confirmed: actual before deduction'
         type: string
       total_amount:
         type: string
@@ -2953,6 +3007,8 @@ definitions:
         type: string
       created_at:
         type: string
+      en:
+        type: string
       id:
         type: string
       name:
@@ -2961,7 +3017,11 @@ definitions:
         type: string
       picture_url:
         type: string
+      ru:
+        type: string
       updated_at:
+        type: string
+      uz:
         type: string
     type: object
   model.SuccessResponse:
@@ -3070,6 +3130,21 @@ definitions:
       total_tables:
         example: 50
         type: integer
+    type: object
+  model.TablePriceResponse:
+    properties:
+      duration_hours:
+        type: number
+      duration_minutes:
+        type: number
+      price_per_hour:
+        type: string
+      started_at:
+        type: string
+      table_id:
+        type: string
+      total_price:
+        type: string
     type: object
   model.TableStatus:
     enum:
@@ -3266,6 +3341,9 @@ definitions:
       pos_y:
         example: 0
         type: integer
+      price_per_hour:
+        example: "50000"
+        type: string
       rotation:
         example: 0
         type: integer
@@ -3312,9 +3390,6 @@ definitions:
       picture_url:
         example: https://example.com/image.jpg
         type: string
-      storage_id:
-        example: 123e4567-e89b-12d3-a456-426614174000
-        type: string
     type: object
   model.UpdateCompoundDetailRequest:
     properties:
@@ -3333,13 +3408,13 @@ definitions:
       color_code:
         example: '#FF5733'
         type: string
-      department_id:
-        example: 123e4567-e89b-12d3-a456-426614174000
-        type: string
       description:
         example: Base dough for all pizzas
         type: string
       description_i18n:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+      ingredient_group_id:
         example: 123e4567-e89b-12d3-a456-426614174000
         type: string
       measurement:
@@ -3355,8 +3430,8 @@ definitions:
         example: https://example.com/pizza-dough.jpg
         type: string
       quantity:
-        example: 10
-        type: integer
+        example: 0.7
+        type: number
     type: object
   model.UpdateCompoundStockRequest:
     properties:
@@ -3416,13 +3491,19 @@ definitions:
     properties:
       color_code:
         type: string
+      en:
+        type: string
       name:
         type: string
       name_i18n:
         type: string
       picture_url:
         type: string
+      ru:
+        type: string
       storage_id:
+        type: string
+      uz:
         type: string
     type: object
   model.UpdateGoodDetailQuantityRequest:
@@ -3470,9 +3551,6 @@ definitions:
       cook_time:
         example: 30
         type: integer
-      department_id:
-        example: 123e4567-e89b-12d3-a456-426614174000
-        type: string
       description:
         example: Classic Italian pizza with tomatoes and mozzarella
         type: string
@@ -3776,6 +3854,25 @@ definitions:
         example: Mon,Tue,Wed,Thu,Fri
         type: string
     type: object
+  model.UpdateShipmentBatchRequest:
+    properties:
+      date:
+        example: "2026-01-24T00:00:00Z"
+        type: string
+      description:
+        type: string
+      items:
+        items:
+          $ref: '#/definitions/model.UpsertShipmentItemRequest'
+        minItems: 1
+        type: array
+      storage_id:
+        type: string
+      supplier_id:
+        type: string
+    required:
+    - items
+    type: object
   model.UpdateShipmentRequest:
     properties:
       date:
@@ -3783,6 +3880,9 @@ definitions:
         type: string
       description:
         example: Expired goods return
+        type: string
+      status:
+        example: active
         type: string
       storage_id:
         example: a1b2c3d4-e5f6-7890-abcd-ef1234567890
@@ -3793,15 +3893,19 @@ definitions:
     type: object
   model.UpdateStorageRequest:
     properties:
-      branch_id:
-        type: string
       color_code:
+        type: string
+      en:
         type: string
       name:
         type: string
       name_i18n:
         type: string
       picture_url:
+        type: string
+      ru:
+        type: string
+      uz:
         type: string
     type: object
   model.UpdateSupplierRequest:
@@ -3908,11 +4012,27 @@ definitions:
     type: object
   model.UpsertInvoiceDetailsRequest:
     properties:
+      date:
+        example: "2024-01-01T00:00:00Z"
+        type: string
       details:
         items:
           $ref: '#/definitions/model.UpsertInvoiceDetailEntry'
         minItems: 1
         type: array
+      status:
+        description: Optional invoice-level fields to update alongside details
+        example: arrived
+        type: string
+      storage_id:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+      supplier_id:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+      total_amount:
+        example: "600000"
+        type: string
     required:
     - details
     type: object
@@ -4015,6 +4135,9 @@ definitions:
       brand_id:
         example: 123e4567-e89b-12d3-a456-426614174000
         type: string
+      cash_register_id:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
       created_at:
         example: "2021-01-01T00:00:00Z"
         type: string
@@ -4046,7 +4169,7 @@ definitions:
         example: admin
         type: string
     type: object
-host: back.maryai.yurtal.tech
+host: back.staging.maryai.yurtal.tech
 info:
   contact: {}
   description: MaryAI API server with multi-language support (uz, ru, en)
@@ -4660,6 +4783,10 @@ paths:
         in: query
         name: offset
         type: integer
+      - description: Expand related fields
+        in: query
+        name: expand
+        type: string
       produces:
       - application/json
       responses:
@@ -4735,6 +4862,10 @@ paths:
         in: query
         name: offset
         type: integer
+      - description: Expand related fields
+        in: query
+        name: expand
+        type: string
       produces:
       - application/json
       responses:
@@ -5019,6 +5150,10 @@ paths:
         in: query
         name: offset
         type: integer
+      - description: Expand related fields
+        in: query
+        name: expand
+        type: string
       produces:
       - application/json
       responses:
@@ -5446,6 +5581,10 @@ paths:
         in: query
         name: offset
         type: integer
+      - description: Expand related fields
+        in: query
+        name: expand
+        type: string
       produces:
       - application/json
       responses:
@@ -5544,6 +5683,10 @@ paths:
         in: query
         name: offset
         type: integer
+      - description: Expand related fields
+        in: query
+        name: expand
+        type: string
       produces:
       - application/json
       responses:
@@ -5626,14 +5769,19 @@ paths:
         in: query
         name: offset
         type: integer
+      - description: Expand related fields
+        in: query
+        name: expand
+        type: string
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            additionalProperties: true
-            type: object
+            items:
+              $ref: '#/definitions/model.CashRegisterShiftResponse'
+            type: array
         "500":
           description: Internal Server Error
           schema:
@@ -5796,8 +5944,13 @@ paths:
       - CashRegisterShifts
   /api/v1/cash-registers:
     get:
-      description: Retrieve all cash registers for the current branch
+      description: Retrieve all cash registers for the current branch with optional
+        search filter
       parameters:
+      - description: Filter by name
+        in: query
+        name: search
+        type: string
       - default: 20
         description: 'Limit results (default: 20)'
         in: query
@@ -5808,6 +5961,10 @@ paths:
         in: query
         name: offset
         type: integer
+      - description: Expand related fields
+        in: query
+        name: expand
+        type: string
       produces:
       - application/json
       responses:
@@ -6070,6 +6227,10 @@ paths:
         in: query
         name: offset
         type: integer
+      - description: Expand related fields
+        in: query
+        name: expand
+        type: string
       produces:
       - application/json
       responses:
@@ -6146,6 +6307,10 @@ paths:
         in: query
         name: offset
         type: integer
+      - description: Expand related fields
+        in: query
+        name: expand
+        type: string
       produces:
       - application/json
       responses:
@@ -6443,6 +6608,10 @@ paths:
         in: query
         name: offset
         type: integer
+      - description: Expand related fields
+        in: query
+        name: expand
+        type: string
       produces:
       - application/json
       responses:
@@ -6488,6 +6657,10 @@ paths:
         in: query
         name: offset
         type: integer
+      - description: Expand related fields
+        in: query
+        name: expand
+        type: string
       produces:
       - application/json
       responses:
@@ -6528,6 +6701,10 @@ paths:
         in: query
         name: offset
         type: integer
+      - description: Expand related fields
+        in: query
+        name: expand
+        type: string
       produces:
       - application/json
       responses:
@@ -6614,6 +6791,10 @@ paths:
         in: query
         name: offset
         type: integer
+      - description: Expand related fields
+        in: query
+        name: expand
+        type: string
       produces:
       - application/json
       responses:
@@ -7267,6 +7448,10 @@ paths:
         in: query
         name: offset
         type: integer
+      - description: Expand related fields
+        in: query
+        name: expand
+        type: string
       produces:
       - application/json
       responses:
@@ -7343,6 +7528,10 @@ paths:
         in: query
         name: offset
         type: integer
+      - description: Expand related fields
+        in: query
+        name: expand
+        type: string
       produces:
       - application/json
       responses:
@@ -7760,6 +7949,10 @@ paths:
         in: path
         name: id
         required: true
+        type: string
+      - description: Comma-separated list of fields to expand (e.g. ingredients,compounds)
+        in: query
+        name: expand
         type: string
       produces:
       - application/json
@@ -8732,7 +8925,7 @@ paths:
     get:
       consumes:
       - application/json
-      description: Retrieve all departments with pagination
+      description: Retrieve all departments with pagination and optional search
       parameters:
       - description: 'Limit (default: 20)'
         in: query
@@ -8742,6 +8935,14 @@ paths:
         in: query
         name: offset
         type: integer
+      - description: Search by name
+        in: query
+        name: search
+        type: string
+      - description: 'Expand FK relations (comma-separated: storage_id, name_i18n)'
+        in: query
+        name: expand
+        type: string
       produces:
       - application/json
       responses:
@@ -8818,6 +9019,10 @@ paths:
         in: query
         name: offset
         type: integer
+      - description: 'Expand FK relations (comma-separated: storage_id, name_i18n)'
+        in: query
+        name: expand
+        type: string
       produces:
       - application/json
       responses:
@@ -8859,6 +9064,10 @@ paths:
       - description: 'Language code (uz, ru, en - default: uz)'
         in: query
         name: lang
+        type: string
+      - description: 'Expand FK relations (comma-separated: storage_id, name_i18n)'
+        in: query
+        name: expand
         type: string
       produces:
       - application/json
@@ -8984,6 +9193,10 @@ paths:
         in: path
         name: id
         required: true
+        type: string
+      - description: 'Expand FK relations (comma-separated: storage_id, name_i18n)'
+        in: query
+        name: expand
         type: string
       produces:
       - application/json
@@ -9160,6 +9373,10 @@ paths:
         in: query
         name: offset
         type: integer
+      - description: 'Expand FK relations (comma-separated: storage_id, name_i18n)'
+        in: query
+        name: expand
+        type: string
       produces:
       - application/json
       responses:
@@ -9449,7 +9666,7 @@ paths:
       - Good Details
   /api/v1/goods:
     get:
-      description: Get all goods with pagination
+      description: Get all goods with pagination and optional filters
       parameters:
       - default: uz
         description: Language (uz, ru, en)
@@ -9466,6 +9683,26 @@ paths:
         in: query
         name: offset
         type: integer
+      - description: Expand related fields
+        in: query
+        name: expand
+        type: string
+      - description: Filter by category ID
+        in: query
+        name: category_id
+        type: string
+      - description: Filter by department ID
+        in: query
+        name: department_id
+        type: string
+      - description: Filter by storage ID
+        in: query
+        name: storage_id
+        type: string
+      - description: Search by name
+        in: query
+        name: search
+        type: string
       produces:
       - application/json
       responses:
@@ -9551,6 +9788,26 @@ paths:
         in: query
         name: offset
         type: integer
+      - description: Expand related fields
+        in: query
+        name: expand
+        type: string
+      - description: Filter by category ID
+        in: query
+        name: category_id
+        type: string
+      - description: Filter by department ID
+        in: query
+        name: department_id
+        type: string
+      - description: Filter by storage ID
+        in: query
+        name: storage_id
+        type: string
+      - description: Search by name
+        in: query
+        name: search
+        type: string
       produces:
       - application/json
       responses:
@@ -9890,6 +10147,10 @@ paths:
         in: path
         name: id
         required: true
+        type: string
+      - description: Comma-separated list of fields to expand (e.g. ingredients,compounds)
+        in: query
+        name: expand
         type: string
       produces:
       - application/json
@@ -10592,6 +10853,10 @@ paths:
         in: query
         name: offset
         type: integer
+      - description: Expand related fields
+        in: query
+        name: expand
+        type: string
       produces:
       - application/json
       responses:
@@ -10669,6 +10934,10 @@ paths:
         in: query
         name: offset
         type: integer
+      - description: Expand related fields
+        in: query
+        name: expand
+        type: string
       produces:
       - application/json
       responses:
@@ -10719,6 +10988,10 @@ paths:
         in: query
         name: offset
         type: integer
+      - description: Expand related fields
+        in: query
+        name: expand
+        type: string
       produces:
       - application/json
       responses:
@@ -10922,6 +11195,10 @@ paths:
         in: query
         name: offset
         type: integer
+      - description: Expand related fields
+        in: query
+        name: expand
+        type: string
       produces:
       - application/json
       responses:
@@ -10987,7 +11264,7 @@ paths:
     get:
       consumes:
       - application/json
-      description: Retrieve all ingredient groups with pagination
+      description: Retrieve all ingredient groups with pagination and optional search
       parameters:
       - default: 20
         description: 'Limit results (default: 20)'
@@ -10999,6 +11276,10 @@ paths:
         in: query
         name: offset
         type: integer
+      - description: Search by name
+        in: query
+        name: search
+        type: string
       produces:
       - application/json
       responses:
@@ -11368,6 +11649,20 @@ paths:
         in: query
         name: ingredient_id
         type: string
+      - default: 20
+        description: Limit
+        in: query
+        name: limit
+        type: integer
+      - default: 0
+        description: Offset
+        in: query
+        name: offset
+        type: integer
+      - description: Expand related fields
+        in: query
+        name: expand
+        type: string
       produces:
       - application/json
       responses:
@@ -11418,6 +11713,10 @@ paths:
       - description: End datetime (RFC3339) or date (YYYY-MM-DD)
         in: query
         name: end
+        type: string
+      - description: Expand related fields
+        in: query
+        name: expand
         type: string
       produces:
       - application/json
@@ -11480,6 +11779,10 @@ paths:
         in: query
         name: offset
         type: integer
+      - description: Expand related fields
+        in: query
+        name: expand
+        type: string
       produces:
       - application/json
       responses:
@@ -11977,7 +12280,7 @@ paths:
     get:
       consumes:
       - application/json
-      description: Retrieve all ingredients with pagination
+      description: Retrieve all ingredients with pagination and optional search
       parameters:
       - default: 20
         description: 'Limit results (default: 20)'
@@ -11989,6 +12292,10 @@ paths:
         in: query
         name: offset
         type: integer
+      - description: Search by name
+        in: query
+        name: search
+        type: string
       - description: 'Expand FK relations (comma-separated: group_id, name_i18n)'
         in: query
         name: expand
@@ -13027,6 +13334,10 @@ paths:
         in: query
         name: offset
         type: integer
+      - description: Expand related fields
+        in: query
+        name: expand
+        type: string
       produces:
       - application/json
       responses:
@@ -13424,6 +13735,10 @@ paths:
         in: query
         name: offset
         type: integer
+      - description: Expand related fields
+        in: query
+        name: expand
+        type: string
       produces:
       - application/json
       responses:
@@ -13474,6 +13789,10 @@ paths:
         in: query
         name: offset
         type: integer
+      - description: Expand related fields
+        in: query
+        name: expand
+        type: string
       produces:
       - application/json
       responses:
@@ -13502,7 +13821,8 @@ paths:
       - Invoice Details
   /api/v1/invoices:
     get:
-      description: Get all invoices with pagination
+      description: 'Get all invoices with optional filters: date range, storage, supplier,
+        ingredient, status'
       parameters:
       - default: uz
         description: Language (uz, ru, en)
@@ -13519,6 +13839,34 @@ paths:
         in: query
         name: offset
         type: integer
+      - description: Filter from date (YYYY-MM-DD or RFC3339)
+        in: query
+        name: date_from
+        type: string
+      - description: Filter to date (YYYY-MM-DD or RFC3339)
+        in: query
+        name: date_to
+        type: string
+      - description: Filter by storage ID
+        in: query
+        name: storage_id
+        type: string
+      - description: Filter by supplier ID
+        in: query
+        name: supplier_id
+        type: string
+      - description: Filter by ingredient ID (invoices containing this ingredient)
+        in: query
+        name: ingredient_id
+        type: string
+      - description: Filter by status (pending, arrived, received, cancelled)
+        in: query
+        name: status
+        type: string
+      - description: Expand related fields
+        in: query
+        name: expand
+        type: string
       produces:
       - application/json
       responses:
@@ -13715,48 +14063,6 @@ paths:
       summary: Update invoice
       tags:
       - Invoices
-  /api/v1/invoices/{id}/cancel:
-    post:
-      description: Cancel an invoice and mark it as cancelled
-      parameters:
-      - default: uz
-        description: Language (uz, ru, en)
-        in: query
-        name: lang
-        type: string
-      - description: Invoice ID
-        in: path
-        name: id
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/model.InvoiceResponse'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/model.ErrorResponse'
-        "401":
-          description: Unauthorized
-          schema:
-            $ref: '#/definitions/model.ErrorResponse'
-        "404":
-          description: Not Found
-          schema:
-            $ref: '#/definitions/model.ErrorResponse'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/model.ErrorResponse'
-      security:
-      - BearerAuth: []
-      summary: Cancel invoice
-      tags:
-      - Invoices
   /api/v1/invoices/{id}/details:
     get:
       description: Get a complete invoice including all line items and ingredient
@@ -13804,8 +14110,11 @@ paths:
     put:
       consumes:
       - application/json
-      description: Replace all details of an invoice. Reverses old stock additions
-        and applies new quantities.
+      description: Replace all details of an invoice. Optionally update invoice-level
+        fields (status, supplier_id, storage_id, total_amount, date). Stock is applied
+        only when invoice status is or becomes 'arrived'. Setting status to 'arrived'
+        applies stock; it was already 'arrived', old stock is reversed and new stock
+        applied.
       parameters:
       - default: uz
         description: Language (uz, ru, en)
@@ -13817,7 +14126,7 @@ paths:
         name: id
         required: true
         type: string
-      - description: New invoice details
+      - description: Invoice fields (optional) + new details
         in: body
         name: request
         required: true
@@ -13845,90 +14154,6 @@ paths:
       security:
       - BearerAuth: []
       summary: Batch update invoice details
-      tags:
-      - Invoices
-  /api/v1/invoices/{id}/mark-arrived:
-    post:
-      description: Mark an invoice as arrived at the location
-      parameters:
-      - default: uz
-        description: Language (uz, ru, en)
-        in: query
-        name: lang
-        type: string
-      - description: Invoice ID
-        in: path
-        name: id
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/model.InvoiceResponse'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/model.ErrorResponse'
-        "401":
-          description: Unauthorized
-          schema:
-            $ref: '#/definitions/model.ErrorResponse'
-        "404":
-          description: Not Found
-          schema:
-            $ref: '#/definitions/model.ErrorResponse'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/model.ErrorResponse'
-      security:
-      - BearerAuth: []
-      summary: Mark invoice arrived
-      tags:
-      - Invoices
-  /api/v1/invoices/{id}/mark-received:
-    post:
-      description: Mark an invoice as fully received and verified
-      parameters:
-      - default: uz
-        description: Language (uz, ru, en)
-        in: query
-        name: lang
-        type: string
-      - description: Invoice ID
-        in: path
-        name: id
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/model.InvoiceResponse'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/model.ErrorResponse'
-        "401":
-          description: Unauthorized
-          schema:
-            $ref: '#/definitions/model.ErrorResponse'
-        "404":
-          description: Not Found
-          schema:
-            $ref: '#/definitions/model.ErrorResponse'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/model.ErrorResponse'
-      security:
-      - BearerAuth: []
-      summary: Mark invoice received
       tags:
       - Invoices
   /api/v1/invoices/{id}/restore:
@@ -14064,61 +14289,6 @@ paths:
       summary: Create invoice with details in batch
       tags:
       - Invoices
-  /api/v1/invoices/date-range:
-    get:
-      description: Get invoices within a specified date range
-      parameters:
-      - default: uz
-        description: Language (uz, ru, en)
-        in: query
-        name: lang
-        type: string
-      - description: Start date (RFC3339 format)
-        in: query
-        name: start_date
-        required: true
-        type: string
-      - description: End date (RFC3339 format)
-        in: query
-        name: end_date
-        required: true
-        type: string
-      - default: 20
-        description: Limit
-        in: query
-        name: limit
-        type: integer
-      - default: 0
-        description: Offset
-        in: query
-        name: offset
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            items:
-              $ref: '#/definitions/model.InvoiceResponse'
-            type: array
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/model.ErrorResponse'
-        "401":
-          description: Unauthorized
-          schema:
-            $ref: '#/definitions/model.ErrorResponse'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/model.ErrorResponse'
-      security:
-      - BearerAuth: []
-      summary: Get invoices by date range
-      tags:
-      - Invoices
   /api/v1/invoices/search:
     get:
       description: Search invoices by supplier name
@@ -14167,190 +14337,6 @@ paths:
       security:
       - BearerAuth: []
       summary: Search invoices
-      tags:
-      - Invoices
-  /api/v1/invoices/stats/date-range:
-    get:
-      description: Get invoice statistics for a specific date range
-      parameters:
-      - default: uz
-        description: Language (uz, ru, en)
-        in: query
-        name: lang
-        type: string
-      - description: Start date (RFC3339 format)
-        in: query
-        name: start_date
-        required: true
-        type: string
-      - description: End date (RFC3339 format)
-        in: query
-        name: end_date
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/model.InvoiceStatsByDateRangeResponse'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/model.ErrorResponse'
-        "401":
-          description: Unauthorized
-          schema:
-            $ref: '#/definitions/model.ErrorResponse'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/model.ErrorResponse'
-      security:
-      - BearerAuth: []
-      summary: Get invoice stats by date range
-      tags:
-      - Invoices
-  /api/v1/invoices/stats/supplier:
-    get:
-      description: Get invoice statistics grouped by supplier
-      parameters:
-      - default: uz
-        description: Language (uz, ru, en)
-        in: query
-        name: lang
-        type: string
-      - default: 20
-        description: Limit
-        in: query
-        name: limit
-        type: integer
-      - default: 0
-        description: Offset
-        in: query
-        name: offset
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            items:
-              $ref: '#/definitions/model.InvoiceStatsBySupplierResponse'
-            type: array
-        "401":
-          description: Unauthorized
-          schema:
-            $ref: '#/definitions/model.ErrorResponse'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/model.ErrorResponse'
-      security:
-      - BearerAuth: []
-      summary: Get invoice stats by supplier
-      tags:
-      - Invoices
-  /api/v1/invoices/status/{status}:
-    get:
-      description: Get invoices filtered by status with pagination
-      parameters:
-      - default: uz
-        description: Language (uz, ru, en)
-        in: query
-        name: lang
-        type: string
-      - description: Invoice status (pending, arrived, received)
-        in: path
-        name: status
-        required: true
-        type: string
-      - default: 20
-        description: Limit
-        in: query
-        name: limit
-        type: integer
-      - default: 0
-        description: Offset
-        in: query
-        name: offset
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            items:
-              $ref: '#/definitions/model.InvoiceResponse'
-            type: array
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/model.ErrorResponse'
-        "401":
-          description: Unauthorized
-          schema:
-            $ref: '#/definitions/model.ErrorResponse'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/model.ErrorResponse'
-      security:
-      - BearerAuth: []
-      summary: Get invoices by status
-      tags:
-      - Invoices
-  /api/v1/invoices/supplier/{supplier_id}:
-    get:
-      description: Get invoices for a specific supplier with pagination
-      parameters:
-      - default: uz
-        description: Language (uz, ru, en)
-        in: query
-        name: lang
-        type: string
-      - description: Supplier ID
-        in: path
-        name: supplier_id
-        required: true
-        type: string
-      - default: 20
-        description: Limit
-        in: query
-        name: limit
-        type: integer
-      - default: 0
-        description: Offset
-        in: query
-        name: offset
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            items:
-              $ref: '#/definitions/model.InvoiceResponse'
-            type: array
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/model.ErrorResponse'
-        "401":
-          description: Unauthorized
-          schema:
-            $ref: '#/definitions/model.ErrorResponse'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/model.ErrorResponse'
-      security:
-      - BearerAuth: []
-      summary: Get invoices by supplier
       tags:
       - Invoices
   /api/v1/media/image:
@@ -15713,6 +15699,41 @@ paths:
       summary: Update order status
       tags:
       - Orders
+  /api/v1/orders/{id}/table-price:
+    get:
+      description: Calculates price based on table's price_per_hour and time elapsed.
+        Uses scheduled_at if set, otherwise created_at. Returns error if table has
+        no hourly price.
+      parameters:
+      - description: Order ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.TablePriceResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get table price for order
+      tags:
+      - Orders
   /api/v1/orders/status/{status}:
     get:
       description: Get orders filtered by status with pagination
@@ -16324,6 +16345,10 @@ paths:
         in: query
         name: offset
         type: integer
+      - description: Expand related fields
+        in: query
+        name: expand
+        type: string
       produces:
       - application/json
       responses:
@@ -16342,6 +16367,72 @@ paths:
       security:
       - BearerAuth: []
       summary: Goods sales report
+      tags:
+      - reports
+  /api/v1/reports/goods/{id}/orders:
+    get:
+      description: 'Per-order breakdown for a specific good: qty, sell price, cost
+        price, markup per order. Only paid orders.'
+      parameters:
+      - description: Good UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Start date (YYYY-MM-DD)
+        in: query
+        name: start_date
+        required: true
+        type: string
+      - description: End date (YYYY-MM-DD, inclusive)
+        in: query
+        name: end_date
+        required: true
+        type: string
+      - description: Filter by waiter UUID
+        in: query
+        name: waiter_id
+        type: string
+      - description: Filter by hall UUID
+        in: query
+        name: hall_id
+        type: string
+      - description: Filter by table UUID
+        in: query
+        name: table_id
+        type: string
+      - default: 20
+        description: Limit
+        in: query
+        name: limit
+        type: integer
+      - default: 0
+        description: Offset
+        in: query
+        name: offset
+        type: integer
+      - description: Expand related fields
+        in: query
+        name: expand
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.GoodOrdersReportResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Good orders report
       tags:
       - reports
   /api/v1/separation-acts:
@@ -16947,7 +17038,8 @@ paths:
       - shifts
   /api/v1/shipments:
     get:
-      description: List shipments filtered by storage, supplier, status, date range
+      description: List shipments filtered by storage, supplier, status, date range.
+        Returns pagination info and total_amount_sum for the filtered range.
       parameters:
       - description: Filter by storage UUID
         in: query
@@ -16957,7 +17049,7 @@ paths:
         in: query
         name: supplier_id
         type: string
-      - description: Filter by status (draft/confirmed/cancelled)
+      - description: Filter by status (draft/active/cancelled)
         in: query
         name: status
         type: string
@@ -16979,6 +17071,10 @@ paths:
         in: query
         name: offset
         type: integer
+      - description: Expand related fields
+        in: query
+        name: expand
+        type: string
       produces:
       - application/json
       responses:
@@ -17000,8 +17096,8 @@ paths:
     post:
       consumes:
       - application/json
-      description: Create a new shipment in draft status. Add items, then confirm
-        to deduct stock.
+      description: Create a new shipment. Use status="draft" (default) or status="active".
+        If active, stock is deducted immediately.
       parameters:
       - description: Create shipment
         in: body
@@ -17031,7 +17127,8 @@ paths:
       - Shipments
   /api/v1/shipments/{id}:
     delete:
-      description: Soft-deletes a shipment. Only draft shipments can be deleted.
+      description: Soft-deletes a shipment. If the shipment was active, ingredient
+        stock is reversed.
       parameters:
       - description: Shipment ID
         in: path
@@ -17086,8 +17183,9 @@ paths:
     put:
       consumes:
       - application/json
-      description: Update storage, supplier, date, description. Only works on draft
-        shipments.
+      description: Update storage, supplier, date, description, and/or status. Setting
+        status="active" deducts stock (draft→active). Setting status="draft" reverses
+        stock (active→draft).
       parameters:
       - description: Shipment ID
         in: path
@@ -17120,22 +17218,31 @@ paths:
       summary: Update shipment
       tags:
       - Shipments
-  /api/v1/shipments/{id}/cancel:
-    post:
-      description: Cancels a draft shipment (no stock change)
+  /api/v1/shipments/{id}/batch:
+    put:
+      consumes:
+      - application/json
+      description: Updates a shipment header and upserts all provided items in a single
+        request.
       parameters:
       - description: Shipment ID
         in: path
         name: id
         required: true
         type: string
+      - description: Batch update
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.UpdateShipmentBatchRequest'
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/model.ShipmentResponse'
+            $ref: '#/definitions/model.ShipmentWithItemsResponse'
         "400":
           description: Bad Request
           schema:
@@ -17146,37 +17253,7 @@ paths:
             $ref: '#/definitions/model.ErrorResponse'
       security:
       - BearerAuth: []
-      summary: Cancel shipment
-      tags:
-      - Shipments
-  /api/v1/shipments/{id}/confirm:
-    post:
-      description: Confirms shipment (draft→confirmed). Deducts each item's quantity
-        from ingredient_stock. Stock can go negative.
-      parameters:
-      - description: Shipment ID
-        in: path
-        name: id
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/model.ShipmentResponse'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/model.ErrorResponse'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/model.ErrorResponse'
-      security:
-      - BearerAuth: []
-      summary: Confirm shipment
+      summary: Update shipment with items (batch)
       tags:
       - Shipments
   /api/v1/shipments/{id}/items:
@@ -17221,7 +17298,7 @@ paths:
       - Shipments
   /api/v1/shipments/{id}/items/{item_id}:
     delete:
-      description: Remove an ingredient item from a draft shipment
+      description: Remove an ingredient item from a shipment
       parameters:
       - description: Shipment ID
         in: path
@@ -17254,7 +17331,8 @@ paths:
       consumes:
       - application/json
       description: Creates a shipment header and upserts all provided items in a single
-        request. Returns full shipment with stock preview.
+        request. Use status="draft" (default) or status="active" to immediately deduct
+        stock.
       parameters:
       - description: Batch create
         in: body
@@ -17298,6 +17376,10 @@ paths:
         in: query
         name: offset
         type: integer
+      - description: Comma-separated relations to expand (e.g. name_i18n)
+        in: query
+        name: expand
+        type: string
       produces:
       - application/json
       responses:
@@ -17374,6 +17456,10 @@ paths:
         in: query
         name: offset
         type: integer
+      - description: Comma-separated relations to expand (e.g. name_i18n)
+        in: query
+        name: expand
+        type: string
       produces:
       - application/json
       responses:
@@ -17415,6 +17501,10 @@ paths:
       - description: 'Language code (uz, ru, en - default: uz)'
         in: query
         name: lang
+        type: string
+      - description: Comma-separated relations to expand (e.g. name_i18n)
+        in: query
+        name: expand
         type: string
       produces:
       - application/json
@@ -17488,6 +17578,10 @@ paths:
         in: path
         name: id
         required: true
+        type: string
+      - description: Comma-separated relations to expand (e.g. name_i18n)
+        in: query
+        name: expand
         type: string
       produces:
       - application/json
@@ -17613,6 +17707,10 @@ paths:
         in: query
         name: offset
         type: integer
+      - description: Comma-separated relations to expand (e.g. name_i18n)
+        in: query
+        name: expand
+        type: string
       produces:
       - application/json
       responses:
@@ -17660,6 +17758,10 @@ paths:
         in: query
         name: offset
         type: integer
+      - description: Comma-separated relations to expand (e.g. name_i18n)
+        in: query
+        name: expand
+        type: string
       produces:
       - application/json
       responses:
@@ -18974,6 +19076,38 @@ paths:
       summary: Delete user
       tags:
       - users
+    get:
+      description: Retrieve a single user by their UUID
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.UserResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get user by ID
+      tags:
+      - users
     put:
       consumes:
       - application/json
@@ -19054,18 +19188,33 @@ paths:
     get:
       consumes:
       - application/json
-      description: Retrieve all users with a specific role (requires authentication)
+      description: Retrieve all users with a specific role with pagination and optional
+        expand
       parameters:
       - description: User role (admin, manager, cashier, waiter, kitchen, user, superadmin)
         in: query
         name: role
         required: true
         type: string
+      - default: 20
+        description: 'Limit results (default: 20)'
+        in: query
+        name: limit
+        type: integer
+      - default: 0
+        description: 'Offset for pagination (default: 0)'
+        in: query
+        name: offset
+        type: integer
+      - description: Expand related fields (e.g. shift,branch)
+        in: query
+        name: expand
+        type: string
       produces:
       - application/json
       responses:
         "200":
-          description: List of users with the specified role
+          description: Paginated list of users
           schema:
             items:
               $ref: '#/definitions/model.UserResponse'
@@ -19078,63 +19227,13 @@ paths:
           description: Unauthorized
           schema:
             $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
       security:
       - BearerAuth: []
       summary: Get users by role
-      tags:
-      - users
-  /api/v1/users/cashiers:
-    get:
-      consumes:
-      - application/json
-      description: Retrieve all cashier staff members
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: List of cashiers
-          schema:
-            items:
-              $ref: '#/definitions/model.UserResponse'
-            type: array
-        "401":
-          description: Unauthorized
-          schema:
-            $ref: '#/definitions/model.ErrorResponse'
-        "500":
-          description: Internal server error
-          schema:
-            $ref: '#/definitions/model.ErrorResponse'
-      security:
-      - BearerAuth: []
-      summary: Get cashiers
-      tags:
-      - users
-  /api/v1/users/kitchen-staff:
-    get:
-      consumes:
-      - application/json
-      description: Retrieve all kitchen staff members
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: List of kitchen staff
-          schema:
-            items:
-              $ref: '#/definitions/model.UserResponse'
-            type: array
-        "401":
-          description: Unauthorized
-          schema:
-            $ref: '#/definitions/model.ErrorResponse'
-        "500":
-          description: Internal server error
-          schema:
-            $ref: '#/definitions/model.ErrorResponse'
-      security:
-      - BearerAuth: []
-      summary: Get kitchen staff
       tags:
       - users
   /api/v1/users/search:
@@ -19188,12 +19287,27 @@ paths:
     get:
       consumes:
       - application/json
-      description: Retrieve all staff members (non-user role employees)
+      description: Retrieve all staff members (excluding admin/superadmin) with pagination
+      parameters:
+      - default: 20
+        description: 'Limit results (default: 20)'
+        in: query
+        name: limit
+        type: integer
+      - default: 0
+        description: 'Offset for pagination (default: 0)'
+        in: query
+        name: offset
+        type: integer
+      - description: Expand related fields (e.g. shift,branch)
+        in: query
+        name: expand
+        type: string
       produces:
       - application/json
       responses:
         "200":
-          description: List of all staff members
+          description: Paginated list of staff
           schema:
             items:
               $ref: '#/definitions/model.UserResponse'
@@ -19208,34 +19322,7 @@ paths:
             $ref: '#/definitions/model.ErrorResponse'
       security:
       - BearerAuth: []
-      summary: Get all staff members
-      tags:
-      - users
-  /api/v1/users/waiters:
-    get:
-      consumes:
-      - application/json
-      description: Retrieve all waiter staff members
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: List of waiters
-          schema:
-            items:
-              $ref: '#/definitions/model.UserResponse'
-            type: array
-        "401":
-          description: Unauthorized
-          schema:
-            $ref: '#/definitions/model.ErrorResponse'
-        "500":
-          description: Internal server error
-          schema:
-            $ref: '#/definitions/model.ErrorResponse'
-      security:
-      - BearerAuth: []
-      summary: Get waiters
+      summary: Get staff users
       tags:
       - users
 schemes:

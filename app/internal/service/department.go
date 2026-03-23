@@ -93,28 +93,38 @@ func (d *DepartmentS) GetDepartmentByID(ctx context.Context, departmentID string
 }
 
 // GetAllDepartments retrieves all departments with pagination
-func (d *DepartmentS) GetAllDepartments(ctx context.Context, limit, offset int32) ([]*model.DepartmentResponse, error) {
+func (d *DepartmentS) GetAllDepartments(ctx context.Context, limit, offset int32) ([]*model.DepartmentResponse, int32, error) {
+	total, err := d.repo.Tenant(ctx).CountDepartments(ctx)
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to count departments: %w", err)
+	}
+
 	departments, err := d.repo.Tenant(ctx).GetAllDepartments(ctx, pg.GetAllDepartmentsParams{
 		Limit:  limit,
 		Offset: offset,
 	})
 	if err != nil {
 		log.Printf("GetAllDepartments failed: %v", err)
-		return nil, fmt.Errorf("failed to retrieve departments: %w", err)
+		return nil, 0, fmt.Errorf("failed to retrieve departments: %w", err)
 	}
 
 	var responses []*model.DepartmentResponse
 	for _, dept := range departments {
 		responses = append(responses, mapDepartmentToResponse(dept.ID, dept.Name, dept.NameI18n, dept.StorageID, dept.ColorCode, dept.PictureUrl, dept.CreatedAt, dept.UpdatedAt))
 	}
-	return responses, nil
+	return responses, int32(total), nil
 }
 
 // GetDepartmentsByStorageID retrieves departments by storage ID
-func (d *DepartmentS) GetDepartmentsByStorageID(ctx context.Context, storageID string, limit, offset int32) ([]*model.DepartmentResponse, error) {
+func (d *DepartmentS) GetDepartmentsByStorageID(ctx context.Context, storageID string, limit, offset int32) ([]*model.DepartmentResponse, int32, error) {
 	id, err := uuid.Parse(storageID)
 	if err != nil {
-		return nil, fmt.Errorf("invalid storage ID: %w", err)
+		return nil, 0, fmt.Errorf("invalid storage ID: %w", err)
+	}
+
+	total, err := d.repo.Tenant(ctx).CountDepartmentsByStorage(ctx, pgtype.UUID{Bytes: id, Valid: true})
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to count departments: %w", err)
 	}
 
 	departments, err := d.repo.Tenant(ctx).GetDepartmentsByStorageID(ctx, pg.GetDepartmentsByStorageIDParams{
@@ -124,18 +134,18 @@ func (d *DepartmentS) GetDepartmentsByStorageID(ctx context.Context, storageID s
 	})
 	if err != nil {
 		log.Printf("GetDepartmentsByStorageID failed: %v", err)
-		return nil, fmt.Errorf("failed to retrieve departments: %w", err)
+		return nil, 0, fmt.Errorf("failed to retrieve departments: %w", err)
 	}
 
 	var responses []*model.DepartmentResponse
 	for _, dept := range departments {
 		responses = append(responses, mapDepartmentToResponse(dept.ID, dept.Name, dept.NameI18n, dept.StorageID, dept.ColorCode, dept.PictureUrl, dept.CreatedAt, dept.UpdatedAt))
 	}
-	return responses, nil
+	return responses, int32(total), nil
 }
 
 // UpdateDepartment updates a department
-func (d *DepartmentS) UpdateDepartment(ctx context.Context, departmentID string, name *string, nameI18n *string, colorCode *string, pictureUrl *string, storageID *string) (*model.DepartmentResponse, error) {
+func (d *DepartmentS) UpdateDepartment(ctx context.Context, departmentID string, name *string, nameI18n *string, colorCode *string, pictureUrl *string, storageID *string, uz *string, ru *string, en *string) (*model.DepartmentResponse, error) {
 	id, err := uuid.Parse(departmentID)
 	if err != nil {
 		return nil, fmt.Errorf("invalid department ID: %w", err)
@@ -196,7 +206,51 @@ func (d *DepartmentS) UpdateDepartment(ctx context.Context, departmentID string,
 		return nil, fmt.Errorf("failed to update department: %w", err)
 	}
 
-	return mapDepartmentToResponse(department.ID, department.Name, department.NameI18n, department.StorageID, department.ColorCode, department.PictureUrl, department.CreatedAt, department.UpdatedAt), nil
+	// Update translation fields if provided
+	var finalUz, finalRu, finalEn *string
+	if uz != nil || ru != nil || en != nil {
+		if department.NameI18n.Valid {
+			tr, trErr := d.repo.Tenant(ctx).UpdateTranslation(ctx, pg.UpdateTranslationParams{
+				ID: department.NameI18n.Bytes,
+				Uz: uz,
+				Ru: ru,
+				En: en,
+			})
+			if trErr != nil {
+				return nil, fmt.Errorf("failed to update translation: %w", trErr)
+			}
+			finalUz, finalRu, finalEn = tr.Uz, tr.Ru, tr.En
+		} else {
+			translationID := uuid.New()
+			tr, trErr := d.repo.Tenant(ctx).CreateTranslation(ctx, pg.CreateTranslationParams{
+				ID: translationID,
+				Uz: uz,
+				Ru: ru,
+				En: en,
+			})
+			if trErr != nil {
+				return nil, fmt.Errorf("failed to create translation: %w", trErr)
+			}
+			finalUz, finalRu, finalEn = tr.Uz, tr.Ru, tr.En
+			department, err = d.repo.Tenant(ctx).UpdateDepartment(ctx, pg.UpdateDepartmentParams{
+				ID:         id,
+				Name:       department.Name,
+				NameI18n:   pgtype.UUID{Bytes: translationID, Valid: true},
+				ColorCode:  department.ColorCode,
+				PictureUrl: department.PictureUrl,
+				StorageID:  department.StorageID,
+			})
+			if err != nil {
+				return nil, fmt.Errorf("failed to link translation: %w", err)
+			}
+		}
+	}
+
+	resp := mapDepartmentToResponse(department.ID, department.Name, department.NameI18n, department.StorageID, department.ColorCode, department.PictureUrl, department.CreatedAt, department.UpdatedAt)
+	resp.Uz = finalUz
+	resp.Ru = finalRu
+	resp.En = finalEn
+	return resp, nil
 }
 
 // DeleteDepartment soft deletes a department
@@ -272,7 +326,12 @@ func (d *DepartmentS) GetDepartmentByIDWithLang(ctx context.Context, departmentI
 }
 
 // GetAllDepartmentsWithLang retrieves all departments with language support
-func (d *DepartmentS) GetAllDepartmentsWithLang(ctx context.Context, lang string, limit, offset int32) ([]*model.DepartmentResponse, error) {
+func (d *DepartmentS) GetAllDepartmentsWithLang(ctx context.Context, lang string, limit, offset int32) ([]*model.DepartmentResponse, int32, error) {
+	total, err := d.repo.Tenant(ctx).CountDepartments(ctx)
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to count departments: %w", err)
+	}
+
 	departments, err := d.repo.Tenant(ctx).GetAllDepartmentsWithLanguage(ctx, pg.GetAllDepartmentsWithLanguageParams{
 		Column1: lang,
 		Limit:   limit,
@@ -280,14 +339,14 @@ func (d *DepartmentS) GetAllDepartmentsWithLang(ctx context.Context, lang string
 	})
 	if err != nil {
 		log.Printf("GetAllDepartmentsWithLang failed: %v", err)
-		return nil, fmt.Errorf("failed to get departments: %w", err)
+		return nil, 0, fmt.Errorf("failed to get departments: %w", err)
 	}
 
 	var responses []*model.DepartmentResponse
 	for _, dept := range departments {
 		responses = append(responses, mapDepartmentToResponse(dept.ID, dept.Name, dept.NameI18n, dept.StorageID, dept.ColorCode, dept.PictureUrl, dept.CreatedAt, dept.UpdatedAt))
 	}
-	return responses, nil
+	return responses, int32(total), nil
 }
 
 // Helper function to convert database department to response model

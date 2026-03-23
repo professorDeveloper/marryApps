@@ -196,17 +196,28 @@ func (s *AuthS) Register(ctx context.Context, req model.RegisterRequest) error {
 		log.Printf("User will be created with brand_id: %s", tenantBrandUUID.String())
 	}
 
+	cashRegUUID := pgtype.UUID{}
+	if req.CashRegisterID != nil && *req.CashRegisterID != "" {
+		if id, err := uuid.Parse(*req.CashRegisterID); err == nil {
+			cashRegUUID = pgtype.UUID{Bytes: id, Valid: true}
+		}
+	}
+	if role == "cashier" && !cashRegUUID.Valid {
+		return fmt.Errorf("cash_register_id is required for cashier role")
+	}
+
 	userParams := pg.CreateUserParams{
-		ID:           uuid.New(),
-		FullName:     &fullName,
-		Role:         userRole,
-		Email:        nil,
-		Pincode:      pincodePtr,
-		PhoneNumber:  &req.PhoneNumber,
-		HashPassword: hashPassword,
-		Username:     &username,
-		BrandID:      brandID,
-		BranchID:     branchUUID,
+		ID:             uuid.New(),
+		FullName:       &fullName,
+		Role:           userRole,
+		Email:          nil,
+		Pincode:        pincodePtr,
+		PhoneNumber:    &req.PhoneNumber,
+		HashPassword:   hashPassword,
+		Username:       &username,
+		BrandID:        brandID,
+		BranchID:       branchUUID,
+		CashRegisterID: cashRegUUID,
 	}
 
 	if role != "superadmin" && brandIDSlug != "" {
@@ -336,11 +347,18 @@ func (s *AuthS) Login(ctx context.Context, req model.LoginRequest, jwtCfg *confi
 		}
 	}
 
+	var cashRegisterID *string
+	if user.CashRegisterID.Valid {
+		s := user.CashRegisterID.String()
+		cashRegisterID = &s
+	}
+
 	accessToken, err := utils.CreateJWTWithClaims(
 		time.Duration(jwtCfg.AccessToken.ExpiresIn)*time.Second,
 		user.ID,
 		brandID,
 		branchID,
+		cashRegisterID,
 		role,
 		false,
 		jwtCfg.SecretKey,
@@ -353,6 +371,7 @@ func (s *AuthS) Login(ctx context.Context, req model.LoginRequest, jwtCfg *confi
 		user.ID,
 		brandID,
 		branchID,
+		cashRegisterID,
 		role,
 		false,
 		jwtCfg.SecretKey,
@@ -475,11 +494,18 @@ func (s *AuthS) LoginWithPincode(ctx context.Context, req model.PincodeLoginRequ
 		}
 	}
 
+	var cashRegisterID *string
+	if user.CashRegisterID.Valid {
+		s := user.CashRegisterID.String()
+		cashRegisterID = &s
+	}
+
 	accessToken, err := utils.CreateJWTWithClaims(
 		time.Duration(jwtCfg.AccessToken.ExpiresIn)*time.Second,
 		user.ID,
 		brandID,
 		branchID,
+		cashRegisterID,
 		role,
 		false,
 		jwtCfg.SecretKey,
@@ -492,6 +518,7 @@ func (s *AuthS) LoginWithPincode(ctx context.Context, req model.PincodeLoginRequ
 		user.ID,
 		brandID,
 		branchID,
+		cashRegisterID,
 		role,
 		false,
 		jwtCfg.SecretKey,
@@ -562,6 +589,7 @@ func (s *AuthS) LoginGlobal(ctx context.Context, req model.LoginRequest, jwtCfg 
 		u.ID,
 		nil,
 		nil,
+		nil,
 		u.Role,
 		true,
 		jwtCfg.SecretKey,
@@ -572,6 +600,7 @@ func (s *AuthS) LoginGlobal(ctx context.Context, req model.LoginRequest, jwtCfg 
 	refreshToken, err := utils.CreateJWTWithClaims(
 		time.Duration(jwtCfg.RefreshToken.ExpiresIn)*time.Second,
 		u.ID,
+		nil,
 		nil,
 		nil,
 		u.Role,
@@ -627,6 +656,7 @@ func (s *AuthS) Refresh(ctx context.Context, req model.RefreshRequest, jwtCfg *c
 			claims.UserID,
 			nil,
 			nil,
+			nil,
 			role,
 			true,
 			jwtCfg.SecretKey,
@@ -637,6 +667,7 @@ func (s *AuthS) Refresh(ctx context.Context, req model.RefreshRequest, jwtCfg *c
 		refreshToken, err := utils.CreateJWTWithClaims(
 			time.Duration(jwtCfg.RefreshToken.ExpiresIn)*time.Second,
 			claims.UserID,
+			nil,
 			nil,
 			nil,
 			role,
@@ -699,6 +730,7 @@ func (s *AuthS) Refresh(ctx context.Context, req model.RefreshRequest, jwtCfg *c
 		user.ID,
 		brandID,
 		branchID,
+		nil,
 		role,
 		false,
 		jwtCfg.SecretKey,
@@ -711,6 +743,7 @@ func (s *AuthS) Refresh(ctx context.Context, req model.RefreshRequest, jwtCfg *c
 		user.ID,
 		brandID,
 		branchID,
+		nil,
 		role,
 		false,
 		jwtCfg.SecretKey,
@@ -863,63 +896,74 @@ func toUserResponse(u pg.User) model.UserResponse {
 		branchID = &br
 	}
 
+	var cashRegisterID *string
+	if u.CashRegisterID.Valid {
+		s := u.CashRegisterID.String()
+		cashRegisterID = &s
+	}
+
 	if roleStr, ok := roleToString(u.Role); ok {
 		role = &roleStr
 	}
 
 	return model.UserResponse{
-		ID:          u.ID.String(),
-		FullName:    fullName,
-		Username:    username,
-		Role:        role,
-		IsActive:    u.IsActive,
-		Email:       email,
-		PhoneNumber: u.PhoneNumber,
-		ShiftID:     shiftID,
-		BrandID:     brandID,
-		BranchID:    branchID,
-		CreatedAt:   createdAt,
-		UpdatedAt:   updatedAt,
+		ID:             u.ID.String(),
+		FullName:       fullName,
+		Username:       username,
+		Role:           role,
+		IsActive:       u.IsActive,
+		Email:          email,
+		PhoneNumber:    u.PhoneNumber,
+		ShiftID:        shiftID,
+		BrandID:        brandID,
+		BranchID:       branchID,
+		CashRegisterID: cashRegisterID,
+		CreatedAt:      createdAt,
+		UpdatedAt:      updatedAt,
 	}
 }
 
-func (s *AuthS) GetUsersByRole(ctx context.Context, role string) ([]model.UserResponse, error) {
+func (s *AuthS) GetUsersByRole(ctx context.Context, role string, limit, offset int32) ([]model.UserResponse, int64, error) {
 	role = strings.TrimSpace(strings.ToLower(role))
-	users, err := s.repo.Tenant(ctx).GetUsersByRole(ctx, role)
+
+	total, err := s.repo.Tenant(ctx).CountUsersByRole(ctx, role)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get users by role: %w", err)
+		return nil, 0, fmt.Errorf("failed to count users by role: %w", err)
+	}
+
+	users, err := s.repo.Tenant(ctx).GetUsersByRolePaginated(ctx, pg.GetUsersByRolePaginatedParams{
+		Role:   role,
+		Limit:  limit,
+		Offset: offset,
+	})
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to get users by role: %w", err)
 	}
 
 	var responses []model.UserResponse
 	for _, user := range users {
 		responses = append(responses, toUserResponse(user))
 	}
-	return responses, nil
+	return responses, total, nil
 }
 
-func (s *AuthS) GetAllStaff(ctx context.Context) ([]model.UserResponse, error) {
-	users, err := s.repo.Tenant(ctx).GetStaffUsers(ctx)
+func (s *AuthS) GetKitchenStaff(ctx context.Context, limit, offset int32) ([]model.UserResponse, int64, error) {
+	total, err := s.repo.Tenant(ctx).CountStaffUsers(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get staff: %w", err)
+		return nil, 0, fmt.Errorf("failed to count staff: %w", err)
 	}
-
+	users, err := s.repo.Tenant(ctx).GetStaffUsersPaginated(ctx, pg.GetStaffUsersPaginatedParams{
+		Limit:  limit,
+		Offset: offset,
+	})
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to get staff: %w", err)
+	}
 	var responses []model.UserResponse
-	for _, user := range users {
-		responses = append(responses, toUserResponse(user))
+	for _, u := range users {
+		responses = append(responses, toUserResponse(u))
 	}
-	return responses, nil
-}
-
-func (s *AuthS) GetKitchenStaff(ctx context.Context) ([]model.UserResponse, error) {
-	return s.GetUsersByRole(ctx, "kitchen")
-}
-
-func (s *AuthS) GetWaiters(ctx context.Context) ([]model.UserResponse, error) {
-	return s.GetUsersByRole(ctx, "waiter")
-}
-
-func (s *AuthS) GetCashiers(ctx context.Context) ([]model.UserResponse, error) {
-	return s.GetUsersByRole(ctx, "cashier")
+	return responses, total, nil
 }
 
 func (s *AuthS) DeleteUser(ctx context.Context, userID string) error {

@@ -41,6 +41,13 @@ type GetIngredientReportParams struct {
 	Start        pgtype.Timestamptz
 	End          pgtype.Timestamptz
 	IngredientID *uuid.UUID
+	Limit        int32
+	Offset       int32
+}
+
+type IngredientReportTotalsRow struct {
+	TotalCount          int64          `json:"total_count"`
+	TotalOrderOutAmount pgtype.Numeric `json:"total_order_out_amount"`
 }
 
 func (q *Queries) GetIngredientReport(ctx context.Context, arg GetIngredientReportParams) ([]IngredientReportRow, error) {
@@ -183,14 +190,19 @@ LEFT JOIN sums s ON s.ingredient_id = bi.ingredient_id
 LEFT JOIN cost_start cs ON cs.ingredient_id = bi.ingredient_id
 LEFT JOIN cost_end ce ON ce.ingredient_id = bi.ingredient_id
 ORDER BY i.name ASC
+LIMIT $5 OFFSET $6
 `
 
 	var ingredientID any
 	if arg.IngredientID != nil {
 		ingredientID = *arg.IngredientID
 	}
+	limit := arg.Limit
+	if limit <= 0 {
+		limit = 20
+	}
 
-	rows, err := q.db.Query(ctx, sql, arg.StorageID, arg.Start, arg.End, ingredientID)
+	rows, err := q.db.Query(ctx, sql, arg.StorageID, arg.Start, arg.End, ingredientID, limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
@@ -233,6 +245,47 @@ ORDER BY i.name ASC
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
+	}
+	return out, nil
+}
+
+func (q *Queries) GetIngredientReportTotals(ctx context.Context, arg GetIngredientReportParams) (IngredientReportTotalsRow, error) {
+	const sql = `
+WITH params AS (
+	SELECT $1::uuid AS storage_id, $2::timestamptz AS start_ts, $3::timestamptz AS end_ts, $4::uuid AS ingredient_id
+),
+base_ingredients AS (
+	SELECT DISTINCT m.ingredient_id
+	FROM ingredient_stock_movements m
+	JOIN params p ON p.storage_id = m.storage_id
+	WHERE m.created_at <= p.end_ts
+		AND (p.ingredient_id IS NULL OR m.ingredient_id = p.ingredient_id)
+),
+sums AS (
+	SELECT
+		m.ingredient_id,
+		COALESCE(SUM(CASE WHEN m.event_type = 'order_out' THEN (m.qty_out * m.price_per_unit) ELSE 0 END), 0)::numeric(18,2) AS order_out_amount
+	FROM ingredient_stock_movements m
+	JOIN params p ON p.storage_id = m.storage_id
+	WHERE m.created_at >= p.start_ts AND m.created_at <= p.end_ts
+		AND (p.ingredient_id IS NULL OR m.ingredient_id = p.ingredient_id)
+	GROUP BY m.ingredient_id
+)
+SELECT
+	COUNT(DISTINCT bi.ingredient_id)::bigint AS total_count,
+	COALESCE(SUM(s.order_out_amount), 0)::numeric(18,2) AS total_order_out_amount
+FROM base_ingredients bi
+JOIN ingredients i ON i.id = bi.ingredient_id AND i.deleted_at = 0
+LEFT JOIN sums s ON s.ingredient_id = bi.ingredient_id
+`
+	var ingredientID any
+	if arg.IngredientID != nil {
+		ingredientID = *arg.IngredientID
+	}
+	row := q.db.QueryRow(ctx, sql, arg.StorageID, arg.Start, arg.End, ingredientID)
+	var out IngredientReportTotalsRow
+	if err := row.Scan(&out.TotalCount, &out.TotalOrderOutAmount); err != nil {
+		return IngredientReportTotalsRow{}, err
 	}
 	return out, nil
 }
