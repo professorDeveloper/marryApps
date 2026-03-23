@@ -118,9 +118,9 @@ func (q *Queries) DeleteInventoryItemByID(ctx context.Context, id uuid.UUID) err
 type CountInventoriesFilteredParams struct {
 	DateFrom     pgtype.Date
 	DateTo       pgtype.Date
-	StorageID    [16]byte
+	StorageID    uuid.UUID
 	Status       string
-	IngredientID [16]byte
+	IngredientID uuid.UUID
 }
 
 // CountInventoriesFiltered returns the total count for paginated filtered list.

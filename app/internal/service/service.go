@@ -281,6 +281,7 @@ type InventoryI interface {
 	GetAllInventoryItems(ctx context.Context, inventoryID *string, limit, offset int32) ([]*model.InventoryItemResponse, error)
 	UpdateInventoryItem(ctx context.Context, inventoryItemID string, req *model.UpdateInventoryItemRequest) (*model.InventoryItemResponse, error)
 	DeleteInventoryItem(ctx context.Context, inventoryItemID string) error
+	DeleteInventoryItemsBatch(ctx context.Context, itemIDs []string) error
 	CalculateInventory(ctx context.Context, inventoryID string) (*model.InventoryResponse, error)
 	CreateInventoryBatch(ctx context.Context, req *model.CreateInventoryBatchRequest) (*model.CreateInventoryBatchResponse, error)
 }

@@ -99,6 +99,10 @@ type DeleteInventoriesBatchRequest struct {
 	IDs []string `json:"ids" validate:"required,min=1"`
 }
 
+type DeleteInventoryItemsBatchRequest struct {
+	IDs []string `json:"ids" validate:"required,min=1"`
+}
+
 type PaginationMeta struct {
 	Total      int32 `json:"total"`
 	Limit      int32 `json:"limit"`

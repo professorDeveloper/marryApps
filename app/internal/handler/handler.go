@@ -499,6 +499,7 @@ func (h *Handler) Register(router *echo.Echo) {
 			inventories.GET("/:id", h.GetInventory, mw.CheckLanguage())
 			inventories.POST("/:id/items", h.UpsertInventoryItems, mw.CheckLanguage())
 			inventories.PUT("/:id/items/batch", h.UpdateInventoryItemsBatch, mw.CheckLanguage())
+			inventories.DELETE("/:id/items/batch", h.DeleteInventoryItemsBatch, mw.CheckLanguage())
 			inventories.GET("/:id/items", h.GetInventoryItems, mw.CheckLanguage())
 			inventories.POST("/:id/calculate", h.CalculateInventory, mw.CheckLanguage())
 			inventories.PUT("/:id", h.UpdateInventory, mw.CheckLanguage())

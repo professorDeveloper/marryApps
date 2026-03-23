@@ -13137,7 +13137,7 @@ const docTemplate = `{
                     },
                     {
                         "type": "string",
-                        "description": "Inventory status",
+                        "description": "Inventory status (draft, active, deleted)",
                         "name": "status",
                         "in": "query"
                     },
@@ -13153,6 +13153,12 @@ const docTemplate = `{
                         "default": 0,
                         "description": "Offset for pagination (default: 0)",
                         "name": "offset",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Comma-separated relations to expand (e.g. storage_id)",
+                        "name": "expand",
                         "in": "query"
                     }
                 ],
@@ -13439,6 +13445,12 @@ const docTemplate = `{
                         "name": "id",
                         "in": "path",
                         "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Comma-separated relations to expand (e.g. storage_id)",
+                        "name": "expand",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -13660,7 +13672,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "inventory_items"
+                    "inventories"
                 ],
                 "summary": "Get inventory items",
                 "parameters": [
@@ -13670,6 +13682,12 @@ const docTemplate = `{
                         "name": "id",
                         "in": "path",
                         "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Comma-separated relations to expand (e.g. ingredient_id)",
+                        "name": "expand",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -13816,6 +13834,68 @@ const docTemplate = `{
                     },
                     "400": {
                         "description": "Invalid request or inventory is deleted",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Remove specific inventory items by ID. Reverses stock if the inventory is active.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "inventories"
+                ],
+                "summary": "Batch delete inventory items",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Inventory ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "List of inventory item IDs to delete",
+                        "name": "input",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.DeleteInventoryItemsBatchRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Inventory items deleted successfully",
+                        "schema": {
+                            "$ref": "#/definitions/model.SuccessResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request",
                         "schema": {
                             "$ref": "#/definitions/model.ErrorResponse"
                         }
@@ -25658,6 +25738,21 @@ const docTemplate = `{
                 }
             }
         },
+        "model.DeleteInventoryItemsBatchRequest": {
+            "type": "object",
+            "required": [
+                "ids"
+            ],
+            "properties": {
+                "ids": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
         "model.DepartmentResponse": {
             "type": "object",
             "properties": {
@@ -29327,9 +29422,9 @@ const docTemplate = `{
 // SwaggerInfo holds exported Swagger Info so clients can modify it
 var SwaggerInfo = &swag.Spec{
 	Version:          "1.0",
-	Host:             "localhost:8080",
+	Host:             "back.staging.maryai.yurtal.tech",
 	BasePath:         "/",
-	Schemes:          []string{"http"},
+	Schemes:          []string{"https"},
 	Title:            "MaryAI API",
 	Description:      "MaryAI API server with multi-language support (uz, ru, en)",
 	InfoInstanceName: "swagger",

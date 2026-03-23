@@ -1637,6 +1637,16 @@ definitions:
     required:
     - ids
     type: object
+  model.DeleteInventoryItemsBatchRequest:
+    properties:
+      ids:
+        items:
+          type: string
+        minItems: 1
+        type: array
+    required:
+    - ids
+    type: object
   model.DepartmentResponse:
     properties:
       color_code:
@@ -4179,7 +4189,7 @@ definitions:
         example: admin
         type: string
     type: object
-host: localhost:8080
+host: back.staging.maryai.yurtal.tech
 info:
   contact: {}
   description: MaryAI API server with multi-language support (uz, ru, en)
@@ -12743,7 +12753,7 @@ paths:
         in: query
         name: ingredient_id
         type: string
-      - description: Inventory status
+      - description: Inventory status (draft, active, deleted)
         in: query
         name: status
         type: string
@@ -12757,6 +12767,10 @@ paths:
         in: query
         name: offset
         type: integer
+      - description: Comma-separated relations to expand (e.g. storage_id)
+        in: query
+        name: expand
+        type: string
       produces:
       - application/json
       responses:
@@ -12859,6 +12873,10 @@ paths:
         in: path
         name: id
         required: true
+        type: string
+      - description: Comma-separated relations to expand (e.g. storage_id)
+        in: query
+        name: expand
         type: string
       produces:
       - application/json
@@ -12976,6 +12994,10 @@ paths:
         name: id
         required: true
         type: string
+      - description: Comma-separated relations to expand (e.g. ingredient_id)
+        in: query
+        name: expand
+        type: string
       produces:
       - application/json
       responses:
@@ -13001,7 +13023,7 @@ paths:
       - BearerAuth: []
       summary: Get inventory items
       tags:
-      - inventory_items
+      - inventories
     post:
       consumes:
       - application/json
@@ -13046,6 +13068,47 @@ paths:
       tags:
       - inventory_items
   /api/v1/inventories/{id}/items/batch:
+    delete:
+      consumes:
+      - application/json
+      description: Remove specific inventory items by ID. Reverses stock if the inventory
+        is active.
+      parameters:
+      - description: Inventory ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: List of inventory item IDs to delete
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/model.DeleteInventoryItemsBatchRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Inventory items deleted successfully
+          schema:
+            $ref: '#/definitions/model.SuccessResponse'
+        "400":
+          description: Invalid request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Batch delete inventory items
+      tags:
+      - inventories
     put:
       consumes:
       - application/json
@@ -19372,7 +19435,7 @@ paths:
       tags:
       - users
 schemes:
-- http
+- https
 securityDefinitions:
   BearerAuth:
     description: Type "Bearer" followed by a space and your JWT token

@@ -163,9 +163,9 @@ func (s *InventoryS) GetInventoriesFiltered(ctx context.Context, dateFrom, dateT
 	countParams := pg.CountInventoriesFilteredParams{
 		DateFrom:     fromDate,
 		DateTo:       toDate,
-		StorageID:    storageUUID.Bytes,
+		StorageID:    uuid.UUID(storageUUID.Bytes),
 		Status:       statusText,
-		IngredientID: ingredientUUID.Bytes,
+		IngredientID: uuid.UUID(ingredientUUID.Bytes),
 	}
 	total, err := s.repo.Tenant(ctx).CountInventoriesFiltered(ctx, countParams)
 	if err != nil {
@@ -685,6 +685,15 @@ func (s *InventoryS) DeleteInventoriesBatch(ctx context.Context, ids []string) e
 	for _, uid := range uuids {
 		if err := s.DeleteInventory(ctx, uid.String()); err != nil {
 			return fmt.Errorf("failed to delete inventory %s: %w", uid, err)
+		}
+	}
+	return nil
+}
+
+func (s *InventoryS) DeleteInventoryItemsBatch(ctx context.Context, itemIDs []string) error {
+	for _, id := range itemIDs {
+		if err := s.DeleteInventoryItem(ctx, id); err != nil {
+			return fmt.Errorf("failed to delete item %s: %w", id, err)
 		}
 	}
 	return nil
