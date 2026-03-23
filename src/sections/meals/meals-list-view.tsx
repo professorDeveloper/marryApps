@@ -17,6 +17,8 @@ import {
 import { paths } from 'src/routes/paths';
 import { useGetMealsPage, useDeleteMeal, useDeleteMeals, useGetMealWithCalculations } from 'src/hooks/use-meals';
 import { useGetCompounds } from 'src/hooks/use-compounds';
+import { useGetCategories } from 'src/actions/categories';
+import { useGetDepartments } from 'src/actions/departments';
 import { useGenericViewModal } from 'src/hooks/use-generic-view-modal';
 import { useImageUrl } from 'src/hooks/use-image-url';
 import { useGetIngredients } from 'src/actions/ingredients';
@@ -225,6 +227,8 @@ export function Meals() {
     const [filters, setFilters] = useState(initialFilters);
     const [draftFilters, setDraftFilters] = useState(initialFilters);
     const [paginationModel, setPaginationModel] = useState({ page: 0, pageSize: 20 });
+    const { categories } = useGetCategories();
+    const { departments } = useGetDepartments();
 
     // SWR hooks
     const { meals, mealsLoading, mutate, pagination } = useGetMealsPage({
@@ -266,50 +270,49 @@ export function Meals() {
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [mealToDelete, setMealToDelete] = useState<string | null>(null);
 
-    // Create translation maps for categories and departments
+    // Create translation maps for categories and departments from master lists,
+    // so filter options do not collapse to only the currently filtered meals.
     const categoryMap = useMemo(() => {
         const map = new Map<string, string>();
         const currentLang = i18n.language || 'uz';
 
-        meals.forEach((meal: any) => {
-            const cat = meal?._expand?.category_id;
-            if (!cat?.id) return;
+        categories.forEach((category: any) => {
+            if (!category?.id) return;
 
-            let displayName = cat.name || '-';
-            if (currentLang === 'en' && cat.name_en) displayName = cat.name_en;
-            else if (currentLang === 'ru' && cat.name_ru) displayName = cat.name_ru;
+            let displayName = category.name || '-';
+            if (currentLang === 'en' && category.name_en) displayName = category.name_en;
+            else if (currentLang === 'ru' && category.name_ru) displayName = category.name_ru;
             else if (
                 (currentLang === 'uz' || currentLang === 'uz-Latn' || currentLang === 'uz-Cyrl') &&
-                cat.name_uz
+                category.name_uz
             )
-                displayName = cat.name_uz;
+                displayName = category.name_uz;
 
-            map.set(cat.id, displayName);
+            map.set(category.id, displayName);
         });
         return map;
-    }, [meals, i18n.language]);
+    }, [categories, i18n.language]);
 
     const departmentMap = useMemo(() => {
         const map = new Map<string, string>();
         const currentLang = i18n.language || 'uz';
 
-        meals.forEach((meal: any) => {
-            const dept = meal?._expand?.department_id;
-            if (!dept?.id) return;
+        departments.forEach((department: any) => {
+            if (!department?.id) return;
 
-            let displayName = dept.name || '-';
-            if (currentLang === 'en' && dept.name_en) displayName = dept.name_en;
-            else if (currentLang === 'ru' && dept.name_ru) displayName = dept.name_ru;
+            let displayName = department.name || '-';
+            if (currentLang === 'en' && department.name_en) displayName = department.name_en;
+            else if (currentLang === 'ru' && department.name_ru) displayName = department.name_ru;
             else if (
                 (currentLang === 'uz' || currentLang === 'uz-Latn' || currentLang === 'uz-Cyrl') &&
-                dept.name_uz
+                department.name_uz
             )
-                displayName = dept.name_uz;
+                displayName = department.name_uz;
 
-            map.set(dept.id, displayName);
+            map.set(department.id, displayName);
         });
         return map;
-    }, [meals, i18n.language]);
+    }, [departments, i18n.language]);
 
     const categoryOptions = useMemo(() => {
         return Array.from(categoryMap.entries()).map(([id, name]) => ({ id, name }));
@@ -532,7 +535,7 @@ export function Meals() {
                                 InputLabelProps={{ shrink: true }}
                                 disabled={isCategoryEmpty}
                             >
-                                <option value="" disabled hidden>
+                                <option value="" >
                                     {t('ingredientReports.all', 'All')}
                                 </option>
                                 {categoryOptions.map((category: any) => (
@@ -542,7 +545,7 @@ export function Meals() {
                                 ))}
                             </TextField>
                         </NoDataTooltip>
-                        <NoDataTooltip enabled={isDepartmentEmpty} title={noDataText}>
+                        {/* <NoDataTooltip enabled={isDepartmentEmpty} title={noDataText}>
                             <TextField
                                 select
                                 size="small"
@@ -558,7 +561,7 @@ export function Meals() {
                                 InputLabelProps={{ shrink: true }}
                                 disabled={isDepartmentEmpty}
                             >
-                                <option value="" disabled hidden>
+                                <option value="" >
                                     {t('ingredientReports.all', 'All')}
                                 </option>
                                 {departmentOptions.map((department: any) => (
@@ -567,7 +570,7 @@ export function Meals() {
                                     </option>
                                 ))}
                             </TextField>
-                        </NoDataTooltip>
+                        </NoDataTooltip> */}
                         {/* <TextField
                             select
                             size="small"
@@ -591,17 +594,17 @@ export function Meals() {
                                 </option>
                             ))}
                         </TextField> */}
-                        <Box sx={{ display: 'flex', gap: 1 }}>
+                        {/* <Box sx={{ display: 'flex', gap: 1 }}>
                             <Button
                                 variant="outlined"
-                                size="small"
+                                size="medium"
                                 startIcon={<Iconify icon="solar:restart-bold" />}
                                 onClick={() => setDraftFilters(initialFilters)}
                                 sx={{ flex: 1 }}
                             >
                                 {t('ingredientReports.reset', 'Reset')}
                             </Button>
-                        </Box>
+                        </Box> */}
                     </Box>
                 )}
                 breadcrumbs={{

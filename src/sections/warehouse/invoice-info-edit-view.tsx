@@ -25,7 +25,7 @@ interface InvoiceInfoEditViewProps {
     onSwitchToDetailsTab?: () => void; // Callback to switch to details tab when validation fails
 }
 
-const ALLOWED_STATUSES = ['pending', 'draft', 'arrived', 'deleted'] as const;
+const ALLOWED_STATUSES = ['pending', 'received', 'arrived', 'deleted'] as const;
 type InvoiceStatus = (typeof ALLOWED_STATUSES)[number];
 const normalizeStatus = (value: unknown): InvoiceStatus =>
     ALLOWED_STATUSES.includes(value as InvoiceStatus) ? (value as InvoiceStatus) : 'pending';
@@ -119,7 +119,7 @@ export function InvoiceInfoEditView({
                 }
 
                 // If using batch flow with details, call the batch submit handler
-                if (onInvoiceSubmit && detailsData && detailsData.length > 0) {
+                if (useBatchFlow && onInvoiceSubmit && detailsData && detailsData.length > 0) {
                     await onInvoiceSubmit({
                         supplier_id: formData.supplier_id,
                         storage_id: formData.storage_id,
@@ -239,7 +239,7 @@ export function InvoiceInfoEditView({
                 options: [
                     { value: 'arrived', label: t('warehouse.invoices.statuses.arrived', 'Arrived') },
                     { value: 'pending', label: t('warehouse.invoices.statuses.pending') },
-                    { value: 'draft', label: t('common.draft', 'Draft') },
+                    { value: 'received', label: t('warehouse.invoices.statuses.received', 'Received') },
                     { value: 'deleted', label: t('common.deleted', 'Deleted') },
                 ],
             },

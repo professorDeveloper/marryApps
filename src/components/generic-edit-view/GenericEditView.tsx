@@ -1,7 +1,8 @@
 import type { FC } from 'react';
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useForm, FormProvider, Controller } from 'react-hook-form';
+import { useForm, FormProvider, Controller, useWatch } from 'react-hook-form';
+import { isEqual } from 'es-toolkit';
 
 import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
@@ -30,6 +31,9 @@ export const GenericEditView: FC<GenericEditViewProps> = ({
     const { t } = useTranslation('menu');
     const prevDataRef = useRef(data);
     const isInitializedRef = useRef(false);
+    const didMountRef = useRef(false);
+    const prevWatchedRef = useRef<Record<string, any> | null>(null);
+    const lastEmittedRef = useRef<Record<string, any> | null>(null);
 
     const [isLoading, setIsLoading] = useState(externalLoading);
     const [error, setError] = useState<string | null>(null);
@@ -49,6 +53,7 @@ export const GenericEditView: FC<GenericEditViewProps> = ({
         defaultValues: initialFormData,
         mode: 'onBlur', // Enable onBlur mode for better performance
     });
+    const watchedValues = useWatch({ control: methods.control });
 
     // Update loading state efficiently
     useEffect(() => {
@@ -59,11 +64,33 @@ export const GenericEditView: FC<GenericEditViewProps> = ({
     useEffect(() => {
         if (data && data !== prevDataRef.current) {
             const mergedData = { ...buildInitialFormData(config), ...data };
-            // Ensure fetched data populates the form on first load
-            methods.reset(mergedData);
+            // Avoid wiping user input when parent echoes current form values
+            const currentValues = methods.getValues();
+            const shouldSkipReset =
+                (lastEmittedRef.current && isEqual(mergedData, lastEmittedRef.current)) ||
+                isEqual(mergedData, currentValues);
+            if (!shouldSkipReset) {
+                methods.reset(mergedData);
+            }
             prevDataRef.current = data;
         }
     }, [data, config, methods]);
+
+    // Keep parent in sync with current form values (for tab persistence)
+    useEffect(() => {
+        if (!onFormDataChange) return;
+        if (!didMountRef.current) {
+            didMountRef.current = true;
+            return;
+        }
+        const nextValues = watchedValues as Record<string, any>;
+        if (prevWatchedRef.current && isEqual(prevWatchedRef.current, nextValues)) {
+            return;
+        }
+        prevWatchedRef.current = nextValues;
+        lastEmittedRef.current = nextValues;
+        onFormDataChange(nextValues);
+    }, [onFormDataChange, watchedValues]);
 
     // Memoize submit handler to prevent recreation
     const onSubmit = useCallback(async (formData: Record<string, any>) => {

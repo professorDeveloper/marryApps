@@ -302,7 +302,7 @@ export const endpoints = {
   },
   cafeTables: {
     list: '/api/v1/cafe-tables',
-    listByHall: (hallId: string) => `/api/v1/cafe-tables/available/hall/${hallId}`,
+    listByHall: (hallId: string) => `/api/v1/cafe-tables/hall/${hallId}`,
     details: (id: string) => `/api/v1/cafe-tables/${id}`,
     create: '/api/v1/cafe-tables',
     update: (id: string) => `/api/v1/cafe-tables/${id}`,
