@@ -284,6 +284,31 @@ FROM (
   WHERE inv.id = $1 AND inv.deleted_at = 0
 ) t;
 
+-- name: CountInventoriesFiltered :one
+SELECT COUNT(DISTINCT inv.id)
+FROM inventories inv
+LEFT JOIN inventory_items ii ON ii.inventory_id = inv.id AND ii.deleted_at = 0
+WHERE EXISTS (
+    SELECT 1 FROM storages s
+    WHERE s.id = inv.storage_id
+      AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  )
+  AND ($1::date IS NULL OR inv.date >= $1)
+  AND ($2::date IS NULL OR inv.date <= $2)
+  AND (NULLIF($3::uuid, '00000000-0000-0000-0000-000000000000') IS NULL OR inv.storage_id = $3)
+  AND (NULLIF($4::text, '') IS NULL OR inv.status = $4)
+  AND (NULLIF($5::uuid, '00000000-0000-0000-0000-000000000000') IS NULL OR ii.ingredient_id = $5);
+
+-- name: DeleteInventoriesBatch :exec
+UPDATE inventories
+SET deleted_at = EXTRACT(EPOCH FROM NOW())::BIGINT
+WHERE id = ANY($1::uuid[]) AND deleted_at = 0
+  AND EXISTS (
+    SELECT 1 FROM storages s
+    WHERE s.id = inventories.storage_id
+      AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  );
+
 -- name: UpdateInventoryAmounts :one
 UPDATE inventories
 SET surplus_amount = $2,

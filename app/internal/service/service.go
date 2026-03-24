@@ -268,17 +268,20 @@ type InventoryI interface {
 	CreateInventory(ctx context.Context, req *model.CreateInventoryRequest) (*model.InventoryResponse, error)
 	GetInventoryByID(ctx context.Context, id string) (*model.InventoryResponse, error)
 	GetAllInventories(ctx context.Context, limit, offset int32) ([]*model.InventoryResponse, error)
-	GetInventoriesFiltered(ctx context.Context, dateFrom, dateTo *time.Time, storageID, ingredientID, status *string, limit, offset int32) ([]*model.InventoryResponse, error)
+	GetInventoriesFiltered(ctx context.Context, dateFrom, dateTo *time.Time, storageID, ingredientID, status *string, limit, offset int32) (*model.PaginatedInventoriesResponse, error)
 	UpdateInventory(ctx context.Context, id string, req *model.UpdateInventoryRequest) (*model.InventoryResponse, error)
 	DeleteInventory(ctx context.Context, id string) error
+	DeleteInventoriesBatch(ctx context.Context, ids []string) error
 	RestoreInventory(ctx context.Context, id string) (*model.InventoryResponse, error)
 	SearchInventories(ctx context.Context, query string, limit, offset int32) ([]*model.InventoryResponse, error)
 
 	UpsertInventoryItems(ctx context.Context, inventoryID string, req *model.UpsertInventoryItemsRequest) ([]*model.InventoryItemComputedResponse, error)
+	ReplaceInventoryItems(ctx context.Context, inventoryID string, req *model.UpsertInventoryItemsRequest) ([]*model.InventoryItemComputedResponse, error)
 	GetInventoryItems(ctx context.Context, inventoryID string) ([]*model.InventoryItemComputedResponse, error)
 	GetAllInventoryItems(ctx context.Context, inventoryID *string, limit, offset int32) ([]*model.InventoryItemResponse, error)
 	UpdateInventoryItem(ctx context.Context, inventoryItemID string, req *model.UpdateInventoryItemRequest) (*model.InventoryItemResponse, error)
 	DeleteInventoryItem(ctx context.Context, inventoryItemID string) error
+	DeleteInventoryItemsBatch(ctx context.Context, itemIDs []string) error
 	CalculateInventory(ctx context.Context, inventoryID string) (*model.InventoryResponse, error)
 	CreateInventoryBatch(ctx context.Context, req *model.CreateInventoryBatchRequest) (*model.CreateInventoryBatchResponse, error)
 }
@@ -293,12 +296,14 @@ type DeductionI interface {
 
 	CreateDeduction(ctx context.Context, req *model.CreateDeductionRequest) (*model.DeductionResponse, error)
 	GetDeductionByID(ctx context.Context, id string) (*model.DeductionResponse, error)
-	GetAllDeductions(ctx context.Context, limit, offset int32) ([]*model.DeductionResponse, error)
+	GetAllDeductions(ctx context.Context, filter model.DeductionFilter, limit, offset int32) (*model.PaginatedDeductionsResponse, error)
 	UpdateDeduction(ctx context.Context, id string, req *model.UpdateDeductionRequest) (*model.DeductionResponse, error)
 	DeleteDeduction(ctx context.Context, id string) error
+	DeleteDeductionsBatch(ctx context.Context, req *model.DeleteDeductionsBatchRequest) error
 	RestoreDeduction(ctx context.Context, id string) (*model.DeductionResponse, error)
 	UpsertDeductionItems(ctx context.Context, deductionID string, req *model.UpsertDeductionItemsRequest) (*model.DeductionResponse, error)
 	DeleteDeductionItem(ctx context.Context, deductionID, itemID string) (*model.DeductionResponse, error)
+	DeleteDeductionItemsBatch(ctx context.Context, deductionID string, req *model.DeleteDeductionItemsBatchRequest) (*model.DeductionResponse, error)
 }
 
 type InvoiceI interface {
@@ -310,6 +315,7 @@ type InvoiceI interface {
 	UpdateInvoice(ctx context.Context, id string, req *model.UpdateInvoiceRequest) (*model.InvoiceResponse, error)
 	UpdateInvoiceStatus(ctx context.Context, id string, status string) (*model.InvoiceResponse, error)
 	DeleteInvoice(ctx context.Context, id string) error
+	DeleteInvoicesBatch(ctx context.Context, req *model.DeleteInvoicesBatchRequest) error
 	RestoreInvoice(ctx context.Context, id string) error
 	SearchInvoices(ctx context.Context, query string, limit, offset int32) ([]*model.InvoiceResponse, error)
 	GetInvoiceWithDetails(ctx context.Context, id string) (*model.InvoiceGetWithDetailsResponse, error)
@@ -323,6 +329,7 @@ type InvoiceI interface {
 	UpdateInvoiceDetail(ctx context.Context, id string, req *model.UpdateInvoiceDetailRequest) (*model.InvoiceDetailResponse, error)
 	UpdateInvoiceDetailQuantity(ctx context.Context, id string, quantity string) (*model.InvoiceDetailResponse, error)
 	DeleteInvoiceDetail(ctx context.Context, id string) error
+	DeleteInvoiceDetailsBatch(ctx context.Context, req *model.DeleteInvoiceDetailsBatchRequest) error
 	RestoreInvoiceDetail(ctx context.Context, id string) error
 	DeleteInvoiceDetailsByInvoiceID(ctx context.Context, invoiceID string) error
 	UpsertInvoiceDetails(ctx context.Context, invoiceID string, req *model.UpsertInvoiceDetailsRequest) (*model.UpsertInvoiceDetailsResponse, error)
@@ -400,9 +407,10 @@ type TransferI interface {
 	CreateTransfer(ctx context.Context, req model.CreateTransferRequest) (*model.TransferResponse, error)
 	AddTransferItems(ctx context.Context, req model.CreateTransferItemsRequest) (*model.TransferResponse, error)
 	GetTransferByID(ctx context.Context, transferID string) (*model.TransferResponse, error)
-	GetAllTransfers(ctx context.Context, limit, offset int32) ([]model.TransferResponse, error)
+	GetAllTransfers(ctx context.Context, filter model.TransferFilter, expand bool, limit, offset int32) (*model.PaginatedTransfersResponse, error)
 	DeleteTransfer(ctx context.Context, transferID string) error
 	DeleteTransferItem(ctx context.Context, itemID string) error
+	DeleteTransfersBatch(ctx context.Context, req *model.DeleteTransfersBatchRequest) error
 	UpsertTransferItems(ctx context.Context, transferID string, req model.UpsertTransferItemsRequest) (*model.TransferResponse, error)
 }
 

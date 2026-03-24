@@ -129,6 +129,14 @@ type InvoiceDetailBatchResponse struct {
 	Errors  []string                `json:"errors,omitempty"`
 }
 
+type DeleteInvoicesBatchRequest struct {
+	IDs []string `json:"ids" validate:"required,min=1"`
+}
+
+type DeleteInvoiceDetailsBatchRequest struct {
+	IDs []string `json:"ids" validate:"required,min=1"`
+}
+
 type UpdateInvoiceDetailRequest struct {
 	IngredientID *string `json:"ingredient_id,omitempty" example:"e2g30c86-9h7e-6647-1636-3d23effg1f1"`
 	Quantity     *string `json:"quantity,omitempty" example:"50"`

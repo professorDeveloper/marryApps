@@ -6490,7 +6490,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Retrieve deductions with pagination",
+                "description": "Retrieve deductions with filters and pagination",
                 "consumes": [
                     "application/json"
                 ],
@@ -6515,16 +6515,55 @@ const docTemplate = `{
                         "description": "Offset for pagination (default: 0)",
                         "name": "offset",
                         "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter from date (YYYY-MM-DD)",
+                        "name": "date_from",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter to date (YYYY-MM-DD)",
+                        "name": "date_to",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by status (draft, active)",
+                        "name": "status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by storage UUID",
+                        "name": "storage_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by act group UUID",
+                        "name": "act_group_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by ingredient UUID (matches deduction items)",
+                        "name": "ingredient_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Comma-separated relations to expand (e.g. storage_id)",
+                        "name": "expand",
+                        "in": "query"
                     }
                 ],
                 "responses": {
                     "200": {
                         "description": "Deductions",
                         "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/model.DeductionResponse"
-                            }
+                            "$ref": "#/definitions/model.PaginatedDeductionsResponse"
                         }
                     },
                     "401": {
@@ -6574,6 +6613,63 @@ const docTemplate = `{
                         "description": "Created",
                         "schema": {
                             "$ref": "#/definitions/model.DeductionResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/deductions/batch": {
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Soft-delete multiple deductions; if active, stock is reversed for each",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "deductions"
+                ],
+                "summary": "Batch delete deductions",
+                "parameters": [
+                    {
+                        "description": "IDs to delete",
+                        "name": "input",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.DeleteDeductionsBatchRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Deleted",
+                        "schema": {
+                            "$ref": "#/definitions/model.SuccessResponse"
                         }
                     },
                     "400": {
@@ -6973,6 +7069,12 @@ const docTemplate = `{
                         "name": "id",
                         "in": "path",
                         "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Comma-separated relations to expand (e.g. storage_id)",
+                        "name": "expand",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -7137,7 +7239,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Replaces all deduction items for the given deduction. Previous stock deductions are reversed, then new quantities are applied. Returns warnings if any ingredient has insufficient stock.",
+                "description": "Full replace of deduction items. Optionally update deduction fields (date, status, storage_id, etc.) in the same call. Stock adjusted on status transition.",
                 "consumes": [
                     "application/json"
                 ],
@@ -7157,7 +7259,7 @@ const docTemplate = `{
                         "required": true
                     },
                     {
-                        "description": "New deduction items",
+                        "description": "Deduction items (required) + optional deduction fields",
                         "name": "input",
                         "in": "body",
                         "required": true,
@@ -7181,6 +7283,68 @@ const docTemplate = `{
                     },
                     "404": {
                         "description": "Deduction not found",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Remove multiple items from a deduction; if active, stock is reversed for each",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "deductions"
+                ],
+                "summary": "Batch delete deduction items",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Deduction ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Item IDs to delete",
+                        "name": "input",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.DeleteDeductionItemsBatchRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Updated deduction",
+                        "schema": {
+                            "$ref": "#/definitions/model.DeductionResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
                         "schema": {
                             "$ref": "#/definitions/model.ErrorResponse"
                         }
@@ -13137,7 +13301,7 @@ const docTemplate = `{
                     },
                     {
                         "type": "string",
-                        "description": "Inventory status",
+                        "description": "Inventory status (draft, active, deleted)",
                         "name": "status",
                         "in": "query"
                     },
@@ -13153,6 +13317,12 @@ const docTemplate = `{
                         "default": 0,
                         "description": "Offset for pagination (default: 0)",
                         "name": "offset",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Comma-separated relations to expand (e.g. storage_id)",
+                        "name": "expand",
                         "in": "query"
                     }
                 ],
@@ -13285,6 +13455,61 @@ const docTemplate = `{
                         }
                     }
                 }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Soft delete multiple inventories. Reverses stock changes for any that are active.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "inventories"
+                ],
+                "summary": "Batch delete inventories",
+                "parameters": [
+                    {
+                        "description": "List of inventory IDs to delete",
+                        "name": "input",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.DeleteInventoriesBatchRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Inventories deleted successfully",
+                        "schema": {
+                            "$ref": "#/definitions/model.SuccessResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    }
+                }
             }
         },
         "/api/v1/inventories/search": {
@@ -13384,6 +13609,12 @@ const docTemplate = `{
                         "name": "id",
                         "in": "path",
                         "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Comma-separated relations to expand (e.g. storage_id)",
+                        "name": "expand",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -13605,7 +13836,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "inventory_items"
+                    "inventories"
                 ],
                 "summary": "Get inventory items",
                 "parameters": [
@@ -13615,6 +13846,12 @@ const docTemplate = `{
                         "name": "id",
                         "in": "path",
                         "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Comma-separated relations to expand (e.g. ingredient_id)",
+                        "name": "expand",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -13720,7 +13957,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Upsert (create/update) counted quantities for multiple ingredients in an existing inventory. Blocked if inventory is already applied.",
+                "description": "Full replace of inventory items. Optionally update inventory fields (date, storage_id, status, description) in the same call. Stock adjusted on status transition.",
                 "consumes": [
                     "application/json"
                 ],
@@ -13728,9 +13965,9 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "inventory_items"
+                    "inventories"
                 ],
-                "summary": "Update inventory items batch",
+                "summary": "Replace inventory items batch",
                 "parameters": [
                     {
                         "type": "string",
@@ -13740,7 +13977,7 @@ const docTemplate = `{
                         "required": true
                     },
                     {
-                        "description": "Inventory items batch update data",
+                        "description": "Inventory items batch data (items required; inventory fields optional)",
                         "name": "input",
                         "in": "body",
                         "required": true,
@@ -13760,7 +13997,69 @@ const docTemplate = `{
                         }
                     },
                     "400": {
-                        "description": "Invalid request or inventory already applied",
+                        "description": "Invalid request or inventory is deleted",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Remove specific inventory items by ID. Reverses stock if the inventory is active.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "inventories"
+                ],
+                "summary": "Batch delete inventory items",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Inventory ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "List of inventory item IDs to delete",
+                        "name": "input",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.DeleteInventoryItemsBatchRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Inventory items deleted successfully",
+                        "schema": {
+                            "$ref": "#/definitions/model.SuccessResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request",
                         "schema": {
                             "$ref": "#/definitions/model.ErrorResponse"
                         }
@@ -15033,6 +15332,61 @@ const docTemplate = `{
                         }
                     }
                 }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Delete multiple invoices at once. Arrived → stock reversed + deleted. Pending → cancelled.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Invoices"
+                ],
+                "summary": "Batch delete invoices",
+                "parameters": [
+                    {
+                        "description": "IDs to delete",
+                        "name": "input",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.DeleteInvoicesBatchRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Deleted",
+                        "schema": {
+                            "$ref": "#/definitions/model.SuccessResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    }
+                }
             }
         },
         "/api/v1/invoices/search": {
@@ -15440,6 +15794,68 @@ const docTemplate = `{
                     },
                     "500": {
                         "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Delete multiple invoice detail line items at once, reversing stock for each",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Invoices"
+                ],
+                "summary": "Batch delete invoice details",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Invoice ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Detail IDs to delete",
+                        "name": "input",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.DeleteInvoiceDetailsBatchRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Deleted",
+                        "schema": {
+                            "$ref": "#/definitions/model.SuccessResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
                         "schema": {
                             "$ref": "#/definitions/model.ErrorResponse"
                         }
@@ -21900,7 +22316,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Get all transfers visible to the current branch",
+                "description": "Get transfers visible to the current branch, with optional filters",
                 "produces": [
                     "application/json"
                 ],
@@ -21920,16 +22336,61 @@ const docTemplate = `{
                         "description": "Offset (default: 0)",
                         "name": "offset",
                         "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Pass 'items' to include transfer items in each result",
+                        "name": "expand",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter from date (YYYY-MM-DD)",
+                        "name": "date_from",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter to date (YYYY-MM-DD)",
+                        "name": "date_to",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by status (draft/active/deleted)",
+                        "name": "status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by sender storage ID",
+                        "name": "from_storage_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by receiver storage ID",
+                        "name": "to_storage_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by act group ID",
+                        "name": "act_group_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by ingredient ID",
+                        "name": "ingredient_id",
+                        "in": "query"
                     }
                 ],
                 "responses": {
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/model.TransferResponse"
-                            }
+                            "$ref": "#/definitions/model.PaginatedTransfersResponse"
                         }
                     },
                     "401": {
@@ -22046,6 +22507,55 @@ const docTemplate = `{
                     },
                     "401": {
                         "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Soft delete multiple transfers and reverse all their stock changes",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Transfers"
+                ],
+                "summary": "Batch delete transfers",
+                "parameters": [
+                    {
+                        "description": "Transfer IDs to delete",
+                        "name": "input",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.DeleteTransfersBatchRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.SuccessResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
                         "schema": {
                             "$ref": "#/definitions/model.ErrorResponse"
                         }
@@ -25295,6 +25805,10 @@ const docTemplate = `{
                         "$ref": "#/definitions/model.CreateTransferItemEntry"
                     }
                 },
+                "status": {
+                    "type": "string",
+                    "example": "draft"
+                },
                 "to_branch_id": {
                     "type": "string",
                     "example": "uuid"
@@ -25365,6 +25879,10 @@ const docTemplate = `{
                 "from_storage_id": {
                     "type": "string",
                     "example": "uuid"
+                },
+                "status": {
+                    "type": "string",
+                    "example": "draft"
                 },
                 "to_branch_id": {
                     "type": "string",
@@ -25587,6 +26105,111 @@ const docTemplate = `{
                 "DeductionStatusDraft",
                 "DeductionStatusDeleted"
             ]
+        },
+        "model.DeleteDeductionItemsBatchRequest": {
+            "type": "object",
+            "required": [
+                "ids"
+            ],
+            "properties": {
+                "ids": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "model.DeleteDeductionsBatchRequest": {
+            "type": "object",
+            "required": [
+                "ids"
+            ],
+            "properties": {
+                "ids": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "model.DeleteInventoriesBatchRequest": {
+            "type": "object",
+            "required": [
+                "ids"
+            ],
+            "properties": {
+                "ids": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "model.DeleteInventoryItemsBatchRequest": {
+            "type": "object",
+            "required": [
+                "ids"
+            ],
+            "properties": {
+                "ids": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "model.DeleteInvoiceDetailsBatchRequest": {
+            "type": "object",
+            "required": [
+                "ids"
+            ],
+            "properties": {
+                "ids": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "model.DeleteInvoicesBatchRequest": {
+            "type": "object",
+            "required": [
+                "ids"
+            ],
+            "properties": {
+                "ids": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "model.DeleteTransfersBatchRequest": {
+            "type": "object",
+            "required": [
+                "ids"
+            ],
+            "properties": {
+                "ids": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
         },
         "model.DepartmentResponse": {
             "type": "object",
@@ -27121,6 +27744,54 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/model.OutgoingInvoiceItemResponse"
                     }
+                }
+            }
+        },
+        "model.PaginatedDeductionsResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.DeductionResponse"
+                    }
+                },
+                "pagination": {
+                    "$ref": "#/definitions/model.PaginationMeta"
+                }
+            }
+        },
+        "model.PaginatedTransfersResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.TransferResponse"
+                    }
+                },
+                "pagination": {
+                    "$ref": "#/definitions/model.PaginationMeta"
+                },
+                "total_amount": {
+                    "type": "string"
+                }
+            }
+        },
+        "model.PaginationMeta": {
+            "type": "object",
+            "properties": {
+                "limit": {
+                    "type": "integer"
+                },
+                "offset": {
+                    "type": "integer"
+                },
+                "total": {
+                    "type": "integer"
+                },
+                "total_pages": {
+                    "type": "integer"
                 }
             }
         },
@@ -28950,12 +29621,36 @@ const docTemplate = `{
                 "items"
             ],
             "properties": {
+                "act_group_id": {
+                    "type": "string",
+                    "example": "123e4567-e89b-12d3-a456-426614174000"
+                },
+                "date": {
+                    "description": "Optional deduction-level fields (update deduction + items in one call)",
+                    "type": "string",
+                    "example": "2024-01-01"
+                },
+                "description": {
+                    "type": "string",
+                    "example": "spoiled items"
+                },
+                "description_i18n": {
+                    "type": "string"
+                },
                 "items": {
                     "type": "array",
                     "minItems": 1,
                     "items": {
                         "$ref": "#/definitions/model.CreateDeductionItemRequest"
                     }
+                },
+                "status": {
+                    "type": "string",
+                    "example": "active"
+                },
+                "storage_id": {
+                    "type": "string",
+                    "example": "123e4567-e89b-12d3-a456-426614174000"
                 }
             }
         },
@@ -28981,12 +29676,31 @@ const docTemplate = `{
                 "items"
             ],
             "properties": {
+                "date": {
+                    "description": "Optional inventory-level fields (update inventory + items in one call)",
+                    "type": "string",
+                    "example": "2024-01-01"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "description_i18n": {
+                    "type": "string"
+                },
                 "items": {
                     "type": "array",
                     "minItems": 1,
                     "items": {
                         "$ref": "#/definitions/model.UpsertInventoryItemRequest"
                     }
+                },
+                "status": {
+                    "type": "string",
+                    "example": "active"
+                },
+                "storage_id": {
+                    "type": "string",
+                    "example": "123e4567-e89b-12d3-a456-426614174000"
                 }
             }
         },
@@ -29177,12 +29891,36 @@ const docTemplate = `{
                 "items"
             ],
             "properties": {
+                "act_group_id": {
+                    "type": "string",
+                    "example": "uuid"
+                },
+                "date": {
+                    "description": "Optional transfer-level fields (update header + items in one call)",
+                    "type": "string",
+                    "example": "2024-01-01"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "from_storage_id": {
+                    "type": "string",
+                    "example": "uuid"
+                },
                 "items": {
                     "type": "array",
                     "minItems": 1,
                     "items": {
                         "$ref": "#/definitions/model.CreateTransferItemEntry"
                     }
+                },
+                "status": {
+                    "type": "string",
+                    "example": "active"
+                },
+                "to_storage_id": {
+                    "type": "string",
+                    "example": "uuid"
                 }
             }
         },

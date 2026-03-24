@@ -1415,6 +1415,9 @@ definitions:
           $ref: '#/definitions/model.CreateTransferItemEntry'
         minItems: 1
         type: array
+      status:
+        example: draft
+        type: string
       to_branch_id:
         example: uuid
         type: string
@@ -1466,6 +1469,9 @@ definitions:
         type: string
       from_storage_id:
         example: uuid
+        type: string
+      status:
+        example: draft
         type: string
       to_branch_id:
         example: uuid
@@ -1627,6 +1633,76 @@ definitions:
     - DeductionStatusActive
     - DeductionStatusDraft
     - DeductionStatusDeleted
+  model.DeleteDeductionItemsBatchRequest:
+    properties:
+      ids:
+        items:
+          type: string
+        minItems: 1
+        type: array
+    required:
+    - ids
+    type: object
+  model.DeleteDeductionsBatchRequest:
+    properties:
+      ids:
+        items:
+          type: string
+        minItems: 1
+        type: array
+    required:
+    - ids
+    type: object
+  model.DeleteInventoriesBatchRequest:
+    properties:
+      ids:
+        items:
+          type: string
+        minItems: 1
+        type: array
+    required:
+    - ids
+    type: object
+  model.DeleteInventoryItemsBatchRequest:
+    properties:
+      ids:
+        items:
+          type: string
+        minItems: 1
+        type: array
+    required:
+    - ids
+    type: object
+  model.DeleteInvoiceDetailsBatchRequest:
+    properties:
+      ids:
+        items:
+          type: string
+        minItems: 1
+        type: array
+    required:
+    - ids
+    type: object
+  model.DeleteInvoicesBatchRequest:
+    properties:
+      ids:
+        items:
+          type: string
+        minItems: 1
+        type: array
+    required:
+    - ids
+    type: object
+  model.DeleteTransfersBatchRequest:
+    properties:
+      ids:
+        items:
+          type: string
+        minItems: 1
+        type: array
+    required:
+    - ids
+    type: object
   model.DepartmentResponse:
     properties:
       color_code:
@@ -2701,6 +2777,37 @@ definitions:
         items:
           $ref: '#/definitions/model.OutgoingInvoiceItemResponse'
         type: array
+    type: object
+  model.PaginatedDeductionsResponse:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/model.DeductionResponse'
+        type: array
+      pagination:
+        $ref: '#/definitions/model.PaginationMeta'
+    type: object
+  model.PaginatedTransfersResponse:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/model.TransferResponse'
+        type: array
+      pagination:
+        $ref: '#/definitions/model.PaginationMeta'
+      total_amount:
+        type: string
+    type: object
+  model.PaginationMeta:
+    properties:
+      limit:
+        type: integer
+      offset:
+        type: integer
+      total:
+        type: integer
+      total_pages:
+        type: integer
     type: object
   model.PincodeLoginRequest:
     properties:
@@ -3961,11 +4068,30 @@ definitions:
     type: object
   model.UpsertDeductionItemsRequest:
     properties:
+      act_group_id:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+      date:
+        description: Optional deduction-level fields (update deduction + items in
+          one call)
+        example: "2024-01-01"
+        type: string
+      description:
+        example: spoiled items
+        type: string
+      description_i18n:
+        type: string
       items:
         items:
           $ref: '#/definitions/model.CreateDeductionItemRequest'
         minItems: 1
         type: array
+      status:
+        example: active
+        type: string
+      storage_id:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
     required:
     - items
     type: object
@@ -3982,11 +4108,26 @@ definitions:
     type: object
   model.UpsertInventoryItemsRequest:
     properties:
+      date:
+        description: Optional inventory-level fields (update inventory + items in
+          one call)
+        example: "2024-01-01"
+        type: string
+      description:
+        type: string
+      description_i18n:
+        type: string
       items:
         items:
           $ref: '#/definitions/model.UpsertInventoryItemRequest'
         minItems: 1
         type: array
+      status:
+        example: active
+        type: string
+      storage_id:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
     required:
     - items
     type: object
@@ -4119,11 +4260,30 @@ definitions:
     type: object
   model.UpsertTransferItemsRequest:
     properties:
+      act_group_id:
+        example: uuid
+        type: string
+      date:
+        description: Optional transfer-level fields (update header + items in one
+          call)
+        example: "2024-01-01"
+        type: string
+      description:
+        type: string
+      from_storage_id:
+        example: uuid
+        type: string
       items:
         items:
           $ref: '#/definitions/model.CreateTransferItemEntry'
         minItems: 1
         type: array
+      status:
+        example: active
+        type: string
+      to_storage_id:
+        example: uuid
+        type: string
     required:
     - items
     type: object
@@ -8389,7 +8549,7 @@ paths:
     get:
       consumes:
       - application/json
-      description: Retrieve deductions with pagination
+      description: Retrieve deductions with filters and pagination
       parameters:
       - default: 20
         description: 'Limit results (default: 20)'
@@ -8401,15 +8561,41 @@ paths:
         in: query
         name: offset
         type: integer
+      - description: Filter from date (YYYY-MM-DD)
+        in: query
+        name: date_from
+        type: string
+      - description: Filter to date (YYYY-MM-DD)
+        in: query
+        name: date_to
+        type: string
+      - description: Filter by status (draft, active)
+        in: query
+        name: status
+        type: string
+      - description: Filter by storage UUID
+        in: query
+        name: storage_id
+        type: string
+      - description: Filter by act group UUID
+        in: query
+        name: act_group_id
+        type: string
+      - description: Filter by ingredient UUID (matches deduction items)
+        in: query
+        name: ingredient_id
+        type: string
+      - description: Comma-separated relations to expand (e.g. storage_id)
+        in: query
+        name: expand
+        type: string
       produces:
       - application/json
       responses:
         "200":
           description: Deductions
           schema:
-            items:
-              $ref: '#/definitions/model.DeductionResponse'
-            type: array
+            $ref: '#/definitions/model.PaginatedDeductionsResponse'
         "401":
           description: Unauthorized
           schema:
@@ -8503,6 +8689,10 @@ paths:
         in: path
         name: id
         required: true
+        type: string
+      - description: Comma-separated relations to expand (e.g. storage_id)
+        in: query
+        name: expand
         type: string
       produces:
       - application/json
@@ -8619,19 +8809,60 @@ paths:
       tags:
       - deductions
   /api/v1/deductions/{id}/items/batch:
-    put:
+    delete:
       consumes:
       - application/json
-      description: Replaces all deduction items for the given deduction. Previous
-        stock deductions are reversed, then new quantities are applied. Returns warnings
-        if any ingredient has insufficient stock.
+      description: Remove multiple items from a deduction; if active, stock is reversed
+        for each
       parameters:
       - description: Deduction ID
         in: path
         name: id
         required: true
         type: string
-      - description: New deduction items
+      - description: Item IDs to delete
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/model.DeleteDeductionItemsBatchRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Updated deduction
+          schema:
+            $ref: '#/definitions/model.DeductionResponse'
+        "400":
+          description: Invalid request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Batch delete deduction items
+      tags:
+      - deductions
+    put:
+      consumes:
+      - application/json
+      description: Full replace of deduction items. Optionally update deduction fields
+        (date, status, storage_id, etc.) in the same call. Stock adjusted on status
+        transition.
+      parameters:
+      - description: Deduction ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Deduction items (required) + optional deduction fields
         in: body
         name: input
         required: true
@@ -8694,6 +8925,43 @@ paths:
       security:
       - BearerAuth: []
       summary: Restore deduction
+      tags:
+      - deductions
+  /api/v1/deductions/batch:
+    delete:
+      consumes:
+      - application/json
+      description: Soft-delete multiple deductions; if active, stock is reversed for
+        each
+      parameters:
+      - description: IDs to delete
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/model.DeleteDeductionsBatchRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Deleted
+          schema:
+            $ref: '#/definitions/model.SuccessResponse'
+        "400":
+          description: Invalid request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Batch delete deductions
       tags:
       - deductions
   /api/v1/deductions/group:
@@ -12733,7 +13001,7 @@ paths:
         in: query
         name: ingredient_id
         type: string
-      - description: Inventory status
+      - description: Inventory status (draft, active, deleted)
         in: query
         name: status
         type: string
@@ -12747,6 +13015,10 @@ paths:
         in: query
         name: offset
         type: integer
+      - description: Comma-separated relations to expand (e.g. storage_id)
+        in: query
+        name: expand
+        type: string
       produces:
       - application/json
       responses:
@@ -12849,6 +13121,10 @@ paths:
         in: path
         name: id
         required: true
+        type: string
+      - description: Comma-separated relations to expand (e.g. storage_id)
+        in: query
+        name: expand
         type: string
       produces:
       - application/json
@@ -12966,6 +13242,10 @@ paths:
         name: id
         required: true
         type: string
+      - description: Comma-separated relations to expand (e.g. ingredient_id)
+        in: query
+        name: expand
+        type: string
       produces:
       - application/json
       responses:
@@ -12991,7 +13271,7 @@ paths:
       - BearerAuth: []
       summary: Get inventory items
       tags:
-      - inventory_items
+      - inventories
     post:
       consumes:
       - application/json
@@ -13036,18 +13316,61 @@ paths:
       tags:
       - inventory_items
   /api/v1/inventories/{id}/items/batch:
-    put:
+    delete:
       consumes:
       - application/json
-      description: Upsert (create/update) counted quantities for multiple ingredients
-        in an existing inventory. Blocked if inventory is already applied.
+      description: Remove specific inventory items by ID. Reverses stock if the inventory
+        is active.
       parameters:
       - description: Inventory ID
         in: path
         name: id
         required: true
         type: string
-      - description: Inventory items batch update data
+      - description: List of inventory item IDs to delete
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/model.DeleteInventoryItemsBatchRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Inventory items deleted successfully
+          schema:
+            $ref: '#/definitions/model.SuccessResponse'
+        "400":
+          description: Invalid request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Batch delete inventory items
+      tags:
+      - inventories
+    put:
+      consumes:
+      - application/json
+      description: Full replace of inventory items. Optionally update inventory fields
+        (date, storage_id, status, description) in the same call. Stock adjusted on
+        status transition.
+      parameters:
+      - description: Inventory ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Inventory items batch data (items required; inventory fields
+          optional)
         in: body
         name: input
         required: true
@@ -13063,7 +13386,7 @@ paths:
               $ref: '#/definitions/model.InventoryItemComputedResponse'
             type: array
         "400":
-          description: Invalid request or inventory already applied
+          description: Invalid request or inventory is deleted
           schema:
             $ref: '#/definitions/model.ErrorResponse'
         "401":
@@ -13076,9 +13399,9 @@ paths:
             $ref: '#/definitions/model.ErrorResponse'
       security:
       - BearerAuth: []
-      summary: Update inventory items batch
+      summary: Replace inventory items batch
       tags:
-      - inventory_items
+      - inventories
   /api/v1/inventories/{id}/restore:
     post:
       consumes:
@@ -13115,6 +13438,42 @@ paths:
       tags:
       - inventories
   /api/v1/inventories/batch:
+    delete:
+      consumes:
+      - application/json
+      description: Soft delete multiple inventories. Reverses stock changes for any
+        that are active.
+      parameters:
+      - description: List of inventory IDs to delete
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/model.DeleteInventoriesBatchRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Inventories deleted successfully
+          schema:
+            $ref: '#/definitions/model.SuccessResponse'
+        "400":
+          description: Invalid request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Batch delete inventories
+      tags:
+      - inventories
     post:
       consumes:
       - application/json
@@ -14107,6 +14466,47 @@ paths:
       tags:
       - Invoices
   /api/v1/invoices/{id}/details/batch:
+    delete:
+      consumes:
+      - application/json
+      description: Delete multiple invoice detail line items at once, reversing stock
+        for each
+      parameters:
+      - description: Invoice ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Detail IDs to delete
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/model.DeleteInvoiceDetailsBatchRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Deleted
+          schema:
+            $ref: '#/definitions/model.SuccessResponse'
+        "400":
+          description: Invalid request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Batch delete invoice details
+      tags:
+      - Invoices
     put:
       consumes:
       - application/json
@@ -14249,6 +14649,42 @@ paths:
       tags:
       - Invoices
   /api/v1/invoices/batch:
+    delete:
+      consumes:
+      - application/json
+      description: Delete multiple invoices at once. Arrived → stock reversed + deleted.
+        Pending → cancelled.
+      parameters:
+      - description: IDs to delete
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/model.DeleteInvoicesBatchRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Deleted
+          schema:
+            $ref: '#/definitions/model.SuccessResponse'
+        "400":
+          description: Invalid request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Batch delete invoices
+      tags:
+      - Invoices
     post:
       consumes:
       - application/json
@@ -18443,7 +18879,7 @@ paths:
       - transactions
   /api/v1/transfers:
     get:
-      description: Get all transfers visible to the current branch
+      description: Get transfers visible to the current branch, with optional filters
       parameters:
       - description: 'Limit (default: 20)'
         in: query
@@ -18453,15 +18889,45 @@ paths:
         in: query
         name: offset
         type: integer
+      - description: Pass 'items' to include transfer items in each result
+        in: query
+        name: expand
+        type: string
+      - description: Filter from date (YYYY-MM-DD)
+        in: query
+        name: date_from
+        type: string
+      - description: Filter to date (YYYY-MM-DD)
+        in: query
+        name: date_to
+        type: string
+      - description: Filter by status (draft/active/deleted)
+        in: query
+        name: status
+        type: string
+      - description: Filter by sender storage ID
+        in: query
+        name: from_storage_id
+        type: string
+      - description: Filter by receiver storage ID
+        in: query
+        name: to_storage_id
+        type: string
+      - description: Filter by act group ID
+        in: query
+        name: act_group_id
+        type: string
+      - description: Filter by ingredient ID
+        in: query
+        name: ingredient_id
+        type: string
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            items:
-              $ref: '#/definitions/model.TransferResponse'
-            type: array
+            $ref: '#/definitions/model.PaginatedTransfersResponse'
         "401":
           description: Unauthorized
           schema:
@@ -18616,6 +19082,37 @@ paths:
       tags:
       - Transfers
   /api/v1/transfers/batch:
+    delete:
+      consumes:
+      - application/json
+      description: Soft delete multiple transfers and reverse all their stock changes
+      parameters:
+      - description: Transfer IDs to delete
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/model.DeleteTransfersBatchRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.SuccessResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Batch delete transfers
+      tags:
+      - Transfers
     post:
       consumes:
       - application/json

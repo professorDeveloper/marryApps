@@ -246,16 +246,23 @@ func (h *Handler) CreateDeduction(c echo.Context) error {
 	return c.JSON(http.StatusCreated, model.NewSuccessResponse("Deduction created successfully", resp, http.StatusCreated))
 }
 
-// GetAllDeductions retrieves deductions
+// GetAllDeductions retrieves deductions with filtering and pagination
 // @Summary Get deductions
-// @Description Retrieve deductions with pagination
+// @Description Retrieve deductions with filters and pagination
 // @Tags deductions
 // @Accept json
 // @Produce json
 // @Security BearerAuth
 // @Param limit query int false "Limit results (default: 20)" default(20)
 // @Param offset query int false "Offset for pagination (default: 0)" default(0)
-// @Success 200 {array} model.DeductionResponse "Deductions"
+// @Param date_from query string false "Filter from date (YYYY-MM-DD)"
+// @Param date_to query string false "Filter to date (YYYY-MM-DD)"
+// @Param status query string false "Filter by status (draft, active)"
+// @Param storage_id query string false "Filter by storage UUID"
+// @Param act_group_id query string false "Filter by act group UUID"
+// @Param ingredient_id query string false "Filter by ingredient UUID (matches deduction items)"
+// @Param expand query string false "Comma-separated relations to expand (e.g. storage_id)"
+// @Success 200 {object} model.PaginatedDeductionsResponse "Deductions"
 // @Failure 401 {object} model.ErrorResponse "Unauthorized"
 // @Failure 500 {object} model.ErrorResponse "Internal server error"
 // @Router /api/v1/deductions [get]
@@ -277,13 +284,39 @@ func (h *Handler) GetAllDeductions(c echo.Context) error {
 		}
 	}
 
-	items, err := h.service.Deduction().GetAllDeductions(c.Request().Context(), limit, offset)
+	strPtr := func(s string) *string {
+		if s == "" {
+			return nil
+		}
+		return &s
+	}
+	filter := model.DeductionFilter{
+		DateFrom:     strPtr(c.QueryParam("date_from")),
+		DateTo:       strPtr(c.QueryParam("date_to")),
+		Status:       strPtr(c.QueryParam("status")),
+		StorageID:    strPtr(c.QueryParam("storage_id")),
+		ActGroupID:   strPtr(c.QueryParam("act_group_id")),
+		IngredientID: strPtr(c.QueryParam("ingredient_id")),
+	}
+
+	paginated, err := h.service.Deduction().GetAllDeductions(c.Request().Context(), filter, limit, offset)
 	if err != nil {
 		log.Printf("GetAllDeductions failed: %v", err)
 		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("failed to fetch deductions", "see logs for details", http.StatusInternalServerError))
 	}
 
-	return c.JSON(http.StatusOK, model.NewSuccessResponse("Data retrieved successfully", items, http.StatusOK))
+	if maps, expanded, err := h.expandListResponse(c, paginated.Data, "deductions"); expanded {
+		if err != nil {
+			log.Printf("expandListResponse failed: %v", err)
+		} else {
+			return c.JSON(http.StatusOK, model.NewSuccessResponse("Data retrieved successfully", map[string]interface{}{
+				"data":       maps,
+				"pagination": paginated.Pagination,
+			}, http.StatusOK))
+		}
+	}
+
+	return c.JSON(http.StatusOK, model.NewSuccessResponse("Data retrieved successfully", paginated, http.StatusOK))
 }
 
 // GetDeductionByID retrieves a deduction by ID
@@ -294,6 +327,7 @@ func (h *Handler) GetAllDeductions(c echo.Context) error {
 // @Produce json
 // @Security BearerAuth
 // @Param id path string true "Deduction ID"
+// @Param expand query string false "Comma-separated relations to expand (e.g. storage_id)"
 // @Success 200 {object} model.DeductionResponse "Deduction"
 // @Failure 400 {object} model.ErrorResponse "Invalid ID"
 // @Failure 401 {object} model.ErrorResponse "Unauthorized"
@@ -316,6 +350,14 @@ func (h *Handler) GetDeductionByID(c echo.Context) error {
 	}
 	if resp == nil {
 		return c.JSON(http.StatusNotFound, model.NewErrorResponse("deduction not found", "see logs for details", http.StatusNotFound))
+	}
+
+	if maps, expanded, err := h.expandListResponse(c, []*model.DeductionResponse{resp}, "deductions"); expanded {
+		if err != nil {
+			log.Printf("expandListResponse failed: %v", err)
+		} else if len(maps) > 0 {
+			return c.JSON(http.StatusOK, model.NewSuccessResponse("Deduction retrieved successfully", maps[0], http.StatusOK))
+		}
 	}
 
 	return c.JSON(http.StatusOK, model.NewSuccessResponse("Deduction retrieved successfully", resp, http.StatusOK))
@@ -424,15 +466,17 @@ func (h *Handler) RestoreDeduction(c echo.Context) error {
 	return c.JSON(http.StatusOK, model.NewSuccessResponse("Deduction restored successfully", resp, http.StatusOK))
 }
 
-// UpsertDeductionItems replaces all items of a deduction in one call, reversing the previous stock impact and applying the new one.
+// UpsertDeductionItems replaces all items and optionally updates deduction fields in one call.
+// Optionally pass date, act_group_id, storage_id, status, description to update the deduction itself.
+// Status transitions (draft↔active) trigger stock apply/reverse automatically.
 // @Summary Batch update deduction items
-// @Description Replaces all deduction items for the given deduction. Previous stock deductions are reversed, then new quantities are applied. Returns warnings if any ingredient has insufficient stock.
+// @Description Full replace of deduction items. Optionally update deduction fields (date, status, storage_id, etc.) in the same call. Stock adjusted on status transition.
 // @Tags deductions
 // @Accept json
 // @Produce json
 // @Security BearerAuth
 // @Param id path string true "Deduction ID"
-// @Param input body model.UpsertDeductionItemsRequest true "New deduction items"
+// @Param input body model.UpsertDeductionItemsRequest true "Deduction items (required) + optional deduction fields"
 // @Success 200 {object} model.DeductionResponse "Updated deduction with new items"
 // @Failure 400 {object} model.ErrorResponse "Invalid request"
 // @Failure 404 {object} model.ErrorResponse "Deduction not found"
@@ -489,4 +533,65 @@ func (h *Handler) DeleteDeductionItem(c echo.Context) error {
 	}
 
 	return c.JSON(http.StatusOK, model.NewSuccessResponse("Deduction item deleted successfully", resp, http.StatusOK))
+}
+
+// DeleteDeductionsBatch deletes multiple deductions at once
+// @Summary Batch delete deductions
+// @Description Soft-delete multiple deductions; if active, stock is reversed for each
+// @Tags deductions
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param input body model.DeleteDeductionsBatchRequest true "IDs to delete"
+// @Success 200 {object} model.SuccessResponse "Deleted"
+// @Failure 400 {object} model.ErrorResponse "Invalid request"
+// @Failure 401 {object} model.ErrorResponse "Unauthorized"
+// @Failure 500 {object} model.ErrorResponse "Internal server error"
+// @Router /api/v1/deductions/batch [delete]
+func (h *Handler) DeleteDeductionsBatch(c echo.Context) error {
+	var req model.DeleteDeductionsBatchRequest
+	if err := c.Bind(&req); err != nil {
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("invalid request format", err.Error(), http.StatusBadRequest))
+	}
+
+	if err := h.service.Deduction().DeleteDeductionsBatch(c.Request().Context(), &req); err != nil {
+		log.Printf("DeleteDeductionsBatch failed: %v", err)
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("failed to delete deductions", err.Error(), http.StatusInternalServerError))
+	}
+
+	return c.JSON(http.StatusOK, model.NewSuccessResponse("Deductions deleted successfully", map[string]interface{}{}, http.StatusOK))
+}
+
+// DeleteDeductionItemsBatch deletes multiple items from a deduction at once
+// @Summary Batch delete deduction items
+// @Description Remove multiple items from a deduction; if active, stock is reversed for each
+// @Tags deductions
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path string true "Deduction ID"
+// @Param input body model.DeleteDeductionItemsBatchRequest true "Item IDs to delete"
+// @Success 200 {object} model.DeductionResponse "Updated deduction"
+// @Failure 400 {object} model.ErrorResponse "Invalid request"
+// @Failure 401 {object} model.ErrorResponse "Unauthorized"
+// @Failure 500 {object} model.ErrorResponse "Internal server error"
+// @Router /api/v1/deductions/{id}/items/batch [delete]
+func (h *Handler) DeleteDeductionItemsBatch(c echo.Context) error {
+	id := c.Param("id")
+	if _, err := uuid.Parse(id); err != nil {
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("invalid deduction id", err.Error(), http.StatusBadRequest))
+	}
+
+	var req model.DeleteDeductionItemsBatchRequest
+	if err := c.Bind(&req); err != nil {
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("invalid request format", err.Error(), http.StatusBadRequest))
+	}
+
+	resp, err := h.service.Deduction().DeleteDeductionItemsBatch(c.Request().Context(), id, &req)
+	if err != nil {
+		log.Printf("DeleteDeductionItemsBatch failed: %v", err)
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("failed to delete deduction items", err.Error(), http.StatusInternalServerError))
+	}
+
+	return c.JSON(http.StatusOK, model.NewSuccessResponse("Deduction items deleted successfully", resp, http.StatusOK))
 }

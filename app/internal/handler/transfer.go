@@ -137,15 +137,23 @@ func (h *Handler) GetTransferByID(c echo.Context) error {
 	return c.JSON(http.StatusOK, model.NewSuccessResponse("Transfer retrieved successfully", transfer, http.StatusOK))
 }
 
-// GetAllTransfers retrieves all transfers with pagination
+// GetAllTransfers retrieves transfers with filters and pagination
 // @Summary Get all transfers
-// @Description Get all transfers visible to the current branch
+// @Description Get transfers visible to the current branch, with optional filters
 // @Tags Transfers
 // @Produce json
 // @Security BearerAuth
-// @Param limit query int false "Limit (default: 20)"
-// @Param offset query int false "Offset (default: 0)"
-// @Success 200 {array} model.TransferResponse
+// @Param limit           query int    false "Limit (default: 20)"
+// @Param offset          query int    false "Offset (default: 0)"
+// @Param expand          query string false "Pass 'items' to include transfer items in each result"
+// @Param date_from       query string false "Filter from date (YYYY-MM-DD)"
+// @Param date_to         query string false "Filter to date (YYYY-MM-DD)"
+// @Param status          query string false "Filter by status (draft/active/deleted)"
+// @Param from_storage_id query string false "Filter by sender storage ID"
+// @Param to_storage_id   query string false "Filter by receiver storage ID"
+// @Param act_group_id    query string false "Filter by act group ID"
+// @Param ingredient_id   query string false "Filter by ingredient ID"
+// @Success 200 {object} model.PaginatedTransfersResponse
 // @Failure 401 {object} model.ErrorResponse
 // @Failure 500 {object} model.ErrorResponse
 // @Router /api/v1/transfers [get]
@@ -164,13 +172,67 @@ func (h *Handler) GetAllTransfers(c echo.Context) error {
 		}
 	}
 
-	transfers, err := h.service.Transfer().GetAllTransfers(c.Request().Context(), limit, offset)
+	filter := model.TransferFilter{}
+	if v := c.QueryParam("date_from"); v != "" {
+		filter.DateFrom = &v
+	}
+	if v := c.QueryParam("date_to"); v != "" {
+		filter.DateTo = &v
+	}
+	if v := c.QueryParam("status"); v != "" {
+		filter.Status = &v
+	}
+	if v := c.QueryParam("from_storage_id"); v != "" {
+		filter.FromStorageID = &v
+	}
+	if v := c.QueryParam("to_storage_id"); v != "" {
+		filter.ToStorageID = &v
+	}
+	if v := c.QueryParam("act_group_id"); v != "" {
+		filter.ActGroupID = &v
+	}
+	if v := c.QueryParam("ingredient_id"); v != "" {
+		filter.IngredientID = &v
+	}
+
+	expand := c.QueryParam("expand") == "items"
+
+	result, err := h.service.Transfer().GetAllTransfers(c.Request().Context(), filter, expand, limit, offset)
 	if err != nil {
 		log.Printf("GetAllTransfers failed: %v", err)
 		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("failed to retrieve transfers", err.Error(), http.StatusInternalServerError))
 	}
 
-	return c.JSON(http.StatusOK, model.NewSuccessResponse("Transfers retrieved successfully", transfers, http.StatusOK))
+	return c.JSON(http.StatusOK, model.NewSuccessResponse("Transfers retrieved successfully", result, http.StatusOK))
+}
+
+// DeleteTransfersBatch soft deletes multiple transfers and reverses stock
+// @Summary Batch delete transfers
+// @Description Soft delete multiple transfers and reverse all their stock changes
+// @Tags Transfers
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param input body model.DeleteTransfersBatchRequest true "Transfer IDs to delete"
+// @Success 200 {object} model.SuccessResponse
+// @Failure 400 {object} model.ErrorResponse
+// @Failure 500 {object} model.ErrorResponse
+// @Router /api/v1/transfers/batch [delete]
+func (h *Handler) DeleteTransfersBatch(c echo.Context) error {
+	var req model.DeleteTransfersBatchRequest
+	if err := c.Bind(&req); err != nil {
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("invalid request body", err.Error(), http.StatusBadRequest))
+	}
+	if len(req.IDs) == 0 {
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("ids are required", "missing required field: ids", http.StatusBadRequest))
+	}
+
+	if err := h.service.Transfer().DeleteTransfersBatch(c.Request().Context(), &req); err != nil {
+		log.Printf("DeleteTransfersBatch failed: %v", err)
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("failed to delete transfers", err.Error(), http.StatusInternalServerError))
+	}
+
+	return c.JSON(http.StatusOK, model.NewSuccessResponse("Transfers deleted successfully", (*model.TransferResponse)(nil), http.StatusOK))
 }
 
 // DeleteTransfer soft deletes a transfer and reverses stock

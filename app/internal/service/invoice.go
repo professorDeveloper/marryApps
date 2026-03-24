@@ -367,6 +367,52 @@ func (s *InvoiceS) DeleteInvoice(ctx context.Context, id string) error {
 	return nil
 }
 
+// DeleteInvoicesBatch deletes arrived invoices (reversing stock) or cancels pending invoices.
+func (s *InvoiceS) DeleteInvoicesBatch(ctx context.Context, req *model.DeleteInvoicesBatchRequest) error {
+	if req == nil || len(req.IDs) == 0 {
+		return fmt.Errorf("ids are required")
+	}
+	for _, id := range req.IDs {
+		invoiceID, err := uuid.Parse(id)
+		if err != nil {
+			return fmt.Errorf("invalid invoice id %s: %w", id, err)
+		}
+		inv, err := s.repo.Tenant(ctx).GetInvoiceByID(ctx, invoiceID)
+		if err != nil {
+			return fmt.Errorf("invoice %s not found: %w", id, err)
+		}
+		if !inv.Status.Valid {
+			return fmt.Errorf("invoice %s has no status", id)
+		}
+		switch inv.Status.InvoiceStatus {
+		case pg.InvoiceStatusArrived:
+			if err := s.DeleteInvoice(ctx, id); err != nil {
+				return err
+			}
+		case pg.InvoiceStatusPending:
+			if _, err := s.CancelInvoice(ctx, id); err != nil {
+				return err
+			}
+		default:
+			return fmt.Errorf("invoice %s has status %s: only arrived or pending invoices can be deleted", id, inv.Status.InvoiceStatus)
+		}
+	}
+	return nil
+}
+
+// DeleteInvoiceDetailsBatch deletes multiple invoice details by ID, reversing stock for each.
+func (s *InvoiceS) DeleteInvoiceDetailsBatch(ctx context.Context, req *model.DeleteInvoiceDetailsBatchRequest) error {
+	if req == nil || len(req.IDs) == 0 {
+		return fmt.Errorf("ids are required")
+	}
+	for _, id := range req.IDs {
+		if err := s.DeleteInvoiceDetail(ctx, id); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // CancelInvoice cancels a pending invoice (no stock changes).
 func (s *InvoiceS) CancelInvoice(ctx context.Context, id string) (*model.InvoiceResponse, error) {
 	invoiceID, err := uuid.Parse(id)

@@ -47,7 +47,13 @@ type UpsertInventoryItemRequest struct {
 }
 
 type UpsertInventoryItemsRequest struct {
-	Items []UpsertInventoryItemRequest `json:"items" validate:"required,min=1,dive"`
+	// Optional inventory-level fields (update inventory + items in one call)
+	Date            *string `json:"date,omitempty" example:"2024-01-01"`
+	StorageID       *string `json:"storage_id,omitempty" example:"123e4567-e89b-12d3-a456-426614174000"`
+	Status          *string `json:"status,omitempty" example:"active"`
+	Description     *string `json:"description,omitempty"`
+	DescriptionI18n *string `json:"description_i18n,omitempty"`
+	Items           []UpsertInventoryItemRequest `json:"items" validate:"required,min=1,dive"`
 }
 
 type CreateInventoryBatchRequest struct {
@@ -93,4 +99,24 @@ type InventoryItemResponse struct {
 
 type UpdateInventoryItemRequest struct {
 	CountedQuantity string `json:"counted_quantity" validate:"required" example:"10"`
+}
+
+type DeleteInventoriesBatchRequest struct {
+	IDs []string `json:"ids" validate:"required,min=1"`
+}
+
+type DeleteInventoryItemsBatchRequest struct {
+	IDs []string `json:"ids" validate:"required,min=1"`
+}
+
+type PaginationMeta struct {
+	Total      int32 `json:"total"`
+	Limit      int32 `json:"limit"`
+	Offset     int32 `json:"offset"`
+	TotalPages int32 `json:"total_pages"`
+}
+
+type PaginatedInventoriesResponse struct {
+	Data       []*InventoryResponse `json:"data"`
+	Pagination PaginationMeta       `json:"pagination"`
 }

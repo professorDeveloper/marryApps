@@ -61,12 +61,13 @@ func (q *Queries) InsertIngredientStockMovement(ctx context.Context, arg InsertI
 type InventoryForApplyRow struct {
 	ID        uuid.UUID
 	StorageID uuid.UUID
+	Status    string
 	AppliedAt pgtype.Timestamptz
 }
 
 func (q *Queries) GetInventoryForApply(ctx context.Context, id uuid.UUID) (InventoryForApplyRow, error) {
 	const sql = `
-		SELECT id, storage_id, applied_at
+		SELECT id, storage_id, status, applied_at
 		FROM inventories
 		WHERE id = $1 AND deleted_at = 0
 		FOR UPDATE
@@ -74,7 +75,7 @@ func (q *Queries) GetInventoryForApply(ctx context.Context, id uuid.UUID) (Inven
 
 	row := q.db.QueryRow(ctx, sql, id)
 	var out InventoryForApplyRow
-	if err := row.Scan(&out.ID, &out.StorageID, &out.AppliedAt); err != nil {
+	if err := row.Scan(&out.ID, &out.StorageID, &out.Status, &out.AppliedAt); err != nil {
 		return InventoryForApplyRow{}, err
 	}
 	return out, nil

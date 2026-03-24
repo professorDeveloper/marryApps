@@ -493,11 +493,13 @@ func (h *Handler) Register(router *echo.Echo) {
 		{
 			inventories.POST("", h.CreateInventory, mw.CheckLanguage())
 			inventories.POST("/batch", h.CreateInventoryBatch, mw.CheckLanguage())
+			inventories.DELETE("/batch", h.DeleteInventoriesBatch, mw.CheckLanguage())
 			inventories.GET("", h.GetAllInventories, mw.CheckLanguage())
 			inventories.GET("/search", h.SearchInventories, mw.CheckLanguage())
 			inventories.GET("/:id", h.GetInventory, mw.CheckLanguage())
 			inventories.POST("/:id/items", h.UpsertInventoryItems, mw.CheckLanguage())
 			inventories.PUT("/:id/items/batch", h.UpdateInventoryItemsBatch, mw.CheckLanguage())
+			inventories.DELETE("/:id/items/batch", h.DeleteInventoryItemsBatch, mw.CheckLanguage())
 			inventories.GET("/:id/items", h.GetInventoryItems, mw.CheckLanguage())
 			inventories.POST("/:id/calculate", h.CalculateInventory, mw.CheckLanguage())
 			inventories.PUT("/:id", h.UpdateInventory, mw.CheckLanguage())
@@ -513,7 +515,9 @@ func (h *Handler) Register(router *echo.Echo) {
 			deductions.PUT("/:id", h.UpdateDeduction, mw.CheckLanguage())
 			deductions.DELETE("/:id", h.DeleteDeduction, mw.CheckLanguage())
 			deductions.POST("/:id/restore", h.RestoreDeduction, mw.CheckLanguage())
+			deductions.DELETE("/batch", h.DeleteDeductionsBatch, mw.CheckLanguage())
 			deductions.PUT("/:id/items/batch", h.UpsertDeductionItems, mw.CheckLanguage())
+			deductions.DELETE("/:id/items/batch", h.DeleteDeductionItemsBatch, mw.CheckLanguage())
 			deductions.DELETE("/:id/items/:itemId", h.DeleteDeductionItem, mw.CheckLanguage())
 
 			deductionGroups := deductions.Group("/group")
@@ -544,10 +548,12 @@ func (h *Handler) Register(router *echo.Echo) {
 			invoices.GET("/:id", h.GetInvoice, mw.CheckLanguage())
 			invoices.PUT("/:id", h.UpdateInvoice, mw.CheckLanguage())
 			invoices.PATCH("/:id/status", h.UpdateInvoiceStatus, mw.CheckLanguage())
+			invoices.DELETE("/batch", h.DeleteInvoicesBatch, mw.CheckLanguage())
 			invoices.DELETE("/:id", h.DeleteInvoice, mw.CheckLanguage())
 			invoices.POST("/:id/restore", h.RestoreInvoice, mw.CheckLanguage())
 			invoices.GET("/:id/details", h.GetInvoiceWithDetails, mw.CheckLanguage())
 			invoices.PUT("/:id/details/batch", h.UpsertInvoiceDetails, mw.CheckLanguage())
+			invoices.DELETE("/:id/details/batch", h.DeleteInvoiceDetailsBatch, mw.CheckLanguage())
 		}
 
 		// Invoice detail endpoints
@@ -617,6 +623,7 @@ func (h *Handler) Register(router *echo.Echo) {
 		transfers := api.Group("/transfers", mw.CheckAuth(h.cfg), mw.TenantMiddleware(h.repo))
 		{
 			transfers.POST("/batch", h.CreateTransferBatch, mw.CheckLanguage())
+			transfers.DELETE("/batch", h.DeleteTransfersBatch, mw.CheckLanguage())
 			transfers.POST("/items", h.AddTransferItems, mw.CheckLanguage())
 			transfers.POST("", h.CreateTransfer, mw.CheckLanguage())
 			transfers.GET("", h.GetAllTransfers, mw.CheckLanguage())
