@@ -246,15 +246,21 @@ func (h *Handler) CreateDeduction(c echo.Context) error {
 	return c.JSON(http.StatusCreated, model.NewSuccessResponse("Deduction created successfully", resp, http.StatusCreated))
 }
 
-// GetAllDeductions retrieves deductions with pagination
+// GetAllDeductions retrieves deductions with filtering and pagination
 // @Summary Get deductions
-// @Description Retrieve deductions with pagination
+// @Description Retrieve deductions with filters and pagination
 // @Tags deductions
 // @Accept json
 // @Produce json
 // @Security BearerAuth
 // @Param limit query int false "Limit results (default: 20)" default(20)
 // @Param offset query int false "Offset for pagination (default: 0)" default(0)
+// @Param date_from query string false "Filter from date (YYYY-MM-DD)"
+// @Param date_to query string false "Filter to date (YYYY-MM-DD)"
+// @Param status query string false "Filter by status (draft, active)"
+// @Param storage_id query string false "Filter by storage UUID"
+// @Param act_group_id query string false "Filter by act group UUID"
+// @Param ingredient_id query string false "Filter by ingredient UUID (matches deduction items)"
 // @Param expand query string false "Comma-separated relations to expand (e.g. storage_id)"
 // @Success 200 {object} model.PaginatedDeductionsResponse "Deductions"
 // @Failure 401 {object} model.ErrorResponse "Unauthorized"
@@ -278,7 +284,22 @@ func (h *Handler) GetAllDeductions(c echo.Context) error {
 		}
 	}
 
-	paginated, err := h.service.Deduction().GetAllDeductions(c.Request().Context(), limit, offset)
+	strPtr := func(s string) *string {
+		if s == "" {
+			return nil
+		}
+		return &s
+	}
+	filter := model.DeductionFilter{
+		DateFrom:     strPtr(c.QueryParam("date_from")),
+		DateTo:       strPtr(c.QueryParam("date_to")),
+		Status:       strPtr(c.QueryParam("status")),
+		StorageID:    strPtr(c.QueryParam("storage_id")),
+		ActGroupID:   strPtr(c.QueryParam("act_group_id")),
+		IngredientID: strPtr(c.QueryParam("ingredient_id")),
+	}
+
+	paginated, err := h.service.Deduction().GetAllDeductions(c.Request().Context(), filter, limit, offset)
 	if err != nil {
 		log.Printf("GetAllDeductions failed: %v", err)
 		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("failed to fetch deductions", "see logs for details", http.StatusInternalServerError))

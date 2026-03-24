@@ -6487,7 +6487,7 @@
                         "BearerAuth": []
                     }
                 ],
-                "description": "Retrieve deductions with pagination",
+                "description": "Retrieve deductions with filters and pagination",
                 "consumes": [
                     "application/json"
                 ],
@@ -6511,6 +6511,42 @@
                         "default": 0,
                         "description": "Offset for pagination (default: 0)",
                         "name": "offset",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter from date (YYYY-MM-DD)",
+                        "name": "date_from",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter to date (YYYY-MM-DD)",
+                        "name": "date_to",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by status (draft, active)",
+                        "name": "status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by storage UUID",
+                        "name": "storage_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by act group UUID",
+                        "name": "act_group_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by ingredient UUID (matches deduction items)",
+                        "name": "ingredient_id",
                         "in": "query"
                     },
                     {

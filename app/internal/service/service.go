@@ -296,7 +296,7 @@ type DeductionI interface {
 
 	CreateDeduction(ctx context.Context, req *model.CreateDeductionRequest) (*model.DeductionResponse, error)
 	GetDeductionByID(ctx context.Context, id string) (*model.DeductionResponse, error)
-	GetAllDeductions(ctx context.Context, limit, offset int32) (*model.PaginatedDeductionsResponse, error)
+	GetAllDeductions(ctx context.Context, filter model.DeductionFilter, limit, offset int32) (*model.PaginatedDeductionsResponse, error)
 	UpdateDeduction(ctx context.Context, id string, req *model.UpdateDeductionRequest) (*model.DeductionResponse, error)
 	DeleteDeduction(ctx context.Context, id string) error
 	DeleteDeductionsBatch(ctx context.Context, req *model.DeleteDeductionsBatchRequest) error

@@ -8503,7 +8503,7 @@ paths:
     get:
       consumes:
       - application/json
-      description: Retrieve deductions with pagination
+      description: Retrieve deductions with filters and pagination
       parameters:
       - default: 20
         description: 'Limit results (default: 20)'
@@ -8515,6 +8515,30 @@ paths:
         in: query
         name: offset
         type: integer
+      - description: Filter from date (YYYY-MM-DD)
+        in: query
+        name: date_from
+        type: string
+      - description: Filter to date (YYYY-MM-DD)
+        in: query
+        name: date_to
+        type: string
+      - description: Filter by status (draft, active)
+        in: query
+        name: status
+        type: string
+      - description: Filter by storage UUID
+        in: query
+        name: storage_id
+        type: string
+      - description: Filter by act group UUID
+        in: query
+        name: act_group_id
+        type: string
+      - description: Filter by ingredient UUID (matches deduction items)
+        in: query
+        name: ingredient_id
+        type: string
       - description: Comma-separated relations to expand (e.g. storage_id)
         in: query
         name: expand

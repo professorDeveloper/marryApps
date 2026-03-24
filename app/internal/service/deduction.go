@@ -834,13 +834,50 @@ func (s *DeductionS) GetDeductionByID(ctx context.Context, id string) (*model.De
 	}, nil
 }
 
-func (s *DeductionS) GetAllDeductions(ctx context.Context, limit, offset int32) (*model.PaginatedDeductionsResponse, error) {
-	total, err := s.repo.Tenant(ctx).CountDeductions(ctx)
+func (s *DeductionS) GetAllDeductions(ctx context.Context, filter model.DeductionFilter, limit, offset int32) (*model.PaginatedDeductionsResponse, error) {
+	// Parse filter fields into DB types
+	var dateFrom, dateTo pgtype.Date
+	if filter.DateFrom != nil && *filter.DateFrom != "" {
+		dt, err := parseDateYYYYMMDD(*filter.DateFrom)
+		if err == nil {
+			dateFrom = pgtype.Date{Time: dt, Valid: true}
+		}
+	}
+	if filter.DateTo != nil && *filter.DateTo != "" {
+		dt, err := parseDateYYYYMMDD(*filter.DateTo)
+		if err == nil {
+			dateTo = pgtype.Date{Time: dt, Valid: true}
+		}
+	}
+	statusStr := ""
+	if filter.Status != nil {
+		statusStr = *filter.Status
+	}
+	var storageUUID, actGroupUUID, ingredientUUID uuid.UUID
+	if filter.StorageID != nil && *filter.StorageID != "" {
+		storageUUID, _ = uuid.Parse(*filter.StorageID)
+	}
+	if filter.ActGroupID != nil && *filter.ActGroupID != "" {
+		actGroupUUID, _ = uuid.Parse(*filter.ActGroupID)
+	}
+	if filter.IngredientID != nil && *filter.IngredientID != "" {
+		ingredientUUID, _ = uuid.Parse(*filter.IngredientID)
+	}
+
+	countParams := pg.CountDeductionsFilteredParams{
+		DateFrom: dateFrom, DateTo: dateTo, Status: statusStr,
+		StorageID: storageUUID, ActGroupID: actGroupUUID, IngredientID: ingredientUUID,
+	}
+	total, err := s.repo.Tenant(ctx).CountDeductionsFiltered(ctx, countParams)
 	if err != nil {
 		return nil, fmt.Errorf("failed to count deductions: %w", err)
 	}
 
-	rows, err := s.repo.Tenant(ctx).GetAllDeductions(ctx, pg.GetAllDeductionsParams{Limit: limit, Offset: offset})
+	rows, err := s.repo.Tenant(ctx).GetDeductionsFiltered(ctx, pg.GetDeductionsFilteredParams{
+		DateFrom: dateFrom, DateTo: dateTo, Status: statusStr,
+		StorageID: storageUUID, ActGroupID: actGroupUUID, IngredientID: ingredientUUID,
+		Limit: limit, Offset: offset,
+	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get deductions: %w", err)
 	}

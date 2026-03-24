@@ -2,6 +2,15 @@ package model
 
 import "time"
 
+type DeductionFilter struct {
+	DateFrom     *string
+	DateTo       *string
+	Status       *string
+	StorageID    *string
+	ActGroupID   *string
+	IngredientID *string
+}
+
 type DeductionStatus string
 
 const (
