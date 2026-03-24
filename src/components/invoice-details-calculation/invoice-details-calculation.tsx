@@ -128,6 +128,7 @@ export function InvoiceDetailsCalculation({ invoiceId, onSuccess, onDetailsChang
     const [rightSelectedIds, setRightSelectedIds] = useState<string[]>([]);
 
     const prevCalculationsRef = useRef<string>('');
+    const hydratedPersistedSnapshotRef = useRef<string>('');
     const calculateDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const [isCalculating, setIsCalculating] = useState(false);
 
@@ -186,7 +187,7 @@ export function InvoiceDetailsCalculation({ invoiceId, onSuccess, onDetailsChang
         loadData();
     }, [getIngredients, t]);
 
-    // Restore persisted details when external state changes, but ignore local echo updates.
+    // Restore persisted details only when parent data actually changes.
     useEffect(() => {
         if (!persistedDetails) return;
 
@@ -209,7 +210,7 @@ export function InvoiceDetailsCalculation({ invoiceId, onSuccess, onDetailsChang
             [...incomingById.values()].sort((a, b) => a.ingredient_id.localeCompare(b.ingredient_id))
         );
 
-        if (incomingSnapshot === prevCalculationsRef.current || incomingSnapshot === localBatchSnapshot) {
+        if (incomingSnapshot === hydratedPersistedSnapshotRef.current) {
             return;
         }
 
@@ -218,6 +219,7 @@ export function InvoiceDetailsCalculation({ invoiceId, onSuccess, onDetailsChang
                 return;
             }
 
+            hydratedPersistedSnapshotRef.current = incomingSnapshot;
             setTransferredIds([]);
             setQuantities({});
             setPricesPerUnit({});
@@ -238,6 +240,7 @@ export function InvoiceDetailsCalculation({ invoiceId, onSuccess, onDetailsChang
             newPrices[ingredientId] = detail.price;
         });
 
+        hydratedPersistedSnapshotRef.current = incomingSnapshot;
         setTransferredIds(newTransferredIds);
         setQuantities(newQuantities);
         setPricesPerUnit(newPricesPerUnit);
@@ -246,7 +249,7 @@ export function InvoiceDetailsCalculation({ invoiceId, onSuccess, onDetailsChang
         if (selectedIds.length > 0) {
             setSelectedIds([]);
         }
-    }, [persistedDetails, localBatchSnapshot, transferredIds.length, selectedIds.length]);
+    }, [persistedDetails, transferredIds.length, selectedIds.length]);
 
     // Update parent whenever details change (for persistence)
     useEffect(() => {
