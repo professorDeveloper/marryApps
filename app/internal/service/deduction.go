@@ -494,45 +494,25 @@ func (s *DeductionS) applyDeductionItemStock(ctx context.Context, deductionID uu
 		}
 
 		stockBefore := stock.Quantity
-		missing, err := subNumericClampZero(requestedQty, stockBefore, 6)
-		if err != nil {
-			return nil, nil, err
-		}
-		actualDeduct, err := subNumericClampZero(requestedQty, missing, 6)
-		if err != nil {
-			return nil, nil, err
-		}
 
-		updatedQty := stockBefore
-		var updatedStock *pg.IngredientStock
-		if numericToString(actualDeduct) != "0" {
-			updated, err := s.repo.Tenant(ctx).RemoveFromIngredientStock(ctx, pg.RemoveFromIngredientStockParams{
-				ID:       stock.ID,
-				Quantity: actualDeduct,
-			})
-			if err != nil {
-				return nil, nil, fmt.Errorf("failed to remove from ingredient stock: %w", err)
-			}
-			updatedQty = updated.Quantity
-			updatedStock = &updated
+		// Always deduct the full requested quantity; stock may go negative (intentional).
+		updated, err := s.repo.Tenant(ctx).RemoveFromIngredientStock(ctx, pg.RemoveFromIngredientStockParams{
+			ID:       stock.ID,
+			Quantity: requestedQty,
+		})
+		if err != nil {
+			return nil, nil, fmt.Errorf("failed to remove from ingredient stock: %w", err)
 		}
-
-		if numericToString(missing) != "0" {
-			warnings = append(warnings, fmt.Sprintf("insufficient stock for ingredient %s: requested %s, available %s",
-				u.ingredientID.String(), numericToString(requestedQty), numericToString(stockBefore)))
-		}
+		updatedQty := updated.Quantity
+		updatedStock := &updated
 
 		price := ingredient.PricePerUnit
-		if numericToString(actualDeduct) == "0" {
-			price = pgtype.Numeric{}
-			_ = price.Scan("0")
-		}
 
 		breakdown, err := s.repo.Tenant(ctx).CreateDeductionItemIngredient(ctx, pg.CreateDeductionItemIngredientParams{
 			ID:              uuid.New(),
 			DeductionItemID: item.ID,
 			IngredientID:    u.ingredientID,
-			Quantity:        actualDeduct,
+			Quantity:        requestedQty,
 			StockBefore:     stockBefore,
 			StockAfter:      updatedQty,
 			PricePerUnit:    price,
@@ -548,7 +528,7 @@ func (s *DeductionS) applyDeductionItemStock(ctx context.Context, deductionID uu
 				IngredientID: u.ingredientID,
 				EventType:    "deduction_out",
 				QtyIn:        zero,
-				QtyOut:       actualDeduct,
+				QtyOut:       requestedQty,
 				StockBefore:  stockBefore,
 				StockAfter:   updatedStock.Quantity,
 				PricePerUnit: price,

@@ -407,7 +407,7 @@ type TransferI interface {
 	CreateTransfer(ctx context.Context, req model.CreateTransferRequest) (*model.TransferResponse, error)
 	AddTransferItems(ctx context.Context, req model.CreateTransferItemsRequest) (*model.TransferResponse, error)
 	GetTransferByID(ctx context.Context, transferID string) (*model.TransferResponse, error)
-	GetAllTransfers(ctx context.Context, filter model.TransferFilter, limit, offset int32) (*model.PaginatedTransfersResponse, error)
+	GetAllTransfers(ctx context.Context, filter model.TransferFilter, expand bool, limit, offset int32) (*model.PaginatedTransfersResponse, error)
 	DeleteTransfer(ctx context.Context, transferID string) error
 	DeleteTransferItem(ctx context.Context, itemID string) error
 	DeleteTransfersBatch(ctx context.Context, req *model.DeleteTransfersBatchRequest) error

@@ -106,6 +106,7 @@ type TransferFilter struct {
 }
 
 type PaginatedTransfersResponse struct {
-	Data       []*TransferResponse `json:"data"`
-	Pagination PaginationMeta      `json:"pagination"`
+	Data        []*TransferResponse `json:"data"`
+	Pagination  PaginationMeta      `json:"pagination"`
+	TotalAmount string              `json:"total_amount"`
 }

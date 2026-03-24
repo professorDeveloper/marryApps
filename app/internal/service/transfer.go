@@ -249,7 +249,7 @@ func (s *TransferS) GetTransferByID(ctx context.Context, transferID string) (*mo
 }
 
 // GetAllTransfers retrieves transfers with filters and pagination.
-func (s *TransferS) GetAllTransfers(ctx context.Context, filter model.TransferFilter, limit, offset int32) (*model.PaginatedTransfersResponse, error) {
+func (s *TransferS) GetAllTransfers(ctx context.Context, filter model.TransferFilter, expand bool, limit, offset int32) (*model.PaginatedTransfersResponse, error) {
 	q := s.repo.Tenant(ctx)
 
 	params := pg.GetTransfersFilteredParams{Limit: limit, Offset: offset}
@@ -297,6 +297,11 @@ func (s *TransferS) GetAllTransfers(ctx context.Context, filter model.TransferFi
 		return nil, fmt.Errorf("failed to count transfers: %w", err)
 	}
 
+	sumNumeric, err := q.SumTransfersFiltered(ctx, countParams)
+	if err != nil {
+		return nil, fmt.Errorf("failed to sum transfers: %w", err)
+	}
+
 	transfers, err := q.GetTransfersFiltered(ctx, params)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get transfers: %w", err)
@@ -304,7 +309,15 @@ func (s *TransferS) GetAllTransfers(ctx context.Context, filter model.TransferFi
 
 	data := make([]*model.TransferResponse, 0, len(transfers))
 	for i := range transfers {
-		data = append(data, toTransferResponse(transfers[i]))
+		resp := toTransferResponse(transfers[i])
+		if expand {
+			items, _ := q.GetTransferItemsByTransferID(ctx, transfers[i].ID)
+			resp.Items = make([]model.TransferItemResponse, 0, len(items))
+			for _, item := range items {
+				resp.Items = append(resp.Items, *toTransferItemResponse(item))
+			}
+		}
+		data = append(data, resp)
 	}
 
 	totalPages := int32(1)
@@ -313,7 +326,8 @@ func (s *TransferS) GetAllTransfers(ctx context.Context, filter model.TransferFi
 	}
 
 	return &model.PaginatedTransfersResponse{
-		Data: data,
+		Data:        data,
+		TotalAmount: numericToStr(sumNumeric),
 		Pagination: model.PaginationMeta{
 			Total:      int32(total),
 			Limit:      limit,

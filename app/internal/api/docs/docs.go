@@ -22339,6 +22339,12 @@ const docTemplate = `{
                     },
                     {
                         "type": "string",
+                        "description": "Pass 'items' to include transfer items in each result",
+                        "name": "expand",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
                         "description": "Filter from date (YYYY-MM-DD)",
                         "name": "date_from",
                         "in": "query"
@@ -22351,7 +22357,7 @@ const docTemplate = `{
                     },
                     {
                         "type": "string",
-                        "description": "Filter by status (active/deleted)",
+                        "description": "Filter by status (draft/active/deleted)",
                         "name": "status",
                         "in": "query"
                     },
@@ -27766,6 +27772,9 @@ const docTemplate = `{
                 },
                 "pagination": {
                     "$ref": "#/definitions/model.PaginationMeta"
+                },
+                "total_amount": {
+                    "type": "string"
                 }
             }
         },

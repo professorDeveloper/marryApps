@@ -143,15 +143,16 @@ func (h *Handler) GetTransferByID(c echo.Context) error {
 // @Tags Transfers
 // @Produce json
 // @Security BearerAuth
-// @Param limit          query int    false "Limit (default: 20)"
-// @Param offset         query int    false "Offset (default: 0)"
-// @Param date_from      query string false "Filter from date (YYYY-MM-DD)"
-// @Param date_to        query string false "Filter to date (YYYY-MM-DD)"
-// @Param status         query string false "Filter by status (active/deleted)"
+// @Param limit           query int    false "Limit (default: 20)"
+// @Param offset          query int    false "Offset (default: 0)"
+// @Param expand          query string false "Pass 'items' to include transfer items in each result"
+// @Param date_from       query string false "Filter from date (YYYY-MM-DD)"
+// @Param date_to         query string false "Filter to date (YYYY-MM-DD)"
+// @Param status          query string false "Filter by status (draft/active/deleted)"
 // @Param from_storage_id query string false "Filter by sender storage ID"
-// @Param to_storage_id  query string false "Filter by receiver storage ID"
-// @Param act_group_id   query string false "Filter by act group ID"
-// @Param ingredient_id  query string false "Filter by ingredient ID"
+// @Param to_storage_id   query string false "Filter by receiver storage ID"
+// @Param act_group_id    query string false "Filter by act group ID"
+// @Param ingredient_id   query string false "Filter by ingredient ID"
 // @Success 200 {object} model.PaginatedTransfersResponse
 // @Failure 401 {object} model.ErrorResponse
 // @Failure 500 {object} model.ErrorResponse
@@ -194,7 +195,9 @@ func (h *Handler) GetAllTransfers(c echo.Context) error {
 		filter.IngredientID = &v
 	}
 
-	result, err := h.service.Transfer().GetAllTransfers(c.Request().Context(), filter, limit, offset)
+	expand := c.QueryParam("expand") == "items"
+
+	result, err := h.service.Transfer().GetAllTransfers(c.Request().Context(), filter, expand, limit, offset)
 	if err != nil {
 		log.Printf("GetAllTransfers failed: %v", err)
 		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("failed to retrieve transfers", err.Error(), http.StatusInternalServerError))

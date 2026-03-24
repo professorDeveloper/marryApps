@@ -2795,6 +2795,8 @@ definitions:
         type: array
       pagination:
         $ref: '#/definitions/model.PaginationMeta'
+      total_amount:
+        type: string
     type: object
   model.PaginationMeta:
     properties:
@@ -18887,6 +18889,10 @@ paths:
         in: query
         name: offset
         type: integer
+      - description: Pass 'items' to include transfer items in each result
+        in: query
+        name: expand
+        type: string
       - description: Filter from date (YYYY-MM-DD)
         in: query
         name: date_from
@@ -18895,7 +18901,7 @@ paths:
         in: query
         name: date_to
         type: string
-      - description: Filter by status (active/deleted)
+      - description: Filter by status (draft/active/deleted)
         in: query
         name: status
         type: string
