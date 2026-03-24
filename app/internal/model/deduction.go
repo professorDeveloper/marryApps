@@ -43,7 +43,14 @@ type CreateDeductionRequest struct {
 }
 
 type UpsertDeductionItemsRequest struct {
-	Items []CreateDeductionItemRequest `json:"items" validate:"required,min=1,dive"`
+	// Optional deduction-level fields (update deduction + items in one call)
+	Date            *string `json:"date,omitempty" example:"2024-01-01"`
+	ActGroupID      *string `json:"act_group_id,omitempty" example:"123e4567-e89b-12d3-a456-426614174000"`
+	StorageID       *string `json:"storage_id,omitempty" example:"123e4567-e89b-12d3-a456-426614174000"`
+	Description     *string `json:"description,omitempty" example:"spoiled items"`
+	DescriptionI18n *string `json:"description_i18n,omitempty"`
+	Status          *string `json:"status,omitempty" example:"active"`
+	Items           []CreateDeductionItemRequest `json:"items" validate:"required,min=1,dive"`
 }
 
 type UpdateDeductionRequest struct {

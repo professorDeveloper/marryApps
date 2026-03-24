@@ -445,15 +445,17 @@ func (h *Handler) RestoreDeduction(c echo.Context) error {
 	return c.JSON(http.StatusOK, model.NewSuccessResponse("Deduction restored successfully", resp, http.StatusOK))
 }
 
-// UpsertDeductionItems replaces all items of a deduction in one call, reversing the previous stock impact and applying the new one.
+// UpsertDeductionItems replaces all items and optionally updates deduction fields in one call.
+// Optionally pass date, act_group_id, storage_id, status, description to update the deduction itself.
+// Status transitions (draft↔active) trigger stock apply/reverse automatically.
 // @Summary Batch update deduction items
-// @Description Replaces all deduction items for the given deduction. Previous stock deductions are reversed, then new quantities are applied. Returns warnings if any ingredient has insufficient stock.
+// @Description Full replace of deduction items. Optionally update deduction fields (date, status, storage_id, etc.) in the same call. Stock adjusted on status transition.
 // @Tags deductions
 // @Accept json
 // @Produce json
 // @Security BearerAuth
 // @Param id path string true "Deduction ID"
-// @Param input body model.UpsertDeductionItemsRequest true "New deduction items"
+// @Param input body model.UpsertDeductionItemsRequest true "Deduction items (required) + optional deduction fields"
 // @Success 200 {object} model.DeductionResponse "Updated deduction with new items"
 // @Failure 400 {object} model.ErrorResponse "Invalid request"
 // @Failure 404 {object} model.ErrorResponse "Deduction not found"

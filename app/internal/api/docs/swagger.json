@@ -7200,7 +7200,7 @@
                         "BearerAuth": []
                     }
                 ],
-                "description": "Replaces all deduction items for the given deduction. Previous stock deductions are reversed, then new quantities are applied. Returns warnings if any ingredient has insufficient stock.",
+                "description": "Full replace of deduction items. Optionally update deduction fields (date, status, storage_id, etc.) in the same call. Stock adjusted on status transition.",
                 "consumes": [
                     "application/json"
                 ],
@@ -7220,7 +7220,7 @@
                         "required": true
                     },
                     {
-                        "description": "New deduction items",
+                        "description": "Deduction items (required) + optional deduction fields",
                         "name": "input",
                         "in": "body",
                         "required": true,
@@ -29448,12 +29448,36 @@
                 "items"
             ],
             "properties": {
+                "act_group_id": {
+                    "type": "string",
+                    "example": "123e4567-e89b-12d3-a456-426614174000"
+                },
+                "date": {
+                    "description": "Optional deduction-level fields (update deduction + items in one call)",
+                    "type": "string",
+                    "example": "2024-01-01"
+                },
+                "description": {
+                    "type": "string",
+                    "example": "spoiled items"
+                },
+                "description_i18n": {
+                    "type": "string"
+                },
                 "items": {
                     "type": "array",
                     "minItems": 1,
                     "items": {
                         "$ref": "#/definitions/model.CreateDeductionItemRequest"
                     }
+                },
+                "status": {
+                    "type": "string",
+                    "example": "active"
+                },
+                "storage_id": {
+                    "type": "string",
+                    "example": "123e4567-e89b-12d3-a456-426614174000"
                 }
             }
         },

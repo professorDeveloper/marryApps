@@ -1099,12 +1099,86 @@ func (s *DeductionS) UpsertDeductionItems(ctx context.Context, id string, req *m
 		return nil, fmt.Errorf("cannot update items of a deleted deduction")
 	}
 
-	storagePg := pgtype.UUID{Bytes: deduction.StorageID, Valid: true}
+	// Determine old/new status for stock transition
+	oldStatus := deduction.Status
+	newStatus := oldStatus
+	if req.Status != nil && *req.Status != "" {
+		if *req.Status == "deleted" {
+			return nil, fmt.Errorf("cannot set status to 'deleted'; use the DELETE endpoint")
+		}
+		if *req.Status != oldStatus {
+			if !((oldStatus == "draft" && *req.Status == "active") || (oldStatus == "active" && *req.Status == "draft")) {
+				return nil, fmt.Errorf("invalid status transition: %s → %s", oldStatus, *req.Status)
+			}
+			newStatus = *req.Status
+		}
+	}
 
-	// Step 1: Reverse stock if active
-	if deduction.Status == "active" {
+	storageID := deduction.StorageID
+	if req.StorageID != nil && *req.StorageID != "" {
+		sid, err := uuid.Parse(*req.StorageID)
+		if err != nil {
+			return nil, fmt.Errorf("invalid storage_id: %w", err)
+		}
+		storageID = sid
+	}
+	storagePg := pgtype.UUID{Bytes: storageID, Valid: true}
+
+	// Step 1: Reverse stock if was active (using OLD storage)
+	if oldStatus == "active" {
 		if err := s.reverseAllDeductionStock(ctx, deductionID, deduction.StorageID, "deduction_updated_in"); err != nil {
 			return nil, fmt.Errorf("failed to reverse stock: %w", err)
+		}
+	}
+
+	// Update deduction-level fields if any provided
+	if req.Date != nil || req.ActGroupID != nil || req.StorageID != nil || req.Description != nil || req.DescriptionI18n != nil || req.Status != nil {
+		finalDate := deduction.Date
+		if req.Date != nil && *req.Date != "" {
+			dt, err := parseDateYYYYMMDD(*req.Date)
+			if err != nil {
+				return nil, fmt.Errorf("invalid date: %w", err)
+			}
+			finalDate = pgtype.Date{Time: dt, Valid: true}
+		}
+		finalActGroup := deduction.ActGroupID
+		if req.ActGroupID != nil {
+			if *req.ActGroupID == "" {
+				finalActGroup = pgtype.UUID{Valid: false}
+			} else {
+				u, err := uuid.Parse(*req.ActGroupID)
+				if err != nil {
+					return nil, fmt.Errorf("invalid act_group_id: %w", err)
+				}
+				finalActGroup = pgtype.UUID{Bytes: u, Valid: true}
+			}
+		}
+		finalDescription := deduction.Description
+		if req.Description != nil {
+			finalDescription = req.Description
+		}
+		finalDescI18n := deduction.DescriptionI18n
+		if req.DescriptionI18n != nil {
+			if *req.DescriptionI18n == "" {
+				finalDescI18n = pgtype.UUID{Valid: false}
+			} else {
+				u, err := uuid.Parse(*req.DescriptionI18n)
+				if err != nil {
+					return nil, fmt.Errorf("invalid description_i18n: %w", err)
+				}
+				finalDescI18n = pgtype.UUID{Bytes: u, Valid: true}
+			}
+		}
+		if _, err := s.repo.Tenant(ctx).UpdateDeduction(ctx, pg.UpdateDeductionParams{
+			ID:              deductionID,
+			Date:            finalDate,
+			ActGroupID:      finalActGroup,
+			StorageID:       storageID,
+			Description:     finalDescription,
+			DescriptionI18n: finalDescI18n,
+			Status:          newStatus,
+		}); err != nil {
+			return nil, fmt.Errorf("failed to update deduction: %w", err)
 		}
 	}
 
@@ -1169,8 +1243,8 @@ func (s *DeductionS) UpsertDeductionItems(ctx context.Context, id string, req *m
 			return nil, fmt.Errorf("failed to create deduction item: %w", err)
 		}
 
-		// Step 4: Apply stock if active
-		if deduction.Status == "active" {
+		// Step 4: Apply stock if new status is active
+		if newStatus == "active" {
 			_, itemWarnings, err := s.applyDeductionItemStock(ctx, deductionID, storagePg, row)
 			if err != nil {
 				return nil, err

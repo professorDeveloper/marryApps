@@ -4041,11 +4041,30 @@ definitions:
     type: object
   model.UpsertDeductionItemsRequest:
     properties:
+      act_group_id:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+      date:
+        description: Optional deduction-level fields (update deduction + items in
+          one call)
+        example: "2024-01-01"
+        type: string
+      description:
+        example: spoiled items
+        type: string
+      description_i18n:
+        type: string
       items:
         items:
           $ref: '#/definitions/model.CreateDeductionItemRequest'
         minItems: 1
         type: array
+      status:
+        example: active
+        type: string
+      storage_id:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
     required:
     - items
     type: object
@@ -8764,16 +8783,16 @@ paths:
     put:
       consumes:
       - application/json
-      description: Replaces all deduction items for the given deduction. Previous
-        stock deductions are reversed, then new quantities are applied. Returns warnings
-        if any ingredient has insufficient stock.
+      description: Full replace of deduction items. Optionally update deduction fields
+        (date, status, storage_id, etc.) in the same call. Stock adjusted on status
+        transition.
       parameters:
       - description: Deduction ID
         in: path
         name: id
         required: true
         type: string
-      - description: New deduction items
+      - description: Deduction items (required) + optional deduction fields
         in: body
         name: input
         required: true
