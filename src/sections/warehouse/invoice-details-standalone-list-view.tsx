@@ -277,10 +277,12 @@ export function InvoiceDetailsStandaloneListView() {
         if (selectedDeleteId && selectedDeleteType) {
             if (selectedDeleteType === 'invoice') {
                 await deleteInvoices([selectedDeleteId]);
-                setRawInvoices((prev) => prev.filter((row) => row.id !== selectedDeleteId));
-                setSelectedInvoiceDetails((prev) =>
-                    prev.filter((detail) => detail.invoice_id !== selectedDeleteId)
-                );
+                lastInvoicesKeyRef.current = '';
+                setFilters((prev) => ({ ...prev }));
+                if (selectedInvoice?.id === selectedDeleteId) {
+                    setSelectedInvoice(null);
+                    setSelectedInvoiceDetails([]);
+                }
             } else if (selectedDeleteType === 'detail') {
                 await deleteInvoiceDetails([selectedDeleteId]);
                 setSelectedInvoiceDetails((prev) => prev.filter((row) => row.id !== selectedDeleteId));
@@ -691,7 +693,6 @@ export function InvoiceDetailsStandaloneListView() {
                             </option>
                             <option value="pending">{t('warehouse.invoices.statuses.pending', 'Pending')}</option>
                             <option value="arrived">{t('warehouse.invoices.statuses.arrived', 'Arrived')}</option>
-                            <option value="received">{t('warehouse.invoices.statuses.received', 'Received')}</option>
                             <option value="cancelled">{t('warehouse.invoices.statuses.cancelled', 'Cancelled')}</option>
                         </TextField>
                       

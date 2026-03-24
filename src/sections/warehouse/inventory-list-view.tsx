@@ -1,4 +1,4 @@
-import type { GridColDef } from '@mui/x-data-grid';
+import type { GridColDef, GridPaginationModel } from '@mui/x-data-grid';
 import { useMemo, useCallback, useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -26,9 +26,8 @@ import { GenericViewModal } from 'src/components/generic-view-view';
 import { toast } from 'src/components/snackbar';
 import { useInventoryAPI } from 'src/hooks/use-inventory-api';
 import { useGenericViewModal } from 'src/hooks/use-generic-view-modal';
-import { useGetStorages } from 'src/actions/departments';
 import dayjs from 'dayjs';
-import type { IInventory, IInventoryItem } from 'src/types/inventory';
+import type { IBackendPagination, IInventory, IInventoryItem } from 'src/types/inventory';
 
 // ============================================================================
 // RENDER CELLS
@@ -81,7 +80,6 @@ export function InventoryListView() {
     const theme = useTheme();
     const router = useRouter();
     const { getInventories, deleteInventory, getInventoryItems } = useInventoryAPI();
-    const { storages } = useGetStorages();
 
     const [inventories, setInventories] = useState<IInventory[]>([]);
     const [loading, setLoading] = useState(true);
@@ -91,6 +89,11 @@ export function InventoryListView() {
     const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
     const [itemsLoading, setItemsLoading] = useState(false);
     const [inventoryItems, setInventoryItems] = useState<IInventoryItem[]>([]);
+    const [pagination, setPagination] = useState<IBackendPagination | undefined>(undefined);
+    const [paginationModel, setPaginationModel] = useState<GridPaginationModel>({
+        page: 0,
+        pageSize: 20,
+    });
 
     const { isOpen, selectedData, openModal, closeModal } = useGenericViewModal<IInventory>();
 
@@ -102,40 +105,43 @@ export function InventoryListView() {
         return () => clearTimeout(timeout);
     }, [searchQuery]);
 
-    // Create storage name map
-    const storageNameById = useMemo(
-        () => new Map(Array.isArray(storages) ? storages.map((s: any) => [s.id, s.name]) : []),
-        [storages]
-    );
-
     const loadInventories = useCallback(async () => {
         try {
             setLoading(true);
-            const data = await getInventories(debouncedSearchQuery);
-            setInventories(data);
+            const response = await getInventories({
+                search: debouncedSearchQuery,
+                limit: paginationModel.pageSize,
+                offset: paginationModel.page * paginationModel.pageSize,
+            });
+            setInventories(response.items);
+            setPagination(response.pagination);
         } catch (error) {
             console.error('Error loading inventories:', error);
         } finally {
             setLoading(false);
         }
-    }, [debouncedSearchQuery, getInventories]);
+    }, [debouncedSearchQuery, getInventories, paginationModel.page, paginationModel.pageSize]);
 
     useEffect(() => {
         loadInventories();
     }, [loadInventories]);
 
+    useEffect(() => {
+        setPaginationModel((prev) => ({ ...prev, page: 0 }));
+    }, [debouncedSearchQuery]);
+
     const handleDelete = useCallback(
         async (id: string) => {
             try {
                 await deleteInventory(id);
-                setInventories((prev) => prev.filter((inv) => inv.id !== id));
+                await loadInventories();
                 setDeleteConfirmOpen(false);
                 setDeleteId(null);
             } catch (error) {
                 console.error('Error deleting inventory:', error);
             }
         },
-        [deleteInventory]
+        [deleteInventory, loadInventories]
     );
 
     const handleEdit = useCallback(
@@ -183,7 +189,7 @@ export function InventoryListView() {
                 width: 200,
                 flex: 0.5,
                 valueGetter: (_value, row) =>
-                    row.storage_id ? storageNameById.get(row.storage_id) || row.storage_id : '-',
+                    row?._expand?.storage_id?.name || row.storage_id || '-',
             },
             {
                 field: 'description',
@@ -270,7 +276,7 @@ export function InventoryListView() {
                 ],
             },
         ],
-        [t, handleEdit, storageNameById, theme]
+        [t, handleEdit, theme]
     );
 
     return (
@@ -279,6 +285,11 @@ export function InventoryListView() {
                 data={inventories}
                 loading={loading}
                 columns={columns}
+                paginationMode="server"
+                rowCount={pagination?.total || 0}
+                paginationModel={paginationModel}
+                onPaginationModelChange={setPaginationModel}
+                pageSizeOptions={[10, 20, 50, 100]}
                 breadcrumbs={{
                     heading: t('inventory.list'),
                     links: [
