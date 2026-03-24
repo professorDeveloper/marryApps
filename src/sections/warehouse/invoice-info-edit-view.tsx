@@ -74,8 +74,8 @@ export function InvoiceInfoEditView({
         : [
             { value: 'arrived', label: t('warehouse.invoices.statuses.arrived', 'Arrived') },
             { value: 'pending', label: t('warehouse.invoices.statuses.pending') },
-            { value: 'cancelled', label: t('warehouse.invoices.statuses.cancelled', 'Cancelled') },
-            { value: 'deleted', label: t('common.deleted', 'Deleted') },
+            // { value: 'cancelled', label: t('warehouse.invoices.statuses.cancelled', 'Cancelled') },
+            // { value: 'deleted', label: t('common.deleted', 'Deleted') },
         ];
 
     // Load suppliers for dropdown
