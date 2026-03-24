@@ -210,21 +210,25 @@ export function InvoiceDetailsCalculation({ invoiceId, onSuccess, onDetailsChang
             [...incomingById.values()].sort((a, b) => a.ingredient_id.localeCompare(b.ingredient_id))
         );
 
-        if (incomingSnapshot === hydratedPersistedSnapshotRef.current) {
+        const localSnapshot = localBatchSnapshot;
+
+        if (
+            incomingSnapshot === hydratedPersistedSnapshotRef.current ||
+            (isNewInvoice &&
+                (incomingSnapshot === prevCalculationsRef.current ||
+                    incomingSnapshot === localSnapshot))
+        ) {
             return;
         }
 
         if (incomingById.size === 0) {
-            if (transferredIds.length === 0) {
-                return;
-            }
-
             hydratedPersistedSnapshotRef.current = incomingSnapshot;
             setTransferredIds([]);
             setQuantities({});
             setPricesPerUnit({});
             setPrices({});
             setShowCalculation(false);
+            setSelectedIds([]);
             return;
         }
 
@@ -246,10 +250,8 @@ export function InvoiceDetailsCalculation({ invoiceId, onSuccess, onDetailsChang
         setPricesPerUnit(newPricesPerUnit);
         setPrices(newPrices);
         setShowCalculation(true);
-        if (selectedIds.length > 0) {
-            setSelectedIds([]);
-        }
-    }, [persistedDetails, transferredIds.length, selectedIds.length]);
+        setSelectedIds([]);
+    }, [persistedDetails, isNewInvoice, localBatchSnapshot]);
 
     // Update parent whenever details change (for persistence)
     useEffect(() => {
@@ -755,14 +757,14 @@ export function InvoiceDetailsCalculation({ invoiceId, onSuccess, onDetailsChang
                                 <Typography variant="subtitle1" sx={{ fontWeight: 'bold', mb: 2 }}>
                                     {t('warehouse.invoiceDetails.selectedItems', 'Selected Items')}
                                 </Typography>
-                                {isCalculating && (
+                                {/* {isCalculating && (
                                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
                                         <CircularProgress size={14} />
                                         <Typography variant="caption" color="text.secondary">
                                             {t('warehouse.invoiceDetails.calculating', 'Calculating...')}
                                         </Typography>
                                     </Box>
-                                )}
+                                )} */}
 
                                 {/* Search */}
                                 <TextField
