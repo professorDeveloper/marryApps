@@ -23,12 +23,25 @@ export interface IInventory {
     date: string;
     storage_id: string;
     description: string;
-    status: 'active' | 'completed' | 'draft' | 'cancelled';
+    status: 'active' | 'completed' | 'draft' | 'cancelled' | 'deleted';
     surplus_amount: string;
     shortage_amount: string;
     remaining_amount: string;
     created_at: string;
     updated_at: string;
+    _expand?: {
+        storage_id?: {
+            id: string;
+            name: string;
+            branch_id?: string;
+            color_code?: string;
+            picture_url?: string | null;
+            created_at?: string;
+            updated_at?: string;
+            deleted_at?: number;
+            name_i18n?: string;
+        };
+    };
 }
 
 export interface IInventoryFormData {
@@ -47,5 +60,24 @@ export interface BackendResponse<T> {
     status: string;
     message: string;
     data: T;
+    pagination?: IBackendPagination;
     code: number;
+}
+
+export interface IBackendPagination {
+    total: number;
+    limit: number;
+    offset: number;
+    total_pages: number;
+}
+
+export interface IInventoryListParams {
+    search?: string;
+    limit?: number;
+    offset?: number;
+}
+
+export interface IInventoryListResult {
+    items: IInventory[];
+    pagination?: IBackendPagination;
 }

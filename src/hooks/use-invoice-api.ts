@@ -69,6 +69,10 @@ export interface BackendResponse<T> {
     code: number;
 }
 
+interface InvoiceBatchDeletePayload {
+    ids?: string[];
+}
+
 export interface UseInvoiceAPIReturn {
     getInvoices: (filters?: InvoiceListFilters) => Promise<Invoice[]>;
     getInvoiceById: (id: string) => Promise<Invoice | null>;
@@ -268,34 +272,34 @@ export function useInvoiceAPI(): UseInvoiceAPIReturn {
     }, []);
 
     /**
-     * Invoice'ni o'chiradi
+     * Bir yoki bir nechta invoice'ni batch endpoint orqali o'chiradi / bekor qiladi
      */
-    const deleteInvoice = useCallback(async (id: string): Promise<void> => {
+    const deleteInvoices = useCallback(async (ids: string[]): Promise<void> => {
+        const normalizedIds = ids.filter(Boolean);
+
+        if (!normalizedIds.length) {
+            return;
+        }
+
         try {
-            await deleter(endpoints.invoice.delete(id));
-            toast.success('Invoice deleted successfully');
+            await deleter(endpoints.invoice.batch, { data: { ids: normalizedIds } as InvoiceBatchDeletePayload });
+            toast.success(
+                normalizedIds.length === 1
+                    ? 'Invoice deleted successfully'
+                    : 'Invoices deleted successfully'
+            );
+            return;
         } catch (error) {
-            const axiosError = error as AxiosError<any>;
-            const message = axiosError?.response?.data?.message || 'Failed to delete invoice';
-            toast.error(message);
-            throw error;
+        const axiosError = error as AxiosError<any>;
+        const message = axiosError?.response?.data?.message || 'Failed to delete invoices';
+        toast.error(message);
+        throw error;
         }
     }, []);
 
-    /**
-     * Bir nechta invoices'ni o'chiradi
-     */
-    const deleteInvoices = useCallback(async (ids: string[]): Promise<void> => {
-        try {
-            await Promise.all(ids.map((id) => deleter(endpoints.invoice.delete(id))));
-            toast.success('Invoices deleted successfully');
-        } catch (error) {
-            const axiosError = error as AxiosError<any>;
-            const message = axiosError?.response?.data?.message || 'Failed to delete invoices';
-            toast.error(message);
-            throw error;
-        }
-    }, []);
+    const deleteInvoice = useCallback(async (id: string): Promise<void> => {
+        await deleteInvoices([id]);
+    }, [deleteInvoices]);
 
     /**
      * Yangi invoice detail'ni yaratadi

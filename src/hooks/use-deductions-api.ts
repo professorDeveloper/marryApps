@@ -36,6 +36,20 @@ export interface Deduction {
     group_name?: string;    // Optional field from backend
     items?: DeductionItem[]; // Optional items array
     warnings?: string[];
+    _expand?: {
+        act_group_id?: DeductionGroup;
+        storage_id?: {
+            id: string;
+            name: string;
+            branch_id?: string;
+            color_code?: string;
+            picture_url?: string | null;
+            created_at?: string;
+            updated_at?: string;
+            deleted_at?: number;
+            name_i18n?: string;
+        };
+    };
 }
 
 export interface DeductionGroup {
@@ -52,8 +66,26 @@ export interface BackendResponse<T> {
     code: number;
 }
 
+export interface BackendPagination {
+    total: number;
+    limit: number;
+    offset: number;
+    total_pages: number;
+}
+
+export interface DeductionListParams {
+    expand?: string;
+    limit?: number;
+    offset?: number;
+}
+
+export interface DeductionListResult {
+    items: Deduction[];
+    pagination?: BackendPagination;
+}
+
 export interface UseDeductionsAPIReturn {
-    getDeductions: () => Promise<Deduction[]>;
+    getDeductions: (params?: DeductionListParams) => Promise<DeductionListResult>;
     getDeductionById: (id: string) => Promise<Deduction | null>;
     createDeduction: (data: {
         act_group_id: string;
@@ -96,22 +128,63 @@ export function useDeductionsAPI(): UseDeductionsAPIReturn {
             };
         });
 
+    const extractListAndPagination = <T,>(
+        payload: unknown
+    ): { items: T[]; pagination?: BackendPagination } => {
+        if (!payload || typeof payload !== 'object') return { items: [] };
+
+        const obj = payload as Record<string, unknown>;
+
+        if (obj.data && typeof obj.data === 'object') {
+            const nested = obj.data as Record<string, unknown>;
+
+            if (Array.isArray(nested.data)) {
+                return {
+                    items: nested.data as T[],
+                    pagination:
+                        nested.pagination && typeof nested.pagination === 'object'
+                            ? (nested.pagination as BackendPagination)
+                            : undefined,
+                };
+            }
+        }
+
+        if (Array.isArray(obj.data)) {
+            return {
+                items: obj.data as T[],
+                pagination:
+                    obj.pagination && typeof obj.pagination === 'object'
+                        ? (obj.pagination as BackendPagination)
+                        : undefined,
+            };
+        }
+
+        return { items: [] };
+    };
+
     /**
      * Barcha deductions'ni oladi
      */
-    const getDeductions = useCallback(async (): Promise<Deduction[]> => {
+    const getDeductions = useCallback(async (params?: DeductionListParams): Promise<DeductionListResult> => {
         try {
-            const response = await fetcher<BackendResponse<Deduction[]>>(
-                endpoints.deductions.list
-            );
-            return response.data || [];
+            const response = await fetcher<unknown>([
+                endpoints.deductions.list,
+                {
+                    params: {
+                        expand: params?.expand || 'act_group_id,storage_id',
+                        limit: typeof params?.limit === 'number' ? params.limit : 20,
+                        offset: typeof params?.offset === 'number' ? params.offset : 0,
+                    },
+                },
+            ]);
+            return extractListAndPagination<Deduction>(response);
         } catch (error) {
             const axiosError = error as AxiosError<any>;
             const message =
                 axiosError?.response?.data?.message ||
                 'Failed to fetch deductions';
             toast.error(message);
-            return [];
+            return { items: [] };
         }
     }, []);
 

@@ -1,4 +1,5 @@
 import { useCallback, useMemo, useState } from 'react';
+import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
     Box,
@@ -14,7 +15,12 @@ import { GridColDef } from '@mui/x-data-grid';
 import { Iconify } from 'src/components/iconify';
 import { CustomGridActionsCellItem } from 'src/components/custom-data-grid';
 import { GenericTableView } from 'src/components/generic-table-view';
-import { useDeductionsAPI, Deduction, DeductionGroup } from 'src/hooks/use-deductions-api';
+import {
+    useDeductionsAPI,
+    Deduction,
+    DeductionGroup,
+    BackendPagination,
+} from 'src/hooks/use-deductions-api';
 import { useRouter } from 'src/routes/hooks';
 import { paths } from 'src/routes/paths';
 import { fetcher, endpoints } from 'src/lib/axios';
@@ -49,6 +55,8 @@ export function DeductionsListView() {
     const [storages, setStorages] = useState<Storage[]>([]);
     const [ingredientsMap, setIngredientsMap] = useState<Record<string, string>>({});
     const [loading, setLoading] = useState(true);
+    const [rowCount, setRowCount] = useState(0);
+    const [paginationModel, setPaginationModel] = useState({ page: 0, pageSize: 20 });
     const [selectedDeleteId, setSelectedDeleteId] = useState<string | null>(null);
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [viewOpen, setViewOpen] = useState(false);
@@ -102,41 +110,40 @@ export function DeductionsListView() {
                 )
             );
 
-            const storageIdSet = new Set(finalStorages.map((s) => s.id));
-
             // Then load deductions
-            const deductionsData = await getDeductions();
-
-            // Scope deductions to current branch storages to prevent cross-branch ID leakage
-            const scopedDeductions = deductionsData.filter((d) => storageIdSet.has(d.storage_id));
+            const deductionsResponse = await getDeductions({
+                expand: 'act_group_id,storage_id',
+                limit: paginationModel.pageSize,
+                offset: paginationModel.page * paginationModel.pageSize,
+            });
+            const deductionsData = deductionsResponse.items || [];
+            const pagination = deductionsResponse.pagination as BackendPagination | undefined;
 
             // Enrich deductions with storage_name and group_name if not present
-            const enrichedDeductions = scopedDeductions.map(d => {
-                const storage = finalStorages.find(s => s.id === d.storage_id);
-                const group = finalGroups.find(g => g.id === d.act_group_id);
+            const enrichedDeductions = deductionsData.map(d => {
+                const storage = d._expand?.storage_id || finalStorages.find(s => s.id === d.storage_id);
+                const group = d._expand?.act_group_id || finalGroups.find(g => g.id === d.act_group_id);
 
                 return {
                     ...d,
-                    storage_name: d.storage_name || storage?.name,
-                    group_name: d.group_name || group?.name,
+                    storage_name: d.storage_name || storage?.name || d.storage_id,
+                    group_name: d.group_name || group?.name || d.act_group_id,
                 };
             });
 
             setDeductions(enrichedDeductions);
+            setRowCount(pagination?.total || 0);
         } catch (error) {
             console.error('Error fetching data:', error);
             // Continue anyway - deduction object may have storage_name and group_name
         } finally {
             setLoading(false);
         }
-    }, [getDeductions, getDeductionGroups]);
+    }, [getDeductions, getDeductionGroups, paginationModel.page, paginationModel.pageSize]);
 
-    // Load data on mount
-    const [mounted, setMounted] = useState(false);
-    if (!mounted) {
-        setMounted(true);
+    useEffect(() => {
         fetchData();
-    }
+    }, [fetchData]);
 
     // Handle delete deduction
     const handleDeleteClick = (id: string) => {
@@ -149,7 +156,7 @@ export function DeductionsListView() {
 
         try {
             await deleteDeduction(selectedDeleteId);
-            setDeductions(deductions.filter((d) => d.id !== selectedDeleteId));
+            fetchData();
             setDeleteDialogOpen(false);
             setSelectedDeleteId(null);
         } catch (error) {
@@ -209,14 +216,22 @@ export function DeductionsListView() {
                 headerName: t('deductions.storage', 'Storage'),
                 flex: 1,
                 minWidth: 180,
-                renderCell: (params) => params.row.storage_name || storagesMap[params.row.storage_id] || '-',
+                renderCell: (params) =>
+                    params.row._expand?.storage_id?.name ||
+                    params.row.storage_name ||
+                    storagesMap[params.row.storage_id] ||
+                    '-',
             },
             {
                 field: 'act_group_id',
                 headerName: t('deductions.group', 'Group'),
                 flex: 1,
                 minWidth: 150,
-                renderCell: (params) => params.row.group_name || groupsMap[params.row.act_group_id] || '-',
+                renderCell: (params) =>
+                    params.row._expand?.act_group_id?.name ||
+                    params.row.group_name ||
+                    groupsMap[params.row.act_group_id] ||
+                    '-',
             },
             {
                 field: 'description',
@@ -319,6 +334,11 @@ export function DeductionsListView() {
                 data={deductions}
                 columns={columns}
                 loading={loading}
+                paginationMode="server"
+                rowCount={rowCount}
+                paginationModel={paginationModel}
+                onPaginationModelChange={setPaginationModel}
+                pageSizeOptions={[10, 20, 50, 100]}
                 breadcrumbs={{
                     heading: t('deductions.title', 'Deductions'),
                     links: [
