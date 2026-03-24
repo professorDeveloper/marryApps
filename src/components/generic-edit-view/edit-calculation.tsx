@@ -1060,6 +1060,7 @@ const ProductCalculator = ({ compoundId, mealId, onEntityCreated, onCalculations
                             {!loading && filteredIngredients.length > visibleIngredientCount && (
                                 <Box sx={{ p: 1.5, textAlign: 'center', borderTop: `1px solid ${theme.vars.palette.divider}` }}>
                                     <Button
+                                        type="button"
                                         size="small"
                                         onClick={() => setVisibleIngredientCount((prev) => prev + INITIAL_VISIBLE_ITEMS)}
                                     >
@@ -1074,6 +1075,7 @@ const ProductCalculator = ({ compoundId, mealId, onEntityCreated, onCalculations
                     <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'start', height: '100%', pt: 5 }}>
                         <Box sx={{ display: 'flex', flexDirection: { xs: 'row', md: 'column' }, gap: 1 }}>
                             <IconButton
+                                type="button"
                                 onClick={handleMoveRight}
                                 disabled={selectedIds.length === 0}
                                 sx={{
@@ -1090,6 +1092,7 @@ const ProductCalculator = ({ compoundId, mealId, onEntityCreated, onCalculations
                                 <ChevronRightIcon />
                             </IconButton>
                             <IconButton
+                                type="button"
                                 onClick={handleMoveLeft}
                                 disabled={transferredIds.length === 0}
                                 sx={{
@@ -1153,7 +1156,7 @@ const ProductCalculator = ({ compoundId, mealId, onEntityCreated, onCalculations
                                         return;
                                     }
 
-                                    // If entity exists, also save to backend
+                                    // If entity exists, also save ingredient calculations to backend
                                     if (transferredIds.length > 0) {
                                         try {
                                             for (const ingredientId of transferredIds) {
@@ -1186,6 +1189,7 @@ const ProductCalculator = ({ compoundId, mealId, onEntityCreated, onCalculations
                                         bgcolor: (transferredIds.length === 0) ? theme.palette.action.disabled : theme.palette.warning.dark
                                     }
                                 }}
+                                disabled={transferredIds.length === 0}
                             >
                                 {t('calculation.calculate')}
                             </Button>
@@ -1378,6 +1382,7 @@ const ProductCalculator = ({ compoundId, mealId, onEntityCreated, onCalculations
                             {!compoundsLoading && filteredCompounds.length > visibleCompoundCount && (
                                 <Box sx={{ p: 1.5, textAlign: 'center', borderTop: `1px solid ${theme.vars.palette.divider}` }}>
                                     <Button
+                                        type="button"
                                         size="small"
                                         onClick={() => setVisibleCompoundCount((prev) => prev + INITIAL_VISIBLE_ITEMS)}
                                     >
@@ -1392,6 +1397,7 @@ const ProductCalculator = ({ compoundId, mealId, onEntityCreated, onCalculations
                     <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'start', height: '100%', pt: 5 }}>
                         <Box sx={{ display: 'flex', flexDirection: { xs: 'row', md: 'column' }, gap: 1 }}>
                             <IconButton
+                                type="button"
                                 onClick={handleSfMoveRight}
                                 disabled={sfSelectedIds.length === 0}
                                 sx={{
@@ -1408,6 +1414,7 @@ const ProductCalculator = ({ compoundId, mealId, onEntityCreated, onCalculations
                                 <ChevronRightIcon />
                             </IconButton>
                             <IconButton
+                                type="button"
                                 onClick={handleSfMoveLeft}
                                 disabled={sfTransferredIds.length === 0}
                                 sx={{
@@ -1439,7 +1446,7 @@ const ProductCalculator = ({ compoundId, mealId, onEntityCreated, onCalculations
                                     e.preventDefault();  // ← Qo'shimcha himoya: forma submit bo'lishini to'xtatadi
 
                                     // Frontend-only calculation (view mode)
-                                    setShowCalculation(true);
+                                    setSfShowCalculation(true);
                                     setViewModeCalculation(true);
 
                                     if (!entityId) {
@@ -1471,20 +1478,22 @@ const ProductCalculator = ({ compoundId, mealId, onEntityCreated, onCalculations
                                         return;
                                     }
 
-                                    // If entity exists, also save to backend
-                                    if (transferredIds.length > 0) {
+                                    // If entity exists, also save semi-finished calculations to backend
+                                    if (sfTransferredIds.length > 0) {
                                         try {
-                                            for (const ingredientId of transferredIds) {
-                                                const quantity = quantities[ingredientId] || 0;
+                                            for (const compoundIdToAdd of sfTransferredIds) {
+                                                const quantity = sfQuantities[compoundIdToAdd] || 0;
                                                 if (quantity > 0) {
-                                                    const existingCalculation = ingredientCalculations?.find(calc => calc.ingredient_id === ingredientId);
+                                                    const existingCalculation = compoundCalculationsList?.find(
+                                                        (calc) => calc.component_compound_id === compoundIdToAdd
+                                                    );
 
                                                     if (existingCalculation) {
                                                         await deleteCalculation(existingCalculation.id);
                                                     }
 
                                                     await createCalculation({
-                                                        ingredient_id: ingredientId,
+                                                        compound_to_add_id: compoundIdToAdd,
                                                         quantity: String(quantity),
                                                     });
                                                 }
@@ -1498,12 +1507,13 @@ const ProductCalculator = ({ compoundId, mealId, onEntityCreated, onCalculations
                                     }
                                 }}
                                 sx={{
-                                    bgcolor: (transferredIds.length === 0) ? theme.palette.action.disabled : theme.palette.warning.main,
+                                    bgcolor: (sfTransferredIds.length === 0) ? theme.palette.action.disabled : theme.palette.warning.main,
                                     textTransform: 'none',
                                     '&:hover': {
-                                        bgcolor: (transferredIds.length === 0) ? theme.palette.action.disabled : theme.palette.warning.dark
+                                        bgcolor: (sfTransferredIds.length === 0) ? theme.palette.action.disabled : theme.palette.warning.dark
                                     }
                                 }}
+                                disabled={sfTransferredIds.length === 0}
                             >
                                 {t('calculation.calculate')}
                             </Button>
