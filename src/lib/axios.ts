@@ -233,6 +233,7 @@ export const endpoints = {
     create: '/api/v1/compounds',
     createWithCalculations: '/api/v1/compounds/with-calculations',
     update: (id: string) => `/api/v1/compounds/${id}`,
+    updateWithCalculations: (id: string) => `/api/v1/compounds/${id}/with-calculations`,
     delete: (id: string) => `/api/v1/compounds/${id}`,
     calculations: (compoundId: string) => `/api/v1/compounds/calculations?compound_id=${compoundId}`,
     createCalculation: '/api/v1/compounds/calculations',

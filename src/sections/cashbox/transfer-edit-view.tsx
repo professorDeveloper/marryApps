@@ -63,7 +63,6 @@ export function TransactionsEditView({ isNew = false }: TransactionsEditViewProp
   const {
     getTransferById,
     createTransferBatch,
-    updateTransfer,
     updateTransferItemsBatch,
     getTransferGroups,
   } = useTransfersAPI();
@@ -226,15 +225,14 @@ export function TransactionsEditView({ isNew = false }: TransactionsEditViewProp
     }
 
     if (effectiveTransferId) {
-      await updateTransfer(effectiveTransferId, {
+      await updateTransferItemsBatch(effectiveTransferId, {
         act_group_id: formData.act_group_id,
-        description: formData.description || '',
-        to_branch_id: formData.to_branch_id,
-        to_storage_id: formData.to_storage_id,
-        from_branch_id: formData.from_branch_id,
-        from_storage_id: formData.from_storage_id,
-        status: formData.status,
         date: formData.date,
+        description: formData.description || '',
+        from_storage_id: formData.from_storage_id,
+        to_storage_id: formData.to_storage_id,
+        status: formData.status,
+        items: itemsRef.current,
       });
       toast.success(t('common.updateSuccess', 'Updated successfully'));
       goToTransactions();
@@ -246,7 +244,7 @@ export function TransactionsEditView({ isNew = false }: TransactionsEditViewProp
     goToTransactions,
     isNew,
     t,
-    updateTransfer,
+    updateTransferItemsBatch,
     validateBaseFields,
   ]);
 
@@ -276,7 +274,15 @@ export function TransactionsEditView({ isNew = false }: TransactionsEditViewProp
       }
 
       if (effectiveTransferId) {
-        await updateTransferItemsBatch(effectiveTransferId, itemsRef.current);
+        await updateTransferItemsBatch(effectiveTransferId, {
+          act_group_id: formData.act_group_id,
+          date: formData.date,
+          description: formData.description || '',
+          from_storage_id: formData.from_storage_id,
+          to_storage_id: formData.to_storage_id,
+          status: formData.status,
+          items: itemsRef.current,
+        });
         toast.success(t('common.updateSuccess', 'Updated successfully'));
         goToTransactions();
       }

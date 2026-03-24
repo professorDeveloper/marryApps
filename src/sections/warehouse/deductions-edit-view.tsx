@@ -66,6 +66,13 @@ interface DeductionsEditViewProps {
     isNew?: boolean;
 }
 
+const CREATE_ALLOWED_STATUSES = ['active', 'draft'] as const;
+type CreateDeductionStatus = (typeof CREATE_ALLOWED_STATUSES)[number];
+const normalizeCreateStatus = (value: unknown): CreateDeductionStatus =>
+    CREATE_ALLOWED_STATUSES.includes(value as CreateDeductionStatus)
+        ? (value as CreateDeductionStatus)
+        : 'active';
+
 export function DeductionsEditView({ isNew = false }: DeductionsEditViewProps) {
     const { t } = useTranslation('menu');
     const { id } = useParams<{ id: string }>();
@@ -96,6 +103,20 @@ export function DeductionsEditView({ isNew = false }: DeductionsEditViewProps) {
     const [storages, setStorages] = useState<Storage[]>([]);
     const [loading, setLoading] = useState(false);
     const [createdDeductionId, setCreatedDeductionId] = useState<string | undefined>(undefined);
+    const statusOptions = useMemo(
+        () =>
+            isNew
+                ? [
+                    { value: 'active', label: t('deductions.active', 'Active') },
+                    { value: 'draft', label: t('deductions.draft', 'Draft') },
+                ]
+                : [
+                    { value: 'active', label: t('deductions.active', 'Active') },
+                    { value: 'draft', label: t('deductions.draft', 'Draft') },
+                    // { value: 'deleted', label: t('deductions.deleted', 'Deleted') },
+                ],
+        [isNew, t]
+    );
 
     // Effective deduction ID
     const effectiveDeductionId = id || deduction?.id || createdDeductionId;
@@ -201,7 +222,7 @@ export function DeductionsEditView({ isNew = false }: DeductionsEditViewProps) {
             // Prepare payload with current items
             const payload = {
                 date: data.date,
-                status: data.status,
+                status: isNew ? normalizeCreateStatus(data.status) : data.status,
                 storage_id: data.storage_id,
                 description: data.description,
                 act_group_id: data.act_group_id,
@@ -274,7 +295,7 @@ export function DeductionsEditView({ isNew = false }: DeductionsEditViewProps) {
             // Prepare payload with all data
             const payload = {
                 date: formData.date,
-                status: formData.status,
+                status: isNew ? normalizeCreateStatus(formData.status) : formData.status,
                 storage_id: formData.storage_id,
                 description: formData.description,
                 act_group_id: formData.act_group_id,
@@ -395,10 +416,7 @@ export function DeductionsEditView({ isNew = false }: DeductionsEditViewProps) {
                             key: 'status',
                             label: t('deductions.status', 'Status'),
                             type: 'select' as const,
-                            options: [
-                                { value: 'active', label: t('deductions.active', 'Active') },
-                                { value: 'deleted', label: t('deductions.deleted', 'Deleted') },
-                            ],
+                            options: statusOptions,
                             defaultValue: 'active',
                         },
                         {
@@ -414,7 +432,7 @@ export function DeductionsEditView({ isNew = false }: DeductionsEditViewProps) {
             onSubmit: handleSubmit as (formData: Record<string, any>) => Promise<void>,
             onDelete: handleDelete as () => Promise<void>,
         }),
-        [isNew, t, deduction?.number, storageOptions, groupOptions, handleSubmit, handleDelete]
+        [isNew, t, deduction?.number, storageOptions, groupOptions, handleSubmit, handleDelete, statusOptions]
     );
 
     return (

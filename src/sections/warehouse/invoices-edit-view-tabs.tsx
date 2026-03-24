@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams } from 'react-router';
 import { Box, Tabs, Tab, CircularProgress } from '@mui/material';
 import { useTranslation } from 'react-i18next';
@@ -49,6 +49,7 @@ export function InvoicesEditViewTabs() {
         total_amount: '',
     }); // Persist form data across tab switches
     const isCreatingNew = !id;
+    const detailsSnapshotRef = useRef<string>('[]');
 
     // Load invoice data when editing
     useEffect(() => {
@@ -73,6 +74,7 @@ export function InvoicesEditViewTabs() {
                     const response = await fetcher<any>(`/api/v1/invoice-details/invoice/${id}`);
                     if (response.data) {
                         const details = Array.isArray(response.data) ? response.data : [response.data];
+                        detailsSnapshotRef.current = JSON.stringify(details);
                         setDetailsData(details);
                     }
                 } catch (error) {
@@ -102,8 +104,13 @@ export function InvoicesEditViewTabs() {
 
     // Called when user adds details in Tab 2
     const handleDetailsChange = useCallback((details: any[]) => {
+        const nextSnapshot = JSON.stringify(details);
+        if (nextSnapshot === detailsSnapshotRef.current) {
+            return;
+        }
+
+        detailsSnapshotRef.current = nextSnapshot;
         setDetailsData(details);
-        console.log('Details updated:', details);
     }, []);
 
     // Called when user submits invoice info in Tab 1 - this is where batch API is called
@@ -156,6 +163,7 @@ export function InvoicesEditViewTabs() {
                     status: 'pending',
                     total_amount: '',
                 });
+                detailsSnapshotRef.current = '[]';
                 setDetailsData([]);
                 toast.success(t('warehouse.invoices.created'));
                 router.push(paths.warehouse.invoiceDetails.root);

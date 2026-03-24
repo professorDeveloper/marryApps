@@ -893,8 +893,12 @@ export function useUpdateMealWithCalculations() {
                         cook_time: payload.good.cook_time || 0,
                         color_code: payload.good.color_code || null,
                     },
-                    ingredient_calculations: payload.ingredient_calculations || [],
-                    compound_calculations: payload.compound_calculations || [],
+                    ...(payload.ingredient_calculations !== undefined
+                        ? { ingredient_calculations: payload.ingredient_calculations }
+                        : {}),
+                    ...(payload.compound_calculations !== undefined
+                        ? { compound_calculations: payload.compound_calculations }
+                        : {}),
                 };
 
                 const response = await putter<BackendResponse<any>>(

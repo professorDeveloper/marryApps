@@ -1,4 +1,4 @@
-import type { GridColDef } from '@mui/x-data-grid';
+import type { GridColDef, GridPaginationModel } from '@mui/x-data-grid';
 import type { Transfer } from 'src/types/transfers';
 
 import { useMemo, useState, useEffect, useCallback } from 'react';
@@ -43,11 +43,17 @@ export function TransfersListView() {
 
   const [loading, setLoading] = useState(true);
   const [rows, setRows] = useState<Transfer[]>([]);
+  const [rowCount, setRowCount] = useState(0);
+  const [totalAmount, setTotalAmount] = useState('0');
   const [branchesMap, setBranchesMap] = useState<Record<string, string>>({});
   const [storagesMap, setStoragesMap] = useState<Record<string, string>>({});
   const [groupsMap, setGroupsMap] = useState<Record<string, string>>({});
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [openConfirm, setOpenConfirm] = useState(false);
+  const [paginationModel, setPaginationModel] = useState<GridPaginationModel>({
+    page: 0,
+    pageSize: 20,
+  });
   const [draftFilters, setDraftFilters] = useState({
     status: '',
   });
@@ -56,7 +62,10 @@ export function TransfersListView() {
     setLoading(true);
     try {
       const [transfersData, groupsData, branchesData, storagesData] = await Promise.all([
-        getTransfers(),
+        getTransfers({
+          limit: paginationModel.pageSize,
+          offset: paginationModel.page * paginationModel.pageSize,
+        }),
         getTransferGroups(),
         fetcher<BackendResponse<Branch[]>>(endpoints.branches.list).catch(() => ({
           status: 'error',
@@ -79,7 +88,7 @@ export function TransfersListView() {
 
       const missingBranchIds = Array.from(
         new Set(
-          transfersData.flatMap((transfer) => [transfer.from_branch_id, transfer.to_branch_id])
+          transfersData.items.flatMap((transfer) => [transfer.from_branch_id, transfer.to_branch_id])
         )
       ).filter((branchId) => branchId && !baseBranchesMap[branchId]);
 
@@ -106,7 +115,7 @@ export function TransfersListView() {
 
       const branchIdsFromTransfers = Array.from(
         new Set(
-          transfersData.flatMap((transfer) => [transfer.from_branch_id, transfer.to_branch_id])
+          transfersData.items.flatMap((transfer) => [transfer.from_branch_id, transfer.to_branch_id])
         )
       ).filter(Boolean);
 
@@ -145,7 +154,9 @@ export function TransfersListView() {
         {} as Record<string, string>
       );
 
-      setRows(transfersData);
+      setRows(transfersData.items);
+      setRowCount(transfersData.pagination?.total || 0);
+      setTotalAmount(transfersData.totalAmount || '0');
       setGroupsMap(
         (groupsData || []).reduce(
           (acc, item) => ({ ...acc, [item.id]: item.name || item.id }),
@@ -164,7 +175,7 @@ export function TransfersListView() {
     } finally {
       setLoading(false);
     }
-  }, [getTransferGroups, getTransfers]);
+  }, [getTransferGroups, getTransfers, paginationModel.page, paginationModel.pageSize]);
 
   useEffect(() => {
     loadData();
@@ -347,6 +358,11 @@ export function TransfersListView() {
         data={filteredRows}
         columns={columns}
         loading={loading}
+        paginationMode="server"
+        rowCount={rowCount}
+        paginationModel={paginationModel}
+        onPaginationModelChange={setPaginationModel}
+        pageSizeOptions={[10, 20, 50, 100]}
         breadcrumbs={{
           heading: t('overview.warehouse.transfers', 'Transfers'),
           links: [
@@ -392,6 +408,23 @@ export function TransfersListView() {
             >
               {t('deductions.reset', 'Reset') || 'Reset'}
             </Button> */}
+          </Box>
+        )}
+        renderFooter={() => (
+          <Box
+            sx={{
+              display: 'flex',
+              justifyContent: 'flex-end',
+              alignItems: 'center',
+              gap: 1.5,
+            }}
+          >
+            <Box sx={{ color: 'text.secondary', fontWeight: 600 }}>
+              {t('deductions.balance', 'Total')}:
+            </Box>
+            <Box sx={{ fontWeight: 700 }}>
+              {Number(totalAmount || 0).toLocaleString()}
+            </Box>
           </Box>
         )}
       />

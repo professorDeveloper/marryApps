@@ -751,3 +751,69 @@ export function useCreateCompoundWithCalculations() {
 
     return { createCompoundWithCalculations };
 }
+
+/**
+ * Update compound with calculations (yangi qulayroq API - PUT request)
+ */
+export function useUpdateCompoundWithCalculations() {
+    const updateCompoundWithCalculations = useCallback(
+        async (
+            compoundId: string,
+            payload: {
+                compound: any;
+                ingredient_calculations?: Array<{ ingredient_id: string; quantity: string }>;
+                compound_calculations?: Array<{ compound_id: string; quantity: string }>;
+            }
+        ): Promise<any> => {
+            try {
+                const payloadToSend = {
+                    compound: {
+                        name: payload.compound.name,
+                        name_i18n: payload.compound.name_i18n || undefined,
+                        description: payload.compound.description || '',
+                        description_i18n: payload.compound.description_i18n || undefined,
+                        price: String(payload.compound.price),
+                        quantity: Number(payload.compound.quantity),
+                        measurement: payload.compound.measurement,
+                        ingredient_group_id: payload.compound.ingredient_group_id,
+                        picture_url: payload.compound.picture_url || null,
+                    },
+                    ...(payload.ingredient_calculations !== undefined
+                        ? { ingredient_calculations: payload.ingredient_calculations }
+                        : {}),
+                    ...(payload.compound_calculations !== undefined
+                        ? { compound_calculations: payload.compound_calculations }
+                        : {}),
+                };
+
+                const response = await putter<BackendResponse<any>>(
+                    endpoints.compound.updateWithCalculations(compoundId),
+                    payloadToSend
+                );
+
+                let data: any;
+                if ('compound' in response && 'calculations' in response) {
+                    data = response;
+                } else if (response?.data) {
+                    data = response.data;
+                } else {
+                    throw new Error('Invalid response format');
+                }
+
+                await mutate(endpoints.compound.list);
+                await mutate(endpoints.compound.details(compoundId));
+                await mutate(endpoints.compound.withCalculations(compoundId));
+
+                toast.success('Compound with calculations updated successfully');
+                return data;
+            } catch (error) {
+                toast.error('Failed to update compound with calculations');
+                console.error('Failed to update compound with calculations:', error);
+                throw error;
+            }
+        },
+        []
+    );
+
+    return { updateCompoundWithCalculations };
+}

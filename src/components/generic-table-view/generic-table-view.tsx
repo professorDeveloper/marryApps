@@ -11,8 +11,9 @@ import { useBoolean, useSetState } from 'minimal-shared/hooks';
 import { useMemo, useRef, useState, useEffect, useCallback } from 'react';
 
 import Card from '@mui/material/Card';
+import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
-import { DataGrid, gridClasses } from '@mui/x-data-grid';
+import { DataGrid, GridFooter, gridClasses } from '@mui/x-data-grid';
 
 import { RouterLink } from 'src/routes/components';
 
@@ -98,6 +99,9 @@ export interface GenericTableConfig<T = any> {
   // Custom filters render function
   renderFilters?: () => React.ReactNode;
 
+  // Optional footer content rendered inside the table card
+  renderFooter?: () => React.ReactNode;
+
   // Optional quick filter callback for server-side search
   onQuickFilterChange?: (value: string) => void;
 
@@ -128,6 +132,7 @@ export function GenericTableView<T extends Record<string, any>>({
   hideFilters = false,
   hideCheckboxes = false,
   renderFilters,
+  renderFooter,
   onQuickFilterChange,
   paginationMode,
   rowCount,
@@ -304,6 +309,36 @@ export function GenericTableView<T extends Record<string, any>>({
     [renderToolbar, DefaultToolbarSlot]
   );
 
+  const FooterSlot = useMemo(() => {
+    if (!renderFooter) return undefined;
+
+    return () => (
+      <Box
+        sx={{
+          width: 1,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: 2,
+          px: 2,
+          py: 1,
+          borderTop: '1px solid rgba(145, 158, 171, 0.24)',
+          overflow: 'hidden',
+          '& .MuiDataGrid-footerContainer': {
+            borderTop: 'none',
+            minHeight: 'unset',
+          },
+          '& .MuiTablePagination-root': {
+            overflow: 'hidden',
+          },
+        }}
+      >
+        <Box sx={{ minWidth: 0 }}>{renderFooter()}</Box>
+        <GridFooter />
+      </Box>
+    );
+  }, [renderFooter]);
+
   const useControlledPagination = Boolean(paginationModel && onPaginationModelChange);
   const effectiveRowCount = useMemo(() => {
     if (typeof rowCount === 'number' && (!loading || rowCount > 0)) {
@@ -373,7 +408,8 @@ export function GenericTableView<T extends Record<string, any>>({
           sx={{
             display: 'flex',
             flexDirection: 'column',
-            height: gridHeight,
+            height: renderFooter ? 'auto' : gridHeight,
+            maxHeight: renderFooter ? gridHeight : undefined,
             minHeight: 0,
             overflow: 'hidden',
           }}
@@ -410,6 +446,7 @@ export function GenericTableView<T extends Record<string, any>>({
               noRowsOverlay: () => <EmptyContent title="Ishlab chiqish jarayonida" />,
               noResultsOverlay: () => <EmptyContent title="Natija topilmadi" />,
               toolbar: ToolbarSlot,
+              footer: FooterSlot,
             }}
             slotProps={{
               columnsManagement: {
