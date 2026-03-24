@@ -1,5 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
-import { useEffect } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
     Box,
@@ -45,6 +44,18 @@ interface BackendResponse<T> {
     data: T;
 }
 
+let staticLookupCache: {
+    groups: DeductionGroup[];
+    storages: Storage[];
+    ingredientsMap: Record<string, string>;
+} | null = null;
+
+let staticLookupPromise: Promise<{
+    groups: DeductionGroup[];
+    storages: Storage[];
+    ingredientsMap: Record<string, string>;
+}> | null = null;
+
 export function DeductionsListView() {
     const { t } = useTranslation('menu');
     const theme = useTheme();
@@ -62,6 +73,7 @@ export function DeductionsListView() {
     const [viewOpen, setViewOpen] = useState(false);
     const [viewLoading, setViewLoading] = useState(false);
     const [viewData, setViewData] = useState<DeductionDetailsData | null>(null);
+    const lastDeductionsKeyRef = useRef('');
 
     const storagesMap = useMemo(
         () =>
@@ -83,32 +95,52 @@ export function DeductionsListView() {
 
     // Fetch deductions and groups
     const fetchData = useCallback(async () => {
+        const requestKey = JSON.stringify({
+            page: paginationModel.page,
+            pageSize: paginationModel.pageSize,
+        });
+
+        if (lastDeductionsKeyRef.current === requestKey) return;
+        lastDeductionsKeyRef.current = requestKey;
+
         setLoading(true);
         try {
-            // Load groups and storages FIRST (in parallel)
-            const [groupsData, storagesData, ingredientsData] = await Promise.all([
-                getDeductionGroups(),
-                fetcher<BackendResponse<Storage[]>>(endpoints.storage.list).catch(() => ({
-                    data: [],
-                })),
-                fetcher<BackendResponse<Ingredient[]>>(endpoints.ingredient.list).catch(() => ({
-                    data: [],
-                })),
-            ]);
+            if (!staticLookupCache) {
+                if (!staticLookupPromise) {
+                    staticLookupPromise = Promise.all([
+                        getDeductionGroups(),
+                        fetcher<BackendResponse<Storage[]>>(endpoints.storage.list).catch(() => ({
+                            data: [],
+                        })),
+                        fetcher<BackendResponse<Ingredient[]>>(endpoints.ingredient.list).catch(() => ({
+                            data: [],
+                        })),
+                    ]).then(([groupsData, storagesData, ingredientsData]) => {
+                        const finalGroups = Array.isArray(groupsData) ? groupsData : [];
+                        const finalStorages = Array.isArray(storagesData?.data) ? storagesData.data : [];
+                        const finalIngredients = Array.isArray(ingredientsData?.data) ? ingredientsData.data : [];
 
-            // Update state - handle both empty and valid responses
-            const finalGroups = Array.isArray(groupsData) ? groupsData : [];
-            const finalStorages = Array.isArray(storagesData?.data) ? storagesData.data : [];
-            const finalIngredients = Array.isArray(ingredientsData?.data) ? ingredientsData.data : [];
+                        return {
+                            groups: finalGroups,
+                            storages: finalStorages,
+                            ingredientsMap: finalIngredients.reduce(
+                                (acc, ingredient) => ({ ...acc, [ingredient.id]: ingredient.name || ingredient.id }),
+                                {} as Record<string, string>
+                            ),
+                        };
+                    });
+                }
+
+                staticLookupCache = await staticLookupPromise;
+            }
+
+            const finalGroups = staticLookupCache?.groups || [];
+            const finalStorages = staticLookupCache?.storages || [];
+            const finalIngredientsMap = staticLookupCache?.ingredientsMap || {};
 
             setGroups(finalGroups);
             setStorages(finalStorages);
-            setIngredientsMap(
-                finalIngredients.reduce(
-                    (acc, ingredient) => ({ ...acc, [ingredient.id]: ingredient.name || ingredient.id }),
-                    {} as Record<string, string>
-                )
-            );
+            setIngredientsMap(finalIngredientsMap);
 
             // Then load deductions
             const deductionsResponse = await getDeductions({
@@ -156,7 +188,8 @@ export function DeductionsListView() {
 
         try {
             await deleteDeduction(selectedDeleteId);
-            fetchData();
+            lastDeductionsKeyRef.current = '';
+            await fetchData();
             setDeleteDialogOpen(false);
             setSelectedDeleteId(null);
         } catch (error) {
