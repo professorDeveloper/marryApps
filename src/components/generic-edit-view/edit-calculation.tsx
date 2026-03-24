@@ -406,10 +406,8 @@ const ProductCalculator = ({ compoundId, mealId, onEntityCreated, onCalculations
         }
     }, [entityId, ingredientCalculations, calculationsLoading]);
 
-    // Keep parent in sync for new entities so Save can send a single combined payload.
+    // Keep parent in sync so Save can send a single combined payload.
     useEffect(() => {
-        if (entityId) return;
-
         const ingredientPending = transferredIds
             .map((id) => ({
                 ingredient_id: id,
@@ -424,25 +422,23 @@ const ProductCalculator = ({ compoundId, mealId, onEntityCreated, onCalculations
             }))
             .filter((calc) => Number.isFinite(calc.quantity) && calc.quantity > 0);
 
-        setPendingCalculations([
-            ...ingredientPending,
-            ...compoundPending,
-        ]);
+        if (!entityId) {
+            setPendingCalculations([
+                ...ingredientPending,
+                ...compoundPending,
+            ]);
+        }
 
         if (onCalculationsReady) {
             onCalculationsReady({
-                ingredient_calculations: ingredientPending.length > 0
-                    ? ingredientPending.map((calc) => ({
-                        ingredient_id: calc.ingredient_id!,
-                        quantity: String(calc.quantity),
-                    }))
-                    : undefined,
-                compound_calculations: compoundPending.length > 0
-                    ? compoundPending.map((calc) => ({
-                        compound_id: calc.compound_to_add_id!,
-                        quantity: String(calc.quantity),
-                    }))
-                    : undefined,
+                ingredient_calculations: ingredientPending.map((calc) => ({
+                    ingredient_id: calc.ingredient_id!,
+                    quantity: String(calc.quantity),
+                })),
+                compound_calculations: compoundPending.map((calc) => ({
+                    compound_id: calc.compound_to_add_id!,
+                    quantity: String(calc.quantity),
+                })),
             });
         }
     }, [entityId, transferredIds, quantities, sfTransferredIds, sfQuantities, onCalculationsReady]);

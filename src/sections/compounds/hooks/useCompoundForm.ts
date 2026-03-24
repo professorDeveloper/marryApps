@@ -5,11 +5,13 @@ import { useRouter } from 'src/routes/hooks';
 import { paths } from 'src/routes/paths';
 import { endpoints } from 'src/lib/axios';
 import { toast } from 'src/components/snackbar';
+import {
+    useCreateCompoundWithCalculations,
+    useDeleteCompound,
+    useUpdateCompoundWithCalculations,
+} from 'src/hooks/use-compounds';
 import { useTranslationsAPI } from 'src/hooks/use-translations-api';
-import { useUpdateCompound } from 'src/hooks/use-compounds';
-import { useDeleteCompound } from 'src/hooks/use-compounds';
-import { useCreateCompoundWithCalculations } from 'src/hooks/use-compounds';
-import { PendingCalculation } from '../types';
+import type { PendingCalculation } from '../types';
 
 interface UseCompoundFormProps {
     compoundId?: string;
@@ -26,10 +28,10 @@ export function useCompoundForm({
 }: UseCompoundFormProps) {
     const router = useRouter();
     const { t } = useTranslation('menu');
-    const { updateCompound } = useUpdateCompound();
     const { deleteCompound } = useDeleteCompound();
     const { createTranslation, updateTranslation } = useTranslationsAPI();
     const { createCompoundWithCalculations } = useCreateCompoundWithCalculations();
+    const { updateCompoundWithCalculations } = useUpdateCompoundWithCalculations();
 
     // Handle form submission
     const handleSubmit = useCallback(
@@ -120,21 +122,24 @@ export function useCompoundForm({
                         description_i18n = descriptionTranslationResult.id;
                     }
 
-                    const payload = {
-                        name: submitFormData.name,
-                        name_i18n,
-                        description: submitFormData.description || '',
-                        description_i18n,
-                        price: String(submitFormData.price),
-                        quantity: Number(submitFormData.quantity),
-                        measurement: submitFormData.measurement,
-                        ingredient_group_id: submitFormData.ingredient_group_id,
-                        picture_url: submitFormData.picture_url || null,
-                    };
-                    await updateCompound(compoundId, payload);
-                    // Revalidate cache to reflect updates immediately
-                    await mutate(endpoints.compound.details(compoundId));
-                    await mutate(endpoints.compound.list);
+                    const pendingCalculations = pendingCalculationsRef.current;
+
+                    await updateCompoundWithCalculations(compoundId, {
+                        compound: {
+                            name: submitFormData.name,
+                            name_i18n,
+                            description: submitFormData.description || '',
+                            description_i18n,
+                            price: String(submitFormData.price),
+                            quantity: Number(submitFormData.quantity),
+                            measurement: submitFormData.measurement,
+                            ingredient_group_id: submitFormData.ingredient_group_id,
+                            picture_url: submitFormData.picture_url || null,
+                        },
+                        ingredient_calculations: pendingCalculations?.ingredient_calculations,
+                        compound_calculations: pendingCalculations?.compound_calculations,
+                    });
+
                     toast.success(t('success.updated', 'Successfully updated'));
                     // Redirect to list
                     router.push(paths.menu.semifinished.root);
@@ -146,7 +151,7 @@ export function useCompoundForm({
                 );
             }
         },
-        [router, isNew, compoundId, updateCompound, t, createTranslation, updateTranslation, createCompoundWithCalculations]
+        [router, isNew, compoundId, t, createTranslation, updateTranslation, createCompoundWithCalculations, pendingCalculationsRef, updateCompoundWithCalculations]
     );
 
     // Handle delete

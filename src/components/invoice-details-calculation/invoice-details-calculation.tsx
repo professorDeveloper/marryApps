@@ -754,17 +754,19 @@ export function InvoiceDetailsCalculation({ invoiceId, onSuccess, onDetailsChang
                         {/* RIGHT PANEL: Selected Items with Inputs */}
                         {showCalculation && (
                             <Paper sx={{ p: 2 }}>
-                                <Typography variant="subtitle1" sx={{ fontWeight: 'bold', mb: 2 }}>
-                                    {t('warehouse.invoiceDetails.selectedItems', 'Selected Items')}
-                                </Typography>
-                                {/* {isCalculating && (
-                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                                        <CircularProgress size={14} />
-                                        <Typography variant="caption" color="text.secondary">
-                                            {t('warehouse.invoiceDetails.calculating', 'Calculating...')}
-                                        </Typography>
-                                    </Box>
-                                )} */}
+                                <Box sx={{ display: 'flex',  }}>
+                                    <Typography variant="subtitle1" sx={{ fontWeight: 'bold', mb: 2 }}>
+                                        {t('warehouse.invoiceDetails.selectedItems', 'Selected Items')}
+                                    </Typography>
+                                    {/* {isCalculating && (
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                                            <CircularProgress size={14} />
+                                            <Typography variant="caption" color="text.secondary">
+                                                {t('warehouse.invoiceDetails.calculating', 'Calculating...')}
+                                            </Typography>
+                                        </Box>
+                                    )} */}
+                                </Box>
 
                                 {/* Search */}
                                 <TextField

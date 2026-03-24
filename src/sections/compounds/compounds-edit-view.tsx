@@ -5,7 +5,7 @@ import { paths } from 'src/routes/paths';
 import { useParams } from 'react-router';
 
 // Hooks and Actions
-import { useGetCompound } from 'src/hooks/use-compounds';
+import { useGetCompound, useGetCompoundWithCalculations } from 'src/hooks/use-compounds';
 import { useGetIngredientGroups } from 'src/actions/ingredient-group';
 import { useCompoundForm } from './hooks/useCompoundForm';
 
@@ -23,6 +23,27 @@ import type { GenericEditViewConfig } from '../../components/generic-edit-view/t
 
 // ================================================================================================
 
+const mapCalculationsToPending = (
+    calculations?: Array<{
+        ingredient_id: string;
+        component_compound_id?: string;
+        quantity: string;
+    }>
+): PendingCalculation => ({
+    ingredient_calculations: calculations
+        ?.filter((calculation) => calculation.ingredient_id && !calculation.component_compound_id)
+        .map((calculation) => ({
+            ingredient_id: calculation.ingredient_id,
+            quantity: String(calculation.quantity),
+        })) || [],
+    compound_calculations: calculations
+        ?.filter((calculation) => calculation.component_compound_id)
+        .map((calculation) => ({
+            compound_id: calculation.component_compound_id!,
+            quantity: String(calculation.quantity),
+        })) || [],
+});
+
 export function CompoundEditView({ compoundId, isNew = false }: CompoundEditViewProps) {
     const { t } = useTranslation('menu');
     const [activeTab, setActiveTab] = useState(0);
@@ -34,6 +55,7 @@ export function CompoundEditView({ compoundId, isNew = false }: CompoundEditView
 
     // --- Data Fetching ---
     const { compound, compoundLoading } = useGetCompound(isNew ? '' : compoundId || '');
+    const { compoundWithCalculations } = useGetCompoundWithCalculations(isNew ? undefined : compoundId || undefined);
     const { ingredientGroups } = useGetIngredientGroups();
     const isDataLoading = !isNew && compoundLoading;
 
@@ -80,6 +102,18 @@ export function CompoundEditView({ compoundId, isNew = false }: CompoundEditView
             });
         }
     }, [compound, isNew, isDataLoading]);
+
+    useEffect(() => {
+        if (!compoundWithCalculations?.calculations) return;
+
+        pendingCalculationsRef.current = mapCalculationsToPending(
+            compoundWithCalculations.calculations.map((calculation) => ({
+                ingredient_id: calculation.ingredient_id,
+                component_compound_id: calculation.component_compound_id,
+                quantity: calculation.quantity,
+            }))
+        );
+    }, [compoundWithCalculations]);
 
     // --- Form Handlers ---
     // These handlers are memoized within the custom hook
