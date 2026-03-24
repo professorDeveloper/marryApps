@@ -437,8 +437,30 @@ func (s *InventoryS) ReplaceInventoryItems(ctx context.Context, inventoryID stri
 		return nil, fmt.Errorf("cannot edit a deleted inventory")
 	}
 
-	isActive := inv.Status == "active"
+	// Determine old/new status for stock transition
+	oldStatus := inv.Status
+	newStatus := oldStatus
+	if req.Status != nil && *req.Status != "" {
+		if *req.Status == "deleted" {
+			return nil, fmt.Errorf("cannot set status to 'deleted'; use the DELETE endpoint")
+		}
+		if *req.Status != oldStatus {
+			if !((oldStatus == "draft" && *req.Status == "active") || (oldStatus == "active" && *req.Status == "draft")) {
+				return nil, fmt.Errorf("invalid status transition: %s → %s", oldStatus, *req.Status)
+			}
+			newStatus = *req.Status
+		}
+	}
+
 	storagePg := pgtype.UUID{Bytes: inv.StorageID, Valid: true}
+	if req.StorageID != nil && *req.StorageID != "" {
+		sid, err := uuid.Parse(*req.StorageID)
+		if err != nil {
+			return nil, fmt.Errorf("invalid storage_id: %w", err)
+		}
+		storagePg = pgtype.UUID{Bytes: sid, Valid: true}
+	}
+
 	zero := pgtype.Numeric{}
 	_ = zero.Scan("0")
 	sourceType := "inventory"
@@ -452,6 +474,67 @@ func (s *InventoryS) ReplaceInventoryItems(ctx context.Context, inventoryID stri
 	for _, item := range existingItems {
 		existingMap[item.IngredientID] = item
 	}
+
+	// If transitioning active→draft, reverse all existing items' stock before processing
+	if oldStatus == "active" && newStatus == "draft" {
+		if err := s.reverseStockForItems(ctx, invID, inv.StorageID, pgtype.UUID{Bytes: inv.StorageID, Valid: true}, existingItems, "active_to_draft"); err != nil {
+			return nil, err
+		}
+	}
+
+	// Update inventory-level fields if any are provided (status, date, storage_id, description)
+	if req.Status != nil || req.Date != nil || req.StorageID != nil || req.Description != nil || req.DescriptionI18n != nil {
+		existing, err := s.repo.Tenant(ctx).GetInventoryByID(ctx, invID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get inventory: %w", err)
+		}
+		finalDate := existing.Date
+		if req.Date != nil && *req.Date != "" {
+			d, err := parseDateYYYYMMDD(*req.Date)
+			if err != nil {
+				return nil, fmt.Errorf("invalid date: %w", err)
+			}
+			finalDate = pgtype.Date{Time: d, Valid: true}
+		}
+		finalStorageID := existing.StorageID
+		if req.StorageID != nil && *req.StorageID != "" {
+			sid, err := uuid.Parse(*req.StorageID)
+			if err != nil {
+				return nil, fmt.Errorf("invalid storage_id: %w", err)
+			}
+			finalStorageID = sid
+		}
+		finalDescription := existing.Description
+		if req.Description != nil {
+			finalDescription = req.Description
+		}
+		finalDescI18n := existing.DescriptionI18n
+		if req.DescriptionI18n != nil {
+			if *req.DescriptionI18n == "" {
+				finalDescI18n = pgtype.UUID{Valid: false}
+			} else {
+				i18nID, err := uuid.Parse(*req.DescriptionI18n)
+				if err != nil {
+					return nil, fmt.Errorf("invalid description_i18n: %w", err)
+				}
+				finalDescI18n = pgtype.UUID{Bytes: i18nID, Valid: true}
+			}
+		}
+		if _, err := s.repo.Tenant(ctx).UpdateInventory(ctx, pg.UpdateInventoryParams{
+			ID:              invID,
+			Date:            finalDate,
+			StorageID:       finalStorageID,
+			Description:     finalDescription,
+			DescriptionI18n: finalDescI18n,
+			Status:          newStatus,
+		}); err != nil {
+			return nil, fmt.Errorf("failed to update inventory: %w", err)
+		}
+		// Refresh storagePg in case storage changed
+		storagePg = pgtype.UUID{Bytes: finalStorageID, Valid: true}
+	}
+
+	isActive := newStatus == "active"
 
 	// Build set of ingredient IDs present in the request
 	requestSet := make(map[uuid.UUID]bool, len(req.Items))

@@ -13921,7 +13921,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Full replace of inventory items. Items in request are upserted; absent items are deleted. Stock adjusted if inventory is active.",
+                "description": "Full replace of inventory items. Optionally update inventory fields (date, storage_id, status, description) in the same call. Stock adjusted on status transition.",
                 "consumes": [
                     "application/json"
                 ],
@@ -13929,7 +13929,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "inventory_items"
+                    "inventories"
                 ],
                 "summary": "Replace inventory items batch",
                 "parameters": [
@@ -13941,7 +13941,7 @@ const docTemplate = `{
                         "required": true
                     },
                     {
-                        "description": "Inventory items batch data",
+                        "description": "Inventory items batch data (items required; inventory fields optional)",
                         "name": "input",
                         "in": "body",
                         "required": true,
@@ -29482,12 +29482,31 @@ const docTemplate = `{
                 "items"
             ],
             "properties": {
+                "date": {
+                    "description": "Optional inventory-level fields (update inventory + items in one call)",
+                    "type": "string",
+                    "example": "2024-01-01"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "description_i18n": {
+                    "type": "string"
+                },
                 "items": {
                     "type": "array",
                     "minItems": 1,
                     "items": {
                         "$ref": "#/definitions/model.UpsertInventoryItemRequest"
                     }
+                },
+                "status": {
+                    "type": "string",
+                    "example": "active"
+                },
+                "storage_id": {
+                    "type": "string",
+                    "example": "123e4567-e89b-12d3-a456-426614174000"
                 }
             }
         },

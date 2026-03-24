@@ -4062,11 +4062,26 @@ definitions:
     type: object
   model.UpsertInventoryItemsRequest:
     properties:
+      date:
+        description: Optional inventory-level fields (update inventory + items in
+          one call)
+        example: "2024-01-01"
+        type: string
+      description:
+        type: string
+      description_i18n:
+        type: string
       items:
         items:
           $ref: '#/definitions/model.UpsertInventoryItemRequest'
         minItems: 1
         type: array
+      status:
+        example: active
+        type: string
+      storage_id:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
     required:
     - items
     type: object
@@ -13256,15 +13271,17 @@ paths:
     put:
       consumes:
       - application/json
-      description: Full replace of inventory items. Items in request are upserted;
-        absent items are deleted. Stock adjusted if inventory is active.
+      description: Full replace of inventory items. Optionally update inventory fields
+        (date, storage_id, status, description) in the same call. Stock adjusted on
+        status transition.
       parameters:
       - description: Inventory ID
         in: path
         name: id
         required: true
         type: string
-      - description: Inventory items batch data
+      - description: Inventory items batch data (items required; inventory fields
+          optional)
         in: body
         name: input
         required: true
@@ -13295,7 +13312,7 @@ paths:
       - BearerAuth: []
       summary: Replace inventory items batch
       tags:
-      - inventory_items
+      - inventories
   /api/v1/inventories/{id}/restore:
     post:
       consumes:

@@ -325,17 +325,18 @@ func (h *Handler) UpsertInventoryItems(c echo.Context) error {
 	))
 }
 
-// UpdateInventoryItemsBatch fully replaces inventory items (add/update/remove) in one request.
+// UpdateInventoryItemsBatch fully replaces inventory items and optionally updates inventory fields in one call.
 // Items present in the request are upserted; items absent from the request are deleted.
-// Stock is applied/reversed based on inventory status. Blocked if inventory is deleted.
+// Optionally pass date, storage_id, status, description to update the inventory itself.
+// Status transitions (draft↔active) trigger stock apply/reverse automatically.
 // @Summary Replace inventory items batch
-// @Description Full replace of inventory items. Items in request are upserted; absent items are deleted. Stock adjusted if inventory is active.
-// @Tags inventory_items
+// @Description Full replace of inventory items. Optionally update inventory fields (date, storage_id, status, description) in the same call. Stock adjusted on status transition.
+// @Tags inventories
 // @Accept json
 // @Produce json
 // @Security BearerAuth
 // @Param id path string true "Inventory ID"
-// @Param input body model.UpsertInventoryItemsRequest true "Inventory items batch data"
+// @Param input body model.UpsertInventoryItemsRequest true "Inventory items batch data (items required; inventory fields optional)"
 // @Success 200 {array} model.InventoryItemComputedResponse "Inventory items updated successfully"
 // @Failure 400 {object} model.ErrorResponse "Invalid request or inventory is deleted"
 // @Failure 401 {object} model.ErrorResponse "Unauthorized"
