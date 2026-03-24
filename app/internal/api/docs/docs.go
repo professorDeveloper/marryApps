@@ -22316,7 +22316,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Get all transfers visible to the current branch",
+                "description": "Get transfers visible to the current branch, with optional filters",
                 "produces": [
                     "application/json"
                 ],
@@ -22336,16 +22336,55 @@ const docTemplate = `{
                         "description": "Offset (default: 0)",
                         "name": "offset",
                         "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter from date (YYYY-MM-DD)",
+                        "name": "date_from",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter to date (YYYY-MM-DD)",
+                        "name": "date_to",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by status (active/deleted)",
+                        "name": "status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by sender storage ID",
+                        "name": "from_storage_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by receiver storage ID",
+                        "name": "to_storage_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by act group ID",
+                        "name": "act_group_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by ingredient ID",
+                        "name": "ingredient_id",
+                        "in": "query"
                     }
                 ],
                 "responses": {
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/model.TransferResponse"
-                            }
+                            "$ref": "#/definitions/model.PaginatedTransfersResponse"
                         }
                     },
                     "401": {
@@ -22462,6 +22501,55 @@ const docTemplate = `{
                     },
                     "401": {
                         "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Soft delete multiple transfers and reverse all their stock changes",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Transfers"
+                ],
+                "summary": "Batch delete transfers",
+                "parameters": [
+                    {
+                        "description": "Transfer IDs to delete",
+                        "name": "input",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.DeleteTransfersBatchRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.SuccessResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
                         "schema": {
                             "$ref": "#/definitions/model.ErrorResponse"
                         }
@@ -25711,6 +25799,10 @@ const docTemplate = `{
                         "$ref": "#/definitions/model.CreateTransferItemEntry"
                     }
                 },
+                "status": {
+                    "type": "string",
+                    "example": "draft"
+                },
                 "to_branch_id": {
                     "type": "string",
                     "example": "uuid"
@@ -25781,6 +25873,10 @@ const docTemplate = `{
                 "from_storage_id": {
                     "type": "string",
                     "example": "uuid"
+                },
+                "status": {
+                    "type": "string",
+                    "example": "draft"
                 },
                 "to_branch_id": {
                     "type": "string",
@@ -26080,6 +26176,21 @@ const docTemplate = `{
             }
         },
         "model.DeleteInvoicesBatchRequest": {
+            "type": "object",
+            "required": [
+                "ids"
+            ],
+            "properties": {
+                "ids": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "model.DeleteTransfersBatchRequest": {
             "type": "object",
             "required": [
                 "ids"
@@ -27637,6 +27748,20 @@ const docTemplate = `{
                     "type": "array",
                     "items": {
                         "$ref": "#/definitions/model.DeductionResponse"
+                    }
+                },
+                "pagination": {
+                    "$ref": "#/definitions/model.PaginationMeta"
+                }
+            }
+        },
+        "model.PaginatedTransfersResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.TransferResponse"
                     }
                 },
                 "pagination": {
@@ -29757,12 +29882,36 @@ const docTemplate = `{
                 "items"
             ],
             "properties": {
+                "act_group_id": {
+                    "type": "string",
+                    "example": "uuid"
+                },
+                "date": {
+                    "description": "Optional transfer-level fields (update header + items in one call)",
+                    "type": "string",
+                    "example": "2024-01-01"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "from_storage_id": {
+                    "type": "string",
+                    "example": "uuid"
+                },
                 "items": {
                     "type": "array",
                     "minItems": 1,
                     "items": {
                         "$ref": "#/definitions/model.CreateTransferItemEntry"
                     }
+                },
+                "status": {
+                    "type": "string",
+                    "example": "active"
+                },
+                "to_storage_id": {
+                    "type": "string",
+                    "example": "uuid"
                 }
             }
         },

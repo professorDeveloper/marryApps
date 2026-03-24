@@ -1415,6 +1415,9 @@ definitions:
           $ref: '#/definitions/model.CreateTransferItemEntry'
         minItems: 1
         type: array
+      status:
+        example: draft
+        type: string
       to_branch_id:
         example: uuid
         type: string
@@ -1466,6 +1469,9 @@ definitions:
         type: string
       from_storage_id:
         example: uuid
+        type: string
+      status:
+        example: draft
         type: string
       to_branch_id:
         example: uuid
@@ -1678,6 +1684,16 @@ definitions:
     - ids
     type: object
   model.DeleteInvoicesBatchRequest:
+    properties:
+      ids:
+        items:
+          type: string
+        minItems: 1
+        type: array
+    required:
+    - ids
+    type: object
+  model.DeleteTransfersBatchRequest:
     properties:
       ids:
         items:
@@ -2767,6 +2783,15 @@ definitions:
       data:
         items:
           $ref: '#/definitions/model.DeductionResponse'
+        type: array
+      pagination:
+        $ref: '#/definitions/model.PaginationMeta'
+    type: object
+  model.PaginatedTransfersResponse:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/model.TransferResponse'
         type: array
       pagination:
         $ref: '#/definitions/model.PaginationMeta'
@@ -4233,11 +4258,30 @@ definitions:
     type: object
   model.UpsertTransferItemsRequest:
     properties:
+      act_group_id:
+        example: uuid
+        type: string
+      date:
+        description: Optional transfer-level fields (update header + items in one
+          call)
+        example: "2024-01-01"
+        type: string
+      description:
+        type: string
+      from_storage_id:
+        example: uuid
+        type: string
       items:
         items:
           $ref: '#/definitions/model.CreateTransferItemEntry'
         minItems: 1
         type: array
+      status:
+        example: active
+        type: string
+      to_storage_id:
+        example: uuid
+        type: string
     required:
     - items
     type: object
@@ -18833,7 +18877,7 @@ paths:
       - transactions
   /api/v1/transfers:
     get:
-      description: Get all transfers visible to the current branch
+      description: Get transfers visible to the current branch, with optional filters
       parameters:
       - description: 'Limit (default: 20)'
         in: query
@@ -18843,15 +18887,41 @@ paths:
         in: query
         name: offset
         type: integer
+      - description: Filter from date (YYYY-MM-DD)
+        in: query
+        name: date_from
+        type: string
+      - description: Filter to date (YYYY-MM-DD)
+        in: query
+        name: date_to
+        type: string
+      - description: Filter by status (active/deleted)
+        in: query
+        name: status
+        type: string
+      - description: Filter by sender storage ID
+        in: query
+        name: from_storage_id
+        type: string
+      - description: Filter by receiver storage ID
+        in: query
+        name: to_storage_id
+        type: string
+      - description: Filter by act group ID
+        in: query
+        name: act_group_id
+        type: string
+      - description: Filter by ingredient ID
+        in: query
+        name: ingredient_id
+        type: string
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            items:
-              $ref: '#/definitions/model.TransferResponse'
-            type: array
+            $ref: '#/definitions/model.PaginatedTransfersResponse'
         "401":
           description: Unauthorized
           schema:
@@ -19006,6 +19076,37 @@ paths:
       tags:
       - Transfers
   /api/v1/transfers/batch:
+    delete:
+      consumes:
+      - application/json
+      description: Soft delete multiple transfers and reverse all their stock changes
+      parameters:
+      - description: Transfer IDs to delete
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/model.DeleteTransfersBatchRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.SuccessResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Batch delete transfers
+      tags:
+      - Transfers
     post:
       consumes:
       - application/json

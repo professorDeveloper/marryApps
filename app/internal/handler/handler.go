@@ -623,6 +623,7 @@ func (h *Handler) Register(router *echo.Echo) {
 		transfers := api.Group("/transfers", mw.CheckAuth(h.cfg), mw.TenantMiddleware(h.repo))
 		{
 			transfers.POST("/batch", h.CreateTransferBatch, mw.CheckLanguage())
+			transfers.DELETE("/batch", h.DeleteTransfersBatch, mw.CheckLanguage())
 			transfers.POST("/items", h.AddTransferItems, mw.CheckLanguage())
 			transfers.POST("", h.CreateTransfer, mw.CheckLanguage())
 			transfers.GET("", h.GetAllTransfers, mw.CheckLanguage())

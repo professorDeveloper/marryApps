@@ -28,6 +28,7 @@ type CreateTransferRequest struct {
 	ToStorageID   string  `json:"to_storage_id" validate:"required" example:"uuid"`
 	ActGroupID    *string `json:"act_group_id,omitempty" example:"uuid"`
 	Description   *string `json:"description,omitempty"`
+	Status        *string `json:"status,omitempty" example:"draft"`
 }
 
 type UpdateTransferRequest struct {
@@ -65,7 +66,14 @@ type CreateTransferItemsRequest struct {
 }
 
 type UpsertTransferItemsRequest struct {
-	Items []CreateTransferItemEntry `json:"items" validate:"required,min=1"`
+	// Optional transfer-level fields (update header + items in one call)
+	Date          *string `json:"date,omitempty" example:"2024-01-01"`
+	FromStorageID *string `json:"from_storage_id,omitempty" example:"uuid"`
+	ToStorageID   *string `json:"to_storage_id,omitempty" example:"uuid"`
+	ActGroupID    *string `json:"act_group_id,omitempty" example:"uuid"`
+	Description   *string `json:"description,omitempty"`
+	Status        *string `json:"status,omitempty" example:"active"`
+	Items         []CreateTransferItemEntry `json:"items" validate:"required,min=1"`
 }
 
 // ==================== BATCH ====================
@@ -77,5 +85,27 @@ type CreateTransferBatchRequest struct {
 	ToStorageID   string                    `json:"to_storage_id" validate:"required" example:"uuid"`
 	ActGroupID    *string                   `json:"act_group_id,omitempty"`
 	Description   *string                   `json:"description,omitempty"`
+	Status        *string                   `json:"status,omitempty" example:"draft"`
 	Items         []CreateTransferItemEntry `json:"items" validate:"required,min=1"`
+}
+
+type DeleteTransfersBatchRequest struct {
+	IDs []string `json:"ids" validate:"required,min=1"`
+}
+
+// ==================== FILTERS / PAGINATION ====================
+
+type TransferFilter struct {
+	DateFrom      *string
+	DateTo        *string
+	Status        *string
+	FromStorageID *string
+	ToStorageID   *string
+	ActGroupID    *string
+	IngredientID  *string
+}
+
+type PaginatedTransfersResponse struct {
+	Data       []*TransferResponse `json:"data"`
+	Pagination PaginationMeta      `json:"pagination"`
 }
