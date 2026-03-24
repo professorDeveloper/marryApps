@@ -25,7 +25,7 @@ interface InvoiceInfoEditViewProps {
     onSwitchToDetailsTab?: () => void; // Callback to switch to details tab when validation fails
 }
 
-const ALLOWED_STATUSES = ['pending', 'cancelled'] as const;
+const ALLOWED_STATUSES = ['pending', 'arrived', 'cancelled'] as const;
 const CREATE_ALLOWED_STATUSES = ['pending', 'arrived'] as const;
 type InvoiceStatus = (typeof ALLOWED_STATUSES)[number];
 type CreateInvoiceStatus = (typeof CREATE_ALLOWED_STATUSES)[number];

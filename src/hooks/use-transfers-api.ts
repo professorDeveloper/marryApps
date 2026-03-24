@@ -13,6 +13,34 @@ interface BackendResponse<T> {
   code: number;
 }
 
+interface BackendPagination {
+  limit: number;
+  offset: number;
+  total: number;
+  total_pages: number;
+}
+
+interface TransferListParams {
+  limit?: number;
+  offset?: number;
+}
+
+interface TransferListResult {
+  items: Transfer[];
+  pagination?: BackendPagination;
+  totalAmount?: string;
+}
+
+interface UpdateTransferItemsBatchPayload {
+  act_group_id: string;
+  date: string;
+  description: string;
+  from_storage_id: string;
+  to_storage_id: string;
+  status: string;
+  items: TransferBatchItemInput[];
+}
+
 const formatTransferCreateError = (error: unknown): string => {
   const fallbackMessage = 'Failed to create transfer';
   const rawMessage = error instanceof Error ? error.message : fallbackMessage;
@@ -42,15 +70,43 @@ export function useTransfersAPI() {
   const isBackendResponse = <T,>(value: unknown): value is BackendResponse<T> =>
     !!value && typeof value === 'object' && 'data' in (value as Record<string, unknown>);
 
-  const getTransfers = useCallback(async (): Promise<Transfer[]> => {
+  const getTransfers = useCallback(async (params?: TransferListParams): Promise<TransferListResult> => {
     try {
-      const response = await fetcher<BackendResponse<Transfer[]>>(endpoints.transfers.list);
-      return response.data || [];
+      const response = await fetcher<unknown>([
+        endpoints.transfers.list,
+        {
+          params: {
+            limit: typeof params?.limit === 'number' ? params.limit : 20,
+            offset: typeof params?.offset === 'number' ? params.offset : 0,
+          },
+        },
+      ]);
+      const envelope = response as Record<string, unknown>;
+      const rootData =
+        envelope.data && typeof envelope.data === 'object'
+          ? (envelope.data as Record<string, unknown>)
+          : envelope;
+
+      const items = Array.isArray(rootData.data) ? (rootData.data as Transfer[]) : [];
+      const pagination =
+        rootData.pagination && typeof rootData.pagination === 'object'
+          ? (rootData.pagination as BackendPagination)
+          : undefined;
+      const totalAmount =
+        typeof rootData.total_amount === 'string' || typeof rootData.total_amount === 'number'
+          ? String(rootData.total_amount)
+          : undefined;
+
+      return {
+        items,
+        pagination,
+        totalAmount,
+      };
     } catch (error) {
       const axiosError = error as AxiosError<{ message?: string }>;
       const message = axiosError?.response?.data?.message || 'Failed to fetch transfers';
       toast.error(message);
-      return [];
+      return { items: [] };
     }
   }, []);
 
@@ -108,11 +164,11 @@ export function useTransfersAPI() {
   }, []);
 
   const updateTransferItemsBatch = useCallback(
-    async (id: string, items: TransferBatchItemInput[]): Promise<Transfer> => {
+    async (id: string, payload: UpdateTransferItemsBatchPayload): Promise<Transfer> => {
       try {
         const response = await putter<BackendResponse<Transfer> | Transfer>(
           endpoints.transfers.updateItemsBatch(id),
-          { items }
+          payload
         );
         const transfer = isBackendResponse<Transfer>(response) ? response.data : response;
         toast.success('Transfer items updated successfully');

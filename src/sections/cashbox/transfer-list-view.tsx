@@ -64,7 +64,7 @@ export function TransactionsListView() {
         })),
       ]);
 
-      setRows(transfersData);
+      setRows(transfersData.items || []);
       setGroupsMap(
         (groupsData || []).reduce(
           (acc, item) => ({ ...acc, [item.id]: item.name || item.id }),
