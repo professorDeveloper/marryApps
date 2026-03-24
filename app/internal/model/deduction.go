@@ -86,6 +86,19 @@ type DeductionItemResponse struct {
 	UpdatedAt    *time.Time                        `json:"updated_at,omitempty"`
 }
 
+type PaginatedDeductionsResponse struct {
+	Data       []*DeductionResponse `json:"data"`
+	Pagination PaginationMeta       `json:"pagination"`
+}
+
+type DeleteDeductionsBatchRequest struct {
+	IDs []string `json:"ids" validate:"required,min=1"`
+}
+
+type DeleteDeductionItemsBatchRequest struct {
+	IDs []string `json:"ids" validate:"required,min=1"`
+}
+
 type DeductionResponse struct {
 	ID              string                  `json:"id" example:"123e4567-e89b-12d3-a456-426614174000"`
 	Number          int64                   `json:"number" example:"1"`

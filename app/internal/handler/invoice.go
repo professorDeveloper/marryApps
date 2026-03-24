@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 	"gitlab.yurtal.tech/company/maryai/back/internal/model"
 )
@@ -488,4 +489,62 @@ func (h *Handler) UpsertInvoiceDetails(c echo.Context) error {
 		resp,
 		http.StatusOK,
 	))
+}
+
+// DeleteInvoicesBatch deletes multiple invoices at once.
+// Arrived invoices have their stock reversed. Pending invoices are cancelled.
+// @Summary Batch delete invoices
+// @Description Delete multiple invoices at once. Arrived → stock reversed + deleted. Pending → cancelled.
+// @Tags Invoices
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param input body model.DeleteInvoicesBatchRequest true "IDs to delete"
+// @Success 200 {object} model.SuccessResponse "Deleted"
+// @Failure 400 {object} model.ErrorResponse "Invalid request"
+// @Failure 401 {object} model.ErrorResponse "Unauthorized"
+// @Failure 500 {object} model.ErrorResponse "Internal server error"
+// @Router /api/v1/invoices/batch [delete]
+func (h *Handler) DeleteInvoicesBatch(c echo.Context) error {
+	var req model.DeleteInvoicesBatchRequest
+	if err := c.Bind(&req); err != nil {
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("invalid request format", err.Error(), http.StatusBadRequest))
+	}
+
+	if err := h.service.Invoice().DeleteInvoicesBatch(c.Request().Context(), &req); err != nil {
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("Operation failed", err.Error(), http.StatusInternalServerError))
+	}
+
+	return c.JSON(http.StatusOK, model.NewSuccessResponse("Invoices deleted successfully", map[string]interface{}{}, http.StatusOK))
+}
+
+// DeleteInvoiceDetailsBatch deletes multiple invoice details at once, reversing stock for each.
+// @Summary Batch delete invoice details
+// @Description Delete multiple invoice detail line items at once, reversing stock for each
+// @Tags Invoices
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path string true "Invoice ID"
+// @Param input body model.DeleteInvoiceDetailsBatchRequest true "Detail IDs to delete"
+// @Success 200 {object} model.SuccessResponse "Deleted"
+// @Failure 400 {object} model.ErrorResponse "Invalid request"
+// @Failure 401 {object} model.ErrorResponse "Unauthorized"
+// @Failure 500 {object} model.ErrorResponse "Internal server error"
+// @Router /api/v1/invoices/{id}/details/batch [delete]
+func (h *Handler) DeleteInvoiceDetailsBatch(c echo.Context) error {
+	if _, err := uuid.Parse(c.Param("id")); err != nil {
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("invalid invoice id", err.Error(), http.StatusBadRequest))
+	}
+
+	var req model.DeleteInvoiceDetailsBatchRequest
+	if err := c.Bind(&req); err != nil {
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("invalid request format", err.Error(), http.StatusBadRequest))
+	}
+
+	if err := h.service.Invoice().DeleteInvoiceDetailsBatch(c.Request().Context(), &req); err != nil {
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("Operation failed", err.Error(), http.StatusInternalServerError))
+	}
+
+	return c.JSON(http.StatusOK, model.NewSuccessResponse("Invoice details deleted successfully", map[string]interface{}{}, http.StatusOK))
 }

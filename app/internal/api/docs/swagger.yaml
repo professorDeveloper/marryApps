@@ -1627,6 +1627,26 @@ definitions:
     - DeductionStatusActive
     - DeductionStatusDraft
     - DeductionStatusDeleted
+  model.DeleteDeductionItemsBatchRequest:
+    properties:
+      ids:
+        items:
+          type: string
+        minItems: 1
+        type: array
+    required:
+    - ids
+    type: object
+  model.DeleteDeductionsBatchRequest:
+    properties:
+      ids:
+        items:
+          type: string
+        minItems: 1
+        type: array
+    required:
+    - ids
+    type: object
   model.DeleteInventoriesBatchRequest:
     properties:
       ids:
@@ -1638,6 +1658,26 @@ definitions:
     - ids
     type: object
   model.DeleteInventoryItemsBatchRequest:
+    properties:
+      ids:
+        items:
+          type: string
+        minItems: 1
+        type: array
+    required:
+    - ids
+    type: object
+  model.DeleteInvoiceDetailsBatchRequest:
+    properties:
+      ids:
+        items:
+          type: string
+        minItems: 1
+        type: array
+    required:
+    - ids
+    type: object
+  model.DeleteInvoicesBatchRequest:
     properties:
       ids:
         items:
@@ -2721,6 +2761,26 @@ definitions:
         items:
           $ref: '#/definitions/model.OutgoingInvoiceItemResponse'
         type: array
+    type: object
+  model.PaginatedDeductionsResponse:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/model.DeductionResponse'
+        type: array
+      pagination:
+        $ref: '#/definitions/model.PaginationMeta'
+    type: object
+  model.PaginationMeta:
+    properties:
+      limit:
+        type: integer
+      offset:
+        type: integer
+      total:
+        type: integer
+      total_pages:
+        type: integer
     type: object
   model.PincodeLoginRequest:
     properties:
@@ -8421,15 +8481,17 @@ paths:
         in: query
         name: offset
         type: integer
+      - description: Comma-separated relations to expand (e.g. storage_id)
+        in: query
+        name: expand
+        type: string
       produces:
       - application/json
       responses:
         "200":
           description: Deductions
           schema:
-            items:
-              $ref: '#/definitions/model.DeductionResponse'
-            type: array
+            $ref: '#/definitions/model.PaginatedDeductionsResponse'
         "401":
           description: Unauthorized
           schema:
@@ -8523,6 +8585,10 @@ paths:
         in: path
         name: id
         required: true
+        type: string
+      - description: Comma-separated relations to expand (e.g. storage_id)
+        in: query
+        name: expand
         type: string
       produces:
       - application/json
@@ -8639,6 +8705,47 @@ paths:
       tags:
       - deductions
   /api/v1/deductions/{id}/items/batch:
+    delete:
+      consumes:
+      - application/json
+      description: Remove multiple items from a deduction; if active, stock is reversed
+        for each
+      parameters:
+      - description: Deduction ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Item IDs to delete
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/model.DeleteDeductionItemsBatchRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Updated deduction
+          schema:
+            $ref: '#/definitions/model.DeductionResponse'
+        "400":
+          description: Invalid request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Batch delete deduction items
+      tags:
+      - deductions
     put:
       consumes:
       - application/json
@@ -8714,6 +8821,43 @@ paths:
       security:
       - BearerAuth: []
       summary: Restore deduction
+      tags:
+      - deductions
+  /api/v1/deductions/batch:
+    delete:
+      consumes:
+      - application/json
+      description: Soft-delete multiple deductions; if active, stock is reversed for
+        each
+      parameters:
+      - description: IDs to delete
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/model.DeleteDeductionsBatchRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Deleted
+          schema:
+            $ref: '#/definitions/model.SuccessResponse'
+        "400":
+          description: Invalid request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Batch delete deductions
       tags:
       - deductions
   /api/v1/deductions/group:
@@ -14216,6 +14360,47 @@ paths:
       tags:
       - Invoices
   /api/v1/invoices/{id}/details/batch:
+    delete:
+      consumes:
+      - application/json
+      description: Delete multiple invoice detail line items at once, reversing stock
+        for each
+      parameters:
+      - description: Invoice ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Detail IDs to delete
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/model.DeleteInvoiceDetailsBatchRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Deleted
+          schema:
+            $ref: '#/definitions/model.SuccessResponse'
+        "400":
+          description: Invalid request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Batch delete invoice details
+      tags:
+      - Invoices
     put:
       consumes:
       - application/json
@@ -14358,6 +14543,42 @@ paths:
       tags:
       - Invoices
   /api/v1/invoices/batch:
+    delete:
+      consumes:
+      - application/json
+      description: Delete multiple invoices at once. Arrived → stock reversed + deleted.
+        Pending → cancelled.
+      parameters:
+      - description: IDs to delete
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/model.DeleteInvoicesBatchRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Deleted
+          schema:
+            $ref: '#/definitions/model.SuccessResponse'
+        "400":
+          description: Invalid request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Batch delete invoices
+      tags:
+      - Invoices
     post:
       consumes:
       - application/json

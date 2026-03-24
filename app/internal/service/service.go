@@ -296,12 +296,14 @@ type DeductionI interface {
 
 	CreateDeduction(ctx context.Context, req *model.CreateDeductionRequest) (*model.DeductionResponse, error)
 	GetDeductionByID(ctx context.Context, id string) (*model.DeductionResponse, error)
-	GetAllDeductions(ctx context.Context, limit, offset int32) ([]*model.DeductionResponse, error)
+	GetAllDeductions(ctx context.Context, limit, offset int32) (*model.PaginatedDeductionsResponse, error)
 	UpdateDeduction(ctx context.Context, id string, req *model.UpdateDeductionRequest) (*model.DeductionResponse, error)
 	DeleteDeduction(ctx context.Context, id string) error
+	DeleteDeductionsBatch(ctx context.Context, req *model.DeleteDeductionsBatchRequest) error
 	RestoreDeduction(ctx context.Context, id string) (*model.DeductionResponse, error)
 	UpsertDeductionItems(ctx context.Context, deductionID string, req *model.UpsertDeductionItemsRequest) (*model.DeductionResponse, error)
 	DeleteDeductionItem(ctx context.Context, deductionID, itemID string) (*model.DeductionResponse, error)
+	DeleteDeductionItemsBatch(ctx context.Context, deductionID string, req *model.DeleteDeductionItemsBatchRequest) (*model.DeductionResponse, error)
 }
 
 type InvoiceI interface {
@@ -313,6 +315,7 @@ type InvoiceI interface {
 	UpdateInvoice(ctx context.Context, id string, req *model.UpdateInvoiceRequest) (*model.InvoiceResponse, error)
 	UpdateInvoiceStatus(ctx context.Context, id string, status string) (*model.InvoiceResponse, error)
 	DeleteInvoice(ctx context.Context, id string) error
+	DeleteInvoicesBatch(ctx context.Context, req *model.DeleteInvoicesBatchRequest) error
 	RestoreInvoice(ctx context.Context, id string) error
 	SearchInvoices(ctx context.Context, query string, limit, offset int32) ([]*model.InvoiceResponse, error)
 	GetInvoiceWithDetails(ctx context.Context, id string) (*model.InvoiceGetWithDetailsResponse, error)
@@ -326,6 +329,7 @@ type InvoiceI interface {
 	UpdateInvoiceDetail(ctx context.Context, id string, req *model.UpdateInvoiceDetailRequest) (*model.InvoiceDetailResponse, error)
 	UpdateInvoiceDetailQuantity(ctx context.Context, id string, quantity string) (*model.InvoiceDetailResponse, error)
 	DeleteInvoiceDetail(ctx context.Context, id string) error
+	DeleteInvoiceDetailsBatch(ctx context.Context, req *model.DeleteInvoiceDetailsBatchRequest) error
 	RestoreInvoiceDetail(ctx context.Context, id string) error
 	DeleteInvoiceDetailsByInvoiceID(ctx context.Context, invoiceID string) error
 	UpsertInvoiceDetails(ctx context.Context, invoiceID string, req *model.UpsertInvoiceDetailsRequest) (*model.UpsertInvoiceDetailsResponse, error)
