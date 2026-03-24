@@ -410,29 +410,24 @@ export function TransfersListView() {
             </Button> */}
           </Box>
         )}
+        renderFooter={() => (
+          <Box
+            sx={{
+              display: 'flex',
+              justifyContent: 'flex-end',
+              alignItems: 'center',
+              gap: 1.5,
+            }}
+          >
+            <Box sx={{ color: 'text.secondary', fontWeight: 600 }}>
+              {t('deductions.balance', 'Total')}:
+            </Box>
+            <Box sx={{ fontWeight: 700 }}>
+              {Number(totalAmount || 0).toLocaleString()}
+            </Box>
+          </Box>
+        )}
       />
-
-      <Box
-        sx={{
-          mt: 2,
-          px: 2,
-          py: 1.5,
-          borderRadius: 1.5,
-          border: '1px solid',
-          borderColor: 'divider',
-          display: 'flex',
-          justifyContent: 'flex-end',
-          alignItems: 'center',
-          gap: 1.5,
-        }}
-      >
-        <Box sx={{ color: 'text.secondary', fontWeight: 600 }}>
-          {t('deductions.balance', 'Total')}:
-        </Box>
-        <Box sx={{ fontWeight: 700 }}>
-          {Number(totalAmount || 0).toLocaleString()}
-        </Box>
-      </Box>
 
       <Dialog open={openConfirm} onClose={() => setOpenConfirm(false)} maxWidth="xs" fullWidth>
         <DialogTitle>{t('common.deleteConfirmTitle', 'Confirm delete')}</DialogTitle>
