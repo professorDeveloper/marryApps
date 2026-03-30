@@ -23,7 +23,7 @@ jobs:
         run: docker build -t maryai-front:test .
 
   publish-and-deploy:
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    if: (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main') && github.event_name == 'push'
     needs: build-check
     runs-on: ubuntu-latest
 
