@@ -1,7 +1,11 @@
 import type { GridColDef } from '@mui/x-data-grid';
-import { useMemo, useState, useEffect, useCallback } from 'react';
+import type { InvoiceListFilters } from 'src/hooks/use-invoice-details-api';
+
+import dayjs from 'dayjs';
+import { useMemo, useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Dialog, DialogTitle, DialogContent, DialogActions, Button, Box } from '@mui/material';
+import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+import { Dialog, DialogTitle, DialogContent, DialogActions, Button, Box, TextField } from '@mui/material';
 import { paths } from 'src/routes/paths';
 import { useInvoiceDetailsAPI } from 'src/hooks/use-invoice-details-api';
 import { useInvoiceAPI } from 'src/hooks/use-invoice-api';
@@ -11,7 +15,9 @@ import { Iconify } from 'src/components/iconify';
 import { CustomGridActionsCellItem } from 'src/components/custom-data-grid';
 import { GenericTableView } from 'src/components/generic-table-view';
 import { GenericViewModal } from 'src/components/generic-view-view';
+import { NoDataTooltip } from 'src/components/no-data-tooltip';
 import { DataGrid } from '@mui/x-data-grid';
+import { fetcher } from 'src/lib/axios';
 
 interface InvoiceDetailWithInvoiceInfo {
     id: string;
@@ -27,8 +33,83 @@ interface InvoiceDetailWithInvoiceInfo {
     invoice_date?: string;
 }
 
+const getTodayUtcBoundary = (endOfDay = false): string => {
+    const now = dayjs();
+    const date = new Date(
+        Date.UTC(
+            now.year(),
+            now.month(),
+            now.date(),
+            endOfDay ? 23 : 0,
+            endOfDay ? 59 : 0,
+            endOfDay ? 59 : 0
+        )
+    );
+
+    return date.toISOString().replace('.000Z', 'Z');
+};
+
+const getTomorrowUtcBoundary = (endOfDay = false): string => {
+    const now = dayjs().add(1, 'day');
+    const date = new Date(
+        Date.UTC(
+            now.year(),
+            now.month(),
+            now.date(),
+            endOfDay ? 23 : 0,
+            endOfDay ? 59 : 0,
+            endOfDay ? 59 : 0
+        )
+    );
+
+    return date.toISOString().replace('.000Z', 'Z');
+};
+
+const initialFilters: InvoiceListFilters = {
+    date_from: getTodayUtcBoundary(),
+    date_to: getTomorrowUtcBoundary(true),
+    storage_id: '',
+    supplier_id: '',
+    ingredient_id: '',
+    status: '',
+    expand: 'supplier_id,storage_id',
+    q: '',
+    limit: 20,
+    offset: 0,
+};
+
+const toUtcDayBoundary = (value: dayjs.Dayjs, endOfDay = false): string => {
+    const date = new Date(
+        Date.UTC(
+            value.year(),
+            value.month(),
+            value.date(),
+            endOfDay ? 23 : 0,
+            endOfDay ? 59 : 0,
+            endOfDay ? 59 : 0
+        )
+    );
+
+    return date.toISOString().replace('.000Z', 'Z');
+};
+
+const toPickerDate = (value?: string): dayjs.Dayjs | null => (value ? dayjs(value.slice(0, 10)) : null);
+
+let staticDataCache: {
+    suppliers: any[];
+    storages: any[];
+    ingredients: any[];
+} | null = null;
+
+let staticDataPromise: Promise<{
+    suppliers: any[];
+    storages: any[];
+    ingredients: any[];
+}> | null = null;
+
 export function InvoiceDetailsStandaloneListView() {
     const { t } = useTranslation('menu');
+    const noDataText = t('noDataAvailable', "Tushunarli ma'lumot mavjud emas");
     const theme = {
         vars: {
             palette: {
@@ -38,12 +119,19 @@ export function InvoiceDetailsStandaloneListView() {
             },
         },
     };
-    const { getInvoiceDetails, deleteInvoiceDetails, getInvoices, getIngredients } = useInvoiceDetailsAPI();
+    const { deleteInvoiceDetails, getIngredients, getInvoicesPage } = useInvoiceDetailsAPI();
     const { deleteInvoices } = useInvoiceAPI();
     const { getSuppliers } = useSupplierAPI();
     const { getStorages } = useStorageAPI();
-    const [invoices, setInvoices] = useState<any[]>([]);
-    const [allDetails, setAllDetails] = useState<InvoiceDetailWithInvoiceInfo[]>([]);
+    const [rawInvoices, setRawInvoices] = useState<any[]>([]);
+    const [suppliers, setSuppliers] = useState<any[]>([]);
+    const [storages, setStorages] = useState<any[]>([]);
+    const [ingredients, setIngredients] = useState<any[]>([]);
+
+    const isSuppliersEmpty = suppliers.length === 0;
+    const isStoragesEmpty = storages.length === 0;
+    const isIngredientsEmpty = ingredients.length === 0;
+    const [selectedInvoiceDetails, setSelectedInvoiceDetails] = useState<InvoiceDetailWithInvoiceInfo[]>([]);
     const [loading, setLoading] = useState(true);
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [selectedDeleteId, setSelectedDeleteId] = useState<string | null>(null);
@@ -51,6 +139,11 @@ export function InvoiceDetailsStandaloneListView() {
     const [selectedInvoice, setSelectedInvoice] = useState<any | null>(null);
     const [searchQuery, setSearchQuery] = useState('');
     const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
+    const [filters, setFilters] = useState<InvoiceListFilters>(initialFilters);
+    const [draftFilters, setDraftFilters] = useState<InvoiceListFilters>(initialFilters);
+    const [rowCount, setRowCount] = useState(0);
+    const [paginationModel, setPaginationModel] = useState({ page: 0, pageSize: 20 });
+    const lastInvoicesKeyRef = useRef('');
 
     useEffect(() => {
         const timeout = setTimeout(() => {
@@ -61,49 +154,118 @@ export function InvoiceDetailsStandaloneListView() {
     }, [searchQuery]);
 
     useEffect(() => {
-        const fetchData = async () => {
+        const fetchStaticData = async () => {
+            try {
+                if (staticDataCache) {
+                    setSuppliers(staticDataCache.suppliers);
+                    setStorages(staticDataCache.storages);
+                    setIngredients(staticDataCache.ingredients);
+                    return;
+                }
+
+                if (!staticDataPromise) {
+                    staticDataPromise = Promise.all([
+                        getSuppliers(),
+                        getStorages(),
+                        getIngredients(),
+                    ]).then(([suppliersData, storagesData, ingredientsData]) => ({
+                        suppliers: suppliersData || [],
+                        storages: storagesData || [],
+                        ingredients: ingredientsData || [],
+                    }));
+                }
+
+                const resolved = await staticDataPromise;
+                staticDataCache = resolved;
+
+                setSuppliers(resolved.suppliers);
+                setStorages(resolved.storages);
+                setIngredients(resolved.ingredients);
+            } catch {
+                setSuppliers([]);
+                setStorages([]);
+                setIngredients([]);
+            }
+        };
+
+        fetchStaticData();
+    }, [getSuppliers, getStorages, getIngredients]);
+
+    useEffect(() => {
+        const fetchInvoices = async () => {
+            const key = JSON.stringify({
+                date_from: filters.date_from,
+                date_to: filters.date_to,
+                storage_id: filters.storage_id,
+                supplier_id: filters.supplier_id,
+                ingredient_id: filters.ingredient_id,
+                status: filters.status,
+                q: filters.q,
+                expand: filters.expand,
+                limit: filters.limit,
+                offset: filters.offset,
+            });
+
+            if (lastInvoicesKeyRef.current === key) return;
+            lastInvoicesKeyRef.current = key;
+
             setLoading(true);
             try {
-                const fetchedInvoices = await getInvoices(debouncedSearchQuery);
-                const suppliers = await getSuppliers();
-                const storages = await getStorages();
-                const details = await getInvoiceDetails();
-                const ingredients = await getIngredients();
-
-                // Enrich invoices with supplier and storage information
-                const enrichedInvoices = fetchedInvoices.map((invoice: any) => {
-                    const supplier = suppliers.find((s: any) => s.id === invoice.supplier_id);
-                    const storage = storages.find((st: any) => st.id === invoice.storage_id);
-                    return {
-                        ...invoice,
-                        supplier_name: supplier?.name || 'Unknown',
-                        supplier_phone: supplier?.phone_number || '',
-                        storage_name: storage?.name || 'Unknown',
-                    };
-                });
-
-                // Enrich details with invoice and ingredient information
-                const enrichedDetails = details.map((detail) => {
-                    const invoice = enrichedInvoices.find((inv) => inv.id === detail.invoice_id);
-                    const ingredient = ingredients.find((ing) => ing.id === detail.ingredient_id);
-                    return {
-                        ...detail,
-                        quantity: Number(detail.quantity),
-                        invoice_supplier_name: invoice?.supplier_name || 'Unknown',
-                        invoice_date: invoice?.date || '',
-                        ingredient_name: ingredient?.name || detail.ingredient_id,
-                    };
-                });
-
-                setInvoices(enrichedInvoices);
-                setAllDetails(enrichedDetails);
+                const response = await getInvoicesPage(filters);
+                setRowCount(response.total || 0);
+                setRawInvoices(response.items || []);
             } finally {
                 setLoading(false);
             }
         };
 
-        fetchData();
-    }, [debouncedSearchQuery, getInvoiceDetails, getInvoices, getIngredients, getSuppliers, getStorages]);
+        fetchInvoices();
+    }, [filters, getInvoicesPage]);
+
+    useEffect(() => {
+        setDraftFilters((prev) => ({
+            ...prev,
+            q: debouncedSearchQuery,
+        }));
+    }, [debouncedSearchQuery]);
+
+    useEffect(() => {
+        setPaginationModel((prev) => ({ ...prev, page: 0 }));
+        setFilters((prev) => ({
+            ...prev,
+            ...draftFilters,
+            offset: 0,
+            limit: paginationModel.pageSize,
+        }));
+    }, [draftFilters]);
+
+    const handlePaginationModelChange = (model: { page: number; pageSize: number }) => {
+        setPaginationModel(model);
+        setFilters((prev) => ({
+            ...prev,
+            limit: model.pageSize,
+            offset: model.page * model.pageSize,
+        }));
+    };
+
+    const invoices = useMemo(() => {
+        const supplierMap = new Map(suppliers.map((s: any) => [s.id, s]));
+        const storageMap = new Map(storages.map((s: any) => [s.id, s]));
+
+        return rawInvoices.map((invoice: any) => {
+            const expandedSupplier = invoice?._expand?.supplier_id;
+            const expandedStorage = invoice?._expand?.storage_id;
+            const supplier = expandedSupplier || supplierMap.get(invoice.supplier_id);
+            const storage = expandedStorage || storageMap.get(invoice.storage_id);
+
+            return {
+                ...invoice,
+                supplier_name: supplier?.name || 'Unknown',
+                supplier_phone: supplier?.phone_number || '',
+                storage_name: storage?.name || 'Unknown',
+            };
+        });
+    }, [rawInvoices, suppliers, storages]);
 
     const handleDeleteClick = (id: string, type: 'invoice' | 'detail') => {
         setSelectedDeleteId(id);
@@ -115,28 +277,15 @@ export function InvoiceDetailsStandaloneListView() {
         if (selectedDeleteId && selectedDeleteType) {
             if (selectedDeleteType === 'invoice') {
                 await deleteInvoices([selectedDeleteId]);
-                setInvoices((prev) => prev.filter((row) => row.id !== selectedDeleteId));
-                setAllDetails((prev) => prev.filter((detail) => detail.invoice_id !== selectedDeleteId));
+                lastInvoicesKeyRef.current = '';
+                setFilters((prev) => ({ ...prev }));
+                if (selectedInvoice?.id === selectedDeleteId) {
+                    setSelectedInvoice(null);
+                    setSelectedInvoiceDetails([]);
+                }
             } else if (selectedDeleteType === 'detail') {
                 await deleteInvoiceDetails([selectedDeleteId]);
-                setAllDetails((prev) => prev.filter((row) => row.id !== selectedDeleteId));
-                // Refresh the invoice details to ensure data consistency
-                const details = await getInvoiceDetails();
-                const suppliers = await getSuppliers();
-                const ingredients = await getIngredients();
-
-                const enrichedDetails = details.map((detail) => {
-                    const invoice = invoices.find((inv: any) => inv.id === detail.invoice_id);
-                    const ingredient = ingredients.find((ing: any) => ing.id === detail.ingredient_id);
-                    return {
-                        ...detail,
-                        quantity: Number(detail.quantity),
-                        invoice_supplier_name: invoice?.supplier_name || 'Unknown',
-                        invoice_date: invoice?.date || '',
-                        ingredient_name: ingredient?.name || detail.ingredient_id,
-                    };
-                });
-                setAllDetails(enrichedDetails);
+                setSelectedInvoiceDetails((prev) => prev.filter((row) => row.id !== selectedDeleteId));
             }
             setDeleteDialogOpen(false);
             setSelectedDeleteId(null);
@@ -150,12 +299,39 @@ export function InvoiceDetailsStandaloneListView() {
         setSelectedDeleteType(null);
     };
 
-    const handleViewClick = (invoice: any) => {
+    const handleViewClick = async (invoice: any) => {
         setSelectedInvoice(invoice);
+        setSelectedInvoiceDetails([]);
+        try {
+            const response = await fetcher<any>(`/api/v1/invoice-details/invoice/${invoice.id}`);
+            const details = Array.isArray(response?.data)
+                ? response.data
+                : Array.isArray(response?.data?.data)
+                    ? response.data.data
+                    : Array.isArray(response)
+                        ? response
+                        : [];
+
+            const enrichedDetails = details.map((detail: any) => {
+                const ingredient = ingredients.find((ing: any) => ing.id === detail.ingredient_id);
+                return {
+                    ...detail,
+                    quantity: Number(detail.quantity),
+                    invoice_supplier_name: invoice?.supplier_name || 'Unknown',
+                    invoice_date: invoice?.date || '',
+                    ingredient_name: ingredient?.name || detail.ingredient_id,
+                };
+            });
+
+            setSelectedInvoiceDetails(enrichedDetails);
+        } catch {
+            setSelectedInvoiceDetails([]);
+        }
     };
 
     const handleModalClose = () => {
         setSelectedInvoice(null);
+        setSelectedInvoiceDetails([]);
     };
 
     const invoiceColumns = useMemo<GridColDef[]>(
@@ -280,7 +456,9 @@ export function InvoiceDetailsStandaloneListView() {
                 headerName: '№',
                 width: 80,
                 renderCell: (params) => {
-                    const filtered = allDetails.filter((d) => d.invoice_id === selectedInvoice?.id);
+                    const filtered = selectedInvoiceDetails.filter(
+                        (d) => d.invoice_id === selectedInvoice?.id
+                    );
                     const index = filtered.findIndex((row) => row.id === params.row.id);
                     return index + 1;
                 },
@@ -342,10 +520,14 @@ export function InvoiceDetailsStandaloneListView() {
             //     ],
             // },
         ],
-        [t, selectedInvoice, allDetails]
+        [t, selectedInvoice, selectedInvoiceDetails]
     );
 
-    const filteredDetails = allDetails.filter((detail) => detail.invoice_id === selectedInvoice?.id);
+    const filteredDetails = selectedInvoiceDetails.filter(
+        (detail) => detail.invoice_id === selectedInvoice?.id
+    );
+    const startDateValue = useMemo(() => toPickerDate(draftFilters.date_from), [draftFilters.date_from]);
+    const endDateValue = useMemo(() => toPickerDate(draftFilters.date_to), [draftFilters.date_to]);
 
     return (
         <>
@@ -353,6 +535,180 @@ export function InvoiceDetailsStandaloneListView() {
                 data={invoices}
                 loading={loading}
                 columns={invoiceColumns}
+                paginationMode="server"
+                rowCount={rowCount}
+                paginationModel={paginationModel}
+                onPaginationModelChange={handlePaginationModelChange}
+                pageSizeOptions={[10, 20, 50, 100]}
+                renderFilters={() => (
+                    <Box
+                        sx={{
+                            display: 'grid',
+                            gridTemplateColumns: {
+                                xs: '1fr',
+                                sm: 'repeat(2, minmax(220px, 1fr))',
+                                md: 'repeat(3, minmax(220px, 1fr))',
+                                lg: 'repeat(4, minmax(220px, 1fr))',
+                            },
+                            gap: 2,
+                            alignItems: 'end',
+                            '& .MuiFormControl-root, & .MuiTextField-root': {
+                                minWidth: 220,
+                                width: '100%',
+                            },
+                        }}
+                    >
+                        <DatePicker
+                            label={t('ingredientReports.startDate', 'Start date')}
+                            value={startDateValue}
+                            onChange={(value) =>
+                                setDraftFilters((prev) => ({
+                                    ...prev,
+                                    date_from: value ? toUtcDayBoundary(value) : '',
+                                }))
+                            }
+                            format="DD.MM.YYYY"
+                            slotProps={{
+                                textField: {
+                                    fullWidth: true,
+                                    size: 'small',
+                                    inputProps: { readOnly: true },
+                                    sx: { cursor: 'pointer' },
+                                },
+                            }}
+                        />
+                        <DatePicker
+                            label={t('ingredientReports.endDate', 'End date')}
+                            value={endDateValue}
+                            onChange={(value) =>
+                                setDraftFilters((prev) => ({
+                                    ...prev,
+                                    date_to: value ? toUtcDayBoundary(value, true) : '',
+                                }))
+                            }
+                            format="DD.MM.YYYY"
+                            slotProps={{
+                                textField: {
+                                    fullWidth: true,
+                                    size: 'small',
+                                    inputProps: { readOnly: true },
+                                    sx: { cursor: 'pointer' },
+                                },
+                            }}
+                        />
+                        <NoDataTooltip enabled={isStoragesEmpty} title={noDataText}>
+                            <TextField
+                                select
+                                size="small"
+                                label={t('invoices.storage', 'Storage')}
+                                SelectProps={{ native: true }}
+                                value={draftFilters.storage_id || ''}
+                                onChange={(e) =>
+                                    setDraftFilters((prev) => ({
+                                        ...prev,
+                                        storage_id: e.target.value,
+                                    }))
+                                }
+                                InputLabelProps={{ shrink: true }}
+                                disabled={isStoragesEmpty}
+                            >
+                                <option value="" disabled hidden>
+                                    {t('ingredientReports.all', 'All')}
+                                </option>
+                                {storages.map((storage) => (
+                                    <option key={storage.id} value={storage.id}>
+                                        {storage.name || storage.id}
+                                    </option>
+                                ))}
+                            </TextField>
+                        </NoDataTooltip>
+                        <NoDataTooltip enabled={isSuppliersEmpty} title={noDataText}>
+                            <TextField
+                                select
+                                size="small"
+                                label={t('invoices.name', 'Supplier')}
+                                SelectProps={{ native: true }}
+                                value={draftFilters.supplier_id || ''}
+                                onChange={(e) =>
+                                    setDraftFilters((prev) => ({
+                                        ...prev,
+                                        supplier_id: e.target.value,
+                                    }))
+                                }
+                                InputLabelProps={{ shrink: true }}
+                                disabled={isSuppliersEmpty}
+                            >
+                                <option value="" disabled hidden>
+                                    {t('ingredientReports.all', 'All')}
+                                </option>
+                                {suppliers.map((supplier) => (
+                                    <option key={supplier.id} value={supplier.id}>
+                                        {supplier.name || supplier.id}
+                                    </option>
+                                ))}
+                            </TextField>
+                        </NoDataTooltip>
+                        <NoDataTooltip enabled={isIngredientsEmpty} title={noDataText}>
+                            <TextField
+                                select
+                                size="small"
+                                label={t('ingredient', 'Ingredient')}
+                                SelectProps={{ native: true }}
+                                value={draftFilters.ingredient_id || ''}
+                                onChange={(e) =>
+                                    setDraftFilters((prev) => ({
+                                        ...prev,
+                                        ingredient_id: e.target.value,
+                                    }))
+                                }
+                                InputLabelProps={{ shrink: true }}
+                                disabled={isIngredientsEmpty}
+                            >
+                                <option value="" disabled hidden>
+                                    {t('ingredientReports.all', 'All')}
+                                </option>
+                                {ingredients.map((ingredient) => (
+                                    <option key={ingredient.id} value={ingredient.id}>
+                                        {ingredient.name || ingredient.id}
+                                    </option>
+                                ))}
+                            </TextField>
+                        </NoDataTooltip>
+                        <TextField
+                            select
+                            size="small"
+                            label={t('invoices.status', 'Status')}
+                            SelectProps={{ native: true }}
+                            value={draftFilters.status || ''}
+                            onChange={(e) =>
+                                setDraftFilters((prev) => ({
+                                    ...prev,
+                                    status: e.target.value,
+                                }))
+                            }
+                            InputLabelProps={{ shrink: true }}
+                        >
+                            <option value="" disabled hidden>
+                                {t('ingredientReports.all', 'All')}
+                            </option>
+                            <option value="pending">{t('warehouse.invoices.statuses.pending', 'Pending')}</option>
+                            <option value="arrived">{t('warehouse.invoices.statuses.arrived', 'Arrived')}</option>
+                            <option value="cancelled">{t('warehouse.invoices.statuses.cancelled', 'Cancelled')}</option>
+                        </TextField>
+                      
+                        <Box sx={{ display: 'flex', gap: 1 }}>
+                            <Button
+                                variant="outlined"
+                                size="small"
+                                startIcon={<Iconify icon="solar:restart-bold" />}
+                                onClick={() => setDraftFilters(initialFilters)}
+                                sx={{ flex: 1 }}
+                            >
+                                {t('ingredientReports.reset', 'Reset')}
+                            </Button>
+                        </Box>
+                    </Box>
+                )}
                 breadcrumbs={{
                     heading: t('overview.warehouse.invoiceDetails', 'Kirimlar'),
                     links: [

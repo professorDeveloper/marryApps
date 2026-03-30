@@ -160,7 +160,7 @@ export function DeductionsDetailsModal({
 
         return (
           <Box sx={{ display: 'grid', gap: 2 }}>
-            <TableContainer>
+            {/* <TableContainer>
               <Table size="small">
                 <TableHead>
                   <TableRow>
@@ -185,7 +185,7 @@ export function DeductionsDetailsModal({
                   </TableRow>
                 </TableBody>
               </Table>
-            </TableContainer>
+            </TableContainer> */}
 
             <TableContainer>
               <Table size="small">
@@ -226,14 +226,14 @@ export function DeductionsDetailsModal({
               </Table>
             </TableContainer>
 
-            <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 3 }}>
+            {/* <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 3 }}>
               <Typography variant="body2">
                 <strong>{t('calculation.remaining', 'Amount')}:</strong> {formatAmount(totalAmount)}
               </Typography>
               <Typography variant="body2">
                 <strong>{t('deductions.balance', 'Balance')}:</strong> {formatAmount(deduction.balance)}
               </Typography>
-            </Box>
+            </Box> */}
           </Box>
         );
       }}

@@ -1,15 +1,21 @@
-import type { IMealsItem } from 'src/types/meals';
 import type { CardSection, GenericEditViewConfig } from 'src/components/generic-edit-view';
+import type { SyntheticEvent } from 'react';
 import { useParams } from 'react-router';
 import { useTranslation } from 'react-i18next';
-import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
+import { useState, useCallback, useMemo, useEffect, useRef, startTransition } from 'react';
 import { mutate } from 'swr';
 import { Box, Tabs, Tab } from '@mui/material';
 import { CustomBreadcrumbs } from 'src/components/custom-breadcrumbs';
 import { paths } from 'src/routes/paths';
 import { useRouter } from 'src/routes/hooks';
 import { endpoints } from 'src/lib/axios';
-import { useGetMeal, useUpdateMeal, useDeleteMeal, useCreateMealWithCalculations } from 'src/hooks/use-meals';
+import {
+    useGetMeal,
+    useGetMealWithCalculations,
+    useUpdateMealWithCalculations,
+    useDeleteMeal,
+    useCreateMealWithCalculations,
+} from 'src/hooks/use-meals';
 import { useGetCategories } from 'src/actions/categories';
 import { useGetDepartments } from 'src/actions/departments';
 import { useTranslationsAPI } from 'src/hooks/use-translations-api';
@@ -20,6 +26,27 @@ import ProductCalculator from 'src/components/generic-edit-view/edit-calculation
 export interface MealEditViewProps {
     isNew?: boolean;
 }
+
+const mapCalculationsToPending = (
+    calculations?: Array<{
+        ingredient_id: string;
+        component_compound_id?: string;
+        quantity: string;
+    }>
+) => ({
+    ingredient_calculations: calculations
+        ?.filter((calculation) => calculation.ingredient_id && !calculation.component_compound_id)
+        .map((calculation) => ({
+            ingredient_id: calculation.ingredient_id,
+            quantity: String(calculation.quantity),
+        })) || [],
+    compound_calculations: calculations
+        ?.filter((calculation) => calculation.component_compound_id)
+        .map((calculation) => ({
+            compound_id: calculation.component_compound_id!,
+            quantity: String(calculation.quantity),
+        })) || [],
+});
 
 const IMAGE_SECTION: CardSection = {
     id: 'image',
@@ -104,23 +131,33 @@ const BASIC_INFO_SECTION: CardSection = {
 interface TabPanelProps {
     children?: React.ReactNode;
     index: number;
+    keepMounted?: boolean;
     value: number;
 }
 
-function TabPanel(props: TabPanelProps) {
-    const { children, value, index, ...other } = props;
+function TabPanel({ children, value, index, keepMounted = false }: TabPanelProps) {
+    const [hasBeenActive, setHasBeenActive] = useState(keepMounted && value === index);
+
+    useEffect(() => {
+        if (keepMounted && value === index) {
+            setHasBeenActive(true);
+        }
+    }, [keepMounted, value, index]);
+
+    if (!keepMounted && value !== index) {
+        return null;
+    }
+
+    if (keepMounted && !hasBeenActive) {
+        return null;
+    }
 
     return (
         <div
             role="tabpanel"
-            hidden={value !== index}
-            id={`meal-tabpanel-${index}`}
-            aria-labelledby={`meal-tab-${index}`}
-            {...other}
+            style={{ display: value === index ? 'block' : 'none' }}
         >
-            <Box sx={{ pt: 0, display: value === index ? 'block' : 'none' }}>
-                {children}
-            </Box>
+            {children}
         </div>
     );
 }
@@ -132,16 +169,18 @@ export function MealEditView({ isNew = false }: MealEditViewProps) {
 
     // SWR hooks
     const { meal, mealLoading } = useGetMeal(isNew ? '' : mealId || '');
+    const { mealWithCalculations } = useGetMealWithCalculations(isNew ? undefined : mealId || undefined);
     const { categories } = useGetCategories();
     const { departments } = useGetDepartments();
     const { createMealWithCalculations } = useCreateMealWithCalculations();
-    const { updateMeal } = useUpdateMeal();
+    const { updateMealWithCalculations } = useUpdateMealWithCalculations();
     const { deleteMeal } = useDeleteMeal();
     const { createTranslation, updateTranslation } = useTranslationsAPI();
 
     const [activeTab, setActiveTab] = useState(0);
     // Store form data at parent level to preserve across tab changes
     const [formData, setFormData] = useState<Record<string, any>>({});
+    const [formTabData, setFormTabData] = useState<Record<string, any>>();
     // Track pending calculations when entity is created
     const pendingCalculationsRef = useRef<{
         ingredient_calculations?: Array<{ ingredient_id: string; quantity: string }>;
@@ -149,6 +188,20 @@ export function MealEditView({ isNew = false }: MealEditViewProps) {
     } | null>(null);
 
     const loading = !isNew && mealLoading;
+
+    const handleTabChange = useCallback((_: SyntheticEvent, newValue: number) => {
+        if (newValue === 0) {
+            setFormTabData(
+                Object.keys(formData).length > 0
+                    ? formData
+                    : (meal || undefined)
+            );
+        }
+
+        startTransition(() => {
+            setActiveTab(newValue);
+        });
+    }, [formData, meal]);
 
     // Effective meal ID - either from URL params or fetched meal
     const effectiveMealId = mealId || meal?.id;
@@ -165,6 +218,7 @@ export function MealEditView({ isNew = false }: MealEditViewProps) {
                 ...meal,
             };
             setFormData(enrichedMeal);
+            setFormTabData(enrichedMeal);
         } else if (isNew && (!formData || Object.keys(formData).length === 0)) {
             // Initialize empty form for new meal
             const initialData: Record<string, any> = {
@@ -181,9 +235,26 @@ export function MealEditView({ isNew = false }: MealEditViewProps) {
                 picture_url: '',
             };
             setFormData(initialData);
+            setFormTabData(initialData);
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [meal, isNew]);
+
+    useEffect(() => {
+        if (!mealWithCalculations?.calculations) return;
+
+        pendingCalculationsRef.current = mapCalculationsToPending(
+            mealWithCalculations.calculations.map((calculation) => ({
+                ingredient_id: calculation.ingredient_id,
+                component_compound_id: calculation.component_compound_id,
+                quantity: calculation.quantity,
+            }))
+        );
+    }, [mealWithCalculations]);
+
+    const handleFormDataChange = useCallback((nextFormData: Record<string, any>) => {
+        setFormData(nextFormData);
+    }, []);
 
     // Auto-set department_id when category changes
     useEffect(() => {
@@ -357,21 +428,26 @@ export function MealEditView({ isNew = false }: MealEditViewProps) {
                         const descriptionTranslationResult = await createTranslation(descriptionTranslationData);
                         description_i18n = descriptionTranslationResult.id;
                     }
-                    await updateMeal(mealId, {
-                        ...submitFormData,
-                        name_i18n,
-                        description_i18n,
+
+                    const pendingCalculations = pendingCalculationsRef.current;
+
+                    await updateMealWithCalculations(mealId, {
+                        good: {
+                            ...submitFormData,
+                            name_i18n,
+                            description_i18n,
+                        },
+                        ingredient_calculations: pendingCalculations?.ingredient_calculations,
+                        compound_calculations: pendingCalculations?.compound_calculations,
                     });
-                    // Revalidate cache to reflect updates immediately
-                    await mutate(endpoints.meals.details(mealId));
-                    await mutate(endpoints.meals.list);
+
                     router.push(paths.menu.meals.root);
                 }
             } catch (err) {
                 console.log("Error saving meal:", err);
             }
         },
-        [isNew, mealId, createMealWithCalculations, createTranslation, updateTranslation, updateMeal, router]
+        [isNew, mealId, createMealWithCalculations, createTranslation, updateTranslation, updateMealWithCalculations, router]
     );
 
     // Handle delete
@@ -417,7 +493,7 @@ export function MealEditView({ isNew = false }: MealEditViewProps) {
                 <Box sx={{ display: 'flex', justifyContent: 'center', mb: 0, width: '100%' }}>
                     <Tabs
                         value={activeTab}
-                        onChange={(e, newValue) => setActiveTab(newValue)}
+                        onChange={handleTabChange}
                         sx={{
                             px: 0,
                             width: '100%',
@@ -459,15 +535,14 @@ export function MealEditView({ isNew = false }: MealEditViewProps) {
                 <TabPanel value={activeTab} index={0}>
                     <GenericEditView
                         config={config}
-                        data={meal || undefined}
-                        formData={formData}
-                        onFormDataChange={setFormData}
+                        data={formTabData || meal || undefined}
+                        onFormDataChange={handleFormDataChange}
                         isNew={isNew}
                         loading={loading}
                     />
                 </TabPanel>
 
-                <TabPanel value={activeTab} index={1}>
+                <TabPanel value={activeTab} index={1} keepMounted>
                     {isNew ? (
                         <ProductCalculator
                             mealId={effectiveMealId}

@@ -1,494 +1,231 @@
-import type { TFunction } from 'i18next';
-import type { CardSection, GenericEditViewConfig } from 'src/components/generic-edit-view';
-import { useParams } from 'react-router';
+import { useMemo, useState, useEffect, useRef, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useRef, useState, useEffect, useCallback } from 'react';
-import { mutate } from 'swr';
-import { Box, Tab, Tabs, Stack } from '@mui/material';
+import { Box, Tab, Tabs, CircularProgress } from '@mui/material';
 import { paths } from 'src/routes/paths';
-import { useRouter } from 'src/routes/hooks';
-import { endpoints } from 'src/lib/axios';
-import { useTranslationsAPI } from 'src/hooks/use-translations-api';
-import { useGetCompound, useDeleteCompound, useUpdateCompound, useCreateCompoundWithCalculations } from 'src/hooks/use-compounds';
-import { useGetDepartments } from 'src/actions/departments';
-import { toast } from 'src/components/snackbar';
-import { GenericEditView } from 'src/components/generic-edit-view';
+import { useParams } from 'react-router';
+
+// Hooks and Actions
+import { useGetCompound, useGetCompoundWithCalculations } from 'src/hooks/use-compounds';
+import { useGetIngredientGroups } from 'src/actions/ingredient-group';
+import { useCompoundForm } from './hooks/useCompoundForm';
+
+// Components
 import { CustomBreadcrumbs } from 'src/components/custom-breadcrumbs';
 import ProductCalculator from 'src/components/generic-edit-view/edit-calculation';
+import { GenericEditView } from '../../components/generic-edit-view/GenericEditView';
+import { TabPanel } from './components/TabPanel';
 
-export interface CompoundEditViewProps {
-    compoundId?: string;
-    isNew?: boolean;
-}
+// Utils, Types, and Constants
+import { IMAGE_SECTION, BASIC_INFO_SECTION, PRICING_SECTION, MEASUREMENT_OPTIONS } from './constants';
+import { translateSection } from './utilities';
+import type { CompoundEditViewProps, PendingCalculation } from './types';
+import type { GenericEditViewConfig } from '../../components/generic-edit-view/types';
 
-const IMAGE_SECTION: CardSection = {
-    id: 'image',
-    title: 'semifinishedProducts.imageTitle',
-    fields: [
-        {
-            key: 'picture_url',
-            label: 'semifinishedProducts.imageUrl',
-            type: 'url',
-            placeholder: 'https://example.com/image.jpg',
-            defaultValue: '',
-        },
-    ],
-};
+// ================================================================================================
 
-const BASIC_INFO_SECTION: CardSection = {
-    id: 'basic',
-    title: 'semifinishedProducts.basicTitle',
-    columns: 1,
-    fields: [
-        {
-            key: 'name',
-            label: 'semifinishedProducts.name',
-            type: 'text',
-            required: true,
-            defaultValue: '',
-            // helperText: 'Asosiy nomi Uzbek tilida kiritiladi va translation uz fieldiga avtomatik yuboriladi',
-        },
-        {
-            key: 'name_en',
-            label: 'semifinishedProducts.nameEn',
-            type: 'text',
-            required: false,
-            defaultValue: '',
-        },
-        {
-            key: 'name_ru',
-            label: 'semifinishedProducts.nameRu',
-            type: 'text',
-            required: false,
-            defaultValue: '',
-        },
-        {
-            key: 'description',
-            label: 'semifinishedProducts.description',
-            type: 'textarea',
-            rows: 3,
-            defaultValue: '',
-        },
-        {
-            key: 'department_id',
-            label: 'semifinishedProducts.department',
-            type: 'text',
-            required: true,
-        },
-    ],
-};
-
-const PRICING_SECTION: CardSection = {
-    id: 'pricing',
-    title: 'semifinishedProducts.pricingTitle',
-    columns: 2,
-    fields: [
-        // {
-        //     key: 'price',
-        //     label: 'semifinishedProducts.price',
-        //     type: 'text',
-        //     required: false,
-        //     placeholder: '0',
-        // },
-        {
-            key: 'quantity',
-            label: 'semifinishedProducts.quantity',
-            type: 'number',
-            required: true,
-            // placeholder: '0',
-        },
-        {
-            key: 'measurement',
-            label: 'semifinishedProducts.measurement',
-            type: 'text',
-            required: true,
-            defaultValue: 'kg',
-        },
-    ],
-};
-
-interface TabPanelProps {
-    children?: React.ReactNode;
-    index: number;
-    value: number;
-}
-
-function TabPanel(props: TabPanelProps) {
-    const { children, value, index, ...other } = props;
-
-    return (
-        <div
-            role="tabpanel"
-            hidden={value !== index}
-            id={`compound-tabpanel-${index}`}
-            aria-labelledby={`compound-tab-${index}`}
-            {...other}
-        >
-            <Box sx={{ pt: 0, display: value === index ? 'block' : 'none' }}>
-                {children}
-            </Box>
-        </div>
-    );
-}
+const mapCalculationsToPending = (
+    calculations?: Array<{
+        ingredient_id: string;
+        component_compound_id?: string;
+        quantity: string;
+    }>
+): PendingCalculation => ({
+    ingredient_calculations: calculations
+        ?.filter((calculation) => calculation.ingredient_id && !calculation.component_compound_id)
+        .map((calculation) => ({
+            ingredient_id: calculation.ingredient_id,
+            quantity: String(calculation.quantity),
+        })) || [],
+    compound_calculations: calculations
+        ?.filter((calculation) => calculation.component_compound_id)
+        .map((calculation) => ({
+            compound_id: calculation.component_compound_id!,
+            quantity: String(calculation.quantity),
+        })) || [],
+});
 
 export function CompoundEditView({ compoundId, isNew = false }: CompoundEditViewProps) {
-    const router = useRouter();
     const { t } = useTranslation('menu');
     const [activeTab, setActiveTab] = useState(0);
-    // Store form data at parent level to preserve across tab changes
-    const [formData, setFormData] = useState<Record<string, any>>({});
-    // Track pending calculations when entity is created
-    const pendingCalculationsRef = useRef<{
-        ingredient_calculations?: Array<{ ingredient_id: string; quantity: string }>;
-        compound_calculations?: Array<{ compound_id: string; quantity: string }>;
-    } | null>(null);
 
-    // SWR hooks
+    // This state holds form data and preserves it across tab changes.
+    // It's initialized to null to prevent rendering form until data is ready.
+    const [formData, setFormData] = useState<Record<string, any> | null>(null);
+    const pendingCalculationsRef = useRef<PendingCalculation | null>(null);
+
+    // --- Data Fetching ---
     const { compound, compoundLoading } = useGetCompound(isNew ? '' : compoundId || '');
-    const { departments } = useGetDepartments();
-    const { updateCompound } = useUpdateCompound();
-    const { deleteCompound } = useDeleteCompound();
-    const { createTranslation, updateTranslation } = useTranslationsAPI();
-    const { createCompoundWithCalculations } = useCreateCompoundWithCalculations();
+    const { compoundWithCalculations } = useGetCompoundWithCalculations(isNew ? undefined : compoundId || undefined);
+    const { ingredientGroups } = useGetIngredientGroups();
+    const isDataLoading = !isNew && compoundLoading;
 
-    const loading = !isNew && compoundLoading;
+    // --- Memoize expensive translations ---
+    const translatedSections = useMemo(() => ({
+        IMAGE_SECTION_T: translateSection(IMAGE_SECTION, t),
+        BASIC_INFO_SECTION_T: translateSection(BASIC_INFO_SECTION, t),
+        PRICING_SECTION_T: translateSection(PRICING_SECTION, t),
+    }), [t]);
 
-    // Effective compound ID - either from props or fetched compound
-    const effectiveCompoundId = compoundId || compound?.id;
-
-    // Initialize form data when compound is loaded
-    useEffect(() => {
-        if (compound && Object.keys(compound).length > 0) {
-            // Ensure translation fields are always present
-            const enrichedCompound = {
-                name_en: '',
-                name_ru: '',
-                description_en: '',
-                description_ru: '',
-                ...compound,
-            };
-            setFormData(enrichedCompound);
-        } else if (isNew && (!formData || Object.keys(formData).length === 0)) {
-            // Initialize empty form for new compound
-            const initialData: Record<string, any> = {
-                name: '',
-                name_en: '',
-                name_ru: '',
-                description: '',
-                description_en: '',
-                description_ru: '',
-                department_id: '',
-                price: '',
-                quantity: '',
-                measurement: 'kg',
-                picture_url: '',
-            };
-            setFormData(initialData);
-        }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [compound, isNew]);
-
-    // Handle form submission
-    const handleSubmit = useCallback(
-        async (submitFormData: Record<string, any>) => {
-            try {
-                if (isNew) {
-                    let name_i18n = submitFormData.name_i18n;
-                    if (!name_i18n && (submitFormData.name_en || submitFormData.name_ru)) {
-                        // Create translation if provided
-                        const translationData: any = {
-                            en: submitFormData.name_en || submitFormData.name || '',
-                            ru: submitFormData.name_ru || submitFormData.name || '',
-                            uz: submitFormData.name || '', // Primary name is always Uzbek
-                        };
-
-                        const translationResult = await createTranslation(translationData);
-                        name_i18n = translationResult.id;
-                    } else if (name_i18n && (submitFormData.name_en || submitFormData.name_ru || submitFormData.name)) {
-                        // Update existing translation if it exists and data changed
-                        const translationData: any = {
-                            en: submitFormData.name_en || submitFormData.name || '',
-                            ru: submitFormData.name_ru || submitFormData.name || '',
-                            uz: submitFormData.name || '',
-                        };
-                        await updateTranslation(name_i18n, translationData);
-                        await mutate(endpoints.translations.list);
-                    }
-
-                    // Create description translation if provided
-                    let description_i18n: string | undefined = submitFormData.description_i18n;
-                    if (!description_i18n && (submitFormData.description_en || submitFormData.description_ru)) {
-                        const descriptionTranslationData: any = {
-                            en: submitFormData.description_en || submitFormData.description || '',
-                            ru: submitFormData.description_ru || submitFormData.description || '',
-                            uz: submitFormData.description || '',
-                        };
-                        const descriptionTranslationResult = await createTranslation(descriptionTranslationData);
-                        description_i18n = descriptionTranslationResult.id;
-                    }
-
-                    const pendingCalculations = pendingCalculationsRef.current;
-
-                    await createCompoundWithCalculations({
-                        compound: {
-                            ...submitFormData,
-                            name_i18n,
-                            description_i18n,
-                        },
-                        ingredient_calculations: pendingCalculations?.ingredient_calculations,
-                        compound_calculations: pendingCalculations?.compound_calculations,
-                    });
-
-                    toast.success(t('success.created', 'Successfully created'));
-                    router.push(paths.menu.semifinished.root);
-                } else if (compoundId) {
-                    // Update existing compound with translation
-                    let name_i18n = submitFormData.name_i18n;
-                    if (!name_i18n && (submitFormData.name_en || submitFormData.name_ru)) {
-                        // Create translation if provided
-                        const translationData: any = {
-                            en: submitFormData.name_en || submitFormData.name || '',
-                            ru: submitFormData.name_ru || submitFormData.name || '',
-                            uz: submitFormData.name || '', // Primary name is always Uzbek
-                        };
-
-                        const translationResult = await createTranslation(translationData);
-                        name_i18n = translationResult.id;
-                    } else if (name_i18n && (submitFormData.name_en || submitFormData.name_ru || submitFormData.name)) {
-                        // Update existing translation when editing
-                        const translationData: any = {
-                            en: submitFormData.name_en || submitFormData.name || '',
-                            ru: submitFormData.name_ru || submitFormData.name || '',
-                            uz: submitFormData.name || '',
-                        };
-                        await updateTranslation(name_i18n, translationData);
-                        await mutate(endpoints.translations.list);
-                    }
-
-                    // Create description translation if provided
-                    let description_i18n: string | undefined = submitFormData.description_i18n;
-                    if (!description_i18n && (submitFormData.description_en || submitFormData.description_ru)) {
-                        const descriptionTranslationData: any = {
-                            en: submitFormData.description_en || submitFormData.description || '',
-                            ru: submitFormData.description_ru || submitFormData.description || '',
-                            uz: submitFormData.description || '',
-                        };
-                        const descriptionTranslationResult = await createTranslation(descriptionTranslationData);
-                        description_i18n = descriptionTranslationResult.id;
-                    }
-
-                    const payload = {
-                        name: submitFormData.name,
-                        name_i18n,
-                        description: submitFormData.description || '',
-                        description_i18n,
-                        price: String(submitFormData.price),
-                        quantity: Number(submitFormData.quantity),
-                        measurement: submitFormData.measurement,
-                        department_id: submitFormData.department_id,
-                        picture_url: submitFormData.picture_url || null,
-                    };
-                    await updateCompound(compoundId, payload);
-                    // Revalidate cache to reflect updates immediately
-                    await mutate(endpoints.compound.details(compoundId));
-                    await mutate(endpoints.compound.list);
-                    toast.success(t('success.updated', 'Successfully updated'));
-                    // Redirect to list
-                    router.push(paths.menu.semifinished.root);
-                }
-            } catch {
-                // console.error('Error saving compound:', err);
-                toast.error(
-                    isNew ? t('error.createFailed') : t('error.updateFailed')
-                );
-            }
-        },
-        [router, isNew, compoundId, updateCompound, t, createTranslation, updateTranslation, createCompoundWithCalculations]
+    // --- Memoize ingredient group options ---
+    const ingredientGroupOptions = useMemo(() =>
+        ingredientGroups.map((group: any) => ({ value: group.id, label: group.name })),
+        [ingredientGroups]
     );
 
-    // Handle delete
-    const handleDelete = useCallback(async () => {
-        if (!compound) return;
+    // --- Memoize measurement options ---
+    const measurementOptions = useMemo(() => 
+        MEASUREMENT_OPTIONS.map((m) => ({
+            value: m,
+            label: t(`semifinishedProducts.${m}`),
+        })),
+        [t]
+    );
 
-        try {
-            await deleteCompound(compound.id);
-            router.push(paths.menu.semifinished.root);
-        } catch {
+    // --- State Initialization ---
+    // This effect runs ONCE to populate form state when data is loaded or for a new entry.
+    useEffect(() => {
+        // Do not run if data is still loading
+        if (isDataLoading) return;
 
-            // console.error('Error deleting compound:', err);
-            toast.error(t('error.deleteFailed'));
+        // If we have an existing compound, populate form
+        if (compound) {
+            setFormData({
+                name_en: '', name_ru: '', description_en: '', description_ru: '', // Ensure translation fields exist
+                ...compound,
+            });
         }
-    }, [compound, deleteCompound, router, t]);
+        // If it's a new compound, initialize with empty/default values
+        else if (isNew) {
+            setFormData({
+                name: '', name_en: '', name_ru: '', description: '', description_en: '', description_ru: '',
+                ingredient_group_id: '', price: '', quantity: '', measurement: 'kg', picture_url: '',
+            });
+        }
+    }, [compound, isNew, isDataLoading]);
 
-    const IMAGE_SECTION_T = translateSection(IMAGE_SECTION, t);
-    const BASIC_INFO_SECTION_T = translateSection(BASIC_INFO_SECTION, t);
-    const PRICING_SECTION_T = translateSection(PRICING_SECTION, t);
+    useEffect(() => {
+        if (!compoundWithCalculations?.calculations) return;
 
-    // Add department options dynamically
-    const BASIC_INFO_WITH_DEPS = {
-        ...BASIC_INFO_SECTION_T,
-        fields: BASIC_INFO_SECTION_T.fields?.map((field) => {
-            if (field.key === 'department_id') {
-                return {
+        pendingCalculationsRef.current = mapCalculationsToPending(
+            compoundWithCalculations.calculations.map((calculation) => ({
+                ingredient_id: calculation.ingredient_id,
+                component_compound_id: calculation.component_compound_id,
+                quantity: calculation.quantity,
+            }))
+        );
+    }, [compoundWithCalculations]);
+
+    // --- Form Handlers ---
+    // These handlers are memoized within the custom hook
+    const { handleSubmit, handleDelete } = useCompoundForm({
+        compoundId,
+        isNew,
+        compound,
+        pendingCalculationsRef,
+    });
+
+    // --- PERFORMANCE BOTTLENECK FIX ---
+    // Memoize sections with transformed fields
+    const basicInfoWithDeps = useMemo(() => ({
+        ...translatedSections.BASIC_INFO_SECTION_T,
+        fields: translatedSections.BASIC_INFO_SECTION_T.fields?.map((field) =>
+            field.key === 'ingredient_group_id'
+                ? {
                     ...field,
                     type: 'select' as const,
-                    options: departments.map((dept: any) => ({
-                        value: dept.id,
-                        label: dept.name,
-                    })),
-                };
-            }
-            return field;
-        }),
-    };
+                    options: ingredientGroupOptions,
+                }
+                : field
+        ),
+    }), [translatedSections.BASIC_INFO_SECTION_T, ingredientGroupOptions]);
 
-    const MEASUREMENT_OPTIONS = ['kg', 'piece', 'l'];
-
-    const PRICING_WITH_MEASUREMENTS = {
-        ...PRICING_SECTION_T,
-        fields: PRICING_SECTION_T.fields?.map((field) => {
-            if (field.key === 'measurement') {
-                return {
+    const pricingWithMeasurements = useMemo(() => ({
+        ...translatedSections.PRICING_SECTION_T,
+        fields: translatedSections.PRICING_SECTION_T.fields?.map((field) =>
+            field.key === 'measurement'
+                ? {
                     ...field,
                     type: 'select' as const,
-                    options: MEASUREMENT_OPTIONS.map((m) => ({
-                        value: m,
-                        label: t(`semifinishedProducts.${m}`),
-                    })),
-                };
-            }
-            return field;
-        }),
-    };
+                    options: measurementOptions,
+                }
+                : field
+        ),
+    }), [translatedSections.PRICING_SECTION_T, measurementOptions]);
 
-    const config: GenericEditViewConfig = {
+    // Memoize the entire config object
+    const memoizedConfig = useMemo((): GenericEditViewConfig => ({
         title: isNew ? t('semifinishedProducts.newTitle') : t('semifinishedProducts.editTitle'),
         entityName: 'compound',
         showBreadcrumbs: false,
         breadcrumbs: [
             { name: t('overview.menu.title', 'Menu'), href: paths.menu.root },
             { name: t('semifinishedProducts.title'), href: paths.menu.semifinished.root },
-            {
-                name: isNew ? t('semifinishedProducts.new', 'New') : compound?.name || t('.semifinishedProducts.edit', 'Edit'),
-                href: '',
-            },
+            { name: isNew ? t('semifinishedProducts.new', 'New') : compound?.name || '...', href: '' },
         ],
-        leftSidecard: IMAGE_SECTION_T,
-        sections: [BASIC_INFO_WITH_DEPS, PRICING_WITH_MEASUREMENTS],
+        leftSidecard: translatedSections.IMAGE_SECTION_T,
+        sections: [basicInfoWithDeps, pricingWithMeasurements],
         onSubmit: handleSubmit,
         onDelete: !isNew ? handleDelete : undefined,
-        showDeleteButton: !isNew,
-    };
+        showDeleteButton: !isNew
+    }), [t, isNew, compound, translatedSections.IMAGE_SECTION_T, basicInfoWithDeps, pricingWithMeasurements, handleSubmit, handleDelete]);
+
+
+    // --- Memoize tab change handler ---
+    const handleTabChange = useCallback((e: any, newValue: number) => {
+        setActiveTab(newValue);
+    }, []);
+
+    // --- Render Logic ---
+    // Prevent rendering the form until the initial data is loaded and set.
+    if (!formData) {
+        return (
+            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '60vh' }}>
+                <CircularProgress />
+            </Box>
+        );
+    }
 
     return (
         <Box sx={{ p: 3 }}>
             <Box sx={{ maxWidth: 1400, mx: 'auto' }}>
-                {/* BREADCRUMBS AND TITLE */}
                 <CustomBreadcrumbs
-                    heading={config.title}
-                    links={config.breadcrumbs}
+                    heading={memoizedConfig.title}
+                    links={memoizedConfig.breadcrumbs}
                     sx={{ mb: 3 }}
                 />
 
-                {/* TABS */}
-                <Box sx={{ display: 'flex', justifyContent: 'center', mb: 0, width: '100%' }}>
-                    <Tabs
-                        value={activeTab}
-                        onChange={(e, newValue) => setActiveTab(newValue)}
-                        sx={{
-                            px: 0,
-                            width: '100%',
-                            minHeight: 48,
-                            '.MuiTabs-flexContainer': {
-                                width: '100%'
-                            }
-                        }}
-                        variant="fullWidth"
-                    >
-                        <Tab
-                            sx={{ minWidth: 0, flex: 1 }}
-                            label={t('semifinishedProducts.basicInfo', 'Basic Info')}
-                            id="compound-tab-0"
-                            aria-controls="compound-tabpanel-0"
-                        />
-                        <Tab
-                            sx={{ minWidth: 0, flex: 1 }}
-                            label={t('semifinishedProducts.composition', 'Composition')}
-                            id="compound-tab-1"
-                            aria-controls="compound-tabpanel-1"
-                        />
-                    </Tabs>
-                </Box>
+                <Tabs value={activeTab} onChange={handleTabChange} variant="fullWidth">
+                    <Tab label={t('semifinishedProducts.basicInfo', 'Basic Info')} />
+                    <Tab label={t('semifinishedProducts.composition', 'Composition')} />
+                </Tabs>
 
-                {/* Tab 0: Basic Edit Form */}
                 <TabPanel value={activeTab} index={0}>
                     <GenericEditView
-                        config={config}
-                        data={compound}
-                        formData={formData}
-                        onFormDataChange={setFormData}
+                        config={memoizedConfig}
+                        data={formData} // Pass the stable state as the initial data
+                        onFormDataChange={setFormData} // Used to update state after submission
                         isNew={isNew}
-                        loading={loading}
+                        loading={isDataLoading}
                     />
                 </TabPanel>
 
-                {/* Tab 1: Calculation/Composition */}
                 <TabPanel value={activeTab} index={1}>
-                    <Stack spacing={3}>
-                        <ProductCalculator
-                            compoundId={effectiveCompoundId}
-                            // showTotalsSummary={false}
-                            onCalculationsReady={(calculations) => {
-                                // Store calculations for when save is clicked
-                                pendingCalculationsRef.current = calculations;
-                            }}
-                        />
-                    </Stack>
+                    <ProductCalculator
+                        compoundId={compoundId || compound?.id}
+                        onCalculationsReady={(calculations) => {
+                            pendingCalculationsRef.current = calculations;
+                        }}
+                    />
                 </TabPanel>
             </Box>
         </Box>
     );
 }
 
+// ================================================================================================
+
+// This wrapper component remains unchanged. It's responsible for getting the ID from the URL.
 export function CompoundEditViewWrapper({ isNew = false }: { isNew?: boolean }) {
     const { id } = useParams<{ id?: string }>();
-
-    return (
-        <CompoundEditView
-            compoundId={id}
-            isNew={isNew}
-        />
-    );
-}
-
-/**
- * Runtime helper: translate CardSection objects that may contain translation keys
- */
-function translateSection(section: CardSection, t: TFunction): CardSection {
-    const mapped = { ...section } as CardSection;
-
-    // translate title if it looks like a key
-    if (typeof mapped.title === 'string' && mapped.title.includes('.')) {
-        mapped.title = t(mapped.title as string, mapped.title as string);
-    }
-
-    if (Array.isArray(mapped.fields)) {
-        mapped.fields = mapped.fields.map((f) => {
-            const nf = { ...f };
-            if (typeof nf.label === 'string' && nf.label.includes('.')) {
-                nf.label = t(nf.label as string, nf.label as string);
-            }
-            if (nf.options && Array.isArray(nf.options)) {
-                nf.options = nf.options.map((opt) => ({
-                    ...opt,
-                    label:
-                        typeof opt.label === 'string' && opt.label.includes('.')
-                            ? t(opt.label as string, opt.label as string)
-                            : opt.label,
-                }));
-            }
-            return nf;
-        });
-    }
-    return mapped;
+    return <CompoundEditView compoundId={id} isNew={isNew} />;
 }

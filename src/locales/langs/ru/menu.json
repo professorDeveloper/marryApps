@@ -1,4 +1,4 @@
-{
+﻿{
   "app": "Меню",
   "job": "Работа",
   "user": "Пользователь",
@@ -30,6 +30,7 @@
   "error": "Ошибка",
   "success": "Успешно",
   "noData": "Нет данных",
+  "noDataAvailable": "Данные отсутствуют",
   "search": "Поиск",
   "filter": "Фильтр",
   "sort": "Сортировка",
@@ -189,7 +190,10 @@
     "deleteConfirm": "Вы уверены, что хотите удалить эту категорию?",
     "deleteMessage": "Это действие нельзя отменить и его нельзя будет вернуть.",
     "cancel": "Отмена",
-    "confirm": "Подтвердить"
+    "confirm": "Подтвердить",
+    "color": "Цвет",
+    "created": "Создано",
+    "updated": "Обновлено"
   },
   "semifinishedProducts": {
     "title": "Полуфабрикаты",
@@ -442,6 +446,7 @@
     "roleRequired": "Выбор роли является обязательным",
     "branchRequired": "Выбор филиала является обязательным",
     "pincodeRequired": "PIN-код является обязательным",
+    "cashRegisterRequired": "Касса обязательна",
     "statusRequired": "Выбор статуса является обязательным",
     "statusActive": "Активный",
     "statusInactive": "Неактивный",
@@ -493,7 +498,9 @@
     "deleteFailed": "Failed to delete",
     "saveFailed": "Failed to save",
     "create": "Создать",
-    "update": "Обновить"
+    "update": "Обновить",
+    "amount": "Сумма",
+    "unit": "Единица измерения"
   },
   "warehouse": {
     "title": "Склад",
@@ -512,6 +519,7 @@
       "edit": "Редактировать накладную",
       "statuses": {
         "pending": "В ожидании",
+        "arrived": "Прибыла",
         "completed": "Завершено",
         "cancelled": "Отменено"
       },
@@ -993,7 +1001,9 @@
     "deductionAmount": "Сумма списания",
     "surplusAmount": "Сумма излишка",
     "shortageAmount": "Сумма недостачи",
-    "all": "Все"
+    "all": "Все",
+    "totalCount": "Общее количество",
+    "totalOrderOutAmount": "Общая сумма расходов по заказам"
   },
   "goodsReports": {
     "title": "Отчет по блюдам",
@@ -1058,6 +1068,7 @@
     "ingredients_group": "Группа ингредиентов",
     "ingredient": "Ингредиент",
     "quantity": "Количество",
+    "pricePerUnit": "Цена за единицу",
     "storage": "Склад",
     "measurement": "Единица измерения",
     "created_at": "Дата создания",
@@ -1235,3 +1246,4 @@
     }
   }
 }
+

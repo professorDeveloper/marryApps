@@ -11,12 +11,9 @@
 node_modules
 *.md
 !README.md
-.dist
 .vscode
 .DS_Store
-# .pnp
-# .pnp.js
-
+dist/
 # testing
 # coverage
 
@@ -25,7 +22,6 @@ node_modules
 # .swc
 # _static
 # out
-# dist
 # build
 
 # environment variables

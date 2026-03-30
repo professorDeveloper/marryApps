@@ -37,6 +37,7 @@ import { Iconify } from 'src/components/iconify';
 import { GenericViewModal } from 'src/components/generic-view-view';
 import { GenericTableView } from 'src/components/generic-table-view';
 import { CustomGridActionsCellItem } from 'src/components/custom-data-grid';
+import { NoDataTooltip } from 'src/components/no-data-tooltip';
 
 const getTodayUtcBoundary = (endOfDay = false): string => {
   const now = dayjs();
@@ -97,6 +98,7 @@ const toPickerDate = (value?: string): dayjs.Dayjs | null =>
 export function ShipmentsListView() {
   const { t } = useTranslation('menu');
   const router = useRouter();
+  const noDataText = t('noDataAvailable', "Tushunarli ma'lumot mavjud emas");
 
   const { getShipments, getShipmentById, deleteShipment } = useShipmentsAPI();
   const { getStorages } = useStorageAPI();
@@ -116,6 +118,9 @@ export function ShipmentsListView() {
   const [viewOpen, setViewOpen] = useState(false);
   const [viewLoading, setViewLoading] = useState(false);
   const [viewData, setViewData] = useState<ShipmentBatchApiResponse | null>(null);
+
+  const isStoragesEmpty = Object.keys(storagesMap).length === 0;
+  const isSuppliersEmpty = Object.keys(suppliersMap).length === 0;
 
   const openViewModal = useCallback(
     async (shipmentId: string) => {
@@ -335,11 +340,16 @@ export function ShipmentsListView() {
               display: 'grid',
               gridTemplateColumns: {
                 xs: '1fr',
-                sm: '1fr 1fr',
-                md: 'repeat(3, 1fr)',
-                lg: 'repeat(4, 1fr)',
+                sm: 'repeat(2, minmax(220px, 1fr))',
+                md: 'repeat(3, minmax(220px, 1fr))',
+                lg: 'repeat(4, minmax(220px, 1fr))',
               },
-              gap: 1.5,
+              gap: 2,
+              alignItems: 'end',
+              '& .MuiFormControl-root, & .MuiTextField-root': {
+                minWidth: 220,
+                width: '100%',
+              },
             }}
           >
             <DatePicker
@@ -380,48 +390,58 @@ export function ShipmentsListView() {
                 },
               }}
             />
-            <TextField
-              select
-              size="small"
-              label={t('deductions.storage', 'Storage')}
-              SelectProps={{ native: true }}
-              value={draftFilters.storage_id || ''}
-              onChange={(e) =>
-                setDraftFilters((prev) => ({
-                  ...prev,
-                  storage_id: e.target.value,
-                }))
-              }
-              InputLabelProps={{ shrink: true }}
-            >
-              <option value="">{t('ingredientReports.all', 'All')}</option>
-              {Object.entries(storagesMap).map(([id, name]) => (
-                <option key={id} value={id}>
-                  {name}
+            <NoDataTooltip enabled={isStoragesEmpty} title={noDataText}>
+              <TextField
+                select
+                size="small"
+                label={t('deductions.storage', 'Storage')}
+                SelectProps={{ native: true }}
+                value={draftFilters.storage_id || ''}
+                onChange={(e) =>
+                  setDraftFilters((prev) => ({
+                    ...prev,
+                    storage_id: e.target.value,
+                  }))
+                }
+                InputLabelProps={{ shrink: true }}
+                disabled={isStoragesEmpty}
+              >
+                <option value="" disabled hidden>
+                  {t('ingredientReports.all', 'All')}
                 </option>
-              ))}
-            </TextField>
-            <TextField
-              select
-              size="small"
-              label={t('invoices.name', 'Supplier')}
-              SelectProps={{ native: true }}
-              value={draftFilters.supplier_id || ''}
-              onChange={(e) =>
-                setDraftFilters((prev) => ({
-                  ...prev,
-                  supplier_id: e.target.value,
-                }))
-              }
-              InputLabelProps={{ shrink: true }}
-            >
-              <option value="">{t('ingredientReports.all', 'All')}</option>
-              {Object.entries(suppliersMap).map(([id, name]) => (
-                <option key={id} value={id}>
-                  {name}
+                {Object.entries(storagesMap).map(([id, name]) => (
+                  <option key={id} value={id}>
+                    {name}
+                  </option>
+                ))}
+              </TextField>
+            </NoDataTooltip>
+            <NoDataTooltip enabled={isSuppliersEmpty} title={noDataText}>
+              <TextField
+                select
+                size="small"
+                label={t('invoices.name', 'Supplier')}
+                SelectProps={{ native: true }}
+                value={draftFilters.supplier_id || ''}
+                onChange={(e) =>
+                  setDraftFilters((prev) => ({
+                    ...prev,
+                    supplier_id: e.target.value,
+                  }))
+                }
+                InputLabelProps={{ shrink: true }}
+                disabled={isSuppliersEmpty}
+              >
+                <option value="" disabled hidden>
+                  {t('ingredientReports.all', 'All')}
                 </option>
-              ))}
-            </TextField>
+                {Object.entries(suppliersMap).map(([id, name]) => (
+                  <option key={id} value={id}>
+                    {name}
+                  </option>
+                ))}
+              </TextField>
+            </NoDataTooltip>
             <TextField
               select
               size="small"
@@ -436,7 +456,9 @@ export function ShipmentsListView() {
               }
               InputLabelProps={{ shrink: true }}
             >
-              <option value="">{t('ingredientReports.all', 'All')}</option>
+              <option value="" disabled hidden>
+                {t('ingredientReports.all', 'All')}
+              </option>
               <option value="active">{t('deductions.active', 'Active')}</option>
               <option value="draft">{t('common.draft', 'Draft')}</option>
               <option value="cancelled">{t('deductions.canceled', 'Canceled')}</option>
@@ -447,7 +469,7 @@ export function ShipmentsListView() {
                 size="small"
                 startIcon={<Iconify icon="solar:restart-bold" />}
                 onClick={handleResetFilters}
-                sx={{ flex: 1 }}
+                sx={{ flex: 1, height: '40px' }}
               >
                 {t('ingredientReports.reset', 'Reset')}
               </Button>

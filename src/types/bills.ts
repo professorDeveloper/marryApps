@@ -47,6 +47,15 @@ export interface IBillsListData {
     limit: number;
     offset: number;
     items: IBillItem[];
+    totals?: {
+        total_food_cost?: IAmountValue;
+        total_guest_count?: number;
+        total_grand_total?: IAmountValue;
+        total_service_amount?: IAmountValue;
+        avg_service_percent?: IAmountValue;
+        total_discount_amount?: IAmountValue;
+        avg_discount_percent?: IAmountValue;
+    };
 }
 
 export interface IBillsResponse {

@@ -66,6 +66,7 @@ export const getNavData = (t: TFunction): NavSectionProps['data'] => [
         children: [
           { title: t('overview.menu.sections', 'Sections'), path: paths.menu.product.root },
           { title: t('overview.menu.categories', 'Categories'), path: paths.menu.category.root },
+          { title: t('overview.warehouse.ingredients', 'Ingredients'), path: paths.warehouse.ingredients.root },
           { title: t('overview.menu.semifinished', 'Semifinished'), path: paths.menu.semifinished.root },
           { title: t('overview.menu.meals', 'Meals'), path: paths.menu.meals.root },
         ],
@@ -78,7 +79,6 @@ export const getNavData = (t: TFunction): NavSectionProps['data'] => [
           { title: t('overview.warehouse.storage', 'Storage'), path: paths.warehouse.storage.root },
           { title: t('overview.warehouse.ingredient-group', ''), path: paths.warehouse.ingredients_group.root },
           { title: t('ingredientStock.title', 'Ingredient Stock'), path: paths.warehouse.ingredientStock.root },
-          { title: t('overview.warehouse.ingredients', 'Ingredients'), path: paths.warehouse.ingredients.root },
           { title: t('overview.warehouse.invoiceDetails', 'Kirimlar'), path: paths.warehouse.invoiceDetails.root },
           { title: t('overview.warehouse.transfers', 'Transfers'), path: paths.warehouse.transfers.root },
           { title: t('overview.warehouse.inventories', 'Ombor Menusi'), path: paths.menu.inventory.root },

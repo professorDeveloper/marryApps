@@ -10,7 +10,7 @@ import { paths } from 'src/routes/paths';
 import { useGenericViewModal } from 'src/hooks/use-generic-view-modal';
 import { getInitials, getAvatarColor } from 'src/utils/avatar';
 import { getFullImageUrl } from 'src/utils/image-url';
-import { useGetCategories, useDeleteCategory, useGetGoodsByCategory } from 'src/actions/categories';
+import { useGetCategoriesPage, useDeleteCategory, useGetGoodsByCategory } from 'src/actions/categories';
 import { toast } from 'src/components/snackbar';
 import { Iconify } from 'src/components/iconify';
 import { GenericTableView } from 'src/components/generic-table-view';
@@ -25,15 +25,10 @@ function GoodsTable({ categoryId }: { categoryId: string }) {
   const { goods, goodsLoading } = useGetGoodsByCategory(categoryId);
   const [imageUrls, setImageUrls] = useState<{ [key: string]: string | null }>({});
 
-  // Debug log
-  useEffect(() => {
-    console.log('GoodsTable - categoryId:', categoryId);
-    console.log('GoodsTable - goods:', goods);
-    console.log('GoodsTable - goodsLoading:', goodsLoading);
-  }, [categoryId, goods, goodsLoading]);
-
   // Load images for goods
   useEffect(() => {
+    let isMounted = true;
+
     const loadImages = async () => {
       const urls: { [key: string]: string | null } = {};
       for (const item of goods) {
@@ -49,12 +44,20 @@ function GoodsTable({ categoryId }: { categoryId: string }) {
           urls[item.id] = null;
         }
       }
-      setImageUrls(urls);
+      if (isMounted) {
+        setImageUrls(urls);
+      }
     };
 
     if (goods.length > 0) {
       loadImages();
+    } else {
+      setImageUrls({});
     }
+
+    return () => {
+      isMounted = false;
+    };
   }, [goods]);
 
   if (goodsLoading) {
@@ -168,23 +171,37 @@ function RenderCellCategory({ params }: { params: any }) {
 
   // Load image asynchronously if picture_url exists
   useEffect(() => {
+    let isMounted = true;
+
     if (category.picture_url) {
       const loadImage = async () => {
         try {
-          setLoading(true);
+          if (isMounted) {
+            setLoading(true);
+          }
           const url = await getFullImageUrl(category.picture_url);
-          setImageUrl(url);
+          if (isMounted) {
+            setImageUrl(url);
+          }
         } catch (error) {
           console.error('Failed to load image:', error);
-          setImageUrl(null);
+          if (isMounted) {
+            setImageUrl(null);
+          }
         } finally {
-          setLoading(false);
+          if (isMounted) {
+            setLoading(false);
+          }
         }
       };
       loadImage();
     } else {
       setImageUrl(null);
     }
+
+    return () => {
+      isMounted = false;
+    };
   }, [category.picture_url]);
 
   // If no image, show avatar with initials
@@ -238,7 +255,10 @@ function RenderCellStorage({ params }: { params: any }) {
  */
 function RenderCellDepartment({ params }: { params: any }) {
   const category = params.row as ICategory;
-  const departmentName = category.department_name || '-';
+  const departmentName =
+    category?._expand?.department_id?.name ||
+    category.department_name ||
+    '-';
   return <span>{departmentName}</span>;
 }
 
@@ -286,7 +306,6 @@ function CategorySpecifications({ category, t }: { category: ICategory; t: any }
 }
 
 export function CategoryListView() {
-  console.log('CategoryListView rendered');
   const theme = useTheme();
   const { t } = useTranslation('menu');
 
@@ -295,6 +314,7 @@ export function CategoryListView() {
   const [categoryToDelete, setCategoryToDelete] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
+  const [paginationModel, setPaginationModel] = useState({ page: 0, pageSize: 20 });
 
   useEffect(() => {
     const timeout = setTimeout(() => {
@@ -304,8 +324,16 @@ export function CategoryListView() {
     return () => clearTimeout(timeout);
   }, [searchQuery]);
 
+  useEffect(() => {
+    setPaginationModel((prev) => ({ ...prev, page: 0 }));
+  }, [debouncedSearchQuery]);
+
   // API hooks
-  const { categories, categoriesLoading } = useGetCategories(debouncedSearchQuery);
+  const { categories, categoriesLoading, pagination } = useGetCategoriesPage({
+    search: debouncedSearchQuery,
+    limit: paginationModel.pageSize,
+    offset: paginationModel.page * paginationModel.pageSize,
+  });
   const { deleteCategory } = useDeleteCategory();
 
   // View modal hook
@@ -408,6 +436,11 @@ export function CategoryListView() {
         data={categories}
         loading={categoriesLoading}
         columns={columns}
+        paginationMode="server"
+        rowCount={pagination?.total || 0}
+        paginationModel={paginationModel}
+        onPaginationModelChange={setPaginationModel}
+        pageSizeOptions={[10, 20, 50, 100]}
         breadcrumbs={{
           heading: t('categories.title'),
           links: [

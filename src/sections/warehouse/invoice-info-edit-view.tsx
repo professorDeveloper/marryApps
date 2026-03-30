@@ -25,10 +25,16 @@ interface InvoiceInfoEditViewProps {
     onSwitchToDetailsTab?: () => void; // Callback to switch to details tab when validation fails
 }
 
-const ALLOWED_STATUSES = ['pending', 'draft', 'deleted'] as const;
+const ALLOWED_STATUSES = ['pending', 'arrived', 'cancelled'] as const;
+const CREATE_ALLOWED_STATUSES = ['pending', 'arrived'] as const;
 type InvoiceStatus = (typeof ALLOWED_STATUSES)[number];
+type CreateInvoiceStatus = (typeof CREATE_ALLOWED_STATUSES)[number];
 const normalizeStatus = (value: unknown): InvoiceStatus =>
     ALLOWED_STATUSES.includes(value as InvoiceStatus) ? (value as InvoiceStatus) : 'pending';
+const normalizeCreateStatus = (value: unknown): CreateInvoiceStatus =>
+    CREATE_ALLOWED_STATUSES.includes(value as CreateInvoiceStatus)
+        ? (value as CreateInvoiceStatus)
+        : 'pending';
 
 export function InvoiceInfoEditView({
     isNew = false,
@@ -60,6 +66,17 @@ export function InvoiceInfoEditView({
         status: 'pending',
         total_amount: '',
     });
+    const statusOptions = isNew
+        ? [
+            { value: 'arrived', label: t('warehouse.invoices.statuses.arrived', 'Arrived') },
+            { value: 'pending', label: t('warehouse.invoices.statuses.pending') },
+        ]
+        : [
+            { value: 'arrived', label: t('warehouse.invoices.statuses.arrived', 'Arrived') },
+            { value: 'pending', label: t('warehouse.invoices.statuses.pending') },
+            // { value: 'cancelled', label: t('warehouse.invoices.statuses.cancelled', 'Cancelled') },
+            // { value: 'deleted', label: t('common.deleted', 'Deleted') },
+        ];
 
     // Load suppliers for dropdown
     useEffect(() => {
@@ -119,12 +136,12 @@ export function InvoiceInfoEditView({
                 }
 
                 // If using batch flow with details, call the batch submit handler
-                if (onInvoiceSubmit && detailsData && detailsData.length > 0) {
+                if (useBatchFlow && onInvoiceSubmit && detailsData && detailsData.length > 0) {
                     await onInvoiceSubmit({
                         supplier_id: formData.supplier_id,
                         storage_id: formData.storage_id,
                         total_amount: formData.total_amount?.toString() || '0',
-                        status: normalizeStatus(formData.status),
+                        status: isNew ? normalizeCreateStatus(formData.status) : normalizeStatus(formData.status),
                         date: formData.date || new Date().toISOString(),
                     }, detailsData);
                     return;
@@ -147,7 +164,7 @@ export function InvoiceInfoEditView({
                         supplier_id: formData.supplier_id,
                         storage_id: formData.storage_id,
                         total_amount: formData.total_amount?.toString() || '0',
-                        status: normalizeStatus(formData.status),
+                        status: isNew ? normalizeCreateStatus(formData.status) : normalizeStatus(formData.status),
                         date: formData.date || new Date().toISOString(),
                     });
                     return;
@@ -159,7 +176,7 @@ export function InvoiceInfoEditView({
                         supplier_id: formData.supplier_id,
                         storage_id: formData.storage_id,
                         total_amount: formData.total_amount?.toString() || '0',
-                        status: normalizeStatus(formData.status),
+                        status: normalizeCreateStatus(formData.status),
                         date: formData.date || new Date().toISOString(),
                     });
                     toast.success(t('warehouse.invoices.created'));
@@ -236,11 +253,7 @@ export function InvoiceInfoEditView({
                 type: 'select',
                 required: true,
                 defaultValue: 'pending',
-                options: [
-                    { value: 'pending', label: t('warehouse.invoices.statuses.pending') },
-                    { value: 'draft', label: t('common.draft', 'Draft') },
-                    { value: 'deleted', label: t('common.deleted', 'Deleted') },
-                ],
+                options: statusOptions,
             },
             // {
             //     key: 'total_amount',

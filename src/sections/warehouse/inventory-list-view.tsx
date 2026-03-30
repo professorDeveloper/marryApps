@@ -1,17 +1,33 @@
-import type { GridColDef } from '@mui/x-data-grid';
+import type { GridColDef, GridPaginationModel } from '@mui/x-data-grid';
 import { useMemo, useCallback, useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Button, Dialog, DialogActions, DialogContent, DialogTitle, Box, useTheme } from '@mui/material';
+import {
+    Button,
+    Dialog,
+    DialogActions,
+    DialogContent,
+    DialogTitle,
+    Box,
+    useTheme,
+    Table,
+    TableBody,
+    TableCell,
+    TableContainer,
+    TableHead,
+    TableRow,
+    Typography,
+} from '@mui/material';
 import { paths } from 'src/routes/paths';
 import { useRouter } from 'src/routes/hooks';
 import { Iconify } from 'src/components/iconify';
 import { CustomGridActionsCellItem } from 'src/components/custom-data-grid';
 import { GenericTableView } from 'src/components/generic-table-view';
+import { GenericViewModal } from 'src/components/generic-view-view';
 import { toast } from 'src/components/snackbar';
 import { useInventoryAPI } from 'src/hooks/use-inventory-api';
-import { useGetStorages } from 'src/actions/departments';
+import { useGenericViewModal } from 'src/hooks/use-generic-view-modal';
 import dayjs from 'dayjs';
-import type { IInventory } from 'src/types/inventory';
+import type { IBackendPagination, IInventory, IInventoryItem } from 'src/types/inventory';
 
 // ============================================================================
 // RENDER CELLS
@@ -48,6 +64,13 @@ function RenderCellStatus({ params }: { params: any }) {
     );
 }
 
+const formatAmount = (value: string | number | null | undefined) => {
+    if (value === null || value === undefined) return '-';
+    const parsed = typeof value === 'string' ? parseFloat(value) : value;
+    if (Number.isNaN(parsed)) return String(value);
+    return parsed.toLocaleString('uz-UZ', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+};
+
 // ============================================================================
 // MAIN COMPONENT
 // ============================================================================
@@ -56,8 +79,7 @@ export function InventoryListView() {
     const { t } = useTranslation('menu');
     const theme = useTheme();
     const router = useRouter();
-    const { getInventories, deleteInventory } = useInventoryAPI();
-    const { storages } = useGetStorages();
+    const { getInventories, deleteInventory, getInventoryItems } = useInventoryAPI();
 
     const [inventories, setInventories] = useState<IInventory[]>([]);
     const [loading, setLoading] = useState(true);
@@ -65,6 +87,15 @@ export function InventoryListView() {
     const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
+    const [itemsLoading, setItemsLoading] = useState(false);
+    const [inventoryItems, setInventoryItems] = useState<IInventoryItem[]>([]);
+    const [pagination, setPagination] = useState<IBackendPagination | undefined>(undefined);
+    const [paginationModel, setPaginationModel] = useState<GridPaginationModel>({
+        page: 0,
+        pageSize: 20,
+    });
+
+    const { isOpen, selectedData, openModal, closeModal } = useGenericViewModal<IInventory>();
 
     useEffect(() => {
         const timeout = setTimeout(() => {
@@ -74,40 +105,43 @@ export function InventoryListView() {
         return () => clearTimeout(timeout);
     }, [searchQuery]);
 
-    // Create storage name map
-    const storageNameById = useMemo(
-        () => new Map(Array.isArray(storages) ? storages.map((s: any) => [s.id, s.name]) : []),
-        [storages]
-    );
-
     const loadInventories = useCallback(async () => {
         try {
             setLoading(true);
-            const data = await getInventories(debouncedSearchQuery);
-            setInventories(data);
+            const response = await getInventories({
+                search: debouncedSearchQuery,
+                limit: paginationModel.pageSize,
+                offset: paginationModel.page * paginationModel.pageSize,
+            });
+            setInventories(response.items);
+            setPagination(response.pagination);
         } catch (error) {
             console.error('Error loading inventories:', error);
         } finally {
             setLoading(false);
         }
-    }, [debouncedSearchQuery, getInventories]);
+    }, [debouncedSearchQuery, getInventories, paginationModel.page, paginationModel.pageSize]);
 
     useEffect(() => {
         loadInventories();
     }, [loadInventories]);
 
+    useEffect(() => {
+        setPaginationModel((prev) => ({ ...prev, page: 0 }));
+    }, [debouncedSearchQuery]);
+
     const handleDelete = useCallback(
         async (id: string) => {
             try {
                 await deleteInventory(id);
-                setInventories((prev) => prev.filter((inv) => inv.id !== id));
+                await loadInventories();
                 setDeleteConfirmOpen(false);
                 setDeleteId(null);
             } catch (error) {
                 console.error('Error deleting inventory:', error);
             }
         },
-        [deleteInventory]
+        [deleteInventory, loadInventories]
     );
 
     const handleEdit = useCallback(
@@ -115,6 +149,23 @@ export function InventoryListView() {
             router.push(paths.menu.inventory.edit(id));
         },
         [router]
+    );
+
+    const handleOpenItemsModal = useCallback(
+        async (inventory: IInventory) => {
+            openModal(inventory);
+            setItemsLoading(true);
+            try {
+                const items = await getInventoryItems(inventory.id);
+                setInventoryItems(items);
+            } catch (error) {
+                console.error('Error loading inventory items:', error);
+                toast.error(t('error.loadFailed'));
+            } finally {
+                setItemsLoading(false);
+            }
+        },
+        [getInventoryItems, openModal, t]
     );
 
     const columns = useMemo<GridColDef[]>(
@@ -138,7 +189,7 @@ export function InventoryListView() {
                 width: 200,
                 flex: 0.5,
                 valueGetter: (_value, row) =>
-                    row.storage_id ? storageNameById.get(row.storage_id) || row.storage_id : '-',
+                    row?._expand?.storage_id?.name || row.storage_id || '-',
             },
             {
                 field: 'description',
@@ -225,7 +276,7 @@ export function InventoryListView() {
                 ],
             },
         ],
-        [t, handleEdit, storageNameById, theme]
+        [t, handleEdit, theme]
     );
 
     return (
@@ -234,6 +285,11 @@ export function InventoryListView() {
                 data={inventories}
                 loading={loading}
                 columns={columns}
+                paginationMode="server"
+                rowCount={pagination?.total || 0}
+                paginationModel={paginationModel}
+                onPaginationModelChange={setPaginationModel}
+                pageSizeOptions={[10, 20, 50, 100]}
                 breadcrumbs={{
                     heading: t('inventory.list'),
                     links: [
@@ -249,6 +305,12 @@ export function InventoryListView() {
                 onDeleteRow={(id) => {
                     setDeleteId(id);
                     setDeleteConfirmOpen(true);
+                }}
+                onRowClick={(id) => {
+                    const inventory = inventories.find((inv) => inv.id === id);
+                    if (inventory) {
+                        handleOpenItemsModal(inventory);
+                    }
                 }}
                 onQuickFilterChange={setSearchQuery}
             />
@@ -275,6 +337,94 @@ export function InventoryListView() {
                     </Button>
                 </DialogActions>
             </Dialog>
+
+            <GenericViewModal
+                isOpen={isOpen}
+                onClose={() => {
+                    closeModal();
+                    setInventoryItems([]);
+                }}
+                title={
+                    selectedData
+                        ? `${t('inventory.items')} #${selectedData.number || ''}`
+                        : t('inventory.items')
+                }
+                data={selectedData}
+                loading={itemsLoading}
+                position="right"
+                slideDirection="left"
+                maxWidth="lg"
+                renderContent={() => {
+                    if (inventoryItems.length === 0) {
+                        return (
+                            <Box sx={{ py: 2, textAlign: 'center' }}>
+                                <Typography variant="body2" color="text.secondary">
+                                    {t('common.noData')}
+                                </Typography>
+                            </Box>
+                        );
+                    }
+
+                    return (
+                        <TableContainer>
+                            <Table size="small">
+                                <TableHead>
+                                    <TableRow>
+                                        <TableCell>#</TableCell>
+                                        <TableCell>{t('calculation.productName', 'Product')}</TableCell>
+                                        <TableCell>{t('calculation.unit', 'Unit')}</TableCell>
+                                        <TableCell align="right">{t('calculation.systemQty', 'System Qty')}</TableCell>
+                                        <TableCell align="right">{t('calculation.countedQty', 'Counted Qty')}</TableCell>
+                                        <TableCell align="right">{t('calculation.difference', 'Difference')}</TableCell>
+                                        <TableCell align="right">{t('calculation.pricePerUnit', 'Price/Unit')}</TableCell>
+                                        <TableCell align="right">{t('calculation.surplus', 'Surplus')}</TableCell>
+                                        <TableCell align="right">{t('calculation.shortage', 'Shortage')}</TableCell>
+                                        <TableCell align="right">{t('calculation.remaining', 'Remaining')}</TableCell>
+                                    </TableRow>
+                                </TableHead>
+                                <TableBody>
+                                    {inventoryItems.map((item, index) => (
+                                        <TableRow key={item.inventory_item_id || `${item.ingredient_id}-${index}`}>
+                                            <TableCell>{index + 1}</TableCell>
+                                            <TableCell>{item.ingredient_name || '-'}</TableCell>
+                                            <TableCell>{item.ingredient_measurement || '-'}</TableCell>
+                                            <TableCell align="right">{item.system_quantity ?? '-'}</TableCell>
+                                            <TableCell align="right">{item.counted_quantity ?? '-'}</TableCell>
+                                            <TableCell align="right">
+                                                <Typography
+                                                    variant="body2"
+                                                    sx={{
+                                                        color:
+                                                            item.difference_quantity > 0
+                                                                ? 'success.main'
+                                                                : item.difference_quantity < 0
+                                                                    ? 'error.main'
+                                                                    : 'text.secondary',
+                                                    }}
+                                                >
+                                                    {item.difference_quantity ?? '-'}
+                                                </Typography>
+                                            </TableCell>
+                                            <TableCell align="right">
+                                                {formatAmount(item.price_per_unit)}
+                                            </TableCell>
+                                            <TableCell align="right" sx={{ color: 'success.main', fontWeight: 600 }}>
+                                                {formatAmount(item.surplus_amount)}
+                                            </TableCell>
+                                            <TableCell align="right" sx={{ color: 'error.main', fontWeight: 600 }}>
+                                                {formatAmount(item.shortage_amount)}
+                                            </TableCell>
+                                            <TableCell align="right">
+                                                {formatAmount(item.remaining_amount)}
+                                            </TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                        </TableContainer>
+                    );
+                }}
+            />
         </>
     );
 }

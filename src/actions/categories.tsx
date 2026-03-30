@@ -23,6 +23,12 @@ interface BackendResponse<T> {
     status: string;
     message: string;
     data: T;
+    pagination?: {
+        total: number;
+        limit: number;
+        offset: number;
+        total_pages: number;
+    };
     code: number;
 }
 
@@ -47,11 +53,6 @@ function enrichCategories(
     const translationMap = new Map(
         translations?.map((t: ITranslationItem) => [t.id, t]) || []
     );
-
-    // Debug: Show available translations
-    if (translationMap.size > 0) {
-        console.log('🔍 Available translations:', Array.from(translationMap.keys()).length, 'translations');
-    }
 
     // Helper function to map i18n language codes to translation fields
     const getLangKey = (lang: string): keyof ITranslationItem => {
@@ -98,12 +99,7 @@ function enrichCategories(
                     // Last resort: use original name
                     localizedName = cat.name;
                 }
-
-                // Debug log
-                console.log(`✅ Translation found for category "${cat.name}" (ID: ${cat.name_i18n})`);
             } else {
-                // Translation ID topilmadi - faqat uz name-ni ko'rsatish
-                console.warn(`⚠️ Translation ID not found for category "${cat.name}" (ID: ${cat.name_i18n})`);
                 translationFields = {
                     name_en: cat.name_en || '',
                     name_ru: cat.name_ru || '',
@@ -113,8 +109,6 @@ function enrichCategories(
                 localizedName = cat.name;
             }
         } else {
-            // name_i18n mavjud emas - available fieldlardan foydalanish
-            console.info(`ℹ️ No translation ID for category "${cat.name}" - using direct fields`);
             translationFields = {
                 name_en: cat.name_en || '',
                 name_ru: cat.name_ru || '',
@@ -130,6 +124,47 @@ function enrichCategories(
             ...translationFields,
             storage_name: storageMap.get(cat.storage_id) || cat.storage_id || '-',
             department_name: departmentMap.get(cat.department_id) || '-',
+        };
+    });
+}
+
+/**
+ * Enrich categories from expand payload (no extra API calls)
+ */
+function enrichCategoriesFromExpand(
+    categoriesData: ICategory[],
+    currentLanguage: string = 'uz'
+): ICategory[] {
+    const getLangKey = (lang: string): keyof ITranslationItem => {
+        const langMap: Record<string, keyof ITranslationItem> = {
+            'uz': 'uz',
+            'uz-Latn': 'uz-Latn',
+            'uz-Cyrl': 'uz-Cyrl',
+            'ru': 'ru',
+            'en': 'en',
+        };
+        return (langMap[lang] || 'uz') as keyof ITranslationItem;
+    };
+
+    return categoriesData.map((cat: any) => {
+        const expandedDept = cat?._expand?.department_id;
+        const expandedName = cat?._expand?.name_i18n;
+        const langKey = getLangKey(currentLanguage);
+
+        const localizedName =
+            expandedName?.[langKey] ||
+            expandedName?.uz ||
+            expandedName?.en ||
+            expandedName?.ru ||
+            cat.name;
+
+        return {
+            ...cat,
+            name: localizedName,
+            name_en: expandedName?.en || cat.name_en || cat.name,
+            name_ru: expandedName?.ru || cat.name_ru || cat.name,
+            name_uz: expandedName?.uz || cat.name_uz || cat.name,
+            department_name: expandedDept?.name || cat.department_name || '-',
         };
     });
 }
@@ -187,6 +222,51 @@ export function useGetCategories(searchQuery?: string) {
             categoriesEmpty: !isLoading && !isValidating && !enrichedCategories.length,
         }),
         [enrichedCategories, error, isLoading, isValidating]
+    );
+
+    return memoizedValue;
+}
+
+/**
+ * Get categories with server-side pagination using expand (no extra API calls)
+ */
+export function useGetCategoriesPage(params?: { search?: string; limit?: number; offset?: number }) {
+    const { i18n } = useTranslation();
+
+    const normalizedQuery = params?.search?.trim() || '';
+    const limit = typeof params?.limit === 'number' ? params?.limit : 20;
+    const offset = typeof params?.offset === 'number' ? params?.offset : 0;
+    const expand = 'name_i18n,department_id';
+
+    const swrKey = normalizedQuery
+        ? [endpoints.category.search, { params: { q: normalizedQuery, limit, offset, expand } }]
+        : [endpoints.category.list, { params: { limit, offset, expand } }];
+
+    const { data, isLoading, error, isValidating } = useSWR<
+        BackendResponse<ICategory[]> | ICategory[]
+    >(swrKey, fetcher, { ...swrOptions });
+
+    const categories = useMemo(() => {
+        if (Array.isArray(data)) return data;
+        if (Array.isArray(data?.data)) return data.data;
+        return [];
+    }, [data]);
+
+    const enrichedCategories = useMemo(
+        () => enrichCategoriesFromExpand(categories, i18n.resolvedLanguage),
+        [categories, i18n.resolvedLanguage]
+    );
+
+    const memoizedValue = useMemo(
+        () => ({
+            categories: enrichedCategories,
+            categoriesLoading: isLoading,
+            categoriesError: error,
+            categoriesValidating: isValidating,
+            categoriesEmpty: !isLoading && !isValidating && !enrichedCategories.length,
+            pagination: (data as BackendResponse<ICategory[]>)?.pagination,
+        }),
+        [enrichedCategories, error, isLoading, isValidating, data]
     );
 
     return memoizedValue;
@@ -335,13 +415,9 @@ export function useGetGoodsByCategory(categoryId: string) {
     const goods = useMemo(() => {
         if (!data) return [];
         if (Array.isArray(data)) {
-            // Direct array response
-            console.log('Direct array response:', data);
             return data;
         }
         if ('data' in data) {
-            // Wrapped response
-            console.log('Wrapped response:', (data as BackendResponse<IGoodsItem[]>).data);
             return (data as BackendResponse<IGoodsItem[]>).data || [];
         }
         return [];
@@ -361,3 +437,37 @@ export function useGetGoodsByCategory(categoryId: string) {
     return memoizedValue;
 }
 
+/**
+ * Get all goods (not filtered by category)
+ */
+export function useGetGoodsAll(params?: { limit?: number; offset?: number }) {
+    const limit = typeof params?.limit === 'number' ? params.limit : 1000;
+    const offset = typeof params?.offset === 'number' ? params.offset : 0;
+    const url = [endpoints.meals.list, { params: { limit, offset } }];
+
+    const { data, isLoading, error, isValidating } = useSWR<BackendResponse<IGoodsItem[]> | IGoodsItem[]>(
+        url,
+        fetcher,
+        { ...swrOptions }
+    );
+
+    const goods = useMemo(() => {
+        if (!data) return [];
+        if (Array.isArray(data)) return data;
+        if ('data' in data) return (data as BackendResponse<IGoodsItem[]>).data || [];
+        return [];
+    }, [data]);
+
+    const memoizedValue = useMemo(
+        () => ({
+            goods,
+            goodsLoading: isLoading,
+            goodsError: error,
+            goodsValidating: isValidating,
+            goodsEmpty: !isLoading && !isValidating && !goods?.length,
+        }),
+        [goods, error, isLoading, isValidating]
+    );
+
+    return memoizedValue;
+}

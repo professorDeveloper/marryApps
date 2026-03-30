@@ -2,7 +2,6 @@ import type { GridColDef } from '@mui/x-data-grid';
 import { useMemo, useState, useCallback, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import Box from '@mui/material/Box';
-import Button from '@mui/material/Button';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import Table from '@mui/material/Table';
@@ -12,15 +11,17 @@ import TableHead from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
 import Tooltip from '@mui/material/Tooltip';
 import CircularProgress from '@mui/material/CircularProgress';
+import ToggleButton from '@mui/material/ToggleButton';
+import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import dayjs from 'dayjs';
 import { paths } from 'src/routes/paths';
 import { useGetIngredientReports, useGetIngredientReportDetail } from 'src/actions/ingredient-reports';
 import { useGetIngredients } from 'src/actions/ingredients';
 import { useGetStorages } from 'src/actions/departments';
-import { Iconify } from 'src/components/iconify';
 import { GenericTableView } from 'src/components/generic-table-view';
 import { GenericViewModal } from 'src/components/generic-view-view/GenericViewModal';
+import { NoDataTooltip } from 'src/components/no-data-tooltip';
 
 const toUtcDayBoundary = (value: dayjs.Dayjs, endOfDay = false): string => {
     const date = new Date(
@@ -38,6 +39,7 @@ const toUtcDayBoundary = (value: dayjs.Dayjs, endOfDay = false): string => {
 
 export function IngredientReportsListView() {
     const { t } = useTranslation('menu');
+    const noDataText = t('noDataAvailable', "Tushunarli ma'lumot mavjud emas");
 
     // Get filter options from APIs
     const { ingredients } = useGetIngredients();
@@ -49,13 +51,15 @@ export function IngredientReportsListView() {
         start: '',
         end: '',
         ingredient_id: '',
-        limit: 1000,
+        limit: 20,
         offset: 0,
     });
+    const [paginationModel, setPaginationModel] = useState({ page: 0, pageSize: 20 });
 
     const [startDate, setStartDate] = useState<dayjs.Dayjs | null>(null);
     const [endDate, setEndDate] = useState<dayjs.Dayjs | null>(null);
     const [selectedStorageId, setSelectedStorageId] = useState<string>('');
+    const [activeRange, setActiveRange] = useState<'day' | 'week' | 'month' | 'year'>('day');
 
     // Modal states
     const [openDetailsModal, setOpenDetailsModal] = useState(false);
@@ -67,9 +71,8 @@ export function IngredientReportsListView() {
     useEffect(() => {
         // Set default date range (yesterday to today)
         const today = dayjs();
-        const yesterday = today.subtract(1, 'day');
-        setStartDate(yesterday);
-        setEndDate(today);
+        setStartDate(today.startOf('day'));
+        setEndDate(today.endOf('day'));
 
         // Set default storage
         if (storages && storages.length > 0) {
@@ -80,14 +83,14 @@ export function IngredientReportsListView() {
             setFilters((prev) => ({
                 ...prev,
                 storage_id: firstStorageId,
-                start: toUtcDayBoundary(yesterday),
+                start: toUtcDayBoundary(today),
                 end: toUtcDayBoundary(today, true),
             }));
         }
     }, [storages]);
 
     // Get reports with applied filters
-    const { reports, reportsLoading } = useGetIngredientReports({
+    const { reports, reportsLoading, totals, reportsPagination } = useGetIngredientReports({
         storage_id: filters.storage_id,
         start: filters.start,
         end: filters.end,
@@ -118,6 +121,9 @@ export function IngredientReportsListView() {
         }),
         [ingredients, storages]
     );
+
+    const isStoragesEmpty = filterOptions.storage_id.length === 0;
+    const isIngredientsEmpty = filterOptions.ingredient_id.length === 0;
 
     const handleOpenAmountsModal = useCallback((row: any) => {
         setSelectedAmountsData(row);
@@ -327,6 +333,10 @@ export function IngredientReportsListView() {
             ...newFilters,
             offset: 0,
         }));
+        setPaginationModel((prev) => ({
+            ...prev,
+            page: 0,
+        }));
     }, []);
 
     // Auto-apply filters when date range or storage changes
@@ -346,15 +356,37 @@ export function IngredientReportsListView() {
         }
     }, [startDate, endDate, selectedStorageId, handleFilterChange]);
 
+    const applyRange = useCallback((range: 'day' | 'week' | 'month' | 'year') => {
+        const today = dayjs();
+        let nextStart = today.startOf('day');
+        let nextEnd = today.endOf('day');
+
+        if (range === 'week') {
+            nextStart = today.startOf('week');
+            nextEnd = today.endOf('week');
+        } else if (range === 'month') {
+            nextStart = today.startOf('month');
+            nextEnd = today.endOf('month');
+        } else if (range === 'year') {
+            nextStart = today.startOf('year');
+            nextEnd = today.endOf('year');
+        }
+
+        setActiveRange(range);
+        setStartDate(nextStart);
+        setEndDate(nextEnd);
+    }, []);
+
     const handleResetFilters = useCallback(() => {
         setFilters({
             storage_id: '',
             start: '',
             end: '',
             ingredient_id: '',
-            limit: 1000,
+            limit: 20,
             offset: 0,
         });
+        setPaginationModel((prev) => ({ ...prev, page: 0 }));
     }, []);
 
     const handleIngredientChange = useCallback(
@@ -373,38 +405,87 @@ export function IngredientReportsListView() {
     );
 
     const renderFiltersContent = () => (
-        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: 'repeat(4, 1fr)', lg: 'repeat(5, 1fr)' }, gap: 1.5 }}>
-            {/* Storage - Required */}
-            <TextField
-                select
-                label={t('ingredientReports.storage') || 'Storage'}
-                value={selectedStorageId}
-                onChange={(e) => handleStorageChange(e.target.value)}
-                SelectProps={{ native: true }}
-                size="small"
-                fullWidth
-                InputLabelProps={{ shrink: true }}
-                sx={{
-                    '& .MuiOutlinedInput-root': {
-                        '&.Mui-focused fieldset': {
-                            borderColor: '#1890FF',
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+            <Box sx={{ display: 'flex', alignItems: 'flex-end', gap: 2, flexWrap: 'wrap' }}>
+                <ToggleButtonGroup
+                    exclusive
+                    value={activeRange}
+                    onChange={(_, value) => {
+                        if (!value) return;
+                        applyRange(value);
+                    }}
+                    size="small"
+                    sx={{
+                        '& .MuiToggleButton-root': {
+                            textTransform: 'uppercase',
+                            fontWeight: 600,
+                            px: 2.5,
+                            border: 'none',
+                            borderRadius: 0,
+                            borderBottom: '2px solid transparent',
                         },
-                    },
-                }}
-            >
-                <option value="">{t('common.select') || 'Select Storage'}</option>
-                {filterOptions.storage_id.map((option) => (
-                    <option key={option.value} value={option.value}>
-                        {option.label}
+                        '& .MuiToggleButton-root.Mui-selected': {
+                            borderBottomColor: 'primary.main',
+                            backgroundColor: 'transparent',
+                        },
+                        '& .MuiToggleButton-root:hover': {
+                            backgroundColor: 'transparent',
+                        },
+                    }}
+                >
+                    <ToggleButton value="day">D</ToggleButton>
+                    <ToggleButton value="week">W</ToggleButton>
+                    <ToggleButton value="month">M</ToggleButton>
+                    <ToggleButton value="year">Y</ToggleButton>
+                </ToggleButtonGroup>
+
+                <Box
+                    sx={{
+                        display: 'grid',
+                        gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: 'repeat(4, 1fr)', lg: 'repeat(5, 1fr)' },
+                        gap: 1.5,
+                        flex: 1,
+                    }}
+                >
+            {/* Storage - Required */}
+            <NoDataTooltip enabled={isStoragesEmpty} title={noDataText}>
+                <TextField
+                    select
+                    label={t('ingredientReports.storage') || 'Storage'}
+                    value={selectedStorageId}
+                    onChange={(e) => handleStorageChange(e.target.value)}
+                    SelectProps={{ native: true }}
+                    size="small"
+                    fullWidth
+                    InputLabelProps={{ shrink: true }}
+                    sx={{
+                        '& .MuiOutlinedInput-root': {
+                            '&.Mui-focused fieldset': {
+                                borderColor: '#1890FF',
+                            },
+                        },
+                    }}
+                    disabled={isStoragesEmpty}
+                >
+                    <option value="" disabled hidden>
+                        {t('common.select') || 'Select Storage'}
                     </option>
-                ))}
-            </TextField>
+                    {filterOptions.storage_id.map((option) => (
+                        <option key={option.value} value={option.value}>
+                            {option.label}
+                        </option>
+                    ))}
+                </TextField>
+            </NoDataTooltip>
 
             {/* Start Date - Required */}
             <DatePicker
                 label={t('ingredientReports.startDate') || 'Start Date'}
                 value={startDate}
-                onChange={setStartDate}
+                onChange={(value) => {
+                    setStartDate(value);
+                    setActiveRange('day');
+                }}
                 format="DD.MM.YYYY"
                 slotProps={{
                     textField: {
@@ -421,7 +502,10 @@ export function IngredientReportsListView() {
             <DatePicker
                 label={t('ingredientReports.endDate') || 'End Date'}
                 value={endDate}
-                onChange={setEndDate}
+                onChange={(value) => {
+                    setEndDate(value);
+                    setActiveRange('day');
+                }}
                 format="DD.MM.YYYY"
                 slotProps={{
                     textField: {
@@ -434,23 +518,30 @@ export function IngredientReportsListView() {
             />
 
             {/* Ingredient - Optional */}
-            <TextField
-                select
-                label={t('ingredientReports.ingredient') || 'Ingredient'}
-                value={filters.ingredient_id}
-                onChange={(e) => handleIngredientChange(e.target.value)}
-                SelectProps={{ native: true }}
-                size="small"
-                fullWidth
-                InputLabelProps={{ shrink: true }}
-            >
-                <option value="">{t('ingredientReports.all') || 'All'}</option>
-                {filterOptions.ingredient_id.map((option) => (
-                    <option key={option.value} value={option.value}>
-                        {option.label}
+            <NoDataTooltip enabled={isIngredientsEmpty} title={noDataText}>
+                <TextField
+                    select
+                    label={t('ingredientReports.ingredient') || 'Ingredient'}
+                    value={filters.ingredient_id}
+                    onChange={(e) => handleIngredientChange(e.target.value)}
+                    SelectProps={{ native: true }}
+                    size="small"
+                    fullWidth
+                    InputLabelProps={{ shrink: true }}
+                    disabled={isIngredientsEmpty}
+                >
+                    <option value="">
+                        {t('ingredientReports.all') || 'All'}
                     </option>
-                ))}
-            </TextField>
+                    {filterOptions.ingredient_id.map((option) => (
+                        <option key={option.value} value={option.value}>
+                            {option.label}
+                        </option>
+                    ))}
+                </TextField>
+            </NoDataTooltip>
+                </Box>
+            </Box>
 
             {/* Action Buttons */}
             {/* <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
@@ -671,6 +762,18 @@ export function IngredientReportsListView() {
                 loading={reportsLoading}
                 columns={columns}
                 idField="ingredient_id"
+                paginationMode="server"
+                rowCount={reportsPagination?.total ?? totals?.total_count ?? 0}
+                paginationModel={paginationModel}
+                onPaginationModelChange={(model) => {
+                    setPaginationModel(model);
+                    setFilters((prev) => ({
+                        ...prev,
+                        limit: model.pageSize,
+                        offset: model.page * model.pageSize,
+                    }));
+                }}
+                pageSizeOptions={[10, 20, 50, 100]}
                 breadcrumbs={{
                     heading: t('ingredientReports.title') || 'Ingredient Reports',
                     links: [
@@ -686,6 +789,49 @@ export function IngredientReportsListView() {
                 onRowClick={handleAmountRowClick}
             />
 
+            {totals && (
+                <Box sx={{ px: { xs: 2, md: 5 }, pb: { xs: 2, md: 3 } }}>
+                    <Box
+                        sx={{
+                            display: 'grid',
+                            gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: 'repeat(2, 1fr)' },
+                            gap: 1,
+                        }}
+                    >
+                        <Box
+                            sx={{
+                                p: 1.5,
+                                borderRadius: 1,
+                                border: '1px solid',
+                                borderColor: 'divider',
+                                bgcolor: 'background.paper',
+                            }}
+                        >
+                            <Typography variant="caption" color="text.secondary">
+                                {t('ingredientReports.totalCount', 'Total count')}
+                            </Typography>
+                            <Typography variant="subtitle2">{totals.total_count ?? 0}</Typography>
+                        </Box>
+                        <Box
+                            sx={{
+                                p: 1.5,
+                                borderRadius: 1,
+                                border: '1px solid',
+                                borderColor: 'divider',
+                                bgcolor: 'background.paper',
+                            }}
+                        >
+                            <Typography variant="caption" color="text.secondary">
+                                {t('ingredientReports.totalOrderOutAmount', 'Total order out amount')}
+                            </Typography>
+                            <Typography variant="subtitle2">
+                                {Number(totals.total_order_out_amount || 0).toLocaleString()} so'm
+                            </Typography>
+                        </Box>
+                    </Box>
+                </Box>
+            )}
+
             {/* Ingredient Report Detail Modal */}
             <GenericViewModal
                 isOpen={openDetailsModal}
@@ -697,6 +843,10 @@ export function IngredientReportsListView() {
                 maxWidth="lg"
                 position="right"
                 slideDirection="left"
+                paperSx={{
+                    width: { xs: '100%', sm: '30vw' },
+                    maxWidth: { xs: '100%', sm: '30vw' },
+                }}
             />
 
             <GenericViewModal
@@ -711,6 +861,10 @@ export function IngredientReportsListView() {
                 maxWidth="sm"
                 position="right"
                 slideDirection="left"
+                paperSx={{
+                    width: { xs: '100%', sm: '30vw' },
+                    maxWidth: { xs: '100%', sm: '30vw' },
+                }}
             />
         </>
     );

@@ -18,6 +18,8 @@ import FormControlLabel from '@mui/material/FormControlLabel';
 import CheckRoundedIcon from '@mui/icons-material/CheckRounded';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { ImageUploadField } from './image-upload-field';
+import { NoDataTooltip } from 'src/components/no-data-tooltip';
+import { useTranslation } from 'react-i18next';
 
 interface EditFormFieldProps {
     field: FieldConfig;
@@ -26,6 +28,8 @@ interface EditFormFieldProps {
 }
 
 export const EditFormField: FC<EditFormFieldProps> = ({ field, value, onChange }) => {
+    const { t } = useTranslation('menu');
+    const noDataText = t('noDataAvailable', "Tushunarli ma'lumot mavjud emas");
     const handleChange = (e: any) => {
         const val = e.target.value;
         if (field.type === 'number') {
@@ -58,25 +62,33 @@ export const EditFormField: FC<EditFormFieldProps> = ({ field, value, onChange }
 
     // Select field
     if (field.type === 'select') {
+        const isOptionsEmpty = (field.options?.length ?? 0) === 0;
         return (
-            <FormControl fullWidth={field.fullWidth !== false} size="small" required={field.required}>
-                <InputLabel>{field.label}</InputLabel>
-                <Select
-                    value={value ?? ''}
-                    label={field.label}
-                    onChange={handleChange}
+            <NoDataTooltip enabled={isOptionsEmpty} title={noDataText}>
+                <FormControl
+                    fullWidth={field.fullWidth !== false}
+                    size="small"
                     required={field.required}
+                    disabled={isOptionsEmpty}
                 >
-                    <MenuItem value="">
-                        <em>None</em>
-                    </MenuItem>
-                    {field.options?.map((opt) => (
-                        <MenuItem key={`${opt.value}`} value={opt.value}>
-                            {opt.label}
+                    <InputLabel>{field.label}</InputLabel>
+                    <Select
+                        value={value ?? ''}
+                        label={field.label}
+                        onChange={handleChange}
+                        required={field.required}
+                    >
+                        <MenuItem value="" disabled hidden>
+                            <em>{field.placeholder || 'Select'}</em>
                         </MenuItem>
-                    ))}
-                </Select>
-            </FormControl>
+                        {field.options?.map((opt) => (
+                            <MenuItem key={`${opt.value}`} value={opt.value}>
+                                {opt.label}
+                            </MenuItem>
+                        ))}
+                    </Select>
+                </FormControl>
+            </NoDataTooltip>
         );
     }
 

@@ -41,6 +41,7 @@ import { Iconify } from 'src/components/iconify';
 import { GenericViewModal } from 'src/components/generic-view-view';
 import { GenericTableView } from 'src/components/generic-table-view';
 import { CustomGridActionsCellItem } from 'src/components/custom-data-grid';
+import { NoDataTooltip } from 'src/components/no-data-tooltip';
 
 const getTodayUtcBoundary = (endOfDay = false): string => {
   const now = dayjs();
@@ -102,6 +103,7 @@ const toPickerDate = (value?: string): dayjs.Dayjs | null =>
 export function SeparationActsListView() {
   const { t } = useTranslation('menu');
   const router = useRouter();
+  const noDataText = t('noDataAvailable', "Tushunarli ma'lumot mavjud emas");
 
   const { getSeparationActs, getSeparationActById, deleteSeparationAct } = useSeparationActsAPI();
   const { getStorages } = useStorageAPI();
@@ -120,6 +122,10 @@ export function SeparationActsListView() {
   const [viewOpen, setViewOpen] = useState(false);
   const [viewLoading, setViewLoading] = useState(false);
   const [viewData, setViewData] = useState<SeparationActBatchApiResponse | null>(null);
+
+  const isStoragesEmpty = Object.keys(storagesMap).length === 0;
+  const isGroupsEmpty = Object.keys(groupsMap).length === 0;
+  const isIngredientsEmpty = Object.keys(ingredientsMap).length === 0;
 
   const openViewModal = useCallback(async (separationActId: string) => {
     setViewOpen(true);
@@ -285,11 +291,16 @@ export function SeparationActsListView() {
               display: 'grid',
               gridTemplateColumns: {
                 xs: '1fr',
-                sm: '1fr 1fr',
-                md: 'repeat(3, 1fr)',
-                lg: 'repeat(4, 1fr)',
+                sm: 'repeat(2, minmax(220px, 1fr))',
+                md: 'repeat(3, minmax(220px, 1fr))',
+                lg: 'repeat(4, minmax(220px, 1fr))',
               },
-              gap: 1.5,
+              gap: 2,
+              alignItems: 'end',
+              '& .MuiFormControl-root, & .MuiTextField-root': {
+                minWidth: 220,
+                width: '100%',
+              },
             }}
           >
             <DatePicker
@@ -330,69 +341,84 @@ export function SeparationActsListView() {
                 },
               }}
             />
-            <TextField
-              select
-              size="small"
-              label={t('deductions.storage', 'Storage')}
-              SelectProps={{ native: true }}
-              value={draftFilters.storage_id || ''}
-              onChange={(e) =>
-                setDraftFilters((prev) => ({
-                  ...prev,
-                  storage_id: e.target.value,
-                }))
-              }
-              InputLabelProps={{ shrink: true }}
-            >
-              <option value="">{t('ingredientReports.all', 'All')}</option>
-              {Object.entries(storagesMap).map(([id, name]) => (
-                <option key={id} value={id}>
-                  {name}
+            <NoDataTooltip enabled={isStoragesEmpty} title={noDataText}>
+              <TextField
+                select
+                size="small"
+                label={t('deductions.storage', 'Storage')}
+                SelectProps={{ native: true }}
+                value={draftFilters.storage_id || ''}
+                onChange={(e) =>
+                  setDraftFilters((prev) => ({
+                    ...prev,
+                    storage_id: e.target.value,
+                  }))
+                }
+                InputLabelProps={{ shrink: true }}
+                disabled={isStoragesEmpty}
+              >
+                <option value="" disabled hidden>
+                  {t('ingredientReports.all', 'All')}
                 </option>
-              ))}
-            </TextField>
-            <TextField
-              select
-              size="small"
-              label={t('outgoingInvoices.group', 'Group')}
-              SelectProps={{ native: true }}
-              value={draftFilters.group_id || ''}
-              onChange={(e) =>
-                setDraftFilters((prev) => ({
-                  ...prev,
-                  group_id: e.target.value,
-                }))
-              }
-              InputLabelProps={{ shrink: true }}
-            >
-              <option value="">{t('ingredientReports.all', 'All')}</option>
-              {Object.entries(groupsMap).map(([id, name]) => (
-                <option key={id} value={id}>
-                  {name}
+                {Object.entries(storagesMap).map(([id, name]) => (
+                  <option key={id} value={id}>
+                    {name}
+                  </option>
+                ))}
+              </TextField>
+            </NoDataTooltip>
+            <NoDataTooltip enabled={isGroupsEmpty} title={noDataText}>
+              <TextField
+                select
+                size="small"
+                label={t('outgoingInvoices.group', 'Group')}
+                SelectProps={{ native: true }}
+                value={draftFilters.group_id || ''}
+                onChange={(e) =>
+                  setDraftFilters((prev) => ({
+                    ...prev,
+                    group_id: e.target.value,
+                  }))
+                }
+                InputLabelProps={{ shrink: true }}
+                disabled={isGroupsEmpty}
+              >
+                <option value="" disabled hidden>
+                  {t('ingredientReports.all', 'All')}
                 </option>
-              ))}
-            </TextField>
-            <TextField
-              select
-              size="small"
-              label={t('warehouse.ingredient', 'Ingredient')}
-              SelectProps={{ native: true }}
-              value={draftFilters.ingredient_id || ''}
-              onChange={(e) =>
-                setDraftFilters((prev) => ({
-                  ...prev,
-                  ingredient_id: e.target.value,
-                }))
-              }
-              InputLabelProps={{ shrink: true }}
-            >
-              <option value="">{t('ingredientReports.all', 'All')}</option>
-              {Object.entries(ingredientsMap).map(([id, name]) => (
-                <option key={id} value={id}>
-                  {name}
+                {Object.entries(groupsMap).map(([id, name]) => (
+                  <option key={id} value={id}>
+                    {name}
+                  </option>
+                ))}
+              </TextField>
+            </NoDataTooltip>
+            <NoDataTooltip enabled={isIngredientsEmpty} title={noDataText}>
+              <TextField
+                select
+                size="small"
+                label={t('warehouse.ingredient', 'Ingredient')}
+                SelectProps={{ native: true }}
+                value={draftFilters.ingredient_id || ''}
+                onChange={(e) =>
+                  setDraftFilters((prev) => ({
+                    ...prev,
+                    ingredient_id: e.target.value,
+                  }))
+                }
+                InputLabelProps={{ shrink: true }}
+                disabled={isIngredientsEmpty}
+              >
+                <option value="" disabled hidden>
+                  {t('ingredientReports.all', 'All')}
                 </option>
-              ))}
-            </TextField>
+                {Object.entries(ingredientsMap).map(([id, name]) => (
+                  <option key={id} value={id}>
+                    {name}
+                  </option>
+                ))}
+              </TextField>
+            </NoDataTooltip>
             <TextField
               select
               size="small"
@@ -407,7 +433,9 @@ export function SeparationActsListView() {
               }
               InputLabelProps={{ shrink: true }}
             >
-              <option value="">{t('ingredientReports.all', 'All')}</option>
+              <option value="" disabled hidden>
+                {t('ingredientReports.all', 'All')}
+              </option>
               <option value="active">{t('deductions.active', 'Active')}</option>
               <option value="draft">{t('common.draft', 'Draft')}</option>
               <option value="cancelled">{t('deductions.canceled', 'Canceled')}</option>

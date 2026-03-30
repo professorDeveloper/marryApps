@@ -21,5 +21,11 @@ export interface IIngredientGroupResponse {
   status: string;
   message: string;
   data: IIngredientGroupItem[];
+  pagination?: {
+    total: number;
+    limit: number;
+    offset: number;
+    total_pages: number;
+  };
   code: number;
 }

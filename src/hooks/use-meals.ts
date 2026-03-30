@@ -30,6 +30,12 @@ interface BackendResponse<T> {
     status: string;
     message: string;
     data: T;
+    pagination?: {
+        total: number;
+        limit: number;
+        offset: number;
+        total_pages: number;
+    };
     code: number;
 }
 
@@ -54,6 +60,16 @@ export interface IMealWithCalculations {
     total_cost: string;
     profit: string;
     profit_margin: string;
+}
+
+export interface MealsFilters {
+    query?: string;
+    category_id?: string;
+    department_id?: string;
+    storage_id?: string;
+    limit?: number;
+    offset?: number;
+    expand?: string;
 }
 
 // ============================================================================
@@ -98,6 +114,13 @@ function enrichMeals(
         } else if (typeof meal.price === 'number') {
             parsedPrice = meal.price;
         }
+        let parsedCostPrice: number | undefined;
+        if (typeof meal.cost_price === 'string') {
+            const num = parseFloat(meal.cost_price);
+            parsedCostPrice = isNaN(num) ? undefined : num;
+        } else if (typeof meal.cost_price === 'number') {
+            parsedCostPrice = meal.cost_price;
+        }
 
         // Get localized names from translation
         let name_en = meal.name;
@@ -117,6 +140,7 @@ function enrichMeals(
         return {
             ...meal,
             price: parsedPrice,
+            cost_price: parsedCostPrice,
             coverUrl: meal.picture_url || '',
             name_en,
             name_ru,
@@ -131,6 +155,76 @@ function enrichMeals(
                 ? {
                     id: meal.department_id,
                     name: departmentMap.get(meal.department_id) || '-',
+                }
+                : undefined,
+        };
+    });
+}
+
+/**
+ * Enrich meals from expand payload (no extra API calls)
+ */
+function enrichMealsFromExpand(
+    mealsData: IMealAPIResponse[],
+    currentLanguage: string = 'uz'
+): IMealsItem[] {
+    const getLangKey = (lang: string): keyof ITranslationItem => {
+        const langMap: Record<string, keyof ITranslationItem> = {
+            'uz': 'uz',
+            'uz-Latn': 'uz-Latn',
+            'uz-Cyrl': 'uz-Cyrl',
+            'ru': 'ru',
+            'en': 'en',
+        };
+        return (langMap[lang] || 'uz') as keyof ITranslationItem;
+    };
+
+    return mealsData.map((meal: any) => {
+        let parsedPrice: number = 0;
+        if (typeof meal.price === 'string') {
+            const num = parseFloat(meal.price);
+            parsedPrice = isNaN(num) ? 0 : num;
+        } else if (typeof meal.price === 'number') {
+            parsedPrice = meal.price;
+        }
+        let parsedCostPrice: number | undefined;
+        if (typeof meal.cost_price === 'string') {
+            const num = parseFloat(meal.cost_price);
+            parsedCostPrice = isNaN(num) ? undefined : num;
+        } else if (typeof meal.cost_price === 'number') {
+            parsedCostPrice = meal.cost_price;
+        }
+
+        const expandedCategory = meal?._expand?.category_id;
+        const expandedDepartment = meal?._expand?.department_id;
+        const expandedName = meal?._expand?.name_i18n;
+
+        const langKey = getLangKey(currentLanguage);
+        const localizedName =
+            expandedName?.[langKey] ||
+            expandedName?.uz ||
+            expandedName?.en ||
+            meal.name;
+
+        return {
+            ...meal,
+            name: localizedName,
+            price: parsedPrice,
+            cost_price: parsedCostPrice,
+            coverUrl: meal.picture_url || '',
+            name_en: expandedName?.en || meal.name,
+            name_ru: expandedName?.ru || meal.name,
+            name_uz: expandedName?.uz || meal.name,
+            category: meal.category_id
+                ? {
+                    id: meal.category_id,
+                    name: expandedCategory?.name || meal.category_name || '-',
+                }
+                : undefined,
+            department: meal.department_id
+                ? {
+                    id: meal.department_id,
+                    name: expandedDepartment?.name || meal.department_name || '-',
                 }
                 : undefined,
         };
@@ -176,6 +270,14 @@ function enrichMeal(
             typeof mealData.price === 'string'
                 ? parseFloat(mealData.price)
                 : mealData.price,
+        cost_price: (() => {
+            if (typeof mealData.cost_price === 'string') {
+                const num = parseFloat(mealData.cost_price);
+                return isNaN(num) ? undefined : num;
+            }
+            if (typeof mealData.cost_price === 'number') return mealData.cost_price;
+            return undefined;
+        })(),
         coverUrl: mealData.picture_url || '',
         name_en,
         name_ru,
@@ -202,7 +304,7 @@ function enrichMeal(
 /**
  * Get all meals with enriched category, department names and translations
  */
-export function useGetMeals(searchQuery?: string) {
+export function useGetMeals(searchQuery?: string | MealsFilters) {
     const { i18n } = useTranslation();
 
     // Get categories and departments for enrichment
@@ -216,10 +318,18 @@ export function useGetMeals(searchQuery?: string) {
         { ...swrOptions }
     );
 
-    const normalizedQuery = searchQuery?.trim() || '';
+    const filters: MealsFilters =
+        typeof searchQuery === 'string' ? { query: searchQuery } : (searchQuery || {});
+    const normalizedQuery = filters.query?.trim() || '';
+    const params: Record<string, string> = {};
+
+    if (filters.category_id) params.category_id = filters.category_id;
+    if (filters.department_id) params.department_id = filters.department_id;
+    if (filters.storage_id) params.storage_id = filters.storage_id;
+
     const swrKey = normalizedQuery
-        ? [endpoints.meals.search, { params: { query: normalizedQuery } }]
-        : endpoints.meals.list;
+        ? [endpoints.meals.search, { params: { ...params, query: normalizedQuery } }]
+        : [endpoints.meals.list, { params }];
 
     const { data, isLoading, error, isValidating, mutate: mutateMeals } = useSWR<
         BackendResponse<IMealAPIResponse[]> | IMealAPIResponse[]
@@ -256,6 +366,62 @@ export function useGetMeals(searchQuery?: string) {
     );
 
     return memoizedValue;
+}
+
+/**
+ * Get meals with server-side pagination using expand (no extra API calls)
+ */
+export function useGetMealsPage(filters?: MealsFilters) {
+    const { i18n } = useTranslation();
+
+    const normalizedQuery = filters?.query?.trim() || '';
+    const limit = typeof filters?.limit === 'number' ? filters?.limit : 20;
+    const offset = typeof filters?.offset === 'number' ? filters?.offset : 0;
+    const rawExpand = filters?.expand || 'category_id,name_i18n';
+    const expand = rawExpand
+        .split(',')
+        .map((item) => item.trim())
+        .filter((item) => item && item !== 'department_id')
+        .join(',');
+
+    const params: Record<string, string | number> = {
+        limit,
+        offset,
+        expand,
+    };
+
+    if (filters?.category_id) params.category_id = filters.category_id;
+    if (filters?.department_id) params.department_id = filters.department_id;
+    if (filters?.storage_id) params.storage_id = filters.storage_id;
+
+    const swrKey = normalizedQuery
+        ? [endpoints.meals.search, { params: { ...params, query: normalizedQuery } }]
+        : [endpoints.meals.list, { params }];
+
+    const { data, isLoading, error, isValidating, mutate: mutateMeals } = useSWR<
+        BackendResponse<IMealAPIResponse[]> | IMealAPIResponse[]
+    >(swrKey, fetcher, { ...swrOptions });
+
+    const mealsData = useMemo(() => {
+        if (Array.isArray(data)) return data;
+        if (data?.data && Array.isArray(data.data)) return data.data;
+        return [];
+    }, [data]);
+
+    const enrichedMeals = useMemo(
+        () => enrichMealsFromExpand(mealsData, i18n.resolvedLanguage),
+        [mealsData, i18n.resolvedLanguage]
+    );
+
+    return {
+        meals: enrichedMeals,
+        mealsLoading: isLoading,
+        mealsError: error,
+        mealsValidating: isValidating,
+        mealsEmpty: !isLoading && !isValidating && enrichedMeals.length === 0,
+        pagination: (data as BackendResponse<IMealAPIResponse[]>)?.pagination,
+        mutate: mutateMeals,
+    };
 }
 
 /**
@@ -354,6 +520,14 @@ export function useCreateMeal() {
                         typeof mealData.price === 'string'
                             ? parseFloat(mealData.price)
                             : mealData.price,
+                    cost_price: (() => {
+                        if (typeof mealData.cost_price === 'string') {
+                            const num = parseFloat(mealData.cost_price);
+                            return isNaN(num) ? undefined : num;
+                        }
+                        if (typeof mealData.cost_price === 'number') return mealData.cost_price;
+                        return undefined;
+                    })(),
                     coverUrl: mealData.picture_url || '',
                 };
 
@@ -413,6 +587,14 @@ export function useUpdateMeal() {
                         typeof mealData.price === 'string'
                             ? parseFloat(mealData.price)
                             : mealData.price,
+                    cost_price: (() => {
+                        if (typeof mealData.cost_price === 'string') {
+                            const num = parseFloat(mealData.cost_price);
+                            return isNaN(num) ? undefined : num;
+                        }
+                        if (typeof mealData.cost_price === 'number') return mealData.cost_price;
+                        return undefined;
+                    })(),
                     coverUrl: mealData.picture_url || '',
                 };
 
@@ -711,8 +893,12 @@ export function useUpdateMealWithCalculations() {
                         cook_time: payload.good.cook_time || 0,
                         color_code: payload.good.color_code || null,
                     },
-                    ingredient_calculations: payload.ingredient_calculations || [],
-                    compound_calculations: payload.compound_calculations || [],
+                    ...(payload.ingredient_calculations !== undefined
+                        ? { ingredient_calculations: payload.ingredient_calculations }
+                        : {}),
+                    ...(payload.compound_calculations !== undefined
+                        ? { compound_calculations: payload.compound_calculations }
+                        : {}),
                 };
 
                 const response = await putter<BackendResponse<any>>(

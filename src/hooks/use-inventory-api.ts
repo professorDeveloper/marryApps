@@ -10,6 +10,8 @@ import type {
     IInventoryFormData,
     IInventoryItemInput,
     BackendResponse,
+    IInventoryListParams,
+    IInventoryListResult,
 } from 'src/types/inventory';
 
 interface IInventoryBatchCreatePayload extends IInventoryFormData {
@@ -99,17 +101,17 @@ const normalizeInventoryBatchCreateResponse = (
 };
 
 export function useInventoryAPI() {
-    const MAX_LIST_ITEMS = 500;
-
-    const extractListAndMeta = <T,>(payload: unknown): { items: T[]; total?: number } => {
+    const extractListAndMeta = <T,>(
+        payload: unknown
+    ): { items: T[]; pagination?: BackendResponse<T[]>['pagination'] } => {
         if (!payload || typeof payload !== 'object') return { items: [] };
 
-        const obj = payload as Record<string, unknown>;
+        const obj = payload as BackendResponse<T[]> & Record<string, unknown>;
 
         if (Array.isArray(obj.data)) {
             return {
                 items: obj.data as T[],
-                total: typeof obj.total === 'number' ? obj.total : undefined,
+                pagination: obj.pagination,
             };
         }
 
@@ -118,12 +120,7 @@ export function useInventoryAPI() {
             if (Array.isArray(nested.data)) {
                 return {
                     items: nested.data as T[],
-                    total:
-                        typeof nested.total === 'number'
-                            ? nested.total
-                            : typeof obj.total === 'number'
-                                ? obj.total
-                                : undefined,
+                    pagination: obj.pagination,
                 };
             }
         }
@@ -134,51 +131,33 @@ export function useInventoryAPI() {
     /**
      * Barcha inventories'ni oladi
      */
-    const getInventories = useCallback(async (searchQuery?: string): Promise<IInventory[]> => {
+    const getInventories = useCallback(async ({
+        search,
+        limit = 20,
+        offset = 0,
+    }: IInventoryListParams = {}): Promise<IInventoryListResult> => {
         try {
-            const normalizedQuery = searchQuery?.trim() || '';
+            const normalizedQuery = search?.trim() || '';
+            const endpoint = normalizedQuery ? endpoints.inventory.search : endpoints.inventory.list;
+            const params = normalizedQuery
+                ? { q: normalizedQuery, limit, offset, expand: 'storage_id' }
+                : { limit, offset, expand: 'storage_id' };
 
-            if (normalizedQuery) {
-                const response = await fetcher<unknown>([
-                    endpoints.inventory.search,
-                    { params: { q: normalizedQuery, limit: MAX_LIST_ITEMS, offset: 0 } },
-                ]);
-                const { items } = extractListAndMeta<IInventory>(response);
-                return items.slice(0, MAX_LIST_ITEMS);
-            }
+            const response = await fetcher<unknown>([
+                endpoint,
+                { params },
+            ]);
 
-            const result: IInventory[] = [];
-            let offset = 0;
+            const { items, pagination } = extractListAndMeta<IInventory>(response);
 
-            while (result.length < MAX_LIST_ITEMS) {
-                const response = await fetcher<unknown>([
-                    endpoints.inventory.list,
-                    { params: { limit: MAX_LIST_ITEMS, offset } },
-                ]);
-
-                const { items, total } = extractListAndMeta<IInventory>(response);
-                if (!items.length) break;
-
-                result.push(...items);
-
-                const reachedTotal =
-                    typeof total === 'number' ? offset + items.length >= total : false;
-
-                if (reachedTotal || items.length >= MAX_LIST_ITEMS || result.length >= MAX_LIST_ITEMS) {
-                    break;
-                }
-
-                offset += items.length;
-            }
-
-            return result.slice(0, MAX_LIST_ITEMS);
+            return { items, pagination };
         } catch (error) {
             const axiosError = error as AxiosError<any>;
             const message = axiosError?.response?.data?.message || 'Failed to fetch inventories';
             toast.error(message);
-            return [];
+            return { items: [] };
         }
-    }, [MAX_LIST_ITEMS]);
+    }, []);
 
     /**
      * ID orqali inventory'ni oladi

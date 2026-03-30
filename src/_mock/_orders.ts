@@ -12,8 +12,8 @@ export const mockOrders: ICompound[] = [
         picture_url: 'https://www.russianfood.com/dycontent/images_upl/604/big_603346.jpg',
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
-        department_id: '1',
-        department_name: 'Oshxona',
+        ingredient_group_id: '1',
+        ingredient_group_name: 'Oshxona',
     },
     {
         id: '2',
@@ -25,8 +25,8 @@ export const mockOrders: ICompound[] = [
         picture_url: 'https://185504.selcdn.ru/static/optoffka.reshop.kz/catalog/1058/563192165bc6a9d4b8983_original.jpg',
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
-        department_id: '2',
-        department_name: 'Taom',
+        ingredient_group_id: '2',
+        ingredient_group_name: 'Taom',
     },
     {
         id: '3',
@@ -38,8 +38,8 @@ export const mockOrders: ICompound[] = [
         picture_url: 'https://thumb.tildacdn.com/tild6336-3034-4062-a336-366533633235/-/resize/824x/-/format/webp/bowl-3366480_1920.jpg',
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
-        department_id: '1',
-        department_name: 'Oshxona',
+        ingredient_group_id: '1',
+        ingredient_group_name: 'Oshxona',
     },
     {
         id: '4',
@@ -51,7 +51,7 @@ export const mockOrders: ICompound[] = [
         picture_url: 'https://basket-01.wbbasket.ru/vol101/part10140/10140166/images/big/1.webp',
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
-        department_id: '2',
-        department_name: 'Taom',
+        ingredient_group_id: '2',
+        ingredient_group_name: 'Taom',
     },
 ];

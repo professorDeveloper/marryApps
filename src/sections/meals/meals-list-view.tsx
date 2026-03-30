@@ -3,7 +3,7 @@ import type { IMealsItem } from 'src/types/meals';
 import { useTranslation } from 'react-i18next';
 import { useMemo, useState, useCallback, useEffect } from 'react';
 import { useTheme } from '@mui/material/styles';
-import { Button, Dialog, DialogTitle, DialogActions, DialogContent, Box, Avatar, ListItemText } from '@mui/material';
+import { Button, Dialog, DialogTitle, DialogActions, DialogContent, Box, Avatar, ListItemText, TextField } from '@mui/material';
 import {
     Table,
     TableBody,
@@ -15,7 +15,10 @@ import {
     CircularProgress,
 } from '@mui/material';
 import { paths } from 'src/routes/paths';
-import { useGetMeals, useDeleteMeal, useDeleteMeals, useGetMealWithCalculations } from 'src/hooks/use-meals';
+import { useGetMealsPage, useDeleteMeal, useDeleteMeals, useGetMealWithCalculations } from 'src/hooks/use-meals';
+import { useGetCompounds } from 'src/hooks/use-compounds';
+import { useGetCategories } from 'src/actions/categories';
+import { useGetDepartments } from 'src/actions/departments';
 import { useGenericViewModal } from 'src/hooks/use-generic-view-modal';
 import { useImageUrl } from 'src/hooks/use-image-url';
 import { useGetIngredients } from 'src/actions/ingredients';
@@ -25,16 +28,21 @@ import { CustomGridActionsCellItem } from 'src/components/custom-data-grid';
 import { GenericViewModal, SpecificationsTable } from 'src/components/generic-view-view';
 import { GenericTableView } from 'src/components/generic-table-view';
 import { formatPrice } from 'src/components/generic-view-view/modal-formatters';
-import { useGetCategories } from 'src/actions/categories';
-import { useGetDepartments } from 'src/actions/departments';
+import { NoDataTooltip } from 'src/components/no-data-tooltip';
+
+const initialFilters = {
+    category_id: '',
+    department_id: '',
+    storage_id: '',
+    query: '',
+};
 
 
 function MealCalculationsTable({ mealId }: { mealId: string }) {
     const { t, i18n } = useTranslation('menu');
     const { mealWithCalculations, loading } = useGetMealWithCalculations(mealId);
     const { ingredients } = useGetIngredients();
-    const { meals } = useGetMeals();
-
+    const { compounds } = useGetCompounds();
     // Create maps for quick name lookup with translations
     const ingredientMap = useMemo(() => {
         const map = new Map<string, string>();
@@ -56,6 +64,14 @@ function MealCalculationsTable({ mealId }: { mealId: string }) {
         });
         return map;
     }, [ingredients, i18n.language]);
+
+    const compoundMap = useMemo(() => {
+        const map = new Map<string, string>();
+        compounds.forEach((compound: any) => {
+            map.set(compound.id, compound.name || '-');
+        });
+        return map;
+    }, [compounds]);
 
     // Remove duplicate calculations - keep only unique ingredient_id or component_compound_id
     // HOOKS MUST BE CALLED BEFORE ANY EARLY RETURNS!
@@ -114,7 +130,9 @@ function MealCalculationsTable({ mealId }: { mealId: string }) {
                         {uniqueCalculations.map((calc, index) => {
                             const itemName = calc.ingredient_id
                                 ? ingredientMap.get(calc.ingredient_id) || calc.ingredient_id
-                                : '-';
+                                : calc.component_compound_id
+                                    ? compoundMap.get(calc.component_compound_id) || calc.component_compound_id
+                                    : '-';
 
                             return (
                                 <TableRow key={calc.ingredient_id || calc.component_compound_id || calc.id}>
@@ -179,6 +197,13 @@ function renderMealsSpecifications(item: IMealsItem, t: any) {
             value: item.department?.name || item.department_id || '-',
         },
         { label: t('mealsProducts.price'), value: `${item.price?.toLocaleString()} so'm` },
+        {
+            label: t('mealsProducts.costPrice'),
+            value:
+                item.cost_price || item.cost_price === 0
+                    ? `${item.cost_price.toLocaleString()} so'm`
+                    : '-',
+        },
         { label: t('mealsProducts.cookingTime'), value: `${item.cook_time} min` },
         {
             label: t('mealsProducts.createdAt'),
@@ -193,15 +218,27 @@ function renderMealsSpecifications(item: IMealsItem, t: any) {
     return <SpecificationsTable rows={specs} />;
 }
 
-// ============================================================================
-// MAIN COMPONENT
-// ============================================================================
-
 export function Meals() {
     const theme = useTheme();
     const { t, i18n } = useTranslation('menu');
+    const noDataText = t('noDataAvailable', "Tushunarli ma'lumot mavjud emas");
     const [searchQuery, setSearchQuery] = useState('');
     const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
+    const [filters, setFilters] = useState(initialFilters);
+    const [draftFilters, setDraftFilters] = useState(initialFilters);
+    const [paginationModel, setPaginationModel] = useState({ page: 0, pageSize: 20 });
+    const { categories } = useGetCategories();
+    const { departments } = useGetDepartments();
+
+    // SWR hooks
+    const { meals, mealsLoading, mutate, pagination } = useGetMealsPage({
+        ...filters,
+        limit: paginationModel.pageSize,
+        offset: paginationModel.page * paginationModel.pageSize,
+        expand: 'category_id,department_id,name_i18n',
+    });
+    const { deleteMeal } = useDeleteMeal();
+    const { deleteMeals } = useDeleteMeals();
 
     useEffect(() => {
         const timeout = setTimeout(() => {
@@ -211,35 +248,47 @@ export function Meals() {
         return () => clearTimeout(timeout);
     }, [searchQuery]);
 
-    // SWR hooks
-    const { meals, mealsLoading, mutate } = useGetMeals(debouncedSearchQuery);
-    const { deleteMeal } = useDeleteMeal();
-    const { deleteMeals } = useDeleteMeals();
-    const { categories } = useGetCategories();
-    const { departments } = useGetDepartments();
+    useEffect(() => {
+        setDraftFilters((prev) => ({
+            ...prev,
+            query: debouncedSearchQuery,
+        }));
+    }, [debouncedSearchQuery]);
+
+    useEffect(() => {
+        setFilters((prev) => ({
+            ...prev,
+            ...draftFilters,
+        }));
+    }, [draftFilters]);
+
+    useEffect(() => {
+        setPaginationModel((prev) => ({ ...prev, page: 0 }));
+    }, [draftFilters]);
 
     // State
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [mealToDelete, setMealToDelete] = useState<string | null>(null);
 
-    // Create translation maps for categories and departments
+    // Create translation maps for categories and departments from master lists,
+    // so filter options do not collapse to only the currently filtered meals.
     const categoryMap = useMemo(() => {
         const map = new Map<string, string>();
         const currentLang = i18n.language || 'uz';
 
-        categories.forEach((cat: any) => {
-            let displayName = cat.name || '-';
+        categories.forEach((category: any) => {
+            if (!category?.id) return;
 
-            // Get translated name based on current language
-            if (currentLang === 'en' && cat.name_en) {
-                displayName = cat.name_en;
-            } else if (currentLang === 'ru' && cat.name_ru) {
-                displayName = cat.name_ru;
-            } else if ((currentLang === 'uz' || currentLang === 'uz-Latn' || currentLang === 'uz-Cyrl') && cat.name_uz) {
-                displayName = cat.name_uz;
-            }
+            let displayName = category.name || '-';
+            if (currentLang === 'en' && category.name_en) displayName = category.name_en;
+            else if (currentLang === 'ru' && category.name_ru) displayName = category.name_ru;
+            else if (
+                (currentLang === 'uz' || currentLang === 'uz-Latn' || currentLang === 'uz-Cyrl') &&
+                category.name_uz
+            )
+                displayName = category.name_uz;
 
-            map.set(cat.id, displayName);
+            map.set(category.id, displayName);
         });
         return map;
     }, [categories, i18n.language]);
@@ -248,22 +297,33 @@ export function Meals() {
         const map = new Map<string, string>();
         const currentLang = i18n.language || 'uz';
 
-        departments.forEach((dept: any) => {
-            let displayName = dept.name || '-';
+        departments.forEach((department: any) => {
+            if (!department?.id) return;
 
-            // Get translated name based on current language
-            if (currentLang === 'en' && dept.name_en) {
-                displayName = dept.name_en;
-            } else if (currentLang === 'ru' && dept.name_ru) {
-                displayName = dept.name_ru;
-            } else if ((currentLang === 'uz' || currentLang === 'uz-Latn' || currentLang === 'uz-Cyrl') && dept.name_uz) {
-                displayName = dept.name_uz;
-            }
+            let displayName = department.name || '-';
+            if (currentLang === 'en' && department.name_en) displayName = department.name_en;
+            else if (currentLang === 'ru' && department.name_ru) displayName = department.name_ru;
+            else if (
+                (currentLang === 'uz' || currentLang === 'uz-Latn' || currentLang === 'uz-Cyrl') &&
+                department.name_uz
+            )
+                displayName = department.name_uz;
 
-            map.set(dept.id, displayName);
+            map.set(department.id, displayName);
         });
         return map;
     }, [departments, i18n.language]);
+
+    const categoryOptions = useMemo(() => {
+        return Array.from(categoryMap.entries()).map(([id, name]) => ({ id, name }));
+    }, [categoryMap]);
+
+    const departmentOptions = useMemo(() => {
+        return Array.from(departmentMap.entries()).map(([id, name]) => ({ id, name }));
+    }, [departmentMap]);
+
+    const isCategoryEmpty = categoryOptions.length === 0;
+    const isDepartmentEmpty = departmentOptions.length === 0;
 
     // View modal hook'i
     const { isOpen, selectedData, openModal, closeModal } = useGenericViewModal<IMealsItem>();
@@ -338,22 +398,32 @@ export function Meals() {
                     return categoryMap.get(params.value) || params.row.category?.name || params.value || '-';
                 },
             },
-            {
-                field: 'department_id',
-                headerName: t('mealsProducts.department'),
-                width: 150,
-                type: 'string',
-                renderCell: (params) => {
-                    // Use the translated department name from departmentMap
-                    return departmentMap.get(params.value) || params.row.department?.name || params.value || '-';
-                },
-            },
+            // {
+            //     field: 'department_id',
+            //     headerName: t('mealsProducts.department'),
+            //     width: 150,
+            //     type: 'string',
+            //     renderCell: (params) => {
+            //         // Use the translated department name from departmentMap
+            //         return departmentMap.get(params.value) || params.row.department?.name || params.value || '-';
+            //     },
+            // },
             {
                 field: 'price',
                 headerName: t('mealsProducts.price'),
                 width: 120,
                 type: 'number',
                 renderCell: (params) => `${params.value?.toLocaleString()} ${t('mealsProducts.som')}`,
+            },
+            {
+                field: 'cost_price',
+                headerName: t('mealsProducts.costPrice'),
+                width: 140,
+                type: 'number',
+                renderCell: (params) =>
+                    params.value || params.value === 0
+                        ? `${params.value?.toLocaleString()} ${t('mealsProducts.som')}`
+                        : '-',
             },
             {
                 field: 'cook_time',
@@ -426,6 +496,117 @@ export function Meals() {
                 data={meals}
                 loading={mealsLoading}
                 columns={columns}
+                paginationMode="server"
+                rowCount={pagination?.total || 0}
+                paginationModel={paginationModel}
+                onPaginationModelChange={setPaginationModel}
+                pageSizeOptions={[10, 20, 50, 100]}
+                renderFilters={() => (
+                    <Box
+                        sx={{
+                            display: 'grid',
+                            gridTemplateColumns: {
+                                xs: '1fr',
+                                sm: 'repeat(2, minmax(220px, 1fr))',
+                                md: 'repeat(3, minmax(220px, 1fr))',
+                                lg: 'repeat(4, minmax(220px, 1fr))',
+                            },
+                            gap: 2,
+                            alignItems: 'end',
+                            '& .MuiFormControl-root, & .MuiTextField-root': {
+                                minWidth: 220,
+                                width: '100%',
+                            },
+                        }}
+                    >
+                        <NoDataTooltip enabled={isCategoryEmpty} title={noDataText}>
+                            <TextField
+                                select
+                                size="small"
+                                label={t('mealsProducts.category')}
+                                SelectProps={{ native: true }}
+                                value={draftFilters.category_id || ''}
+                                onChange={(e) =>
+                                    setDraftFilters((prev) => ({
+                                        ...prev,
+                                        category_id: e.target.value,
+                                    }))
+                                }
+                                InputLabelProps={{ shrink: true }}
+                                disabled={isCategoryEmpty}
+                            >
+                                <option value="" >
+                                    {t('ingredientReports.all', 'All')}
+                                </option>
+                                {categoryOptions.map((category: any) => (
+                                    <option key={category.id} value={category.id}>
+                                        {category.name || category.id}
+                                    </option>
+                                ))}
+                            </TextField>
+                        </NoDataTooltip>
+                        {/* <NoDataTooltip enabled={isDepartmentEmpty} title={noDataText}>
+                            <TextField
+                                select
+                                size="small"
+                                label={t('mealsProducts.department')}
+                                SelectProps={{ native: true }}
+                                value={draftFilters.department_id || ''}
+                                onChange={(e) =>
+                                    setDraftFilters((prev) => ({
+                                        ...prev,
+                                        department_id: e.target.value,
+                                    }))
+                                }
+                                InputLabelProps={{ shrink: true }}
+                                disabled={isDepartmentEmpty}
+                            >
+                                <option value="" >
+                                    {t('ingredientReports.all', 'All')}
+                                </option>
+                                {departmentOptions.map((department: any) => (
+                                    <option key={department.id} value={department.id}>
+                                        {department.name || department.id}
+                                    </option>
+                                ))}
+                            </TextField>
+                        </NoDataTooltip> */}
+                        {/* <TextField
+                            select
+                            size="small"
+                            label={t('invoices.storage', 'Storage')}
+                            SelectProps={{ native: true }}
+                            value={draftFilters.storage_id || ''}
+                            onChange={(e) =>
+                                setDraftFilters((prev) => ({
+                                    ...prev,
+                                    storage_id: e.target.value,
+                                }))
+                            }
+                            InputLabelProps={{ shrink: true }}
+                        >
+                            <option value="" disabled hidden>
+                                {t('ingredientReports.all', 'All')}
+                            </option>
+                            {storages.map((storage: any) => (
+                                <option key={storage.id} value={storage.id}>
+                                    {storage.name || storage.id}
+                                </option>
+                            ))}
+                        </TextField> */}
+                        {/* <Box sx={{ display: 'flex', gap: 1 }}>
+                            <Button
+                                variant="outlined"
+                                size="medium"
+                                startIcon={<Iconify icon="solar:restart-bold" />}
+                                onClick={() => setDraftFilters(initialFilters)}
+                                sx={{ flex: 1 }}
+                            >
+                                {t('ingredientReports.reset', 'Reset')}
+                            </Button>
+                        </Box> */}
+                    </Box>
+                )}
                 breadcrumbs={{
                     heading: t('mealsProducts.title'),
                     links: [

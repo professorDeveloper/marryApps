@@ -128,6 +128,7 @@ export function InvoiceDetailsCalculation({ invoiceId, onSuccess, onDetailsChang
     const [rightSelectedIds, setRightSelectedIds] = useState<string[]>([]);
 
     const prevCalculationsRef = useRef<string>('');
+    const hydratedPersistedSnapshotRef = useRef<string>('');
     const calculateDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const [isCalculating, setIsCalculating] = useState(false);
 
@@ -186,7 +187,7 @@ export function InvoiceDetailsCalculation({ invoiceId, onSuccess, onDetailsChang
         loadData();
     }, [getIngredients, t]);
 
-    // Restore persisted details when external state changes, but ignore local echo updates.
+    // Restore persisted details only when parent data actually changes.
     useEffect(() => {
         if (!persistedDetails) return;
 
@@ -209,20 +210,25 @@ export function InvoiceDetailsCalculation({ invoiceId, onSuccess, onDetailsChang
             [...incomingById.values()].sort((a, b) => a.ingredient_id.localeCompare(b.ingredient_id))
         );
 
-        if (incomingSnapshot === prevCalculationsRef.current || incomingSnapshot === localBatchSnapshot) {
+        const localSnapshot = localBatchSnapshot;
+
+        if (
+            incomingSnapshot === hydratedPersistedSnapshotRef.current ||
+            (isNewInvoice &&
+                (incomingSnapshot === prevCalculationsRef.current ||
+                    incomingSnapshot === localSnapshot))
+        ) {
             return;
         }
 
         if (incomingById.size === 0) {
-            if (transferredIds.length === 0) {
-                return;
-            }
-
+            hydratedPersistedSnapshotRef.current = incomingSnapshot;
             setTransferredIds([]);
             setQuantities({});
             setPricesPerUnit({});
             setPrices({});
             setShowCalculation(false);
+            setSelectedIds([]);
             return;
         }
 
@@ -238,15 +244,14 @@ export function InvoiceDetailsCalculation({ invoiceId, onSuccess, onDetailsChang
             newPrices[ingredientId] = detail.price;
         });
 
+        hydratedPersistedSnapshotRef.current = incomingSnapshot;
         setTransferredIds(newTransferredIds);
         setQuantities(newQuantities);
         setPricesPerUnit(newPricesPerUnit);
         setPrices(newPrices);
         setShowCalculation(true);
-        if (selectedIds.length > 0) {
-            setSelectedIds([]);
-        }
-    }, [persistedDetails, localBatchSnapshot, transferredIds.length, selectedIds.length]);
+        setSelectedIds([]);
+    }, [persistedDetails, isNewInvoice, localBatchSnapshot]);
 
     // Update parent whenever details change (for persistence)
     useEffect(() => {
@@ -749,17 +754,19 @@ export function InvoiceDetailsCalculation({ invoiceId, onSuccess, onDetailsChang
                         {/* RIGHT PANEL: Selected Items with Inputs */}
                         {showCalculation && (
                             <Paper sx={{ p: 2 }}>
-                                <Typography variant="subtitle1" sx={{ fontWeight: 'bold', mb: 2 }}>
-                                    {t('warehouse.invoiceDetails.selectedItems', 'Selected Items')}
-                                </Typography>
-                                {isCalculating && (
-                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                                        <CircularProgress size={14} />
-                                        <Typography variant="caption" color="text.secondary">
-                                            {t('warehouse.invoiceDetails.calculating', 'Calculating...')}
-                                        </Typography>
-                                    </Box>
-                                )}
+                                <Box sx={{ display: 'flex',  }}>
+                                    <Typography variant="subtitle1" sx={{ fontWeight: 'bold', mb: 2 }}>
+                                        {t('warehouse.invoiceDetails.selectedItems', 'Selected Items')}
+                                    </Typography>
+                                    {/* {isCalculating && (
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                                            <CircularProgress size={14} />
+                                            <Typography variant="caption" color="text.secondary">
+                                                {t('warehouse.invoiceDetails.calculating', 'Calculating...')}
+                                            </Typography>
+                                        </Box>
+                                    )} */}
+                                </Box>
 
                                 {/* Search */}
                                 <TextField

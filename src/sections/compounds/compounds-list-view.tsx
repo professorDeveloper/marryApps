@@ -19,8 +19,12 @@ import {
 } from '@mui/material';
 import { paths } from 'src/routes/paths';
 import { useGenericViewModal } from 'src/hooks/use-generic-view-modal';
-import { useGetCompounds, useDeleteCompound, useDeleteCompounds, useGetCompoundWithCalculations } from 'src/hooks/use-compounds';
-import { useGetDepartments } from 'src/actions/departments';
+import {
+    useGetCompoundsPage,
+    useDeleteCompound,
+    useDeleteCompounds,
+    useGetCompoundWithCalculations,
+} from 'src/hooks/use-compounds';
 import { useImageUrl } from 'src/hooks/use-image-url';
 import { getInitials, getAvatarColor } from 'src/utils/avatar';
 import { toast } from 'src/components/snackbar';
@@ -30,14 +34,13 @@ import { CustomGridActionsCellItem } from 'src/components/custom-data-grid';
 import { GenericViewModal, SpecificationsTable } from 'src/components/generic-view-view';
 import { formatDate, formatPrice } from 'src/components/generic-view-view/modal-formatters';
 import { useGetIngredients } from 'src/actions/ingredients';
+import { useGetIngredientGroups } from 'src/actions/ingredient-group';
 
 
 function RenderCellCompound({ params }: { params: any }) {
     const { row } = params;
     const name = row.name || '-';
     const { imageUrl, loading } = useImageUrl(row.picture_url);
-
-    // If no image, show avatar with initials
     const initials = getInitials(name);
     const bgColor = getAvatarColor(name);
 
@@ -102,12 +105,16 @@ function RenderCellPrice({ params }: { params: any }) {
 /**
  * Compound calculations table renderer
  */
-function CompoundCalculationsTable({ compoundId }: { compoundId: string }) {
+function CompoundCalculationsTable({
+    compoundId,
+    compounds,
+}: {
+    compoundId: string;
+    compounds: ICompound[];
+}) {
     const { t } = useTranslation('menu');
     const { compoundWithCalculations, loading } = useGetCompoundWithCalculations(compoundId);
     const { ingredients } = useGetIngredients();
-    const { compounds } = useGetCompounds();
-
     // Create maps for quick name lookup
     const ingredientMap = useMemo(() => {
         const map = new Map<string, string>();
@@ -217,7 +224,7 @@ function renderCompoundSpecifications(item: ICompound, t: any) {
             label: t('semifinishedProducts.measurement'),
             value: t(`semifinishedProducts.${item.measurement}`, item.measurement),
         },
-        { label: t('semifinishedProducts.department'), value: item.department_name || '-' },
+        { label: t('ingredients.group'), value: item.ingredient_group_name || '-' },
         { label: t('semifinishedProducts.quantity'), value: item.quantity },
         { label: t('semifinishedProducts.price'), value: formatPrice(Number(item.price)) },
         { label: t('semifinishedProducts.createdAt'), value: formatDate(item.created_at) },
@@ -237,6 +244,7 @@ export function HalfMeals() {
 
     const [searchQuery, setSearchQuery] = useState('');
     const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
+    const [paginationModel, setPaginationModel] = useState({ page: 0, pageSize: 20 });
 
     useEffect(() => {
         const timeout = setTimeout(() => {
@@ -246,9 +254,18 @@ export function HalfMeals() {
         return () => clearTimeout(timeout);
     }, [searchQuery]);
 
+    useEffect(() => {
+        setPaginationModel((prev) => ({ ...prev, page: 0 }));
+    }, [debouncedSearchQuery]);
+
     // SWR hooks
-    const { compounds, compoundsLoading, mutate } = useGetCompounds(debouncedSearchQuery);
-    const { departments } = useGetDepartments();
+    const { compounds, compoundsLoading, mutate, pagination } = useGetCompoundsPage({
+        search: debouncedSearchQuery,
+        limit: paginationModel.pageSize,
+        offset: paginationModel.page * paginationModel.pageSize,
+        expand: 'ingredient_group_id,name_i18n,description_i18n',
+    });
+    const { ingredientGroups } = useGetIngredientGroups();
     const { deleteCompound } = useDeleteCompound();
     const { deleteCompounds } = useDeleteCompounds();
 
@@ -258,14 +275,17 @@ export function HalfMeals() {
     // View modal
     const { isOpen, selectedData, openModal, closeModal } = useGenericViewModal<ICompound>();
 
-    // Convert departments array to map for filtering
-    const departmentsMap = useMemo(() => {
-        const deptMap: Record<string, string> = {};
-        departments.forEach((dept: any) => {
-            deptMap[dept.id] = dept.name;
+    const ingredientGroupMap = useMemo(() => {
+        const map = new Map<string, string>();
+
+        ingredientGroups.forEach((group: any) => {
+            if (group?.id) {
+                map.set(group.id, group.name || '-');
+            }
         });
-        return deptMap;
-    }, [departments]);
+
+        return map;
+    }, [ingredientGroups]);
 
     // Measurement options with translations
     const _measurementOptions = useMemo(
@@ -277,15 +297,26 @@ export function HalfMeals() {
         [t]
     );
 
-    // Department options for filtering
-    const departmentOptions = useMemo(
-        () =>
-            departments.map((dept: any) => ({
-                value: dept.id,
-                label: dept.name,
-            })),
-        [departments]
-    );
+    // Ingredient group options for filtering (derived from expanded compounds to avoid extra API call)
+    const ingredientGroupOptions = useMemo(() => {
+        const map = new Map<string, string>();
+
+        ingredientGroups.forEach((group: any) => {
+            if (group?.id) {
+                map.set(group.id, group.name || '-');
+            }
+        });
+
+        compounds.forEach((comp: any) => {
+            const group = comp?._expand?.ingredient_group_id;
+            if (group?.id && group?.name) {
+                map.set(group.id, group.name);
+            } else if (comp?.ingredient_group_id && comp?.ingredient_group_name) {
+                map.set(comp.ingredient_group_id, comp.ingredient_group_name);
+            }
+        });
+        return Array.from(map.entries()).map(([value, label]) => ({ value, label }));
+    }, [compounds, ingredientGroups]);
 
     // Columns config
     const columns = useMemo<GridColDef[]>(
@@ -305,16 +336,19 @@ export function HalfMeals() {
                 renderCell: (params) => <RenderCellMeasurement params={params} />,
             },
             {
+                field: 'ingredient_group_name',
+                headerName: t('ingredients.group'),
+                width: 180,
+                renderCell: (params) =>
+                    params.row.ingredient_group_name ||
+                    ingredientGroupMap.get(params.row.ingredient_group_id) ||
+                    '-',
+            },
+            {
                 field: 'price',
                 headerName: t('semifinishedProducts.price'),
                 width: 140,
                 renderCell: (params) => <RenderCellPrice params={params} />,
-            },
-            {
-                field: 'department_name',
-                headerName: t('semifinishedProducts.department'),
-                width: 150,
-                type: 'string',
             },
             {
                 field: 'quantity',
@@ -359,7 +393,7 @@ export function HalfMeals() {
                 ],
             },
         ],
-        [t, theme.vars.palette.error.main]
+        [t, theme.vars.palette.error.main, ingredientGroupMap]
     );
 
     // Handle delete confirmation
@@ -406,6 +440,11 @@ export function HalfMeals() {
                 data={compounds}
                 loading={compoundsLoading}
                 columns={columns}
+                paginationMode="server"
+                rowCount={pagination?.total || 0}
+                paginationModel={paginationModel}
+                onPaginationModelChange={setPaginationModel}
+                pageSizeOptions={[10, 20, 50, 100]}
                 breadcrumbs={{
                     heading: t('semifinishedProducts.title'),
                     links: [
@@ -419,10 +458,10 @@ export function HalfMeals() {
                     href: paths.menu.semifinished.new,
                 }}
                 filterOptions={{
-                    department_id: departmentOptions,
+                    ingredient_group_id: ingredientGroupOptions,
                 }}
                 initialFilters={{
-                    department_id: [],
+                    ingredient_group_id: [],
                 }}
                 hideColumns={{}}
                 hideColumnsTogglable={['actions']}
@@ -450,7 +489,7 @@ export function HalfMeals() {
                             {/* <Box sx={{ mb: 2, fontWeight: 600, fontSize: 16 }}>
                                 {t('common.calculations')}
                             </Box> */}
-                            <CompoundCalculationsTable compoundId={item.id} />
+                            <CompoundCalculationsTable compoundId={item.id} compounds={compounds} />
                         </Box>
                     </Box>
                 )}

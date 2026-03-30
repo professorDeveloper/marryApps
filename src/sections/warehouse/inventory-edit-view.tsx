@@ -149,6 +149,7 @@ export function InventoryEditView({ isNew = false }: InventoryEditViewProps) {
                     if (result) {
                         setInventory(result);
                         toast.success(t('success.updated'));
+                        navigate(paths.menu.inventory.root);
                     }
                 }
             } catch (error) {
@@ -156,7 +157,7 @@ export function InventoryEditView({ isNew = false }: InventoryEditViewProps) {
                 throw error;
             }
         },
-        [isNew, id, createdInventoryId, updateInventory, t]
+        [isNew, id, createdInventoryId, updateInventory, navigate, t]
     );
 
     // Handle delete
