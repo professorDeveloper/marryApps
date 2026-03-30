@@ -1,88 +1,79 @@
-name: Build and Deploy
+name: Frontend CI/CD
 
 on:
   push:
     branches:
       - master
-      - staging
-
-env:
-  REGISTRY: ${{ secrets.REGISTRY_URL }}
-  IMAGE_NAME: ${{ secrets.REGISTRY_IMAGE_NAME }}
+      - main
+      - feature/frontend-cicd
+  pull_request:
+    branches:
+      - master
+      - main
 
 jobs:
-  build:
+  build-check:
     runs-on: ubuntu-latest
-    outputs:
-      image-tag: ${{ steps.meta.outputs.tags }}
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+      - name: Build docker image for check
+        run: docker build -t maryai-front:test .
 
-      - name: Log in to Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ secrets.REGISTRY_USER }}
-          password: ${{ secrets.REGISTRY_PASSWORD }}
-
-      - name: Extract metadata
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-          tags: |
-            type=ref,event=branch
-            type=sha,prefix={{branch}}-
-            type=raw,value=latest,enable={{is_default_branch}}
-
-      - name: Build and push Docker image
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:buildcache
-          cache-to: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:buildcache,mode=max
-
-  deploy-staging:
-    needs: build
+  publish-and-deploy:
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    needs: build-check
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/staging'
-    environment: staging
-    steps:
-      - name: Deploy to Staging
-        uses: appleboy/ssh-action@master
-        with:
-          host: ${{ secrets.STAGING_HOST }}
-          username: ${{ secrets.STAGING_USER }}
-          key: ${{ secrets.STAGING_SSH_PRIVATE_KEY }}
-          script: |
-            docker login ${{ env.REGISTRY }} --username ${{ secrets.REGISTRY_USER }} --password ${{ secrets.REGISTRY_PASSWORD }}
-            docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:staging
-            docker service update --force maryai_frontv2_staging
-            docker container prune -f --filter 'until=24h' || true
-            docker image prune -f --filter 'until=24h' || true
 
-  deploy-production:
-    needs: build
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/master'
-    environment: production
+    permissions:
+      contents: read
+      packages: write
+
     steps:
-      - name: Deploy to Production
-        uses: appleboy/ssh-action@master
-        with:
-          host: ${{ secrets.PROD_HOST }}
-          username: ${{ secrets.PROD_USER }}
-          key: ${{ secrets.PROD_SSH_PRIVATE_KEY }}
-          script: |
-            docker login ${{ env.REGISTRY }} --username ${{ secrets.REGISTRY_USER }} --password ${{ secrets.REGISTRY_PASSWORD }}
-            docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
-            docker service update --force maryai_frontv2
-            docker container prune -f --filter 'until=24h' || true
-            docker image prune -f --filter 'until=24h' || true
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Prepare image variables
+        run: |
+          echo "IMAGE_NAME=$(echo ghcr.io/${GITHUB_REPOSITORY_OWNER}/maryai-front | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
+          echo "IMAGE_TAG=${GITHUB_SHA::7}" >> $GITHUB_ENV
+
+      - name: Login to GHCR for push
+        run: echo "${{ github.token }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+
+      - name: Build image
+        run: |
+          docker build \
+            -t $IMAGE_NAME:$IMAGE_TAG \
+            -t $IMAGE_NAME:latest \
+            .
+
+      - name: Push image
+        run: |
+          docker push $IMAGE_NAME:$IMAGE_TAG
+          docker push $IMAGE_NAME:latest
+
+      - name: Prepare SSH
+        run: |
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          printf "%s\n" "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          printf "%s\n" "${{ secrets.SSH_KNOWN_HOSTS }}" > ~/.ssh/known_hosts
+          chmod 644 ~/.ssh/known_hosts
+
+      - name: Deploy on server
+        run: |
+          ssh -i ~/.ssh/id_ed25519 ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << EOF
+            set -e
+
+            docker login ghcr.io -u "${{ secrets.GHCR_USER }}" -p "${{ secrets.GHCR_PULL_TOKEN }}"
+
+            cd /opt/maryai/infra/compose
+            docker compose -f frontend-compose.yml pull
+            docker compose -f frontend-compose.yml up -d
+
+            docker image prune -f
+          EOF
