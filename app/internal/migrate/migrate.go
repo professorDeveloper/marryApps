@@ -30,7 +30,9 @@ func RunMigrationsFromSubdir(ctx context.Context, pool *pgxpool.Pool, migrations
 	if strings.Contains(connString, "?") {
 		sep = "&"
 	}
-	connString += sep + "sslmode=disable"
+	if !strings.Contains(connString, "sslmode=") {
+		connString += sep + "sslmode=require"
+	}
 
 	db, err := sql.Open("postgres", connString)
 	if err != nil {
@@ -81,7 +83,11 @@ func RunMigrationsInSchema(ctx context.Context, pool *pgxpool.Pool, schemaName s
 	if strings.Contains(connString, "?") {
 		sep = "&"
 	}
-	connString += sep + "sslmode=disable&search_path=" + schemaName
+	if !strings.Contains(connString, "sslmode=") {
+		connString += sep + "sslmode=require"
+		sep = "&"
+	}
+	connString += sep + "search_path=" + schemaName
 
 	db, err := sql.Open("postgres", connString)
 	if err != nil {
