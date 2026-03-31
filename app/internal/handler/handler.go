@@ -1,6 +1,8 @@
 package handler
 
 import (
+	"net/http"
+
 	"github.com/labstack/echo-contrib/prometheus"
 	"github.com/labstack/echo/v4"
 	"gitlab.yurtal.tech/company/maryai/back/internal/config"
@@ -22,6 +24,10 @@ type Handler struct {
 func (h *Handler) Register(router *echo.Echo) {
 	p := prometheus.NewPrometheus("echo", nil)
 	p.Use(router)
+
+	router.GET("/healthz", func(c echo.Context) error {
+		return c.String(http.StatusOK, "ok")
+	})
 
 	api := router.Group("/api/v1")
 
