@@ -92,3 +92,7 @@ jwt:
   refresh-token:
     expires-in: 2592000
     max-age: 2592000
+
+swagger:
+  host: localhost:8080
+  scheme: http

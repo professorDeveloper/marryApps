@@ -12,10 +12,10 @@ import (
 
 	"github.com/labstack/echo/v4"
 	echoSwagger "github.com/swaggo/echo-swagger"
+	docs "gitlab.yurtal.tech/company/maryai/back/internal/api/docs"
 	"gitlab.yurtal.tech/company/maryai/back/internal/config"
 	"gitlab.yurtal.tech/company/maryai/back/internal/handler"
 	"gitlab.yurtal.tech/company/maryai/back/internal/middleware"
-
 	"gitlab.yurtal.tech/company/maryai/back/internal/migrate"
 	"gitlab.yurtal.tech/company/maryai/back/internal/repository"
 	"gitlab.yurtal.tech/company/maryai/back/internal/service"
@@ -26,17 +26,14 @@ import (
 	"gitlab.yurtal.tech/company/maryai/back/pkg/paymentPayme"
 	pg "gitlab.yurtal.tech/company/maryai/back/pkg/postgres"
 	"gitlab.yurtal.tech/company/maryai/back/pkg/validate"
-
-	_ "gitlab.yurtal.tech/company/maryai/back/internal/api/docs"
 )
 
 // @title MaryAI API
 // @version 1.0
 // @description MaryAI API server with multi-language support (uz, ru, en)
-// host localhost:8080
-// @host back.staging.maryai.yurtal.tech
+// @host localhost:8080
 // @BasePath /
-// @schemes https
+// @schemes http
 
 // @securityDefinitions.apikey BearerAuth
 // @in header
@@ -46,27 +43,73 @@ import (
 func Run(cfg *config.Config) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
+
 	l := logger.New(cfg.Logger.Level)
 
 	validate.Init()
 
-	clickClient := paymentClick.NewClient(slog.Default(), http.DefaultClient, paymentClick.BaseUrl(cfg.Click.Url), paymentClick.MerchantUserId(cfg.Click.MerchantUserID), paymentClick.SecretKey(cfg.Click.SecretKey), paymentClick.ServiceId(cfg.Click.ServiceID), paymentClick.MerchantId(cfg.Click.MerchantID), paymentClick.ReturnUrl(cfg.Click.ReturnUrl))
-	paymeClient := paymentPayme.NewClient(slog.Default(), http.DefaultClient, paymentPayme.BaseUrl(cfg.Payme.Url), paymentPayme.ClientKey(cfg.Payme.ClientKey), paymentPayme.MerchantId(cfg.Payme.MerchantID), paymentPayme.Login(cfg.Payme.Login), paymentPayme.Password(cfg.Payme.Password), paymentPayme.ReturnUrl(cfg.Payme.ReturnUrl))
+	clickClient := paymentClick.NewClient(
+		slog.Default(),
+		http.DefaultClient,
+		paymentClick.BaseUrl(cfg.Click.Url),
+		paymentClick.MerchantUserId(cfg.Click.MerchantUserID),
+		paymentClick.SecretKey(cfg.Click.SecretKey),
+		paymentClick.ServiceId(cfg.Click.ServiceID),
+		paymentClick.MerchantId(cfg.Click.MerchantID),
+		paymentClick.ReturnUrl(cfg.Click.ReturnUrl),
+	)
+
+	paymeClient := paymentPayme.NewClient(
+		slog.Default(),
+		http.DefaultClient,
+		paymentPayme.BaseUrl(cfg.Payme.Url),
+		paymentPayme.ClientKey(cfg.Payme.ClientKey),
+		paymentPayme.MerchantId(cfg.Payme.MerchantID),
+		paymentPayme.Login(cfg.Payme.Login),
+		paymentPayme.Password(cfg.Payme.Password),
+		paymentPayme.ReturnUrl(cfg.Payme.ReturnUrl),
+	)
 
 	e := echo.New()
+
+	swaggerHost := cfg.Swagger.Host
+	if swaggerHost == "" {
+		swaggerHost = "localhost:8080"
+	}
+
+	swaggerScheme := cfg.Swagger.Scheme
+	if swaggerScheme == "" {
+		swaggerScheme = "http"
+	}
+
+	docs.SwaggerInfo.Host = swaggerHost
+	docs.SwaggerInfo.Schemes = []string{swaggerScheme}
+	docs.SwaggerInfo.BasePath = "/"
+
 	middleware.SetupMiddleware(e, cfg)
 
-	mainPgClient, err := pg.New(pg.Username(cfg.MainPostgres.User), pg.Password(cfg.MainPostgres.Password),
-		pg.Host(cfg.MainPostgres.Host), pg.Port(cfg.MainPostgres.Port),
-		pg.Database(cfg.MainPostgres.Db), pg.MaxPoolSize(cfg.MainPostgres.MaxPoolSize))
+	mainPgClient, err := pg.New(
+		pg.Username(cfg.MainPostgres.User),
+		pg.Password(cfg.MainPostgres.Password),
+		pg.Host(cfg.MainPostgres.Host),
+		pg.Port(cfg.MainPostgres.Port),
+		pg.Database(cfg.MainPostgres.Db),
+		pg.MaxPoolSize(cfg.MainPostgres.MaxPoolSize),
+	)
 	if err != nil {
-		l.Fatalf("app - Run - pg.New(main): %v",  err)
+		l.Fatalf("app - Run - pg.New(main): %v", err)
 	}
 	defer mainPgClient.Close()
 
-	tenantPgClient, err := pg.New(pg.Username(cfg.Postgres.User), pg.Password(cfg.Postgres.Password),
-		pg.Host(cfg.Postgres.Host), pg.Port(cfg.Postgres.Port),
-		pg.Database(cfg.Postgres.Db), pg.MaxPoolSize(cfg.Postgres.MaxPoolSize), pg.SimpleProtocol())
+	tenantPgClient, err := pg.New(
+		pg.Username(cfg.Postgres.User),
+		pg.Password(cfg.Postgres.Password),
+		pg.Host(cfg.Postgres.Host),
+		pg.Port(cfg.Postgres.Port),
+		pg.Database(cfg.Postgres.Db),
+		pg.MaxPoolSize(cfg.Postgres.MaxPoolSize),
+		pg.SimpleProtocol(),
+	)
 	if err != nil {
 		l.Fatalf("app - Run - pg.New(tenant): %v", err)
 	}
@@ -87,22 +130,18 @@ func Run(cfg *config.Config) {
 		l.Fatalf("app - Run - RunMigrationsForAllTenantSchemas: %v", err)
 	}
 
-	// Seed test data (only if debug mode is enabled)
-	// if cfg.App.IsDebug {
-	// 	l.Infof("Debug mode enabled - seeding test data...")
-	// 	if err := migrate.SeedData(ctx, mainPgClient.Pool, tenantPgClient.Pool); err != nil {
-	// 		l.Warn("Failed to seed test data (this is non-fatal): %v", err)
-	// 	}
-	// }
-
-	minioClient, err := minio.New(minio.Endpoint(cfg.Minio.Endpoint), minio.AccessKeyID(cfg.Minio.AccessKey), minio.SecretAccessKey(cfg.Minio.SecretKey), minio.UseSSL(cfg.Minio.UseSSL))
+	minioClient, err := minio.New(
+		minio.Endpoint(cfg.Minio.Endpoint),
+		minio.AccessKeyID(cfg.Minio.AccessKey),
+		minio.SecretAccessKey(cfg.Minio.SecretKey),
+		minio.UseSSL(cfg.Minio.UseSSL),
+	)
 	if err != nil {
 		l.Fatalf("app - Run - minio.New: %v", err)
 	}
 
 	repos := repository.New(mainPgClient.Pool, tenantPgClient.Pool, minioClient)
-
-	service := service.New(cfg, repos, clickClient, paymeClient, minioClient)
+	svc := service.New(cfg, repos, clickClient, paymeClient, minioClient)
 
 	var fcmClient *notification.FCMClient
 	if cfg.Firebase.Enabled {
@@ -115,12 +154,12 @@ func Run(cfg *config.Config) {
 		}
 	}
 
-	handler := handler.New(l, cfg, service, repos, fcmClient)
-	handler.Register(e)
+	h := handler.New(l, cfg, svc, repos, fcmClient)
+	h.Register(e)
 
 	e.GET("/swagger/*", echoSwagger.WrapHandler)
 
-	errc := make(chan error)
+	errc := make(chan error, 1)
 
 	go func() {
 		c := make(chan os.Signal, 1)
@@ -129,8 +168,10 @@ func Run(cfg *config.Config) {
 	}()
 
 	go func() {
-		l.Info("starting server on %s", fmt.Sprintf(":%d", cfg.Server.Http.Port))
-		if err := e.Start(fmt.Sprintf(":%d", cfg.Server.Http.Port)); err != nil && err != http.ErrServerClosed {
+		addr := fmt.Sprintf(":%d", cfg.Server.Http.Port)
+		l.Infof("starting server on %s", addr)
+
+		if err := e.Start(addr); err != nil && err != http.ErrServerClosed {
 			l.Fatalf("app - Run - e.Start: %v", err)
 		}
 	}()
