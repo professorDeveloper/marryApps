@@ -27,6 +27,7 @@ type (
 		Click        ClickConfig            `yaml:"click"`
 		OTP          OTPConfig              `yaml:"otp"`
 		Firebase     FirebaseConfig         `yaml:"firebase"`
+		Swagger      SwaggerConfig          `yaml:"swagger"`
 	}
 
 	ClickConfig struct {
@@ -86,6 +87,10 @@ type (
 		WriteTimeout int        `yaml:"write-timeout" env:"HTTP_WRITE_TIMEOUT"`
 		Cors         CorsConfig `yaml:"cors"`
 		Ssl          bool       `yaml:"ssl" env:"HTTP_SSL"`
+	}
+	SwaggerConfig struct {
+		Host   string `yaml:"host" env:"SWAGGER_HOST"`
+		Scheme string `yaml:"scheme" env:"SWAGGER_SCHEME"`
 	}
 
 	CorsConfig struct {

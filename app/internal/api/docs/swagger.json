@@ -9,7 +9,7 @@
         "contact": {},
         "version": "1.0"
     },
-    "host": "back.staging.maryai.yurtal.tech",
+    "host": "api.meryai.uz",
     "basePath": "/",
     "paths": {
         "/api/v1/admin/brands": {
