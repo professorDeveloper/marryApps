@@ -316,3 +316,25 @@ func getLanguage(c echo.Context) string {
 	}
 	return "uz"
 }
+
+func RequireRoles(roles ...string) echo.MiddlewareFunc {
+	allowed := make(map[string]struct{}, len(roles))
+	for _, r := range roles {
+		allowed[strings.TrimSpace(strings.ToLower(r))] = struct{}{}
+	}
+
+	return func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(c echo.Context) error {
+			role, _ := c.Get("role").(string)
+			role = strings.TrimSpace(strings.ToLower(role))
+
+			if _, ok := allowed[role]; !ok {
+				return c.JSON(http.StatusForbidden, model.ErrorResponse{
+					Message: "Forbidden",
+				})
+			}
+
+			return next(c)
+		}
+	}
+}

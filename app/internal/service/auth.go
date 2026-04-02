@@ -634,6 +634,7 @@ func (s *AuthS) Refresh(ctx context.Context, req model.RefreshRequest, jwtCfg *c
 
 	claims, err := utils.ValidateJWTWithClaims(req.RefreshToken, jwtCfg.SecretKey)
 	if err != nil {
+		log.Printf("refresh: validate token failed: %v", err)
 		return model.RefreshResponse{}, errors.New(http.StatusText(http.StatusUnauthorized))
 	}
 
@@ -645,6 +646,7 @@ func (s *AuthS) Refresh(ctx context.Context, req model.RefreshRequest, jwtCfg *c
 			claims.UserID,
 		).Scan(&role)
 		if err != nil {
+			log.Printf("refresh global: role query failed for user=%s: %v", claims.UserID, err)
 			if errors.Is(err, pgx.ErrNoRows) {
 				return model.RefreshResponse{}, errors.New(http.StatusText(http.StatusUnauthorized))
 			}
@@ -664,6 +666,7 @@ func (s *AuthS) Refresh(ctx context.Context, req model.RefreshRequest, jwtCfg *c
 		if err != nil {
 			return model.RefreshResponse{}, err
 		}
+
 		refreshToken, err := utils.CreateJWTWithClaims(
 			time.Duration(jwtCfg.RefreshToken.ExpiresIn)*time.Second,
 			claims.UserID,
@@ -685,25 +688,43 @@ func (s *AuthS) Refresh(ctx context.Context, req model.RefreshRequest, jwtCfg *c
 	}
 
 	if claims.BrandID == nil {
+		log.Printf("refresh tenant: claims.BrandID is nil for user=%s", claims.UserID)
 		return model.RefreshResponse{}, errors.New(http.StatusText(http.StatusUnauthorized))
 	}
+
 	brandIDSlug := strings.TrimSpace(*claims.BrandID)
 	if brandIDSlug == "" {
+		log.Printf("refresh tenant: empty brand slug for user=%s", claims.UserID)
 		return model.RefreshResponse{}, errors.New(http.StatusText(http.StatusUnauthorized))
 	}
+
 	schemaName := fmt.Sprintf("tenant_%s", brandIDSlug)
 	tx, err := s.repo.PgRepo.TenantPool.Begin(ctx)
 	if err != nil {
+		log.Printf("refresh tenant: begin tx failed: %v", err)
 		return model.RefreshResponse{}, err
 	}
 	defer tx.Rollback(ctx)
 
 	if _, err := tx.Exec(ctx, fmt.Sprintf("SET LOCAL search_path TO \"%s\", public", schemaName)); err != nil {
+		log.Printf("refresh tenant: set search_path failed schema=%s err=%v", schemaName, err)
 		return model.RefreshResponse{}, errors.New(http.StatusText(http.StatusUnauthorized))
 	}
+	
+	if claims.BranchID != nil && strings.TrimSpace(*claims.BranchID) != "" {
+		if _, err := tx.Exec(ctx, "SET LOCAL app.branch_id = $1", strings.TrimSpace(*claims.BranchID)); err != nil {
+			return model.RefreshResponse{}, errors.New(http.StatusText(http.StatusUnauthorized))
+		}
+	}
+
 	q := s.repo.Tenant(ctx).WithTx(tx)
+
 	user, gErr := q.GetUserByID(ctx, claims.UserID)
 	if gErr != nil {
+		log.Printf("refresh tenant: GetUserByID failed user=%s schema=%s err=%v", claims.UserID, schemaName, gErr)
+		if errors.Is(gErr, pgx.ErrNoRows) {
+			return model.RefreshResponse{}, errors.New(http.StatusText(http.StatusUnauthorized))
+		}
 		return model.RefreshResponse{}, gErr
 	}
 
@@ -722,7 +743,15 @@ func (s *AuthS) Refresh(ctx context.Context, req model.RefreshRequest, jwtCfg *c
 		if sh, err := q.GetShiftByID(ctx, user.ShiftID.Bytes); err == nil {
 			s := sh.BranchID.String()
 			branchID = &s
+		} else {
+			log.Printf("refresh tenant: GetShiftByID failed shift=%s err=%v", user.ShiftID.Bytes, err)
 		}
+	}
+
+	var cashRegisterID *string
+	if user.CashRegisterID.Valid {
+		s := user.CashRegisterID.String()
+		cashRegisterID = &s
 	}
 
 	accessToken, err := utils.CreateJWTWithClaims(
@@ -730,25 +759,28 @@ func (s *AuthS) Refresh(ctx context.Context, req model.RefreshRequest, jwtCfg *c
 		user.ID,
 		brandID,
 		branchID,
-		nil,
+		cashRegisterID,
 		role,
 		false,
 		jwtCfg.SecretKey,
 	)
 	if err != nil {
+		log.Printf("refresh tenant: create access token failed: %v", err)
 		return model.RefreshResponse{}, err
 	}
+
 	refreshToken, err := utils.CreateJWTWithClaims(
 		time.Duration(jwtCfg.RefreshToken.ExpiresIn)*time.Second,
 		user.ID,
 		brandID,
 		branchID,
-		nil,
+		cashRegisterID,
 		role,
 		false,
 		jwtCfg.SecretKey,
 	)
 	if err != nil {
+		log.Printf("refresh tenant: create refresh token failed: %v", err)
 		return model.RefreshResponse{}, err
 	}
 

@@ -29995,9 +29995,9 @@ const docTemplate = `{
 // SwaggerInfo holds exported Swagger Info so clients can modify it
 var SwaggerInfo = &swag.Spec{
 	Version:          "1.0",
-	Host:             "api.meryai.uz",
+	Host:             "localhost:8080",
 	BasePath:         "/",
-	Schemes:          []string{"https"},
+	Schemes:          []string{"http"},
 	Title:            "MaryAI API",
 	Description:      "MaryAI API server with multi-language support (uz, ru, en)",
 	InfoInstanceName: "swagger",

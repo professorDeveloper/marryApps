@@ -1,6 +1,7 @@
 package model
 
 import (
+	"encoding/json"
 	"strings"
 	"time"
 )
@@ -72,14 +73,14 @@ func (d *Date) UnmarshalJSON(b []byte) error {
 }
 
 type UserResponse struct {
-	ID          string     `json:"id" example:"123e4567-e89b-12d3-a456-426614174000"`
-	FullName    *string    `json:"full_name,omitempty" example:"John Doe"`
-	Username    *string    `json:"username,omitempty" example:"admin"`
-	Role        *string    `json:"role,omitempty" example:"user"`
-	IsActive    bool       `json:"is_active" example:"true"`
-	Email       *string    `json:"email,omitempty" example:"user@example.com"`
-	PhoneNumber *string    `json:"phone_number,omitempty" example:"+998901234567"`
-	ShiftID     *string    `json:"shift_id,omitempty" example:"123e4567-e89b-12d3-a456-426614174000"`
+	ID             string     `json:"id" example:"123e4567-e89b-12d3-a456-426614174000"`
+	FullName       *string    `json:"full_name,omitempty" example:"John Doe"`
+	Username       *string    `json:"username,omitempty" example:"admin"`
+	Role           *string    `json:"role,omitempty" example:"user"`
+	IsActive       bool       `json:"is_active" example:"true"`
+	Email          *string    `json:"email,omitempty" example:"user@example.com"`
+	PhoneNumber    *string    `json:"phone_number,omitempty" example:"+998901234567"`
+	ShiftID        *string    `json:"shift_id,omitempty" example:"123e4567-e89b-12d3-a456-426614174000"`
 	BrandID        *string    `json:"brand_id,omitempty"         example:"123e4567-e89b-12d3-a456-426614174000"`
 	BranchID       *string    `json:"branch_id,omitempty"        example:"123e4567-e89b-12d3-a456-426614174000"`
 	CashRegisterID *string    `json:"cash_register_id,omitempty" example:"123e4567-e89b-12d3-a456-426614174000"`
@@ -117,8 +118,23 @@ type RefreshRequest struct {
 	RefreshToken string `json:"refreshToken" example:"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."`
 }
 
-type LogoutRequest struct {
-	AccessToken string `json:"accessToken" example:"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."`
+func (r *RefreshRequest) UnmarshalJSON(data []byte) error {
+	type Alias struct {
+		RefreshTokenCamel string `json:"refreshToken"`
+		RefreshTokenSnake string `json:"refresh_token"`
+	}
+
+	var aux Alias
+	if err := json.Unmarshal(data, &aux); err != nil {
+		return err
+	}
+
+	if aux.RefreshTokenCamel != "" {
+		r.RefreshToken = aux.RefreshTokenCamel
+		return nil
+	}
+	r.RefreshToken = aux.RefreshTokenSnake
+	return nil
 }
 
 type RefreshResponse struct {
