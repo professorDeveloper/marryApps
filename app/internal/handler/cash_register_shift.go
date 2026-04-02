@@ -24,6 +24,15 @@ func (h *Handler) OpenCashRegisterShift(c echo.Context) error {
 	if err := c.Bind(&req); err != nil {
 		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("invalid request", err.Error(), http.StatusBadRequest))
 	}
+	cashierID, _ := c.Get("user_id").(string)
+	if cashierID == "" {
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("cashier_id is required", "missing user_id in token", http.StatusBadRequest))
+	}
+	req.CashierID = cashierID
+
+	if cr, _ := c.Get("cash_register_id").(string); cr != "" && req.CashRegisterID == "" {
+		req.CashRegisterID = cr
+	}
 	resp, err := h.service.CashRegisterShift().OpenShift(c.Request().Context(), req)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("failed to open shift", err.Error(), http.StatusInternalServerError))

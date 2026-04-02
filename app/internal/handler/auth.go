@@ -82,8 +82,6 @@ func (h *Handler) LoginWithPincode(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("brand_id is required", "see logs for details", http.StatusBadRequest))
 	}
 
-
-
 	resp, err := h.service.Auth().LoginWithPincode(c.Request().Context(), req, &h.cfg.Jwt)
 	if err != nil {
 		log.Printf("Pincode login failed: %v", err)
@@ -235,7 +233,7 @@ func (h *Handler) Refresh(c echo.Context) error {
 	lang := c.Get("language").(string)
 	resp, err := h.service.Auth().Refresh(c.Request().Context(), req, &h.cfg.Jwt)
 	if err != nil {
-		fmt.Println(err)
+		log.Printf("refresh failed: %v", err)
 		if lang == "ru" {
 			return c.JSON(http.StatusUnauthorized, model.NewErrorResponse("ru: Xatolik login qilishda", "see logs for details", http.StatusInternalServerError))
 		}

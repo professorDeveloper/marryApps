@@ -22,19 +22,18 @@ func TenantMiddleware(repo *repository.Repository) echo.MiddlewareFunc {
 			isGlobal, _ := c.Get("is_global").(bool)
 			userID, _ := c.Get("user_id").(string)
 
-			log.Printf("TenantMiddleware: Initial state - brandIDStr=%q, isGlobal=%v, userID=%q", brandIDStr, isGlobal, userID)
+			log.Printf("TenantMiddleware: Initial state - brandIDStr=%q, branchIDStr=%q, isGlobal=%v, role=%q, userID=%q",
+				brandIDStr, branchIDStr, isGlobal, c.Get("role"), userID)
 
-			if brandIDStr == "" && isGlobal {
-				brandIDStr = c.Request().Header.Get("X-Brand-Id")
-				log.Printf("TenantMiddleware: Global superadmin - trying X-Brand-Id header: %q", brandIDStr)
-				if brandIDStr == "" {
-					log.Println("TenantMiddleware: Global superadmin: brand_id not found in token or X-Brand-Id header")
-					return c.JSON(http.StatusBadRequest, map[string]interface{}{
-						"message": "Global superadmin must specify X-Brand-Id header",
-					})
+			if branchIDStr == "" && !isGlobal {
+				role, _ := c.Get("role").(string)
+				if role == "superadmin" {
+					if h := c.Request().Header.Get("X-Branch-ID"); h != "" {
+						branchIDStr = h
+						c.Set("branch_id", branchIDStr)
+						log.Printf("TenantMiddleware: Brand superadmin using X-Branch-ID header: %s", branchIDStr)
+					}
 				}
-				log.Printf("TenantMiddleware: Global superadmin using X-Brand-Id header: %s", brandIDStr)
-				c.Set("brand_id", brandIDStr)
 			}
 
 			userIDStr, _ := c.Get("user_id").(string)
@@ -88,7 +87,8 @@ func TenantMiddleware(repo *repository.Repository) echo.MiddlewareFunc {
 				role, _ := c.Get("role").(string)
 				if role == "superadmin" {
 					if h := c.Request().Header.Get("X-Branch-ID"); h != "" {
-						branchIDStr = h
+						branchIDStr = strings.TrimSpace(h)
+						c.Set("branch_id", branchIDStr)
 						log.Printf("TenantMiddleware: Brand superadmin using X-Branch-ID header: %s", branchIDStr)
 					}
 				}
