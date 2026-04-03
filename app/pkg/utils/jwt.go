@@ -8,6 +8,11 @@ import (
 	"github.com/google/uuid"
 )
 
+const (
+	TokenTypeAccess  = "access"
+	TokenTypeRefresh = "refresh"
+)
+
 type JWTClaims struct {
 	UserID         uuid.UUID `json:"user_id"`
 	BrandID        *string   `json:"brand_id,omitempty"`
@@ -15,10 +20,21 @@ type JWTClaims struct {
 	CashRegisterID *string   `json:"cash_register_id,omitempty"`
 	Role           string    `json:"role"`
 	IsGlobal       bool      `json:"is_global"`
+	TokenType      string    `json:"token_type"`
 	jwt.StandardClaims
 }
 
-func CreateJWTWithClaims(ttl time.Duration, userID uuid.UUID, brandID *string, branchID *string, cashRegisterID *string, role string, isGlobal bool, secretKey string) (string, error) {
+func CreateJWTWithClaims(
+	ttl time.Duration,
+	userID uuid.UUID,
+	brandID *string,
+	branchID *string,
+	cashRegisterID *string,
+	role string,
+	isGlobal bool,
+	tokenType string,
+	secretKey string,
+) (string, error) {
 	now := time.Now().UTC()
 	expiresAt := now.Add(ttl)
 
@@ -29,6 +45,7 @@ func CreateJWTWithClaims(ttl time.Duration, userID uuid.UUID, brandID *string, b
 		CashRegisterID: cashRegisterID,
 		Role:           role,
 		IsGlobal:       isGlobal,
+		TokenType:      tokenType,
 		StandardClaims: jwt.StandardClaims{
 			Subject:   userID.String(),
 			ExpiresAt: expiresAt.Unix(),

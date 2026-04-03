@@ -51,11 +51,9 @@ func GenerateUniqueUsername() string {
 }
 
 func HashPassword(password string) (string, error) {
-	fmt.Println("password", password)
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
-
 	if err != nil {
-		return "", fmt.Errorf("could not hash password %w", err)
+		return "", fmt.Errorf("could not hash password: %w", err)
 	}
 	return string(hashedPassword), nil
 }

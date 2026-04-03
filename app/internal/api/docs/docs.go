@@ -601,7 +601,7 @@ const docTemplate = `{
         },
         "/api/v1/auth/login-pincode": {
             "post": {
-                "description": "Authenticate user using password and optional pincode, with brand_id (slug).",
+                "description": "Authenticate POS staff using brand_id, pos_password, and pincode",
                 "consumes": [
                     "application/json"
                 ],
@@ -611,10 +611,10 @@ const docTemplate = `{
                 "tags": [
                     "auth"
                 ],
-                "summary": "User login with pincode",
+                "summary": "POS staff login with pincode",
                 "parameters": [
                     {
-                        "description": "Login credentials (password and brand_id required, pincode optional)",
+                        "description": "POS login credentials",
                         "name": "request",
                         "in": "body",
                         "required": true,
@@ -19805,6 +19805,103 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/settings/pos-password": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Update POS password for current tenant. Only admin/manager/superadmin can do this.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "settings"
+                ],
+                "summary": "Update POS password",
+                "parameters": [
+                    {
+                        "description": "POS password update payload",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.UpdatePOSPasswordRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.UpdatePOSPasswordSwaggerResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorData"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorData"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorData"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/settings/pos-password/status": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns whether POS password is configured for current tenant",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "settings"
+                ],
+                "summary": "Get POS password status",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.POSPasswordStatusSwaggerResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorData"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorData"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/shifts": {
             "get": {
                 "security": [
@@ -23962,6 +24059,9 @@ const docTemplate = `{
                     ],
                     "example": "free"
                 },
+                "table_type": {
+                    "type": "string"
+                },
                 "updated_at": {
                     "type": "string"
                 },
@@ -24618,6 +24718,10 @@ const docTemplate = `{
                 "status": {
                     "type": "string",
                     "example": "free"
+                },
+                "table_type": {
+                    "type": "string",
+                    "example": "simple"
                 },
                 "width": {
                     "type": "integer",
@@ -27747,6 +27851,34 @@ const docTemplate = `{
                 }
             }
         },
+        "model.POSPasswordStatusResponse": {
+            "type": "object",
+            "properties": {
+                "isConfigured": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "model.POSPasswordStatusSwaggerResponse": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "integer",
+                    "example": 200
+                },
+                "data": {
+                    "$ref": "#/definitions/model.POSPasswordStatusResponse"
+                },
+                "message": {
+                    "type": "string",
+                    "example": "POS password holati olindi"
+                },
+                "status": {
+                    "type": "string",
+                    "example": "success"
+                }
+            }
+        },
         "model.PaginatedDeductionsResponse": {
             "type": "object",
             "properties": {
@@ -27806,13 +27938,13 @@ const docTemplate = `{
                     "type": "string",
                     "example": "eP8...firebase...token"
                 },
-                "password": {
-                    "type": "string",
-                    "example": "Password:Javohir"
-                },
                 "pincode": {
                     "type": "string",
                     "example": "1234"
+                },
+                "pos_password": {
+                    "type": "string",
+                    "example": "123456"
                 }
             }
         },
@@ -28744,6 +28876,10 @@ const docTemplate = `{
                     "type": "string",
                     "example": "available"
                 },
+                "table_type": {
+                    "type": "string",
+                    "example": "time_based"
+                },
                 "width": {
                     "type": "integer",
                     "example": 0
@@ -29400,6 +29536,48 @@ const docTemplate = `{
                 "storage_id": {
                     "type": "string",
                     "example": "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+                }
+            }
+        },
+        "model.UpdatePOSPasswordRequest": {
+            "type": "object",
+            "properties": {
+                "currentPassword": {
+                    "type": "string",
+                    "example": "111111"
+                },
+                "newPassword": {
+                    "type": "string",
+                    "example": "222222"
+                }
+            }
+        },
+        "model.UpdatePOSPasswordResponse": {
+            "type": "object",
+            "properties": {
+                "message": {
+                    "type": "string",
+                    "example": "updated"
+                }
+            }
+        },
+        "model.UpdatePOSPasswordSwaggerResponse": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "integer",
+                    "example": 200
+                },
+                "data": {
+                    "$ref": "#/definitions/model.UpdatePOSPasswordResponse"
+                },
+                "message": {
+                    "type": "string",
+                    "example": "POS password muvaffaqiyatli yangilandi"
+                },
+                "status": {
+                    "type": "string",
+                    "example": "success"
                 }
             }
         },

@@ -2,11 +2,17 @@ package model
 
 import "time"
 
-type TableStatus string
+type (
+	TableStatus string
+	TableType   string
+)
 
 const (
 	TableStatusFree TableStatus = "free"
 	TableStatusBusy TableStatus = "busy"
+
+	TableTypeSimple    TableType = "simple"
+	TableTypeTimeBased TableType = "time_based"
 )
 
 type CafeTable struct {
@@ -25,16 +31,17 @@ type CafeTable struct {
 }
 
 type CreateCafeTableRequest struct {
-	HallID       string   `json:"hall_id" validate:"required" example:"a1b2c3d4-e5f6-4a5b-8c9d-e0f1a2b3c4d5"`
-	Number       int32    `json:"number" validate:"required,min=1" example:"5"`
-	Capacity     int32    `json:"capacity" validate:"required,min=1" example:"4"`
-	Status       string   `json:"status" example:"free"`
-	PosX         *int32   `json:"pos_x,omitempty" example:"0"`
-	PosY         *int32   `json:"pos_y,omitempty" example:"0"`
-	Width        *int32   `json:"width,omitempty" example:"0"`
-	Height       *int32   `json:"height,omitempty" example:"0"`
-	Rotation     *int32   `json:"rotation,omitempty" example:"0"`
+	HallID       string  `json:"hall_id" validate:"required" example:"a1b2c3d4-e5f6-4a5b-8c9d-e0f1a2b3c4d5"`
+	Number       int32   `json:"number" validate:"required,min=1" example:"5"`
+	Capacity     int32   `json:"capacity" validate:"required,min=1" example:"4"`
+	Status       string  `json:"status" example:"free"`
+	PosX         *int32  `json:"pos_x,omitempty" example:"0"`
+	PosY         *int32  `json:"pos_y,omitempty" example:"0"`
+	Width        *int32  `json:"width,omitempty" example:"0"`
+	Height       *int32  `json:"height,omitempty" example:"0"`
+	Rotation     *int32  `json:"rotation,omitempty" example:"0"`
 	PricePerHour *string `json:"price_per_hour,omitempty" example:"50000"`
+	TableType    *string `json:"table_type,omitempty" example:"simple"`
 }
 
 type UpdateCafeTableRequest struct {
@@ -48,6 +55,7 @@ type UpdateCafeTableRequest struct {
 	Height       *int32  `json:"height,omitempty" example:"0"`
 	Rotation     *int32  `json:"rotation,omitempty" example:"0"`
 	PricePerHour *string `json:"price_per_hour,omitempty" example:"50000"`
+	TableType    *string `json:"table_type,omitempty" example:"time_based"`
 }
 
 type UpdateCafeTableStatusRequest struct {
@@ -60,6 +68,7 @@ type CafeTableResponse struct {
 	Number       int32       `json:"number" example:"5"`
 	Capacity     int32       `json:"capacity" example:"4"`
 	Status       TableStatus `json:"status" example:"free"`
+	TableType    string      `json:"table_type"`
 	PosX         int32       `json:"pos_x" example:"0"`
 	PosY         int32       `json:"pos_y" example:"0"`
 	Width        int32       `json:"width" example:"0"`
