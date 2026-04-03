@@ -60,6 +60,124 @@ func NewAuthS(cfg *config.Config, repo *repository.Repository) *AuthS {
 		repo: repo,
 	}
 }
+func normalizedRole(role string) string {
+	return strings.ToLower(strings.TrimSpace(role))
+}
+
+func canUseTenantPasswordLogin(role string) bool {
+	switch normalizedRole(role) {
+	case "admin", "manager", "superadmin":
+		return true
+	default:
+		return false
+	}
+}
+
+func canUsePincodeLogin(role string) bool {
+	switch normalizedRole(role) {
+	case "cashier", "waiter", "kitchen":
+		return true
+	default:
+		return false
+	}
+}
+
+func canUseGlobalLogin(role string) bool {
+	return normalizedRole(role) == "superadmin"
+}
+
+func buildTenantLoginResponse(
+	ctx context.Context,
+	q *pg.Queries,
+	user pg.User,
+	brandIDSlug string,
+	jwtCfg *config.JwtConfig,
+) (model.LoginResponse, error) {
+	brandID := &brandIDSlug
+
+	role := "user"
+	if roleStr, ok := roleToString(user.Role); ok {
+		role = normalizedRole(roleStr)
+	}
+
+	var branchID *string
+	if user.BranchID.Valid {
+		s := user.BranchID.String()
+		branchID = &s
+	} else if user.ShiftID.Valid {
+		if sh, err := q.GetShiftByID(ctx, user.ShiftID.Bytes); err == nil {
+			s := sh.BranchID.String()
+			branchID = &s
+		}
+	}
+
+	var cashRegisterID *string
+	if user.CashRegisterID.Valid {
+		s := user.CashRegisterID.String()
+		cashRegisterID = &s
+	}
+
+	accessToken, err := utils.CreateJWTWithClaims(
+		time.Duration(jwtCfg.AccessToken.ExpiresIn)*time.Second,
+		user.ID,
+		brandID,
+		branchID,
+		cashRegisterID,
+		role,
+		false,
+		utils.TokenTypeAccess,
+		jwtCfg.SecretKey,
+	)
+	if err != nil {
+		return model.LoginResponse{}, err
+	}
+
+	refreshToken, err := utils.CreateJWTWithClaims(
+		time.Duration(jwtCfg.RefreshToken.ExpiresIn)*time.Second,
+		user.ID,
+		brandID,
+		branchID,
+		cashRegisterID,
+		role,
+		false,
+		utils.TokenTypeRefresh,
+		jwtCfg.SecretKey,
+	)
+	if err != nil {
+		return model.LoginResponse{}, err
+	}
+
+	return model.LoginResponse{
+		AccessToken:  accessToken,
+		RefreshToken: refreshToken,
+		User:         toUserResponse(user),
+	}, nil
+}
+
+func (s *AuthS) verifyPOSPassword(ctx context.Context, tx pgx.Tx, posPassword string) (bool, error) {
+	var hash string
+	err := tx.QueryRow(ctx, `
+		SELECT pos_password_hash
+		FROM pos_auth_settings
+		WHERE id = 1
+	`).Scan(&hash)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return false, nil
+		}
+		return false, err
+	}
+
+	if strings.TrimSpace(hash) == "" {
+		return false, nil
+	}
+
+	if err := utils.VerifyPassword(hash, posPassword); err != nil {
+		return false, nil
+	}
+
+	return true, nil
+}
 
 func (s *AuthS) Register(ctx context.Context, req model.RegisterRequest) error {
 	if req.PhoneNumber == "" {
@@ -107,7 +225,7 @@ func (s *AuthS) Register(ctx context.Context, req model.RegisterRequest) error {
 		schemaName := fmt.Sprintf("tenant_%s", brandIDSlug)
 		log.Printf("Setting schema to: %s for user registration", schemaName)
 
-		tx, err := s.repo.TenantPool.Begin(ctx)
+		tx, err := s.repo.PgRepo.TenantPool.Begin(ctx)
 		if err != nil {
 			return fmt.Errorf("failed to begin transaction: %w", err)
 		}
@@ -152,14 +270,6 @@ func (s *AuthS) Register(ctx context.Context, req model.RegisterRequest) error {
 			return fmt.Errorf("failed to check user existence: %w", err)
 		}
 	}
-	var hashPassword *string
-	if strings.TrimSpace(req.Password) != "" {
-		h, err := utils.HashPassword(req.Password)
-		if err != nil {
-			return fmt.Errorf("failed to process password: %w", err)
-		}
-		hashPassword = &h
-	}
 	validRoles := map[string]string{
 		"admin":      "admin",
 		"user":       "user",
@@ -174,6 +284,28 @@ func (s *AuthS) Register(ctx context.Context, req model.RegisterRequest) error {
 	if !validRole {
 		userRole = "user"
 		log.Printf("Using default role: %s", userRole)
+	}
+
+	// role bo‘yicha credential policy
+	switch userRole {
+	case "admin", "manager", "superadmin":
+		if strings.TrimSpace(req.Password) == "" {
+			return fmt.Errorf("password is required for role %s", userRole)
+		}
+
+	case "cashier", "waiter", "kitchen":
+		if strings.TrimSpace(req.Pincode) == "" {
+			return fmt.Errorf("pincode is required for role %s", userRole)
+		}
+	}
+
+	var hashPassword *string
+	if strings.TrimSpace(req.Password) != "" {
+		h, err := utils.HashPassword(req.Password)
+		if err != nil {
+			return fmt.Errorf("failed to process password: %w", err)
+		}
+		hashPassword = &h
 	}
 
 	fullName := strings.TrimSpace(req.FullName)
@@ -216,13 +348,14 @@ func (s *AuthS) Register(ctx context.Context, req model.RegisterRequest) error {
 		HashPassword:   hashPassword,
 		Username:       &username,
 		BrandID:        brandID,
+		IsActive:       true,
 		BranchID:       branchUUID,
 		CashRegisterID: cashRegUUID,
 	}
 
 	if role != "superadmin" && brandIDSlug != "" {
 		schemaName := fmt.Sprintf("tenant_%s", brandIDSlug)
-		tx, err := s.repo.TenantPool.Begin(ctx)
+		tx, err := s.repo.PgRepo.TenantPool.Begin(ctx)
 		if err != nil {
 			return fmt.Errorf("failed to begin transaction: %w", err)
 		}
@@ -280,44 +413,61 @@ func (s *AuthS) Register(ctx context.Context, req model.RegisterRequest) error {
 }
 
 func (s *AuthS) Login(ctx context.Context, req model.LoginRequest, jwtCfg *config.JwtConfig) (model.LoginResponse, error) {
-	if req.Username == "" {
-		return model.LoginResponse{}, errors.New(http.StatusText(http.StatusBadRequest))
-	}
-	if strings.TrimSpace(req.Password) == "" {
-		return model.LoginResponse{}, errors.New(http.StatusText(http.StatusBadRequest))
-	}
+	username := strings.TrimSpace(req.Username)
+	password := strings.TrimSpace(req.Password)
 
-	// Check if brand_id is provided, if not try global login
+	if username == "" {
+		return model.LoginResponse{}, errors.New(http.StatusText(http.StatusBadRequest))
+	}
+	if password == "" {
+		return model.LoginResponse{}, errors.New(http.StatusText(http.StatusBadRequest))
+	}
 	if req.BrandID == nil || strings.TrimSpace(*req.BrandID) == "" {
-		log.Printf("Login: No brand_id provided, attempting global login for username: %s", req.Username)
-		return s.LoginGlobal(ctx, req, jwtCfg)
+		return model.LoginResponse{}, errors.New("brand_id is required")
 	}
 
 	brandIDSlug := strings.TrimSpace(*req.BrandID)
 	schemaName := fmt.Sprintf("tenant_%s", brandIDSlug)
+
 	tx, err := s.repo.PgRepo.TenantPool.Begin(ctx)
 	if err != nil {
 		return model.LoginResponse{}, err
 	}
 	defer tx.Rollback(ctx)
 
-	if _, err := tx.Exec(ctx, fmt.Sprintf("SET LOCAL search_path TO \"%s\", public", schemaName)); err != nil {
+	if _, err := tx.Exec(ctx, fmt.Sprintf(`SET LOCAL search_path TO "%s", public`, schemaName)); err != nil {
 		return model.LoginResponse{}, errors.New(http.StatusText(http.StatusUnauthorized))
 	}
 
 	q := s.repo.Tenant(ctx).WithTx(tx)
-	user, err := q.GetUserByUsername(ctx, &req.Username)
+
+	user, err := q.GetUserByUsername(ctx, &username)
 	if err != nil {
 		return model.LoginResponse{}, errors.New(http.StatusText(http.StatusUnauthorized))
 	}
-	if user.HashPassword == nil || *user.HashPassword == "" {
-		return model.LoginResponse{}, errors.New(http.StatusText(http.StatusUnauthorized))
-	}
-	if err := utils.VerifyPassword(*user.HashPassword, req.Password); err != nil {
+
+	if !user.IsActive {
 		return model.LoginResponse{}, errors.New(http.StatusText(http.StatusUnauthorized))
 	}
 
-	// Save FCM token if provided
+	role := "user"
+	if roleStr, ok := roleToString(user.Role); ok {
+		role = normalizedRole(roleStr)
+	}
+
+	if !canUseTenantPasswordLogin(role) {
+		log.Printf("Login: role=%s cannot use tenant password login user=%s", role, user.ID)
+		return model.LoginResponse{}, errors.New(http.StatusText(http.StatusUnauthorized))
+	}
+
+	if user.HashPassword == nil || *user.HashPassword == "" {
+		return model.LoginResponse{}, errors.New(http.StatusText(http.StatusUnauthorized))
+	}
+
+	if err := utils.VerifyPassword(*user.HashPassword, password); err != nil {
+		return model.LoginResponse{}, errors.New(http.StatusText(http.StatusUnauthorized))
+	}
+
 	if req.FCMToken != nil && strings.TrimSpace(*req.FCMToken) != "" {
 		_, err := q.UpdateUserFCMToken(ctx, pg.UpdateUserFCMTokenParams{
 			ID:       user.ID,
@@ -325,83 +475,29 @@ func (s *AuthS) Login(ctx context.Context, req model.LoginRequest, jwtCfg *confi
 		})
 		if err != nil {
 			log.Printf("Failed to save FCM token: %v", err)
-			// Don't fail login if FCM token save fails
 		}
 	}
 
-	brandID := &brandIDSlug
-
-	role := "user"
-	if roleStr, ok := roleToString(user.Role); ok {
-		role = roleStr
-	}
-
-	var branchID *string
-	if user.BranchID.Valid {
-		s := user.BranchID.String()
-		branchID = &s
-	} else if user.ShiftID.Valid {
-		if sh, err := q.GetShiftByID(ctx, user.ShiftID.Bytes); err == nil {
-			s := sh.BranchID.String()
-			branchID = &s
-		}
-	}
-
-	var cashRegisterID *string
-	if user.CashRegisterID.Valid {
-		s := user.CashRegisterID.String()
-		cashRegisterID = &s
-	}
-
-	accessToken, err := utils.CreateJWTWithClaims(
-		time.Duration(jwtCfg.AccessToken.ExpiresIn)*time.Second,
-		user.ID,
-		brandID,
-		branchID,
-		cashRegisterID,
-		role,
-		false,
-		jwtCfg.SecretKey,
-	)
-	if err != nil {
-		return model.LoginResponse{}, err
-	}
-	refreshToken, err := utils.CreateJWTWithClaims(
-		time.Duration(jwtCfg.RefreshToken.ExpiresIn)*time.Second,
-		user.ID,
-		brandID,
-		branchID,
-		cashRegisterID,
-		role,
-		false,
-		jwtCfg.SecretKey,
-	)
-	if err != nil {
-		return model.LoginResponse{}, err
-	}
-
-	return model.LoginResponse{
-		AccessToken:  accessToken,
-		RefreshToken: refreshToken,
-		User:         toUserResponse(user),
-	}, nil
+	return buildTenantLoginResponse(ctx, q, user, brandIDSlug, jwtCfg)
 }
 
 func (s *AuthS) LoginWithPincode(ctx context.Context, req model.PincodeLoginRequest, jwtCfg *config.JwtConfig) (model.LoginResponse, error) {
-	// Validate required fields
-	if strings.TrimSpace(req.Password) == "" {
-		return model.LoginResponse{}, errors.New("password is required")
-	}
-	if strings.TrimSpace(req.BrandID) == "" {
-		return model.LoginResponse{}, errors.New(http.StatusText(http.StatusBadRequest))
-	}
-
-	// Pincode is optional - treat empty string as nil
-	if req.Pincode != nil && strings.TrimSpace(*req.Pincode) == "" {
-		req.Pincode = nil
-	}
-
 	brandIDSlug := strings.TrimSpace(req.BrandID)
+	posPassword := strings.TrimSpace(req.PosPassword)
+
+	if brandIDSlug == "" {
+		return model.LoginResponse{}, errors.New("brand_id is required")
+	}
+	if posPassword == "" {
+		return model.LoginResponse{}, errors.New("pos_password is required")
+	}
+	if req.Pincode == nil || strings.TrimSpace(*req.Pincode) == "" {
+		return model.LoginResponse{}, errors.New("pincode is required")
+	}
+
+	pincode := strings.TrimSpace(*req.Pincode)
+	req.Pincode = &pincode
+
 	schemaName := fmt.Sprintf("tenant_%s", brandIDSlug)
 	tx, err := s.repo.PgRepo.TenantPool.Begin(ctx)
 	if err != nil {
@@ -409,60 +505,42 @@ func (s *AuthS) LoginWithPincode(ctx context.Context, req model.PincodeLoginRequ
 	}
 	defer tx.Rollback(ctx)
 
-	if _, err := tx.Exec(ctx, fmt.Sprintf("SET LOCAL search_path TO \"%s\", public", schemaName)); err != nil {
+	if _, err := tx.Exec(ctx, fmt.Sprintf(`SET LOCAL search_path TO "%s", public`, schemaName)); err != nil {
 		return model.LoginResponse{}, errors.New(http.StatusText(http.StatusUnauthorized))
 	}
 
 	q := s.repo.Tenant(ctx).WithTx(tx)
 
-	var user pg.User
-
-	// Try to find user by pincode if provided
-	if req.Pincode != nil {
-		foundUser, err := q.GetUserByPincode(ctx, req.Pincode)
-		if err != nil {
-			log.Printf("LoginWithPincode: User not found with pincode: %s, error: %v", *req.Pincode, err)
-			return model.LoginResponse{}, errors.New(http.StatusText(http.StatusUnauthorized))
-		}
-		user = foundUser
-	} else {
-		// No pincode provided - get all users and try to verify password with each
-		// This is for first login without pincode
-		allUsers, err := q.GetAllUsers(ctx)
-		if err != nil {
-			log.Printf("LoginWithPincode: Failed to get all users: %v", err)
-			return model.LoginResponse{}, errors.New(http.StatusText(http.StatusUnauthorized))
-		}
-
-		// Try to find user by password verification
-		foundUser := false
-		for _, u := range allUsers {
-			if u.HashPassword != nil && *u.HashPassword != "" {
-				if err := utils.VerifyPassword(*u.HashPassword, req.Password); err == nil {
-					// Password matches
-					user = u
-					foundUser = true
-					break
-				}
-			}
-		}
-
-		if !foundUser {
-			log.Printf("LoginWithPincode: No user found with matching password")
-			return model.LoginResponse{}, errors.New(http.StatusText(http.StatusUnauthorized))
-		}
+	ok, err := s.verifyPOSPassword(ctx, tx, posPassword)
+	if err != nil {
+		log.Printf("LoginWithPincode: verifyPOSPassword failed: %v", err)
+		return model.LoginResponse{}, err
 	}
-
-	// Verify password matches (double check if found by pincode)
-	if user.HashPassword == nil || *user.HashPassword == "" {
-		return model.LoginResponse{}, errors.New(http.StatusText(http.StatusUnauthorized))
-	}
-	if err := utils.VerifyPassword(*user.HashPassword, req.Password); err != nil {
-		log.Printf("LoginWithPincode: Password verification failed for user: %s", user.ID)
+	if !ok {
+		log.Printf("LoginWithPincode: invalid POS password for brand=%s", brandIDSlug)
 		return model.LoginResponse{}, errors.New(http.StatusText(http.StatusUnauthorized))
 	}
 
-	// Save FCM token if provided
+	user, err := q.GetUserByPincode(ctx, req.Pincode)
+	if err != nil {
+		log.Printf("LoginWithPincode: user not found by pincode: %v", err)
+		return model.LoginResponse{}, errors.New(http.StatusText(http.StatusUnauthorized))
+	}
+
+	if !user.IsActive {
+		return model.LoginResponse{}, errors.New(http.StatusText(http.StatusUnauthorized))
+	}
+
+	role := "user"
+	if roleStr, ok := roleToString(user.Role); ok {
+		role = normalizedRole(roleStr)
+	}
+
+	if !canUsePincodeLogin(role) {
+		log.Printf("LoginWithPincode: role=%s cannot use POS pincode login user=%s", role, user.ID)
+		return model.LoginResponse{}, errors.New(http.StatusText(http.StatusUnauthorized))
+	}
+
 	if req.FCMToken != nil && strings.TrimSpace(*req.FCMToken) != "" {
 		_, err := q.UpdateUserFCMToken(ctx, pg.UpdateUserFCMTokenParams{
 			ID:       user.ID,
@@ -470,81 +548,19 @@ func (s *AuthS) LoginWithPincode(ctx context.Context, req model.PincodeLoginRequ
 		})
 		if err != nil {
 			log.Printf("Failed to save FCM token: %v", err)
-			// Don't fail login if FCM token save fails
 		}
 	}
 
-	brandID := &brandIDSlug
-
-	role := "user"
-	if roleStr, ok := roleToString(user.Role); ok {
-		role = roleStr
-	}
-
-	log.Printf("LoginWithPincode: Successfully authenticated user %s with role %s", user.ID, role)
-
-	var branchID *string
-	if user.BranchID.Valid {
-		s := user.BranchID.String()
-		branchID = &s
-	} else if user.ShiftID.Valid {
-		if sh, err := q.GetShiftByID(ctx, user.ShiftID.Bytes); err == nil {
-			s := sh.BranchID.String()
-			branchID = &s
-		}
-	}
-
-	var cashRegisterID *string
-	if user.CashRegisterID.Valid {
-		s := user.CashRegisterID.String()
-		cashRegisterID = &s
-	}
-
-	accessToken, err := utils.CreateJWTWithClaims(
-		time.Duration(jwtCfg.AccessToken.ExpiresIn)*time.Second,
-		user.ID,
-		brandID,
-		branchID,
-		cashRegisterID,
-		role,
-		false,
-		jwtCfg.SecretKey,
-	)
-	if err != nil {
-		return model.LoginResponse{}, err
-	}
-	refreshToken, err := utils.CreateJWTWithClaims(
-		time.Duration(jwtCfg.RefreshToken.ExpiresIn)*time.Second,
-		user.ID,
-		brandID,
-		branchID,
-		cashRegisterID,
-		role,
-		false,
-		jwtCfg.SecretKey,
-	)
-	if err != nil {
-		return model.LoginResponse{}, err
-	}
-
-	return model.LoginResponse{
-		AccessToken:  accessToken,
-		RefreshToken: refreshToken,
-		User:         toUserResponse(user),
-	}, nil
+	return buildTenantLoginResponse(ctx, q, user, brandIDSlug, jwtCfg)
 }
 
 func (s *AuthS) LoginGlobal(ctx context.Context, req model.LoginRequest, jwtCfg *config.JwtConfig) (model.LoginResponse, error) {
-	if strings.TrimSpace(req.Username) == "" {
-		return model.LoginResponse{}, errors.New(http.StatusText(http.StatusBadRequest))
-	}
-	if strings.TrimSpace(req.Password) == "" {
-		return model.LoginResponse{}, errors.New(http.StatusText(http.StatusBadRequest))
-	}
-
 	username := strings.TrimSpace(req.Username)
-	password := req.Password
-	log.Printf("LoginGlobal: Attempting login for username: %s", username)
+	password := strings.TrimSpace(req.Password)
+
+	if username == "" || password == "" {
+		return model.LoginResponse{}, errors.New(http.StatusText(http.StatusBadRequest))
+	}
 
 	type mainUser struct {
 		ID       uuid.UUID
@@ -561,27 +577,21 @@ func (s *AuthS) LoginGlobal(ctx context.Context, req model.LoginRequest, jwtCfg 
 		username,
 	).Scan(&u.ID, &u.Username, &u.Password, &u.Email, &u.Role)
 	if err != nil {
-		log.Printf("LoginGlobal: User lookup failed: %v", err)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return model.LoginResponse{}, errors.New(http.StatusText(http.StatusUnauthorized))
 		}
 		return model.LoginResponse{}, err
 	}
 
-	log.Printf("LoginGlobal: User found. Username: %s, Email: %s, Role: %s", u.Username, u.Email, u.Role)
+	role := normalizedRole(u.Role)
+	if !canUseGlobalLogin(role) {
+		log.Printf("LoginGlobal: role=%s cannot use global login user=%s", role, u.ID)
+		return model.LoginResponse{}, errors.New(http.StatusText(http.StatusUnauthorized))
+	}
 
-	// Try bcrypt verification first (for new hashed passwords)
-	bcryptErr := utils.VerifyPassword(u.Password, password)
-	if bcryptErr != nil {
-		// Fallback to plain text comparison (for legacy/old passwords in main DB)
-		if u.Password == password {
-			log.Printf("LoginGlobal: User authenticated with plain text password: %s", u.Username)
-		} else {
-			log.Printf("LoginGlobal: Password verification failed for user %s (bcrypt: %v, plain text: mismatch)", u.Username, bcryptErr)
-			return model.LoginResponse{}, errors.New(http.StatusText(http.StatusUnauthorized))
-		}
-	} else {
-		log.Printf("LoginGlobal: Password verified with bcrypt for user %s", u.Username)
+	if err := utils.VerifyPassword(u.Password, password); err != nil {
+		log.Printf("LoginGlobal: Password verification failed for user %s", u.Username)
+		return model.LoginResponse{}, errors.New(http.StatusText(http.StatusUnauthorized))
 	}
 
 	accessToken, err := utils.CreateJWTWithClaims(
@@ -590,28 +600,31 @@ func (s *AuthS) LoginGlobal(ctx context.Context, req model.LoginRequest, jwtCfg 
 		nil,
 		nil,
 		nil,
-		u.Role,
+		role,
 		true,
-		jwtCfg.SecretKey,
-	)
-	if err != nil {
-		return model.LoginResponse{}, err
-	}
-	refreshToken, err := utils.CreateJWTWithClaims(
-		time.Duration(jwtCfg.RefreshToken.ExpiresIn)*time.Second,
-		u.ID,
-		nil,
-		nil,
-		nil,
-		u.Role,
-		true,
+		utils.TokenTypeAccess,
 		jwtCfg.SecretKey,
 	)
 	if err != nil {
 		return model.LoginResponse{}, err
 	}
 
-	role := u.Role
+	refreshToken, err := utils.CreateJWTWithClaims(
+		time.Duration(jwtCfg.RefreshToken.ExpiresIn)*time.Second,
+		u.ID,
+		nil,
+		nil,
+		nil,
+		role,
+		true,
+		utils.TokenTypeRefresh,
+		jwtCfg.SecretKey,
+	)
+	if err != nil {
+		return model.LoginResponse{}, err
+	}
+
+	roleCopy := role
 	email := u.Email
 	uName := u.Username
 
@@ -621,7 +634,7 @@ func (s *AuthS) LoginGlobal(ctx context.Context, req model.LoginRequest, jwtCfg 
 		User: model.UserResponse{
 			ID:       u.ID.String(),
 			Username: &uName,
-			Role:     &role,
+			Role:     &roleCopy,
 			Email:    &email,
 		},
 	}, nil
@@ -635,6 +648,11 @@ func (s *AuthS) Refresh(ctx context.Context, req model.RefreshRequest, jwtCfg *c
 	claims, err := utils.ValidateJWTWithClaims(req.RefreshToken, jwtCfg.SecretKey)
 	if err != nil {
 		log.Printf("refresh: validate token failed: %v", err)
+		return model.RefreshResponse{}, errors.New(http.StatusText(http.StatusUnauthorized))
+	}
+
+	if claims.TokenType != utils.TokenTypeRefresh {
+		log.Printf("refresh: invalid token type=%s user=%s", claims.TokenType, claims.UserID)
 		return model.RefreshResponse{}, errors.New(http.StatusText(http.StatusUnauthorized))
 	}
 
@@ -661,6 +679,7 @@ func (s *AuthS) Refresh(ctx context.Context, req model.RefreshRequest, jwtCfg *c
 			nil,
 			role,
 			true,
+			utils.TokenTypeAccess,
 			jwtCfg.SecretKey,
 		)
 		if err != nil {
@@ -675,6 +694,7 @@ func (s *AuthS) Refresh(ctx context.Context, req model.RefreshRequest, jwtCfg *c
 			nil,
 			role,
 			true,
+			utils.TokenTypeRefresh,
 			jwtCfg.SecretKey,
 		)
 		if err != nil {
@@ -710,7 +730,7 @@ func (s *AuthS) Refresh(ctx context.Context, req model.RefreshRequest, jwtCfg *c
 		log.Printf("refresh tenant: set search_path failed schema=%s err=%v", schemaName, err)
 		return model.RefreshResponse{}, errors.New(http.StatusText(http.StatusUnauthorized))
 	}
-	
+
 	if claims.BranchID != nil && strings.TrimSpace(*claims.BranchID) != "" {
 		if _, err := tx.Exec(ctx, "SET LOCAL app.branch_id = $1", strings.TrimSpace(*claims.BranchID)); err != nil {
 			return model.RefreshResponse{}, errors.New(http.StatusText(http.StatusUnauthorized))
@@ -762,6 +782,7 @@ func (s *AuthS) Refresh(ctx context.Context, req model.RefreshRequest, jwtCfg *c
 		cashRegisterID,
 		role,
 		false,
+		utils.TokenTypeAccess,
 		jwtCfg.SecretKey,
 	)
 	if err != nil {
@@ -777,6 +798,7 @@ func (s *AuthS) Refresh(ctx context.Context, req model.RefreshRequest, jwtCfg *c
 		cashRegisterID,
 		role,
 		false,
+		utils.TokenTypeRefresh,
 		jwtCfg.SecretKey,
 	)
 	if err != nil {
@@ -1041,4 +1063,95 @@ func (s *AuthS) SearchUsers(ctx context.Context, query string, limit, offset int
 		responses = append(responses, toUserResponse(user))
 	}
 	return responses, nil
+}
+
+func (s *AuthS) UpdatePOSPassword(ctx context.Context, brandID, currentPassword, newPassword string) error {
+	brandID = strings.TrimSpace(brandID)
+	currentPassword = strings.TrimSpace(currentPassword)
+	newPassword = strings.TrimSpace(newPassword)
+
+	if brandID == "" {
+		return errors.New("brand_id is required")
+	}
+	if newPassword == "" {
+		return errors.New("new_password is required")
+	}
+	if len(newPassword) < 4 {
+		return errors.New("new_password must be at least 4 characters")
+	}
+
+	schemaName := fmt.Sprintf("tenant_%s", brandID)
+
+	tx, err := s.repo.PgRepo.TenantPool.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(ctx)
+
+	if _, err := tx.Exec(ctx, fmt.Sprintf(`SET LOCAL search_path TO "%s", public`, schemaName)); err != nil {
+		return errors.New(http.StatusText(http.StatusUnauthorized))
+	}
+
+	q := s.repo.Tenant(ctx).WithTx(tx)
+
+	existing, err := q.GetPOSAuthSettings(ctx)
+	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+		return err
+	}
+
+	// Agar oldin parol bo‘lsa, currentPassword tekshiriladi
+	if err == nil && strings.TrimSpace(existing.PosPasswordHash) != "" {
+		if currentPassword == "" {
+			return errors.New("current_password is required")
+		}
+		if verifyErr := utils.VerifyPassword(existing.PosPasswordHash, currentPassword); verifyErr != nil {
+			return errors.New(http.StatusText(http.StatusUnauthorized))
+		}
+	}
+
+	hashed, err := utils.HashPassword(newPassword)
+	if err != nil {
+		return err
+	}
+
+	if err := q.UpsertPOSAuthSettings(ctx, hashed); err != nil {
+		return err
+	}
+
+	return tx.Commit(ctx)
+}
+
+func (s *AuthS) GetPOSPasswordStatus(ctx context.Context, brandID string) (bool, error) {
+	brandID = strings.TrimSpace(brandID)
+	if brandID == "" {
+		return false, errors.New("brand_id is required")
+	}
+
+	schemaName := fmt.Sprintf("tenant_%s", brandID)
+
+	tx, err := s.repo.PgRepo.TenantPool.Begin(ctx)
+	if err != nil {
+		return false, err
+	}
+	defer tx.Rollback(ctx)
+
+	if _, err := tx.Exec(ctx, fmt.Sprintf(`SET LOCAL search_path TO "%s", public`, schemaName)); err != nil {
+		return false, errors.New(http.StatusText(http.StatusUnauthorized))
+	}
+
+	q := s.repo.Tenant(ctx).WithTx(tx)
+
+	row, err := q.GetPOSAuthSettings(ctx)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return false, nil
+		}
+		return false, err
+	}
+
+	if strings.TrimSpace(row.PosPasswordHash) == "" {
+		return false, nil
+	}
+
+	return true, nil
 }

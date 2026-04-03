@@ -161,11 +161,11 @@ func (s *InventoryS) GetInventoriesFiltered(ctx context.Context, dateFrom, dateT
 	}
 
 	countParams := pg.CountInventoriesFilteredParams{
-		DateFrom:     fromDate,
-		DateTo:       toDate,
-		StorageID:    uuid.UUID(storageUUID.Bytes),
-		Status:       statusText,
-		IngredientID: uuid.UUID(ingredientUUID.Bytes),
+		Column1: fromDate,
+		Column2: toDate,
+		Column3: uuid.UUID(storageUUID.Bytes),
+		Column4: statusText,
+		Column5: uuid.UUID(ingredientUUID.Bytes),
 	}
 	total, err := s.repo.Tenant(ctx).CountInventoriesFiltered(ctx, countParams)
 	if err != nil {

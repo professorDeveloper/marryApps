@@ -103,6 +103,12 @@ func CheckAuth(cfg *config.Config) echo.MiddlewareFunc {
 				})
 			}
 
+			if claims.TokenType != "" && claims.TokenType != utils.TokenTypeAccess {
+				return c.JSON(http.StatusUnauthorized, model.ErrorResponse{
+					Message: "Invalid token type",
+				})
+			}
+
 			c.Set("user_id", claims.UserID.String())
 			if claims.BrandID != nil {
 				c.Set("brand_id", *claims.BrandID)

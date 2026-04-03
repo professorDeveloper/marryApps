@@ -32,6 +32,11 @@ sql:
       - "../../app/migrations/tenants/27_compound_quantity_numeric.up.sql"
       - "../../app/migrations/tenants/28_invoice_status_deleted.up.sql"
       - "../../app/migrations/tenants/29_cafe_tables_price_per_hour.up.sql"
+      - "../../app/migrations/tenants/30_order_payment_split.up.sql"
+      - "../../app/migrations/tenants/31_drop_transfers_branch_check.up.sql"
+      - "../../app/migrations/tenants/32_shift_role_cashier.up.sql"
+      - "../../app/migrations/tenants/33_table_timer_foundation.up.sql"
+      - "../../app/migrations/tenants/34_pos_auth.up.sql"
 
 
     gen:

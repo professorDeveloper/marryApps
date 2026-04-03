@@ -53,16 +53,13 @@ func (h *Handler) Login(c echo.Context) error {
 	))
 }
 
-// LoginWithPincode handles user login via pincode (for kitchen, terminals, cashiers)
-// @Summary User login with pincode
-// @Description Authenticate user using password and optional pincode, with brand_id (slug).
-// First login: password + brand_id (pincode not needed yet).
-// Subsequent logins: password + brand_id + pincode.
-// Used for kitchen staff, terminals, and cashiers
+// LoginWithPincode handles POS staff login using brand_id + pos_password + pincode(for kitchen, terminals, cashiers)
+// @Summary POS staff login with pincode
+// @Description Authenticate POS staff using brand_id, pos_password, and pincode
 // @Tags auth
 // @Accept json
 // @Produce json
-// @Param request body model.PincodeLoginRequest true "Login credentials (password and brand_id required, pincode optional)"
+// @Param request body model.PincodeLoginRequest true "POS login credentials"
 // @Success 200 {object} model.LoginResponse "Successfully logged in"
 // @Failure 400 {object} model.ErrorResponse "Invalid request format"
 // @Failure 401 {object} model.ErrorResponse "Unauthorized"
@@ -74,12 +71,16 @@ func (h *Handler) LoginWithPincode(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("invalid request body", "see logs for details", http.StatusBadRequest))
 	}
 
-	if req.Password == "" {
-		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("password is required", "see logs for details", http.StatusBadRequest))
-	}
-
 	if req.BrandID == "" {
 		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("brand_id is required", "see logs for details", http.StatusBadRequest))
+	}
+
+	if req.PosPassword == "" {
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("pos_password is required", "see logs for details", http.StatusBadRequest))
+	}
+
+	if req.Pincode == nil || *req.Pincode == "" {
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("pincode is required", "see logs for details", http.StatusBadRequest))
 	}
 
 	resp, err := h.service.Auth().LoginWithPincode(c.Request().Context(), req, &h.cfg.Jwt)
@@ -219,28 +220,30 @@ func (h *Handler) RegisterUser(c echo.Context) error {
 // @Router /api/v1/auth/refresh [post]
 func (h *Handler) Refresh(c echo.Context) error {
 	var req model.RefreshRequest
-	if v := c.Get("refreshBody"); v != nil {
-		if r, ok := v.(model.RefreshRequest); ok {
-			req = r
-		} else {
-			return c.JSON(http.StatusBadRequest, model.NewErrorResponse("invalid request body", "see logs for details", http.StatusBadRequest))
-		}
-	} else {
-		if err := c.Bind(&req); err != nil {
-			return c.JSON(http.StatusBadRequest, model.NewErrorResponse("invalid request body", "see logs for details", http.StatusBadRequest))
-		}
-	}
-	lang := c.Get("language").(string)
-	resp, err := h.service.Auth().Refresh(c.Request().Context(), req, &h.cfg.Jwt)
-	if err != nil {
-		log.Printf("refresh failed: %v", err)
-		if lang == "ru" {
-			return c.JSON(http.StatusUnauthorized, model.NewErrorResponse("ru: Xatolik login qilishda", "see logs for details", http.StatusInternalServerError))
-		}
-		return c.JSON(http.StatusUnauthorized, model.NewErrorResponse("Login qilishda xatolik", "see logs for details", http.StatusInternalServerError))
+	if err := c.Bind(&req); err != nil {
+		log.Printf("Failed to bind refresh request: %v", err)
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"Noto'g'ri so'rov formati",
+			"see logs for details",
+			http.StatusBadRequest,
+		))
 	}
 
-	return c.JSON(http.StatusOK, resp)
+	resp, err := h.service.Auth().Refresh(c.Request().Context(), req, &h.cfg.Jwt)
+	if err != nil {
+		log.Printf("Refresh failed: %v", err)
+		return c.JSON(http.StatusUnauthorized, model.NewErrorResponse(
+			"Refresh token noto'g'ri yoki eskirgan",
+			"see logs for details",
+			http.StatusUnauthorized,
+		))
+	}
+
+	return c.JSON(http.StatusOK, model.NewSuccessResponse(
+		"Token muvaffaqiyatli yangilandi",
+		resp,
+		http.StatusOK,
+	))
 }
 
 // GetUserByID retrieves a user by ID

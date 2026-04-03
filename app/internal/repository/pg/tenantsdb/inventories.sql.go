@@ -63,6 +63,43 @@ func (q *Queries) CountInventories(ctx context.Context) (int64, error) {
 	return count, err
 }
 
+const countInventoriesFiltered = `-- name: CountInventoriesFiltered :one
+SELECT COUNT(DISTINCT inv.id)
+FROM inventories inv
+LEFT JOIN inventory_items ii ON ii.inventory_id = inv.id AND ii.deleted_at = 0
+WHERE EXISTS (
+    SELECT 1 FROM storages s
+    WHERE s.id = inv.storage_id
+      AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  )
+  AND ($1::date IS NULL OR inv.date >= $1)
+  AND ($2::date IS NULL OR inv.date <= $2)
+  AND (NULLIF($3::uuid, '00000000-0000-0000-0000-000000000000') IS NULL OR inv.storage_id = $3)
+  AND (NULLIF($4::text, '') IS NULL OR inv.status = $4)
+  AND (NULLIF($5::uuid, '00000000-0000-0000-0000-000000000000') IS NULL OR ii.ingredient_id = $5)
+`
+
+type CountInventoriesFilteredParams struct {
+	Column1 pgtype.Date `json:"column_1"`
+	Column2 pgtype.Date `json:"column_2"`
+	Column3 uuid.UUID   `json:"column_3"`
+	Column4 string      `json:"column_4"`
+	Column5 uuid.UUID   `json:"column_5"`
+}
+
+func (q *Queries) CountInventoriesFiltered(ctx context.Context, arg CountInventoriesFilteredParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countInventoriesFiltered,
+		arg.Column1,
+		arg.Column2,
+		arg.Column3,
+		arg.Column4,
+		arg.Column5,
+	)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const createInventory = `-- name: CreateInventory :one
 
 INSERT INTO inventories (id, date, storage_id, description, description_i18n, status)
@@ -124,6 +161,22 @@ func (q *Queries) CreateInventory(ctx context.Context, arg CreateInventoryParams
 		&i.DeletedAt,
 	)
 	return i, err
+}
+
+const deleteInventoriesBatch = `-- name: DeleteInventoriesBatch :exec
+UPDATE inventories
+SET deleted_at = EXTRACT(EPOCH FROM NOW())::BIGINT
+WHERE id = ANY($1::uuid[]) AND deleted_at = 0
+  AND EXISTS (
+    SELECT 1 FROM storages s
+    WHERE s.id = inventories.storage_id
+      AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  )
+`
+
+func (q *Queries) DeleteInventoriesBatch(ctx context.Context, dollar_1 []uuid.UUID) error {
+	_, err := q.db.Exec(ctx, deleteInventoriesBatch, dollar_1)
+	return err
 }
 
 const deleteInventory = `-- name: DeleteInventory :exec

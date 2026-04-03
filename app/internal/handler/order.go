@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"fmt"
 	"log"
 	"math"
 	"net/http"
@@ -126,11 +125,40 @@ func (h *Handler) CreateOrder(c echo.Context) error {
 				http.StatusNotFound,
 			))
 		}
+		if strings.Contains(strings.ToLower(err.Error()), "table already has an active order") {
+			return c.JSON(http.StatusConflict, model.NewErrorResponse(
+				"table already has an active order",
+				err.Error(),
+				http.StatusConflict,
+			))
+		}
 		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse(
 			"failed to create order",
 			err.Error(),
 			http.StatusInternalServerError,
 		))
+	}
+
+	// Auto-start table timer for immediate dine-in orders on time_based tables.
+	// Best-effort only: order creation must stay successful even if timer start fails.
+	orderType := "dine_in"
+	if req.OrderType != nil && *req.OrderType == "takeaway" {
+		orderType = "takeaway"
+	}
+
+	shouldAutoStartTimer := orderType == "dine_in" &&
+		req.TableID != "" &&
+		(req.ScheduledAt == nil || *req.ScheduledAt == "")
+
+	if shouldAutoStartTimer && order != nil {
+		if _, timerErr := h.service.TableTimer().StartTableTimerIfNeeded(
+			c.Request().Context(),
+			order.ID,
+			userID,
+			role,
+		); timerErr != nil {
+			log.Printf("CreateOrder auto-start timer skipped/failed for order %s: %v", order.ID, timerErr)
+		}
 	}
 
 	return c.JSON(http.StatusCreated, model.NewSuccessResponse(
@@ -654,54 +682,74 @@ func (h *Handler) UpdateOrderStatus(c echo.Context) error {
 func (h *Handler) GetOrderTablePrice(c echo.Context) error {
 	orderID := c.Param("id")
 	if orderID == "" {
-		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("order id is required", "missing path parameter: id", http.StatusBadRequest))
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"order id is required",
+			"missing path parameter: id",
+			http.StatusBadRequest,
+		))
 	}
-	id, err := uuid.Parse(orderID)
+	if _, err := uuid.Parse(orderID); err != nil {
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"invalid order id format",
+			err.Error(),
+			http.StatusBadRequest,
+		))
+	}
+
+	timer, err := h.service.TableTimer().GetTableTimerState(c.Request().Context(), orderID)
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("invalid order id format", err.Error(), http.StatusBadRequest))
+		log.Printf("GetOrderTablePrice failed for order %s: %v", orderID, err)
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"failed to calculate table price",
+			err.Error(),
+			http.StatusBadRequest,
+		))
 	}
 
-	row, err := h.repo.Tenant(c.Request().Context()).GetOrderWithTablePrice(c.Request().Context(), id)
-	if err != nil {
-		return c.JSON(http.StatusNotFound, model.NewErrorResponse("order not found or has no table", err.Error(), http.StatusNotFound))
+	if timer.PricePerHour == nil || *timer.PricePerHour == "" {
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"this table has no hourly price set",
+			"price_per_hour is null or 0",
+			http.StatusBadRequest,
+		))
 	}
 
-	// Check price_per_hour
-	if !row.PricePerHour.Valid {
-		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("this table has no hourly price set", "price_per_hour is null", http.StatusBadRequest))
-	}
-	pricePerHourStr := "0"
-	if v, err := row.PricePerHour.Value(); err == nil && v != nil {
-		pricePerHourStr = fmt.Sprintf("%v", v)
-	}
-	pricePerHourF, _ := strconv.ParseFloat(pricePerHourStr, 64)
-	if pricePerHourF == 0 {
-		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("this table has no hourly price set", "price_per_hour is 0", http.StatusBadRequest))
+	startedAt := ""
+	if timer.StartedAt != nil {
+		startedAt = timer.StartedAt.Format(time.RFC3339)
 	}
 
-	// Determine start time
-	var startedAt time.Time
-	if row.ScheduledAt.Valid && !row.ScheduledAt.Time.IsZero() {
-		startedAt = row.ScheduledAt.Time
-	} else {
-		startedAt = row.CreatedAt.Time
+	durationMinutes := math.Round((float64(timer.TotalActiveSec)/60.0)*100) / 100
+	durationHours := math.Round((float64(timer.TotalActiveSec)/3600.0)*10000) / 10000
+
+	totalPrice := "0.00"
+	if timer.CurrentAmount != nil && *timer.CurrentAmount != "" {
+		totalPrice = *timer.CurrentAmount
 	}
 
-	duration := time.Since(startedAt)
-	durationMinutes := duration.Minutes()
-	durationHours := duration.Hours()
-	totalPrice := durationHours * pricePerHourF
+	return c.JSON(http.StatusOK, model.NewSuccessResponse(
+		"Table price calculated successfully",
+		model.TablePriceResponse{
+			TableID:         timer.TableID,
+			PricePerHour:    *timer.PricePerHour,
+			StartedAt:       startedAt,
+			DurationMinutes: durationMinutes,
+			DurationHours:   durationHours,
+			TotalPrice:      totalPrice,
+		},
+		http.StatusOK,
+	))
+}
 
-	tableID := uuid.UUID(row.TableID.Bytes).String()
+func isIgnorableTableTimerCloseError(err error) bool {
+	if err == nil {
+		return false
+	}
+	msg := strings.ToLower(err.Error())
 
-	return c.JSON(http.StatusOK, model.NewSuccessResponse("Table price calculated successfully", model.TablePriceResponse{
-		TableID:         tableID,
-		PricePerHour:    pricePerHourStr,
-		StartedAt:       startedAt.Format(time.RFC3339),
-		DurationMinutes: math.Round(durationMinutes*100) / 100,
-		DurationHours:   math.Round(durationHours*10000) / 10000,
-		TotalPrice:      strconv.FormatFloat(math.Round(totalPrice*100)/100, 'f', 2, 64),
-	}, http.StatusOK))
+	return strings.Contains(msg, "table timer is only available for time_based tables") ||
+		strings.Contains(msg, "table timer is only available for dine_in orders") ||
+		strings.Contains(msg, "order has no table")
 }
 
 // MarkOrderPaid marks an order as paid
@@ -761,7 +809,30 @@ func (h *Handler) MarkOrderPaid(c echo.Context) error {
 		cashRegisterID = &cr
 	}
 
-	order, err := h.service.Order().MarkOrderPaid(c.Request().Context(), orderID, cashierID, cashRegisterID, req.PaymentType, req.DiscountPercent, req.DiscountAmount, req.DiscountComment, &req.CustomerPaidAmount, req.TableCharge, req.CashAmount, req.CardAmount)
+	role, _ := c.Get("role").(string)
+
+	effectiveTableCharge := req.TableCharge
+
+	timerResp, timerErr := h.service.TableTimer().CloseTableTimer(
+		c.Request().Context(),
+		orderID,
+		cashierID,
+		role,
+	)
+	if timerErr != nil {
+		if !isIgnorableTableTimerCloseError(timerErr) {
+			log.Printf("MarkOrderPaid failed to close table timer for order %s: %v", orderID, timerErr)
+			return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+				"failed to close table timer",
+				timerErr.Error(),
+				http.StatusBadRequest,
+			))
+		}
+	} else if timerResp != nil && timerResp.FinalAmount != nil && *timerResp.FinalAmount != "" {
+		effectiveTableCharge = timerResp.FinalAmount
+	}
+
+	order, err := h.service.Order().MarkOrderPaid(c.Request().Context(), orderID, cashierID, cashRegisterID, req.PaymentType, req.DiscountPercent, req.DiscountAmount, req.DiscountComment, &req.CustomerPaidAmount, effectiveTableCharge, req.CashAmount, req.CardAmount)
 	if err != nil {
 		log.Printf("MarkOrderPaid failed for order %s: %v", orderID, err)
 		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse(

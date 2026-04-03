@@ -123,6 +123,15 @@ func (s *OrderS) CreateOrder(ctx context.Context, req model.CreateOrderRequest) 
 			return nil, fmt.Errorf("failed to fetch cafe table: %w", err)
 		}
 	}
+	if req.OrderType != nil && *req.OrderType == "dine_in" && req.TableID != "" {
+		existing, err := s.repo.Tenant(ctx).GetActiveOpenOrderByTableID(ctx, tableUUID)
+		if err == nil {
+			return nil, fmt.Errorf("table already has an active order: %s", existing.ID.String())
+		}
+		if err != nil && err != pgx.ErrNoRows {
+			return nil, fmt.Errorf("failed to check active order by table: %w", err)
+		}
+	}
 
 	waiterUUID := pgtype.UUID{}
 	if req.WaiterID != nil && *req.WaiterID != "" {
@@ -618,7 +627,7 @@ func (s *OrderS) MarkOrderPaid(ctx context.Context, orderID string, cashierID st
 		if paymentType != nil && *paymentType != "" {
 			txParams.PayType = pg.NullPaymentType{
 				PaymentType: pg.PaymentType(*paymentType),
-				Valid:        true,
+				Valid:       true,
 			}
 		}
 		_, err := s.repo.Tenant(ctx).CreateTransaction(ctx, txParams)
@@ -1014,28 +1023,28 @@ func (s *OrderS) GetBillDetails(ctx context.Context, billID string) (*model.Bill
 	}
 
 	return &model.BillDetails{
-		ID:              h.ID.String(),
-		BillNo:          h.BillNo,
-		BillStatus:      h.BillStatus,
-		OpenedAt:        openedAt,
-		ClosedAt:        closedAt,
-		PaidAt:          paidAt,
-		PaymentType:     h.PaymentType,
-		TableID:         tableIDStr,
-		TableNumber:     h.TableNumber,
-		HallName:        h.HallName,
-		WaiterID:        waiterIDStr,
-		WaiterName:      h.WaiterName,
-		CashierID:       cashierIDStr,
-		CashierName:     h.CashierName,
-		CashRegisterID:  cashRegIDStr,
-		GuestCount:      h.GuestCount,
-		FoodCost:        numericToString(h.FoodCost),
-		FoodTotal:       numericToString(h.FoodTotal),
-		ServicePercent:  numericToString(h.ServicePercent),
-		ServiceAmount:   numericToString(h.ServiceAmount),
-		DiscountPercent: numericToString(h.DiscountPercent),
-		DiscountAmount:  numericToString(h.DiscountAmount),
+		ID:                 h.ID.String(),
+		BillNo:             h.BillNo,
+		BillStatus:         h.BillStatus,
+		OpenedAt:           openedAt,
+		ClosedAt:           closedAt,
+		PaidAt:             paidAt,
+		PaymentType:        h.PaymentType,
+		TableID:            tableIDStr,
+		TableNumber:        h.TableNumber,
+		HallName:           h.HallName,
+		WaiterID:           waiterIDStr,
+		WaiterName:         h.WaiterName,
+		CashierID:          cashierIDStr,
+		CashierName:        h.CashierName,
+		CashRegisterID:     cashRegIDStr,
+		GuestCount:         h.GuestCount,
+		FoodCost:           numericToString(h.FoodCost),
+		FoodTotal:          numericToString(h.FoodTotal),
+		ServicePercent:     numericToString(h.ServicePercent),
+		ServiceAmount:      numericToString(h.ServiceAmount),
+		DiscountPercent:    numericToString(h.DiscountPercent),
+		DiscountAmount:     numericToString(h.DiscountAmount),
 		DiscountComment:    h.DiscountComment,
 		GrandTotal:         numericToString(h.GrandTotal),
 		TableCharge:        numericToString(h.TableCharge),

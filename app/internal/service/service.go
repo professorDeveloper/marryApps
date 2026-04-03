@@ -32,6 +32,8 @@ type AuthI interface {
 	DeleteUser(ctx context.Context, userID string) error
 	RestoreUser(ctx context.Context, userID string) error
 	SearchUsers(ctx context.Context, query string, limit, offset int32) ([]model.UserResponse, error)
+	UpdatePOSPassword(ctx context.Context, brandID, currentPassword, newPassword string) error
+	GetPOSPasswordStatus(ctx context.Context, brandID string) (bool, error)
 }
 type MinioI interface {
 	UploadImage(ctx context.Context, file io.Reader, size int64, fileName string, extension string) (string, error)
@@ -235,7 +237,7 @@ type GoodsI interface {
 }
 
 type CafeTableI interface {
-	CreateCafeTable(ctx context.Context, hallID string, number int32, capacity int32, status *string, posX, posY, width, height, rotation *int32, pricePerHour *string) (*model.CafeTableResponse, error)
+	CreateCafeTable(ctx context.Context, hallID string, number int32, capacity int32, status *string, posX, posY, width, height, rotation *int32, pricePerHour *string, tableType *string) (*model.CafeTableResponse, error)
 	GetCafeTableByID(ctx context.Context, tableID string) (*model.CafeTableResponse, error)
 	GetAllCafeTables(ctx context.Context, limit, offset int32) ([]model.CafeTableResponse, int64, error)
 	GetCafeTablesByHallID(ctx context.Context, hallID string, limit, offset int32) ([]model.CafeTableResponse, int64, error)
@@ -244,7 +246,7 @@ type CafeTableI interface {
 	GetAvailableTablesByHall(ctx context.Context, hallID string) ([]model.CafeTableResponse, error)
 	GetAvailableTablesByCapacity(ctx context.Context, capacity, limit, offset int32) ([]model.CafeTableResponse, error)
 	GetAvailableTablesByHallAndCapacity(ctx context.Context, hallID string, capacity int32) ([]model.CafeTableResponse, error)
-	UpdateCafeTable(ctx context.Context, tableID string, hallID *string, number *int32, capacity *int32, status *string, posX, posY, width, height, rotation *int32, pricePerHour *string) (*model.CafeTableResponse, error)
+	UpdateCafeTable(ctx context.Context, tableID string, hallID *string, number *int32, capacity *int32, status *string, posX, posY, width, height, rotation *int32, pricePerHour *string, tableType *string) (*model.CafeTableResponse, error)
 	UpdateCafeTableStatus(ctx context.Context, tableID string, status string) (*model.CafeTableResponse, error)
 	SetTableFree(ctx context.Context, tableID string) (*model.CafeTableResponse, error)
 	SetTableBusy(ctx context.Context, tableID string) (*model.CafeTableResponse, error)
@@ -383,6 +385,14 @@ type OrderI interface {
 	SendNotificationByStatus(ctx context.Context, fcmClient *notification.FCMClient, deviceToken string, orderID string, status string, tableNumber string) error
 }
 
+type TableTimerI interface {
+	StartTableTimerIfNeeded(ctx context.Context, orderID string, actorUserID string, actorRole string) (*model.TableTimerResponse, error)
+	GetTableTimerState(ctx context.Context, orderID string) (*model.TableTimerResponse, error)
+	PauseTableTimer(ctx context.Context, orderID string, actorUserID string, actorRole string) (*model.TableTimerResponse, error)
+	ResumeTableTimer(ctx context.Context, orderID string, actorUserID string, actorRole string) (*model.TableTimerResponse, error)
+	CloseTableTimer(ctx context.Context, orderID string, actorUserID string, actorRole string) (*model.TableTimerResponse, error)
+}
+
 type CalculationI interface {
 	CreateCalculation(ctx context.Context, goodID, ingredientID, quantity string) (*model.CalculationResponse, error)
 	CreateCalculationForCompound(ctx context.Context, compoundID, ingredientID, quantity string) (*model.CalculationResponse, error)
@@ -477,6 +487,7 @@ type I interface {
 	Inventory() InventoryI
 	Invoice() InvoiceI
 	Order() OrderI
+	TableTimer() TableTimerI
 	Brand() BrandI
 	Calculation() CalculationI
 	Deduction() DeductionI
@@ -492,72 +503,74 @@ type I interface {
 }
 
 type Service struct {
-	auth         AuthI
-	payment      PaymentI
-	sync         SyncI
-	repo         *repository.Repository
-	minio        MinioI
-	shift        ShiftI
-	organization OrganizationI
-	ingredient   IngredientI
-	storage      StorageI
-	department   DepartmentI
-	hall         HallI
-	category     CategoryI
-	compound     CompoundI
-	goods        GoodsI
-	cafeTable    CafeTableI
-	supplier     SupplierI
-	inventory    InventoryI
-	invoice      InvoiceI
-	order        OrderI
-	brand        BrandI
-	calculation  CalculationI
-	deduction    DeductionI
-	transfer     TransferI
+	auth              AuthI
+	payment           PaymentI
+	sync              SyncI
+	repo              *repository.Repository
+	minio             MinioI
+	shift             ShiftI
+	organization      OrganizationI
+	ingredient        IngredientI
+	storage           StorageI
+	department        DepartmentI
+	hall              HallI
+	category          CategoryI
+	compound          CompoundI
+	goods             GoodsI
+	cafeTable         CafeTableI
+	supplier          SupplierI
+	inventory         InventoryI
+	invoice           InvoiceI
+	order             OrderI
+	tableTimer        TableTimerI
+	brand             BrandI
+	calculation       CalculationI
+	deduction         DeductionI
+	transfer          TransferI
 	cash              CashRegisterI
 	cashRegisterShift CashRegisterShiftI
 	groupTransaction  GroupTransactionI
-	transaction      TransactionI
-	shipment         ShipmentI
-	outgoingInvoice  OutgoingInvoiceI
-	report           ReportI
-	separationAct    SeparationActI
+	transaction       TransactionI
+	shipment          ShipmentI
+	outgoingInvoice   OutgoingInvoiceI
+	report            ReportI
+	separationAct     SeparationActI
 }
 
 func New(cfg *config.Config, repo *repository.Repository, clickClient *paymentClick.Client, paymeClient *paymentPayme.Client, minioClient *minio.Minio) *Service {
 	return &Service{
-		auth:         NewAuthS(cfg, repo),
-		payment:      NewPaymentS(cfg, repo, clickClient, paymeClient),
-		sync:         NewSyncS(repo),
-		repo:         repo,
-		minio:        NewMinioS(cfg, minioClient),
-		shift:        NewShiftS(repo),
-		organization: NewOrganizationS(repo),
-		ingredient:   NewIngredientS(repo),
-		storage:      NewStorageS(repo),
-		department:   NewDepartmentS(repo),
-		hall:         NewHallS(repo),
-		category:     NewCategoryS(repo),
-		compound:     NewCompoundS(repo),
-		goods:        NewGoodsS(repo),
-		cafeTable:    NewCafeTableS(repo),
-		supplier:     NewSupplierS(repo),
-		inventory:    NewInventoryS(repo),
-		invoice:      NewInvoiceS(repo),
-		order:        NewOrderS(repo),
-		brand:        NewBrandS(repo),
-		calculation:  NewCalculationS(repo),
-		deduction:    NewDeductionS(repo),
-		transfer:     NewTransferS(repo),
+		auth:              NewAuthS(cfg, repo),
+		payment:           NewPaymentS(cfg, repo, clickClient, paymeClient),
+		sync:              NewSyncS(repo),
+		repo:              repo,
+		minio:             NewMinioS(cfg, minioClient),
+		shift:             NewShiftS(repo),
+		organization:      NewOrganizationS(repo),
+		ingredient:        NewIngredientS(repo),
+		storage:           NewStorageS(repo),
+		department:        NewDepartmentS(repo),
+		hall:              NewHallS(repo),
+		category:          NewCategoryS(repo),
+		compound:          NewCompoundS(repo),
+		goods:             NewGoodsS(repo),
+		cafeTable:         NewCafeTableS(repo),
+		supplier:          NewSupplierS(repo),
+		inventory:         NewInventoryS(repo),
+		invoice:           NewInvoiceS(repo),
+		order:             NewOrderS(repo),
+		tableTimer:        NewTableTimerS(repo),
+		brand:             NewBrandS(repo),
+		calculation:       NewCalculationS(repo),
+		deduction:         NewDeductionS(repo),
+		transfer:          NewTransferS(repo),
 		cash:              NewCashRegisterS(repo),
 		cashRegisterShift: NewCashRegisterShiftS(repo),
 		groupTransaction:  NewGroupTransactionS(repo),
-		transaction:      NewTransactionS(repo),
-		shipment:         NewShipmentS(repo),
-		outgoingInvoice:  NewOutgoingInvoiceS(repo),
-		report:           NewReportS(repo),
-		separationAct:    NewSeparationActS(repo),
+		transaction:       NewTransactionS(repo),
+		shipment:          NewShipmentS(repo),
+		outgoingInvoice:   NewOutgoingInvoiceS(repo),
+		report:            NewReportS(repo),
+		separationAct:     NewSeparationActS(repo),
 	}
 }
 
@@ -634,6 +647,10 @@ func (s *Service) Invoice() InvoiceI {
 
 func (s *Service) Order() OrderI {
 	return s.order
+}
+
+func (s *Service) TableTimer() TableTimerI {
+	return s.tableTimer
 }
 
 func (s *Service) Brand() BrandI {

@@ -284,8 +284,9 @@ func (ns NullOutgoingInvoiceStatus) Value() (driver.Value, error) {
 type PaymentType string
 
 const (
-	PaymentTypeCash PaymentType = "cash"
-	PaymentTypeCard PaymentType = "card"
+	PaymentTypeCash  PaymentType = "cash"
+	PaymentTypeCard  PaymentType = "card"
+	PaymentTypeSplit PaymentType = "split"
 )
 
 func (e *PaymentType) Scan(src interface{}) error {
@@ -585,6 +586,7 @@ type CafeTable struct {
 	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
 	DeletedAt    *int64             `json:"deleted_at"`
 	PricePerHour pgtype.Numeric     `json:"price_per_hour"`
+	TableType    string             `json:"table_type"`
 }
 
 type Calculation struct {
@@ -954,6 +956,9 @@ type Order struct {
 	ScheduledAt        pgtype.Timestamptz `json:"scheduled_at"`
 	RescheduleComment  *string            `json:"reschedule_comment"`
 	CashRegisterID     pgtype.UUID        `json:"cash_register_id"`
+	TableCharge        pgtype.Numeric     `json:"table_charge"`
+	CashAmount         pgtype.Numeric     `json:"cash_amount"`
+	CardAmount         pgtype.Numeric     `json:"card_amount"`
 }
 
 type OrderItem struct {
@@ -997,6 +1002,13 @@ type OutgoingInvoiceItem struct {
 	CreatedAt         pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt         pgtype.Timestamptz `json:"updated_at"`
 	DeletedAt         *int64             `json:"deleted_at"`
+}
+
+type PosAuthSetting struct {
+	ID              int16     `json:"id"`
+	PosPasswordHash string    `json:"pos_password_hash"`
+	CreatedAt       time.Time `json:"created_at"`
+	UpdatedAt       time.Time `json:"updated_at"`
 }
 
 type PriceForPlan struct {
@@ -1118,6 +1130,36 @@ type Supplier struct {
 	CreatedAt   pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
 	DeletedAt   *int64             `json:"deleted_at"`
+}
+
+type TableTimeEvent struct {
+	ID          uuid.UUID   `json:"id"`
+	SessionID   uuid.UUID   `json:"session_id"`
+	OrderID     uuid.UUID   `json:"order_id"`
+	TableID     uuid.UUID   `json:"table_id"`
+	EventType   string      `json:"event_type"`
+	ActorUserID pgtype.UUID `json:"actor_user_id"`
+	ActorRole   *string     `json:"actor_role"`
+	Comment     *string     `json:"comment"`
+	CreatedAt   time.Time   `json:"created_at"`
+	DeletedAt   *int64      `json:"deleted_at"`
+}
+
+type TableTimeSession struct {
+	ID                   uuid.UUID          `json:"id"`
+	OrderID              uuid.UUID          `json:"order_id"`
+	TableID              uuid.UUID          `json:"table_id"`
+	State                string             `json:"state"`
+	StartedAt            time.Time          `json:"started_at"`
+	ActiveStartedAt      pgtype.Timestamptz `json:"active_started_at"`
+	AccumulatedActiveSec int64              `json:"accumulated_active_sec"`
+	EndedAt              pgtype.Timestamptz `json:"ended_at"`
+	FinalAmount          pgtype.Numeric     `json:"final_amount"`
+	CreatedBy            pgtype.UUID        `json:"created_by"`
+	UpdatedBy            pgtype.UUID        `json:"updated_by"`
+	CreatedAt            pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt            pgtype.Timestamptz `json:"updated_at"`
+	DeletedAt            *int64             `json:"deleted_at"`
 }
 
 type Transaction struct {

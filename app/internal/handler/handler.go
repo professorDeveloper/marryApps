@@ -40,6 +40,12 @@ func (h *Handler) Register(router *echo.Echo) {
 			auth.POST("/refresh", h.Refresh, mw.CheckLanguage())
 		}
 
+		settings := api.Group("/settings", mw.CheckAuth(h.cfg), mw.TenantMiddleware(h.repo))
+		{
+			settings.PUT("/pos-password", h.UpdatePOSPassword, mw.CheckLanguage(), mw.RequireRoles(mw.RolesAdminOnly...))
+			settings.GET("/pos-password/status", h.GetPOSPasswordStatus, mw.CheckLanguage(), mw.RequireRoles(mw.RolesAdminOnly...))
+		}
+
 		// Global login
 		auth.POST("/global/login", h.LoginGlobal, mw.LoginRateLimiter(), mw.CheckLanguage(), mw.ValidateLoginInput)
 		payments := api.Group("/payments")
@@ -64,35 +70,35 @@ func (h *Handler) Register(router *echo.Echo) {
 		// User management endpoints
 		users := api.Group("/users", mw.CheckAuth(h.cfg), mw.TenantMiddleware(h.repo))
 		{
-			users.GET("/:id", h.GetUserByID, mw.CheckLanguage(), mw.RequireRoles("admin", "manager", "superadmin"))
-			users.GET("/by-role", h.GetUsersByRole, mw.CheckLanguage(), mw.RequireRoles("admin", "manager", "superadmin"))
-			users.GET("/staff", h.GetKitchenStaff, mw.CheckLanguage(), mw.RequireRoles("admin", "manager", "superadmin"))
-			users.GET("/search", h.SearchUsers, mw.CheckLanguage(), mw.RequireRoles("admin", "manager", "superadmin"))
-			users.PUT("/:id", h.UpdateUserByID, mw.CheckLanguage(), mw.RequireRoles("admin", "manager", "superadmin"))
-			users.DELETE("/:id", h.DeleteUser, mw.CheckLanguage(), mw.RequireRoles("admin", "manager", "superadmin"))
-			users.POST("/:id/restore", h.RestoreUser, mw.CheckLanguage(), mw.RequireRoles("admin", "manager", "superadmin"))
+			users.GET("/:id", h.GetUserByID, mw.CheckLanguage(), mw.RequireRoles(mw.RolesAdminOnly...))
+			users.GET("/by-role", h.GetUsersByRole, mw.CheckLanguage(), mw.RequireRoles(mw.RolesAdminOnly...))
+			users.GET("/staff", h.GetKitchenStaff, mw.CheckLanguage(), mw.RequireRoles(mw.RolesAdminOnly...))
+			users.GET("/search", h.SearchUsers, mw.CheckLanguage(), mw.RequireRoles(mw.RolesAdminOnly...))
+			users.PUT("/:id", h.UpdateUserByID, mw.CheckLanguage(), mw.RequireRoles(mw.RolesAdminOnly...))
+			users.DELETE("/:id", h.DeleteUser, mw.CheckLanguage(), mw.RequireRoles(mw.RolesAdminOnly...))
+			users.POST("/:id/restore", h.RestoreUser, mw.CheckLanguage(), mw.RequireRoles(mw.RolesAdminOnly...))
 		}
 
 		// Shift management endpoints
 		shifts := api.Group("/shifts", mw.CheckAuth(h.cfg), mw.TenantMiddleware(h.repo))
 		{
-			shifts.POST("", h.CreateShift, mw.CheckLanguage(), mw.RequireRoles("admin", "manager", "superadmin"))
-			shifts.GET("", h.GetAllShifts, mw.CheckLanguage(), mw.RequireRoles("admin", "manager", "superadmin"))
-			shifts.GET("/:id", h.GetShiftByID, mw.CheckLanguage(), mw.RequireRoles("admin", "manager", "superadmin"))
-			shifts.PUT("/:id", h.UpdateShift, mw.CheckLanguage(), mw.RequireRoles("admin", "manager", "superadmin"))
-			shifts.DELETE("/:id", h.DeleteShift, mw.CheckLanguage(), mw.RequireRoles("admin", "manager", "superadmin"))
-			shifts.GET("/branch/:branchId", h.GetShiftsByBranchID, mw.CheckLanguage(), mw.RequireRoles("admin", "manager", "superadmin"))
+			shifts.POST("", h.CreateShift, mw.CheckLanguage(), mw.RequireRoles(mw.RolesAdminOnly...))
+			shifts.GET("", h.GetAllShifts, mw.CheckLanguage(), mw.RequireRoles(mw.RolesAdminOnly...))
+			shifts.GET("/:id", h.GetShiftByID, mw.CheckLanguage(), mw.RequireRoles(mw.RolesAdminOnly...))
+			shifts.PUT("/:id", h.UpdateShift, mw.CheckLanguage(), mw.RequireRoles(mw.RolesAdminOnly...))
+			shifts.DELETE("/:id", h.DeleteShift, mw.CheckLanguage(), mw.RequireRoles(mw.RolesAdminOnly...))
+			shifts.GET("/branch/:branchId", h.GetShiftsByBranchID, mw.CheckLanguage(), mw.RequireRoles(mw.RolesAdminOnly...))
 		}
 
 		// Branch management endpoints
 		branches := api.Group("/branches", mw.CheckAuth(h.cfg), mw.TenantMiddleware(h.repo))
 		{
-			branches.POST("", h.CreateBranch, mw.CheckLanguage(), mw.RequireRoles("admin", "manager", "superadmin"))
-			branches.GET("", h.GetAllBranches, mw.CheckLanguage(), mw.RequireRoles("admin", "manager", "superadmin"))
-			branches.GET("/:id", h.GetBranchByID, mw.CheckLanguage(), mw.RequireRoles("admin", "manager", "superadmin"))
-			branches.PUT("/:id", h.UpdateBranch, mw.CheckLanguage(), mw.RequireRoles("admin", "manager", "superadmin"))
-			branches.DELETE("/:id", h.DeleteBranch, mw.CheckLanguage(), mw.RequireRoles("admin", "manager", "superadmin"))
-			branches.POST("/:id/restore", h.RestoreBranch, mw.CheckLanguage(), mw.RequireRoles("admin", "manager", "superadmin"))
+			branches.POST("", h.CreateBranch, mw.CheckLanguage(), mw.RequireRoles(mw.RolesAdminOnly...))
+			branches.GET("", h.GetAllBranches, mw.CheckLanguage(), mw.RequireRoles(mw.RolesAdminOnly...))
+			branches.GET("/:id", h.GetBranchByID, mw.CheckLanguage(), mw.RequireRoles(mw.RolesAdminOnly...))
+			branches.PUT("/:id", h.UpdateBranch, mw.CheckLanguage(), mw.RequireRoles(mw.RolesAdminOnly...))
+			branches.DELETE("/:id", h.DeleteBranch, mw.CheckLanguage(), mw.RequireRoles(mw.RolesAdminOnly...))
+			branches.POST("/:id/restore", h.RestoreBranch, mw.CheckLanguage(), mw.RequireRoles(mw.RolesAdminOnly...))
 		}
 
 		// Branch endpoints with language support
@@ -241,53 +247,57 @@ func (h *Handler) Register(router *echo.Echo) {
 
 		orders := api.Group("/orders", mw.CheckAuth(h.cfg), mw.TenantMiddleware(h.repo))
 		{
-			orders.POST("", h.CreateOrder, mw.CheckLanguage(), mw.RequireRoles("waiter", "cashier", "admin", "manager", "superadmin"))
-			orders.GET("", h.GetAllOrders, mw.CheckLanguage(), mw.RequireRoles("cashier", "admin", "manager", "superadmin"))
-			orders.GET("/:id", h.GetOrderByID, mw.CheckLanguage(), mw.RequireRoles("waiter", "cashier", "admin", "manager", "superadmin"))
-			orders.POST("/:id/items", h.AddOrderItems, mw.CheckLanguage(), mw.RequireRoles("waiter", "cashier", "admin", "manager", "superadmin"))
-			orders.PUT("/:id", h.UpdateOrder, mw.CheckLanguage(), mw.RequireRoles("waiter", "cashier", "admin", "manager", "superadmin"))
-			orders.DELETE("/:id", h.DeleteOrder, mw.CheckLanguage(), mw.RequireRoles("admin", "manager", "superadmin"))
-			orders.POST("/:id/restore", h.RestoreOrder, mw.CheckLanguage(), mw.RequireRoles("admin", "manager", "superadmin"))
+			orders.POST("", h.CreateOrder, mw.CheckLanguage(), mw.RequireRoles(mw.RolesCanCreateOrder...))
+			orders.GET("", h.GetAllOrders, mw.CheckLanguage(), mw.RequireRoles(mw.RolesCanReadCashierOrders...))
+			orders.GET("/:id", h.GetOrderByID, mw.CheckLanguage(), mw.RequireRoles(mw.RolesCanReadPOSOrders...))
+			orders.POST("/:id/items", h.AddOrderItems, mw.CheckLanguage(), mw.RequireRoles(mw.RolesCanCreateOrder...))
+			orders.PUT("/:id", h.UpdateOrder, mw.CheckLanguage(), mw.RequireRoles(mw.RolesCanCreateOrder...))
+			orders.DELETE("/:id", h.DeleteOrder, mw.CheckLanguage(), mw.RequireRoles(mw.RolesAdminOnly...))
+			orders.POST("/:id/restore", h.RestoreOrder, mw.CheckLanguage(), mw.RequireRoles(mw.RolesAdminOnly...))
 
-			orders.PUT("/:id/status", h.UpdateOrderStatus, mw.CheckLanguage(), mw.RequireRoles("admin", "manager", "superadmin"))
-			orders.POST("/:id/pay", h.MarkOrderPaid, mw.CheckLanguage(), mw.RequireRoles("cashier", "admin", "manager", "superadmin"))
-			orders.GET("/:id/table-price", h.GetOrderTablePrice, mw.CheckLanguage(), mw.RequireRoles("cashier", "admin", "manager", "superadmin"))
-			orders.POST("/:id/cancel", h.CancelOrder, mw.CheckLanguage(), mw.RequireRoles("waiter", "cashier", "admin", "manager", "superadmin"))
-			orders.POST("/:id/cooking", h.MarkOrderCooking, mw.CheckLanguage(), mw.RequireRoles("kitchen", "admin", "manager", "superadmin"))
-			orders.POST("/:id/ready", h.MarkOrderReady, mw.CheckLanguage(), mw.RequireRoles("kitchen", "admin", "manager", "superadmin"))
-			orders.POST("/:id/served", h.MarkOrderServed, mw.CheckLanguage(), mw.RequireRoles("waiter", "admin", "manager", "superadmin"))
-			orders.POST("/:id/activate", h.ActivateOrder, mw.CheckLanguage(), mw.RequireRoles("admin", "manager", "superadmin"))
-			orders.POST("/:id/reschedule", h.RescheduleOrder, mw.CheckLanguage(), mw.RequireRoles("waiter", "cashier", "admin", "manager", "superadmin"))
+			orders.PUT("/:id/status", h.UpdateOrderStatus, mw.CheckLanguage(), mw.RequireRoles(mw.RolesAdminOnly...))
+			orders.POST("/:id/pay", h.MarkOrderPaid, mw.CheckLanguage(), mw.RequireRoles(mw.RolesCanPayOrder...))
+			orders.GET("/:id/table-price", h.GetOrderTablePrice, mw.CheckLanguage(), mw.RequireRoles(mw.RolesCanPayOrder...))
+			orders.POST("/:id/table-timer/start", h.StartOrderTableTimer, mw.CheckLanguage(), mw.RequireRoles(mw.RolesCanControlTableTimer...))
+			orders.GET("/:id/table-timer", h.GetOrderTableTimer, mw.CheckLanguage(), mw.RequireRoles(mw.RolesCanControlTableTimer...))
+			orders.POST("/:id/table-timer/pause", h.PauseOrderTableTimer, mw.CheckLanguage(), mw.RequireRoles(mw.RolesCanControlTableTimer...))
+			orders.POST("/:id/table-timer/resume", h.ResumeOrderTableTimer, mw.CheckLanguage(), mw.RequireRoles(mw.RolesCanControlTableTimer...))
+			orders.POST("/:id/cancel", h.CancelOrder, mw.CheckLanguage(), mw.RequireRoles(mw.RolesCanCreateOrder...))
+			orders.POST("/:id/cooking", h.MarkOrderCooking, mw.CheckLanguage(), mw.RequireRoles(mw.RolesCanManageKitchen...))
+			orders.POST("/:id/ready", h.MarkOrderReady, mw.CheckLanguage(), mw.RequireRoles(mw.RolesCanManageKitchen...))
+			orders.POST("/:id/served", h.MarkOrderServed, mw.CheckLanguage(), mw.RequireRoles(mw.RolesCanServeOrder...))
+			orders.POST("/:id/activate", h.ActivateOrder, mw.CheckLanguage(), mw.RequireRoles(mw.RolesAdminOnly...))
+			orders.POST("/:id/reschedule", h.RescheduleOrder, mw.CheckLanguage(), mw.RequireRoles(mw.RolesCanCreateOrder...))
 
-			orders.GET("/status/:status", h.GetOrdersByStatus, mw.CheckLanguage(), mw.RequireRoles("cashier", "admin", "manager", "superadmin"))
-			orders.GET("/table/:tableId", h.GetOrdersByTableID, mw.CheckLanguage(), mw.RequireRoles("waiter", "cashier", "admin", "manager", "superadmin"))
-			orders.GET("/waiter/:waiterId", h.GetOrdersByWaiterID, mw.CheckLanguage(), mw.RequireRoles("admin", "manager", "superadmin"))
-			orders.POST("/:id/assign-waiter/:waiterId", h.AssignWaiterToOrder, mw.CheckLanguage(), mw.RequireRoles("admin", "manager", "superadmin"))
-			orders.POST("/:id/assign-cashier/:cashierId", h.AssignCashierToOrder, mw.CheckLanguage(), mw.RequireRoles("admin", "manager", "superadmin"))
+			orders.GET("/status/:status", h.GetOrdersByStatus, mw.CheckLanguage(), mw.RequireRoles(mw.RolesCanReadCashierOrders...))
+			orders.GET("/table/:tableId", h.GetOrdersByTableID, mw.CheckLanguage(), mw.RequireRoles(mw.RolesCanReadPOSOrders...))
+			orders.GET("/waiter/:waiterId", h.GetOrdersByWaiterID, mw.CheckLanguage(), mw.RequireRoles(mw.RolesAdminOnly...))
+			orders.POST("/:id/assign-waiter/:waiterId", h.AssignWaiterToOrder, mw.CheckLanguage(), mw.RequireRoles(mw.RolesAdminOnly...))
+			orders.POST("/:id/assign-cashier/:cashierId", h.AssignCashierToOrder, mw.CheckLanguage(), mw.RequireRoles(mw.RolesAdminOnly...))
 		}
 
 		bills := api.Group("/bills", mw.CheckAuth(h.cfg), mw.TenantMiddleware(h.repo))
 		{
-			bills.GET("", h.GetBills, mw.CheckLanguage(), mw.RequireRoles("cashier", "admin", "manager", "superadmin"))
-			bills.GET("/:id", h.GetBillDetails, mw.CheckLanguage(), mw.RequireRoles("cashier", "admin", "manager", "superadmin"))
+			bills.GET("", h.GetBills, mw.CheckLanguage(), mw.RequireRoles(mw.RolesCanReadCashierOrders...))
+			bills.GET("/:id", h.GetBillDetails, mw.CheckLanguage(), mw.RequireRoles(mw.RolesCanReadCashierOrders...))
 		}
 
 		orderItems := api.Group("/order-items", mw.CheckAuth(h.cfg), mw.TenantMiddleware(h.repo))
 		{
-			orderItems.POST("", h.CreateOrderItem, mw.CheckLanguage(), mw.RequireRoles("waiter", "cashier", "admin", "manager", "superadmin"))
-			orderItems.GET("", h.GetAllOrderItems, mw.CheckLanguage(), mw.RequireRoles("cashier", "admin", "manager", "superadmin"))
-			orderItems.GET("/:id", h.GetOrderItemByID, mw.CheckLanguage(), mw.RequireRoles("waiter", "cashier", "admin", "manager", "superadmin"))
-			orderItems.PUT("/:id", h.UpdateOrderItem, mw.CheckLanguage(), mw.RequireRoles("waiter", "cashier", "admin", "manager", "superadmin"))
-			orderItems.DELETE("/:id", h.DeleteOrderItem, mw.CheckLanguage(), mw.RequireRoles("admin", "manager", "superadmin"))
-			orderItems.POST("/:id/restore", h.RestoreOrderItem, mw.CheckLanguage(), mw.RequireRoles("admin", "manager", "superadmin"))
+			orderItems.POST("", h.CreateOrderItem, mw.CheckLanguage(), mw.RequireRoles(mw.RolesCanCreateOrder...))
+			orderItems.GET("", h.GetAllOrderItems, mw.CheckLanguage(), mw.RequireRoles(mw.RolesCanReadCashierOrders...))
+			orderItems.GET("/:id", h.GetOrderItemByID, mw.CheckLanguage(), mw.RequireRoles(mw.RolesCanReadPOSOrders...))
+			orderItems.PUT("/:id", h.UpdateOrderItem, mw.CheckLanguage(), mw.RequireRoles(mw.RolesCanCreateOrder...))
+			orderItems.DELETE("/:id", h.DeleteOrderItem, mw.CheckLanguage(), mw.RequireRoles(mw.RolesAdminOnly...))
+			orderItems.POST("/:id/restore", h.RestoreOrderItem, mw.CheckLanguage(), mw.RequireRoles(mw.RolesAdminOnly...))
 
-			orderItems.GET("/order/:orderId", h.GetOrderItemsByOrderID, mw.CheckLanguage(), mw.RequireRoles("waiter", "cashier", "admin", "manager", "superadmin"))
-			orderItems.GET("/status/:status", h.GetOrderItemsByStatus, mw.CheckLanguage(), mw.RequireRoles("cashier", "kitchen", "admin", "manager", "superadmin"))
-			orderItems.PUT("/:id/quantity", h.UpdateOrderItemQuantity, mw.CheckLanguage(), mw.RequireRoles("waiter", "cashier", "admin", "manager", "superadmin"))
-			orderItems.PUT("/:id/status", h.UpdateOrderItemStatus, mw.CheckLanguage(), mw.RequireRoles("kitchen", "admin", "manager", "superadmin"))
-			orderItems.POST("/:id/cancel", h.CancelOrderItem, mw.CheckLanguage(), mw.RequireRoles("waiter", "cashier", "admin", "manager", "superadmin"))
-			orderItems.POST("/:id/cooking", h.MarkOrderItemCooking, mw.CheckLanguage(), mw.RequireRoles("kitchen", "admin", "manager", "superadmin"))
-			orderItems.POST("/:id/ready", h.MarkOrderItemReady, mw.CheckLanguage(), mw.RequireRoles("kitchen", "admin", "manager", "superadmin"))
+			orderItems.GET("/order/:orderId", h.GetOrderItemsByOrderID, mw.CheckLanguage(), mw.RequireRoles(mw.RolesCanReadPOSOrders...))
+			orderItems.GET("/status/:status", h.GetOrderItemsByStatus, mw.CheckLanguage(), mw.RequireRoles(mw.RolesCanManageKitchen...))
+			orderItems.PUT("/:id/quantity", h.UpdateOrderItemQuantity, mw.CheckLanguage(), mw.RequireRoles(mw.RolesCanCreateOrder...))
+			orderItems.PUT("/:id/status", h.UpdateOrderItemStatus, mw.CheckLanguage(), mw.RequireRoles(mw.RolesCanManageKitchen...))
+			orderItems.POST("/:id/cancel", h.CancelOrderItem, mw.CheckLanguage(), mw.RequireRoles(mw.RolesCanCreateOrder...))
+			orderItems.POST("/:id/cooking", h.MarkOrderItemCooking, mw.CheckLanguage(), mw.RequireRoles(mw.RolesCanManageKitchen...))
+			orderItems.POST("/:id/ready", h.MarkOrderItemReady, mw.CheckLanguage(), mw.RequireRoles(mw.RolesCanManageKitchen...))
 		}
 
 		// kitchen := api.Group("/kitchen")
@@ -581,24 +591,24 @@ func (h *Handler) Register(router *echo.Echo) {
 		// Cash register management endpoints
 		cashRegisters := api.Group("/cash-registers", mw.CheckAuth(h.cfg), mw.TenantMiddleware(h.repo))
 		{
-			cashRegisters.POST("", h.CreateCashRegister, mw.CheckLanguage(), mw.RequireRoles("admin", "manager", "superadmin"))
-			cashRegisters.GET("", h.GetAllCashRegisters, mw.CheckLanguage(), mw.RequireRoles("cashier", "admin", "manager", "superadmin"))
-			cashRegisters.GET("/branch/:branchId", h.GetCashRegistersByBranchID, mw.CheckLanguage(), mw.RequireRoles("cashier", "admin", "manager", "superadmin"))
-			cashRegisters.GET("/:id", h.GetCashRegister, mw.CheckLanguage(), mw.RequireRoles("cashier", "admin", "manager", "superadmin"))
-			cashRegisters.PUT("/:id", h.UpdateCashRegister, mw.CheckLanguage(), mw.RequireRoles("admin", "manager", "superadmin"))
-			cashRegisters.DELETE("/:id", h.DeleteCashRegister, mw.CheckLanguage(), mw.RequireRoles("admin", "manager", "superadmin"))
-			cashRegisters.POST("/:id/restore", h.RestoreCashRegister, mw.CheckLanguage(), mw.RequireRoles("admin", "manager", "superadmin"))
+			cashRegisters.POST("", h.CreateCashRegister, mw.CheckLanguage(), mw.RequireRoles(mw.RolesAdminOnly...))
+			cashRegisters.GET("", h.GetAllCashRegisters, mw.CheckLanguage(), mw.RequireRoles(mw.RolesCanOperateCashRegister...))
+			cashRegisters.GET("/branch/:branchId", h.GetCashRegistersByBranchID, mw.CheckLanguage(), mw.RequireRoles(mw.RolesCanOperateCashRegister...))
+			cashRegisters.GET("/:id", h.GetCashRegister, mw.CheckLanguage(), mw.RequireRoles(mw.RolesCanOperateCashRegister...))
+			cashRegisters.PUT("/:id", h.UpdateCashRegister, mw.CheckLanguage(), mw.RequireRoles(mw.RolesAdminOnly...))
+			cashRegisters.DELETE("/:id", h.DeleteCashRegister, mw.CheckLanguage(), mw.RequireRoles(mw.RolesAdminOnly...))
+			cashRegisters.POST("/:id/restore", h.RestoreCashRegister, mw.CheckLanguage(), mw.RequireRoles(mw.RolesAdminOnly...))
 		}
 
 		// Cash register shift endpoints
 		cashRegisterShifts := api.Group("/cash-register-shifts", mw.CheckAuth(h.cfg), mw.TenantMiddleware(h.repo))
 		{
-			cashRegisterShifts.POST("", h.OpenCashRegisterShift, mw.CheckLanguage(), mw.RequireRoles("cashier", "admin", "manager", "superadmin"))
-			cashRegisterShifts.GET("", h.ListCashRegisterShifts, mw.CheckLanguage(), mw.RequireRoles("cashier", "admin", "manager", "superadmin"))
-			cashRegisterShifts.GET("/active", h.GetActiveCashRegisterShift, mw.CheckLanguage(), mw.RequireRoles("cashier", "admin", "manager", "superadmin"))
-			cashRegisterShifts.GET("/:id", h.GetCashRegisterShift, mw.CheckLanguage(), mw.RequireRoles("cashier", "admin", "manager", "superadmin"))
-			cashRegisterShifts.POST("/:id/close", h.CloseCashRegisterShift, mw.CheckLanguage(), mw.RequireRoles("cashier", "admin", "manager", "superadmin"))
-			cashRegisterShifts.DELETE("/:id", h.DeleteCashRegisterShift, mw.CheckLanguage(), mw.RequireRoles("admin", "manager", "superadmin"))
+			cashRegisterShifts.POST("", h.OpenCashRegisterShift, mw.CheckLanguage(), mw.RequireRoles(mw.RolesCanOperateCashRegister...))
+			cashRegisterShifts.GET("", h.ListCashRegisterShifts, mw.CheckLanguage(), mw.RequireRoles(mw.RolesCanOperateCashRegister...))
+			cashRegisterShifts.GET("/active", h.GetActiveCashRegisterShift, mw.CheckLanguage(), mw.RequireRoles(mw.RolesCanOperateCashRegister...))
+			cashRegisterShifts.GET("/:id", h.GetCashRegisterShift, mw.CheckLanguage(), mw.RequireRoles(mw.RolesCanOperateCashRegister...))
+			cashRegisterShifts.POST("/:id/close", h.CloseCashRegisterShift, mw.CheckLanguage(), mw.RequireRoles(mw.RolesCanOperateCashRegister...))
+			cashRegisterShifts.DELETE("/:id", h.DeleteCashRegisterShift, mw.CheckLanguage(), mw.RequireRoles(mw.RolesAdminOnly...))
 		}
 
 		// Group transaction management endpoints
