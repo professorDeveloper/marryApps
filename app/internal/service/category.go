@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -358,9 +359,16 @@ func (c *CategoryS) RestoreCategory(ctx context.Context, categoryID string) (*mo
 	return c.GetCategoryByID(ctx, categoryID)
 }
 
-func (c *CategoryS) SearchCategories(ctx context.Context, query string, limit, offset int32) ([]*model.CategoryResponse, error) {
+func (c *CategoryS) SearchCategories(ctx context.Context, query string, limit, offset int32) ([]*model.CategoryResponse, int64, error) {
+	query = strings.TrimSpace(query)
 	if query == "" {
-		return nil, fmt.Errorf("search query is required")
+		return nil, 0, fmt.Errorf("search query is required")
+	}
+
+	total, err := c.repo.Tenant(ctx).CountSearchCategories(ctx, &query)
+	if err != nil {
+		log.Printf("CountSearchCategories failed: %v", err)
+		return nil, 0, fmt.Errorf("failed to count searched categories: %w", err)
 	}
 
 	rows, err := c.repo.Tenant(ctx).SearchCategories(ctx, pg.SearchCategoriesParams{
@@ -370,14 +378,26 @@ func (c *CategoryS) SearchCategories(ctx context.Context, query string, limit, o
 	})
 	if err != nil {
 		log.Printf("SearchCategories failed: %v", err)
-		return nil, fmt.Errorf("failed to search categories: %w", err)
+		return nil, 0, fmt.Errorf("failed to search categories: %w", err)
 	}
 
 	var responses []*model.CategoryResponse
 	for _, row := range rows {
-		responses = append(responses, mapCategoryToResponse(row.ID, row.Name, row.NameI18n, row.DepartmentID, row.StorageID, row.Parent, row.PictureUrl, row.ColorCode, row.CreatedAt, row.UpdatedAt))
+		responses = append(responses, mapCategoryToResponse(
+			row.ID,
+			row.Name,
+			row.NameI18n,
+			row.DepartmentID,
+			row.StorageID,
+			row.Parent,
+			row.PictureUrl,
+			row.ColorCode,
+			row.CreatedAt,
+			row.UpdatedAt,
+		))
 	}
-	return responses, nil
+
+	return responses, total, nil
 }
 
 func (c *CategoryS) GetCategoryByIDWithLang(ctx context.Context, categoryID string, lang string) (*model.CategoryResponse, error) {

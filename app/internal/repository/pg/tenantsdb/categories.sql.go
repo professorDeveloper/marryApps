@@ -103,6 +103,33 @@ func (q *Queries) CountRootCategories(ctx context.Context) (int64, error) {
 	return count, err
 }
 
+const countSearchCategories = `-- name: CountSearchCategories :one
+SELECT COUNT(*)
+FROM categories c
+LEFT JOIN departments d ON c.department_id = d.id AND d.deleted_at = 0
+LEFT JOIN translations t ON c.name_i18n = t.id AND t.deleted_at = 0
+WHERE c.deleted_at = 0
+  AND (
+    COALESCE(c.name, '') ILIKE '%' || $1 || '%'
+    OR COALESCE(t.uz, '') ILIKE '%' || $1 || '%'
+    OR COALESCE(t.ru, '') ILIKE '%' || $1 || '%'
+    OR COALESCE(t.en, '') ILIKE '%' || $1 || '%'
+  )
+  AND EXISTS (
+    SELECT 1
+    FROM storages s
+    WHERE s.id = d.storage_id
+      AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  )
+`
+
+func (q *Queries) CountSearchCategories(ctx context.Context, dollar_1 *string) (int64, error) {
+	row := q.db.QueryRow(ctx, countSearchCategories, dollar_1)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const createCategory = `-- name: CreateCategory :one
 INSERT INTO categories (id, name, picture_url, name_i18n, department_id, parent, color_code)
 SELECT $1, $2, $3, $4, $5, $6, $7
@@ -775,13 +802,31 @@ func (q *Queries) RestoreCategory(ctx context.Context, id uuid.UUID) error {
 }
 
 const searchCategories = `-- name: SearchCategories :many
-SELECT c.id, c.name, c.picture_url, c.color_code, c.name_i18n, c.department_id,
-       d.storage_id, c.parent, c.created_at, c.updated_at, c.deleted_at
+SELECT
+    c.id,
+    COALESCE(c.name, '') as name,
+    c.picture_url,
+    c.color_code,
+    c.name_i18n,
+    c.department_id,
+    d.storage_id,
+    c.parent,
+    c.created_at,
+    c.updated_at,
+    c.deleted_at
 FROM categories c
 LEFT JOIN departments d ON c.department_id = d.id AND d.deleted_at = 0
-WHERE c.deleted_at = 0 AND c.name ILIKE '%' || $1 || '%'
+LEFT JOIN translations t ON c.name_i18n = t.id AND t.deleted_at = 0
+WHERE c.deleted_at = 0
+  AND (
+    COALESCE(c.name, '') ILIKE '%' || $1 || '%'
+    OR COALESCE(t.uz, '') ILIKE '%' || $1 || '%'
+    OR COALESCE(t.ru, '') ILIKE '%' || $1 || '%'
+    OR COALESCE(t.en, '') ILIKE '%' || $1 || '%'
+  )
   AND EXISTS (
-    SELECT 1 FROM storages s
+    SELECT 1
+    FROM storages s
     WHERE s.id = d.storage_id
       AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
   )
