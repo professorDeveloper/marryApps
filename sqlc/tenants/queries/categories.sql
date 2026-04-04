@@ -143,18 +143,55 @@ WHERE categories.id = $1 AND deleted_at != 0
   );
 
 -- name: SearchCategories :many
-SELECT c.id, c.name, c.picture_url, c.color_code, c.name_i18n, c.department_id,
-       d.storage_id, c.parent, c.created_at, c.updated_at, c.deleted_at
+SELECT
+    c.id,
+    COALESCE(c.name, '') as name,
+    c.picture_url,
+    c.color_code,
+    c.name_i18n,
+    c.department_id,
+    d.storage_id,
+    c.parent,
+    c.created_at,
+    c.updated_at,
+    c.deleted_at
 FROM categories c
 LEFT JOIN departments d ON c.department_id = d.id AND d.deleted_at = 0
-WHERE c.deleted_at = 0 AND c.name ILIKE '%' || $1 || '%'
+LEFT JOIN translations t ON c.name_i18n = t.id AND t.deleted_at = 0
+WHERE c.deleted_at = 0
+  AND (
+    COALESCE(c.name, '') ILIKE '%' || $1 || '%'
+    OR COALESCE(t.uz, '') ILIKE '%' || $1 || '%'
+    OR COALESCE(t.ru, '') ILIKE '%' || $1 || '%'
+    OR COALESCE(t.en, '') ILIKE '%' || $1 || '%'
+  )
   AND EXISTS (
-    SELECT 1 FROM storages s
+    SELECT 1
+    FROM storages s
     WHERE s.id = d.storage_id
       AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
   )
 ORDER BY c.created_at DESC
 LIMIT $2 OFFSET $3;
+
+-- name: CountSearchCategories :one
+SELECT COUNT(*)
+FROM categories c
+LEFT JOIN departments d ON c.department_id = d.id AND d.deleted_at = 0
+LEFT JOIN translations t ON c.name_i18n = t.id AND t.deleted_at = 0
+WHERE c.deleted_at = 0
+  AND (
+    COALESCE(c.name, '') ILIKE '%' || $1 || '%'
+    OR COALESCE(t.uz, '') ILIKE '%' || $1 || '%'
+    OR COALESCE(t.ru, '') ILIKE '%' || $1 || '%'
+    OR COALESCE(t.en, '') ILIKE '%' || $1 || '%'
+  )
+  AND EXISTS (
+    SELECT 1
+    FROM storages s
+    WHERE s.id = d.storage_id
+      AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  );
 
 -- name: CountCategories :one
 SELECT COUNT(*) FROM categories c

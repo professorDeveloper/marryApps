@@ -169,7 +169,7 @@ type CategoryI interface {
 	UpdateCategory(ctx context.Context, categoryID string, name, nameI18n, departmentID, parent *string, pictureUrl *string, colorCode *string) (*model.CategoryResponse, error)
 	DeleteCategory(ctx context.Context, categoryID string) error
 	RestoreCategory(ctx context.Context, categoryID string) (*model.CategoryResponse, error)
-	SearchCategories(ctx context.Context, query string, limit, offset int32) ([]*model.CategoryResponse, error)
+	SearchCategories(ctx context.Context, query string, limit, offset int32) ([]*model.CategoryResponse, int64, error)
 }
 
 type CompoundI interface {

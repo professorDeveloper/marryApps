@@ -309,12 +309,12 @@ func (h *Handler) Register(router *echo.Echo) {
 		{
 			categories.POST("", h.CreateCategory, mw.CheckLanguage())
 			categories.GET("", h.GetAllCategories, mw.CheckLanguage())
+			categories.GET("/search", h.SearchCategories, mw.CheckLanguage())
 			categories.GET("/:id", h.GetCategoryByID, mw.CheckLanguage())
 			categories.GET("/department/:departmentId", h.GetCategoriesByDepartmentID, mw.CheckLanguage())
 			categories.GET("/storage/:storageId", h.GetCategoriesByStorageID, mw.CheckLanguage())
 			categories.GET("/parent/:parentId", h.GetCategoriesByParentID, mw.CheckLanguage())
 			categories.GET("/root", h.GetRootCategories, mw.CheckLanguage())
-			categories.GET("/search", h.SearchCategories, mw.CheckLanguage())
 			categories.PUT("/:id", h.UpdateCategory, mw.CheckLanguage())
 			categories.DELETE("/:id", h.DeleteCategory, mw.CheckLanguage())
 			categories.POST("/:id/restore", h.RestoreCategory, mw.CheckLanguage())

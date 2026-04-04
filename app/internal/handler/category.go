@@ -4,6 +4,7 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/labstack/echo/v4"
 	"gitlab.yurtal.tech/company/maryai/back/internal/model"
@@ -463,9 +464,13 @@ func (h *Handler) RestoreCategory(c echo.Context) error {
 // @Failure 500 {object} model.ErrorResponse "Internal server error"
 // @Router /api/v1/categories/search [get]
 func (h *Handler) SearchCategories(c echo.Context) error {
-	query := c.QueryParam("q")
+	query := strings.TrimSpace(c.QueryParam("q"))
 	if query == "" {
-		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("search query is required", "see logs for details", http.StatusBadRequest))
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"search query is required",
+			"missing query parameter: q",
+			http.StatusBadRequest,
+		))
 	}
 
 	var limit int32 = 20
@@ -483,13 +488,42 @@ func (h *Handler) SearchCategories(c echo.Context) error {
 		}
 	}
 
-	categories, err := h.service.Category().SearchCategories(c.Request().Context(), query, limit, offset)
+	categories, total, err := h.service.Category().SearchCategories(c.Request().Context(), query, limit, offset)
 	if err != nil {
 		log.Printf("SearchCategories failed for query %s: %v", query, err)
-		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("failed to search categories", "see logs for details", http.StatusInternalServerError))
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse(
+			"failed to search categories",
+			err.Error(),
+			http.StatusInternalServerError,
+		))
 	}
 
-	return c.JSON(http.StatusOK, model.NewSuccessResponse("Data retrieved successfully", categories, http.StatusOK))
+	if maps, expanded, err := h.expandListResponse(c, categories, "categories"); expanded {
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, model.NewErrorResponse(
+				"expand failed",
+				err.Error(),
+				http.StatusInternalServerError,
+			))
+		}
+		return c.JSON(http.StatusOK, model.NewPaginatedResponse(
+			"Data retrieved successfully",
+			maps,
+			int32(total),
+			limit,
+			offset,
+			http.StatusOK,
+		))
+	}
+
+	return c.JSON(http.StatusOK, model.NewPaginatedResponse(
+		"Data retrieved successfully",
+		categories,
+		int32(total),
+		limit,
+		offset,
+		http.StatusOK,
+	))
 }
 
 // GetCategoryByIDWithLang retrieves a category by ID with language support
