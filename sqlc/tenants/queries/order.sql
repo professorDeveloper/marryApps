@@ -510,3 +510,102 @@ JOIN cafe_tables ct ON ct.id = o.table_id AND ct.deleted_at = 0
 WHERE o.id = $1
   AND o.deleted_at = 0
   AND o.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid;
+
+-- name: GetMyWaiterOrders :many
+SELECT
+    o.id,
+    o.table_id,
+    o.waiter_id,
+    o.cashier_id,
+    o.cash_register_id,
+    o.status,
+    o.guest_count,
+    o.total_amount,
+    o.comment,
+    o.order_type,
+    o.scheduled_at,
+    o.reschedule_comment,
+    o.created_at,
+    o.updated_at,
+    ct.number AS table_number,
+    h.name AS hall_name,
+    COUNT(oi.id)::bigint AS item_count,
+    CAST(COALESCE(SUM(COALESCE(oi.quantity, 0)), 0) AS bigint) AS total_items
+FROM orders o
+LEFT JOIN cafe_tables ct ON o.table_id = ct.id AND ct.deleted_at = 0
+LEFT JOIN halls h ON ct.hall_id = h.id AND h.deleted_at = 0
+LEFT JOIN order_items oi ON o.id = oi.order_id AND oi.deleted_at = 0
+WHERE o.waiter_id = sqlc.arg(waiter_id)::uuid
+  AND o.deleted_at = 0
+  AND (
+        sqlc.arg(scope)::text = 'all'
+        OR (
+            sqlc.arg(scope)::text = 'active'
+            AND (
+                o.status IN ('open', 'cooking', 'ready', 'served')
+                OR (o.order_type = 'takeaway' AND o.status = 'paid')
+            )
+        )
+        OR (
+            sqlc.arg(scope)::text = 'reservations'
+            AND o.status IN ('reserved', 'rescheduled')
+        )
+        OR (
+            sqlc.arg(scope)::text = 'history'
+            AND o.status IN ('paid', 'cancelled')
+        )
+      )
+  AND (
+        sqlc.narg(order_type)::text IS NULL
+        OR o.order_type = sqlc.narg(order_type)::text
+      )
+  AND (
+        sqlc.narg(table_id)::uuid IS NULL
+        OR o.table_id = sqlc.narg(table_id)::uuid
+      )
+  AND (
+        CASE
+            WHEN o.status IN ('reserved', 'rescheduled') AND o.scheduled_at IS NOT NULL
+                THEN o.scheduled_at
+            ELSE o.created_at
+        END
+      ) >= sqlc.arg(day_start)::timestamptz
+  AND (
+        CASE
+            WHEN o.status IN ('reserved', 'rescheduled') AND o.scheduled_at IS NOT NULL
+                THEN o.scheduled_at
+            ELSE o.created_at
+        END
+      ) < sqlc.arg(day_end)::timestamptz
+GROUP BY
+    o.id,
+    o.table_id,
+    o.waiter_id,
+    o.cashier_id,
+    o.cash_register_id,
+    o.status,
+    o.guest_count,
+    o.total_amount,
+    o.comment,
+    o.order_type,
+    o.scheduled_at,
+    o.reschedule_comment,
+    o.created_at,
+    o.updated_at,
+    ct.number,
+    h.name
+ORDER BY
+    CASE
+        WHEN o.status = 'ready' THEN 1
+        WHEN o.status = 'cooking' THEN 2
+        WHEN o.status = 'open' THEN 3
+        WHEN o.status = 'served' THEN 4
+        WHEN o.status = 'reserved' THEN 5
+        WHEN o.status = 'rescheduled' THEN 6
+        WHEN o.status = 'paid' THEN 7
+        WHEN o.status = 'cancelled' THEN 8
+        ELSE 99
+    END,
+    o.created_at DESC
+LIMIT sqlc.arg(page_limit)::int
+OFFSET sqlc.arg(page_offset)::int;
