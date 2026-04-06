@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"strconv"
+	"strings"
 	"time"
 
 	"firebase.google.com/go/v4/messaging"
@@ -1376,10 +1377,18 @@ func (s *OrderS) GetAllOrderItems(ctx context.Context, limit, offset int32) ([]m
 	return responses, nil
 }
 
-func (s *OrderS) GetOrderItemsByOrderID(ctx context.Context, orderID string) ([]model.OrderItemResponse, error) {
+func (s *OrderS) GetOrderItemsByOrderID(
+	ctx context.Context,
+	orderID string,
+	lang string,
+) ([]model.OrderItemWithGoodResponse, error) {
 	id, err := uuid.Parse(orderID)
 	if err != nil {
 		return nil, fmt.Errorf("invalid order id: %w", err)
+	}
+
+	if strings.TrimSpace(lang) == "" {
+		lang = "uz"
 	}
 
 	items, err := s.repo.Tenant(ctx).GetOrderItemsByOrderID(ctx, id)
@@ -1387,10 +1396,23 @@ func (s *OrderS) GetOrderItemsByOrderID(ctx context.Context, orderID string) ([]
 		return nil, fmt.Errorf("failed to get order items: %w", err)
 	}
 
-	var responses []model.OrderItemResponse
+	responses := make([]model.OrderItemWithGoodResponse, 0, len(items))
+
 	for _, it := range items {
-		responses = append(responses, *toOrderItemResponse(it))
+		good, err := s.repo.Tenant(ctx).GetGoodByIDWithLanguage(ctx, pg.GetGoodByIDWithLanguageParams{
+			ID:      it.GoodID,
+			Column2: lang,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("failed to get good for item %s: %w", it.ID.String(), err)
+		}
+
+		resp := toOrderItemWithGoodResponse(it, good)
+		if resp != nil {
+			responses = append(responses, *resp)
+		}
 	}
+
 	return responses, nil
 }
 
@@ -2159,6 +2181,46 @@ func toOrderItemResponse(oi pg.OrderItem) *model.OrderItemResponse {
 		Comment:   oi.Comment,
 		CreatedAt: createdAt,
 		UpdatedAt: updatedAt,
+	}
+}
+
+func toOrderItemWithGoodResponse(
+	oi pg.OrderItem,
+	good pg.GetGoodByIDWithLanguageRow,
+) *model.OrderItemWithGoodResponse {
+	if oi.ID == uuid.Nil {
+		return nil
+	}
+
+	var createdAt *time.Time
+	if oi.CreatedAt.Valid {
+		t := oi.CreatedAt.Time
+		createdAt = &t
+	}
+
+	var updatedAt *time.Time
+	if oi.UpdatedAt.Valid {
+		t := oi.UpdatedAt.Time
+		updatedAt = &t
+	}
+
+	status := model.OrderItemStatusPending
+	if oi.Status.Valid {
+		status = model.OrderItemStatus(oi.Status.OrderItemsStatus)
+	}
+
+	return &model.OrderItemWithGoodResponse{
+		ID:         oi.ID.String(),
+		OrderID:    oi.OrderID.String(),
+		GoodID:     oi.GoodID.String(),
+		GoodName:   good.Name,
+		PictureUrl: good.PictureUrl,
+		Quantity:   oi.Quantity,
+		Price:      numericToString(oi.Price),
+		Status:     status,
+		Comment:    oi.Comment,
+		CreatedAt:  createdAt,
+		UpdatedAt:  updatedAt,
 	}
 }
 
