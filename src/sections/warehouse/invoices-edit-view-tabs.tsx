@@ -1,14 +1,20 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { useParams } from 'react-router';
-import { Box, Tabs, Tab, CircularProgress } from '@mui/material';
-import { useTranslation } from 'react-i18next';
-import { useRouter } from 'src/routes/hooks';
-import { paths } from 'src/routes/paths';
-import { InvoiceInfoEditView } from './invoice-info-edit-view';
-import { InvoiceDetailsCalculation } from 'src/components/invoice-details-calculation/invoice-details-calculation';
-import { useInvoiceAPI } from 'src/hooks/use-invoice-api';
-import { fetcher, endpoints } from 'src/lib/axios';
 import { toast } from 'sonner';
+import { useParams } from 'react-router';
+import { useTranslation } from 'react-i18next';
+import { useRef, useState, useEffect, useCallback } from 'react';
+
+import { Box, Tab, Tabs } from '@mui/material';
+
+import { paths } from 'src/routes/paths';
+import { useRouter } from 'src/routes/hooks';
+
+import { useInvoiceAPI } from 'src/hooks/use-invoice-api';
+
+import { fetcher } from 'src/lib/axios';
+
+import { InvoiceDetailsCalculation } from 'src/components/invoice-details-calculation/invoice-details-calculation';
+
+import { InvoiceInfoEditView } from './invoice-info-edit-view';
 
 interface TabPanelProps {
     children?: React.ReactNode;
@@ -134,9 +140,7 @@ export function InvoicesEditViewTabs() {
             // If creating new invoice with details, use batch API
             if (isCreatingNew && detailsToSubmit && detailsToSubmit.length > 0) {
                 // Calculate total_amount from details (not from user input)
-                const calculatedTotal = detailsToSubmit.reduce((sum, item) => {
-                    return sum + (parseFloat(item.price?.toString() || '0'));
-                }, 0);
+                const calculatedTotal = detailsToSubmit.reduce((sum, item) => sum + (parseFloat(item.price?.toString() || '0')), 0);
 
                 const batchPayload = {
                     invoice: {

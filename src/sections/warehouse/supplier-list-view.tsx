@@ -1,103 +1,74 @@
-import type { GridColDef } from '@mui/x-data-grid';
-import { useMemo, useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useMemo, useState, useEffect } from 'react';
+
+import {
+    Box,
+    Button,
+    Dialog,
+    IconButton,
+    DialogTitle,
+    DialogActions,
+    DialogContent,
+} from '@mui/material';
+
 import { paths } from 'src/routes/paths';
+
 import { useSupplierAPI } from 'src/hooks/use-supplier-api';
+
+import { DashboardContent } from 'src/layouts/dashboard';
+
 import { Iconify } from 'src/components/iconify';
-import { CustomGridActionsCellItem } from 'src/components/custom-data-grid';
-import { GenericTableView } from 'src/components/generic-table-view';
-import { Box, Button, Dialog, DialogTitle, DialogContent, DialogActions } from '@mui/material';
+
+import { DeductionUtilityDataTable } from 'src/sections/warehouse/deduction';
 
 export function InvoicesListView() {
     const { t } = useTranslation('menu');
-    const theme = {
-        vars: {
-            palette: {
-                error: {
-                    main: '#f44336',
-                },
-            },
-        },
-    };
     const { getSuppliers, deleteSuppliers } = useSupplierAPI();
     const [rows, setRows] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [supplierToDelete, setSupplierToDelete] = useState<string | null>(null);
+    const [searchQuery, setSearchQuery] = useState('');
+    const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
+
+    // Debounce search query
+    useEffect(() => {
+        const timeout = setTimeout(() => {
+            setDebouncedSearchQuery(searchQuery);
+        }, 400);
+
+        return () => clearTimeout(timeout);
+    }, [searchQuery]);
 
     useEffect(() => {
         const fetchData = async () => {
             setLoading(true);
             try {
                 const suppliers = await getSuppliers();
-                setRows(
-                    Array.isArray(suppliers)
-                        ? suppliers.filter((row) => row && typeof row === 'object' && row.id != null)
-                        : []
-                );
+                let filteredData = Array.isArray(suppliers)
+                    ? suppliers.filter((row) => row && typeof row === 'object' && row.id != null)
+                    : [];
+
+                // Apply search filter
+                if (debouncedSearchQuery) {
+                    const searchLower = debouncedSearchQuery.toLowerCase();
+                    filteredData = filteredData.filter((supplier) => {
+                        const searchableText = [
+                            supplier.name,
+                            supplier.phone_number,
+                        ].filter(Boolean).join(' ').toLowerCase();
+                        return searchableText.includes(searchLower);
+                    });
+                }
+
+                setRows(filteredData);
             } finally {
                 setLoading(false);
             }
         };
 
         fetchData();
-    }, [getSuppliers]);
-
-    const columns = useMemo<GridColDef[]>(
-        () => [
-            {
-                field: 'id',
-                headerName: '№',
-                width: 80,
-                renderCell: (params) => {
-                    const index = rows.findIndex((row) => row && row.id === params.row.id);
-                    return index + 1;
-                },
-            },
-            {
-                field: 'name',
-                headerName: t('warehouse.suppliers.name'),
-                flex: 1,
-                minWidth: 200,
-                renderCell: (params) => <Box sx={{ mt: 1.5, mb: 1.5 }}>{params.row.name}</Box>,
-            },
-            {
-                field: 'phone_number',
-                headerName: t('warehouse.suppliers.phoneNumber'),
-                width: 160,
-            },
-            {
-                type: 'actions',
-                field: 'actions',
-                headerName: t('actions'),
-                width: 120,
-                // align: 'right',
-                // headerAlign: 'right',
-                sortable: false,
-                filterable: false,
-                disableColumnMenu: true,
-                getActions: (params) => [
-                    <CustomGridActionsCellItem
-                        // showInMenu
-                        label={t('edit')}
-                        icon={<Iconify icon="solar:pen-bold" />}
-                        href={paths.warehouse.suppliers.edit(params.row.id)}
-                    />,
-                    <CustomGridActionsCellItem
-                        // showInMenu
-                        label={t('delete')}
-                        icon={<Iconify icon="solar:trash-bin-trash-bold" />}
-                        style={{ color: theme.vars.palette.error.main }}
-                        onClick={() => {
-                            setSupplierToDelete(params.row.id);
-                            setDeleteDialogOpen(true);
-                        }}
-                    />,
-                ],
-            },
-        ],
-        [t, rows, deleteSuppliers]
-    );
+    }, [getSuppliers, debouncedSearchQuery]);
 
     const handleConfirmDelete = async () => {
         if (supplierToDelete) {
@@ -112,24 +83,107 @@ export function InvoicesListView() {
         }
     };
 
+    const columns = useMemo(
+        () => [
+            {
+                key: 'name',
+                label: t('warehouse.suppliers.name'),
+                sortable: true,
+                width: '2fr',
+                align: 'left' as const,
+                getValue: (row: any) => row?.name ?? '',
+            },
+            {
+                key: 'phone_number',
+                label: t('warehouse.suppliers.phoneNumber'),
+                sortable: true,
+                width: '1fr',
+                align: 'left' as const,
+                getValue: (row: any) => row?.phone_number ?? '',
+            },
+            {
+                key: 'actions',
+                label: t('actions'),
+                sortable: false,
+                filterable: false,
+                width: '0.5fr',
+                align: 'center' as const,
+                renderCell: ({ row }: { row: any }) => (
+                    <Box sx={{ display: 'flex', gap: 0.5 }}>
+                        <IconButton
+                            size="small"
+                            onClick={() => window.location.href = paths.warehouse.suppliers.edit(row.id)}
+                            sx={{ color: 'text.secondary' }}
+                        >
+                            <Iconify icon="solar:pen-bold" width={18} />
+                        </IconButton>
+                        <IconButton
+                            size="small"
+                            onClick={() => {
+                                setSupplierToDelete(row.id);
+                                setDeleteDialogOpen(true);
+                            }}
+                            sx={{ color: 'error.main' }}
+                        >
+                            <Iconify icon="solar:trash-bin-trash-bold" width={18} />
+                        </IconButton>
+                    </Box>
+                ),
+            },
+        ],
+        [t]
+    );
+
     return (
         <>
-            <GenericTableView
-                data={rows}
-                loading={loading}
-                columns={columns}
-                breadcrumbs={{
-                    heading: t('warehouse.suppliers.title'),
-                    links: [
-                        { name: t('overview.menu.title'), href: paths.menu.root },
-                        { name: t('warehouse.title'), href: paths.warehouse.root },
-                        { name: t('warehouse.suppliers.title'), href: paths.warehouse.suppliers.root },
-                    ],
+            <DashboardContent
+                sx={{
+                    flexGrow: 1,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    maxHeight: '100vh',
+                    '--layout-dashboard-content-pt': { xs: '0px', md: '0px' },
+                    '--layout-dashboard-content-pb': { xs: '0px', md: '0px' },
                 }}
-                addButton={{ label: t('common.add'), href: paths.warehouse.suppliers.new }}
-            />
+            >
+                <DeductionUtilityDataTable
+                    persistKey="warehouse-suppliers"
+                    data={rows}
+                    getRowId={(row: any) => String(row?.id)}
+                    columns={columns}
+                    searchValue={searchQuery}
+                    onSearchChange={(value: string) => {
+                        setSearchQuery(value);
+                    }}
+                    defaultConfig={{
+                        order: ['name', 'phone_number', 'actions'],
+                        visibility: {
+                            name: true,
+                            phone_number: true,
+                            actions: true,
+                        },
+                        widths: {
+                            name: '2fr',
+                            phone_number: '1fr',
+                            actions: '0.5fr',
+                        },
+                    }}
+                    onReset={() => {
+                        setSearchQuery('');
+                    }}
+                    headerActions={
+                        <Button
+                            variant="contained"
+                            startIcon={<Iconify icon="mingcute:add-line" />}
+                            href={paths.warehouse.suppliers.new}
+                            size="small"
+                        >
+                            {t('common.add')}
+                        </Button>
+                    }
+                />
+            </DashboardContent>
 
-            {/* Delete Confirmation Dialog */}
             <Dialog
                 open={deleteDialogOpen}
                 onClose={() => setDeleteDialogOpen(false)}

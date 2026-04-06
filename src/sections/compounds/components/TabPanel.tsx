@@ -1,4 +1,5 @@
 import type { FC } from 'react';
+
 import { Box } from '@mui/material';
 
 export interface TabPanelProps {

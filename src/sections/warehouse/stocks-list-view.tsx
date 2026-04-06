@@ -1,67 +1,101 @@
-import type { GridColDef } from '@mui/x-data-grid';
-
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Button } from '@mui/material';
+
 import { paths } from 'src/routes/paths';
 
+import { DashboardContent } from 'src/layouts/dashboard';
+
 import { Iconify } from 'src/components/iconify';
-import { CustomGridActionsCellItem } from 'src/components/custom-data-grid';
-import { RenderCellItem, GenericTableView } from 'src/components/generic-table-view';
+
+import { DeductionUtilityDataTable } from 'src/sections/warehouse/deduction';
 
 export function StocksListView() {
-  const { t } = useTranslation('menu');
-  const rows: any[] = [];
+    const { t } = useTranslation('menu');
+    const rows: any[] = [];
 
-  const columns = useMemo<GridColDef[]>(
-    () => [
-      { field: 'sku', headerName: 'SKU', width: 140 },
-      {
-        field: 'name',
-        headerName: t('overview.warehouse.stocks', 'Name'),
-        flex: 1,
-        minWidth: 220,
-        renderCell: (params) => <RenderCellItem params={params} imageField="coverUrl" nameField="name" />,
-      },
-      { field: 'quantity', headerName: 'Quantity', width: 120 },
-      { field: 'location', headerName: t('overview.warehouse.locations', 'Location'), width: 160 },
-      {
-        type: 'actions',
-        field: 'actions',
-        headerName: ' ',
-        width: 64,
-        align: 'right',
-        headerAlign: 'right',
-        sortable: false,
-        filterable: false,
-        disableColumnMenu: true,
-        getActions: (params) => [
-          <CustomGridActionsCellItem
-            showInMenu
-            label={t('edit')}
-            icon={<Iconify icon="solar:pen-bold" />}
-            href={paths.warehouse.stocks.edit(params.row.id)}
-          />,
+    const columns = useMemo(
+        () => [
+            {
+                key: 'sku',
+                label: 'SKU',
+                sortable: true,
+                width: '1fr',
+                align: 'left' as const,
+                getValue: (row: any) => row?.sku ?? '',
+            },
+            {
+                key: 'name',
+                label: t('overview.warehouse.stocks', 'Name'),
+                sortable: true,
+                width: '2fr',
+                align: 'left' as const,
+                getValue: (row: any) => row?.name ?? '',
+            },
+            {
+                key: 'quantity',
+                label: 'Quantity',
+                sortable: true,
+                width: '1fr',
+                align: 'left' as const,
+                getValue: (row: any) => row?.quantity ?? '',
+            },
+            {
+                key: 'location',
+                label: t('overview.warehouse.locations', 'Location'),
+                sortable: true,
+                width: '1fr',
+                align: 'left' as const,
+                getValue: (row: any) => row?.location ?? '',
+            },
         ],
-      },
-    ],
-    [t]
-  );
+        [t]
+    );
 
-  return (
-    <GenericTableView
-      data={rows}
-      loading={false}
-      columns={columns}
-      breadcrumbs={{
-        heading: t('overview.warehouse.stocks', 'Stocks'),
-        links: [
-          { name: t('app'), href: paths.menu.root },
-          { name: t('overview.warehouse.title', 'Ombor'), href: paths.warehouse.root },
-          { name: t('overview.warehouse.stocks', 'Stocks'), href: paths.warehouse.stocks.root },
-        ],
-      }}
-      addButton={{ label: t('add'), href: paths.warehouse.stocks.new }}
-    />
-  );
+    return (
+        <DashboardContent
+            sx={{
+                flexGrow: 1,
+                display: 'flex',
+                flexDirection: 'column',
+                maxHeight: '100vh',
+                '--layout-dashboard-content-pt': { xs: '0px', md: '0px' },
+                '--layout-dashboard-content-pb': { xs: '0px', md: '0px' },
+            }}
+        >
+            <DeductionUtilityDataTable
+                persistKey="warehouse-stocks"
+                data={rows}
+                getRowId={(row: any) => String(row?.id)}
+                columns={columns}
+                defaultConfig={{
+                    order: ['sku', 'name', 'quantity', 'location'],
+                    visibility: {
+                        sku: true,
+                        name: true,
+                        quantity: true,
+                        location: true,
+                    },
+                    widths: {
+                        sku: '1fr',
+                        name: '2fr',
+                        quantity: '1fr',
+                        location: '1fr',
+                    },
+                }}
+                onReset={() => {}}
+                headerActions={
+                    <Button
+                        variant="contained"
+                        startIcon={<Iconify icon="mingcute:add-line" />}
+                        href={paths.warehouse.stocks.new}
+                        size="small"
+                    >
+                        {t('add')}
+                    </Button>
+                }
+            />
+        </DashboardContent>
+    );
 }

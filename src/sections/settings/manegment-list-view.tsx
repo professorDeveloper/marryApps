@@ -3,15 +3,16 @@ import type { GridColDef } from '@mui/x-data-grid';
 import { useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import Tooltip from '@mui/material/Tooltip';
+import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
+import Tooltip from '@mui/material/Tooltip';
 
 import { paths } from 'src/routes/paths';
 
+import { fDateTime } from 'src/utils/format-time';
+
 import { Label } from 'src/components/label';
 import { GenericTableView } from 'src/components/generic-table-view';
-import { fDateTime } from 'src/utils/format-time';
-import Box from '@mui/material/Box';
 
 export function ManagementListView() {
   const { t } = useTranslation('menu');
@@ -62,9 +63,7 @@ export function ManagementListView() {
         field: 'connection_date',
         headerName: 'Oxirgi sinxronlash sanasi',
         width: 200,
-        renderCell: (params) => {
-          return fDateTime(params.row.connection_date, 'DD/MM/YYYY HH:mm');
-        },
+        renderCell: (params) => fDateTime(params.row.connection_date, 'DD/MM/YYYY HH:mm'),
       },
       {
         field: 'phone_type',
@@ -147,8 +146,8 @@ export function ManagementListView() {
         ],
       }}
       // addButton={{ label: t('add'), href: paths.settings.profile.new }}
-      hideFilters={true}
-      hideCheckboxes={true}
+      hideFilters
+      hideCheckboxes
     />
   );
 }

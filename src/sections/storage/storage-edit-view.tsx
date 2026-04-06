@@ -1,14 +1,20 @@
-import type { CardSection, GenericEditViewConfig } from 'src/components/generic-edit-view';
 import type { IStorageFormData } from 'src/types/departments.tsx';
-import { Box } from '@mui/material';
+import type { CardSection, GenericEditViewConfig } from 'src/components/generic-edit-view';
+
 import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import { Box } from '@mui/material';
+
 import { paths } from 'src/routes/paths';
 import { useParams, useRouter } from 'src/routes/hooks';
+
+import { useTranslationsAPI } from 'src/hooks/use-translations-api';
+
+import { useGetStorage, useCreateStorage, useDeleteStorage, useUpdateStorage, useUpdateTranslation } from 'src/actions/departments';
+
 import { GenericEditView } from 'src/components/generic-edit-view';
 import { CustomBreadcrumbs } from 'src/components/custom-breadcrumbs';
-import { useCreateStorage, useDeleteStorage, useGetStorage, useUpdateStorage, useUpdateTranslation } from 'src/actions/departments';
-import { useTranslationsAPI } from 'src/hooks/use-translations-api';
 
 const COLOR_CODES = [
   '#FF4842', // Red

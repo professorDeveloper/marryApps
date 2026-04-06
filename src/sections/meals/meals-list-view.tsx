@@ -1,34 +1,38 @@
-import type { GridColDef } from '@mui/x-data-grid';
 import type { IMealsItem } from 'src/types/meals';
+import type { DataTableColumn } from 'src/sections/warehouse/deduction/components/utility-data-table/types/types';
+
 import { useTranslation } from 'react-i18next';
-import { useMemo, useState, useCallback, useEffect } from 'react';
+import { useMemo, useState, useEffect, useCallback } from 'react';
+
 import { useTheme } from '@mui/material/styles';
-import { Button, Dialog, DialogTitle, DialogActions, DialogContent, Box, Avatar, ListItemText, TextField } from '@mui/material';
-import {
-    Table,
+import { Box, Table, Paper, Button, Dialog, TableRow, 
     TableBody,
     TableCell,
-    TableContainer,
     TableHead,
-    TableRow,
-    Paper,
+    IconButton,
+    DialogTitle,
+    DialogActions,
+    DialogContent,
+    TableContainer,
     CircularProgress,
 } from '@mui/material';
+
 import { paths } from 'src/routes/paths';
-import { useGetMealsPage, useDeleteMeal, useDeleteMeals, useGetMealWithCalculations } from 'src/hooks/use-meals';
+
 import { useGetCompounds } from 'src/hooks/use-compounds';
+import { useGenericViewModal } from 'src/hooks/use-generic-view-modal';
+import { useDeleteMeal, useDeleteMeals, useGetMealsPage, useGetMealWithCalculations } from 'src/hooks/use-meals';
+
+import { DashboardContent } from 'src/layouts/dashboard';
 import { useGetCategories } from 'src/actions/categories';
 import { useGetDepartments } from 'src/actions/departments';
-import { useGenericViewModal } from 'src/hooks/use-generic-view-modal';
-import { useImageUrl } from 'src/hooks/use-image-url';
 import { useGetIngredients } from 'src/actions/ingredients';
-import { getInitials, getAvatarColor } from 'src/utils/avatar';
+
 import { Iconify } from 'src/components/iconify';
-import { CustomGridActionsCellItem } from 'src/components/custom-data-grid';
-import { GenericViewModal, SpecificationsTable } from 'src/components/generic-view-view';
-import { GenericTableView } from 'src/components/generic-table-view';
 import { formatPrice } from 'src/components/generic-view-view/modal-formatters';
-import { NoDataTooltip } from 'src/components/no-data-tooltip';
+import { GenericViewModal, SpecificationsTable } from 'src/components/generic-view-view';
+
+import { DataTable } from 'src/sections/warehouse/deduction/components/utility-data-table';
 
 const initialFilters = {
     category_id: '',
@@ -314,13 +318,9 @@ export function Meals() {
         return map;
     }, [departments, i18n.language]);
 
-    const categoryOptions = useMemo(() => {
-        return Array.from(categoryMap.entries()).map(([id, name]) => ({ id, name }));
-    }, [categoryMap]);
+    const categoryOptions = useMemo(() => Array.from(categoryMap.entries()).map(([id, name]) => ({ id, name })), [categoryMap]);
 
-    const departmentOptions = useMemo(() => {
-        return Array.from(departmentMap.entries()).map(([id, name]) => ({ id, name }));
-    }, [departmentMap]);
+    const departmentOptions = useMemo(() => Array.from(departmentMap.entries()).map(([id, name]) => ({ id, name })), [departmentMap]);
 
     const isCategoryEmpty = categoryOptions.length === 0;
     const isDepartmentEmpty = departmentOptions.length === 0;
@@ -329,16 +329,14 @@ export function Meals() {
     const { isOpen, selectedData, openModal, closeModal } = useGenericViewModal<IMealsItem>();
 
     // Columns config
-    const columns = useMemo<GridColDef[]>(
+    const columns = useMemo<Array<DataTableColumn<IMealsItem>>>(
         () => [
             {
-                field: 'name',
-                headerName: t('mealsProducts.name'),
-                flex: 1,
-                minWidth: 250,
-                hideable: false,
-                renderCell: (params) => {
-                    const { row } = params;
+                key: 'name',
+                label: t('mealsProducts.name'),
+                width: '2fr',
+                sortable: true,
+                getValue: (row) => {
                     // Get translation based on current language
                     const currentLang = i18n.language || 'uz';
                     let displayName = row.name || '-';
@@ -350,118 +348,111 @@ export function Meals() {
                     } else if ((currentLang === 'uz' || currentLang === 'uz-Latn' || currentLang === 'uz-Cyrl') && row.name_uz) {
                         displayName = row.name_uz;
                     }
-
-                    const { imageUrl, loading } = useImageUrl(row.picture_url);
-                    const initials = getInitials(displayName);
-                    const bgColor = imageUrl ? undefined : getAvatarColor(displayName);
-
-                    return (
-                        <Box
-                            sx={{
-                                py: 2,
-                                gap: 2,
-                                width: 1,
-                                display: 'flex',
-                                alignItems: 'center',
-                            }}
-                        >
-                            <Avatar
-                                alt={displayName}
-                                src={imageUrl || undefined}
-                                variant="rounded"
-                                sx={{
-                                    width: 64,
-                                    height: 64,
-                                    bgcolor: bgColor,
-                                    color: '#fff',
-                                    fontWeight: 'bold',
-                                    fontSize: '20px',
-                                    borderRadius: '15%',
-                                }}
-                            >
-                                {!imageUrl && !loading && initials}
-                                {loading && '...'}
-                            </Avatar>
-
-                            <ListItemText primary={<span>{displayName}</span>} />
-                        </Box>
-                    );
+                    return displayName;
+                },
+                renderCell: ({ value }) => {
+                    const displayName = String(value);
+                    return <span>{displayName}</span>;
                 },
             },
             {
-                field: 'category_id',
-                headerName: t('mealsProducts.category'),
-                width: 150,
-                type: 'string',
-                renderCell: (params) => {
+                key: 'category_id',
+                label: t('mealsProducts.category'),
+                width: '1fr',
+                sortable: true,
+                getValue: (row) => 
                     // Use the translated category name from categoryMap
-                    return categoryMap.get(params.value) || params.row.category?.name || params.value || '-';
-                },
-            },
-            // {
-            //     field: 'department_id',
-            //     headerName: t('mealsProducts.department'),
-            //     width: 150,
-            //     type: 'string',
-            //     renderCell: (params) => {
-            //         // Use the translated department name from departmentMap
-            //         return departmentMap.get(params.value) || params.row.department?.name || params.value || '-';
-            //     },
-            // },
-            {
-                field: 'price',
-                headerName: t('mealsProducts.price'),
-                width: 120,
-                type: 'number',
-                renderCell: (params) => `${params.value?.toLocaleString()} ${t('mealsProducts.som')}`,
+                     categoryMap.get(row.category_id) || row.category?.name || row.category_id || '-',
             },
             {
-                field: 'cost_price',
-                headerName: t('mealsProducts.costPrice'),
-                width: 140,
-                type: 'number',
-                renderCell: (params) =>
-                    params.value || params.value === 0
-                        ? `${params.value?.toLocaleString()} ${t('mealsProducts.som')}`
+                key: 'price',
+                label: t('mealsProducts.price'),
+                width: '1fr',
+                sortable: true,
+                align: 'right',
+                mono: true,
+                getValue: (row) => Number(row.price || 0),
+                renderCell: ({ value }) => `${Number(value).toLocaleString()} ${t('mealsProducts.som')}`,
+            },
+            {
+                key: 'cost_price',
+                label: t('mealsProducts.costPrice'),
+                width: '1fr',
+                sortable: true,
+                align: 'right',
+                mono: true,
+                getValue: (row) => row.cost_price ? Number(row.cost_price) : null,
+                renderCell: ({ value }) => value !== null && value !== undefined
+                        ? `${Number(value).toLocaleString()} ${t('mealsProducts.som')}`
                         : '-',
             },
             {
-                field: 'cook_time',
-                headerName: t('mealsProducts.cookingTime'),
-                width: 120,
-                type: 'number',
-                renderCell: (params) => `${params.value} ${t('mealsProducts.min')}`,
+                key: 'cook_time',
+                label: t('mealsProducts.cookingTime'),
+                width: '0.8fr',
+                sortable: true,
+                align: 'center',
+                getValue: (row) => Number(row.cook_time || 0),
+                renderCell: ({ value }) => `${value} ${t('mealsProducts.min')}`,
             },
             {
-                type: 'actions',
-                field: 'actions',
-                headerName: t('actions'),
-                width: 150,
+                key: 'actions',
+                label: t('actions'),
+                width: '0.8fr',
                 sortable: false,
-                filterable: false,
-                disableColumnMenu: true,
-                getActions: (params) => [
-                    <CustomGridActionsCellItem
-                        key="edit"
-                        label={t('mealsProducts.edit')}
-                        icon={<Iconify icon="solar:pen-bold" />}
-                        href={paths.menu.meals.edit(params.row.id)}
-                    />,
-                    <CustomGridActionsCellItem
-                        key="delete"
-                        label={t('mealsProducts.delete')}
-                        icon={<Iconify icon="solar:trash-bin-trash-bold" />}
-                        onClick={() => {
-                            setMealToDelete(params.row.id);
-                            setDeleteDialogOpen(true);
-                        }}
-                        style={{ color: theme.vars.palette.error.main }}
-                    />,
-                ],
+                align: 'center',
+                getValue: (row) => row,
+                renderCell: ({ row }: { row: IMealsItem }) => (
+                    <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'center' }}>
+                        <IconButton
+                            size="small"
+                            onClick={() => openModal(row)}
+                            sx={{ color: 'text.secondary' }}
+                        >
+                            <Iconify icon="solar:eye-bold" width={18} />
+                        </IconButton>
+                        <IconButton
+                            size="small"
+                            onClick={() => {
+                                window.location.href = paths.menu.meals.edit(row.id);
+                            }}
+                            sx={{ color: 'text.secondary' }}
+                        >
+                            <Iconify icon="solar:pen-bold" width={18} />
+                        </IconButton>
+                        <IconButton
+                            size="small"
+                            onClick={() => {
+                                setMealToDelete(row.id);
+                                setDeleteDialogOpen(true);
+                            }}
+                            sx={{ color: 'error.main' }}
+                        >
+                            <Iconify icon="solar:trash-bin-trash-bold" width={18} />
+                        </IconButton>
+                    </Box>
+                ),
             },
         ],
         [theme.vars.palette.error.main, t, i18n.language, openModal, categoryMap, departmentMap]
     );
+
+    const handlePaginationPageChange = (page: number) => {
+        setPaginationModel((prev) => ({ ...prev, page }));
+        setFilters((prev) => ({
+            ...prev,
+            offset: page * paginationModel.pageSize,
+        }));
+    };
+
+    const handlePaginationRowsPerPageChange = (pageSize: number) => {
+        setPaginationModel({ page: 0, pageSize });
+        setFilters((prev) => ({
+            ...prev,
+            limit: pageSize,
+            offset: 0,
+        }));
+    };
 
     const handleConfirmDelete = useCallback(async () => {
         if (mealToDelete) {
@@ -492,146 +483,87 @@ export function Meals() {
 
     return (
         <>
-            <GenericTableView<IMealsItem>
-                data={meals}
-                loading={mealsLoading}
-                columns={columns}
-                paginationMode="server"
-                rowCount={pagination?.total || 0}
-                paginationModel={paginationModel}
-                onPaginationModelChange={setPaginationModel}
-                pageSizeOptions={[10, 20, 50, 100]}
-                renderFilters={() => (
-                    <Box
-                        sx={{
-                            display: 'grid',
-                            gridTemplateColumns: {
-                                xs: '1fr',
-                                sm: 'repeat(2, minmax(220px, 1fr))',
-                                md: 'repeat(3, minmax(220px, 1fr))',
-                                lg: 'repeat(4, minmax(220px, 1fr))',
-                            },
-                            gap: 2,
-                            alignItems: 'end',
-                            '& .MuiFormControl-root, & .MuiTextField-root': {
-                                minWidth: 220,
-                                width: '100%',
-                            },
-                        }}
-                    >
-                        <NoDataTooltip enabled={isCategoryEmpty} title={noDataText}>
-                            <TextField
-                                select
-                                size="small"
-                                label={t('mealsProducts.category')}
-                                SelectProps={{ native: true }}
-                                value={draftFilters.category_id || ''}
-                                onChange={(e) =>
-                                    setDraftFilters((prev) => ({
-                                        ...prev,
-                                        category_id: e.target.value,
-                                    }))
-                                }
-                                InputLabelProps={{ shrink: true }}
-                                disabled={isCategoryEmpty}
-                            >
-                                <option value="" >
-                                    {t('ingredientReports.all', 'All')}
-                                </option>
-                                {categoryOptions.map((category: any) => (
-                                    <option key={category.id} value={category.id}>
-                                        {category.name || category.id}
-                                    </option>
-                                ))}
-                            </TextField>
-                        </NoDataTooltip>
-                        {/* <NoDataTooltip enabled={isDepartmentEmpty} title={noDataText}>
-                            <TextField
-                                select
-                                size="small"
-                                label={t('mealsProducts.department')}
-                                SelectProps={{ native: true }}
-                                value={draftFilters.department_id || ''}
-                                onChange={(e) =>
-                                    setDraftFilters((prev) => ({
-                                        ...prev,
-                                        department_id: e.target.value,
-                                    }))
-                                }
-                                InputLabelProps={{ shrink: true }}
-                                disabled={isDepartmentEmpty}
-                            >
-                                <option value="" >
-                                    {t('ingredientReports.all', 'All')}
-                                </option>
-                                {departmentOptions.map((department: any) => (
-                                    <option key={department.id} value={department.id}>
-                                        {department.name || department.id}
-                                    </option>
-                                ))}
-                            </TextField>
-                        </NoDataTooltip> */}
-                        {/* <TextField
-                            select
+            <DashboardContent
+                sx={{
+                    flexGrow: 1,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    maxHeight: '100vh',
+                    '--layout-dashboard-content-pt': { xs: '0px', md: '0px' },
+                    '--layout-dashboard-content-pb': { xs: '0px', md: '0px' },
+                }}
+            >
+            
+                <DataTable<IMealsItem>
+                    persistKey="meals-list-view"
+                    data={meals}
+                    getRowId={(row: IMealsItem) => String(row?.id)}
+                    columns={columns}
+                    searchValue={searchQuery}
+                    onSearchChange={(value) => {
+                        setSearchQuery(value);
+                        setPaginationModel((prev) => ({ ...prev, page: 0 }));
+                    }}
+                    page={paginationModel.page}
+                    rowsPerPage={paginationModel.pageSize}
+                    totalCount={pagination?.total || 0}
+                    rowsPerPageOptions={[10, 20, 50, 100]}
+                    onPageChange={handlePaginationPageChange}
+                    onRowsPerPageChange={handlePaginationRowsPerPageChange}
+                    defaultConfig={{
+                        order: ['name', 'category_id', 'price', 'cost_price', 'cook_time', 'actions'],
+                        visibility: {
+                            name: true,
+                            category_id: true,
+                            price: true,
+                            cost_price: true,
+                            cook_time: true,
+                            actions: true,
+                        },
+                        widths: {
+                            name: '2fr',
+                            category_id: '1fr',
+                            price: '1fr',
+                            cost_price: '1fr',
+                            cook_time: '0.8fr',
+                            actions: '0.8fr',
+                        },
+                    }}
+                    onReset={() => setDraftFilters(initialFilters)}
+                    headerActions={
+                        <Button
+                            variant="contained"
+                            startIcon={<Iconify icon="mingcute:add-line" />}
+                            href={paths.menu.meals.new}
                             size="small"
-                            label={t('invoices.storage', 'Storage')}
-                            SelectProps={{ native: true }}
-                            value={draftFilters.storage_id || ''}
-                            onChange={(e) =>
-                                setDraftFilters((prev) => ({
-                                    ...prev,
-                                    storage_id: e.target.value,
-                                }))
-                            }
-                            InputLabelProps={{ shrink: true }}
                         >
-                            <option value="" disabled hidden>
-                                {t('ingredientReports.all', 'All')}
-                            </option>
-                            {storages.map((storage: any) => (
-                                <option key={storage.id} value={storage.id}>
-                                    {storage.name || storage.id}
-                                </option>
-                            ))}
-                        </TextField> */}
-                        {/* <Box sx={{ display: 'flex', gap: 1 }}>
-                            <Button
-                                variant="outlined"
-                                size="medium"
-                                startIcon={<Iconify icon="solar:restart-bold" />}
-                                onClick={() => setDraftFilters(initialFilters)}
-                                sx={{ flex: 1 }}
-                            >
-                                {t('ingredientReports.reset', 'Reset')}
-                            </Button>
-                        </Box> */}
-                    </Box>
-                )}
-                breadcrumbs={{
-                    heading: t('mealsProducts.title'),
-                    links: [
-                        { name: t('app'), href: paths.menu.root },
-                        { name: t('mealsProducts.title'), href: paths.menu.meals.root },
-                        { name: t('mealsProducts.list') },
-                    ],
-                }}
-                addButton={{
-                    label: t('mealsProducts.add'),
-                    href: paths.menu.meals.new,
-                }}
-                filterOptions={{}}
-                initialFilters={{}}
-                hideColumns={{}}
-                hideColumnsTogglable={['actions']}
-                onDeleteRows={handleDeleteRows}
-                onRowClick={(id) => {
-                    const meal = meals.find(m => m.id === id);
-                    if (meal) {
-                        openModal(meal);
+                            {t('mealsProducts.add')}
+                        </Button>
                     }
-                }}
-                onQuickFilterChange={setSearchQuery}
-            />
+                    rowActions={[
+                        {
+                            label: t('mealsProducts.view'),
+                            icon: <Iconify icon="solar:eye-bold" width={18} />,
+                            onClick: (row: IMealsItem) => openModal(row),
+                        },
+                        {
+                            label: t('mealsProducts.edit'),
+                            icon: <Iconify icon="solar:pen-bold" width={18} />,
+                            onClick: (row: IMealsItem) => {
+                                window.location.href = paths.menu.meals.edit(row.id);
+                            },
+                        },
+                        {
+                            label: t('mealsProducts.delete'),
+                            icon: <Iconify icon="solar:trash-bin-trash-bold" width={18} />,
+                            onClick: (row: IMealsItem) => {
+                                setMealToDelete(row.id);
+                                setDeleteDialogOpen(true);
+                            },
+                        },
+                    ]}
+                />
+            </DashboardContent>
 
             {/* Meals Item View Modal */}
             <GenericViewModal

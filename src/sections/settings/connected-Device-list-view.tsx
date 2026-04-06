@@ -3,14 +3,15 @@ import type { GridColDef } from '@mui/x-data-grid';
 import { useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import Tooltip from '@mui/material/Tooltip';
 import Button from '@mui/material/Button';
+import Tooltip from '@mui/material/Tooltip';
 
 import { paths } from 'src/routes/paths';
 
+import { fDateTime } from 'src/utils/format-time';
+
 import { Label } from 'src/components/label';
 import { GenericTableView } from 'src/components/generic-table-view';
-import { fDateTime } from 'src/utils/format-time';
 
 export function ConnectedDeviceListView() {
   const { t } = useTranslation('menu');
@@ -59,9 +60,7 @@ export function ConnectedDeviceListView() {
         field: 'connection_date',
         headerName: 'Ulangan sana',
         width: 200,
-        renderCell: (params) => {
-          return fDateTime(params.row.connection_date, 'DD/MM/YYYY HH:mm');
-        },
+        renderCell: (params) => fDateTime(params.row.connection_date, 'DD/MM/YYYY HH:mm'),
       },
       {
         field: 'name',
@@ -131,8 +130,8 @@ export function ConnectedDeviceListView() {
         ],
       }}
       // addButton={{ label: t('add'), href: paths.settings.profile.new }}
-      hideFilters={true}
-      hideCheckboxes={true}
+      hideFilters
+      hideCheckboxes
     />
   );
 }

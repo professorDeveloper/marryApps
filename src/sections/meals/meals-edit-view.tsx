@@ -1,25 +1,31 @@
-import type { CardSection, GenericEditViewConfig } from 'src/components/generic-edit-view';
 import type { SyntheticEvent } from 'react';
+import type { CardSection, GenericEditViewConfig } from 'src/components/generic-edit-view';
+
+import { mutate } from 'swr';
 import { useParams } from 'react-router';
 import { useTranslation } from 'react-i18next';
-import { useState, useCallback, useMemo, useEffect, useRef, startTransition } from 'react';
-import { mutate } from 'swr';
-import { Box, Tabs, Tab } from '@mui/material';
-import { CustomBreadcrumbs } from 'src/components/custom-breadcrumbs';
+import { useRef, useMemo, useState, useEffect, useCallback, startTransition } from 'react';
+
+import { Box, Tab, Tabs } from '@mui/material';
+
 import { paths } from 'src/routes/paths';
 import { useRouter } from 'src/routes/hooks';
-import { endpoints } from 'src/lib/axios';
+
+import { useTranslationsAPI } from 'src/hooks/use-translations-api';
 import {
     useGetMeal,
+    useDeleteMeal,
     useGetMealWithCalculations,
     useUpdateMealWithCalculations,
-    useDeleteMeal,
     useCreateMealWithCalculations,
 } from 'src/hooks/use-meals';
+
+import { endpoints } from 'src/lib/axios';
 import { useGetCategories } from 'src/actions/categories';
 import { useGetDepartments } from 'src/actions/departments';
-import { useTranslationsAPI } from 'src/hooks/use-translations-api';
+
 import { GenericEditView } from 'src/components/generic-edit-view';
+import { CustomBreadcrumbs } from 'src/components/custom-breadcrumbs';
 import ProductCalculator from 'src/components/generic-edit-view/edit-calculation';
 
 

@@ -1,18 +1,22 @@
 import type { Transfer, TransferFormData, TransferBatchItemInput } from 'src/types/transfers';
-import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
+
+import dayjs from 'dayjs';
 import { useTranslation } from 'react-i18next';
 import { useParams, useNavigate } from 'react-router';
+import { useRef, useMemo, useState, useEffect, useCallback } from 'react';
+
 import { Box, Tab, Tabs, Stack } from '@mui/material';
-import dayjs from 'dayjs';
 
 import { paths } from 'src/routes/paths';
+
+import { useTransfersAPI } from 'src/hooks/use-transfers-api';
+
+import { fetcher, endpoints } from 'src/lib/axios';
+
 import { toast } from 'src/components/snackbar';
 import { GenericEditView } from 'src/components/generic-edit-view';
 import { CustomBreadcrumbs } from 'src/components/custom-breadcrumbs';
 import TransfersDetailsCalculation from 'src/components/transfers-details-calculation';
-
-import { fetcher, endpoints } from 'src/lib/axios';
-import { useTransfersAPI } from 'src/hooks/use-transfers-api';
 
 interface Branch {
   id: string;

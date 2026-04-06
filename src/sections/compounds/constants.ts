@@ -1,5 +1,5 @@
 
-import { CardSection } from "src/components/generic-edit-view/types";
+import type { CardSection } from "src/components/generic-edit-view/types";
 
 export const IMAGE_SECTION: CardSection = {
     id: 'image',

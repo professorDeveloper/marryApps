@@ -1,13 +1,18 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import type { DeductionGroup } from 'src/hooks/use-deductions-api';
+
 import { useTranslation } from 'react-i18next';
 import { useParams, useNavigate } from 'react-router';
+import { useMemo, useState, useEffect, useCallback } from 'react';
+
 import { Box } from '@mui/material';
 
 import { paths } from 'src/routes/paths';
+
+import { useDeductionsAPI } from 'src/hooks/use-deductions-api';
+
 import { toast } from 'src/components/snackbar';
 import { GenericEditView } from 'src/components/generic-edit-view';
 import { CustomBreadcrumbs } from 'src/components/custom-breadcrumbs';
-import { useDeductionsAPI, DeductionGroup } from 'src/hooks/use-deductions-api';
 
 // ============================================================================
 // TYPES

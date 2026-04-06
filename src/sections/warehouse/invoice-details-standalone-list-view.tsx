@@ -1,36 +1,61 @@
-import type { GridColDef } from '@mui/x-data-grid';
 import type { InvoiceListFilters } from 'src/hooks/use-invoice-details-api';
 
 import dayjs from 'dayjs';
-import { useMemo, useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { DatePicker } from '@mui/x-date-pickers/DatePicker';
-import { Dialog, DialogTitle, DialogContent, DialogActions, Button, Box, TextField } from '@mui/material';
-import { paths } from 'src/routes/paths';
-import { useInvoiceDetailsAPI } from 'src/hooks/use-invoice-details-api';
-import { useInvoiceAPI } from 'src/hooks/use-invoice-api';
-import { useSupplierAPI } from 'src/hooks/use-supplier-api';
-import { useStorageAPI } from 'src/hooks/use-storage-api';
-import { Iconify } from 'src/components/iconify';
-import { CustomGridActionsCellItem } from 'src/components/custom-data-grid';
-import { GenericTableView } from 'src/components/generic-table-view';
-import { GenericViewModal } from 'src/components/generic-view-view';
-import { NoDataTooltip } from 'src/components/no-data-tooltip';
-import { DataGrid } from '@mui/x-data-grid';
-import { fetcher } from 'src/lib/axios';
+import { useRef, useMemo, useState, useEffect, useCallback } from 'react';
 
-interface InvoiceDetailWithInvoiceInfo {
+import { DataGrid } from '@mui/x-data-grid';
+import {
+  Box,
+  Dialog,
+  Button,
+  IconButton,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+} from '@mui/material';
+
+import { paths } from 'src/routes/paths';
+
+import { useInvoiceAPI } from 'src/hooks/use-invoice-api';
+import { useStorageAPI } from 'src/hooks/use-storage-api';
+import { useSupplierAPI } from 'src/hooks/use-supplier-api';
+import { useInvoiceDetailsAPI } from 'src/hooks/use-invoice-details-api';
+
+import { fetcher } from 'src/lib/axios';
+import { DashboardContent } from 'src/layouts/dashboard';
+
+import { Iconify } from 'src/components/iconify';
+import { GenericViewModal } from 'src/components/generic-view-view';
+
+import { DataTable } from 'src/sections/warehouse/deduction/components/utility-data-table';
+
+type DataTableFilterState = Record<string, { type: 'text' | 'multi'; value: string | string[] }>;
+
+interface InvoiceDetailWithFullInfo {
+  id: string;
+  invoice_id: string;
+  ingredient_id: string;
+  ingredient_name?: string;
+  quantity: number;
+  price: string;
+  price_per_unit: string;
+  created_at: string;
+  updated_at: string;
+  invoice_supplier_name?: string;
+  invoice_date?: string;
+}
+
+interface InvoiceWithDetails {
     id: string;
-    invoice_id: string;
-    ingredient_id: string;
-    ingredient_name?: string;
-    quantity: number;
-    price: string;
-    price_per_unit: string;
-    created_at: string;
-    updated_at: string;
-    invoice_supplier_name?: string;
-    invoice_date?: string;
+    supplier_id: string;
+    storage_id: string;
+    total_amount: string;
+    status: string;
+    date: string;
+    supplier_name: string;
+    supplier_phone: string;
+    storage_name: string;
 }
 
 const getTodayUtcBoundary = (endOfDay = false): string => {
@@ -110,15 +135,6 @@ let staticDataPromise: Promise<{
 export function InvoiceDetailsStandaloneListView() {
     const { t } = useTranslation('menu');
     const noDataText = t('noDataAvailable', "Tushunarli ma'lumot mavjud emas");
-    const theme = {
-        vars: {
-            palette: {
-                error: {
-                    main: '#f44336',
-                },
-            },
-        },
-    };
     const { deleteInvoiceDetails, getIngredients, getInvoicesPage } = useInvoiceDetailsAPI();
     const { deleteInvoices } = useInvoiceAPI();
     const { getSuppliers } = useSupplierAPI();
@@ -127,12 +143,7 @@ export function InvoiceDetailsStandaloneListView() {
     const [suppliers, setSuppliers] = useState<any[]>([]);
     const [storages, setStorages] = useState<any[]>([]);
     const [ingredients, setIngredients] = useState<any[]>([]);
-
-    const isSuppliersEmpty = suppliers.length === 0;
-    const isStoragesEmpty = storages.length === 0;
-    const isIngredientsEmpty = ingredients.length === 0;
-    const [selectedInvoiceDetails, setSelectedInvoiceDetails] = useState<InvoiceDetailWithInvoiceInfo[]>([]);
-    const [loading, setLoading] = useState(true);
+    const [selectedInvoiceDetails, setSelectedInvoiceDetails] = useState<InvoiceDetailWithFullInfo[]>([]);
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [selectedDeleteId, setSelectedDeleteId] = useState<string | null>(null);
     const [selectedDeleteType, setSelectedDeleteType] = useState<'invoice' | 'detail' | null>(null);
@@ -141,8 +152,10 @@ export function InvoiceDetailsStandaloneListView() {
     const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
     const [filters, setFilters] = useState<InvoiceListFilters>(initialFilters);
     const [draftFilters, setDraftFilters] = useState<InvoiceListFilters>(initialFilters);
+    const [tableFilters, setTableFilters] = useState<DataTableFilterState>({});
     const [rowCount, setRowCount] = useState(0);
     const [paginationModel, setPaginationModel] = useState({ page: 0, pageSize: 20 });
+    const [activePeriod, setActivePeriod] = useState<'day' | 'week' | 'month' | 'year' | undefined>(undefined);
     const lastInvoicesKeyRef = useRef('');
 
     useEffect(() => {
@@ -209,18 +222,57 @@ export function InvoiceDetailsStandaloneListView() {
             if (lastInvoicesKeyRef.current === key) return;
             lastInvoicesKeyRef.current = key;
 
-            setLoading(true);
             try {
                 const response = await getInvoicesPage(filters);
                 setRowCount(response.total || 0);
                 setRawInvoices(response.items || []);
             } finally {
-                setLoading(false);
+                // Loading state handled by DataTable component
             }
         };
 
         fetchInvoices();
     }, [filters, getInvoicesPage]);
+
+    const handleFiltersChange = (newFilters: DataTableFilterState) => {
+        setTableFilters(newFilters);
+        setDraftFilters((prev) => {
+            const updated = { ...prev };
+
+            // Handle supplier filter
+            if (newFilters.supplier?.value) {
+                const supplierValue = Array.isArray(newFilters.supplier.value)
+                    ? newFilters.supplier.value[0]
+                    : newFilters.supplier.value;
+                updated.supplier_id = supplierValue;
+            } else {
+                updated.supplier_id = '';
+            }
+
+            // Handle storage filter
+            if (newFilters.storage_id?.value) {
+                const storageValue = Array.isArray(newFilters.storage_id.value)
+                    ? newFilters.storage_id.value[0]
+                    : newFilters.storage_id.value;
+                updated.storage_id = storageValue;
+            } else {
+                updated.storage_id = '';
+            }
+
+            // Handle status filter
+            if (newFilters.status?.value) {
+                const statusValue = Array.isArray(newFilters.status.value)
+                    ? newFilters.status.value[0]
+                    : newFilters.status.value;
+                updated.status = statusValue;
+            } else {
+                updated.status = '';
+            }
+
+            return updated;
+        });
+        setPaginationModel((prev) => ({ ...prev, page: 0 }));
+    };
 
     useEffect(() => {
         setDraftFilters((prev) => ({
@@ -237,15 +289,25 @@ export function InvoiceDetailsStandaloneListView() {
             offset: 0,
             limit: paginationModel.pageSize,
         }));
-    }, [draftFilters]);
+    }, [draftFilters, paginationModel.pageSize]);
 
-    const handlePaginationModelChange = (model: { page: number; pageSize: number }) => {
-        setPaginationModel(model);
+    const handlePaginationPageChange = (page: number) => {
+        setPaginationModel((prev) => ({ ...prev, page }));
         setFilters((prev) => ({
             ...prev,
-            limit: model.pageSize,
-            offset: model.page * model.pageSize,
+            offset: page * paginationModel.pageSize,
         }));
+        lastInvoicesKeyRef.current = '';
+    };
+
+    const handlePaginationRowsPerPageChange = (pageSize: number) => {
+        setPaginationModel({ page: 0, pageSize });
+        setFilters((prev) => ({
+            ...prev,
+            limit: pageSize,
+            offset: 0,
+        }));
+        lastInvoicesKeyRef.current = '';
     };
 
     const invoices = useMemo(() => {
@@ -299,7 +361,7 @@ export function InvoiceDetailsStandaloneListView() {
         setSelectedDeleteType(null);
     };
 
-    const handleViewClick = async (invoice: any) => {
+    const handleViewClick = useCallback(async (invoice: InvoiceWithDetails) => {
         setSelectedInvoice(invoice);
         setSelectedInvoiceDetails([]);
         try {
@@ -327,60 +389,85 @@ export function InvoiceDetailsStandaloneListView() {
         } catch {
             setSelectedInvoiceDetails([]);
         }
-    };
+    }, [ingredients]);
 
     const handleModalClose = () => {
         setSelectedInvoice(null);
         setSelectedInvoiceDetails([]);
     };
 
-    const invoiceColumns = useMemo<GridColDef[]>(
+    const columns = useMemo(
         () => [
             {
-                field: 'id',
-                headerName: '№',
-                width: 80,
-                renderCell: (params) => {
-                    const index = invoices.findIndex((row) => row.id === params.row.id);
-                    return index + 1;
+                key: 'supplier',
+                label: t('invoices.name', 'Supplier'),
+                sortable: true,
+                filter: {
+                    type: 'multi' as const,
+                    options: suppliers.map((s: any) => s.id),
+                    getOptionLabel: (v: string) => {
+                        const supplier = suppliers.find((s: any) => s.id === v);
+                        return supplier?.name || v;
+                    },
                 },
+                width: '1.5fr',
+                align: 'left' as const,
+                getValue: (row: any) => row?.supplier_id ?? '',
+                renderCell: ({ row }: { row: any }) => row?.supplier_name ?? '',
             },
             {
-                field: 'supplier_name',
-                headerName: t('invoices.name', 'Supplier Name'),
-                flex: 1,
-                minWidth: 200,
+                key: 'supplier_phone',
+                label: t('invoices.phone', 'Phone'),
+                sortable: true,
+                width: '1fr',
+                align: 'left' as const,
+                getValue: (row: any) => row?.supplier_phone ?? '',
             },
             {
-                field: 'supplier_phone',
-                headerName: t('invoices.phone', 'Phone'),
-                width: 160,
+                key: 'storage_id',
+                label: t('invoices.storage', 'Storage'),
+                sortable: true,
+                filter: {
+                    type: 'multi' as const,
+                    options: storages.map((s: any) => s.id),
+                    getOptionLabel: (v: string) => {
+                        const storage = storages.find((s: any) => s.id === v);
+                        return storage?.name || v;
+                    },
+                },
+                width: '1.2fr',
+                align: 'left' as const,
+                getValue: (row: any) => row?.storage_id ?? '',
+                renderCell: ({ row }: { row: any }) => row?.storage_name ?? '',
             },
             {
-                field: 'storage_name',
-                headerName: t('invoices.storage', 'Storage'),
-                flex: 1,
-                minWidth: 180,
-            },
-            {
-                field: 'total_amount',
-                headerName: t('invoices.totalAmount', 'Total Amount'),
-                width: 150,
-                renderCell: (params) => {
-                    const amount = parseFloat(params.row.total_amount || 0);
+                key: 'total_amount',
+                label: t('invoices.totalAmount', 'Total Amount'),
+                sortable: true,
+                width: '1fr',
+                align: 'left' as const,
+                mono: true,
+                getValue: (row: any) => Number(row?.total_amount || 0),
+                renderCell: ({ value }: { value: unknown }) => {
+                    const amount = Number(value ?? 0);
                     return `${amount.toLocaleString()} UZS`;
                 },
+                total: { aggregation: 'sum' as const },
             },
             {
-                field: 'status',
-                headerName: t('invoices.status', 'Status'),
-                width: 120,
-                renderCell: (params) => {
-                    const status = params.row.status?.toLowerCase();
-                    let color = 'default';
-                    if (status === 'pending') color = 'warning';
-                    if (status === 'draft') color = 'default';
-                    if (status === 'deleted') color = 'error';
+                key: 'status',
+                label: t('invoices.status', 'Status'),
+                sortable: true,
+                filter: { type: 'multi' as const, options: ['pending', 'received', 'cancelled'] },
+                width: '0.8fr',
+                align: 'left' as const,
+                getValue: (row: any) => row?.status || '',
+                renderCell: ({ value }: { value: unknown }) => {
+                    const status = String(value ?? '').toLowerCase();
+                    let bgColor = '#E2E3E5';
+                    let textColor = '#383D41';
+                    if (status === 'pending') { bgColor = '#FFF3CD'; textColor = '#856404'; }
+                    if (status === 'deleted') { bgColor = '#F8D7DA'; textColor = '#721C24'; }
                     return (
                         <span
                             style={{
@@ -388,24 +475,8 @@ export function InvoiceDetailsStandaloneListView() {
                                 borderRadius: '4px',
                                 fontSize: '14px',
                                 fontWeight: 700,
-                                marginTop: '10px',
-                                marginBottom: '10px',
-                                backgroundColor:
-                                    color === 'warning'
-                                        ? '#FFF3CD'
-                                        : color === 'success'
-                                            ? '#D4EDDA'
-                                            : color === 'error'
-                                                ? '#F8D7DA'
-                                                : '#E2E3E5',
-                                color:
-                                    color === 'warning'
-                                        ? '#856404'
-                                        : color === 'success'
-                                            ? '#155724'
-                                            : color === 'error'
-                                                ? '#721C24'
-                                                : '#383D41',
+                                backgroundColor: bgColor,
+                                color: textColor,
                             }}
                         >
                             {status}
@@ -414,48 +485,58 @@ export function InvoiceDetailsStandaloneListView() {
                 },
             },
             {
-                field: 'date',
-                headerName: t('invoices.date', 'Date'),
-                width: 140,
-                renderCell: (params) => new Date(params.row.date).toLocaleDateString(),
+                key: 'date',
+                label: t('invoices.date', 'Date'),
+                sortable: true,
+                width: '1fr',
+                align: 'left' as const,
+                getValue: (row: any) =>
+                    row?.date ? new Date(row.date).toLocaleDateString() : '',
             },
             {
-                type: 'actions',
-                field: 'actions',
-                headerName: t('actions'),
-                width: 150,
-                // align: 'right',
-                // headerAlign: 'right',
+                key: 'actions',
+                label: t('actions'),
                 sortable: false,
                 filterable: false,
-                disableColumnMenu: true,
-                getActions: (params) => [
-                    <CustomGridActionsCellItem
-                        // showInMenu
-                        label={t('edit')}
-                        icon={<Iconify icon="solar:pen-bold" />}
-                        href={paths.warehouse.invoices.edit(params.row.id)}
-                    />,
-                    <CustomGridActionsCellItem
-                        // showInMenu
-                        label={t('delete')}
-                        icon={<Iconify icon="solar:trash-bin-trash-bold" />}
-                        onClick={() => handleDeleteClick(params.row.id, 'invoice')}
-                        style={{ color: theme.vars.palette.error.main }}
-                    />,
-                ],
+                width: '0.7fr',
+                align: 'center' as const,
+                renderCell: ({ row }: { row: any }) => (
+                    <Box sx={{ display: 'flex', gap: 0.5 }}>
+                        <IconButton
+                            size="small"
+                            onClick={() => handleViewClick(row)}
+                            sx={{ color: 'text.secondary' }}
+                        >
+                            <Iconify icon="solar:eye-bold" width={18} />
+                        </IconButton>
+                        <IconButton
+                            size="small"
+                            onClick={() => window.location.href = paths.warehouse.invoices.edit(row.id)}
+                            sx={{ color: 'text.secondary' }}
+                        >
+                            <Iconify icon="solar:pen-bold" width={18} />
+                        </IconButton>
+                        <IconButton
+                            size="small"
+                            onClick={() => handleDeleteClick(row.id, 'invoice')}
+                            sx={{ color: 'error.main' }}
+                        >
+                            <Iconify icon="solar:trash-bin-trash-bold" width={18} />
+                        </IconButton>
+                    </Box>
+                ),
             },
         ],
-        [t, invoices]
+        [t, handleViewClick, storages, suppliers]
     );
 
-    const detailsColumns = useMemo<GridColDef[]>(
+    const detailsColumns = useMemo(
         () => [
             {
-                field: 'id',
+                field: 'id' as const,
                 headerName: '№',
                 width: 80,
-                renderCell: (params) => {
+                renderCell: (params: any) => {
                     const filtered = selectedInvoiceDetails.filter(
                         (d) => d.invoice_id === selectedInvoice?.id
                     );
@@ -464,61 +545,36 @@ export function InvoiceDetailsStandaloneListView() {
                 },
             },
             {
-                field: 'ingredient_id',
+                field: 'ingredient_id' as const,
                 headerName: t('ingredient', 'Mahsulot'),
                 flex: 1,
                 minWidth: 200,
-                renderCell: (params) => params.row.ingredient_name || params.row.ingredient_id,
+                renderCell: (params: any) => params.row.ingredient_name || params.row.ingredient_id,
             },
             {
-                field: 'quantity',
+                field: 'quantity' as const,
                 headerName: t('quantity', 'Miqdori'),
                 width: 120,
-                renderCell: (params) => `${params.row.quantity}`,
+                renderCell: (params: any) => `${params.row.quantity}`,
             },
             {
-                field: 'price_per_unit',
+                field: 'price_per_unit' as const,
                 headerName: t('price_per_unit', 'Birlik narxi'),
                 width: 150,
-                renderCell: (params) => {
+                renderCell: (params: any) => {
                     const amount = parseFloat(params.row.price_per_unit || 0);
                     return `${amount.toLocaleString()} UZS`;
                 },
             },
             {
-                field: 'price',
+                field: 'price' as const,
                 headerName: t('total_price', 'Jami narx'),
                 width: 150,
-                renderCell: (params) => {
+                renderCell: (params: any) => {
                     const amount = parseFloat(params.row.price || 0);
                     return `${amount.toLocaleString()} UZS`;
                 },
             },
-            // {
-            //     type: 'actions',
-            //     field: 'actions',
-            //     headerName: ' ',
-            //     width: 100,
-            //     align: 'right',
-            //     headerAlign: 'right',
-            //     sortable: false,
-            //     filterable: false,
-            //     disableColumnMenu: true,
-            //     getActions: (params) => [
-            //         <CustomGridActionsCellItem
-            //             showInMenu
-            //             label={t('edit')}
-            //             icon={<Iconify icon="solar:pen-bold" />}
-            //             href={paths.warehouse.invoiceDetails.edit(params.row.id)}
-            //         />,
-            //         <CustomGridActionsCellItem
-            //             showInMenu
-            //             label={t('delete')}
-            //             icon={<Iconify icon="solar:trash-bin-trash-bold" />}
-            //             onClick={() => handleDeleteClick(params.row.id, 'detail')}
-            //         />,
-            //     ],
-            // },
         ],
         [t, selectedInvoice, selectedInvoiceDetails]
     );
@@ -531,201 +587,143 @@ export function InvoiceDetailsStandaloneListView() {
 
     return (
         <>
-            <GenericTableView
-                data={invoices}
-                loading={loading}
-                columns={invoiceColumns}
-                paginationMode="server"
-                rowCount={rowCount}
-                paginationModel={paginationModel}
-                onPaginationModelChange={handlePaginationModelChange}
-                pageSizeOptions={[10, 20, 50, 100]}
-                renderFilters={() => (
-                    <Box
-                        sx={{
-                            display: 'grid',
-                            gridTemplateColumns: {
-                                xs: '1fr',
-                                sm: 'repeat(2, minmax(220px, 1fr))',
-                                md: 'repeat(3, minmax(220px, 1fr))',
-                                lg: 'repeat(4, minmax(220px, 1fr))',
-                            },
-                            gap: 2,
-                            alignItems: 'end',
-                            '& .MuiFormControl-root, & .MuiTextField-root': {
-                                minWidth: 220,
-                                width: '100%',
-                            },
-                        }}
-                    >
-                        <DatePicker
-                            label={t('ingredientReports.startDate', 'Start date')}
-                            value={startDateValue}
-                            onChange={(value) =>
-                                setDraftFilters((prev) => ({
+            <DashboardContent
+                sx={{
+                    flexGrow: 1,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    maxHeight: '100vh',
+                    '--layout-dashboard-content-pt': { xs: '0px', md: '0px' },
+                    '--layout-dashboard-content-pb': { xs: '0px', md: '0px' },
+                }}
+            >
+            
+                <DataTable<InvoiceWithDetails>
+                    persistKey="warehouse-invoice-details-standalone"
+                    data={invoices}
+                    getRowId={(row: any) => String(row?.id)}
+                    columns={columns}
+                    searchValue={searchQuery}
+                    onSearchChange={(value: string) => {
+                        setSearchQuery(value);
+                        setPaginationModel((prev) => ({ ...prev, page: 0 }));
+                    }}
+                    filters={tableFilters}
+                    onFiltersChange={handleFiltersChange}
+                    page={paginationModel.page}
+                    rowsPerPage={paginationModel.pageSize}
+                    totalCount={rowCount}
+                    rowsPerPageOptions={[10, 20, 50, 100]}
+                    onPageChange={handlePaginationPageChange}
+                    onRowsPerPageChange={handlePaginationRowsPerPageChange}
+                    showPeriodPicker
+                    periodPickerProps={{
+                        startDate: startDateValue ? startDateValue.toDate() : null,
+                        endDate: endDateValue ? endDateValue.toDate() : null,
+                        onStartDateChange: (date: Date | null) => {
+                            setActivePeriod(undefined); // Reset active period when manually changing date
+                            if (date) {
+                                setDraftFilters(prev => ({
                                     ...prev,
-                                    date_from: value ? toUtcDayBoundary(value) : '',
-                                }))
-                            }
-                            format="DD.MM.YYYY"
-                            slotProps={{
-                                textField: {
-                                    fullWidth: true,
-                                    size: 'small',
-                                    inputProps: { readOnly: true },
-                                    sx: { cursor: 'pointer' },
-                                },
-                            }}
-                        />
-                        <DatePicker
-                            label={t('ingredientReports.endDate', 'End date')}
-                            value={endDateValue}
-                            onChange={(value) =>
-                                setDraftFilters((prev) => ({
+                                    date_from: toUtcDayBoundary(dayjs(date), false)
+                                }));
+                            } else {
+                                setDraftFilters(prev => ({
                                     ...prev,
-                                    date_to: value ? toUtcDayBoundary(value, true) : '',
-                                }))
+                                    date_from: ''
+                                }));
                             }
-                            format="DD.MM.YYYY"
-                            slotProps={{
-                                textField: {
-                                    fullWidth: true,
-                                    size: 'small',
-                                    inputProps: { readOnly: true },
-                                    sx: { cursor: 'pointer' },
-                                },
-                            }}
-                        />
-                        <NoDataTooltip enabled={isStoragesEmpty} title={noDataText}>
-                            <TextField
-                                select
-                                size="small"
-                                label={t('invoices.storage', 'Storage')}
-                                SelectProps={{ native: true }}
-                                value={draftFilters.storage_id || ''}
-                                onChange={(e) =>
-                                    setDraftFilters((prev) => ({
-                                        ...prev,
-                                        storage_id: e.target.value,
-                                    }))
-                                }
-                                InputLabelProps={{ shrink: true }}
-                                disabled={isStoragesEmpty}
-                            >
-                                <option value="" disabled hidden>
-                                    {t('ingredientReports.all', 'All')}
-                                </option>
-                                {storages.map((storage) => (
-                                    <option key={storage.id} value={storage.id}>
-                                        {storage.name || storage.id}
-                                    </option>
-                                ))}
-                            </TextField>
-                        </NoDataTooltip>
-                        <NoDataTooltip enabled={isSuppliersEmpty} title={noDataText}>
-                            <TextField
-                                select
-                                size="small"
-                                label={t('invoices.name', 'Supplier')}
-                                SelectProps={{ native: true }}
-                                value={draftFilters.supplier_id || ''}
-                                onChange={(e) =>
-                                    setDraftFilters((prev) => ({
-                                        ...prev,
-                                        supplier_id: e.target.value,
-                                    }))
-                                }
-                                InputLabelProps={{ shrink: true }}
-                                disabled={isSuppliersEmpty}
-                            >
-                                <option value="" disabled hidden>
-                                    {t('ingredientReports.all', 'All')}
-                                </option>
-                                {suppliers.map((supplier) => (
-                                    <option key={supplier.id} value={supplier.id}>
-                                        {supplier.name || supplier.id}
-                                    </option>
-                                ))}
-                            </TextField>
-                        </NoDataTooltip>
-                        <NoDataTooltip enabled={isIngredientsEmpty} title={noDataText}>
-                            <TextField
-                                select
-                                size="small"
-                                label={t('ingredient', 'Ingredient')}
-                                SelectProps={{ native: true }}
-                                value={draftFilters.ingredient_id || ''}
-                                onChange={(e) =>
-                                    setDraftFilters((prev) => ({
-                                        ...prev,
-                                        ingredient_id: e.target.value,
-                                    }))
-                                }
-                                InputLabelProps={{ shrink: true }}
-                                disabled={isIngredientsEmpty}
-                            >
-                                <option value="" disabled hidden>
-                                    {t('ingredientReports.all', 'All')}
-                                </option>
-                                {ingredients.map((ingredient) => (
-                                    <option key={ingredient.id} value={ingredient.id}>
-                                        {ingredient.name || ingredient.id}
-                                    </option>
-                                ))}
-                            </TextField>
-                        </NoDataTooltip>
-                        <TextField
-                            select
+                        },
+                        onEndDateChange: (date: Date | null) => {
+                            setActivePeriod(undefined); // Reset active period when manually changing date
+                            if (date) {
+                                setDraftFilters(prev => ({
+                                    ...prev,
+                                    date_to: toUtcDayBoundary(dayjs(date), true)
+                                }));
+                            } else {
+                                setDraftFilters(prev => ({
+                                    ...prev,
+                                    date_to: ''
+                                }));
+                            }
+                        }
+                    }}
+                    showPeriodButtons
+                    periodButtonProps={{
+                        activePeriod,
+                        onPeriodChange: (period: 'day' | 'week' | 'month' | 'year') => {
+                            setActivePeriod(period);
+                            const now = dayjs();
+                            let startDate = '';
+                            let endDate = '';
+                            
+                            switch (period) {
+                                case 'day':
+                                    startDate = toUtcDayBoundary(now, false);
+                                    endDate = toUtcDayBoundary(now, true);
+                                    break;
+                                case 'week':
+                                    const weekStart = now.subtract(7, 'day');
+                                    startDate = toUtcDayBoundary(weekStart, false);
+                                    endDate = toUtcDayBoundary(now, true);
+                                    break;
+                                case 'month':
+                                    const monthStart = now.subtract(30, 'day');
+                                    startDate = toUtcDayBoundary(monthStart, false);
+                                    endDate = toUtcDayBoundary(now, true);
+                                    break;
+                                case 'year':
+                                    const yearStart = now.subtract(365, 'day');
+                                    startDate = toUtcDayBoundary(yearStart, false);
+                                    endDate = toUtcDayBoundary(now, true);
+                                    break;
+                            }
+                            
+                            setDraftFilters(prev => ({
+                                ...prev,
+                                date_from: startDate,
+                                date_to: endDate
+                            }));
+                        }
+                    }}
+                    defaultConfig={{
+                        order: ['supplier', 'supplier_phone', 'storage_id', 'total_amount', 'status', 'date', 'actions'],
+                        visibility: {
+                            supplier: true,
+                            supplier_phone: true,
+                            storage_id: true,
+                            total_amount: true,
+                            status: true,
+                            date: true,
+                            actions: true,
+                        },
+                        widths: {
+                            supplier: '1.5fr',
+                            supplier_phone: '1fr',
+                            storage_id: '1.2fr',
+                            total_amount: '1fr',
+                            status: '0.8fr',
+                            date: '1fr',
+                            actions: '0.7fr',
+                        },
+                    }}
+                    onReset={() => {
+                        setTableFilters({});
+                        setDraftFilters(initialFilters);
+                    }}
+                    headerActions={
+                        <Button
+                            variant="contained"
+                            startIcon={<Iconify icon="mingcute:add-line" />}
+                            href={paths.warehouse.invoices.new}
                             size="small"
-                            label={t('invoices.status', 'Status')}
-                            SelectProps={{ native: true }}
-                            value={draftFilters.status || ''}
-                            onChange={(e) =>
-                                setDraftFilters((prev) => ({
-                                    ...prev,
-                                    status: e.target.value,
-                                }))
-                            }
-                            InputLabelProps={{ shrink: true }}
                         >
-                            <option value="" disabled hidden>
-                                {t('ingredientReports.all', 'All')}
-                            </option>
-                            <option value="pending">{t('warehouse.invoices.statuses.pending', 'Pending')}</option>
-                            <option value="arrived">{t('warehouse.invoices.statuses.arrived', 'Arrived')}</option>
-                            <option value="cancelled">{t('warehouse.invoices.statuses.cancelled', 'Cancelled')}</option>
-                        </TextField>
-                      
-                        <Box sx={{ display: 'flex', gap: 1 }}>
-                            <Button
-                                variant="outlined"
-                                size="small"
-                                startIcon={<Iconify icon="solar:restart-bold" />}
-                                onClick={() => setDraftFilters(initialFilters)}
-                                sx={{ flex: 1 }}
-                            >
-                                {t('ingredientReports.reset', 'Reset')}
-                            </Button>
-                        </Box>
-                    </Box>
-                )}
-                breadcrumbs={{
-                    heading: t('overview.warehouse.invoiceDetails', 'Kirimlar'),
-                    links: [
-                        { name: t('app'), href: paths.menu.root },
-                        { name: t('overview.warehouse.title', 'Warehouse'), href: paths.warehouse.root },
-                        { name: t('overview.warehouse.invoiceDetails', 'Kirimlar'), href: paths.warehouse.invoiceDetails.root },
-                    ],
-                }}
-                addButton={{ label: t('add'), href: paths.warehouse.invoices.new }}
-                onRowClick={(id) => {
-                    const invoice = invoices.find(inv => inv.id === id);
-                    if (invoice) {
-                        handleViewClick(invoice);
+                            {t('add')}
+                        </Button>
                     }
-                }}
-                onQuickFilterChange={setSearchQuery}
-            />
+                />
+            </DashboardContent>
 
             <Dialog open={deleteDialogOpen} onClose={handleDeleteCancel}>
                 <DialogTitle>{t('warehouse.invoiceDetails.deleteConfirmation.title')}</DialogTitle>
@@ -750,67 +748,48 @@ export function InvoiceDetailsStandaloneListView() {
                 maxWidth="sm"
                 slideDirection="left"
                 position="right"
-                // position="center"
                 renderContent={(data) => (
-                    <>
-                        {/* <Box sx={{ display: 'flex', justifyContent: 'flex-end', marginY: '6px' }}>
-                            <Button
-                                variant="contained"
-                                color="primary"
-                                href={`${paths.warehouse.invoiceDetails.new}?invoice_id=${data.id}`}
-                                startIcon={<Iconify icon="solar:add-circle-bold" />}
-                                style={{ marginBottom: '6px' }}
-                            >
-                                {t('add_detail', 'Add Detail')}
-                            </Button>
-                        </Box> */}
-                        <Box sx={{ width: '100%' }}>
-                            <DataGrid
-                                rows={filteredDetails}
-                                columns={detailsColumns}
-                                autoHeight
-                                disableRowSelectionOnClick
-                                disableColumnFilter
-                                disableColumnMenu
-                                disableColumnSelector
-                                disableDensitySelector
-                                hideFooterSelectedRowCount
-                                pagination
-                                pageSizeOptions={[10, 25, 50, 100]}
-                                initialState={{
-                                    pagination: {
-                                        paginationModel: { page: 0, pageSize: 100 },
-                                    },
-                                }}
-                                sx={{
-                                    // Hide toolbar completely
-                                    '& .MuiDataGrid-toolbarContainer, & .MuiDataGrid-toolbarContainer button': {
-                                        display: 'none !important',
-                                    },
-                                    // Style column headers
-                                    '& .MuiDataGrid-columnHeaders': {
-                                        backgroundColor: 'background.paper',
-                                    },
-                                    // Hide menu icons in column headers
-                                    '& .MuiDataGrid-menuIcon': {
-                                        display: 'none !important',
-                                    },
-                                    // Remove focus outlines
-                                    '& .MuiDataGrid-columnHeader:focus, & .MuiDataGrid-cell:focus': {
-                                        outline: 'none !important',
-                                    },
-                                    // Hide column separators
-                                    '& .MuiDataGrid-columnSeparator': {
-                                        display: 'none',
-                                    },
-                                }}
-                                slots={{
-                                    toolbar: () => null,
-                                    columnMenu: () => null,
-                                }}
-                            />
-                        </Box>
-                    </>
+                    <Box sx={{ width: '100%' }}>
+                        <DataGrid
+                            rows={filteredDetails}
+                            columns={detailsColumns}
+                            autoHeight
+                            disableRowSelectionOnClick
+                            disableColumnFilter
+                            disableColumnMenu
+                            disableColumnSelector
+                            disableDensitySelector
+                            hideFooterSelectedRowCount
+                            pagination
+                            pageSizeOptions={[10, 25, 50, 100]}
+                            initialState={{
+                                pagination: {
+                                    paginationModel: { page: 0, pageSize: 100 },
+                                },
+                            }}
+                            sx={{
+                                '& .MuiDataGrid-toolbarContainer, & .MuiDataGrid-toolbarContainer button': {
+                                    display: 'none !important',
+                                },
+                                '& .MuiDataGrid-columnHeaders': {
+                                    backgroundColor: 'background.paper',
+                                },
+                                '& .MuiDataGrid-menuIcon': {
+                                    display: 'none !important',
+                                },
+                                '& .MuiDataGrid-columnHeader:focus, & .MuiDataGrid-cell:focus': {
+                                    outline: 'none !important',
+                                },
+                                '& .MuiDataGrid-columnSeparator': {
+                                    display: 'none',
+                                },
+                            }}
+                            slots={{
+                                toolbar: () => null,
+                                columnMenu: () => null,
+                            }}
+                        />
+                    </Box>
                 )}
             />
         </>

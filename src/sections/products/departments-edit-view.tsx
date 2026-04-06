@@ -1,17 +1,22 @@
 import type { TFunction } from 'i18next';
 import type { IDepartmentFormData } from 'src/types/departments.tsx';
 import type { CardSection, GenericEditViewConfig } from 'src/components/generic-edit-view';
+
+import { mutate } from 'swr';
 import { useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { mutate } from 'swr';
+
 import { Box } from '@mui/material';
+
 import { paths } from 'src/routes/paths';
 import { useRouter, useParams } from 'src/routes/hooks';
+
 import { useTranslationsAPI } from 'src/hooks/use-translations-api';
-import { useGetStorages, useGetDepartment, useCreateDepartment, useUpdateDepartment, useDeleteDepartment } from 'src/actions/departments';
+
 import { endpoints } from 'src/lib/axios';
+import { useGetStorages, useGetDepartment, useCreateDepartment, useUpdateDepartment, useDeleteDepartment } from 'src/actions/departments';
+
 import { GenericEditView } from 'src/components/generic-edit-view';
-import { CustomBreadcrumbs } from 'src/components/custom-breadcrumbs';
 
 const COLOR_CODES = [
     '#FF4842', // Red            
@@ -167,13 +172,7 @@ export function ProductEditView({ isNew = false }: DepartmentEditViewProps) {
     return (
         <Box sx={{ p: 3 }}>
             <Box sx={{ maxWidth: 1400, mx: 'auto' }}>
-                {/* BREADCRUMBS AND TITLE */}
-                <CustomBreadcrumbs
-                    heading={isNew ? t('departments.new') : t('departments.edit')}
-                    links={config.breadcrumbs}
-                    sx={{ mb: 3 }}
-                />
-
+         
                 <GenericEditView
                     config={config}
                     data={department}

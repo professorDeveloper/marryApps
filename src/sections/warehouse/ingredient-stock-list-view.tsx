@@ -1,34 +1,71 @@
-import type { GridColDef } from '@mui/x-data-grid';
-import { useMemo, useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useMemo, useState, useEffect } from 'react';
+
 import {
     Dialog,
+    Button,
+    TextField,
+    DialogTitle,
     DialogActions,
     DialogContent,
-    DialogTitle,
-    TextField,
-    Button,
-    Box,
 } from '@mui/material';
-import { Iconify } from 'src/components/iconify';
-import { CustomGridActionsCellItem } from 'src/components/custom-data-grid';
-import { GenericTableView } from 'src/components/generic-table-view';
-import { toast } from 'src/components/snackbar';
+
+import { DashboardContent } from 'src/layouts/dashboard';
 import {
-    useGetIngredientStocksPage,
     useUpdateIngredientStock,
     useDeleteIngredientStock,
+    useGetIngredientStocksPage,
 } from 'src/actions/ingredient-stock';
-import { paths } from 'src/routes/paths';
+
+import { DeductionUtilityDataTable } from 'src/sections/warehouse/deduction';
 
 function IngredientStockListView() {
     const { t } = useTranslation('menu');
     const [paginationModel, setPaginationModel] = useState({ page: 0, pageSize: 20 });
+    const [searchQuery, setSearchQuery] = useState('');
+    const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
+    const [storageFilter, setStorageFilter] = useState('');
+
+    // Debounce search query
+    useEffect(() => {
+        const timeout = setTimeout(() => {
+            console.log('Setting debounced search query:', searchQuery);
+            setDebouncedSearchQuery(searchQuery);
+        }, 400);
+
+        return () => clearTimeout(timeout);
+    }, [searchQuery]);
+
+    // Reset page when search changes
+    useEffect(() => {
+        setPaginationModel((prev) => ({ ...prev, page: 0 }));
+    }, [debouncedSearchQuery]);
+
     const { stocks, stocksLoading, pagination } = useGetIngredientStocksPage({
         limit: paginationModel.pageSize,
         offset: paginationModel.page * paginationModel.pageSize,
+        search: debouncedSearchQuery,
         expand: 'ingredient_id,storage_id,branch_id',
     });
+    
+    // Debug logging
+    useEffect(() => {
+        console.log('API call params:', {
+            limit: paginationModel.pageSize,
+            offset: paginationModel.page * paginationModel.pageSize,
+            search: debouncedSearchQuery,
+            expand: 'ingredient_id,storage_id,branch_id',
+        });
+    }, [paginationModel.pageSize, paginationModel.page, debouncedSearchQuery]);
+    
+    // Debug search state changes
+    useEffect(() => {
+        console.log('Search state changed:', { searchQuery, debouncedSearchQuery });
+    }, [searchQuery, debouncedSearchQuery]);
+    const handleSearchChange = (value: string) => {
+        console.log('Search input changed:', value);
+        setSearchQuery(value);
+    };
     const { updateStock } = useUpdateIngredientStock();
     const { deleteStock } = useDeleteIngredientStock();
 
@@ -37,12 +74,6 @@ function IngredientStockListView() {
     const [editQuantity, setEditQuantity] = useState('');
     const [openDelete, setOpenDelete] = useState(false);
     const [deleteStockId, setDeleteStockId] = useState<string | null>(null);
-
-    const handleEditOpen = (stock: any) => {
-        setSelectedStock(stock);
-        setEditQuantity(stock.quantity);
-        setOpenEdit(true);
-    };
 
     const handleEditClose = () => {
         setOpenEdit(false);
@@ -61,11 +92,6 @@ function IngredientStockListView() {
         }
     };
 
-    const handleDeleteOpen = (stockId: string) => {
-        setDeleteStockId(stockId);
-        setOpenDelete(true);
-    };
-
     const handleDeleteClose = () => {
         setOpenDelete(false);
         setDeleteStockId(null);
@@ -82,115 +108,172 @@ function IngredientStockListView() {
         }
     };
 
-    const columns: GridColDef[] = useMemo(
+    const handleFiltersChange = (filterState: Record<string, { type: 'text' | 'multi'; value: string | string[] }>) => {
+        const v = filterState.storage_name?.value;
+        const storageValue = Array.isArray(v) ? (v[0] ?? '') : (v ?? '');
+        setStorageFilter(storageValue);
+        setPaginationModel((prev) => ({ ...prev, page: 0 }));
+    };
+
+    const enrichedStocks = useMemo(() => (Array.isArray(stocks) ? stocks : []).map((stock: any) => {
+        const expandedIngredient = stock?._expand?.ingredient_id;
+        const expandedStorage = stock?._expand?.storage_id;
+        return {
+            ...stock,
+            ingredient_name: expandedIngredient?.name || stock.ingredient_name || stock.ingredient_id,
+            measurement: expandedIngredient?.measurement || stock.measurement || '-',
+            price_per_unit: expandedIngredient?.price_per_unit ?? stock.price_per_unit ?? '-',
+            storage_name: expandedStorage?.name || stock.storage_name || stock.storage_id,
+            storage_id: stock.storage_id,
+        };
+    }), [stocks]);
+
+    // TODO: Once the backend supports storage_id param in the ingredient-stocks endpoint,
+    // move this filtering to the server-side by adding storage_id to the API query params
+    const filteredStocks = useMemo(() => {
+        if (!storageFilter) return enrichedStocks;
+        return enrichedStocks.filter((stock: any) => stock.storage_id === storageFilter);
+    }, [enrichedStocks, storageFilter]);
+
+    // Build unique storage options from enriched stocks
+    const storageOptions = useMemo(() => {
+        const options = new Set<string>();
+        enrichedStocks.forEach((stock: any) => {
+            if (stock.storage_id) options.add(stock.storage_id);
+        });
+        return Array.from(options);
+    }, [enrichedStocks]);
+
+    const storageMap = useMemo(() => {
+        const map: Record<string, string> = {};
+        enrichedStocks.forEach((stock: any) => {
+            if (stock.storage_id && stock.storage_name) {
+                map[stock.storage_id] = stock.storage_name;
+            }
+        });
+        return map;
+    }, [enrichedStocks]);
+
+    const filtersValue = useMemo(() => {
+        const result: Record<string, { type: 'multi'; value: string[] }> = {};
+        if (storageFilter) result.storage_name = { type: 'multi', value: [storageFilter] };
+        return result;
+    }, [storageFilter]);
+
+    const columns = useMemo(
         () => [
             {
-                field: 'ingredient_name',
-                headerName: t('ingredientStock.ingredient'),
-                flex: 1,
-                minWidth: 150,
-                renderCell: (params) => <Box sx={{ mt: 2, mb: 2 }}>{params.row.ingredient_name}</Box>,
+                key: 'ingredient_name',
+                label: t('ingredientStock.ingredient'),
+                sortable: true,
+                width: '1.5fr',
+                align: 'left' as const,
+                getValue: (row: any) => row?.ingredient_name ?? '',
             },
             {
-                field: 'quantity',
-                headerName: t('ingredientStock.quantity'),
-                flex: 0.8,
-                minWidth: 100,
-                align: 'right',
-                headerAlign: 'right',
+                key: 'quantity',
+                label: t('ingredientStock.quantity'),
+                sortable: true,
+                width: '1fr',
+                align: 'right' as const,
+                mono: true,
+                getValue: (row: any) => row?.quantity ?? '',
             },
             {
-                field: 'measurement',
-                headerName: t('ingredientStock.measurement'),
-                flex: 0.8,
-                minWidth: 100,
+                key: 'measurement',
+                label: t('ingredientStock.measurement'),
+                sortable: true,
+                width: '1fr',
+                align: 'left' as const,
+                getValue: (row: any) => row?.measurement ?? '-',
             },
             {
-                field: 'price_per_unit',
-                headerName: t('ingredientStock.pricePerUnit', 'Price per unit'),
-                flex: 0.9,
-                minWidth: 130,
-                align: 'left',
-                headerAlign: 'left',
+                key: 'price_per_unit',
+                label: t('ingredientStock.pricePerUnit', 'Price per unit'),
+                sortable: true,
+                width: '1fr',
+                align: 'left' as const,
+                getValue: (row: any) => row?.price_per_unit ?? '-',
             },
             {
-                field: 'storage_name',
-                headerName: t('ingredientStock.storage', 'Storage'),
-                flex: 1,
-                minWidth: 140,
+                key: 'storage_name',
+                label: t('ingredientStock.storage', 'Storage'),
+                sortable: true,
+                filter: {
+                    type: 'multi' as const,
+                    options: storageOptions,
+                    getOptionLabel: (id: string) => storageMap[id] || id,
+                },
+                width: '1.2fr',
+                align: 'left' as const,
+                getValue: (row: any) => row?.storage_name ?? '',
             },
             {
-                field: 'created_at',
-                headerName: t('ingredientStock.created_at'),
-                // flex: 1,
-                minWidth: 150,
-                renderCell: (params) => new Date(params.value).toLocaleDateString(),
+                key: 'created_at',
+                label: t('ingredientStock.created_at'),
+                sortable: true,
+                width: '1fr',
+                align: 'left' as const,
+                getValue: (row: any) =>
+                    row?.created_at ? new Date(row.created_at).toLocaleDateString() : '',
             },
-            // {
-            //     field: 'actions',
-            //     type: 'actions',
-            //     headerName: t('actions'),
-            //     // flex: 0.8,
-            //     width: 100,
-            //     sortable: false,
-            //     filterable: false,
-            //     getActions: (params) => [
-            //         // <CustomGridActionsCellItem
-            //         //     key="edit"
-            //         //     icon={<Iconify icon="solar:pen-bold" />}
-            //         //     label={t('edit')}
-            //         //     onClick={() => handleEditOpen(params.row)}
-            //         //     showInMenu
-            //         // />,
-            //         <CustomGridActionsCellItem
-            //             key="delete"
-            //             icon={<Iconify icon="solar:trash-bin-trash-bold" />}
-            //             label={t('delete')}
-            //             onClick={() => handleDeleteOpen(params.row.id)}
-            //             style={{ color: '#FB6633' }}
-            //             // showInMenu
-            //         />,
-            //     ],
-            // },
         ],
-        [t]
+        [t, storageOptions, storageMap]
     );
-
-    const enrichedStocks = useMemo(() => {
-        return (Array.isArray(stocks) ? stocks : []).map((stock: any) => {
-            const expandedIngredient = stock?._expand?.ingredient_id;
-            const expandedStorage = stock?._expand?.storage_id;
-            return {
-                ...stock,
-                ingredient_name: expandedIngredient?.name || stock.ingredient_name || stock.ingredient_id,
-                measurement: expandedIngredient?.measurement || stock.measurement || '-',
-                price_per_unit: expandedIngredient?.price_per_unit ?? stock.price_per_unit ?? '-',
-                storage_name: expandedStorage?.name || stock.storage_name || stock.storage_id,
-            };
-        });
-    }, [stocks]);
 
     return (
         <>
-            <GenericTableView
-                data={enrichedStocks}
-                loading={stocksLoading}
-                columns={columns}
-                paginationMode="server"
-                rowCount={pagination?.total || 0}
-                paginationModel={paginationModel}
-                onPaginationModelChange={setPaginationModel}
-                pageSizeOptions={[10, 20, 50, 100]}
-                breadcrumbs={{
-                    heading: t('ingredientStock.title'),
-                    links: [
-                        { name: t('app'), href: paths.menu.root },
-                        { name: t('warehouse.ingredients'), href: paths.warehouse.ingredients.root },
-                        { name: t('ingredientStock.title') },
-                    ],
+            <DashboardContent
+                sx={{
+                    flexGrow: 1,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    maxHeight: '100vh',
+                    '--layout-dashboard-content-pt': { xs: '0px', md: '0px' },
+                    '--layout-dashboard-content-pb': { xs: '0px', md: '0px' },
                 }}
-                onDeleteRow={(id) => deleteStock(id)}
-            />
+            >
+                <DeductionUtilityDataTable
+                    persistKey="warehouse-ingredient-stocks"
+                    data={filteredStocks}
+                    getRowId={(row: any) => String(row?.id)}
+                    columns={columns}
+                    filters={filtersValue}
+                    onFiltersChange={handleFiltersChange}
+                    page={paginationModel.page}
+                    rowsPerPage={paginationModel.pageSize}
+                    totalCount={pagination?.total || 0}
+                    rowsPerPageOptions={[10, 20, 50, 100]}
+                    onPageChange={(p) => setPaginationModel((prev) => ({ ...prev, page: p }))}
+                    onRowsPerPageChange={(size) => setPaginationModel({ page: 0, pageSize: size })}
+                    searchValue={searchQuery}
+                    onSearchChange={handleSearchChange}
+                    onReset={() => {
+                        setSearchQuery('');
+                        setStorageFilter('');
+                        setPaginationModel({ page: 0, pageSize: 20 });
+                    }}
+                    defaultConfig={{
+                        order: ['ingredient_name', 'quantity', 'measurement', 'price_per_unit', 'storage_name', 'created_at'],
+                        visibility: {
+                            ingredient_name: true,
+                            quantity: true,
+                            measurement: true,
+                            price_per_unit: true,
+                            storage_name: true,
+                            created_at: true,
+                        },
+                        widths: {
+                            ingredient_name: '1.5fr',
+                            quantity: '1fr',
+                            measurement: '1fr',
+                            price_per_unit: '1fr',
+                            storage_name: '1.2fr',
+                            created_at: '1fr',
+                        },
+                    }}
+                />
+            </DashboardContent>
 
             {/* Edit Dialog */}
             <Dialog open={openEdit} onClose={handleEditClose} maxWidth="sm" fullWidth>

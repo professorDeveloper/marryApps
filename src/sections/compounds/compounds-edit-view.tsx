@@ -1,25 +1,29 @@
-import { useMemo, useState, useEffect, useRef, useCallback } from 'react';
-import { useTranslation } from 'react-i18next';
-import { Box, Tab, Tabs, CircularProgress } from '@mui/material';
-import { paths } from 'src/routes/paths';
+import type { PendingCalculation, CompoundEditViewProps } from './types';
+import type { GenericEditViewConfig } from '../../components/generic-edit-view/types';
+
 import { useParams } from 'react-router';
+import { useTranslation } from 'react-i18next';
+import { useRef, useMemo, useState, useEffect, useCallback } from 'react';
+
+import { Box, Tab, Tabs, CircularProgress } from '@mui/material';
+
+import { paths } from 'src/routes/paths';
 
 // Hooks and Actions
 import { useGetCompound, useGetCompoundWithCalculations } from 'src/hooks/use-compounds';
+
 import { useGetIngredientGroups } from 'src/actions/ingredient-group';
-import { useCompoundForm } from './hooks/useCompoundForm';
 
 // Components
 import { CustomBreadcrumbs } from 'src/components/custom-breadcrumbs';
 import ProductCalculator from 'src/components/generic-edit-view/edit-calculation';
-import { GenericEditView } from '../../components/generic-edit-view/GenericEditView';
-import { TabPanel } from './components/TabPanel';
 
-// Utils, Types, and Constants
-import { IMAGE_SECTION, BASIC_INFO_SECTION, PRICING_SECTION, MEASUREMENT_OPTIONS } from './constants';
 import { translateSection } from './utilities';
-import type { CompoundEditViewProps, PendingCalculation } from './types';
-import type { GenericEditViewConfig } from '../../components/generic-edit-view/types';
+import { TabPanel } from './components/TabPanel';
+import { useCompoundForm } from './hooks/useCompoundForm';
+import { GenericEditView } from '../../components/generic-edit-view/GenericEditView';
+// Utils, Types, and Constants
+import { IMAGE_SECTION, PRICING_SECTION, BASIC_INFO_SECTION, MEASUREMENT_OPTIONS } from './constants';
 
 // ================================================================================================
 

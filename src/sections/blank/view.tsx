@@ -1,12 +1,10 @@
 import type { Theme, SxProps } from '@mui/material/styles';
 
-import { varAlpha } from 'minimal-shared/utils';
+import { useState } from 'react';
 
-import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 
 import { DashboardContent } from 'src/layouts/dashboard';
-import { useState } from 'react';
 
 // ----------------------------------------------------------------------
 

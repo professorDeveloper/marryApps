@@ -1,60 +1,91 @@
-import type { GridColDef } from '@mui/x-data-grid';
-
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Button } from '@mui/material';
+
 import { paths } from 'src/routes/paths';
 
+import { DashboardContent } from 'src/layouts/dashboard';
+
 import { Iconify } from 'src/components/iconify';
-import { GenericTableView } from 'src/components/generic-table-view';
-import { CustomGridActionsCellItem } from 'src/components/custom-data-grid';
+
+import { DeductionUtilityDataTable } from 'src/sections/warehouse/deduction';
 
 export function LocationsListView() {
-  const { t } = useTranslation('menu');
-  const rows: any[] = [];
+    const { t } = useTranslation('menu');
+    const rows: any[] = [];
 
-  const columns = useMemo<GridColDef[]>(
-    () => [
-      { field: 'code', headerName: 'Code', width: 140 },
-      { field: 'name', headerName: t('overview.warehouse.locations', 'Name'), flex: 1, minWidth: 220 },
-      { field: 'capacity', headerName: 'Capacity', width: 140 },
-      {
-        type: 'actions',
-        field: 'actions',
-        headerName: ' ',
-        width: 64,
-        align: 'right',
-        headerAlign: 'right',
-        sortable: false,
-        filterable: false,
-        disableColumnMenu: true,
-        getActions: (params) => [
-          <CustomGridActionsCellItem
-            showInMenu
-            label={t('edit')}
-            icon={<Iconify icon="solar:pen-bold" />}
-            href={paths.warehouse.locations.edit(params.row.id)}
-          />,
+    const columns = useMemo(
+        () => [
+            {
+                key: 'code',
+                label: 'Code',
+                sortable: true,
+                width: '1fr',
+                align: 'left' as const,
+                getValue: (row: any) => row?.code ?? '',
+            },
+            {
+                key: 'name',
+                label: t('overview.warehouse.locations', 'Name'),
+                sortable: true,
+                width: '2fr',
+                align: 'left' as const,
+                getValue: (row: any) => row?.name ?? '',
+            },
+            {
+                key: 'capacity',
+                label: 'Capacity',
+                sortable: true,
+                width: '1fr',
+                align: 'left' as const,
+                getValue: (row: any) => row?.capacity ?? '',
+            },
         ],
-      },
-    ],
-    [t]
-  );
+        [t]
+    );
 
-  return (
-    <GenericTableView
-      data={rows}
-      loading={false}
-      columns={columns}
-      breadcrumbs={{
-        heading: t('overview.warehouse.locations', 'Locations'),
-        links: [
-          { name: t('app'), href: paths.menu.root },
-          { name: t('overview.warehouse.title', 'Ombor'), href: paths.warehouse.root },
-          { name: t('overview.warehouse.locations', 'Locations'), href: paths.warehouse.locations.root },
-        ],
-      }}
-      addButton={{ label: t('add'), href: paths.warehouse.locations.new }}
-    />
-  );
+    return (
+        <DashboardContent
+            sx={{
+                flexGrow: 1,
+                display: 'flex',
+                flexDirection: 'column',
+                maxHeight: '100vh',
+                '--layout-dashboard-content-pt': { xs: '0px', md: '0px' },
+                '--layout-dashboard-content-pb': { xs: '0px', md: '0px' },
+            }}
+        >
+            <DeductionUtilityDataTable
+                persistKey="warehouse-locations"
+                data={rows}
+                getRowId={(row: any) => String(row?.id)}
+                columns={columns}
+                defaultConfig={{
+                    order: ['code', 'name', 'capacity'],
+                    visibility: {
+                        code: true,
+                        name: true,
+                        capacity: true,
+                    },
+                    widths: {
+                        code: '1fr',
+                        name: '2fr',
+                        capacity: '1fr',
+                    },
+                }}
+                onReset={() => {}}
+                headerActions={
+                    <Button
+                        variant="contained"
+                        startIcon={<Iconify icon="mingcute:add-line" />}
+                        href={paths.warehouse.locations.new}
+                        size="small"
+                    >
+                        {t('add')}
+                    </Button>
+                }
+            />
+        </DashboardContent>
+    );
 }

@@ -1,12 +1,18 @@
 import type { CardSection, GenericEditViewConfig } from 'src/components/generic-edit-view';
-import { useCallback, useEffect, useState } from 'react';
+
 import { useParams } from 'react-router';
+import { useState, useEffect, useCallback } from 'react';
+
+import { Box, CircularProgress } from '@mui/material';
+
 import { paths } from 'src/routes/paths';
 import { useRouter } from 'src/routes/hooks';
-import { useTranslate } from 'src/locales';
-import { GenericEditView } from 'src/components/generic-edit-view';
+
 import { useSupplierAPI } from 'src/hooks/use-supplier-api';
-import { Box, CircularProgress } from '@mui/material';
+
+import { useTranslate } from 'src/locales';
+
+import { GenericEditView } from 'src/components/generic-edit-view';
 
 interface SupplierEditViewProps {
     isNew?: boolean;

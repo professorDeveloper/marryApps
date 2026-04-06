@@ -1,102 +1,47 @@
-import type { GridColDef } from '@mui/x-data-grid';
 import type { ICompound } from 'src/types/compounds';
+
 import { useTranslation } from 'react-i18next';
-import { useMemo, useState, useCallback, useEffect } from 'react';
-import Box from '@mui/material/Box';
-import Avatar from '@mui/material/Avatar';
+import { useMemo, useState, useEffect, useCallback } from 'react';
+
 import { useTheme } from '@mui/material/styles';
-import ListItemText from '@mui/material/ListItemText';
-import { Button, Dialog, DialogTitle, DialogActions, DialogContent } from '@mui/material';
 import {
+    Box,
     Table,
-    TableBody,
-    TableCell,
-    TableContainer,
-    TableHead,
-    TableRow,
     Paper,
+    Dialog,
+    Button,
+    TableRow,
+    TableHead,
+    TableCell,
+    TableBody,
+    DialogTitle,
+    ListItemText,
+    DialogActions,
+    DialogContent,
+    TableContainer,
     CircularProgress,
 } from '@mui/material';
+
 import { paths } from 'src/routes/paths';
+
 import { useGenericViewModal } from 'src/hooks/use-generic-view-modal';
 import {
-    useGetCompoundsPage,
     useDeleteCompound,
     useDeleteCompounds,
+    useGetCompoundsPage,
     useGetCompoundWithCalculations,
 } from 'src/hooks/use-compounds';
-import { useImageUrl } from 'src/hooks/use-image-url';
-import { getInitials, getAvatarColor } from 'src/utils/avatar';
-import { toast } from 'src/components/snackbar';
-import { Iconify } from 'src/components/iconify';
-import { GenericTableView } from 'src/components/generic-table-view';
-import { CustomGridActionsCellItem } from 'src/components/custom-data-grid';
-import { GenericViewModal, SpecificationsTable } from 'src/components/generic-view-view';
-import { formatDate, formatPrice } from 'src/components/generic-view-view/modal-formatters';
+
+import { DashboardContent } from 'src/layouts/dashboard';
 import { useGetIngredients } from 'src/actions/ingredients';
 import { useGetIngredientGroups } from 'src/actions/ingredient-group';
 
+import { Iconify } from 'src/components/iconify';
+import { GenericViewModal } from 'src/components/generic-view-view';
+import { formatDate, formatPrice } from 'src/components/generic-view-view/modal-formatters';
 
-function RenderCellCompound({ params }: { params: any }) {
-    const { row } = params;
-    const name = row.name || '-';
-    const { imageUrl, loading } = useImageUrl(row.picture_url);
-    const initials = getInitials(name);
-    const bgColor = getAvatarColor(name);
+import { DataTable } from 'src/sections/warehouse/deduction/components/utility-data-table';
 
-    return (
-        <Box
-            sx={{
-                py: 2,
-                gap: 2,
-                width: 1,
-                display: 'flex',
-                alignItems: 'center',
-            }}
-        >
-            <Avatar
-                alt={name}
-                src={imageUrl || undefined}
-                variant="rounded"
-                sx={{
-                    width: 64,
-                    height: 64,
-                    bgcolor: !imageUrl ? bgColor : undefined,
-                    color: '#fff',
-                    fontWeight: 'bold',
-                    fontSize: '20px',
-                }}
-            >
-                {!imageUrl && !loading && initials}
-                {loading && '...'}
-            </Avatar>
-
-            <ListItemText primary={<span>{name}</span>} />
-        </Box>
-    );
-}
-
-/**
- * Measurement renderer with translation
- */
-function RenderCellMeasurement({ params }: { params: any }) {
-    const { t } = useTranslation('menu');
-    const { value } = params;
-
-    const measurementKey = `semifinishedProducts.${value}`;
-    const label = t(measurementKey);
-
-    return <span>{label}</span>;
-}
-
-/**
- * Price renderer
- */
-function RenderCellPrice({ params }: { params: any }) {
-    const { value } = params;
-    const numPrice = typeof value === 'string' ? parseFloat(value) : value;
-    return <span>{numPrice} so&apos;m</span>;
-}
 
 // ============================================================================
 // SPECIFICATIONS RENDERING
@@ -217,21 +162,42 @@ function CompoundCalculationsTable({
  * Render compound specifications for modal
  */
 function renderCompoundSpecifications(item: ICompound, t: any) {
-    const specs = [
-        { label: t('semifinishedProducts.name'), value: item.name || '-' },
-        { label: t('semifinishedProducts.description'), value: item.description || '-' },
-        {
-            label: t('semifinishedProducts.measurement'),
-            value: t(`semifinishedProducts.${item.measurement}`, item.measurement),
-        },
-        { label: t('ingredients.group'), value: item.ingredient_group_name || '-' },
-        { label: t('semifinishedProducts.quantity'), value: item.quantity },
-        { label: t('semifinishedProducts.price'), value: formatPrice(Number(item.price)) },
-        { label: t('semifinishedProducts.createdAt'), value: formatDate(item.created_at) },
-        { label: t('semifinishedProducts.updatedAt'), value: formatDate(item.updated_at) },
-    ];
-
-    return <SpecificationsTable rows={specs} />;
+    return (
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                <Box sx={{ fontWeight: 500 }}>{t('semifinishedProducts.name')}:</Box>
+                <Box>{item.name || '-'}</Box>
+            </Box>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                <Box sx={{ fontWeight: 500 }}>{t('semifinishedProducts.description')}:</Box>
+                <Box>{item.description || '-'}</Box>
+            </Box>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                <Box sx={{ fontWeight: 500 }}>{t('semifinishedProducts.measurement')}:</Box>
+                <Box>{t(`semifinishedProducts.${item.measurement}`, item.measurement)}</Box>
+            </Box>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                <Box sx={{ fontWeight: 500 }}>{t('ingredients.group')}:</Box>
+                <Box>{item.ingredient_group_name || '-'}</Box>
+            </Box>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                <Box sx={{ fontWeight: 500 }}>{t('semifinishedProducts.quantity')}:</Box>
+                <Box>{item.quantity}</Box>
+            </Box>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                <Box sx={{ fontWeight: 500 }}>{t('semifinishedProducts.price')}:</Box>
+                <Box>{formatPrice(Number(item.price))}</Box>
+            </Box>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                <Box sx={{ fontWeight: 500 }}>{t('semifinishedProducts.createdAt')}:</Box>
+                <Box>{formatDate(item.created_at)}</Box>
+            </Box>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                <Box sx={{ fontWeight: 500 }}>{t('semifinishedProducts.updatedAt')}:</Box>
+                <Box>{formatDate(item.updated_at)}</Box>
+            </Box>
+        </Box>
+    );
 }
 
 // ============================================================================
@@ -318,79 +284,118 @@ export function HalfMeals() {
         return Array.from(map.entries()).map(([value, label]) => ({ value, label }));
     }, [compounds, ingredientGroups]);
 
-    // Columns config
-    const columns = useMemo<GridColDef[]>(
+    // DataTable columns
+    const columns = useMemo(
         () => [
             {
-                field: 'name',
-                headerName: t('semifinishedProducts.name'),
-                flex: 1,
-                minWidth: 250,
-                hideable: false,
-                renderCell: (params) => <RenderCellCompound params={params} />,
+                key: 'name',
+                label: t('semifinishedProducts.name'),
+                sortable: true,
+                width: '2fr',
+                align: 'left' as const,
+                getValue: (row: ICompound) => row?.name ?? '',
+                renderCell: ({ row }: { row: ICompound }) => {
+                    const name = row.name || '-';
+
+                    return (
+                        <Box
+                            sx={{
+                                py: 1,
+                                width: 1,
+                                display: 'flex',
+                                alignItems: 'center',
+                            }}
+                        >
+                            <ListItemText primary={<span>{name}</span>} />
+                        </Box>
+                    );
+                },
             },
             {
-                field: 'measurement',
-                headerName: t('semifinishedProducts.measurement'),
-                width: 120,
-                renderCell: (params) => <RenderCellMeasurement params={params} />,
+                key: 'measurement',
+                label: t('semifinishedProducts.measurement'),
+                sortable: true,
+                filter: { type: 'multi' as const },
+                width: '1fr',
+                align: 'left' as const,
+                getValue: (row: ICompound) => row?.measurement || '',
+                renderCell: ({ value }: { value: unknown }) => {
+                    const measurementKey = `semifinishedProducts.${value}`;
+                    const label = t(measurementKey);
+                    return <span>{label}</span>;
+                },
             },
             {
-                field: 'ingredient_group_name',
-                headerName: t('ingredients.group'),
-                width: 180,
-                renderCell: (params) =>
-                    params.row.ingredient_group_name ||
-                    ingredientGroupMap.get(params.row.ingredient_group_id) ||
-                    '-',
+                key: 'ingredient_group_name',
+                label: t('ingredients.group'),
+                sortable: true,
+                filter: { type: 'multi' as const },
+                width: '1.5fr',
+                align: 'left' as const,
+                getValue: (row: ICompound) => (
+                        row.ingredient_group_name ||
+                        ingredientGroupMap.get(row.ingredient_group_id) ||
+                        '-'
+                    ),
             },
             {
-                field: 'price',
-                headerName: t('semifinishedProducts.price'),
-                width: 140,
-                renderCell: (params) => <RenderCellPrice params={params} />,
+                key: 'price',
+                label: t('semifinishedProducts.price'),
+                sortable: true,
+                width: '1fr',
+                align: 'left' as const,
+                getValue: (row: ICompound) => {
+                    const numPrice = typeof row.price === 'string' ? parseFloat(row.price) : row.price;
+                    return numPrice || 0;
+                },
+                renderCell: ({ value }: { value: unknown }) => {
+                    const numPrice = typeof value === 'string' ? parseFloat(value) : value;
+                    return <span>{String(numPrice)} so&apos;m</span>;
+                },
             },
             {
-                field: 'quantity',
-                headerName: t('semifinishedProducts.quantity'),
-                width: 120,
-                type: 'number',
+                key: 'quantity',
+                label: t('semifinishedProducts.quantity'),
+                sortable: true,
+                width: '1fr',
+                align: 'left' as const,
+                getValue: (row: ICompound) => row?.quantity || 0,
             },
-            // {
-            //     field: 'created_at',
-            //     headerName: t('semifinishedProducts.createdAt'),
-            //     width: 160,
-            //     renderCell: (params) => formatDate(params.value),
-            // },
             {
-                type: 'actions',
-                field: 'actions',
-                headerName: t('actions'),
-                width: 150,
-                // align: 'right',
-                // headerAlign: 'right',
+                key: 'actions',
+                label: t('actions'),
                 sortable: false,
                 filterable: false,
-                disableColumnMenu: true,
-                getActions: (params) => [
-                    <CustomGridActionsCellItem
-                        // showInMenu
-                        label={t('semifinishedProducts.edit')}
-                        icon={<Iconify icon="solar:pen-bold" />}
-                        href={paths.menu.semifinished.edit(params.row.id)}
-                    />,
-                    <CustomGridActionsCellItem
-                        key="delete"
-                        // showInMenu
-                        label={t('semifinishedProducts.delete')}
-                        icon={<Iconify icon="solar:trash-bin-trash-bold" />}
-                        onClick={() => {
-                            setCompoundToDelete(params.row.id);
-                            setDeleteDialogOpen(true);
-                        }}
-                        style={{ color: theme.vars.palette.error.main }}
-                    />,
-                ],
+                width: '1fr',
+                align: 'center' as const,
+                renderCell: ({ row }: { row: ICompound }) => (
+                    <Box sx={{ display: 'flex', gap: 0.5 }}>
+                        <Button
+                            size="small"
+                            onClick={() => openModal(row)}
+                            sx={{ color: 'text.secondary' }}
+                        >
+                            <Iconify icon="solar:eye-bold" width={18} />
+                        </Button>
+                        <Button
+                            size="small"
+                            href={paths.menu.semifinished.edit(row.id)}
+                            sx={{ color: 'text.secondary' }}
+                        >
+                            <Iconify icon="solar:pen-bold" width={18} />
+                        </Button>
+                        <Button
+                            size="small"
+                            onClick={() => {
+                                setCompoundToDelete(row.id);
+                                setDeleteDialogOpen(true);
+                            }}
+                            sx={{ color: theme.vars.palette.error.main }}
+                        >
+                            <Iconify icon="solar:trash-bin-trash-bold" width={18} />
+                        </Button>
+                    </Box>
+                ),
             },
         ],
         [t, theme.vars.palette.error.main, ingredientGroupMap]
@@ -434,47 +439,77 @@ export function HalfMeals() {
         [deleteCompounds, mutate]
     );
 
+    const handlePaginationPageChange = (page: number) => {
+        setPaginationModel((prev) => ({ ...prev, page }));
+    };
+
+    const handlePaginationRowsPerPageChange = (pageSize: number) => {
+        setPaginationModel({ page: 0, pageSize });
+    };
+
     return (
         <>
-            <GenericTableView<ICompound>
-                data={compounds}
-                loading={compoundsLoading}
-                columns={columns}
-                paginationMode="server"
-                rowCount={pagination?.total || 0}
-                paginationModel={paginationModel}
-                onPaginationModelChange={setPaginationModel}
-                pageSizeOptions={[10, 20, 50, 100]}
-                breadcrumbs={{
-                    heading: t('semifinishedProducts.title'),
-                    links: [
-                        { name: t('app'), href: paths.menu.root },
-                        { name: t('semifinishedProducts.title'), href: paths.menu.semifinished.root },
-                        { name: t('semifinishedProducts.list') },
-                    ],
+            <DashboardContent
+                sx={{
+                    flexGrow: 1,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    maxHeight: '100vh',
+                    '--layout-dashboard-content-pt': { xs: '0px', md: '0px' },
+                    '--layout-dashboard-content-pb': { xs: '0px', md: '0px' },
                 }}
-                addButton={{
-                    label: t('semifinishedProducts.add'),
-                    href: paths.menu.semifinished.new,
-                }}
-                filterOptions={{
-                    ingredient_group_id: ingredientGroupOptions,
-                }}
-                initialFilters={{
-                    ingredient_group_id: [],
-                }}
-                hideColumns={{}}
-                hideColumnsTogglable={['actions']}
-                onDeleteRow={handleDelete}
-                onDeleteRows={handleDeleteMultiple}
-                onRowClick={(id) => {
-                    const compound = compounds.find(c => c.id === id);
-                    if (compound) {
-                        openModal(compound);
+            >
+                <DataTable
+                    persistKey="compounds-list-view"
+                    data={compounds}
+                    getRowId={(row: ICompound) => row.id}
+                    columns={columns}
+                    searchValue={searchQuery}
+                    onSearchChange={(value) => {
+                        setSearchQuery(value);
+                        setPaginationModel((prev) => ({ ...prev, page: 0 }));
+                    }}
+                    page={paginationModel.page}
+                    rowsPerPage={paginationModel.pageSize}
+                    totalCount={pagination?.total || 0}
+                    rowsPerPageOptions={[10, 20, 50, 100]}
+                    onPageChange={handlePaginationPageChange}
+                    onRowsPerPageChange={handlePaginationRowsPerPageChange}
+                    defaultConfig={{
+                        order: ['name', 'measurement', 'ingredient_group_name', 'price', 'quantity', 'actions'],
+                        visibility: {
+                            name: true,
+                            measurement: true,
+                            ingredient_group_name: true,
+                            price: true,
+                            quantity: true,
+                            actions: true,
+                        },
+                        widths: {
+                            name: '2fr',
+                            measurement: '1fr',
+                            ingredient_group_name: '1.5fr',
+                            price: '1fr',
+                            quantity: '1fr',
+                            actions: '1fr',
+                        },
+                    }}
+                    onReset={() => {
+                        setSearchQuery('');
+                        setPaginationModel({ page: 0, pageSize: 20 });
+                    }}
+                    headerActions={
+                        <Button
+                            variant="contained"
+                            startIcon={<Iconify icon="mingcute:add-line" />}
+                            href={paths.menu.semifinished.new}
+                            size="small"
+                        >
+                            {t('semifinishedProducts.add')}
+                        </Button>
                     }
-                }}
-                onQuickFilterChange={setSearchQuery}
-            />
+                />
+            </DashboardContent>
 
             {/* Compound Item View Modal */}
             <GenericViewModal

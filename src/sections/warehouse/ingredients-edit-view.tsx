@@ -1,14 +1,17 @@
-import { useCallback, useMemo, useState, useEffect } from 'react';
-import type { TFunction } from 'i18next';
 import type { IIngredientFormData } from 'src/types/ingredients';
-import type { CardSection, GenericEditViewConfig } from 'src/components/generic-edit-view';
+import type { SectionConfig, EditViewConfig } from 'src/components/generic-edit-v2';
+
+import { useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Box } from '@mui/material';
+
+import Box from '@mui/material/Box';
+
 import { paths } from 'src/routes/paths';
 import { useRouter, useParams } from 'src/routes/hooks';
+
 import { useGetIngredient, useCreateIngredient, useUpdateIngredient, useDeleteIngredient, useGetIngredientGroups } from 'src/actions/ingredients';
 
-import { GenericEditView } from 'src/components/generic-edit-view';
+import { GenericEditV2 } from 'src/components/generic-edit-v2';
 import { CustomBreadcrumbs } from 'src/components/custom-breadcrumbs';
 
 const COLOR_CODES = [
@@ -26,113 +29,6 @@ const COLOR_CODES = [
     '#FFFFFF', // White
 ];
 
-function translateSection(section: CardSection, t: TFunction): CardSection {
-    const mapped = { ...section } as CardSection;
-    if (typeof mapped.title === 'string' && mapped.title.includes('.')) {
-        mapped.title = t(mapped.title as string, mapped.title as string);
-    }
-    if (Array.isArray(mapped.fields)) {
-        mapped.fields = mapped.fields.map((f) => {
-            const nf = { ...f };
-            if (typeof nf.label === 'string' && nf.label.includes('.')) {
-                nf.label = t(nf.label as string, nf.label as string);
-            }
-            if (nf.options && Array.isArray(nf.options)) {
-                nf.options = nf.options.map((opt) => ({
-                    ...opt,
-                    label:
-                        typeof opt.label === 'string' && opt.label.includes('.')
-                            ? t(opt.label as string, opt.label as string)
-                            : opt.label,
-                }));
-            }
-            return nf;
-        });
-    }
-    return mapped;
-}
-
-function buildBasicInfoSection(): CardSection {
-    return {
-        id: 'basic',
-        title: 'ingredients.basicInfo',
-        columns: 1,
-        fields: [
-            {
-                key: 'name',
-                label: 'common.name',
-                type: 'text' as const,
-                required: true,
-                defaultValue: '',
-            },
-            {
-                key: 'measurement',
-                label: 'common.measurement',
-                type: 'select' as const,
-                required: true,
-                defaultValue: '',
-                options: [
-                    { value: 'kg', label: 'ingredients.measurementKg' },
-                    { value: 'l', label: 'ingredients.measurementL' },
-                    { value: 'piece', label: 'ingredients.measurementDona' },
-                ],
-            },
-        ],
-    };
-}
-
-function buildGroupSection(groupOptions: Array<{ value: string; label: string }>): CardSection {
-    return {
-        id: 'group',
-        title: 'ingredients.groupInfo',
-        columns: 1,
-        fields: [
-            {
-                key: 'group_id',
-                label: 'ingredients.group',
-                type: 'select' as const,
-                required: true,
-                defaultValue: '',
-                options: groupOptions,
-            },
-        ],
-    };
-}
-
-function buildColorSection(): CardSection {
-    return {
-        id: 'color',
-        title: 'ingredients.colorInfo',
-        columns: 1,
-        fields: [
-            {
-                key: 'color_code',
-                label: 'common.colorCode',
-                type: 'color' as const,
-                defaultValue: COLOR_CODES[0],
-                colors: COLOR_CODES,
-            },
-        ],
-    };
-}
-
-function buildPictureSection(): CardSection {
-    return {
-        id: 'picture',
-        title: 'ingredients.pictureInfo',
-        columns: 1,
-        fields: [
-            {
-                key: 'picture_url',
-                label: 'common.pictureUrl',
-                type: 'image' as const,
-                defaultValue: null,
-                height: 250,
-            },
-        ],
-    };
-}
-
 export interface IngredientEditViewProps {
     isNew?: boolean;
     onSuccess?: () => void | Promise<void>;
@@ -148,32 +44,9 @@ export function IngredientEditView({ isNew = false, onSuccess }: IngredientEditV
     const { deleteIngredient } = useDeleteIngredient();
     const { ingredientGroups } = useGetIngredientGroups();
 
-    // Form state for controlled mode
-    const [formData, setFormData] = useState<Record<string, any>>({
-        name: '',
-        measurement: '',
-        group_id: '',
-        color_code: COLOR_CODES[0],
-        picture_url: null,
-    });
-
     // Load ingredient if editing
     const { ingredient, ingredientLoading } = useGetIngredient(!isNew && id ? id : '');
 
-    // Initialize form data when ingredient loads
-    useEffect(() => {
-        if (ingredient && !isNew) {
-            setFormData({
-                name: ingredient.name || '',
-                measurement: ingredient.measurement || '',
-                group_id: ingredient.group_id || '',
-                color_code: ingredient.color_code || '#FF4842',
-                picture_url: ingredient.picture_url || null,
-            });
-        }
-    }, [ingredient, isNew]);
-
-    // Build group options
     const groupOptions = useMemo(
         () => ingredientGroups.map((g) => ({
             value: g.id,
@@ -182,25 +55,9 @@ export function IngredientEditView({ isNew = false, onSuccess }: IngredientEditV
         [ingredientGroups]
     );
 
-    // Build sections
-    const BASIC_INFO_SECTION_T = useMemo(() => translateSection(buildBasicInfoSection(), t), [t]);
-    const GROUP_SECTION_T = useMemo(() => translateSection(buildGroupSection(groupOptions), t), [t, groupOptions]);
-    const COLOR_SECTION_T = useMemo(() => translateSection(buildColorSection(), t), [t]);
-    const IMAGE_SECTION_T = useMemo(() => translateSection(buildPictureSection(), t), [t]);
-
-    // Handle form data changes (for controlled mode)
-    const handleFormDataChange = useCallback(
-        (newFormData: Record<string, any>) => {
-            setFormData(newFormData);
-        },
-        []
-    );
-
-    // Handle form submission
     const handleSubmit = useCallback(
         async (formData: Record<string, any>) => {
             try {
-                // Validate required fields
                 if (!formData.name || !formData.name.trim()) {
                     throw new Error(t('ingredients.nameRequired'));
                 }
@@ -225,25 +82,11 @@ export function IngredientEditView({ isNew = false, onSuccess }: IngredientEditV
                     await updateIngredient(id, ingredientData);
                 }
 
-                // Small delay to ensure SWR cache is updated
                 await new Promise((resolve) => setTimeout(resolve, 500));
-
-                // Clear form after successful creation
-                if (isNew) {
-                    setFormData({
-                        name: '',
-                        measurement: '',
-                        group_id: '',
-                        color_code: COLOR_CODES[0],
-                        picture_url: null,
-                    });
-                }
-
-                // If onSuccess callback provided, call it instead of routing
                 if (onSuccess) {
                     await onSuccess();
                 } else {
-                    router.push(paths.warehouse.ingredients.root);
+                    router.push(paths.menu.ingredients.root);
                 }
             } catch (err) {
                 console.error('Error saving ingredient:', err);
@@ -253,14 +96,13 @@ export function IngredientEditView({ isNew = false, onSuccess }: IngredientEditV
         [isNew, id, t, createIngredient, updateIngredient, router, onSuccess]
     );
 
-    // Handle delete
     const handleDelete = useCallback(
         async () => {
             try {
                 if (id) {
                     await deleteIngredient(id);
                     await new Promise((resolve) => setTimeout(resolve, 500));
-                    router.push(paths.warehouse.ingredients.root);
+                    router.push(paths.menu.ingredients.root);
                 }
             } catch (err) {
                 console.error('Error deleting ingredient:', err);
@@ -270,43 +112,106 @@ export function IngredientEditView({ isNew = false, onSuccess }: IngredientEditV
         [id, deleteIngredient, router]
     );
 
-    // Build config for GenericEditView
-    const config: GenericEditViewConfig = useMemo(
+    const handleCancel = useCallback(() => {
+        router.back();
+    }, [router]);
+
+    const config: EditViewConfig = useMemo(
         () => ({
-            title: isNew ? t('ingredients.new') : t('ingredients.edit'),
             entityName: 'ingredient',
             showBreadcrumbs: false,
+            sidebar: {
+                id: 'picture',
+                title: t('ingredients.pictureInfo', { defaultValue: 'Picture' }),
+                fields: [
+                    {
+                        key: 'picture_url',
+                        label: t('common.pictureUrl', { defaultValue: 'Picture' }),
+                        type: 'image',
+                        defaultValue: null,
+                    },
+                ],
+            } as SectionConfig,
             breadcrumbs: [
                 { name: t('app'), href: paths.menu.root },
-                { name: t('ingredients.title'), href: paths.warehouse.ingredients.root },
+                { name: t('ingredients.title'), href: paths.menu.ingredients.root },
                 { name: isNew ? t('ingredients.new') : t('ingredients.edit'), href: '' },
             ],
-            leftSidecard: IMAGE_SECTION_T,
-            sections: [BASIC_INFO_SECTION_T, GROUP_SECTION_T, COLOR_SECTION_T],
-            onSubmit: handleSubmit,
-            onDelete: !isNew ? handleDelete : undefined,
+            sections: [
+                {
+                    id: 'basic',
+                    title: t('ingredients.basicInfo', { defaultValue: 'Basic Info' }),
+                    columns: 1,
+                    fields: [
+                        {
+                            key: 'name',
+                            label: t('common.name', { defaultValue: 'Name' }),
+                            type: 'text',
+                            required: true,
+                            defaultValue: '',
+                        },
+                        {
+                            key: 'measurement',
+                            label: t('common.measurement', { defaultValue: 'Measurement' }),
+                            type: 'select',
+                            required: true,
+                            defaultValue: '',
+                            options: [
+                                { value: 'kg', label: t('ingredients.measurementKg', { defaultValue: 'Kg' }) },
+                                { value: 'l', label: t('ingredients.measurementL', { defaultValue: 'Litre' }) },
+                                { value: 'piece', label: t('ingredients.measurementDona', { defaultValue: 'Piece' }) },
+                            ],
+                        },
+                    ],
+                },
+                {
+                    id: 'group',
+                    title: t('ingredients.groupInfo', { defaultValue: 'Group' }),
+                    columns: 1,
+                    fields: [
+                        {
+                            key: 'group_id',
+                            label: t('ingredients.group', { defaultValue: 'Group' }),
+                            type: 'select',
+                            required: true,
+                            defaultValue: '',
+                            options: groupOptions,
+                        },
+                    ],
+                },
+                {
+                    id: 'color',
+                    title: t('ingredients.colorInfo', { defaultValue: 'Color' }),
+                    columns: 1,
+                    fields: [
+                        {
+                            key: 'color_code',
+                            label: t('common.colorCode', { defaultValue: 'Color' }),
+                            type: 'color',
+                            defaultValue: COLOR_CODES[0],
+                            colors: COLOR_CODES,
+                        },
+                    ],
+                },
+            ],
             showDeleteButton: !isNew,
         }),
-        [isNew, t, IMAGE_SECTION_T, BASIC_INFO_SECTION_T, GROUP_SECTION_T, COLOR_SECTION_T, handleSubmit, handleDelete]
+        [isNew, t, groupOptions]
     );
 
     return (
         <Box sx={{ p: 3 }}>
             <Box sx={{ maxWidth: 1400, mx: 'auto' }}>
-                {/* BREADCRUMBS AND TITLE */}
-                <CustomBreadcrumbs
-                    heading={isNew ? t('ingredients.new') : t('ingredients.edit')}
-                    links={config.breadcrumbs}
-                    sx={{ mb: 3 }}
-                />
+          
 
-                <GenericEditView
+                <GenericEditV2
+                    data={ingredient || null}
                     config={config}
-                    data={ingredient || undefined}
                     isNew={isNew}
                     loading={!isNew && ingredientLoading}
-                    formData={formData}
-                    onFormDataChange={handleFormDataChange}
+                    onSubmit={handleSubmit}
+                    onDelete={!isNew ? handleDelete : undefined}
+                    onCancel={handleCancel}
                 />
             </Box>
         </Box>

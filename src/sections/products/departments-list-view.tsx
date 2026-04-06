@@ -1,80 +1,40 @@
-import type { GridColDef, GridPaginationModel } from '@mui/x-data-grid';
 import type { IDepartmentItem } from 'src/types/departments.tsx';
+import type { DataTableColumn, DataTableDefaultConfig } from 'src/sections/warehouse/deduction/components/utility-data-table/types/types';
+
 import { useTranslation } from 'react-i18next';
-import { useMemo, useState, useCallback, useEffect } from 'react';
+import { useMemo, useState, useEffect, useCallback } from 'react';
+
 import { useTheme } from '@mui/material/styles';
-import { Avatar, Button, Dialog, DialogTitle, DialogActions, DialogContent, Box, ListItemText } from '@mui/material';
+import { Box, Avatar, Button, Dialog, IconButton, Typography, DialogTitle, ListItemText, DialogActions, DialogContent } from '@mui/material';
+
 import { paths } from 'src/routes/paths';
 import { useRouter } from 'src/routes/hooks';
-import { useGetDepartments, useDeleteDepartment, useGetCategoriesByDepartment, useGetStorages } from 'src/actions/departments';
+
+import { getInitials } from 'src/utils/avatar';
+import { getFullImageUrl } from 'src/utils/image-url';
+
+import { DashboardContent } from 'src/layouts/dashboard';
+import { useGetStorages, useGetDepartments, useDeleteDepartment, useGetCategoriesByDepartment } from 'src/actions/departments';
+
 import { toast } from 'src/components/snackbar';
 import { Iconify } from 'src/components/iconify';
-import { GenericTableView } from 'src/components/generic-table-view';
-import { CustomGridActionsCellItem } from 'src/components/custom-data-grid';
 import { GenericViewModal } from 'src/components/generic-view-view';
-import { getFullImageUrl } from 'src/utils/image-url';
-import { getInitials, getAvatarColor } from 'src/utils/avatar';
-import { Typography } from '@mui/material';
+
+import { DeductionUtilityDataTable } from 'src/sections/warehouse/deduction';
 
 function RenderCellDepartmentName({ params }: { params: any }) {
   const { row } = params;
   const name = row.name || '-';
-  const [imageUrl, setImageUrl] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-
-  // Load image asynchronously if picture_url exists
-  useEffect(() => {
-    if (row.picture_url) {
-      const loadImage = async () => {
-        try {
-          setLoading(true);
-          const url = await getFullImageUrl(row.picture_url);
-          setImageUrl(url);
-        } catch (error) {
-          console.error('Failed to load image:', error);
-          setImageUrl(null);
-        } finally {
-          setLoading(false);
-        }
-      };
-      loadImage();
-    } else {
-      setImageUrl(null);
-    }
-  }, [row.picture_url]);
-
-  // If no image, show avatar with initials
-  const initials = getInitials(name);
-  const bgColor = imageUrl ? undefined : (row.color_code || getAvatarColor(name));
 
   return (
     <Box
       sx={{
         py: 2,
-        gap: 2,
         width: 1,
         display: 'flex',
         alignItems: 'center',
       }}
     >
-      <Avatar
-        alt={name}
-        src={imageUrl || undefined}
-        variant="rounded"
-        sx={{
-          width: 64,
-          height: 64,
-          bgcolor: bgColor,
-          color: '#fff',
-          fontWeight: 'bold',
-          fontSize: '20px',
-          borderRadius: '15%',
-        }}
-      >
-        {!imageUrl && !loading && initials}
-        {loading && '...'}
-      </Avatar>
-
       <ListItemText primary={<span>{name}</span>} />
     </Box>
   );
@@ -127,31 +87,8 @@ function RenderCellColor({ params }: { params: any }) {
   );
 }
 
-/**
- * Date renderer
- */
-function RenderCellDate({ params, dateField }: { params: any; dateField: string }) {
-  const dateValue = params.row[dateField];
-  if (!dateValue) return '-';
-
-  return new Date(dateValue).toLocaleDateString(undefined, {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-}
-
-/**
- * Categories table component for department view modal
- */
-/**
- * Categories table component for department view modal
- */
 function CategoriesTable({ departmentId }: { departmentId: string }) {
   const { t } = useTranslation('menu');
-  const theme = useTheme();
   const { categories, categoriesLoading } = useGetCategoriesByDepartment(departmentId);
   const { storages } = useGetStorages();
   const [imageUrls, setImageUrls] = useState<{ [key: string]: string | null }>({});
@@ -327,7 +264,7 @@ export function ProductListView() {
   const [departmentToDelete, setDepartmentToDelete] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
-  const [paginationModel, setPaginationModel] = useState<GridPaginationModel>({
+  const [paginationModel, setPaginationModel] = useState({
     page: 0,
     pageSize: 20,
   });
@@ -342,7 +279,7 @@ export function ProductListView() {
   }, [searchQuery]);
 
   // Get departments from API (supports server-side search)
-  const { departments, departmentsLoading, departmentsError, departmentsTotal } = useGetDepartments(
+  const { departments, departmentsTotal } = useGetDepartments(
     debouncedSearchQuery,
     {
       limit: paginationModel.pageSize,
@@ -354,80 +291,90 @@ export function ProductListView() {
     setPaginationModel((prev) => ({ ...prev, page: 0 }));
   }, [debouncedSearchQuery]);
 
-  // Columns configuration
-  const columns = useMemo<GridColDef[]>(
+  const handleEditDepartment = useCallback((id: string) => {
+    router.push(paths.menu.product.edit(id));
+  }, [router]);
+
+  // Columns configuration for DataTable
+  const columns = useMemo<DataTableColumn<IDepartmentItem>[]>(
     () => [
       {
-        field: 'name',
-        headerName: t('departments.name'),
-        flex: 1,
-        minWidth: 280,
-        hideable: false,
-        renderCell: (params) => <RenderCellDepartmentName params={params} />,
+        key: 'name',
+        label: t('departments.name'),
+        width: '280px',
+        sortable: true,
+        filterable: true,
+        getValue: (row) => row.name || '',
+        renderCell: ({ row }) => <RenderCellDepartmentName params={{ row }} />,
       },
       {
-        field: 'storage_id',
-        headerName: t('departments.storage'),
-        width: 180,
-        renderCell: (params) => <RenderCellStorageId params={params} />,
+        key: 'storage_id',
+        label: t('departments.storage'),
+        width: '4fr',
+        sortable: true,
+        filterable: true,
+        getValue: (row) => row.storage_name || '',
+        renderCell: ({ row }) => <RenderCellStorageId params={{ row }} />,
       },
       {
-        field: 'color_code',
-        headerName: t('departments.color'),
-        width: 150,
-        renderCell: (params) => <RenderCellColor params={params} />,
+        key: 'color_code',
+        label: t('departments.color'),
+        width: '1fr',
+        sortable: true,
+        filterable: true,
+        getValue: (row) => row.color_code || '',
+        renderCell: ({ row }) => <RenderCellColor params={{ row }} />,
       },
-      // {
-      //   field: 'created_at',
-      //   headerName: t('departments.created'),
-      //   width: 200,
-      //   sortable: true,
-      //   renderCell: (params) => <RenderCellDate params={params} dateField="created_at" />,
-      // },
-      // {
-      //   field: 'updated_at',de
-      //   headerName: t('departments.updated'),
-      //   width: 200,
-      //   sortable: true,
-      //   renderCell: (params) => <RenderCellDate params={params} dateField="updated_at" />,
-      // },
       {
-        type: 'actions',
-        field: 'actions',
-        headerName: t('actions'),
-        width: 150,
-        // align: 'right',
-        // headerAlign: 'right',
+        key: 'actions',
+        label: t('actions'),
+        width: '60px',
         sortable: false,
         filterable: false,
-        disableColumnMenu: true,
-        getActions: (params) => [
-          <CustomGridActionsCellItem
-            // showInMenu
-            label={t('departments.edit')}
-            icon={<Iconify icon="solar:pen-bold" />}
-            onClick={() => handleEditDepartment(params.row.id)}
-          />,
-          <CustomGridActionsCellItem
-            key="delete"
-            // showInMenu
-            label={t('departments.delete')}
-            icon={<Iconify icon="solar:trash-bin-trash-bold" />}
-            onClick={() => {
-              setDepartmentToDelete(params.row.id);
-              setDeleteDialogOpen(true);
-            }}
-            style={{ color: theme.vars.palette.error.main }}
-          />,
-        ],
+        getValue: () => '',
+        renderCell: ({ row }) => (
+          <Box sx={{ display: 'flex', gap: 0.5 }}>
+            <IconButton
+              size="small"
+              onClick={() => handleEditDepartment(row.id)}
+              title={t('departments.edit')}
+            >
+              <Iconify icon="solar:pen-bold" />
+            </IconButton>
+            <IconButton
+              size="small"
+              color="error"
+              onClick={() => {
+                setDepartmentToDelete(row.id);
+                setDeleteDialogOpen(true);
+              }}
+              title={t('departments.delete')}
+            >
+              <Iconify icon="solar:trash-bin-trash-bold" />
+            </IconButton>
+          </Box>
+        ),
       },
     ],
     [t, theme.vars.palette.error.main]
   );
 
-  const handleEditDepartment = useCallback((id: string) => {
-    router.push(paths.menu.product.edit(id));
-  }, [router]);
+  // Default configuration for DataTable
+  const defaultConfig: DataTableDefaultConfig = {
+    order: ['name', 'storage_id', 'color_code', 'actions'],
+    visibility: {
+      name: true,
+      storage_id: true,
+      color_code: true,
+      actions: true,
+    },
+    widths: {
+      name: '4fr',
+      storage_id: '1fr',
+      color_code: '1fr',
+      actions: '60px',
+    },
+  };
 
   // Handle delete confirmation
   const handleConfirmDelete = useCallback(async () => {
@@ -445,76 +392,66 @@ export function ProductListView() {
     }
   }, [departmentToDelete, deleteDepartment, t]);
 
-  const handleDeleteDepartment = useCallback((id: string) => {
-    setDepartmentToDelete(id);
-    setDeleteDialogOpen(true);
-  }, []);
-
-  const handleViewDepartment = useCallback((department: IDepartmentItem) => {
-    setSelectedDepartment(department);
-    setViewModalOpen(true);
-  }, []);
-
   const handleCloseModal = useCallback(() => {
     setViewModalOpen(false);
     setSelectedDepartment(null);
   }, []);
 
   // Render specifications for view modal
-  const renderDepartmentSpecifications = useCallback((dept: IDepartmentItem) => {
-    return (
+  const renderDepartmentSpecifications = useCallback((dept: IDepartmentItem) => (
       <Box>
         <CategoriesTable departmentId={dept.id} />
       </Box>
-    );
-  }, [t]);
+    ), [t]);
 
   return (
     <>
-      <GenericTableView<IDepartmentItem>
-        data={Array.isArray(departments) ? departments : []}
-        loading={departmentsLoading}
-        columns={columns}
-        paginationMode="server"
-        rowCount={departmentsTotal || 0}
-        paginationModel={paginationModel}
-        onPaginationModelChange={setPaginationModel}
-        pageSizeOptions={[10, 20, 50, 100]}
-        breadcrumbs={{
-          heading: t('departments.title'),
-          links: [
-            { name: t('app'), href: paths.menu.root },
-            { name: t('departments.title') },
-          ],
+      <DashboardContent
+        sx={{
+          flexGrow: 1,
+          display: 'flex',
+          flexDirection: 'column',
+          maxHeight: '100vh',
+          '--layout-dashboard-content-pt': { xs: '0px', md: '0px' },
+          '--layout-dashboard-content-pb': { xs: '0px', md: '0px' },
         }}
-        addButton={{
-          label: t('departments.add'),
-          href: paths.menu.product.new,
-        }}
-        filterOptions={{}}
-        initialFilters={{}}
-        hideColumns={{}}
-        hideColumnsTogglable={['created_at', 'updated_at', 'actions']}
-        onDeleteRow={handleDeleteDepartment}
-        onDeleteRows={async (ids) => {
-          for (const id of ids) {
-            try {
-              await deleteDepartment(id);
-            } catch (error) {
-              console.error('Failed to delete:', error);
-            }
+      >
+        <DeductionUtilityDataTable<IDepartmentItem>
+          persistKey="departments-list"
+          data={Array.isArray(departments) ? departments : []}
+          columns={columns}
+          defaultConfig={defaultConfig}
+          onReset={() => {
+            setSearchQuery('');
+            setPaginationModel({ page: 0, pageSize: 20 });
+          }}
+          searchValue={searchQuery}
+          onSearchChange={setSearchQuery}
+          page={paginationModel.page}
+          rowsPerPage={paginationModel.pageSize}
+          totalCount={departmentsTotal || 0}
+          rowsPerPageOptions={[10, 20, 50, 100]}
+          onPageChange={(page) => {
+            setPaginationModel((prev) => ({ ...prev, page }));
+          }}
+          onRowsPerPageChange={(pageSize) => {
+            setPaginationModel({ page: 0, pageSize });
+          }}
+          getRowId={(row) => row.id}
+          headerActions={
+            <Button
+              variant="contained"
+              startIcon={<Iconify icon="mingcute:add-line" />}
+              href={paths.menu.product.new}
+              size="small"
+            >
+              {t('departments.add')}
+            </Button>
           }
-        }}
-        onRowClick={(id) => {
-          const department = Array.isArray(departments)
-            ? departments.find(dept => dept.id === id)
-            : undefined;
-          if (department) {
-            handleViewDepartment(department);
-          }
-        }}
-        onQuickFilterChange={setSearchQuery}
-      />
+          emptyTitle={t('departments.noData', 'No departments found')}
+          emptySubtitle={t('departments.noDataSubtitle', 'Try adjusting your search or filters')}
+        />
+      </DashboardContent>
 
       <GenericViewModal
         isOpen={viewModalOpen}
