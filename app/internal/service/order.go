@@ -40,8 +40,12 @@ func (s *OrderS) AddOrderItems(ctx context.Context, orderID string, req model.Ad
 
 	existing, err := s.repo.Tenant(ctx).GetOrderByID(ctx, oID)
 	if err != nil {
+		if err == pgx.ErrNoRows {
+			return nil, fmt.Errorf("order not found")
+		}
 		return nil, fmt.Errorf("failed to get order: %w", err)
 	}
+
 	if existing.Status.Valid {
 		st := string(existing.Status.OrderStatus)
 		if st == string(model.OrderStatusPaid) || st == string(model.OrderStatusCancelled) {
@@ -50,18 +54,22 @@ func (s *OrderS) AddOrderItems(ctx context.Context, orderID string, req model.Ad
 	}
 
 	created := make([]model.OrderItemResponse, 0, len(req.Items))
-	for _, it := range req.Items {
+
+	for i, it := range req.Items {
 		goodUUID, err := uuid.Parse(it.GoodID)
 		if err != nil {
-			return nil, fmt.Errorf("invalid good_id: %w", err)
+			return nil, fmt.Errorf("items[%d]: invalid good_id", i)
 		}
 		if it.Quantity <= 0 {
-			return nil, fmt.Errorf("quantity must be greater than 0")
+			return nil, fmt.Errorf("items[%d]: quantity must be greater than 0", i)
 		}
 
 		good, err := s.repo.Tenant(ctx).GetGoodByID(ctx, goodUUID)
 		if err != nil {
-			return nil, fmt.Errorf("failed to fetch good: %w", err)
+			if err == pgx.ErrNoRows {
+				return nil, fmt.Errorf("items[%d]: good not found", i)
+			}
+			return nil, fmt.Errorf("items[%d]: failed to fetch good: %w", i, err)
 		}
 
 		item, err := s.repo.Tenant(ctx).CreateOrderItem(ctx, pg.CreateOrderItemParams{
@@ -71,15 +79,20 @@ func (s *OrderS) AddOrderItems(ctx context.Context, orderID string, req model.Ad
 			Quantity:  it.Quantity,
 			Price:     good.Price,
 			CostPrice: good.CostPrice,
-			Status:    pg.NullOrderItemsStatus{OrderItemsStatus: pg.OrderItemsStatus(model.OrderItemStatusPending), Valid: true},
-			Comment:   it.Comment,
+			Status: pg.NullOrderItemsStatus{
+				OrderItemsStatus: pg.OrderItemsStatus(model.OrderItemStatusPending),
+				Valid:            true,
+			},
+			Comment: it.Comment,
 		})
 		if err != nil {
-			return nil, fmt.Errorf("failed to create order item: %w", err)
+			return nil, fmt.Errorf("items[%d]: failed to create order item: %w", i, err)
 		}
+
 		if err := s.consumeItemStock(ctx, goodUUID, it.Quantity, oID); err != nil {
-			return nil, fmt.Errorf("failed to deduct stock for item: %w", err)
+			return nil, fmt.Errorf("items[%d]: failed to deduct stock for item: %w", i, err)
 		}
+
 		if resp := toOrderItemResponse(item); resp != nil {
 			created = append(created, *resp)
 		}
