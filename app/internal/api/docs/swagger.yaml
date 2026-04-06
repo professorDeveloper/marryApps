@@ -31,6 +31,25 @@ definitions:
     required:
     - quantity
     type: object
+  model.AttachModifierItem:
+    properties:
+      is_required:
+        example: false
+        type: boolean
+      modifier_id:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+      sort_order:
+        example: 1
+        type: integer
+    type: object
+  model.AttachModifiersToGoodRequest:
+    properties:
+      modifiers:
+        items:
+          $ref: '#/definitions/model.AttachModifierItem'
+        type: array
+    type: object
   model.BranchResponse:
     properties:
       address:
@@ -1152,6 +1171,33 @@ definitions:
       summary:
         $ref: '#/definitions/model.InvoiceDetailsBatchSummary'
     type: object
+  model.CreateModifierRequest:
+    properties:
+      code:
+        example: EXTRA_CHEESE
+        type: string
+      cost_delta:
+        example: 50
+        type: integer
+      description:
+        example: Add extra cheese to your pizza
+        type: string
+      is_active:
+        example: true
+        type: boolean
+      name:
+        example: Extra Cheese
+        type: string
+      name_i18n:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+      picture_url:
+        example: https://example.com/image.jpg
+        type: string
+      price_delta:
+        example: 100
+        type: integer
+    type: object
   model.CreateOrderItemEntry:
     properties:
       comment:
@@ -1847,6 +1893,32 @@ definitions:
         type: string
       quantity:
         example: 250
+        type: integer
+      updated_at:
+        example: "2022-01-01T00:00:00Z"
+        type: string
+    type: object
+  model.GoodModifierResponse:
+    properties:
+      created_at:
+        example: "2022-01-01T00:00:00Z"
+        type: string
+      good_id:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+      id:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+      is_required:
+        example: false
+        type: boolean
+      modifier:
+        $ref: '#/definitions/model.ModifierShortResponse'
+      modifier_id:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+      sort_order:
+        example: 1
         type: integer
       updated_at:
         example: "2022-01-01T00:00:00Z"
@@ -2582,6 +2654,72 @@ definitions:
         type: string
     required:
     - customer_paid_amount
+    type: object
+  model.ModifierResponse:
+    properties:
+      code:
+        example: EXTRA_CHEESE
+        type: string
+      cost_delta:
+        example: 50
+        type: integer
+      created_at:
+        example: "2022-01-01T00:00:00Z"
+        type: string
+      description:
+        example: Add extra cheese to your pizza
+        type: string
+      id:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+      is_active:
+        example: true
+        type: boolean
+      name:
+        example: Extra Cheese
+        type: string
+      name_i18n:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+      picture_url:
+        example: https://example.com/image.jpg
+        type: string
+      price_delta:
+        example: 100
+        type: integer
+      updated_at:
+        example: "2022-01-01T00:00:00Z"
+        type: string
+    type: object
+  model.ModifierShortResponse:
+    properties:
+      code:
+        example: EXTRA_CHEESE
+        type: string
+      cost_delta:
+        example: 50
+        type: integer
+      description:
+        example: Add extra cheese to your pizza
+        type: string
+      id:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+      is_active:
+        example: true
+        type: boolean
+      name:
+        example: Extra Cheese
+        type: string
+      name_i18n:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+      picture_url:
+        example: https://example.com/image.jpg
+        type: string
+      price_delta:
+        example: 100
+        type: integer
     type: object
   model.OpenCashRegisterShiftRequest:
     properties:
@@ -3866,6 +4004,33 @@ definitions:
         type: string
     required:
     - status
+    type: object
+  model.UpdateModifierRequest:
+    properties:
+      code:
+        example: EXTRA_CHEESE
+        type: string
+      cost_delta:
+        example: 50
+        type: integer
+      description:
+        example: Add extra cheese to your pizza
+        type: string
+      is_active:
+        example: true
+        type: boolean
+      name:
+        example: Extra Cheese
+        type: string
+      name_i18n:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+      picture_url:
+        example: https://example.com/image.jpg
+        type: string
+      price_delta:
+        example: 100
+        type: integer
     type: object
   model.UpdateOrderItemQuantityRequest:
     properties:
@@ -10369,6 +10534,111 @@ paths:
       summary: Update good
       tags:
       - Goods
+  /api/v1/goods/{id}/modifiers:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve all modifiers attached to a good
+      parameters:
+      - description: Good ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/model.GoodModifierResponse'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get modifiers by good ID
+      tags:
+      - goods-modifiers
+    post:
+      consumes:
+      - application/json
+      description: Attach a modifier to a good
+      parameters:
+      - description: Good ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Attach modifiers request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.AttachModifiersToGoodRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/model.SuccessResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Attach modifier to good
+      tags:
+      - goods-modifiers
+  /api/v1/goods/{id}/modifiers/{modifierId}:
+    delete:
+      consumes:
+      - application/json
+      description: Detach a modifier from a good
+      parameters:
+      - description: Good ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Modifier ID
+        in: path
+        name: modifierId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.SuccessResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Detach modifier from good
+      tags:
+      - goods-modifiers
   /api/v1/goods/{id}/price:
     put:
       consumes:
@@ -14924,6 +15194,250 @@ paths:
       summary: Videoni yuklab olish
       tags:
       - media
+  /api/v1/modifiers:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve all modifiers with pagination
+      parameters:
+      - description: 'Limit (default: 20)'
+        in: query
+        name: limit
+        type: integer
+      - description: 'Offset (default: 0)'
+        in: query
+        name: offset
+        type: integer
+      - description: Expand related fields
+        in: query
+        name: expand
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/model.ModifierResponse'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get all modifiers
+      tags:
+      - modifiers
+    post:
+      consumes:
+      - application/json
+      description: Create a new modifier
+      parameters:
+      - description: Modifier creation request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.CreateModifierRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/model.ModifierResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create modifier
+      tags:
+      - modifiers
+  /api/v1/modifiers/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Soft delete a modifier by ID
+      parameters:
+      - description: Modifier ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.SuccessResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete modifier
+      tags:
+      - modifiers
+    get:
+      consumes:
+      - application/json
+      description: Retrieve a modifier by ID
+      parameters:
+      - description: Modifier ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.ModifierResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get modifier by ID
+      tags:
+      - modifiers
+    put:
+      consumes:
+      - application/json
+      description: Update a modifier by ID
+      parameters:
+      - description: Modifier ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Modifier update request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.UpdateModifierRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.ModifierResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update modifier
+      tags:
+      - modifiers
+  /api/v1/modifiers/{id}/restore:
+    post:
+      consumes:
+      - application/json
+      description: Restore a soft deleted modifier by ID
+      parameters:
+      - description: Modifier ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.SuccessResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Restore modifier
+      tags:
+      - modifiers
+  /api/v1/modifiers/search:
+    get:
+      consumes:
+      - application/json
+      description: Search modifiers by name, description, or code
+      parameters:
+      - description: Search query
+        in: query
+        name: q
+        required: true
+        type: string
+      - description: 'Limit (default: 20)'
+        in: query
+        name: limit
+        type: integer
+      - description: 'Offset (default: 0)'
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/model.ModifierResponse'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Search modifiers
+      tags:
+      - modifiers
   /api/v1/order-items:
     get:
       description: Get all order items with pagination
