@@ -1985,6 +1985,80 @@ func toOrderResponse(o any) *model.OrderResponse {
 	}
 }
 
+func toWaiterOrderListItem(row pg.GetMyWaiterOrdersRow) *model.WaiterOrderListItem {
+	if row.ID == uuid.Nil {
+		return nil
+	}
+
+	var tableID *string
+	if row.TableID.Valid {
+		s := row.TableID.String()
+		tableID = &s
+	}
+
+	var waiterID *string
+	if row.WaiterID.Valid {
+		s := row.WaiterID.String()
+		waiterID = &s
+	}
+
+	var cashierID *string
+	if row.CashierID.Valid {
+		s := row.CashierID.String()
+		cashierID = &s
+	}
+
+	var cashRegisterID *string
+	if row.CashRegisterID.Valid {
+		s := row.CashRegisterID.String()
+		cashRegisterID = &s
+	}
+
+	var createdAt *time.Time
+	if row.CreatedAt.Valid {
+		t := row.CreatedAt.Time
+		createdAt = &t
+	}
+
+	var updatedAt *time.Time
+	if row.UpdatedAt.Valid {
+		t := row.UpdatedAt.Time
+		updatedAt = &t
+	}
+
+	var scheduledAt *time.Time
+	if row.ScheduledAt.Valid {
+		t := row.ScheduledAt.Time
+		scheduledAt = &t
+	}
+
+	status := model.OrderStatusOpen
+	if row.Status.Valid {
+		status = model.OrderStatus(row.Status.OrderStatus)
+	}
+
+	return &model.WaiterOrderListItem{
+		ID:                row.ID.String(),
+		TableID:           tableID,
+		TableNumber:       row.TableNumber,
+		HallName:          row.HallName,
+		WaiterID:          waiterID,
+		CashierID:         cashierID,
+		CashRegisterID:    cashRegisterID,
+		Status:            status,
+		GuestCount:        row.GuestCount,
+		TotalAmount:       numericToString(row.TotalAmount),
+		Comment:           row.Comment,
+		OrderType:         model.OrderType(row.OrderType),
+		ScheduledAt:       scheduledAt,
+		RescheduleComment: row.RescheduleComment,
+		ItemCount:         row.ItemCount,
+		TotalItems:        row.TotalItems,
+		CreatedAt:         createdAt,
+		UpdatedAt:         updatedAt,
+	}
+}
+
 func toOrderItemResponse(oi pg.OrderItem) *model.OrderItemResponse {
 	if oi.ID == uuid.Nil {
 		return nil
@@ -2107,4 +2181,82 @@ func (s *OrderS) SendNotificationByStatus(ctx context.Context, fcmClient *notifi
 
 	log.Printf("Notification sent for order %s with status %s", orderID, status)
 	return nil
+}
+
+func (s *OrderS) GetMyOrders(ctx context.Context, waiterID string, req model.GetMyOrdersRequest) ([]model.WaiterOrderListItem, error) {
+	id, err := uuid.Parse(waiterID)
+	if err != nil {
+		return nil, fmt.Errorf("invalid waiter id: %w", err)
+	}
+
+	scope := model.WaiterOrderScopeActive
+	if req.Scope != nil && *req.Scope != "" {
+		scope = *req.Scope
+	}
+
+	switch scope {
+	case model.WaiterOrderScopeActive,
+		model.WaiterOrderScopeReservations,
+		model.WaiterOrderScopeHistory,
+		model.WaiterOrderScopeAll:
+	default:
+		return nil, fmt.Errorf("invalid scope: %s", scope)
+	}
+
+	limit := req.Limit
+	offset := req.Offset
+
+	if limit <= 0 {
+		limit = 20
+	}
+	if offset < 0 {
+		offset = 0
+	}
+
+	loc := time.FixedZone("Asia/Tashkent", 5*60*60)
+	now := time.Now().In(loc)
+
+	dayStart := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, loc)
+	dayEnd := dayStart.Add(24 * time.Hour)
+
+	params := pg.GetMyWaiterOrdersParams{
+		WaiterID:   id,
+		Scope:      string(scope),
+		DayStart:   dayStart.UTC(),
+		DayEnd:     dayEnd.UTC(),
+		PageLimit:  limit,
+		PageOffset: offset,
+	}
+
+	if req.OrderType != nil && *req.OrderType != "" {
+		orderType := string(*req.OrderType)
+		params.OrderType = &orderType
+	}
+
+	if req.TableID != nil && *req.TableID != "" {
+		tableUUID, err := uuid.Parse(*req.TableID)
+		if err != nil {
+			return nil, fmt.Errorf("invalid table id: %w", err)
+		}
+
+		params.TableID = pgtype.UUID{
+			Bytes: tableUUID,
+			Valid: true,
+		}
+	}
+
+	rows, err := s.repo.Tenant(ctx).GetMyWaiterOrders(ctx, params)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get my orders: %w", err)
+	}
+
+	resp := make([]model.WaiterOrderListItem, 0, len(rows))
+	for _, row := range rows {
+		item := toWaiterOrderListItem(row)
+		if item != nil {
+			resp = append(resp, *item)
+		}
+	}
+
+	return resp, nil
 }

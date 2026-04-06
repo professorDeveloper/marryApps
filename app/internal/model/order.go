@@ -48,12 +48,12 @@ type CreateOrderRequest struct {
 	WaiterID       *string                 `json:"waiter_id,omitempty"       example:"a1b2c3d4-e5f6-4a5b-8c9d-e0f1a2b3c4d5"`
 	CashierID      *string                 `json:"cashier_id,omitempty"      example:"a1b2c3d4-e5f6-4a5b-8c9d-e0f1a2b3c4d5"`
 	CashRegisterID *string                 `json:"cash_register_id,omitempty" example:"uuid-of-cash-register"`
-	Status      *string                 `json:"status,omitempty"     example:"open"`
-	GuestCount  *int32                  `json:"guest_count,omitempty" example:"2"`
-	Comment     *string                 `json:"comment,omitempty"`
-	Items       []CreateOrderItemInline `json:"items,omitempty"`
-	OrderType   *string                 `json:"order_type,omitempty"   example:"dine_in"`
-	ScheduledAt *string                 `json:"scheduled_at,omitempty" example:"2024-01-01T15:00:00Z"`
+	Status         *string                 `json:"status,omitempty"     example:"open"`
+	GuestCount     *int32                  `json:"guest_count,omitempty" example:"2"`
+	Comment        *string                 `json:"comment,omitempty"`
+	Items          []CreateOrderItemInline `json:"items,omitempty"`
+	OrderType      *string                 `json:"order_type,omitempty"   example:"dine_in"`
+	ScheduledAt    *string                 `json:"scheduled_at,omitempty" example:"2024-01-01T15:00:00Z"`
 }
 
 type CreateOrderItemInline struct {
@@ -85,20 +85,20 @@ type UpdateOrderStatusRequest struct {
 }
 
 type OrderResponse struct {
-	ID               string      `json:"id"                          example:"c0f18a64-7f5c-4425-9414-1b01cddee9d9"`
-	TableID          string      `json:"table_id"                    example:"a1b2c3d4-e5f6-4a5b-8c9d-e0f1a2b3c4d5"`
-	WaiterID         *string     `json:"waiter_id,omitempty"          example:"a1b2c3d4-e5f6-4a5b-8c9d-e0f1a2b3c4d5"`
-	CashierID        *string     `json:"cashier_id,omitempty"         example:"a1b2c3d4-e5f6-4a5b-8c9d-e0f1a2b3c4d5"`
-	CashRegisterID   *string     `json:"cash_register_id,omitempty"   example:"a1b2c3d4-e5f6-4a5b-8c9d-e0f1a2b3c4d5"`
-	Status           OrderStatus `json:"status"                      example:"open"`
-	GuestCount       *int32      `json:"guest_count,omitempty"       example:"2"`
-	TotalAmount      string      `json:"total_amount"                example:"100000"`
-	Comment          *string     `json:"comment,omitempty"`
-	OrderType        string      `json:"order_type"                  example:"dine_in"`
-	ScheduledAt      *time.Time  `json:"scheduled_at,omitempty"`
-	RescheduleComment *string    `json:"reschedule_comment,omitempty"`
-	CreatedAt        *time.Time  `json:"created_at,omitempty"`
-	UpdatedAt        *time.Time  `json:"updated_at,omitempty"`
+	ID                string      `json:"id"                          example:"c0f18a64-7f5c-4425-9414-1b01cddee9d9"`
+	TableID           string      `json:"table_id"                    example:"a1b2c3d4-e5f6-4a5b-8c9d-e0f1a2b3c4d5"`
+	WaiterID          *string     `json:"waiter_id,omitempty"          example:"a1b2c3d4-e5f6-4a5b-8c9d-e0f1a2b3c4d5"`
+	CashierID         *string     `json:"cashier_id,omitempty"         example:"a1b2c3d4-e5f6-4a5b-8c9d-e0f1a2b3c4d5"`
+	CashRegisterID    *string     `json:"cash_register_id,omitempty"   example:"a1b2c3d4-e5f6-4a5b-8c9d-e0f1a2b3c4d5"`
+	Status            OrderStatus `json:"status"                      example:"open"`
+	GuestCount        *int32      `json:"guest_count,omitempty"       example:"2"`
+	TotalAmount       string      `json:"total_amount"                example:"100000"`
+	Comment           *string     `json:"comment,omitempty"`
+	OrderType         string      `json:"order_type"                  example:"dine_in"`
+	ScheduledAt       *time.Time  `json:"scheduled_at,omitempty"`
+	RescheduleComment *string     `json:"reschedule_comment,omitempty"`
+	CreatedAt         *time.Time  `json:"created_at,omitempty"`
+	UpdatedAt         *time.Time  `json:"updated_at,omitempty"`
 }
 
 type RescheduleOrderRequest struct {
@@ -187,4 +187,48 @@ type TablePriceResponse struct {
 	DurationMinutes float64 `json:"duration_minutes"`
 	DurationHours   float64 `json:"duration_hours"`
 	TotalPrice      string  `json:"total_price"`
+}
+
+type WaiterOrderScope string
+
+const (
+	WaiterOrderScopeActive       WaiterOrderScope = "active"
+	WaiterOrderScopeReservations WaiterOrderScope = "reservations"
+	WaiterOrderScopeHistory      WaiterOrderScope = "history"
+	WaiterOrderScopeAll          WaiterOrderScope = "all"
+)
+
+type GetMyOrdersRequest struct {
+	Scope     *WaiterOrderScope `json:"scope,omitempty"      query:"scope"      example:"active"`
+	OrderType *OrderType        `json:"order_type,omitempty" query:"order_type" example:"dine_in"`
+	TableID   *string           `json:"table_id,omitempty"   query:"table_id"   example:"a1b2c3d4-e5f6-4a5b-8c9d-e0f1a2b3c4d5"`
+	Limit     int32             `json:"limit"                query:"limit"      example:"20"`
+	Offset    int32             `json:"offset"               query:"offset"     example:"0"`
+}
+
+type WaiterOrderListItem struct {
+	ID                string      `json:"id" example:"c0f18a64-7f5c-4425-9414-1b01cddee9d9"`
+	TableID           *string     `json:"table_id,omitempty" example:"a1b2c3d4-e5f6-4a5b-8c9d-e0f1a2b3c4d5"`
+	TableNumber       *int32      `json:"table_number,omitempty" example:"12"`
+	HallName          *string     `json:"hall_name,omitempty" example:"Main hall"`
+	WaiterID          *string     `json:"waiter_id,omitempty" example:"a1b2c3d4-e5f6-4a5b-8c9d-e0f1a2b3c4d5"`
+	CashierID         *string     `json:"cashier_id,omitempty" example:"a1b2c3d4-e5f6-4a5b-8c9d-e0f1a2b3c4d5"`
+	CashRegisterID    *string     `json:"cash_register_id,omitempty" example:"a1b2c3d4-e5f6-4a5b-8c9d-e0f1a2b3c4d5"`
+	Status            OrderStatus `json:"status" example:"open"`
+	GuestCount        *int32      `json:"guest_count,omitempty" example:"2"`
+	TotalAmount       string      `json:"total_amount" example:"100000"`
+	Comment           *string     `json:"comment,omitempty"`
+	OrderType         OrderType   `json:"order_type" example:"dine_in"`
+	ScheduledAt       *time.Time  `json:"scheduled_at,omitempty"`
+	RescheduleComment *string     `json:"reschedule_comment,omitempty"`
+	ItemCount         int64       `json:"item_count" example:"3"`
+	TotalItems        int64       `json:"total_items" example:"5"`
+	CreatedAt         *time.Time  `json:"created_at,omitempty"`
+	UpdatedAt         *time.Time  `json:"updated_at,omitempty"`
+}
+
+type WaiterOrderListResponse struct {
+	Message    string                `json:"message" example:"My orders retrieved successfully"`
+	Data       []WaiterOrderListItem `json:"data"`
+	StatusCode int                   `json:"status_code" example:"200"`
 }
