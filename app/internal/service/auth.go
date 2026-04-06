@@ -75,7 +75,7 @@ func canUseTenantPasswordLogin(role string) bool {
 
 func canUsePincodeLogin(role string) bool {
 	switch normalizedRole(role) {
-	case "cashier", "waiter", "kitchen":
+	case "cashier", "waiter", "kitchen", "admin", "manager":
 		return true
 	default:
 		return false
@@ -288,9 +288,14 @@ func (s *AuthS) Register(ctx context.Context, req model.RegisterRequest) error {
 
 	// role bo‘yicha credential policy
 	switch userRole {
-	case "admin", "manager", "superadmin":
+	case "superadmin":
 		if strings.TrimSpace(req.Password) == "" {
 			return fmt.Errorf("password is required for role %s", userRole)
+		}
+
+	case "admin", "manager":
+		if strings.TrimSpace(req.Password) == "" && strings.TrimSpace(req.Pincode) == "" {
+			return fmt.Errorf("password or pincode is required for role %s", userRole)
 		}
 
 	case "cashier", "waiter", "kitchen":
@@ -876,6 +881,15 @@ func (s *AuthS) UpdateUser(ctx context.Context, req model.UpdateUserRequest, use
 		HashPassword: existingUser.HashPassword,
 		BrandID:      existingUser.BrandID,
 		PhoneNumber:  existingUser.PhoneNumber,
+	}
+
+	if req.Pincode != nil {
+		p := strings.TrimSpace(*req.Pincode)
+		if p == "" {
+			params.Pincode = nil
+		} else {
+			params.Pincode = &p
+		}
 	}
 
 	if req.FullName != nil && *req.FullName != "" {
