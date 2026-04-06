@@ -157,6 +157,19 @@ type OrderItemResponse struct {
 	UpdatedAt *time.Time      `json:"updated_at,omitempty"`
 }
 
+type OrderItemDetailResponse struct {
+	ID         string          `json:"id" example:"c0f18a64-7f5c-4425-9414-1b01cddee9d9"`
+	GoodID     string          `json:"good_id" example:"d4e5f6a7-b8c9-4a5b-8c9d-e0f1a2b3c4d5"`
+	GoodName   string          `json:"good_name" example:"Osh"`
+	PictureUrl *string         `json:"picture_url,omitempty" example:"https://example.com/goods/osh.jpg"`
+	Quantity   int32           `json:"quantity" example:"2"`
+	Price      string          `json:"price" example:"50000"`
+	Status     OrderItemStatus `json:"status" example:"pending"`
+	Comment    *string         `json:"comment,omitempty" example:"kamroq achchiq"`
+	CreatedAt  *time.Time      `json:"created_at,omitempty"`
+	UpdatedAt  *time.Time      `json:"updated_at,omitempty"`
+}
+
 type MarkOrderPaidRequest struct {
 	CashierID      *string `json:"cashier_id,omitempty"       example:"a1b2c3d4-e5f6-4a5b-8c9d-e0f1a2b3c4d5"`
 	CashRegisterID *string `json:"cash_register_id,omitempty" example:"uuid"`

@@ -348,7 +348,7 @@ type OrderI interface {
 	GetOrdersByStatus(ctx context.Context, status string, limit, offset int32) ([]model.OrderResponse, error)
 	GetOrdersByWaiterID(ctx context.Context, waiterID string, limit, offset int32) ([]model.OrderResponse, error)
 	GetOrdersByTableID(ctx context.Context, tableID string) ([]model.OrderResponse, error)
-	GetMyOrders(ctx context.Context, waiterID string, req model.GetMyOrdersRequest) ([]model.WaiterOrderListItem, error) 
+	GetMyOrders(ctx context.Context, waiterID string, req model.GetMyOrdersRequest) ([]model.WaiterOrderListItem, error)
 	UpdateOrder(ctx context.Context, orderID string, req model.UpdateOrderRequest) (*model.OrderResponse, error)
 	UpdateOrderStatus(ctx context.Context, orderID string, status string) (*model.OrderResponse, error)
 	MarkOrderPaid(ctx context.Context, orderID string, cashierID string, cashRegisterID *string, paymentType *string, discountPercent *string, discountAmount *string, discountComment *string, customerPaidAmount *string, tableCharge *string, cashAmount *string, cardAmount *string) (*model.OrderResponse, error)
@@ -367,7 +367,7 @@ type OrderI interface {
 	GetBillDetails(ctx context.Context, billID string) (*model.BillDetails, error)
 
 	CreateOrderItems(ctx context.Context, req model.CreateOrderItemRequest) ([]model.OrderItemResponse, error)
-	GetOrderItemByID(ctx context.Context, itemID string) (*model.OrderItemResponse, error)
+	GetOrderItemByID(ctx context.Context, itemID string) (*model.OrderItemDetailResponse, error)
 	GetAllOrderItems(ctx context.Context, limit, offset int32) ([]model.OrderItemResponse, error)
 	GetOrderItemsByOrderID(ctx context.Context, orderID string) ([]model.OrderItemResponse, error)
 	GetOrderItemsByStatus(ctx context.Context, status string, limit, offset int32) ([]model.OrderItemResponse, error)
