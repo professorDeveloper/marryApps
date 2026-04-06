@@ -6,20 +6,21 @@ import type { TFunction } from 'i18next';
 import type { ICategoryFormData } from 'src/types/category';
 import type { CardSection, GenericEditViewConfig } from 'src/components/generic-edit-view';
 
-import { useCallback, useMemo, useState } from 'react';
+import { mutate } from 'swr';
 import { useParams } from 'react-router';
 import { useTranslation } from 'react-i18next';
-import { mutate } from 'swr';
+import { useMemo, useState, useCallback } from 'react';
 
 import { Box } from '@mui/material';
 
 import { paths } from 'src/routes/paths';
 import { useRouter } from 'src/routes/hooks';
-import { endpoints } from 'src/lib/axios';
 
-import { useDeleteCategory, useGetCategory, useCreateCategory, useUpdateCategory } from 'src/actions/categories';
-import { useGetDepartments, useGetStorages } from 'src/actions/departments';
 import { useTranslationsAPI } from 'src/hooks/use-translations-api';
+
+import { endpoints } from 'src/lib/axios';
+import { useGetStorages, useGetDepartments } from 'src/actions/departments';
+import { useGetCategory, useDeleteCategory, useCreateCategory, useUpdateCategory } from 'src/actions/categories';
 
 import { GenericEditView } from 'src/components/generic-edit-view';
 import { CustomBreadcrumbs } from 'src/components/custom-breadcrumbs';
