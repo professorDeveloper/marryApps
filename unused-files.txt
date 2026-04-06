@@ -1,0 +1,128 @@
+# Unused Files Analysis
+
+## Summary:
+- **Total TypeScript/TSX files:** 655
+- **Imported files:** 971 (some files imported multiple times)
+- **Unused files:** 358
+
+## Route Files (56 files)
+src/routes/components/error-boundary.tsx
+src/routes/components/index.ts
+src/routes/components/router-link.tsx
+src/routes/hooks/index.ts
+src/routes/hooks/use-params.ts
+src/routes/hooks/use-pathname.ts
+src/routes/hooks/use-router.ts
+src/routes/hooks/use-search-params.ts
+src/routes/sections/menu/cashbox.tsx
+src/routes/sections/menu/meals.tsx
+src/routes/sections/menu/products.tsx
+src/routes/sections/menu/reports.tsx
+src/routes/sections/menu/settings.tsx
+src/routes/sections/menu/users.tsx
+src/routes/sections/menu/warehouse.tsx
+
+## Auth Components (13 files)
+src/auth/components/form-divider.tsx
+src/auth/components/form-head.tsx
+src/auth/components/form-resend-code.tsx
+src/auth/components/sign-up-terms.tsx
+src/auth/context/auth-context.tsx
+src/auth/context/jwt/constant.ts
+src/auth/context/jwt/index.ts
+src/auth/guard/index.ts
+src/auth/hooks/index.ts
+src/auth/hooks/use-auth-context.ts
+src/auth/types.ts
+src/auth/utils/error-message.ts
+src/auth/utils/index.ts
+src/auth/view/jwt/index.ts
+
+## Animation Components (25+ files)
+src/components/animate/animate-count-up.tsx
+src/components/animate/animate-logo.tsx
+src/components/animate/back-to-top-button.tsx
+src/components/animate/index.ts
+src/components/animate/motion-container.tsx
+src/components/animate/motion-lazy.tsx
+src/components/animate/motion-viewport.tsx
+src/components/animate/scroll-progress/index.ts
+src/components/animate/scroll-progress/use-scroll-progress.tsx
+src/components/animate/variants/actions.ts
+src/components/animate/variants/background.ts
+src/components/animate/variants/bounce.ts
+src/components/animate/variants/container.ts
+src/components/animate/variants/fade.ts
+src/components/animate/variants/flip.ts
+src/components/animate/variants/index.ts
+src/components/animate/variants/path.ts
+src/components/animate/variants/rotate.ts
+src/components/animate/variants/scale.ts
+src/components/animate/variants/slide.ts
+src/components/animate/variants/transition.ts
+src/components/animate/variants/zoom.ts
+
+## Assets & Icons (17 files)
+src/assets/data/countries.ts
+src/assets/data/index.ts
+src/assets/icons/email-inbox-icon.tsx
+src/assets/icons/index.ts
+src/assets/icons/new-password-icon.tsx
+src/assets/icons/password-icon.tsx
+src/assets/icons/plan-free-icon.tsx
+src/assets/icons/plan-premium-icon.tsx
+src/assets/icons/plan-starter-icon.tsx
+src/assets/icons/sent-icon.tsx
+src/assets/illustrations/avatar-shape.tsx
+src/assets/illustrations/background-shape.tsx
+src/assets/illustrations/booking-illustration.tsx
+src/assets/illustrations/check-in-illustration.tsx
+src/assets/illustrations/check-out-illustration.tsx
+src/assets/illustrations/index.ts
+src/assets/illustrations/upload-illustration.tsx
+
+## Other Components
+src/components/contexts/branch-context.tsx
+src/components/custom-breadcrumbs/custom-breadcrumbs.tsx
+src/components/custom-breadcrumbs/index.ts
+src/components/custom-breadcrumbs/more-links.tsx
+src/components/file-thumbnail/styles.tsx
+src/components/file-thumbnail/file-thumbnail.tsx
+src/components/file-thumbnail/classes.ts
+src/components/file-thumbnail/types.ts
+src/components/file-thumbnail/utils.ts
+src/components/file-thumbnail/index.ts
+src/components/file-thumbnail/use-file-preview.ts
+src/components/filters-result/filters-result.tsx
+src/components/filters-result/filters-block.tsx
+src/components/filters-result/index.ts
+src/components/invoice-details-calculation/invoice-details-calculation.tsx
+src/components/invoice-details-calculation/new-invoiece.tsx
+src/components/invoice-details-batch/invoice-details-batch.tsx
+src/components/inventory-details-calculation/index.ts
+src/components/inventory-details-calculation/inventory-details-calculation.tsx
+src/components/custom-data-grid/grid-actions-cell-item.tsx
+src/components/custom-data-grid/toolbar-core.tsx
+src/components/custom-data-grid/toolbar-extend-settings.tsx
+src/components/custom-data-grid/index.ts
+
+## Sections & Pages
+src/sections/compounds/components/TabPanel.tsx
+src/sections/compounds/types.ts
+src/sections/error/index.ts
+src/sections/warehouse/deduction/components/DeductionLineItems.tsx
+src/sections/warehouse/deduction/index.ts
+src/sections/warehouse/deductions-edit-view.tsx
+src/sections/warehouse/deduction/types.ts
+src/sections/warehouse/inventory/components/AddedInventoryItemRow.tsx
+src/sections/warehouse/inventory/components/AddedInventoryItemsPanel.tsx
+src/sections/warehouse/inventory/components/InventoryDescriptionField.tsx
+src/sections/warehouse/inventory/components/InventoryResultsTable.tsx
+src/sections/warehouse/inventory/components/InventorySummaryPanel.tsx
+src/sections/warehouse/inventory/constants.ts
+
+## Important Notes:
+1. **Route Files**: Many route files appear unused because you've moved to the new structure in `/src/routes/sections/menu/index.tsx`
+2. **False Positives**: Some files might be dynamically imported, referenced in configuration files, or used in string-based imports
+3. **Safe to Remove**: Animation components, unused assets/illustrations, old auth components (if using new auth system)
+4. **Before Deleting**: Check if files are referenced in configuration files, look for dynamic imports, verify they're not entry points
