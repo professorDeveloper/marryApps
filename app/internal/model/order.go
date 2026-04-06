@@ -85,20 +85,21 @@ type UpdateOrderStatusRequest struct {
 }
 
 type OrderResponse struct {
-	ID                string      `json:"id"                          example:"c0f18a64-7f5c-4425-9414-1b01cddee9d9"`
-	TableID           string      `json:"table_id"                    example:"a1b2c3d4-e5f6-4a5b-8c9d-e0f1a2b3c4d5"`
-	WaiterID          *string     `json:"waiter_id,omitempty"          example:"a1b2c3d4-e5f6-4a5b-8c9d-e0f1a2b3c4d5"`
-	CashierID         *string     `json:"cashier_id,omitempty"         example:"a1b2c3d4-e5f6-4a5b-8c9d-e0f1a2b3c4d5"`
-	CashRegisterID    *string     `json:"cash_register_id,omitempty"   example:"a1b2c3d4-e5f6-4a5b-8c9d-e0f1a2b3c4d5"`
-	Status            OrderStatus `json:"status"                      example:"open"`
-	GuestCount        *int32      `json:"guest_count,omitempty"       example:"2"`
-	TotalAmount       string      `json:"total_amount"                example:"100000"`
-	Comment           *string     `json:"comment,omitempty"`
-	OrderType         string      `json:"order_type"                  example:"dine_in"`
-	ScheduledAt       *time.Time  `json:"scheduled_at,omitempty"`
-	RescheduleComment *string     `json:"reschedule_comment,omitempty"`
-	CreatedAt         *time.Time  `json:"created_at,omitempty"`
-	UpdatedAt         *time.Time  `json:"updated_at,omitempty"`
+	ID                string              `json:"id"                          example:"c0f18a64-7f5c-4425-9414-1b01cddee9d9"`
+	TableID           string              `json:"table_id"                    example:"a1b2c3d4-e5f6-4a5b-8c9d-e0f1a2b3c4d5"`
+	WaiterID          *string             `json:"waiter_id,omitempty"          example:"a1b2c3d4-e5f6-4a5b-8c9d-e0f1a2b3c4d5"`
+	CashierID         *string             `json:"cashier_id,omitempty"         example:"a1b2c3d4-e5f6-4a5b-8c9d-e0f1a2b3c4d5"`
+	CashRegisterID    *string             `json:"cash_register_id,omitempty"   example:"a1b2c3d4-e5f6-4a5b-8c9d-e0f1a2b3c4d5"`
+	Status            OrderStatus         `json:"status"                      example:"open"`
+	GuestCount        *int32              `json:"guest_count,omitempty"       example:"2"`
+	TotalAmount       string              `json:"total_amount"                example:"100000"`
+	Comment           *string             `json:"comment,omitempty"`
+	OrderType         string              `json:"order_type"                  example:"dine_in"`
+	ScheduledAt       *time.Time          `json:"scheduled_at,omitempty"`
+	RescheduleComment *string             `json:"reschedule_comment,omitempty"`
+	Items             []OrderItemResponse `json:"items"`
+	CreatedAt         *time.Time          `json:"created_at,omitempty"`
+	UpdatedAt         *time.Time          `json:"updated_at,omitempty"`
 }
 
 type RescheduleOrderRequest struct {

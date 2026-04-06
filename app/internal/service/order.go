@@ -334,7 +334,24 @@ func (s *OrderS) GetOrderByID(ctx context.Context, orderID string) (*model.Order
 		return nil, fmt.Errorf("failed to get order: %w", err)
 	}
 
-	return toOrderResponse(order), nil
+	resp := toOrderResponse(order)
+	if resp == nil {
+		return nil, nil
+	}
+
+	items, err := s.repo.Tenant(ctx).GetOrderItemsByOrderID(ctx, id)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get order items: %w", err)
+	}
+
+	resp.Items = make([]model.OrderItemResponse, 0, len(items))
+	for _, item := range items {
+		if itemResp := toOrderItemResponse(item); itemResp != nil {
+			resp.Items = append(resp.Items, *itemResp)
+		}
+	}
+
+	return resp, nil
 }
 
 func (s *OrderS) GetAllOrders(ctx context.Context, limit, offset int32) ([]model.OrderResponse, error) {
