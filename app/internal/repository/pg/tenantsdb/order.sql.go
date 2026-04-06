@@ -7,6 +7,7 @@ package pg
 
 import (
 	"context"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -755,6 +756,186 @@ func (q *Queries) GetKitchenQueue(ctx context.Context) ([]GetKitchenQueueRow, er
 			&i.HallName,
 			&i.GuestCount,
 			&i.WaitTimeMinutes,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getMyWaiterOrders = `-- name: GetMyWaiterOrders :many
+SELECT
+    o.id,
+    o.table_id,
+    o.waiter_id,
+    o.cashier_id,
+    o.cash_register_id,
+    o.status,
+    o.guest_count,
+    o.total_amount,
+    o.comment,
+    o.order_type,
+    o.scheduled_at,
+    o.reschedule_comment,
+    o.created_at,
+    o.updated_at,
+    ct.number AS table_number,
+    h.name AS hall_name,
+    COUNT(oi.id)::bigint AS item_count,
+    CAST(COALESCE(SUM(COALESCE(oi.quantity, 0)), 0) AS bigint) AS total_items
+FROM orders o
+LEFT JOIN cafe_tables ct ON o.table_id = ct.id AND ct.deleted_at = 0
+LEFT JOIN halls h ON ct.hall_id = h.id AND h.deleted_at = 0
+LEFT JOIN order_items oi ON o.id = oi.order_id AND oi.deleted_at = 0
+WHERE o.waiter_id = $1::uuid
+  AND o.deleted_at = 0
+  AND (
+        $2::text = 'all'
+        OR (
+            $2::text = 'active'
+            AND (
+                o.status IN ('open', 'cooking', 'ready', 'served')
+                OR (o.order_type = 'takeaway' AND o.status = 'paid')
+            )
+        )
+        OR (
+            $2::text = 'reservations'
+            AND o.status IN ('reserved', 'rescheduled')
+        )
+        OR (
+            $2::text = 'history'
+            AND o.status IN ('paid', 'cancelled')
+        )
+      )
+  AND (
+        $3::text IS NULL
+        OR o.order_type = $3::text
+      )
+  AND (
+        $4::uuid IS NULL
+        OR o.table_id = $4::uuid
+      )
+  AND (
+        CASE
+            WHEN o.status IN ('reserved', 'rescheduled') AND o.scheduled_at IS NOT NULL
+                THEN o.scheduled_at
+            ELSE o.created_at
+        END
+      ) >= $5::timestamptz
+  AND (
+        CASE
+            WHEN o.status IN ('reserved', 'rescheduled') AND o.scheduled_at IS NOT NULL
+                THEN o.scheduled_at
+            ELSE o.created_at
+        END
+      ) < $6::timestamptz
+GROUP BY
+    o.id,
+    o.table_id,
+    o.waiter_id,
+    o.cashier_id,
+    o.cash_register_id,
+    o.status,
+    o.guest_count,
+    o.total_amount,
+    o.comment,
+    o.order_type,
+    o.scheduled_at,
+    o.reschedule_comment,
+    o.created_at,
+    o.updated_at,
+    ct.number,
+    h.name
+ORDER BY
+    CASE
+        WHEN o.status = 'ready' THEN 1
+        WHEN o.status = 'cooking' THEN 2
+        WHEN o.status = 'open' THEN 3
+        WHEN o.status = 'served' THEN 4
+        WHEN o.status = 'reserved' THEN 5
+        WHEN o.status = 'rescheduled' THEN 6
+        WHEN o.status = 'paid' THEN 7
+        WHEN o.status = 'cancelled' THEN 8
+        ELSE 99
+    END,
+    o.created_at DESC
+LIMIT $8::int
+OFFSET $7::int
+`
+
+type GetMyWaiterOrdersParams struct {
+	WaiterID   uuid.UUID   `json:"waiter_id"`
+	Scope      string      `json:"scope"`
+	OrderType  *string     `json:"order_type"`
+	TableID    pgtype.UUID `json:"table_id"`
+	DayStart   time.Time   `json:"day_start"`
+	DayEnd     time.Time   `json:"day_end"`
+	PageOffset int32       `json:"page_offset"`
+	PageLimit  int32       `json:"page_limit"`
+}
+
+type GetMyWaiterOrdersRow struct {
+	ID                uuid.UUID          `json:"id"`
+	TableID           pgtype.UUID        `json:"table_id"`
+	WaiterID          pgtype.UUID        `json:"waiter_id"`
+	CashierID         pgtype.UUID        `json:"cashier_id"`
+	CashRegisterID    pgtype.UUID        `json:"cash_register_id"`
+	Status            NullOrderStatus    `json:"status"`
+	GuestCount        *int32             `json:"guest_count"`
+	TotalAmount       pgtype.Numeric     `json:"total_amount"`
+	Comment           *string            `json:"comment"`
+	OrderType         string             `json:"order_type"`
+	ScheduledAt       pgtype.Timestamptz `json:"scheduled_at"`
+	RescheduleComment *string            `json:"reschedule_comment"`
+	CreatedAt         pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt         pgtype.Timestamptz `json:"updated_at"`
+	TableNumber       *int32             `json:"table_number"`
+	HallName          *string            `json:"hall_name"`
+	ItemCount         int64              `json:"item_count"`
+	TotalItems        int64              `json:"total_items"`
+}
+
+func (q *Queries) GetMyWaiterOrders(ctx context.Context, arg GetMyWaiterOrdersParams) ([]GetMyWaiterOrdersRow, error) {
+	rows, err := q.db.Query(ctx, getMyWaiterOrders,
+		arg.WaiterID,
+		arg.Scope,
+		arg.OrderType,
+		arg.TableID,
+		arg.DayStart,
+		arg.DayEnd,
+		arg.PageOffset,
+		arg.PageLimit,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetMyWaiterOrdersRow
+	for rows.Next() {
+		var i GetMyWaiterOrdersRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.TableID,
+			&i.WaiterID,
+			&i.CashierID,
+			&i.CashRegisterID,
+			&i.Status,
+			&i.GuestCount,
+			&i.TotalAmount,
+			&i.Comment,
+			&i.OrderType,
+			&i.ScheduledAt,
+			&i.RescheduleComment,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.TableNumber,
+			&i.HallName,
+			&i.ItemCount,
+			&i.TotalItems,
 		); err != nil {
 			return nil, err
 		}

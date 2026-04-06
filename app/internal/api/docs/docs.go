@@ -17137,6 +17137,91 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/orders/my": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get current authenticated waiter's own orders with optional filters",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Orders"
+                ],
+                "summary": "Get my orders",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "default": "uz",
+                        "description": "Language (uz, ru, en)",
+                        "name": "lang",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "default": "active",
+                        "description": "Scope filter: active, reservations, history, all",
+                        "name": "scope",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Order type filter: dine_in, takeaway",
+                        "name": "order_type",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Table ID",
+                        "name": "table_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 20,
+                        "description": "Limit",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 0,
+                        "description": "Offset",
+                        "name": "offset",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.WaiterOrderListResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorData"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorData"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorData"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/orders/status/{status}": {
             "get": {
                 "security": [
@@ -27730,6 +27815,17 @@ const docTemplate = `{
                 "OrderStatusRescheduled"
             ]
         },
+        "model.OrderType": {
+            "type": "string",
+            "enum": [
+                "dine_in",
+                "takeaway"
+            ],
+            "x-enum-varnames": [
+                "OrderTypeDineIn",
+                "OrderTypeTakeaway"
+            ]
+        },
         "model.OutgoingInvoiceItemResponse": {
             "type": "object",
             "properties": {
@@ -30156,6 +30252,105 @@ const docTemplate = `{
                 "username": {
                     "type": "string",
                     "example": "admin"
+                }
+            }
+        },
+        "model.WaiterOrderListItem": {
+            "type": "object",
+            "properties": {
+                "cash_register_id": {
+                    "type": "string",
+                    "example": "a1b2c3d4-e5f6-4a5b-8c9d-e0f1a2b3c4d5"
+                },
+                "cashier_id": {
+                    "type": "string",
+                    "example": "a1b2c3d4-e5f6-4a5b-8c9d-e0f1a2b3c4d5"
+                },
+                "comment": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "guest_count": {
+                    "type": "integer",
+                    "example": 2
+                },
+                "hall_name": {
+                    "type": "string",
+                    "example": "Main hall"
+                },
+                "id": {
+                    "type": "string",
+                    "example": "c0f18a64-7f5c-4425-9414-1b01cddee9d9"
+                },
+                "item_count": {
+                    "type": "integer",
+                    "example": 3
+                },
+                "order_type": {
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/model.OrderType"
+                        }
+                    ],
+                    "example": "dine_in"
+                },
+                "reschedule_comment": {
+                    "type": "string"
+                },
+                "scheduled_at": {
+                    "type": "string"
+                },
+                "status": {
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/model.OrderStatus"
+                        }
+                    ],
+                    "example": "open"
+                },
+                "table_id": {
+                    "type": "string",
+                    "example": "a1b2c3d4-e5f6-4a5b-8c9d-e0f1a2b3c4d5"
+                },
+                "table_number": {
+                    "type": "integer",
+                    "example": 12
+                },
+                "total_amount": {
+                    "type": "string",
+                    "example": "100000"
+                },
+                "total_items": {
+                    "type": "integer",
+                    "example": 5
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "waiter_id": {
+                    "type": "string",
+                    "example": "a1b2c3d4-e5f6-4a5b-8c9d-e0f1a2b3c4d5"
+                }
+            }
+        },
+        "model.WaiterOrderListResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.WaiterOrderListItem"
+                    }
+                },
+                "message": {
+                    "type": "string",
+                    "example": "My orders retrieved successfully"
+                },
+                "status_code": {
+                    "type": "integer",
+                    "example": 200
                 }
             }
         }

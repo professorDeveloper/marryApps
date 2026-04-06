@@ -37,6 +37,7 @@ sql:
       - "../../app/migrations/tenants/32_shift_role_cashier.up.sql"
       - "../../app/migrations/tenants/33_table_timer_foundation.up.sql"
       - "../../app/migrations/tenants/34_pos_auth.up.sql"
+      - "../../app/migrations/tenants/35_modifier.up.sql"
 
 
     gen:
