@@ -9,6 +9,18 @@ import (
 	"gitlab.yurtal.tech/company/maryai/back/internal/model"
 )
 
+// StartOrderTableTimer godoc
+// @Summary Start order table timer
+// @Description Starts table timer for a time-based table if needed
+// @Tags order-table-timer
+// @Security BearerAuth
+// @Produce json
+// @Param id path string true "Order ID"
+// @Success 200 {object} model.SuccessResponse{data=model.TableTimerResponse}
+// @Failure 400 {object} model.ErrorResponse
+// @Failure 401 {object} model.ErrorResponse
+// @Failure 403 {object} model.ErrorResponse
+// @Router /api/v1/orders/{id}/table-timer/start [post]
 func (h *Handler) StartOrderTableTimer(c echo.Context) error {
 	orderID := c.Param("id")
 	if orderID == "" {
@@ -46,6 +58,18 @@ func (h *Handler) StartOrderTableTimer(c echo.Context) error {
 	))
 }
 
+// GetOrderTableTimer godoc
+// @Summary Get order table timer
+// @Description Returns current table timer state for the order
+// @Tags order-table-timer
+// @Security BearerAuth
+// @Produce json
+// @Param id path string true "Order ID"
+// @Success 200 {object} model.SuccessResponse{data=model.TableTimerResponse}
+// @Failure 400 {object} model.ErrorResponse
+// @Failure 401 {object} model.ErrorResponse
+// @Failure 403 {object} model.ErrorResponse
+// @Router /api/v1/orders/{id}/table-timer [get]
 func (h *Handler) GetOrderTableTimer(c echo.Context) error {
 	orderID := c.Param("id")
 	if orderID == "" {
@@ -80,6 +104,18 @@ func (h *Handler) GetOrderTableTimer(c echo.Context) error {
 	))
 }
 
+// PauseOrderTableTimer godoc
+// @Summary Pause order table timer
+// @Description Pauses the active table timer for the given order
+// @Tags order-table-timer
+// @Security BearerAuth
+// @Produce json
+// @Param id path string true "Order ID"
+// @Success 200 {object} model.SuccessResponse{data=model.TableTimerResponse}
+// @Failure 400 {object} model.ErrorResponse
+// @Failure 401 {object} model.ErrorResponse
+// @Failure 403 {object} model.ErrorResponse
+// @Router /api/v1/orders/{id}/table-timer/pause [post]
 func (h *Handler) PauseOrderTableTimer(c echo.Context) error {
 	orderID := c.Param("id")
 	if orderID == "" {
@@ -117,6 +153,18 @@ func (h *Handler) PauseOrderTableTimer(c echo.Context) error {
 	))
 }
 
+// ResumeOrderTableTimer godoc
+// @Summary Resume order table timer
+// @Description Resumes a paused table timer for the given order
+// @Tags order-table-timer
+// @Security BearerAuth
+// @Produce json
+// @Param id path string true "Order ID"
+// @Success 200 {object} model.SuccessResponse{data=model.TableTimerResponse}
+// @Failure 400 {object} model.ErrorResponse
+// @Failure 401 {object} model.ErrorResponse
+// @Failure 403 {object} model.ErrorResponse
+// @Router /api/v1/orders/{id}/table-timer/resume [post]
 func (h *Handler) ResumeOrderTableTimer(c echo.Context) error {
 	orderID := c.Param("id")
 	if orderID == "" {
