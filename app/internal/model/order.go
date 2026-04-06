@@ -157,6 +157,20 @@ type OrderItemResponse struct {
 	UpdatedAt *time.Time      `json:"updated_at,omitempty"`
 }
 
+type OrderItemWithGoodResponse struct {
+	ID         string          `json:"id" example:"c0f18a64-7f5c-4425-9414-1b01cddee9d9"`
+	OrderID    string          `json:"order_id" example:"4365eb64-3569-4f72-bd79-703695ae42be"`
+	GoodID     string          `json:"good_id" example:"6aac7e44-05ea-4711-96c8-7de524faf55b"`
+	GoodName   string          `json:"good_name" example:"Osh"`
+	PictureUrl *string         `json:"picture_url,omitempty" example:"https://example.com/goods/osh.jpg"`
+	Quantity   int32           `json:"quantity" example:"2"`
+	Price      string          `json:"price" example:"25000"`
+	Status     OrderItemStatus `json:"status" example:"pending"`
+	Comment    *string         `json:"comment,omitempty" example:"kamroq achchiq"`
+	CreatedAt  *time.Time      `json:"created_at,omitempty"`
+	UpdatedAt  *time.Time      `json:"updated_at,omitempty"`
+}
+
 type OrderItemDetailResponse struct {
 	ID         string          `json:"id" example:"c0f18a64-7f5c-4425-9414-1b01cddee9d9"`
 	GoodID     string          `json:"good_id" example:"d4e5f6a7-b8c9-4a5b-8c9d-e0f1a2b3c4d5"`
