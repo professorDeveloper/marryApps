@@ -93,6 +93,7 @@ type UpdateUserRequest struct {
 	Username    *string `json:"username"`
 	Email       *string `json:"email"`
 	PhoneNumber *string `json:"phone_number"`
+	Pincode     *string `json:"pincode"`
 	IsActive    *bool   `json:"is_active,omitempty"`
 }
 
