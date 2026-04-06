@@ -1344,7 +1344,7 @@ func (s *OrderS) CreateOrderItems(ctx context.Context, req model.CreateOrderItem
 	return responses, nil
 }
 
-func (s *OrderS) GetOrderItemByID(ctx context.Context, itemID string) (*model.OrderItemResponse, error) {
+func (s *OrderS) GetOrderItemByID(ctx context.Context, itemID string) (*model.OrderItemDetailResponse, error) {
 	id, err := uuid.Parse(itemID)
 	if err != nil {
 		return nil, fmt.Errorf("invalid order item id: %w", err)
@@ -1355,7 +1355,12 @@ func (s *OrderS) GetOrderItemByID(ctx context.Context, itemID string) (*model.Or
 		return nil, fmt.Errorf("failed to get order item: %w", err)
 	}
 
-	return toOrderItemResponse(item), nil
+	good, err := s.repo.Tenant(ctx).GetGoodByID(ctx, item.GoodID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get good: %w", err)
+	}
+
+	return toOrderItemDetailResponse(item, good), nil
 }
 
 func (s *OrderS) GetAllOrderItems(ctx context.Context, limit, offset int32) ([]model.OrderItemResponse, error) {
@@ -2154,6 +2159,42 @@ func toOrderItemResponse(oi pg.OrderItem) *model.OrderItemResponse {
 		Comment:   oi.Comment,
 		CreatedAt: createdAt,
 		UpdatedAt: updatedAt,
+	}
+}
+
+func toOrderItemDetailResponse(oi pg.OrderItem, good pg.GetGoodByIDRow) *model.OrderItemDetailResponse {
+	if oi.ID == uuid.Nil {
+		return nil
+	}
+
+	var createdAt *time.Time
+	if oi.CreatedAt.Valid {
+		t := oi.CreatedAt.Time
+		createdAt = &t
+	}
+
+	var updatedAt *time.Time
+	if oi.UpdatedAt.Valid {
+		t := oi.UpdatedAt.Time
+		updatedAt = &t
+	}
+
+	status := model.OrderItemStatusPending
+	if oi.Status.Valid {
+		status = model.OrderItemStatus(oi.Status.OrderItemsStatus)
+	}
+
+	return &model.OrderItemDetailResponse{
+		ID:         oi.ID.String(),
+		GoodID:     oi.GoodID.String(),
+		GoodName:   good.Name,
+		PictureUrl: good.PictureUrl,
+		Quantity:   oi.Quantity,
+		Price:      numericToString(oi.Price),
+		Status:     status,
+		Comment:    oi.Comment,
+		CreatedAt:  createdAt,
+		UpdatedAt:  updatedAt,
 	}
 }
 

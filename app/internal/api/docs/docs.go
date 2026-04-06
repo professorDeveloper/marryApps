@@ -16466,7 +16466,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/model.OrderItemResponse"
+                            "$ref": "#/definitions/model.OrderItemDetailResponse"
                         }
                     },
                     "400": {
@@ -27675,6 +27675,53 @@ const docTemplate = `{
                 }
             }
         },
+        "model.OrderItemDetailResponse": {
+            "type": "object",
+            "properties": {
+                "comment": {
+                    "type": "string",
+                    "example": "kamroq achchiq"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "good_id": {
+                    "type": "string",
+                    "example": "d4e5f6a7-b8c9-4a5b-8c9d-e0f1a2b3c4d5"
+                },
+                "good_name": {
+                    "type": "string",
+                    "example": "Osh"
+                },
+                "id": {
+                    "type": "string",
+                    "example": "c0f18a64-7f5c-4425-9414-1b01cddee9d9"
+                },
+                "picture_url": {
+                    "type": "string",
+                    "example": "https://example.com/goods/osh.jpg"
+                },
+                "price": {
+                    "type": "string",
+                    "example": "50000"
+                },
+                "quantity": {
+                    "type": "integer",
+                    "example": 2
+                },
+                "status": {
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/model.OrderItemStatus"
+                        }
+                    ],
+                    "example": "pending"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
         "model.OrderItemResponse": {
             "type": "object",
             "properties": {
@@ -29888,6 +29935,9 @@ const docTemplate = `{
                     "type": "boolean"
                 },
                 "phone_number": {
+                    "type": "string"
+                },
+                "pincode": {
                     "type": "string"
                 },
                 "username": {

@@ -1351,7 +1351,7 @@ func (h *Handler) CreateOrderItem(c echo.Context) error {
 // @Security BearerAuth
 // @Param lang query string false "Language (uz, ru, en)" default(uz)
 // @Param id path string true "Order Item ID"
-// @Success 200 {object} model.OrderItemResponse
+// @Success 200 {object} model.OrderItemDetailResponse
 // @Failure 400 {object} model.ErrorResponse
 // @Failure 401 {object} model.ErrorResponse
 // @Failure 404 {object} model.ErrorResponse
