@@ -2660,6 +2660,10 @@ definitions:
       id:
         example: c0f18a64-7f5c-4425-9414-1b01cddee9d9
         type: string
+      items:
+        items:
+          $ref: '#/definitions/model.OrderItemResponse'
+        type: array
       order_type:
         example: dine_in
         type: string

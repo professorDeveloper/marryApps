@@ -27754,6 +27754,12 @@
                     "type": "string",
                     "example": "c0f18a64-7f5c-4425-9414-1b01cddee9d9"
                 },
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.OrderItemResponse"
+                    }
+                },
                 "order_type": {
                     "type": "string",
                     "example": "dine_in"
