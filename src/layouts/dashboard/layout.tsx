@@ -3,22 +3,27 @@ import type { NavItemProps, NavSectionProps } from 'src/components/nav-section';
 import type { MainSectionProps, HeaderSectionProps, LayoutSectionProps } from '../core';
 
 import { merge } from 'es-toolkit';
-import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useBoolean } from 'minimal-shared/hooks';
+import { useRef, useMemo, useEffect, useCallback } from 'react';
 
 import Box from '@mui/material/Box';
 import Alert from '@mui/material/Alert';
 import { useTheme } from '@mui/material/styles';
 import { iconButtonClasses } from '@mui/material/IconButton';
 
+import { usePathname } from 'src/routes/hooks';
+
+import { usePageNavigation } from 'src/hooks/use-page-navigation';
+import { useGetWorkspacesBranches } from 'src/hooks/use-workspaces-branches';
+
 import { _notifications } from 'src/_mock';
 
 import { Logo } from 'src/components/logo';
 import { useSettingsContext } from 'src/components/settings';
+import { CustomBreadcrumbs } from 'src/components/custom-breadcrumbs';
 
 import { useAuthContext } from 'src/auth/hooks';
-import { useGetWorkspacesBranches } from 'src/hooks/use-workspaces-branches';
 
 import { NavMobile } from './nav-mobile';
 import { VerticalDivider } from './content';
@@ -42,6 +47,7 @@ type LayoutBaseProps = Pick<LayoutSectionProps, 'sx' | 'children' | 'cssVars'>;
 
 export type DashboardLayoutProps = LayoutBaseProps & {
   layoutQuery?: Breakpoint;
+  pageTitle?: string;
   slotProps?: {
     header?: HeaderSectionProps;
     nav?: {
@@ -57,8 +63,10 @@ export function DashboardLayout({
   children,
   slotProps,
   layoutQuery = 'lg',
+  pageTitle,
 }: DashboardLayoutProps) {
   const theme = useTheme();
+  const pathname = usePathname();
 
   const { user } = useAuthContext();
 
@@ -69,34 +77,56 @@ export function DashboardLayout({
   const { t: tLayout } = useTranslation('layout');
   const { t: tMenu } = useTranslation('menu');
 
-  const navVars = dashboardNavColorVars(theme, settings.state.navColor, settings.state.navLayout);
+  const { pageTitle: dynamicPageTitle, breadcrumbs: dynamicBreadcrumbs } = usePageNavigation();
+
+  const { navColor, navLayout } = settings.state;
+
+  const navVars = useMemo(
+    () => dashboardNavColorVars(theme, navColor, navLayout),
+    [theme, navColor, navLayout]
+  );
 
   const { value: open, onFalse: onClose, onTrue: onOpen } = useBoolean();
 
-  const navData = slotProps?.nav?.data ?? getNavData(tMenu);
+  const navData = useMemo(
+    () => slotProps?.nav?.data ?? getNavData(tMenu),
+    [slotProps?.nav?.data, tMenu]
+  );
 
-  const isNavMini = settings.state.navLayout === 'mini';
-  const isNavHorizontal = settings.state.navLayout === 'horizontal';
-  const isNavVertical = isNavMini || settings.state.navLayout === 'vertical';
+  const layoutCssVars = useMemo(
+    () => ({ ...dashboardLayoutVars(theme), ...navVars.layout, ...cssVars }),
+    [theme, navVars.layout, cssVars]
+  );
+
+  const isNavMini = navLayout === 'mini';
+  const isNavHorizontal = navLayout === 'horizontal';
+  const isNavVertical = isNavMini || navLayout === 'vertical';
+
+  const { setField } = settings;
+  const navLayoutRef = useRef(navLayout);
+  navLayoutRef.current = navLayout;
 
   // Ctrl + B shortcut uchun listener
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if ((event.ctrlKey || event.metaKey) && event.key === 'b') {
         event.preventDefault();
-        settings.setField(
+        setField(
           'navLayout',
-          settings.state.navLayout === 'vertical' ? 'mini' : 'vertical'
+          navLayoutRef.current === 'vertical' ? 'mini' : 'vertical'
         );
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [settings]);
+  }, [setField]);
 
-  const canDisplayItemByRole = (allowedRoles: NavItemProps['allowedRoles']): boolean =>
-    !allowedRoles?.includes(user?.role);
+  const userRole = user?.role;
+  const canDisplayItemByRole = useCallback(
+    (allowedRoles: NavItemProps['allowedRoles']): boolean => !allowedRoles?.includes(userRole),
+    [userRole]
+  );
 
   const isSuperadmin = String(user?.role || '').toLowerCase() === 'superadmin';
 
@@ -131,6 +161,18 @@ export function DashboardLayout({
       ) : null,
       leftArea: (
         <>
+          {/* Breadcrumbs */}
+          <CustomBreadcrumbs
+            heading={dynamicPageTitle}
+            links={dynamicBreadcrumbs}
+            sideLayout
+            sx={{ 
+              display: { xs: 'none', md: 'flex' },
+              '& .MuiBreadcrumbs-separator': { mx: 0.5 },
+              '& .MuiBreadcrumbs-li': { fontSize: '0.875rem' }
+            }}
+          />
+          
           {/** @slot Nav mobile */}
           <MenuButton
             onClick={onOpen}
@@ -159,19 +201,17 @@ export function DashboardLayout({
           {isNavHorizontal && (
             <VerticalDivider sx={{ [theme.breakpoints.up(layoutQuery)]: { display: 'flex' } }} />
           )}
-
-          {/** @slot Workspace popover */}
-          {isSuperadmin && (
-            <WorkspacesPopover
-              data={workspaces}
-              sx={{ ...(isNavHorizontal && { color: 'var(--layout-nav-text-primary-color)' }) }}
-            />
-          )}
         </>
       ),
       rightArea: (
         <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 0, sm: 0.75 } }}>
           {/** @slot Searchbar */}
+           {/* @slot Workspace popover */}
+            <WorkspacesPopover
+              data={workspaces}
+              sx={{ ...(isNavHorizontal && { color: 'var(--layout-nav-text-primary-color)' }) }}
+              disabled={!isSuperadmin}
+            />
           <Searchbar data={navData} />
 
           {/** @slot Language popover */}
@@ -211,6 +251,10 @@ export function DashboardLayout({
     );
   };
 
+  const onToggleNav = useCallback(() => {
+    setField('navLayout', navLayoutRef.current === 'vertical' ? 'mini' : 'vertical');
+  }, [setField]);
+
   const renderSidebar = () => (
     <NavVertical
       data={navData}
@@ -218,12 +262,7 @@ export function DashboardLayout({
       layoutQuery={layoutQuery}
       cssVars={navVars.section}
       checkPermissions={canDisplayItemByRole}
-      onToggleNav={() =>
-        settings.setField(
-          'navLayout',
-          settings.state.navLayout === 'vertical' ? 'mini' : 'vertical'
-        )
-      }
+      onToggleNav={onToggleNav}
     />
   );
 
@@ -248,7 +287,7 @@ export function DashboardLayout({
       /** **************************************
        * @Styles
        *************************************** */
-      cssVars={{ ...dashboardLayoutVars(theme), ...navVars.layout, ...cssVars }}
+      cssVars={layoutCssVars}
       sx={[
         {
           [`& .${layoutClasses.sidebarContainer}`]: {
