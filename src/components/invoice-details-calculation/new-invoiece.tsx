@@ -787,7 +787,7 @@ export function InvoiceDetailsCalculation({
         if (!persistedDetails) return;
 
         const incomingSnapshot = JSON.stringify(
-            [...(persistedDetails || [])]
+            [...persistedDetails]
                 .map((d) => ({
                     ingredient_id: String(d.ingredient_id || d.id || ''),
                     quantity: Number(d.quantity) || 0,
