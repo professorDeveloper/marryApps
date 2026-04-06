@@ -343,9 +343,9 @@ export function useInvoiceDetailsAPI(): UseInvoiceDetailsAPIReturn {
      * Barcha ingredients'ni oladi
      */
     const getIngredients = useCallback(async (): Promise<any[]> => {
-        try {
+    try {
             const response = await fetcher<BackendResponse<any[]>>(endpoints.ingredient.list);
-            return response.data || [];
+            return response.data || []; 
         } catch (error) {
             const axiosError = error as AxiosError<any>;
             const message = axiosError?.response?.data?.message || 'Failed to fetch ingredients';

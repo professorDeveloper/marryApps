@@ -1,28 +1,36 @@
-import type { GridColDef } from '@mui/x-data-grid';
-import { useMemo, useState, useCallback, useEffect } from 'react';
-import { useTranslation } from 'react-i18next';
-import Box from '@mui/material/Box';
-import TextField from '@mui/material/TextField';
-import Typography from '@mui/material/Typography';
-import Table from '@mui/material/Table';
-import TableBody from '@mui/material/TableBody';
-import TableCell from '@mui/material/TableCell';
-import TableHead from '@mui/material/TableHead';
-import TableRow from '@mui/material/TableRow';
-import Tooltip from '@mui/material/Tooltip';
-import CircularProgress from '@mui/material/CircularProgress';
-import ToggleButton from '@mui/material/ToggleButton';
-import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
-import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import dayjs from 'dayjs';
-import { paths } from 'src/routes/paths';
-import { useGetIngredientReports, useGetIngredientReportDetail } from 'src/actions/ingredient-reports';
-import { useGetIngredients } from 'src/actions/ingredients';
-import { useGetStorages } from 'src/actions/departments';
-import { GenericTableView } from 'src/components/generic-table-view';
-import { GenericViewModal } from 'src/components/generic-view-view/GenericViewModal';
-import { NoDataTooltip } from 'src/components/no-data-tooltip';
+import { useTranslation } from 'react-i18next';
+import { useMemo, useState, useEffect, useCallback } from 'react';
 
+import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+import {
+  Box,
+  Table,
+  Tooltip,
+  TableRow,
+  TextField,
+  TableBody,
+  TableCell,
+  TableHead,
+  IconButton,
+  Typography,
+  ToggleButton,
+  CircularProgress,
+  ToggleButtonGroup,
+} from '@mui/material';
+
+import { useGetStorages } from 'src/actions/departments';
+import { DashboardContent } from 'src/layouts/dashboard';
+import { useGetIngredients } from 'src/actions/ingredients';
+import { useGetIngredientReports, useGetIngredientReportDetail } from 'src/actions/ingredient-reports';
+
+import { Iconify } from 'src/components/iconify';
+import { NoDataTooltip } from 'src/components/no-data-tooltip';
+import { GenericViewModal } from 'src/components/generic-view-view/GenericViewModal';
+
+import { DataTable } from 'src/sections/warehouse/deduction/components/utility-data-table';
+
+// Helper functions
 const toUtcDayBoundary = (value: dayjs.Dayjs, endOfDay = false): string => {
     const date = new Date(
         Date.UTC(
@@ -37,6 +45,41 @@ const toUtcDayBoundary = (value: dayjs.Dayjs, endOfDay = false): string => {
     return date.toISOString().replace('.000Z', 'Z');
 };
 
+const getTodayUtcBoundary = (): string => {
+    const today = dayjs();
+    return toUtcDayBoundary(today);
+};
+
+const getTomorrowUtcBoundary = (endOfDay = false): string => {
+    const tomorrow = dayjs().add(1, 'day');
+    return toUtcDayBoundary(tomorrow, endOfDay);
+};
+
+const toPickerDate = (value?: string): dayjs.Dayjs | null => (value ? dayjs(value.slice(0, 10)) : null);
+
+// Filter types
+interface IngredientReportsFilters {
+    storage_id: string;
+    start: string;
+    end: string;
+    ingredient_id: string;
+    status: string; // Adding status field for compatibility
+    q: string; // Adding search field for compatibility
+    limit: number;
+    offset: number;
+}
+
+const initialFilters: IngredientReportsFilters = {
+    storage_id: '',
+    start: getTodayUtcBoundary(),
+    end: getTomorrowUtcBoundary(true),
+    ingredient_id: '',
+    status: '',
+    q: '',
+    limit: 20,
+    offset: 0,
+};
+
 export function IngredientReportsListView() {
     const { t } = useTranslation('menu');
     const noDataText = t('noDataAvailable', "Tushunarli ma'lumot mavjud emas");
@@ -46,14 +89,11 @@ export function IngredientReportsListView() {
     const { storages } = useGetStorages();
 
     // Filter states
-    const [filters, setFilters] = useState({
-        storage_id: '',
-        start: '',
-        end: '',
-        ingredient_id: '',
-        limit: 20,
-        offset: 0,
-    });
+    const [filters, setFilters] = useState<IngredientReportsFilters>(initialFilters);
+    const [draftFilters, setDraftFilters] = useState<IngredientReportsFilters>(initialFilters);
+    const [searchQuery, setSearchQuery] = useState('');
+    const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
+    const [rowCount, setRowCount] = useState(0);
     const [paginationModel, setPaginationModel] = useState({ page: 0, pageSize: 20 });
 
     const [startDate, setStartDate] = useState<dayjs.Dayjs | null>(null);
@@ -66,6 +106,52 @@ export function IngredientReportsListView() {
     const [selectedIngredientId, setSelectedIngredientId] = useState<string | null>(null);
     const [openAmountsModal, setOpenAmountsModal] = useState(false);
     const [selectedAmountsData, setSelectedAmountsData] = useState<any | null>(null);
+
+    // Debounced search
+    useEffect(() => {
+        const timeout = setTimeout(() => {
+            setDebouncedSearchQuery(searchQuery);
+        }, 400);
+
+        return () => clearTimeout(timeout);
+    }, [searchQuery]);
+
+    // Update draft filters with search
+    useEffect(() => {
+        setDraftFilters((prev) => ({
+            ...prev,
+            q: debouncedSearchQuery,
+        }));
+    }, [debouncedSearchQuery]);
+
+    // Update filters when draft filters change
+    useEffect(() => {
+        setPaginationModel((prev) => ({ ...prev, page: 0 }));
+        setFilters((prev) => ({
+            ...prev,
+            ...draftFilters,
+            offset: 0,
+            limit: paginationModel.pageSize,
+        }));
+    }, [draftFilters, paginationModel.pageSize]);
+
+    // Pagination handlers
+    const handlePaginationPageChange = (page: number) => {
+        setPaginationModel((prev) => ({ ...prev, page }));
+        setFilters((prev) => ({
+            ...prev,
+            offset: page * paginationModel.pageSize,
+        }));
+    };
+
+    const handlePaginationRowsPerPageChange = (pageSize: number) => {
+        setPaginationModel({ page: 0, pageSize });
+        setFilters((prev) => ({
+            ...prev,
+            limit: pageSize,
+            offset: 0,
+        }));
+    };
 
     // Set default date range and storage on component mount
     useEffect(() => {
@@ -80,7 +166,7 @@ export function IngredientReportsListView() {
             setSelectedStorageId(firstStorageId);
 
             // Update filters with initial values
-            setFilters((prev) => ({
+            setDraftFilters((prev) => ({
                 ...prev,
                 storage_id: firstStorageId,
                 start: toUtcDayBoundary(today),
@@ -98,6 +184,11 @@ export function IngredientReportsListView() {
         limit: filters.limit,
         offset: filters.offset,
     });
+
+    // Update row count when pagination changes
+    useEffect(() => {
+        setRowCount(reportsPagination?.total ?? totals?.total_count ?? 0);
+    }, [reportsPagination, totals]);
 
     // Get ingredient report detail for modal
     const { report: reportDetail, reportLoading } = useGetIngredientReportDetail(
@@ -130,53 +221,47 @@ export function IngredientReportsListView() {
         setOpenAmountsModal(true);
     }, []);
 
-    const columns = useMemo<GridColDef[]>(
+    // View ingredient details
+    const handleViewClick = useCallback((rowData: any) => {
+        setSelectedIngredientId(rowData.ingredient_id);
+        setOpenDetailsModal(true);
+    }, []);
+
+    // Modal close handlers
+    const handleDetailsModalClose = useCallback(() => {
+        setSelectedIngredientId(null);
+        setOpenDetailsModal(false);
+    }, []);
+
+    const handleAmountsModalClose = useCallback(() => {
+        setSelectedAmountsData(null);
+        setOpenAmountsModal(false);
+    }, []);
+
+    // DataTable columns
+    const columns = useMemo(
         () => [
-            // {
-            //     field: 'ingredient_id',
-            //     headerName: 'ID',
-            //     minWidth: 260,
-            //     renderCell: (params) => params.row.ingredient_id || '-',
-            // },
             {
-                field: 'ingredient_name',
-                headerName: t('ingredientReports.ingredient') || 'Ingredient',
-                flex: 1,
-                minWidth: 200,
-                renderCell: (params) => (
+                key: 'ingredient_name',
+                label: t('ingredientReports.ingredient') || 'Ingredient',
+                sortable: true,
+                width: '1.5fr',
+                align: 'left' as const,
+                getValue: (row: any) => row?.ingredient_name ?? '',
+                renderCell: ({ value }: { value: unknown }) => (
                     <Box>
-                        <Typography sx={{ mb: 1, mt: 1 }}>{params.row.ingredient_name}</Typography>
+                        <Typography sx={{ mb: 1, mt: 1 }}>{String(value)}</Typography>
                     </Box>
-                )
-                // renderCell: (params) => (
-                //     <RenderCellItem params={params} nameField="ingredient_name" />
-                // ),
+                ),
             },
-            // {
-            //     field: 'color_code',
-            //     headerName: t('ingredientReports.color', 'Color'),
-            //     width: 120,
-            //     renderCell: (params) => (
-            //         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            //             <Box
-            //                 sx={{
-            //                     width: 16,
-            //                     height: 16,
-            //                     borderRadius: '4px',
-            //                     border: '1px solid #ccc',
-            //                     bgcolor: params.row.color_code || 'transparent',
-            //                 }}
-            //             />
-            //             <Typography variant="body2">{params.row.color_code || '-'}</Typography>
-            //         </Box>
-            //     ),
-            // },
             {
-                field: 'measurement',
-                headerName: t('ingredientReports.unit') || 'Unit',
-                width: 100,
-                renderCell: (params) => {
-                    const measurement = params.row.measurement;
+                key: 'measurement',
+                label: t('ingredientReports.unit') || 'Unit',
+                sortable: true,
+                width: '0.8fr',
+                align: 'left' as const,
+                getValue: (row: any) => {
+                    const measurement = row?.measurement;
                     const unitMap: Record<string, string> = {
                         kg: 'kg',
                         l: 'l',
@@ -186,33 +271,52 @@ export function IngredientReportsListView() {
                 },
             },
             {
-                field: 'cost_start',
-                headerName: t('ingredientReports.costStart', 'Cost Start'),
-                width: 130,
-                renderCell: (params) => {
-                    const amount = Number(params.row.cost_start) || 0;
+                key: 'cost_start',
+                label: t('ingredientReports.costStart', 'Cost Start'),
+                sortable: true,
+                width: '1fr',
+                align: 'left' as const,
+                mono: true,
+                getValue: (row: any) => Number(row?.cost_start || 0),
+                renderCell: ({ value }: { value: unknown }) => {
+                    const amount = Number(value ?? 0);
                     return `${amount.toLocaleString()} so'm`;
                 },
+                total: { aggregation: 'sum' as const },
             },
             {
-                field: 'begin_qty',
-                headerName: t('ingredientReports.beginQty') || 'Begin Qty',
-                width: 120,
-                renderCell: (params) => `${Number(params.row.begin_qty).toFixed(2)}`,
+                key: 'begin_qty',
+                label: t('ingredientReports.beginQty') || 'Begin Qty',
+                sortable: true,
+                width: '1fr',
+                align: 'left' as const,
+                mono: true,
+                getValue: (row: any) => Number(row?.begin_qty || 0),
+                renderCell: ({ value }: { value: unknown }) => `${Number(value).toFixed(2)}`,
+                total: { aggregation: 'sum' as const },
             },
             {
-                field: 'invoice_in_qty',
-                headerName: t('ingredientReports.in') || 'In',
-                width: 100,
-                renderCell: (params) => `${Number(params.row.invoice_in_qty).toFixed(2)}`,
+                key: 'invoice_in_qty',
+                label: t('ingredientReports.in') || 'In',
+                sortable: true,
+                width: '0.8fr',
+                align: 'left' as const,
+                mono: true,
+                getValue: (row: any) => Number(row?.invoice_in_qty || 0),
+                renderCell: ({ value }: { value: unknown }) => `${Number(value).toFixed(2)}`,
+                total: { aggregation: 'sum' as const },
             },
             {
-                field: 'order_out_qty',
-                headerName: t('ingredientReports.out') || 'Out',
-                width: 100,
-                renderCell: (params) => (
+                key: 'order_out_qty',
+                label: t('ingredientReports.out') || 'Out',
+                sortable: true,
+                width: '0.8fr',
+                align: 'left' as const,
+                mono: true,
+                getValue: (row: any) => Number(row?.order_out_qty || 0),
+                renderCell: ({ row }: { row: any }) => (
                     <Tooltip
-                        title={`${t('ingredientReports.deduction', 'Deduction')}: ${Number(params.row.deduction_out_qty).toFixed(2)}`}
+                        title={`${t('ingredientReports.deduction', 'Deduction')}: ${Number(row.deduction_out_qty).toFixed(2)}`}
                         arrow
                         disableInteractive
                         slotProps={{
@@ -221,141 +325,148 @@ export function IngredientReportsListView() {
                             },
                         }}
                     >
-                        <Box component="span">{`${Number(params.row.order_out_qty).toFixed(2)}`}</Box>
+                        <Box component="span">{`${Number(row.order_out_qty).toFixed(2)}`}</Box>
                     </Tooltip>
                 ),
+                total: { aggregation: 'sum' as const },
             },
             {
-                field: 'surplus_qty',
-                headerName: t('ingredientReports.surplus', 'Surplus Qty'),
-                width: 130,
-                renderCell: (params) => `${Number(params.row.surplus_qty).toFixed(2)}`,
+                key: 'surplus_qty',
+                label: t('ingredientReports.surplus', 'Surplus Qty'),
+                sortable: true,
+                width: '1fr',
+                align: 'left' as const,
+                mono: true,
+                getValue: (row: any) => Number(row?.surplus_qty || 0),
+                renderCell: ({ value }: { value: unknown }) => `${Number(value).toFixed(2)}`,
+                total: { aggregation: 'sum' as const },
             },
             {
-                field: 'shortage_qty',
-                headerName: t('ingredientReports.shortage', 'Shortage Qty'),
-                width: 140,
-                renderCell: (params) => `${Number(params.row.shortage_qty).toFixed(2)}`,
+                key: 'shortage_qty',
+                label: t('ingredientReports.shortage', 'Shortage Qty'),
+                sortable: true,
+                width: '1fr',
+                align: 'left' as const,
+                mono: true,
+                getValue: (row: any) => Number(row?.shortage_qty || 0),
+                renderCell: ({ value }: { value: unknown }) => `${Number(value).toFixed(2)}`,
+                total: { aggregation: 'sum' as const },
             },
             {
-                field: 'end_qty',
-                headerName: t('ingredientReports.endQty') || 'End Qty',
-                width: 120,
-                renderCell: (params) => `${Number(params.row.end_qty).toFixed(2)}`,
+                key: 'end_qty',
+                label: t('ingredientReports.endQty') || 'End Qty',
+                sortable: true,
+                width: '1fr',
+                align: 'left' as const,
+                mono: true,
+                getValue: (row: any) => Number(row?.end_qty || 0),
+                renderCell: ({ value }: { value: unknown }) => `${Number(value).toFixed(2)}`,
+                total: { aggregation: 'sum' as const },
             },
-            // rasxod hoverda chiqshi kerak
-            // {
-            //     field: 'deduction_out_qty',
-            //     headerName: t('ingredientReports.deduction', 'Deduction Qty'),
-            //     width: 140,
-            //     renderCell: (params) => `${Number(params.row.deduction_out_qty).toFixed(2)}`,
-            // },
             {
-                field: 'cost_end',
-                headerName: t('ingredientReports.costEnd', 'Cost End'),
-                width: 130,
-                renderCell: (params) => {
-                    const amount = Number(params.row.cost_end) || 0;
+                key: 'cost_end',
+                label: t('ingredientReports.costEnd', 'Cost End'),
+                sortable: true,
+                width: '1fr',
+                align: 'left' as const,
+                mono: true,
+                getValue: (row: any) => Number(row?.cost_end || 0),
+                renderCell: ({ value }: { value: unknown }) => {
+                    const amount = Number(value ?? 0);
                     return `${amount.toLocaleString()} so'm`;
                 },
+                total: { aggregation: 'sum' as const },
             },
             {
-                field: 'end_amount',
-                headerName: t('ingredientReports.endCost') || 'End Cost',
-                width: 120,
-                renderCell: (params) => {
-                    const amount = Number(params.row.end_amount) || 0;
+                key: 'end_amount',
+                label: t('ingredientReports.endCost') || 'End Cost',
+                sortable: true,
+                width: '1fr',
+                align: 'left' as const,
+                mono: true,
+                getValue: (row: any) => Number(row?.end_amount || 0),
+                renderCell: ({ value }: { value: unknown }) => {
+                    const amount = Number(value ?? 0);
                     return `${amount.toLocaleString()} so'm`;
                 },
+                total: { aggregation: 'sum' as const },
             },
-            // detailda chiqshi kerak
-            // {
-            //     field: 'begin_amount',
-            //     headerName: t('ingredientReports.beginCost') || 'Begin Cost',
-            //     width: 120,
-            //     renderCell: (params) => {
-            //         const amount = Number(params.row.begin_amount) || 0;
-            //         return `${amount.toLocaleString()} so'm`;
-            //     },
-            // },
-            // {
-            //     field: 'invoice_in_amount',
-            //     headerName: t('ingredientReports.inAmount', 'In Amount'),
-            //     width: 140,
-            //     renderCell: (params) => {
-            //         const amount = Number(params.row.invoice_in_amount) || 0;
-            //         return `${amount.toLocaleString()} so'm`;
-            //     },
-            // },
-            // {
-            //     field: 'order_out_amount',
-            //     headerName: t('ingredientReports.outAmount', 'Out Amount'),
-            //     width: 140,
-            //     renderCell: (params) => {
-            //         const amount = Number(params.row.order_out_amount) || 0;
-            //         return `${amount.toLocaleString()} so'm`;
-            //     },
-            // },
-            // {
-            //     field: 'deduction_out_amount',
-            //     headerName: t('ingredientReports.deductionAmount', 'Deduction Amount'),
-            //     width: 170,
-            //     renderCell: (params) => {
-            //         const amount = Number(params.row.deduction_out_amount) || 0;
-            //         return `${amount.toLocaleString()} so'm`;
-            //     },
-            // },
-            // {
-            //     field: 'surplus_amount',
-            //     headerName: t('ingredientReports.surplusAmount', 'Surplus Amount'),
-            //     width: 160,
-            //     renderCell: (params) => {
-            //         const amount = Number(params.row.surplus_amount) || 0;
-            //         return `${amount.toLocaleString()} so'm`;
-            //     },
-            // },
-            // {
-            //     field: 'shortage_amount',
-            //     headerName: t('ingredientReports.shortageAmount', 'Shortage Amount'),
-            //     width: 170,
-            //     renderCell: (params) => {
-            //         const amount = Number(params.row.shortage_amount) || 0;
-            //         return `${amount.toLocaleString()} so'm`;
-            //     },
-            // },
+            {
+                key: 'actions',
+                label: t('actions'),
+                sortable: false,
+                filterable: false,
+                width: '0.7fr',
+                align: 'center' as const,
+                renderCell: ({ row }: { row: any }) => (
+                    <Box sx={{ display: 'flex', gap: 0.5 }}>
+                        <IconButton
+                            size="small"
+                            onClick={() => handleViewClick(row)}
+                            sx={{ color: 'text.secondary' }}
+                        >
+                            <Iconify icon="solar:eye-bold" width={18} />
+                        </IconButton>
+                        <IconButton
+                            size="small"
+                            onClick={() => handleOpenAmountsModal(row)}
+                            sx={{ color: 'text.secondary' }}
+                        >
+                            <Iconify icon="solar:chart-square-outline" width={18} />
+                        </IconButton>
+                    </Box>
+                ),
+            },
         ],
-        [t]
+        [t, handleViewClick, handleOpenAmountsModal]
     );
 
-    const handleFilterChange = useCallback((newFilters: Record<string, any>) => {
-        setFilters((prev) => ({
+    // Filter handlers adapted for invoice pattern
+    const handleStorageChange = useCallback(
+        (storageId: string) => {
+            setSelectedStorageId(storageId);
+            setDraftFilters((prev) => ({ ...prev, storage_id: storageId }));
+        },
+        []
+    );
+
+    const handleIngredientChange = useCallback(
+        (ingredientId: string) => {
+            setDraftFilters((prev) => ({ ...prev, ingredient_id: ingredientId }));
+        },
+        []
+    );
+
+    const handleResetFilters = useCallback(() => {
+        setDraftFilters(initialFilters);
+        setStartDate(dayjs().startOf('day'));
+        setEndDate(dayjs().endOf('day'));
+        setActiveRange('day');
+        if (storages && storages.length > 0) {
+            setSelectedStorageId(storages[0].id);
+            setDraftFilters((prev) => ({
+                ...initialFilters,
+                storage_id: storages[0].id,
+            }));
+        }
+    }, [storages]);
+
+    // Date picker values
+    const startDateValue = useMemo(() => toPickerDate(draftFilters.start), [draftFilters.start]);
+    const endDateValue = useMemo(() => toPickerDate(draftFilters.end), [draftFilters.end]);
+
+    // Apply date range changes
+    useEffect(() => {
+        setDraftFilters((prev) => ({
             ...prev,
-            ...newFilters,
+            start: startDate ? toUtcDayBoundary(startDate) : '',
+            end: endDate ? toUtcDayBoundary(endDate, true) : '',
             offset: 0,
         }));
-        setPaginationModel((prev) => ({
-            ...prev,
-            page: 0,
-        }));
-    }, []);
+        setPaginationModel((prev) => ({ ...prev, page: 0 }));
+    }, [startDate, endDate]);
 
-    // Auto-apply filters when date range or storage changes
-    useEffect(() => {
-        const newFilters: Record<string, string> = {};
-        if (startDate) {
-            newFilters.start = toUtcDayBoundary(startDate);
-        }
-        if (endDate) {
-            newFilters.end = toUtcDayBoundary(endDate, true);
-        }
-        if (selectedStorageId) {
-            newFilters.storage_id = selectedStorageId;
-        }
-        if (Object.keys(newFilters).length > 0) {
-            handleFilterChange(newFilters);
-        }
-    }, [startDate, endDate, selectedStorageId, handleFilterChange]);
-
+    // Apply range changes
     const applyRange = useCallback((range: 'day' | 'week' | 'month' | 'year') => {
         const today = dayjs();
         let nextStart = today.startOf('day');
@@ -376,33 +487,6 @@ export function IngredientReportsListView() {
         setStartDate(nextStart);
         setEndDate(nextEnd);
     }, []);
-
-    const handleResetFilters = useCallback(() => {
-        setFilters({
-            storage_id: '',
-            start: '',
-            end: '',
-            ingredient_id: '',
-            limit: 20,
-            offset: 0,
-        });
-        setPaginationModel((prev) => ({ ...prev, page: 0 }));
-    }, []);
-
-    const handleIngredientChange = useCallback(
-        (ingredientId: string) => {
-            handleFilterChange({ ingredient_id: ingredientId });
-        },
-        [handleFilterChange]
-    );
-
-    const handleStorageChange = useCallback(
-        (storageId: string) => {
-            setSelectedStorageId(storageId);
-            handleFilterChange({ storage_id: storageId });
-        },
-        [handleFilterChange]
-    );
 
     const renderFiltersContent = () => (
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
@@ -522,7 +606,7 @@ export function IngredientReportsListView() {
                 <TextField
                     select
                     label={t('ingredientReports.ingredient') || 'Ingredient'}
-                    value={filters.ingredient_id}
+                    value={draftFilters.ingredient_id}
                     onChange={(e) => handleIngredientChange(e.target.value)}
                     SelectProps={{ native: true }}
                     size="small"
@@ -756,86 +840,92 @@ export function IngredientReportsListView() {
 
     return (
         <>
-            {/* Table */}
-            <GenericTableView
-                data={reports}
-                loading={reportsLoading}
-                columns={columns}
-                idField="ingredient_id"
-                paginationMode="server"
-                rowCount={reportsPagination?.total ?? totals?.total_count ?? 0}
-                paginationModel={paginationModel}
-                onPaginationModelChange={(model) => {
-                    setPaginationModel(model);
-                    setFilters((prev) => ({
-                        ...prev,
-                        limit: model.pageSize,
-                        offset: model.page * model.pageSize,
-                    }));
+            <DashboardContent
+                sx={{
+                    flexGrow: 1,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    maxHeight: '100vh',
+                    '--layout-dashboard-content-pt': { xs: '0px', md: '0px' },
+                    '--layout-dashboard-content-pb': { xs: '0px', md: '0px' },
                 }}
-                pageSizeOptions={[10, 20, 50, 100]}
-                breadcrumbs={{
-                    heading: t('ingredientReports.title') || 'Ingredient Reports',
-                    links: [
-                        { name: t('app') || 'App', href: paths.menu.root },
-                        { name: t('overview.reports.title') || 'Reports', href: paths.menu.reports.root },
-                        {
-                            name: t('ingredientReports.title') || 'Ingredient Reports',
-                            href: paths.menu.reports.ingredients?.root || '#',
-                        },
-                    ],
-                }}
-                renderFilters={renderFiltersContent}
-                onRowClick={handleAmountRowClick}
-            />
+            >
 
-            {totals && (
-                <Box sx={{ px: { xs: 2, md: 5 }, pb: { xs: 2, md: 3 } }}>
-                    <Box
-                        sx={{
-                            display: 'grid',
-                            gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: 'repeat(2, 1fr)' },
-                            gap: 1,
-                        }}
-                    >
-                        <Box
-                            sx={{
-                                p: 1.5,
-                                borderRadius: 1,
-                                border: '1px solid',
-                                borderColor: 'divider',
-                                bgcolor: 'background.paper',
-                            }}
-                        >
-                            <Typography variant="caption" color="text.secondary">
-                                {t('ingredientReports.totalCount', 'Total count')}
-                            </Typography>
-                            <Typography variant="subtitle2">{totals.total_count ?? 0}</Typography>
-                        </Box>
-                        <Box
-                            sx={{
-                                p: 1.5,
-                                borderRadius: 1,
-                                border: '1px solid',
-                                borderColor: 'divider',
-                                bgcolor: 'background.paper',
-                            }}
-                        >
-                            <Typography variant="caption" color="text.secondary">
-                                {t('ingredientReports.totalOrderOutAmount', 'Total order out amount')}
-                            </Typography>
-                            <Typography variant="subtitle2">
-                                {Number(totals.total_order_out_amount || 0).toLocaleString()} so'm
-                            </Typography>
-                        </Box>
-                    </Box>
-                </Box>
-            )}
+                <DataTable<any>
+                    persistKey="reports-ingredient-reports"
+                    data={reports || []}
+                    getRowId={(row: any) => String(row?.ingredient_id)}
+                    columns={columns}
+                    searchValue={searchQuery}
+                    onSearchChange={(value: string) => {
+                        setSearchQuery(value);
+                        setPaginationModel((prev) => ({ ...prev, page: 0 }));
+                    }}
+                    page={paginationModel.page}
+                    rowsPerPage={paginationModel.pageSize}
+                    totalCount={rowCount}
+                    rowsPerPageOptions={[10, 20, 50, 100]}
+                    onPageChange={handlePaginationPageChange}
+                    onRowsPerPageChange={handlePaginationRowsPerPageChange}
+                    showPeriodPicker
+                    periodPickerProps={{
+                        startDate: startDate ? startDate.toDate() : null,
+                        endDate: endDate ? endDate.toDate() : null,
+                        onStartDateChange: (date: Date | null) => {
+                            setStartDate(date ? dayjs(date) : null);
+                            setActiveRange('day');
+                        },
+                        onEndDateChange: (date: Date | null) => {
+                            setEndDate(date ? dayjs(date) : null);
+                            setActiveRange('day');
+                        }
+                    }}
+                    showPeriodButtons
+                    periodButtonProps={{
+                        activePeriod: activeRange,
+                        onPeriodChange: (period: 'day' | 'week' | 'month' | 'year') => {
+                            applyRange(period);
+                        }
+                    }}
+                    defaultConfig={{
+                        order: ['ingredient_name', 'measurement', 'cost_start', 'begin_qty', 'invoice_in_qty', 'order_out_qty', 'surplus_qty', 'shortage_qty', 'end_qty', 'cost_end', 'end_amount', 'actions'],
+                        visibility: {
+                            ingredient_name: true,
+                            measurement: true,
+                            cost_start: true,
+                            begin_qty: true,
+                            invoice_in_qty: true,
+                            order_out_qty: true,
+                            surplus_qty: true,
+                            shortage_qty: true,
+                            end_qty: true,
+                            cost_end: true,
+                            end_amount: true,
+                            actions: true,
+                        },
+                        widths: {
+                            ingredient_name: '1.5fr',
+                            measurement: '0.8fr',
+                            cost_start: '1fr',
+                            begin_qty: '1fr',
+                            invoice_in_qty: '0.8fr',
+                            order_out_qty: '0.8fr',
+                            surplus_qty: '1fr',
+                            shortage_qty: '1fr',
+                            end_qty: '1fr',
+                            cost_end: '1fr',
+                            end_amount: '1fr',
+                            actions: '0.7fr',
+                        },
+                    }}
+                    onReset={handleResetFilters}
+                />
+            </DashboardContent>
 
             {/* Ingredient Report Detail Modal */}
             <GenericViewModal
                 isOpen={openDetailsModal}
-                onClose={() => setOpenDetailsModal(false)}
+                onClose={handleDetailsModalClose}
                 title={reportDetail ? reportDetail.ingredient_name : t('ingredientReports.title') || 'Ingredient Report'}
                 data={reportDetail}
                 loading={reportLoading}
@@ -843,28 +933,18 @@ export function IngredientReportsListView() {
                 maxWidth="lg"
                 position="right"
                 slideDirection="left"
-                paperSx={{
-                    width: { xs: '100%', sm: '30vw' },
-                    maxWidth: { xs: '100%', sm: '30vw' },
-                }}
             />
 
+            {/* Amounts Modal */}
             <GenericViewModal
                 isOpen={openAmountsModal}
-                onClose={() => {
-                    setOpenAmountsModal(false);
-                    setSelectedAmountsData(null);
-                }}
-                title={selectedAmountsData?.ingredient_name || (t('ingredientReports.title') || 'Ingredient Report')}
+                onClose={handleAmountsModalClose}
+                title={selectedAmountsData ? `${t('ingredientReports.amountDetails', 'Amount Details')} - ${selectedAmountsData.ingredient_name}` : t('ingredientReports.amountDetails', 'Amount Details')}
                 data={selectedAmountsData}
                 renderContent={renderAmountsDetailsContent}
-                maxWidth="sm"
+                maxWidth="md"
                 position="right"
                 slideDirection="left"
-                paperSx={{
-                    width: { xs: '100%', sm: '30vw' },
-                    maxWidth: { xs: '100%', sm: '30vw' },
-                }}
             />
         </>
     );

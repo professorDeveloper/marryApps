@@ -1,10 +1,10 @@
 import type { AxiosError } from 'axios';
 import type { Transfer, TransferBatchPayload, TransferBatchItemInput } from 'src/types/transfers';
 
-import { useCallback } from 'react';
 import { toast } from 'sonner';
+import { useCallback } from 'react';
 
-import { deleter, endpoints, fetcher, poster, putter } from 'src/lib/axios';
+import { poster, putter, deleter, fetcher, endpoints } from 'src/lib/axios';
 
 interface BackendResponse<T> {
   status: string;
@@ -23,6 +23,14 @@ interface BackendPagination {
 interface TransferListParams {
   limit?: number;
   offset?: number;
+  status?: string;
+  date_from?: string;
+  date_to?: string;
+  from_storage_id?: string;
+  to_storage_id?: string;
+  act_group_id?: string;
+  ingredient_id?: string;
+  expand?: string;
 }
 
 interface TransferListResult {
@@ -78,6 +86,14 @@ export function useTransfersAPI() {
           params: {
             limit: typeof params?.limit === 'number' ? params.limit : 20,
             offset: typeof params?.offset === 'number' ? params.offset : 0,
+            status: params?.status || undefined,
+            date_from: params?.date_from || undefined,
+            date_to: params?.date_to || undefined,
+            from_storage_id: params?.from_storage_id || undefined,
+            to_storage_id: params?.to_storage_id || undefined,
+            act_group_id: params?.act_group_id || undefined,
+            ingredient_id: params?.ingredient_id || undefined,
+            expand: params?.expand || undefined,
           },
         },
       ]);

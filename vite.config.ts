@@ -33,4 +33,11 @@ export default defineConfig({
   },
   server: { port: PORT, host: true },
   preview: { port: PORT, host: true },
+  // NOTE: production still emits a very large entry chunk because
+  // `src/routes/sections/menu.tsx` eagerly static-imports most dashboard screens.
+  // Use `yarn dev` for day-to-day work; reducing that file to `lazy()` imports
+  // is the real fix for fast `vite build` + `vite preview`.
+  build: {
+    chunkSizeWarningLimit: 3000,
+  },
 });

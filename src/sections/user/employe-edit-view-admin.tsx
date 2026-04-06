@@ -3,8 +3,9 @@ import type { IUserFormData } from 'src/types/user';
 import type { CardSection, GenericEditViewConfig } from 'src/components/generic-edit-view';
 
 import { useParams } from 'react-router';
-import { useTranslation } from 'react-i18next';
 import { useState, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
+
 import { Box } from '@mui/material';
 
 import { paths } from 'src/routes/paths';

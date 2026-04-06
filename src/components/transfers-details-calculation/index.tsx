@@ -1,24 +1,26 @@
-import { useMemo, useState, useEffect, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useRef, useMemo, useState, useEffect, useCallback } from 'react';
+
+import SearchIcon from '@mui/icons-material/Search';
+import DeleteIcon from '@mui/icons-material/Delete';
+import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
+import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import {
   Box,
   Paper,
-  Typography,
-  TextField,
   Button,
-  IconButton,
   Divider,
-  InputAdornment,
-  CircularProgress,
   Checkbox,
   useTheme,
+  TextField,
+  Typography,
+  IconButton,
+  InputAdornment,
+  CircularProgress,
 } from '@mui/material';
-import SearchIcon from '@mui/icons-material/Search';
-import ChevronRightIcon from '@mui/icons-material/ChevronRight';
-import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
-import DeleteIcon from '@mui/icons-material/Delete';
 
 import { fetcher, endpoints } from 'src/lib/axios';
+
 import { toast } from 'src/components/snackbar';
 
 interface Ingredient {

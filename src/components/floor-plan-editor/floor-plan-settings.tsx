@@ -1,19 +1,17 @@
 import { useState } from 'react';
+
+import { useTheme } from '@mui/material/styles';
 import {
-    Box,
+    Stack,
     Button,
     Dialog,
+    TextField,
+    Typography,
     DialogTitle,
     DialogContent,
     DialogActions,
-    Stack,
-    Typography,
-    TextField,
-    Paper,
-    Divider,
 } from '@mui/material';
-import { useTheme } from '@mui/material/styles';
-import { Iconify } from '../../iconify';
+
 
 interface FloorPlanSettingsProps {
     hallWidth?: number;

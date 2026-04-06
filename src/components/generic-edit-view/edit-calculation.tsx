@@ -1,34 +1,35 @@
-import React, { startTransition, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import React, { useRef, useMemo, useState, useEffect, startTransition, useDeferredValue } from 'react';
+
+import SearchIcon from '@mui/icons-material/Search';
+import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
+import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import {
     Box,
     Paper,
-    Typography,
-    TextField,
-    MenuItem,
-    Select,
-    Checkbox,
-    Button,
-    IconButton,
     Table,
+    Button,
+    Divider,
+    Checkbox,
+    TableRow,
+    useTheme,
+    TextField,
     TableBody,
     TableCell,
-    TableContainer,
     TableHead,
-    TableRow,
-    Divider,
+    Typography,
+    IconButton,
+    TableContainer,
     InputAdornment,
-    useTheme,
-    CircularProgress,
-    Alert
+    CircularProgress
 } from '@mui/material';
-import SearchIcon from '@mui/icons-material/Search';
-import ChevronRightIcon from '@mui/icons-material/ChevronRight';
-import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
-import { fetcher, endpoints, putter } from 'src/lib/axios';
+
+import { useGetMealCalculations, useCreateMealCalculation, useDeleteMealCalculation, useGetMealWithCalculations } from 'src/hooks/use-meals';
+import { useGetCompounds, useGetCompoundCalculations, useCreateCompoundCalculation, useDeleteCompoundCalculation, useGetCompoundWithCalculations } from 'src/hooks/use-compounds';
+
+import { putter, fetcher, endpoints } from 'src/lib/axios';
+
 import { toast } from 'src/components/snackbar';
-import { useGetCompounds, useGetCompoundCalculations, useCreateCompoundCalculation, useDeleteCompoundCalculation, useGetCompoundWithCalculations, type ICompoundCalculation } from 'src/hooks/use-compounds';
-import { useGetMealCalculations, useCreateMealCalculation, useDeleteMealCalculation, useGetMealWithCalculations, type IMealCalculation } from 'src/hooks/use-meals';
 
 // --- TYPES ---
 interface BackendResponse<T> {
@@ -184,13 +185,9 @@ const ProductCalculator = ({ compoundId, mealId, onEntityCreated, onCalculations
     }, [entityType, compoundWithCalculations, mealWithCalculations, compoundCalculations, mealCalculations]);
 
     // Split calculations into ingredient and compound based
-    const ingredientCalculations = useMemo(() => {
-        return calculations?.filter(calc => calc.ingredient_id && !calc.component_compound_id) || [];
-    }, [calculations]);
+    const ingredientCalculations = useMemo(() => calculations?.filter(calc => calc.ingredient_id && !calc.component_compound_id) || [], [calculations]);
 
-    const compoundCalculationsList = useMemo(() => {
-        return calculations?.filter(calc => calc.component_compound_id) || [];
-    }, [calculations]);
+    const compoundCalculationsList = useMemo(() => calculations?.filter(calc => calc.component_compound_id) || [], [calculations]);
 
     const calculationsLoading = entityType === 'compound'
         ? (compoundWithCalculationsLoading || compoundCalculationsLoading)
@@ -838,9 +835,7 @@ const ProductCalculator = ({ compoundId, mealId, onEntityCreated, onCalculations
     }, [sfTransferredIds, sfQuantities, compoundById, compoundCalculationById]);
 
     // Combined calculated rows for the total display
-    const allCalculatedRows = useMemo(() => {
-        return [...calculatedRows, ...sfCalculatedRows];
-    }, [calculatedRows, sfCalculatedRows]);
+    const allCalculatedRows = useMemo(() => [...calculatedRows, ...sfCalculatedRows], [calculatedRows, sfCalculatedRows]);
 
     // If there are no calculated rows, use backend values
     const shouldUseBackendValues = allCalculatedRows.length === 0;
@@ -858,12 +853,10 @@ const ProductCalculator = ({ compoundId, mealId, onEntityCreated, onCalculations
         : (backendProfitMargin !== undefined ? backendProfitMargin : '0%');
 
     // Filtered compounds for semi-finished tab (exclude current compound if editing)
-    const filteredCompounds = useMemo(() => {
-        return compounds.filter(c => {
+    const filteredCompounds = useMemo(() => compounds.filter(c => {
             if (compoundId && c.id === compoundId) return false;
             return c.name.toLowerCase().includes(deferredSfSearchTerm.trim().toLowerCase());
-        });
-    }, [compounds, compoundId, deferredSfSearchTerm]);
+        }), [compounds, compoundId, deferredSfSearchTerm]);
 
     const visibleIngredients = useMemo(
         () => filteredIngredients.slice(0, visibleIngredientCount),
@@ -1240,7 +1233,7 @@ const ProductCalculator = ({ compoundId, mealId, onEntityCreated, onCalculations
                                                 <Box sx={{ width: '5%', textAlign: 'center' }}>
                                                     <Checkbox
                                                         size="small"
-                                                        checked={true}
+                                                        checked
                                                         onChange={async () => {
                                                             // Remove from transferred IDs first
                                                             setTransferredIds(prevIds => prevIds.filter(tid => tid !== id));
@@ -1559,7 +1552,7 @@ const ProductCalculator = ({ compoundId, mealId, onEntityCreated, onCalculations
                                                 <Box sx={{ width: '5%', textAlign: 'center' }}>
                                                     <Checkbox
                                                         size="small"
-                                                        checked={true}
+                                                        checked
                                                         onChange={async () => {
                                                             // Remove from transferred IDs first
                                                             setSfTransferredIds(prevIds => prevIds.filter(tid => tid !== id));

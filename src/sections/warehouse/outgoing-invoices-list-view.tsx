@@ -1,4 +1,3 @@
-import type { GridColDef } from '@mui/x-data-grid';
 import type {
   OutgoingInvoice,
   OutgoingInvoiceFilters,
@@ -8,7 +7,6 @@ import type {
 import dayjs from 'dayjs';
 import { useTranslation } from 'react-i18next';
 import { useMemo, useState, useEffect, useCallback } from 'react';
-import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 
 import {
   Box,
@@ -16,11 +14,11 @@ import {
   Button,
   Dialog,
   TableRow,
-  TextField,
   TableHead,
   TableBody,
   TableCell,
   Typography,
+  IconButton,
   DialogTitle,
   DialogActions,
   DialogContent,
@@ -28,20 +26,19 @@ import {
 } from '@mui/material';
 
 import { paths } from 'src/routes/paths';
+import { useRouter } from 'src/routes/hooks';
 
 import { useStorageAPI } from 'src/hooks/use-storage-api';
 import { useDeductionsAPI } from 'src/hooks/use-deductions-api';
 import { useOutgoingInvoicesAPI } from 'src/hooks/use-outgoing-invoices-api';
 
-import { useRouter } from 'src/routes/hooks';
-
 import { fetcher, endpoints } from 'src/lib/axios';
+import { DashboardContent } from 'src/layouts/dashboard';
 
 import { Iconify } from 'src/components/iconify';
 import { GenericViewModal } from 'src/components/generic-view-view';
-import { GenericTableView } from 'src/components/generic-table-view';
-import { CustomGridActionsCellItem } from 'src/components/custom-data-grid';
-import { NoDataTooltip } from 'src/components/no-data-tooltip';
+
+import { DeductionUtilityDataTable } from 'src/sections/warehouse/deduction';
 
 const getTodayUtcBoundary = (endOfDay = false): string => {
   const now = dayjs();
@@ -59,6 +56,16 @@ const getTodayUtcBoundary = (endOfDay = false): string => {
   return date.toISOString().replace('.000Z', 'Z');
 };
 
+// Remove empty-string UUID params before sending to API (backend 500s on invalid UUID format)
+const cleanFilters = (filters: Record<string, unknown>): Record<string, unknown> =>
+  Object.fromEntries(
+    Object.entries(filters).filter(([, v]) => v !== '' && v !== undefined && v !== null)
+  );
+
+// Reverse lookup: find ID (key) from name (value) in a map
+const reverseMap = (map: Record<string, string>, name: string): string =>
+  Object.entries(map).find(([, v]) => v === name)?.[0] ?? '';
+
 const initialFilters: OutgoingInvoiceFilters = {
   start_date: getTodayUtcBoundary(),
   end_date: getTodayUtcBoundary(true),
@@ -67,6 +74,8 @@ const initialFilters: OutgoingInvoiceFilters = {
   status: '',
   limit: 1000,
   offset: 0,
+  sort_by: undefined,
+  sort_order: undefined,
 };
 
 interface Ingredient {
@@ -118,13 +127,33 @@ export function OutgoingInvoicesListView() {
 
   const [filters, setFilters] = useState<OutgoingInvoiceFilters>(initialFilters);
   const [draftFilters, setDraftFilters] = useState<OutgoingInvoiceFilters>(initialFilters);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [viewOpen, setViewOpen] = useState(false);
   const [viewLoading, setViewLoading] = useState(false);
   const [viewData, setViewData] = useState<OutgoingInvoiceBatchApiResponse | null>(null);
+  const [activePeriod, setActivePeriod] = useState<'day' | 'week' | 'month' | 'year'>('day');
 
   const isStoragesEmpty = Object.keys(storagesMap).length === 0;
   const isGroupsEmpty = Object.keys(groupsMap).length === 0;
+
+  // Debounce search query
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery);
+    }, 400);
+
+    return () => clearTimeout(timeout);
+  }, [searchQuery]);
+
+  // Update draftFilters with search
+  useEffect(() => {
+    setDraftFilters((prev) => ({
+      ...prev,
+      search: debouncedSearchQuery,
+    }));
+  }, [debouncedSearchQuery]);
 
   const openViewModal = useCallback(async (outgoingInvoiceId: string) => {
     setViewOpen(true);
@@ -174,7 +203,8 @@ export function OutgoingInvoicesListView() {
   const loadOutgoingInvoices = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await getOutgoingInvoices(filters);
+      const cleanedFilters = cleanFilters(filters as Record<string, unknown>);
+      const response = await getOutgoingInvoices(cleanedFilters as OutgoingInvoiceFilters);
       setRows(response.data);
       setTotal(response.total);
     } finally {
@@ -200,72 +230,105 @@ export function OutgoingInvoicesListView() {
 
   const handleResetFilters = useCallback(() => {
     setDraftFilters(initialFilters);
+    setSearchQuery('');
+    setActivePeriod('day');
   }, []);
 
-  const columns = useMemo<GridColDef[]>(
+  const columns = useMemo(
     () => [
       {
-        field: 'number',
-        headerName: t('deductions.number', 'Number'),
-        width: 90,
+        key: 'number',
+        label: t('deductions.number', 'Number'),
+        sortable: true,
+        width: '0.6fr',
+        align: 'left' as const,
+        getValue: (row: OutgoingInvoice) => row?.number ?? '',
       },
       {
-        field: 'date',
-        headerName: t('deductions.date', 'Date'),
-        width: 130,
-        renderCell: (params) => new Date(params.row.date).toLocaleDateString(),
+        key: 'date',
+        label: t('deductions.date', 'Date'),
+        sortable: true,
+        width: '1fr',
+        align: 'left' as const,
+        getValue: (row: OutgoingInvoice) =>
+          row?.date ? new Date(row.date).toLocaleDateString() : '',
       },
       {
-        field: 'storage_id',
-        headerName: t('deductions.storage', 'Storage'),
-        flex: 1,
-        minWidth: 170,
-        renderCell: (params) => storagesMap[params.row.storage_id] || params.row.storage_id,
+        key: 'storage_id',
+        label: t('deductions.storage', 'Storage'),
+        sortable: true,
+        filter: { type: 'multi' as const, options: Object.values(storagesMap) },
+        width: '1.2fr',
+        align: 'left' as const,
+        getValue: (row: OutgoingInvoice) =>
+          storagesMap[row.storage_id] || row.storage_id || '',
       },
       {
-        field: 'group_id',
-        headerName: t('outgoingInvoices.group', 'Group'),
-        flex: 1,
-        minWidth: 180,
-        renderCell: (params) => groupsMap[params.row.group_id] || params.row.group_id,
+        key: 'group_id',
+        label: t('outgoingInvoices.group', 'Group'),
+        sortable: true,
+        filter: { type: 'multi' as const, options: Object.values(groupsMap) },
+        width: '1.2fr',
+        align: 'left' as const,
+        getValue: (row: OutgoingInvoice) =>
+          groupsMap[row.group_id] || row.group_id || '',
       },
       {
-        field: 'status',
-        headerName: t('deductions.status', 'Status'),
-        width: 120,
+        key: 'status',
+        label: t('deductions.status', 'Status'),
+        sortable: true,
+        filter: { type: 'multi' as const, options: ['active', 'draft', 'cancelled'] },
+        width: '0.8fr',
+        align: 'left' as const,
+        getValue: (row: OutgoingInvoice) => row?.status || '',
       },
       {
-        field: 'total_amount',
-        headerName: t('outgoingInvoices.totalAmount', 'Total amount'),
-        width: 150,
-        renderCell: (params) => Number(params.row.total_amount || 0).toLocaleString(),
+        key: 'total_amount',
+        label: t('outgoingInvoices.totalAmount', 'Total amount'),
+        sortable: true,
+        width: '1fr',
+        align: 'left' as const,
+        mono: true,
+        getValue: (row: OutgoingInvoice) => Number(row?.total_amount || 0),
+        renderCell: ({ value }: { value: unknown }) =>
+          Number(value ?? 0).toLocaleString(),
+        total: { aggregation: 'sum' as const },
       },
       {
-        type: 'actions',
-        field: 'actions',
-        headerName: t('common.actions', 'Actions'),
-        width: 110,
+        key: 'actions',
+        label: t('common.actions', 'Actions'),
         sortable: false,
         filterable: false,
-        disableColumnMenu: true,
-        getActions: (params) => [
-          <CustomGridActionsCellItem
-            key="edit"
-            icon={<Iconify icon="solar:pen-bold" />}
-            label={t('common.edit', 'Edit')}
-            onClick={() => router.push(paths.warehouse.outgoingInvoices.edit(String(params.row.id)))}
-          />,
-          <CustomGridActionsCellItem
-            key="delete"
-            icon={<Iconify icon="solar:trash-bin-trash-bold" />}
-            label={t('common.delete', 'Delete')}
-            style={{ color: '#FB6633' }}
-            onClick={() => setDeleteId(params.row.id)}
-          />,
-        ],
+        width: '0.7fr',
+        align: 'center' as const,
+        renderCell: ({ row }: { row: OutgoingInvoice }) => (
+          <Box sx={{ display: 'flex', gap: 0.5 }}>
+            <IconButton
+              size="small"
+              onClick={() => openViewModal(String(row.id))}
+              sx={{ color: 'text.secondary' }}
+            >
+              <Iconify icon="solar:eye-bold" width={18} />
+            </IconButton>
+            <IconButton
+              size="small"
+              onClick={() => router.push(paths.warehouse.outgoingInvoices.edit(String(row.id)))}
+              sx={{ color: 'text.secondary' }}
+            >
+              <Iconify icon="solar:pen-bold" width={18} />
+            </IconButton>
+            <IconButton
+              size="small"
+              onClick={() => setDeleteId(row.id)}
+              sx={{ color: 'error.main' }}
+            >
+              <Iconify icon="solar:trash-bin-trash-bold" width={18} />
+            </IconButton>
+          </Box>
+        ),
       },
     ],
-    [storagesMap, groupsMap, t, router]
+    [storagesMap, groupsMap, t, router, openViewModal]
   );
 
   const startDateValue = useMemo(() => toPickerDate(draftFilters.start_date), [draftFilters.start_date]);
@@ -273,166 +336,134 @@ export function OutgoingInvoicesListView() {
 
   return (
     <>
-      <GenericTableView
-        data={rows}
-        columns={columns}
-        loading={loading}
-        onRowClick={(rowId) => openViewModal(String(rowId))}
-        renderFilters={() => (
-          <Box
-            sx={{
-              display: 'grid',
-              gridTemplateColumns: {
-                xs: '1fr',
-                sm: 'repeat(2, minmax(220px, 1fr))',
-                md: 'repeat(3, minmax(220px, 1fr))',
-                lg: 'repeat(4, minmax(220px, 1fr))',
-              },
-              gap: 2,
-              alignItems: 'end',
-              '& .MuiFormControl-root, & .MuiTextField-root': {
-                minWidth: 220,
-                width: '100%',
-              },
-            }}
-          >
-            <DatePicker
-              label={t('ingredientReports.startDate', 'Start date')}
-              value={startDateValue}
-              onChange={(value) =>
-                setDraftFilters((prev) => ({
-                  ...prev,
-                  start_date: value ? toUtcDayBoundary(value) : '',
-                }))
+      <DashboardContent
+        sx={{
+          flexGrow: 1,
+          display: 'flex',
+          flexDirection: 'column',
+          maxHeight: '100vh',
+          '--layout-dashboard-content-pt': { xs: '0px', md: '0px' },
+          '--layout-dashboard-content-pb': { xs: '0px', md: '0px' },
+        }}
+      >
+     
+        <DeductionUtilityDataTable
+          persistKey="warehouse-outgoing-invoices"
+          data={rows}
+          getRowId={(row: OutgoingInvoice) => String(row?.id)}
+          columns={columns}
+          searchValue={searchQuery}
+          onSearchChange={(value: string) => {
+            setSearchQuery(value);
+          }}
+          onSortChange={(sort) => {
+            setDraftFilters((prev) => ({
+              ...prev,
+              sort_by: sort.key ?? undefined,
+              sort_order: (sort.dir as 'asc' | 'desc' | undefined) ?? undefined,
+              offset: 0,
+            }));
+          }}
+          onFiltersChange={(fs: Record<string, any>) => {
+            const storageName = (fs.storage_id?.value as string[])?.[0];
+            const groupName = (fs.group_id?.value as string[])?.[0];
+            setDraftFilters((prev) => ({
+              ...prev,
+              storage_id: storageName ? reverseMap(storagesMap, storageName) : '',
+              group_id: groupName ? reverseMap(groupsMap, groupName) : '',
+              offset: 0,
+            }));
+          }}
+          showPeriodPicker
+          periodPickerProps={{
+            startDate: startDateValue ? startDateValue.toDate() : null,
+            endDate: endDateValue ? endDateValue.toDate() : null,
+            onStartDateChange: (date: Date | null) => {
+              setDraftFilters((prev) => ({
+                ...prev,
+                start_date: date ? toUtcDayBoundary(dayjs(date)) : '',
+              }));
+            },
+            onEndDateChange: (date: Date | null) => {
+              setDraftFilters((prev) => ({
+                ...prev,
+                end_date: date ? toUtcDayBoundary(dayjs(date), true) : '',
+              }));
+            }
+          }}
+          showPeriodButtons
+          periodButtonProps={{
+            activePeriod,
+            onPeriodChange: (period: 'day' | 'week' | 'month' | 'year') => {
+              setActivePeriod(period);
+              const now = new Date();
+              let startDate = '';
+              let endDate = '';
+
+              switch (period) {
+                case 'day':
+                  startDate = toUtcDayBoundary(dayjs());
+                  endDate = toUtcDayBoundary(dayjs(), true);
+                  break;
+                case 'week':
+                  const weekStart = new Date(now);
+                  weekStart.setDate(now.getDate() - now.getDay());
+                  startDate = toUtcDayBoundary(dayjs(weekStart));
+                  endDate = toUtcDayBoundary(dayjs(), true);
+                  break;
+                case 'month':
+                  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+                  startDate = toUtcDayBoundary(dayjs(monthStart));
+                  endDate = toUtcDayBoundary(dayjs(), true);
+                  break;
+                case 'year':
+                  const yearStart = new Date(now.getFullYear(), 0, 1);
+                  startDate = toUtcDayBoundary(dayjs(yearStart));
+                  endDate = toUtcDayBoundary(dayjs(), true);
+                  break;
               }
-              format="DD.MM.YYYY"
-              slotProps={{
-                textField: {
-                  fullWidth: true,
-                  size: 'small',
-                  inputProps: { readOnly: true },
-                  sx: { cursor: 'pointer' },
-                },
-              }}
-            />
-            <DatePicker
-              label={t('ingredientReports.endDate', 'End date')}
-              value={endDateValue}
-              onChange={(value) =>
-                setDraftFilters((prev) => ({
-                  ...prev,
-                  end_date: value ? toUtcDayBoundary(value, true) : '',
-                }))
-              }
-              format="DD.MM.YYYY"
-              slotProps={{
-                textField: {
-                  fullWidth: true,
-                  size: 'small',
-                  inputProps: { readOnly: true },
-                  sx: { cursor: 'pointer' },
-                },
-              }}
-            />
-            <NoDataTooltip enabled={isStoragesEmpty} title={noDataText}>
-              <TextField
-                select
-                size="small"
-                label={t('deductions.storage', 'Storage')}
-                SelectProps={{ native: true }}
-                value={draftFilters.storage_id || ''}
-                onChange={(e) =>
-                  setDraftFilters((prev) => ({
-                    ...prev,
-                    storage_id: e.target.value,
-                  }))
-                }
-                InputLabelProps={{ shrink: true }}
-                disabled={isStoragesEmpty}
-              >
-                <option value="" disabled hidden>
-                  {t('ingredientReports.all', 'All')}
-                </option>
-                {Object.entries(storagesMap).map(([id, name]) => (
-                  <option key={id} value={id}>
-                    {name}
-                  </option>
-                ))}
-              </TextField>
-            </NoDataTooltip>
-            <NoDataTooltip enabled={isGroupsEmpty} title={noDataText}>
-              <TextField
-                select
-                size="small"
-                label={t('outgoingInvoices.group', 'Group')}
-                SelectProps={{ native: true }}
-                value={draftFilters.group_id || ''}
-                onChange={(e) =>
-                  setDraftFilters((prev) => ({
-                    ...prev,
-                    group_id: e.target.value,
-                  }))
-                }
-                InputLabelProps={{ shrink: true }}
-                disabled={isGroupsEmpty}
-              >
-                <option value="" disabled hidden>
-                  {t('ingredientReports.all', 'All')}
-                </option>
-                {Object.entries(groupsMap).map(([id, name]) => (
-                  <option key={id} value={id}>
-                    {name}
-                  </option>
-                ))}
-              </TextField>
-            </NoDataTooltip>
-            <TextField
-              select
+
+              setDraftFilters((prev) => ({
+                ...prev,
+                start_date: startDate,
+                end_date: endDate,
+              }));
+            }
+          }}
+          defaultConfig={{
+            order: ['number', 'date', 'storage_id', 'group_id', 'status', 'total_amount', 'actions'],
+            visibility: {
+              number: true,
+              date: true,
+              storage_id: true,
+              group_id: true,
+              status: true,
+              total_amount: true,
+              actions: true,
+            },
+            widths: {
+              number: '0.6fr',
+              date: '1fr',
+              storage_id: '1.2fr',
+              group_id: '1.2fr',
+              status: '0.8fr',
+              total_amount: '1fr',
+              actions: '0.7fr',
+            },
+          }}
+          onReset={handleResetFilters}
+          headerActions={
+            <Button
+              variant="contained"
+              startIcon={<Iconify icon="mingcute:add-line" />}
+              href={paths.warehouse.outgoingInvoices.new}
               size="small"
-              label={t('deductions.status', 'Status')}
-              SelectProps={{ native: true }}
-              value={draftFilters.status || ''}
-              onChange={(e) =>
-                setDraftFilters((prev) => ({
-                  ...prev,
-                  status: e.target.value,
-                }))
-              }
-              InputLabelProps={{ shrink: true }}
             >
-              <option value="" disabled hidden>
-                {t('ingredientReports.all', 'All')}
-              </option>
-              <option value="active">{t('deductions.active', 'Active')}</option>
-              <option value="draft">{t('common.draft', 'Draft')}</option>
-              <option value="cancelled">{t('deductions.canceled', 'Canceled')}</option>
-            </TextField>
-            <Box sx={{ display: 'flex', gap: 1 }}>
-              <Button
-                variant="outlined"
-                size="small"
-                startIcon={<Iconify icon="solar:restart-bold" />}
-                onClick={handleResetFilters}
-                sx={{ flex: 1 }}
-              >
-                {t('ingredientReports.reset', 'Reset')}
-              </Button>
-            </Box>
-          </Box>
-        )}
-        breadcrumbs={{
-          heading: t('overview.warehouse.expensesInvoices', 'Expenses invoices'),
-          links: [
-            { name: t('dashboard', 'Dashboard'), href: paths.dashboard.root },
-            { name: t('overview.warehouse.title', 'Warehouse'), href: paths.warehouse.root },
-            { name: t('overview.warehouse.expensesInvoices', 'Expenses invoices') },
-          ],
-        }}
-        addButton={{
-          label: t('common.add', 'Add'),
-          href: paths.warehouse.outgoingInvoices.new,
-        }}
-      />
+              {t('common.add', 'Add')}
+            </Button>
+          }
+        />
+      </DashboardContent>
 
       <Dialog open={!!deleteId} onClose={() => setDeleteId(null)} maxWidth="xs" fullWidth>
         <DialogTitle>{t('common.deleteConfirmTitle', 'Confirm delete')}</DialogTitle>

@@ -1,4 +1,9 @@
 ﻿{
+  "units": {
+    "kg": "kg",
+    "piece": "dona",
+    "l": "l"
+  },
   "app": "Menyu",
   "job": "Ish",
   "user": "Foydalanuvchi",
@@ -335,7 +340,7 @@
     "menu": {
       "title": "Menyu",
       "storage": "Ombor",
-      "sections": "Bo'limlar",
+      "departments": "Bo'limlar",
       "categories": "Kategoriyalar",
       "semifinished": "Yarim tayyor mahsulotlar",
       "meals": "Taomlar"
@@ -543,7 +548,10 @@
         "completed": "Tamomlandi",
         "cancelled": "Bekor qilindi"
       },
-      "supplierNameRequired": "Yetkazib beruvchi nomi kiritilishi shart"
+      "supplierNameRequired": "Yetkazib beruvchi nomi kiritilishi shart",
+      "supplier": "Yetkazib beruvchi",
+      "storage": "Ombor",
+      "information": "Umumiy ma'lumotlar"
     },
     "invoiceDetails": {
       "title": "Kirim ma'lumotlari",
@@ -565,6 +573,8 @@
       "addNew": "Yangi qo'shish",
       "editEntry": "Tahrirlash",
       "selectSupplier": "Yetkazib beruvchini tanlang",
+      "selectStorage": "Omborni tanlang",
+      "generalInfo": "Umumiy ma'lumotlar",
       "selectProduct": "Mahsulotni tanlang",
       "quantityRequired": "Miqdor 0 dan katta bo'lishi kerak",
       "priceRequired": "Narx 0 dan katta bo'lishi kerak",
@@ -590,6 +600,16 @@
       "selectIngredientsFirst": "Chap paneldan mahsulotlarni tanlang va Qo'shish tugmasini bosing",
       "summary": "Kirim Xulosasi",
       "batchOperations": "Batch Operatsiyalari",
+      "totalQty": "Jami Miqdor",
+      "totalAmount": "Jami Summa",
+      "status": "Holati",
+      "discard": "Bekor qilish",
+      "products": "Mahsulotlar",
+      "selectAll": "Hammasini tanlang",
+      "deselectAll": "Tanlovni o'chirish",
+      "removeLine": "Qatorni o'chirish",
+      "removeBatch": "Tanlanganlarni o'chirish",
+      "addSelected": "Tanlanganlarni qo'shish",
       "root": "Kirim ma'lumotlari"
     },
     "cancel": "Bekor qilish",
@@ -1174,7 +1194,9 @@
   },
   "shipments": {
     "create": "Yetkazib berish yaratish",
+    "createNew": "Yangi yetkazib berish yaratish",
     "view": "Yetkazib berishni ko'rish",
+    "edit": "Yetkazib berishni tahrirlash",
     "shipment": "Yetkazib berish",
     "items": "Elementlar",
     "totals": "Jami",
@@ -1186,6 +1208,20 @@
     "stockBefore": "Oldingi qoldiq",
     "stockAfter": "Keyingi qoldiq",
     "notFound": "Yetkazib berish topilmadi",
+    "details": "Yetkazib berish tafsilotlari",
+    "supplier": "Tamonini etkazib beruvchi",
+    "selectSupplier": "Tamonini etkazib beruvchini tanlang",
+    "enterDescription": "Tavsifni kiriting...",
+    "new": "Yangi",
+    "noItems": "Elementlar yo'q",
+    "deleteItemConfirm": "Siz bu elementni o'chirib tashlamoqchimisiz?",
+    "created": "Yetkazib berish muvaffaqiyatli yaratildi",
+    "updated": "Yetkazib berish muvaffaqiyatli yangilandi",
+    "confirmed": "Yetkazib berish muvaffaqiyatli tasdiqlandi",
+    "cancelled": "Yetkazib berish muvaffaqiyatli bekor qilindi",
+    "deleted": "Yetkazib berish muvaffaqiyatli o'chirildi",
+    "itemDeleted": "Element muvaffaqiyatli o'chirildi",
+    "date": "Sana",
     "messages": {
       "fetchFailed": "Jo‘natmalar yuklanmadi",
       "createFailed": "Yetkazib berishni yaratib bo'lmadi",
@@ -1240,6 +1276,8 @@
   },
   "separationActs": {
     "create": "Ajratish aktini yaratish",
+    "createNew": "Yangi ajratish akti yaratish",
+    "edit": "Ajratish aktini tahrirlash",
     "view": "Ajratish aktini ko'rish",
     "act": "Ajratish akti",
     "items": "Elementlar",
@@ -1247,11 +1285,24 @@
     "total": "Jami",
     "totalAmount": "Umumiy summa",
     "group": "Guruh",
+    "details": "Ajratish akti tafsilotlari",
     "sourceIngredient": "Asosiy ingredient",
+    "selectSourceIngredient": "Asosiy ingredientni tanlang",
     "sourceQuantity": "Asosiy miqdor",
     "sourceIngredientRequired": "Iltimos, asosiy ingredientni tanlang",
     "sourceQuantityRequired": "Asosiy miqdor 0 dan katta bo'lishi kerak",
     "notFound": "Ajratish akti topilmadi",
+    "new": "Yangi",
+    "selectGroup": "Guruhni tanlang",
+    "enterDescription": "Tavsifni kiriting...",
+    "noItems": "Elementlar yo'q",
+    "deleteItemConfirm": "Siz bu elementni o'chirib tashlamoqchimisiz?",
+    "created": "Ajratish akti muvaffaqiyatli yaratildi",
+    "updated": "Ajratish akti muvaffaqiyatli yangilandi",
+    "confirmed": "Ajratish akti muvaffaqiyatli tasdiqlandi",
+    "cancelled": "Ajratish akti muvaffaqiyatli bekor qilindi",
+    "deleted": "Ajratish akti muvaffaqiyatli o'chirildi",
+    "itemDeleted": "Element muvaffaqiyatli o'chirildi",
     "messages": {
       "fetchFailed": "Ajratish aktlari yuklanmadi",
       "createFailed": "Ajratish aktini yaratib bo'lmadi",
@@ -1270,6 +1321,30 @@
       "updated": "Ajratish akti muvaffaqiyatli yangilandi",
       "itemsAdded": "Ajratish akti elementlari muvaffaqiyatli qo'shildi"
     }
+  },
+  "transfers": {
+    "title": "O'tkazish",
+    "details": "O'tkazish tafsilotlari",
+    "createNew": "Yangi o'tkazish yaratish",
+    "edit": "O'tkazishni tahrirlash",
+    "create": "O'tkazish yaratish",
+    "new": "Yangi",
+    "fromBranch": "Shoxdan",
+    "selectFromBranch": "Shoxni jo'natuvchi tanlang",
+    "toBranch": "Shoxga",
+    "selectToBranch": "Shoxni qabul qiluvchi tanlang",
+    "fromStorage": "Ombordan",
+    "selectFromStorage": "Omborni jo'natuvchi tanlang",
+    "toStorage": "Omborga",
+    "selectToStorage": "Omborni qabul qiluvchi tanlang",
+    "enterDescription": "Tavsifni kiriting...",
+    "branchRequired": "Iltimos, ikkala shoxni tanlang",
+    "selectGroup": "Guruhni tanlang",
+    "active": "Faol",
+    "draft": "Qoralasmasi",
+    "deleted": "O'chirilgan",
+    "created": "O'tkazish muvaffaqiyatli yaratildi",
+    "updated": "O'tkazish muvaffaqiyatli yangilandi"
   }
 }
 

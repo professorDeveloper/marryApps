@@ -1,19 +1,24 @@
+// import { useTranslation } from 'node_modules/react-i18next';
+import type { FC } from 'react';
+
+import { memo } from 'react';
+import { useFormState } from 'react-hook-form';
+import { useTranslation } from 'react-i18next';
+
+import Stack from '@mui/material/Stack';
 // FormActionButtons.tsx — ALOHIDA FAYL
 import Button from '@mui/lab/LoadingButton';
-import Stack from '@mui/material/Stack';
-// import { useTranslation } from 'node_modules/react-i18next';
-import { FC } from 'react';
-import { useFormState } from 'react-hook-form';
+
 import { useRouter } from 'src/routes/hooks/use-router';
+
 import { Iconify } from '../iconify';
-import { useTranslation } from 'react-i18next';
 
 export const FormActionButtons: FC<{
     isNew: boolean;
     isLoading: boolean;
     showDeleteButton?: boolean;
     onDelete: () => void;
-}> = ({ isNew, isLoading, showDeleteButton, onDelete }) => {
+}> = memo(({ isNew, isLoading, showDeleteButton, onDelete }) => {
     const { t } = useTranslation('menu');
     const router = useRouter();
     const { isSubmitting } = useFormState(); // ✅ Faqat shu komponent re-render bo'ladi
@@ -44,4 +49,4 @@ export const FormActionButtons: FC<{
             </Button>
         </Stack>
     );
-};
+});

@@ -1,9 +1,10 @@
-import { useCallback, useMemo } from 'react';
 import type { TFunction } from 'i18next';
 import type { IIngredientGroupFormData } from 'src/types/ingredient-group';
 import type { CardSection, GenericEditViewConfig } from 'src/components/generic-edit-view';
 
+import { useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
+
 import { Box } from '@mui/material';
 
 import { paths } from 'src/routes/paths';
@@ -142,7 +143,7 @@ export function IngredientGroupEditView({ isNew = false }: IngredientGroupEditVi
 
         await new Promise((resolve) => setTimeout(resolve, 500));
 
-        router.push(paths.warehouse.ingredients_group.root);
+        router.push(paths.menu.ingredients_group.root);
       } catch (err) {
         console.error('Error saving ingredient group:', err);
         throw err;
@@ -156,7 +157,7 @@ export function IngredientGroupEditView({ isNew = false }: IngredientGroupEditVi
       if (id) {
         await deleteIngredientGroup(id);
         await new Promise((resolve) => setTimeout(resolve, 500));
-        router.push(paths.warehouse.ingredients_group.root);
+        router.push(paths.menu.ingredients_group.root);
       }
     } catch (err) {
       console.error('Error deleting ingredient group:', err);
@@ -171,7 +172,7 @@ export function IngredientGroupEditView({ isNew = false }: IngredientGroupEditVi
       showBreadcrumbs: false,
       breadcrumbs: [
         { name: t('app'), href: paths.menu.root },
-        { name: t('ingredientGroups.title'), href: paths.warehouse.ingredients_group.root },
+        { name: t('ingredientGroups.title'), href: paths.menu.ingredients_group.root },
         { name: isNew ? t('ingredientGroups.new') : t('ingredientGroups.edit'), href: '' },
       ],
       leftSidecard: IMAGE_SECTION_T,

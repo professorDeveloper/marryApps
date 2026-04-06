@@ -267,7 +267,7 @@ export function useGetDepartment(departmentId: string) {
     };
 
     // Apply translation if available
-    let enrichedDept: any = { ...dept };
+    const enrichedDept: any = { ...dept };
     if (dept.name_i18n) {
       const translation = translations.find((t) => t.id === dept.name_i18n);
       if (translation) {
@@ -674,7 +674,7 @@ export function useGetStorage(storageId: string) {
     };
 
     // Build response with translation data for form editing
-    let responseData: any = {
+    const responseData: any = {
       ...storageData,
     };
 

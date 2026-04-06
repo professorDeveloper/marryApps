@@ -6,6 +6,9 @@ import type { FC } from 'react';
 import type { FieldConfig } from './types';
 
 import dayjs from 'dayjs';
+import { memo, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
+
 import Box from '@mui/material/Box';
 import Select from '@mui/material/Select';
 import Switch from '@mui/material/Switch';
@@ -14,12 +17,13 @@ import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import InputLabel from '@mui/material/InputLabel';
 import FormControl from '@mui/material/FormControl';
+import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import CheckRoundedIcon from '@mui/icons-material/CheckRounded';
-import { DatePicker } from '@mui/x-date-pickers/DatePicker';
-import { ImageUploadField } from './image-upload-field';
+
 import { NoDataTooltip } from 'src/components/no-data-tooltip';
-import { useTranslation } from 'react-i18next';
+
+import { ImageUploadField } from './image-upload-field';
 
 interface EditFormFieldProps {
     field: FieldConfig;
@@ -27,10 +31,11 @@ interface EditFormFieldProps {
     onChange: (value: any) => void;
 }
 
-export const EditFormField: FC<EditFormFieldProps> = ({ field, value, onChange }) => {
+const EditFormFieldComponent: FC<EditFormFieldProps> = ({ field, value, onChange }) => {
     const { t } = useTranslation('menu');
     const noDataText = t('noDataAvailable', "Tushunarli ma'lumot mavjud emas");
-    const handleChange = (e: any) => {
+
+    const handleChange = useCallback((e: any) => {
         const val = e.target.value;
         if (field.type === 'number') {
             // Convert to number, handle empty input
@@ -39,7 +44,7 @@ export const EditFormField: FC<EditFormFieldProps> = ({ field, value, onChange }
         } else {
             onChange(val);
         }
-    };
+    }, [field.type, onChange]);
 
     // Text fields (text, email, url, number, textarea)
     if (['text', 'email', 'url', 'number', 'textarea'].includes(field.type)) {
@@ -239,3 +244,5 @@ export const EditFormField: FC<EditFormFieldProps> = ({ field, value, onChange }
 
     return null;
 };
+
+export const EditFormField = memo(EditFormFieldComponent);

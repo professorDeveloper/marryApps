@@ -1,6 +1,8 @@
 import { useState, useCallback } from 'react';
+
+import { getObjectName, getFullImageUrl } from 'src/utils/image-url';
+
 import { uploadImage, getImageUrl } from 'src/lib/image-upload';
-import { getFullImageUrl, getObjectName } from 'src/utils/image-url';
 
 // ============================================================================
 // USE IMAGE UPLOAD HOOK

@@ -1,29 +1,31 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useMemo, useState, useEffect } from 'react';
+
+import SearchIcon from '@mui/icons-material/Search';
+import DeleteIcon from '@mui/icons-material/Delete';
+import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import {
     Box,
     Paper,
-    Typography,
-    TextField,
-    Checkbox,
-    Button,
-    IconButton,
     Table,
+    Button,
+    Divider,
+    Checkbox,
+    TableRow,
+    useTheme,
+    TextField,
     TableBody,
     TableCell,
-    TableContainer,
     TableHead,
-    TableRow,
-    Divider,
+    Typography,
+    IconButton,
+    TableContainer,
     InputAdornment,
-    useTheme,
     CircularProgress,
 } from '@mui/material';
-import SearchIcon from '@mui/icons-material/Search';
-import ChevronRightIcon from '@mui/icons-material/ChevronRight';
-import DeleteIcon from '@mui/icons-material/Delete';
 
 import { fetcher, endpoints } from 'src/lib/axios';
+
 import { toast } from 'src/components/snackbar';
 
 // ============================================================================
@@ -55,12 +57,10 @@ interface BackendResponse<T> {
 // UTILITIES
 // ============================================================================
 
-const formatPrice = (price: number) => {
-    return new Intl.NumberFormat('uz-UZ', {
+const formatPrice = (price: number) => new Intl.NumberFormat('uz-UZ', {
         minimumFractionDigits: 0,
         maximumFractionDigits: 0,
     }).format(price);
-};
 
 // ============================================================================
 // COMPONENT

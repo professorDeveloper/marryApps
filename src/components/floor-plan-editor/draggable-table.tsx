@@ -2,12 +2,15 @@
  * Draggable Table Component for Floor Plan Editor with Dark Mode Support
  */
 
-import { useRef, useState } from 'react';
-import { Group, Rect, Text } from 'react-konva';
 import type Konva from 'konva';
-import { useTheme } from '@mui/material/styles';
 import type { Table } from './types';
-import { checkCollision, snapRotation, snapToGrid, clampPosition, findCollidingTable } from './utils';
+
+import { useRef, useState } from 'react';
+import { Rect, Text, Group } from 'react-konva';
+
+import { useTheme } from '@mui/material/styles';
+
+import { snapToGrid, snapRotation, clampPosition, findCollidingTable } from './utils';
 
 interface DraggableTableProps {
     table: Table;
@@ -120,15 +123,14 @@ export const DraggableTable = ({
 
 
     return (
-        <>
-            <Group
+        <Group
                 ref={groupRef}
                 x={table.x}
                 y={table.y}
                 rotation={table.rotation}
                 id={`table-${table.id}`}
                 name="table-group"
-                draggable={true}
+                draggable
                 onDragStart={handleDragStart}
                 onDragEnd={handleDragEnd}
                 onMouseEnter={() => {
@@ -154,7 +156,7 @@ export const DraggableTable = ({
                 <Rect
                     width={table.width}
                     height={table.height}
-                    fill={'#f0f0f0'}
+                    fill="#f0f0f0"
                     stroke={borderColor}
                     strokeWidth={isSelected ? 2 : 1}
                     cornerRadius={4}
@@ -191,6 +193,5 @@ export const DraggableTable = ({
                     verticalAlign="middle"
                 />
             </Group>
-        </>
     );
 };

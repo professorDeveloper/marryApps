@@ -1,188 +1,65 @@
-import type { GridColDef, GridPaginationModel } from '@mui/x-data-grid';
+import type { GridPaginationModel } from '@mui/x-data-grid';
 import type { IIngredientItem } from 'src/types/ingredients';
+
 import { useTranslation } from 'react-i18next';
-import { useMemo, useState, useCallback, useEffect } from 'react';
-import { useTheme } from '@mui/material/styles';
+import { useMemo, useState, useEffect, useCallback } from 'react';
+
 import {
-    Avatar,
+    Box,
     Button,
     Dialog,
+    Typography,
+    IconButton,
     DialogTitle,
+    ListItemText,
     DialogActions,
     DialogContent,
-    Box,
-    ListItemText,
-    Typography,
 } from '@mui/material';
+
 import { paths } from 'src/routes/paths';
 import { useRouter } from 'src/routes/hooks';
+
+import { DashboardContent } from 'src/layouts/dashboard';
 import { useGetIngredients, useDeleteIngredient } from 'src/actions/ingredients';
+
 import { toast } from 'src/components/snackbar';
 import { Iconify } from 'src/components/iconify';
-import { GenericTableView } from 'src/components/generic-table-view';
-import { CustomGridActionsCellItem } from 'src/components/custom-data-grid';
 import { GenericViewModal } from 'src/components/generic-view-view';
-import { getFullImageUrl } from 'src/utils/image-url';
-import { getInitials, getAvatarColor } from 'src/utils/avatar';
 
-/**
- * Ingredient name renderer with avatar
- */
-function RenderCellIngredientName({ params }: { params: any }) {
-    const { row } = params;
+import { DeductionUtilityDataTable } from 'src/sections/warehouse/deduction';
+
+function RenderCellIngredientName({ row }: { row: any }) {
     const name = row.name || '-';
-    const [imageUrl, setImageUrl] = useState<string | null>(null);
-    const [loading, setLoading] = useState(false);
-
-    useEffect(() => {
-        if (row.picture_url) {
-            const loadImage = async () => {
-                try {
-                    setLoading(true);
-                    const url = await getFullImageUrl(row.picture_url);
-                    setImageUrl(url);
-                } catch (error) {
-                    console.error('Failed to load image:', error);
-                    setImageUrl(null);
-                } finally {
-                    setLoading(false);
-                }
-            };
-            loadImage();
-        } else {
-            setImageUrl(null);
-        }
-    }, [row.picture_url]);
-
-    const initials = getInitials(name);
-    const bgColor = imageUrl ? undefined : (row.color_code || getAvatarColor(name));
 
     return (
         <Box
             sx={{
                 py: 2,
-                gap: 2,
                 width: 1,
                 display: 'flex',
                 alignItems: 'center',
             }}
         >
-            <Avatar
-                alt={name}
-                src={imageUrl || undefined}
-                variant="rounded"
-                sx={{
-                    width: 64,
-                    height: 64,
-                    bgcolor: bgColor,
-                    color: '#fff',
-                    fontWeight: 'bold',
-                    fontSize: '20px',
-                    borderRadius: '15%',
-                }}
-            >
-                {!imageUrl && !loading && initials}
-                {loading && '...'}
-            </Avatar>
-
             <ListItemText primary={<span>{name}</span>} />
         </Box>
     );
 }
 
-/**
- * Group name renderer
- */
-function RenderCellGroupName({ params }: { params: any }) {
-    const groupName = params.row.group_name || '-';
-
-    return (
-        <div style={{ fontSize: '0.875rem', opacity: 0.8 }}>
-            {groupName}
-        </div>
-    );
-}
-
-/**
- * Measurement renderer with translation
- */
-function RenderCellMeasurement({ params, t }: { params: any; t: (key: string) => string }) {
-    const measurement = params.row.measurement || '-';
-
-    // Map backend values to translation keys
-    const getMeasurementLabel = (value: string): string => {
-        switch (value) {
-            case 'kg':
-                return t('ingredients.measurementKg');
-            case 'l':
-                return t('ingredients.measurementL');
-            case 'piece':
-                return t('ingredients.measurementDona');
-            default:
-                return value;
-        }
-    };
-
-    return (
-        <div style={{ fontSize: '0.875rem', opacity: 0.8 }}>
-            {getMeasurementLabel(measurement)}
-        </div>
-    );
-}
-
-/**
- * Color renderer
- */
-function RenderCellColor({ params }: { params: any }) {
-    const colorCode = params.row.color_code;
-
-    if (!colorCode) {
-        return <div style={{ fontSize: '0.875rem', opacity: 0.8 }}>-</div>;
+function getMeasurementLabel(value: string, t: (key: string) => string): string {
+    switch (value) {
+        case 'kg':
+            return t('ingredients.measurementKg');
+        case 'l':
+            return t('ingredients.measurementL');
+        case 'piece':
+            return t('ingredients.measurementDona');
+        default:
+            return value;
     }
-
-    return (
-        <Box
-            sx={{
-                display: 'flex',
-                justifyContent: 'center',
-                alignItems: 'center',
-                width: '100%',
-                height: '100%',
-            }}
-        >
-            <Box
-                sx={{
-                    width: 36,
-                    height: 36,
-                    borderRadius: 1,
-                    bgcolor: colorCode,
-                    border: '1px solid',
-                    borderColor: 'divider',
-                }}
-            />
-        </Box>
-    );
-}
-
-/**
- * Date renderer
- */
-function RenderCellDate({ params, dateField }: { params: any; dateField: string }) {
-    const dateValue = params.row[dateField];
-    if (!dateValue) return '-';
-
-    return new Date(dateValue).toLocaleDateString(undefined, {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-    });
 }
 
 export function IngredientListView() {
     const { t } = useTranslation('menu');
-    const theme = useTheme();
     const router = useRouter();
     const [searchQuery, setSearchQuery] = useState('');
     const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
@@ -202,6 +79,7 @@ export function IngredientListView() {
     const [selectedIngredient, setSelectedIngredient] = useState<IIngredientItem | null>(null);
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [ingredientToDelete, setIngredientToDelete] = useState<string | null>(null);
+    const lastSearchKeyRef = useState('')[1];
 
     useEffect(() => {
         const timeout = setTimeout(() => {
@@ -210,89 +88,15 @@ export function IngredientListView() {
 
         return () => clearTimeout(timeout);
     }, [searchQuery]);
+
     useEffect(() => {
         setPaginationModel((prev) => ({ ...prev, page: 0 }));
     }, [debouncedSearchQuery]);
 
-    // Columns configuration
-    const columns = useMemo<GridColDef[]>(
-        () => [
-            {
-                field: 'name',
-                headerName: t('warehouse.name'),
-                flex: 1,
-                minWidth: 280,
-                hideable: false,
-                renderCell: (params) => <RenderCellIngredientName params={params} />,
-            },
-            {
-                field: 'group_name',
-                headerName: t('warehouse.group'),
-                width: 180,
-                renderCell: (params) => <RenderCellGroupName params={params} />,
-            },
-            {
-                field: 'measurement',
-                headerName: t('warehouse.measurement'),
-                width: 150,
-                renderCell: (params) => <RenderCellMeasurement params={params} t={t} />,
-            },
-            {
-                field: 'color_code',
-                headerName: t('warehouse.color'),
-                width: 150,
-                align: 'center',
-                renderCell: (params) => <RenderCellColor params={params} />,
-            },
-            {
-                field: 'price_per_unit',
-                headerName: t('warehouse.price'),
-                width: 150,
-                renderCell: (params) => (
-                    <div style={{ fontSize: '0.875rem', opacity: 0.8 }}>
-                        {params.row.price_per_unit ? `${params.row.price_per_unit}` : '-'}
-                    </div>
-                ),
-            },
-            {
-                type: 'actions',
-                field: 'actions',
-                headerName: t('actions'),
-                width: 150,
-                // align: 'right',
-                // headerAlign: 'right',
-                sortable: false,
-                filterable: false,
-                disableColumnMenu: true,
-                getActions: (params) => [
-                    <CustomGridActionsCellItem
-                        // showInMenu
-                        label={t('warehouse.edit')}
-                        icon={<Iconify icon="solar:pen-bold" />}
-                        onClick={() => handleEditIngredient(params.row.id)}
-                    />,
-                    <CustomGridActionsCellItem
-                        key="delete"
-                        // showInMenu
-                        label={t('warehouse.delete')}
-                        icon={<Iconify icon="solar:trash-bin-trash-bold" />}
-                        onClick={() => {
-                            setIngredientToDelete(params.row.id);
-                            setDeleteDialogOpen(true);
-                        }}
-                        style={{ color: theme.palette.error.main }}
-                    />,
-                ],
-            },
-        ],
-        [t, theme.palette.error.main]
-    );
-
     const handleEditIngredient = useCallback((id: string) => {
-        router.push(paths.warehouse.ingredients.edit(id));
+        router.push(paths.menu.ingredients.edit(id));
     }, [router]);
 
-    // Handle delete confirmation
     const handleConfirmDelete = useCallback(async () => {
         if (ingredientToDelete) {
             try {
@@ -308,11 +112,6 @@ export function IngredientListView() {
         }
     }, [ingredientToDelete, deleteIngredient, t]);
 
-    const handleDeleteIngredient = useCallback((id: string) => {
-        setIngredientToDelete(id);
-        setDeleteDialogOpen(true);
-    }, []);
-
     const handleViewIngredient = useCallback((ingredient: IIngredientItem) => {
         setSelectedIngredient(ingredient);
         setViewModalOpen(true);
@@ -323,124 +122,229 @@ export function IngredientListView() {
         setSelectedIngredient(null);
     }, []);
 
-    // Render specifications for view modal
-    const renderIngredientSpecifications = useCallback((ingredient: IIngredientItem) => {
-        return (
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                {ingredient.picture_url && (
-                    <Box
-                        component="img"
-                        src={ingredient.picture_url}
-                        alt={ingredient.name}
-                        sx={{ width: '100%', borderRadius: 1, maxHeight: 300, objectFit: 'cover' }}
-                    />
-                )}
-                {/* <Box>
-                    <Typography variant="subtitle2" sx={{ color: 'text.secondary', mb: 0.5 }}>
-                        {t('warehouse.id')}
-                    </Typography>
-                    <Typography variant="body2">{ingredient.id}</Typography>
-                </Box> */}
-                <Box>
-                    <Typography variant="subtitle2" sx={{ color: 'text.secondary', mb: 0.5 }}>
-                        {t('warehouse.name')}
-                    </Typography>
-                    <Typography variant="body2">{ingredient.name}</Typography>
-                </Box>
-                <Box>
-                    <Typography variant="subtitle2" sx={{ color: 'text.secondary', mb: 0.5 }}>
-                        {t('warehouse.group')}
-                    </Typography>
-                    <Typography variant="body2">
-                        {ingredient._expand?.group_id?.name ||
-                            ingredient.group_name ||
-                            ingredient.group_id ||
-                            '-'}
-                    </Typography>
-                </Box>
-                <Box>
-                    <Typography variant="subtitle2" sx={{ color: 'text.secondary', mb: 0.5 }}>
-                        {t('warehouse.measurement')}
-                    </Typography>
-                    <Typography variant="body2">{ingredient.measurement}</Typography>
-                </Box>
-                <Box>
-                    <Typography variant="subtitle2" sx={{ color: 'text.secondary', mb: 0.5 }}>
-                        {t('warehouse.price')}
-                    </Typography>
-                    <Typography variant="body2">{ingredient.price_per_unit || '-'}</Typography>
-                </Box>
-                {/* {ingredient.color_code && (
-                    <Box>
-                        <Typography variant="subtitle2" sx={{ color: 'text.secondary', mb: 0.5 }}>
-                            {t('warehouse.color')}
-                        </Typography>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+    const columns = useMemo(
+        () => [
+            {
+                key: 'name',
+                label: t('warehouse.name'),
+                sortable: true,
+                width: '2fr',
+                align: 'left' as const,
+                getValue: (row: IIngredientItem) => row?.name ?? '',
+                renderCell: ({ row }: { row: IIngredientItem }) => (
+                    <RenderCellIngredientName row={row} />
+                ),
+            },
+            {
+                key: 'group_name',
+                label: t('warehouse.group'),
+                sortable: true,
+                filter: { type: 'multi' as const },
+                width: '1.2fr',
+                align: 'left' as const,
+                getValue: (row: IIngredientItem) => row?.group_name || '-',
+            },
+            {
+                key: 'measurement',
+                label: t('warehouse.measurement'),
+                sortable: true,
+                filter: { type: 'multi' as const },
+                width: '1fr',
+                align: 'left' as const,
+                getValue: (row: IIngredientItem) => row?.measurement || '-',
+                renderCell: ({ value }: { value: unknown }) => (
+                    <div style={{ fontSize: '0.875rem', opacity: 0.8 }}>
+                        {getMeasurementLabel(String(value ?? '-'), t)}
+                    </div>
+                ),
+            },
+            {
+                key: 'color_code',
+                label: t('warehouse.color'),
+                sortable: false,
+                width: '0.8fr',
+                align: 'center' as const,
+                getValue: (row: IIngredientItem) => row?.color_code || '',
+                renderCell: ({ value }: { value: unknown }) => {
+                    const colorCode = value as string;
+                    if (!colorCode) {
+                        return <div style={{ fontSize: '0.875rem', opacity: 0.8 }}>-</div>;
+                    }
+                    return (
+                        <Box
+                            sx={{
+                                display: 'flex',
+                                justifyContent: 'center',
+                                alignItems: 'center',
+                                width: '100%',
+                                height: '100%',
+                                py: 1,
+                            }}
+                        >
                             <Box
                                 sx={{
                                     width: 40,
-                                    height: 40,
+                                    height: 32,
                                     borderRadius: 1,
-                                    bgcolor: ingredient.color_code,
+                                    bgcolor: colorCode,
                                     border: '1px solid',
                                     borderColor: 'divider',
                                 }}
                             />
-                            <Typography variant="body2">{ingredient.color_code}</Typography>
                         </Box>
+                    );
+                },
+            },
+            {
+                key: 'price_per_unit',
+                label: t('warehouse.price'),
+                sortable: true,
+                width: '1fr',
+                align: 'left' as const,
+                getValue: (row: IIngredientItem) => row?.price_per_unit || '-',
+            },
+            {
+                key: 'actions',
+                label: t('actions'),
+                sortable: false,
+                filterable: false,
+                width: '0.7fr',
+                align: 'center' as const,
+                renderCell: ({ row }: { row: IIngredientItem }) => (
+                    <Box sx={{ display: 'flex', gap: 0.5 }}>
+                        <IconButton
+                            size="small"
+                            onClick={() => handleViewIngredient(row)}
+                            sx={{ color: 'text.secondary' }}
+                        >
+                            <Iconify icon="solar:eye-bold" width={18} />
+                        </IconButton>
+                        <IconButton
+                            size="small"
+                            onClick={() => handleEditIngredient(row.id)}
+                            sx={{ color: 'text.secondary' }}
+                        >
+                            <Iconify icon="solar:pen-bold" width={18} />
+                        </IconButton>
+                        <IconButton
+                            size="small"
+                            onClick={() => {
+                                setIngredientToDelete(row.id);
+                                setDeleteDialogOpen(true);
+                            }}
+                            sx={{ color: 'error.main' }}
+                        >
+                            <Iconify icon="solar:trash-bin-trash-bold" width={18} />
+                        </IconButton>
                     </Box>
-                )} */}
+                ),
+            },
+        ],
+        [t, handleEditIngredient, handleViewIngredient]
+    );
+
+    const renderIngredientSpecifications = useCallback((ingredient: IIngredientItem) => (
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            {ingredient.picture_url && (
+                <Box
+                    component="img"
+                    src={ingredient.picture_url}
+                    alt={ingredient.name}
+                    sx={{ width: '100%', borderRadius: 1, maxHeight: 300, objectFit: 'cover' }}
+                />
+            )}
+            <Box>
+                <Typography variant="subtitle2" sx={{ color: 'text.secondary', mb: 0.5 }}>
+                    {t('warehouse.name')}
+                </Typography>
+                <Typography variant="body2">{ingredient.name}</Typography>
             </Box>
-        );
-    }, [t]);
+            <Box>
+                <Typography variant="subtitle2" sx={{ color: 'text.secondary', mb: 0.5 }}>
+                    {t('warehouse.group')}
+                </Typography>
+                <Typography variant="body2">
+                    {ingredient._expand?.group_id?.name ||
+                        ingredient.group_name ||
+                        ingredient.group_id ||
+                        '-'}
+                </Typography>
+            </Box>
+            <Box>
+                <Typography variant="subtitle2" sx={{ color: 'text.secondary', mb: 0.5 }}>
+                    {t('warehouse.measurement')}
+                </Typography>
+                <Typography variant="body2">{ingredient.measurement}</Typography>
+            </Box>
+            <Box>
+                <Typography variant="subtitle2" sx={{ color: 'text.secondary', mb: 0.5 }}>
+                    {t('warehouse.price')}
+                </Typography>
+                <Typography variant="body2">{ingredient.price_per_unit || '-'}</Typography>
+            </Box>
+        </Box>
+    ), [t]);
 
     return (
         <>
-            <GenericTableView<IIngredientItem>
-                data={Array.isArray(ingredients) ? ingredients : []}
-                loading={ingredientsLoading}
-                columns={columns}
-                paginationMode="server"
-                rowCount={ingredientsTotal || 0}
-                paginationModel={paginationModel}
-                onPaginationModelChange={setPaginationModel}
-                pageSizeOptions={[10, 20, 50, 100]}
-                breadcrumbs={{
-                    heading: t('warehouse.ingredients'),
-                    links: [
-                        { name: t('app'), href: paths.menu.root },
-                        { name: t('warehouse.ingredient') },
-                        { name: t('warehouse.ingredients') },
-                    ],
+            <DashboardContent
+                sx={{
+                    flexGrow: 1,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    maxHeight: '100vh',
+                    '--layout-dashboard-content-pt': { xs: '0px', md: '0px' },
+                    '--layout-dashboard-content-pb': { xs: '0px', md: '0px' },
                 }}
-                addButton={{
-                    label: t('warehouse.add'),
-                    href: paths.warehouse.ingredients.new,
-                }}
-                filterOptions={{}}
-                initialFilters={{}}
-                hideColumns={{}}
-                hideColumnsTogglable={['created_at', 'updated_at', 'actions']}
-                onDeleteRow={handleDeleteIngredient}
-                onDeleteRows={async (ids) => {
-                    for (const id of ids) {
-                        try {
-                            await deleteIngredient(id);
-                        } catch (error) {
-                            console.error('Failed to delete:', error);
-                        }
+            >
+                <DeductionUtilityDataTable
+                    persistKey="warehouse-ingredients"
+                    data={Array.isArray(ingredients) ? ingredients : []}
+                    getRowId={(row: IIngredientItem) => String(row?.id)}
+                    columns={columns}
+                    searchValue={searchQuery}
+                    onSearchChange={(value) => {
+                        setSearchQuery(value);
+                        setPaginationModel((prev) => ({ ...prev, page: 0 }));
+                    }}
+                    page={paginationModel.page}
+                    rowsPerPage={paginationModel.pageSize}
+                    totalCount={ingredientsTotal || 0}
+                    rowsPerPageOptions={[10, 20, 50, 100]}
+                    onPageChange={(p) => setPaginationModel((prev) => ({ ...prev, page: p }))}
+                    onRowsPerPageChange={(size) => setPaginationModel({ page: 0, pageSize: size })}
+                    defaultConfig={{
+                        order: ['name', 'group_name', 'measurement', 'color_code', 'price_per_unit', 'actions'],
+                        visibility: {
+                            name: true,
+                            group_name: true,
+                            measurement: true,
+                            color_code: true,
+                            price_per_unit: true,
+                            actions: true,
+                        },
+                        widths: {
+                            name: '2fr',
+                            group_name: '1.2fr',
+                            measurement: '1fr',
+                            color_code: '0.8fr',
+                            price_per_unit: '1fr',
+                            actions: '0.7fr',
+                        },
+                    }}
+                    onReset={() => {}}
+                    headerActions={
+                        <Button
+                            variant="contained"
+                            startIcon={<Iconify icon="mingcute:add-line" />}
+                            href={paths.menu.ingredients.new}
+                            size="small"
+                        >
+                            {t('warehouse.add')}
+                        </Button>
                     }
-                }}
-                onRowClick={(id) => {
-                    const ingredient = Array.isArray(ingredients)
-                        ? ingredients.find(ing => ing.id === id)
-                        : undefined;
-                    if (ingredient) {
-                        handleViewIngredient(ingredient);
-                    }
-                }}
-                onQuickFilterChange={setSearchQuery}
-            />
+                />
+            </DashboardContent>
 
             <GenericViewModal
                 isOpen={viewModalOpen}
@@ -457,7 +361,6 @@ export function IngredientListView() {
                 }}
             />
 
-            {/* Delete Confirmation Dialog */}
             <Dialog
                 open={deleteDialogOpen}
                 onClose={() => setDeleteDialogOpen(false)}
@@ -489,4 +392,3 @@ export function IngredientListView() {
         </>
     );
 }
-

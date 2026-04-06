@@ -103,8 +103,7 @@ export function useMealsAPI(): UseMealsAPIReturn {
             );
 
             // Meals'ni enrich qiladi
-            const enrichedMeals: IMealsItem[] = mealsData.map((meal) => {
-                return {
+            const enrichedMeals: IMealsItem[] = mealsData.map((meal) => ({
                     ...meal,
                     price: parseNumberOrZero(meal.price),
                     cost_price: parseNumberOrUndefined(meal.cost_price),
@@ -117,8 +116,7 @@ export function useMealsAPI(): UseMealsAPIReturn {
                         id: meal.department_id,
                         name: departmentMap.get(meal.department_id) || meal.department_id,
                     } : undefined,
-                };
-            });
+                }));
 
             return enrichedMeals;
         } catch (error) {

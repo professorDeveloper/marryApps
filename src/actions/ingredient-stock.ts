@@ -1,15 +1,16 @@
 import type { SWRConfiguration } from 'swr';
+import type { IIngredientItem } from 'src/types/ingredients';
 import type {
     IIngredientStock,
     IIngredientStockFormData,
     IIngredientStockResponse,
 } from 'src/types/ingredient-stock';
-import type { IIngredientItem } from 'src/types/ingredients';
 
 import useSWR, { mutate } from 'swr';
 import { useMemo, useCallback } from 'react';
 
 import { putter, fetcher, deleter, endpoints } from 'src/lib/axios';
+
 import { toast } from 'src/components/snackbar';
 
 const swrOptions: SWRConfiguration = {
@@ -82,21 +83,21 @@ export function useGetIngredientStocksPage(params?: {
     limit?: number;
     offset?: number;
     expand?: string;
+    search?: string;
 }) {
     const limit = typeof params?.limit === 'number' ? params?.limit : 20;
     const offset = typeof params?.offset === 'number' ? params?.offset : 0;
     const expand = params?.expand || 'ingredient_id,storage_id,branch_id';
+    const search = params?.search || '';
 
-    const url = [
-        endpoints.ingredientStock.list,
-        {
-            params: {
-                limit,
-                offset,
-                expand,
-            },
-        },
-    ];
+    // Build URL with query parameters so SWR cache key includes search
+    const queryParams = new URLSearchParams({
+        limit: String(limit),
+        offset: String(offset),
+        expand,
+        ...(search && { search }),
+    });
+    const url = `${endpoints.ingredientStock.list}?${queryParams.toString()}`;
 
     const { data, isLoading, error, isValidating } = useSWR<IIngredientStockResponse>(
         url,

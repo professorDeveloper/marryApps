@@ -20,7 +20,7 @@ const Jwt = {
 };
 
 const authJwt = {
-  path: 'jwt',
+  // path: '/',
   children: [
     {
       path: 'sign-in',
@@ -51,7 +51,7 @@ const authJwt = {
 
 export const authRoutes: RouteObject[] = [
   {
-    path: 'auth',
+    // path: 'auth',
     element: (
       <Suspense fallback={<SplashScreen />}>
         <Outlet />

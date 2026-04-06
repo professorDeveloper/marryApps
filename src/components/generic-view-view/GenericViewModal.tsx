@@ -1,5 +1,7 @@
+import type { Theme, SxProps } from '@mui/material/styles';
+
 import { useMemo, forwardRef, useCallback } from 'react';
-import type { SxProps, Theme } from '@mui/material/styles';
+
 import {
   Box,
   Slide,
@@ -12,9 +14,10 @@ import {
   DialogTitle,
   DialogContent,
   useMediaQuery,
-  CircularProgress,
   type SlideProps,
+  CircularProgress,
 } from '@mui/material';
+
 import { Iconify } from 'src/components/iconify';
 
 export interface GenericViewModalProps {

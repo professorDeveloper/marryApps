@@ -77,6 +77,14 @@ export interface DeductionListParams {
     expand?: string;
     limit?: number;
     offset?: number;
+    search?: string;
+    status?: string;
+    date_from?: string;
+    date_to?: string;
+    storage_id?: string;
+    act_group_id?: string;
+    sort_by?: string;
+    sort_order?: 'asc' | 'desc';
 }
 
 export interface DeductionListResult {
@@ -167,15 +175,38 @@ export function useDeductionsAPI(): UseDeductionsAPIReturn {
      */
     const getDeductions = useCallback(async (params?: DeductionListParams): Promise<DeductionListResult> => {
         try {
+            const queryParams: Record<string, unknown> = {
+                expand: params?.expand || 'act_group_id,storage_id',
+                limit: typeof params?.limit === 'number' ? params.limit : 20,
+                offset: typeof params?.offset === 'number' ? params.offset : 0,
+            };
+            if (params?.search) {
+                queryParams.search = params.search;
+            }
+            if (params?.status) {
+                queryParams.status = params.status;
+            }
+            if (params?.date_from) {
+                queryParams.date_from = params.date_from;
+            }
+            if (params?.date_to) {
+                queryParams.date_to = params.date_to;
+            }
+            if (params?.storage_id) {
+                queryParams.storage_id = params.storage_id;
+            }
+            if (params?.act_group_id) {
+                queryParams.act_group_id = params.act_group_id;
+            }
+            if (params?.sort_by) {
+                queryParams.sort_by = params.sort_by;
+            }
+            if (params?.sort_order) {
+                queryParams.sort_order = params.sort_order;
+            }
             const response = await fetcher<unknown>([
                 endpoints.deductions.list,
-                {
-                    params: {
-                        expand: params?.expand || 'act_group_id,storage_id',
-                        limit: typeof params?.limit === 'number' ? params.limit : 20,
-                        offset: typeof params?.offset === 'number' ? params.offset : 0,
-                    },
-                },
+                { params: queryParams },
             ]);
             return extractListAndPagination<Deduction>(response);
         } catch (error) {

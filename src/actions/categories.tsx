@@ -1,14 +1,13 @@
 import type { SWRConfiguration } from 'swr';
-
-import type { ICategoryFormData, IGoodsItem, ICategory } from 'src/types/category';
 import type { ITranslationItem } from 'src/types/departments.tsx';
+import type { ICategory, IGoodsItem, ICategoryFormData } from 'src/types/category';
 
-import { useTranslation } from 'react-i18next';
 import useSWR, { mutate } from 'swr';
-import { useCallback, useMemo } from 'react';
+import { useMemo, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 
-import { deleter, endpoints, fetcher, poster, putter } from 'src/lib/axios';
-import { useGetDepartments, useGetStorages } from 'src/actions/departments';
+import { poster, putter, deleter, fetcher, endpoints } from 'src/lib/axios';
+import { useGetStorages, useGetDepartments } from 'src/actions/departments';
 
 const swrOptions: SWRConfiguration = {
     revalidateIfStale: true,

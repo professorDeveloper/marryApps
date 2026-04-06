@@ -1,11 +1,11 @@
 import type { SWRConfiguration } from 'swr';
+import type { ICafeTableItem, ICafeTableFormData } from 'src/types/cafe-tables';
 
-import useSWR, { mutate } from 'swr';
-import { useCallback, useMemo } from 'react';
 import { toast } from 'sonner';
+import useSWR, { mutate } from 'swr';
+import { useMemo, useCallback } from 'react';
 
-import { deleter, endpoints, fetcher, poster, putter } from 'src/lib/axios';
-import type { ICafeTableFormData, ICafeTableItem } from 'src/types/cafe-tables';
+import { poster, putter, deleter, fetcher, endpoints } from 'src/lib/axios';
 
 const swrOptions: SWRConfiguration = {
     revalidateIfStale: true,

@@ -1,20 +1,21 @@
 import type { FC } from 'react';
 
-import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { memo, useRef, useState, useCallback } from 'react';
 
 import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
 import Stack from '@mui/material/Stack';
 import Button from '@mui/material/Button';
-import IconButton from '@mui/material/IconButton';
 import Typography from '@mui/material/Typography';
 import CircularProgress from '@mui/material/CircularProgress';
 
-import { Iconify } from 'src/components/iconify';
-import { uploadImage } from 'src/lib/image-upload';
 import { useImageUrl } from 'src/hooks/use-image-url';
+
+import { uploadImage } from 'src/lib/image-upload';
+
 import { toast } from 'src/components/snackbar';
+import { Iconify } from 'src/components/iconify';
 
 interface ImageUploadFieldProps {
     label: string;
@@ -24,7 +25,7 @@ interface ImageUploadFieldProps {
     height?: number;
 }
 
-export const ImageUploadField: FC<ImageUploadFieldProps> = ({
+const ImageUploadFieldComponent: FC<ImageUploadFieldProps> = ({
     label,
     value,
     onChange,
@@ -40,7 +41,7 @@ export const ImageUploadField: FC<ImageUploadFieldProps> = ({
     const { imageUrl: displayUrl, loading: imageLoading } = useImageUrl(value);
     const loading = uploadLoading || imageLoading;
 
-    const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleFileSelect = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
 
@@ -67,21 +68,21 @@ export const ImageUploadField: FC<ImageUploadFieldProps> = ({
                 inputRef.current.value = '';
             }
         }
-    };
+    }, [onChange, t]);
 
-    const handleClick = () => {
+    const handleClick = useCallback(() => {
         if (!loading) {
             inputRef.current?.click();
         }
-    };
+    }, [loading]);
 
-    const handleRemove = () => {
+    const handleRemove = useCallback(() => {
         if (inputRef.current) {
             inputRef.current.value = '';
         }
         setError(null);
         onRemove?.();
-    };
+    }, [onRemove]);
 
     return (
         <Card sx={{ p: 3 }}>
@@ -215,3 +216,5 @@ export const ImageUploadField: FC<ImageUploadFieldProps> = ({
         </Card>
     );
 };
+
+export const ImageUploadField = memo(ImageUploadFieldComponent);

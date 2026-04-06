@@ -1,5 +1,5 @@
 import type { SWRConfiguration } from 'swr';
-import type { IBranchFormData, IBranchItem } from 'src/types/branches';
+import type { IBranchItem, IBranchFormData } from 'src/types/branches';
 
 import useSWR, { mutate } from 'swr';
 import { useMemo, useCallback } from 'react';

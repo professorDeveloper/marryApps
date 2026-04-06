@@ -2,16 +2,16 @@
 import type {
   GridColDef,
   GridFilterModel,
+  GridPaginationModel,
   GridRowSelectionModel,
   GridColumnVisibilityModel,
-  GridPaginationModel,
 } from '@mui/x-data-grid';
 
 import { useBoolean, useSetState } from 'minimal-shared/hooks';
-import { useMemo, useRef, useState, useEffect, useCallback } from 'react';
+import { useRef, useMemo, useState, useEffect, useCallback } from 'react';
 
-import Card from '@mui/material/Card';
 import Box from '@mui/material/Box';
+import Card from '@mui/material/Card';
 import Button from '@mui/material/Button';
 import { DataGrid, GridFooter, gridClasses } from '@mui/x-data-grid';
 

@@ -1,32 +1,32 @@
-import { useMemo, useState, useCallback, useEffect } from 'react';
+import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
+import { useMemo, useState, useEffect, useCallback } from 'react';
+
 import { useTheme } from '@mui/material/styles';
 import {
     Box,
-    Alert,
-    Button,
+    Tab,
     Card,
-    CardContent,
+    Tabs,
+    Alert,
     Table,
+    Paper,
+    Button,
+    TableRow,
     TableBody,
     TableCell,
-    TableContainer,
     TableHead,
-    TableRow,
     TextField,
     IconButton,
-    Dialog,
-    DialogTitle,
-    DialogContent,
-    DialogActions,
-    Tabs,
-    Tab,
-    Paper,
+    CardContent,
+    TableContainer,
 } from '@mui/material';
-import { toast } from 'sonner';
+
+import { useInvoiceDetailsAPI } from 'src/hooks/use-invoice-details-api';
+
 import { Iconify } from 'src/components/iconify';
 import { NoDataTooltip } from 'src/components/no-data-tooltip';
-import { useInvoiceDetailsAPI } from 'src/hooks/use-invoice-details-api';
+
 import { IngredientEditView } from 'src/sections/warehouse/ingredients-edit-view';
 
 interface Ingredient {
@@ -51,9 +51,7 @@ interface InvoiceDetailsBatchProps {
     onSuccess?: () => void;
 }
 
-const calculatePrice = (quantity: number, pricePerUnit: number): number => {
-    return quantity * pricePerUnit;
-};
+const calculatePrice = (quantity: number, pricePerUnit: number): number => quantity * pricePerUnit;
 
 export function InvoiceDetailsBatch({ invoiceId, storageId, supplierId, onSuccess }: InvoiceDetailsBatchProps) {
     const { t } = useTranslation('menu');
@@ -213,12 +211,10 @@ export function InvoiceDetailsBatch({ invoiceId, storageId, supplierId, onSucces
     };
 
     // Calculate totals
-    const totals = useMemo(() => {
-        return {
+    const totals = useMemo(() => ({
             quantity: batchItems.reduce((acc, item) => acc + item.quantity, 0),
             totalPrice: batchItems.reduce((acc, item) => acc + item.price, 0),
-        };
-    }, [batchItems]);
+        }), [batchItems]);
 
     const ingredientOptions = useMemo(() => {
         const usedIds = new Set(batchItems.map((item) => item.ingredient_id));
@@ -439,7 +435,7 @@ export function InvoiceDetailsBatch({ invoiceId, storageId, supplierId, onSucces
             {/* Tab 2: Add New Ingredient */}
             {currentTab === 1 && (
                 <Box sx={{ p: 3 }}>
-                    <IngredientEditView isNew={true} onSuccess={handleRefreshIngredients} />
+                    <IngredientEditView isNew onSuccess={handleRefreshIngredients} />
                 </Box>
             )}
         </Paper>

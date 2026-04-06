@@ -1,4 +1,5 @@
 import { m } from 'framer-motion';
+import { useTranslation } from 'react-i18next';
 
 import Button from '@mui/material/Button';
 import Container from '@mui/material/Container';
@@ -10,7 +11,6 @@ import { SimpleLayout } from 'src/layouts/simple';
 import { PageNotFoundIllustration } from 'src/assets/illustrations';
 
 import { varBounce, MotionContainer } from 'src/components/animate';
-import { useTranslation } from 'react-i18next';
 
 // ----------------------------------------------------------------------
 

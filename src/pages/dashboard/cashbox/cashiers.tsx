@@ -1,4 +1,5 @@
 import { CONFIG } from 'src/global-config';
+
 import { CashiersListView } from 'src/sections/cashbox/cashiers-list-view';
 
 // ----------------------------------------------------------------------

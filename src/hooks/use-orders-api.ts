@@ -7,7 +7,7 @@ import type {
 
 import { useCallback } from 'react';
 
-import { endpoints, fetcher, poster } from 'src/lib/axios';
+import { poster, fetcher, endpoints } from 'src/lib/axios';
 
 import { toast } from 'src/components/snackbar';
 
@@ -15,6 +15,17 @@ interface BackendResponse<T> {
   data?: T;
   message?: string;
   total?: number;
+  limit?: number;
+  offset?: number;
+}
+
+export interface OrderListParams {
+  order_type?: string;
+  status?: string;
+  start_date?: string;
+  end_date?: string;
+  sort_by?: string;
+  sort_order?: 'asc' | 'desc';
   limit?: number;
   offset?: number;
 }
@@ -92,9 +103,23 @@ const normalizeListResponse = (payload: unknown): OrdersListResponse => {
 };
 
 export function useOrdersAPI() {
-  const getOrders = useCallback(async (): Promise<OrdersListResponse> => {
+  const getOrders = useCallback(async (params?: OrderListParams): Promise<OrdersListResponse> => {
     try {
-      const response = await fetcher<unknown>(endpoints.orders.list);
+      const queryParams: Record<string, unknown> = {};
+      if (params?.order_type) queryParams.order_type = params.order_type;
+      if (params?.status) queryParams.status = params.status;
+      if (params?.start_date) queryParams.start_date = params.start_date;
+      if (params?.end_date) queryParams.end_date = params.end_date;
+      if (params?.sort_by) queryParams.sort_by = params.sort_by;
+      if (params?.sort_order) queryParams.sort_order = params.sort_order;
+      if (typeof params?.limit === 'number') queryParams.limit = params.limit;
+      if (typeof params?.offset === 'number') queryParams.offset = params.offset;
+
+      const response = await fetcher<unknown>(
+        Object.keys(queryParams).length > 0
+          ? [endpoints.orders.list, { params: queryParams }]
+          : endpoints.orders.list
+      );
       return normalizeListResponse(response);
     } catch (error) {
       const axiosError = error as AxiosError<{ message?: string }>;

@@ -1,10 +1,10 @@
 import type { SWRConfiguration } from 'swr';
-import type { IGroupTransaction, IGroupTransactionFormData, ICashier, ICashierFormData, ITransaction, ITransactionFormData, ICashRegister, ICashRegisterFormData } from 'src/types/cashbox';
+import type { ICashier, ITransaction, ICashRegister, ICashierFormData, IGroupTransaction, ITransactionFormData, ICashRegisterFormData, IGroupTransactionFormData } from 'src/types/cashbox';
 
 import useSWR, { mutate } from 'swr';
-import { useCallback, useMemo } from 'react';
+import { useMemo, useCallback } from 'react';
 
-import { deleter, endpoints, fetcher, poster, putter } from 'src/lib/axios';
+import { poster, putter, deleter, fetcher, endpoints } from 'src/lib/axios';
 
 const swrOptions: SWRConfiguration = {
     revalidateIfStale: true,

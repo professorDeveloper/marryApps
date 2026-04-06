@@ -1,9 +1,11 @@
 import { useSearchParams } from 'react-router';
+
 import { Box, Container } from '@mui/material';
 
 import { CONFIG } from 'src/global-config';
 import { useGetHall } from 'src/actions/halls';
 import { useGetCafeTablesByHall } from 'src/actions/cafe-tables';
+
 import { FloorPlanEditor } from 'src/components/floor-plan-editor';
 
 const metadata = { title: `Floor Plan Editor | ${CONFIG.appName}` };

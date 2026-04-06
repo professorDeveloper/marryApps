@@ -1,365 +1,335 @@
-import type { GridColDef } from '@mui/x-data-grid';
 import type { IIngredientGroupItem } from 'src/types/ingredient-group';
+
 import { useTranslation } from 'react-i18next';
-import { useMemo, useState, useCallback, useEffect } from 'react';
-import { useTheme } from '@mui/material/styles';
+import { useMemo, useState, useEffect, useCallback } from 'react';
+
 import {
-  Avatar,
-  Button,
-  Dialog,
-  DialogTitle,
-  DialogActions,
-  DialogContent,
-  Box,
-  ListItemText,
-  Typography,
+    Box,
+    Button,
+    Dialog,
+    Typography,
+    IconButton,
+    DialogTitle,
+    ListItemText,
+    DialogActions,
+    DialogContent,
 } from '@mui/material';
+
 import { paths } from 'src/routes/paths';
 import { useRouter } from 'src/routes/hooks';
-import { useGetIngredientGroupsPage, useDeleteIngredientGroup } from 'src/actions/ingredient-group';
+
+import { DashboardContent } from 'src/layouts/dashboard';
+import { useDeleteIngredientGroup, useGetIngredientGroupsPage } from 'src/actions/ingredient-group';
+
 import { toast } from 'src/components/snackbar';
 import { Iconify } from 'src/components/iconify';
-import { GenericTableView } from 'src/components/generic-table-view';
-import { CustomGridActionsCellItem } from 'src/components/custom-data-grid';
 import { GenericViewModal } from 'src/components/generic-view-view';
-import { getFullImageUrl } from 'src/utils/image-url';
-import { getInitials, getAvatarColor } from 'src/utils/avatar';
 
-function RenderCellGroupName({ params }: { params: any }) {
-  const { row } = params;
-  const name = row.name || '-';
-  const [imageUrl, setImageUrl] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
+import { DeductionUtilityDataTable } from 'src/sections/warehouse/deduction';
 
-  useEffect(() => {
-    if (row.picture_url) {
-      const loadImage = async () => {
-        try {
-          setLoading(true);
-          const url = await getFullImageUrl(row.picture_url);
-          setImageUrl(url);
-        } catch (error) {
-          console.error('Failed to load image:', error);
-          setImageUrl(null);
-        } finally {
-          setLoading(false);
-        }
-      };
-      loadImage();
-    } else {
-      setImageUrl(null);
-    }
-  }, [row.picture_url]);
+function RenderCellGroupName({ row }: { row: any }) {
+    const name = row.name || '-';
 
-  const initials = getInitials(name);
-  const bgColor = imageUrl ? undefined : row.color_code || getAvatarColor(name);
-
-  return (
-    <Box
-      sx={{
-        py: 2,
-        gap: 2,
-        width: 1,
-        display: 'flex',
-        alignItems: 'center',
-      }}
-    >
-      <Avatar
-        alt={name}
-        src={imageUrl || undefined}
-        variant="rounded"
-        sx={{
-          width: 64,
-          height: 64,
-          bgcolor: bgColor,
-          color: '#fff',
-          fontWeight: 'bold',
-          fontSize: '20px',
-          borderRadius: '15%',
-        }}
-      >
-        {!imageUrl && !loading && initials}
-        {loading && '...'}
-      </Avatar>
-
-      <ListItemText primary={<span>{name}</span>} />
-    </Box>
-  );
-}
-
-function RenderCellColor({ params }: { params: any }) {
-  const colorCode = params.row.color_code;
-
-  if (!colorCode) {
-    return <div style={{ fontSize: '0.875rem', opacity: 0.8 }}>-</div>;
-  }
-
-  return (
-    <Box
-      sx={{
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-        width: '100%',
-        height: '100%',
-      }}
-    >
-      <Box
-        sx={{
-          width: 36,
-          height: 36,
-          borderRadius: 1,
-          bgcolor: colorCode,
-          border: '1px solid',
-          borderColor: 'divider',
-        }}
-      />
-    </Box>
-  );
+    return (
+        <Box
+            sx={{
+                py: 2,
+                width: 1,
+                display: 'flex',
+                alignItems: 'center',
+            }}
+        >
+            <ListItemText primary={<span>{name}</span>} />
+        </Box>
+    );
 }
 
 export function IngredientGroupListView() {
-  const { t } = useTranslation('menu');
-  const theme = useTheme();
-  const router = useRouter();
-  const [searchQuery, setSearchQuery] = useState('');
-  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
-  const [paginationModel, setPaginationModel] = useState({ page: 0, pageSize: 20 });
-  const { ingredientGroups, ingredientGroupsLoading, pagination } = useGetIngredientGroupsPage({
-    search: debouncedSearchQuery,
-    limit: paginationModel.pageSize,
-    offset: paginationModel.page * paginationModel.pageSize,
-  });
-  const { deleteIngredientGroup } = useDeleteIngredientGroup();
+    const { t } = useTranslation('menu');
+    const router = useRouter();
+    const [searchQuery, setSearchQuery] = useState('');
+    const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
+    const [paginationModel, setPaginationModel] = useState({ page: 0, pageSize: 20 });
+    const { ingredientGroups, ingredientGroupsLoading, pagination } = useGetIngredientGroupsPage({
+        search: debouncedSearchQuery,
+        limit: paginationModel.pageSize,
+        offset: paginationModel.page * paginationModel.pageSize,
+    });
+    const { deleteIngredientGroup } = useDeleteIngredientGroup();
 
-  const [viewModalOpen, setViewModalOpen] = useState(false);
-  const [selectedGroup, setSelectedGroup] = useState<IIngredientGroupItem | null>(null);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [groupToDelete, setGroupToDelete] = useState<string | null>(null);
+    const [viewModalOpen, setViewModalOpen] = useState(false);
+    const [selectedGroup, setSelectedGroup] = useState<IIngredientGroupItem | null>(null);
+    const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+    const [groupToDelete, setGroupToDelete] = useState<string | null>(null);
 
-  useEffect(() => {
-    const timeout = setTimeout(() => {
-      setDebouncedSearchQuery(searchQuery);
-    }, 400);
+    useEffect(() => {
+        const timeout = setTimeout(() => {
+            setDebouncedSearchQuery(searchQuery);
+        }, 400);
 
-    return () => clearTimeout(timeout);
-  }, [searchQuery]);
+        return () => clearTimeout(timeout);
+    }, [searchQuery]);
 
-  useEffect(() => {
-    setPaginationModel((prev) => ({ ...prev, page: 0 }));
-  }, [debouncedSearchQuery]);
+    useEffect(() => {
+        setPaginationModel((prev) => ({ ...prev, page: 0 }));
+    }, [debouncedSearchQuery]);
 
-  const columns = useMemo<GridColDef[]>(() => [
-    {
-      field: 'name',
-      headerName: t('warehouse.name'),
-      flex: 1,
-      minWidth: 280,
-      hideable: false,
-      renderCell: (params) => <RenderCellGroupName params={params} />,
-    },
-    {
-      field: 'color_code',
-      headerName: t('warehouse.color'),
-      width: 150,
-      renderCell: (params) => <RenderCellColor params={params} />,
-    },
-    {
-      type: 'actions',
-      field: 'actions',
-      // headerName: ' ',
-      headerName: t('actions'),
-      width: 150,
-      // align: 'right',
-      // headerAlign: 'right',
-      sortable: false,
-      filterable: false,
-      disableColumnMenu: true,
-      getActions: (params) => [
-        <CustomGridActionsCellItem
-          // showInMenu
-          label={t('warehouse.edit')}
-          icon={<Iconify icon="solar:pen-bold" />}
-          onClick={() => handleEditGroup(params.row.id)}
-        />,
-        <CustomGridActionsCellItem
-          key="delete"
-          // showInMenu
-          label={t('warehouse.delete')}
-          icon={<Iconify icon="solar:trash-bin-trash-bold" />}
-          onClick={() => {
-            setGroupToDelete(params.row.id);
-            setDeleteDialogOpen(true);
-          }}
-          style={{ color: theme.palette.error.main }}
-        />,
-      ],
-    },
-  ], [t, theme.palette.error.main]);
+    const handleEditGroup = useCallback((id: string) => {
+        router.push(paths.menu.ingredients_group.edit(id));
+    }, [router]);
 
-  const handleEditGroup = useCallback((id: string) => {
-    router.push(paths.warehouse.ingredients_group.edit(id));
-  }, [router]);
-
-  const handleConfirmDelete = useCallback(async () => {
-    if (groupToDelete) {
-      try {
-        await deleteIngredientGroup(groupToDelete);
-        toast.success(t('success.deleteSuccess'));
-      } catch (error) {
-        console.error('Failed to delete:', error);
-        toast.error(t('error.deleteFailed'));
-      } finally {
-        setDeleteDialogOpen(false);
-        setGroupToDelete(null);
-      }
-    }
-  }, [groupToDelete, deleteIngredientGroup, t]);
-
-  const handleDeleteGroup = useCallback((id: string) => {
-    setGroupToDelete(id);
-    setDeleteDialogOpen(true);
-  }, []);
-
-  const handleViewGroup = useCallback((group: IIngredientGroupItem) => {
-    setSelectedGroup(group);
-    setViewModalOpen(true);
-  }, []);
-
-  const handleCloseModal = useCallback(() => {
-    setViewModalOpen(false);
-    setSelectedGroup(null);
-  }, []);
-
-  const renderGroupSpecifications = useCallback((group: IIngredientGroupItem) => (
-    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-      {group.picture_url && (
-        <Box
-          component="img"
-          src={group.picture_url}
-          alt={group.name}
-          sx={{ width: '100%', borderRadius: 1, maxHeight: 300, objectFit: 'cover' }}
-        />
-      )}
-      <Box>
-        <Typography variant="subtitle2" sx={{ color: 'text.secondary', mb: 0.5 }}>{t('warehouse.id')}</Typography>
-        <Typography variant="body2">{group.id}</Typography>
-      </Box>
-      <Box>
-        <Typography variant="subtitle2" sx={{ color: 'text.secondary', mb: 0.5 }}>{t('warehouse.name')}</Typography>
-        <Typography variant="body2">{group.name}</Typography>
-      </Box>
-      {group.color_code && (
-        <Box>
-          <Typography variant="subtitle2" sx={{ color: 'text.secondary', mb: 0.5 }}>{t('warehouse.color')}</Typography>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <Box
-              sx={{
-                width: 40,
-                height: 40,
-                borderRadius: 1,
-                bgcolor: group.color_code,
-                border: '1px solid',
-                borderColor: 'divider',
-              }}
-            />
-            <Typography variant="body2">{group.color_code}</Typography>
-          </Box>
-        </Box>
-      )}
-    </Box>
-  ), [t]);
-
-  return (
-    <>
-      <GenericTableView<IIngredientGroupItem>
-        data={Array.isArray(ingredientGroups) ? ingredientGroups : []}
-        loading={ingredientGroupsLoading}
-        columns={columns}
-        paginationMode="server"
-        rowCount={pagination?.total || 0}
-        paginationModel={paginationModel}
-        onPaginationModelChange={setPaginationModel}
-        pageSizeOptions={[10, 20, 50, 100]}
-        breadcrumbs={{
-          heading: t('ingredientGroups.title'),
-          links: [
-            { name: t('app'), href: paths.menu.root },
-            { name: t('ingredientGroups.title') },
-          ],
-        }}
-        addButton={{
-          label: t('warehouse.addGroup'),
-          href: paths.warehouse.ingredients_group.new,
-        }}
-        filterOptions={{}}
-        initialFilters={{}}
-        hideColumns={{}}
-        hideColumnsTogglable={['actions']}
-        onDeleteRow={handleDeleteGroup}
-        onDeleteRows={async (ids) => {
-          for (const id of ids) {
+    const handleConfirmDelete = useCallback(async () => {
+        if (groupToDelete) {
             try {
-              await deleteIngredientGroup(id);
+                await deleteIngredientGroup(groupToDelete);
+                toast.success(t('success.deleteSuccess'));
             } catch (error) {
-              console.error('Failed to delete:', error);
+                console.error('Failed to delete:', error);
+                toast.error(t('error.deleteFailed'));
+            } finally {
+                setDeleteDialogOpen(false);
+                setGroupToDelete(null);
             }
-          }
-        }}
-        onRowClick={(id) => {
-          const group = Array.isArray(ingredientGroups)
-            ? ingredientGroups.find(g => g.id === id)
-            : undefined;
-          if (group) {
-            handleViewGroup(group);
-          }
-        }}
-        onQuickFilterChange={setSearchQuery}
-      />
+        }
+    }, [groupToDelete, deleteIngredientGroup, t]);
 
-      <GenericViewModal
-        isOpen={viewModalOpen}
-        onClose={handleCloseModal}
-        title={selectedGroup?.name || t('warehouse.ingredientGroups')}
-        data={selectedGroup}
-        renderContent={renderGroupSpecifications}
-        maxWidth="sm"
-        slideDirection="left"
-        position="right"
-        paperSx={{
-            width: { xs: '100%', sm: '30vw' },
-            maxWidth: { xs: '100%', sm: '30vw' },
-        }}
-      />
+    const handleViewGroup = useCallback((group: IIngredientGroupItem) => {
+        setSelectedGroup(group);
+        setViewModalOpen(true);
+    }, []);
 
-      <Dialog
-        open={deleteDialogOpen}
-        onClose={() => setDeleteDialogOpen(false)}
-        maxWidth="sm"
-        fullWidth
-      >
-        <DialogTitle>{t('warehouse.deleteConfirm')}</DialogTitle>
-        <DialogContent>
-          {t('warehouse.deleteMessage')}
-        </DialogContent>
-        <DialogActions>
-          <Button
-            variant="outlined"
-            color="inherit"
-            onClick={() => setDeleteDialogOpen(false)}
-          >
-            {t('warehouse.cancel')}
-          </Button>
-          <Button
-            variant="contained"
-            color="error"
-            onClick={handleConfirmDelete}
-            autoFocus
-          >
-            {t('warehouse.delete')}
-          </Button>
-        </DialogActions>
-      </Dialog>
-    </>
-  );
+    const handleCloseModal = useCallback(() => {
+        setViewModalOpen(false);
+        setSelectedGroup(null);
+    }, []);
+
+    const columns = useMemo(
+        () => [
+            {
+                key: 'name',
+                label: t('warehouse.name'),
+                sortable: true,
+                width: '2fr',
+                align: 'left' as const,
+                getValue: (row: IIngredientGroupItem) => row?.name ?? '',
+                renderCell: ({ row }: { row: IIngredientGroupItem }) => (
+                    <RenderCellGroupName row={row} />
+                ),
+            },
+            {
+                key: 'color_code',
+                label: t('warehouse.color'),
+                sortable: false,
+                width: '1fr',
+                align: 'center' as const,
+                getValue: (row: IIngredientGroupItem) => row?.color_code || '',
+                renderCell: ({ value }: { value: unknown }) => {
+                    const colorCode = value as string;
+                    if (!colorCode) {
+                        return <div style={{ fontSize: '0.875rem', opacity: 0.8 }}>-</div>;
+                    }
+                    return (
+                        <Box
+                            sx={{
+                                display: 'flex',
+                                justifyContent: 'center',
+                                alignItems: 'center',
+                                width: '100%',
+                                height: '100%',
+                                py: 1,
+                            }}
+                        >
+                            <Box
+                                sx={{
+                                    width: 40,
+                                    height: 32,
+                                    borderRadius: 1,
+                                    bgcolor: colorCode,
+                                    border: '1px solid',
+                                    borderColor: 'divider',
+                                }}
+                            />
+                        </Box>
+                    );
+                },
+            },
+            {
+                key: 'actions',
+                label: t('actions'),
+                sortable: false,
+                filterable: false,
+                width: '0.7fr',
+                align: 'center' as const,
+                renderCell: ({ row }: { row: IIngredientGroupItem }) => (
+                    <Box sx={{ display: 'flex', gap: 0.5 }}>
+                        <IconButton
+                            size="small"
+                            onClick={() => handleViewGroup(row)}
+                            sx={{ color: 'text.secondary' }}
+                        >
+                            <Iconify icon="solar:eye-bold" width={18} />
+                        </IconButton>
+                        <IconButton
+                            size="small"
+                            onClick={() => handleEditGroup(row.id)}
+                            sx={{ color: 'text.secondary' }}
+                        >
+                            <Iconify icon="solar:pen-bold" width={18} />
+                        </IconButton>
+                        <IconButton
+                            size="small"
+                            onClick={() => {
+                                setGroupToDelete(row.id);
+                                setDeleteDialogOpen(true);
+                            }}
+                            sx={{ color: 'error.main' }}
+                        >
+                            <Iconify icon="solar:trash-bin-trash-bold" width={18} />
+                        </IconButton>
+                    </Box>
+                ),
+            },
+        ],
+        [t, handleEditGroup, handleViewGroup]
+    );
+
+    const renderGroupSpecifications = useCallback((group: IIngredientGroupItem) => (
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            {group.picture_url && (
+                <Box
+                    component="img"
+                    src={group.picture_url}
+                    alt={group.name}
+                    sx={{ width: '100%', borderRadius: 1, maxHeight: 300, objectFit: 'cover' }}
+                />
+            )}
+            <Box>
+                <Typography variant="subtitle2" sx={{ color: 'text.secondary', mb: 0.5 }}>{t('warehouse.id')}</Typography>
+                <Typography variant="body2">{group.id}</Typography>
+            </Box>
+            <Box>
+                <Typography variant="subtitle2" sx={{ color: 'text.secondary', mb: 0.5 }}>{t('warehouse.name')}</Typography>
+                <Typography variant="body2">{group.name}</Typography>
+            </Box>
+            {group.color_code && (
+                <Box>
+                    <Typography variant="subtitle2" sx={{ color: 'text.secondary', mb: 0.5 }}>{t('warehouse.color')}</Typography>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Box
+                            sx={{
+                                width: 40,
+                                height: 40,
+                                borderRadius: 1,
+                                bgcolor: group.color_code,
+                                border: '1px solid',
+                                borderColor: 'divider',
+                            }}
+                        />
+                        <Typography variant="body2">{group.color_code}</Typography>
+                    </Box>
+                </Box>
+            )}
+        </Box>
+    ), [t]);
+
+    return (
+        <>
+            <DashboardContent
+                sx={{
+                    flexGrow: 1,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    maxHeight: '100vh',
+                    '--layout-dashboard-content-pt': { xs: '0px', md: '0px' },
+                    '--layout-dashboard-content-pb': { xs: '0px', md: '0px' },
+                }}
+            >
+                <DeductionUtilityDataTable
+                    persistKey="warehouse-ingredient-groups"
+                    data={Array.isArray(ingredientGroups) ? ingredientGroups : []}
+                    getRowId={(row: IIngredientGroupItem) => String(row?.id)}
+                    columns={columns}
+                    searchValue={searchQuery}
+                    onSearchChange={(value) => {
+                        setSearchQuery(value);
+                        setPaginationModel((prev) => ({ ...prev, page: 0 }));
+                    }}
+                    page={paginationModel.page}
+                    rowsPerPage={paginationModel.pageSize}
+                    totalCount={pagination?.total || 0}
+                    rowsPerPageOptions={[10, 20, 50, 100]}
+                    onPageChange={(p) => setPaginationModel((prev) => ({ ...prev, page: p }))}
+                    onRowsPerPageChange={(size) => setPaginationModel({ page: 0, pageSize: size })}
+                    defaultConfig={{
+                        order: ['name', 'color_code', 'actions'],
+                        visibility: {
+                            name: true,
+                            color_code: true,
+                            actions: true,
+                        },
+                        widths: {
+                            name: '2fr',
+                            color_code: '1fr',
+                            actions: '0.7fr',
+                        },
+                    }}
+                    onReset={() => {}}
+                    headerActions={
+                        <Button
+                            variant="contained"
+                            startIcon={<Iconify icon="mingcute:add-line" />}
+                            href={paths.menu.ingredients_group.new}
+                            size="small"
+                        >
+                            {t('warehouse.addGroup')}
+                        </Button>
+                    }
+                />
+            </DashboardContent>
+
+            <GenericViewModal
+                isOpen={viewModalOpen}
+                onClose={handleCloseModal}
+                title={selectedGroup?.name || t('warehouse.ingredientGroups')}
+                data={selectedGroup}
+                renderContent={renderGroupSpecifications}
+                maxWidth="sm"
+                slideDirection="left"
+                position="right"
+                paperSx={{
+                    width: { xs: '100%', sm: '30vw' },
+                    maxWidth: { xs: '100%', sm: '30vw' },
+                }}
+            />
+
+            <Dialog
+                open={deleteDialogOpen}
+                onClose={() => setDeleteDialogOpen(false)}
+                maxWidth="sm"
+                fullWidth
+            >
+                <DialogTitle>{t('warehouse.deleteConfirm')}</DialogTitle>
+                <DialogContent>
+                    {t('warehouse.deleteMessage')}
+                </DialogContent>
+                <DialogActions>
+                    <Button
+                        variant="outlined"
+                        color="inherit"
+                        onClick={() => setDeleteDialogOpen(false)}
+                    >
+                        {t('warehouse.cancel')}
+                    </Button>
+                    <Button
+                        variant="contained"
+                        color="error"
+                        onClick={handleConfirmDelete}
+                        autoFocus
+                    >
+                        {t('warehouse.delete')}
+                    </Button>
+                </DialogActions>
+            </Dialog>
+        </>
+    );
 }

@@ -9,8 +9,8 @@ import { bulletColor } from 'src/components/nav-section';
 
 export function dashboardLayoutVars(theme: Theme) {
   return {
-    '--layout-transition-easing': 'linear',
-    '--layout-transition-duration': '120ms',
+    '--layout-transition-easing': 'cubic-bezier(0.4, 0, 0.2, 1)',
+    '--layout-transition-duration': '400ms',
     '--layout-nav-mini-width': '88px',
     '--layout-nav-vertical-width': '300px',
     '--layout-nav-horizontal-height': '64px',

@@ -1,9 +1,9 @@
 import type { AxiosError } from 'axios';
 import type {
+  IUserOption,
   ICurrentUser,
   ITransaction,
   IBranchOption,
-  IUserOption,
   TransferPayload,
   ITransactionGroup,
   TransactionFilters,

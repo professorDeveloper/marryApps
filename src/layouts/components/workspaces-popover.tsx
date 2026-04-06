@@ -2,16 +2,14 @@ import type { Theme, SxProps } from '@mui/material/styles';
 import type { ButtonBaseProps } from '@mui/material/ButtonBase';
 
 import { usePopover } from 'minimal-shared/hooks';
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 
 import Box from '@mui/material/Box';
 import Avatar from '@mui/material/Avatar';
-import Divider from '@mui/material/Divider';
 import MenuList from '@mui/material/MenuList';
 import MenuItem from '@mui/material/MenuItem';
 import Typography from '@mui/material/Typography';
 import ButtonBase from '@mui/material/ButtonBase';
-import Button, { buttonClasses } from '@mui/material/Button';
 
 import { useTranslate } from 'src/locales/use-locales';
 

@@ -1,5 +1,6 @@
-import axiosInstance from './axios';
 import { getFullImageUrl } from 'src/utils/image-url';
+
+import axiosInstance from './axios';
 
 export interface ImageUploadResponse {
     status: 'success' | 'error';
@@ -64,6 +65,4 @@ export const uploadImage = async (file: File): Promise<string> => {
  * @param objectName - The object name returned from upload API
  * @returns Promise with full URL to the image
  */
-export const getImageUrl = async (objectName: string): Promise<string> => {
-    return await getFullImageUrl(objectName);
-};
+export const getImageUrl = async (objectName: string): Promise<string> => await getFullImageUrl(objectName);

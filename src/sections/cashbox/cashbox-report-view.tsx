@@ -29,11 +29,8 @@ import {
   TableContainer,
 } from '@mui/material';
 
-import { paths } from 'src/routes/paths';
-
 import { useTransactionsAPI } from 'src/hooks/use-transactions-api';
 
-import { CustomBreadcrumbs } from 'src/components/custom-breadcrumbs';
 
 const toApiDateTime = (value: dayjs.Dayjs) => value.format('YYYY-MM-DDTHH:mm:ssZ');
 
@@ -274,16 +271,6 @@ export function CashboxReportView() {
 
   return (
     <Box sx={{ p: 3 }}>
-      <CustomBreadcrumbs
-        heading={t('cashbox.sidebar.report', 'Cash report')}
-        links={[
-          { name: t('dashboard', 'Dashboard'), href: paths.dashboard.root },
-          { name: t('cashbox.sidebar.title', 'Cashbox'), href: paths.cashbox.root },
-          { name: t('cashbox.sidebar.report', 'Report') },
-        ]}
-        sx={{ mb: 2.5 }}
-      />
-
       <Card sx={{ p: 2, mb: 2 }}>
         <Stack spacing={1.5}>
           <Stack

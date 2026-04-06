@@ -1,207 +1,88 @@
 import type { FC } from 'react';
-import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { useTranslation } from 'react-i18next';
-import { useForm, FormProvider, Controller, useWatch } from 'react-hook-form';
-import { isEqual } from 'es-toolkit';
+import type { GenericEditViewProps } from './types';
+import type { FieldConfig, SectionConfig, EditViewConfig } from 'src/components/generic-edit-v2';
 
-import Box from '@mui/material/Box';
-import Stack from '@mui/material/Stack';
-import Alert from '@mui/material/Alert';
-import Button from '@mui/material/Button';
+import { useMemo, useCallback } from 'react';
 
 import { useRouter } from 'src/routes/hooks';
-import { ConfirmDialog } from 'src/components/custom-dialog';
-import { Iconify } from 'src/components/iconify';
-import { CustomBreadcrumbs } from 'src/components/custom-breadcrumbs';
 
-import type { GenericEditViewProps } from './types';
-import { buildInitialFormData } from './utils';
-import EditFormSection from './EditFormSection';
-import { ImageUploadField } from 'src/index-image-upload';
-import { FormActionButtons } from './FormActionButtons';
+import { GenericEditV2 } from 'src/components/generic-edit-v2';
 
 export const GenericEditView: FC<GenericEditViewProps> = ({
     config,
     data,
     isNew = false,
-    loading: externalLoading = false,
+    loading = false,
     onFormDataChange,
 }) => {
     const router = useRouter();
-    const { t } = useTranslation('menu');
-    const prevDataRef = useRef(data);
-    const isInitializedRef = useRef(false);
-    const didMountRef = useRef(false);
-    const prevWatchedRef = useRef<Record<string, any> | null>(null);
-    const lastEmittedRef = useRef<Record<string, any> | null>(null);
 
-    const [isLoading, setIsLoading] = useState(externalLoading);
-    const [error, setError] = useState<string | null>(null);
-    const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+    const mapField = useCallback(
+        (field: any): FieldConfig<Record<string, any>> => ({
+            key: field.key,
+            label: field.label,
+            // Backward compatibility: old GenericEditView often used `type: 'url'`
+            // for picture fields, but V2 expects `type: 'image'` for uploader UI.
+            type: field.type === 'url' && field.key === 'picture_url' ? 'image' : field.type,
+            required: field.required,
+            placeholder: field.placeholder,
+            multiline: field.multiline,
+            rows: field.rows,
+            options: field.options,
+            defaultValue: field.defaultValue,
+            helperText: field.helperText,
+            fullWidth: field.fullWidth,
+            colors: field.colors,
+            height: field.height,
+        }),
+        []
+    );
 
-    // Memoize initial form data to prevent recalculation
-    const initialFormData = useMemo(() => {
-        if (data && !isInitializedRef.current) {
-            isInitializedRef.current = true;
-            return { ...buildInitialFormData(config), ...data };
-        }
-        return buildInitialFormData(config);
-    }, [config, data]);
+    const mapSection = useCallback(
+        (section: any): SectionConfig<Record<string, any>> => ({
+            id: section.id,
+            title: section.title,
+            columns: section.columns === 2 ? 2 : 1,
+            fields: (section.fields || []).map(mapField),
+        }),
+        [mapField]
+    );
 
-    // Initialize react-hook-form with memoized defaults
-    const methods = useForm({
-        defaultValues: initialFormData,
-        mode: 'onBlur', // Enable onBlur mode for better performance
-    });
-    const watchedValues = useWatch({ control: methods.control });
+    const v2Config: EditViewConfig<Record<string, any>> = useMemo(
+        () => ({
+            entityName: config.entityName,
+            breadcrumbs: config.breadcrumbs,
+            showBreadcrumbs: config.showBreadcrumbs,
+            showDeleteButton: config.showDeleteButton,
+            deleteConfirmMessage: config.deleteConfirmMessage,
+            sidebar: config.leftSidecard ? mapSection(config.leftSidecard) : undefined,
+            sections: (config.sections || []).map(mapSection),
+        }),
+        [config, mapSection]
+    );
 
-    // Update loading state efficiently
-    useEffect(() => {
-        setIsLoading(externalLoading);
-    }, [externalLoading]);
-
-    // Only reset form when data actually changes (not on every render)
-    useEffect(() => {
-        if (data && data !== prevDataRef.current) {
-            const mergedData = { ...buildInitialFormData(config), ...data };
-            // Avoid wiping user input when parent echoes current form values
-            const currentValues = methods.getValues();
-            const shouldSkipReset =
-                (lastEmittedRef.current && isEqual(mergedData, lastEmittedRef.current)) ||
-                isEqual(mergedData, currentValues);
-            if (!shouldSkipReset) {
-                methods.reset(mergedData);
-            }
-            prevDataRef.current = data;
-        }
-    }, [data, config, methods]);
-
-    // Keep parent in sync with current form values (for tab persistence)
-    useEffect(() => {
-        if (!onFormDataChange) return;
-        if (!didMountRef.current) {
-            didMountRef.current = true;
-            return;
-        }
-        const nextValues = watchedValues as Record<string, any>;
-        if (prevWatchedRef.current && isEqual(prevWatchedRef.current, nextValues)) {
-            return;
-        }
-        prevWatchedRef.current = nextValues;
-        lastEmittedRef.current = nextValues;
-        onFormDataChange(nextValues);
-    }, [onFormDataChange, watchedValues]);
-
-    // Memoize submit handler to prevent recreation
-    const onSubmit = useCallback(async (formData: Record<string, any>) => {
-        setIsLoading(true);
-        setError(null);
-
-        try {
+    const handleSubmit = useCallback(
+        async (formData: Record<string, any>) => {
             await config.onSubmit(formData);
             onFormDataChange?.(formData);
-        } catch (err) {
-            setError(err instanceof Error ? err.message : `Failed to save ${config.entityName}`);
-        } finally {
-            setIsLoading(false);
-        }
-    }, [config.onSubmit, config.entityName, onFormDataChange]);
+        },
+        [config, onFormDataChange]
+    );
 
-    // Memoize delete handler
-    const handleDelete = useCallback(async () => {
-        setIsLoading(true);
-        setDeleteDialogOpen(false);
-        try {
-            await config.onDelete?.();
-        } catch (err) {
-            setError(err instanceof Error ? err.message : `Failed to delete ${config.entityName}`);
-        } finally {
-            setIsLoading(false);
-        }
-    }, [config.onDelete, config.entityName]);
-
-    // Memoize computed values
-    const imageFieldKey = useMemo(() => config.leftSidecard?.fields?.[0]?.key || 'picture_url', [config.leftSidecard]);
-    const hasLeftSidecard = useMemo(() => !!config.leftSidecard, [config.leftSidecard]);
-
-    const actionButtonProps = useMemo(() => ({
-        isNew,
-        isLoading,
-        showDeleteButton: config.showDeleteButton,
-        onDelete: () => setDeleteDialogOpen(true),
-    }), [isNew, isLoading, config.showDeleteButton]);
-
-
-    // Memoize sections to prevent recreation
-    const renderedSections = useMemo(() => config.sections.map((section) => (
-        <EditFormSection key={section.id} section={section} />
-    )), [config.sections]);
+    const handleCancel = useCallback(() => {
+        router.back();
+    }, [router]);
 
     return (
-        <Box>
-            {config.showBreadcrumbs !== false && (
-                <CustomBreadcrumbs
-                    heading={isNew ? `New ${config.title}` : `Edit ${config.title}`}
-                    links={config.breadcrumbs}
-                />
-            )}
-
-            <FormProvider {...methods}>
-                <form onSubmit={methods.handleSubmit(onSubmit)}>
-                    <Box
-                        sx={{
-                            maxWidth: 1400,
-                            mx: 'auto',
-                            pt: 5,
-                            display: 'grid',
-                            gridTemplateColumns: { xs: '1fr', md: hasLeftSidecard ? '1fr 2fr' : '1fr' },
-                            gap: 3,
-                        }}
-                    >
-                        {hasLeftSidecard && (
-                            <Box>
-                                <Controller
-                                    name={imageFieldKey}
-                                    control={methods.control}
-                                    render={({ field }) => (
-                                        <ImageUploadField
-                                            label="Upload Image"
-                                            value={field.value}
-                                            onChange={field.onChange}
-                                        />
-                                    )}
-                                />
-                                <FormActionButtons {...actionButtonProps} /> {/* ✅ */}
-                            </Box>
-                        )}
-
-                        <Box>
-                            {error && <Alert severity="error" sx={{ mb: 3 }}>{error}</Alert>}
-                            {renderedSections}
-                            {!hasLeftSidecard && (
-                                <FormActionButtons
-                                    isNew={isNew}
-                                    isLoading={isLoading}
-                                    showDeleteButton={config.showDeleteButton}
-                                    onDelete={() => setDeleteDialogOpen(true)}
-                                />
-                            )}
-                        </Box>
-                    </Box>
-                </form>
-            </FormProvider>
-
-            <ConfirmDialog
-                open={deleteDialogOpen}
-                onClose={() => setDeleteDialogOpen(false)}
-                title={t('common.deleteConfirmTitle')}
-                content={config.deleteConfirmMessage || t('common.deleteConfirmMessage')}
-                action={
-                    <Button variant="contained" color="error" onClick={handleDelete} disabled={isLoading}>
-                        {t('delete')}
-                    </Button>
-                }
-            />
-        </Box>
+        <GenericEditV2
+            data={data ?? null}
+            config={v2Config}
+            isNew={isNew}
+            loading={loading}
+            onSubmit={handleSubmit}
+            onDelete={config.onDelete}
+            onCancel={handleCancel}
+            title={config.title}
+        />
     );
 };

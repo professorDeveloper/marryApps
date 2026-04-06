@@ -1,19 +1,27 @@
-import type { GridColDef } from '@mui/x-data-grid';
+import type { RowAction, DataTableColumn, DataTableDefaultConfig } from 'src/sections/warehouse/deduction/components/utility-data-table/types/types';
 
 import { useTranslation } from 'react-i18next';
 import { useMemo, useState, useCallback } from 'react';
 
+import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
+import Typography from '@mui/material/Typography';
 import { Dialog, DialogTitle, DialogActions, DialogContent } from '@mui/material';
 
-import { paths } from 'src/routes/paths';
-
+import { DashboardContent } from 'src/layouts/dashboard';
 import { useGetGroupTransactions, useDeleteGroupTransaction } from 'src/actions/cashbox';
 
 import { toast } from 'src/components/snackbar';
 import { Iconify } from 'src/components/iconify';
-import { GenericTableView } from 'src/components/generic-table-view';
-import { CustomGridActionsCellItem } from 'src/components/custom-data-grid';
+
+import { DataTable } from 'src/sections/warehouse/deduction/components/utility-data-table/components/DataTable';
+
+// Types for transaction groups
+interface TransactionGroup {
+  id: string;
+  name: string;
+  created_at: string | Date;
+}
 
 export function CashRegistersListView() {
     const { t } = useTranslation('menu');
@@ -22,6 +30,7 @@ export function CashRegistersListView() {
 
     const [deleteId, setDeleteId] = useState<string | null>(null);
     const [openConfirm, setOpenConfirm] = useState(false);
+    const [searchValue, setSearchValue] = useState('');
 
     const handleDelete = useCallback(async () => {
         if (!deleteId) return;
@@ -36,73 +45,105 @@ export function CashRegistersListView() {
         }
     }, [deleteId, onDelete, t]);
 
-    const columns: GridColDef[] = useMemo(
+    const columns: DataTableColumn<TransactionGroup>[] = useMemo(
         () => [
             {
-                field: 'name',
-                headerName: t('common.name', 'Name'),
-                flex: 1,
-                minWidth: 200,
+                key: 'name',
+                label: t('common.name', 'Name'),
+                width: '1fr',
+                sortable: true,
+                filterable: true,
+                align: 'left',
             },
             {
-                field: 'created_at',
-                headerName: t('common.created_at', 'Created At'),
-                flex: 1,
-                minWidth: 180,
-                type: 'dateTime',
-                valueFormatter: (value: any) => {
+                key: 'created_at',
+                label: t('common.created_at', 'Created At'),
+                width: 180,
+                sortable: true,
+                filterable: true,
+                align: 'center',
+                mono: true,
+                getValue: (row) => row.created_at,
+                renderCell: ({ value }) => {
                     if (!value) return '';
-                    return new Date(value).toLocaleDateString();
+                    const date = typeof value === 'string' ? new Date(value) : value as Date;
+                    return date.toLocaleDateString();
                 },
-            },
-            {
-                field: 'actions',
-                type: 'actions',
-                headerName: t('common.actions', 'Actions'),
-                width: 120,
-                sortable: false,
-                filterable: false,
-                getActions: (params: any) => [
-                    <CustomGridActionsCellItem
-                        key="edit"
-                        icon={<Iconify icon="solar:pen-bold" />}
-                        label={t('common.edit', 'Edit')}
-                        href={`/menu/cashbox/transaction-groups/${params.row.id}/edit`}
-                    />,
-                    <CustomGridActionsCellItem
-                        key="delete"
-                        icon={<Iconify icon="solar:trash-bin-trash-bold" />}
-                        label={t('common.delete', 'Delete')}
-                        style={{ color: '#FB6633' }}
-                        onClick={() => {
-                            setDeleteId(params.row.id);
-                            setOpenConfirm(true);
-                        }}
-                    />,
-                ],
             },
         ],
         [t]
     );
 
+    const rowActions: RowAction<TransactionGroup>[] = useMemo(
+        () => [
+            {
+                label: t('common.edit', 'Edit'),
+                icon: <Iconify icon="solar:pen-bold" />,
+                onClick: (row) => {
+                    window.location.href = `/menu/cashbox/transaction-groups/${row.id}/edit`;
+                },
+            },
+            {
+                label: t('common.delete', 'Delete'),
+                icon: <Iconify icon="solar:trash-bin-trash-bold" />,
+                onClick: (row) => {
+                    setDeleteId(row.id);
+                    setOpenConfirm(true);
+                },
+            },
+        ],
+        [t]
+    );
+
+    const defaultConfig: DataTableDefaultConfig = useMemo(
+        () => ({
+            order: ['name', 'created_at'],
+            visibility: {
+                name: true,
+                created_at: true,
+            },
+            widths: {
+                name: '1fr',
+                created_at: 180,
+            },
+        }),
+        []
+    );
+
+    const handleReset = useCallback(() => {
+        setSearchValue('');
+    }, []);
+
+    const getRowId = useCallback((row: TransactionGroup) => row.id, []);
+
     return (
         <>
-            <GenericTableView
-                data={groupTransactions}
-                columns={columns}
-                loading={groupTransactionsLoading}
-                breadcrumbs={{
-                    heading: t('cashbox.transactionGroups.title', 'Transaction Groups'),
-                    links: [
-                        { name: t('dashboard', 'Dashboard'), href: paths.dashboard.root },
-                        { name: t('cashbox.transactionGroups.title', 'Transaction Groups') },
-                    ],
-                }}
-                addButton={{
-                    label: t('common.add', 'Add'),
-                    href: `/menu/cashbox/transaction-groups/new`,
-                }}
-            />
+            <DashboardContent>
+                {groupTransactionsLoading ? (
+                    <Box 
+                        display="flex" 
+                        alignItems="center" 
+                        justifyContent="center" 
+                        minHeight={400}
+                    >
+                        <Typography variant="h6">Loading...</Typography>
+                    </Box>
+                ) : (
+                    <DataTable<TransactionGroup>
+                        persistKey="cashbox-transaction-groups"
+                        data={groupTransactions || []}
+                        columns={columns}
+                        defaultConfig={defaultConfig}
+                        onReset={handleReset}
+                        searchValue={searchValue}
+                        onSearchChange={setSearchValue}
+                        rowActions={rowActions}
+                        getRowId={getRowId}
+                        emptyTitle={t('common.noData', 'No data')}
+                        emptySubtitle={t('common.noDataSubtitle', 'Try adjusting filters or columns.')}
+                    />
+                )}
+            </DashboardContent>
 
             <Dialog
                 open={openConfirm}

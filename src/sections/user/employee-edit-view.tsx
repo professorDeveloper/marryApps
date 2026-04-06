@@ -2,16 +2,19 @@
 import type { TFunction } from 'i18next';
 import type { IUserFormData } from 'src/types/user';
 import type { CardSection, GenericEditViewConfig } from 'src/components/generic-edit-view';
+
 import { useParams } from 'react-router';
 import { useTranslation } from 'react-i18next';
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+
 import { Box } from '@mui/material';
 
 import { paths } from 'src/routes/paths';
 import { useRouter } from 'src/routes/hooks';
 
-import { useGetUser, useCreateUser, useUpdateUser, useDeleteUser } from 'src/actions/users';
 import { useTransactionsAPI } from 'src/hooks/use-transactions-api';
+
+import { useGetUser, useCreateUser, useUpdateUser, useDeleteUser } from 'src/actions/users';
 
 import { GenericEditView } from 'src/components/generic-edit-view';
 import { CustomBreadcrumbs } from 'src/components/custom-breadcrumbs';

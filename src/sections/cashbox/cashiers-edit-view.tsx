@@ -1,7 +1,7 @@
-import { useTranslation } from 'react-i18next';
-import { useCallback, useEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
-import { useNavigate, useParams } from 'react-router';
+import { useTranslation } from 'react-i18next';
+import { useParams, useNavigate } from 'react-router';
+import { useMemo, useEffect, useCallback } from 'react';
 
 import Card from '@mui/material/Card';
 import Stack from '@mui/material/Stack';
@@ -9,14 +9,16 @@ import Button from '@mui/material/Button';
 import TextField from '@mui/material/TextField';
 
 import { paths } from 'src/routes/paths';
-import { toast } from 'src/components/snackbar';
+
 import { DashboardContent } from 'src/layouts/dashboard';
-import { CustomBreadcrumbs } from 'src/components/custom-breadcrumbs';
 import {
     useGetCashier,
     useCreateCashier,
     useUpdateCashier,
 } from 'src/actions/cashbox';
+
+import { toast } from 'src/components/snackbar';
+import { CustomBreadcrumbs } from 'src/components/custom-breadcrumbs';
 
 interface CashierEditViewProps {
     isNew?: boolean;

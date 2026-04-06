@@ -1,42 +1,96 @@
-import type { GridColDef, GridPaginationModel } from '@mui/x-data-grid';
-import { useMemo, useCallback, useState, useEffect } from 'react';
+import type { GridPaginationModel } from '@mui/x-data-grid';
+import type { IInventory, IInventoryItem, IBackendPagination } from 'src/types/inventory';
+
+import dayjs from 'dayjs';
 import { useTranslation } from 'react-i18next';
+import { useMemo, useState, useEffect, useCallback } from 'react';
+
 import {
+    Box,
+    Table,
     Button,
     Dialog,
-    DialogActions,
-    DialogContent,
-    DialogTitle,
-    Box,
     useTheme,
-    Table,
+    TableRow,
     TableBody,
     TableCell,
-    TableContainer,
     TableHead,
-    TableRow,
+    IconButton,
     Typography,
+    DialogTitle,
+    DialogActions,
+    DialogContent,
+    TableContainer,
 } from '@mui/material';
+
 import { paths } from 'src/routes/paths';
 import { useRouter } from 'src/routes/hooks';
-import { Iconify } from 'src/components/iconify';
-import { CustomGridActionsCellItem } from 'src/components/custom-data-grid';
-import { GenericTableView } from 'src/components/generic-table-view';
-import { GenericViewModal } from 'src/components/generic-view-view';
-import { toast } from 'src/components/snackbar';
+
+import { useStorageAPI } from 'src/hooks/use-storage-api';
 import { useInventoryAPI } from 'src/hooks/use-inventory-api';
 import { useGenericViewModal } from 'src/hooks/use-generic-view-modal';
-import dayjs from 'dayjs';
-import type { IBackendPagination, IInventory, IInventoryItem } from 'src/types/inventory';
 
-// ============================================================================
-// RENDER CELLS
-// ============================================================================
+// Date utility functions
+const toPickerDate = (dateString: string): dayjs.Dayjs | null => {
+    if (!dateString) return null;
+    return dayjs(dateString);
+};
 
-function RenderCellStatus({ params }: { params: any }) {
-    const { row } = params;
-    const status = row.status || 'draft';
+const getTodayUtcBoundary = (endOfDay = false): string => {
+    const now = dayjs();
+    const date = new Date(
+        Date.UTC(
+            now.year(),
+            now.month(),
+            now.date(),
+            endOfDay ? 23 : 0,
+            endOfDay ? 59 : 0,
+            endOfDay ? 59 : 0
+        )
+    );
+    return date.toISOString().replace('.000Z', 'Z');
+};
 
+const getTomorrowUtcBoundary = (endOfDay = false): string => {
+    const now = dayjs().add(1, 'day');
+    const date = new Date(
+        Date.UTC(
+            now.year(),
+            now.month(),
+            now.date(),
+            endOfDay ? 23 : 0,
+            endOfDay ? 59 : 0,
+            endOfDay ? 59 : 0
+        )
+    );
+    return date.toISOString().replace('.000Z', 'Z');
+};
+
+// Helper to convert a dayjs date to UTC boundary string
+const toUtcDayBoundary = (date: dayjs.Dayjs, endOfDay = false): string => {
+    const d = new Date(
+        Date.UTC(
+            date.year(),
+            date.month(),
+            date.date(),
+            endOfDay ? 23 : 0,
+            endOfDay ? 59 : 0,
+            endOfDay ? 59 : 0,
+            0
+        )
+    );
+    return d.toISOString().replace('.000Z', 'Z');
+};
+
+import { DashboardContent } from 'src/layouts/dashboard';
+
+import { toast } from 'src/components/snackbar';
+import { Iconify } from 'src/components/iconify';
+import { GenericViewModal } from 'src/components/generic-view-view';
+
+import { DeductionUtilityDataTable } from 'src/sections/warehouse/deduction';
+
+function RenderCellStatus({ status }: { status: string }) {
     const statusConfig: Record<string, { label: string; color: string }> = {
         active: { label: 'Active', color: '#22c55e' },
         draft: { label: 'Draft', color: '#f59e0b' },
@@ -71,15 +125,12 @@ const formatAmount = (value: string | number | null | undefined) => {
     return parsed.toLocaleString('uz-UZ', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 };
 
-// ============================================================================
-// MAIN COMPONENT
-// ============================================================================
-
 export function InventoryListView() {
     const { t } = useTranslation('menu');
     const theme = useTheme();
     const router = useRouter();
     const { getInventories, deleteInventory, getInventoryItems } = useInventoryAPI();
+    const { getStorages } = useStorageAPI();
 
     const [inventories, setInventories] = useState<IInventory[]>([]);
     const [loading, setLoading] = useState(true);
@@ -87,6 +138,8 @@ export function InventoryListView() {
     const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
+    const [dateFrom, setDateFrom] = useState(getTodayUtcBoundary());
+    const [dateTo, setDateTo] = useState(getTomorrowUtcBoundary(true));
     const [itemsLoading, setItemsLoading] = useState(false);
     const [inventoryItems, setInventoryItems] = useState<IInventoryItem[]>([]);
     const [pagination, setPagination] = useState<IBackendPagination | undefined>(undefined);
@@ -94,6 +147,14 @@ export function InventoryListView() {
         page: 0,
         pageSize: 20,
     });
+    const [activePeriod, setActivePeriod] = useState<'day' | 'week' | 'month' | 'year' | undefined>('day');
+    const [storageOptions, setStorageOptions] = useState<Array<{ id: string; name: string }>>([]);
+  const [draftFilters, setDraftFilters] = useState({
+    status: '',
+    storage_id: '',
+    date_from: getTodayUtcBoundary(),
+    date_to: getTomorrowUtcBoundary(true),
+  });
 
     const { isOpen, selectedData, openModal, closeModal } = useGenericViewModal<IInventory>();
 
@@ -105,6 +166,13 @@ export function InventoryListView() {
         return () => clearTimeout(timeout);
     }, [searchQuery]);
 
+    // Fetch storages on mount
+    useEffect(() => {
+        getStorages().then((storages) => {
+            setStorageOptions(storages);
+        });
+    }, [getStorages]);
+
     const loadInventories = useCallback(async () => {
         try {
             setLoading(true);
@@ -112,6 +180,10 @@ export function InventoryListView() {
                 search: debouncedSearchQuery,
                 limit: paginationModel.pageSize,
                 offset: paginationModel.page * paginationModel.pageSize,
+                ...(draftFilters.date_from ? { date_from: draftFilters.date_from } : {}),
+                ...(draftFilters.date_to ? { date_to: draftFilters.date_to } : {}),
+                ...(draftFilters.status ? { status: draftFilters.status } : {}),
+                ...(draftFilters.storage_id ? { storage_id: draftFilters.storage_id } : {}),
             });
             setInventories(response.items);
             setPagination(response.pagination);
@@ -120,7 +192,7 @@ export function InventoryListView() {
         } finally {
             setLoading(false);
         }
-    }, [debouncedSearchQuery, getInventories, paginationModel.page, paginationModel.pageSize]);
+    }, [debouncedSearchQuery, getInventories, paginationModel.page, paginationModel.pageSize, draftFilters]);
 
     useEffect(() => {
         loadInventories();
@@ -128,7 +200,7 @@ export function InventoryListView() {
 
     useEffect(() => {
         setPaginationModel((prev) => ({ ...prev, page: 0 }));
-    }, [debouncedSearchQuery]);
+    }, [debouncedSearchQuery, draftFilters]);
 
     const handleDelete = useCallback(
         async (id: string) => {
@@ -168,152 +240,292 @@ export function InventoryListView() {
         [getInventoryItems, openModal, t]
     );
 
-    const columns = useMemo<GridColDef[]>(
+    const columns = useMemo(
         () => [
+      
             {
-                field: 'number',
-                headerName: t('inventory.number'),
-                width: 120,
-                renderCell: (params) => <Box sx={{ mt: 1.5, mb: 1.5 }}>{params.row.number}</Box>,
+                key: 'storage_id',
+                label: t('inventory.storage'),
+                sortable: true,
+                filter: {
+                    type: 'multi' as const,
+                    maxSelections: 1,
+                    options: storageOptions.map(s => s.id),
+                    getOptionLabel: (id: string) => {
+                        const storage = storageOptions.find(s => s.id === id);
+                        return storage?.name || id;
+                    },
+                },
+                width: '1.2fr',
+                align: 'left' as const,
+                getValue: (row: IInventory) =>
+                    row?.storage_id || '-',
+                renderCell: ({ row }: { row: IInventory }) => {
+                    const id = row?.storage_id;
+                    const storage = storageOptions.find((s) => s.id === id);
+                    return storage?.name || id || '-';
+                },
             },
             {
-                field: 'date',
-                headerName: t('inventory.date'),
-                width: 150,
-                valueGetter: (_value, row) =>
-                    row.date ? dayjs(row.date).format('DD.MM.YYYY') : '-',
+                key: 'description',
+                label: t('inventory.description'),
+                sortable: true,
+                width: '1.5fr',
+                align: 'left' as const,
+                getValue: (row: IInventory) => (row as any)?.description || '-',
             },
             {
-                field: 'storage_id',
-                headerName: t('inventory.storage'),
-                width: 200,
-                flex: 0.5,
-                valueGetter: (_value, row) =>
-                    row?._expand?.storage_id?.name || row.storage_id || '-',
+                key: 'status',
+                label: t('inventory.status'),
+                sortable: true,
+                filter: { type: 'multi' as const, maxSelections: 1, options: ['active', 'draft', 'deleted'] },
+                width: '0.8fr',
+                align: 'left' as const,
+                getValue: (row: IInventory) => row?.status || 'draft',
+                renderCell: ({ value }: { value: unknown }) => (
+                    <RenderCellStatus status={String(value ?? 'draft')} />
+                ),
             },
             {
-                field: 'description',
-                headerName: t('inventory.description'),
-                flex: 1,
-                minWidth: 200,
-                valueGetter: (_value, row) => row.description || '-',
+                key: 'remaining_amount',
+                label: t('inventory.remainingAmount'),
+                sortable: true,
+                width: '1fr',
+                align: 'right' as const,
+                mono: true,
+                getValue: (row: IInventory) => Number((row as any)?.remaining_amount ?? 0),
+                renderCell: ({ value }: { value: unknown }) =>
+                    formatAmount(value as number),
+                total: { aggregation: 'sum' as const },
             },
             {
-                field: 'status',
-                headerName: t('inventory.status'),
-                width: 120,
-                renderCell: (params) => <RenderCellStatus params={params} />,
+                key: 'shortage_amount',
+                label: t('inventory.shortageAmount'),
+                sortable: true,
+                width: '1fr',
+                align: 'right' as const,
+                mono: true,
+                getValue: (row: IInventory) => Number((row as any)?.shortage_amount ?? 0),
+                renderCell: ({ value }: { value: unknown }) =>
+                    formatAmount(value as number),
+                total: { aggregation: 'sum' as const },
             },
             {
-                field: 'remaining_amount',
-                headerName: t('inventory.remainingAmount'),
-                width: 180,
-                align: 'right',
-                headerAlign: 'right',
-                valueGetter: (_value, row) =>
-                    row.remaining_amount
-                        ? parseFloat(row.remaining_amount).toLocaleString('uz-UZ', {
-                            minimumFractionDigits: 2,
-                        })
-                        : '0.00',
-                        
+                key: 'surplus_amount',
+                label: t('inventory.surplusAmount'),
+                sortable: true,
+                width: '1fr',
+                align: 'right' as const,
+                mono: true,
+                getValue: (row: IInventory) => Number((row as any)?.surplus_amount ?? 0),
+                renderCell: ({ value }: { value: unknown }) =>
+                    formatAmount(value as number),
+                total: { aggregation: 'sum' as const },
+            },
+                  {
+                key: 'date',
+                label: t('inventory.date'),
+                sortable: true,
+                width: '1fr',
+                align: 'left' as const,
+                getValue: (row: IInventory) =>
+                    row?.date ? dayjs(row.date).format('DD.MM.YYYY') : '-',
             },
             {
-                field: 'shortage_amount',
-                headerName: t('inventory.shortageAmount'),
-                width: 180,
-                align: 'right',
-                headerAlign: 'right',
-                valueGetter: (_value, row) =>
-                    row.shortage_amount
-                        ? parseFloat(row.shortage_amount).toLocaleString('uz-UZ', {
-                            minimumFractionDigits: 2,
-                        })
-                        : '0.00',
-            },
-            {
-                field: 'surplus_amount',
-                headerName: t('inventory.surplusAmount'),
-                width: 150,
-                align: 'right',
-                headerAlign: 'right',
-                valueGetter: (_value, row) =>
-                    row.surplus_amount
-                        ? parseFloat(row.surplus_amount).toLocaleString('uz-UZ', {
-                            minimumFractionDigits: 2,
-                        })
-                        : '0.00',
-            },
-            {
-                type: 'actions',
-                field: 'actions',
-                headerName: t('actions'),
-                width: 130,
-                // align: 'right',
-                // headerAlign: 'right',
+                key: 'actions',
+                label: t('actions'),
                 sortable: false,
                 filterable: false,
-                disableColumnMenu: true,
-                getActions: (params) => [
-                    <CustomGridActionsCellItem
-                        key="edit"
-                        // showInMenu
-                        label={t('common.edit')}
-                        icon={<Iconify icon="solar:pen-bold" />}
-                        onClick={() => handleEdit(params.row.id)}
-                    />,
-                    <CustomGridActionsCellItem
-                        key="delete"
-                        // showInMenu
-                        label={t('common.delete')}
-                        icon={<Iconify icon="solar:trash-bin-trash-bold" />}
-                        style={{ color: theme.vars.palette.error.main }}
-                        onClick={() => {
-                            setDeleteId(params.row.id);
-                            setDeleteConfirmOpen(true);
-                        }}
-                    />,
-                ],
+                width: '0.7fr',
+                align: 'center' as const,
+                renderCell: ({ row }: { row: IInventory }) => (
+                    <Box sx={{ display: 'flex', gap: 0.5 }}>
+                        <IconButton
+                            size="small"
+                            onClick={() => handleOpenItemsModal(row)}
+                            sx={{ color: 'text.secondary' }}
+                        >
+                            <Iconify icon="solar:eye-bold" width={18} />
+                        </IconButton>
+                        <IconButton
+                            size="small"
+                            onClick={() => handleEdit(row.id)}
+                            sx={{ color: 'text.secondary' }}
+                        >
+                            <Iconify icon="solar:pen-bold" width={18} />
+                        </IconButton>
+                        <IconButton
+                            size="small"
+                            onClick={() => {
+                                setDeleteId(row.id);
+                                setDeleteConfirmOpen(true);
+                            }}
+                            sx={{ color: 'error.main' }}
+                        >
+                            <Iconify icon="solar:trash-bin-trash-bold" width={18} />
+                        </IconButton>
+                    </Box>
+                ),
             },
         ],
-        [t, handleEdit, theme]
+        [t, handleEdit, handleOpenItemsModal, storageOptions]
     );
 
     return (
         <>
-            <GenericTableView
-                data={inventories}
-                loading={loading}
-                columns={columns}
-                paginationMode="server"
-                rowCount={pagination?.total || 0}
-                paginationModel={paginationModel}
-                onPaginationModelChange={setPaginationModel}
-                pageSizeOptions={[10, 20, 50, 100]}
-                breadcrumbs={{
-                    heading: t('inventory.list'),
-                    links: [
-                        { name: t('app'), href: paths.menu.root },
-                        { name: t('inventory.title'), href: paths.menu.inventory.root },
-                        { name: t('inventory.list') },
-                    ],
+            <DashboardContent
+                sx={{
+                    flexGrow: 1,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    maxHeight: '100vh',
+                    '--layout-dashboard-content-pt': { xs: '0px', md: '0px' },
+                    '--layout-dashboard-content-pb': { xs: '0px', md: '0px' },
                 }}
-                addButton={{
-                    label: t('inventory.add'),
-                    href: paths.menu.inventory.new,
+            >
+                <DeductionUtilityDataTable
+                    persistKey="warehouse-inventory"
+                    data={inventories}
+                    getRowId={(row: IInventory) => String(row?.id)}
+                    columns={columns}
+                    searchValue={searchQuery}
+                    onSearchChange={(value) => {
+                        setSearchQuery(value);
+                        setPaginationModel((prev) => ({ ...prev, page: 0 }));
+                    }}
+                    filters={Object.keys(draftFilters).reduce((acc, key) => {
+                        const value = (draftFilters as any)[key];
+                        if (key === 'status' && value) {
+                            acc.status = { type: 'multi', value: [value] };
+                        } else if (key === 'storage_id' && value) {
+                            acc.storage_id = { type: 'multi', value: [value] };
+                        }
+                        return acc;
+                    }, {} as Record<string, { type: 'text' | 'multi'; value: string | string[] }>)}
+                    onFiltersChange={(filterState: any) => {
+                        // Convert DataTable filter format to API filter format
+                        setDraftFilters(prev => {
+                            const newStatus = Array.isArray(filterState.status?.value) ? filterState.status.value[0] : (filterState.status?.value || '');
+                            const newStorageId = Array.isArray(filterState.storage_id?.value) ? filterState.storage_id.value[0] : (filterState.storage_id?.value || '');
+                            
+                            // If clicking the same value again, clear the filter
+                            return {
+                                ...prev,
+                                status: newStatus === prev.status ? '' : newStatus,
+                                storage_id: newStorageId === prev.storage_id ? '' : newStorageId,
+                            };
+                        });
+                    }}
+                    page={paginationModel.page}
+                    rowsPerPage={paginationModel.pageSize}
+                    totalCount={pagination?.total || 0}
+                    rowsPerPageOptions={[10, 20, 50, 100]}
+                    onPageChange={(p) => setPaginationModel((prev) => ({ ...prev, page: p }))}
+                    onRowsPerPageChange={(size) => setPaginationModel({ page: 0, pageSize: size })}
+                    defaultConfig={{
+                        order: [ 'storage_id', 'description', 'status', 'remaining_amount', 'shortage_amount', 'surplus_amount','date', 'actions'],
+                        visibility: {
+                            number: true,
+                            date: true,
+                            storage_id: true,
+                            description: true,
+                            status: true,
+                            remaining_amount: true,
+                            shortage_amount: true,
+                            surplus_amount: true,
+                            actions: true,
+                        },
+                        widths: {
+                            number: '0.8fr',
+                            date: '1fr',
+                            storage_id: '1.2fr',
+                            description: '1.5fr',
+                            status: '0.8fr',
+                            remaining_amount: '1fr',
+                            shortage_amount: '1fr',
+                            surplus_amount: '1fr',
+                            actions: '0.7fr',
+                        },
+                    }}
+                    onReset={() => {
+                    setSearchQuery('');
+                    setDateFrom(getTodayUtcBoundary());
+                    setDateTo(getTomorrowUtcBoundary(true));
+                    setActivePeriod('day');
+                    setDraftFilters({ 
+                        status: '', 
+                        storage_id: '',
+                        date_from: getTodayUtcBoundary(),
+                        date_to: getTomorrowUtcBoundary(true),
+                    });
                 }}
-                onDeleteRow={(id) => {
-                    setDeleteId(id);
-                    setDeleteConfirmOpen(true);
-                }}
-                onRowClick={(id) => {
-                    const inventory = inventories.find((inv) => inv.id === id);
-                    if (inventory) {
-                        handleOpenItemsModal(inventory);
+                    showPeriodPicker
+                    periodPickerProps={{
+                        startDate: toPickerDate(dateFrom)?.toDate() || null,
+                        endDate: toPickerDate(dateTo)?.toDate() || null,
+                        onStartDateChange: (date: Date | null) => {
+                            setActivePeriod(undefined);
+                            if (date) {
+                                const pickedDate = dayjs(date);
+                                setDateFrom(toUtcDayBoundary(pickedDate, false));
+                            } else {
+                                setDateFrom('');
+                            }
+                        },
+                        onEndDateChange: (date: Date | null) => {
+                            setActivePeriod(undefined);
+                            if (date) {
+                                const pickedDate = dayjs(date);
+                                setDateTo(toUtcDayBoundary(pickedDate, true));
+                            } else {
+                                setDateTo('');
+                            }
+                        }
+                    }}
+                    showPeriodButtons
+                    periodButtonProps={{
+                        activePeriod,
+                        onPeriodChange: (period: 'day' | 'week' | 'month' | 'year') => {
+                            setActivePeriod(period);
+                            const now = dayjs();
+                            let startDate = '';
+                            let endDate = '';
+
+                            switch (period) {
+                                case 'day':
+                                    startDate = toUtcDayBoundary(now, false);
+                                    endDate = toUtcDayBoundary(now, true);
+                                    break;
+                                case 'week':
+                                    startDate = toUtcDayBoundary(now.subtract(7, 'day'), false);
+                                    endDate = toUtcDayBoundary(now, true);
+                                    break;
+                                case 'month':
+                                    startDate = toUtcDayBoundary(now.subtract(30, 'day'), false);
+                                    endDate = toUtcDayBoundary(now, true);
+                                    break;
+                                case 'year':
+                                    startDate = toUtcDayBoundary(now.subtract(365, 'day'), false);
+                                    endDate = toUtcDayBoundary(now, true);
+                                    break;
+                            }
+
+                            setDateFrom(startDate);
+                            setDateTo(endDate);
+                        }
+                    }}
+                    headerActions={
+                        <Button
+                            variant="contained"
+                            startIcon={<Iconify icon="mingcute:add-line" />}
+                            href={paths.menu.inventory.new}
+                            size="small"
+                        >
+                            {t('inventory.add')}
+                        </Button>
                     }
-                }}
-                onQuickFilterChange={setSearchQuery}
-            />
+                />
+            </DashboardContent>
 
             <Dialog
                 open={deleteConfirmOpen}

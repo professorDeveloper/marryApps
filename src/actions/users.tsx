@@ -3,7 +3,6 @@ import type { IUser, IUserFormData, IUserRegisterData } from 'src/types/user';
 
 import useSWR, { mutate } from 'swr';
 import { useMemo, useCallback } from 'react';
-
 import { uuidv4 } from 'minimal-shared/utils';
 
 import { poster, putter, fetcher, deleter, endpoints } from 'src/lib/axios';

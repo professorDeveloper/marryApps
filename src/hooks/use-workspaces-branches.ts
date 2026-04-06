@@ -1,11 +1,12 @@
 import type { SWRConfiguration } from 'swr';
 import type { IBranchItem } from 'src/types/branches';
-import type { ITranslationItem } from 'src/types/departments.tsx';
+
 import useSWR from 'swr';
 import { useMemo } from 'react';
+
+import { CONFIG } from 'src/global-config';
 import { fetcher, endpoints } from 'src/lib/axios';
 import { useTranslate } from 'src/locales/use-locales';
-import { CONFIG } from 'src/global-config';
 
 interface BackendResponse<T> {
     status: string;

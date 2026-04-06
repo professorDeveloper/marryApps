@@ -1,5 +1,6 @@
 import type { NavGroupProps, NavSectionProps } from '../types';
 
+import { memo } from 'react';
 import { mergeClasses } from 'minimal-shared/utils';
 
 import { useTheme } from '@mui/material/styles';
@@ -10,7 +11,7 @@ import { navSectionClasses, navSectionCssVars } from '../styles';
 
 // ----------------------------------------------------------------------
 
-export function NavSectionMini({
+export const NavSectionMini = memo(function NavSectionMini({
   sx,
   data,
   render,
@@ -46,11 +47,11 @@ export function NavSectionMini({
       </NavUl>
     </Nav>
   );
-}
+});
 
 // ----------------------------------------------------------------------
 
-function Group({
+const Group = memo(function Group({
   items,
   render,
   cssVars,
@@ -76,4 +77,4 @@ function Group({
       </NavUl>
     </NavLi>
   );
-}
+});

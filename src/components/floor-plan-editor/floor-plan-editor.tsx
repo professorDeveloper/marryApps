@@ -1,18 +1,21 @@
-import { useState, useCallback, useEffect } from 'react';
+import type { Table } from './types';
+
+import { useState, useEffect, useCallback } from 'react';
+
 import { Box } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
-import type { Table } from './types';
-import {
-    DEFAULT_TABLE_WIDTH,
-    DEFAULT_TABLE_HEIGHT,
-    DEFAULT_TABLE_SEATS,
-    GRID_SIZE,
-    HALL_WIDTH,
-    HALL_HEIGHT,
-} from './types';
+
 import { FloorPlanCanvas } from './floor-plan-canvas';
 import { FloorPlanSidebar } from './floor-plan-sidebar';
 import { generateTableId, findNearestEmptyPosition } from './utils';
+import {
+    GRID_SIZE,
+    HALL_WIDTH,
+    HALL_HEIGHT,
+    DEFAULT_TABLE_WIDTH,
+    DEFAULT_TABLE_SEATS,
+    DEFAULT_TABLE_HEIGHT,
+} from './types';
 
 interface FloorPlanEditorProps {
     hallWidth?: number;

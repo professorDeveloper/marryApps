@@ -1,5 +1,6 @@
-import { Box, Table, Paper, TableRow, useTheme, TableBody, TableCell, TableHead, Typography, TableContainer } from '@mui/material';
 import type { ReactNode } from 'react';
+
+import { Box, Table, Paper, TableRow, useTheme, TableBody, TableCell, TableHead, Typography, TableContainer } from '@mui/material';
 
 // ============================================================================
 // TYPES

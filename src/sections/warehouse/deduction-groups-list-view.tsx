@@ -1,38 +1,41 @@
-import { useCallback, useMemo, useState } from 'react';
+import type { DeductionGroup } from 'src/hooks/use-deductions-api';
+
+import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
+import { useMemo, useState, useCallback } from 'react';
+
 import {
     Box,
     Button,
     Dialog,
+    IconButton,
+    DialogTitle,
     DialogActions,
     DialogContent,
-    DialogTitle,
-    useTheme,
 } from '@mui/material';
-import { GridColDef } from '@mui/x-data-grid';
+
+import { paths } from 'src/routes/paths';
+import { useRouter } from 'src/routes/hooks';
+
+import { useDeductionsAPI } from 'src/hooks/use-deductions-api';
+
+import { DashboardContent } from 'src/layouts/dashboard';
 
 import { Iconify } from 'src/components/iconify';
-import { CustomGridActionsCellItem } from 'src/components/custom-data-grid';
-import { GenericTableView } from 'src/components/generic-table-view';
-import { useDeductionsAPI, DeductionGroup } from 'src/hooks/use-deductions-api';
-import { useRouter } from 'src/routes/hooks';
-import { paths } from 'src/routes/paths';
-import { toast } from 'sonner';
+
+import { DeductionUtilityDataTable } from 'src/sections/warehouse/deduction';
 
 export function DeductionGroupsListView() {
     const { t } = useTranslation('menu');
-    const theme = useTheme();
     const router = useRouter();
 
-    const { getDeductionGroups, createDeductionGroup, deleteDeductionGroup } =
-        useDeductionsAPI();
+    const { getDeductionGroups, deleteDeductionGroup } = useDeductionsAPI();
 
     const [groups, setGroups] = useState<DeductionGroup[]>([]);
     const [loading, setLoading] = useState(true);
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
 
-    // Fetch groups
     const fetchGroups = useCallback(async () => {
         setLoading(true);
         try {
@@ -46,18 +49,11 @@ export function DeductionGroupsListView() {
         }
     }, [getDeductionGroups, t]);
 
-    // Load data on mount
     const [mounted, setMounted] = useState(false);
     if (!mounted) {
         setMounted(true);
         fetchGroups();
     }
-
-    // Handle delete
-    const handleDeleteClick = (id: string) => {
-        setSelectedGroupId(id);
-        setDeleteDialogOpen(true);
-    };
 
     const handleDeleteConfirm = async () => {
         if (!selectedGroupId) return;
@@ -73,92 +69,109 @@ export function DeductionGroupsListView() {
         }
     };
 
-    const columns = useMemo<GridColDef[]>(
+    const columns = useMemo(
         () => [
-            // {
-            //     field: 'number',
-            //     headerName: t('deductions.number', 'Act Number'),
-            //     // flex: 0.8,
-            //     minWidth: 80,
-            // },
             {
-                field: 'name',
-                headerName: t('deductions.groupName', 'Group Name'),
-                flex: 1,
-                minWidth: 200,
-                renderCell: (params) => <Box sx={{ mt: 2, mb: 2 }}>{params.row.name}</Box>,
+                key: 'name',
+                label: t('deductions.groupName', 'Group Name'),
+                sortable: true,
+                width: '2fr',
+                align: 'left' as const,
+                getValue: (row: DeductionGroup) => row?.name ?? '',
             },
             {
-                field: 'created_at',
-                headerName: t('deductions.createdAt', 'Created At'),
-                // flex: 1,
-                minWidth: 300,
-                renderCell: (params) =>
-                    new Date(params.row.created_at).toLocaleDateString('uz-UZ'),
+                key: 'created_at',
+                label: t('deductions.createdAt', 'Created At'),
+                sortable: true,
+                width: '1.5fr',
+                align: 'left' as const,
+                getValue: (row: DeductionGroup) =>
+                    row?.created_at
+                        ? new Date(row.created_at).toLocaleDateString('uz-UZ')
+                        : '',
             },
             {
-                type: 'actions',
-                field: 'actions',
-                headerName: t('actions'),
-                width: 120,
-                // align: 'right',
-                // headerAlign: 'right',
+                key: 'actions',
+                label: t('actions'),
                 sortable: false,
                 filterable: false,
-                disableColumnMenu: true,
-                getActions: (params) => [
-                    // <CustomGridActionsCellItem
-                    //     showInMenu
-                    //     label={t('common.view', 'View')}
-                    //     icon={<Iconify icon="solar:eye-bold" />}
-                    //     onClick={() => router.push(paths.warehouse.deductionGroups.edit(String(params.id)))}
-                    // />,
-                    <CustomGridActionsCellItem
-                        // showInMenu
-                        label={t('common.edit', 'Edit')}
-                        icon={<Iconify icon="solar:pen-bold" />}
-                        onClick={() => router.push(paths.warehouse.deductionGroups.edit(String(params.id)))}
-                    />,
-                    <CustomGridActionsCellItem
-                        key="delete"
-                        // showInMenu
-                        label={t('common.delete', 'Delete')}
-                        icon={<Iconify icon="solar:trash-bin-trash-bold" />}
-                        onClick={() => handleDeleteClick(String(params.id))}
-                        style={{ color: theme.vars.palette.error.main }}
-                    />,
-                ],
+                width: '0.5fr',
+                align: 'center' as const,
+                renderCell: ({ row }: { row: DeductionGroup }) => (
+                    <Box sx={{ display: 'flex', gap: 0.5 }}>
+                        <IconButton
+                            size="small"
+                            onClick={() => router.push(paths.warehouse.deductionGroups.edit(String(row.id)))}
+                            sx={{ color: 'text.secondary' }}
+                        >
+                            <Iconify icon="solar:pen-bold" width={18} />
+                        </IconButton>
+                        <IconButton
+                            size="small"
+                            onClick={() => {
+                                setSelectedGroupId(String(row.id));
+                                setDeleteDialogOpen(true);
+                            }}
+                            sx={{ color: 'error.main' }}
+                        >
+                            <Iconify icon="solar:trash-bin-trash-bold" width={18} />
+                        </IconButton>
+                    </Box>
+                ),
             },
         ],
-        [t, theme]
+        [t, router]
+    );
+
+    const tableData = useMemo(
+        () => groups.map((group, idx) => ({ ...group, id: group.id || `group-${idx}` })),
+        [groups]
     );
 
     return (
         <>
-            <GenericTableView
-                data={groups.map((group, idx) => ({ ...group, id: group.id || `group-${idx}` }))}
-                columns={columns}
-                loading={loading}
-                breadcrumbs={{
-                    heading: t('deductions.groups', 'Deduction Groups'),
-                    links: [
-                        { name: t('app'), href: paths.menu.root },
-                        // { name: t('warehouse.title', 'Warehouse'), href: paths.warehouse.root },
-                        { name: t('deductions.title', 'Deductions'), href: paths.warehouse.deductions.root },
-                        { name: t('deductions.groups', 'Groups'), href: paths.warehouse.deductionGroups.root },
-                    ],
+            <DashboardContent
+                sx={{
+                    flexGrow: 1,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    maxHeight: '100vh',
+                    '--layout-dashboard-content-pt': { xs: '0px', md: '0px' },
+                    '--layout-dashboard-content-pb': { xs: '0px', md: '0px' },
                 }}
-                addButton={{
-                    label: t('deductions.addGroup', 'Add Group'),
-                    href: paths.warehouse.deductionGroups.new,
-                }}
-                onDeleteRow={handleDeleteClick}
-            // onRowClick={(id: string) => {
-            //     router.push(paths.warehouse.deductionGroups.edit(id));
-            // }}
-            />
+            >
+                <DeductionUtilityDataTable
+                    persistKey="warehouse-deduction-groups"
+                    data={tableData}
+                    getRowId={(row: DeductionGroup) => String(row?.id)}
+                    columns={columns}
+                    defaultConfig={{
+                        order: ['name', 'created_at', 'actions'],
+                        visibility: {
+                            name: true,
+                            created_at: true,
+                            actions: true,
+                        },
+                        widths: {
+                            name: '2fr',
+                            created_at: '1.5fr',
+                            actions: '0.5fr',
+                        },
+                    }}
+                    onReset={() => {}}
+                    headerActions={
+                        <Button
+                            variant="contained"
+                            startIcon={<Iconify icon="mingcute:add-line" />}
+                            href={paths.warehouse.deductionGroups.new}
+                            size="small"
+                        >
+                            {t('deductions.addGroup', 'Add Group')}
+                        </Button>
+                    }
+                />
+            </DashboardContent>
 
-            {/* Delete Dialog */}
             <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)}>
                 <DialogTitle>{t('deductions.deleteConfirm', 'Confirm Delete')}</DialogTitle>
                 <DialogContent>

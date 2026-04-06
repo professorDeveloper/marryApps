@@ -1,30 +1,35 @@
-import type { GridColDef } from '@mui/x-data-grid';
-import { useMemo, useState, useCallback, useEffect } from 'react';
-import { useTranslation } from 'react-i18next';
-import Box from '@mui/material/Box';
-import Card from '@mui/material/Card';
-import Button from '@mui/material/Button';
-import TextField from '@mui/material/TextField';
-import Table from '@mui/material/Table';
-import TableBody from '@mui/material/TableBody';
-import TableCell from '@mui/material/TableCell';
-import TableHead from '@mui/material/TableHead';
-import TableRow from '@mui/material/TableRow';
-import Typography from '@mui/material/Typography';
-import ToggleButton from '@mui/material/ToggleButton';
-import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
-import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import dayjs from 'dayjs';
-import { paths } from 'src/routes/paths';
-import { useGetBills, useGetBillDetails } from 'src/actions/bills';
+import { useTranslation } from 'react-i18next';
+import { useMemo, useState, useEffect, useCallback } from 'react';
+
+import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+import {
+  Box,
+  Table,
+  Button,
+  TableRow,
+  TextField,
+  TableBody,
+  TableCell,
+  TableHead,
+  IconButton,
+  Typography,
+  ToggleButton,
+  ToggleButtonGroup,
+} from '@mui/material';
+
 import { useGetHalls } from 'src/actions/halls';
 import { useGetUsersByRole } from 'src/actions/users';
-import { Iconify } from 'src/components/iconify';
-import { CustomGridActionsCellItem } from 'src/components/custom-data-grid';
-import { RenderCellItem, GenericTableView } from 'src/components/generic-table-view';
-import { GenericViewModal } from 'src/components/generic-view-view/GenericViewModal';
-import { NoDataTooltip } from 'src/components/no-data-tooltip';
+import { DashboardContent } from 'src/layouts/dashboard';
+import { useGetBills, useGetBillDetails } from 'src/actions/bills';
 
+import { Iconify } from 'src/components/iconify';
+import { NoDataTooltip } from 'src/components/no-data-tooltip';
+import { GenericViewModal } from 'src/components/generic-view-view/GenericViewModal';
+
+import { DataTable } from 'src/sections/warehouse/deduction/components/utility-data-table';
+
+// Helper functions
 const toUtcDayBoundary = (value: dayjs.Dayjs, endOfDay = false): string => {
     const date = new Date(
         Date.UTC(
@@ -39,12 +44,54 @@ const toUtcDayBoundary = (value: dayjs.Dayjs, endOfDay = false): string => {
     return date.toISOString().replace('.000Z', 'Z');
 };
 
+const getTodayUtcBoundary = (): string => {
+    const today = dayjs();
+    return toUtcDayBoundary(today);
+};
+
+const getTomorrowUtcBoundary = (endOfDay = false): string => {
+    const tomorrow = dayjs().add(1, 'day');
+    return toUtcDayBoundary(tomorrow, endOfDay);
+};
+
+const toPickerDate = (value?: string): dayjs.Dayjs | null => (value ? dayjs(value.slice(0, 10)) : null);
+
+// Filter types
+interface BillsListFilters {
+    start: string;
+    end: string;
+    bill_status: string;
+    payment_type: string;
+    waiter_id: string;
+    hall_id: string;
+    table_id: string;
+    status: string; // Adding status field for compatibility
+    q: string; // Adding search field for compatibility
+    limit: number;
+    offset: number;
+}
+
+const initialFilters: BillsListFilters = {
+    start: getTodayUtcBoundary(),
+    end: getTomorrowUtcBoundary(true),
+    bill_status: '',
+    payment_type: '',
+    waiter_id: '',
+    hall_id: '',
+    table_id: '',
+    status: '',
+    q: '',
+    limit: 20,
+    offset: 0,
+};
+
 export function BillsListView() {
     const { t, i18n } = useTranslation('menu');
     const noDataText = t('noDataAvailable', "Tushunarli ma'lumot mavjud emas");
 
     // Modal state
     const [selectedBillId, setSelectedBillId] = useState<string | null>(null);
+    const [selectedBill, setSelectedBill] = useState<any | null>(null);
     const [openDetailsModal, setOpenDetailsModal] = useState(false);
 
     // Get filter options from APIs
@@ -55,17 +102,11 @@ export function BillsListView() {
     const { bill, billLoading } = useGetBillDetails(selectedBillId || '');
 
     // Filter states
-    const [filters, setFilters] = useState({
-        start: '',
-        end: '',
-        bill_status: '',
-        payment_type: '',
-        waiter_id: '',
-        hall_id: '',
-        table_id: '',
-        limit: 20,
-        offset: 0,
-    });
+    const [filters, setFilters] = useState<BillsListFilters>(initialFilters);
+    const [draftFilters, setDraftFilters] = useState<BillsListFilters>(initialFilters);
+    const [searchQuery, setSearchQuery] = useState('');
+    const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
+    const [rowCount, setRowCount] = useState(0);
     const [paginationModel, setPaginationModel] = useState({ page: 0, pageSize: 20 });
 
     const [startDate, setStartDate] = useState<dayjs.Dayjs | null>(null);
@@ -79,10 +120,61 @@ export function BillsListView() {
         setEndDate(today.endOf('day'));
     }, []);
 
+    // Debounced search
+    useEffect(() => {
+        const timeout = setTimeout(() => {
+            setDebouncedSearchQuery(searchQuery);
+        }, 400);
+
+        return () => clearTimeout(timeout);
+    }, [searchQuery]);
+
+    // Update draft filters with search
+    useEffect(() => {
+        setDraftFilters((prev) => ({
+            ...prev,
+            q: debouncedSearchQuery,
+        }));
+    }, [debouncedSearchQuery]);
+
+    // Update filters when draft filters change
+    useEffect(() => {
+        setPaginationModel((prev) => ({ ...prev, page: 0 }));
+        setFilters((prev) => ({
+            ...prev,
+            ...draftFilters,
+            offset: 0,
+            limit: paginationModel.pageSize,
+        }));
+    }, [draftFilters, paginationModel.pageSize]);
+
+    // Pagination handlers
+    const handlePaginationPageChange = (page: number) => {
+        setPaginationModel((prev) => ({ ...prev, page }));
+        setFilters((prev) => ({
+            ...prev,
+            offset: page * paginationModel.pageSize,
+        }));
+    };
+
+    const handlePaginationRowsPerPageChange = (pageSize: number) => {
+        setPaginationModel({ page: 0, pageSize });
+        setFilters((prev) => ({
+            ...prev,
+            limit: pageSize,
+            offset: 0,
+        }));
+    };
+
     // Get bills with applied filters
     const { bills, billsLoading, pagination, totals } = useGetBills(
         Object.fromEntries(Object.entries(filters).filter(([, v]) => v !== ''))
     );
+
+    // Update row count when pagination changes
+    useEffect(() => {
+        setRowCount(pagination?.total || 0);
+    }, [pagination]);
 
     // Prepare filter options
     const filterOptions = useMemo(
@@ -257,20 +349,40 @@ export function BillsListView() {
         );
     }, [t]);
 
-    const columns = useMemo<GridColDef[]>(
+    // View bill details
+    const handleViewClick = useCallback((billData: any) => {
+        setSelectedBillId(billData.id);
+        setSelectedBill(billData);
+        setOpenDetailsModal(true);
+    }, []);
+
+    // Modal close handler
+    const handleModalClose = useCallback(() => {
+        setSelectedBillId(null);
+        setSelectedBill(null);
+        setOpenDetailsModal(false);
+    }, []);
+
+    // DataTable columns
+    const columns = useMemo(
         () => [
             {
-                field: 'bill_no',
-                headerName: t('bills.billNo') || 'Bill #',
-                width: 20,
+                key: 'bill_no',
+                label: t('bills.billNo') || 'Bill #',
+                sortable: true,
+                width: '0.5fr',
+                align: 'left' as const,
+                getValue: (row: any) => row?.bill_no ?? '',
             },
             {
-                field: 'opened_at',
-                headerName: t('bills.date') || 'Date',
-                // flex: 0.5,
-                width: 100,
-                renderCell: (params) => {
-                    const dateObj = dayjs(params.row.opened_at);
+                key: 'opened_at',
+                label: t('bills.date') || 'Date',
+                sortable: true,
+                width: '1.2fr',
+                align: 'left' as const,
+                getValue: (row: any) => row?.opened_at || '',
+                renderCell: ({ value }: { value: unknown }) => {
+                    const dateObj = dayjs(value as string);
                     const currentLang = i18n.language;
 
                     let dayMonthLine = '';
@@ -286,7 +398,6 @@ export function BillsListView() {
                         dayMonthLine = dateObj.format('DD MMMM');
                         yearTimeLine = dateObj.format('YYYY, HH:mm');
                     } else {
-                        // uz-Latn yoki boshqa Uzbek tillari
                         dayMonthLine = dateObj.format('DD MMMM');
                         yearTimeLine = dateObj.format('YYYY, HH:mm');
                     }
@@ -300,104 +411,133 @@ export function BillsListView() {
                 },
             },
             {
-                field: 'closed_at',
-                headerName: t('bills.closedAt', 'Closed At'),
-                width: 100,
-                renderCell: (params) => {
-                    const closedAt = params.row.closed_at || params.row.paid_at;
-                    if (!closedAt) return '-';
-
+                key: 'closed_at',
+                label: t('bills.closedAt', 'Closed At'),
+                sortable: true,
+                width: '1fr',
+                align: 'left' as const,
+                getValue: (row: any) => {
+                    const closedAt = row?.closed_at || row?.paid_at;
+                    if (!closedAt) return '';
                     const dateObj = dayjs(closedAt);
-                    if (!dateObj.isValid()) return '-';
-
+                    if (!dateObj.isValid()) return '';
                     return dateObj.format('DD.MM.YYYY HH:mm');
                 },
             },
             {
-                field: 'waiter_name',
-                headerName: t('bills.waiter') || 'Waiter',
-                flex: 1,
-                width: 150,
-                renderCell: (params) => (
-                    <Box>
-                        <Typography sx={{ mb: 1.5, mt: 1.5 }}>
-                            {params.row.waiter_name || '-'}
-                        </Typography>
-                    </Box>
-                )
-                // renderCell: (params) => (
-                //     <RenderCellItem params={params} nameField="waiter_name" />
-                // ),
+                key: 'waiter_name',
+                label: t('bills.waiter') || 'Waiter',
+                sortable: true,
+                width: '1.2fr',
+                align: 'left' as const,
+                getValue: (row: any) => row?.waiter_name ?? '-',
             },
             {
-                field: 'hall_name',
-                headerName: t('bills.hall') || 'Hall',
-                width: 100,
-                renderCell: (params) => params.row.hall_name || '-',
+                key: 'hall_name',
+                label: t('bills.hall') || 'Hall',
+                sortable: true,
+                filter: { type: 'multi' as const },
+                width: '0.8fr',
+                align: 'left' as const,
+                getValue: (row: any) => row?.hall_name ?? '-',
             },
             {
-                field: 'table_number',
-                headerName: t('bills.table') || 'Table #',
-                width: 60,
+                key: 'table_number',
+                label: t('bills.table') || 'Table #',
+                sortable: true,
+                width: '0.5fr',
+                align: 'left' as const,
+                getValue: (row: any) => row?.table_number ?? '',
             },
             {
-                field: 'guest_count',
-                headerName: t('bills.guests') || 'Guests',
-                width: 60,
+                key: 'guest_count',
+                label: t('bills.guests') || 'Guests',
+                sortable: true,
+                width: '0.5fr',
+                align: 'left' as const,
+                getValue: (row: any) => row?.guest_count ?? 0,
             },
             {
-                field: 'food_cost',
-                headerName: t('bills.foodCost', 'Food Cost'),
-                width: 160,
-                renderCell: (params) => {
-                    const amount = Number(params.row.food_cost) || 0;
+                key: 'food_cost',
+                label: t('bills.foodCost', 'Food Cost'),
+                sortable: true,
+                width: '1fr',
+                align: 'left' as const,
+                mono: true,
+                getValue: (row: any) => Number(row?.food_cost || 0),
+                renderCell: ({ value }: { value: unknown }) => {
+                    const amount = Number(value ?? 0);
                     return `${amount.toLocaleString()} so'm`;
                 },
+                total: { aggregation: 'sum' as const },
             },
             {
-                field: 'grand_total',
-                headerName: t('bills.total') || 'Total',
-                width: 160,
-                renderCell: (params) => {
-                    const amount = Number(params.row.grand_total) || 0;
+                key: 'grand_total',
+                label: t('bills.total') || 'Total',
+                sortable: true,
+                width: '1fr',
+                align: 'left' as const,
+                mono: true,
+                getValue: (row: any) => Number(row?.grand_total || 0),
+                renderCell: ({ value }: { value: unknown }) => {
+                    const amount = Number(value ?? 0);
                     return `${amount.toLocaleString()} so'm`;
                 },
+                total: { aggregation: 'sum' as const },
             },
             {
-                field: 'payment_type',
-                headerName: t('bills.paymentType') || 'Payment Type',
-                width: 100,
-                renderCell: (params) => {
-                    const value = params.row.payment_type;
-                    if (value === 'cash') return t('bills.cash', 'Cash');
-                    if (value === 'card') return t('bills.card', 'Card');
+                key: 'payment_type',
+                label: t('bills.paymentType') || 'Payment Type',
+                sortable: true,
+                filter: { type: 'multi' as const, options: ['cash', 'card'] },
+                width: '0.8fr',
+                align: 'left' as const,
+                getValue: (row: any) => row?.payment_type || '',
+                renderCell: ({ value }: { value: unknown }) => {
+                    const val = String(value ?? '');
+                    if (val === 'cash') return t('bills.cash', 'Cash');
+                    if (val === 'card') return t('bills.card', 'Card');
                     return '-';
                 },
             },
             {
-                field: 'service_amount',
-                headerName: t('bills.service') || 'Service',
-                width: 160,
-                renderCell: (params) => {
-                    const amount = Number(params.row.service_amount) || 0;
+                key: 'service_amount',
+                label: t('bills.service') || 'Service',
+                sortable: true,
+                width: '1fr',
+                align: 'left' as const,
+                mono: true,
+                getValue: (row: any) => Number(row?.service_amount || 0),
+                renderCell: ({ value }: { value: unknown }) => {
+                    const amount = Number(value ?? 0);
                     return `${amount.toLocaleString()} so'm`;
                 },
+                total: { aggregation: 'sum' as const },
             },
             {
-                field: 'discount_amount',
-                headerName: t('bills.discount') || 'Discount',
-                width: 100,
-                renderCell: (params) => {
-                    const amount = Number(params.row.discount_amount) || 0;
+                key: 'discount_amount',
+                label: t('bills.discount') || 'Discount',
+                sortable: true,
+                width: '0.8fr',
+                align: 'left' as const,
+                mono: true,
+                getValue: (row: any) => Number(row?.discount_amount || 0),
+                renderCell: ({ value }: { value: unknown }) => {
+                    const amount = Number(value ?? 0);
                     return amount > 0 ? `${amount.toLocaleString()} so'm` : '-';
                 },
+                total: { aggregation: 'sum' as const },
             },
             {
-                field: 'bill_status',
-                headerName: t('bills.status') || 'Status',
-                width: 140,
-                renderCell: (params) => {
-                    const status = params.row.bill_status;
+                key: 'bill_status',
+                label: t('bills.status') || 'Status',
+                sortable: true,
+                filter: { type: 'multi' as const, options: ['opened', 'closed', 'paid'] },
+                width: '0.8fr',
+                align: 'left' as const,
+                getValue: (row: any) => row?.bill_status || '',
+                renderCell: ({ value }: { value: unknown }) => {
+                    const status = String(value ?? '').toLowerCase();
                     const statusColors: Record<string, string> = {
                         opened: '#FFA726',
                         closed: '#66BB6A',
@@ -420,78 +560,72 @@ export function BillsListView() {
                     );
                 },
             },
-            // {
-            //     type: 'actions',
-            //     field: 'actions',
-            //     headerName: t('actions'),
-            //     width: 100,
-            //     // align: 'right',
-            //     // headerAlign: 'right',
-            //     sortable: false,
-            //     filterable: false,
-            //     disableColumnMenu: true,
-            //     getActions: (params) => [
-            //         // View action removed - row click will trigger view
-            //     ],
-            // },
+            {
+                key: 'actions',
+                label: t('actions'),
+                sortable: false,
+                filterable: false,
+                width: '0.7fr',
+                align: 'center' as const,
+                renderCell: ({ row }: { row: any }) => (
+                    <Box sx={{ display: 'flex', gap: 0.5 }}>
+                        <IconButton
+                            size="small"
+                            onClick={() => handleViewClick(row)}
+                            sx={{ color: 'text.secondary' }}
+                        >
+                            <Iconify icon="solar:eye-bold" width={18} />
+                        </IconButton>
+                    </Box>
+                ),
+            },
         ],
-        [t]
+        [t, i18n.language, handleViewClick]
     );
 
-    const handleFilterChange = useCallback((newFilters: Record<string, any>) => {
-        setFilters((prev) => ({
-            ...prev,
-            ...newFilters,
-            offset: 0,
-        }));
-        setPaginationModel((prev) => ({ ...prev, page: 0 }));
-    }, []);
-
-    const handleResetFilters = useCallback(() => {
-        setFilters({
-            start: startDate ? toUtcDayBoundary(startDate) : '',
-            end: endDate ? toUtcDayBoundary(endDate, true) : '',
-            bill_status: '',
-            payment_type: '',
-            waiter_id: '',
-            hall_id: '',
-            table_id: '',
-            limit: paginationModel.pageSize,
-            offset: 0,
-        });
-        setPaginationModel((prev) => ({ ...prev, page: 0 }));
-    }, [startDate, endDate, paginationModel.pageSize]);
-
+    // Filter handlers adapted for invoice pattern
     const handleStatusChange = useCallback(
         (status: string) => {
-            handleFilterChange({ bill_status: status });
+            setDraftFilters((prev) => ({ ...prev, bill_status: status }));
         },
-        [handleFilterChange]
+        []
     );
 
     const handlePaymentTypeChange = useCallback(
         (type: string) => {
-            handleFilterChange({ payment_type: type });
+            setDraftFilters((prev) => ({ ...prev, payment_type: type }));
         },
-        [handleFilterChange]
+        []
     );
 
     const handleWaiterChange = useCallback(
         (waiterId: string) => {
-            handleFilterChange({ waiter_id: waiterId });
+            setDraftFilters((prev) => ({ ...prev, waiter_id: waiterId }));
         },
-        [handleFilterChange]
+        []
     );
 
     const handleHallChange = useCallback(
         (hallId: string) => {
-            handleFilterChange({ hall_id: hallId });
+            setDraftFilters((prev) => ({ ...prev, hall_id: hallId }));
         },
-        [handleFilterChange]
+        []
     );
 
+    const handleResetFilters = useCallback(() => {
+        setDraftFilters(initialFilters);
+        setStartDate(dayjs().startOf('day'));
+        setEndDate(dayjs().endOf('day'));
+        setActiveRange('day');
+    }, []);
+
+    // Date picker values
+    const startDateValue = useMemo(() => toPickerDate(draftFilters.start), [draftFilters.start]);
+    const endDateValue = useMemo(() => toPickerDate(draftFilters.end), [draftFilters.end]);
+
+    // Apply date range changes
     useEffect(() => {
-        setFilters((prev) => ({
+        setDraftFilters((prev) => ({
             ...prev,
             start: startDate ? toUtcDayBoundary(startDate) : '',
             end: endDate ? toUtcDayBoundary(endDate, true) : '',
@@ -500,6 +634,7 @@ export function BillsListView() {
         setPaginationModel((prev) => ({ ...prev, page: 0 }));
     }, [startDate, endDate]);
 
+    // Date range application
     const applyRange = useCallback((range: 'day' | 'week' | 'month' | 'year') => {
         const today = dayjs();
         let nextStart = today.startOf('day');
@@ -520,14 +655,6 @@ export function BillsListView() {
         setStartDate(nextStart);
         setEndDate(nextEnd);
     }, []);
-
-    useEffect(() => {
-        setFilters((prev) => ({
-            ...prev,
-            limit: paginationModel.pageSize,
-            offset: paginationModel.page * paginationModel.pageSize,
-        }));
-    }, [paginationModel.page, paginationModel.pageSize]);
 
     const renderFiltersContent = () => (
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
@@ -613,7 +740,7 @@ export function BillsListView() {
                 <TextField
                     select
                     label={t('bills.status') || 'Status'}
-                    value={filters.bill_status}
+                    value={draftFilters.bill_status}
                     onChange={(e) => handleStatusChange(e.target.value)}
                     SelectProps={{ native: true }}
                     size="small"
@@ -634,7 +761,7 @@ export function BillsListView() {
                 <TextField
                     select
                     label={t('bills.paymentType') || 'Payment Type'}
-                    value={filters.payment_type}
+                    value={draftFilters.payment_type}
                     onChange={(e) => handlePaymentTypeChange(e.target.value)}
                     SelectProps={{ native: true }}
                     size="small"
@@ -656,7 +783,7 @@ export function BillsListView() {
                     <TextField
                         select
                         label={t('bills.waiter') || 'Waiter'}
-                        value={filters.waiter_id}
+                        value={draftFilters.waiter_id}
                         onChange={(e) => handleWaiterChange(e.target.value)}
                         SelectProps={{ native: true }}
                         size="small"
@@ -680,7 +807,7 @@ export function BillsListView() {
                     <TextField
                         select
                         label={t('bills.hall') || 'Hall'}
-                        value={filters.hall_id}
+                        value={draftFilters.hall_id}
                         onChange={(e) => handleHallChange(e.target.value)}
                         SelectProps={{ native: true }}
                         size="small"
@@ -717,110 +844,95 @@ export function BillsListView() {
     
     return (
         <>
-            {/* Table */}
-            <GenericTableView
-                data={bills}
-                loading={billsLoading}
+            <DashboardContent
+            sx={{
+                flexGrow: 1,
+                display: 'flex',
+                flexDirection: 'column',
+                maxHeight: '100vh',
+                '--layout-dashboard-content-pt': { xs: '0px', md: '0px' },
+                '--layout-dashboard-content-pb': { xs: '0px', md: '0px' },
+            }}
+        >
+
+            <DataTable<any>
+                persistKey="reports-bills-list"
+                data={bills || []}
+                getRowId={(row: any) => String(row?.id)}
                 columns={columns}
-                paginationMode="server"
-                rowCount={pagination?.total || 0}
-                paginationModel={paginationModel}
-                onPaginationModelChange={setPaginationModel}
-                pageSizeOptions={[10, 20, 50, 100]}
-                breadcrumbs={{
-                    heading: t('bills.title') || 'Bills',
-                    links: [
-                        { name: t('app') || 'App', href: paths.menu.root },
-                        { name: t('overview.reports.title') || 'Reports', href: paths.menu.reports.root },
-                        {
-                            name: t('bills.title') || 'Bills',
-                            href: paths.menu.reports.bills.root,
-                        },
-                    ],
+                searchValue={searchQuery}
+                onSearchChange={(value: string) => {
+                    setSearchQuery(value);
+                    setPaginationModel((prev) => ({ ...prev, page: 0 }));
                 }}
-                filterOptions={filterOptions}
-                initialFilters={filters}
-                hideFilters={false}
-                renderFilters={renderFiltersContent}
-                onRowClick={(id) => {
-                    setSelectedBillId(id);
-                    setOpenDetailsModal(true);
+                page={paginationModel.page}
+                rowsPerPage={paginationModel.pageSize}
+                totalCount={rowCount}
+                rowsPerPageOptions={[10, 20, 50, 100]}
+                onPageChange={handlePaginationPageChange}
+                onRowsPerPageChange={handlePaginationRowsPerPageChange}
+                showPeriodPicker
+                periodPickerProps={{
+                    startDate: startDate ? startDate.toDate() : null,
+                    endDate: endDate ? endDate.toDate() : null,
+                    onStartDateChange: (date: Date | null) => {
+                        setStartDate(date ? dayjs(date) : null);
+                        setActiveRange('day');
+                    },
+                    onEndDateChange: (date: Date | null) => {
+                        setEndDate(date ? dayjs(date) : null);
+                        setActiveRange('day');
+                    }
                 }}
+                showPeriodButtons
+                periodButtonProps={{
+                    activePeriod: activeRange,
+                    onPeriodChange: (period: 'day' | 'week' | 'month' | 'year') => {
+                        applyRange(period);
+                    }
+                }}
+                defaultConfig={{
+                    order: ['bill_no', 'opened_at', 'closed_at', 'waiter_name', 'hall_name', 'table_number', 'guest_count', 'food_cost', 'grand_total', 'payment_type', 'service_amount', 'discount_amount', 'bill_status', 'actions'],
+                    visibility: {
+                        bill_no: true,
+                        opened_at: true,
+                        closed_at: true,
+                        waiter_name: true,
+                        hall_name: true,
+                        table_number: true,
+                        guest_count: true,
+                        food_cost: true,
+                        grand_total: true,
+                        payment_type: true,
+                        service_amount: true,
+                        discount_amount: true,
+                        bill_status: true,
+                        actions: true,
+                    },
+                    widths: {
+                        bill_no: '0.5fr',
+                        opened_at: '1.2fr',
+                        closed_at: '1fr',
+                        waiter_name: '1.2fr',
+                        hall_name: '0.8fr',
+                        table_number: '0.5fr',
+                        guest_count: '0.5fr',
+                        food_cost: '1fr',
+                        grand_total: '1fr',
+                        payment_type: '0.8fr',
+                        service_amount: '1fr',
+                        discount_amount: '0.8fr',
+                        bill_status: '0.8fr',
+                        actions: '0.7fr',
+                    },
+                }}
+                onReset={handleResetFilters}
             />
+            </DashboardContent>
 
-            {totals && (
-                <Box sx={{ px: { xs: 2, md: 3 }, pb: { xs: 2, md: 3 } }}>
-                    <Box
-                        sx={{
-                            display: 'grid',
-                            gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: 'repeat(7, 1fr)' },
-                            gap: 1,
-                        }}
-                    >
-                        <Card sx={{ p: 1.5 }}>
-                            <Typography variant="caption" color="text.secondary">
-                                {t('bills.foodCost', 'Food Cost')}
-                            </Typography>
-                            <Typography variant="subtitle2">
-                                {Number(totals.total_food_cost || 0).toLocaleString()} so'm
-                            </Typography>
-                        </Card>
-                        <Card sx={{ p: 1.5 }}>
-                            <Typography variant="caption" color="text.secondary">
-                                {t('bills.guests', 'Guests')}
-                            </Typography>
-                            <Typography variant="subtitle2">
-                                {totals.total_guest_count ?? 0}
-                            </Typography>
-                        </Card>
-                        <Card sx={{ p: 1.5 }}>
-                            <Typography variant="caption" color="text.secondary">
-                                {t('bills.grandTotal', 'Grand Total')}
-                            </Typography>
-                            <Typography variant="subtitle2">
-                                {Number(totals.total_grand_total || 0).toLocaleString()} so'm
-                            </Typography>
-                        </Card>
-                        <Card sx={{ p: 1.5 }}>
-                            <Typography variant="caption" color="text.secondary">
-                                {t('bills.service', 'Service')}
-                            </Typography>
-                            <Typography variant="subtitle2">
-                                {Number(totals.total_service_amount || 0).toLocaleString()} so'm
-                            </Typography>
-                        </Card>
-                        <Card sx={{ p: 1.5 }}>
-                            <Typography variant="caption" color="text.secondary">
-                                {t('bills.service', 'Service')} %
-                            </Typography>
-                            <Typography variant="subtitle2">
-                                {Number(totals.avg_service_percent || 0).toLocaleString()}%
-                            </Typography>
-                        </Card>
-                        <Card sx={{ p: 1.5 }}>
-                            <Typography variant="caption" color="text.secondary">
-                                {t('bills.discount', 'Discount')}
-                            </Typography>
-                            <Typography variant="subtitle2">
-                                {Number(totals.total_discount_amount || 0).toLocaleString()} so'm
-                            </Typography>
-                        </Card>
-                        <Card sx={{ p: 1.5 }}>
-                            <Typography variant="caption" color="text.secondary">
-                                {t('bills.discount', 'Discount')} %
-                            </Typography>
-                            <Typography variant="subtitle2">
-                                {Number(totals.avg_discount_percent || 0).toLocaleString()}%
-                            </Typography>
-                        </Card>
-                    </Box>
-                </Box>
-            )}
-
-            {/* Bill Details Modal - Using GenericViewModal */}
             <GenericViewModal
                 isOpen={openDetailsModal}
-                onClose={() => setOpenDetailsModal(false)}
+                onClose={handleModalClose}
                 title={bill ? `${t('bills.billNo') || 'Bill #'} ${bill.bill_no}` : t('bills.details') || 'Bill Details'}
                 data={bill}
                 loading={billLoading}

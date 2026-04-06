@@ -1,16 +1,22 @@
-import { useState, useEffect, useCallback } from 'react';
+import type { IInventory, IInventoryFormData } from 'src/types/inventory';
+
+import dayjs from 'dayjs';
 import { useTranslation } from 'react-i18next';
 import { useParams, useNavigate } from 'react-router';
-import { Box, CircularProgress, Tab, Tabs, Stack } from '@mui/material';
-import dayjs from 'dayjs';
+import { useState, useEffect, useCallback } from 'react';
+
+import { Box, Tab, Tabs, Stack, CircularProgress } from '@mui/material';
+
 import { paths } from 'src/routes/paths';
+
+import { useInventoryAPI } from 'src/hooks/use-inventory-api';
+
+import { useGetStorages } from 'src/actions/departments';
+
 import { toast } from 'src/components/snackbar';
 import { GenericEditView } from 'src/components/generic-edit-view';
 import { CustomBreadcrumbs } from 'src/components/custom-breadcrumbs';
-import { useInventoryAPI } from 'src/hooks/use-inventory-api';
-import { useGetStorages } from 'src/actions/departments';
 import { InventoryDetailsCalculation } from 'src/components/inventory-details-calculation';
-import type { IInventoryFormData, IInventory } from 'src/types/inventory';
 
 interface InventoryEditViewProps {
     isNew?: boolean;

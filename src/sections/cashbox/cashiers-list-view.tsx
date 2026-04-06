@@ -1,26 +1,132 @@
-import type { GridColDef } from '@mui/x-data-grid';
 import type { ICashier } from 'src/types/cashbox';
+import type { DataTableColumn } from 'src/sections/warehouse/deduction/components/utility-data-table/types/types';
 
+import dayjs from 'dayjs';
 import { useTranslation } from 'react-i18next';
-import { useMemo, useState, useCallback } from 'react';
+import { useMemo, useState, useEffect, useCallback } from 'react';
 
-import Button from '@mui/material/Button';
-import { Dialog, DialogTitle, DialogActions, DialogContent } from '@mui/material';
+import {
+    Box,
+    Button,
+    Dialog,
+    IconButton,
+    DialogTitle,
+    DialogActions,
+    DialogContent,
+} from '@mui/material';
 
 import { paths } from 'src/routes/paths';
+import { useRouter } from 'src/routes/hooks';
+
+import { DashboardContent } from 'src/layouts/dashboard';
+import { useGetCashiers, useDeleteCashier } from 'src/actions/cashbox';
+
 import { toast } from 'src/components/snackbar';
 import { Iconify } from 'src/components/iconify';
-import { GenericTableView } from 'src/components/generic-table-view';
-import { CustomGridActionsCellItem } from 'src/components/custom-data-grid';
-import { useGetCashiers, useDeleteCashier } from 'src/actions/cashbox';
+
+import { DeductionUtilityDataTable } from 'src/sections/warehouse/deduction';
+
+// Helper functions for date handling
+const getTodayUtcBoundary = (endOfDay = false): string => {
+    const now = dayjs();
+    const date = new Date(
+        Date.UTC(
+            now.year(),
+            now.month(),
+            now.date(),
+            endOfDay ? 23 : 0,
+            endOfDay ? 59 : 0,
+            endOfDay ? 59 : 0
+        )
+    );
+
+    return date.toISOString().replace('.000Z', 'Z');
+};
+
+const toUtcDayBoundary = (value: dayjs.Dayjs, endOfDay = false): string => {
+    const date = new Date(
+        Date.UTC(
+            value.year(),
+            value.month(),
+            value.date(),
+            endOfDay ? 23 : 0,
+            endOfDay ? 59 : 0,
+            endOfDay ? 59 : 0
+        )
+    );
+
+    return date.toISOString().replace('.000Z', 'Z');
+};
+
+const toPickerDate = (value?: string): dayjs.Dayjs | null =>
+    value ? dayjs(value.slice(0, 10)) : null;
+
+// Initial filters state
+const initialFilters = {
+    search: '',
+    start_date: getTodayUtcBoundary(),
+    end_date: getTodayUtcBoundary(true),
+};
 
 export function CashiersListView() {
     const { t } = useTranslation('menu');
-    const { cashiers, cashiersLoading } = useGetCashiers();
+    const router = useRouter();
+    const { cashiers } = useGetCashiers();
     const { onDelete } = useDeleteCashier();
 
     const [deleteId, setDeleteId] = useState<string | null>(null);
     const [openConfirm, setOpenConfirm] = useState(false);
+    const [filters, setFilters] = useState(initialFilters);
+    const [draftFilters, setDraftFilters] = useState(initialFilters);
+    const [startDate, setStartDate] = useState<dayjs.Dayjs | null>(null);
+    const [endDate, setEndDate] = useState<dayjs.Dayjs | null>(null);
+    const [activeRange, setActiveRange] = useState<'day' | 'week' | 'month' | 'year'>('day');
+
+    // Set default date range on component mount
+    useEffect(() => {
+        const today = dayjs();
+        setStartDate(today.startOf('day'));
+        setEndDate(today.endOf('day'));
+    }, []);
+
+    // Apply date range changes
+    useEffect(() => {
+        setDraftFilters((prev) => ({
+            ...prev,
+            start_date: startDate ? toUtcDayBoundary(startDate) : '',
+            end_date: endDate ? toUtcDayBoundary(endDate, true) : '',
+        }));
+    }, [startDate, endDate]);
+
+    // Apply range changes
+    const applyRange = useCallback((range: 'day' | 'week' | 'month' | 'year') => {
+        const today = dayjs();
+        let nextStart = today.startOf('day');
+        let nextEnd = today.endOf('day');
+
+        switch (range) {
+            case 'day':
+                nextStart = today.startOf('day');
+                nextEnd = today.endOf('day');
+                break;
+            case 'week':
+                nextStart = today.startOf('week');
+                nextEnd = today.endOf('day');
+                break;
+            case 'month':
+                nextStart = today.startOf('month');
+                nextEnd = today.endOf('day');
+                break;
+            case 'year':
+                nextStart = today.startOf('year');
+                nextEnd = today.endOf('day');
+                break;
+        }
+
+        setActiveRange(range);
+        setStartDate(nextStart);
+        setEndDate(nextEnd);
+    }, []);
 
     const handleDelete = useCallback(async () => {
         if (!deleteId) return;
@@ -35,74 +141,167 @@ export function CashiersListView() {
         }
     }, [deleteId, onDelete, t]);
 
-    const columns: GridColDef[] = useMemo(
+    const handleResetFilters = useCallback(() => {
+        setDraftFilters(initialFilters);
+        const today = dayjs();
+        setStartDate(today.startOf('day'));
+        setEndDate(today.endOf('day'));
+        setActiveRange('day');
+    }, []);
+
+    // Update filters when draft filters change
+    useEffect(() => {
+        setFilters((prev) => ({
+            ...prev,
+            ...draftFilters,
+        }));
+    }, [draftFilters]);
+
+    // Filter cashiers based on search and date range
+    const filteredCashiers = useMemo(() => {
+        let filtered = cashiers;
+
+        // Search filter
+        if (filters.search) {
+            const searchLower = filters.search.toLowerCase();
+            filtered = filtered.filter(cashier => 
+                cashier.name.toLowerCase().includes(searchLower)
+            );
+        }
+
+        // Date range filter
+        if (filters.start_date || filters.end_date) {
+            filtered = filtered.filter(cashier => {
+                const cashierDate = new Date(cashier.created_at);
+                const startDate = filters.start_date ? new Date(filters.start_date) : new Date('1970-01-01');
+                const endDate = filters.end_date ? new Date(filters.end_date) : new Date('9999-12-31');
+                return cashierDate >= startDate && cashierDate <= endDate;
+            });
+        }
+
+        return filtered;
+    }, [cashiers, filters]);
+
+    const columns: DataTableColumn<ICashier>[] = useMemo(
         () => [
             {
-                field: 'name',
-                headerName: t('cashbox.cashiers.name'),
-                flex: 1,
-                minWidth: 200,
+                key: 'name',
+                label: t('cashbox.cashiers.name'),
+                sortable: true,
+                filterable: true,
+                width: '1.5fr',
+                align: 'left',
+                getValue: (row: ICashier) => row?.name || '',
             },
             {
-                field: 'created_at',
-                headerName: t('cashbox.cashiers.created_at'),
-                flex: 1,
-                minWidth: 180,
-                type: 'dateTime',
-                valueFormatter: (value: any) => {
-                    if (!value) return '';
-                    return new Date(value).toLocaleDateString();
-                },
+                key: 'created_at',
+                label: t('cashbox.cashiers.created_at'),
+                sortable: true,
+                filterable: true,
+                width: '1fr',
+                align: 'left',
+                getValue: (row: ICashier) =>
+                    row?.created_at ? new Date(row.created_at).toLocaleDateString() : '',
             },
             {
-                field: 'actions',
-                type: 'actions',
-                headerName: t('common.actions'),
-                width: 120,
+                key: 'actions',
+                label: t('common.actions'),
                 sortable: false,
                 filterable: false,
-                getActions: (params: any) => [
-                    <CustomGridActionsCellItem
-                        key="edit"
-                        icon={<Iconify icon="solar:pen-bold" />}
-                        label={t('common.edit')}
-                        href={`${paths.cashbox.cashiers}/${params.row.id}/edit`}
-                    />,
-                    <CustomGridActionsCellItem
-                        key="delete"
-                        icon={<Iconify icon="solar:trash-bin-trash-bold" />}
-                        label={t('common.delete')}
-                        style={{ color: '#FB6633' }}
-                        onClick={() => {
-                            setDeleteId(params.row.id);
-                            setOpenConfirm(true);
-                        }}
-                    />,
-                ],
+                width: '0.7fr',
+                align: 'center',
+                renderCell: ({ row }: { row: ICashier }) => (
+                    <Box sx={{ display: 'flex', gap: 0.5 }}>
+                        <IconButton
+                            size="small"
+                            onClick={() => router.push(`${paths.cashbox.cashiers}/${row.id}/edit`)}
+                            sx={{ color: 'text.secondary' }}
+                        >
+                            <Iconify icon="solar:pen-bold" width={18} />
+                        </IconButton>
+                        <IconButton
+                            size="small"
+                            onClick={() => {
+                                setDeleteId(row.id);
+                                setOpenConfirm(true);
+                            }}
+                            sx={{ color: 'error.main' }}
+                        >
+                            <Iconify icon="solar:trash-bin-trash-bold" width={18} />
+                        </IconButton>
+                    </Box>
+                ),
             },
         ],
-        [t]
+        [t, router]
     );
+
+    const startDateValue = useMemo(() => toPickerDate(draftFilters.start_date), [draftFilters.start_date]);
+    const endDateValue = useMemo(() => toPickerDate(draftFilters.end_date), [draftFilters.end_date]);
 
     return (
         <>
-            <GenericTableView
-                data={cashiers}
-                columns={columns}
-                loading={cashiersLoading}
-                breadcrumbs={{
-                    heading: t('cashbox.cashiers.title'),
-                    links: [
-                        { name: t('dashboard'), href: paths.dashboard.root },
-                        { name: t('cashbox.sidebar.title'), href: paths.cashbox.root },
-                        { name: t('cashbox.cashiers.title') },
-                    ],
+            <DashboardContent
+                sx={{
+                    flexGrow: 1,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    maxHeight: '100vh',
+                    '--layout-dashboard-content-pt': { xs: '0px', md: '0px' },
+                    '--layout-dashboard-content-pb': { xs: '0px', md: '0px' },
                 }}
-                addButton={{
-                    label: t('common.add'),
-                    href: `${paths.cashbox.cashiers}/new`,
-                }}
-            />
+            >
+                <DeductionUtilityDataTable
+                    persistKey="cashbox-cashiers"
+                    data={filteredCashiers}
+                    getRowId={(row: ICashier) => String(row?.id)}
+                    columns={columns}
+                    defaultConfig={{
+                        order: ['name', 'created_at', 'actions'],
+                        visibility: {
+                            name: true,
+                            created_at: true,
+                            actions: true,
+                        },
+                        widths: {
+                            name: '1.5fr',
+                            created_at: '1fr',
+                            actions: '0.7fr',
+                        },
+                    }}
+                    onReset={handleResetFilters}
+                    showPeriodPicker
+                    periodPickerProps={{
+                        startDate: startDate ? startDate.toDate() : null,
+                        endDate: endDate ? endDate.toDate() : null,
+                        onStartDateChange: (date: Date | null) => {
+                            setStartDate(date ? dayjs(date) : null);
+                            setActiveRange('day');
+                        },
+                        onEndDateChange: (date: Date | null) => {
+                            setEndDate(date ? dayjs(date) : null);
+                            setActiveRange('day');
+                        }
+                    }}
+                    showPeriodButtons
+                    periodButtonProps={{
+                        activePeriod: activeRange,
+                        onPeriodChange: (period: 'day' | 'week' | 'month' | 'year') => {
+                            applyRange(period);
+                        }
+                    }}
+                    headerActions={
+                        <Button
+                            variant="contained"
+                            startIcon={<Iconify icon="mingcute:add-line" />}
+                            href={`${paths.cashbox.cashiers}/new`}
+                            size="small"
+                        >
+                            {t('common.add', 'Add')}
+                        </Button>
+                    }
+                />
+            </DashboardContent>
 
             <Dialog
                 open={openConfirm}
