@@ -369,7 +369,7 @@ type OrderI interface {
 	CreateOrderItems(ctx context.Context, req model.CreateOrderItemRequest) ([]model.OrderItemResponse, error)
 	GetOrderItemByID(ctx context.Context, itemID string) (*model.OrderItemDetailResponse, error)
 	GetAllOrderItems(ctx context.Context, limit, offset int32) ([]model.OrderItemResponse, error)
-	GetOrderItemsByOrderID(ctx context.Context, orderID string) ([]model.OrderItemResponse, error)
+	GetOrderItemsByOrderID(ctx context.Context, orderID string, lang string) ([]model.OrderItemWithGoodResponse, error)
 	GetOrderItemsByStatus(ctx context.Context, status string, limit, offset int32) ([]model.OrderItemResponse, error)
 	UpdateOrderItem(ctx context.Context, itemID string, req model.UpdateOrderItemRequest) (*model.OrderItemResponse, error)
 	UpdateOrderItemQuantity(ctx context.Context, itemID string, quantity int32) (*model.OrderItemResponse, error)
