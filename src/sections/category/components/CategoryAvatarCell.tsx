@@ -18,7 +18,7 @@ export function CategoryAvatarCell({ category }: CategoryAvatarCellProps) {
     const currentLanguage = i18n.language;
 
     // Get name based on current language
-    let name = '-';
+    let name;
     if (currentLanguage.startsWith('en')) {
         name = category.name_en || category.name || '-';
     } else if (currentLanguage.startsWith('ru')) {
