@@ -10,10 +10,10 @@ import { LocalizationProvider } from 'src/locales/localization-provider';
 
 import { ProgressBar } from 'src/components/progress-bar';
 import { MotionLazy } from 'src/components/animate/motion-lazy';
+import { BranchProvider } from 'src/components/contexts/branch-context';
 import { SettingsDrawer, defaultSettings, SettingsProvider } from 'src/components/settings';
 
 import { AuthProvider } from 'src/auth/context/jwt';
-import { BranchProvider } from 'src/components/contexts/branch-context';
 
 // ----------------------------------------------------------------------
 

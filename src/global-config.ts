@@ -1,4 +1,3 @@
-import { paths } from 'src/routes/paths';
 
 import packageJson from '../package.json';
 
@@ -42,7 +41,7 @@ export const CONFIG: ConfigValue = {
   auth: {
     method: 'jwt',
     skip: false,
-    redirectPath: paths.menu.root,
+    redirectPath: '/menu/sign',
   },
   /**
    * Firebase

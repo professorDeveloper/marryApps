@@ -2,6 +2,8 @@ import type { Theme, ThemeProviderProps as MuiThemeProviderProps } from '@mui/ma
 import type {} from './extend-theme-types';
 import type { ThemeOptions } from './types';
 
+import { useMemo } from 'react';
+
 import CssBaseline from '@mui/material/CssBaseline';
 import { ThemeProvider as ThemeVarsProvider } from '@mui/material/styles';
 
@@ -19,15 +21,23 @@ export type ThemeProviderProps = Partial<MuiThemeProviderProps<Theme>> & {
 export function ThemeProvider({ themeOverrides, children, ...other }: ThemeProviderProps) {
   const settings = useSettingsContext();
 
-  const theme = createTheme({
-    settingsState: settings.state,
-    themeOverrides,
-  });
+  // Only the fields that actually affect theme creation — navLayout/navColor/compactLayout do NOT.
+  const { direction, fontFamily, contrast, primaryColor, mode } = settings.state;
+
+  const theme = useMemo(
+    () =>
+      createTheme({
+        settingsState: settings.state,
+        themeOverrides,
+      }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [direction, fontFamily, contrast, primaryColor, mode, themeOverrides]
+  );
 
   return (
     <ThemeVarsProvider disableTransitionOnChange theme={theme} {...other}>
       <CssBaseline />
-      <Rtl direction={settings.state.direction}>{children}</Rtl>
+      <Rtl direction={direction}>{children}</Rtl>
     </ThemeVarsProvider>
   );
 }
