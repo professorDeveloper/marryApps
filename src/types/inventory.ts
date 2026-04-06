@@ -75,6 +75,10 @@ export interface IInventoryListParams {
     search?: string;
     limit?: number;
     offset?: number;
+    date_from?: string;
+    date_to?: string;
+    storage_id?: string;
+    status?: string;
 }
 
 export interface IInventoryListResult {

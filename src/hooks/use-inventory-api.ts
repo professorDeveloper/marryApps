@@ -1,18 +1,18 @@
 import type { AxiosError } from 'axios';
+import type {
+    IInventory,
+    IInventoryItem,
+    BackendResponse,
+    IInventoryFormData,
+    IInventoryItemInput,
+    IInventoryListParams,
+    IInventoryListResult,
+} from 'src/types/inventory';
 
 import { toast } from 'sonner';
 import { useCallback } from 'react';
 
 import { poster, putter, deleter, fetcher, endpoints } from 'src/lib/axios';
-import type {
-    IInventory,
-    IInventoryItem,
-    IInventoryFormData,
-    IInventoryItemInput,
-    BackendResponse,
-    IInventoryListParams,
-    IInventoryListResult,
-} from 'src/types/inventory';
 
 interface IInventoryBatchCreatePayload extends IInventoryFormData {
     items: IInventoryItemInput[];
@@ -135,13 +135,24 @@ export function useInventoryAPI() {
         search,
         limit = 20,
         offset = 0,
+        date_from,
+        date_to,
+        storage_id,
+        status,
     }: IInventoryListParams = {}): Promise<IInventoryListResult> => {
         try {
             const normalizedQuery = search?.trim() || '';
             const endpoint = normalizedQuery ? endpoints.inventory.search : endpoints.inventory.list;
-            const params = normalizedQuery
-                ? { q: normalizedQuery, limit, offset, expand: 'storage_id' }
-                : { limit, offset, expand: 'storage_id' };
+            const params = {
+                ...(normalizedQuery ? { q: normalizedQuery } : {}),
+                limit,
+                offset,
+                expand: 'storage_id',
+                ...(date_from ? { date_from } : {}),
+                ...(date_to ? { date_to } : {}),
+                ...(storage_id ? { storage_id } : {}),
+                ...(status ? { status } : {}),
+            };
 
             const response = await fetcher<unknown>([
                 endpoint,

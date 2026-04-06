@@ -34,54 +34,42 @@ export const getUnitConverterConfig = (): UnitConverterConfig => config;
  * @param px - Value in pixels
  * @returns Value in meters (rounded to 2 decimal places)
  */
-export const pxToMeters = (px: number): number => {
-    return parseFloat((px / config.pxPerMeter).toFixed(2));
-};
+export const pxToMeters = (px: number): number => parseFloat((px / config.pxPerMeter).toFixed(2));
 
 /**
  * Convert pixels to centimeters
  * @param px - Value in pixels
  * @returns Value in centimeters (rounded to 1 decimal place)
  */
-export const pxToCentimeters = (px: number): number => {
-    return parseFloat((px / (config.pxPerMeter / 100)).toFixed(1));
-};
+export const pxToCentimeters = (px: number): number => parseFloat((px / (config.pxPerMeter / 100)).toFixed(1));
 
 /**
  * Convert meters to pixels
  * @param meters - Value in meters
  * @returns Value in pixels (rounded to nearest integer)
  */
-export const metersToPx = (meters: number): number => {
-    return Math.round(meters * config.pxPerMeter);
-};
+export const metersToPx = (meters: number): number => Math.round(meters * config.pxPerMeter);
 
 /**
  * Convert centimeters to pixels
  * @param cm - Value in centimeters
  * @returns Value in pixels (rounded to nearest integer)
  */
-export const centimetersToPx = (cm: number): number => {
-    return Math.round(cm * (config.pxPerMeter / 100));
-};
+export const centimetersToPx = (cm: number): number => Math.round(cm * (config.pxPerMeter / 100));
 
 /**
  * Convert meters to centimeters
  * @param meters - Value in meters
  * @returns Value in centimeters
  */
-export const metersToCentimeters = (meters: number): number => {
-    return meters * 100;
-};
+export const metersToCentimeters = (meters: number): number => meters * 100;
 
 /**
  * Convert centimeters to meters
  * @param cm - Value in centimeters
  * @returns Value in meters (rounded to 2 decimal places)
  */
-export const centimetersToMeters = (cm: number): number => {
-    return parseFloat((cm / 100).toFixed(2));
-};
+export const centimetersToMeters = (cm: number): number => parseFloat((cm / 100).toFixed(2));
 
 /**
  * Format a value for display with unit
@@ -117,13 +105,11 @@ export const parseUnitString = (str: string): number => {
  * @param px - Value in pixels
  * @returns Object with meters and centimeters
  */
-export const getPxInUnits = (px: number): { meters: number; centimeters: number; pixels: number } => {
-    return {
+export const getPxInUnits = (px: number): { meters: number; centimeters: number; pixels: number } => ({
         pixels: px,
         meters: pxToMeters(px),
         centimeters: pxToCentimeters(px),
-    };
-};
+    });
 
 /**
  * Get display string for dimensions

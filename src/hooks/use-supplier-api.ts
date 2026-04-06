@@ -3,7 +3,7 @@ import type { AxiosError } from 'axios';
 import { toast } from 'sonner';
 import { useCallback } from 'react';
 
-import { poster, deleter, fetcher, putter, endpoints } from 'src/lib/axios';
+import { poster, putter, deleter, fetcher, endpoints } from 'src/lib/axios';
 
 export interface Supplier {
     id: string;

@@ -1,16 +1,15 @@
 import type { SWRConfiguration } from 'swr';
-import type { IMealsItem, IMealAPIResponse } from 'src/types/meals';
 import type { ITranslationItem } from 'src/types/departments.tsx';
+import type { IMealsItem, IMealAPIResponse } from 'src/types/meals';
 
+import { toast } from 'sonner';
 import useSWR, { mutate } from 'swr';
 import { useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { poster, putter, deleter, fetcher, endpoints } from 'src/lib/axios';
 import { useGetCategories } from 'src/actions/categories';
 import { useGetDepartments } from 'src/actions/departments';
-
-import { toast } from 'sonner';
+import { poster, putter, deleter, fetcher, endpoints } from 'src/lib/axios';
 
 // ============================================================================
 // CONFIGURATION

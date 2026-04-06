@@ -1,7 +1,9 @@
 import type { SWRConfiguration } from 'swr';
 import type { IBranchItem } from 'src/types/branches';
+
 import useSWR from 'swr';
 import { useMemo } from 'react';
+
 import { fetcher, endpoints } from 'src/lib/axios';
 
 interface BackendResponse<T> {

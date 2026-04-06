@@ -1,11 +1,14 @@
 import type { SWRConfiguration } from 'swr';
 import type { ICompound } from 'src/types/compounds';
 import type { ITranslationItem } from 'src/types/departments.tsx';
+
 import useSWR, { mutate } from 'swr';
 import { useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
+
 import { useGetIngredientGroups } from 'src/actions/ingredient-group';
 import { poster, putter, deleter, fetcher, endpoints } from 'src/lib/axios';
+
 import { toast } from 'src/components/snackbar';
 
 const swrOptions: SWRConfiguration = {
