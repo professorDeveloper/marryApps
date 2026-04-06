@@ -3,6 +3,7 @@ import type { BreadcrumbsProps } from '@mui/material/Breadcrumbs';
 import type { MoreLinksProps } from './more-links';
 import type { BreadcrumbsLinkProps } from './breadcrumb-link';
 
+import Box from '@mui/material/Box';
 import Breadcrumbs from '@mui/material/Breadcrumbs';
 
 import { BackLink } from './back-link';
@@ -38,6 +39,7 @@ export type CustomBreadcrumbsProps = React.ComponentProps<'div'> & {
   action?: React.ReactNode;
   links?: BreadcrumbsLinkProps[];
   moreLinks?: MoreLinksProps['links'];
+  sideLayout?: boolean; // New prop for side layout
   slots?: CustomBreadcrumbsSlots;
   slotProps?: Partial<CustomBreadcrumbsSlotProps>;
 };
@@ -52,6 +54,7 @@ export function CustomBreadcrumbs({
   moreLinks = [],
   slotProps = {},
   activeLast = false,
+  sideLayout = false,
   ...other
 }: CustomBreadcrumbsProps) {
   const lastLink = links[links.length - 1]?.name;
@@ -82,11 +85,39 @@ export function CustomBreadcrumbs({
   return (
     <BreadcrumbsRoot sx={sx} {...other}>
       <BreadcrumbsContainer {...slotProps?.container}>
-        <BreadcrumbsContent {...slotProps?.content}>
-          {(heading || backHref) && renderHeading()}
-          {(!!links.length || slots?.breadcrumbs) && renderLinks()}
-        </BreadcrumbsContent>
-        {action}
+        {sideLayout ? (
+          <Box sx={{ display: 'flex', alignItems: 'flex-end', gap: 2 }}>
+            <Box sx={{ 
+              display: 'flex', 
+              alignItems: 'flex-end',
+              '& h6': { 
+                margin: 0, 
+                lineHeight: 1.2,
+                marginBottom: 0
+              }
+            }}>
+              {(heading || backHref) && renderHeading()}
+            </Box>
+            <Box sx={{ 
+              width: '1px', 
+              height: '20px', 
+              backgroundColor: 'text.disabled',
+              alignSelf: 'center'
+            }} />
+            <Box sx={{ display: 'flex', alignItems: 'flex-end' }}>
+              {(!!links.length || slots?.breadcrumbs) && renderLinks()}
+            </Box>
+            {action}
+          </Box>
+        ) : (
+          <>
+            <BreadcrumbsContent {...slotProps?.content}>
+              {(heading || backHref) && renderHeading()}
+              {(!!links.length || slots?.breadcrumbs) && renderLinks()}
+            </BreadcrumbsContent>
+            {action}
+          </>
+        )}
       </BreadcrumbsContainer>
 
       {!!moreLinks?.length && renderMoreLinks()}

@@ -96,7 +96,7 @@ export const i18nResourceLoader = resourcesToBackend(
 
 export function i18nOptions(lang = fallbackLng, namespace = defaultNS): InitOptions {
   return {
-    debug: true,
+    debug: import.meta.env.DEV,
     supportedLngs,
     fallbackLng,
     lng: lang,
