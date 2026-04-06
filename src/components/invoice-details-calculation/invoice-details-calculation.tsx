@@ -1,38 +1,38 @@
-import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
+import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
+import React, { useRef, useMemo, useState, useEffect } from 'react';
+
+import SearchIcon from '@mui/icons-material/Search';
+import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
+import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import {
     Box,
     Paper,
-    Typography,
-    TextField,
-    Checkbox,
-    Button,
-    IconButton,
     Table,
+    Alert,
+    Button,
+    Dialog,
+    Divider,
+    Checkbox,
+    TableRow,
+    useTheme,
+    TextField,
     TableBody,
     TableCell,
-    TableContainer,
     TableHead,
-    TableRow,
-    Divider,
+    Typography,
+    DialogContent,
+    TableContainer,
     InputAdornment,
-    useTheme,
     CircularProgress,
-    Alert,
-    Tabs,
-    Tab,
 } from '@mui/material';
-import SearchIcon from '@mui/icons-material/Search';
-import ChevronRightIcon from '@mui/icons-material/ChevronRight';
-import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 
-import { fetcher, endpoints } from 'src/lib/axios';
-import { toast } from 'sonner';
-import { Iconify } from 'src/components/iconify';
-import { useInvoiceDetailsAPI } from 'src/hooks/use-invoice-details-api';
-import { useInvoiceAPI } from 'src/hooks/use-invoice-api';
-import { IngredientEditView } from 'src/sections/warehouse/ingredients-edit-view';
 import { useRouter } from 'src/routes/hooks/use-router';
+
+import { useInvoiceAPI } from 'src/hooks/use-invoice-api';
+import { useInvoiceDetailsAPI } from 'src/hooks/use-invoice-details-api';
+
+import { IngredientEditView } from 'src/sections/warehouse/ingredients-edit-view';
 
 // --- TYPES ---
 interface BackendResponse<T> {
@@ -79,9 +79,7 @@ const formatPrice = (price: number) => {
 };
 
 // Format number to 2 decimal places
-const formatNumber = (num: number): number => {
-    return Math.round(num * 100) / 100;
-};
+const formatNumber = (num: number): number => Math.round(num * 100) / 100;
 
 const parseInputNumber = (value: string): number | null => {
     if (value.trim() === '') {
@@ -103,8 +101,7 @@ export function InvoiceDetailsCalculation({ invoiceId, onSuccess, onDetailsChang
     const { updateInvoiceDetailsBatch } = useInvoiceAPI();
     const router = useRouter();
 
-    // Tab state
-    const [currentTab, setCurrentTab] = useState(0);
+    const [isIngredientDialogOpen, setIsIngredientDialogOpen] = useState(false);
 
     // Left panel (available ingredients)
     const [ingredients, setIngredients] = useState<Ingredient[]>([]);
@@ -129,28 +126,6 @@ export function InvoiceDetailsCalculation({ invoiceId, onSuccess, onDetailsChang
 
     const prevCalculationsRef = useRef<string>('');
     const hydratedPersistedSnapshotRef = useRef<string>('');
-    const calculateDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-    const [isCalculating, setIsCalculating] = useState(false);
-
-    const markCalculating = useCallback(() => {
-        setIsCalculating(true);
-        if (calculateDebounceRef.current) {
-            clearTimeout(calculateDebounceRef.current);
-        }
-
-        calculateDebounceRef.current = setTimeout(() => {
-            setIsCalculating(false);
-        }, 180);
-    }, []);
-
-    useEffect(
-        () => () => {
-            if (calculateDebounceRef.current) {
-                clearTimeout(calculateDebounceRef.current);
-            }
-        },
-        []
-    );
 
     const localBatchData = useMemo(() => {
         if (transferredIds.length === 0) {
@@ -287,7 +262,6 @@ export function InvoiceDetailsCalculation({ invoiceId, onSuccess, onDetailsChang
 
     // Handle quantity change
     const handleQuantityChange = (id: string, value: string) => {
-        markCalculating();
         const qty = parseInputNumber(value);
         setQuantities((prev) => {
             const next = { ...prev };
@@ -324,7 +298,6 @@ export function InvoiceDetailsCalculation({ invoiceId, onSuccess, onDetailsChang
 
     // Handle price per unit change
     const handlePricePerUnitChange = (id: string, value: string) => {
-        markCalculating();
         const pricePerUnit = parseInputNumber(value);
         setPricesPerUnit((prev) => {
             const next = { ...prev };
@@ -361,7 +334,6 @@ export function InvoiceDetailsCalculation({ invoiceId, onSuccess, onDetailsChang
 
     // Handle total price change
     const handleTotalPriceChange = (id: string, value: string) => {
-        markCalculating();
         const totalPrice = parseInputNumber(value);
         setPrices((prev) => {
             const next = { ...prev };
@@ -493,17 +465,14 @@ export function InvoiceDetailsCalculation({ invoiceId, onSuccess, onDetailsChang
     };
 
     // Filtered ingredients for left panel
-    const filteredLeftIngredients = useMemo(() => {
-        return ingredients.filter(
+    const filteredLeftIngredients = useMemo(() => ingredients.filter(
             (ing) =>
                 !transferredIds.includes(ing.id) &&
                 ing.name.toLowerCase().includes(searchTerm.toLowerCase())
-        );
-    }, [ingredients, transferredIds, searchTerm]);
+        ), [ingredients, transferredIds, searchTerm]);
 
     // Transferred items for right panel
-    const transferredItems = useMemo(() => {
-        return transferredIds
+    const transferredItems = useMemo(() => transferredIds
             .map((id) => {
                 const ingredient = ingredients.find((ing) => ing.id === id);
                 if (!ingredient) return null;
@@ -522,16 +491,13 @@ export function InvoiceDetailsCalculation({ invoiceId, onSuccess, onDetailsChang
                 };
             })
             .filter((item) => item !== null)
-            .filter((item) => item!.name.toLowerCase().includes(rightSearchTerm.toLowerCase()));
-    }, [transferredIds, ingredients, quantities, pricesPerUnit, rightSearchTerm, prices]);
+            .filter((item) => item!.name.toLowerCase().includes(rightSearchTerm.toLowerCase())), [transferredIds, ingredients, quantities, pricesPerUnit, rightSearchTerm, prices]);
 
     // Calculate totals
-    const totals = useMemo(() => {
-        return {
+    const totals = useMemo(() => ({
             quantity: transferredItems.reduce((acc, item) => acc + item.quantity, 0),
             totalPrice: transferredItems.reduce((acc, item) => acc + item.price, 0),
-        };
-    }, [transferredItems]);
+        }), [transferredItems]);
 
     // Handle submit batch
     const handleSubmitBatch = async () => {
@@ -611,8 +577,6 @@ export function InvoiceDetailsCalculation({ invoiceId, onSuccess, onDetailsChang
             setLoading(true);
             const data = await getIngredients();
             setIngredients(data);
-            // Switch back to Tab 1 after ingredient creation
-            setCurrentTab(0);
             toast.success(t('warehouse.ingredients.created'));
         } catch (error) {
             console.error('Error refreshing ingredients:', error);
@@ -623,50 +587,125 @@ export function InvoiceDetailsCalculation({ invoiceId, onSuccess, onDetailsChang
     };
 
     return (
-        <div style={{ minHeight: '100vh' }}>
-            {/* Tabs Navigation */}
-            <Tabs
-                value={currentTab}
-                onChange={(e, newValue) => setCurrentTab(newValue)}
-                variant="fullWidth"
+        <Box sx={{ minHeight: '100vh', p: 3 }}>
+            {/* Header actions (save/cancel handled here to match new UI) */}
+            <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, mb: 2 }}>
+                <Button
+                    variant="text"
+                    onClick={() => router.push('/menu/warehouse/invoice-details')}
+                    disabled={loading}
+                >
+                    {t('cancel')}
+                </Button>
+                <Button
+                    sx={{
+                        backgroundColor: '#FB6633',
+                        color: 'white',
+                        '&:hover': { backgroundColor: '#d9534f' },
+                    }}
+                    onClick={handleSubmitBatch}
+                    disabled={loading || transferredItems.length === 0}
+                >
+                    {isNewInvoice ? t('save') : t('warehouse.invoiceDetails.submitBatch')}
+                </Button>
+            </Box>
+
+            <Box
                 sx={{
-                    borderColor: 'divider',
-                    px: 3,
-                    width: '50%',
+                    display: 'grid',
+                    gridTemplateColumns: { xs: '1fr', lg: '9fr 3fr' },
+                    gap: 2,
+                    alignItems: 'start',
                 }}
             >
-                <Tab
-                    label={t('warehouse.invoiceDetails.batchOperations')}
-                    icon={<Iconify icon="solar:list-bold" />}
-                    iconPosition="start"
-                />
-                <Tab
-                    label={t('warehouse.add')}
-                    icon={<Iconify icon="solar:add-circle-bold" />}
-                    iconPosition="start"
-                />
-            </Tabs>
+                {/* Main column */}
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                    {/* General Information */}
+                    <Paper sx={{ p: 2 }}>
+                        <Typography variant="overline" sx={{ opacity: 0.7 }}>
+                            {t('warehouse.invoiceDetails.generalInfo', 'General Information')}
+                        </Typography>
+                        <Box
+                            sx={{
+                                mt: 2,
+                                display: 'grid',
+                                gridTemplateColumns: { xs: '1fr', md: '1fr 1fr 1fr' },
+                                gap: 2,
+                            }}
+                        >
+                            <TextField
+                                label={t('warehouse.invoice.supplier', 'Supplier')}
+                                value={formData?.supplier_id ?? ''}
+                                size="small"
+                                disabled
+                            />
+                            <TextField
+                                label={t('warehouse.invoice.storage', 'Storage')}
+                                value={formData?.storage_id ?? ''}
+                                size="small"
+                                disabled
+                            />
+                            <TextField
+                                label={t('warehouse.invoice.date', 'Date')}
+                                value={formData?.date ?? formData?.datetime ?? ''}
+                                size="small"
+                                disabled
+                            />
+                        </Box>
+                    </Paper>
 
-            {/* Tab 1: Batch Operations */}
-            {currentTab === 0 && (
-                <Box sx={{ p: 3, minHeight: '100vh' }}>
-
-                    {/* Main Grid: Left | Middle | Right */}
+                    {/* Available + Added */}
                     <Box
                         sx={{
                             display: 'grid',
-                            gridTemplateColumns: { xs: '1fr', md: '5fr 1fr 6fr' },
+                            gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' },
                             gap: 2,
-                            alignItems: 'flex-start',
                         }}
                     >
-                        {/* LEFT PANEL: Available Ingredients */}
+                        {/* Available items */}
                         <Paper sx={{ p: 2 }}>
-                            <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 'bold' }}>
-                                {t('warehouse.invoiceDetails.availableIngredients', 'Available Ingredients')}
-                            </Typography>
+                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                                <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+                                    {t('warehouse.invoiceDetails.availableIngredients', 'Available Items')}
+                                </Typography>
+                                <Box sx={{ display: 'flex', gap: 1 }}>
+                                    <Button
+                                        size="small"
+                                        variant="text"
+                                        onClick={() => {
+                                            const allIds = filteredLeftIngredients.map((ing) => ing.id);
+                                            const isAllSelected = allIds.length > 0 && allIds.every((id) => selectedIds.includes(id));
 
-                            {/* Search */}
+                                            if (isAllSelected) {
+                                                setSelectedIds([]);
+                                                setQuantities({});
+                                                return;
+                                            }
+
+                                            setSelectedIds(allIds);
+                                            setQuantities((prev) => {
+                                                const next = { ...prev };
+                                                allIds.forEach((id) => {
+                                                    if (!next[id]) next[id] = 1;
+                                                });
+                                                return next;
+                                            });
+                                        }}
+                                        disabled={loading || filteredLeftIngredients.length === 0}
+                                    >
+                                        {t('warehouse.invoiceDetails.selectAll', 'Select All')}
+                                    </Button>
+                                    <Button
+                                        size="small"
+                                        variant="outlined"
+                                        onClick={() => setIsIngredientDialogOpen(true)}
+                                        disabled={loading}
+                                    >
+                                        {t('warehouse.add', 'Add')}
+                                    </Button>
+                                </Box>
+                            </Box>
+
                             <TextField
                                 size="small"
                                 placeholder={t('search')}
@@ -680,14 +719,13 @@ export function InvoiceDetailsCalculation({ invoiceId, onSuccess, onDetailsChang
                                         </InputAdornment>
                                     ),
                                 }}
-                                sx={{ mb: 2 }}
+                                sx={{ mb: 1.5 }}
                             />
 
-                            {/* Ingredients List */}
-                            <Box sx={{ maxHeight: 400, overflowY: 'auto' }}>
+                            <Box sx={{ maxHeight: 420, overflowY: 'auto' }}>
                                 {loading ? (
                                     <Box sx={{ display: 'flex', justifyContent: 'center', p: 2 }}>
-                                        <CircularProgress size={30} />
+                                        <CircularProgress size={26} />
                                     </Box>
                                 ) : filteredLeftIngredients.length > 0 ? (
                                     filteredLeftIngredients.map((ing) => (
@@ -696,179 +734,88 @@ export function InvoiceDetailsCalculation({ invoiceId, onSuccess, onDetailsChang
                                             sx={{
                                                 display: 'flex',
                                                 alignItems: 'center',
-                                                p: 1,
-                                                borderBottom: `1px solid ${theme.vars.palette.divider}`,
-                                                '&:hover': {
-                                                    backgroundColor: theme.vars.palette.action.hover,
-                                                },
+                                                px: 1,
+                                                py: 0.75,
+                                                borderRadius: 1,
+                                                '&:hover': { backgroundColor: theme.vars.palette.action.hover },
                                             }}
                                         >
                                             <Checkbox
+                                                size="small"
                                                 checked={selectedIds.includes(ing.id)}
                                                 onChange={() => handleToggle(ing.id)}
                                             />
-                                            <Box sx={{ ml: 1 }}>
-                                                <Typography variant="body2">{ing.name}</Typography>
-                                                <Typography variant="caption" color="textSecondary">
+                                            <Box sx={{ ml: 1, minWidth: 0 }}>
+                                                <Typography variant="body2" noWrap>
+                                                    {ing.name}
+                                                </Typography>
+                                                <Typography variant="caption" color="text.secondary" noWrap>
                                                     {ing.measurement}
                                                 </Typography>
                                             </Box>
                                         </Box>
                                     ))
                                 ) : (
-                                    <Typography variant="body2" color="textSecondary">
+                                    <Typography variant="body2" color="text.secondary">
                                         {t('noData')}
                                     </Typography>
                                 )}
                             </Box>
-                        </Paper>
 
-                        {/* MIDDLE: Action Buttons */}
-                        <Box sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 2 }}>
-                            <Button
-                                fullWidth
-                                variant="contained"
-                                endIcon={<ChevronRightIcon />}
-                                onClick={handleMoveRight}
-                                disabled={selectedIds.length === 0 || loading}
-                            >
-                                {t('add')}
-                            </Button>
-
-                            {transferredIds.length > 0 && (
+                            <Box sx={{ display: 'flex', gap: 1, mt: 1.5 }}>
                                 <Button
                                     fullWidth
-                                    variant="outlined"
+                                    variant="contained"
+                                    endIcon={<ChevronRightIcon />}
+                                    onClick={handleMoveRight}
+                                    disabled={selectedIds.length === 0 || loading}
+                                >
+                                    {t('warehouse.invoiceDetails.addSelected', 'Add Selected')}
+                                </Button>
+                            </Box>
+                        </Paper>
+
+                        {/* Added to invoice */}
+                        <Paper sx={{ p: 2 }}>
+                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                                <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+                                    {t('warehouse.invoiceDetails.selectedItems', 'Added to Invoice')}
+                                </Typography>
+                                <Button
+                                    size="small"
+                                    variant="text"
                                     startIcon={<ChevronLeftIcon />}
                                     onClick={handleMoveLeft}
-                                    disabled={loading}
+                                    disabled={loading || transferredIds.length === 0}
                                 >
                                     {rightSelectedIds.length > 0
-                                        ? `${t('remove')}`
-                                        : t('remove')
-                                    }
+                                        ? t('warehouse.invoiceDetails.removeSelected', 'Remove')
+                                        : t('warehouse.invoiceDetails.discard', 'Discard')}
                                 </Button>
-                            )}
-                        </Box>
+                            </Box>
 
-                        {/* RIGHT PANEL: Selected Items with Inputs */}
-                        {showCalculation && (
-                            <Paper sx={{ p: 2 }}>
-                                <Box sx={{ display: 'flex',  }}>
-                                    <Typography variant="subtitle1" sx={{ fontWeight: 'bold', mb: 2 }}>
-                                        {t('warehouse.invoiceDetails.selectedItems', 'Selected Items')}
-                                    </Typography>
-                                    {/* {isCalculating && (
-                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                                            <CircularProgress size={14} />
-                                            <Typography variant="caption" color="text.secondary">
-                                                {t('warehouse.invoiceDetails.calculating', 'Calculating...')}
-                                            </Typography>
-                                        </Box>
-                                    )} */}
-                                </Box>
+                            <TextField
+                                size="small"
+                                placeholder={t('search')}
+                                fullWidth
+                                value={rightSearchTerm}
+                                onChange={(e) => setRightSearchTerm(e.target.value)}
+                                InputProps={{
+                                    startAdornment: (
+                                        <InputAdornment position="start">
+                                            <SearchIcon />
+                                        </InputAdornment>
+                                    ),
+                                }}
+                                sx={{ mb: 1.5 }}
+                            />
 
-                                {/* Search */}
-                                <TextField
-                                    size="small"
-                                    placeholder={t('search')}
-                                    fullWidth
-                                    value={rightSearchTerm}
-                                    onChange={(e) => setRightSearchTerm(e.target.value)}
-                                    InputProps={{
-                                        startAdornment: (
-                                            <InputAdornment position="start">
-                                                <SearchIcon />
-                                            </InputAdornment>
-                                        ),
-                                    }}
-                                    sx={{ mb: 2 }}
-                                />
-
-                                {/* Items with Input Fields */}
-                                <Box sx={{ maxHeight: 400, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 2 }}>
-                                    {transferredItems.map((item) => (
-                                        <Box key={item.id} sx={{ display: 'flex', alignItems: 'flex-start', gap: 2, paddingTop: 1 }}>
-                                            {/* Checkbox and Name */}
-                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0, minWidth: '150px', }}>
-                                                <Checkbox
-                                                    size="small"
-                                                    checked={rightSelectedIds.includes(item.id)}
-                                                    onChange={() => handleRightToggle(item.id)}
-                                                />
-                                                <Box>
-                                                    <Typography variant="subtitle2" sx={{ fontWeight: 'bold', fontSize: 12 }}>
-                                                        {item.name}
-                                                    </Typography>
-                                                </Box>
-                                            </Box>
-
-                                            {/* Input Fields in a Row */}
-                                            <Box
-                                                sx={{
-                                                    display: 'flex',
-                                                    flex: 1,
-                                                    gap: 1,
-                                                }}
-                                            >
-                                                {/* Quantity */}
-                                                <TextField
-                                                    size="small"
-                                                    label={t('warehouse.invoiceDetails.quantity')}
-                                                    type="number"
-                                                    value={quantities[item.id] ?? ''}
-                                                    onChange={(e) => handleQuantityChange(item.id, e.target.value)}
-                                                    inputProps={{ step: '0.01', min: '0' }}
-                                                    InputProps={{
-                                                        endAdornment: (
-                                                            <InputAdornment position="end">
-                                                                {item.measurement}
-                                                            </InputAdornment>
-                                                        ),
-                                                    }}
-                                                />
-
-                                                {/* Unit Price */}
-                                                <TextField
-                                                    size="small"
-                                                    label={t('warehouse.invoiceDetails.unitPrice')}
-                                                    type="number"
-                                                    value={pricesPerUnit[item.id] || ''}
-                                                    onChange={(e) => handlePricePerUnitChange(item.id, e.target.value)}
-                                                    inputProps={{ step: '0.01', min: '0' }}
-                                                />
-
-                                                {/* Total Price */}
-                                                <TextField
-                                                    size="small"
-                                                    label={t('warehouse.invoiceDetails.totalPrice')}
-                                                    type="number"
-                                                    value={prices[item.id] || ''}
-                                                    onChange={(e) => handleTotalPriceChange(item.id, e.target.value)}
-                                                    inputProps={{ step: '0.01', min: '0' }}
-                                                />
-                                            </Box>
-                                        </Box>
-                                    ))}
-                                </Box>
-                            </Paper>
-                        )}
-                    </Box>
-
-                    {/* BOTTOM: Calculation Table */}
-                    {showCalculation && transferredItems.length > 0 && (
-                        <Box sx={{ mt: 4 }}>
-                            <Divider sx={{ mb: 3 }} />
-
-                            <Typography variant="h6" sx={{ mb: 2, fontWeight: 'bold' }}>
-                                {t('warehouse.invoiceDetails.summary', 'Invoice Summary')}
-                            </Typography>
-
-                            <TableContainer component={Paper}>
-                                <Table>
+                            <TableContainer sx={{ maxHeight: 420 }}>
+                                <Table stickyHeader size="small">
                                     <TableHead>
-                                        <TableRow sx={{ backgroundColor: theme.vars.palette.background.paper }}>
-                                            <TableCell>№</TableCell>
+                                        <TableRow>
+                                            <TableCell padding="checkbox" />
+                                            <TableCell>#</TableCell>
                                             <TableCell>{t('warehouse.invoiceDetails.product')}</TableCell>
                                             <TableCell align="right">{t('warehouse.invoiceDetails.quantity')}</TableCell>
                                             <TableCell align="right">{t('warehouse.invoiceDetails.unitPrice')}</TableCell>
@@ -876,82 +823,163 @@ export function InvoiceDetailsCalculation({ invoiceId, onSuccess, onDetailsChang
                                         </TableRow>
                                     </TableHead>
                                     <TableBody>
-                                        {transferredItems.map((item, index) => (
-                                            <TableRow key={item.id}>
-                                                <TableCell>{index + 1}</TableCell>
-                                                <TableCell>{item.name}</TableCell>
-                                                <TableCell align="right">
-                                                    {formatPrice(item.quantity)} {item.measurement}
+                                        {transferredItems.length === 0 ? (
+                                            <TableRow>
+                                                <TableCell colSpan={6} sx={{ py: 6, textAlign: 'center', opacity: 0.6 }}>
+                                                    {t('warehouse.invoiceDetails.noItemsAdded', 'No items added')}
                                                 </TableCell>
-                                                <TableCell align="right">{formatPrice(item.price_per_unit)} UZS</TableCell>
-                                                <TableCell align="right">{formatPrice(item.price)} UZS</TableCell>
                                             </TableRow>
-                                        ))}
-                                        {/* Totals Row */}
-                                        <TableRow sx={{ backgroundColor: theme.vars.palette.action.hover }}>
-                                            <TableCell colSpan={2} sx={{ fontWeight: 'bold' }}>
-                                                {t('warehouse.invoiceDetails.total')}
-                                            </TableCell>
-                                            <TableCell align="right" sx={{ fontWeight: 'bold' }}>
-                                                {formatPrice(totals.quantity)}
-                                            </TableCell>
-                                            <TableCell />
-                                            <TableCell align="right" sx={{ fontWeight: 'bold' }}>
-                                                {formatPrice(totals.totalPrice)} UZS
-                                            </TableCell>
-                                        </TableRow>
+                                        ) : (
+                                            transferredItems.map((item, index) => (
+                                                <TableRow key={item.id} hover>
+                                                    <TableCell padding="checkbox">
+                                                        <Checkbox
+                                                            size="small"
+                                                            checked={rightSelectedIds.includes(item.id)}
+                                                            onChange={() => handleRightToggle(item.id)}
+                                                        />
+                                                    </TableCell>
+                                                    <TableCell>{index + 1}</TableCell>
+                                                    <TableCell>
+                                                        <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                                                            {item.name}
+                                                        </Typography>
+                                                        <Typography variant="caption" color="text.secondary">
+                                                            {item.measurement}
+                                                        </Typography>
+                                                    </TableCell>
+                                                    <TableCell align="right" sx={{ minWidth: 140 }}>
+                                                        <TextField
+                                                            size="small"
+                                                            type="number"
+                                                            value={quantities[item.id] ?? ''}
+                                                            onChange={(e) => handleQuantityChange(item.id, e.target.value)}
+                                                            inputProps={{ step: '0.01', min: '0' }}
+                                                            InputProps={{
+                                                                endAdornment: (
+                                                                    <InputAdornment position="end">
+                                                                        {item.measurement}
+                                                                    </InputAdornment>
+                                                                ),
+                                                            }}
+                                                        />
+                                                    </TableCell>
+                                                    <TableCell align="right" sx={{ minWidth: 120 }}>
+                                                        <TextField
+                                                            size="small"
+                                                            type="number"
+                                                            value={pricesPerUnit[item.id] ?? ''}
+                                                            onChange={(e) => handlePricePerUnitChange(item.id, e.target.value)}
+                                                            inputProps={{ step: '0.01', min: '0' }}
+                                                        />
+                                                    </TableCell>
+                                                    <TableCell align="right" sx={{ minWidth: 120 }}>
+                                                        <TextField
+                                                            size="small"
+                                                            type="number"
+                                                            value={prices[item.id] ?? ''}
+                                                            onChange={(e) => handleTotalPriceChange(item.id, e.target.value)}
+                                                            inputProps={{ step: '0.01', min: '0' }}
+                                                        />
+                                                    </TableCell>
+                                                </TableRow>
+                                            ))
+                                        )}
                                     </TableBody>
                                 </Table>
                             </TableContainer>
-
-                            {/* Submit Button */}
-                            <Box sx={{ mt: 3, display: 'flex', justifyContent: 'flex-end', gap: 2 }}>
-                                <Button
-                                    variant="outlined"
-                                    onClick={() => router.push('/menu/warehouse/invoice-details')}
-                                    disabled={loading}
-                                >
-                                    {t('cancel')}
-                                </Button>
-                                <Button
-                                    sx={{
-                                        backgroundColor: '#FB6633',
-                                        color: 'white',
-                                        '&:hover': {
-                                            backgroundColor: '#d9534f',
-                                        },
-                                    }}
-                                    color="primary"
-                                    onClick={handleSubmitBatch}
-                                    disabled={loading || transferredItems.length === 0}
-                                // startIcon={<Iconify icon="solar:check-circle-bold" />}
-                                >
-                                    {isNewInvoice ? t('save') : t('warehouse.invoiceDetails.submitBatch')}
-                                </Button>
-                            </Box>
-                        </Box>
-                    )}
-
-                    {/* {!showCalculation && transferredIds.length === 0 && (
-                        <Alert severity="warning" sx={{ mt: 3 }}>
-                            {t('warehouse.invoiceDetails.selectIngredientsFirst', 'Select ingredients from left panel and click Add to continue')}
-                        </Alert>
-                    )} */}
+                        </Paper>
+                    </Box>
 
                     {isNewInvoice && showCalculation && (
-                        <Alert severity="info" sx={{ mt: 3 }}>
+                        <Alert severity="info">
                             {t('warehouse.invoiceDetails.fillInvoiceInfoInTab1', 'Please fill invoice information (Supplier, Date, Amount) in Tab 1 before saving')}
                         </Alert>
                     )}
                 </Box>
-            )}
 
-            {/* Tab 2: Add New Ingredient */}
-            {currentTab === 1 && (
-                <Box sx={{ p: 3 }}>
-                    <IngredientEditView isNew={true} onSuccess={handleRefreshIngredients} />
+                {/* Sidebar */}
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                    <Paper sx={{ p: 2 }}>
+                        <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1 }}>
+                            {t('warehouse.invoiceDetails.summary', 'Summary')}
+                        </Typography>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                            <Typography variant="body2" color="text.secondary">
+                                {t('warehouse.invoiceDetails.products', 'Products')}
+                            </Typography>
+                            <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                                {transferredItems.length}
+                            </Typography>
+                        </Box>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                            <Typography variant="body2" color="text.secondary">
+                                {t('warehouse.invoiceDetails.totalQty', 'Total Qty')}
+                            </Typography>
+                            <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                                {formatPrice(totals.quantity)}
+                            </Typography>
+                        </Box>
+                        <Divider sx={{ my: 1.5 }} />
+                        <Typography variant="caption" color="text.secondary">
+                            {t('warehouse.invoiceDetails.totalAmount')}
+                        </Typography>
+                        <Typography variant="h5" sx={{ fontWeight: 800, mt: 0.5 }}>
+                            {formatPrice(totals.totalPrice)} UZS
+                        </Typography>
+                    </Paper>
+
+                    <Paper sx={{ p: 2 }}>
+                        <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1 }}>
+                            {t('warehouse.invoiceDetails.status', 'Status')}
+                        </Typography>
+                        <TextField
+                            select
+                            fullWidth
+                            size="small"
+                            SelectProps={{ native: true }}
+                            defaultValue="pending"
+                        >
+                            <option value="pending">{t('pending', 'Pending')}</option>
+                            <option value="completed">{t('completed', 'Completed')}</option>
+                        </TextField>
+                        <Box sx={{ mt: 1.5 }}>
+                            <Button
+                                fullWidth
+                                variant="outlined"
+                                onClick={() => {
+                                    setTransferredIds([]);
+                                    setPrices({});
+                                    setPricesPerUnit({});
+                                    setQuantities({});
+                                    setRightSelectedIds([]);
+                                    setShowCalculation(false);
+                                }}
+                                disabled={loading || transferredIds.length === 0}
+                            >
+                                {t('warehouse.invoiceDetails.discard', 'Discard')}
+                            </Button>
+                        </Box>
+                    </Paper>
                 </Box>
-            )}
-        </div>
+            </Box>
+
+            <Dialog
+                open={isIngredientDialogOpen}
+                onClose={() => setIsIngredientDialogOpen(false)}
+                fullWidth
+                maxWidth="lg"
+            >
+                <DialogContent>
+                    <IngredientEditView
+                        isNew
+                        onSuccess={async () => {
+                            await handleRefreshIngredients();
+                            setIsIngredientDialogOpen(false);
+                        }}
+                    />
+                </DialogContent>
+            </Dialog>
+        </Box>
     );
 }

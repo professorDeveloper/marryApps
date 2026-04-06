@@ -1,11 +1,11 @@
 import type { SWRConfiguration } from 'swr';
+import type { IHallItem, IHallFormData, IHallCreateRequest } from 'src/types/halls';
 
-import useSWR, { mutate } from 'swr';
-import { useCallback, useMemo } from 'react';
 import { toast } from 'sonner';
+import useSWR, { mutate } from 'swr';
+import { useMemo, useCallback } from 'react';
 
-import { deleter, endpoints, fetcher, poster, putter } from 'src/lib/axios';
-import type { IHallCreateRequest, IHallFormData, IHallItem } from 'src/types/halls';
+import { poster, putter, deleter, fetcher, endpoints } from 'src/lib/axios';
 
 const swrOptions: SWRConfiguration = {
     revalidateIfStale: true,

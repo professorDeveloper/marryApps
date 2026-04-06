@@ -1,42 +1,44 @@
-import { useState, useCallback } from 'react';
+import type { Table } from './types';
+import type { ICafeTableFormData } from 'src/types/cafe-tables';
+
+import { useState } from 'react';
 import { useNavigate } from 'react-router';
 import { useTranslation } from 'react-i18next';
+
+import { useTheme } from '@mui/material/styles';
 import {
     Box,
-    Button,
     List,
-    ListItem,
-    ListItemButton,
-    ListItemText,
-    Divider,
-    TextField,
     Stack,
+    Paper,
+    Button,
+    Dialog,
+    Select,
+    ListItem,
+    MenuItem,
+    TextField,
     Typography,
     IconButton,
-    Dialog,
+    InputLabel,
     DialogTitle,
+    FormControl,
+    ListItemText,
+    ToggleButton,
     DialogContent,
     DialogActions,
-    FormControlLabel,
-    Checkbox,
-    Paper,
-    FormControl,
-    InputLabel,
-    Select,
-    MenuItem,
-    ToggleButton,
+    ListItemButton,
     ToggleButtonGroup,
 } from '@mui/material';
-import { useTheme } from '@mui/material/styles';
-import { Iconify } from '../iconify';
+
+import { pxToMeters, metersToPx, centimetersToPx } from 'src/utils/unit-converter';
+
 import { useCreateHall } from 'src/actions/halls';
 import { useGetBranches } from 'src/actions/branches';
 import { useCreateCafeTable, useUpdateCafeTable, useDeleteCafeTable } from 'src/actions/cafe-tables';
-import type { ICafeTableFormData } from 'src/types/cafe-tables';
-import type { Table } from './types';
-import { DEFAULT_TABLE_SEATS, DEFAULT_TABLE_WIDTH, DEFAULT_TABLE_HEIGHT, HALL_WIDTH, HALL_HEIGHT } from './types';
-import { pxToMeters, pxToCentimeters, metersToPx, centimetersToPx, getDimensionDisplay } from 'src/utils/unit-converter';
+
+import { Iconify } from '../iconify';
 import { findNearestEmptyPosition } from './utils';
+import { HALL_WIDTH, HALL_HEIGHT, DEFAULT_TABLE_SEATS } from './types';
 
 interface FloorPlanSidebarProps {
     tables: Table[];

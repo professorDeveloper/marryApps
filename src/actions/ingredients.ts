@@ -1,8 +1,8 @@
 import type { SWRConfiguration } from 'swr';
 import type {
     IIngredientItem,
-    IIngredientFormData,
     IIngredientGroup,
+    IIngredientFormData,
     IIngredientResponse,
     IIngredientGroupResponse,
 } from 'src/types/ingredients';
@@ -11,6 +11,7 @@ import useSWR, { mutate } from 'swr';
 import { useMemo, useCallback } from 'react';
 
 import { poster, putter, fetcher, deleter, endpoints } from 'src/lib/axios';
+
 import { toast } from 'src/components/snackbar';
 
 const swrOptions: SWRConfiguration = {

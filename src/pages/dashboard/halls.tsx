@@ -1,37 +1,43 @@
+import type { IHallItem } from 'src/types/halls';
+
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+
 import {
     Box,
-    Button,
     Card,
-    CardActionArea,
-    CardContent,
-    Container,
-    Dialog,
-    DialogActions,
-    DialogContent,
-    DialogTitle,
     Stack,
+    Alert,
+    Button,
+    Dialog,
+    Select,
+    MenuItem,
+    Container,
     TextField,
     Typography,
-    CircularProgress,
-    Alert,
     IconButton,
-    MenuItem,
-    Select,
-    FormControl,
     InputLabel,
+    CardContent,
+    DialogTitle,
+    FormControl,
     ToggleButton,
+    DialogActions,
+    DialogContent,
+    CardActionArea,
+    CircularProgress,
     ToggleButtonGroup,
 } from '@mui/material';
-import { CONFIG } from 'src/global-config';
-import { Iconify } from 'src/components/iconify';
-import { useGetHalls, useCreateHall, useDeleteHall, useUpdateHall } from 'src/actions/halls';
-import { useGetBranches } from 'src/actions/branches';
-import { useRouter } from 'src/routes/hooks';
+
 import { paths } from 'src/routes/paths';
-import type { IHallItem } from 'src/types/halls';
-import { pxToMeters, pxToCentimeters, metersToPx, centimetersToPx, getDimensionDisplay } from 'src/utils/unit-converter';
+import { useRouter } from 'src/routes/hooks';
+
+import { pxToMeters, metersToPx, centimetersToPx, getDimensionDisplay } from 'src/utils/unit-converter';
+
+import { CONFIG } from 'src/global-config';
+import { useGetBranches } from 'src/actions/branches';
+import { useGetHalls, useCreateHall, useDeleteHall, useUpdateHall } from 'src/actions/halls';
+
+import { Iconify } from 'src/components/iconify';
 
 const metadata = { title: `Halls Management | ${CONFIG.appName}` };
 

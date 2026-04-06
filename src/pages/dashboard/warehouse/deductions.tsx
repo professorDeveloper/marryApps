@@ -1,5 +1,7 @@
 import { useEffect } from 'react';
+
 import { CONFIG } from 'src/global-config';
+
 import { DeductionsListView } from 'src/sections/warehouse/deductions-list-view';
 
 // ============================================================================

@@ -1,33 +1,38 @@
-import { useState, useMemo, useEffect } from 'react';
+import type {
+    IInventory,
+    IInventoryItem,
+    IInventoryFormData,
+    IInventoryItemInput,
+} from 'src/types/inventory';
+
+import { toast } from 'sonner';
 import { useNavigate } from 'react-router';
 import { useTranslation } from 'react-i18next';
+import { useMemo, useState, useEffect } from 'react';
+
+import SearchIcon from '@mui/icons-material/Search';
+import DeleteIcon from '@mui/icons-material/Delete';
+import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
+import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import {
     Box,
     Paper,
-    Typography,
-    TextField,
     Button,
-    IconButton,
     Divider,
-    InputAdornment,
     useTheme,
-    CircularProgress,
     Checkbox,
+    TextField,
+    Typography,
+    IconButton,
+    InputAdornment,
+    CircularProgress,
 } from '@mui/material';
-import SearchIcon from '@mui/icons-material/Search';
-import ChevronRightIcon from '@mui/icons-material/ChevronRight';
-import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
-import DeleteIcon from '@mui/icons-material/Delete';
-import { fetcher, endpoints, deleter } from 'src/lib/axios';
-import { toast } from 'sonner';
-import { useInventoryAPI } from 'src/hooks/use-inventory-api';
+
 import { paths } from 'src/routes/paths';
-import type {
-    IInventory,
-    IInventoryFormData,
-    IInventoryItem,
-    IInventoryItemInput,
-} from 'src/types/inventory';
+
+import { useInventoryAPI } from 'src/hooks/use-inventory-api';
+
+import { fetcher, deleter, endpoints } from 'src/lib/axios';
 
 // --- TYPES ---
 interface Ingredient {
@@ -61,9 +66,7 @@ const formatPrice = (price: number) => {
     }).format(formatted);
 };
 
-const formatNumber = (num: number): number => {
-    return Math.round(num * 100) / 100;
-};
+const formatNumber = (num: number): number => Math.round(num * 100) / 100;
 
 export function InventoryDetailsCalculation({
     inventoryId,
@@ -147,22 +150,18 @@ export function InventoryDetailsCalculation({
     }, [persistedDetails]);
 
     // Filter available ingredients (not selected and matches search)
-    const availableIngredients = useMemo(() => {
-        return ingredients.filter(
+    const availableIngredients = useMemo(() => ingredients.filter(
             (ing) =>
                 !transferredIds.includes(ing.id) &&
                 ing.name.toLowerCase().includes(searchTerm.toLowerCase())
-        );
-    }, [ingredients, transferredIds, searchTerm]);
+        ), [ingredients, transferredIds, searchTerm]);
 
     // Filter transferred ingredients (matches search)
-    const transferredIngredients = useMemo(() => {
-        return ingredients.filter(
+    const transferredIngredients = useMemo(() => ingredients.filter(
             (ing) =>
                 transferredIds.includes(ing.id) &&
                 ing.name.toLowerCase().includes(rightSearchTerm.toLowerCase())
-        );
-    }, [ingredients, transferredIds, rightSearchTerm]);
+        ), [ingredients, transferredIds, rightSearchTerm]);
 
     // Handle add selected ingredients
     const handleAddIngredients = () => {
@@ -217,12 +216,10 @@ export function InventoryDetailsCalculation({
     };
 
     // Build transfer data
-    const buildTransferData = (): IInventoryItemInput[] => {
-        return transferredIds.map((id) => ({
+    const buildTransferData = (): IInventoryItemInput[] => transferredIds.map((id) => ({
             ingredient_id: id,
             counted_quantity: String(quantities[id]),
         }));
-    };
 
     const buildPayloadKey = (items: IInventoryItemInput[]) =>
         [...items]

@@ -2,15 +2,14 @@
  * Floor Plan Editor - Utility Functions
  */
 
-import type { Table, CollisionCheckResult, TableDragPosition } from './types';
-import { DEFAULT_TABLE_WIDTH, DEFAULT_TABLE_HEIGHT, ROTATION_SNAP, GRID_SIZE } from './types';
+import type { Table, CollisionCheckResult } from './types';
+
+import { GRID_SIZE, ROTATION_SNAP, DEFAULT_TABLE_WIDTH, DEFAULT_TABLE_HEIGHT } from './types';
 
 /**
  * Generate unique ID for tables
  */
-export const generateTableId = (): string => {
-    return `table-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-};
+export const generateTableId = (): string => `table-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
 /**
  * Collision detection using AABB (Axis-Aligned Bounding Box)
@@ -89,9 +88,7 @@ export const findNearestEmptyPosition = (
 /**
  * Snap rotation to nearest value
  */
-export const snapRotation = (rotation: number, snapDegrees: number = ROTATION_SNAP): number => {
-    return Math.round(rotation / snapDegrees) * snapDegrees;
-};
+export const snapRotation = (rotation: number, snapDegrees: number = ROTATION_SNAP): number => Math.round(rotation / snapDegrees) * snapDegrees;
 
 /**
  * Snap position to grid
@@ -116,12 +113,10 @@ export const clampPosition = (
     maxX: number,
     maxY: number,
     padding: number = 10
-): { x: number; y: number } => {
-    return {
+): { x: number; y: number } => ({
         x: Math.max(padding, Math.min(x, maxX - width - padding)),
         y: Math.max(padding, Math.min(y, maxY - height - padding)),
-    };
-};
+    });
 
 /**
  * Calculate next table number

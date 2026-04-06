@@ -1,5 +1,7 @@
 import { useEffect } from 'react';
+
 import { CONFIG } from 'src/global-config';
+
 import { DeductionGroupsListView } from 'src/sections/warehouse/deduction-groups-list-view';
 
 // ============================================================================
@@ -12,8 +14,6 @@ export default function DeductionGroupsPage() {
     }, []);
 
     return (
-        <>
-            <DeductionGroupsListView />
-        </>
+        <DeductionGroupsListView />
     );
 }

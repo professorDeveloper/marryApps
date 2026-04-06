@@ -1,21 +1,29 @@
 import type { FC } from 'react';
+import type { CardSection, FieldConfig } from './types';
+
 import { memo, useMemo } from 'react';
-import { useFormContext, Controller } from 'react-hook-form';
-import type { CardSection } from './types';
 
 import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
-import { EditFormField } from 'src/components/generic-edit-view';
+
+import { EditFormFieldWithController } from 'src/components/generic-edit-view';
 
 interface EditFormSectionProps {
     section: CardSection;
 }
 
-const EditFormSection: FC<EditFormSectionProps> = memo(({ section }) => {
-    const { control } = useFormContext();
+interface FieldItemProps {
+    field: FieldConfig;
+}
 
+const FieldItem = memo<FieldItemProps>(({ field }) => (
+    <EditFormFieldWithController field={field} />
+));
+FieldItem.displayName = 'FieldItem';
+
+const EditFormSection: FC<EditFormSectionProps> = memo(({ section }) => {
     // Memoize the grid columns calculation
     const gridColumns = useMemo(() => ({
         xs: '1fr',
@@ -24,20 +32,8 @@ const EditFormSection: FC<EditFormSectionProps> = memo(({ section }) => {
 
     // Memoize the rendered fields to prevent recreation on every render
     const renderedFields = useMemo(() => section.fields.map((field) => (
-        <Controller
-            key={field.key}
-            name={field.key}
-            control={control}
-            defaultValue={field.defaultValue ?? null}
-            render={({ field: { onChange, value } }) => (
-                <EditFormField
-                    field={field}
-                    value={value ?? field.defaultValue ?? ''}
-                    onChange={onChange}
-                />
-            )}
-        />
-    )), [section.fields, control]);
+        <FieldItem key={field.key} field={field} />
+    )), [section.fields]);
 
     return (
         <Card sx={{ p: 3, mb: 3 }}>

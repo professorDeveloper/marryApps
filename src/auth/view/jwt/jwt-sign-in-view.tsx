@@ -82,7 +82,7 @@ export function JwtSignInView() {
       });
       await checkUserSession?.();
 
-      router.push(paths.menu.root);
+      router.push(paths.menu.sign);
     } catch (error) {
       console.error(error);
       const { key, fallback } = getErrorMessageKey(error);

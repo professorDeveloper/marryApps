@@ -1,5 +1,6 @@
 import type { NavGroupProps, NavSectionProps } from '../types';
 
+import { memo } from 'react';
 import { useBoolean } from 'minimal-shared/hooks';
 import { mergeClasses } from 'minimal-shared/utils';
 
@@ -12,7 +13,7 @@ import { navSectionClasses, navSectionCssVars } from '../styles';
 
 // ----------------------------------------------------------------------
 
-export function NavSectionVertical({
+export const NavSectionVertical = memo(function NavSectionVertical({
   sx,
   data,
   render,
@@ -48,11 +49,11 @@ export function NavSectionVertical({
       </NavUl>
     </Nav>
   );
-}
+});
 
 // ----------------------------------------------------------------------
 
-function Group({
+const Group = memo(function Group({
   items,
   render,
   subheader,
@@ -91,11 +92,17 @@ function Group({
             {subheader}
           </NavSubheader>
 
-          <Collapse in={groupOpen.value}>{renderContent()}</Collapse>
+          <Collapse
+            in={groupOpen.value}
+            timeout={{ enter: 250, exit: 200 }}
+            easing={{ enter: 'cubic-bezier(0.4, 0, 0.2, 1)', exit: 'cubic-bezier(0.4, 0, 0.2, 1)' }}
+          >
+            {renderContent()}
+          </Collapse>
         </>
       ) : (
         renderContent()
       )}
     </NavLi>
   );
-}
+});

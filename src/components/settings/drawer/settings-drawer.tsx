@@ -1,6 +1,8 @@
 import type { SettingsState, SettingsDrawerProps } from '../types';
+
 import { useEffect, useCallback } from 'react';
 import { hasKeys, varAlpha } from 'minimal-shared/utils';
+
 import Box from '@mui/material/Box';
 import Badge from '@mui/material/Badge';
 import Drawer from '@mui/material/Drawer';
@@ -8,11 +10,12 @@ import SvgIcon from '@mui/material/SvgIcon';
 import Tooltip from '@mui/material/Tooltip';
 import IconButton from '@mui/material/IconButton';
 import Typography from '@mui/material/Typography';
-import { useColorScheme } from '@mui/material/styles';
-import { useTheme } from '@mui/material/styles';
+import { useTheme , useColorScheme } from '@mui/material/styles';
+
 import { themeConfig } from 'src/theme/theme-config';
 import { useTranslate } from 'src/locales/use-locales';
 import { primaryColorPresets } from 'src/theme/with-settings';
+
 import { Label } from '../../label';
 import { settingIcons } from './icons';
 import { Iconify } from '../../iconify';

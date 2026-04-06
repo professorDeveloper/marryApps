@@ -7,8 +7,6 @@ import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import {
   Box,
-  Tab,
-  Tabs,
   Paper,
   Table,
   Button,
@@ -130,7 +128,7 @@ export function ShipmentsDetailsCalculation({
       quantity: quantities[ingredientId] ?? '',
     }));
     onItemsChangeRef.current?.(newItems);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [transferredIds, quantities]);
 
   const loadIngredients = useCallback(async () => {

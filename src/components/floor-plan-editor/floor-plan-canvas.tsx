@@ -1,9 +1,12 @@
-import { useRef, useState, useEffect } from 'react';
-import { Stage, Layer, Rect, Line, Text } from 'react-konva';
 import type Konva from 'konva';
-import { Box, Tooltip } from '@mui/material';
-import { useColorScheme, useTheme } from '@mui/material/styles';
 import type { Table } from './types';
+
+import { useRef, useState, useEffect } from 'react';
+import { Rect, Line, Stage, Layer } from 'react-konva';
+
+import { Box, Tooltip } from '@mui/material';
+import { useTheme, useColorScheme } from '@mui/material/styles';
+
 import { DraggableTable } from './draggable-table';
 
 interface FloorPlanCanvasProps {

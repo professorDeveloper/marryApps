@@ -182,7 +182,9 @@ const ItemRoot = styled(ButtonBase, { shouldForwardProp })<StyledState>(({
     paddingBottom: 'var(--nav-item-pb)',
     borderRadius: 'var(--nav-item-radius)',
     color: 'var(--nav-item-color)',
+    transition: 'background-color 0.2s ease, color 0.2s ease, transform 0.15s ease',
     '&:hover': { backgroundColor: 'var(--nav-item-hover-bg)' },
+    '&:active': { transform: 'scale(0.97)' },
     variants: [
       { props: { variant: 'rootItem' }, style: rootItemStyles },
       { props: { variant: 'subItem' }, style: subItemStyles },

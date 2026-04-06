@@ -1,5 +1,7 @@
 import { useEffect } from 'react';
+
 import { CONFIG } from 'src/global-config';
+
 import { DeductionsEditView } from 'src/sections/warehouse/deductions-edit-view';
 
 // ============================================================================
@@ -11,8 +13,6 @@ export default function DeductionDetailsPage() {
         document.title = metadata.title;
     }, []); 
     return (
-        <>
-            <DeductionsEditView />
-        </>
+        <DeductionsEditView />
     );
 }
