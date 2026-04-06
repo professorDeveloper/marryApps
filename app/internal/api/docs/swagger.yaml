@@ -2841,6 +2841,14 @@ definitions:
     - OrderStatusCancelled
     - OrderStatusReserved
     - OrderStatusRescheduled
+  model.OrderType:
+    enum:
+    - dine_in
+    - takeaway
+    type: string
+    x-enum-varnames:
+    - OrderTypeDineIn
+    - OrderTypeTakeaway
   model.OutgoingInvoiceItemResponse:
     properties:
       created_at:
@@ -4549,6 +4557,73 @@ definitions:
       username:
         example: admin
         type: string
+    type: object
+  model.WaiterOrderListItem:
+    properties:
+      cash_register_id:
+        example: a1b2c3d4-e5f6-4a5b-8c9d-e0f1a2b3c4d5
+        type: string
+      cashier_id:
+        example: a1b2c3d4-e5f6-4a5b-8c9d-e0f1a2b3c4d5
+        type: string
+      comment:
+        type: string
+      created_at:
+        type: string
+      guest_count:
+        example: 2
+        type: integer
+      hall_name:
+        example: Main hall
+        type: string
+      id:
+        example: c0f18a64-7f5c-4425-9414-1b01cddee9d9
+        type: string
+      item_count:
+        example: 3
+        type: integer
+      order_type:
+        allOf:
+        - $ref: '#/definitions/model.OrderType'
+        example: dine_in
+      reschedule_comment:
+        type: string
+      scheduled_at:
+        type: string
+      status:
+        allOf:
+        - $ref: '#/definitions/model.OrderStatus'
+        example: open
+      table_id:
+        example: a1b2c3d4-e5f6-4a5b-8c9d-e0f1a2b3c4d5
+        type: string
+      table_number:
+        example: 12
+        type: integer
+      total_amount:
+        example: "100000"
+        type: string
+      total_items:
+        example: 5
+        type: integer
+      updated_at:
+        type: string
+      waiter_id:
+        example: a1b2c3d4-e5f6-4a5b-8c9d-e0f1a2b3c4d5
+        type: string
+    type: object
+  model.WaiterOrderListResponse:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/model.WaiterOrderListItem'
+        type: array
+      message:
+        example: My orders retrieved successfully
+        type: string
+      status_code:
+        example: 200
+        type: integer
     type: object
 host: localhost:8080
 info:
@@ -16737,6 +16812,62 @@ paths:
       security:
       - BearerAuth: []
       summary: Get table price for order
+      tags:
+      - Orders
+  /api/v1/orders/my:
+    get:
+      description: Get current authenticated waiter's own orders with optional filters
+      parameters:
+      - default: uz
+        description: Language (uz, ru, en)
+        in: query
+        name: lang
+        type: string
+      - default: active
+        description: 'Scope filter: active, reservations, history, all'
+        in: query
+        name: scope
+        type: string
+      - description: 'Order type filter: dine_in, takeaway'
+        in: query
+        name: order_type
+        type: string
+      - description: Table ID
+        in: query
+        name: table_id
+        type: string
+      - default: 20
+        description: Limit
+        in: query
+        name: limit
+        type: integer
+      - default: 0
+        description: Offset
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.WaiterOrderListResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorData'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorData'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorData'
+      security:
+      - BearerAuth: []
+      summary: Get my orders
       tags:
       - Orders
   /api/v1/orders/status/{status}:

@@ -2121,3 +2121,121 @@ func (h *Handler) RescheduleOrder(c echo.Context) error {
 		http.StatusOK,
 	))
 }
+
+// GetMyOrders retrieves current waiter's own orders
+// @Summary Get my orders
+// @Description Get current authenticated waiter's own orders with optional filters
+// @Tags Orders
+// @Produce json
+// @Security BearerAuth
+// @Param lang query string false "Language (uz, ru, en)" default(uz)
+// @Param scope query string false "Scope filter: active, reservations, history, all" default(active)
+// @Param order_type query string false "Order type filter: dine_in, takeaway"
+// @Param table_id query string false "Table ID"
+// @Param limit query int false "Limit" default(20)
+// @Param offset query int false "Offset" default(0)
+// @Success 200 {object} model.WaiterOrderListResponse
+// @Failure 400 {object} model.ErrorData
+// @Failure 401 {object} model.ErrorData
+// @Failure 500 {object} model.ErrorData
+// @Router /api/v1/orders/my [get]
+func (h *Handler) GetMyOrders(c echo.Context) error {
+	userID, _ := c.Get("user_id").(string)
+	if userID == "" {
+		return c.JSON(http.StatusUnauthorized, model.NewErrorResponse(
+			"user not authenticated",
+			"missing user_id in context",
+			http.StatusUnauthorized,
+		))
+	}
+
+	var req model.GetMyOrdersRequest
+
+	// scope
+	scope := model.WaiterOrderScopeActive
+	if v := c.QueryParam("scope"); v != "" {
+		scope = model.WaiterOrderScope(v)
+		switch scope {
+		case model.WaiterOrderScopeActive,
+			model.WaiterOrderScopeReservations,
+			model.WaiterOrderScopeHistory,
+			model.WaiterOrderScopeAll:
+		default:
+			return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+				"invalid scope",
+				"scope must be one of: active, reservations, history, all",
+				http.StatusBadRequest,
+			))
+		}
+	}
+	req.Scope = &scope
+
+	// order_type
+	if v := c.QueryParam("order_type"); v != "" {
+		orderType := model.OrderType(v)
+		switch orderType {
+		case model.OrderTypeDineIn, model.OrderTypeTakeaway:
+			req.OrderType = &orderType
+		default:
+			return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+				"invalid order_type",
+				"order_type must be one of: dine_in, takeaway",
+				http.StatusBadRequest,
+			))
+		}
+	}
+
+	if v := c.QueryParam("table_id"); v != "" {
+		if _, err := uuid.Parse(v); err != nil {
+			return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+				"invalid table_id format",
+				err.Error(),
+				http.StatusBadRequest,
+			))
+		}
+		req.TableID = &v
+	}
+
+	req.Limit = 20
+	req.Offset = 0
+
+	if v := c.QueryParam("limit"); v != "" {
+		limit, err := strconv.ParseInt(v, 10, 32)
+		if err != nil || limit <= 0 {
+			return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+				"invalid limit",
+				"limit must be a positive integer",
+				http.StatusBadRequest,
+			))
+		}
+		req.Limit = int32(limit)
+	}
+
+	if v := c.QueryParam("offset"); v != "" {
+		offset, err := strconv.ParseInt(v, 10, 32)
+		if err != nil || offset < 0 {
+			return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+				"invalid offset",
+				"offset must be a non-negative integer",
+				http.StatusBadRequest,
+			))
+		}
+		req.Offset = int32(offset)
+	}
+
+	orders, err := h.service.Order().GetMyOrders(c.Request().Context(), userID, req)
+	if err != nil {
+		log.Printf("GetMyOrders failed for user_id %s: %v", userID, err)
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse(
+			"failed to fetch my orders",
+			err.Error(),
+			http.StatusInternalServerError,
+		))
+	}
+
+	return c.JSON(http.StatusOK, model.NewSuccessResponse(
+		"My orders retrieved successfully",
+		orders,
+		http.StatusOK,
+	))
+}

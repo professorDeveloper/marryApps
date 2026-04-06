@@ -7,6 +7,7 @@ import (
 	"github.com/labstack/echo/v4"
 	"gitlab.yurtal.tech/company/maryai/back/internal/config"
 	mw "gitlab.yurtal.tech/company/maryai/back/internal/middleware"
+	"gitlab.yurtal.tech/company/maryai/back/internal/model"
 	"gitlab.yurtal.tech/company/maryai/back/internal/repository"
 	"gitlab.yurtal.tech/company/maryai/back/internal/service"
 	"gitlab.yurtal.tech/company/maryai/back/pkg/logger"
@@ -254,6 +255,7 @@ func (h *Handler) Register(router *echo.Echo) {
 			orders.PUT("/:id", h.UpdateOrder, mw.CheckLanguage(), mw.RequireRoles(mw.RolesCanCreateOrder...))
 			orders.DELETE("/:id", h.DeleteOrder, mw.CheckLanguage(), mw.RequireRoles(mw.RolesAdminOnly...))
 			orders.POST("/:id/restore", h.RestoreOrder, mw.CheckLanguage(), mw.RequireRoles(mw.RolesAdminOnly...))
+			orders.GET("/my", h.GetMyOrders, mw.CheckLanguage(), mw.RequireRoles(model.RoleWaiter))
 
 			orders.PUT("/:id/status", h.UpdateOrderStatus, mw.CheckLanguage(), mw.RequireRoles(mw.RolesAdminOnly...))
 			orders.POST("/:id/pay", h.MarkOrderPaid, mw.CheckLanguage(), mw.RequireRoles(mw.RolesCanPayOrder...))
