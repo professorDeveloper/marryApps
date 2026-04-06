@@ -16,8 +16,9 @@ SELECT id, status
 FROM orders
 WHERE table_id = $1
   AND order_type = 'dine_in'
-  AND status = 'open'
+  AND status NOT IN ('paid', 'cancelled')
   AND COALESCE(deleted_at, 0) = 0
+  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 ORDER BY created_at DESC
 LIMIT 1
 `

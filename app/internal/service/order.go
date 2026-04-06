@@ -123,15 +123,6 @@ func (s *OrderS) CreateOrder(ctx context.Context, req model.CreateOrderRequest) 
 			return nil, fmt.Errorf("failed to fetch cafe table: %w", err)
 		}
 	}
-	if req.OrderType != nil && *req.OrderType == "dine_in" && req.TableID != "" {
-		existing, err := s.repo.Tenant(ctx).GetActiveOpenOrderByTableID(ctx, tableUUID)
-		if err == nil {
-			return nil, fmt.Errorf("table already has an active order: %s", existing.ID.String())
-		}
-		if err != nil && err != pgx.ErrNoRows {
-			return nil, fmt.Errorf("failed to check active order by table: %w", err)
-		}
-	}
 
 	waiterUUID := pgtype.UUID{}
 	if req.WaiterID != nil && *req.WaiterID != "" {
@@ -160,22 +151,63 @@ func (s *OrderS) CreateOrder(ctx context.Context, req model.CreateOrderRequest) 
 		cashRegisterUUID = pgtype.UUID{Bytes: id, Valid: true}
 	}
 
-	// Determine initial status
-	status := pg.NullOrderStatus{OrderStatus: pg.OrderStatus(model.OrderStatusOpen), Valid: true}
-	if req.ScheduledAt != nil && *req.ScheduledAt != "" {
-		status = pg.NullOrderStatus{OrderStatus: pg.OrderStatus(model.OrderStatusReserved), Valid: true}
-	} else if req.Status != nil && *req.Status != "" {
-		status = pg.NullOrderStatus{OrderStatus: pg.OrderStatus(*req.Status), Valid: true}
+	status := pg.NullOrderStatus{
+		OrderStatus: pg.OrderStatus(model.OrderStatusOpen),
+		Valid:       true,
 	}
 
 	scheduledAtPg := pgtype.Timestamptz{}
 	if req.ScheduledAt != nil && *req.ScheduledAt != "" {
-		if t, err := time.Parse(time.RFC3339, *req.ScheduledAt); err == nil {
-			scheduledAtPg = pgtype.Timestamptz{Time: t, Valid: true}
+		t, err := time.Parse(time.RFC3339, *req.ScheduledAt)
+		if err != nil {
+			return nil, fmt.Errorf("invalid scheduled_at: %w", err)
+		}
+		scheduledAtPg = pgtype.Timestamptz{Time: t, Valid: true}
+		status = pg.NullOrderStatus{
+			OrderStatus: pg.OrderStatus(model.OrderStatusReserved),
+			Valid:       true,
+		}
+	} else if req.Status != nil && *req.Status != "" {
+		status = pg.NullOrderStatus{
+			OrderStatus: pg.OrderStatus(*req.Status),
+			Valid:       true,
 		}
 	}
 
-	// Totals must be computed from order_items + service/discount logic.
+	isDineIn := orderType == "dine_in" && tableUUID != uuid.Nil
+	immediateDineIn := isDineIn && !scheduledAtPg.Valid
+
+	if isDineIn {
+		if immediateDineIn {
+			lockedTable, err := s.repo.Tenant(ctx).LockCafeTableByID(ctx, tableUUID)
+			if err != nil {
+				if err == pgx.ErrNoRows {
+					return nil, fmt.Errorf("cafe table not found")
+				}
+				return nil, fmt.Errorf("failed to lock cafe table: %w", err)
+			}
+
+			if lockedTable.Status == string(model.TableStatusBusy) {
+				existing, activeErr := s.repo.Tenant(ctx).GetActiveOpenOrderByTableID(ctx, tableUUID)
+				if activeErr == nil {
+					return nil, fmt.Errorf("table already has an active order: %s", existing.ID.String())
+				}
+				if activeErr != nil && activeErr != pgx.ErrNoRows {
+					return nil, fmt.Errorf("failed to check active order by table: %w", activeErr)
+				}
+				return nil, fmt.Errorf("table is busy")
+			}
+		}
+
+		existing, err := s.repo.Tenant(ctx).GetActiveOpenOrderByTableID(ctx, tableUUID)
+		if err == nil {
+			return nil, fmt.Errorf("table already has an active order: %s", existing.ID.String())
+		}
+		if err != nil && err != pgx.ErrNoRows {
+			return nil, fmt.Errorf("failed to check active order by table: %w", err)
+		}
+	}
+
 	var totalAmount pgtype.Numeric
 	if err := totalAmount.Scan("0"); err != nil {
 		return nil, fmt.Errorf("failed to init total_amount: %w", err)
@@ -202,11 +234,10 @@ func (s *OrderS) CreateOrder(ctx context.Context, req model.CreateOrderRequest) 
 	if err != nil {
 		return nil, fmt.Errorf("failed to create order: %w", err)
 	}
+
 	orderForResponse := any(createdOrder)
 
-	// Mark the table as busy only for immediately-active dine-in orders.
-	// Reserved orders keep the table free until the reservation activates.
-	if orderType == "dine_in" && tableUUID != uuid.Nil && !scheduledAtPg.Valid {
+	if immediateDineIn {
 		if _, err := s.repo.Tenant(ctx).SetTableBusy(ctx, tableUUID); err != nil {
 			return nil, fmt.Errorf("failed to set table busy: %w", err)
 		}
@@ -218,7 +249,7 @@ func (s *OrderS) CreateOrder(ctx context.Context, req model.CreateOrderRequest) 
 	}
 
 	var servicePercent pgtype.Numeric
-	if orderType == "dine_in" && tableUUID != uuid.Nil {
+	if isDineIn {
 		servicePercent, err = s.repo.Tenant(ctx).GetDefaultServicePercentByTable(ctx, tableUUID)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get default service percent: %w", err)
@@ -231,7 +262,6 @@ func (s *OrderS) CreateOrder(ctx context.Context, req model.CreateOrderRequest) 
 		return nil, fmt.Errorf("failed to init bill fields: %w", err)
 	}
 
-	// If items are provided, create them now (same tenant transaction) and compute totals.
 	if len(req.Items) > 0 {
 		for _, it := range req.Items {
 			goodUUID, err := uuid.Parse(it.GoodID)
@@ -254,11 +284,15 @@ func (s *OrderS) CreateOrder(ctx context.Context, req model.CreateOrderRequest) 
 				Quantity:  it.Quantity,
 				Price:     good.Price,
 				CostPrice: good.CostPrice,
-				Status:    pg.NullOrderItemsStatus{OrderItemsStatus: pg.OrderItemsStatus(model.OrderItemStatusPending), Valid: true},
-				Comment:   it.Comment,
+				Status: pg.NullOrderItemsStatus{
+					OrderItemsStatus: pg.OrderItemsStatus(model.OrderItemStatusPending),
+					Valid:            true,
+				},
+				Comment: it.Comment,
 			}); err != nil {
 				return nil, fmt.Errorf("failed to create order item: %w", err)
 			}
+
 			if err := s.consumeItemStock(ctx, goodUUID, it.Quantity, createdOrder.ID); err != nil {
 				return nil, fmt.Errorf("failed to deduct stock for item: %w", err)
 			}
@@ -276,7 +310,6 @@ func (s *OrderS) CreateOrder(ctx context.Context, req model.CreateOrderRequest) 
 
 	return toOrderResponse(orderForResponse), nil
 }
-
 func (s *OrderS) GetOrderByID(ctx context.Context, orderID string) (*model.OrderResponse, error) {
 	id, err := uuid.Parse(orderID)
 	if err != nil {
