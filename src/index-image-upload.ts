@@ -5,9 +5,6 @@
  * across the application.
  */
 
-// Service
-export { uploadImage, getImageUrl, type ImageUploadResponse, type ImageUploadError } from 'src/lib/image-upload';
-
 // Hook
 export { useImageUpload, type UseImageUploadReturn } from 'src/hooks/use-image-upload';
 
@@ -16,10 +13,13 @@ export { ImageUploadField } from 'src/components/generic-edit-view/image-upload-
 
 // Utilities
 export {
-    getFullImageUrl,
     getObjectName,
+    getFullImageUrl,
     isValidImageUrl,
 } from 'src/utils/image-url';
+
+// Service
+export { uploadImage, getImageUrl, type ImageUploadError, type ImageUploadResponse } from 'src/lib/image-upload';
 
 /**
  * Quick Start:
