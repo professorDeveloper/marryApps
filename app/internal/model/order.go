@@ -115,6 +115,9 @@ type OrderResponse struct {
 	PricePerHour      *string             `json:"price_per_hour,omitempty" example:"50000"`
 	TableStartedAt    *time.Time          `json:"table_started_at,omitempty"`
 	TableAmount       *string             `json:"table_amount,omitempty" example:"12500.00"`
+	ItemsAmount       *string             `json:"items_amount,omitempty" example:"50000"`
+	ServicePercent    *string             `json:"service_percent,omitempty" example:"20"`
+	ServiceAmount     *string             `json:"service_amount,omitempty" example:"10000"`
 	Items             []OrderItemResponse `json:"items"`
 	CreatedAt         *time.Time          `json:"created_at,omitempty"`
 	UpdatedAt         *time.Time          `json:"updated_at,omitempty"`
