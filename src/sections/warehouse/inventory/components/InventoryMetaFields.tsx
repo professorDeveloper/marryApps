@@ -30,8 +30,8 @@ export const InventoryMetaFields = React.memo(function InventoryMetaFields({
     const formattedDate = dateValue ? dateValue.format('DD.MM.YYYY') : '';
     const selectedStorage = storages.find((s) => String(s.id) === String(storageId))?.name;
     const statusLabel =
-        status === 'completed'
-            ? t('inventory.completed')
+        status === 'deleted'
+            ? t('inventory.deleted')
             : status === 'active'
               ? t('inventory.active')
               : status === 'draft'
@@ -98,9 +98,9 @@ export const InventoryMetaFields = React.memo(function InventoryMetaFields({
                     SelectProps={{ native: true }}
                     disabled={disabled}
                 >
+                    <option value="deleted">{t('inventory.deleted', 'Deleted')}</option>
                     <option value="draft">{t('inventory.draft', 'Draft')}</option>
                     <option value="active">{t('inventory.active', 'Active')}</option>
-                    <option value="completed">{t('inventory.completed', 'Completed')}</option>
                 </TextField>
                 <InventoryDescriptionField
                     value={description}

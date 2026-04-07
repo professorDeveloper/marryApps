@@ -45,11 +45,15 @@ export const InvoiceMetaFields = React.memo(function InvoiceMetaFields({
     const selectedStorage = storages.find((s) => String(s.id) === String(storage))?.name;
     const formattedDate = dateValue ? dateValue.format('DD.MM.YYYY') : '';
     const statusLabel =
-        invoiceStatus === 'completed'
-            ? t('warehouse.invoices.completed')
-            : invoiceStatus === 'pending'
-              ? t('warehouse.invoices.pending')
-              : '';
+        invoiceStatus === 'pending'
+            ? t('warehouse.invoices.pending')
+            : invoiceStatus === 'arrived'
+              ? t('warehouse.invoices.arrived')
+              : invoiceStatus === 'received'
+                ? t('warehouse.invoices.received')
+                : invoiceStatus === 'cancelled'
+                  ? t('warehouse.invoices.cancelled')
+                  : '';
 
     const summaryValues = [selectedSupplier, selectedStorage, formattedDate, statusLabel].filter(
         Boolean
@@ -130,7 +134,9 @@ export const InvoiceMetaFields = React.memo(function InvoiceMetaFields({
                     disabled={disabled}
                 >
                     <option value="pending">{t('warehouse.invoices.pending', 'Pending')}</option>
-                    <option value="completed">{t('warehouse.invoices.completed', 'Completed')}</option>
+                    <option value="arrived">{t('warehouse.invoices.arrived', 'Arrived')}</option>
+                    <option value="received">{t('warehouse.invoices.received', 'Received')}</option>
+                    <option value="cancelled">{t('warehouse.invoices.cancelled', 'Cancelled')}</option>
                 </TextField>
             </Box>
         </GeneralInformation>
