@@ -72,6 +72,15 @@ func (d *Date) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
+type GetUsersRequest struct {
+	Query    *string `json:"query,omitempty"     query:"query"     example:"ali"`
+	Role     *string `json:"role,omitempty"      query:"role"      example:"waiter"`
+	Staff    bool    `json:"staff"               query:"staff"     example:"true"`
+	BranchID *string `json:"branch_id,omitempty" query:"branch_id" example:"123e4567-e89b-12d3-a456-426614174000"`
+	Limit    int32   `json:"limit"               query:"limit"     example:"20"`
+	Offset   int32   `json:"offset"              query:"offset"    example:"0"`
+}
+
 type UserResponse struct {
 	ID             string     `json:"id" example:"123e4567-e89b-12d3-a456-426614174000"`
 	FullName       *string    `json:"full_name,omitempty" example:"John Doe"`

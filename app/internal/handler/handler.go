@@ -71,6 +71,7 @@ func (h *Handler) Register(router *echo.Echo) {
 		// User management endpoints
 		users := api.Group("/users", mw.CheckAuth(h.cfg), mw.TenantMiddleware(h.repo))
 		{
+			users.GET("", h.GetUsers, mw.CheckLanguage(), mw.RequireRoles(mw.RolesAdminOnly...))
 			users.GET("/:id", h.GetUserByID, mw.CheckLanguage(), mw.RequireRoles(mw.RolesAdminOnly...))
 			users.GET("/by-role", h.GetUsersByRole, mw.CheckLanguage(), mw.RequireRoles(mw.RolesAdminOnly...))
 			users.GET("/staff", h.GetKitchenStaff, mw.CheckLanguage(), mw.RequireRoles(mw.RolesAdminOnly...))
