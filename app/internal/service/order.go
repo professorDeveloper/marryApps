@@ -322,7 +322,16 @@ func (s *OrderS) CreateOrder(ctx context.Context, req model.CreateOrderRequest) 
 		}
 	}
 
-	return toOrderResponse(orderForResponse), nil
+	resp := toOrderResponse(orderForResponse)
+	if resp == nil {
+		return nil, nil
+	}
+
+	if err := s.attachTableAmountPreview(ctx, createdOrder.ID, resp); err != nil {
+		return nil, fmt.Errorf("failed to attach table amount preview: %w", err)
+	}
+
+	return resp, nil
 }
 func (s *OrderS) GetOrderByID(ctx context.Context, orderID string) (*model.OrderResponse, error) {
 	id, err := uuid.Parse(orderID)
@@ -352,7 +361,102 @@ func (s *OrderS) GetOrderByID(ctx context.Context, orderID string) (*model.Order
 		}
 	}
 
+	if err := s.attachTableAmountPreview(ctx, id, resp); err != nil {
+		return nil, fmt.Errorf("failed to attach table amount preview: %w", err)
+	}
+
 	return resp, nil
+}
+
+func (s *OrderS) attachTableAmountPreview(ctx context.Context, orderID uuid.UUID, resp *model.OrderResponse) error {
+	if resp == nil {
+		return nil
+	}
+
+	if resp.DisplayTotalAmount == "" {
+		resp.DisplayTotalAmount = resp.TotalAmount
+	}
+
+	ctxRow, err := s.repo.Tenant(ctx).GetOrderTimerContext(ctx, orderID)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return nil
+		}
+		return fmt.Errorf("failed to get order timer context: %w", err)
+	}
+
+	if ctxRow.OrderType != "dine_in" {
+		return nil
+	}
+	if !ctxRow.TableID.Valid {
+		return nil
+	}
+	if ctxRow.TableType != string(model.TableTypeTimeBased) {
+		return nil
+	}
+
+	tableType := ctxRow.TableType
+	resp.TableType = &tableType
+
+	if ctxRow.PricePerHour.Valid {
+		v := numericToStr(ctxRow.PricePerHour)
+		resp.PricePerHour = &v
+	}
+
+	var tableAmount *string
+	var startedAt *time.Time
+
+	session, err := s.repo.Tenant(ctx).GetLatestTableTimeSessionByOrderID(ctx, orderID)
+	switch {
+	case err == nil:
+		timer := toTableTimerResponse(ctxRow, &session, time.Now())
+
+		if timer.StartedAt != nil {
+			startedAt = timer.StartedAt
+		}
+
+		if timer.FinalAmount != nil && *timer.FinalAmount != "" {
+			tableAmount = timer.FinalAmount
+		} else if timer.CurrentAmount != nil && *timer.CurrentAmount != "" {
+			tableAmount = timer.CurrentAmount
+		}
+
+	case err == pgx.ErrNoRows:
+		startedAt = nil
+		zero := "0.00"
+		tableAmount = &zero
+
+	default:
+		return fmt.Errorf("failed to get latest table timer session: %w", err)
+	}
+
+	resp.TableStartedAt = startedAt
+	resp.TableAmount = tableAmount
+
+	if tableAmount != nil && *tableAmount != "" {
+		baseTotal := parseAmountString(resp.TotalAmount)
+		tableTotal := parseAmountString(*tableAmount)
+		resp.DisplayTotalAmount = formatAmountString(baseTotal + tableTotal)
+	}
+
+	return nil
+}
+
+func parseAmountString(s string) float64 {
+	if s == "" {
+		return 0
+	}
+
+	v, err := strconv.ParseFloat(strings.TrimSpace(s), 64)
+	if err != nil {
+		return 0
+	}
+
+	return v
+}
+
+func formatAmountString(v float64) string {
+	return strconv.FormatFloat(v, 'f', 2, 64)
 }
 
 func (s *OrderS) GetAllOrders(ctx context.Context, limit, offset int32) ([]model.OrderResponse, error) {
@@ -2058,20 +2162,21 @@ func toOrderResponse(o any) *model.OrderResponse {
 	}
 
 	return &model.OrderResponse{
-		ID:                id.String(),
-		TableID:           tableID.String(),
-		WaiterID:          waiterID,
-		CashierID:         cashierID,
-		CashRegisterID:    cashRegisterID,
-		Status:            status,
-		GuestCount:        guestCount,
-		TotalAmount:       numericToString(totalAmount),
-		Comment:           comment,
-		OrderType:         orderType,
-		ScheduledAt:       scheduledAt,
-		RescheduleComment: rescheduleComment,
-		CreatedAt:         createdAt,
-		UpdatedAt:         updatedAt,
+		ID:                 id.String(),
+		TableID:            tableID.String(),
+		WaiterID:           waiterID,
+		CashierID:          cashierID,
+		CashRegisterID:     cashRegisterID,
+		Status:             status,
+		GuestCount:         guestCount,
+		TotalAmount:        numericToString(totalAmount),
+		Comment:            comment,
+		OrderType:          orderType,
+		ScheduledAt:        scheduledAt,
+		RescheduleComment:  rescheduleComment,
+		DisplayTotalAmount: numericToString(totalAmount),
+		CreatedAt:          createdAt,
+		UpdatedAt:          updatedAt,
 	}
 }
 
