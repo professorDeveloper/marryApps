@@ -8,6 +8,12 @@ var (
 		model.RoleManager,
 		model.RoleSuperAdmin,
 	}
+	RolesCanActivateOrder = []string{
+		model.RoleCashier,
+		model.RoleAdmin,
+		model.RoleManager,
+		model.RoleSuperAdmin,
+	}
 
 	RolesCanCreateOrder = []string{
 		model.RoleWaiter,
