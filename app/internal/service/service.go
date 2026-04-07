@@ -237,7 +237,7 @@ type GoodsI interface {
 }
 
 type CafeTableI interface {
-	CreateCafeTable(ctx context.Context, hallID string, number int32, capacity int32, status *string, posX, posY, width, height, rotation *int32, pricePerHour *string, tableType *string) (*model.CafeTableResponse, error)
+	CreateCafeTable(ctx context.Context, hallID string, number int32, capacity int32, status *string, posX, posY, width, height, rotation *int32, pricePerHour *int64, tableType *string) (*model.CafeTableResponse, error)
 	GetCafeTableByID(ctx context.Context, tableID string) (*model.CafeTableResponse, error)
 	GetAllCafeTables(ctx context.Context, limit, offset int32) ([]model.CafeTableResponse, int64, error)
 	GetCafeTablesByHallID(ctx context.Context, hallID string, limit, offset int32) ([]model.CafeTableResponse, int64, error)
@@ -344,7 +344,7 @@ type OrderI interface {
 	CreateOrder(ctx context.Context, req model.CreateOrderRequest) (*model.OrderResponse, error)
 	AddOrderItems(ctx context.Context, orderID string, req model.AddOrderItemsRequest) (*model.AddOrderItemsResponse, error)
 	GetOrderByID(ctx context.Context, orderID string) (*model.OrderResponse, error)
-	GetAllOrders(ctx context.Context, limit, offset int32) ([]model.OrderResponse, error)
+	GetAllOrders(ctx context.Context, req model.GetOrdersRequest) ([]model.OrderResponse, error)
 	GetOrdersByStatus(ctx context.Context, status string, limit, offset int32) ([]model.OrderResponse, error)
 	GetOrdersByWaiterID(ctx context.Context, waiterID string, limit, offset int32) ([]model.OrderResponse, error)
 	GetOrdersByTableID(ctx context.Context, tableID string) ([]model.OrderResponse, error)

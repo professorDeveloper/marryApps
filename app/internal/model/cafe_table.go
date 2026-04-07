@@ -40,7 +40,7 @@ type CreateCafeTableRequest struct {
 	Width        *int32  `json:"width,omitempty" example:"0"`
 	Height       *int32  `json:"height,omitempty" example:"0"`
 	Rotation     *int32  `json:"rotation,omitempty" example:"0"`
-	PricePerHour *string `json:"price_per_hour,omitempty" example:"50000"`
+	PricePerHour *int64  `json:"price_per_hour,omitempty" example:"50000"`
 	TableType    *string `json:"table_type,omitempty" example:"simple"`
 }
 

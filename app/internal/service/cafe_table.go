@@ -38,7 +38,7 @@ func normalizeCafeTableType(input *string, defaultToSimple bool) (string, error)
 	}
 }
 
-func (s *CafeTableS) CreateCafeTable(ctx context.Context, hallID string, number int32, capacity int32, status *string, posX, posY, width, height, rotation *int32, pricePerHour *string, tableType *string) (*model.CafeTableResponse, error) {
+func (s *CafeTableS) CreateCafeTable(ctx context.Context, hallID string, number int32, capacity int32, status *string, posX, posY, width, height, rotation *int32, pricePerHour *int64, tableType *string) (*model.CafeTableResponse, error) {
 	if hallID == "" {
 		return nil, fmt.Errorf("hall_id is required")
 	}
@@ -92,7 +92,7 @@ func (s *CafeTableS) CreateCafeTable(ctx context.Context, hallID string, number 
 
 	var pph pgtype.Numeric
 	if pricePerHour != nil {
-		pph = stringToNumeric(*pricePerHour)
+		pph = intToNumeric(*pricePerHour)
 	}
 
 	table, err := s.repo.Tenant(ctx).CreateCafeTable(ctx, pg.CreateCafeTableParams{

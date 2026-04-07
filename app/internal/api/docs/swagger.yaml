@@ -570,8 +570,8 @@ definitions:
         example: 0
         type: integer
       price_per_hour:
-        example: "50000"
-        type: string
+        example: 50000
+        type: integer
       rotation:
         example: 0
         type: integer
@@ -2696,19 +2696,39 @@ definitions:
         items:
           $ref: '#/definitions/model.OrderItemResponse'
         type: array
+      items_amount:
+        example: "50000"
+        type: string
       order_type:
         example: dine_in
+        type: string
+      price_per_hour:
+        example: "50000"
         type: string
       reschedule_comment:
         type: string
       scheduled_at:
         type: string
+      service_amount:
+        example: "10000"
+        type: string
+      service_percent:
+        example: "20"
+        type: string
       status:
         allOf:
         - $ref: '#/definitions/model.OrderStatus'
         example: open
+      table_amount:
+        example: "12500.00"
+        type: string
       table_id:
         example: a1b2c3d4-e5f6-4a5b-8c9d-e0f1a2b3c4d5
+        type: string
+      table_started_at:
+        type: string
+      table_type:
+        example: time_based
         type: string
       total_amount:
         example: "100000"
@@ -15636,12 +15656,61 @@ paths:
       - Order Items
   /api/v1/orders:
     get:
-      description: Get all orders with pagination
+      description: Get all orders with type, status, period/from-to, table filters
+        and created/updated date sorting
       parameters:
       - default: uz
         description: Language (uz, ru, en)
         in: query
         name: lang
+        type: string
+      - description: Order type
+        enum:
+        - dine_in
+        - takeaway
+        in: query
+        name: type
+        type: string
+      - description: Order status
+        enum:
+        - open
+        - cooking
+        - ready
+        - served
+        - paid
+        - cancelled
+        - reserved
+        - rescheduled
+        in: query
+        name: status
+        type: string
+      - description: Start date (YYYY-MM-DD)
+        in: query
+        name: from
+        type: string
+      - description: End date (YYYY-MM-DD)
+        in: query
+        name: to
+        type: string
+      - description: Table ID
+        in: query
+        name: table_id
+        type: string
+      - default: created_at
+        description: Sort field
+        enum:
+        - created_at
+        - updated_at
+        in: query
+        name: sort_by
+        type: string
+      - default: desc
+        description: Sort order
+        enum:
+        - asc
+        - desc
+        in: query
+        name: sort_order
         type: string
       - default: 20
         description: Limit

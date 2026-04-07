@@ -617,18 +617,78 @@ func (q *Queries) GetAllOrderItems(ctx context.Context, arg GetAllOrderItemsPara
 }
 
 const getAllOrders = `-- name: GetAllOrders :many
-SELECT id, table_id, waiter_id, cashier_id, cash_register_id, branch_id, status, guest_count, total_amount, comment,
-       order_type, scheduled_at, reschedule_comment, created_at, updated_at, deleted_at
+SELECT
+    id,
+    table_id,
+    waiter_id,
+    cashier_id,
+    cash_register_id,
+    branch_id,
+    status,
+    guest_count,
+    total_amount,
+    comment,
+    order_type,
+    scheduled_at,
+    reschedule_comment,
+    created_at,
+    updated_at,
+    deleted_at
 FROM orders
 WHERE deleted_at = 0
   AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-ORDER BY created_at DESC
-LIMIT $1 OFFSET $2
+  AND (
+        $1::text IS NULL
+        OR order_type = $1::text
+      )
+  AND (
+        $2::order_status IS NULL
+        OR status = $2::order_status
+      )
+  AND (
+        $3::uuid IS NULL
+        OR table_id = $3::uuid
+      )
+  AND (
+        $4::timestamptz IS NULL
+        OR created_at >= $4::timestamptz
+      )
+  AND (
+        $5::timestamptz IS NULL
+        OR created_at < $5::timestamptz
+      )
+ORDER BY
+  CASE
+    WHEN $6::text = 'created_at' AND $7::text = 'asc'
+      THEN created_at
+  END ASC,
+  CASE
+    WHEN $6::text = 'created_at' AND $7::text = 'desc'
+      THEN created_at
+  END DESC,
+  CASE
+    WHEN $6::text = 'updated_at' AND $7::text = 'asc'
+      THEN updated_at
+  END ASC,
+  CASE
+    WHEN $6::text = 'updated_at' AND $7::text = 'desc'
+      THEN updated_at
+  END DESC,
+  created_at DESC
+LIMIT $9
+OFFSET $8
 `
 
 type GetAllOrdersParams struct {
-	Limit  int32 `json:"limit"`
-	Offset int32 `json:"offset"`
+	OrderType   *string            `json:"order_type"`
+	Status      NullOrderStatus    `json:"status"`
+	TableID     pgtype.UUID        `json:"table_id"`
+	PeriodStart pgtype.Timestamptz `json:"period_start"`
+	PeriodEnd   pgtype.Timestamptz `json:"period_end"`
+	SortBy      string             `json:"sort_by"`
+	SortOrder   string             `json:"sort_order"`
+	PageOffset  int32              `json:"page_offset"`
+	PageLimit   int32              `json:"page_limit"`
 }
 
 type GetAllOrdersRow struct {
@@ -651,7 +711,17 @@ type GetAllOrdersRow struct {
 }
 
 func (q *Queries) GetAllOrders(ctx context.Context, arg GetAllOrdersParams) ([]GetAllOrdersRow, error) {
-	rows, err := q.db.Query(ctx, getAllOrders, arg.Limit, arg.Offset)
+	rows, err := q.db.Query(ctx, getAllOrders,
+		arg.OrderType,
+		arg.Status,
+		arg.TableID,
+		arg.PeriodStart,
+		arg.PeriodEnd,
+		arg.SortBy,
+		arg.SortOrder,
+		arg.PageOffset,
+		arg.PageLimit,
+	)
 	if err != nil {
 		return nil, err
 	}
