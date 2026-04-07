@@ -14,7 +14,7 @@ import InputAdornment from '@mui/material/InputAdornment';
 
 import { Iconify } from 'src/components/iconify';
 
-import { ACCENT, APP_BG, BORDER } from '../utils';
+import { ACCENT, BORDER } from '../utils';
 
 export type DataTableToolbarProps<T> = {
   searchValue?: string;

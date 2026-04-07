@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import type { RowAction, BatchAction, SortDirection, DataTableColumn, StorageStrategy, DataTableDefaultConfig, SortState } from '../types/types';
+import type { RowAction, SortState, BatchAction, SortDirection, DataTableColumn, StorageStrategy, DataTableDefaultConfig } from '../types/types';
 
 import { useRef, useMemo, useState, useEffect, useCallback } from 'react';
 

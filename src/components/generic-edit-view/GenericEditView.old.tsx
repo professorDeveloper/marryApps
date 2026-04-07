@@ -13,7 +13,6 @@ import Button from '@mui/material/Button';
 import { ImageUploadField } from 'src/index-image-upload';
 
 import { ConfirmDialog } from 'src/components/custom-dialog';
-import { CustomBreadcrumbs } from 'src/components/custom-breadcrumbs';
 
 import { buildInitialFormData } from './utils';
 import EditFormSection from './EditFormSection';

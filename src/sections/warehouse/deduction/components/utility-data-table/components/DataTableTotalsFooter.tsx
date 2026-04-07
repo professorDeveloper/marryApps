@@ -5,7 +5,7 @@ import { m } from 'framer-motion';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 
-import { ACCENT, APP_BG, BORDER } from '../utils';
+import { ACCENT } from '../utils';
 
 export type DataTableTotalsFooterProps<T> = {
   gridTemplateColumns: string;
