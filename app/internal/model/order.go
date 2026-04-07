@@ -281,3 +281,15 @@ type WaiterOrderListResponse struct {
 	Data       []WaiterOrderListItem `json:"data"`
 	StatusCode int                   `json:"status_code" example:"200"`
 }
+
+type GetOrdersRequest struct {
+	Type      *OrderType   `json:"type,omitempty"       query:"type"       example:"dine_in"`
+	Status    *OrderStatus `json:"status,omitempty"     query:"status"     example:"open"`
+	From      *string      `json:"from,omitempty"       query:"from"       example:"2026-04-01"`
+	To        *string      `json:"to,omitempty"         query:"to"         example:"2026-04-07"`
+	TableID   *string      `json:"table_id,omitempty"   query:"table_id"   example:"a1b2c3d4-e5f6-4a5b-8c9d-e0f1a2b3c4d5"`
+	SortBy    string       `json:"sort_by"              query:"sort_by"    example:"created_at"`
+	SortOrder string       `json:"sort_order"           query:"sort_order" example:"desc"`
+	Limit     int32        `json:"limit"                query:"limit"      example:"20"`
+	Offset    int32        `json:"offset"               query:"offset"     example:"0"`
+}

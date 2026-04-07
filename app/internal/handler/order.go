@@ -340,13 +340,20 @@ func (h *Handler) GetOrderByID(c echo.Context) error {
 	))
 }
 
-// GetAllOrders retrieves all orders with pagination
+// GetAllOrders retrieves all orders with filters and sorting
 // @Summary Get all orders
-// @Description Get all orders with pagination
+// @Description Get all orders with type, status, period/from-to, table filters and created/updated date sorting
 // @Tags Orders
 // @Produce json
 // @Security BearerAuth
 // @Param lang query string false "Language (uz, ru, en)" default(uz)
+// @Param type query string false "Order type" Enums(dine_in,takeaway)
+// @Param status query string false "Order status" Enums(open,cooking,ready,served,paid,cancelled,reserved,rescheduled)
+// @Param from query string false "Start date (YYYY-MM-DD)"
+// @Param to query string false "End date (YYYY-MM-DD)"
+// @Param table_id query string false "Table ID"
+// @Param sort_by query string false "Sort field" Enums(created_at,updated_at) default(created_at)
+// @Param sort_order query string false "Sort order" Enums(asc,desc) default(desc)
 // @Param limit query int false "Limit" default(20)
 // @Param offset query int false "Offset" default(0)
 // @Success 200 {object} []model.OrderResponse
@@ -355,24 +362,144 @@ func (h *Handler) GetOrderByID(c echo.Context) error {
 // @Failure 500 {object} model.ErrorResponse
 // @Router /api/v1/orders [get]
 func (h *Handler) GetAllOrders(c echo.Context) error {
-	limitStr := c.QueryParam("limit")
-	offsetStr := c.QueryParam("offset")
-
-	limit := int32(20)
-	offset := int32(0)
-
-	if limitStr != "" {
-		if l, err := strconv.ParseInt(limitStr, 10, 32); err == nil && l > 0 {
-			limit = int32(l)
-		}
-	}
-	if offsetStr != "" {
-		if o, err := strconv.ParseInt(offsetStr, 10, 32); err == nil && o >= 0 {
-			offset = int32(o)
-		}
+	req := model.GetOrdersRequest{
+		SortBy:    "created_at",
+		SortOrder: "desc",
+		Limit:     20,
+		Offset:    0,
 	}
 
-	orders, err := h.service.Order().GetAllOrders(c.Request().Context(), limit, offset)
+	if v := strings.TrimSpace(c.QueryParam("type")); v != "" {
+		switch model.OrderType(v) {
+		case model.OrderTypeDineIn, model.OrderTypeTakeaway:
+			orderType := model.OrderType(v)
+			req.Type = &orderType
+		default:
+			return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+				"invalid order type",
+				"allowed values: dine_in, takeaway",
+				http.StatusBadRequest,
+			))
+		}
+	}
+
+	if v := strings.TrimSpace(c.QueryParam("status")); v != "" {
+		switch model.OrderStatus(v) {
+		case model.OrderStatusOpen,
+			model.OrderStatusCooking,
+			model.OrderStatusReady,
+			model.OrderStatusServed,
+			model.OrderStatusPaid,
+			model.OrderStatusCancelled,
+			model.OrderStatusReserved,
+			model.OrderStatusRescheduled:
+			status := model.OrderStatus(v)
+			req.Status = &status
+		default:
+			return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+				"invalid order status",
+				"allowed values: open, cooking, ready, served, paid, cancelled, reserved, rescheduled",
+				http.StatusBadRequest,
+			))
+		}
+	}
+
+	if v := strings.TrimSpace(c.QueryParam("from")); v != "" {
+		if _, err := time.Parse("2006-01-02", v); err != nil {
+			return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+				"invalid from date",
+				"use YYYY-MM-DD format",
+				http.StatusBadRequest,
+			))
+		}
+		req.From = &v
+	}
+
+	if v := strings.TrimSpace(c.QueryParam("to")); v != "" {
+		if _, err := time.Parse("2006-01-02", v); err != nil {
+			return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+				"invalid to date",
+				"use YYYY-MM-DD format",
+				http.StatusBadRequest,
+			))
+		}
+		req.To = &v
+	}
+
+	if req.From != nil && req.To != nil {
+		fromDate, _ := time.Parse("2006-01-02", *req.From)
+		toDate, _ := time.Parse("2006-01-02", *req.To)
+		if fromDate.After(toDate) {
+			return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+				"invalid date range",
+				"from must be less than or equal to to",
+				http.StatusBadRequest,
+			))
+		}
+	}
+
+	if v := strings.TrimSpace(c.QueryParam("table_id")); v != "" {
+		if _, err := uuid.Parse(v); err != nil {
+			return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+				"invalid table_id format",
+				err.Error(),
+				http.StatusBadRequest,
+			))
+		}
+		req.TableID = &v
+	}
+
+	if v := strings.TrimSpace(c.QueryParam("sort_by")); v != "" {
+		switch v {
+		case "created_at", "updated_at":
+			req.SortBy = v
+		default:
+			return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+				"invalid sort_by",
+				"allowed values: created_at, updated_at",
+				http.StatusBadRequest,
+			))
+		}
+	}
+
+	if v := strings.TrimSpace(c.QueryParam("sort_order")); v != "" {
+		switch v {
+		case "asc", "desc":
+			req.SortOrder = v
+		default:
+			return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+				"invalid sort_order",
+				"allowed values: asc, desc",
+				http.StatusBadRequest,
+			))
+		}
+	}
+
+	if v := strings.TrimSpace(c.QueryParam("limit")); v != "" {
+		limit, err := strconv.ParseInt(v, 10, 32)
+		if err != nil || limit <= 0 {
+			return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+				"invalid limit",
+				"limit must be a positive integer",
+				http.StatusBadRequest,
+			))
+		}
+		req.Limit = int32(limit)
+	}
+
+	if v := strings.TrimSpace(c.QueryParam("offset")); v != "" {
+		offset, err := strconv.ParseInt(v, 10, 32)
+		if err != nil || offset < 0 {
+			return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+				"invalid offset",
+				"offset must be a non-negative integer",
+				http.StatusBadRequest,
+			))
+		}
+		req.Offset = int32(offset)
+	}
+
+	orders, err := h.service.Order().GetAllOrders(c.Request().Context(), req)
 	if err != nil {
 		log.Printf("GetAllOrders failed: %v", err)
 		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse(
