@@ -12,7 +12,6 @@ import { useRouter, useParams } from 'src/routes/hooks';
 import { useGetIngredient, useCreateIngredient, useUpdateIngredient, useDeleteIngredient, useGetIngredientGroups } from 'src/actions/ingredients';
 
 import { GenericEditV2 } from 'src/components/generic-edit-v2';
-import { CustomBreadcrumbs } from 'src/components/custom-breadcrumbs';
 
 const COLOR_CODES = [
     '#FF4842', // Red

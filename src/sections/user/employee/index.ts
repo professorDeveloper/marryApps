@@ -1,5 +1,9 @@
-export { EmployeeListView } from './EmployeeListView';
+export { EmployeeListView } from './components/EmployeeListView';
+export { EmployeeFormView } from './components/EmployeeFormView';
+
 export { useEmployeeApi } from './hooks/useEmployeeApi';
+export { useCashRegisters } from './hooks/useCashRegisters';
+
 export { EmployeeUserCell } from './components/EmployeeUserCell';
 export { EmployeeRoleCell } from './components/EmployeeRoleCell';
 export { EmployeeViewModal } from './components/EmployeeViewModal';
@@ -8,6 +12,7 @@ export { EmployeeDeleteDialog } from './components/EmployeeDeleteDialog';
 export { EmployeeSpecifications } from './components/EmployeeSpecifications';
 
 export { ROLE_COLORS, STATUS_COLORS, DEFAULT_DATATABLE_CONFIG, EMPLOYEE_DATATABLE_PERSIST_KEY } from './constants';
+export { ROLE_OPTIONS } from './constants';
 
 export type {
     EmployeeApi,
@@ -24,3 +29,5 @@ export type {
     EmployeeCellRendererProps,
     EmployeeSpecificationsProps,
 } from './types';
+
+export type { EmployeeFormProps, EmployeeFormState, CashRegisterOption } from './types';

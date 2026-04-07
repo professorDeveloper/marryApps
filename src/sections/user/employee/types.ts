@@ -1,5 +1,6 @@
 import type { TFunction } from 'i18next';
 import type { IUser } from 'src/types/user';
+import type { UserRole } from 'src/types/user';
 
 // ── Employee Management Types ───────────────────────────────────────────────────
 
@@ -81,3 +82,23 @@ export interface EmployeeSpecificationRow {
 
 export type EmployeeRole = 'admin' | 'manager' | 'cashier' | 'waiter' | 'kitchen' | 'user';
 export type EmployeeStatus = 'active' | 'inactive';
+
+
+
+export type CashRegisterOption = { value: string; label: string };
+
+export interface EmployeeFormProps {
+    isNew?: boolean;
+    userId?: string;
+}
+
+export type EmployeeFormState = {
+    full_name: string;
+    username: string;
+    phone_number: string;
+    password: string;
+    role: UserRole | '';
+    pincode: string;
+    terminal: string;
+    cash_register_id: string;
+};

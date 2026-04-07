@@ -10,7 +10,6 @@ import LoadingButton from '@mui/lab/LoadingButton';
 
 import { Iconify } from 'src/components/iconify';
 import { ConfirmDialog } from 'src/components/custom-dialog';
-import { CustomBreadcrumbs } from 'src/components/custom-breadcrumbs';
 
 import { FieldRenderer } from './FieldRenderer';
 import { SectionRenderer } from './SectionRenderer';

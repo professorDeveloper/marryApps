@@ -8,7 +8,7 @@ import Typography from '@mui/material/Typography';
 
 import { Iconify } from 'src/components/iconify';
 
-import { ACCENT, APP_BG, BORDER } from '../utils';
+import { ACCENT, BORDER } from '../utils';
 
 export type DataTablePaginationProps = {
   page: number;

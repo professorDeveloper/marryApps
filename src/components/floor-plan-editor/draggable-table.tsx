@@ -192,6 +192,33 @@ export const DraggableTable = ({
                     align="center"
                     verticalAlign="middle"
                 />
+
+                {/* Time-based indicator badge */}
+                {table.table_type === 'time_based' && (
+                    <>
+                        <Rect
+                            x={table.width - 22}
+                            y={4}
+                            width={18}
+                            height={18}
+                            fill={theme.palette.warning.main}
+                            cornerRadius={9}
+                            opacity={0.95}
+                        />
+                        <Text
+                            x={table.width - 22}
+                            y={4}
+                            width={18}
+                            height={18}
+                            text="⏱"
+                            fontSize={12}
+                            fontFamily="Arial"
+                            fill={theme.palette.warning.contrastText}
+                            align="center"
+                            verticalAlign="middle"
+                        />
+                    </>
+                )}
             </Group>
     );
 };

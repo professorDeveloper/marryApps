@@ -1,4 +1,4 @@
-import { useSearchParams } from 'react-router';
+import { useParams, useSearchParams } from 'react-router';
 
 import { Box, Container } from '@mui/material';
 
@@ -12,9 +12,10 @@ const metadata = { title: `Floor Plan Editor | ${CONFIG.appName}` };
 
 export default function FloorPlanPage() {
     const [searchParams] = useSearchParams();
-    const hallId = searchParams.get('hallId');
-    const { hall, hallLoading } = useGetHall(hallId || '');
-    const { tables, tablesLoading } = useGetCafeTablesByHall(hallId || '');
+    const params = useParams();
+    const hallId = params.id || searchParams.get('hallId');
+    const { hall } = useGetHall(hallId || '');
+    const { tables } = useGetCafeTablesByHall(hallId || '');
 
     return (
         <>
