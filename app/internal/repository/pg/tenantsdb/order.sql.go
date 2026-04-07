@@ -675,8 +675,8 @@ ORDER BY
       THEN updated_at
   END DESC,
   created_at DESC
-LIMIT $9
-OFFSET $8
+LIMIT $9::int
+OFFSET $8::int
 `
 
 type GetAllOrdersParams struct {

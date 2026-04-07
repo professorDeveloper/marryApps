@@ -105,6 +105,53 @@ func (q *Queries) CountUsersByShift(ctx context.Context, shiftID pgtype.UUID) (i
 	return count, err
 }
 
+const countUsersFiltered = `-- name: CountUsersFiltered :one
+SELECT COUNT(*)
+FROM users
+WHERE deleted_at = 0
+  AND (
+        NULLIF(current_setting('app.branch_id', true), '') IS NULL
+        OR branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+      )
+  AND (
+        $1::uuid IS NULL
+        OR branch_id = $1::uuid
+      )
+  AND (
+        $2::text IS NULL
+        OR role = $2::text
+      )
+  AND (
+        NOT $3::bool
+        OR role NOT IN ('admin', 'superadmin')
+      )
+  AND (
+        $4::text IS NULL
+        OR full_name ILIKE '%' || $4::text || '%'
+        OR username ILIKE '%' || $4::text || '%'
+        OR phone_number ILIKE '%' || $4::text || '%'
+      )
+`
+
+type CountUsersFilteredParams struct {
+	BranchID  pgtype.UUID `json:"branch_id"`
+	Role      *string     `json:"role"`
+	StaffOnly bool        `json:"staff_only"`
+	Query     *string     `json:"query"`
+}
+
+func (q *Queries) CountUsersFiltered(ctx context.Context, arg CountUsersFilteredParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countUsersFiltered,
+		arg.BranchID,
+		arg.Role,
+		arg.StaffOnly,
+		arg.Query,
+	)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const createAttendance = `-- name: CreateAttendance :one
 INSERT INTO attendances (
     id,
@@ -1714,6 +1761,91 @@ ORDER BY u.full_name ASC
 
 func (q *Queries) GetUsersByShiftID(ctx context.Context, shiftID pgtype.UUID) ([]User, error) {
 	rows, err := q.db.Query(ctx, getUsersByShiftID, shiftID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []User
+	for rows.Next() {
+		var i User
+		if err := rows.Scan(
+			&i.ID,
+			&i.FullName,
+			&i.Username,
+			&i.Role,
+			&i.Email,
+			&i.ShiftID,
+			&i.Pincode,
+			&i.HashPassword,
+			&i.BrandID,
+			&i.BranchID,
+			&i.PhoneNumber,
+			&i.FcmToken,
+			&i.IsActive,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.DeletedAt,
+			&i.CashRegisterID,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getUsersFiltered = `-- name: GetUsersFiltered :many
+SELECT id, full_name, username, role, email, shift_id, pincode, hash_password, brand_id, branch_id, phone_number, fcm_token, is_active, created_at, updated_at, deleted_at, cash_register_id
+FROM users
+WHERE deleted_at = 0
+  AND (
+        NULLIF(current_setting('app.branch_id', true), '') IS NULL
+        OR branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+      )
+  AND (
+        $1::uuid IS NULL
+        OR branch_id = $1::uuid
+      )
+  AND (
+        $2::text IS NULL
+        OR role = $2::text
+      )
+  AND (
+        NOT $3::bool
+        OR role NOT IN ('admin', 'superadmin')
+      )
+  AND (
+        $4::text IS NULL
+        OR full_name ILIKE '%' || $4::text || '%'
+        OR username ILIKE '%' || $4::text || '%'
+        OR phone_number ILIKE '%' || $4::text || '%'
+      )
+ORDER BY full_name ASC, created_at DESC
+LIMIT $6::int
+OFFSET $5::int
+`
+
+type GetUsersFilteredParams struct {
+	BranchID  pgtype.UUID `json:"branch_id"`
+	Role      *string     `json:"role"`
+	StaffOnly bool        `json:"staff_only"`
+	Query     *string     `json:"query"`
+	Offset    int32       `json:"offset"`
+	Limit     int32       `json:"limit"`
+}
+
+func (q *Queries) GetUsersFiltered(ctx context.Context, arg GetUsersFilteredParams) ([]User, error) {
+	rows, err := q.db.Query(ctx, getUsersFiltered,
+		arg.BranchID,
+		arg.Role,
+		arg.StaffOnly,
+		arg.Query,
+		arg.Offset,
+		arg.Limit,
+	)
 	if err != nil {
 		return nil, err
 	}

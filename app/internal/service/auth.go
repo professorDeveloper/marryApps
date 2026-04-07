@@ -857,6 +857,72 @@ func (s *AuthS) GetUserByID(ctx context.Context, userID string) (model.UserRespo
 	return toUserResponse(user), nil
 }
 
+func (s *AuthS) GetUsers(ctx context.Context, req model.GetUsersRequest) ([]model.UserResponse, int64, error) {
+	limit := req.Limit
+	offset := req.Offset
+
+	if limit <= 0 {
+		limit = 20
+	}
+	if offset < 0 {
+		offset = 0
+	}
+
+	countParams := pg.CountUsersFilteredParams{
+		StaffOnly: req.Staff,
+	}
+	listParams := pg.GetUsersFilteredParams{
+		StaffOnly: req.Staff,
+		Limit:     limit,
+		Offset:    offset,
+	}
+
+	if req.Query != nil && strings.TrimSpace(*req.Query) != "" {
+		q := strings.TrimSpace(*req.Query)
+		countParams.Query = &q
+		listParams.Query = &q
+	}
+
+	if req.Role != nil && strings.TrimSpace(*req.Role) != "" {
+		role := strings.ToLower(strings.TrimSpace(*req.Role))
+		countParams.Role = &role
+		listParams.Role = &role
+	}
+
+	if req.BranchID != nil && strings.TrimSpace(*req.BranchID) != "" {
+		branchUUID, err := uuid.Parse(strings.TrimSpace(*req.BranchID))
+		if err != nil {
+			return nil, 0, fmt.Errorf("invalid branch_id: %w", err)
+		}
+
+		countParams.BranchID = pgtype.UUID{
+			Bytes: branchUUID,
+			Valid: true,
+		}
+		listParams.BranchID = pgtype.UUID{
+			Bytes: branchUUID,
+			Valid: true,
+		}
+	}
+
+	total, err := s.repo.Tenant(ctx).CountUsersFiltered(ctx, countParams)
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to count users: %w", err)
+	}
+
+	users, err := s.repo.Tenant(ctx).GetUsersFiltered(ctx, listParams)
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to get users: %w", err)
+	}
+
+	resp := make([]model.UserResponse, 0, len(users))
+	for _, u := range users {
+		resp = append(resp, toUserResponse(u))
+	}
+
+	return resp, total, nil
+}
+
 func (s *AuthS) UpdateUser(ctx context.Context, req model.UpdateUserRequest, userID string) (model.UserResponse, error) {
 	uuidID, err := uuid.Parse(userID)
 	if err != nil {
