@@ -102,7 +102,7 @@ const InvoiceFormView = React.memo(function InvoiceFormView() {
 
                 setSupplier(invoice.supplier_id || '');
                 setStorage(invoice.storage_id || '');
-                setInvoiceStatus(invoice.status || 'pending');
+                setInvoiceStatus(invoice.status);
                 const d = invoice.date;
                 setInvoiceDate(typeof d === 'string' && d ? d : new Date().toISOString());
 
@@ -158,7 +158,7 @@ const InvoiceFormView = React.memo(function InvoiceFormView() {
                         supplier_id: supplier,
                         storage_id: storage,
                         total_amount: calculatedTotal.toString(),
-                        status: 'pending',
+                        status: invoiceStatus,
                         date: invoiceDate || new Date().toISOString(),
                     },
                     details: batchData.map((d) => ({

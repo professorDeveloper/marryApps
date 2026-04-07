@@ -36,6 +36,8 @@ export interface DataTableColumn<T> {
   /** Header interactions */
   sortable?: boolean;
   filterable?: boolean;
+  /** Where to place the sort/filter icons in the header cell. Defaults to 'start'. */
+  headerActionsAlign?: 'start' | 'end';
   editable?: boolean;
   toggleable?: boolean;
   reorderable?: boolean;

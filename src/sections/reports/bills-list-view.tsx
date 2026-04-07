@@ -367,61 +367,45 @@ export function BillsListView() {
     const columns = useMemo(
         () => [
             {
-                key: 'bill_no',
-                label: t('bills.billNo') || 'Bill #',
-                sortable: true,
-                width: '0.5fr',
-                align: 'left' as const,
-                getValue: (row: any) => row?.bill_no ?? '',
-            },
-            {
                 key: 'opened_at',
-                label: t('bills.date') || 'Date',
+                label: t('bills.opened', 'Opened'),
                 sortable: true,
-                width: '1.2fr',
+                width: '0.8fr',
                 align: 'left' as const,
-                getValue: (row: any) => row?.opened_at || '',
                 renderCell: ({ value }: { value: unknown }) => {
                     const dateObj = dayjs(value as string);
-                    const currentLang = i18n.language;
-
-                    let dayMonthLine = '';
-                    let yearTimeLine = '';
-
-                    if (currentLang.startsWith('ru')) {
-                        dayMonthLine = dateObj.format('DD MMMM');
-                        yearTimeLine = dateObj.format('YYYY, HH:mm');
-                    } else if (currentLang.startsWith('en')) {
-                        dayMonthLine = dateObj.format('DD MMMM');
-                        yearTimeLine = dateObj.format('YYYY, HH:mm');
-                    } else if (currentLang === 'uz-Cyrl') {
-                        dayMonthLine = dateObj.format('DD MMMM');
-                        yearTimeLine = dateObj.format('YYYY, HH:mm');
-                    } else {
-                        dayMonthLine = dateObj.format('DD MMMM');
-                        yearTimeLine = dateObj.format('YYYY, HH:mm');
-                    }
-
+                    if (!dateObj.isValid()) return '';
+                    
+                    const dateLine = dateObj.format('DD.MM.YYYY');
+                    const timeLine = dateObj.format('HH:mm');
+                    
                     return (
-                        <div style={{ lineHeight: 1.4 }}>
-                            <div>{dayMonthLine}</div>
-                            <div>{yearTimeLine}</div>
+                        <div style={{ lineHeight: 1.2, fontSize: '0.85em' }}>
+                            <div>{dateLine}</div>
+                            <div>{timeLine}</div>
                         </div>
                     );
                 },
             },
             {
                 key: 'closed_at',
-                label: t('bills.closedAt', 'Closed At'),
+                label: t('bills.closed', 'Closed'),
                 sortable: true,
-                width: '1fr',
+                width: '0.8fr',
                 align: 'left' as const,
-                getValue: (row: any) => {
-                    const closedAt = row?.closed_at || row?.paid_at;
-                    if (!closedAt) return '';
-                    const dateObj = dayjs(closedAt);
+                renderCell: ({ value }: { value: unknown }) => {
+                    const dateObj = dayjs(value as string);
                     if (!dateObj.isValid()) return '';
-                    return dateObj.format('DD.MM.YYYY HH:mm');
+                    
+                    const dateLine = dateObj.format('DD.MM.YYYY');
+                    const timeLine = dateObj.format('HH:mm');
+                    
+                    return (
+                        <div style={{ lineHeight: 1.2, fontSize: '0.85em' }}>
+                            <div>{dateLine}</div>
+                            <div>{timeLine}</div>
+                        </div>
+                    );
                 },
             },
             {
@@ -437,23 +421,23 @@ export function BillsListView() {
                 label: t('bills.hall') || 'Hall',
                 sortable: true,
                 filter: { type: 'multi' as const },
-                width: '0.8fr',
+                width: '1fr',
                 align: 'left' as const,
                 getValue: (row: any) => row?.hall_name ?? '-',
             },
             {
                 key: 'table_number',
-                label: t('bills.table') || 'Table #',
+                label: t('bills.table'),
                 sortable: true,
-                width: '0.5fr',
+                width: '0.7fr',
                 align: 'left' as const,
                 getValue: (row: any) => row?.table_number ?? '',
             },
             {
                 key: 'guest_count',
-                label: t('bills.guests') || 'Guests',
+                label: t('bills.guests'),
                 sortable: true,
-                width: '0.5fr',
+                width: '0.7fr',
                 align: 'left' as const,
                 getValue: (row: any) => row?.guest_count ?? 0,
             },
@@ -461,13 +445,13 @@ export function BillsListView() {
                 key: 'food_cost',
                 label: t('bills.foodCost', 'Food Cost'),
                 sortable: true,
-                width: '1fr',
+                width: '1.4fr',
                 align: 'left' as const,
                 mono: true,
                 getValue: (row: any) => Number(row?.food_cost || 0),
                 renderCell: ({ value }: { value: unknown }) => {
                     const amount = Number(value ?? 0);
-                    return `${amount.toLocaleString()} so'm`;
+                    return `${amount.toLocaleString()}`;
                 },
                 total: { aggregation: 'sum' as const },
             },
@@ -475,22 +459,22 @@ export function BillsListView() {
                 key: 'grand_total',
                 label: t('bills.total') || 'Total',
                 sortable: true,
-                width: '1fr',
+                width: '0.8fr',
                 align: 'left' as const,
                 mono: true,
                 getValue: (row: any) => Number(row?.grand_total || 0),
                 renderCell: ({ value }: { value: unknown }) => {
                     const amount = Number(value ?? 0);
-                    return `${amount.toLocaleString()} so'm`;
+                    return `${amount.toLocaleString()}`;
                 },
                 total: { aggregation: 'sum' as const },
             },
             {
                 key: 'payment_type',
-                label: t('bills.paymentType') || 'Payment Type',
+                label: t('bills.paymentType') || 'Payment type',
                 sortable: true,
                 filter: { type: 'multi' as const, options: ['cash', 'card'] },
-                width: '0.8fr',
+                width: '1.2fr',
                 align: 'left' as const,
                 getValue: (row: any) => row?.payment_type || '',
                 renderCell: ({ value }: { value: unknown }) => {
@@ -533,7 +517,7 @@ export function BillsListView() {
                 label: t('bills.status') || 'Status',
                 sortable: true,
                 filter: { type: 'multi' as const, options: ['opened', 'closed', 'paid'] },
-                width: '0.8fr',
+                width: '0.9fr',
                 align: 'left' as const,
                 getValue: (row: any) => row?.bill_status || '',
                 renderCell: ({ value }: { value: unknown }) => {

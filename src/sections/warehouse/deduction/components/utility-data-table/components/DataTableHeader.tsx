@@ -58,7 +58,8 @@ export function DataTableHeader<T>({
         display: 'grid',
         gridTemplateColumns,
         alignItems: 'center',
-        height: 44,
+        py: 1,
+        maxHeight: 46,
         px: 1,
         backgroundColor: SURFACE_BG,
         borderBottom: `1px solid ${BORDER}`,
@@ -83,17 +84,19 @@ export function DataTableHeader<T>({
       )}
 
       {showRowNumbers && (
-        <Typography
-          sx={{
-            fontFamily: '"JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace',
-            fontSize: 12,
-            color: 'rgba(255,255,255,0.55)',
-            textAlign: 'center',
-            userSelect: 'none',
-          }}
-        >
-          #
-        </Typography>
+        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+          <Typography
+            sx={{
+              fontFamily: '"JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace',
+              fontSize: 12,
+              color: 'rgba(255,255,255,0.55)',
+              textAlign: 'center',
+              userSelect: 'none',
+            }}
+          >
+            #
+          </Typography>
+        </Box>
       )}
 
       {visibleColumns.map((col) => {
@@ -124,70 +127,88 @@ export function DataTableHeader<T>({
             }}
             sx={{
               position: 'relative',
-              height: 44,
               minWidth: 0,
+              height: '100%',
               display: 'flex',
               alignItems: 'center',
               px: 1,
-              gap: 0.75,
+              gap: 0.5,
               cursor: canReorder ? 'grab' : 'default',
               userSelect: 'none',
+              justifyContent: col.headerActionsAlign === 'end' ? 'space-between' : 'flex-start',
             }}
           >
-            <Typography
-              noWrap
+            <Tooltip title={col.label} placement="top" enterDelay={500}>
+              <Typography
+                sx={{
+                  flex: col.headerActionsAlign === 'end' ? 1 : '0 1 auto',
+                  minWidth: 0,
+                  fontSize: 12.5,
+                  lineHeight: 1.2,
+                  color: 'rgba(255,255,255,0.78)',
+                  fontWeight: 600,
+                  fontFamily: '"Inter", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif',
+                  whiteSpace: 'normal',
+                  wordBreak: 'normal',
+                  overflowWrap: 'normal',
+                  overflow: 'hidden',
+                }}
+              >
+                {col.label}
+              </Typography>
+            </Tooltip>
+
+            <Box
+              className="col-actions"
               sx={{
-                minWidth: 0,
-                fontSize: 12.5,
-                color: 'rgba(255,255,255,0.78)',
-                fontWeight: 600,
-                fontFamily: '"Inter", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 0.25,
+                flexShrink: 0,
               }}
             >
-              {col.label}
-            </Typography>
+              {canSort && (
+                <IconButton
+                  size="small"
+                  onClick={() => {
+                    const nextDir = sort.key !== col.key ? 'asc' : nextSort(sort.dir);
+                    onSortChange({ key: nextDir ? col.key : null, dir: nextDir });
+                  }}
+                  sx={{
+                    width: 22,
+                    height: 22,
+                    color: isActiveSort ? ACCENT : 'rgba(255,255,255,0.45)',
+                    '&:hover': { color: ACCENT, backgroundColor: 'rgba(245, 158, 11, 0.10)' },
+                  }}
+                >
+                  <Iconify
+                    icon={
+                      sort.key !== col.key || sort.dir == null
+                        ? 'solar:sort-by-time-bold-duotone'
+                        : sort.dir === 'asc'
+                          ? 'solar:double-alt-arrow-up-bold-duotone'
+                          : 'solar:double-alt-arrow-down-bold-duotone'
+                    }
+                    width={14}
+                  />
+                </IconButton>
+              )}
 
-            {canSort && (
-              <IconButton
-                size="small"
-                onClick={() => {
-                  const nextDir = sort.key !== col.key ? 'asc' : nextSort(sort.dir);
-                  onSortChange({ key: nextDir ? col.key : null, dir: nextDir });
-                }}
-                sx={{
-                  width: 28,
-                  height: 28,
-                  color: isActiveSort ? ACCENT : 'rgba(255,255,255,0.45)',
-                  '&:hover': { color: ACCENT, backgroundColor: 'rgba(245, 158, 11, 0.10)' },
-                }}
-              >
-                <Iconify
-                  icon={
-                    sort.key !== col.key || sort.dir == null
-                      ? 'solar:sort-by-time-bold-duotone'
-                      : sort.dir === 'asc'
-                        ? 'solar:double-alt-arrow-up-bold-duotone'
-                        : 'solar:double-alt-arrow-down-bold-duotone'
-                  }
-                  width={16}
-                />
-              </IconButton>
-            )}
-
-            {canFilter && (
-              <IconButton
-                size="small"
-                onClick={(e) => onOpenFilter(col.key, e.currentTarget)}
-                sx={{
-                  width: 28,
-                  height: 28,
-                  color: filterOn ? ACCENT : 'rgba(255,255,255,0.45)',
-                  '&:hover': { color: ACCENT, backgroundColor: 'rgba(245, 158, 11, 0.10)' },
-                }}
-              >
-                <Iconify icon="ic:round-filter-list" width={16} />
-              </IconButton>
-            )}
+              {canFilter && (
+                <IconButton
+                  size="small"
+                  onClick={(e) => onOpenFilter(col.key, e.currentTarget)}
+                  sx={{
+                    width: 22,
+                    height: 22,
+                    color: filterOn ? ACCENT : 'rgba(255,255,255,0.45)',
+                    '&:hover': { color: ACCENT, backgroundColor: 'rgba(245, 158, 11, 0.10)' },
+                  }}
+                >
+                  <Iconify icon="ic:round-filter-list" width={14} />
+                </IconButton>
+              )}
+            </Box>
 
             {/* Resize handle */}
             <Box
