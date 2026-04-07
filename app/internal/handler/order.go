@@ -1534,6 +1534,14 @@ func (h *Handler) GetOrderItemsByStatus(c echo.Context) error {
 		))
 	}
 
+	if !model.IsValidOrderItemStatus(status) {
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"invalid order item status",
+			"allowed values: "+model.OrderItemStatusAllowedValues,
+			http.StatusBadRequest,
+		))
+	}
+
 	limitStr := c.QueryParam("limit")
 	offsetStr := c.QueryParam("offset")
 
