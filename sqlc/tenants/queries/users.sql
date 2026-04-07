@@ -84,7 +84,62 @@ WHERE id = $1 AND deleted_at != 0
   AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 RETURNING *;
 
+-- name: CountUsersFiltered :one
+SELECT COUNT(*)
+FROM users
+WHERE deleted_at = 0
+  AND (
+        NULLIF(current_setting('app.branch_id', true), '') IS NULL
+        OR branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+      )
+  AND (
+        sqlc.narg('branch_id')::uuid IS NULL
+        OR branch_id = sqlc.narg('branch_id')::uuid
+      )
+  AND (
+        sqlc.narg('role')::text IS NULL
+        OR role = sqlc.narg('role')::text
+      )
+  AND (
+        NOT sqlc.arg('staff_only')::bool
+        OR role NOT IN ('admin', 'superadmin')
+      )
+  AND (
+        sqlc.narg('query')::text IS NULL
+        OR full_name ILIKE '%' || sqlc.narg('query')::text || '%'
+        OR username ILIKE '%' || sqlc.narg('query')::text || '%'
+        OR phone_number ILIKE '%' || sqlc.narg('query')::text || '%'
+      );
 
+-- name: GetUsersFiltered :many
+SELECT *
+FROM users
+WHERE deleted_at = 0
+  AND (
+        NULLIF(current_setting('app.branch_id', true), '') IS NULL
+        OR branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+      )
+  AND (
+        sqlc.narg('branch_id')::uuid IS NULL
+        OR branch_id = sqlc.narg('branch_id')::uuid
+      )
+  AND (
+        sqlc.narg('role')::text IS NULL
+        OR role = sqlc.narg('role')::text
+      )
+  AND (
+        NOT sqlc.arg('staff_only')::bool
+        OR role NOT IN ('admin', 'superadmin')
+      )
+  AND (
+        sqlc.narg('query')::text IS NULL
+        OR full_name ILIKE '%' || sqlc.narg('query')::text || '%'
+        OR username ILIKE '%' || sqlc.narg('query')::text || '%'
+        OR phone_number ILIKE '%' || sqlc.narg('query')::text || '%'
+      )
+ORDER BY full_name ASC, created_at DESC
+LIMIT sqlc.arg('limit')::int
+OFFSET sqlc.arg('offset')::int;
 
 -- name: GetUserByID :one
 SELECT * FROM users 

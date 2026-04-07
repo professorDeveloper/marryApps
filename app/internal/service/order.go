@@ -90,10 +90,6 @@ func (s *OrderS) AddOrderItems(ctx context.Context, orderID string, req model.Ad
 			return nil, fmt.Errorf("items[%d]: failed to create order item: %w", i, err)
 		}
 
-		if err := s.consumeItemStock(ctx, goodUUID, it.Quantity, oID); err != nil {
-			return nil, fmt.Errorf("items[%d]: failed to deduct stock for item: %w", i, err)
-		}
-
 		if resp := toOrderItemResponse(item); resp != nil {
 			created = append(created, *resp)
 		}
@@ -307,9 +303,6 @@ func (s *OrderS) CreateOrder(ctx context.Context, req model.CreateOrderRequest) 
 				return nil, fmt.Errorf("failed to create order item: %w", err)
 			}
 
-			if err := s.consumeItemStock(ctx, goodUUID, it.Quantity, createdOrder.ID); err != nil {
-				return nil, fmt.Errorf("failed to deduct stock for item: %w", err)
-			}
 		}
 
 		if err := s.repo.Tenant(ctx).RecalculateOrderTotalsFromItems(ctx, createdOrder.ID); err != nil {
@@ -438,9 +431,14 @@ func (s *OrderS) attachTableAmountPreview(ctx context.Context, orderID uuid.UUID
 	resp.TableAmount = tableAmount
 
 	if tableAmount != nil && *tableAmount != "" {
-		baseTotal := parseAmountString(resp.TotalAmount)
-		tableTotal := parseAmountString(*tableAmount)
-		resp.TotalAmount = formatAmountString(baseTotal + tableTotal)
+		isPaid := ctxRow.OrderStatus.Valid &&
+			string(ctxRow.OrderStatus.OrderStatus) == string(model.OrderStatusPaid)
+
+		if !isPaid {
+			baseTotal := parseAmountString(resp.TotalAmount)
+			tableTotal := parseAmountString(*tableAmount)
+			resp.TotalAmount = formatAmountString(baseTotal + tableTotal)
+		}
 	}
 
 	return nil
@@ -1553,9 +1551,6 @@ func (s *OrderS) CreateOrderItems(ctx context.Context, req model.CreateOrderItem
 		if err != nil {
 			return nil, fmt.Errorf("items[%d]: failed to create order item: %w", i, err)
 		}
-		if err := s.consumeItemStock(ctx, gID, entry.Quantity, oID); err != nil {
-			return nil, fmt.Errorf("items[%d]: failed to deduct stock: %w", i, err)
-		}
 
 		responses = append(responses, *toOrderItemResponse(item))
 	}
@@ -1752,90 +1747,30 @@ func (s *OrderS) UpdateOrderItemStatus(ctx context.Context, itemID string, statu
 	}
 	currentStatus := string(existing.Status.OrderItemsStatus)
 
-	// Terminal status — cannot change
 	if currentStatus == string(pg.OrderItemsStatusCancelled) {
 		return nil, fmt.Errorf("cannot change status of a cancelled order item")
 	}
 
-	st := pg.NullOrderItemsStatus{OrderItemsStatus: pg.OrderItemsStatus(status), Valid: true}
-	item, err := s.repo.Tenant(ctx).UpdateOrderItemStatus(ctx, pg.UpdateOrderItemStatusParams{ID: id, Status: st})
+	st := pg.NullOrderItemsStatus{
+		OrderItemsStatus: pg.OrderItemsStatus(status),
+		Valid:            true,
+	}
+
+	item, err := s.repo.Tenant(ctx).UpdateOrderItemStatus(ctx, pg.UpdateOrderItemStatusParams{
+		ID:     id,
+		Status: st,
+	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to update order item status: %w", err)
 	}
 
-	// Deduct stock when kitchen starts cooking
 	if currentStatus == string(pg.OrderItemsStatusPending) && status == string(pg.OrderItemsStatusCooking) {
-		if err := s.deductStockForOrderItem(ctx, existing.GoodID, existing.Quantity); err != nil {
-			log.Printf("UpdateOrderItemStatus: stock deduction failed for item %s: %v", itemID, err)
+		if err := s.consumeItemStock(ctx, existing.GoodID, existing.Quantity, existing.OrderID); err != nil {
+			return nil, fmt.Errorf("failed to deduct stock for order item: %w", err)
 		}
 	}
 
 	return toOrderItemResponse(item), nil
-}
-
-// deductStockForOrderItem resolves the storage from good→category→department,
-// then recursively collects all ingredients and deducts from ingredient_stock.
-func (s *OrderS) deductStockForOrderItem(ctx context.Context, goodID uuid.UUID, qty int32) error {
-	storageID, err := s.repo.Tenant(ctx).GetStorageIDByGoodID(ctx, goodID)
-	if err != nil {
-		return fmt.Errorf("failed to resolve storage for good %s: %w", goodID, err)
-	}
-	if !storageID.Valid {
-		return fmt.Errorf("good %s has no storage (check category→department→storage chain)", goodID)
-	}
-
-	ingredients := map[uuid.UUID]float64{}
-	s.collectIngredients(ctx, goodID, float64(qty), true, ingredients)
-
-	for ingID, amount := range ingredients {
-		stockID, err := s.repo.Tenant(ctx).EnsureIngredientStockByStorage(ctx, pg.EnsureIngredientStockByStorageParams{
-			ID:           uuid.New(),
-			IngredientID: ingID,
-			StorageID:    storageID,
-		})
-		if err != nil {
-			log.Printf("deductStock: EnsureIngredientStockByStorage failed for ingredient %s: %v", ingID, err)
-			continue
-		}
-
-		amountNum := stringToNumeric(strconv.FormatFloat(amount, 'f', -1, 64))
-		if _, err := s.repo.Tenant(ctx).RemoveFromIngredientStock(ctx, pg.RemoveFromIngredientStockParams{
-			ID:       stockID,
-			Quantity: amountNum,
-		}); err != nil {
-			log.Printf("deductStock: RemoveFromIngredientStock failed for ingredient %s: %v", ingID, err)
-		}
-	}
-	return nil
-}
-
-// collectIngredients recursively resolves all leaf ingredients from a good or compound,
-// multiplying quantities down the tree. Results accumulated in `out` map (ingredientID → total qty).
-func (s *OrderS) collectIngredients(ctx context.Context, id uuid.UUID, multiplier float64, isGood bool, out map[uuid.UUID]float64) {
-	idUUID := pgtype.UUID{Bytes: id, Valid: true}
-	var rows []pg.Calculation
-	var err error
-	if isGood {
-		rows, err = s.repo.Tenant(ctx).GetCalculationsByGoodID(ctx, idUUID)
-	} else {
-		rows, err = s.repo.Tenant(ctx).GetCalculationsByCompoundID(ctx, idUUID)
-	}
-	if err != nil {
-		log.Printf("collectIngredients: failed to get calculations: %v", err)
-		return
-	}
-
-	for _, row := range rows {
-		rowQty, _ := strconv.ParseFloat(numericToStr(row.Quantity), 64)
-		effectiveQty := rowQty * multiplier
-
-		if row.IngredientID.Valid {
-			out[row.IngredientID.Bytes] += effectiveQty
-		} else if row.ComponentCompoundID.Valid {
-			compID := row.ComponentCompoundID.Bytes
-			s.collectIngredients(ctx, compID, effectiveQty, false, out)
-		}
-	}
 }
 
 func (s *OrderS) DeleteOrderItem(ctx context.Context, itemID string) error {
@@ -1887,15 +1822,7 @@ func (s *OrderS) CancelOrderItem(ctx context.Context, itemID string) (*model.Ord
 }
 
 func (s *OrderS) MarkOrderItemCooking(ctx context.Context, itemID string) (*model.OrderItemResponse, error) {
-	id, err := uuid.Parse(itemID)
-	if err != nil {
-		return nil, fmt.Errorf("invalid order item id: %w", err)
-	}
-	item, err := s.repo.Tenant(ctx).MarkOrderItemCooking(ctx, id)
-	if err != nil {
-		return nil, fmt.Errorf("failed to mark order item cooking: %w", err)
-	}
-	return toOrderItemResponse(item), nil
+	return s.UpdateOrderItemStatus(ctx, itemID, string(model.OrderItemStatusCooking))
 }
 
 func (s *OrderS) MarkOrderItemReady(ctx context.Context, itemID string) (*model.OrderItemResponse, error) {

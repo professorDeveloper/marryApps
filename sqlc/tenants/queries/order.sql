@@ -21,13 +21,66 @@ WHERE orders.id = $1
   AND deleted_at = 0;
 
 -- name: GetAllOrders :many
-SELECT id, table_id, waiter_id, cashier_id, cash_register_id, branch_id, status, guest_count, total_amount, comment,
-       order_type, scheduled_at, reschedule_comment, created_at, updated_at, deleted_at
+SELECT
+    id,
+    table_id,
+    waiter_id,
+    cashier_id,
+    cash_register_id,
+    branch_id,
+    status,
+    guest_count,
+    total_amount,
+    comment,
+    order_type,
+    scheduled_at,
+    reschedule_comment,
+    created_at,
+    updated_at,
+    deleted_at
 FROM orders
 WHERE deleted_at = 0
   AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-ORDER BY created_at DESC
-LIMIT $1 OFFSET $2;
+  AND (
+        sqlc.narg('order_type')::text IS NULL
+        OR order_type = sqlc.narg('order_type')::text
+      )
+  AND (
+        sqlc.narg('status')::order_status IS NULL
+        OR status = sqlc.narg('status')::order_status
+      )
+  AND (
+        sqlc.narg('table_id')::uuid IS NULL
+        OR table_id = sqlc.narg('table_id')::uuid
+      )
+  AND (
+        sqlc.narg('period_start')::timestamptz IS NULL
+        OR created_at >= sqlc.narg('period_start')::timestamptz
+      )
+  AND (
+        sqlc.narg('period_end')::timestamptz IS NULL
+        OR created_at < sqlc.narg('period_end')::timestamptz
+      )
+ORDER BY
+  CASE
+    WHEN sqlc.arg('sort_by')::text = 'created_at' AND sqlc.arg('sort_order')::text = 'asc'
+      THEN created_at
+  END ASC,
+  CASE
+    WHEN sqlc.arg('sort_by')::text = 'created_at' AND sqlc.arg('sort_order')::text = 'desc'
+      THEN created_at
+  END DESC,
+  CASE
+    WHEN sqlc.arg('sort_by')::text = 'updated_at' AND sqlc.arg('sort_order')::text = 'asc'
+      THEN updated_at
+  END ASC,
+  CASE
+    WHEN sqlc.arg('sort_by')::text = 'updated_at' AND sqlc.arg('sort_order')::text = 'desc'
+      THEN updated_at
+  END DESC,
+  created_at DESC
+LIMIT sqlc.arg('page_limit')::int
+OFFSET sqlc.arg('page_offset')::int;
 
 -- name: GetOrdersByStatus :many
 SELECT id, table_id, waiter_id, cashier_id, cash_register_id, branch_id, status, guest_count, total_amount, comment,
