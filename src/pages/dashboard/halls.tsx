@@ -156,7 +156,7 @@ export default function HallsPage() {
     };
 
     const handleHallClick = (hallId: string) => {
-        router.push(`${paths.dashboard.floorPlan}?hallId=${hallId}`);
+        router.push(paths.settings.floorPlan(hallId));
     };
 
     const handleDeleteConfirm = (hall: IHallItem) => {
@@ -183,14 +183,7 @@ export default function HallsPage() {
 
             <Container maxWidth="xl" sx={{ py: 4 }}>
                 <Box sx={{ mb: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <Box>
-                        <Typography variant="h3" sx={{ mb: 1 }}>
-                            {t('halls.title')}
-                        </Typography>
-                        <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                            {t('halls.description')}
-                        </Typography>
-                    </Box>
+             
                     <Button
                         variant="contained"
                         startIcon={<Iconify icon="solar:add-circle-bold" />}
