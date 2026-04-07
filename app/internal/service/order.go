@@ -373,10 +373,6 @@ func (s *OrderS) attachTableAmountPreview(ctx context.Context, orderID uuid.UUID
 		return nil
 	}
 
-	if resp.DisplayTotalAmount == "" {
-		resp.DisplayTotalAmount = resp.TotalAmount
-	}
-
 	ctxRow, err := s.repo.Tenant(ctx).GetOrderTimerContext(ctx, orderID)
 	if err != nil {
 		if err == pgx.ErrNoRows {
@@ -436,7 +432,7 @@ func (s *OrderS) attachTableAmountPreview(ctx context.Context, orderID uuid.UUID
 	if tableAmount != nil && *tableAmount != "" {
 		baseTotal := parseAmountString(resp.TotalAmount)
 		tableTotal := parseAmountString(*tableAmount)
-		resp.DisplayTotalAmount = formatAmountString(baseTotal + tableTotal)
+		resp.TotalAmount = formatAmountString(baseTotal + tableTotal)
 	}
 
 	return nil
@@ -2174,7 +2170,6 @@ func toOrderResponse(o any) *model.OrderResponse {
 		OrderType:          orderType,
 		ScheduledAt:        scheduledAt,
 		RescheduleComment:  rescheduleComment,
-		DisplayTotalAmount: numericToString(totalAmount),
 		CreatedAt:          createdAt,
 		UpdatedAt:          updatedAt,
 	}
