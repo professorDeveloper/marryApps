@@ -17013,7 +17013,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Get all orders with pagination",
+                "description": "Get all orders with type, status, period/from-to, table filters and created/updated date sorting",
                 "produces": [
                     "application/json"
                 ],
@@ -17027,6 +17027,72 @@ const docTemplate = `{
                         "default": "uz",
                         "description": "Language (uz, ru, en)",
                         "name": "lang",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "dine_in",
+                            "takeaway"
+                        ],
+                        "type": "string",
+                        "description": "Order type",
+                        "name": "type",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "open",
+                            "cooking",
+                            "ready",
+                            "served",
+                            "paid",
+                            "cancelled",
+                            "reserved",
+                            "rescheduled"
+                        ],
+                        "type": "string",
+                        "description": "Order status",
+                        "name": "status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Start date (YYYY-MM-DD)",
+                        "name": "from",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "End date (YYYY-MM-DD)",
+                        "name": "to",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Table ID",
+                        "name": "table_id",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "created_at",
+                            "updated_at"
+                        ],
+                        "type": "string",
+                        "default": "created_at",
+                        "description": "Sort field",
+                        "name": "sort_by",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "asc",
+                            "desc"
+                        ],
+                        "type": "string",
+                        "default": "desc",
+                        "description": "Sort order",
+                        "name": "sort_order",
                         "in": "query"
                     },
                     {
@@ -25049,8 +25115,8 @@ const docTemplate = `{
                     "example": 0
                 },
                 "price_per_hour": {
-                    "type": "string",
-                    "example": "50000"
+                    "type": "integer",
+                    "example": 50000
                 },
                 "rotation": {
                     "type": "integer",
@@ -28066,15 +28132,31 @@ const docTemplate = `{
                         "$ref": "#/definitions/model.OrderItemResponse"
                     }
                 },
+                "items_amount": {
+                    "type": "string",
+                    "example": "50000"
+                },
                 "order_type": {
                     "type": "string",
                     "example": "dine_in"
+                },
+                "price_per_hour": {
+                    "type": "string",
+                    "example": "50000"
                 },
                 "reschedule_comment": {
                     "type": "string"
                 },
                 "scheduled_at": {
                     "type": "string"
+                },
+                "service_amount": {
+                    "type": "string",
+                    "example": "10000"
+                },
+                "service_percent": {
+                    "type": "string",
+                    "example": "20"
                 },
                 "status": {
                     "allOf": [
@@ -28084,9 +28166,20 @@ const docTemplate = `{
                     ],
                     "example": "open"
                 },
+                "table_amount": {
+                    "type": "string",
+                    "example": "12500.00"
+                },
                 "table_id": {
                     "type": "string",
                     "example": "a1b2c3d4-e5f6-4a5b-8c9d-e0f1a2b3c4d5"
+                },
+                "table_started_at": {
+                    "type": "string"
+                },
+                "table_type": {
+                    "type": "string",
+                    "example": "time_based"
                 },
                 "total_amount": {
                     "type": "string",

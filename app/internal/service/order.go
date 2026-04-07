@@ -487,8 +487,7 @@ func formatAmountString(v float64) string {
 	return strconv.FormatFloat(v, 'f', 2, 64)
 }
 
-func (s *OrderS) GetAllOrders(ctx context.Context, limit, offset int32) ([]model.OrderResponse, error) {
-	// Lazy-activate reservations whose scheduled time has arrived, then mark dine-in tables busy.
+func (s *OrderS) GetAllOrders(ctx context.Context, req model.GetOrdersRequest) ([]model.OrderResponse, error) {
 	if activated, err := s.repo.Tenant(ctx).ActivateReservedOrders(ctx); err == nil {
 		for _, row := range activated {
 			if row.OrderType == "dine_in" && row.TableID.Valid {
@@ -497,7 +496,67 @@ func (s *OrderS) GetAllOrders(ctx context.Context, limit, offset int32) ([]model
 		}
 	}
 
-	orders, err := s.repo.Tenant(ctx).GetAllOrders(ctx, pg.GetAllOrdersParams{Limit: limit, Offset: offset})
+	limit := req.Limit
+	offset := req.Offset
+	sortBy := req.SortBy
+	sortOrder := req.SortOrder
+
+	if limit <= 0 {
+		limit = 20
+	}
+	if offset < 0 {
+		offset = 0
+	}
+	if sortBy == "" {
+		sortBy = "created_at"
+	}
+	if sortOrder == "" {
+		sortOrder = "desc"
+	}
+
+	params := pg.GetAllOrdersParams{
+		SortBy:     sortBy,
+		SortOrder:  sortOrder,
+		PageLimit:  limit,
+		PageOffset: offset,
+	}
+
+	if req.Type != nil && *req.Type != "" {
+		orderType := string(*req.Type)
+		params.OrderType = &orderType
+	}
+
+	if req.Status != nil && *req.Status != "" {
+		params.Status = pg.NullOrderStatus{
+			OrderStatus: pg.OrderStatus(*req.Status),
+			Valid:       true,
+		}
+	}
+
+	if req.TableID != nil && *req.TableID != "" {
+		tableID, err := uuid.Parse(*req.TableID)
+		if err != nil {
+			return nil, fmt.Errorf("invalid table id: %w", err)
+		}
+		params.TableID = pgtype.UUID{
+			Bytes: tableID,
+			Valid: true,
+		}
+	}
+
+	start, end, err := resolveOrderDateRange(req)
+	if err != nil {
+		return nil, err
+	}
+
+	if start != nil {
+		params.PeriodStart = pgtype.Timestamptz{Time: start.UTC(), Valid: true}
+	}
+	if end != nil {
+		params.PeriodEnd = pgtype.Timestamptz{Time: end.UTC(), Valid: true}
+	}
+
+	orders, err := s.repo.Tenant(ctx).GetAllOrders(ctx, params)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get orders: %w", err)
 	}
@@ -507,6 +566,36 @@ func (s *OrderS) GetAllOrders(ctx context.Context, limit, offset int32) ([]model
 		responses = append(responses, *toOrderResponse(o))
 	}
 	return responses, nil
+}
+
+func resolveOrderDateRange(req model.GetOrdersRequest) (*time.Time, *time.Time, error) {
+	loc := time.FixedZone("Asia/Tashkent", 5*60*60)
+
+	var start *time.Time
+	var end *time.Time
+
+	if req.From != nil && *req.From != "" {
+		t, err := time.ParseInLocation("2006-01-02", *req.From, loc)
+		if err != nil {
+			return nil, nil, fmt.Errorf("invalid from date: %w", err)
+		}
+		start = &t
+	}
+
+	if req.To != nil && *req.To != "" {
+		t, err := time.ParseInLocation("2006-01-02", *req.To, loc)
+		if err != nil {
+			return nil, nil, fmt.Errorf("invalid to date: %w", err)
+		}
+		t = t.AddDate(0, 0, 1)
+		end = &t
+	}
+
+	if start != nil && end != nil && start.After(*end) {
+		return nil, nil, fmt.Errorf("from must be less than or equal to to")
+	}
+
+	return start, end, nil
 }
 
 func (s *OrderS) GetOrdersByStatus(ctx context.Context, status string, limit, offset int32) ([]model.OrderResponse, error) {
