@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
 
@@ -34,7 +35,7 @@ func (h *Handler) CreateCafeTable(c echo.Context) error {
 	if status == "" {
 		status = "free"
 	}
-
+	fmt.Println(&req.PricePerHour)
 	table, err := h.service.CafeTable().CreateCafeTable(c.Request().Context(), req.HallID, req.Number, req.Capacity, &status, req.PosX, req.PosY, req.Width, req.Height, req.Rotation, req.PricePerHour, req.TableType)
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(

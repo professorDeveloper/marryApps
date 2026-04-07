@@ -32,12 +32,8 @@ func stringToNumeric(s string) pgtype.Numeric {
 }
 
 // Helper to convert int64 to pgtype.Numeric
-func intToNumeric(s int64) pgtype.Numeric {
-	num := pgtype.Numeric{}
-	if err := num.Scan(s); err != nil {
-		return pgtype.Numeric{}
-	}
-	return num
+func intToNumeric(v int64) pgtype.Numeric {
+	return stringToNumeric(strconv.FormatInt(v, 10))
 }
 
 // Helper to convert pgtype.Numeric to string

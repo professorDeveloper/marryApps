@@ -68,6 +68,11 @@ func (s *CafeTableS) CreateCafeTable(ctx context.Context, hallID string, number 
 	if err != nil {
 		return nil, err
 	}
+	if tableTypeValue == string(model.TableTypeTimeBased) {
+		if pricePerHour == nil || *pricePerHour <= 0 {
+			return nil, fmt.Errorf("price_per_hour is required and must be greater than 0 for time_based tables")
+		}
+	}
 
 	finalPosX := int32(0)
 	if posX != nil {
@@ -89,12 +94,10 @@ func (s *CafeTableS) CreateCafeTable(ctx context.Context, hallID string, number 
 	if rotation != nil {
 		finalRotation = *rotation
 	}
-
 	var pph pgtype.Numeric
 	if pricePerHour != nil {
 		pph = intToNumeric(*pricePerHour)
 	}
-
 	table, err := s.repo.Tenant(ctx).CreateCafeTable(ctx, pg.CreateCafeTableParams{
 		ID:           uuid.New(),
 		HallID:       hID,
