@@ -327,6 +327,10 @@ func (s *OrderS) CreateOrder(ctx context.Context, req model.CreateOrderRequest) 
 		return nil, nil
 	}
 
+	if err := s.attachOrderBillSummary(ctx, createdOrder.ID, resp); err != nil {
+		return nil, fmt.Errorf("failed to attach order bill summary: %w", err)
+	}
+
 	if err := s.attachTableAmountPreview(ctx, createdOrder.ID, resp); err != nil {
 		return nil, fmt.Errorf("failed to attach table amount preview: %w", err)
 	}
@@ -361,6 +365,10 @@ func (s *OrderS) GetOrderByID(ctx context.Context, orderID string) (*model.Order
 		}
 	}
 
+	if err := s.attachOrderBillSummary(ctx, id, resp); err != nil {
+		return nil, fmt.Errorf("failed to attach order bill summary: %w", err)
+	}
+
 	if err := s.attachTableAmountPreview(ctx, id, resp); err != nil {
 		return nil, fmt.Errorf("failed to attach table amount preview: %w", err)
 	}
@@ -371,10 +379,6 @@ func (s *OrderS) GetOrderByID(ctx context.Context, orderID string) (*model.Order
 func (s *OrderS) attachTableAmountPreview(ctx context.Context, orderID uuid.UUID, resp *model.OrderResponse) error {
 	if resp == nil {
 		return nil
-	}
-
-	if resp.DisplayTotalAmount == "" {
-		resp.DisplayTotalAmount = resp.TotalAmount
 	}
 
 	ctxRow, err := s.repo.Tenant(ctx).GetOrderTimerContext(ctx, orderID)
@@ -436,8 +440,32 @@ func (s *OrderS) attachTableAmountPreview(ctx context.Context, orderID uuid.UUID
 	if tableAmount != nil && *tableAmount != "" {
 		baseTotal := parseAmountString(resp.TotalAmount)
 		tableTotal := parseAmountString(*tableAmount)
-		resp.DisplayTotalAmount = formatAmountString(baseTotal + tableTotal)
+		resp.TotalAmount = formatAmountString(baseTotal + tableTotal)
 	}
+
+	return nil
+}
+
+func (s *OrderS) attachOrderBillSummary(ctx context.Context, orderID uuid.UUID, resp *model.OrderResponse) error {
+	if resp == nil {
+		return nil
+	}
+
+	bill, err := s.repo.Tenant(ctx).GetBillDetails(ctx, orderID)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return nil
+		}
+		return fmt.Errorf("failed to get bill details: %w", err)
+	}
+
+	itemsAmount := numericToString(bill.FoodTotal)
+	servicePercent := numericToString(bill.ServicePercent)
+	serviceAmount := numericToString(bill.ServiceAmount)
+
+	resp.ItemsAmount = &itemsAmount
+	resp.ServicePercent = &servicePercent
+	resp.ServiceAmount = &serviceAmount
 
 	return nil
 }
@@ -2162,21 +2190,20 @@ func toOrderResponse(o any) *model.OrderResponse {
 	}
 
 	return &model.OrderResponse{
-		ID:                 id.String(),
-		TableID:            tableID.String(),
-		WaiterID:           waiterID,
-		CashierID:          cashierID,
-		CashRegisterID:     cashRegisterID,
-		Status:             status,
-		GuestCount:         guestCount,
-		TotalAmount:        numericToString(totalAmount),
-		Comment:            comment,
-		OrderType:          orderType,
-		ScheduledAt:        scheduledAt,
-		RescheduleComment:  rescheduleComment,
-		DisplayTotalAmount: numericToString(totalAmount),
-		CreatedAt:          createdAt,
-		UpdatedAt:          updatedAt,
+		ID:                id.String(),
+		TableID:           tableID.String(),
+		WaiterID:          waiterID,
+		CashierID:         cashierID,
+		CashRegisterID:    cashRegisterID,
+		Status:            status,
+		GuestCount:        guestCount,
+		TotalAmount:       numericToString(totalAmount),
+		Comment:           comment,
+		OrderType:         orderType,
+		ScheduledAt:       scheduledAt,
+		RescheduleComment: rescheduleComment,
+		CreatedAt:         createdAt,
+		UpdatedAt:         updatedAt,
 	}
 }
 
