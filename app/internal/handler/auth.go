@@ -4,7 +4,10 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strconv"
+	"strings"
 
+	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 	"gitlab.yurtal.tech/company/maryai/back/internal/model"
 )
@@ -271,6 +274,132 @@ func (h *Handler) GetUserByID(c echo.Context) error {
 	}
 
 	return c.JSON(http.StatusOK, model.NewSuccessResponse("Data retrieved successfully", user, http.StatusOK))
+}
+
+// GetUsers retrieves users with unified filters
+// @Summary Get users
+// @Description Get users with query, role, staff and branch_id filters
+// @Tags users
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param query query string false "Search by full_name, username, phone_number"
+// @Param role query string false "Role filter"
+// @Param staff query bool false "Only staff users (exclude admin and superadmin)"
+// @Param branch_id query string false "Branch ID filter (superadmin only)"
+// @Param limit query int false "Limit results (default: 20)" default(20)
+// @Param offset query int false "Offset for pagination (default: 0)" default(0)
+// @Success 200 {array} model.UserResponse
+// @Failure 400 {object} model.ErrorResponse
+// @Failure 403 {object} model.ErrorResponse
+// @Failure 500 {object} model.ErrorResponse
+// @Router /api/v1/users [get]
+func (h *Handler) GetUsers(c echo.Context) error {
+	req := model.GetUsersRequest{
+		Limit:  20,
+		Offset: 0,
+	}
+
+	roleFromToken, _ := c.Get("role").(string)
+
+	if v := strings.TrimSpace(c.QueryParam("query")); v != "" {
+		req.Query = &v
+	}
+
+	if v := strings.TrimSpace(c.QueryParam("role")); v != "" {
+		v = strings.ToLower(v)
+		switch v {
+		case model.RoleSuperAdmin,
+			model.RoleAdmin,
+			model.RoleManager,
+			model.RoleCashier,
+			model.RoleWaiter,
+			model.RoleKitchen,
+			model.RoleUser:
+			req.Role = &v
+		default:
+			return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+				"invalid role",
+				"allowed values: superadmin, admin, manager, cashier, waiter, kitchen, user",
+				http.StatusBadRequest,
+			))
+		}
+	}
+
+	if v := strings.TrimSpace(c.QueryParam("staff")); v != "" {
+		staff, err := strconv.ParseBool(v)
+		if err != nil {
+			return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+				"invalid staff value",
+				"staff must be true or false",
+				http.StatusBadRequest,
+			))
+		}
+		req.Staff = staff
+	}
+
+	if v := strings.TrimSpace(c.QueryParam("branch_id")); v != "" {
+		if roleFromToken != model.RoleSuperAdmin {
+			return c.JSON(http.StatusForbidden, model.NewErrorResponse(
+				"branch_id filter is allowed only for superadmin",
+				"forbidden",
+				http.StatusForbidden,
+			))
+		}
+
+		if _, err := uuid.Parse(v); err != nil {
+			return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+				"invalid branch_id format",
+				err.Error(),
+				http.StatusBadRequest,
+			))
+		}
+
+		req.BranchID = &v
+	}
+
+	if v := strings.TrimSpace(c.QueryParam("limit")); v != "" {
+		limit, err := strconv.ParseInt(v, 10, 32)
+		if err != nil || limit <= 0 {
+			return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+				"invalid limit",
+				"limit must be a positive integer",
+				http.StatusBadRequest,
+			))
+		}
+		req.Limit = int32(limit)
+	}
+
+	if v := strings.TrimSpace(c.QueryParam("offset")); v != "" {
+		offset, err := strconv.ParseInt(v, 10, 32)
+		if err != nil || offset < 0 {
+			return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+				"invalid offset",
+				"offset must be a non-negative integer",
+				http.StatusBadRequest,
+			))
+		}
+		req.Offset = int32(offset)
+	}
+
+	users, total, err := h.service.Auth().GetUsers(c.Request().Context(), req)
+	if err != nil {
+		log.Printf("GetUsers failed: %v", err)
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse(
+			"failed to fetch users",
+			err.Error(),
+			http.StatusInternalServerError,
+		))
+	}
+
+	return c.JSON(http.StatusOK, model.NewPaginatedResponse(
+		"Data retrieved successfully",
+		users,
+		int32(total),
+		req.Limit,
+		req.Offset,
+		http.StatusOK,
+	))
 }
 
 // GetUsersByRole retrieves users by their role

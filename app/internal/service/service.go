@@ -25,6 +25,7 @@ type AuthI interface {
 	Refresh(ctx context.Context, req model.RefreshRequest, jwtCfg *config.JwtConfig) (model.RefreshResponse, error)
 	UpdateUserPassword(ctx context.Context, userID uuid.UUID, currentPassword, newPassword string) error
 	GetUserByID(ctx context.Context, userID string) (model.UserResponse, error)
+	GetUsers(ctx context.Context, req model.GetUsersRequest) ([]model.UserResponse, int64, error)
 	UpdateUser(ctx context.Context, req model.UpdateUserRequest, userID string) (model.UserResponse, error)
 	// Additional methods for QR ordering system
 	GetUsersByRole(ctx context.Context, role string, limit, offset int32) ([]model.UserResponse, int64, error)
