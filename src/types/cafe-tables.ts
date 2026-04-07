@@ -9,6 +9,7 @@ export interface ICafeTableItem {
     height: number;
     rotation: number;
     table_type: 'simple' | 'time_based';
+    price_per_hour?: number;
     status: 'free' | 'occupied' | 'reserved';
     created_at: string;
     updated_at: string;
@@ -23,5 +24,6 @@ export interface ICafeTableFormData {
     height: number;
     rotation: number;
     table_type: 'simple' | 'time_based';
+    price_per_hour?: number;
     status?: 'free' | 'occupied' | 'reserved';
 }

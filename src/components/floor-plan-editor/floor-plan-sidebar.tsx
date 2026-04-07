@@ -39,7 +39,7 @@ import { useCreateCafeTable, useUpdateCafeTable, useDeleteCafeTable } from 'src/
 
 import { Iconify } from '../iconify';
 import { findNearestEmptyPosition } from './utils';
-import { HALL_WIDTH, HALL_HEIGHT, DEFAULT_TABLE_SEATS } from './types';
+import { HALL_WIDTH, HALL_HEIGHT } from './types';
 
 interface FloorPlanSidebarProps {
     tables: Table[];
@@ -87,12 +87,11 @@ export const FloorPlanSidebar = ({
     const { updateTable } = useUpdateCafeTable();
     const { deleteTable } = useDeleteCafeTable();
 
-    const [editDialogOpen, setEditDialogOpen] = useState(false);
     const [editTableId, setEditTableId] = useState<string | null>(null);
     const [editFormData, setEditFormData] = useState<Partial<Table>>({});
     const [createTableDialogOpen, setCreateTableDialogOpen] = useState(false);
     const [unitType, setUnitType] = useState<'m' | 'cm'>('m');
-    const [createTableFormData, setCreateTableFormData] = useState<{ number: number; capacity: number; pos_x: number; pos_y: number; width: number; height: number; rotation: number; table_type: 'simple' | 'time_based' }>({ number: 0, capacity: 4, pos_x: 0, pos_y: 0, width: 0.8, height: 0.6, rotation: 0, table_type: 'simple' });
+    const [createTableFormData, setCreateTableFormData] = useState<{ number: number; capacity: number; pos_x: number; pos_y: number; width: number; height: number; rotation: number; table_type: 'simple' | 'time_based'; price_per_hour: number }>({ number: 0, capacity: 4, pos_x: 0, pos_y: 0, width: 0.8, height: 0.6, rotation: 0, table_type: 'simple', price_per_hour: 0 });
     const [creatingTable, setCreatingTable] = useState(false);
     const [updatingTable, setUpdatingTable] = useState(false);
     const [deletingTable, setDeletingTable] = useState(false);
@@ -149,13 +148,12 @@ export const FloorPlanSidebar = ({
             height: heightInMeters,
             rotation: table.rotation,
             table_type: table.table_type || 'simple',
+            price_per_hour: table.price_per_hour ?? 0,
         });
         setUnitType('m');
-        setEditDialogOpen(true);
     };
 
     const handleEditClose = () => {
-        setEditDialogOpen(false);
         setEditTableId(null);
         setEditFormData({});
     };
@@ -181,6 +179,7 @@ export const FloorPlanSidebar = ({
                 height: heightInPx,  // Send in pixels
                 rotation: editFormData.rotation,
                 table_type: editFormData.table_type,
+                price_per_hour: editFormData.table_type === 'time_based' ? editFormData.price_per_hour : undefined,
             };
 
             await updateTable(editTableId, hallId, payload);
@@ -210,7 +209,8 @@ export const FloorPlanSidebar = ({
             width: 0.8,   // 0.8 meters
             height: 0.6,  // 0.6 meters
             rotation: 0,
-            table_type: 'simple'
+            table_type: 'simple',
+            price_per_hour: 0,
         });
         setUnitType('m');
         setCreateTableDialogOpen(true);
@@ -253,6 +253,7 @@ export const FloorPlanSidebar = ({
                 height: tableHeightPx,  // Send in pixels
                 rotation: createTableFormData.rotation,
                 table_type: createTableFormData.table_type,
+                price_per_hour: createTableFormData.table_type === 'time_based' ? createTableFormData.price_per_hour : undefined,
             });
             handleCreateTableDialogClose();
             // Don't call onTableCreate() - SWR will auto-refresh via mutate
@@ -529,55 +530,6 @@ export const FloorPlanSidebar = ({
             </Box>
 
             {/* Edit Dialog */}
-            <Dialog open={editDialogOpen} onClose={handleEditClose} maxWidth="sm" fullWidth>
-                <DialogTitle>{t('floorPlan.editTableDialog.title')}</DialogTitle>
-                <DialogContent sx={{ pt: 2 }}>
-                    <Stack spacing={2}>
-                        <TextField
-                            label={t('floorPlan.editTableDialog.tableNumber')}
-                            type="number"
-                            value={editFormData.number || ''}
-                            onChange={(e) => handleInputChange('number', parseInt(e.target.value))}
-                            fullWidth
-                            size="small"
-                        />
-                        <TextField
-                            label={t('floorPlan.editTableDialog.seats')}
-                            type="number"
-                            value={editFormData.seats || DEFAULT_TABLE_SEATS}
-                            onChange={(e) => handleInputChange('seats', parseInt(e.target.value))}
-                            fullWidth
-                            size="small"
-                            inputProps={{ min: 1, max: 12 }}
-                        />
-                        <TextField
-                            label={t('floorPlan.editTableDialog.width')}
-                            type="number"
-                            value={editFormData.width || ''}
-                            onChange={(e) => handleInputChange('width', parseFloat(e.target.value))}
-                            fullWidth
-                            size="small"
-                            inputProps={{ step: 5 }}
-                        />
-                        <TextField
-                            label={t('floorPlan.editTableDialog.height')}
-                            type="number"
-                            value={editFormData.height || ''}
-                            onChange={(e) => handleInputChange('height', parseFloat(e.target.value))}
-                            fullWidth
-                            size="small"
-                            inputProps={{ step: 5 }}
-                        />
-                    </Stack>
-                </DialogContent>
-                <DialogActions>
-                    <Button onClick={handleEditClose}>{t('common.cancel')}</Button>
-                    <Button onClick={handleEditSave} variant="contained" color="primary">
-                        {t('common.save')}
-                    </Button>
-                </DialogActions>
-            </Dialog>
-
             {/* Create Hall Dialog - only when no hallId */}
             {!hallId && (
                 <Dialog open={hallDialogOpen} onClose={handleHallDialogClose} maxWidth="sm" fullWidth>
@@ -714,17 +666,29 @@ export const FloorPlanSidebar = ({
                             size="small"
                             inputProps={{ min: 0, max: 360, step: 15 }}
                         />
-                        <FormControl fullWidth size="small">
-                            <InputLabel>Table type</InputLabel>
-                            <Select
-                                label="Table type"
-                                value={createTableFormData.table_type}
-                                onChange={(e) => setCreateTableFormData((prev) => ({ ...prev, table_type: e.target.value as 'simple' | 'time_based' }))}
-                            >
-                                <MenuItem value="simple">Simple</MenuItem>
-                                <MenuItem value="time_based">Time based</MenuItem>
-                            </Select>
-                        </FormControl>
+                        <Stack direction="row" spacing={1}>
+                            <FormControl fullWidth size="small">
+                                <InputLabel>Table type</InputLabel>
+                                <Select
+                                    label="Table type"
+                                    value={createTableFormData.table_type}
+                                    onChange={(e) => setCreateTableFormData((prev) => ({ ...prev, table_type: e.target.value as 'simple' | 'time_based' }))}
+                                >
+                                    <MenuItem value="simple">Simple</MenuItem>
+                                    <MenuItem value="time_based">Time based</MenuItem>
+                                </Select>
+                            </FormControl>
+                            <TextField
+                                label="Price per hour"
+                                type="number"
+                                value={createTableFormData.price_per_hour}
+                                onChange={(e) => setCreateTableFormData((prev) => ({ ...prev, price_per_hour: parseFloat(e.target.value) || 0 }))}
+                                fullWidth
+                                size="small"
+                                disabled={createTableFormData.table_type !== 'time_based'}
+                                inputProps={{ min: 0, step: 1000 }}
+                            />
+                        </Stack>
                         <Typography variant="caption" sx={{ color: theme.palette.text.secondary, pt: 1, fontStyle: 'italic' }}>
                             {t('floorPlan.createTableDialog.infoText')}
                         </Typography>
@@ -818,17 +782,29 @@ export const FloorPlanSidebar = ({
                             size="small"
                             inputProps={{ min: 0, max: 360, step: 15 }}
                         />
-                        <FormControl fullWidth size="small">
-                            <InputLabel>Table type</InputLabel>
-                            <Select
-                                label="Table type"
-                                value={editFormData.table_type || 'simple'}
-                                onChange={(e) => handleInputChange('table_type', e.target.value)}
-                            >
-                                <MenuItem value="simple">Simple</MenuItem>
-                                <MenuItem value="time_based">Time based</MenuItem>
-                            </Select>
-                        </FormControl>
+                        <Stack direction="row" spacing={1}>
+                            <FormControl fullWidth size="small">
+                                <InputLabel>Table type</InputLabel>
+                                <Select
+                                    label="Table type"
+                                    value={editFormData.table_type || 'simple'}
+                                    onChange={(e) => handleInputChange('table_type', e.target.value)}
+                                >
+                                    <MenuItem value="simple">Simple</MenuItem>
+                                    <MenuItem value="time_based">Time based</MenuItem>
+                                </Select>
+                            </FormControl>
+                            <TextField
+                                label="Price per hour"
+                                type="number"
+                                value={editFormData.price_per_hour ?? 0}
+                                onChange={(e) => handleInputChange('price_per_hour', parseFloat(e.target.value) || 0)}
+                                fullWidth
+                                size="small"
+                                disabled={editFormData.table_type !== 'time_based'}
+                                inputProps={{ min: 0, step: 1000 }}
+                            />
+                        </Stack>
                         <Typography variant="caption" sx={{ color: theme.palette.text.secondary, pt: 1, fontStyle: 'italic' }}>
                             {t('floorPlan.editTableDialog.infoText')}
                         </Typography>
