@@ -35,3 +35,12 @@ export const DEFAULT_DATATABLE_CONFIG = {
 };
 
 export const EMPLOYEE_DATATABLE_PERSIST_KEY = 'employee-list-table-config';
+
+export const ROLE_OPTIONS = [
+    { value: 'admin', label: 'Admin' },
+    { value: 'manager', label: 'Manager' },
+    { value: 'cashier', label: 'Cashier' },
+    { value: 'waiter', label: 'Waiter' },
+    { value: 'kitchen', label: 'Kitchen' },
+    { value: 'user', label: 'User' },
+] as const;

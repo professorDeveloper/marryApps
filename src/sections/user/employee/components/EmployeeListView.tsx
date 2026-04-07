@@ -1,5 +1,5 @@
 import type { IUser } from 'src/types/user';
-import type { EmployeeListProps } from './types';
+import type { EmployeeListProps } from '../types';
 import type { RowAction, BatchAction, DataTableColumn } from 'src/sections/warehouse/deduction/components/utility-data-table/types/types';
 
 import { useTranslation } from 'react-i18next';
@@ -20,18 +20,19 @@ import { DataTable } from 'src/sections/warehouse/deduction/components/utility-d
 
 import { getErrorMessageKey } from 'src/auth/utils';
 
-import { useEmployeeApi } from './hooks/useEmployeeApi';
-import { EmployeeUserCell } from './components/EmployeeUserCell';
-import { EmployeeRoleCell } from './components/EmployeeRoleCell';
-import { EmployeeViewModal } from './components/EmployeeViewModal';
-import { EmployeeStatusCell } from './components/EmployeeStatusCell';
-import { EmployeeDeleteDialog } from './components/EmployeeDeleteDialog';
-import { ROLE_COLORS, STATUS_COLORS, DEFAULT_DATATABLE_CONFIG, EMPLOYEE_DATATABLE_PERSIST_KEY } from './constants';
+import { useEmployeeApi } from '../hooks/useEmployeeApi';
+import { EmployeeUserCell } from './EmployeeUserCell';
+import { EmployeeRoleCell } from './EmployeeRoleCell';
+import { EmployeeViewModal } from './EmployeeViewModal';
+import { EmployeeStatusCell } from './EmployeeStatusCell';
+import { EmployeeDeleteDialog } from './EmployeeDeleteDialog';
+import { ROLE_COLORS, STATUS_COLORS, DEFAULT_DATATABLE_CONFIG, EMPLOYEE_DATATABLE_PERSIST_KEY } from '../constants';
 
-export function EmployeeListView({ role, title, useStaffApi = false }: EmployeeListProps) {
+export function EmployeeListView() {
     const theme = useTheme();
     const { t } = useTranslation('menu');
-
+    const role = 'user'; // TODO: Remove this when the API is ready
+    const useStaffApi = false; // TODO: Remove this when the API is ready
     // API hooks
     const { employees, employeesLoading, deleteEmployee, deleteMultipleEmployees } = useEmployeeApi(role, useStaffApi);
 
@@ -115,9 +116,7 @@ export function EmployeeListView({ role, title, useStaffApi = false }: EmployeeL
                 label: t('users.edit'),
                 icon: <Iconify icon="solar:pen-bold" />,
                 onClick: (row) => {
-                    const editPath = role === 'user'
-                        ? paths.menu.user.restaurantStaffEdit(row.id)
-                        : paths.menu.user.edit(row.id);
+                    const editPath = paths.settings.usersEdit(row.id);
                     window.location.href = editPath;
                 },
             },
@@ -197,14 +196,11 @@ export function EmployeeListView({ role, title, useStaffApi = false }: EmployeeL
         <Button
             variant="contained"
             startIcon={<Iconify icon="solar:add-circle-bold" />}
-            href={role === 'user'
-                ? paths.menu.user.restaurantStaffNew
-                : paths.menu.user.new
-            }
+            href={paths.settings.usersNew}
         >
             {t('users.add')}
         </Button>
-    ), [role, t]);
+    ), [t]);
 
     return (
         <Box sx={{m:2}}>
@@ -243,3 +239,6 @@ export function EmployeeListView({ role, title, useStaffApi = false }: EmployeeL
         </Box>
     );
 }
+
+
+

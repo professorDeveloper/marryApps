@@ -17,7 +17,6 @@ import { useTransactionsAPI } from 'src/hooks/use-transactions-api';
 import { useGetUser, useCreateUser, useUpdateUser, useDeleteUser } from 'src/actions/users';
 
 import { GenericEditView } from 'src/components/generic-edit-view';
-import { CustomBreadcrumbs } from 'src/components/custom-breadcrumbs';
 
 export interface EmployeeEditViewProps {
     userId?: string;
@@ -253,12 +252,7 @@ export function EmployeeEditView({ userId, isNew = false, role }: EmployeeEditVi
     return (
         <Box sx={{ p: 3 }}>
             <Box sx={{ maxWidth: 1400, mx: 'auto' }}>
-                {/* BREADCRUMBS AND TITLE */}
-                <CustomBreadcrumbs
-                    heading={isNew ? t('users.new') : t('users.edit')}
-                    links={config.breadcrumbs}
-                    sx={{ mb: 3 }}
-                />
+         
 
                 <GenericEditView config={config} data={user} isNew={isNew} />
             </Box>
