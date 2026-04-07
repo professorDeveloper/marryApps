@@ -294,7 +294,7 @@ func (h *Handler) Register(router *echo.Echo) {
 			orderItems.POST("/:id/restore", h.RestoreOrderItem, mw.CheckLanguage(), mw.RequireRoles(mw.RolesAdminOnly...))
 
 			orderItems.GET("/order/:orderId", h.GetOrderItemsByOrderID, mw.CheckLanguage(), mw.RequireRoles(mw.RolesCanReadPOSOrders...))
-			orderItems.GET("/status/:status", h.GetOrderItemsByStatus, mw.CheckLanguage(), mw.RequireRoles(mw.RolesCanManageKitchen...))
+			orderItems.GET("/status/:status", h.GetOrderItemsByStatus, mw.CheckLanguage(), mw.RequireRoles(mw.RolesCanReadOrderItemsStatus...))
 			orderItems.PUT("/:id/quantity", h.UpdateOrderItemQuantity, mw.CheckLanguage(), mw.RequireRoles(mw.RolesCanCreateOrder...))
 			orderItems.PUT("/:id/status", h.UpdateOrderItemStatus, mw.CheckLanguage(), mw.RequireRoles(mw.RolesCanManageKitchen...))
 			orderItems.POST("/:id/cancel", h.CancelOrderItem, mw.CheckLanguage(), mw.RequireRoles(mw.RolesCanCreateOrder...))
