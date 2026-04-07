@@ -277,8 +277,8 @@ export const paths = {
     integrations: {
       root: `${ROOTS.SETTING}/integrations`,
     },
-    floorPlan: `${ROOTS.SETTING}/floor-plan`,
     halls: `${ROOTS.SETTING}/halls`,
+    floorPlan: (id: string) => `${ROOTS.SETTING}/halls/${id}`,
   },
 
   // DASHBOARD

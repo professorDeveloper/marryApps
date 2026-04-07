@@ -2,6 +2,9 @@ import type { RouteObject } from 'react-router';
 
 import { lazy } from 'react';
 
+import { EmployeeFormView } from 'src/sections/user/employee';
+
+
 const FloorPlanPage = lazy(() => import('src/pages/dashboard/floor-plan'));
 const HallsPage = lazy(() => import('src/pages/dashboard/halls'));
 
@@ -20,17 +23,20 @@ const RestaurantInfoListView = lazy(() =>
     default: m.RestaurantInfoListView,
   }))
 );
-const UsersPage = lazy(() =>
-  import('src/pages/dashboard/settings/users').then((m) => ({
-    default: m.UsersPage,
+const EmployeeListView = lazy(() =>
+  import('src/sections/user/employee').then((m) => ({
+    default: m.EmployeeListView,
   }))
 );
 
 export const settingRoutes: RouteObject[] = [
-  { path: 'settings/users', element: <UsersPage /> },
+  { path: 'settings/users', element: <EmployeeListView /> },
+  { path: 'settings/users/new', element: <EmployeeFormView isNew /> },
+  { path: 'settings/users/:id', element: <EmployeeFormView /> },
   { path: 'settings/connected-device', element: <ConnectedDeviceListView /> },
   { path: 'settings/management', element: <ManagementListView /> },
   { path: 'settings/restaurant-info', element: <RestaurantInfoListView /> },
   { path: 'settings/floor-plan', element: <FloorPlanPage /> },
   { path: 'settings/halls', element: <HallsPage /> },
+  { path: 'settings/halls/:id', element: <FloorPlanPage /> },
 ];
