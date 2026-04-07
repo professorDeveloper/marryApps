@@ -12,6 +12,7 @@ export interface Table {
     rotation: number;
     color?: string;
     seats: number;
+    table_type?: 'simple' | 'time_based';
 }
 
 export interface FloorPlanState {

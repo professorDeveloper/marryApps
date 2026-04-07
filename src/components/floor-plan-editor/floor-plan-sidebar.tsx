@@ -8,6 +8,7 @@ import { useTranslation } from 'react-i18next';
 import { useTheme } from '@mui/material/styles';
 import {
     Box,
+    Chip,
     List,
     Stack,
     Paper,
@@ -91,7 +92,7 @@ export const FloorPlanSidebar = ({
     const [editFormData, setEditFormData] = useState<Partial<Table>>({});
     const [createTableDialogOpen, setCreateTableDialogOpen] = useState(false);
     const [unitType, setUnitType] = useState<'m' | 'cm'>('m');
-    const [createTableFormData, setCreateTableFormData] = useState({ number: 0, capacity: 4, pos_x: 0, pos_y: 0, width: 0.8, height: 0.6, rotation: 0 });
+    const [createTableFormData, setCreateTableFormData] = useState<{ number: number; capacity: number; pos_x: number; pos_y: number; width: number; height: number; rotation: number; table_type: 'simple' | 'time_based' }>({ number: 0, capacity: 4, pos_x: 0, pos_y: 0, width: 0.8, height: 0.6, rotation: 0, table_type: 'simple' });
     const [creatingTable, setCreatingTable] = useState(false);
     const [updatingTable, setUpdatingTable] = useState(false);
     const [deletingTable, setDeletingTable] = useState(false);
@@ -146,6 +147,8 @@ export const FloorPlanSidebar = ({
             seats: table.seats,
             width: widthInMeters,
             height: heightInMeters,
+            rotation: table.rotation,
+            table_type: table.table_type || 'simple',
         });
         setUnitType('m');
         setEditDialogOpen(true);
@@ -177,6 +180,7 @@ export const FloorPlanSidebar = ({
                 width: widthInPx,  // Send in pixels
                 height: heightInPx,  // Send in pixels
                 rotation: editFormData.rotation,
+                table_type: editFormData.table_type,
             };
 
             await updateTable(editTableId, hallId, payload);
@@ -205,7 +209,8 @@ export const FloorPlanSidebar = ({
             pos_y: 0,  // Will be auto-set by server or ignored
             width: 0.8,   // 0.8 meters
             height: 0.6,  // 0.6 meters
-            rotation: 0
+            rotation: 0,
+            table_type: 'simple'
         });
         setUnitType('m');
         setCreateTableDialogOpen(true);
@@ -247,6 +252,7 @@ export const FloorPlanSidebar = ({
                 width: tableWidthPx,  // Send in pixels
                 height: tableHeightPx,  // Send in pixels
                 rotation: createTableFormData.rotation,
+                table_type: createTableFormData.table_type,
             });
             handleCreateTableDialogClose();
             // Don't call onTableCreate() - SWR will auto-refresh via mutate
@@ -337,7 +343,7 @@ export const FloorPlanSidebar = ({
                 <Box sx={{ display: 'flex', alignItems: 'center', mb: 2, gap: 1 }}>
                     <IconButton
                         size="small"
-                        onClick={() => navigate('/menu/halls')}
+                        onClick={() => navigate('/settings/halls')}
                         sx={{ color: '#FB6633' }}
                     >
                         <Iconify icon="eva:arrow-ios-back-fill" width={20} />
@@ -494,9 +500,20 @@ export const FloorPlanSidebar = ({
                                             </Typography>
                                         }
                                         secondary={
-                                            <Typography variant="caption" sx={{ display: 'block', mt: 0.5 }}>
-                                                {table.seats} {t('floorPlan.tableInfo.seatLabel')} • {Math.round(table.width)} × {Math.round(table.height)}
-                                            </Typography>
+                                            <Box component="span" sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 0.5, flexWrap: 'wrap' }}>
+                                                <Typography component="span" variant="caption">
+                                                    {table.seats} {t('floorPlan.tableInfo.seatLabel')} • {Math.round(table.width)} × {Math.round(table.height)}
+                                                </Typography>
+                                                {table.table_type === 'time_based' && (
+                                                    <Chip
+                                                        size="small"
+                                                        icon={<Iconify icon="solar:clock-circle-bold" width={12} />}
+                                                        label="Time-based"
+                                                        color="warning"
+                                                        sx={{ height: 18, '& .MuiChip-label': { px: 0.75, fontSize: 10 } }}
+                                                    />
+                                                )}
+                                            </Box>
                                         }
                                     />
                                 </ListItemButton>
@@ -697,6 +714,17 @@ export const FloorPlanSidebar = ({
                             size="small"
                             inputProps={{ min: 0, max: 360, step: 15 }}
                         />
+                        <FormControl fullWidth size="small">
+                            <InputLabel>Table type</InputLabel>
+                            <Select
+                                label="Table type"
+                                value={createTableFormData.table_type}
+                                onChange={(e) => setCreateTableFormData((prev) => ({ ...prev, table_type: e.target.value as 'simple' | 'time_based' }))}
+                            >
+                                <MenuItem value="simple">Simple</MenuItem>
+                                <MenuItem value="time_based">Time based</MenuItem>
+                            </Select>
+                        </FormControl>
                         <Typography variant="caption" sx={{ color: theme.palette.text.secondary, pt: 1, fontStyle: 'italic' }}>
                             {t('floorPlan.createTableDialog.infoText')}
                         </Typography>
@@ -790,6 +818,17 @@ export const FloorPlanSidebar = ({
                             size="small"
                             inputProps={{ min: 0, max: 360, step: 15 }}
                         />
+                        <FormControl fullWidth size="small">
+                            <InputLabel>Table type</InputLabel>
+                            <Select
+                                label="Table type"
+                                value={editFormData.table_type || 'simple'}
+                                onChange={(e) => handleInputChange('table_type', e.target.value)}
+                            >
+                                <MenuItem value="simple">Simple</MenuItem>
+                                <MenuItem value="time_based">Time based</MenuItem>
+                            </Select>
+                        </FormControl>
                         <Typography variant="caption" sx={{ color: theme.palette.text.secondary, pt: 1, fontStyle: 'italic' }}>
                             {t('floorPlan.editTableDialog.infoText')}
                         </Typography>

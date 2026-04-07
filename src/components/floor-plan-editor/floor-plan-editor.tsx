@@ -51,6 +51,7 @@ export const FloorPlanEditor = ({ hallWidth, hallHeight, hallId, cafeTables }: F
                 rotation: cafeTable.rotation || 0,
                 color: `hsl(${Math.random() * 360}, 70%, 70%)`,
                 seats: cafeTable.capacity || DEFAULT_TABLE_SEATS,
+                table_type: cafeTable.table_type || 'simple',
             }));
             setTables(importedTables);
 
