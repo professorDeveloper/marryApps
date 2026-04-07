@@ -61,6 +61,7 @@ var (
 	}
 
 	RolesCanReadOrderItemsStatus = []string{
+		model.RoleWaiter,
 		model.RoleCashier,
 		model.RoleKitchen,
 		model.RoleAdmin,
