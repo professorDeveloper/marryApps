@@ -13,6 +13,7 @@ export interface Table {
     color?: string;
     seats: number;
     table_type?: 'simple' | 'time_based';
+    price_per_hour?: number;
 }
 
 export interface FloorPlanState {
