@@ -683,7 +683,13 @@ func (h *Handler) GetStockByIngredientAndBranch(c echo.Context) error {
 // @Security BearerAuth
 // @Param limit query int false "Limit results (default: 20)" default(20)
 // @Param offset query int false "Offset for pagination (default: 0)" default(0)
-// @Param expand query string false "Expand FK relations (comma-separated: ingredient_id, storage_id, branch_id)"
+// @Param ingredient_id query string false "Filter by ingredient ID"
+// @Param ingredient_name query string false "Search by ingredient name"
+// @Param search query string false "Search by ingredient name"
+// @Param storage_id query string false "Filter by storage ID"
+// @Param measurement query string false "Filter by measurement (kg, l, piece)"
+// @Param sort_by query string false "Sort by: created_at, quantity, price_per_unit"
+// @Param sort_order query string false "Sort order: asc, desc"
 // @Success 200 {array} model.IngredientStockResponse "List of all ingredient stock"
 // @Failure 401 {object} model.ErrorResponse "Unauthorized"
 // @Failure 500 {object} model.ErrorResponse "Internal server error"
@@ -706,18 +712,55 @@ func (h *Handler) GetAllIngredientStock(c echo.Context) error {
 		}
 	}
 
-	stocks, total64, err := h.service.Ingredient().GetAllIngredientStock(c.Request().Context(), limit, offset)
+	filter := model.IngredientStockFilter{}
+	if v := c.QueryParam("ingredient_id"); v == "" {
+		if v2 := c.QueryParam("ingredientId"); v2 != "" {
+			filter.IngredientID = &v2
+		}
+	} else {
+		filter.IngredientID = &v
+	}
+	if v := c.QueryParam("ingredient_name"); v == "" {
+		if v2 := c.QueryParam("ingredientName"); v2 != "" {
+			filter.IngredientName = &v2
+		}
+	} else {
+		filter.IngredientName = &v
+	}
+	if v := c.QueryParam("search"); v != "" {
+		filter.Search = &v
+	}
+	if v := c.QueryParam("storage_id"); v == "" {
+		if v2 := c.QueryParam("storageId"); v2 != "" {
+			filter.StorageID = &v2
+		}
+	} else {
+		filter.StorageID = &v
+	}
+	if v := c.QueryParam("measurement"); v != "" {
+		filter.Measurement = &v
+	}
+	if v := c.QueryParam("sort_by"); v == "" {
+		if v2 := c.QueryParam("sortBy"); v2 != "" {
+			filter.SortBy = &v2
+		}
+	} else {
+		filter.SortBy = &v
+	}
+	if v := c.QueryParam("sort_order"); v == "" {
+		if v2 := c.QueryParam("sortOrder"); v2 != "" {
+			filter.SortOrder = &v2
+		}
+	} else {
+		filter.SortOrder = &v
+	}
+
+	stocks, total64, err := h.service.Ingredient().GetAllIngredientStock(c.Request().Context(), filter, limit, offset)
 	if err != nil {
 		log.Printf("GetAllIngredientStock failed: %v", err)
 		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("failed to fetch ingredient stock", "see logs for details", http.StatusInternalServerError))
 	}
 
-	if maps, expanded, err := h.expandListResponse(c, stocks, "ingredient_stock"); expanded {
-		if err != nil {
-			return err
-		}
-		return c.JSON(http.StatusOK, model.NewPaginatedResponse("Data retrieved successfully", maps, int32(total64), limit, offset, http.StatusOK))
-	}
 	return c.JSON(http.StatusOK, model.NewPaginatedResponse("Data retrieved successfully", stocks, int32(total64), limit, offset, http.StatusOK))
 }
 

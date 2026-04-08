@@ -267,6 +267,18 @@ func (s *TransferS) GetAllTransfers(ctx context.Context, filter model.TransferFi
 		params.Status = *filter.Status
 		countParams.Status = *filter.Status
 	}
+	if filter.FromBranchID != nil {
+		if id, err := uuid.Parse(*filter.FromBranchID); err == nil {
+			params.FromBranchID = id
+			countParams.FromBranchID = id
+		}
+	}
+	if filter.ToBranchID != nil {
+		if id, err := uuid.Parse(*filter.ToBranchID); err == nil {
+			params.ToBranchID = id
+			countParams.ToBranchID = id
+		}
+	}
 	if filter.FromStorageID != nil {
 		if id, err := uuid.Parse(*filter.FromStorageID); err == nil {
 			params.FromStorageID = id
