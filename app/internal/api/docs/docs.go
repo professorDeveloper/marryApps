@@ -30587,7 +30587,7 @@ const docTemplate = `{
                 "status": {
                     "description": "Optional invoice-level fields to update alongside details",
                     "type": "string",
-                    "example": "arrived"
+                    "example": "received"
                 },
                 "storage_id": {
                     "type": "string",

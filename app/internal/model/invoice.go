@@ -182,7 +182,7 @@ type UpsertInvoiceDetailEntry struct {
 
 type UpsertInvoiceDetailsRequest struct {
 	// Optional invoice-level fields to update alongside details
-	Status      *string `json:"status,omitempty" example:"arrived"`
+	Status      *string `json:"status,omitempty" example:"received"`
 	SupplierID  *string `json:"supplier_id,omitempty" example:"123e4567-e89b-12d3-a456-426614174000"`
 	StorageID   *string `json:"storage_id,omitempty" example:"123e4567-e89b-12d3-a456-426614174000"`
 	TotalAmount *string `json:"total_amount,omitempty" example:"600000"`
