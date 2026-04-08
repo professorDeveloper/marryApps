@@ -99,6 +99,8 @@ type TransferFilter struct {
 	DateFrom      *string
 	DateTo        *string
 	Status        *string
+	FromBranchID  *string
+	ToBranchID    *string
 	FromStorageID *string
 	ToStorageID   *string
 	ActGroupID    *string

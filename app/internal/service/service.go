@@ -143,7 +143,7 @@ type IngredientI interface {
 	CreateIngredientStock(ctx context.Context, ingredientID string, quantity string, branchID *string, storageID *string) (*model.IngredientStockResponse, error)
 	GetIngredientStockByID(ctx context.Context, stockID string) (*model.IngredientStockResponse, error)
 	GetStockByIngredientAndBranch(ctx context.Context, ingredientID, branchID string) (*model.IngredientStockResponse, error)
-	GetAllIngredientStock(ctx context.Context, limit, offset int32) ([]model.IngredientStockResponse, int64, error)
+	GetAllIngredientStock(ctx context.Context, filter model.IngredientStockFilter, limit, offset int32) ([]model.IngredientStockResponse, int64, error)
 	GetStockByBranchID(ctx context.Context, branchID string, limit, offset int32) ([]model.IngredientStockResponse, int64, error)
 	GetStockByIngredientID(ctx context.Context, ingredientID string, limit, offset int32) ([]model.IngredientStockResponse, int64, error)
 	UpdateIngredientStock(ctx context.Context, stockID string, quantity string) (*model.IngredientStockResponse, error)

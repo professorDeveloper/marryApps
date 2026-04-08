@@ -12071,8 +12071,44 @@ const docTemplate = `{
                     },
                     {
                         "type": "string",
-                        "description": "Expand FK relations (comma-separated: ingredient_id, storage_id, branch_id)",
-                        "name": "expand",
+                        "description": "Filter by ingredient ID",
+                        "name": "ingredient_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Search by ingredient name",
+                        "name": "ingredient_name",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Search by ingredient name",
+                        "name": "search",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by storage ID",
+                        "name": "storage_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by measurement (kg, l, piece)",
+                        "name": "measurement",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Sort by: created_at, quantity, price_per_unit",
+                        "name": "sort_by",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Sort order: asc, desc",
+                        "name": "sort_order",
                         "in": "query"
                     }
                 ],
@@ -23410,6 +23446,18 @@ const docTemplate = `{
                         "type": "string",
                         "description": "Filter by status (draft/active/deleted)",
                         "name": "status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by sender branch ID",
+                        "name": "from_branch_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by receiver branch ID",
+                        "name": "to_branch_id",
                         "in": "query"
                     },
                     {

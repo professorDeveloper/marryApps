@@ -727,16 +727,52 @@ func (i *IngredientS) GetStockByIngredientAndBranch(ctx context.Context, ingredi
 }
 
 // GetAllIngredientStock retrieves all ingredient stock entries
-func (i *IngredientS) GetAllIngredientStock(ctx context.Context, limit, offset int32) ([]model.IngredientStockResponse, int64, error) {
-	total, err := i.repo.Tenant(ctx).CountIngredientStock(ctx)
+func (i *IngredientS) GetAllIngredientStock(ctx context.Context, filter model.IngredientStockFilter, limit, offset int32) ([]model.IngredientStockResponse, int64, error) {
+	q := i.repo.Tenant(ctx)
+
+	params := pg.GetIngredientStockFilteredParams{
+		Limit:  limit,
+		Offset: offset,
+	}
+	countParams := pg.CountIngredientStockFilteredParams{}
+
+	if filter.IngredientID != nil {
+		if id, err := uuid.Parse(*filter.IngredientID); err == nil {
+			params.IngredientID = id
+			countParams.IngredientID = id
+		}
+	}
+	if filter.IngredientName != nil {
+		params.IngredientName = *filter.IngredientName
+		countParams.IngredientName = *filter.IngredientName
+	}
+	if filter.Search != nil {
+		params.Search = *filter.Search
+		countParams.Search = *filter.Search
+	}
+	if filter.StorageID != nil {
+		if id, err := uuid.Parse(*filter.StorageID); err == nil {
+			params.StorageID = id
+			countParams.StorageID = id
+		}
+	}
+	if filter.Measurement != nil {
+		params.Measurement = *filter.Measurement
+		countParams.Measurement = *filter.Measurement
+	}
+	if filter.SortBy != nil {
+		params.SortBy = *filter.SortBy
+	}
+	if filter.SortOrder != nil {
+		params.SortOrder = *filter.SortOrder
+	}
+
+	total, err := q.CountIngredientStockFiltered(ctx, countParams)
 	if err != nil {
 		return nil, 0, fmt.Errorf("failed to count ingredient stock: %w", err)
 	}
 
-	stocks, err := i.repo.Tenant(ctx).GetAllIngredientStock(ctx, pg.GetAllIngredientStockParams{
-		Limit:  limit,
-		Offset: offset,
-	})
+	stocks, err := q.GetIngredientStockFiltered(ctx, params)
 	if err != nil {
 		return nil, 0, fmt.Errorf("failed to get ingredient stock: %w", err)
 	}

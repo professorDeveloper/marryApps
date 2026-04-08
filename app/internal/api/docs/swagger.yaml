@@ -12598,10 +12598,33 @@ paths:
         in: query
         name: offset
         type: integer
-      - description: 'Expand FK relations (comma-separated: ingredient_id, storage_id,
-          branch_id)'
+      - description: Filter by ingredient ID
         in: query
-        name: expand
+        name: ingredient_id
+        type: string
+      - description: Search by ingredient name
+        in: query
+        name: ingredient_name
+        type: string
+      - description: Search by ingredient name
+        in: query
+        name: search
+        type: string
+      - description: Filter by storage ID
+        in: query
+        name: storage_id
+        type: string
+      - description: Filter by measurement (kg, l, piece)
+        in: query
+        name: measurement
+        type: string
+      - description: 'Sort by: created_at, quantity, price_per_unit'
+        in: query
+        name: sort_by
+        type: string
+      - description: 'Sort order: asc, desc'
+        in: query
+        name: sort_order
         type: string
       produces:
       - application/json
@@ -19972,6 +19995,14 @@ paths:
       - description: Filter by status (draft/active/deleted)
         in: query
         name: status
+        type: string
+      - description: Filter by sender branch ID
+        in: query
+        name: from_branch_id
+        type: string
+      - description: Filter by receiver branch ID
+        in: query
+        name: to_branch_id
         type: string
       - description: Filter by sender storage ID
         in: query
