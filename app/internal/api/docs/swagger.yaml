@@ -4497,7 +4497,7 @@ definitions:
         type: array
       status:
         description: Optional invoice-level fields to update alongside details
-        example: arrived
+        example: received
         type: string
       storage_id:
         example: 123e4567-e89b-12d3-a456-426614174000

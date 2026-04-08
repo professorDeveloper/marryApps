@@ -992,9 +992,18 @@ func (h *Handler) MarkOrderPaid(c echo.Context) error {
 
 		errMsg := strings.ToLower(err.Error())
 
-		if strings.Contains(errMsg, "insufficient payment") {
+		if strings.Contains(errMsg, "insufficient payment") ||
+			strings.Contains(errMsg, "invalid payment_type") ||
+			strings.Contains(errMsg, "customer_paid_amount") ||
+			strings.Contains(errMsg, "cash_amount") ||
+			strings.Contains(errMsg, "card_amount") ||
+			strings.Contains(errMsg, "discount_percent") ||
+			strings.Contains(errMsg, "discount_amount") ||
+			strings.Contains(errMsg, "table_charge") ||
+			strings.Contains(errMsg, "provide only one of discount_percent or discount_amount") ||
+			strings.Contains(errMsg, "for split payment, cash_amount + card_amount must equal customer_paid_amount") {
 			return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
-				"insufficient payment",
+				"invalid payment payload",
 				err.Error(),
 				http.StatusBadRequest,
 			))

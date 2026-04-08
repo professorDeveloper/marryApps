@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"math"
 	"strconv"
 	"strings"
 	"time"
@@ -780,75 +781,76 @@ func (s *OrderS) MarkOrderPaid(ctx context.Context, orderID string, cashierID st
 		return nil, fmt.Errorf("invalid cashier id: %w", err)
 	}
 
+	if err := validateMarkOrderPaidInput(paymentType, discountPercent, discountAmount, customerPaidAmount, tableCharge, cashAmount, cardAmount); err != nil {
+		return nil, err
+	}
+
 	var discPercentNum *pgtype.Numeric
-	if discountPercent != nil && *discountPercent != "" {
+	if discountPercent != nil && strings.TrimSpace(*discountPercent) != "" {
 		n := pgtype.Numeric{}
-		if err := n.Scan(*discountPercent); err != nil {
+		if err := n.Scan(strings.TrimSpace(*discountPercent)); err != nil {
 			return nil, fmt.Errorf("invalid discount_percent: %w", err)
 		}
 		discPercentNum = &n
 	}
 
 	var discAmountNum *pgtype.Numeric
-	if discountAmount != nil && *discountAmount != "" {
+	if discountAmount != nil && strings.TrimSpace(*discountAmount) != "" {
 		n := pgtype.Numeric{}
-		if err := n.Scan(*discountAmount); err != nil {
+		if err := n.Scan(strings.TrimSpace(*discountAmount)); err != nil {
 			return nil, fmt.Errorf("invalid discount_amount: %w", err)
 		}
 		discAmountNum = &n
 	}
 
 	var paidAmountNum *pgtype.Numeric
-	if customerPaidAmount != nil && *customerPaidAmount != "" {
+	if customerPaidAmount != nil && strings.TrimSpace(*customerPaidAmount) != "" {
 		n := pgtype.Numeric{}
-		if err := n.Scan(*customerPaidAmount); err != nil {
+		if err := n.Scan(strings.TrimSpace(*customerPaidAmount)); err != nil {
 			return nil, fmt.Errorf("invalid customer_paid_amount: %w", err)
 		}
 		paidAmountNum = &n
 	}
 
 	var tableChargeNum *pgtype.Numeric
-	if tableCharge != nil && *tableCharge != "" {
+	if tableCharge != nil && strings.TrimSpace(*tableCharge) != "" {
 		n := pgtype.Numeric{}
-		if err := n.Scan(*tableCharge); err != nil {
+		if err := n.Scan(strings.TrimSpace(*tableCharge)); err != nil {
 			return nil, fmt.Errorf("invalid table_charge: %w", err)
 		}
 		tableChargeNum = &n
 	}
 
-	// Normalize cash/card amounts based on payment_type.
-	// SQL uses cash_amount + card_amount as total_paid for validation and change calculation.
-	pt := ""
-	if paymentType != nil {
-		pt = *paymentType
+	pt := "cash"
+	if paymentType != nil && strings.TrimSpace(*paymentType) != "" {
+		pt = strings.TrimSpace(*paymentType)
 	}
+
 	var cashAmountNum, cardAmountNum *pgtype.Numeric
 	switch pt {
 	case "split":
-		// Both must be provided; total_paid = cash + card
-		if cashAmount != nil && *cashAmount != "" {
+		if cashAmount != nil && strings.TrimSpace(*cashAmount) != "" {
 			n := pgtype.Numeric{}
-			if err := n.Scan(*cashAmount); err != nil {
+			if err := n.Scan(strings.TrimSpace(*cashAmount)); err != nil {
 				return nil, fmt.Errorf("invalid cash_amount: %w", err)
 			}
 			cashAmountNum = &n
 		}
-		if cardAmount != nil && *cardAmount != "" {
+		if cardAmount != nil && strings.TrimSpace(*cardAmount) != "" {
 			n := pgtype.Numeric{}
-			if err := n.Scan(*cardAmount); err != nil {
+			if err := n.Scan(strings.TrimSpace(*cardAmount)); err != nil {
 				return nil, fmt.Errorf("invalid card_amount: %w", err)
 			}
 			cardAmountNum = &n
 		}
 	case "card":
-		// card_amount = customer_paid_amount; cash_amount = 0
 		cardAmountNum = paidAmountNum
-	default: // "cash" or unset
-		// cash_amount = customer_paid_amount; card_amount = 0
+	case "cash":
 		cashAmountNum = paidAmountNum
+	default:
+		return nil, fmt.Errorf("invalid payment_type: must be one of cash, card, split")
 	}
 
-	// Fetch the order before paying so we have the table_id
 	orderBeforePay, err := s.repo.Tenant(ctx).GetOrderByID(ctx, oID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch order: %w", err)
@@ -865,7 +867,7 @@ func (s *OrderS) MarkOrderPaid(ctx context.Context, orderID string, cashierID st
 		OrderID:            oID,
 		CashierID:          cID,
 		CashRegisterID:     crUUID,
-		PaymentType:        paymentType,
+		PaymentType:        &pt,
 		DiscountPercent:    discPercentNum,
 		DiscountAmount:     discAmountNum,
 		DiscountComment:    discountComment,
@@ -877,7 +879,6 @@ func (s *OrderS) MarkOrderPaid(ctx context.Context, orderID string, cashierID st
 		return nil, fmt.Errorf("failed to mark order paid: %w", err)
 	}
 
-	// Free the table — best-effort, must not abort the main transaction on failure
 	if orderBeforePay.TableID.Valid {
 		withSavepoint(ctx, "sp_set_table_free", func() error {
 			_, err := s.repo.Tenant(ctx).SetTableFree(ctx, orderBeforePay.TableID.Bytes)
@@ -885,7 +886,6 @@ func (s *OrderS) MarkOrderPaid(ctx context.Context, orderID string, cashierID st
 		})
 	}
 
-	// Auto-create income transaction — best-effort, must not abort the main transaction
 	withSavepoint(ctx, "sp_create_tx", func() error {
 		bill, billErr := s.repo.Tenant(ctx).GetBillDetails(ctx, oID)
 		if billErr != nil {
@@ -907,11 +907,9 @@ func (s *OrderS) MarkOrderPaid(ctx context.Context, orderID string, cashierID st
 				txParams.CashRegisterID = pgtype.UUID{Bytes: crID, Valid: true}
 			}
 		}
-		if paymentType != nil && *paymentType != "" {
-			txParams.PayType = pg.NullPaymentType{
-				PaymentType: pg.PaymentType(*paymentType),
-				Valid:       true,
-			}
+		txParams.PayType = pg.NullPaymentType{
+			PaymentType: pg.PaymentType(pt),
+			Valid:       true,
 		}
 		_, err := s.repo.Tenant(ctx).CreateTransaction(ctx, txParams)
 		return err
@@ -922,6 +920,125 @@ func (s *OrderS) MarkOrderPaid(ctx context.Context, orderID string, cashierID st
 		return nil, fmt.Errorf("failed to fetch order: %w", err)
 	}
 	return toOrderResponse(order), nil
+}
+
+func validateMarkOrderPaidInput(
+	paymentType *string,
+	discountPercent *string,
+	discountAmount *string,
+	customerPaidAmount *string,
+	tableCharge *string,
+	cashAmount *string,
+	cardAmount *string,
+) error {
+	pt := "cash"
+	if paymentType != nil && strings.TrimSpace(*paymentType) != "" {
+		pt = strings.TrimSpace(*paymentType)
+	}
+
+	switch pt {
+	case "cash", "card", "split":
+	default:
+		return fmt.Errorf("invalid payment_type: must be one of cash, card, split")
+	}
+
+	paid, err := parseRequiredMoney(customerPaidAmount, "customer_paid_amount")
+	if err != nil {
+		return err
+	}
+	if paid <= 0 {
+		return fmt.Errorf("customer_paid_amount must be greater than 0")
+	}
+
+	if tableCharge != nil && strings.TrimSpace(*tableCharge) != "" {
+		v, err := parseMoney(*tableCharge, "table_charge")
+		if err != nil {
+			return err
+		}
+		if v < 0 {
+			return fmt.Errorf("table_charge cannot be negative")
+		}
+	}
+
+	hasDiscountPercent := discountPercent != nil && strings.TrimSpace(*discountPercent) != ""
+	hasDiscountAmount := discountAmount != nil && strings.TrimSpace(*discountAmount) != ""
+
+	if hasDiscountPercent && hasDiscountAmount {
+		return fmt.Errorf("provide only one of discount_percent or discount_amount")
+	}
+
+	if hasDiscountPercent {
+		v, err := parseMoney(*discountPercent, "discount_percent")
+		if err != nil {
+			return err
+		}
+		if v < 0 || v > 100 {
+			return fmt.Errorf("discount_percent must be between 0 and 100")
+		}
+	}
+
+	if hasDiscountAmount {
+		v, err := parseMoney(*discountAmount, "discount_amount")
+		if err != nil {
+			return err
+		}
+		if v < 0 {
+			return fmt.Errorf("discount_amount cannot be negative")
+		}
+	}
+
+	switch pt {
+	case "cash":
+		if cashAmount != nil && strings.TrimSpace(*cashAmount) != "" {
+			return fmt.Errorf("cash_amount must not be provided when payment_type is cash")
+		}
+		if cardAmount != nil && strings.TrimSpace(*cardAmount) != "" {
+			return fmt.Errorf("card_amount must not be provided when payment_type is cash")
+		}
+	case "card":
+		if cashAmount != nil && strings.TrimSpace(*cashAmount) != "" {
+			return fmt.Errorf("cash_amount must not be provided when payment_type is card")
+		}
+		if cardAmount != nil && strings.TrimSpace(*cardAmount) != "" {
+			return fmt.Errorf("card_amount must not be provided when payment_type is card")
+		}
+	case "split":
+		cash, err := parseRequiredMoney(cashAmount, "cash_amount")
+		if err != nil {
+			return err
+		}
+		card, err := parseRequiredMoney(cardAmount, "card_amount")
+		if err != nil {
+			return err
+		}
+		if cash < 0 || card < 0 {
+			return fmt.Errorf("cash_amount and card_amount cannot be negative")
+		}
+		if !amountsEqual(cash+card, paid) {
+			return fmt.Errorf("for split payment, cash_amount + card_amount must equal customer_paid_amount")
+		}
+	}
+
+	return nil
+}
+
+func parseRequiredMoney(v *string, field string) (float64, error) {
+	if v == nil || strings.TrimSpace(*v) == "" {
+		return 0, fmt.Errorf("%s is required", field)
+	}
+	return parseMoney(*v, field)
+}
+
+func parseMoney(raw string, field string) (float64, error) {
+	val, err := strconv.ParseFloat(strings.TrimSpace(raw), 64)
+	if err != nil {
+		return 0, fmt.Errorf("invalid %s", field)
+	}
+	return val, nil
+}
+
+func amountsEqual(a, b float64) bool {
+	return math.Abs(a-b) < 0.000001
 }
 
 func (s *OrderS) DeleteOrder(ctx context.Context, orderID string) error {
