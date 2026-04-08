@@ -208,6 +208,16 @@ type UpdateIngredientStockRequest struct {
 	Quantity *string `json:"quantity,omitempty" example:"100"`
 }
 
+type IngredientStockFilter struct {
+	IngredientID   *string `json:"ingredient_id,omitempty" example:"123e4567-e89b-12d3-a456-426614174000"`
+	IngredientName *string `json:"ingredient_name,omitempty" example:"Tomato"`
+	Search         *string `json:"search,omitempty" example:"tomato"`
+	StorageID      *string `json:"storage_id,omitempty" example:"123e4567-e89b-12d3-a456-426614174000"`
+	Measurement    *string `json:"measurement,omitempty" example:"kg"`
+	SortBy         *string `json:"sort_by,omitempty" example:"created_at"`
+	SortOrder      *string `json:"sort_order,omitempty" example:"desc"`
+}
+
 type IngredientStockResponse struct {
 	ID           string     `json:"id" example:"123e4567-e89b-12d3-a456-426614174000"`
 	IngredientID string     `json:"ingredient_id" example:"123e4567-e89b-12d3-a456-426614174000"`

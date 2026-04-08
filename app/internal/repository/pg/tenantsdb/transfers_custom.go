@@ -27,11 +27,12 @@ func (q *Queries) DeductStockAllowNegative(ctx context.Context, id uuid.UUID, qu
 }
 
 // ==================== FILTERED LIST ====================
-
 type GetTransfersFilteredParams struct {
-	DateFrom     pgtype.Date
-	DateTo       pgtype.Date
-	Status       string
+	DateFrom      pgtype.Date
+	DateTo        pgtype.Date
+	Status        string
+	FromBranchID  uuid.UUID
+	ToBranchID    uuid.UUID
 	FromStorageID uuid.UUID
 	ToStorageID   uuid.UUID
 	ActGroupID    uuid.UUID
@@ -44,6 +45,8 @@ type CountTransfersFilteredParams struct {
 	DateFrom      pgtype.Date
 	DateTo        pgtype.Date
 	Status        string
+	FromBranchID  uuid.UUID
+	ToBranchID    uuid.UUID
 	FromStorageID uuid.UUID
 	ToStorageID   uuid.UUID
 	ActGroupID    uuid.UUID
@@ -63,15 +66,17 @@ func (q *Queries) SumTransfersFiltered(ctx context.Context, arg CountTransfersFi
 		  AND ($1::date IS NULL OR t.date::date >= $1)
 		  AND ($2::date IS NULL OR t.date::date <= $2)
 		  AND (NULLIF($3::text, '') IS NULL OR t.status::text = $3)
-		  AND (NULLIF($4::uuid, '00000000-0000-0000-0000-000000000000') IS NULL OR t.from_storage_id = $4)
-		  AND (NULLIF($5::uuid, '00000000-0000-0000-0000-000000000000') IS NULL OR t.to_storage_id   = $5)
-		  AND (NULLIF($6::uuid, '00000000-0000-0000-0000-000000000000') IS NULL OR t.act_group_id    = $6)
-		  AND (NULLIF($7::uuid, '00000000-0000-0000-0000-000000000000') IS NULL OR ti.ingredient_id  = $7)
+		  AND (NULLIF($4::uuid, '00000000-0000-0000-0000-000000000000') IS NULL OR t.from_branch_id  = $4)
+		  AND (NULLIF($5::uuid, '00000000-0000-0000-0000-000000000000') IS NULL OR t.to_branch_id    = $5)
+		  AND (NULLIF($6::uuid, '00000000-0000-0000-0000-000000000000') IS NULL OR t.from_storage_id = $6)
+		  AND (NULLIF($7::uuid, '00000000-0000-0000-0000-000000000000') IS NULL OR t.to_storage_id   = $7)
+		  AND (NULLIF($8::uuid, '00000000-0000-0000-0000-000000000000') IS NULL OR t.act_group_id    = $8)
+		  AND (NULLIF($9::uuid, '00000000-0000-0000-0000-000000000000') IS NULL OR ti.ingredient_id  = $9)
 	`
 	var sum pgtype.Numeric
 	if err := q.db.QueryRow(ctx, sql,
 		arg.DateFrom, arg.DateTo, arg.Status,
-		arg.FromStorageID, arg.ToStorageID, arg.ActGroupID, arg.IngredientID,
+		arg.FromBranchID, arg.ToBranchID, arg.FromStorageID, arg.ToStorageID, arg.ActGroupID, arg.IngredientID,
 	).Scan(&sum); err != nil {
 		return pgtype.Numeric{}, err
 	}
@@ -94,16 +99,18 @@ func (q *Queries) GetTransfersFiltered(ctx context.Context, arg GetTransfersFilt
 		  AND ($1::date IS NULL OR t.date::date >= $1)
 		  AND ($2::date IS NULL OR t.date::date <= $2)
 		  AND (NULLIF($3::text, '') IS NULL OR t.status::text = $3)
-		  AND (NULLIF($4::uuid, '00000000-0000-0000-0000-000000000000') IS NULL OR t.from_storage_id = $4)
-		  AND (NULLIF($5::uuid, '00000000-0000-0000-0000-000000000000') IS NULL OR t.to_storage_id   = $5)
-		  AND (NULLIF($6::uuid, '00000000-0000-0000-0000-000000000000') IS NULL OR t.act_group_id    = $6)
-		  AND (NULLIF($7::uuid, '00000000-0000-0000-0000-000000000000') IS NULL OR ti.ingredient_id  = $7)
+		  AND (NULLIF($4::uuid, '00000000-0000-0000-0000-000000000000') IS NULL OR t.from_branch_id  = $4)
+		  AND (NULLIF($5::uuid, '00000000-0000-0000-0000-000000000000') IS NULL OR t.to_branch_id    = $5)
+		  AND (NULLIF($6::uuid, '00000000-0000-0000-0000-000000000000') IS NULL OR t.from_storage_id = $6)
+		  AND (NULLIF($7::uuid, '00000000-0000-0000-0000-000000000000') IS NULL OR t.to_storage_id   = $7)
+		  AND (NULLIF($8::uuid, '00000000-0000-0000-0000-000000000000') IS NULL OR t.act_group_id    = $8)
+		  AND (NULLIF($9::uuid, '00000000-0000-0000-0000-000000000000') IS NULL OR ti.ingredient_id  = $9)
 		ORDER BY t.date DESC, t.number DESC
-		LIMIT $8 OFFSET $9
+		LIMIT $10 OFFSET $11
 	`
 	rows, err := q.db.Query(ctx, sql,
 		arg.DateFrom, arg.DateTo, arg.Status,
-		arg.FromStorageID, arg.ToStorageID, arg.ActGroupID, arg.IngredientID,
+		arg.FromBranchID, arg.ToBranchID, arg.FromStorageID, arg.ToStorageID, arg.ActGroupID, arg.IngredientID,
 		arg.Limit, arg.Offset,
 	)
 	if err != nil {
@@ -140,15 +147,17 @@ func (q *Queries) CountTransfersFiltered(ctx context.Context, arg CountTransfers
 		  AND ($1::date IS NULL OR t.date::date >= $1)
 		  AND ($2::date IS NULL OR t.date::date <= $2)
 		  AND (NULLIF($3::text, '') IS NULL OR t.status::text = $3)
-		  AND (NULLIF($4::uuid, '00000000-0000-0000-0000-000000000000') IS NULL OR t.from_storage_id = $4)
-		  AND (NULLIF($5::uuid, '00000000-0000-0000-0000-000000000000') IS NULL OR t.to_storage_id   = $5)
-		  AND (NULLIF($6::uuid, '00000000-0000-0000-0000-000000000000') IS NULL OR t.act_group_id    = $6)
-		  AND (NULLIF($7::uuid, '00000000-0000-0000-0000-000000000000') IS NULL OR ti.ingredient_id  = $7)
+		  AND (NULLIF($4::uuid, '00000000-0000-0000-0000-000000000000') IS NULL OR t.from_branch_id  = $4)
+		  AND (NULLIF($5::uuid, '00000000-0000-0000-0000-000000000000') IS NULL OR t.to_branch_id    = $5)
+		  AND (NULLIF($6::uuid, '00000000-0000-0000-0000-000000000000') IS NULL OR t.from_storage_id = $6)
+		  AND (NULLIF($7::uuid, '00000000-0000-0000-0000-000000000000') IS NULL OR t.to_storage_id   = $7)
+		  AND (NULLIF($8::uuid, '00000000-0000-0000-0000-000000000000') IS NULL OR t.act_group_id    = $8)
+		  AND (NULLIF($9::uuid, '00000000-0000-0000-0000-000000000000') IS NULL OR ti.ingredient_id  = $9)
 	`
 	var count int64
 	if err := q.db.QueryRow(ctx, sql,
 		arg.DateFrom, arg.DateTo, arg.Status,
-		arg.FromStorageID, arg.ToStorageID, arg.ActGroupID, arg.IngredientID,
+		arg.FromBranchID, arg.ToBranchID, arg.FromStorageID, arg.ToStorageID, arg.ActGroupID, arg.IngredientID,
 	).Scan(&count); err != nil {
 		return 0, err
 	}

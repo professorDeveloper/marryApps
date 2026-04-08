@@ -149,6 +149,8 @@ func (h *Handler) GetTransferByID(c echo.Context) error {
 // @Param date_from       query string false "Filter from date (YYYY-MM-DD)"
 // @Param date_to         query string false "Filter to date (YYYY-MM-DD)"
 // @Param status          query string false "Filter by status (draft/active/deleted)"
+// @Param from_branch_id  query string false "Filter by sender branch ID"
+// @Param to_branch_id    query string false "Filter by receiver branch ID"
 // @Param from_storage_id query string false "Filter by sender storage ID"
 // @Param to_storage_id   query string false "Filter by receiver storage ID"
 // @Param act_group_id    query string false "Filter by act group ID"
@@ -181,6 +183,20 @@ func (h *Handler) GetAllTransfers(c echo.Context) error {
 	}
 	if v := c.QueryParam("status"); v != "" {
 		filter.Status = &v
+	}
+	if v := c.QueryParam("from_branch_id"); v == "" {
+		if v2 := c.QueryParam("fromBranchID"); v2 != "" {
+			filter.FromBranchID = &v2
+		}
+	} else {
+		filter.FromBranchID = &v
+	}
+	if v := c.QueryParam("to_branch_id"); v == "" {
+		if v2 := c.QueryParam("toBranchID"); v2 != "" {
+			filter.ToBranchID = &v2
+		}
+	} else {
+		filter.ToBranchID = &v
 	}
 	if v := c.QueryParam("from_storage_id"); v != "" {
 		filter.FromStorageID = &v
