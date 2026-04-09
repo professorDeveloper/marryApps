@@ -788,6 +788,17 @@ type GoodsDetail struct {
 	DeletedAt    *int64              `json:"deleted_at"`
 }
 
+type GoodsModifier struct {
+	ID         uuid.UUID          `json:"id"`
+	GoodID     uuid.UUID          `json:"good_id"`
+	ModifierID uuid.UUID          `json:"modifier_id"`
+	IsRequired bool               `json:"is_required"`
+	SortOrder  int32              `json:"sort_order"`
+	CreatedAt  pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt  pgtype.Timestamptz `json:"updated_at"`
+	DeletedAt  *int64             `json:"deleted_at"`
+}
+
 type GroupTransaction struct {
 	ID        uuid.UUID          `json:"id"`
 	Name      string             `json:"name"`
@@ -920,6 +931,19 @@ type InvoiceDetailed struct {
 	CreatedAt    pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
 	DeletedAt    *int64             `json:"deleted_at"`
+}
+
+type Modifier struct {
+	ID          uuid.UUID          `json:"id"`
+	Name        string             `json:"name"`
+	NameI18n    pgtype.UUID        `json:"name_i18n"`
+	Description *string            `json:"description"`
+	Code        *string            `json:"code"`
+	IsActive    bool              `json:"is_active"`
+	PictureUrl  *string            `json:"picture_url"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
+	DeletedAt   *int64             `json:"deleted_at"`
 }
 
 type Order struct {

@@ -469,6 +469,23 @@ type TransactionI interface {
 	GetCashReport(ctx context.Context, req model.CashReportRequest) (*model.CashReportResponse, error)
 }
 
+type ModifierI interface {
+	CreateModifier(ctx context.Context, req model.CreateModifierRequest) (*model.ModifierResponse, error)
+	GetModifierByID(ctx context.Context, modifierID string) (*model.ModifierResponse, error)
+	GetAllModifiers(ctx context.Context, limit, offset int32) ([]*model.ModifierResponse, error)
+	UpdateModifier(ctx context.Context, modifierID string, req model.UpdateModifierRequest) (*model.ModifierResponse, error)
+	DeleteModifier(ctx context.Context, modifierID string) error
+	RestoreModifier(ctx context.Context, modifierID string) error
+	SearchModifiers(ctx context.Context, query string, limit, offset int32) ([]*model.ModifierResponse, error)
+}
+
+type GoodsModifierI interface {
+	AttachModifiersToGood(ctx context.Context, goodID string, req model.AttachModifiersToGoodRequest) error
+	ReplaceModifiersForGood(ctx context.Context, goodID string, req model.AttachModifiersToGoodRequest) error
+	GetModifiersByGoodID(ctx context.Context, goodID string) ([]*model.GoodModifierResponse, error)
+	DetachModifierFromGood(ctx context.Context, goodID, modifierID string) error
+}
+
 type I interface {
 	Auth() AuthI
 	Payment() PaymentI
@@ -502,6 +519,8 @@ type I interface {
 	OutgoingInvoice() OutgoingInvoiceI
 	Report() ReportI
 	SeparationAct() SeparationActI
+	Modifier() ModifierI
+	GoodsModifier() GoodsModifierI
 }
 
 type Service struct {
@@ -537,6 +556,8 @@ type Service struct {
 	outgoingInvoice   OutgoingInvoiceI
 	report            ReportI
 	separationAct     SeparationActI
+	modifier          ModifierI
+	goodsModifier     GoodsModifierI
 }
 
 func New(cfg *config.Config, repo *repository.Repository, clickClient *paymentClick.Client, paymeClient *paymentPayme.Client, minioClient *minio.Minio) *Service {
@@ -573,6 +594,8 @@ func New(cfg *config.Config, repo *repository.Repository, clickClient *paymentCl
 		outgoingInvoice:   NewOutgoingInvoiceS(repo),
 		report:            NewReportS(repo),
 		separationAct:     NewSeparationActS(repo),
+		modifier:          NewModifierS(repo),
+		goodsModifier:     NewGoodsModifierS(repo),
 	}
 }
 
@@ -701,4 +724,12 @@ func (s *Service) Report() ReportI {
 
 func (s *Service) SeparationAct() SeparationActI {
 	return s.separationAct
+}
+
+func (s *Service) Modifier() ModifierI {
+	return s.modifier
+}
+
+func (s *Service) GoodsModifier() GoodsModifierI {
+	return s.goodsModifier
 }

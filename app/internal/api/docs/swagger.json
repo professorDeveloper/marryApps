@@ -9410,7 +9410,7 @@
                         "BearerAuth": []
                     }
                 ],
-                "description": "Create a new good/menu item with its ingredient/compound calculations in one atomic transaction.\n\n**How it works:**\n- Create the good first\n- Then create all ingredient calculations (price from invoice_detail)\n- Then create all compound calculations (price from compound.price)\n- If any calculation fails, everything is rolled back (good won't be created)\n\n**Example Request:**\n```json\n{\n\"good\": { \"name\": \"Osh\", \"price\": \"85000.00\" },\n\"ingredient_calculations\": [\n{ \"ingredient_id\": \"sabzi-uuid\", \"quantity\": \"2.5\" },\n{ \"ingredient_id\": \"guruch-uuid\", \"quantity\": \"0.5\" }\n],\n\"compound_calculations\": [\n{ \"compound_id\": \"salad-uuid\", \"quantity\": \"3\" },\n{ \"compound_id\": \"xamir-uuid\", \"quantity\": \"1\" }\n]\n}\n```",
+                "description": "Create a new good/menu item with its ingredient/compound calculations in one atomic transaction.\n\n**How it works:**\n- Create the good first\n- Then create all ingredient calculations (price from invoice_detail)\n- Then create all compound calculations (price from compound.price)\n- If any calculation fails, everything is rolled back (good won't be created)\n\n**Example Request:**\n```json\n{\n\"good\": { \"name\": \"Osh\", \"price\": \"85000.00\" },\n\"ingredient_calculations\": [\n{ \"ingredient_id\": \"sabzi-uuid\", \"quantity\": \"2.5\" },\n{ \"ingredient_id\": \"guruch-uuid\", \"quantity\": \"0.5\" }\n],\n\"compound_calculations\": [\n{ \"compound_id\": \"salad-uuid\", \"quantity\": \"3\" },\n{ \"compound_id\": \"xamir-uuid\", \"quantity\": \"1\" }\n],\n\"modifiers\": [\n{ \"modifier_id\": \"modifier-uuid-1\", \"is_required\": false, \"sort_order\": 1 },\n{ \"modifier_id\": \"modifier-uuid-2\", \"is_required\": true, \"sort_order\": 2 }\n]\n}\n```",
                 "consumes": [
                     "application/json"
                 ],
@@ -9430,7 +9430,7 @@
                         "in": "query"
                     },
                     {
-                        "description": "Good + ingredients + compounds",
+                        "description": "Good + ingredient calculations + compound calculations + modifiers",
                         "name": "request",
                         "in": "body",
                         "required": true,
@@ -9441,7 +9441,7 @@
                 ],
                 "responses": {
                     "201": {
-                        "description": "Good and all calculations created successfully",
+                        "description": "Good, calculations, and modifiers created successfully",
                         "schema": {
                             "$ref": "#/definitions/model.GoodWithCalculationsResponse"
                         }
@@ -9726,6 +9726,170 @@
                 }
             }
         },
+        "/api/v1/goods/{id}/modifiers": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Retrieve all modifiers attached to a good",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "goods-modifiers"
+                ],
+                "summary": "Get modifiers by good ID",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Good ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/model.GoodModifierResponse"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Attach a modifier to a good",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "goods-modifiers"
+                ],
+                "summary": "Attach modifier to good",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Good ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Attach modifiers request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.AttachModifiersToGoodRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/model.SuccessResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/goods/{id}/modifiers/{modifierId}": {
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Detach a modifier from a good",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "goods-modifiers"
+                ],
+                "summary": "Detach modifier from good",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Good ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Modifier ID",
+                        "name": "modifierId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.SuccessResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/goods/{id}/price": {
             "put": {
                 "security": [
@@ -9932,39 +10096,11 @@
                 }
             },
             "put": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Update a good/menu item and replace all its ingredient/compound calculations in one atomic transaction.\n\n**How it works:**\n- Update the good first\n- Delete all existing calculations for this good\n- Create the new ingredient calculations (price from invoice_detail)\n- Create the new compound calculations (price from compound.price)\n- If any step fails, everything is rolled back",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Goods"
-                ],
-                "summary": "Update good with multiple ingredients and compounds (One Save)",
+                "description": "Update a good/menu item and replace all its ingredient calculations, compound calculations, and modifiers in one atomic transaction.\n\n**How it works:**\n- Update the good first\n- Delete all existing calculations for this good\n- Create the new ingredient calculations (price from invoice_detail)\n- Create the new compound calculations (price from compound.price)\n- Replace all good modifiers\n- If any step fails, everything is rolled back",
+                "summary": "Update good with calculations and modifiers (One Save)",
                 "parameters": [
                     {
-                        "type": "string",
-                        "default": "uz",
-                        "description": "Language (uz, ru, en)",
-                        "name": "lang",
-                        "in": "query"
-                    },
-                    {
-                        "type": "string",
-                        "description": "Good ID",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "description": "Good update + ingredients + compounds",
+                        "description": "Good update + ingredient calculations + compound calculations + modifiers",
                         "name": "request",
                         "in": "body",
                         "required": true,
@@ -16187,6 +16323,389 @@
                         "description": "Video fayli",
                         "schema": {
                             "type": "file"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/modifiers": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Retrieve all modifiers with pagination",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "modifiers"
+                ],
+                "summary": "Get all modifiers",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Limit (default: 20)",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Offset (default: 0)",
+                        "name": "offset",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Expand related fields",
+                        "name": "expand",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/model.ModifierResponse"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Create a new modifier",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "modifiers"
+                ],
+                "summary": "Create modifier",
+                "parameters": [
+                    {
+                        "description": "Modifier creation request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.CreateModifierRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/model.ModifierResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/modifiers/search": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Search modifiers by name, description, or code",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "modifiers"
+                ],
+                "summary": "Search modifiers",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Search query",
+                        "name": "q",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Limit (default: 20)",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Offset (default: 0)",
+                        "name": "offset",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/model.ModifierResponse"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/modifiers/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Retrieve a modifier by ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "modifiers"
+                ],
+                "summary": "Get modifier by ID",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Modifier ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.ModifierResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Update a modifier by ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "modifiers"
+                ],
+                "summary": "Update modifier",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Modifier ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Modifier update request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.UpdateModifierRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.ModifierResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Soft delete a modifier by ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "modifiers"
+                ],
+                "summary": "Delete modifier",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Modifier ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.SuccessResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/modifiers/{id}/restore": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Restore a soft deleted modifier by ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "modifiers"
+                ],
+                "summary": "Restore modifier",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Modifier ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.SuccessResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
                         }
                     }
                 }
@@ -24468,6 +24987,34 @@
                 }
             }
         },
+        "model.AttachModifierItem": {
+            "type": "object",
+            "properties": {
+                "is_required": {
+                    "type": "boolean",
+                    "example": false
+                },
+                "modifier_id": {
+                    "type": "string",
+                    "example": "123e4567-e89b-12d3-a456-426614174000"
+                },
+                "sort_order": {
+                    "type": "integer",
+                    "example": 1
+                }
+            }
+        },
+        "model.AttachModifiersToGoodRequest": {
+            "type": "object",
+            "properties": {
+                "modifiers": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.AttachModifierItem"
+                    }
+                }
+            }
+        },
         "model.BranchResponse": {
             "type": "object",
             "properties": {
@@ -25708,6 +26255,13 @@
                     "items": {
                         "$ref": "#/definitions/model.IngredientCalculationItem"
                     }
+                },
+                "modifiers": {
+                    "description": "Modifiers - array of modifiers to attacg to this good in the same save",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.AttachModifierItem"
+                    }
                 }
             }
         },
@@ -26061,6 +26615,35 @@
                 },
                 "summary": {
                     "$ref": "#/definitions/model.InvoiceDetailsBatchSummary"
+                }
+            }
+        },
+        "model.CreateModifierRequest": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "string",
+                    "example": "EXTRA_CHEESE"
+                },
+                "description": {
+                    "type": "string",
+                    "example": "Add extra cheese to your pizza"
+                },
+                "is_active": {
+                    "type": "boolean",
+                    "example": true
+                },
+                "name": {
+                    "type": "string",
+                    "example": "Extra Cheese"
+                },
+                "name_i18n": {
+                    "type": "string",
+                    "example": "123e4567-e89b-12d3-a456-426614174000"
+                },
+                "picture_url": {
+                    "type": "string",
+                    "example": "https://example.com/image.jpg"
                 }
             }
         },
@@ -27064,6 +27647,42 @@
                 }
             }
         },
+        "model.GoodModifierResponse": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string",
+                    "example": "2022-01-01T00:00:00Z"
+                },
+                "good_id": {
+                    "type": "string",
+                    "example": "123e4567-e89b-12d3-a456-426614174000"
+                },
+                "id": {
+                    "type": "string",
+                    "example": "123e4567-e89b-12d3-a456-426614174000"
+                },
+                "is_required": {
+                    "type": "boolean",
+                    "example": false
+                },
+                "modifier": {
+                    "$ref": "#/definitions/model.ModifierShortResponse"
+                },
+                "modifier_id": {
+                    "type": "string",
+                    "example": "123e4567-e89b-12d3-a456-426614174000"
+                },
+                "sort_order": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "updated_at": {
+                    "type": "string",
+                    "example": "2022-01-01T00:00:00Z"
+                }
+            }
+        },
         "model.GoodOrdersReportResponse": {
             "type": "object",
             "properties": {
@@ -27243,12 +27862,19 @@
                     }
                 },
                 "good": {
-                    "description": "Good - the created good/menu item",
+                    "description": "Good - the created/updated good/menu item",
                     "allOf": [
                         {
                             "$ref": "#/definitions/model.GoodResponse"
                         }
                     ]
+                },
+                "modifiers": {
+                    "description": "Modifiers - all modifiers currently attached to this good",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.GoodModifierResponse"
+                    }
                 }
             }
         },
@@ -28102,6 +28728,80 @@
                     "description": "table_charge: confirmed table fee from GET /orders/:id/table-price (optional; auto-calc if table has price_per_hour and this is not provided)",
                     "type": "string",
                     "example": "50000"
+                }
+            }
+        },
+        "model.ModifierResponse": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "string",
+                    "example": "EXTRA_CHEESE"
+                },
+                "created_at": {
+                    "type": "string",
+                    "example": "2022-01-01T00:00:00Z"
+                },
+                "description": {
+                    "type": "string",
+                    "example": "Add extra cheese to your pizza"
+                },
+                "id": {
+                    "type": "string",
+                    "example": "123e4567-e89b-12d3-a456-426614174000"
+                },
+                "is_active": {
+                    "type": "boolean",
+                    "example": true
+                },
+                "name": {
+                    "type": "string",
+                    "example": "Extra Cheese"
+                },
+                "name_i18n": {
+                    "type": "string",
+                    "example": "123e4567-e89b-12d3-a456-426614174000"
+                },
+                "picture_url": {
+                    "type": "string",
+                    "example": "https://example.com/image.jpg"
+                },
+                "updated_at": {
+                    "type": "string",
+                    "example": "2022-01-01T00:00:00Z"
+                }
+            }
+        },
+        "model.ModifierShortResponse": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "string",
+                    "example": "EXTRA_CHEESE"
+                },
+                "description": {
+                    "type": "string",
+                    "example": "Add extra cheese to your pizza"
+                },
+                "id": {
+                    "type": "string",
+                    "example": "123e4567-e89b-12d3-a456-426614174000"
+                },
+                "is_active": {
+                    "type": "boolean",
+                    "example": true
+                },
+                "name": {
+                    "type": "string",
+                    "example": "Extra Cheese"
+                },
+                "name_i18n": {
+                    "type": "string",
+                    "example": "123e4567-e89b-12d3-a456-426614174000"
+                },
+                "picture_url": {
+                    "type": "string",
+                    "example": "https://example.com/image.jpg"
                 }
             }
         },
@@ -29920,6 +30620,13 @@
                     "items": {
                         "$ref": "#/definitions/model.IngredientCalculationItem"
                     }
+                },
+                "modifiers": {
+                    "description": "Modifiers - replacement array of modifiers for this good",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.AttachModifierItem"
+                    }
                 }
             }
         },
@@ -30123,6 +30830,35 @@
                 "status": {
                     "type": "string",
                     "example": "arrived"
+                }
+            }
+        },
+        "model.UpdateModifierRequest": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "string",
+                    "example": "EXTRA_CHEESE"
+                },
+                "description": {
+                    "type": "string",
+                    "example": "Add extra cheese to your pizza"
+                },
+                "is_active": {
+                    "type": "boolean",
+                    "example": true
+                },
+                "name": {
+                    "type": "string",
+                    "example": "Extra Cheese"
+                },
+                "name_i18n": {
+                    "type": "string",
+                    "example": "123e4567-e89b-12d3-a456-426614174000"
+                },
+                "picture_url": {
+                    "type": "string",
+                    "example": "https://example.com/image.jpg"
                 }
             }
         },

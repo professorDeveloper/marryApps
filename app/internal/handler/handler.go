@@ -404,6 +404,10 @@ func (h *Handler) Register(router *echo.Echo) {
 			goods.POST("/:id/restore", h.RestoreGood, mw.CheckLanguage())
 			// Good details endpoints
 			goods.GET("/:good_id/details", h.GetGoodDetailsByGood, mw.CheckLanguage())
+
+			goods.POST("/:id/modifiers", h.AttachModifierToGood, mw.CheckLanguage())
+			goods.GET("/:id/modifiers", h.GetModifiersByGoodID, mw.CheckLanguage())
+			goods.DELETE("/:id/modifiers/:modifierId", h.DetachModifierFromGood, mw.CheckLanguage())
 		}
 
 		// Goods endpoints with language support
@@ -471,6 +475,17 @@ func (h *Handler) Register(router *echo.Echo) {
 		compoundGoods := api.Group("/compounds/:compound_id/goods", mw.CheckAuth(h.cfg), mw.TenantMiddleware(h.repo))
 		{
 			compoundGoods.GET("", h.GetGoodDetailsByCompound, mw.CheckLanguage())
+		}
+
+		modifiers := api.Group("/modifiers", mw.CheckAuth(h.cfg), mw.TenantMiddleware(h.repo))
+		{
+			modifiers.POST("", h.CreateModifier, mw.CheckLanguage())
+			modifiers.GET("", h.GetAllModifiers, mw.CheckLanguage())
+			modifiers.GET("/search", h.SearchModifiers, mw.CheckLanguage())
+			modifiers.GET("/:id", h.GetModifierByID, mw.CheckLanguage())
+			modifiers.PUT("/:id", h.UpdateModifier, mw.CheckLanguage())
+			modifiers.DELETE("/:id", h.DeleteModifier, mw.CheckLanguage())
+			modifiers.POST("/:id/restore", h.RestoreModifier, mw.CheckLanguage())
 		}
 
 		// Cafe Table endpoints

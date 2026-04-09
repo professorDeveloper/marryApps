@@ -200,15 +200,21 @@ type CreateGoodWithCalculationsRequest struct {
 
 	// CompoundCalculations - array of compounds to add (price from compound.price)
 	CompoundCalculations []CompoundCalculationItem `json:"compound_calculations"`
+
+	//Modifiers - array of modifiers to attacg to this good in the same save
+	Modifiers []AttachModifierItem `json:"modifiers"`
 }
 
 // GoodWithCalculationsResponse - response containing created good and all its calculations
 type GoodWithCalculationsResponse struct {
-	// Good - the created good/menu item
+	// Good - the created/updated good/menu item
 	Good *GoodResponse `json:"good"`
 
 	// Calculations - all calculation records created for this good
 	Calculations []CalculationResponse `json:"calculations"`
+
+	// Modifiers - all modifiers currently attached to this good
+	Modifiers []*GoodModifierResponse `json:"modifiers,omitempty"`
 }
 
 // UpdateGoodWithCalculationsRequest updates a good and replaces all its calculations in one atomic operation.
@@ -222,6 +228,9 @@ type UpdateGoodWithCalculationsRequest struct {
 
 	// CompoundCalculations - replacement array of compounds to add (price from compound.price)
 	CompoundCalculations []CompoundCalculationItem `json:"compound_calculations"`
+
+	// Modifiers - replacement array of modifiers for this good
+	Modifiers []AttachModifierItem `json:"modifiers"`
 }
 
 // UpdateCompoundWithCalculationsRequest updates a compound and replaces all its calculations in one atomic operation.
