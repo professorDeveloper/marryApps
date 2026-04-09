@@ -244,8 +244,6 @@ SELECT
     m.name_i18n,
     m.description,
     m.code,
-    m.price_delta,
-    m.cost_delta,
     m.is_active,
     m.picture_url
 FROM goods_modifiers gm
@@ -269,8 +267,6 @@ type GetModifiersByGoodIDRow struct {
 	NameI18n    pgtype.UUID        `json:"name_i18n"`
 	Description *string            `json:"description"`
 	Code        *string            `json:"code"`
-	PriceDelta  pgtype.Numeric     `json:"price_delta"`
-	CostDelta   pgtype.Numeric     `json:"cost_delta"`
 	IsActive    bool               `json:"is_active"`
 	PictureUrl  *string            `json:"picture_url"`
 }
@@ -297,8 +293,6 @@ func (q *Queries) GetModifiersByGoodID(ctx context.Context, goodID uuid.UUID) ([
 			&i.NameI18n,
 			&i.Description,
 			&i.Code,
-			&i.PriceDelta,
-			&i.CostDelta,
 			&i.IsActive,
 			&i.PictureUrl,
 		); err != nil {
@@ -326,8 +320,6 @@ SELECT
     m.name_i18n,
     m.description,
     m.code,
-    m.price_delta,
-    m.cost_delta,
     m.is_active,
     m.picture_url
 FROM goods_modifiers gm
@@ -358,8 +350,6 @@ type GetModifiersByGoodIDPaginatedRow struct {
 	NameI18n    pgtype.UUID        `json:"name_i18n"`
 	Description *string            `json:"description"`
 	Code        *string            `json:"code"`
-	PriceDelta  pgtype.Numeric     `json:"price_delta"`
-	CostDelta   pgtype.Numeric     `json:"cost_delta"`
 	IsActive    bool               `json:"is_active"`
 	PictureUrl  *string            `json:"picture_url"`
 }
@@ -386,8 +376,6 @@ func (q *Queries) GetModifiersByGoodIDPaginated(ctx context.Context, arg GetModi
 			&i.NameI18n,
 			&i.Description,
 			&i.Code,
-			&i.PriceDelta,
-			&i.CostDelta,
 			&i.IsActive,
 			&i.PictureUrl,
 		); err != nil {

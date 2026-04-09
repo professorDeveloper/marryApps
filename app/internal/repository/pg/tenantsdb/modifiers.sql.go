@@ -19,13 +19,11 @@ INSERT INTO modifiers (
     name_i18n,
     description,
     code,
-    price_delta,
-    cost_delta,
     is_active,
     picture_url
 )
 VALUES (
-    $1, $2, $3, $4, $5, $6, $7, $8, $9
+    $1, $2, $3, $4, $5, $6, $7
 )
 RETURNING
     id,
@@ -33,8 +31,6 @@ RETURNING
     name_i18n,
     description,
     code,
-    price_delta,
-    cost_delta,
     is_active,
     picture_url,
     created_at,
@@ -43,15 +39,13 @@ RETURNING
 `
 
 type CreateModifierParams struct {
-	ID          uuid.UUID      `json:"id"`
-	Name        string         `json:"name"`
-	NameI18n    pgtype.UUID    `json:"name_i18n"`
-	Description *string        `json:"description"`
-	Code        *string        `json:"code"`
-	PriceDelta  pgtype.Numeric `json:"price_delta"`
-	CostDelta   pgtype.Numeric `json:"cost_delta"`
-	IsActive    bool           `json:"is_active"`
-	PictureUrl  *string        `json:"picture_url"`
+	ID          uuid.UUID   `json:"id"`
+	Name        string      `json:"name"`
+	NameI18n    pgtype.UUID `json:"name_i18n"`
+	Description *string     `json:"description"`
+	Code        *string     `json:"code"`
+	IsActive    bool        `json:"is_active"`
+	PictureUrl  *string     `json:"picture_url"`
 }
 
 func (q *Queries) CreateModifier(ctx context.Context, arg CreateModifierParams) (Modifier, error) {
@@ -61,8 +55,6 @@ func (q *Queries) CreateModifier(ctx context.Context, arg CreateModifierParams) 
 		arg.NameI18n,
 		arg.Description,
 		arg.Code,
-		arg.PriceDelta,
-		arg.CostDelta,
 		arg.IsActive,
 		arg.PictureUrl,
 	)
@@ -73,8 +65,6 @@ func (q *Queries) CreateModifier(ctx context.Context, arg CreateModifierParams) 
 		&i.NameI18n,
 		&i.Description,
 		&i.Code,
-		&i.PriceDelta,
-		&i.CostDelta,
 		&i.IsActive,
 		&i.PictureUrl,
 		&i.CreatedAt,
@@ -103,8 +93,6 @@ SELECT
     name_i18n,
     description,
     code,
-    price_delta,
-    cost_delta,
     is_active,
     picture_url,
     created_at,
@@ -136,8 +124,6 @@ func (q *Queries) GetAllModifiers(ctx context.Context, arg GetAllModifiersParams
 			&i.NameI18n,
 			&i.Description,
 			&i.Code,
-			&i.PriceDelta,
-			&i.CostDelta,
 			&i.IsActive,
 			&i.PictureUrl,
 			&i.CreatedAt,
@@ -161,8 +147,6 @@ SELECT
     name_i18n,
     description,
     code,
-    price_delta,
-    cost_delta,
     is_active,
     picture_url,
     created_at,
@@ -182,8 +166,6 @@ func (q *Queries) GetModifierByCode(ctx context.Context, code *string) (Modifier
 		&i.NameI18n,
 		&i.Description,
 		&i.Code,
-		&i.PriceDelta,
-		&i.CostDelta,
 		&i.IsActive,
 		&i.PictureUrl,
 		&i.CreatedAt,
@@ -200,8 +182,6 @@ SELECT
     name_i18n,
     description,
     code,
-    price_delta,
-    cost_delta,
     is_active,
     picture_url,
     created_at,
@@ -221,8 +201,6 @@ func (q *Queries) GetModifierByID(ctx context.Context, id uuid.UUID) (Modifier, 
 		&i.NameI18n,
 		&i.Description,
 		&i.Code,
-		&i.PriceDelta,
-		&i.CostDelta,
 		&i.IsActive,
 		&i.PictureUrl,
 		&i.CreatedAt,
@@ -251,8 +229,6 @@ SELECT
     name_i18n,
     description,
     code,
-    price_delta,
-    cost_delta,
     is_active,
     picture_url,
     created_at,
@@ -290,8 +266,6 @@ func (q *Queries) SearchModifiers(ctx context.Context, arg SearchModifiersParams
 			&i.NameI18n,
 			&i.Description,
 			&i.Code,
-			&i.PriceDelta,
-			&i.CostDelta,
 			&i.IsActive,
 			&i.PictureUrl,
 			&i.CreatedAt,
@@ -315,10 +289,8 @@ SET
     name_i18n = $3,
     description = $4,
     code = $5,
-    price_delta = $6,
-    cost_delta = $7,
-    is_active = $8,
-    picture_url = $9
+    is_active = $6,
+    picture_url = $7
 WHERE id = $1
   AND deleted_at = 0
 RETURNING
@@ -327,8 +299,6 @@ RETURNING
     name_i18n,
     description,
     code,
-    price_delta,
-    cost_delta,
     is_active,
     picture_url,
     created_at,
@@ -337,15 +307,13 @@ RETURNING
 `
 
 type UpdateModifierParams struct {
-	ID          uuid.UUID      `json:"id"`
-	Name        string         `json:"name"`
-	NameI18n    pgtype.UUID    `json:"name_i18n"`
-	Description *string        `json:"description"`
-	Code        *string        `json:"code"`
-	PriceDelta  pgtype.Numeric `json:"price_delta"`
-	CostDelta   pgtype.Numeric `json:"cost_delta"`
-	IsActive    bool           `json:"is_active"`
-	PictureUrl  *string        `json:"picture_url"`
+	ID          uuid.UUID   `json:"id"`
+	Name        string      `json:"name"`
+	NameI18n    pgtype.UUID `json:"name_i18n"`
+	Description *string     `json:"description"`
+	Code        *string     `json:"code"`
+	IsActive    bool        `json:"is_active"`
+	PictureUrl  *string     `json:"picture_url"`
 }
 
 func (q *Queries) UpdateModifier(ctx context.Context, arg UpdateModifierParams) (Modifier, error) {
@@ -355,8 +323,6 @@ func (q *Queries) UpdateModifier(ctx context.Context, arg UpdateModifierParams) 
 		arg.NameI18n,
 		arg.Description,
 		arg.Code,
-		arg.PriceDelta,
-		arg.CostDelta,
 		arg.IsActive,
 		arg.PictureUrl,
 	)
@@ -367,8 +333,6 @@ func (q *Queries) UpdateModifier(ctx context.Context, arg UpdateModifierParams) 
 		&i.NameI18n,
 		&i.Description,
 		&i.Code,
-		&i.PriceDelta,
-		&i.CostDelta,
 		&i.IsActive,
 		&i.PictureUrl,
 		&i.CreatedAt,

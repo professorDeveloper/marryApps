@@ -922,6 +922,12 @@ definitions:
         items:
           $ref: '#/definitions/model.IngredientCalculationItem'
         type: array
+      modifiers:
+        description: Modifiers - array of modifiers to attacg to this good in the
+          same save
+        items:
+          $ref: '#/definitions/model.AttachModifierItem'
+        type: array
     required:
     - good
     type: object
@@ -1176,9 +1182,6 @@ definitions:
       code:
         example: EXTRA_CHEESE
         type: string
-      cost_delta:
-        example: 50
-        type: integer
       description:
         example: Add extra cheese to your pizza
         type: string
@@ -1194,9 +1197,6 @@ definitions:
       picture_url:
         example: https://example.com/image.jpg
         type: string
-      price_delta:
-        example: 100
-        type: integer
     type: object
   model.CreateOrderItemEntry:
     properties:
@@ -2052,7 +2052,12 @@ definitions:
       good:
         allOf:
         - $ref: '#/definitions/model.GoodResponse'
-        description: Good - the created good/menu item
+        description: Good - the created/updated good/menu item
+      modifiers:
+        description: Modifiers - all modifiers currently attached to this good
+        items:
+          $ref: '#/definitions/model.GoodModifierResponse'
+        type: array
     type: object
   model.GoodsReportResponse:
     properties:
@@ -2660,9 +2665,6 @@ definitions:
       code:
         example: EXTRA_CHEESE
         type: string
-      cost_delta:
-        example: 50
-        type: integer
       created_at:
         example: "2022-01-01T00:00:00Z"
         type: string
@@ -2684,9 +2686,6 @@ definitions:
       picture_url:
         example: https://example.com/image.jpg
         type: string
-      price_delta:
-        example: 100
-        type: integer
       updated_at:
         example: "2022-01-01T00:00:00Z"
         type: string
@@ -2696,9 +2695,6 @@ definitions:
       code:
         example: EXTRA_CHEESE
         type: string
-      cost_delta:
-        example: 50
-        type: integer
       description:
         example: Add extra cheese to your pizza
         type: string
@@ -2717,9 +2713,6 @@ definitions:
       picture_url:
         example: https://example.com/image.jpg
         type: string
-      price_delta:
-        example: 100
-        type: integer
     type: object
   model.OpenCashRegisterShiftRequest:
     properties:
@@ -3971,6 +3964,11 @@ definitions:
         items:
           $ref: '#/definitions/model.IngredientCalculationItem'
         type: array
+      modifiers:
+        description: Modifiers - replacement array of modifiers for this good
+        items:
+          $ref: '#/definitions/model.AttachModifierItem'
+        type: array
     required:
     - good
     type: object
@@ -4121,9 +4119,6 @@ definitions:
       code:
         example: EXTRA_CHEESE
         type: string
-      cost_delta:
-        example: 50
-        type: integer
       description:
         example: Add extra cheese to your pizza
         type: string
@@ -4139,9 +4134,6 @@ definitions:
       picture_url:
         example: https://example.com/image.jpg
         type: string
-      price_delta:
-        example: 100
-        type: integer
     type: object
   model.UpdateOrderItemQuantityRequest:
     properties:
@@ -10954,36 +10946,24 @@ paths:
       tags:
       - Calculations
     put:
-      consumes:
-      - application/json
       description: |-
-        Update a good/menu item and replace all its ingredient/compound calculations in one atomic transaction.
+        Update a good/menu item and replace all its ingredient calculations, compound calculations, and modifiers in one atomic transaction.
 
         **How it works:**
         - Update the good first
         - Delete all existing calculations for this good
         - Create the new ingredient calculations (price from invoice_detail)
         - Create the new compound calculations (price from compound.price)
+        - Replace all good modifiers
         - If any step fails, everything is rolled back
       parameters:
-      - default: uz
-        description: Language (uz, ru, en)
-        in: query
-        name: lang
-        type: string
-      - description: Good ID
-        in: path
-        name: id
-        required: true
-        type: string
-      - description: Good update + ingredients + compounds
+      - description: Good update + ingredient calculations + compound calculations
+          + modifiers
         in: body
         name: request
         required: true
         schema:
           $ref: '#/definitions/model.UpdateGoodWithCalculationsRequest'
-      produces:
-      - application/json
       responses:
         "200":
           description: Good and all calculations updated successfully
@@ -11002,11 +10982,7 @@ paths:
             etc.)
           schema:
             $ref: '#/definitions/model.ErrorResponse'
-      security:
-      - BearerAuth: []
-      summary: Update good with multiple ingredients and compounds (One Save)
-      tags:
-      - Goods
+      summary: Update good with calculations and modifiers (One Save)
   /api/v1/goods/calculations:
     get:
       consumes:
@@ -11332,6 +11308,10 @@ paths:
         "compound_calculations": [
         { "compound_id": "salad-uuid", "quantity": "3" },
         { "compound_id": "xamir-uuid", "quantity": "1" }
+        ],
+        "modifiers": [
+        { "modifier_id": "modifier-uuid-1", "is_required": false, "sort_order": 1 },
+        { "modifier_id": "modifier-uuid-2", "is_required": true, "sort_order": 2 }
         ]
         }
         ```
@@ -11341,7 +11321,7 @@ paths:
         in: query
         name: lang
         type: string
-      - description: Good + ingredients + compounds
+      - description: Good + ingredient calculations + compound calculations + modifiers
         in: body
         name: request
         required: true
@@ -11351,7 +11331,7 @@ paths:
       - application/json
       responses:
         "201":
-          description: Good and all calculations created successfully
+          description: Good, calculations, and modifiers created successfully
           schema:
             $ref: '#/definitions/model.GoodWithCalculationsResponse'
         "400":

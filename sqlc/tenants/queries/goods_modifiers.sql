@@ -92,8 +92,6 @@ SELECT
     m.name_i18n,
     m.description,
     m.code,
-    m.price_delta,
-    m.cost_delta,
     m.is_active,
     m.picture_url
 FROM goods_modifiers gm
@@ -117,8 +115,6 @@ SELECT
     m.name_i18n,
     m.description,
     m.code,
-    m.price_delta,
-    m.cost_delta,
     m.is_active,
     m.picture_url
 FROM goods_modifiers gm

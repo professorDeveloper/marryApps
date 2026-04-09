@@ -9413,7 +9413,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Create a new good/menu item with its ingredient/compound calculations in one atomic transaction.\n\n**How it works:**\n- Create the good first\n- Then create all ingredient calculations (price from invoice_detail)\n- Then create all compound calculations (price from compound.price)\n- If any calculation fails, everything is rolled back (good won't be created)\n\n**Example Request:**\n` + "`" + `` + "`" + `` + "`" + `json\n{\n\"good\": { \"name\": \"Osh\", \"price\": \"85000.00\" },\n\"ingredient_calculations\": [\n{ \"ingredient_id\": \"sabzi-uuid\", \"quantity\": \"2.5\" },\n{ \"ingredient_id\": \"guruch-uuid\", \"quantity\": \"0.5\" }\n],\n\"compound_calculations\": [\n{ \"compound_id\": \"salad-uuid\", \"quantity\": \"3\" },\n{ \"compound_id\": \"xamir-uuid\", \"quantity\": \"1\" }\n]\n}\n` + "`" + `` + "`" + `` + "`" + `",
+                "description": "Create a new good/menu item with its ingredient/compound calculations in one atomic transaction.\n\n**How it works:**\n- Create the good first\n- Then create all ingredient calculations (price from invoice_detail)\n- Then create all compound calculations (price from compound.price)\n- If any calculation fails, everything is rolled back (good won't be created)\n\n**Example Request:**\n` + "`" + `` + "`" + `` + "`" + `json\n{\n\"good\": { \"name\": \"Osh\", \"price\": \"85000.00\" },\n\"ingredient_calculations\": [\n{ \"ingredient_id\": \"sabzi-uuid\", \"quantity\": \"2.5\" },\n{ \"ingredient_id\": \"guruch-uuid\", \"quantity\": \"0.5\" }\n],\n\"compound_calculations\": [\n{ \"compound_id\": \"salad-uuid\", \"quantity\": \"3\" },\n{ \"compound_id\": \"xamir-uuid\", \"quantity\": \"1\" }\n],\n\"modifiers\": [\n{ \"modifier_id\": \"modifier-uuid-1\", \"is_required\": false, \"sort_order\": 1 },\n{ \"modifier_id\": \"modifier-uuid-2\", \"is_required\": true, \"sort_order\": 2 }\n]\n}\n` + "`" + `` + "`" + `` + "`" + `",
                 "consumes": [
                     "application/json"
                 ],
@@ -9433,7 +9433,7 @@ const docTemplate = `{
                         "in": "query"
                     },
                     {
-                        "description": "Good + ingredients + compounds",
+                        "description": "Good + ingredient calculations + compound calculations + modifiers",
                         "name": "request",
                         "in": "body",
                         "required": true,
@@ -9444,7 +9444,7 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "201": {
-                        "description": "Good and all calculations created successfully",
+                        "description": "Good, calculations, and modifiers created successfully",
                         "schema": {
                             "$ref": "#/definitions/model.GoodWithCalculationsResponse"
                         }
@@ -10099,39 +10099,11 @@ const docTemplate = `{
                 }
             },
             "put": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Update a good/menu item and replace all its ingredient/compound calculations in one atomic transaction.\n\n**How it works:**\n- Update the good first\n- Delete all existing calculations for this good\n- Create the new ingredient calculations (price from invoice_detail)\n- Create the new compound calculations (price from compound.price)\n- If any step fails, everything is rolled back",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Goods"
-                ],
-                "summary": "Update good with multiple ingredients and compounds (One Save)",
+                "description": "Update a good/menu item and replace all its ingredient calculations, compound calculations, and modifiers in one atomic transaction.\n\n**How it works:**\n- Update the good first\n- Delete all existing calculations for this good\n- Create the new ingredient calculations (price from invoice_detail)\n- Create the new compound calculations (price from compound.price)\n- Replace all good modifiers\n- If any step fails, everything is rolled back",
+                "summary": "Update good with calculations and modifiers (One Save)",
                 "parameters": [
                     {
-                        "type": "string",
-                        "default": "uz",
-                        "description": "Language (uz, ru, en)",
-                        "name": "lang",
-                        "in": "query"
-                    },
-                    {
-                        "type": "string",
-                        "description": "Good ID",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "description": "Good update + ingredients + compounds",
+                        "description": "Good update + ingredient calculations + compound calculations + modifiers",
                         "name": "request",
                         "in": "body",
                         "required": true,
@@ -26286,6 +26258,13 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/model.IngredientCalculationItem"
                     }
+                },
+                "modifiers": {
+                    "description": "Modifiers - array of modifiers to attacg to this good in the same save",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.AttachModifierItem"
+                    }
                 }
             }
         },
@@ -26649,10 +26628,6 @@ const docTemplate = `{
                     "type": "string",
                     "example": "EXTRA_CHEESE"
                 },
-                "cost_delta": {
-                    "type": "integer",
-                    "example": 50
-                },
                 "description": {
                     "type": "string",
                     "example": "Add extra cheese to your pizza"
@@ -26672,10 +26647,6 @@ const docTemplate = `{
                 "picture_url": {
                     "type": "string",
                     "example": "https://example.com/image.jpg"
-                },
-                "price_delta": {
-                    "type": "integer",
-                    "example": 100
                 }
             }
         },
@@ -27894,12 +27865,19 @@ const docTemplate = `{
                     }
                 },
                 "good": {
-                    "description": "Good - the created good/menu item",
+                    "description": "Good - the created/updated good/menu item",
                     "allOf": [
                         {
                             "$ref": "#/definitions/model.GoodResponse"
                         }
                     ]
+                },
+                "modifiers": {
+                    "description": "Modifiers - all modifiers currently attached to this good",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.GoodModifierResponse"
+                    }
                 }
             }
         },
@@ -28763,10 +28741,6 @@ const docTemplate = `{
                     "type": "string",
                     "example": "EXTRA_CHEESE"
                 },
-                "cost_delta": {
-                    "type": "integer",
-                    "example": 50
-                },
                 "created_at": {
                     "type": "string",
                     "example": "2022-01-01T00:00:00Z"
@@ -28795,10 +28769,6 @@ const docTemplate = `{
                     "type": "string",
                     "example": "https://example.com/image.jpg"
                 },
-                "price_delta": {
-                    "type": "integer",
-                    "example": 100
-                },
                 "updated_at": {
                     "type": "string",
                     "example": "2022-01-01T00:00:00Z"
@@ -28811,10 +28781,6 @@ const docTemplate = `{
                 "code": {
                     "type": "string",
                     "example": "EXTRA_CHEESE"
-                },
-                "cost_delta": {
-                    "type": "integer",
-                    "example": 50
                 },
                 "description": {
                     "type": "string",
@@ -28839,10 +28805,6 @@ const docTemplate = `{
                 "picture_url": {
                     "type": "string",
                     "example": "https://example.com/image.jpg"
-                },
-                "price_delta": {
-                    "type": "integer",
-                    "example": 100
                 }
             }
         },
@@ -30661,6 +30623,13 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/model.IngredientCalculationItem"
                     }
+                },
+                "modifiers": {
+                    "description": "Modifiers - replacement array of modifiers for this good",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.AttachModifierItem"
+                    }
                 }
             }
         },
@@ -30874,10 +30843,6 @@ const docTemplate = `{
                     "type": "string",
                     "example": "EXTRA_CHEESE"
                 },
-                "cost_delta": {
-                    "type": "integer",
-                    "example": 50
-                },
                 "description": {
                     "type": "string",
                     "example": "Add extra cheese to your pizza"
@@ -30897,10 +30862,6 @@ const docTemplate = `{
                 "picture_url": {
                     "type": "string",
                     "example": "https://example.com/image.jpg"
-                },
-                "price_delta": {
-                    "type": "integer",
-                    "example": 100
                 }
             }
         },

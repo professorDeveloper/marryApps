@@ -939,9 +939,7 @@ type Modifier struct {
 	NameI18n    pgtype.UUID        `json:"name_i18n"`
 	Description *string            `json:"description"`
 	Code        *string            `json:"code"`
-	PriceDelta  pgtype.Numeric     `json:"price_delta"`
-	CostDelta   pgtype.Numeric     `json:"cost_delta"`
-	IsActive    bool               `json:"is_active"`
+	IsActive    bool              `json:"is_active"`
 	PictureUrl  *string            `json:"picture_url"`
 	CreatedAt   pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`

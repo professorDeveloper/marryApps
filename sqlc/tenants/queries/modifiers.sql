@@ -5,13 +5,11 @@ INSERT INTO modifiers (
     name_i18n,
     description,
     code,
-    price_delta,
-    cost_delta,
     is_active,
     picture_url
 )
 VALUES (
-    $1, $2, $3, $4, $5, $6, $7, $8, $9
+    $1, $2, $3, $4, $5, $6, $7
 )
 RETURNING
     id,
@@ -19,8 +17,6 @@ RETURNING
     name_i18n,
     description,
     code,
-    price_delta,
-    cost_delta,
     is_active,
     picture_url,
     created_at,
@@ -34,8 +30,6 @@ SELECT
     name_i18n,
     description,
     code,
-    price_delta,
-    cost_delta,
     is_active,
     picture_url,
     created_at,
@@ -52,8 +46,6 @@ SELECT
     name_i18n,
     description,
     code,
-    price_delta,
-    cost_delta,
     is_active,
     picture_url,
     created_at,
@@ -71,10 +63,8 @@ SET
     name_i18n = $3,
     description = $4,
     code = $5,
-    price_delta = $6,
-    cost_delta = $7,
-    is_active = $8,
-    picture_url = $9
+    is_active = $6,
+    picture_url = $7
 WHERE id = $1
   AND deleted_at = 0
 RETURNING
@@ -83,8 +73,6 @@ RETURNING
     name_i18n,
     description,
     code,
-    price_delta,
-    cost_delta,
     is_active,
     picture_url,
     created_at,
@@ -110,8 +98,6 @@ SELECT
     name_i18n,
     description,
     code,
-    price_delta,
-    cost_delta,
     is_active,
     picture_url,
     created_at,
@@ -128,8 +114,6 @@ SELECT
     name_i18n,
     description,
     code,
-    price_delta,
-    cost_delta,
     is_active,
     picture_url,
     created_at,

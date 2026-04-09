@@ -5,8 +5,6 @@ CREATE TABLE IF NOT EXISTS modifiers (
   name_i18n   UUID REFERENCES translations(id) ON DELETE SET NULL,
   description TEXT,
   code        TEXT,
-  price_delta DECIMAL(15,2) NOT NULL DEFAULT 0,
-  cost_delta  DECIMAL(15,2) NOT NULL DEFAULT 0,
   is_active   BOOLEAN NOT NULL DEFAULT TRUE,
   picture_url TEXT,
   created_at  TIMESTAMPTZ DEFAULT NOW(),

@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"strconv"
 	"strings"
 
 	"github.com/google/uuid"
@@ -23,75 +22,6 @@ func NewModifierS(repo *repository.Repository) *ModifierS {
 	return &ModifierS{repo: repo}
 }
 
-func int64ToNumeric(val *int64) pgtype.Numeric {
-	if val == nil {
-		return pgtype.Numeric{}
-	}
-
-	n := pgtype.Numeric{}
-	_ = n.Scan(fmt.Sprintf("%d", *val))
-	return n
-}
-
-func numericToInt64Ptr(n pgtype.Numeric) *int64 {
-	if !n.Valid {
-		return nil
-	}
-
-	if v, err := n.Int64Value(); err == nil && v.Valid {
-		val := v.Int64
-		return &val
-	}
-
-	if v, err := n.Float64Value(); err == nil && v.Valid {
-		val := int64(v.Float64)
-		return &val
-	}
-
-	// fallback
-	s := numericToStringModifier(n)
-	if s == "" {
-		return nil
-	}
-
-	f, err := strconv.ParseFloat(s, 64)
-	if err != nil {
-		return nil
-	}
-
-	val := int64(f)
-	return &val
-}
-
-func numericToStringModifier(n pgtype.Numeric) string {
-	if !n.Valid {
-		return ""
-	}
-	if n.NaN {
-		return ""
-	}
-	if n.InfinityModifier != 0 {
-		return ""
-	}
-	if n.Int == nil {
-		return "0"
-	}
-
-	str := n.Int.String()
-	if n.Exp < 0 {
-		exp := -int(n.Exp)
-		if exp >= len(str) {
-			str = "0." + strings.Repeat("0", exp-len(str)) + str
-		} else {
-			str = str[:len(str)-exp] + "." + str[len(str)-exp:]
-		}
-	} else if n.Exp > 0 {
-		str = str + strings.Repeat("0", int(n.Exp))
-	}
-
-	return str
-}
-
 func mapModifierToResponse(row pg.Modifier) *model.ModifierResponse {
 	return &model.ModifierResponse{
 		ID:          row.ID.String(),
@@ -99,8 +29,6 @@ func mapModifierToResponse(row pg.Modifier) *model.ModifierResponse {
 		NameI18n:    uuidToStr(row.NameI18n),
 		Description: row.Description,
 		Code:        row.Code,
-		PriceDelta:  numericToInt64Ptr(row.PriceDelta),
-		CostDelta:   numericToInt64Ptr(row.CostDelta),
 		IsActive:    row.IsActive,
 		PictureUrl:  row.PictureUrl,
 		CreatedAt:   timestampToTime(row.CreatedAt),
@@ -126,7 +54,9 @@ func (s *ModifierS) CreateModifier(ctx context.Context, req model.CreateModifier
 		trimmedCode := strings.TrimSpace(*req.Code)
 		req.Code = &trimmedCode
 
-		if trimmedCode != "" {
+		if trimmedCode == "" {
+			req.Code = nil
+		} else {
 			_, err := s.repo.Tenant(ctx).GetModifierByCode(ctx, req.Code)
 			if err == nil {
 				return nil, fmt.Errorf("modifier code already exists")
@@ -138,15 +68,18 @@ func (s *ModifierS) CreateModifier(ctx context.Context, req model.CreateModifier
 		}
 	}
 
+	finalIsActive := true
+	if req.IsActive != nil {
+		finalIsActive = *req.IsActive
+	}
+
 	row, err := s.repo.Tenant(ctx).CreateModifier(ctx, pg.CreateModifierParams{
 		ID:          uuid.New(),
 		Name:        strings.TrimSpace(req.Name),
 		NameI18n:    nameI18nUUID,
 		Description: req.Description,
 		Code:        req.Code,
-		PriceDelta:  int64ToNumeric(req.PriceDelta),
-		CostDelta:   int64ToNumeric(req.CostDelta),
-		IsActive:    req.IsActive,
+		IsActive:    finalIsActive,
 		PictureUrl:  req.PictureUrl,
 	})
 	if err != nil {
@@ -254,16 +187,6 @@ func (s *ModifierS) UpdateModifier(ctx context.Context, modifierID string, req m
 		}
 	}
 
-	finalPriceDelta := existing.PriceDelta
-	if req.PriceDelta != nil {
-		finalPriceDelta = int64ToNumeric(req.PriceDelta)
-	}
-
-	finalCostDelta := existing.CostDelta
-	if req.CostDelta != nil {
-		finalCostDelta = int64ToNumeric(req.CostDelta)
-	}
-
 	finalIsActive := existing.IsActive
 	if req.IsActive != nil {
 		finalIsActive = *req.IsActive
@@ -280,8 +203,6 @@ func (s *ModifierS) UpdateModifier(ctx context.Context, modifierID string, req m
 		NameI18n:    finalNameI18n,
 		Description: finalDescription,
 		Code:        finalCode,
-		PriceDelta:  finalPriceDelta,
-		CostDelta:   finalCostDelta,
 		IsActive:    finalIsActive,
 		PictureUrl:  finalPictureURL,
 	})

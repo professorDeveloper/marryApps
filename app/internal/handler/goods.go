@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 	"strconv"
@@ -433,6 +434,15 @@ func (h *Handler) SearchGoods(c echo.Context) error {
 	return c.JSON(http.StatusOK, resp)
 }
 
+func validateModifierItems(items []model.AttachModifierItem) error {
+	for i, item := range items {
+		if item.ModifierID == "" {
+			return fmt.Errorf("modifiers[%d]: modifier_id is required", i)
+		}
+	}
+	return nil
+}
+
 // CreateGoodWithCalculations creates a new good with calculations in one transaction
 // @Summary Create good with multiple ingredients and compounds (One Save)
 // @Description Create a new good/menu item with its ingredient/compound calculations in one atomic transaction.
@@ -454,6 +464,10 @@ func (h *Handler) SearchGoods(c echo.Context) error {
 // @Description   "compound_calculations": [
 // @Description     { "compound_id": "salad-uuid", "quantity": "3" },
 // @Description     { "compound_id": "xamir-uuid", "quantity": "1" }
+// @Description   ],
+// @Description   "modifiers": [
+// @Description     { "modifier_id": "modifier-uuid-1", "is_required": false, "sort_order": 1 },
+// @Description     { "modifier_id": "modifier-uuid-2", "is_required": true, "sort_order": 2 }
 // @Description   ]
 // @Description }
 // @Description ```
@@ -462,8 +476,8 @@ func (h *Handler) SearchGoods(c echo.Context) error {
 // @Produce json
 // @Security BearerAuth
 // @Param lang query string false "Language (uz, ru, en)" default(uz)
-// @Param request body model.CreateGoodWithCalculationsRequest true "Good + ingredients + compounds"
-// @Success 201 {object} model.GoodWithCalculationsResponse "Good and all calculations created successfully"
+// @Param request body model.CreateGoodWithCalculationsRequest true "Good + ingredient calculations + compound calculations + modifiers"
+// @Success 201 {object} model.GoodWithCalculationsResponse "Good, calculations, and modifiers created successfully"
 // @Failure 400 {object} model.ErrorResponse "Invalid request (missing fields, invalid UUIDs, etc.)"
 // @Failure 401 {object} model.ErrorResponse "Unauthorized"
 // @Failure 500 {object} model.ErrorResponse "Internal error (ingredient not found, no invoice for ingredient, etc.)"
@@ -532,6 +546,14 @@ func (h *Handler) CreateGoodWithCalculations(c echo.Context) error {
 		}
 	}
 
+	if err := validateModifierItems(req.Modifiers); err != nil {
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"Invalid modifiers payload",
+			err.Error(),
+			http.StatusBadRequest,
+		))
+	}
+
 	ctx := c.Request().Context()
 
 	// Step 1: Create the good
@@ -597,9 +619,28 @@ func (h *Handler) CreateGoodWithCalculations(c echo.Context) error {
 		updatedGood = goodResp
 	}
 
+	// Step 4: Replace modifiers for this good in the same transaction
+	if err := h.service.GoodsModifier().ReplaceModifiersForGood(ctx, goodResp.ID, model.AttachModifiersToGoodRequest{
+		Modifiers: req.Modifiers,
+	}); err != nil {
+		log.Printf("CreateGoodWithCalculations: failed to replace modifiers: %v", err)
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse(
+			"Failed to attach modifiers",
+			err.Error(),
+			http.StatusInternalServerError,
+		))
+	}
+
+	modifiers, mErr := h.service.GoodsModifier().GetModifiersByGoodID(ctx, goodResp.ID)
+	if mErr != nil {
+		log.Printf("CreateGoodWithCalculations: failed to fetch modifiers: %v", mErr)
+		modifiers = nil
+	}
+
 	response := model.GoodWithCalculationsResponse{
 		Good:         updatedGood,
 		Calculations: calculations,
+		Modifiers:    modifiers,
 	}
 
 	return c.JSON(http.StatusCreated, model.NewSuccessResponse(
@@ -610,22 +651,18 @@ func (h *Handler) CreateGoodWithCalculations(c echo.Context) error {
 }
 
 // UpdateGoodWithCalculations updates a good and replaces all calculations in one transaction
-// @Summary Update good with multiple ingredients and compounds (One Save)
-// @Description Update a good/menu item and replace all its ingredient/compound calculations in one atomic transaction.
+// @Summary Update good with calculations and modifiers (One Save)
+// @Description Update a good/menu item and replace all its ingredient calculations, compound calculations, and modifiers in one atomic transaction.
 // @Description
 // @Description **How it works:**
 // @Description - Update the good first
 // @Description - Delete all existing calculations for this good
 // @Description - Create the new ingredient calculations (price from invoice_detail)
 // @Description - Create the new compound calculations (price from compound.price)
+// @Description - Replace all good modifiers
 // @Description - If any step fails, everything is rolled back
-// @Tags Goods
-// @Accept json
-// @Produce json
-// @Security BearerAuth
-// @Param lang query string false "Language (uz, ru, en)" default(uz)
-// @Param id path string true "Good ID"
-// @Param request body model.UpdateGoodWithCalculationsRequest true "Good update + ingredients + compounds"
+// @Param request body model.UpdateGoodWithCalculationsRequest true "Good update + ingredient calculations + compound calculations + modifiers"
+// @Success 200 {object} model.GoodWithCalculationsResponse "Good, calculations, and modifiers updated successfully"
 // @Success 200 {object} model.GoodWithCalculationsResponse "Good and all calculations updated successfully"
 // @Failure 400 {object} model.ErrorResponse "Invalid request (missing fields, invalid UUIDs, etc.)"
 // @Failure 401 {object} model.ErrorResponse "Unauthorized"
@@ -685,6 +722,14 @@ func (h *Handler) UpdateGoodWithCalculations(c echo.Context) error {
 				http.StatusBadRequest,
 			))
 		}
+	}
+
+	if err := validateModifierItems(req.Modifiers); err != nil {
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"Invalid modifiers payload",
+			err.Error(),
+			http.StatusBadRequest,
+		))
 	}
 
 	ctx := c.Request().Context()
@@ -763,9 +808,28 @@ func (h *Handler) UpdateGoodWithCalculations(c echo.Context) error {
 		updatedGood = goodResp
 	}
 
+	// Step 5: Replace modifiers for this good in the same transaction
+	if err := h.service.GoodsModifier().ReplaceModifiersForGood(ctx, goodID, model.AttachModifiersToGoodRequest{
+		Modifiers: req.Modifiers,
+	}); err != nil {
+		log.Printf("UpdateGoodWithCalculations: failed to replace modifiers: %v", err)
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse(
+			"Failed to replace modifiers",
+			err.Error(),
+			http.StatusInternalServerError,
+		))
+	}
+
+	modifiers, mErr := h.service.GoodsModifier().GetModifiersByGoodID(ctx, goodID)
+	if mErr != nil {
+		log.Printf("UpdateGoodWithCalculations: failed to fetch modifiers: %v", mErr)
+		modifiers = nil
+	}
+
 	response := model.GoodWithCalculationsResponse{
 		Good:         updatedGood,
 		Calculations: calculations,
+		Modifiers:    modifiers,
 	}
 
 	return c.JSON(http.StatusOK, model.NewSuccessResponse(

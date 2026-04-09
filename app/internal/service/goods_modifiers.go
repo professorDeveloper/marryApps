@@ -36,8 +36,6 @@ func mapGoodModifierRow(row pg.GetModifiersByGoodIDRow) *model.GoodModifierRespo
 			NameI18n:    uuidToStr(row.NameI18n),
 			Description: row.Description,
 			Code:        row.Code,
-			PriceDelta:  numericToInt64Ptr(row.PriceDelta),
-			CostDelta:   numericToInt64Ptr(row.CostDelta),
 			IsActive:    row.IsActive,
 			PictureUrl:  row.PictureUrl,
 		},
@@ -230,4 +228,35 @@ func (s *GoodsModifierS) DetachModifierFromGood(ctx context.Context, goodID, mod
 	}
 
 	return nil
+}
+
+func (s *GoodsModifierS) ReplaceModifiersForGood(ctx context.Context, goodID string, req model.AttachModifiersToGoodRequest) error {
+	if strings.TrimSpace(goodID) == "" {
+		return fmt.Errorf("good ID is required")
+	}
+
+	goodUUID, err := uuid.Parse(strings.TrimSpace(goodID))
+	if err != nil {
+		return fmt.Errorf("invalid good ID: %w", err)
+	}
+
+	_, err = s.repo.Tenant(ctx).GetGoodByID(ctx, goodUUID)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return fmt.Errorf("good not found")
+		}
+		log.Printf("GetGoodByID failed: %v", err)
+		return fmt.Errorf("failed to validate good: %w", err)
+	}
+
+	if err := s.repo.Tenant(ctx).SoftDeleteAllModifiersByGoodID(ctx, goodUUID); err != nil {
+		log.Printf("SoftDeleteAllModifiersByGoodID failed: %v", err)
+		return fmt.Errorf("failed to clear existing good modifiers: %w", err)
+	}
+
+	if len(req.Modifiers) == 0 {
+		return nil
+	}
+
+	return s.AttachModifiersToGood(ctx, goodID, req)
 }

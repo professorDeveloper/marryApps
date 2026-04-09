@@ -481,6 +481,7 @@ type ModifierI interface {
 
 type GoodsModifierI interface {
 	AttachModifiersToGood(ctx context.Context, goodID string, req model.AttachModifiersToGoodRequest) error
+	ReplaceModifiersForGood(ctx context.Context, goodID string, req model.AttachModifiersToGoodRequest) error
 	GetModifiersByGoodID(ctx context.Context, goodID string) ([]*model.GoodModifierResponse, error)
 	DetachModifierFromGood(ctx context.Context, goodID, modifierID string) error
 }
