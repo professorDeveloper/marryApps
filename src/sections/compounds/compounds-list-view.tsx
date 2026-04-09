@@ -372,21 +372,16 @@ export function HalfMeals() {
                     <Box sx={{ display: 'flex', gap: 0.5 }}>
                         <Button
                             size="small"
-                            onClick={() => openModal(row)}
-                            sx={{ color: 'text.secondary' }}
-                        >
-                            <Iconify icon="solar:eye-bold" width={18} />
-                        </Button>
-                        <Button
-                            size="small"
                             href={paths.menu.semifinished.edit(row.id)}
+                            onClick={(e) => e.stopPropagation()}
                             sx={{ color: 'text.secondary' }}
                         >
                             <Iconify icon="solar:pen-bold" width={18} />
                         </Button>
                         <Button
                             size="small"
-                            onClick={() => {
+                            onClick={(e) => {
+                                e.stopPropagation();
                                 setCompoundToDelete(row.id);
                                 setDeleteDialogOpen(true);
                             }}
@@ -498,6 +493,7 @@ export function HalfMeals() {
                         setSearchQuery('');
                         setPaginationModel({ page: 0, pageSize: 20 });
                     }}
+                    onRowClick={openModal}
                     headerActions={
                         <Button
                             variant="contained"

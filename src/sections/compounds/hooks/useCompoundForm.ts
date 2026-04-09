@@ -1,4 +1,4 @@
-import type { PendingCalculation } from '../types';
+import type { MealItemPickerApi } from 'src/sections/meals/components/MealItemPicker/types';
 
 import { mutate } from 'swr';
 import { useCallback } from 'react';
@@ -22,14 +22,14 @@ interface UseCompoundFormProps {
     compoundId?: string;
     isNew: boolean;
     compound: any;
-    pendingCalculationsRef: React.MutableRefObject<PendingCalculation | null>;
+    mealItemsApiRef: React.MutableRefObject<MealItemPickerApi | null>;
 }
 
-export function useCompoundForm({ 
-    compoundId, 
-    isNew, 
-    compound, 
-    pendingCalculationsRef 
+export function useCompoundForm({
+    compoundId,
+    isNew,
+    compound,
+    mealItemsApiRef
 }: UseCompoundFormProps) {
     const router = useRouter();
     const { t } = useTranslation('menu');
@@ -77,7 +77,10 @@ export function useCompoundForm({
                         description_i18n = descriptionTranslationResult.id;
                     }
 
-                    const pendingCalculations = pendingCalculationsRef.current;
+                    const { ingredient_calculations, compound_calculations } = mealItemsApiRef.current?.getCalculations() ?? {
+                        ingredient_calculations: [],
+                        compound_calculations: [],
+                    };
 
                     await createCompoundWithCalculations({
                         compound: {
@@ -85,8 +88,8 @@ export function useCompoundForm({
                             name_i18n,
                             description_i18n,
                         },
-                        ingredient_calculations: pendingCalculations?.ingredient_calculations,
-                        compound_calculations: pendingCalculations?.compound_calculations,
+                        ingredient_calculations,
+                        compound_calculations,
                     });
 
                     toast.success(t('success.created', 'Successfully created'));
@@ -127,7 +130,10 @@ export function useCompoundForm({
                         description_i18n = descriptionTranslationResult.id;
                     }
 
-                    const pendingCalculations = pendingCalculationsRef.current;
+                    const { ingredient_calculations, compound_calculations } = mealItemsApiRef.current?.getCalculations() ?? {
+                        ingredient_calculations: [],
+                        compound_calculations: [],
+                    };
 
                     await updateCompoundWithCalculations(compoundId, {
                         compound: {
@@ -141,8 +147,8 @@ export function useCompoundForm({
                             ingredient_group_id: submitFormData.ingredient_group_id,
                             picture_url: submitFormData.picture_url || null,
                         },
-                        ingredient_calculations: pendingCalculations?.ingredient_calculations,
-                        compound_calculations: pendingCalculations?.compound_calculations,
+                        ingredient_calculations,
+                        compound_calculations,
                     });
 
                     toast.success(t('success.updated', 'Successfully updated'));
@@ -156,7 +162,7 @@ export function useCompoundForm({
                 );
             }
         },
-        [router, isNew, compoundId, t, createTranslation, updateTranslation, createCompoundWithCalculations, pendingCalculationsRef, updateCompoundWithCalculations]
+        [router, isNew, compoundId, t, createTranslation, updateTranslation, createCompoundWithCalculations, mealItemsApiRef, updateCompoundWithCalculations]
     );
 
     // Handle delete
@@ -175,5 +181,8 @@ export function useCompoundForm({
     return {
         handleSubmit,
         handleDelete,
+        handleCancel: () => {
+            router.push(paths.menu.semifinished.root);
+        },
     };
 }

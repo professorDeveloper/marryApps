@@ -12,9 +12,11 @@ import { poster, putter, deleter, fetcher, endpoints } from 'src/lib/axios';
 import { toast } from 'src/components/snackbar';
 
 const swrOptions: SWRConfiguration = {
-    revalidateIfStale: true,
+    revalidateIfStale: false, // Don't re-fetch stale data when component re-mounts
     revalidateOnFocus: false,
     revalidateOnReconnect: false,
+    dedupingInterval: 60000, // Dedupe requests within 1 minute
+    keepPreviousData: true, // Keep previous data while revalidating
 };
 
 interface BackendResponse<T> {
@@ -262,22 +264,20 @@ function enrichCompound(
 export function useGetCompounds(searchQuery?: string, enabled = true) {
     const { i18n } = useTranslation();
 
-    // Get ingredient groups for enrichment
-    const { ingredientGroups } = useGetIngredientGroups(undefined, enabled);
+    // Get ingredient groups for enrichment - always fetch once and cache
+    const { ingredientGroups } = useGetIngredientGroups(undefined, true);
 
-    // Fetch translations
+    // Fetch translations - always fetch once and cache
     const { data: translationsData } = useSWR<BackendResponse<ITranslationItem[]>>(
-        enabled ? endpoints.translations.list : null,
+        endpoints.translations.list,
         fetcher,
         { ...swrOptions }
     );
 
     const normalizedQuery = searchQuery?.trim() || '';
-    const swrKey = !enabled
-        ? null
-        : normalizedQuery
+    const swrKey = normalizedQuery
         ? [endpoints.compound.search, { params: { q: normalizedQuery } }]
-        : endpoints.compound.list;
+        : endpoints.compound.list; // Always fetch compounds
 
     const { data, isLoading, error, isValidating, mutate: mutateCompounds } = useSWR<
         BackendResponse<ICompound[]> | ICompound[]
@@ -294,8 +294,13 @@ export function useGetCompounds(searchQuery?: string, enabled = true) {
 
         if (Array.isArray(data)) {
             compoundsData = data;
-        } else if (data?.data && Array.isArray(data.data)) {
+        } else if (data && 'data' in data && Array.isArray(data.data)) {
             compoundsData = data.data;
+        }
+
+        // Early return if no data or dependencies
+        if (compoundsData.length === 0 || !ingredientGroups.length || !translations.length) {
+            return compoundsData.map(c => ({ ...c, ingredient_group_name: '-' }));
         }
 
         return enrichCompounds(compoundsData, ingredientGroups, translations, i18n.resolvedLanguage);

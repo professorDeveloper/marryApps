@@ -34,6 +34,7 @@ export type DataTableRowProps<T> = {
   startEdit: (rowId: string, key: string) => void;
   commitEdit: (rowId: string, key: string, next: unknown) => void;
   cancelEdit: () => void;
+  onRowClick?: (row: T) => void;
 };
 
 export const DataTableRow = memo(function DataTableRow<T>({
@@ -53,6 +54,7 @@ export const DataTableRow = memo(function DataTableRow<T>({
   startEdit,
   commitEdit,
   cancelEdit,
+  onRowClick,
 }: DataTableRowProps<T>) {
   const [actionsAnchor, setActionsAnchor] = useState<HTMLElement | null>(null);
 
@@ -77,6 +79,7 @@ export const DataTableRow = memo(function DataTableRow<T>({
       initial={{ opacity: 0, y: 6 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: 6 }}
+      onClick={() => onRowClick?.(row)}
       sx={{
         display: 'grid',
         gridTemplateColumns,
@@ -85,6 +88,7 @@ export const DataTableRow = memo(function DataTableRow<T>({
         height: 44,
         borderBottom: `1px solid ${BORDER}`,
         position: 'relative',
+        cursor: onRowClick ? 'pointer' : 'default',
         '&:hover': {
           backgroundColor: 'rgba(245, 158, 11, 0.06)',
         },
@@ -96,6 +100,7 @@ export const DataTableRow = memo(function DataTableRow<T>({
           <Checkbox
             checked={selected}
             onChange={onToggleSelected}
+            onClick={(e) => e.stopPropagation()}
             size="small"
             sx={{
               color: 'rgba(255,255,255,0.35)',

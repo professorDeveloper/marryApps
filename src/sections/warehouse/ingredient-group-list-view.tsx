@@ -164,21 +164,18 @@ export function IngredientGroupListView() {
                     <Box sx={{ display: 'flex', gap: 0.5 }}>
                         <IconButton
                             size="small"
-                            onClick={() => handleViewGroup(row)}
-                            sx={{ color: 'text.secondary' }}
-                        >
-                            <Iconify icon="solar:eye-bold" width={18} />
-                        </IconButton>
-                        <IconButton
-                            size="small"
-                            onClick={() => handleEditGroup(row.id)}
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                handleEditGroup(row.id);
+                            }}
                             sx={{ color: 'text.secondary' }}
                         >
                             <Iconify icon="solar:pen-bold" width={18} />
                         </IconButton>
                         <IconButton
                             size="small"
-                            onClick={() => {
+                            onClick={(e) => {
+                                e.stopPropagation();
                                 setGroupToDelete(row.id);
                                 setDeleteDialogOpen(true);
                             }}
@@ -274,6 +271,7 @@ export function IngredientGroupListView() {
                         },
                     }}
                     onReset={() => {}}
+                    onRowClick={handleViewGroup}
                     headerActions={
                         <Button
                             variant="contained"

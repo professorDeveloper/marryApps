@@ -31,6 +31,7 @@ export type DataTableBodyProps<T> = {
   scrollRef: RefObject<HTMLDivElement | null>;
   emptyTitle: string;
   emptySubtitle: string;
+  onRowClick?: (row: T) => void;
 };
 
 export function DataTableBody<T>({
@@ -52,6 +53,7 @@ export function DataTableBody<T>({
   scrollRef,
   emptyTitle,
   emptySubtitle,
+  onRowClick,
 }: DataTableBodyProps<T>) {
   const rowVirtualizer = useVirtualizer({
     count: data.length,
@@ -137,6 +139,7 @@ export function DataTableBody<T>({
                     startEdit={startEdit}
                     commitEdit={commitEdit}
                     cancelEdit={cancelEdit}
+                    onRowClick={onRowClick}
                   />
                 </Box>
               );

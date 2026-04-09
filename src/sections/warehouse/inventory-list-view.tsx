@@ -342,21 +342,18 @@ export function InventoryListView() {
                     <Box sx={{ display: 'flex', gap: 0.5 }}>
                         <IconButton
                             size="small"
-                            onClick={() => handleOpenItemsModal(row)}
-                            sx={{ color: 'text.secondary' }}
-                        >
-                            <Iconify icon="solar:eye-bold" width={18} />
-                        </IconButton>
-                        <IconButton
-                            size="small"
-                            onClick={() => handleEdit(row.id)}
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                handleEdit(row.id);
+                            }}
                             sx={{ color: 'text.secondary' }}
                         >
                             <Iconify icon="solar:pen-bold" width={18} />
                         </IconButton>
                         <IconButton
                             size="small"
-                            onClick={() => {
+                            onClick={(e) => {
+                                e.stopPropagation();
                                 setDeleteId(row.id);
                                 setDeleteConfirmOpen(true);
                             }}
@@ -514,6 +511,7 @@ export function InventoryListView() {
                             setDateTo(endDate);
                         }
                     }}
+                    onRowClick={handleOpenItemsModal}
                     headerActions={
                         <Button
                             variant="contained"

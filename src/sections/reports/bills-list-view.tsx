@@ -543,26 +543,7 @@ export function BillsListView() {
                         </span>
                     );
                 },
-            },
-            {
-                key: 'actions',
-                label: t('actions'),
-                sortable: false,
-                filterable: false,
-                width: '0.7fr',
-                align: 'center' as const,
-                renderCell: ({ row }: { row: any }) => (
-                    <Box sx={{ display: 'flex', gap: 0.5 }}>
-                        <IconButton
-                            size="small"
-                            onClick={() => handleViewClick(row)}
-                            sx={{ color: 'text.secondary' }}
-                        >
-                            <Iconify icon="solar:eye-bold" width={18} />
-                        </IconButton>
-                    </Box>
-                ),
-            },
+            }
         ],
         [t, i18n.language, handleViewClick]
     );
@@ -911,6 +892,7 @@ export function BillsListView() {
                     },
                 }}
                 onReset={handleResetFilters}
+                onRowClick={handleViewClick}
             />
             </DashboardContent>
 

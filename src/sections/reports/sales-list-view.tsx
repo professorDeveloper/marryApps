@@ -408,17 +408,7 @@ export function SalesListView() {
         filterable: false,
         width: '0.7fr',
         align: 'center',
-        renderCell: ({ row }: { row: SalesReport }) => (
-          <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'center' }}>
-            <IconButton
-              size="small"
-              onClick={() => handleViewClick(row)}
-              sx={{ color: 'text.secondary' }}
-            >
-              <Iconify icon="solar:eye-bold" width={18} />
-            </IconButton>
-          </Box>
-        ),
+        renderCell: () => null,
       },
     ],
     [t, handleViewClick]
@@ -500,6 +490,7 @@ export function SalesListView() {
             applyRange(period);
           }
         }}
+        onRowClick={(row: SalesReport) => console.log('View sales report:', row)}
         headerActions={
           <Button
             variant="contained"

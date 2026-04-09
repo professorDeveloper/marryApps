@@ -13,9 +13,11 @@ import { poster, putter, fetcher, deleter, endpoints } from 'src/lib/axios';
 import { toast } from 'src/components/snackbar';
 
 const swrOptions: SWRConfiguration = {
-  revalidateIfStale: true,
+  revalidateIfStale: false, // Don't re-fetch stale data when component re-mounts
   revalidateOnFocus: false,
   revalidateOnReconnect: false,
+  dedupingInterval: 60000, // Dedupe requests within 1 minute
+  keepPreviousData: true, // Keep previous data while revalidating
 };
 
 /**
@@ -23,9 +25,8 @@ const swrOptions: SWRConfiguration = {
  */
 export function useGetIngredientGroups(searchQuery?: string, enabled = true) {
   const normalizedQuery = searchQuery?.trim() || '';
-  const url = !enabled
-    ? null
-    : normalizedQuery
+  // Always fetch ingredient groups once and cache them globally
+  const url = normalizedQuery
     ? [endpoints.ingredientGroups.list, { params: { search: normalizedQuery } }]
     : endpoints.ingredientGroups.list;
 

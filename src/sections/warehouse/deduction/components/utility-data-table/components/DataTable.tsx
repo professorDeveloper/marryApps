@@ -76,6 +76,7 @@ export type DataTableProps<T> = {
 
   emptyTitle?: string;
   emptySubtitle?: string;
+  onRowClick?: (row: T) => void;
 };
 
 // ---------------------------------------------------------------------------
@@ -112,6 +113,7 @@ export function DataTable<T>({
   storageStrategy = localStorageStrategy,
   emptyTitle = 'No results',
   emptySubtitle = 'Try adjusting filters or columns.',
+  onRowClick,
 }: DataTableProps<T>) {
   const serverPagination = Boolean(onPageChange);
   const effectiveTotalCount = totalCount ?? data.length;
@@ -550,6 +552,7 @@ export function DataTable<T>({
         scrollRef={scrollRef}
         emptyTitle={emptyTitle}
         emptySubtitle={emptySubtitle}
+        onRowClick={onRowClick}
       />
 
       <DataTableTotalsFooter<T>

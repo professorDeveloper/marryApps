@@ -404,21 +404,20 @@ export function InventoryReportsListView() {
           <Box sx={{ display: 'flex', gap: 0.5 }}>
             <IconButton
               size="small"
-              onClick={() => handleViewClick(row)}
-              sx={{ color: 'text.secondary' }}
-            >
-              <Iconify icon="solar:eye-bold" width={18} />
-            </IconButton>
-            <IconButton
-              size="small"
-              onClick={() => window.location.href = paths.menu.reports.inventory.edit(row.id)}
+              onClick={(e) => {
+                e.stopPropagation();
+                window.location.href = paths.menu.reports.inventory.edit(row.id);
+              }}
               sx={{ color: 'text.secondary' }}
             >
               <Iconify icon="solar:pen-bold" width={18} />
             </IconButton>
             <IconButton
               size="small"
-              onClick={() => handleDeleteClick(row.id)}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleDeleteClick(row.id);
+              }}
               sx={{ color: 'error.main' }}
             >
               <Iconify icon="solar:trash-bin-trash-bold" width={18} />
@@ -507,6 +506,7 @@ export function InventoryReportsListView() {
               applyRange(period);
             }
           }}
+          onRowClick={handleViewClick}
           headerActions={
             <Button
               variant="contained"

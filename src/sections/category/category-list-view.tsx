@@ -148,21 +148,20 @@ export function CategoryListView() {
                     <Box sx={{ display: 'flex', gap: 0.5 }}>
                         <IconButton
                             size="small"
-                            onClick={() => handleViewGoods(row)}
-                            sx={{ color: 'text.secondary' }}
-                        >
-                            <Iconify icon="solar:eye-bold" width={18} />
-                        </IconButton>
-                        <IconButton
-                            size="small"
-                            onClick={() => handleEdit(row)}
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                handleEdit(row);
+                            }}
                             sx={{ color: 'text.secondary' }}
                         >
                             <Iconify icon="solar:pen-bold" width={18} />
                         </IconButton>
                         <IconButton
                             size="small"
-                            onClick={() => handleDeleteClick(row.id)}
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteClick(row.id);
+                            }}
                             sx={{ color: 'error.main' }}
                         >
                             <Iconify icon="solar:trash-bin-trash-bold" width={18} />
@@ -260,6 +259,7 @@ export function CategoryListView() {
                             actions: '0.8fr',
                         },
                     }}
+                    onRowClick={handleViewGoods}
                     headerActions={
                         <Button
                             variant="contained"

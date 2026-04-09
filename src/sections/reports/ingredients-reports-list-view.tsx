@@ -402,14 +402,10 @@ export function IngredientReportsListView() {
                     <Box sx={{ display: 'flex', gap: 0.5 }}>
                         <IconButton
                             size="small"
-                            onClick={() => handleViewClick(row)}
-                            sx={{ color: 'text.secondary' }}
-                        >
-                            <Iconify icon="solar:eye-bold" width={18} />
-                        </IconButton>
-                        <IconButton
-                            size="small"
-                            onClick={() => handleOpenAmountsModal(row)}
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                handleOpenAmountsModal(row);
+                            }}
                             sx={{ color: 'text.secondary' }}
                         >
                             <Iconify icon="solar:chart-square-outline" width={18} />
@@ -919,6 +915,7 @@ export function IngredientReportsListView() {
                         },
                     }}
                     onReset={handleResetFilters}
+                    onRowClick={handleViewClick}
                 />
             </DashboardContent>
 

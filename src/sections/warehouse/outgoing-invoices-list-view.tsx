@@ -305,21 +305,20 @@ export function OutgoingInvoicesListView() {
           <Box sx={{ display: 'flex', gap: 0.5 }}>
             <IconButton
               size="small"
-              onClick={() => openViewModal(String(row.id))}
-              sx={{ color: 'text.secondary' }}
-            >
-              <Iconify icon="solar:eye-bold" width={18} />
-            </IconButton>
-            <IconButton
-              size="small"
-              onClick={() => router.push(paths.warehouse.outgoingInvoices.edit(String(row.id)))}
+              onClick={(e) => {
+                e.stopPropagation();
+                router.push(paths.warehouse.outgoingInvoices.edit(String(row.id)));
+              }}
               sx={{ color: 'text.secondary' }}
             >
               <Iconify icon="solar:pen-bold" width={18} />
             </IconButton>
             <IconButton
               size="small"
-              onClick={() => setDeleteId(row.id)}
+              onClick={(e) => {
+                e.stopPropagation();
+                setDeleteId(row.id);
+              }}
               sx={{ color: 'error.main' }}
             >
               <Iconify icon="solar:trash-bin-trash-bold" width={18} />
@@ -452,6 +451,7 @@ export function OutgoingInvoicesListView() {
             },
           }}
           onReset={handleResetFilters}
+          onRowClick={(row: OutgoingInvoice) => openViewModal(String(row.id))}
           headerActions={
             <Button
               variant="contained"

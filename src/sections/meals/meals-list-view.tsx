@@ -406,14 +406,8 @@ export function Meals() {
                     <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'center' }}>
                         <IconButton
                             size="small"
-                            onClick={() => openModal(row)}
-                            sx={{ color: 'text.secondary' }}
-                        >
-                            <Iconify icon="solar:eye-bold" width={18} />
-                        </IconButton>
-                        <IconButton
-                            size="small"
-                            onClick={() => {
+                            onClick={(e) => {
+                                e.stopPropagation();
                                 window.location.href = paths.menu.meals.edit(row.id);
                             }}
                             sx={{ color: 'text.secondary' }}
@@ -422,7 +416,8 @@ export function Meals() {
                         </IconButton>
                         <IconButton
                             size="small"
-                            onClick={() => {
+                            onClick={(e) => {
+                                e.stopPropagation();
                                 setMealToDelete(row.id);
                                 setDeleteDialogOpen(true);
                             }}
@@ -530,6 +525,7 @@ export function Meals() {
                         },
                     }}
                     onReset={() => setDraftFilters(initialFilters)}
+                    onRowClick={openModal}
                     headerActions={
                         <Button
                             variant="contained"

@@ -290,18 +290,7 @@ export function ArchivesListView() {
         filterable: false,
         width: '0.7fr',
         align: 'center' as const,
-        renderCell: ({ row }: { row: ArchiveReport }) => (
-          <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'center' }}>
-            <Button
-              size="small"
-              variant="outlined"
-              startIcon={<Iconify icon="solar:eye-bold" width={16} />}
-              onClick={() => handleViewClick(row)}
-            >
-              {t('view')}
-            </Button>
-          </Box>
-        ),
+        renderCell: () => null,
       },
     ],
     [t, handleViewClick]
@@ -373,6 +362,7 @@ export function ArchivesListView() {
             applyRange(period);
           }
         }}
+        onRowClick={handleViewClick}
         headerActions={
           <Button
             variant="contained"
