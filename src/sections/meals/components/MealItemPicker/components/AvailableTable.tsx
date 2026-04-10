@@ -18,7 +18,6 @@ import { AvailableRow } from './AvailableRow';
 import { compositeKey } from '../types';
 import type { MealItem, MealItemTypeFilter } from '../types';
 
-// const LIST_HEIGHT_PX = 460; // Removed to use flexible height
 const AVAILABLE_ROW_ESTIMATE_PX = 52;
 
 interface AvailableTableProps {
@@ -67,7 +66,7 @@ export const AvailableTable = React.memo(function AvailableTable({
     });
 
     return (
-        <Paper variant="outlined" sx={{ p: 2, position: 'relative', display: 'flex', flexDirection: 'column', height: '100%' }}>
+        <Paper variant="outlined" sx={{ p: 2, position: 'relative', display: 'flex', flexDirection: 'column', height: 740 }}>
             <Stack
                 direction={{ xs: 'column' }}
                 spacing={1}

@@ -18,7 +18,6 @@ import { fCurrency } from 'src/utils/format-number';
 import { compositeKey } from '../types';
 import type { MealItemRow, MealItemType, MealItemTypeFilter } from '../types';
 
-// const LIST_HEIGHT_PX = 480; // Removed to use flexible height
 const ADDED_ROW_ESTIMATE_PX = 56;
 
 interface AddedTableProps {
@@ -42,6 +41,8 @@ interface AddedTableProps {
     ingredientLabel: string;
     compoundLabel: string;
     isEmpty: boolean;
+    menuPrice?: string;
+    showProfitMargin?: boolean;
 }
 
 export const AddedTable = React.memo(function AddedTable({
@@ -65,9 +66,21 @@ export const AddedTable = React.memo(function AddedTable({
     ingredientLabel,
     compoundLabel,
     isEmpty,
+    menuPrice,
+    showProfitMargin = false,
 }: AddedTableProps) {
     const { t } = useTranslation('menu');
     const scrollRef = React.useRef<HTMLDivElement>(null);
+
+    // Calculate profit margin
+    const profitMargin = React.useMemo(() => {
+        if (!showProfitMargin || !menuPrice) return null;
+        const menuPriceNum = parseFloat(menuPrice) || 0;
+        if (menuPriceNum <= 0) return null;
+        const profit = menuPriceNum - totalCost;
+        const margin = menuPriceNum > 0 ? (profit / menuPriceNum) * 100 : 0;
+        return { profit, margin };
+    }, [showProfitMargin, menuPrice, totalCost]);
 
     const virtualizer = useVirtualizer({
         count: rows.length,
@@ -77,7 +90,7 @@ export const AddedTable = React.memo(function AddedTable({
     });
 
     return (
-        <Paper variant="outlined" sx={{ p: 1.5, display: 'flex', flexDirection: 'column', height: '100%' }}>
+        <Paper variant="outlined" sx={{ p: 1.5, display: 'flex', flexDirection: 'column' }}>
             <Stack
                 direction="row"
                 spacing={1}
@@ -226,18 +239,30 @@ export const AddedTable = React.memo(function AddedTable({
 
             {/* Summary */}
             <Stack
-                direction={{ xs: 'column', sm: 'row' }}
+                direction="row"
                 spacing={1}
                 justifyContent="space-between"
                 alignItems={{ xs: 'stretch', sm: 'center' }}
-                sx={{ mt: 2, flexShrink: 0 }}
+                sx={{ margin: 0, flexShrink: 0 }}
             >
                 <Typography variant="body2" color="text.secondary">
                     {t('mealsProducts.summaryItems', 'Items')}: {totalItemsCount}
                 </Typography>
-                <Typography variant="subtitle2">
-                    {t('mealsProducts.summaryTotalCost', 'Total cost')}: {fCurrency(totalCost)}
-                </Typography>
+                <Stack direction="row" spacing={5} alignItems="flex-end">
+                    <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.875rem' }}>
+                        Cost: {totalCost.toFixed(2)}
+                    </Typography>
+                    {showProfitMargin && profitMargin && (
+                        <>
+                            <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.875rem' }}>
+                                Price: {parseFloat(menuPrice || '0').toFixed(2)}
+                            </Typography>
+                            <Typography variant="body2" color="success.main" sx={{ fontSize: '0.875rem', fontWeight: 500 }}>
+                                Profit: {profitMargin.profit.toFixed(2)} ({profitMargin.margin.toFixed(1)}%)
+                            </Typography>
+                        </>
+                    )}
+                </Stack>
             </Stack>
         </Paper>
     );

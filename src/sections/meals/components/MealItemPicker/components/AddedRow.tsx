@@ -2,7 +2,7 @@ import React from 'react';
 import { Box, Checkbox, Stack, Typography, IconButton } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import { TypeBadge } from './TypeBadge';
-import { fCurrency } from 'src/utils/format-number';
+// import { fCurrency } from 'src/utils/format-number'; // Removed to show numbers without currency
 import { compositeKey } from '../types';
 import type { MealItemRow, MealItemType } from '../types';
 
@@ -141,10 +141,10 @@ export const AddedRow = React.memo(function AddedRow({
             </Box>
 
             <Typography variant="body2" sx={RIGHT_SX}>
-                {fCurrency(pricePerUnit)}
+                {pricePerUnit.toFixed(2)}
             </Typography>
             <Typography variant="body2" sx={RIGHT_SX}>
-                {fCurrency(totalPrice)}
+                {totalPrice.toFixed(2)}
             </Typography>
 
             <Box sx={CELL_CENTER_SX}>

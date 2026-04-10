@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { Box, TextField } from '@mui/material';
 
 import { GeneralInformation } from 'src/sections/warehouse/utils/components/GeneralInformation';
+import { ImageUpload } from 'src/components/generic-edit-view/image-upload-new';
 
 interface MealGeneralInformationProps {
     name: string;
@@ -71,85 +72,118 @@ export const MealGeneralInformation = React.memo(function MealGeneralInformation
             <Box
                 sx={{
                     display: 'grid',
-                    gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' },
+                    gridTemplateColumns: { xs: '1fr', md: '1fr 1.2fr' }, // 🔥 better balance
                     gap: 2,
+                    alignItems: 'stretch',
                 }}
             >
-                <TextField
-                    label={t('mealsProducts.name')}
-                    value={name}
-                    onChange={(e) => onNameChange(e.target.value)}
-                    size="small"
-                    required
-                    disabled={disabled}
-                />
-                <TextField
-                    select
-                    label={t('mealsProducts.category')}
-                    value={categoryId}
-                    onChange={(e) => onCategoryChange(e.target.value)}
-                    size="small"
-                    required
-                    SelectProps={{ native: true }}
-                    disabled={disabled || categories.length === 0}
+                {/* ================= LEFT COLUMN ================= */}
+                <Box
+                    sx={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: 2,
+                    }}
                 >
-                    <option value="" />
-                    {categories.map((c) => (
-                        <option key={c.id} value={c.id}>
-                            {c.name}
-                        </option>
-                    ))}
-                </TextField>
-                <TextField
-                    label={t('mealsProducts.nameEn')}
-                    value={nameEn}
-                    onChange={(e) => onNameEnChange(e.target.value)}
-                    size="small"
-                    disabled={disabled}
-                />
-                <TextField
-                    label={t('mealsProducts.nameRu')}
-                    value={nameRu}
-                    onChange={(e) => onNameRuChange(e.target.value)}
-                    size="small"
-                    disabled={disabled}
-                />
-                <TextField
-                    label={t('mealsProducts.price')}
-                    value={price}
-                    onChange={(e) => onPriceChange(e.target.value)}
-                    size="small"
-                    type="number"
-                    required
-                    disabled={disabled}
-                />
-                <TextField
-                    label={t('mealsProducts.cookingTime')}
-                    value={cookTime}
-                    onChange={(e) => onCookTimeChange(e.target.value)}
-                    size="small"
-                    type="number"
-                    disabled={disabled}
-                />
-                <TextField
-                    label={t('mealsProducts.imageUrl')}
-                    value={pictureUrl}
-                    onChange={(e) => onPictureUrlChange(e.target.value)}
-                    size="small"
-                    placeholder="https://example.com/image.jpg"
-                    disabled={disabled}
-                    sx={{ gridColumn: { md: '1 / -1' } }}
-                />
-                <TextField
-                    label={t('mealsProducts.description')}
-                    value={description}
-                    onChange={(e) => onDescriptionChange(e.target.value)}
-                    size="small"
-                    multiline
-                    minRows={2}
-                    disabled={disabled}
-                    sx={{ gridColumn: { md: '1 / -1' } }}
-                />
+                    <TextField
+                        label={t('mealsProducts.name')}
+                        value={name}
+                        onChange={(e) => onNameChange(e.target.value)}
+                        size="small"
+                        required
+                        disabled={disabled}
+                    />
+
+                    <TextField
+                        label={t('mealsProducts.nameEn')}
+                        value={nameEn}
+                        onChange={(e) => onNameEnChange(e.target.value)}
+                        size="small"
+                        disabled={disabled}
+                    />
+
+                    <TextField
+                        label={t('mealsProducts.nameRu')}
+                        value={nameRu}
+                        onChange={(e) => onNameRuChange(e.target.value)}
+                        size="small"
+                        disabled={disabled}
+                    />
+
+                    <TextField
+                        label={t('mealsProducts.price')}
+                        value={price}
+                        onChange={(e) => onPriceChange(e.target.value)}
+                        size="small"
+                        type="number"
+                        required
+                        disabled={disabled}
+                    />
+                </Box>
+
+                {/* ================= RIGHT COLUMN ================= */}
+               <Box
+    sx={{
+        display: 'grid',
+        // Column 1 is flexible, Column 2 is for the image
+        gridTemplateColumns: '1fr auto',
+        // 4 rows to match the left column's 4 fields
+        gridTemplateRows: 'auto auto 1fr 1fr',
+        gap: 2,
+        height: '100%',
+    }}
+>
+    {/* Category - Row 1, Col 1 (Left) */}
+    <TextField
+        select
+        label={t('mealsProducts.category')}
+        value={categoryId}
+        onChange={(e) => onCategoryChange(e.target.value)}
+        size="small"
+        required
+        sx={{ gridColumn: 1, gridRow: 1 }}
+        slotProps={{ select: { native: true } }}
+    >
+        {/* ... options ... */}
+    </TextField>
+
+    {/* Cooking Time - Row 2, Col 1 (Left) */}
+    <TextField
+        label={t('mealsProducts.cookingTime')}
+        value={cookTime}
+        onChange={(e) => onCookTimeChange(e.target.value)}
+        size="small"
+        sx={{ gridColumn: 1, gridRow: 2 }}
+    />
+
+    {/* Image Upload - Row 1 & 2, Col 2 (Right side) */}
+    <Box sx={{ gridColumn: 2, gridRow: '1 / 3' }}>
+        <ImageUpload
+            label={t('mealsProducts.imageUrl')}
+            value={pictureUrl || null}
+            onChange={onPictureUrlChange}
+            height={112} // Matches height of 2 small text fields + gap
+        />
+    </Box>
+
+    {/* Description - Row 3 & 4, Full Width */}
+    <TextField
+        label={t('mealsProducts.description')}
+        value={description}
+        onChange={(e) => onDescriptionChange(e.target.value)}
+        size="small"
+        multiline
+        sx={{
+            gridColumn: '1 / -1',
+            gridRow: '3 / 5',
+            height: '100%',
+            '& .MuiInputBase-root': {
+                height: '100%',
+                alignItems: 'flex-start',
+            },
+        }}
+    />
+</Box>
             </Box>
         </GeneralInformation>
     );

@@ -39,6 +39,8 @@ export interface MealItemPickerProps {
     saveLabel: string;
     hideActionBar?: boolean;
     isVisible?: boolean;
+    menuPrice?: string;
+    showProfitMargin?: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -76,6 +78,8 @@ export const MealItemPicker = React.memo(function MealItemPicker({
     saveLabel,
     hideActionBar = false,
     isVisible = true,
+    menuPrice,
+    showProfitMargin = false,
 }: MealItemPickerProps) {
     const { t } = useTranslation('menu');
     // Only fetch meal items when this tab is visible to avoid unnecessary requests
@@ -487,6 +491,8 @@ export const MealItemPicker = React.memo(function MealItemPicker({
                     ingredientLabel={ingredientLabel}
                     compoundLabel={compoundLabel}
                     isEmpty={addedRowsMap.size === 0}
+                    menuPrice={menuPrice}
+                    showProfitMargin={showProfitMargin}
                 />
             </Box>
 

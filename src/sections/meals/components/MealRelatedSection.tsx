@@ -17,7 +17,7 @@ export const MealRelatedSection = React.memo(function MealRelatedSection() {
             }}
         >
             <Typography variant="h6" sx={{ mb: 1 }}>
-                {t('mealsProducts.related', 'Related meals')}
+                {t('mealsProducts.related', 'Related')}
             </Typography>
             <Typography variant="body2">
                 {t('mealsProducts.comingSoon', 'Coming soon')}

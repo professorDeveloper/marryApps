@@ -347,17 +347,12 @@ export function MealEditView({ isNew = false }: MealEditViewProps) {
                     ]}
                 >
                     {/* Tabs inside accordion */}
-                    <Box sx={{ display: 'flex', justifyContent: 'center', width: '100%', m:1 }}>
+                    <Box sx={{ width: '100%' }}>
                         <Tabs
                             value={activeTab}
                             onChange={handleTabChange}
                             variant="fullWidth"
-                            sx={{
-                                px: 0,
-                                width: '100%',
-                                minHeight: 48,
-                                '.MuiTabs-flexContainer': { width: '100%' },
-                            }}
+                            sx={{ borderBottom: 1, borderColor: 'divider' }}
                         >
                             <Tab
                                 sx={{ minWidth: 0, flex: 1 }}
@@ -369,32 +364,36 @@ export function MealEditView({ isNew = false }: MealEditViewProps) {
                             />
                             <Tab
                                 sx={{ minWidth: 0, flex: 1 }}
-                                label={t('mealsProducts.related', 'Related meals')}
+                                label={t('mealsProducts.related', 'Related')}
                             />
                         </Tabs>
                     </Box>
 
-                    {/* Tab content with lazy loading */}
-                    <Box sx={{ mx: -2, height: 'calc(100vh - 340px)' }}>
-                        <Box sx={{ display: activeTab === 0 ? 'flex' : 'none', height: '100%' }}>
-                            <MealItemPicker
-                                apiRef={mealItemsApiRef}
-                                onCancel={() => {}} // No-op - handled outside
-                                onSave={() => {}} // No-op - handled outside
-                                cancelDisabled={true} // Disable internal buttons
-                                saveDisabled={true} // Disable internal buttons
-                                saveLabel={saveLabel}
-                                hideActionBar={true} // Hide internal action bar
-                                isVisible={activeTab === 0 && isMealItemsOpen}
-                            />
-                        </Box>
+                    {/* Tab content with full height */}
+                    <Box sx={{ mx: -2, p: 0, mb: 0, flex: 1, minHeight: 0 }}>
+                        {activeTab === 0 && (
+                            <Box sx={{ height: '100%' }}>
+                                <MealItemPicker
+                                    apiRef={mealItemsApiRef}
+                                    onCancel={() => {}} // No-op - handled outside
+                                    onSave={() => {}} // No-op - handled outside
+                                    cancelDisabled={true} // Disable internal buttons
+                                    saveDisabled={true} // Disable internal buttons
+                                    saveLabel={saveLabel}
+                                    hideActionBar={true} // Hide internal action bar
+                                    isVisible={isMealItemsOpen}
+                                    menuPrice={price}
+                                    showProfitMargin={true}
+                                />
+                            </Box>
+                        )}
                         {activeTab === 1 && (
-                            <Box>
+                            <Box sx={{ height: '100%' }}>
                                 {React.createElement(MealModifiersSection)}
                             </Box>
                         )}
                         {activeTab === 2 && (
-                            <Box>
+                            <Box sx={{ height: '100%' }}>
                                 {React.createElement(MealRelatedSection)}
                             </Box>
                         )}
