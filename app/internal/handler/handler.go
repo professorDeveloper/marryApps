@@ -45,6 +45,8 @@ func (h *Handler) Register(router *echo.Echo) {
 		{
 			settings.PUT("/pos-password", h.UpdatePOSPassword, mw.CheckLanguage(), mw.RequireRoles(mw.RolesAdminOnly...))
 			settings.GET("/pos-password/status", h.GetPOSPasswordStatus, mw.CheckLanguage(), mw.RequireRoles(mw.RolesAdminOnly...))
+			settings.PUT("/printer", h.UpsertPrinterSettings, mw.CheckLanguage(), mw.RequireRoles(mw.RolesAdminOnly...))
+			settings.GET("/printer", h.GetPrinterSettings, mw.CheckLanguage(), mw.RequireRoles(mw.RolesAdminOnly...))
 		}
 
 		// Global login

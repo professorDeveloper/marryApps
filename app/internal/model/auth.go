@@ -209,3 +209,22 @@ type POSPasswordStatusSwaggerResponse struct {
 type POSPasswordStatusResponse struct {
 	IsConfigured bool `json:"isConfigured"`
 }
+
+type UpdatePrinterSettingsRequest struct {
+	CashierPrinterIP string `json:"cashier_printer_ip" example:"192.168.1.100"`
+	KitchenPrinterIP string `json:"kitchen_printer_ip" example:"192.168.1.101"`
+	PrinterPort      int32  `json:"printer_port" example:"9100"`
+}
+
+type PrinterSettingsResponse struct {
+	CashierPrinterIP string `json:"cashier_printer_ip" example:"192.168.1.100"`
+	KitchenPrinterIP string `json:"kitchen_printer_ip" example:"192.168.1.101"`
+	PrinterPort      int32  `json:"printer_port" example:"9100"`
+}
+
+type PrinterSettingsSwaggerResponse struct {
+	Status  string                  `json:"status" example:"success"`
+	Message string                  `json:"message" example:"Printer sozlamalari olindi"`
+	Data    PrinterSettingsResponse `json:"data"`
+	Code    int                     `json:"code" example:"200"`
+}

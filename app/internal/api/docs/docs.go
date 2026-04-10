@@ -20864,6 +20864,101 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/settings/printer": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns cashier and kitchen printer settings for current tenant",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "settings"
+                ],
+                "summary": "Get printer settings",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.PrinterSettingsSwaggerResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorData"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorData"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Creates or updates cashier and kitchen printer settings for current tenant. Only admin can do this.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "settings"
+                ],
+                "summary": "Create or update printer settings",
+                "parameters": [
+                    {
+                        "description": "Printer settings payload",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.UpdatePrinterSettingsRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.PrinterSettingsSwaggerResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorData"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorData"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorData"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/shifts": {
             "get": {
                 "security": [
@@ -29311,6 +29406,43 @@ const docTemplate = `{
                 }
             }
         },
+        "model.PrinterSettingsResponse": {
+            "type": "object",
+            "properties": {
+                "cashier_printer_ip": {
+                    "type": "string",
+                    "example": "192.168.1.100"
+                },
+                "kitchen_printer_ip": {
+                    "type": "string",
+                    "example": "192.168.1.101"
+                },
+                "printer_port": {
+                    "type": "integer",
+                    "example": 9100
+                }
+            }
+        },
+        "model.PrinterSettingsSwaggerResponse": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "integer",
+                    "example": 200
+                },
+                "data": {
+                    "$ref": "#/definitions/model.PrinterSettingsResponse"
+                },
+                "message": {
+                    "type": "string",
+                    "example": "Printer sozlamalari olindi"
+                },
+                "status": {
+                    "type": "string",
+                    "example": "success"
+                }
+            }
+        },
         "model.RefreshRequest": {
             "type": "object",
             "properties": {
@@ -31030,6 +31162,23 @@ const docTemplate = `{
                 "newPassword": {
                     "type": "string",
                     "example": "newPassword123"
+                }
+            }
+        },
+        "model.UpdatePrinterSettingsRequest": {
+            "type": "object",
+            "properties": {
+                "cashier_printer_ip": {
+                    "type": "string",
+                    "example": "192.168.1.100"
+                },
+                "kitchen_printer_ip": {
+                    "type": "string",
+                    "example": "192.168.1.101"
+                },
+                "printer_port": {
+                    "type": "integer",
+                    "example": 9100
                 }
             }
         },
