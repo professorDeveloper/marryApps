@@ -3061,6 +3061,32 @@ definitions:
           $ref: '#/definitions/model.CalculationPreviewItem'
         type: array
     type: object
+  model.PrinterSettingsResponse:
+    properties:
+      cashier_printer_ip:
+        example: 192.168.1.100
+        type: string
+      kitchen_printer_ip:
+        example: 192.168.1.101
+        type: string
+      printer_port:
+        example: 9100
+        type: integer
+    type: object
+  model.PrinterSettingsSwaggerResponse:
+    properties:
+      code:
+        example: 200
+        type: integer
+      data:
+        $ref: '#/definitions/model.PrinterSettingsResponse'
+      message:
+        example: Printer sozlamalari olindi
+        type: string
+      status:
+        example: success
+        type: string
+    type: object
   model.RefreshRequest:
     properties:
       refreshToken:
@@ -4251,6 +4277,18 @@ definitions:
       newPassword:
         example: newPassword123
         type: string
+    type: object
+  model.UpdatePrinterSettingsRequest:
+    properties:
+      cashier_printer_ip:
+        example: 192.168.1.100
+        type: string
+      kitchen_printer_ip:
+        example: 192.168.1.101
+        type: string
+      printer_port:
+        example: 9100
+        type: integer
     type: object
   model.UpdateSeparationActRequest:
     properties:
@@ -18325,6 +18363,67 @@ paths:
       security:
       - BearerAuth: []
       summary: Get POS password status
+      tags:
+      - settings
+  /api/v1/settings/printer:
+    get:
+      consumes:
+      - application/json
+      description: Returns cashier and kitchen printer settings for current tenant
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.PrinterSettingsSwaggerResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorData'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/model.ErrorData'
+      security:
+      - BearerAuth: []
+      summary: Get printer settings
+      tags:
+      - settings
+    put:
+      consumes:
+      - application/json
+      description: Creates or updates cashier and kitchen printer settings for current
+        tenant. Only admin can do this.
+      parameters:
+      - description: Printer settings payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.UpdatePrinterSettingsRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.PrinterSettingsSwaggerResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorData'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorData'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/model.ErrorData'
+      security:
+      - BearerAuth: []
+      summary: Create or update printer settings
       tags:
       - settings
   /api/v1/shifts:

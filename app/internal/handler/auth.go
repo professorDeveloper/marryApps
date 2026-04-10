@@ -594,3 +594,101 @@ func (h *Handler) RestoreUser(c echo.Context) error {
 		http.StatusOK,
 	))
 }
+
+// UpsertPrinterSettings creates or updates printer settings for current tenant
+// @Summary Create or update printer settings
+// @Description Creates or updates cashier and kitchen printer settings for current tenant. Only admin can do this.
+// @Tags settings
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param request body model.UpdatePrinterSettingsRequest true "Printer settings payload"
+// @Success 200 {object} model.PrinterSettingsSwaggerResponse
+// @Failure 400 {object} model.ErrorData
+// @Failure 401 {object} model.ErrorData
+// @Failure 403 {object} model.ErrorData
+// @Router /api/v1/settings/printer [put]
+func (h *Handler) UpsertPrinterSettings(c echo.Context) error {
+	var req model.UpdatePrinterSettingsRequest
+	if err := c.Bind(&req); err != nil {
+		log.Printf("UpsertPrinterSettings bind error: %v", err)
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"Noto'g'ri so'rov formati",
+			"see logs for details",
+			http.StatusBadRequest,
+		))
+	}
+
+	brandID, _ := c.Get("brand_id").(string)
+	brandID = strings.TrimSpace(brandID)
+	if brandID == "" {
+		return c.JSON(http.StatusUnauthorized, model.NewErrorResponse(
+			"Brand aniqlanmadi",
+			"see logs for details",
+			http.StatusUnauthorized,
+		))
+	}
+
+	resp, err := h.service.Auth().UpsertPrinterSettings(c.Request().Context(), brandID, req)
+	if err != nil {
+		log.Printf("UpsertPrinterSettings failed: %v", err)
+		status := http.StatusBadRequest
+		if err.Error() == http.StatusText(http.StatusUnauthorized) {
+			status = http.StatusUnauthorized
+		}
+		return c.JSON(status, model.NewErrorResponse(
+			"Printer sozlamalari saqlanmadi",
+			"see logs for details",
+			status,
+		))
+	}
+
+	return c.JSON(http.StatusOK, model.NewSuccessResponse(
+		"Printer sozlamalari muvaffaqiyatli saqlandi",
+		resp,
+		http.StatusOK,
+	))
+}
+
+// GetPrinterSettings returns printer settings for current tenant
+// @Summary Get printer settings
+// @Description Returns cashier and kitchen printer settings for current tenant
+// @Tags settings
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {object} model.PrinterSettingsSwaggerResponse
+// @Failure 401 {object} model.ErrorData
+// @Failure 403 {object} model.ErrorData
+// @Router /api/v1/settings/printer [get]
+func (h *Handler) GetPrinterSettings(c echo.Context) error {
+	brandID, _ := c.Get("brand_id").(string)
+	brandID = strings.TrimSpace(brandID)
+	if brandID == "" {
+		return c.JSON(http.StatusUnauthorized, model.NewErrorResponse(
+			"Brand aniqlanmadi",
+			"see logs for details",
+			http.StatusUnauthorized,
+		))
+	}
+
+	resp, err := h.service.Auth().GetPrinterSettings(c.Request().Context(), brandID)
+	if err != nil {
+		log.Printf("GetPrinterSettings failed: %v", err)
+		status := http.StatusBadRequest
+		if err.Error() == http.StatusText(http.StatusUnauthorized) {
+			status = http.StatusUnauthorized
+		}
+		return c.JSON(status, model.NewErrorResponse(
+			"Printer sozlamalarini olishda xatolik",
+			"see logs for details",
+			status,
+		))
+	}
+
+	return c.JSON(http.StatusOK, model.NewSuccessResponse(
+		"Printer sozlamalari olindi",
+		resp,
+		http.StatusOK,
+	))
+}

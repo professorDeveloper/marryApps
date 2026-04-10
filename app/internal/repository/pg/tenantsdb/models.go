@@ -939,7 +939,7 @@ type Modifier struct {
 	NameI18n    pgtype.UUID        `json:"name_i18n"`
 	Description *string            `json:"description"`
 	Code        *string            `json:"code"`
-	IsActive    bool              `json:"is_active"`
+	IsActive    bool               `json:"is_active"`
 	PictureUrl  *string            `json:"picture_url"`
 	CreatedAt   pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
@@ -1041,6 +1041,15 @@ type PriceForPlan struct {
 	Amount    int32              `json:"amount"`
 	CreatedAt pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
+}
+
+type PrinterSetting struct {
+	ID               int16     `json:"id"`
+	CashierPrinterIp string    `json:"cashier_printer_ip"`
+	KitchenPrinterIp string    `json:"kitchen_printer_ip"`
+	PrinterPort      int32     `json:"printer_port"`
+	CreatedAt        time.Time `json:"created_at"`
+	UpdatedAt        time.Time `json:"updated_at"`
 }
 
 type QrSession struct {

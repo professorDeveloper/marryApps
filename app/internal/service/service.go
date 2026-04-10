@@ -35,6 +35,8 @@ type AuthI interface {
 	SearchUsers(ctx context.Context, query string, limit, offset int32) ([]model.UserResponse, error)
 	UpdatePOSPassword(ctx context.Context, brandID, currentPassword, newPassword string) error
 	GetPOSPasswordStatus(ctx context.Context, brandID string) (bool, error)
+	UpsertPrinterSettings(ctx context.Context, brandID string, req model.UpdatePrinterSettingsRequest) (*model.PrinterSettingsResponse, error)
+	GetPrinterSettings(ctx context.Context, brandID string) (*model.PrinterSettingsResponse, error)
 }
 type MinioI interface {
 	UploadImage(ctx context.Context, file io.Reader, size int64, fileName string, extension string) (string, error)
