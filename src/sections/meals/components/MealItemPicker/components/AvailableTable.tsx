@@ -1,22 +1,25 @@
+import type { MealItem, MealItemTypeFilter } from '../types';
+
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { useVirtualizer } from '@tanstack/react-virtual';
+
+import SearchIcon from '@mui/icons-material/Search';
 import {
     Box,
-    Button,
-    Checkbox,
-    CircularProgress,
-    InputAdornment,
     Paper,
     Stack,
+    Button,
+    Checkbox,
     TextField,
     Typography,
+    InputAdornment,
+    CircularProgress,
 } from '@mui/material';
-import SearchIcon from '@mui/icons-material/Search';
-import { TypeFilterToggle } from './TypeFilterToggle';
-import { AvailableRow } from './AvailableRow';
+
 import { compositeKey } from '../types';
-import type { MealItem, MealItemTypeFilter } from '../types';
+import { AvailableRow } from './AvailableRow';
+import { TypeFilterToggle } from './TypeFilterToggle';
 
 const AVAILABLE_ROW_ESTIMATE_PX = 52;
 
@@ -36,6 +39,7 @@ interface AvailableTableProps {
     indeterminate: boolean;
     ingredientLabel: string;
     compoundLabel: string;
+    tableHeight?: string | number;
 }
 
 export const AvailableTable = React.memo(function AvailableTable({
@@ -54,6 +58,7 @@ export const AvailableTable = React.memo(function AvailableTable({
     indeterminate,
     ingredientLabel,
     compoundLabel,
+    tableHeight,
 }: AvailableTableProps) {
     const { t } = useTranslation('menu');
     const scrollRef = React.useRef<HTMLDivElement>(null);
@@ -66,7 +71,7 @@ export const AvailableTable = React.memo(function AvailableTable({
     });
 
     return (
-        <Paper variant="outlined" sx={{ p: 2, position: 'relative', display: 'flex', flexDirection: 'column', height: 740 }}>
+        <Paper variant="outlined" sx={{ p: 2, position: 'relative', display: 'flex', flexDirection: 'column', height: tableHeight }}>
             <Stack
                 direction={{ xs: 'column' }}
                 spacing={1}

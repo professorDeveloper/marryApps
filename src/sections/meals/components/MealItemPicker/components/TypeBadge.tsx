@@ -1,6 +1,8 @@
-import React from 'react';
-import { Chip } from '@mui/material';
 import type { MealItemType } from '../types';
+
+import React from 'react';
+
+import { Chip } from '@mui/material';
 
 interface TypeBadgeProps {
     type: MealItemType;

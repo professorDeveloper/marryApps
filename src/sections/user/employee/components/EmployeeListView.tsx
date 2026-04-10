@@ -1,5 +1,4 @@
 import type { IUser } from 'src/types/user';
-import type { EmployeeListProps } from '../types';
 import type { RowAction, BatchAction, DataTableColumn } from 'src/sections/warehouse/deduction/components/utility-data-table/types/types';
 
 import { useTranslation } from 'react-i18next';
@@ -20,10 +19,10 @@ import { DataTable } from 'src/sections/warehouse/deduction/components/utility-d
 
 import { getErrorMessageKey } from 'src/auth/utils';
 
-import { useEmployeeApi } from '../hooks/useEmployeeApi';
 import { EmployeeUserCell } from './EmployeeUserCell';
 import { EmployeeRoleCell } from './EmployeeRoleCell';
 import { EmployeeViewModal } from './EmployeeViewModal';
+import { useEmployeeApi } from '../hooks/useEmployeeApi';
 import { EmployeeStatusCell } from './EmployeeStatusCell';
 import { EmployeeDeleteDialog } from './EmployeeDeleteDialog';
 import { ROLE_COLORS, STATUS_COLORS, DEFAULT_DATATABLE_CONFIG, EMPLOYEE_DATATABLE_PERSIST_KEY } from '../constants';

@@ -1,22 +1,24 @@
+import type { MealItemRow, MealItemType, MealItemTypeFilter } from '../types';
+
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { useVirtualizer } from '@tanstack/react-virtual';
+
+import SearchIcon from '@mui/icons-material/Search';
 import {
     Box,
-    Button,
-    Checkbox,
-    InputAdornment,
     Paper,
     Stack,
+    Button,
+    Checkbox,
     TextField,
     Typography,
+    InputAdornment,
 } from '@mui/material';
-import SearchIcon from '@mui/icons-material/Search';
-import { TypeFilterToggle } from './TypeFilterToggle';
+
 import { AddedRow } from './AddedRow';
-import { fCurrency } from 'src/utils/format-number';
 import { compositeKey } from '../types';
-import type { MealItemRow, MealItemType, MealItemTypeFilter } from '../types';
+import { TypeFilterToggle } from './TypeFilterToggle';
 
 const ADDED_ROW_ESTIMATE_PX = 56;
 
@@ -43,6 +45,7 @@ interface AddedTableProps {
     isEmpty: boolean;
     menuPrice?: string;
     showProfitMargin?: boolean;
+    tableHeight?: string | number;
 }
 
 export const AddedTable = React.memo(function AddedTable({
@@ -68,6 +71,7 @@ export const AddedTable = React.memo(function AddedTable({
     isEmpty,
     menuPrice,
     showProfitMargin = false,
+    tableHeight,
 }: AddedTableProps) {
     const { t } = useTranslation('menu');
     const scrollRef = React.useRef<HTMLDivElement>(null);
@@ -90,7 +94,7 @@ export const AddedTable = React.memo(function AddedTable({
     });
 
     return (
-        <Paper variant="outlined" sx={{ p: 1.5, display: 'flex', flexDirection: 'column' }}>
+        <Paper variant="outlined" sx={{ p: 1.5, display: 'flex', flexDirection: 'column', height: tableHeight }}>
             <Stack
                 direction="row"
                 spacing={1}

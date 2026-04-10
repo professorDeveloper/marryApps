@@ -1,6 +1,5 @@
 import type { TFunction } from 'i18next';
-import type { IUser } from 'src/types/user';
-import type { UserRole } from 'src/types/user';
+import type { IUser , UserRole } from 'src/types/user';
 
 // ── Employee Management Types ───────────────────────────────────────────────────
 

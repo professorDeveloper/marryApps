@@ -7,7 +7,6 @@ import { useRef, useMemo, useState, useEffect, useCallback } from 'react';
 import {
   Box,
   Button,
-  IconButton,
 } from '@mui/material';
 
 import { paths } from 'src/routes/paths';

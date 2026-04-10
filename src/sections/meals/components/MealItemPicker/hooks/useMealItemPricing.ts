@@ -1,6 +1,6 @@
-import { useMemo } from 'react';
-
 import type { MealItemRow } from '../types';
+
+import { useMemo } from 'react';
 
 export interface UseMealItemPricingResult {
     priceByKey: Map<string, number>;

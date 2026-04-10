@@ -332,7 +332,7 @@
     "isPopular": "Is popular",
     "new": "New",
     "upload_prompt": "Click to upload image",
-    "file_types": "Jpg, PNG, GIF - maximum 5MB",
+    "file_types": "Jpg, PNG, GIF - Maximum 5MB",
     "upload_another": "Upload another image",
     "alert_select_image": "Please select an image file",
     "alert_max_size": "File size must be less than 5MB",

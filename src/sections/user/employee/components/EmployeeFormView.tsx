@@ -1,9 +1,9 @@
-import type { IUserFormData, UserRole } from 'src/types/user';
+import type { UserRole, IUserFormData } from 'src/types/user';
 import type { EmployeeFormProps, EmployeeFormState } from '../types';
 
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
-import React, { useCallback, useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 
 import {
     Box,
@@ -24,7 +24,7 @@ import {
 import { paths } from 'src/routes/paths';
 import { useParams, useRouter } from 'src/routes/hooks';
 
-import { useCreateUser, useUpdateUser, useGetUser } from 'src/actions/users';
+import { useGetUser, useCreateUser, useUpdateUser } from 'src/actions/users';
 
 import { Iconify } from 'src/components/iconify';
 

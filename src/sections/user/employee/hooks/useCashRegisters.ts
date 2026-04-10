@@ -2,7 +2,7 @@ import type { CashRegisterOption } from '../types';
 
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
-import { useMemo, useState, useEffect, useRef, useCallback } from 'react';
+import { useRef, useMemo, useState, useEffect, useCallback } from 'react';
 
 import { useTransactionsAPI } from 'src/hooks/use-transactions-api';
 

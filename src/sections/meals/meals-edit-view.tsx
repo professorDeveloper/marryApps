@@ -370,7 +370,7 @@ export function MealEditView({ isNew = false }: MealEditViewProps) {
                     </Box>
 
                     {/* Tab content with full height */}
-                    <Box sx={{ mx: -2, p: 0, mb: 0, flex: 1, minHeight: 0 }}>
+                    <Box sx={{ mx: -2, p: 0, mb: -2, flex: 1, minHeight: 0 }}>
                         {activeTab === 0 && (
                             <Box sx={{ height: '100%' }}>
                                 <MealItemPicker
@@ -384,6 +384,7 @@ export function MealEditView({ isNew = false }: MealEditViewProps) {
                                     isVisible={isMealItemsOpen}
                                     menuPrice={price}
                                     showProfitMargin={true}
+                                    tableHeight={680}
                                 />
                             </Box>
                         )}

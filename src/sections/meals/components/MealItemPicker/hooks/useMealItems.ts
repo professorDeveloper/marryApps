@@ -1,10 +1,11 @@
-import { useMemo, useCallback, useRef } from 'react';
-import useSWR from 'swr';
+import type { MealItem } from '../types';
 
-import { fetcher, endpoints } from 'src/lib/axios';
+import useSWR from 'swr';
+import { useMemo, useCallback } from 'react';
+
 import { useGetCompounds } from 'src/hooks/use-compounds';
 
-import type { MealItem } from '../types';
+import { fetcher, endpoints } from 'src/lib/axios';
 
 interface RawIngredient {
     id: string;

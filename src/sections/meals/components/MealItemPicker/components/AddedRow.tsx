@@ -1,10 +1,13 @@
+import type { MealItemRow, MealItemType } from '../types';
+
 import React from 'react';
-import { Box, Checkbox, Stack, Typography, IconButton } from '@mui/material';
+
 import CloseIcon from '@mui/icons-material/Close';
+import { Box, Stack, Checkbox, Typography, IconButton } from '@mui/material';
+
 import { TypeBadge } from './TypeBadge';
 // import { fCurrency } from 'src/utils/format-number'; // Removed to show numbers without currency
 import { compositeKey } from '../types';
-import type { MealItemRow, MealItemType } from '../types';
 
 interface AddedRowProps {
     row: MealItemRow;

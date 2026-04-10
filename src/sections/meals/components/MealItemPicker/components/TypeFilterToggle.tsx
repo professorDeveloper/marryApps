@@ -1,6 +1,8 @@
-import React from 'react';
-import { ToggleButton, ToggleButtonGroup } from '@mui/material';
 import type { MealItemType, MealItemTypeFilter } from '../types';
+
+import React from 'react';
+
+import { ToggleButton, ToggleButtonGroup } from '@mui/material';
 
 interface TypeFilterToggleProps {
     value: MealItemTypeFilter;

@@ -1,19 +1,22 @@
+import type { MealItemRow, MealItemType, MealItemTypeFilter } from './types';
+
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { useVirtualizer } from '@tanstack/react-virtual';
+
+import SearchIcon from '@mui/icons-material/Search';
 import {
     Box,
-    Button,
-    Checkbox,
-    InputAdornment,
     Paper,
     Stack,
+    Button,
+    Checkbox,
     TextField,
     Typography,
+    InputAdornment,
 } from '@mui/material';
-import SearchIcon from '@mui/icons-material/Search';
+
 import { compositeKey } from './types';
-import type { MealItemRow, MealItemType, MealItemTypeFilter } from './types';
 import { AddedRow } from './components/AddedRow';
 import { TypeFilterToggle } from './components/TypeFilterToggle';
 

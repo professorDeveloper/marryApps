@@ -1,13 +1,3 @@
-import React, { useRef, useMemo, useState, useEffect, useCallback } from 'react';
-import { useTranslation } from 'react-i18next';
-import { Stack, Button, Box } from '@mui/material';
-
-import { useMealItems } from '../hooks/useMealItems';
-import { useMealItemPricing } from '../hooks/useMealItemPricing';
-import { compositeKey } from '../types';
-import { AvailableTable } from './AvailableTable';
-import { AddedTable } from './AddedTable';
-
 import type {
     MealItem,
     MealItemRow,
@@ -15,6 +5,18 @@ import type {
     MealItemPickerApi,
     MealItemTypeFilter,
 } from '../types';
+
+import { useTranslation } from 'react-i18next';
+import React, { useRef, useMemo, useState, useEffect, useCallback } from 'react';
+
+import { Box, Stack, Button } from '@mui/material';
+
+import { compositeKey } from '../types';
+import { AddedTable } from './AddedTable';
+import { AvailableTable } from './AvailableTable';
+import { useMealItems } from '../hooks/useMealItems';
+import { MealItemPickerCache } from '../MealItemPickerCache';
+import { useMealItemPricing } from '../hooks/useMealItemPricing';
 
 // ---------------------------------------------------------------------------
 // Persisted-but-not-yet-hydrated calc storage
@@ -41,6 +43,8 @@ export interface MealItemPickerProps {
     isVisible?: boolean;
     menuPrice?: string;
     showProfitMargin?: boolean;
+    tableHeight?: string | number;
+    cacheKey?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -80,6 +84,8 @@ export const MealItemPicker = React.memo(function MealItemPicker({
     isVisible = true,
     menuPrice,
     showProfitMargin = false,
+    tableHeight = 700,
+    cacheKey,
 }: MealItemPickerProps) {
     const { t } = useTranslation('menu');
     // Only fetch meal items when this tab is visible to avoid unnecessary requests
@@ -94,7 +100,14 @@ export const MealItemPicker = React.memo(function MealItemPicker({
 
     // Added rows live as Map<compositeKey, MealItemRow> so insertion order is stable.
     // Rows may be hydrated before items load; those render with placeholder metadata.
-    const [addedRowsMap, setAddedRowsMap] = useState<Map<string, MealItemRow>>(() => new Map());
+    // Initialize from cache if cacheKey is provided, otherwise start with empty map.
+    const [addedRowsMap, setAddedRowsMap] = useState<Map<string, MealItemRow>>(() => {
+        if (cacheKey) {
+            const cached = MealItemPickerCache.restore(cacheKey);
+            if (cached) return new Map(cached);
+        }
+        return new Map();
+    });
 
     // Calcs that arrived (via restoreFromPersisted) before items finished loading.
     const pendingRef = useRef<PendingCalc[] | null>(null);
@@ -189,12 +202,10 @@ export const MealItemPicker = React.memo(function MealItemPicker({
     const { priceByKey } = useMealItemPricing(allAddedRows);
 
     const totalItemsCount = allAddedRows.length;
-    const totalCost = useMemo(() => {
-        return allAddedRows.reduce((sum, r) => {
+    const totalCost = useMemo(() => allAddedRows.reduce((sum, r) => {
             const unit = priceByKey.get(compositeKey(r.type, r.id)) ?? 0;
             return sum + unit * (r.quantity ?? 0);
-        }, 0);
-    }, [allAddedRows, priceByKey]);
+        }, 0), [allAddedRows, priceByKey]);
 
     // Reset available selection when the visible list changes (filter/search/items churn).
     // Selection is cleared inline inside mutation handlers, not via effects, to avoid a
@@ -438,6 +449,19 @@ export const MealItemPicker = React.memo(function MealItemPicker({
         };
     }, [apiRef, refresh]);
 
+    // ── Cache persistence ───────────────────────────────────────────────
+    // Save state to cache whenever it changes (survives unmount/remount).
+    // Clear cache on unmount if cacheKey is provided.
+    useEffect(() => {
+        if (cacheKey && addedRowsMap.size > 0) {
+            MealItemPickerCache.save(cacheKey, addedRowsMap);
+        }
+        return () => {
+            // Don't clear on unmount — keep cache alive for remount.
+            // User navigates away from the parent view → parent clears cache.
+        };
+    }, [cacheKey, addedRowsMap]);
+
     // ── Render ──────────────────────────────────────────────────────────
     return (
         <Stack spacing={2} sx={{ height: '100%' }}>
@@ -467,6 +491,7 @@ export const MealItemPicker = React.memo(function MealItemPicker({
                     indeterminate={availableIndeterminate}
                     ingredientLabel={ingredientLabel}
                     compoundLabel={compoundLabel}
+                    tableHeight={tableHeight}
                 />
 
                 {/* ADDED TABLE */}
@@ -493,6 +518,7 @@ export const MealItemPicker = React.memo(function MealItemPicker({
                     isEmpty={addedRowsMap.size === 0}
                     menuPrice={menuPrice}
                     showProfitMargin={showProfitMargin}
+                    tableHeight={tableHeight}
                 />
             </Box>
 

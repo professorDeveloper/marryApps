@@ -1,7 +1,10 @@
-import React from 'react';
-import { Box, Checkbox, Typography, Chip } from '@mui/material';
-import { compositeKey } from '../types';
 import type { MealItem } from '../types';
+
+import React from 'react';
+
+import { Box, Chip, Checkbox, Typography } from '@mui/material';
+
+import { compositeKey } from '../types';
 
 interface AvailableRowProps {
     item: MealItem;

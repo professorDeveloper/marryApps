@@ -38,8 +38,8 @@ import { useGetBranches } from 'src/actions/branches';
 import { useCreateCafeTable, useUpdateCafeTable, useDeleteCafeTable } from 'src/actions/cafe-tables';
 
 import { Iconify } from '../iconify';
-import { findNearestEmptyPosition } from './utils';
 import { HALL_WIDTH, HALL_HEIGHT } from './types';
+import { findNearestEmptyPosition } from './utils';
 
 interface FloorPlanSidebarProps {
     tables: Table[];

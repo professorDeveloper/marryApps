@@ -1,3 +1,3 @@
 export { MealItemPicker } from './components/MealItemPicker';
 
-export type { MealItemPickerApi, MealItem, MealItemRow, MealItemType, MealItemTypeFilter } from './types';
+export type { MealItem, MealItemRow, MealItemType, MealItemPickerApi, MealItemTypeFilter } from './types';

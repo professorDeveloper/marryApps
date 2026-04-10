@@ -3,8 +3,9 @@ import { useTranslation } from 'react-i18next';
 
 import { Box, TextField } from '@mui/material';
 
-import { GeneralInformation } from 'src/sections/warehouse/utils/components/GeneralInformation';
 import { ImageUpload } from 'src/components/generic-edit-view/image-upload-new';
+
+import { GeneralInformation } from 'src/sections/warehouse/utils/components/GeneralInformation';
 
 interface MealGeneralInformationProps {
     name: string;
@@ -122,68 +123,67 @@ export const MealGeneralInformation = React.memo(function MealGeneralInformation
                 </Box>
 
                 {/* ================= RIGHT COLUMN ================= */}
-               <Box
-    sx={{
-        display: 'grid',
-        // Column 1 is flexible, Column 2 is for the image
-        gridTemplateColumns: '1fr auto',
-        // 4 rows to match the left column's 4 fields
-        gridTemplateRows: 'auto auto 1fr 1fr',
-        gap: 2,
-        height: '100%',
-    }}
->
-    {/* Category - Row 1, Col 1 (Left) */}
-    <TextField
-        select
-        label={t('mealsProducts.category')}
-        value={categoryId}
-        onChange={(e) => onCategoryChange(e.target.value)}
-        size="small"
-        required
-        sx={{ gridColumn: 1, gridRow: 1 }}
-        slotProps={{ select: { native: true } }}
-    >
-        {/* ... options ... */}
-    </TextField>
+                <Box
+                    sx={{
+                        display: 'grid',
+                        // Column 1 is flexible, Column 2 is for the image
+                        gridTemplateColumns: '1fr auto',
+                        // 4 rows to match the left column's 4 fields
+                        gridTemplateRows: 'auto auto 1fr 1fr',
+                        gap: 2,
+                        height: '100%',
+                    }}
+                >
+                    {/* Category - Row 1, Col 1 (Left) */}
+                    <TextField
+                        select
+                        label={t('mealsProducts.category')}
+                        value={categoryId}
+                        onChange={(e) => onCategoryChange(e.target.value)}
+                        size="small"
+                        required
+                        sx={{ gridColumn: 1, gridRow: 1 }}
+                        slotProps={{ select: { native: true } }}
+                    >
+                    </TextField>
 
-    {/* Cooking Time - Row 2, Col 1 (Left) */}
-    <TextField
-        label={t('mealsProducts.cookingTime')}
-        value={cookTime}
-        onChange={(e) => onCookTimeChange(e.target.value)}
-        size="small"
-        sx={{ gridColumn: 1, gridRow: 2 }}
-    />
+                    {/* Cooking Time - Row 2, Col 1 (Left) */}
+                    <TextField
+                        label={t('mealsProducts.cookingTime')}
+                        value={cookTime}
+                        onChange={(e) => onCookTimeChange(e.target.value)}
+                        size="small"
+                        sx={{ gridColumn: 1, gridRow: 2 }}
+                    />
 
-    {/* Image Upload - Row 1 & 2, Col 2 (Right side) */}
-    <Box sx={{ gridColumn: 2, gridRow: '1 / 3' }}>
-        <ImageUpload
-            label={t('mealsProducts.imageUrl')}
-            value={pictureUrl || null}
-            onChange={onPictureUrlChange}
-            height={112} // Matches height of 2 small text fields + gap
-        />
-    </Box>
+                    {/* Image Upload - Row 1 & 2, Col 2 (Right side) */}
+                    <Box sx={{ gridColumn: 2, gridRow: '1 / 3' }}>
+                        <ImageUpload
+                            label={t('mealsProducts.imageUrl')}
+                            value={pictureUrl || null}
+                            onChange={onPictureUrlChange}
+                            height={112} // Matches height of 2 small text fields + gap
+                        />
+                    </Box>
 
-    {/* Description - Row 3 & 4, Full Width */}
-    <TextField
-        label={t('mealsProducts.description')}
-        value={description}
-        onChange={(e) => onDescriptionChange(e.target.value)}
-        size="small"
-        multiline
-        sx={{
-            gridColumn: '1 / -1',
-            gridRow: '3 / 5',
-            height: '100%',
-            '& .MuiInputBase-root': {
-                height: '100%',
-                alignItems: 'flex-start',
-            },
-        }}
-    />
-</Box>
+                    {/* Description - Row 3 & 4, Full Width */}
+                    <TextField
+                        label={t('mealsProducts.description')}
+                        value={description}
+                        onChange={(e) => onDescriptionChange(e.target.value)}
+                        size="small"
+                        multiline
+                        sx={{
+                            gridColumn: '1 / -1',
+                            gridRow: '3 / 5',
+                            height: '100%',
+                            '& .MuiInputBase-root': {
+                                height: '100%',
+                                alignItems: 'flex-start',
+                            },
+                        }}
+                    />
+                </Box>
             </Box>
         </GeneralInformation>
     );

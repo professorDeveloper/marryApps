@@ -4,25 +4,25 @@ import { useParams } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import { useRef, useMemo, useState, useEffect, useCallback } from 'react';
 
-import { Box, Tab, Tabs, CircularProgress, Button, Stack } from '@mui/material';
+import { Box, Stack, Button, CircularProgress } from '@mui/material';
 
 import { paths } from 'src/routes/paths';
 import { useRouter } from 'src/routes/hooks';
 
 // Hooks and Actions
 import { useGetCompound, useGetCompoundWithCalculations } from 'src/hooks/use-compounds';
+
 import { useGetIngredientGroups } from 'src/actions/ingredient-group';
 
 // Components
-import { CustomBreadcrumbs } from 'src/components/custom-breadcrumbs';
-import { MealItemPicker, type MealItemPickerApi } from 'src/sections/meals/components/MealItemPicker';
 import { GeneralInformation } from 'src/sections/warehouse/utils/components/GeneralInformation';
-
-import { CompoundGeneralInformation } from './components/CompoundGeneralInformation';
-import { useCompoundForm } from './hooks/useCompoundForm';
+import { MealItemPicker, type MealItemPickerApi } from 'src/sections/meals/components/MealItemPicker';
+import { MealItemPickerCache } from 'src/sections/meals/components/MealItemPicker/MealItemPickerCache';
 
 // Utils, Types, and Constants
 import { MEASUREMENT_OPTIONS } from './constants';
+import { useCompoundForm } from './hooks/useCompoundForm';
+import { CompoundGeneralInformation } from './components/CompoundGeneralInformation';
 
 // ================================================================================================
 
@@ -53,6 +53,14 @@ export function CompoundEditView({ compoundId, isNew = false }: CompoundEditView
 
     // --- Section refs ──────────────────────────────────────────────────────
     const mealItemsApiRef = useRef<MealItemPickerApi | null>(null);
+
+    // --- Cache key for MealItemPicker ──────────────────────────────────────
+    const mealItemPickerCacheKey = isNew ? 'compound_new' : `compound_${compoundId}`;
+
+    // --- Clear cache on unmount (when navigating away from this view) ───────
+    useEffect(() => () => {
+            MealItemPickerCache.clear(mealItemPickerCacheKey);
+        }, [mealItemPickerCacheKey]);
 
     // --- Memoize measurement options ---
     const measurementOptions = useMemo(() =>
@@ -258,10 +266,13 @@ export function CompoundEditView({ compoundId, isNew = false }: CompoundEditView
                             apiRef={mealItemsApiRef}
                             onCancel={() => {}} // No-op - handled outside
                             onSave={() => {}} // No-op - handled outside
-                            cancelDisabled={true} // Disable internal buttons
-                            saveDisabled={true} // Disable internal buttons
+                            cancelDisabled // Disable internal buttons
+                            saveDisabled // Disable internal buttons
                             saveLabel={saveLabel}
-                            hideActionBar={true} // Hide internal action bar
+                            hideActionBar // Hide internal action bar
+                            isVisible={isMealItemsOpen}
+                            tableHeight={730}
+                            cacheKey={mealItemPickerCacheKey}
                         />
                     </Box>
                 </GeneralInformation>
