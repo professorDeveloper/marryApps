@@ -966,6 +966,7 @@ func (h *Handler) MarkOrderPaid(c echo.Context) error {
 	role, _ := c.Get("role").(string)
 
 	effectiveTableCharge := req.TableCharge
+	hasClientTableCharge := req.TableCharge != nil && strings.TrimSpace(*req.TableCharge) != ""
 
 	timerResp, timerErr := h.service.TableTimer().CloseTableTimer(
 		c.Request().Context(),
@@ -982,11 +983,24 @@ func (h *Handler) MarkOrderPaid(c echo.Context) error {
 				http.StatusBadRequest,
 			))
 		}
-	} else if timerResp != nil && timerResp.FinalAmount != nil && *timerResp.FinalAmount != "" {
+	} else if !hasClientTableCharge && timerResp != nil && timerResp.FinalAmount != nil && *timerResp.FinalAmount != "" {
 		effectiveTableCharge = timerResp.FinalAmount
 	}
 
-	order, err := h.service.Order().MarkOrderPaid(c.Request().Context(), orderID, cashierID, cashRegisterID, req.PaymentType, req.DiscountPercent, req.DiscountAmount, req.DiscountComment, &req.CustomerPaidAmount, effectiveTableCharge, req.CashAmount, req.CardAmount)
+	order, err := h.service.Order().MarkOrderPaid(
+		c.Request().Context(),
+		orderID,
+		cashierID,
+		cashRegisterID,
+		req.PaymentType,
+		req.DiscountPercent,
+		req.DiscountAmount,
+		req.DiscountComment,
+		&req.CustomerPaidAmount,
+		effectiveTableCharge,
+		req.CashAmount,
+		req.CardAmount,
+	)
 	if err != nil {
 		log.Printf("MarkOrderPaid failed for order %s: %v", orderID, err)
 
