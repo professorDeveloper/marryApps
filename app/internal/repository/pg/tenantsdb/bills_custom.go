@@ -51,28 +51,28 @@ type GetBillsParams struct {
 }
 
 type BillDetailsRow struct {
-	ID              uuid.UUID          `json:"id"`
-	BillNo          int32              `json:"bill_no"`
-	BillStatus      string             `json:"bill_status"`
-	BillOpenedAt    pgtype.Timestamptz `json:"bill_opened_at"`
-	BillClosedAt    pgtype.Timestamptz `json:"bill_closed_at"`
-	PaidAt          pgtype.Timestamptz `json:"paid_at"`
-	PaymentType     *string            `json:"payment_type"`
-	TableID         pgtype.UUID        `json:"table_id"`
-	TableNumber     *int32             `json:"table_number"`
-	HallName        *string            `json:"hall_name"`
-	WaiterID        pgtype.UUID        `json:"waiter_id"`
-	WaiterName      *string            `json:"waiter_name"`
-	CashierID       pgtype.UUID        `json:"cashier_id"`
-	CashierName     *string            `json:"cashier_name"`
-	CashRegisterID  pgtype.UUID        `json:"cash_register_id"`
-	GuestCount      *int32             `json:"guest_count"`
-	FoodCost        pgtype.Numeric     `json:"food_cost"`
-	FoodTotal       pgtype.Numeric     `json:"food_total"`
-	ServicePercent  pgtype.Numeric     `json:"service_percent"`
-	ServiceAmount   pgtype.Numeric     `json:"service_amount"`
-	DiscountPercent pgtype.Numeric     `json:"discount_percent"`
-	DiscountAmount  pgtype.Numeric     `json:"discount_amount"`
+	ID                 uuid.UUID          `json:"id"`
+	BillNo             int32              `json:"bill_no"`
+	BillStatus         string             `json:"bill_status"`
+	BillOpenedAt       pgtype.Timestamptz `json:"bill_opened_at"`
+	BillClosedAt       pgtype.Timestamptz `json:"bill_closed_at"`
+	PaidAt             pgtype.Timestamptz `json:"paid_at"`
+	PaymentType        *string            `json:"payment_type"`
+	TableID            pgtype.UUID        `json:"table_id"`
+	TableNumber        *int32             `json:"table_number"`
+	HallName           *string            `json:"hall_name"`
+	WaiterID           pgtype.UUID        `json:"waiter_id"`
+	WaiterName         *string            `json:"waiter_name"`
+	CashierID          pgtype.UUID        `json:"cashier_id"`
+	CashierName        *string            `json:"cashier_name"`
+	CashRegisterID     pgtype.UUID        `json:"cash_register_id"`
+	GuestCount         *int32             `json:"guest_count"`
+	FoodCost           pgtype.Numeric     `json:"food_cost"`
+	FoodTotal          pgtype.Numeric     `json:"food_total"`
+	ServicePercent     pgtype.Numeric     `json:"service_percent"`
+	ServiceAmount      pgtype.Numeric     `json:"service_amount"`
+	DiscountPercent    pgtype.Numeric     `json:"discount_percent"`
+	DiscountAmount     pgtype.Numeric     `json:"discount_amount"`
 	DiscountComment    *string            `json:"discount_comment"`
 	GrandTotal         pgtype.Numeric     `json:"grand_total"`
 	TableCharge        pgtype.Numeric     `json:"table_charge"`
@@ -227,7 +227,6 @@ func (q *Queries) PayOrderBill(ctx context.Context, arg PayOrderBillParams) erro
 		disc_calc AS (
 			SELECT
 				base_total,
-				-- percent wins over flat amount
 				CASE
 					WHEN $5::numeric IS NOT NULL THEN ROUND((base_total * $5::numeric / 100.0), 2)
 					WHEN $6::numeric IS NOT NULL THEN ROUND($6::numeric, 2)
@@ -243,40 +242,65 @@ func (q *Queries) PayOrderBill(ctx context.Context, arg PayOrderBillParams) erro
 				b.service_percent,
 				COALESCE($9::numeric, 0)::numeric(15,2) AS table_charge,
 				d.discount_amount,
-				GREATEST(ROUND((d.base_total - d.discount_amount + COALESCE($9::numeric, 0)), 2), 0) AS grand_total
-			FROM base_calc b, disc_calc d
+				GREATEST(ROUND((d.base_total - d.discount_amount + COALESCE($9::numeric, 0)), 2), 0) AS grand_total,
+				CASE
+					WHEN ct.table_type = 'time_based' AND COALESCE(ct.price_per_hour, 0) > 0
+					THEN ROUND((ct.price_per_hour / 60.0), 2)
+					ELSE 0::numeric(15,2)
+				END AS allowed_gap
+			FROM base_calc b
+			CROSS JOIN disc_calc d
+			JOIN orders o2 ON o2.id = $1 AND o2.deleted_at = 0
+			LEFT JOIN cafe_tables ct ON ct.id = o2.table_id AND ct.deleted_at = 0
 		),
 		payment_calc AS (
 			SELECT
 				f.*,
 				(COALESCE($10::numeric, 0) + COALESCE($11::numeric, 0))::numeric(15,2) AS total_paid
 			FROM final_calc f
+		),
+		settlement_calc AS (
+			SELECT
+				p.*,
+				CASE
+					WHEN p.total_paid < p.grand_total
+					 AND (p.grand_total - p.total_paid) <= p.allowed_gap
+					THEN GREATEST(ROUND((p.table_charge - (p.grand_total - p.total_paid)), 2), 0)
+					ELSE p.table_charge
+				END AS settled_table_charge,
+				CASE
+					WHEN p.total_paid < p.grand_total
+					 AND (p.grand_total - p.total_paid) <= p.allowed_gap
+					THEN p.total_paid
+					ELSE p.grand_total
+				END AS settled_grand_total
+			FROM payment_calc p
 		)
 		UPDATE orders o
 		SET
 			food_total           = p.food_total,
 			food_cost            = p.food_cost,
 			service_amount       = p.service_amount,
-			table_charge         = p.table_charge,
+			table_charge         = p.settled_table_charge,
 			payment_type         = CASE WHEN $4::text IS NULL OR $4::text = '' THEN o.payment_type ELSE $4::payment_type END,
 			discount_percent     = $5,
 			discount_amount      = p.discount_amount,
 			discount_comment     = $7,
-			grand_total          = p.grand_total,
-			total_amount         = p.grand_total,
+			grand_total          = p.settled_grand_total,
+			total_amount         = p.settled_grand_total,
 			customer_paid_amount = $8,
 			cash_amount          = $10,
 			card_amount          = $11,
-			change_amount        = GREATEST(p.total_paid - p.grand_total, 0),
+			change_amount        = GREATEST(p.total_paid - p.settled_grand_total, 0),
 			bill_status          = 'paid',
 			bill_closed_at       = COALESCE(o.bill_closed_at, NOW()),
 			paid_at              = NOW(),
 			cashier_id           = $2,
 			cash_register_id     = COALESCE($3::uuid, o.cash_register_id),
 			status               = 'paid'
-		FROM payment_calc p
+		FROM settlement_calc p
 		WHERE o.id = $1 AND o.deleted_at = 0
-		  AND p.total_paid >= p.grand_total
+		  AND p.total_paid + p.allowed_gap >= p.grand_total
 	`
 	var cashRegisterID *uuid.UUID
 	if arg.CashRegisterID.Valid {
