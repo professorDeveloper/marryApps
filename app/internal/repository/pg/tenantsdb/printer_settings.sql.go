@@ -66,6 +66,23 @@ func (q *Queries) CreatePrinterSetting(ctx context.Context, arg CreatePrinterSet
 	return i, err
 }
 
+const deletePrinterSetting = `-- name: DeletePrinterSetting :execrows
+UPDATE printer_settings
+SET
+  deleted_at = extract(epoch from now())::bigint,
+  updated_at = NOW()
+WHERE id = $1
+  AND deleted_at = 0
+`
+
+func (q *Queries) DeletePrinterSetting(ctx context.Context, id uuid.UUID) (int64, error) {
+	result, err := q.db.Exec(ctx, deletePrinterSetting, id)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
 const getPrinterSettingByID = `-- name: GetPrinterSettingByID :one
 SELECT
   id,
