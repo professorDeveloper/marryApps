@@ -169,6 +169,10 @@ export function usePageNavigation() {
     }
     
     // Settings
+    if (pathname.includes('/settings/devices')) {
+      const title = tMenu('devices.title', 'Printer Devices');
+      return isNew ? `New ${title.toLowerCase()}` : title;
+    }
     if (pathname.includes('/settings/connected-device')) {
       const title = tMenu('overview.settings.connecteddevices', 'Connected Devices');
       return isNew ? `New ${title.toLowerCase()}` : title;
@@ -359,7 +363,10 @@ export function usePageNavigation() {
     
     // Settings
     if (pathname.includes('/settings')) {
-      links.push({ name: tMenu('overview.settings.title', 'Settings'), href: '/settings/connected-device' });
+      links.push({ name: tMenu('overview.settings.title', 'Settings'), href: '/settings/devices' });
+    }
+    if (pathname.includes('/settings/devices')) {
+      links.push({ name: tMenu('devices.title', 'Printer Devices'), href: '/settings/devices' });
     }
     if (pathname.includes('/settings/connected-device')) {
       links.push({ name: tMenu('overview.settings.connecteddevices', 'Connected Devices'), href: '/settings/connected-device' });

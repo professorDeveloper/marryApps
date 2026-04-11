@@ -1345,6 +1345,21 @@
     "deleted": "O'chirilgan",
     "created": "O'tkazish muvaffaqiyatli yaratildi",
     "updated": "O'tkazish muvaffaqiyatli yangilandi"
+  },
+  "devices": {
+    "title": "Printer qurilmalari",
+    "ipAddress": "IP-manzil",
+    "type": "Turi",
+    "categories": "Kategoriyalar",
+    "createTitle": "Printer qo'shish",
+    "editTitle": "Printerni tahrirlash",
+    "deleteTitle": "Qurilmani o'chirish",
+    "deleteMessage": "{{ip}} qurilmasini o'chirishga ishonchingiz komilmi?",
+    "createSuccess": "Qurilma muvaffaqiyatli yaratildi",
+    "updateSuccess": "Qurilma muvaffaqiyatli yangilandi",
+    "deleteSuccess": "Qurilma muvaffaqiyatli o'chirildi",
+    "saveFailed": "Qurilmani saqlab bo'lmadi",
+    "deleteFailed": "Qurilmani o'chirib bo'lmadi"
   }
 }
 

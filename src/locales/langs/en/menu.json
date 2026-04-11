@@ -1350,5 +1350,21 @@
       "details": "Transaction Group Details",
       "edit": "Edit Transaction Group"
     }
+  },
+  "devices": {
+    "title": "Devices",
+    "ipAddress": "IP Address",
+    "port": "Port",
+    "type": "Type",
+    "categories": "Categories",
+    "createTitle": "Add Printer Device",
+    "editTitle": "Edit Printer Device",
+    "deleteTitle": "Delete Device",
+    "deleteMessage": "Are you sure you want to delete device {{ip}}?",
+    "createSuccess": "Device created successfully",
+    "updateSuccess": "Device updated successfully",
+    "deleteSuccess": "Device deleted successfully",
+    "saveFailed": "Failed to save device",
+    "deleteFailed": "Failed to delete device"
   }
 }

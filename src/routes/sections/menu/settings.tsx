@@ -33,7 +33,7 @@ export const settingRoutes: RouteObject[] = [
   { path: 'settings/users', element: <EmployeeListView /> },
   { path: 'settings/users/new', element: <EmployeeFormView isNew /> },
   { path: 'settings/users/:id', element: <EmployeeFormView /> },
-  { path: 'settings/connected-device', element: <ConnectedDeviceListView /> },
+  { path: 'settings/devices', element: <ConnectedDeviceListView /> },
   { path: 'settings/management', element: <ManagementListView /> },
   { path: 'settings/restaurant-info', element: <RestaurantInfoListView /> },
   { path: 'settings/floor-plan', element: <FloorPlanPage /> },

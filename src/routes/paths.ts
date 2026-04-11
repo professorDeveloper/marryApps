@@ -265,8 +265,9 @@ export const paths = {
     usersEdit: (id: string) => `${ROOTS.SETTING}/users/${id}/edit`,
     usersRestaurantStaffNew: `${ROOTS.SETTING}/users/restaurant-staff/new`,
     usersRestaurantStaffEdit: (id: string) => `${ROOTS.SETTING}/users/restaurant-staff/${id}/edit`,
+    devices: `${ROOTS.SETTING}/devices`,
     general: {
-      root: `${ROOTS.SETTING}/connected-device`,
+      root: `${ROOTS.SETTING}/devices`,
     },
     profile: {
       root: `${ROOTS.SETTING}/management`,

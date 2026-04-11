@@ -450,4 +450,10 @@ export const endpoints = {
     },
     report: '/api/v1/transactions/report',
   },
+  printerSettings: {
+    list: '/api/v1/settings/printer-settings',
+    create: '/api/v1/settings/printer-settings',
+    update: (id: string | number) => `/api/v1/settings/printer-settings/${id}`,
+    delete: (id: string | number) => `/api/v1/settings/printer-settings/${id}`,
+  },
 } as const;
