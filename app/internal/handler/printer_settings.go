@@ -36,6 +36,13 @@ type PrinterSettingUpdateSuccessResponse struct {
 	Code    int                          `json:"code" example:"200"`
 }
 
+type PrinterSettingDeleteSuccessResponse struct {
+	Status  string `json:"status" example:"success"`
+	Message string `json:"message" example:"Printer setting deleted successfully"`
+	Data    struct{} `json:"data"`
+	Code    int    `json:"code" example:"200"`
+}
+
 func getBrandIDFromContext(c echo.Context) string {
 	brandID, _ := c.Get("brand_id").(string)
 	if brandID == "" {
@@ -224,6 +231,51 @@ func (h *Handler) UpdatePrinterSetting(c echo.Context) error {
 	return c.JSON(http.StatusOK, model.NewSuccessResponse(
 		"Printer setting updated successfully",
 		resp,
+		http.StatusOK,
+	))
+}
+
+// DeletePrinterSetting godoc
+// @Summary Delete printer setting
+// @Description Soft delete printer setting by id for current tenant
+// @Tags printer-settings
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path string true "Printer setting ID"
+// @Success 200 {object} handler.PrinterSettingDeleteSuccessResponse
+// @Failure 400 {object} model.ErrorResponse
+// @Router /api/v1/settings/printer-settings/{id} [delete]
+func (h *Handler) DeletePrinterSetting(c echo.Context) error {
+	id := c.Param("id")
+	if id == "" {
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"id is required",
+			"missing path parameter: id",
+			http.StatusBadRequest,
+		))
+	}
+
+	brandID := getBrandIDFromContext(c)
+	if brandID == "" {
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"brand_id is required",
+			"brand_id not found in context",
+			http.StatusBadRequest,
+		))
+	}
+
+	if err := h.service.Settings().DeletePrinterSetting(c.Request().Context(), brandID, id); err != nil {
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"failed to delete printer setting",
+			err.Error(),
+			http.StatusBadRequest,
+		))
+	}
+
+	return c.JSON(http.StatusOK, model.NewSuccessResponse(
+		"Printer setting deleted successfully",
+		struct{}{},
 		http.StatusOK,
 	))
 }

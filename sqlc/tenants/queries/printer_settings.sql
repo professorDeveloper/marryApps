@@ -75,3 +75,11 @@ RETURNING
   created_at,
   updated_at,
   deleted_at;
+
+-- name: DeletePrinterSetting :execrows
+UPDATE printer_settings
+SET
+  deleted_at = extract(epoch from now())::bigint,
+  updated_at = NOW()
+WHERE id = sqlc.arg(id)
+  AND deleted_at = 0;

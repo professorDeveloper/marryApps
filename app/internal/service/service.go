@@ -492,6 +492,7 @@ type SettingsI interface {
 	GetPrinterSettingByID(ctx context.Context, brandID, id string) (*model.PrinterSettingResponse, error)
 	CreatePrinterSetting(ctx context.Context, brandID string, req model.CreatePrinterSettingRequest) (*model.PrinterSettingResponse, error)
 	UpdatePrinterSetting(ctx context.Context, brandID, id string, req model.UpdatePrinterSettingRequest) (*model.PrinterSettingResponse, error)
+	DeletePrinterSetting(ctx context.Context, brandID, id string) error
 }
 
 type I interface {

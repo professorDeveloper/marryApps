@@ -10,6 +10,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 
 	"gitlab.yurtal.tech/company/maryai/back/internal/model"
 	"gitlab.yurtal.tech/company/maryai/back/internal/repository"
@@ -64,6 +65,14 @@ func isValidPrinterSettingType(t string) bool {
 
 func validateIP(ip string) bool {
 	return net.ParseIP(ip) != nil
+}
+
+func isUniqueViolation(err error) bool {
+	var pgErr *pgconn.PgError
+	if errors.As(err, &pgErr) {
+		return pgErr.Code == "23505"
+	}
+	return false
 }
 
 func mapPrinterSettingResponse(row pg.PrinterSetting) *model.PrinterSettingResponse {
@@ -148,6 +157,9 @@ func (s *SettingsS) CreatePrinterSetting(ctx context.Context, brandID string, re
 		ConnectedEntityIds: connectedEntityIDs,
 	})
 	if err != nil {
+		if isUniqueViolation(err) {
+			return nil, errors.New("printer setting with this ip, port and type already exists")
+		}
 		return nil, err
 	}
 
@@ -308,6 +320,9 @@ func (s *SettingsS) UpdatePrinterSetting(ctx context.Context, brandID, id string
 		ConnectedEntityIds: connectedEntityIDs,
 	})
 	if err != nil {
+		if isUniqueViolation(err) {
+			return nil, errors.New("printer setting with this ip, port and type already exists")
+		}
 		return nil, err
 	}
 
@@ -316,4 +331,49 @@ func (s *SettingsS) UpdatePrinterSetting(ctx context.Context, brandID, id string
 	}
 
 	return mapPrinterSettingResponse(row), nil
+}
+
+func (s *SettingsS) DeletePrinterSetting(ctx context.Context, brandID, id string) error {
+	brandID = strings.TrimSpace(brandID)
+	id = strings.TrimSpace(id)
+
+	if brandID == "" {
+		return errors.New("brand_id is required")
+	}
+	if id == "" {
+		return errors.New("id is required")
+	}
+
+	printerID, err := uuid.Parse(id)
+	if err != nil {
+		return errors.New("invalid printer setting id")
+	}
+
+	schemaName := fmt.Sprintf("tenant_%s", brandID)
+
+	tx, err := s.repo.PgRepo.TenantPool.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(ctx)
+
+	if _, err := tx.Exec(ctx, fmt.Sprintf(`SET LOCAL search_path TO "%s", public`, schemaName)); err != nil {
+		return errors.New(http.StatusText(http.StatusUnauthorized))
+	}
+
+	q := s.repo.Tenant(ctx).WithTx(tx)
+
+	rowsAffected, err := q.DeletePrinterSetting(ctx, printerID)
+	if err != nil {
+		return err
+	}
+	if rowsAffected == 0 {
+		return errors.New("printer setting not found")
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return err
+	}
+
+	return nil
 }

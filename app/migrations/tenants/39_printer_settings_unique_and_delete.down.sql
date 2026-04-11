@@ -1,0 +1,1 @@
+DROP INDEX IF EXISTS uq_printer_settings_ip_port_type_active;
