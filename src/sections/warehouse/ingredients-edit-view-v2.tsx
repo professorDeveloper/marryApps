@@ -132,7 +132,7 @@ export function IngredientEditViewV2({ isNew = false, onSuccess }: Props) {
             sections: [basicSection, groupSection, colorSection],
             breadcrumbs: [
                 { name: t('app'), href: paths.menu.root },
-                { name: t('ingredients.title'), href: paths.warehouse.ingredients.root },
+                { name: t('ingredients.title'), href: paths.menu.ingredients.root },
                 { name: isNew ? t('ingredients.new') : t('ingredients.edit'), href: '' },
             ],
             showDeleteButton: !isNew,
@@ -166,7 +166,7 @@ export function IngredientEditViewV2({ isNew = false, onSuccess }: Props) {
             if (onSuccess) {
                 await onSuccess();
             } else {
-                router.push(paths.warehouse.ingredients.root);
+                router.push(paths.menu.ingredients.root);
             }
         },
         [isNew, id, t, createIngredient, updateIngredient, router, onSuccess],
@@ -176,7 +176,7 @@ export function IngredientEditViewV2({ isNew = false, onSuccess }: Props) {
         if (!id) return;
         await deleteIngredient(id);
         await new Promise((r) => setTimeout(r, 500));
-        router.push(paths.warehouse.ingredients.root);
+        router.push(paths.menu.ingredients.root);
     }, [id, deleteIngredient, router]);
 
     const handleCancel = useCallback(() => {
