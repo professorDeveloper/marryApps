@@ -1,5 +1,63 @@
 basePath: /
 definitions:
+  handler.PrinterSettingCreateSuccessResponse:
+    properties:
+      code:
+        example: 201
+        type: integer
+      data:
+        $ref: '#/definitions/model.PrinterSettingResponse'
+      message:
+        example: Printer setting created successfully
+        type: string
+      status:
+        example: success
+        type: string
+    type: object
+  handler.PrinterSettingGetSuccessResponse:
+    properties:
+      code:
+        example: 200
+        type: integer
+      data:
+        $ref: '#/definitions/model.PrinterSettingResponse'
+      message:
+        example: Printer setting fetched successfully
+        type: string
+      status:
+        example: success
+        type: string
+    type: object
+  handler.PrinterSettingListSuccessResponse:
+    properties:
+      code:
+        example: 200
+        type: integer
+      data:
+        items:
+          $ref: '#/definitions/model.PrinterSettingResponse'
+        type: array
+      message:
+        example: Printer settings fetched successfully
+        type: string
+      status:
+        example: success
+        type: string
+    type: object
+  handler.PrinterSettingUpdateSuccessResponse:
+    properties:
+      code:
+        example: 200
+        type: integer
+      data:
+        $ref: '#/definitions/model.PrinterSettingResponse'
+      message:
+        example: Printer setting updated successfully
+        type: string
+      status:
+        example: success
+        type: string
+    type: object
   handler.stockAdjustRequest:
     properties:
       quantity:
@@ -1312,6 +1370,22 @@ definitions:
         type: string
       storage_id:
         example: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+        type: string
+    type: object
+  model.CreatePrinterSettingRequest:
+    properties:
+      connected_entity_ids:
+        items:
+          type: string
+        type: array
+      ip:
+        example: 192.168.1.100
+        type: string
+      port:
+        example: 9100
+        type: integer
+      type:
+        example: category
         type: string
     type: object
   model.CreateSeparationActBatchRequest:
@@ -3061,30 +3135,23 @@ definitions:
           $ref: '#/definitions/model.CalculationPreviewItem'
         type: array
     type: object
-  model.PrinterSettingsResponse:
+  model.PrinterSettingResponse:
     properties:
-      cashier_printer_ip:
-        example: 192.168.1.100
+      connected_entity_ids:
+        items:
+          type: string
+        type: array
+      created_at:
         type: string
-      kitchen_printer_ip:
-        example: 192.168.1.101
+      id:
         type: string
-      printer_port:
-        example: 9100
+      ip:
+        type: string
+      port:
         type: integer
-    type: object
-  model.PrinterSettingsSwaggerResponse:
-    properties:
-      code:
-        example: 200
-        type: integer
-      data:
-        $ref: '#/definitions/model.PrinterSettingsResponse'
-      message:
-        example: Printer sozlamalari olindi
+      type:
         type: string
-      status:
-        example: success
+      updated_at:
         type: string
     type: object
   model.RefreshRequest:
@@ -4278,17 +4345,21 @@ definitions:
         example: newPassword123
         type: string
     type: object
-  model.UpdatePrinterSettingsRequest:
+  model.UpdatePrinterSettingRequest:
     properties:
-      cashier_printer_ip:
+      connected_entity_ids:
+        items:
+          type: string
+        type: array
+      ip:
         example: 192.168.1.100
         type: string
-      kitchen_printer_ip:
-        example: 192.168.1.101
-        type: string
-      printer_port:
+      port:
         example: 9100
         type: integer
+      type:
+        example: category
+        type: string
     type: object
   model.UpdateSeparationActRequest:
     properties:
@@ -18365,67 +18436,113 @@ paths:
       summary: Get POS password status
       tags:
       - settings
-  /api/v1/settings/printer:
+  /api/v1/settings/printer-settings:
     get:
       consumes:
       - application/json
-      description: Returns cashier and kitchen printer settings for current tenant
+      description: Get printer settings list for current tenant
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/model.PrinterSettingsSwaggerResponse'
-        "401":
-          description: Unauthorized
+            $ref: '#/definitions/handler.PrinterSettingListSuccessResponse'
+        "400":
+          description: Bad Request
           schema:
-            $ref: '#/definitions/model.ErrorData'
-        "403":
-          description: Forbidden
-          schema:
-            $ref: '#/definitions/model.ErrorData'
+            $ref: '#/definitions/model.ErrorResponse'
       security:
       - BearerAuth: []
-      summary: Get printer settings
+      summary: List printer settings
       tags:
-      - settings
-    put:
+      - printer-settings
+    post:
       consumes:
       - application/json
-      description: Creates or updates cashier and kitchen printer settings for current
-        tenant. Only admin can do this.
+      description: Create new printer setting for current tenant
       parameters:
-      - description: Printer settings payload
+      - description: Create printer setting request
         in: body
         name: request
         required: true
         schema:
-          $ref: '#/definitions/model.UpdatePrinterSettingsRequest'
+          $ref: '#/definitions/model.CreatePrinterSettingRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/handler.PrinterSettingCreateSuccessResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create printer setting
+      tags:
+      - printer-settings
+  /api/v1/settings/printer-settings/{id}:
+    get:
+      consumes:
+      - application/json
+      description: Get one printer setting by id for current tenant
+      parameters:
+      - description: Printer setting ID
+        in: path
+        name: id
+        required: true
+        type: string
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/model.PrinterSettingsSwaggerResponse'
+            $ref: '#/definitions/handler.PrinterSettingGetSuccessResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/model.ErrorData'
-        "401":
-          description: Unauthorized
-          schema:
-            $ref: '#/definitions/model.ErrorData'
-        "403":
-          description: Forbidden
-          schema:
-            $ref: '#/definitions/model.ErrorData'
+            $ref: '#/definitions/model.ErrorResponse'
       security:
       - BearerAuth: []
-      summary: Create or update printer settings
+      summary: Get printer setting by id
       tags:
-      - settings
+      - printer-settings
+    put:
+      consumes:
+      - application/json
+      description: Update printer setting by id for current tenant
+      parameters:
+      - description: Printer setting ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Update printer setting request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.UpdatePrinterSettingRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.PrinterSettingUpdateSuccessResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update printer setting
+      tags:
+      - printer-settings
   /api/v1/shifts:
     get:
       consumes:

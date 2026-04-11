@@ -38,6 +38,7 @@ sql:
       - "../../app/migrations/tenants/33_table_timer_foundation.up.sql"
       - "../../app/migrations/tenants/34_pos_auth.up.sql"
       - "../../app/migrations/tenants/35_modifier.up.sql"
+      - "../../app/migrations/tenants/38_recreate_printer_settings.up.sql"
 
 
     gen:

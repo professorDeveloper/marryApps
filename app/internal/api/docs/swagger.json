@@ -20861,14 +20861,14 @@
                 }
             }
         },
-        "/api/v1/settings/printer": {
+        "/api/v1/settings/printer-settings": {
             "get": {
                 "security": [
                     {
                         "BearerAuth": []
                     }
                 ],
-                "description": "Returns cashier and kitchen printer settings for current tenant",
+                "description": "Get printer settings list for current tenant",
                 "consumes": [
                     "application/json"
                 ],
@@ -20876,26 +20876,106 @@
                     "application/json"
                 ],
                 "tags": [
-                    "settings"
+                    "printer-settings"
                 ],
-                "summary": "Get printer settings",
+                "summary": "List printer settings",
                 "responses": {
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/model.PrinterSettingsSwaggerResponse"
+                            "$ref": "#/definitions/handler.PrinterSettingListSuccessResponse"
                         }
                     },
-                    "401": {
-                        "description": "Unauthorized",
+                    "400": {
+                        "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/model.ErrorData"
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Create new printer setting for current tenant",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "printer-settings"
+                ],
+                "summary": "Create printer setting",
+                "parameters": [
+                    {
+                        "description": "Create printer setting request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.CreatePrinterSettingRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/handler.PrinterSettingCreateSuccessResponse"
                         }
                     },
-                    "403": {
-                        "description": "Forbidden",
+                    "400": {
+                        "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/model.ErrorData"
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/settings/printer-settings/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get one printer setting by id for current tenant",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "printer-settings"
+                ],
+                "summary": "Get printer setting by id",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Printer setting ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handler.PrinterSettingGetSuccessResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
                         }
                     }
                 }
@@ -20906,7 +20986,7 @@
                         "BearerAuth": []
                     }
                 ],
-                "description": "Creates or updates cashier and kitchen printer settings for current tenant. Only admin can do this.",
+                "description": "Update printer setting by id for current tenant",
                 "consumes": [
                     "application/json"
                 ],
@@ -20914,17 +20994,24 @@
                     "application/json"
                 ],
                 "tags": [
-                    "settings"
+                    "printer-settings"
                 ],
-                "summary": "Create or update printer settings",
+                "summary": "Update printer setting",
                 "parameters": [
                     {
-                        "description": "Printer settings payload",
+                        "type": "string",
+                        "description": "Printer setting ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Update printer setting request",
                         "name": "request",
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/model.UpdatePrinterSettingsRequest"
+                            "$ref": "#/definitions/model.UpdatePrinterSettingRequest"
                         }
                     }
                 ],
@@ -20932,25 +21019,13 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/model.PrinterSettingsSwaggerResponse"
+                            "$ref": "#/definitions/handler.PrinterSettingUpdateSuccessResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/model.ErrorData"
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "$ref": "#/definitions/model.ErrorData"
-                        }
-                    },
-                    "403": {
-                        "description": "Forbidden",
-                        "schema": {
-                            "$ref": "#/definitions/model.ErrorData"
+                            "$ref": "#/definitions/model.ErrorResponse"
                         }
                     }
                 }
@@ -25034,6 +25109,89 @@
         }
     },
     "definitions": {
+        "handler.PrinterSettingCreateSuccessResponse": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "integer",
+                    "example": 201
+                },
+                "data": {
+                    "$ref": "#/definitions/model.PrinterSettingResponse"
+                },
+                "message": {
+                    "type": "string",
+                    "example": "Printer setting created successfully"
+                },
+                "status": {
+                    "type": "string",
+                    "example": "success"
+                }
+            }
+        },
+        "handler.PrinterSettingGetSuccessResponse": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "integer",
+                    "example": 200
+                },
+                "data": {
+                    "$ref": "#/definitions/model.PrinterSettingResponse"
+                },
+                "message": {
+                    "type": "string",
+                    "example": "Printer setting fetched successfully"
+                },
+                "status": {
+                    "type": "string",
+                    "example": "success"
+                }
+            }
+        },
+        "handler.PrinterSettingListSuccessResponse": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "integer",
+                    "example": 200
+                },
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.PrinterSettingResponse"
+                    }
+                },
+                "message": {
+                    "type": "string",
+                    "example": "Printer settings fetched successfully"
+                },
+                "status": {
+                    "type": "string",
+                    "example": "success"
+                }
+            }
+        },
+        "handler.PrinterSettingUpdateSuccessResponse": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "integer",
+                    "example": 200
+                },
+                "data": {
+                    "$ref": "#/definitions/model.PrinterSettingResponse"
+                },
+                "message": {
+                    "type": "string",
+                    "example": "Printer setting updated successfully"
+                },
+                "status": {
+                    "type": "string",
+                    "example": "success"
+                }
+            }
+        },
         "handler.stockAdjustRequest": {
             "type": "object",
             "properties": {
@@ -26903,6 +27061,29 @@
                 "storage_id": {
                     "type": "string",
                     "example": "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+                }
+            }
+        },
+        "model.CreatePrinterSettingRequest": {
+            "type": "object",
+            "properties": {
+                "connected_entity_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "ip": {
+                    "type": "string",
+                    "example": "192.168.1.100"
+                },
+                "port": {
+                    "type": "integer",
+                    "example": 9100
+                },
+                "type": {
+                    "type": "string",
+                    "example": "category"
                 }
             }
         },
@@ -29403,40 +29584,32 @@
                 }
             }
         },
-        "model.PrinterSettingsResponse": {
+        "model.PrinterSettingResponse": {
             "type": "object",
             "properties": {
-                "cashier_printer_ip": {
-                    "type": "string",
-                    "example": "192.168.1.100"
+                "connected_entity_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 },
-                "kitchen_printer_ip": {
-                    "type": "string",
-                    "example": "192.168.1.101"
+                "created_at": {
+                    "type": "string"
                 },
-                "printer_port": {
-                    "type": "integer",
-                    "example": 9100
-                }
-            }
-        },
-        "model.PrinterSettingsSwaggerResponse": {
-            "type": "object",
-            "properties": {
-                "code": {
-                    "type": "integer",
-                    "example": 200
+                "id": {
+                    "type": "string"
                 },
-                "data": {
-                    "$ref": "#/definitions/model.PrinterSettingsResponse"
+                "ip": {
+                    "type": "string"
                 },
-                "message": {
-                    "type": "string",
-                    "example": "Printer sozlamalari olindi"
+                "port": {
+                    "type": "integer"
                 },
-                "status": {
-                    "type": "string",
-                    "example": "success"
+                "type": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
                 }
             }
         },
@@ -31162,20 +31335,26 @@
                 }
             }
         },
-        "model.UpdatePrinterSettingsRequest": {
+        "model.UpdatePrinterSettingRequest": {
             "type": "object",
             "properties": {
-                "cashier_printer_ip": {
+                "connected_entity_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "ip": {
                     "type": "string",
                     "example": "192.168.1.100"
                 },
-                "kitchen_printer_ip": {
-                    "type": "string",
-                    "example": "192.168.1.101"
-                },
-                "printer_port": {
+                "port": {
                     "type": "integer",
                     "example": 9100
+                },
+                "type": {
+                    "type": "string",
+                    "example": "category"
                 }
             }
         },

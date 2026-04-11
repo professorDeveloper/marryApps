@@ -35,9 +35,8 @@ type AuthI interface {
 	SearchUsers(ctx context.Context, query string, limit, offset int32) ([]model.UserResponse, error)
 	UpdatePOSPassword(ctx context.Context, brandID, currentPassword, newPassword string) error
 	GetPOSPasswordStatus(ctx context.Context, brandID string) (bool, error)
-	UpsertPrinterSettings(ctx context.Context, brandID string, req model.UpdatePrinterSettingsRequest) (*model.PrinterSettingsResponse, error)
-	GetPrinterSettings(ctx context.Context, brandID string) (*model.PrinterSettingsResponse, error)
 }
+
 type MinioI interface {
 	UploadImage(ctx context.Context, file io.Reader, size int64, fileName string, extension string) (string, error)
 	GetImage(ctx context.Context, objectName string) (*RealMinio.Object, error)
@@ -488,6 +487,13 @@ type GoodsModifierI interface {
 	DetachModifierFromGood(ctx context.Context, goodID, modifierID string) error
 }
 
+type SettingsI interface {
+	ListPrinterSettings(ctx context.Context, brandID string) ([]model.PrinterSettingResponse, error)
+	GetPrinterSettingByID(ctx context.Context, brandID, id string) (*model.PrinterSettingResponse, error)
+	CreatePrinterSetting(ctx context.Context, brandID string, req model.CreatePrinterSettingRequest) (*model.PrinterSettingResponse, error)
+	UpdatePrinterSetting(ctx context.Context, brandID, id string, req model.UpdatePrinterSettingRequest) (*model.PrinterSettingResponse, error)
+}
+
 type I interface {
 	Auth() AuthI
 	Payment() PaymentI
@@ -523,6 +529,7 @@ type I interface {
 	SeparationAct() SeparationActI
 	Modifier() ModifierI
 	GoodsModifier() GoodsModifierI
+	Settings() SettingsI
 }
 
 type Service struct {
@@ -560,6 +567,7 @@ type Service struct {
 	separationAct     SeparationActI
 	modifier          ModifierI
 	goodsModifier     GoodsModifierI
+	settings          SettingsI
 }
 
 func New(cfg *config.Config, repo *repository.Repository, clickClient *paymentClick.Client, paymeClient *paymentPayme.Client, minioClient *minio.Minio) *Service {
@@ -598,6 +606,7 @@ func New(cfg *config.Config, repo *repository.Repository, clickClient *paymentCl
 		separationAct:     NewSeparationActS(repo),
 		modifier:          NewModifierS(repo),
 		goodsModifier:     NewGoodsModifierS(repo),
+		settings:          NewSettingsS(repo),
 	}
 }
 
@@ -734,4 +743,8 @@ func (s *Service) Modifier() ModifierI {
 
 func (s *Service) GoodsModifier() GoodsModifierI {
 	return s.goodsModifier
+}
+
+func (s *Service) Settings() SettingsI {
+	return s.settings
 }

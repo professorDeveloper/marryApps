@@ -7,47 +7,191 @@ package pg
 
 import (
 	"context"
+
+	"github.com/google/uuid"
 )
 
-const getPrinterSettings = `-- name: GetPrinterSettings :one
-SELECT id, cashier_printer_ip, kitchen_printer_ip, printer_port, created_at, updated_at
-FROM printer_settings
-WHERE id = 1
-LIMIT 1
+const createPrinterSetting = `-- name: CreatePrinterSetting :one
+INSERT INTO printer_settings (
+  ip,
+  port,
+  type,
+  connected_entity_ids
+)
+VALUES (
+  $1,
+  $2,
+  $3,
+  ARRAY(
+    SELECT x::uuid
+    FROM unnest($4::text[]) AS x
+  )
+)
+RETURNING
+  id,
+  ip,
+  port,
+  type,
+  connected_entity_ids,
+  created_at,
+  updated_at,
+  deleted_at
 `
 
-func (q *Queries) GetPrinterSettings(ctx context.Context) (PrinterSetting, error) {
-	row := q.db.QueryRow(ctx, getPrinterSettings)
+type CreatePrinterSettingParams struct {
+	Ip                 string   `json:"ip"`
+	Port               int32    `json:"port"`
+	Type               string   `json:"type"`
+	ConnectedEntityIds []string `json:"connected_entity_ids"`
+}
+
+func (q *Queries) CreatePrinterSetting(ctx context.Context, arg CreatePrinterSettingParams) (PrinterSetting, error) {
+	row := q.db.QueryRow(ctx, createPrinterSetting,
+		arg.Ip,
+		arg.Port,
+		arg.Type,
+		arg.ConnectedEntityIds,
+	)
 	var i PrinterSetting
 	err := row.Scan(
 		&i.ID,
-		&i.CashierPrinterIp,
-		&i.KitchenPrinterIp,
-		&i.PrinterPort,
+		&i.Ip,
+		&i.Port,
+		&i.Type,
+		&i.ConnectedEntityIds,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.DeletedAt,
 	)
 	return i, err
 }
 
-const upsertPrinterSettings = `-- name: UpsertPrinterSettings :exec
-INSERT INTO printer_settings (id, cashier_printer_ip, kitchen_printer_ip, printer_port)
-VALUES (1, $1, $2, $3)
-ON CONFLICT (id)
-DO UPDATE SET
-  cashier_printer_ip = EXCLUDED.cashier_printer_ip,
-  kitchen_printer_ip = EXCLUDED.kitchen_printer_ip,
-  printer_port = EXCLUDED.printer_port,
-  updated_at = NOW()
+const getPrinterSettingByID = `-- name: GetPrinterSettingByID :one
+SELECT
+  id,
+  ip,
+  port,
+  type,
+  connected_entity_ids,
+  created_at,
+  updated_at,
+  deleted_at
+FROM printer_settings
+WHERE id = $1
+  AND deleted_at = 0
+LIMIT 1
 `
 
-type UpsertPrinterSettingsParams struct {
-	CashierPrinterIp string `json:"cashier_printer_ip"`
-	KitchenPrinterIp string `json:"kitchen_printer_ip"`
-	PrinterPort      int32  `json:"printer_port"`
+func (q *Queries) GetPrinterSettingByID(ctx context.Context, id uuid.UUID) (PrinterSetting, error) {
+	row := q.db.QueryRow(ctx, getPrinterSettingByID, id)
+	var i PrinterSetting
+	err := row.Scan(
+		&i.ID,
+		&i.Ip,
+		&i.Port,
+		&i.Type,
+		&i.ConnectedEntityIds,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
+	)
+	return i, err
 }
 
-func (q *Queries) UpsertPrinterSettings(ctx context.Context, arg UpsertPrinterSettingsParams) error {
-	_, err := q.db.Exec(ctx, upsertPrinterSettings, arg.CashierPrinterIp, arg.KitchenPrinterIp, arg.PrinterPort)
-	return err
+const listPrinterSettings = `-- name: ListPrinterSettings :many
+SELECT
+  id,
+  ip,
+  port,
+  type,
+  connected_entity_ids,
+  created_at,
+  updated_at,
+  deleted_at
+FROM printer_settings
+WHERE deleted_at = 0
+ORDER BY created_at DESC
+`
+
+func (q *Queries) ListPrinterSettings(ctx context.Context) ([]PrinterSetting, error) {
+	rows, err := q.db.Query(ctx, listPrinterSettings)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []PrinterSetting
+	for rows.Next() {
+		var i PrinterSetting
+		if err := rows.Scan(
+			&i.ID,
+			&i.Ip,
+			&i.Port,
+			&i.Type,
+			&i.ConnectedEntityIds,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.DeletedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const updatePrinterSetting = `-- name: UpdatePrinterSetting :one
+UPDATE printer_settings
+SET
+  ip = $1,
+  port = $2,
+  type = $3,
+  connected_entity_ids = ARRAY(
+    SELECT x::uuid
+    FROM unnest($4::text[]) AS x
+  ),
+  updated_at = NOW()
+WHERE id = $5
+  AND deleted_at = 0
+RETURNING
+  id,
+  ip,
+  port,
+  type,
+  connected_entity_ids,
+  created_at,
+  updated_at,
+  deleted_at
+`
+
+type UpdatePrinterSettingParams struct {
+	Ip                 string    `json:"ip"`
+	Port               int32     `json:"port"`
+	Type               string    `json:"type"`
+	ConnectedEntityIds []string  `json:"connected_entity_ids"`
+	ID                 uuid.UUID `json:"id"`
+}
+
+func (q *Queries) UpdatePrinterSetting(ctx context.Context, arg UpdatePrinterSettingParams) (PrinterSetting, error) {
+	row := q.db.QueryRow(ctx, updatePrinterSetting,
+		arg.Ip,
+		arg.Port,
+		arg.Type,
+		arg.ConnectedEntityIds,
+		arg.ID,
+	)
+	var i PrinterSetting
+	err := row.Scan(
+		&i.ID,
+		&i.Ip,
+		&i.Port,
+		&i.Type,
+		&i.ConnectedEntityIds,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
+	)
+	return i, err
 }
