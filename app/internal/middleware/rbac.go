@@ -81,11 +81,4 @@ var (
 		model.RoleManager,
 		model.RoleSuperAdmin,
 	}
-	RolesCanGetPrinterSettings = []string{
-		model.RoleWaiter,
-		model.RoleCashier,
-		model.RoleAdmin,
-		model.RoleManager,
-		model.RoleSuperAdmin,
-	}
 )
