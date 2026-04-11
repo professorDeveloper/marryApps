@@ -19,6 +19,7 @@ import { DeviceTableRow } from './devices/components/DeviceTableRow';
 import { DeviceFormDialog } from './devices/components/DeviceFormDialog';
 import { DeviceDeleteDialog } from './devices/components/DeviceDeleteDialog';
 import type { IDevice } from './devices/types';
+import { CONNECTION_TYPES } from './devices/constants';
 
 export function ConnectedDeviceListView() {
   const { t } = useTranslation('menu');
@@ -92,6 +93,25 @@ export function ConnectedDeviceListView() {
         renderCell: ({ value }: { value: unknown }) => {
           const type = String(value || 'close_check');
           const displayLabel = type === 'close_check' ? 'Close Check' : type.charAt(0).toUpperCase() + type.slice(1);
+          return (
+            <Chip
+              label={displayLabel}
+              size="small"
+              variant="outlined"
+            />
+          );
+        },
+      },
+      {
+        key: 'connection_type',
+        label: t('devices.connectionType', 'Connection Type'),
+        width: '120px',
+        sortable: true,
+        getValue: (row: any) => row?.connection_type || 'wlan',
+        renderCell: ({ value }: { value: unknown }) => {
+          const connectionType = String(value || 'wlan');
+          const connectionTypeConfig = CONNECTION_TYPES.find(ct => ct.value === connectionType);
+          const displayLabel = connectionTypeConfig?.label || connectionType.toUpperCase();
           return (
             <Chip
               label={displayLabel}
@@ -176,11 +196,12 @@ export function ConnectedDeviceListView() {
         columns={columns}
         onRowClick={handleRowClick}
         defaultConfig={{
-          order: ['ip', 'port', 'type', 'connected_entities', 'actions'],
+          order: ['ip', 'port', 'type', 'connection_type', 'connected_entities', 'actions'],
           visibility: {
             ip: true,
             port: true,
             type: true,
+            connection_type: true,
             connected_entities: true,
             actions: true,
           },
@@ -188,6 +209,7 @@ export function ConnectedDeviceListView() {
             ip: '1fr',
             port: '100px',
             type: '120px',
+            connection_type: '120px',
             connected_entities: '2fr',
             actions: '120px',
           },
@@ -258,6 +280,19 @@ export function ConnectedDeviceListView() {
                   </Typography>
                   <Typography variant="body1">
                     {selectedDevice.type === 'close_check' ? 'Close Check' : selectedDevice.type.charAt(0).toUpperCase() + selectedDevice.type.slice(1)}
+                  </Typography>
+                </Box>
+                
+                <Box>
+                  <Typography variant="subtitle2" color="text.secondary">
+                    {t('devices.connectionType', 'Connection Type')}
+                  </Typography>
+                  <Typography variant="body1">
+                    {(() => {
+                      const connectionType = selectedDevice.connection_type || 'wlan';
+                      const connectionTypeConfig = CONNECTION_TYPES.find(ct => ct.value === connectionType);
+                      return connectionTypeConfig?.label || connectionType.toUpperCase();
+                    })()}
                   </Typography>
                 </Box>
                 

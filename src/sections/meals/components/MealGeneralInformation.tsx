@@ -145,6 +145,11 @@ export const MealGeneralInformation = React.memo(function MealGeneralInformation
                         sx={{ gridColumn: 1, gridRow: 1 }}
                         slotProps={{ select: { native: true } }}
                     >
+                        {categories.map((category) => (
+                            <option key={category.id} value={category.id}>
+                                {category.name}
+                            </option>
+                        ))}
                     </TextField>
 
                     {/* Cooking Time - Row 2, Col 1 (Left) */}

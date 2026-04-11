@@ -109,6 +109,13 @@ export function MealEditView({ isNew = false }: MealEditViewProps) {
         mealItemsApiRef.current?.restoreFromPersisted(ingredientCalcs, compoundCalcs);
     }, [mealWithCalculations]);
 
+    // ── Set default category when categories are loaded ───────────────────
+    useEffect(() => {
+        if (!categoryId && Array.isArray(categories) && categories.length > 0) {
+            setCategoryId(categories[0].id);
+        }
+    }, [categories, categoryId]);
+
     // ── Auto-set department when category changes ─────────────────────────
     useEffect(() => {
         if (!categoryId || !Array.isArray(categories)) return;

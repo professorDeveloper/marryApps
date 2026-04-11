@@ -1,4 +1,4 @@
-import type { IDevice, IDeviceFormData, DeviceType } from '../types';
+import type { IDevice, IDeviceFormData, DeviceType, ConnectionType } from '../types';
 
 import { useForm, Controller } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
@@ -18,7 +18,7 @@ import Typography from '@mui/material/Typography';
 import { Iconify } from 'src/components/iconify';
 import { useGetCategories } from 'src/actions/categories';
 import { validateIpAddress, validatePort, validateConnectedEntities } from '../utils/validation';
-import { DEVICE_TYPES } from '../constants';
+import { DEVICE_TYPES, CONNECTION_TYPES } from '../constants';
 
 interface DeviceFormProps {
   formId: string;
@@ -42,6 +42,7 @@ export function DeviceForm({ formId, defaultValues, onSubmit }: DeviceFormProps)
       ip: defaultValues?.ip ?? '',
       port: defaultValues?.port ?? 9100,
       type: defaultValues?.type ?? 'close_check',
+      connection_type: defaultValues?.connection_type ?? 'wlan',
       connected_entity_ids: defaultValues?.connected_entity_ids ?? [],
     },
   });
@@ -54,6 +55,7 @@ export function DeviceForm({ formId, defaultValues, onSubmit }: DeviceFormProps)
       ip: defaultValues?.ip ?? '',
       port: defaultValues?.port ?? 9100,
       type: defaultValues?.type ?? 'close_check',
+      connection_type: defaultValues?.connection_type ?? 'wlan',
       connected_entity_ids: defaultValues?.connected_entity_ids ?? [],
     });
   }, [defaultValues, reset]);
@@ -108,6 +110,28 @@ export function DeviceForm({ formId, defaultValues, onSubmit }: DeviceFormProps)
           )}
         />
         {errors.type && <FormHelperText>{errors.type.message}</FormHelperText>}
+      </FormControl>
+
+      <FormControl fullWidth error={!!errors.connection_type}>
+        <InputLabel id="connection-type-select-label">{t('devices.connectionType', 'Connection Type')}</InputLabel>
+        <Controller
+          name="connection_type"
+          control={control}
+          render={({ field }) => (
+            <Select
+              {...field}
+              labelId="connection-type-select-label"
+              label={t('devices.connectionType', 'Connection Type')}
+            >
+              {CONNECTION_TYPES.map((ct) => (
+                <MenuItem key={ct.value} value={ct.value}>
+                  {ct.label}
+                </MenuItem>
+              ))}
+            </Select>
+          )}
+        />
+        {errors.connection_type && <FormHelperText>{errors.connection_type.message}</FormHelperText>}
       </FormControl>
 
       {selectedType === 'category' && (
