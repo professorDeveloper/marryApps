@@ -48,6 +48,23 @@ func (q *Queries) CountCategoriesByDepartment(ctx context.Context, departmentID 
 	return count, err
 }
 
+const countCategoriesByIDs = `-- name: CountCategoriesByIDs :one
+SELECT COUNT(*)::BIGINT
+FROM categories
+WHERE deleted_at = 0
+  AND id IN (
+    SELECT x::uuid
+    FROM unnest($1::text[]) AS x
+  )
+`
+
+func (q *Queries) CountCategoriesByIDs(ctx context.Context, ids []string) (int64, error) {
+	row := q.db.QueryRow(ctx, countCategoriesByIDs, ids)
+	var column_1 int64
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
 const countCategoriesByParent = `-- name: CountCategoriesByParent :one
 SELECT COUNT(*) FROM categories c
 LEFT JOIN departments d ON c.department_id = d.id AND d.deleted_at = 0

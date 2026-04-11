@@ -1044,12 +1044,14 @@ type PriceForPlan struct {
 }
 
 type PrinterSetting struct {
-	ID               int16     `json:"id"`
-	CashierPrinterIp string    `json:"cashier_printer_ip"`
-	KitchenPrinterIp string    `json:"kitchen_printer_ip"`
-	PrinterPort      int32     `json:"printer_port"`
-	CreatedAt        time.Time `json:"created_at"`
-	UpdatedAt        time.Time `json:"updated_at"`
+	ID                 uuid.UUID   `json:"id"`
+	Ip                 string      `json:"ip"`
+	Port               int32       `json:"port"`
+	Type               string      `json:"type"`
+	ConnectedEntityIds []uuid.UUID `json:"connected_entity_ids"`
+	CreatedAt          time.Time   `json:"created_at"`
+	UpdatedAt          time.Time   `json:"updated_at"`
+	DeletedAt          int64       `json:"deleted_at"`
 }
 
 type QrSession struct {

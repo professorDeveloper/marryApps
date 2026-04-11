@@ -305,3 +305,12 @@ WHERE c.deleted_at = 0
   )
 ORDER BY c.created_at DESC
 LIMIT $2 OFFSET $3;
+
+-- name: CountCategoriesByIDs :one
+SELECT COUNT(*)::BIGINT
+FROM categories
+WHERE deleted_at = 0
+  AND id IN (
+    SELECT x::uuid
+    FROM unnest(sqlc.arg(ids)::text[]) AS x
+  );
