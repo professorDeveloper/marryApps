@@ -47,8 +47,8 @@ func (h *Handler) Register(router *echo.Echo) {
 			settings.GET("/pos-password/status", h.GetPOSPasswordStatus, mw.CheckLanguage(), mw.RequireRoles(mw.RolesAdminOnly...))
 			printerSettings := settings.Group("/printer-settings")
 			printerSettings.POST("", h.CreatePrinterSetting, mw.CheckLanguage(), mw.RequireRoles(mw.RolesAdminOnly...))
-			printerSettings.GET("", h.ListPrinterSettings, mw.CheckLanguage(), mw.RequireRoles(mw.RolesAdminOnly...))
-			printerSettings.GET("/:id", h.GetPrinterSettingByID, mw.CheckLanguage(), mw.RequireRoles(mw.RolesAdminOnly...))
+			printerSettings.GET("", h.ListPrinterSettings, mw.CheckLanguage(), mw.RequireRoles(mw.RolesCanGetPrinterSettings...))
+			printerSettings.GET("/:id", h.GetPrinterSettingByID, mw.CheckLanguage(), mw.RequireRoles(mw.RolesCanGetPrinterSettings...))
 			printerSettings.PUT("/:id", h.UpdatePrinterSetting, mw.CheckLanguage(), mw.RequireRoles(mw.RolesAdminOnly...))
 			printerSettings.DELETE("/:id", h.DeletePrinterSetting, mw.CheckLanguage(), mw.RequireRoles(mw.RolesAdminOnly...))
 		}
