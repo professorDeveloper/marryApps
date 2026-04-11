@@ -7,6 +7,7 @@ package pg
 
 import (
 	"context"
+	"time"
 
 	"github.com/google/uuid"
 )
@@ -16,15 +17,17 @@ INSERT INTO printer_settings (
   ip,
   port,
   type,
+  connection_type,
   connected_entity_ids
 )
 VALUES (
   $1,
   $2,
   $3,
+  $4,
   ARRAY(
     SELECT x::uuid
-    FROM unnest($4::text[]) AS x
+    FROM unnest($5::text[]) AS x
   )
 )
 RETURNING
@@ -32,6 +35,7 @@ RETURNING
   ip,
   port,
   type,
+  connection_type,
   connected_entity_ids,
   created_at,
   updated_at,
@@ -42,22 +46,37 @@ type CreatePrinterSettingParams struct {
 	Ip                 string   `json:"ip"`
 	Port               int32    `json:"port"`
 	Type               string   `json:"type"`
+	ConnectionType     string   `json:"connection_type"`
 	ConnectedEntityIds []string `json:"connected_entity_ids"`
 }
 
-func (q *Queries) CreatePrinterSetting(ctx context.Context, arg CreatePrinterSettingParams) (PrinterSetting, error) {
+type CreatePrinterSettingRow struct {
+	ID                 uuid.UUID   `json:"id"`
+	Ip                 string      `json:"ip"`
+	Port               int32       `json:"port"`
+	Type               string      `json:"type"`
+	ConnectionType     string      `json:"connection_type"`
+	ConnectedEntityIds []uuid.UUID `json:"connected_entity_ids"`
+	CreatedAt          time.Time   `json:"created_at"`
+	UpdatedAt          time.Time   `json:"updated_at"`
+	DeletedAt          int64       `json:"deleted_at"`
+}
+
+func (q *Queries) CreatePrinterSetting(ctx context.Context, arg CreatePrinterSettingParams) (CreatePrinterSettingRow, error) {
 	row := q.db.QueryRow(ctx, createPrinterSetting,
 		arg.Ip,
 		arg.Port,
 		arg.Type,
+		arg.ConnectionType,
 		arg.ConnectedEntityIds,
 	)
-	var i PrinterSetting
+	var i CreatePrinterSettingRow
 	err := row.Scan(
 		&i.ID,
 		&i.Ip,
 		&i.Port,
 		&i.Type,
+		&i.ConnectionType,
 		&i.ConnectedEntityIds,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -89,6 +108,7 @@ SELECT
   ip,
   port,
   type,
+  connection_type,
   connected_entity_ids,
   created_at,
   updated_at,
@@ -99,14 +119,27 @@ WHERE id = $1
 LIMIT 1
 `
 
-func (q *Queries) GetPrinterSettingByID(ctx context.Context, id uuid.UUID) (PrinterSetting, error) {
+type GetPrinterSettingByIDRow struct {
+	ID                 uuid.UUID   `json:"id"`
+	Ip                 string      `json:"ip"`
+	Port               int32       `json:"port"`
+	Type               string      `json:"type"`
+	ConnectionType     string      `json:"connection_type"`
+	ConnectedEntityIds []uuid.UUID `json:"connected_entity_ids"`
+	CreatedAt          time.Time   `json:"created_at"`
+	UpdatedAt          time.Time   `json:"updated_at"`
+	DeletedAt          int64       `json:"deleted_at"`
+}
+
+func (q *Queries) GetPrinterSettingByID(ctx context.Context, id uuid.UUID) (GetPrinterSettingByIDRow, error) {
 	row := q.db.QueryRow(ctx, getPrinterSettingByID, id)
-	var i PrinterSetting
+	var i GetPrinterSettingByIDRow
 	err := row.Scan(
 		&i.ID,
 		&i.Ip,
 		&i.Port,
 		&i.Type,
+		&i.ConnectionType,
 		&i.ConnectedEntityIds,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -121,6 +154,7 @@ SELECT
   ip,
   port,
   type,
+  connection_type,
   connected_entity_ids,
   created_at,
   updated_at,
@@ -130,20 +164,33 @@ WHERE deleted_at = 0
 ORDER BY created_at DESC
 `
 
-func (q *Queries) ListPrinterSettings(ctx context.Context) ([]PrinterSetting, error) {
+type ListPrinterSettingsRow struct {
+	ID                 uuid.UUID   `json:"id"`
+	Ip                 string      `json:"ip"`
+	Port               int32       `json:"port"`
+	Type               string      `json:"type"`
+	ConnectionType     string      `json:"connection_type"`
+	ConnectedEntityIds []uuid.UUID `json:"connected_entity_ids"`
+	CreatedAt          time.Time   `json:"created_at"`
+	UpdatedAt          time.Time   `json:"updated_at"`
+	DeletedAt          int64       `json:"deleted_at"`
+}
+
+func (q *Queries) ListPrinterSettings(ctx context.Context) ([]ListPrinterSettingsRow, error) {
 	rows, err := q.db.Query(ctx, listPrinterSettings)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []PrinterSetting
+	var items []ListPrinterSettingsRow
 	for rows.Next() {
-		var i PrinterSetting
+		var i ListPrinterSettingsRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.Ip,
 			&i.Port,
 			&i.Type,
+			&i.ConnectionType,
 			&i.ConnectedEntityIds,
 			&i.CreatedAt,
 			&i.UpdatedAt,
@@ -165,18 +212,20 @@ SET
   ip = $1,
   port = $2,
   type = $3,
+  connection_type = $4,
   connected_entity_ids = ARRAY(
     SELECT x::uuid
-    FROM unnest($4::text[]) AS x
+    FROM unnest($5::text[]) AS x
   ),
   updated_at = NOW()
-WHERE id = $5
+WHERE id = $6
   AND deleted_at = 0
 RETURNING
   id,
   ip,
   port,
   type,
+  connection_type,
   connected_entity_ids,
   created_at,
   updated_at,
@@ -187,24 +236,39 @@ type UpdatePrinterSettingParams struct {
 	Ip                 string    `json:"ip"`
 	Port               int32     `json:"port"`
 	Type               string    `json:"type"`
+	ConnectionType     string    `json:"connection_type"`
 	ConnectedEntityIds []string  `json:"connected_entity_ids"`
 	ID                 uuid.UUID `json:"id"`
 }
 
-func (q *Queries) UpdatePrinterSetting(ctx context.Context, arg UpdatePrinterSettingParams) (PrinterSetting, error) {
+type UpdatePrinterSettingRow struct {
+	ID                 uuid.UUID   `json:"id"`
+	Ip                 string      `json:"ip"`
+	Port               int32       `json:"port"`
+	Type               string      `json:"type"`
+	ConnectionType     string      `json:"connection_type"`
+	ConnectedEntityIds []uuid.UUID `json:"connected_entity_ids"`
+	CreatedAt          time.Time   `json:"created_at"`
+	UpdatedAt          time.Time   `json:"updated_at"`
+	DeletedAt          int64       `json:"deleted_at"`
+}
+
+func (q *Queries) UpdatePrinterSetting(ctx context.Context, arg UpdatePrinterSettingParams) (UpdatePrinterSettingRow, error) {
 	row := q.db.QueryRow(ctx, updatePrinterSetting,
 		arg.Ip,
 		arg.Port,
 		arg.Type,
+		arg.ConnectionType,
 		arg.ConnectedEntityIds,
 		arg.ID,
 	)
-	var i PrinterSetting
+	var i UpdatePrinterSettingRow
 	err := row.Scan(
 		&i.ID,
 		&i.Ip,
 		&i.Port,
 		&i.Type,
+		&i.ConnectionType,
 		&i.ConnectedEntityIds,
 		&i.CreatedAt,
 		&i.UpdatedAt,

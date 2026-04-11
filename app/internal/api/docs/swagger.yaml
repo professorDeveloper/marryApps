@@ -1392,6 +1392,9 @@ definitions:
         items:
           type: string
         type: array
+      connection_type:
+        example: cable
+        type: string
       ip:
         example: 192.168.1.100
         type: string
@@ -3155,6 +3158,8 @@ definitions:
         items:
           type: string
         type: array
+      connection_type:
+        type: string
       created_at:
         type: string
       id:
@@ -4365,6 +4370,9 @@ definitions:
         items:
           type: string
         type: array
+      connection_type:
+        example: cable
+        type: string
       ip:
         example: 192.168.1.100
         type: string

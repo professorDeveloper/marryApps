@@ -27134,6 +27134,10 @@
                         "type": "string"
                     }
                 },
+                "connection_type": {
+                    "type": "string",
+                    "example": "cable"
+                },
                 "ip": {
                     "type": "string",
                     "example": "192.168.1.100"
@@ -29654,6 +29658,9 @@
                         "type": "string"
                     }
                 },
+                "connection_type": {
+                    "type": "string"
+                },
                 "created_at": {
                     "type": "string"
                 },
@@ -31404,6 +31411,10 @@
                     "items": {
                         "type": "string"
                     }
+                },
+                "connection_type": {
+                    "type": "string",
+                    "example": "cable"
                 },
                 "ip": {
                     "type": "string",
