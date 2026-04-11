@@ -54,6 +54,23 @@ func normalizeConnectedEntityIDs(ids []string) []string {
 	return result
 }
 
+func normalizeConnectionType(v string) string {
+	v = strings.TrimSpace(strings.ToLower(v))
+	if v == "" {
+		return string(model.PrinterConnectionTypeCable)
+	}
+	return v
+}
+
+func isValidPrinterConnectionType(v string) bool {
+	switch v {
+	case string(model.PrinterConnectionTypeCable), string(model.PrinterConnectionTypeWLAN):
+		return true
+	default:
+		return false
+	}
+}
+
 func isValidPrinterSettingType(t string) bool {
 	switch t {
 	case string(model.PrinterSettingTypeCategory), string(model.PrinterSettingTypeCloseCheck):
@@ -74,8 +91,7 @@ func isUniqueViolation(err error) bool {
 	}
 	return false
 }
-
-func mapPrinterSettingResponse(row pg.PrinterSetting) *model.PrinterSettingResponse {
+func mapCreatePrinterSettingRow(row pg.CreatePrinterSettingRow) *model.PrinterSettingResponse {
 	connectedEntityIDs := make([]string, 0, len(row.ConnectedEntityIds))
 	for _, id := range row.ConnectedEntityIds {
 		connectedEntityIDs = append(connectedEntityIDs, id.String())
@@ -86,6 +102,61 @@ func mapPrinterSettingResponse(row pg.PrinterSetting) *model.PrinterSettingRespo
 		IP:                 row.Ip,
 		Port:               row.Port,
 		Type:               row.Type,
+		ConnectionType:     row.ConnectionType,
+		ConnectedEntityIDs: connectedEntityIDs,
+		CreatedAt:          row.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
+		UpdatedAt:          row.UpdatedAt.Format("2006-01-02T15:04:05Z07:00"),
+	}
+}
+
+func mapListPrinterSettingsRow(row pg.ListPrinterSettingsRow) *model.PrinterSettingResponse {
+	connectedEntityIDs := make([]string, 0, len(row.ConnectedEntityIds))
+	for _, id := range row.ConnectedEntityIds {
+		connectedEntityIDs = append(connectedEntityIDs, id.String())
+	}
+
+	return &model.PrinterSettingResponse{
+		ID:                 row.ID.String(),
+		IP:                 row.Ip,
+		Port:               row.Port,
+		Type:               row.Type,
+		ConnectionType:     row.ConnectionType,
+		ConnectedEntityIDs: connectedEntityIDs,
+		CreatedAt:          row.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
+		UpdatedAt:          row.UpdatedAt.Format("2006-01-02T15:04:05Z07:00"),
+	}
+}
+
+func mapGetPrinterSettingByIDRow(row pg.GetPrinterSettingByIDRow) *model.PrinterSettingResponse {
+	connectedEntityIDs := make([]string, 0, len(row.ConnectedEntityIds))
+	for _, id := range row.ConnectedEntityIds {
+		connectedEntityIDs = append(connectedEntityIDs, id.String())
+	}
+
+	return &model.PrinterSettingResponse{
+		ID:                 row.ID.String(),
+		IP:                 row.Ip,
+		Port:               row.Port,
+		Type:               row.Type,
+		ConnectionType:     row.ConnectionType,
+		ConnectedEntityIDs: connectedEntityIDs,
+		CreatedAt:          row.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
+		UpdatedAt:          row.UpdatedAt.Format("2006-01-02T15:04:05Z07:00"),
+	}
+}
+
+func mapUpdatePrinterSettingRow(row pg.UpdatePrinterSettingRow) *model.PrinterSettingResponse {
+	connectedEntityIDs := make([]string, 0, len(row.ConnectedEntityIds))
+	for _, id := range row.ConnectedEntityIds {
+		connectedEntityIDs = append(connectedEntityIDs, id.String())
+	}
+
+	return &model.PrinterSettingResponse{
+		ID:                 row.ID.String(),
+		IP:                 row.Ip,
+		Port:               row.Port,
+		Type:               row.Type,
+		ConnectionType:     row.ConnectionType,
 		ConnectedEntityIDs: connectedEntityIDs,
 		CreatedAt:          row.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
 		UpdatedAt:          row.UpdatedAt.Format("2006-01-02T15:04:05Z07:00"),
@@ -96,6 +167,7 @@ func (s *SettingsS) CreatePrinterSetting(ctx context.Context, brandID string, re
 	brandID = strings.TrimSpace(brandID)
 	req.IP = normalizePrinterIP(req.IP)
 	req.Type = strings.TrimSpace(req.Type)
+	req.ConnectionType = normalizeConnectionType(req.ConnectionType)
 	req.ConnectedEntityIDs = normalizeConnectedEntityIDs(req.ConnectedEntityIDs)
 
 	if brandID == "" {
@@ -112,6 +184,9 @@ func (s *SettingsS) CreatePrinterSetting(ctx context.Context, brandID string, re
 	}
 	if req.Type == "" {
 		return nil, errors.New("type is required")
+	}
+	if !isValidPrinterConnectionType(req.ConnectionType) {
+		return nil, errors.New("connection_type must be one of: cable, wlan")
 	}
 	if !isValidPrinterSettingType(req.Type) {
 		return nil, errors.New("type must be one of: category, close_check")
@@ -154,6 +229,7 @@ func (s *SettingsS) CreatePrinterSetting(ctx context.Context, brandID string, re
 		Ip:                 req.IP,
 		Port:               req.Port,
 		Type:               req.Type,
+		ConnectionType:     req.ConnectionType,
 		ConnectedEntityIds: connectedEntityIDs,
 	})
 	if err != nil {
@@ -167,7 +243,7 @@ func (s *SettingsS) CreatePrinterSetting(ctx context.Context, brandID string, re
 		return nil, err
 	}
 
-	return mapPrinterSettingResponse(row), nil
+	return mapCreatePrinterSettingRow(row), nil
 }
 func (s *SettingsS) ListPrinterSettings(ctx context.Context, brandID string) ([]model.PrinterSettingResponse, error) {
 	brandID = strings.TrimSpace(brandID)
@@ -196,7 +272,7 @@ func (s *SettingsS) ListPrinterSettings(ctx context.Context, brandID string) ([]
 
 	resp := make([]model.PrinterSettingResponse, 0, len(rows))
 	for _, row := range rows {
-		resp = append(resp, *mapPrinterSettingResponse(row))
+		resp = append(resp, *mapListPrinterSettingsRow(row))
 	}
 
 	return resp, nil
@@ -240,7 +316,7 @@ func (s *SettingsS) GetPrinterSettingByID(ctx context.Context, brandID, id strin
 		return nil, err
 	}
 
-	return mapPrinterSettingResponse(row), nil
+	return mapGetPrinterSettingByIDRow(row), nil
 }
 
 func (s *SettingsS) UpdatePrinterSetting(ctx context.Context, brandID, id string, req model.UpdatePrinterSettingRequest) (*model.PrinterSettingResponse, error) {
@@ -249,6 +325,7 @@ func (s *SettingsS) UpdatePrinterSetting(ctx context.Context, brandID, id string
 
 	req.IP = normalizePrinterIP(req.IP)
 	req.Type = strings.TrimSpace(req.Type)
+	req.ConnectionType = normalizeConnectionType(req.ConnectionType)
 	req.ConnectedEntityIDs = normalizeConnectedEntityIDs(req.ConnectedEntityIDs)
 
 	if brandID == "" {
@@ -274,6 +351,9 @@ func (s *SettingsS) UpdatePrinterSetting(ctx context.Context, brandID, id string
 	}
 	if req.Type == "" {
 		return nil, errors.New("type is required")
+	}
+	if !isValidPrinterConnectionType(req.ConnectionType) {
+		return nil, errors.New("connection_type must be one of: cable, wlan")
 	}
 	if !isValidPrinterSettingType(req.Type) {
 		return nil, errors.New("type must be one of: category, close_check")
@@ -317,6 +397,7 @@ func (s *SettingsS) UpdatePrinterSetting(ctx context.Context, brandID, id string
 		Ip:                 req.IP,
 		Port:               req.Port,
 		Type:               req.Type,
+		ConnectionType:     req.ConnectionType,
 		ConnectedEntityIds: connectedEntityIDs,
 	})
 	if err != nil {
@@ -330,7 +411,7 @@ func (s *SettingsS) UpdatePrinterSetting(ctx context.Context, brandID, id string
 		return nil, err
 	}
 
-	return mapPrinterSettingResponse(row), nil
+	return mapUpdatePrinterSettingRow(row), nil
 }
 
 func (s *SettingsS) DeletePrinterSetting(ctx context.Context, brandID, id string) error {

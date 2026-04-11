@@ -27137,6 +27137,10 @@ const docTemplate = `{
                         "type": "string"
                     }
                 },
+                "connection_type": {
+                    "type": "string",
+                    "example": "cable"
+                },
                 "ip": {
                     "type": "string",
                     "example": "192.168.1.100"
@@ -29657,6 +29661,9 @@ const docTemplate = `{
                         "type": "string"
                     }
                 },
+                "connection_type": {
+                    "type": "string"
+                },
                 "created_at": {
                     "type": "string"
                 },
@@ -31407,6 +31414,10 @@ const docTemplate = `{
                     "items": {
                         "type": "string"
                     }
+                },
+                "connection_type": {
+                    "type": "string",
+                    "example": "cable"
                 },
                 "ip": {
                     "type": "string",

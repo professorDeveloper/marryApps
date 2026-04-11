@@ -1052,6 +1052,7 @@ type PrinterSetting struct {
 	CreatedAt          time.Time   `json:"created_at"`
 	UpdatedAt          time.Time   `json:"updated_at"`
 	DeletedAt          int64       `json:"deleted_at"`
+	ConnectionType     string      `json:"connection_type"`
 }
 
 type QrSession struct {
