@@ -3,12 +3,14 @@ INSERT INTO printer_settings (
   ip,
   port,
   type,
+  connection_type,
   connected_entity_ids
 )
 VALUES (
   sqlc.arg(ip),
   sqlc.arg(port),
   sqlc.arg(type),
+  sqlc.arg(connection_type),
   ARRAY(
     SELECT x::uuid
     FROM unnest(sqlc.arg(connected_entity_ids)::text[]) AS x
@@ -19,6 +21,7 @@ RETURNING
   ip,
   port,
   type,
+  connection_type,
   connected_entity_ids,
   created_at,
   updated_at,
@@ -30,6 +33,7 @@ SELECT
   ip,
   port,
   type,
+  connection_type,
   connected_entity_ids,
   created_at,
   updated_at,
@@ -44,6 +48,7 @@ SELECT
   ip,
   port,
   type,
+  connection_type,
   connected_entity_ids,
   created_at,
   updated_at,
@@ -59,6 +64,7 @@ SET
   ip = sqlc.arg(ip),
   port = sqlc.arg(port),
   type = sqlc.arg(type),
+  connection_type = sqlc.arg(connection_type),
   connected_entity_ids = ARRAY(
     SELECT x::uuid
     FROM unnest(sqlc.arg(connected_entity_ids)::text[]) AS x
@@ -71,6 +77,7 @@ RETURNING
   ip,
   port,
   type,
+  connection_type,
   connected_entity_ids,
   created_at,
   updated_at,
