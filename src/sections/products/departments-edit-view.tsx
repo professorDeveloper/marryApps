@@ -1,4 +1,3 @@
-import type { TFunction } from 'i18next';
 import type { IDepartmentFormData } from 'src/types/departments.tsx';
 import type { CardSection, GenericEditViewConfig } from 'src/components/generic-edit-view';
 
@@ -18,26 +17,13 @@ import { useGetStorages, useGetDepartment, useCreateDepartment, useUpdateDepartm
 
 import { GenericEditView } from 'src/components/generic-edit-view';
 
-const COLOR_CODES = [
-    '#FF4842', // Red            
-    '#1890FF', // Blue               
-    '#00AB55', // Green            
-    '#FFC107', // Yellow               
-    '#7F00FF', // Violet             
-    '#FF6B35', // Orange              
-    '#FF1493', // Deep Pink                      
-    '#00CED1', // Dark Turquoise
-    '#FFD700', // Gold           
-    '#8B4513', // Saddle Brown    
-    '#000000', // Black           
-    '#FFFFFF', // White           
-];
+import { COLOR_CODES, translateSection, CACHE_SYNC_DELAY_MS, DELETE_SYNC_DELAY_MS, mapStoragesToOptions } from 'src/sections/menu/compounds/utilities';
 
 export interface DepartmentEditViewProps {
     isNew?: boolean;
 }
 
-export function ProductEditView({ isNew = false }: DepartmentEditViewProps) {
+export function DepartmentEditView({ isNew = false }: DepartmentEditViewProps) {
     const router = useRouter();
     const params = useParams();
     const id = params.id as string | undefined;
@@ -50,10 +36,7 @@ export function ProductEditView({ isNew = false }: DepartmentEditViewProps) {
     const { department, departmentLoading } = useGetDepartment(!isNew && id ? id : '');
 
     const storageOptions = useMemo(
-        () => (Array.isArray(storages) ? storages.map((s) => ({
-            value: s.id,
-            label: s.name || s.id,
-        })) : []),
+        () => mapStoragesToOptions(storages),
         [storages]
     );
 
@@ -121,7 +104,7 @@ export function ProductEditView({ isNew = false }: DepartmentEditViewProps) {
                 }
 
                 // Add small delay to ensure SWR cache is updated before redirect
-                await new Promise(resolve => setTimeout(resolve, 300));
+                await new Promise(resolve => setTimeout(resolve, CACHE_SYNC_DELAY_MS));
 
                 // Only redirect if we're not already navigating away
                 router.push(paths.menu.product.root);
@@ -141,7 +124,7 @@ export function ProductEditView({ isNew = false }: DepartmentEditViewProps) {
             if (id) {
                 await deleteDepartment(id);
                 // Add small delay to ensure SWR cache is updated before redirect
-                await new Promise(resolve => setTimeout(resolve, 500));
+                await new Promise(resolve => setTimeout(resolve, DELETE_SYNC_DELAY_MS));
                 router.push(paths.menu.product.root);
             }
         } catch (err) {
@@ -260,27 +243,3 @@ function buildColorAndStorageSection(
     };
 }
 
-function translateSection(section: CardSection, t: TFunction): CardSection {
-    const mapped = { ...section } as CardSection;
-    if (typeof mapped.title === 'string' && mapped.title.includes('.')) {
-        mapped.title = t(mapped.title as string, mapped.title as string);
-    }
-    if (Array.isArray(mapped.fields)) {
-        mapped.fields = mapped.fields.map((f) => {
-            const nf = { ...f };
-            if (typeof nf.label === 'string' && nf.label.includes('.')) {
-                nf.label = t(nf.label as string, nf.label as string);
-            }
-            if (nf.options && Array.isArray(nf.options)) {
-                nf.options = nf.options.map((opt) => ({
-                    ...opt,
-                    label: typeof opt.label === 'string' && opt.label.includes('.')
-                        ? t(opt.label as string, opt.label as string)
-                        : opt.label
-                }));
-            }
-            return nf;
-        });
-    }
-    return mapped;
-}

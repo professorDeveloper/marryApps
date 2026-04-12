@@ -9,7 +9,6 @@
 # dependencies
 
 node_modules
-*.md
 !README.md
 .vscode
 .DS_Store

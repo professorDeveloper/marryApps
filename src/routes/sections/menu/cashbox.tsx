@@ -8,10 +8,10 @@ const TransactionsPage = lazy(() => import('src/pages/dashboard/cashbox/transact
 const CashboxReportPage = lazy(() => import('src/pages/dashboard/cashbox/cashbox-report'));
 
 const CashierEditView = lazy(() =>
-  import('src/sections/cashbox/cashiers-edit-view').then((m) => ({ default: m.CashierEditView }))
+  import('src/sections/cashbox/cashiers').then((m) => ({ default: m.CashierEditView }))
 );
 const CashRegisterEditView = lazy(() =>
-  import('src/sections/cashbox/transaction-groups-edit-view').then((m) => ({
+  import('src/sections/cashbox/transaction-groups').then((m) => ({
     default: m.CashRegisterEditView,
   }))
 );

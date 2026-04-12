@@ -1,3 +1,5 @@
+import type { IDeviceFormData, DeviceModalState } from '../types';
+
 import { useTranslation } from 'react-i18next';
 
 import Button from '@mui/material/Button';
@@ -7,7 +9,6 @@ import DialogContent from '@mui/material/DialogContent';
 import DialogActions from '@mui/material/DialogActions';
 import CircularProgress from '@mui/material/CircularProgress';
 
-import type { DeviceModalState, IDeviceFormData } from '../types';
 import { DeviceForm } from './DeviceForm';
 
 const FORM_ID = 'device-form';

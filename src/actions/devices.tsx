@@ -1,11 +1,11 @@
 import type { SWRConfiguration } from 'swr';
+import type { BackendResponse } from 'src/types/inventory';
 import type { IDevice, IDeviceFormData } from 'src/sections/settings/devices/types';
 
-import useSWR, { mutate } from 'swr';
 import { useCallback } from 'react';
+import useSWR, { mutate } from 'swr';
 
 import { poster, putter, deleter, fetcher, endpoints } from 'src/lib/axios';
-import { BackendResponse } from 'src/types/inventory';
 
 const swrOptions: SWRConfiguration = {
   revalidateIfStale: true,

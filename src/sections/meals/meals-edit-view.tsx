@@ -1,13 +1,12 @@
 import type { SyntheticEvent } from 'react';
-import React from 'react';
 
 import { mutate } from 'swr';
 import { toast } from 'sonner';
 import { useParams } from 'react-router';
 import { useTranslation } from 'react-i18next';
-import { useRef, useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useRef, useMemo, useState, useEffect, useCallback } from 'react';
 
-import { Box, Tab, Tabs, Typography, CircularProgress, Button, Stack } from '@mui/material';
+import { Box, Tab, Tabs, Stack, Button, CircularProgress } from '@mui/material';
 
 import { paths } from 'src/routes/paths';
 import { useRouter } from 'src/routes/hooks';
@@ -23,7 +22,6 @@ import {
 import { endpoints } from 'src/lib/axios';
 import { useGetCategories } from 'src/actions/categories';
 
-import { CustomBreadcrumbs } from 'src/components/custom-breadcrumbs';
 import { GeneralInformation } from 'src/sections/warehouse/utils/components/GeneralInformation';
 
 import { MealRelatedSection } from './components/MealRelatedSection';
@@ -384,13 +382,13 @@ export function MealEditView({ isNew = false }: MealEditViewProps) {
                                     apiRef={mealItemsApiRef}
                                     onCancel={() => {}} // No-op - handled outside
                                     onSave={() => {}} // No-op - handled outside
-                                    cancelDisabled={true} // Disable internal buttons
-                                    saveDisabled={true} // Disable internal buttons
+                                    cancelDisabled // Disable internal buttons
+                                    saveDisabled // Disable internal buttons
                                     saveLabel={saveLabel}
-                                    hideActionBar={true} // Hide internal action bar
+                                    hideActionBar // Hide internal action bar
                                     isVisible={isMealItemsOpen}
                                     menuPrice={price}
-                                    showProfitMargin={true}
+                                    showProfitMargin
                                     tableHeight={680}
                                 />
                             </Box>

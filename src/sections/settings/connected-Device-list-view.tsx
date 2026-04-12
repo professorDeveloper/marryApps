@@ -1,25 +1,26 @@
-import { useMemo, useCallback, useState } from 'react';
+import type { IDevice } from './devices/types';
+
 import { useTranslation } from 'react-i18next';
+import { useMemo, useState, useCallback } from 'react';
 
 import Box from '@mui/material/Box';
 import Chip from '@mui/material/Chip';
 import Button from '@mui/material/Button';
 import Drawer from '@mui/material/Drawer';
-import Typography from '@mui/material/Typography';
 import Divider from '@mui/material/Divider';
+import Typography from '@mui/material/Typography';
 
-import { paths } from 'src/routes/paths';
-
-import { Iconify } from 'src/components/iconify';
-import { DataTable } from 'src/sections/warehouse/deduction/components/utility-data-table';
 import { useGetCategories } from 'src/actions/categories';
 
+import { Iconify } from 'src/components/iconify';
+
+import { DataTable } from 'src/sections/warehouse/deduction/components/utility-data-table';
+
+import { CONNECTION_TYPES } from './devices/constants';
 import { useDevicesData } from './devices/hooks/useDevicesData';
 import { DeviceTableRow } from './devices/components/DeviceTableRow';
 import { DeviceFormDialog } from './devices/components/DeviceFormDialog';
 import { DeviceDeleteDialog } from './devices/components/DeviceDeleteDialog';
-import type { IDevice } from './devices/types';
-import { CONNECTION_TYPES } from './devices/constants';
 
 export function ConnectedDeviceListView() {
   const { t } = useTranslation('menu');
@@ -35,9 +36,7 @@ export function ConnectedDeviceListView() {
     return map;
   }, [categories]);
 
-  const getCategoryName = useCallback((categoryId: string) => {
-    return categoryMap.get(categoryId) || categoryId;
-  }, [categoryMap]);
+  const getCategoryName = useCallback((categoryId: string) => categoryMap.get(categoryId) || categoryId, [categoryMap]);
 
   // Detail view state
   const [selectedDevice, setSelectedDevice] = useState<IDevice | null>(null);

@@ -15,32 +15,32 @@ const MealEditView = lazy(() =>
 
 // Semifinished components
 const HalfMeals = lazy(() =>
-  import('src/sections/compounds/compounds-list-view').then((m) => ({ default: m.HalfMeals }))
+  import('src/sections/menu/compounds/compounds-list-view').then((m) => ({ default: m.HalfMeals }))
 );
 const CompoundEditViewWrapper = lazy(() =>
-  import('src/sections/compounds/compounds-edit-view').then((m) => ({
+  import('src/sections/menu/compounds/compounds-edit-view').then((m) => ({
     default: m.CompoundEditViewWrapper,
   }))
 );
 
-// Products components
+// Products/Departments components
 const ProductListView = lazy(() =>
-  import('src/sections/products/departments-list-view').then((m) => ({
-    default: m.ProductListView,
+  import('src/sections/menu/departments').then((m) => ({
+    default: m.DepartmentListView,
   }))
 );
 const ProductEditView = lazy(() =>
-  import('src/sections/products/departments-edit-view').then((m) => ({
-    default: m.ProductEditView,
+  import('src/sections/menu/departments').then((m) => ({
+    default: m.DepartmentEditView,
   }))
 );
 const CategoryListView = lazy(() =>
-  import('src/sections/category/category-list-view').then((m) => ({
+  import('src/sections/menu/category/category-list-view').then((m) => ({
     default: m.CategoryListView,
   }))
 );
 const CategoryEditViewWrapper = lazy(() =>
-  import('src/sections/category/category-edit-view').then((m) => ({
+  import('src/sections/menu/category/category-edit-view').then((m) => ({
     default: m.CategoryEditViewWrapper,
   }))
 );

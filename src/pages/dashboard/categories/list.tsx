@@ -1,6 +1,6 @@
 import { CONFIG } from 'src/global-config';
 
-import { CategoryListView } from 'src/sections/category/category-list-view';
+import { CategoryListView } from 'src/sections/menu/category/category-list-view';
 
 // ----------------------------------------------------------------------
 

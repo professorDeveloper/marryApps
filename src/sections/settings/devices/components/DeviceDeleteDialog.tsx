@@ -1,13 +1,13 @@
+import type { IDevice } from '../types';
+
 import { useTranslation } from 'react-i18next';
 
 import Button from '@mui/material/Button';
 import Dialog from '@mui/material/Dialog';
+import Typography from '@mui/material/Typography';
 import DialogTitle from '@mui/material/DialogTitle';
 import DialogContent from '@mui/material/DialogContent';
 import DialogActions from '@mui/material/DialogActions';
-import Typography from '@mui/material/Typography';
-
-import type { IDevice } from '../types';
 
 interface DeviceDeleteDialogProps {
   open: boolean;

@@ -1,4 +1,5 @@
 import type { DeviceType } from '../types';
+
 import { IP_REGEX } from '../constants';
 
 export function isValidIp(value: string): boolean {

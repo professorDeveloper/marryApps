@@ -10,5 +10,9 @@
     "education": "Education",
     "sports": "Sports",
     "meals": "Meals"
+  },
+  "dataTable": {
+    "sort": "Sort",
+    "filter": "Filter"
   }
 }

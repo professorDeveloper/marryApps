@@ -10,5 +10,9 @@
     "education": "Ўқитиш",
     "sports": "Спорт",
     "meals": "Таомлар"
+  },
+  "dataTable": {
+    "sort": "Саралаш",
+    "filter": "Филтер"
   }
 }

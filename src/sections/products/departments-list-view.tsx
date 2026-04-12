@@ -4,12 +4,12 @@ import type { DataTableColumn, DataTableDefaultConfig } from 'src/sections/wareh
 import { useTranslation } from 'react-i18next';
 import { useMemo, useState, useEffect, useCallback } from 'react';
 
-import { useTheme } from '@mui/material/styles';
 import { Box, Avatar, Button, Dialog, IconButton, Typography, DialogTitle, ListItemText, DialogActions, DialogContent } from '@mui/material';
 
 import { paths } from 'src/routes/paths';
 import { useRouter } from 'src/routes/hooks';
 
+import { fDate } from 'src/utils/format-time';
 import { getInitials } from 'src/utils/avatar';
 import { getFullImageUrl } from 'src/utils/image-url';
 
@@ -21,9 +21,13 @@ import { Iconify } from 'src/components/iconify';
 import { GenericViewModal } from 'src/components/generic-view-view';
 
 import { DeductionUtilityDataTable } from 'src/sections/warehouse/deduction';
+import { DEPARTMENTS_TABLE_PERSIST_KEY } from 'src/sections/menu/compounds/utilities';
 
-function RenderCellDepartmentName({ params }: { params: any }) {
-  const { row } = params;
+interface CellRenderParams {
+  row: IDepartmentItem;
+}
+
+function RenderCellDepartmentName({ row }: CellRenderParams) {
   const name = row.name || '-';
 
   return (
@@ -40,27 +44,21 @@ function RenderCellDepartmentName({ params }: { params: any }) {
   );
 }
 
-/**
- * Storage ID renderer - Shows storage name instead of ID
- */
-function RenderCellStorageId({ params }: { params: any }) {
-  const storageName = params.row.storage_name || '-';
+function RenderCellStorageId({ row }: CellRenderParams) {
+  const storageName = row.storage_name || '-';
 
   return (
-    <div style={{ fontSize: '0.875rem', opacity: 0.8 }}>
+    <Box sx={{ fontSize: '0.875rem', opacity: 0.8 }}>
       {storageName}
-    </div>
+    </Box>
   );
 }
 
-/**
- * Color renderer - Shows color code with visual color box
- */
-function RenderCellColor({ params }: { params: any }) {
-  const colorCode = params.row.color_code;
+function RenderCellColor({ row }: CellRenderParams) {
+  const colorCode = row.color_code;
 
   if (!colorCode) {
-    return <div style={{ fontSize: '0.875rem', opacity: 0.8 }}>-</div>;
+    return <Box sx={{ fontSize: '0.875rem', opacity: 0.8 }}>-</Box>;
   }
 
   return (
@@ -95,36 +93,40 @@ function CategoriesTable({ departmentId }: { departmentId: string }) {
 
   // Create storage map for quick lookup
   const storageMap = useMemo(() => {
-    const map = new Map();
+    const map = new Map<string, string>();
     storages.forEach((storage) => {
-      map.set(storage.id, storage.name);
+      map.set(storage.id, storage.name || '');
     });
     return map;
   }, [storages]);
 
-  // Load images for categories
+  // Load images for categories in parallel
   useEffect(() => {
     const loadImages = async () => {
-      const urls: { [key: string]: string | null } = {};
-      for (const category of categories) {
-        if (category.picture_url) {
-          try {
-            const url = await getFullImageUrl(category.picture_url);
-            urls[category.id] = url;
-          } catch (error) {
-            console.error('Failed to load category image:', error);
-            urls[category.id] = null;
-          }
-        } else {
-          urls[category.id] = null;
+      if (categories.length === 0) return;
+
+      const imagePromises = categories.map(async (category) => {
+        if (!category.picture_url) {
+          return { id: category.id, url: null };
         }
-      }
+        try {
+          const url = await getFullImageUrl(category.picture_url);
+          return { id: category.id, url };
+        } catch (error) {
+          console.error('Failed to load category image:', error);
+          return { id: category.id, url: null };
+        }
+      });
+
+      const results = await Promise.all(imagePromises);
+      const urls: { [key: string]: string | null } = {};
+      results.forEach(({ id, url }) => {
+        urls[id] = url;
+      });
       setImageUrls(urls);
     };
 
-    if (categories.length > 0) {
-      loadImages();
-    }
+    loadImages();
   }, [categories]);
 
   if (categoriesLoading) {
@@ -228,20 +230,12 @@ function CategoriesTable({ departmentId }: { departmentId: string }) {
               </td>
               <td>
                 <Typography sx={{ color: 'text.primary' }}>
-                  {new Date(category.created_at).toLocaleDateString(undefined, {
-                    year: 'numeric',
-                    month: 'short',
-                    day: 'numeric',
-                  })}
+                  {fDate(category.created_at)}
                 </Typography>
               </td>
               <td>
                 <Typography sx={{ color: 'text.primary' }}>
-                  {new Date(category.updated_at).toLocaleDateString(undefined, {
-                    year: 'numeric',
-                    month: 'short',
-                    day: 'numeric',
-                  })}
+                  {fDate(category.updated_at)}
                 </Typography>
               </td>
             </tr>
@@ -252,8 +246,7 @@ function CategoriesTable({ departmentId }: { departmentId: string }) {
   );
 }
 
-export function ProductListView() {
-  const theme = useTheme();
+export function DepartmentListView() {
   const { t } = useTranslation('menu');
   const router = useRouter();
   const { deleteDepartment } = useDeleteDepartment();
@@ -302,28 +295,28 @@ export function ProductListView() {
         key: 'name',
         label: t('departments.name'),
         width: '280px',
-        sortable: true,
-        filterable: true,
+        sortable: false,
+        filterable: false,
         getValue: (row) => row.name || '',
-        renderCell: ({ row }) => <RenderCellDepartmentName params={{ row }} />,
+        renderCell: ({ row }) => <RenderCellDepartmentName row={row} />,
       },
       {
         key: 'storage_id',
         label: t('departments.storage'),
         width: '4fr',
-        sortable: true,
-        filterable: true,
+        sortable: false,
+        filterable: false,
         getValue: (row) => row.storage_name || '',
-        renderCell: ({ row }) => <RenderCellStorageId params={{ row }} />,
+        renderCell: ({ row }) => <RenderCellStorageId row={row} />,
       },
       {
         key: 'color_code',
         label: t('departments.color'),
         width: '1fr',
-        sortable: true,
-        filterable: true,
+        sortable: false,
+        filterable: false,
         getValue: (row) => row.color_code || '',
-        renderCell: ({ row }) => <RenderCellColor params={{ row }} />,
+        renderCell: ({ row }) => <RenderCellColor row={row} />,
       },
       {
         key: 'actions',
@@ -356,25 +349,28 @@ export function ProductListView() {
         ),
       },
     ],
-    [t, theme.vars.palette.error.main]
+    [t, handleEditDepartment]
   );
 
   // Default configuration for DataTable
-  const defaultConfig: DataTableDefaultConfig = {
-    order: ['name', 'storage_id', 'color_code', 'actions'],
-    visibility: {
-      name: true,
-      storage_id: true,
-      color_code: true,
-      actions: true,
-    },
-    widths: {
-      name: '4fr',
-      storage_id: '1fr',
-      color_code: '1fr',
-      actions: '60px',
-    },
-  };
+  const defaultConfig = useMemo<DataTableDefaultConfig>(
+    () => ({
+      order: ['name', 'storage_id', 'color_code', 'actions'],
+      visibility: {
+        name: true,
+        storage_id: true,
+        color_code: true,
+        actions: true,
+      },
+      widths: {
+        name: '4fr',
+        storage_id: '1fr',
+        color_code: '1fr',
+        actions: '60px',
+      },
+    }),
+    []
+  );
 
   // Handle delete confirmation
   const handleConfirmDelete = useCallback(async () => {
@@ -402,7 +398,7 @@ export function ProductListView() {
       <Box>
         <CategoriesTable departmentId={dept.id} />
       </Box>
-    ), [t]);
+    ), []);
 
   return (
     <>
@@ -417,7 +413,7 @@ export function ProductListView() {
         }}
       >
         <DeductionUtilityDataTable<IDepartmentItem>
-          persistKey="departments-list"
+          persistKey={DEPARTMENTS_TABLE_PERSIST_KEY}
           data={Array.isArray(departments) ? departments : []}
           columns={columns}
           defaultConfig={defaultConfig}

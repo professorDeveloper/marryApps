@@ -1,7 +1,7 @@
-import type { IDevice, DeviceModalState, IDeviceFormData } from '../types';
+import type { IDevice, IDeviceFormData, DeviceModalState } from '../types';
 
-import { useState, useCallback } from 'react';
 import { toast } from 'sonner';
+import { useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useGetDevices, useCreateDevice, useUpdateDevice, useDeleteDevice } from 'src/actions/devices';

@@ -8,8 +8,11 @@ import Tooltip from '@mui/material/Tooltip';
 import Checkbox from '@mui/material/Checkbox';
 import IconButton from '@mui/material/IconButton';
 import Typography from '@mui/material/Typography';
+import SwapVertIcon from '@mui/icons-material/SwapVert';
+import FilterAltIcon from '@mui/icons-material/FilterAlt';
+import KeyboardDoubleArrowDownIcon from '@mui/icons-material/KeyboardDoubleArrowDown';
 
-import { Iconify } from 'src/components/iconify';
+import { useTranslate } from 'src/locales/use-locales';
 
 import { ACCENT, BORDER, nextSort, SURFACE_BG } from '../utils';
 
@@ -50,6 +53,7 @@ export function DataTableHeader<T>({
   onResizeEnd,
   headerDragKey,
 }: DataTableHeaderProps<T>) {
+  const { t } = useTranslate('common');
   return (
     <Box
       component={m.div}
@@ -168,45 +172,50 @@ export function DataTableHeader<T>({
               }}
             >
               {canSort && (
-                <IconButton
-                  size="small"
-                  onClick={() => {
-                    const nextDir = sort.key !== col.key ? 'asc' : nextSort(sort.dir);
-                    onSortChange({ key: nextDir ? col.key : null, dir: nextDir });
-                  }}
-                  sx={{
-                    width: 22,
-                    height: 22,
-                    color: isActiveSort ? ACCENT : 'rgba(255,255,255,0.45)',
-                    '&:hover': { color: ACCENT, backgroundColor: 'rgba(245, 158, 11, 0.10)' },
-                  }}
-                >
-                  <Iconify
-                    icon={
-                      sort.key !== col.key || sort.dir == null
-                        ? 'solar:sort-by-time-bold-duotone'
-                        : sort.dir === 'asc'
-                          ? 'solar:double-alt-arrow-up-bold-duotone'
-                          : 'solar:double-alt-arrow-down-bold-duotone'
-                    }
-                    width={14}
-                  />
-                </IconButton>
+                <Tooltip title={t('dataTable.sort')}>
+                  <IconButton
+                    size="small"
+                    onClick={() => {
+                      const nextDir = sort.key !== col.key ? 'asc' : nextSort(sort.dir);
+                      onSortChange({ key: nextDir ? col.key : null, dir: nextDir });
+                    }}
+                    sx={{
+                      width: 24,
+                      height: 24,
+                      color: isActiveSort ? ACCENT : 'rgba(255,255,255,0.45)',
+                      '&:hover': { color: ACCENT, backgroundColor: 'rgba(245, 158, 11, 0.10)' },
+                    }}
+                  >
+                    {sort.key === col.key && sort.dir != null ? (
+                      <KeyboardDoubleArrowDownIcon 
+                        sx={{ 
+                          fontSize: 16,
+                          transform: sort.dir === 'asc' ? 'rotate(180deg)' : 'rotate(0deg)',
+                          transition: 'transform 0.2s ease'
+                        }} 
+                      />
+                    ) : (
+                      <SwapVertIcon sx={{ fontSize: 16 }} />
+                    )}
+                  </IconButton>
+                </Tooltip>
               )}
 
               {canFilter && (
-                <IconButton
-                  size="small"
-                  onClick={(e) => onOpenFilter(col.key, e.currentTarget)}
-                  sx={{
-                    width: 22,
-                    height: 22,
-                    color: filterOn ? ACCENT : 'rgba(255,255,255,0.45)',
-                    '&:hover': { color: ACCENT, backgroundColor: 'rgba(245, 158, 11, 0.10)' },
-                  }}
-                >
-                  <Iconify icon="ic:round-filter-list" width={14} />
-                </IconButton>
+                <Tooltip title={t('dataTable.filter')}>
+                  <IconButton
+                    size="small"
+                    onClick={(e) => onOpenFilter(col.key, e.currentTarget)}
+                    sx={{
+                      width: 24,
+                      height: 24,
+                      color: filterOn ? ACCENT : 'rgba(255,255,255,0.45)',
+                      '&:hover': { color: ACCENT, backgroundColor: 'rgba(245, 158, 11, 0.10)' },
+                    }}
+                  >
+                    <FilterAltIcon sx={{ fontSize: 16 }} />
+                  </IconButton>
+                </Tooltip>
               )}
             </Box>
 

@@ -1,6 +1,6 @@
 import { CONFIG } from 'src/global-config';
 
-import { HalfMeals } from 'src/sections/compounds/compounds-list-view';
+import { HalfMeals } from 'src/sections/menu/compounds/compounds-list-view';
 
 // ============================================================================
 

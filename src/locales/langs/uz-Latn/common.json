@@ -10,5 +10,9 @@
     "education": "O'qitish",
     "sports": "Sport",
     "meals": "Taomlar"
+  },
+  "dataTable": {
+    "sort": "Saralash",
+    "filter": "Filter"
   }
 }

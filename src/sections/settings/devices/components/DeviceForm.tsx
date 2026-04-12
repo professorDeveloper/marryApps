@@ -1,24 +1,24 @@
-import type { IDevice, IDeviceFormData, DeviceType, ConnectionType } from '../types';
+import type { IDeviceFormData } from '../types';
 
-import { useForm, Controller } from 'react-hook-form';
-import { useTranslation } from 'react-i18next';
 import { useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
+import { useForm, Controller } from 'react-hook-form';
 
 import Box from '@mui/material/Box';
 import Chip from '@mui/material/Chip';
+import Select from '@mui/material/Select';
 import MenuItem from '@mui/material/MenuItem';
 import TextField from '@mui/material/TextField';
-import Select from '@mui/material/Select';
 import InputLabel from '@mui/material/InputLabel';
 import FormControl from '@mui/material/FormControl';
 import FormHelperText from '@mui/material/FormHelperText';
-import CircularProgress from '@mui/material/CircularProgress';
-import Typography from '@mui/material/Typography';
+
+import { useGetCategories } from 'src/actions/categories';
 
 import { Iconify } from 'src/components/iconify';
-import { useGetCategories } from 'src/actions/categories';
-import { validateIpAddress, validatePort, validateConnectedEntities } from '../utils/validation';
+
 import { DEVICE_TYPES, CONNECTION_TYPES } from '../constants';
+import { validatePort, validateIpAddress, validateConnectedEntities } from '../utils/validation';
 
 interface DeviceFormProps {
   formId: string;
