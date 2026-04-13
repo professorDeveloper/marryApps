@@ -11,12 +11,12 @@ import { useRouter } from 'src/routes/hooks';
 import { Iconify } from '../../../../components/iconify';
 import { useIngredients } from '../hooks/use-ingredients';
 import { DataTable } from '../../deduction/components/utility-data-table';
-import { 
-  IngredientNameCell, 
-  IngredientColorCell, 
-  IngredientPriceCell, 
-  IngredientActionsCell, 
-  IngredientMeasurementCell 
+import {
+  IngredientNameCell,
+  IngredientColorCell,
+  IngredientPriceCell,
+  IngredientActionsCell,
+  IngredientMeasurementCell
 } from '../components/IngredientCells';
 
 interface IngredientsDataTableProps {

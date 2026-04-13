@@ -15,6 +15,7 @@ import { useGetCategories } from 'src/actions/categories';
 import { Iconify } from 'src/components/iconify';
 
 import { DataTable } from 'src/sections/warehouse/deduction/components/utility-data-table';
+import { CELL_SX } from 'src/sections/warehouse/deduction/components/utility-data-table/utils/constants';
 
 import { CONNECTION_TYPES } from './devices/constants';
 import { useDevicesData } from './devices/hooks/useDevicesData';
@@ -75,6 +76,11 @@ export function ConnectedDeviceListView() {
         width: '1fr',
         sortable: true,
         getValue: (row: any) => row?.ip ?? '',
+        renderCell: ({ row }: { row: any }) => (
+          <Box sx={CELL_SX}>
+            {row?.ip || '-'}
+          </Box>
+        ),
       },
       {
         key: 'port',
@@ -82,6 +88,11 @@ export function ConnectedDeviceListView() {
         width: '100px',
         sortable: true,
         getValue: (row: any) => row?.port ?? 9100,
+        renderCell: ({ row }: { row: any }) => (
+          <Box sx={CELL_SX}>
+            {row?.port || 9100}
+          </Box>
+        ),
       },
       {
         key: 'type',
@@ -93,11 +104,26 @@ export function ConnectedDeviceListView() {
           const type = String(value || 'close_check');
           const displayLabel = type === 'close_check' ? 'Close Check' : type.charAt(0).toUpperCase() + type.slice(1);
           return (
-            <Chip
-              label={displayLabel}
-              size="small"
-              variant="outlined"
-            />
+            <Box sx={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              py: 1.5, 
+              px: 1
+            }}>
+              <Box
+                sx={{
+                  padding: '4px 12px',
+                  borderRadius: '4px',
+                  fontSize: '0.875rem',
+                  fontWeight: 600,
+                  backgroundColor: '#E3F2FD',
+                  color: '#1565C0',
+                  border: '1px solid #90CAF9',
+                }}
+              >
+                {displayLabel}
+              </Box>
+            </Box>
           );
         },
       },
@@ -112,11 +138,26 @@ export function ConnectedDeviceListView() {
           const connectionTypeConfig = CONNECTION_TYPES.find(ct => ct.value === connectionType);
           const displayLabel = connectionTypeConfig?.label || connectionType.toUpperCase();
           return (
-            <Chip
-              label={displayLabel}
-              size="small"
-              variant="outlined"
-            />
+            <Box sx={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              py: 1.5, 
+              px: 1
+            }}>
+              <Box
+                sx={{
+                  padding: '4px 12px',
+                  borderRadius: '4px',
+                  fontSize: '0.875rem',
+                  fontWeight: 600,
+                  backgroundColor: '#E8F5E8',
+                  color: '#2E7D32',
+                  border: '1px solid #A5D6A7',
+                }}
+              >
+                {displayLabel}
+              </Box>
+            </Box>
           );
         },
       },
@@ -150,8 +191,8 @@ export function ConnectedDeviceListView() {
           if (items.length <= displayLimit) {
             const categoryNames = items.map((entity) => entity.name).join(', ');
             return (
-              <Box sx={{ py: 0.5 }}>
-                {categoryNames}
+              <Box sx={CELL_SX}>
+                {categoryNames || '-'}
               </Box>
             );
           }
@@ -161,7 +202,7 @@ export function ConnectedDeviceListView() {
           const allNames = items.map((entity) => entity.name).join(', ');
           
           return (
-            <Box sx={{ py: 0.5 }} title={allNames}>
+            <Box sx={CELL_SX} title={allNames}>
               {displayedNames}... +{remainingCount}
             </Box>
           );

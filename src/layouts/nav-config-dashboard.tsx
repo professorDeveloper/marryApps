@@ -145,7 +145,6 @@ export const getNavData = (t: TFunction): NavSectionProps['data'] => [
           { title: t('devices.title', 'Devices'), path: paths.settings.general.root },
           { title: t('settings.management', 'Management'), path: paths.settings.profile.root },
           { title: t('settings.restaurantInfo', 'Restaurant Info'), path: paths.settings.notifications.root },
-          { title: t('overview.settings.restaurantInfo', 'Restaurant information'), path: paths.settings.notifications.root },
           { title: t('halls.Halls', 'Halls'), path: paths.settings.halls },
         ],
       },

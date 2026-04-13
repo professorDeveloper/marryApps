@@ -20,6 +20,7 @@ import {
     DialogContent,
     TableContainer,
     CircularProgress,
+    IconButton,
 } from '@mui/material';
 
 import { paths } from 'src/routes/paths';
@@ -41,6 +42,7 @@ import { GenericViewModal } from 'src/components/generic-view-view';
 import { formatDate, formatPrice } from 'src/components/generic-view-view/modal-formatters';
 
 import { DataTable } from 'src/sections/warehouse/deduction/components/utility-data-table';
+import { CELL_SX } from 'src/sections/warehouse/deduction/components/utility-data-table/utils/constants';
 
 
 // ============================================================================
@@ -86,7 +88,20 @@ function CompoundCalculationsTable({
     }
 
     if (!compoundWithCalculations || !compoundWithCalculations.calculations) {
-        return <Box sx={{ py: 2 }}>{t('common.noData')}</Box>;
+        return (
+            <Box sx={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'center',
+                py: 1.5, 
+                px: 1,
+                color: 'text.primary',
+                fontSize: '0.875rem',
+                fontWeight: 400
+            }}>
+                {t('common.noData')}
+            </Box>
+        );
     }
 
     const { calculations, total_cost, profit, profit_margin } = compoundWithCalculations;
@@ -95,7 +110,7 @@ function CompoundCalculationsTable({
         <Box sx={{ width: '100%' }}>
             <TableContainer component={Paper} sx={{ mb: 2 }}>
                 <Table size="small">
-                    <TableHead sx={{ bgcolor: '#f5f5f5' }}>
+                    <TableHead sx={{ bgcolor: 'background.paper' }}>
                         <TableRow>
                             <TableCell align="left">{t('common.name')}</TableCell>
                             <TableCell align="center">{t('semifinishedProducts.quantity')}</TableCell>
@@ -117,21 +132,82 @@ function CompoundCalculationsTable({
                                 <TableRow key={calc.id}>
                                     {/* Number + Name */}
                                     <TableCell align="left">
-                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                            <Box sx={{ fontWeight: 600, color: 'text.secondary' }}>
+                                        <Box sx={{ 
+                                            display: 'flex', 
+                                            alignItems: 'center', 
+                                            gap: 1,
+                                            py: 1,
+                                            px: 1,
+                                            color: 'text.primary',
+                                            fontSize: '0.875rem',
+                                            fontWeight: 400
+                                        }}>
+                                            <Box sx={{ 
+                                                fontWeight: 600, 
+                                                color: 'text.secondary',
+                                                fontSize: '0.875rem'
+                                            }}>
                                                 {index + 1}.
                                             </Box>
                                             <Box>{itemName}</Box>
                                         </Box>
                                     </TableCell>
 
-                                    <TableCell align="center">{calc.quantity}</TableCell>
-                                    <TableCell align="center">{calc.measurement_unit}</TableCell>
-                                    <TableCell align="right">
-                                        {formatPrice(Number(calc.price_per_unit))}
+                                    <TableCell align="center">
+                                        <Box sx={{ 
+                                            display: 'flex', 
+                                            alignItems: 'center', 
+                                            justifyContent: 'center',
+                                            py: 1,
+                                            px: 1,
+                                            color: 'text.primary',
+                                            fontSize: '0.875rem',
+                                            fontWeight: 400
+                                        }}>
+                                            {calc.quantity}
+                                        </Box>
+                                    </TableCell>
+                                    <TableCell align="center">
+                                        <Box sx={{ 
+                                            display: 'flex', 
+                                            alignItems: 'center', 
+                                            justifyContent: 'center',
+                                            py: 1,
+                                            px: 1,
+                                            color: 'text.primary',
+                                            fontSize: '0.875rem',
+                                            fontWeight: 400
+                                        }}>
+                                            {calc.measurement_unit}
+                                        </Box>
                                     </TableCell>
                                     <TableCell align="right">
-                                        {formatPrice(Number(calc.total_cost))}
+                                        <Box sx={{ 
+                                            display: 'flex', 
+                                            alignItems: 'center', 
+                                            justifyContent: 'flex-end',
+                                            py: 1,
+                                            px: 1,
+                                            color: 'text.primary',
+                                            fontSize: '0.875rem',
+                                            fontWeight: 400
+                                        }}>
+                                            {formatPrice(Number(calc.price_per_unit))}
+                                        </Box>
+                                    </TableCell>
+                                    <TableCell align="right">
+                                        <Box sx={{ 
+                                            display: 'flex', 
+                                            alignItems: 'center', 
+                                            justifyContent: 'flex-end',
+                                            py: 1,
+                                            px: 1,
+                                            color: 'text.primary',
+                                            fontSize: '0.875rem',
+                                            fontWeight: 400
+                                        }}>
+                                            {formatPrice(Number(calc.total_cost))}
+                                        </Box>
                                     </TableCell>
                                 </TableRow>
                             );
@@ -142,16 +218,63 @@ function CompoundCalculationsTable({
             </TableContainer>
 
             {/* Summary row */}
-            <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 4, mb: 2 }}>
+            <Box sx={{ 
+                display: 'flex', 
+                justifyContent: 'flex-end', 
+                gap: 4, 
+                mb: 2,
+                py: 1.5,
+                px: 1
+            }}>
                 <Box>
-                    <Box sx={{ fontWeight: 600, mb: 1 }}>{t('common.total')}:</Box>
-                    <Box sx={{ fontWeight: 600, mb: 1 }}>Foyda:</Box>
-                    <Box sx={{ fontWeight: 600 }}>Foyda foizi:</Box>
+                    <Box sx={{ 
+                        fontWeight: 600, 
+                        mb: 1,
+                        color: 'text.primary',
+                        fontSize: '0.875rem'
+                    }}>
+                        {t('common.total')}:
+                    </Box>
+                    <Box sx={{ 
+                        fontWeight: 600, 
+                        mb: 1,
+                        color: 'text.primary',
+                        fontSize: '0.875rem'
+                    }}>
+                        Foyda:
+                    </Box>
+                    <Box sx={{ 
+                        fontWeight: 600,
+                        color: 'text.primary',
+                        fontSize: '0.875rem'
+                    }}>
+                        Foyda foizi:
+                    </Box>
                 </Box>
                 <Box sx={{ textAlign: 'right' }}>
-                    <Box sx={{ fontWeight: 600, mb: 1 }}>{formatPrice(Number(total_cost))}</Box>
-                    <Box sx={{ fontWeight: 600, mb: 1 }}>{formatPrice(Number(profit))}</Box>
-                    <Box sx={{ fontWeight: 600 }}>{profit_margin}</Box>
+                    <Box sx={{ 
+                        fontWeight: 600, 
+                        mb: 1,
+                        color: 'text.primary',
+                        fontSize: '0.875rem'
+                    }}>
+                        {formatPrice(Number(total_cost))}
+                    </Box>
+                    <Box sx={{ 
+                        fontWeight: 600, 
+                        mb: 1,
+                        color: 'text.primary',
+                        fontSize: '0.875rem'
+                    }}>
+                        {formatPrice(Number(profit))}
+                    </Box>
+                    <Box sx={{ 
+                        fontWeight: 600,
+                        color: 'text.primary',
+                        fontSize: '0.875rem'
+                    }}>
+                        {profit_margin}
+                    </Box>
                 </Box>
             </Box>
         </Box>
@@ -165,36 +288,132 @@ function renderCompoundSpecifications(item: ICompound, t: any) {
     return (
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                <Box sx={{ fontWeight: 500 }}>{t('semifinishedProducts.name')}:</Box>
-                <Box>{item.name || '-'}</Box>
+                <Box sx={{ 
+                    fontWeight: 500,
+                    color: 'text.primary',
+                    fontSize: '0.875rem'
+                }}>
+                    {t('semifinishedProducts.name')}:
+                </Box>
+                <Box sx={{ 
+                    color: 'text.primary',
+                    fontSize: '0.875rem',
+                    fontWeight: 400
+                }}>
+                    {item.name || '-'}
+                </Box>
             </Box>
             <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                <Box sx={{ fontWeight: 500 }}>{t('semifinishedProducts.description')}:</Box>
-                <Box>{item.description || '-'}</Box>
+                <Box sx={{ 
+                    fontWeight: 500,
+                    color: 'text.primary',
+                    fontSize: '0.875rem'
+                }}>
+                    {t('semifinishedProducts.description')}:
+                </Box>
+                <Box sx={{ 
+                    color: 'text.primary',
+                    fontSize: '0.875rem',
+                    fontWeight: 400
+                }}>
+                    {item.description || '-'}
+                </Box>
             </Box>
             <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                <Box sx={{ fontWeight: 500 }}>{t('semifinishedProducts.measurement')}:</Box>
-                <Box>{t(`semifinishedProducts.${item.measurement}`, item.measurement)}</Box>
+                <Box sx={{ 
+                    fontWeight: 500,
+                    color: 'text.primary',
+                    fontSize: '0.875rem'
+                }}>
+                    {t('semifinishedProducts.measurement')}:
+                </Box>
+                <Box sx={{ 
+                    color: 'text.primary',
+                    fontSize: '0.875rem',
+                    fontWeight: 400
+                }}>
+                    {t(`semifinishedProducts.${item.measurement}`, item.measurement)}
+                </Box>
             </Box>
             <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                <Box sx={{ fontWeight: 500 }}>{t('ingredients.group')}:</Box>
-                <Box>{item.ingredient_group_name || '-'}</Box>
+                <Box sx={{ 
+                    fontWeight: 500,
+                    color: 'text.primary',
+                    fontSize: '0.875rem'
+                }}>
+                    {t('ingredients.group')}:
+                </Box>
+                <Box sx={{ 
+                    color: 'text.primary',
+                    fontSize: '0.875rem',
+                    fontWeight: 400
+                }}>
+                    {item.ingredient_group_name || '-'}
+                </Box>
             </Box>
             <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                <Box sx={{ fontWeight: 500 }}>{t('semifinishedProducts.quantity')}:</Box>
-                <Box>{item.quantity}</Box>
+                <Box sx={{ 
+                    fontWeight: 500,
+                    color: 'text.primary',
+                    fontSize: '0.875rem'
+                }}>
+                    {t('semifinishedProducts.quantity')}:
+                </Box>
+                <Box sx={{ 
+                    color: 'text.primary',
+                    fontSize: '0.875rem',
+                    fontWeight: 400
+                }}>
+                    {item.quantity}
+                </Box>
             </Box>
             <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                <Box sx={{ fontWeight: 500 }}>{t('semifinishedProducts.price')}:</Box>
-                <Box>{formatPrice(Number(item.price))}</Box>
+                <Box sx={{ 
+                    fontWeight: 500,
+                    color: 'text.primary',
+                    fontSize: '0.875rem'
+                }}>
+                    {t('semifinishedProducts.price')}:
+                </Box>
+                <Box sx={{ 
+                    color: 'text.primary',
+                    fontSize: '0.875rem',
+                    fontWeight: 400
+                }}>
+                    {formatPrice(Number(item.price))}
+                </Box>
             </Box>
             <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                <Box sx={{ fontWeight: 500 }}>{t('semifinishedProducts.createdAt')}:</Box>
-                <Box>{formatDate(item.created_at)}</Box>
+                <Box sx={{ 
+                    fontWeight: 500,
+                    color: 'text.primary',
+                    fontSize: '0.875rem'
+                }}>
+                    {t('semifinishedProducts.createdAt')}:
+                </Box>
+                <Box sx={{ 
+                    color: 'text.primary',
+                    fontSize: '0.875rem',
+                    fontWeight: 400
+                }}>
+                    {formatDate(item.created_at)}
+                </Box>
             </Box>
             <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                <Box sx={{ fontWeight: 500 }}>{t('semifinishedProducts.updatedAt')}:</Box>
-                <Box>{formatDate(item.updated_at)}</Box>
+                <Box sx={{ 
+                    fontWeight: 500,
+                    color: 'text.primary',
+                    fontSize: '0.875rem'
+                }}>
+                    {t('semifinishedProducts.updatedAt')}:
+                </Box>
+                <Box sx={{ 
+                    color: 'text.primary',
+                    fontSize: '0.875rem',
+                    fontWeight: 400
+                }}>
+                    {formatDate(item.updated_at)}
+                </Box>
             </Box>
         </Box>
     );
@@ -298,15 +517,8 @@ export function HalfMeals() {
                     const name = row.name || '-';
 
                     return (
-                        <Box
-                            sx={{
-                                py: 1,
-                                width: 1,
-                                display: 'flex',
-                                alignItems: 'center',
-                            }}
-                        >
-                            <ListItemText primary={<span>{name}</span>} />
+                        <Box sx={CELL_SX}>
+                            {name}
                         </Box>
                     );
                 },
@@ -322,7 +534,11 @@ export function HalfMeals() {
                 renderCell: ({ value }: { value: unknown }) => {
                     const measurementKey = `semifinishedProducts.${value}`;
                     const label = t(measurementKey);
-                    return <span>{label}</span>;
+                    return (
+                        <Box sx={CELL_SX}>
+                            {label}
+                        </Box>
+                    );
                 },
             },
             {
@@ -337,6 +553,14 @@ export function HalfMeals() {
                         ingredientGroupMap.get(row.ingredient_group_id) ||
                         '-'
                     ),
+                renderCell: ({ row }: { row: ICompound }) => {
+                    const groupName = row.ingredient_group_name || ingredientGroupMap.get(row.ingredient_group_id) || '-';
+                    return (
+                        <Box sx={CELL_SX}>
+                            {groupName}
+                        </Box>
+                    );
+                },
             },
             {
                 key: 'price',
@@ -350,7 +574,11 @@ export function HalfMeals() {
                 },
                 renderCell: ({ value }: { value: unknown }) => {
                     const numPrice = typeof value === 'string' ? parseFloat(value) : value;
-                    return <span>{String(numPrice)} so&apos;m</span>;
+                    return (
+                        <Box sx={CELL_SX}>
+                            {String(numPrice)} so&apos;m
+                        </Box>
+                    );
                 },
             },
             {
@@ -360,6 +588,14 @@ export function HalfMeals() {
                 width: '1fr',
                 align: 'left' as const,
                 getValue: (row: ICompound) => row?.quantity || 0,
+                renderCell: ({ row }: { row: ICompound }) => {
+                    const quantity = row?.quantity || 0;
+                    return (
+                        <Box sx={CELL_SX}>
+                            {quantity}
+                        </Box>
+                    );
+                },
             },
             {
                 key: 'actions',
@@ -369,26 +605,44 @@ export function HalfMeals() {
                 width: '1fr',
                 align: 'center' as const,
                 renderCell: ({ row }: { row: ICompound }) => (
-                    <Box sx={{ display: 'flex', gap: 0.5 }}>
-                        <Button
+                    <Box sx={{ 
+                        display: 'flex', 
+                        gap: 0.5, 
+                        alignItems: 'center', 
+                        py: 1.5, 
+                        px: 1
+                    }}>
+                        <IconButton
                             size="small"
                             href={paths.menu.semifinished.edit(row.id)}
                             onClick={(e) => e.stopPropagation()}
-                            sx={{ color: 'text.secondary' }}
+                            sx={{ 
+                                color: 'text.secondary',
+                                '&:hover': {
+                                    backgroundColor: 'action.hover',
+                                    color: 'primary.main'
+                                }
+                            }}
                         >
                             <Iconify icon="solar:pen-bold" width={18} />
-                        </Button>
-                        <Button
+                        </IconButton>
+                        <IconButton
                             size="small"
                             onClick={(e) => {
                                 e.stopPropagation();
                                 setCompoundToDelete(row.id);
                                 setDeleteDialogOpen(true);
                             }}
-                            sx={{ color: theme.vars.palette.error.main }}
+                            sx={{ 
+                                color: 'error.main',
+                                '&:hover': {
+                                    backgroundColor: 'error.lighter',
+                                    color: 'error.dark'
+                                }
+                            }}
                         >
                             <Iconify icon="solar:trash-bin-trash-bold" width={18} />
-                        </Button>
+                        </IconButton>
                     </Box>
                 ),
             },

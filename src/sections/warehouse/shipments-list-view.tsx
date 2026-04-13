@@ -242,6 +242,19 @@ export function ShipmentsListView() {
         width: '0.6fr',
         align: 'left' as const,
         getValue: (row: Shipment) => row?.number ?? '',
+        renderCell: ({ row }: { row: Shipment }) => (
+          <Box sx={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            py: 1.5, 
+            px: 1,
+            color: 'text.primary',
+            fontSize: '0.875rem',
+            fontWeight: 400
+          }}>
+            {row?.number || '-'}
+          </Box>
+        ),
       },
       {
         key: 'date',
@@ -251,6 +264,22 @@ export function ShipmentsListView() {
         align: 'left' as const,
         getValue: (row: Shipment) =>
           row?.date ? new Date(row.date).toLocaleDateString() : '',
+        renderCell: ({ row }: { row: Shipment }) => {
+          const dateValue = row?.date ? new Date(row.date).toLocaleDateString() : '-';
+          return (
+            <Box sx={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              py: 1.5, 
+              px: 1,
+              color: 'text.primary',
+              fontSize: '0.875rem',
+              fontWeight: 400
+            }}>
+              {dateValue}
+            </Box>
+          );
+        },
       },
       {
         key: 'storage_id',
@@ -261,6 +290,22 @@ export function ShipmentsListView() {
         align: 'left' as const,
         getValue: (row: Shipment) =>
           storagesMap[row.storage_id] || row.storage_id || '',
+        renderCell: ({ row }: { row: Shipment }) => {
+          const value = storagesMap[row.storage_id] || row.storage_id || '-';
+          return (
+            <Box sx={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              py: 1.5, 
+              px: 1,
+              color: 'text.primary',
+              fontSize: '0.875rem',
+              fontWeight: 400
+            }}>
+              {value}
+            </Box>
+          );
+        },
       },
       {
         key: 'supplier_id',
@@ -271,6 +316,22 @@ export function ShipmentsListView() {
         align: 'left' as const,
         getValue: (row: Shipment) =>
           suppliersMap[row.supplier_id] || row.supplier_id || '',
+        renderCell: ({ row }: { row: Shipment }) => {
+          const value = suppliersMap[row.supplier_id] || row.supplier_id || '-';
+          return (
+            <Box sx={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              py: 1.5, 
+              px: 1,
+              color: 'text.primary',
+              fontSize: '0.875rem',
+              fontWeight: 400
+            }}>
+              {value}
+            </Box>
+          );
+        },
       },
       {
         key: 'status',
@@ -287,18 +348,25 @@ export function ShipmentsListView() {
           if (status === 'active') { bgColor = '#D4EDDA'; textColor = '#155724'; }
           if (status === 'deleted') { bgColor = '#F8D7DA'; textColor = '#721C24'; }
           return (
-            <span
-              style={{
-                padding: '4px 12px',
-                borderRadius: '4px',
-                fontSize: '14px',
-                fontWeight: 700,
-                backgroundColor: bgColor,
-                color: textColor,
-              }}
-            >
-              {status}
-            </span>
+            <Box sx={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              py: 1.5, 
+              px: 1
+            }}>
+              <Box
+                sx={{
+                  padding: '4px 12px',
+                  borderRadius: '4px',
+                  fontSize: '0.875rem',
+                  fontWeight: 600,
+                  backgroundColor: bgColor,
+                  color: textColor,
+                }}
+              >
+                {status}
+              </Box>
+            </Box>
           );
         },
       },
@@ -310,8 +378,22 @@ export function ShipmentsListView() {
         align: 'left' as const,
         mono: true,
         getValue: (row: Shipment) => Number(row?.total_amount || 0),
-        renderCell: ({ value }: { value: unknown }) =>
-          Number(value ?? 0).toLocaleString(),
+        renderCell: ({ value }: { value: unknown }) => {
+          const numValue = Number(value ?? 0).toLocaleString();
+          return (
+            <Box sx={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              py: 1.5, 
+              px: 1,
+              color: 'text.primary',
+              fontSize: '0.875rem',
+              fontWeight: 400
+            }}>
+              {numValue}
+            </Box>
+          );
+        },
         total: { aggregation: 'sum' as const },
       },
       {
@@ -322,8 +404,22 @@ export function ShipmentsListView() {
         align: 'left' as const,
         mono: true,
         getValue: (row: Shipment) => Number(row?.paid_amount || 0),
-        renderCell: ({ value }: { value: unknown }) =>
-          Number(value ?? 0).toLocaleString(),
+        renderCell: ({ value }: { value: unknown }) => {
+          const numValue = Number(value ?? 0).toLocaleString();
+          return (
+            <Box sx={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              py: 1.5, 
+              px: 1,
+              color: 'text.primary',
+              fontSize: '0.875rem',
+              fontWeight: 400
+            }}>
+              {numValue}
+            </Box>
+          );
+        },
         total: { aggregation: 'sum' as const },
       },
       {
@@ -334,14 +430,26 @@ export function ShipmentsListView() {
         width: '0.7fr',
         align: 'center' as const,
         renderCell: ({ row }: { row: Shipment }) => (
-          <Box sx={{ display: 'flex', gap: 0.5 }}>
+          <Box sx={{ 
+            display: 'flex', 
+            gap: 0.5, 
+            alignItems: 'center', 
+            py: 1.5, 
+            px: 1
+          }}>
             <IconButton
               size="small"
               onClick={(e) => {
                 e.stopPropagation();
                 router.push(paths.warehouse.shipments.edit(String(row.id)));
               }}
-              sx={{ color: 'text.secondary' }}
+              sx={{ 
+                color: 'text.secondary',
+                '&:hover': {
+                  backgroundColor: 'action.hover',
+                  color: 'primary.main'
+                }
+              }}
             >
               <Iconify icon="solar:pen-bold" width={18} />
             </IconButton>
@@ -351,7 +459,13 @@ export function ShipmentsListView() {
                 e.stopPropagation();
                 setDeleteId(row.id);
               }}
-              sx={{ color: 'error.main' }}
+              sx={{ 
+                color: 'error.main',
+                '&:hover': {
+                  backgroundColor: 'error.lighter',
+                  color: 'error.dark'
+                }
+              }}
             >
               <Iconify icon="solar:trash-bin-trash-bold" width={18} />
             </IconButton>

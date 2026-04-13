@@ -22,6 +22,17 @@ export type ICategory = {
             id?: string;
             name?: string;
         };
+        storage_id?: {
+            id?: string;
+            name?: string;
+            branch_id?: string;
+            color_code?: string;
+            created_at?: string;
+            deleted_at?: number;
+            name_i18n?: any;
+            picture_url?: string;
+            updated_at?: string;
+        };
         name_i18n?: {
             id?: string;
             uz?: string;

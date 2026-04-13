@@ -76,6 +76,7 @@ const SeparationActsFormView = React.memo(function SeparationActsFormView({
     const {
         getSeparationActById,
         createSeparationActBatch,
+        updateSeparationAct,
         confirmSeparationAct,
         cancelSeparationAct,
         deleteSeparationAct,
@@ -263,7 +264,7 @@ const SeparationActsFormView = React.memo(function SeparationActsFormView({
                     toast.success(t('separationActs.created', 'Separation act created successfully'));
                 }
             } else if (effectiveActId) {
-                const result = await getSeparationActById(effectiveActId);
+                const result = await updateSeparationAct(effectiveActId, payload);
                 if (result) {
                     setBatchResponse(result);
                     toast.success(t('separationActs.updated', 'Separation act updated successfully'));

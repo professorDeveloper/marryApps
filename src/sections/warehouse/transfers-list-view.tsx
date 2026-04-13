@@ -437,6 +437,19 @@ export function TransfersListView() {
         align: 'left' as const,
         getValue: (row: Transfer) =>
           row?.number ?? t('common.notFound', 'Not found'),
+        renderCell: ({ row }: { row: Transfer }) => (
+          <Box sx={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            py: 1.5, 
+            px: 1,
+            color: 'text.primary',
+            fontSize: '0.875rem',
+            fontWeight: 400
+          }}>
+            {row?.number ?? t('common.notFound', 'Not found')}
+          </Box>
+        ),
       },
       {
         key: 'from_branch_id',
@@ -452,6 +465,23 @@ export function TransfersListView() {
         getValue: (row: Transfer) => {
           if (!row.from_branch_id) return t('common.notFound', 'Not found');
           return branchesMap[row.from_branch_id] || t('common.notFound', 'Not found');
+        },
+        renderCell: ({ row }: { row: Transfer }) => {
+          const value = !row.from_branch_id ? t('common.notFound', 'Not found') : 
+                     branchesMap[row.from_branch_id] || t('common.notFound', 'Not found');
+          return (
+            <Box sx={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              py: 1.5, 
+              px: 1,
+              color: 'text.primary',
+              fontSize: '0.875rem',
+              fontWeight: 400
+            }}>
+              {value}
+            </Box>
+          );
         },
       },
       {
@@ -469,6 +499,23 @@ export function TransfersListView() {
           if (!row.to_branch_id) return t('common.notFound', 'Not found');
           return branchesMap[row.to_branch_id] || t('common.notFound', 'Not found');
         },
+        renderCell: ({ row }: { row: Transfer }) => {
+          const value = !row.to_branch_id ? t('common.notFound', 'Not found') : 
+                     branchesMap[row.to_branch_id] || t('common.notFound', 'Not found');
+          return (
+            <Box sx={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              py: 1.5, 
+              px: 1,
+              color: 'text.primary',
+              fontSize: '0.875rem',
+              fontWeight: 400
+            }}>
+              {value}
+            </Box>
+          );
+        },
       },
       {
         key: 'from_storage_id',
@@ -484,6 +531,23 @@ export function TransfersListView() {
         getValue: (row: Transfer) => {
           if (!row.from_storage_id) return t('common.notFound', 'Not found');
           return storagesMap[row.from_storage_id] || t('common.notFound', 'Not found');
+        },
+        renderCell: ({ row }: { row: Transfer }) => {
+          const value = !row.from_storage_id ? t('common.notFound', 'Not found') : 
+                     storagesMap[row.from_storage_id] || t('common.notFound', 'Not found');
+          return (
+            <Box sx={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              py: 1.5, 
+              px: 1,
+              color: 'text.primary',
+              fontSize: '0.875rem',
+              fontWeight: 400
+            }}>
+              {value}
+            </Box>
+          );
         },
       },
       {
@@ -501,6 +565,23 @@ export function TransfersListView() {
           if (!row.to_storage_id) return t('common.notFound', 'Not found');
           return storagesMap[row.to_storage_id] || t('common.notFound', 'Not found');
         },
+        renderCell: ({ row }: { row: Transfer }) => {
+          const value = !row.to_storage_id ? t('common.notFound', 'Not found') : 
+                     storagesMap[row.to_storage_id] || t('common.notFound', 'Not found');
+          return (
+            <Box sx={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              py: 1.5, 
+              px: 1,
+              color: 'text.primary',
+              fontSize: '0.875rem',
+              fontWeight: 400
+            }}>
+              {value}
+            </Box>
+          );
+        },
       },
       {
         key: 'act_group_id',
@@ -516,6 +597,23 @@ export function TransfersListView() {
         getValue: (row: Transfer) => {
           if (!row.act_group_id) return t('common.notFound', 'Not found');
           return groupsMap[row.act_group_id] || t('common.notFound', 'Not found');
+        },
+        renderCell: ({ row }: { row: Transfer }) => {
+          const value = !row.act_group_id ? t('common.notFound', 'Not found') : 
+                     groupsMap[row.act_group_id] || t('common.notFound', 'Not found');
+          return (
+            <Box sx={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              py: 1.5, 
+              px: 1,
+              color: 'text.primary',
+              fontSize: '0.875rem',
+              fontWeight: 400
+            }}>
+              {value}
+            </Box>
+          );
         },
       },
       {
@@ -535,18 +633,25 @@ export function TransfersListView() {
           if (status === 'active') { bgColor = '#D4EDDA'; textColor = '#155724'; }
           if (status === 'deleted') { bgColor = '#F8D7DA'; textColor = '#721C24'; }
           return (
-            <span
-              style={{
-                padding: '4px 12px',
-                borderRadius: '4px',
-                fontSize: '14px',
-                fontWeight: 700,
-                backgroundColor: bgColor,
-                color: textColor,
-              }}
-            >
-              {status}
-            </span>
+            <Box sx={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              py: 1.5, 
+              px: 1
+            }}>
+              <Box
+                sx={{
+                  padding: '4px 12px',
+                  borderRadius: '4px',
+                  fontSize: '0.875rem',
+                  fontWeight: 600,
+                  backgroundColor: bgColor,
+                  color: textColor,
+                }}
+              >
+                {status}
+              </Box>
+            </Box>
           );
         },
       },
@@ -563,8 +668,20 @@ export function TransfersListView() {
         },
         renderCell: ({ value }: { value: unknown }) => {
           const num = Number(value ?? 0);
-          if (!num && num !== 0) return t('common.notFound', 'Not found');
-          return num.toLocaleString();
+          const displayValue = !num && num !== 0 ? t('common.notFound', 'Not found') : num.toLocaleString();
+          return (
+            <Box sx={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              py: 1.5, 
+              px: 1,
+              color: 'text.primary',
+              fontSize: '0.875rem',
+              fontWeight: 400
+            }}>
+              {displayValue}
+            </Box>
+          );
         },
         total: { aggregation: 'sum' as const },
       },
@@ -582,6 +699,29 @@ export function TransfersListView() {
             return '';
           }
         },
+        renderCell: ({ row }: { row: Transfer }) => {
+          let dateValue = '';
+          if (row.date) {
+            try {
+              dateValue = new Date(row.date).toLocaleDateString();
+            } catch {
+              dateValue = '-';
+            }
+          }
+          return (
+            <Box sx={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              py: 1.5, 
+              px: 1,
+              color: 'text.primary',
+              fontSize: '0.875rem',
+              fontWeight: 400
+            }}>
+              {dateValue || '-'}
+            </Box>
+          );
+        },
       },
       {
         key: 'actions',
@@ -591,11 +731,23 @@ export function TransfersListView() {
         width: '0.7fr',
         align: 'center' as const,
         renderCell: ({ row }: { row: Transfer }) => (
-          <Box sx={{ display: 'flex', gap: 0.5 }}>
+          <Box sx={{ 
+            display: 'flex', 
+            gap: 0.5, 
+            alignItems: 'center', 
+            py: 1.5, 
+            px: 1
+          }}>
             <IconButton
               size="small"
               onClick={() => router.push(paths.warehouse.transfers.edit(row.id))}
-              sx={{ color: 'text.secondary' }}
+              sx={{ 
+                color: 'text.secondary',
+                '&:hover': {
+                  backgroundColor: 'action.hover',
+                  color: 'primary.main'
+                }
+              }}
             >
               <Iconify icon="solar:pen-bold" width={18} />
             </IconButton>
@@ -605,7 +757,13 @@ export function TransfersListView() {
                 setDeleteId(row.id);
                 setOpenConfirm(true);
               }}
-              sx={{ color: 'error.main' }}
+              sx={{ 
+                color: 'error.main',
+                '&:hover': {
+                  backgroundColor: 'error.lighter',
+                  color: 'error.dark'
+                }
+              }}
             >
               <Iconify icon="solar:trash-bin-trash-bold" width={18} />
             </IconButton>

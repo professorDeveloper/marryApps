@@ -243,6 +243,19 @@ export function OutgoingInvoicesListView() {
         width: '0.6fr',
         align: 'left' as const,
         getValue: (row: OutgoingInvoice) => row?.number ?? '',
+        renderCell: ({ row }: { row: OutgoingInvoice }) => (
+          <Box sx={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            py: 1.5, 
+            px: 1,
+            color: 'text.primary',
+            fontSize: '0.875rem',
+            fontWeight: 400
+          }}>
+            {row?.number || '-'}
+          </Box>
+        ),
       },
       {
         key: 'date',
@@ -252,6 +265,22 @@ export function OutgoingInvoicesListView() {
         align: 'left' as const,
         getValue: (row: OutgoingInvoice) =>
           row?.date ? new Date(row.date).toLocaleDateString() : '',
+        renderCell: ({ row }: { row: OutgoingInvoice }) => {
+          const dateValue = row?.date ? new Date(row.date).toLocaleDateString() : '-';
+          return (
+            <Box sx={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              py: 1.5, 
+              px: 1,
+              color: 'text.primary',
+              fontSize: '0.875rem',
+              fontWeight: 400
+            }}>
+              {dateValue}
+            </Box>
+          );
+        },
       },
       {
         key: 'storage_id',
@@ -262,6 +291,22 @@ export function OutgoingInvoicesListView() {
         align: 'left' as const,
         getValue: (row: OutgoingInvoice) =>
           storagesMap[row.storage_id] || row.storage_id || '',
+        renderCell: ({ row }: { row: OutgoingInvoice }) => {
+          const value = storagesMap[row.storage_id] || row.storage_id || '-';
+          return (
+            <Box sx={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              py: 1.5, 
+              px: 1,
+              color: 'text.primary',
+              fontSize: '0.875rem',
+              fontWeight: 400
+            }}>
+              {value}
+            </Box>
+          );
+        },
       },
       {
         key: 'group_id',
@@ -272,6 +317,22 @@ export function OutgoingInvoicesListView() {
         align: 'left' as const,
         getValue: (row: OutgoingInvoice) =>
           groupsMap[row.group_id] || row.group_id || '',
+        renderCell: ({ row }: { row: OutgoingInvoice }) => {
+          const value = groupsMap[row.group_id] || row.group_id || '-';
+          return (
+            <Box sx={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              py: 1.5, 
+              px: 1,
+              color: 'text.primary',
+              fontSize: '0.875rem',
+              fontWeight: 400
+            }}>
+              {value}
+            </Box>
+          );
+        },
       },
       {
         key: 'status',
@@ -281,6 +342,22 @@ export function OutgoingInvoicesListView() {
         width: '0.8fr',
         align: 'left' as const,
         getValue: (row: OutgoingInvoice) => row?.status || '',
+        renderCell: ({ row }: { row: OutgoingInvoice }) => {
+          const status = row?.status || '-';
+          return (
+            <Box sx={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              py: 1.5, 
+              px: 1,
+              color: 'text.primary',
+              fontSize: '0.875rem',
+              fontWeight: 400
+            }}>
+              {status}
+            </Box>
+          );
+        },
       },
       {
         key: 'total_amount',
@@ -290,8 +367,22 @@ export function OutgoingInvoicesListView() {
         align: 'left' as const,
         mono: true,
         getValue: (row: OutgoingInvoice) => Number(row?.total_amount || 0),
-        renderCell: ({ value }: { value: unknown }) =>
-          Number(value ?? 0).toLocaleString(),
+        renderCell: ({ value }: { value: unknown }) => {
+          const numValue = Number(value ?? 0).toLocaleString();
+          return (
+            <Box sx={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              py: 1.5, 
+              px: 1,
+              color: 'text.primary',
+              fontSize: '0.875rem',
+              fontWeight: 400
+            }}>
+              {numValue}
+            </Box>
+          );
+        },
         total: { aggregation: 'sum' as const },
       },
       {
@@ -302,14 +393,26 @@ export function OutgoingInvoicesListView() {
         width: '0.7fr',
         align: 'center' as const,
         renderCell: ({ row }: { row: OutgoingInvoice }) => (
-          <Box sx={{ display: 'flex', gap: 0.5 }}>
+          <Box sx={{ 
+            display: 'flex', 
+            gap: 0.5, 
+            alignItems: 'center', 
+            py: 1.5, 
+            px: 1
+          }}>
             <IconButton
               size="small"
               onClick={(e) => {
                 e.stopPropagation();
                 router.push(paths.warehouse.outgoingInvoices.edit(String(row.id)));
               }}
-              sx={{ color: 'text.secondary' }}
+              sx={{ 
+                color: 'text.secondary',
+                '&:hover': {
+                  backgroundColor: 'action.hover',
+                  color: 'primary.main'
+                }
+              }}
             >
               <Iconify icon="solar:pen-bold" width={18} />
             </IconButton>
@@ -319,7 +422,13 @@ export function OutgoingInvoicesListView() {
                 e.stopPropagation();
                 setDeleteId(row.id);
               }}
-              sx={{ color: 'error.main' }}
+              sx={{ 
+                color: 'error.main',
+                '&:hover': {
+                  backgroundColor: 'error.lighter',
+                  color: 'error.dark'
+                }
+              }}
             >
               <Iconify icon="solar:trash-bin-trash-bold" width={18} />
             </IconButton>

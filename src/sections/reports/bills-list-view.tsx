@@ -27,6 +27,7 @@ import { NoDataTooltip } from 'src/components/no-data-tooltip';
 import { GenericViewModal } from 'src/components/generic-view-view/GenericViewModal';
 
 import { DataTable } from 'src/sections/warehouse/deduction/components/utility-data-table';
+import { CELL_SX } from 'src/sections/warehouse/deduction/components/utility-data-table/utils/constants';
 
 // Helper functions
 const toUtcDayBoundary = (value: dayjs.Dayjs, endOfDay = false): string => {
@@ -414,6 +415,11 @@ export function BillsListView() {
                 width: '1.2fr',
                 align: 'left' as const,
                 getValue: (row: any) => row?.waiter_name ?? '-',
+                renderCell: ({ row }: { row: any }) => (
+                    <Box sx={CELL_SX}>
+                        {row?.waiter_name || '-'}
+                    </Box>
+                ),
             },
             {
                 key: 'hall_name',
@@ -423,6 +429,11 @@ export function BillsListView() {
                 width: '1fr',
                 align: 'left' as const,
                 getValue: (row: any) => row?.hall_name ?? '-',
+                renderCell: ({ row }: { row: any }) => (
+                    <Box sx={CELL_SX}>
+                        {row?.hall_name || '-'}
+                    </Box>
+                ),
             },
             {
                 key: 'table_number',
@@ -431,6 +442,11 @@ export function BillsListView() {
                 width: '0.7fr',
                 align: 'left' as const,
                 getValue: (row: any) => row?.table_number ?? '',
+                renderCell: ({ row }: { row: any }) => (
+                    <Box sx={CELL_SX}>
+                        {row?.table_number || '-'}
+                    </Box>
+                ),
             },
             {
                 key: 'guest_count',
@@ -439,6 +455,11 @@ export function BillsListView() {
                 width: '0.7fr',
                 align: 'left' as const,
                 getValue: (row: any) => row?.guest_count ?? 0,
+                renderCell: ({ row }: { row: any }) => (
+                    <Box sx={CELL_SX}>
+                        {row?.guest_count || 0}
+                    </Box>
+                ),
             },
             {
                 key: 'food_cost',
@@ -450,7 +471,11 @@ export function BillsListView() {
                 getValue: (row: any) => Number(row?.food_cost || 0),
                 renderCell: ({ value }: { value: unknown }) => {
                     const amount = Number(value ?? 0);
-                    return `${amount.toLocaleString()}`;
+                    return (
+                        <Box sx={CELL_SX}>
+                            {amount.toLocaleString()}
+                        </Box>
+                    );
                 },
                 total: { aggregation: 'sum' as const },
             },
@@ -464,7 +489,11 @@ export function BillsListView() {
                 getValue: (row: any) => Number(row?.grand_total || 0),
                 renderCell: ({ value }: { value: unknown }) => {
                     const amount = Number(value ?? 0);
-                    return `${amount.toLocaleString()}`;
+                    return (
+                        <Box sx={CELL_SX}>
+                            {amount.toLocaleString()}
+                        </Box>
+                    );
                 },
                 total: { aggregation: 'sum' as const },
             },
@@ -478,9 +507,14 @@ export function BillsListView() {
                 getValue: (row: any) => row?.payment_type || '',
                 renderCell: ({ value }: { value: unknown }) => {
                     const val = String(value ?? '');
-                    if (val === 'cash') return t('bills.cash', 'Cash');
-                    if (val === 'card') return t('bills.card', 'Card');
-                    return '-';
+                    let displayValue = '-';
+                    if (val === 'cash') displayValue = t('bills.cash', 'Cash');
+                    else if (val === 'card') displayValue = t('bills.card', 'Card');
+                    return (
+                        <Box sx={CELL_SX}>
+                            {displayValue}
+                        </Box>
+                    );
                 },
             },
             {
@@ -493,7 +527,11 @@ export function BillsListView() {
                 getValue: (row: any) => Number(row?.service_amount || 0),
                 renderCell: ({ value }: { value: unknown }) => {
                     const amount = Number(value ?? 0);
-                    return `${amount.toLocaleString()} so'm`;
+                    return (
+                        <Box sx={CELL_SX}>
+                            {amount.toLocaleString()} so'm
+                        </Box>
+                    );
                 },
                 total: { aggregation: 'sum' as const },
             },

@@ -7,15 +7,16 @@ import Box from '@mui/material/Box';
  */
 export function EmployeeUserCell({ employee }: EmployeeCellRendererProps) {
     return (
-        <Box
-            sx={{
-                display: 'flex',
-                flexDirection: 'column',
-                paddingTop: '15px',
-                paddingBottom: '15px',
-            }}
-        >
-            <Box sx={{ fontWeight: 600 }}>{employee.full_name}</Box>
+        <Box sx={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            py: 1.5, 
+            px: 1,
+            color: 'text.primary',
+            fontSize: '0.875rem',
+            fontWeight: 400
+        }}>
+            {employee.full_name || '-'}
         </Box>
     );
 }

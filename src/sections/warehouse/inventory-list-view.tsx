@@ -100,20 +100,25 @@ function RenderCellStatus({ status }: { status: string }) {
     const config = statusConfig[status] || statusConfig.draft;
 
     return (
-        <Box
-            sx={{
-                px: 2,
-                py: 0.75,
-                borderRadius: 0.75,
-                backgroundColor: `${config.color}20`,
-                color: config.color,
-                display: 'inline-block',
-                fontSize: '0.75rem',
-                fontWeight: 600,
-                textTransform: 'uppercase',
-            }}
-        >
-            {config.label}
+        <Box sx={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            py: 1.5, 
+            px: 1
+        }}>
+            <Box
+                sx={{
+                    padding: '4px 12px',
+                    borderRadius: '4px',
+                    fontSize: '0.875rem',
+                    fontWeight: 600,
+                    backgroundColor: `${config.color}20`,
+                    color: config.color,
+                    textTransform: 'uppercase',
+                }}
+            >
+                {config.label}
+            </Box>
         </Box>
     );
 }
@@ -263,7 +268,20 @@ export function InventoryListView() {
                 renderCell: ({ row }: { row: IInventory }) => {
                     const id = row?.storage_id;
                     const storage = storageOptions.find((s) => s.id === id);
-                    return storage?.name || id || '-';
+                    const value = storage?.name || id || '-';
+                    return (
+                        <Box sx={{ 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            py: 1.5, 
+                            px: 1,
+                            color: 'text.primary',
+                            fontSize: '0.875rem',
+                            fontWeight: 400
+                        }}>
+                            {value}
+                        </Box>
+                    );
                 },
             },
             {
@@ -273,6 +291,19 @@ export function InventoryListView() {
                 width: '1.5fr',
                 align: 'left' as const,
                 getValue: (row: IInventory) => (row as any)?.description || '-',
+                renderCell: ({ row }: { row: IInventory }) => (
+                    <Box sx={{ 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        py: 1.5, 
+                        px: 1,
+                        color: 'text.primary',
+                        fontSize: '0.875rem',
+                        fontWeight: 400
+                    }}>
+                        {(row as any)?.description || '-'}
+                    </Box>
+                ),
             },
             {
                 key: 'status',
@@ -294,8 +325,22 @@ export function InventoryListView() {
                 align: 'right' as const,
                 mono: true,
                 getValue: (row: IInventory) => Number((row as any)?.remaining_amount ?? 0),
-                renderCell: ({ value }: { value: unknown }) =>
-                    formatAmount(value as number),
+                renderCell: ({ value }: { value: unknown }) => {
+                    const amountValue = formatAmount(value as number);
+                    return (
+                        <Box sx={{ 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            py: 1.5, 
+                            px: 1,
+                            color: 'text.primary',
+                            fontSize: '0.875rem',
+                            fontWeight: 400
+                        }}>
+                            {amountValue}
+                        </Box>
+                    );
+                },
                 total: { aggregation: 'sum' as const },
             },
             {
@@ -306,8 +351,22 @@ export function InventoryListView() {
                 align: 'right' as const,
                 mono: true,
                 getValue: (row: IInventory) => Number((row as any)?.shortage_amount ?? 0),
-                renderCell: ({ value }: { value: unknown }) =>
-                    formatAmount(value as number),
+                renderCell: ({ value }: { value: unknown }) => {
+                    const amountValue = formatAmount(value as number);
+                    return (
+                        <Box sx={{ 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            py: 1.5, 
+                            px: 1,
+                            color: 'text.primary',
+                            fontSize: '0.875rem',
+                            fontWeight: 400
+                        }}>
+                            {amountValue}
+                        </Box>
+                    );
+                },
                 total: { aggregation: 'sum' as const },
             },
             {
@@ -318,8 +377,22 @@ export function InventoryListView() {
                 align: 'right' as const,
                 mono: true,
                 getValue: (row: IInventory) => Number((row as any)?.surplus_amount ?? 0),
-                renderCell: ({ value }: { value: unknown }) =>
-                    formatAmount(value as number),
+                renderCell: ({ value }: { value: unknown }) => {
+                    const amountValue = formatAmount(value as number);
+                    return (
+                        <Box sx={{ 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            py: 1.5, 
+                            px: 1,
+                            color: 'text.primary',
+                            fontSize: '0.875rem',
+                            fontWeight: 400
+                        }}>
+                            {amountValue}
+                        </Box>
+                    );
+                },
                 total: { aggregation: 'sum' as const },
             },
                   {
@@ -330,6 +403,22 @@ export function InventoryListView() {
                 align: 'left' as const,
                 getValue: (row: IInventory) =>
                     row?.date ? dayjs(row.date).format('DD.MM.YYYY') : '-',
+                renderCell: ({ row }: { row: IInventory }) => {
+                    const dateValue = row?.date ? dayjs(row.date).format('DD.MM.YYYY') : '-';
+                    return (
+                        <Box sx={{ 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            py: 1.5, 
+                            px: 1,
+                            color: 'text.primary',
+                            fontSize: '0.875rem',
+                            fontWeight: 400
+                        }}>
+                            {dateValue}
+                        </Box>
+                    );
+                },
             },
             {
                 key: 'actions',
@@ -339,14 +428,26 @@ export function InventoryListView() {
                 width: '0.7fr',
                 align: 'center' as const,
                 renderCell: ({ row }: { row: IInventory }) => (
-                    <Box sx={{ display: 'flex', gap: 0.5 }}>
+                    <Box sx={{ 
+                        display: 'flex', 
+                        gap: 0.5, 
+                        alignItems: 'center', 
+                        py: 1.5, 
+                        px: 1
+                    }}>
                         <IconButton
                             size="small"
                             onClick={(e) => {
                                 e.stopPropagation();
                                 handleEdit(row.id);
                             }}
-                            sx={{ color: 'text.secondary' }}
+                            sx={{ 
+                                color: 'text.secondary',
+                                '&:hover': {
+                                    backgroundColor: 'action.hover',
+                                    color: 'primary.main'
+                                }
+                            }}
                         >
                             <Iconify icon="solar:pen-bold" width={18} />
                         </IconButton>
@@ -357,7 +458,13 @@ export function InventoryListView() {
                                 setDeleteId(row.id);
                                 setDeleteConfirmOpen(true);
                             }}
-                            sx={{ color: 'error.main' }}
+                            sx={{ 
+                                color: 'error.main',
+                                '&:hover': {
+                                    backgroundColor: 'error.lighter',
+                                    color: 'error.dark'
+                                }
+                            }}
                         >
                             <Iconify icon="solar:trash-bin-trash-bold" width={18} />
                         </IconButton>

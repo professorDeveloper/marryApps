@@ -1,5 +1,6 @@
 import type { IStorageItem } from 'src/types/departments.tsx';
 import type { DataTableColumn, DataTableDefaultConfig } from 'src/sections/warehouse/deduction/components/utility-data-table/types/types';
+import { CELL_SX } from 'src/sections/warehouse/deduction/components/utility-data-table/utils/constants';
 
 import { useTranslation } from 'react-i18next';
 import { useMemo, useState, useEffect, useCallback } from 'react';
@@ -23,15 +24,8 @@ function RenderCellStorageName({ params }: { params: any }) {
   const name = row.name || '-';
 
   return (
-    <Box
-      sx={{
-        py: 2,
-        width: 1,
-        display: 'flex',
-        alignItems: 'center',
-      }}
-    >
-      <ListItemText primary={<span>{name}</span>} />
+    <Box sx={CELL_SX}>
+      {name}
     </Box>
   );
 }
@@ -40,28 +34,30 @@ function RenderCellColor({ params }: { params: any }) {
   const colorCode = params.row.color_code;
 
   if (!colorCode) {
-    return <div style={{ fontSize: '0.875rem', opacity: 0.8 }}>-</div>;
+    return (
+      <Box sx={CELL_SX}>
+        -
+      </Box>
+    );
   }
 
   return (
-    <Box
-      sx={{
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-        width: '100%',
-        height: '100%',
-        py: 1,
-      }}
-    >
+    <Box sx={{ 
+      display: 'flex', 
+      justifyContent: 'center', 
+      alignItems: 'center', 
+      py: 1.5, 
+      px: 1
+    }}>
       <Box
         sx={{
           width: 40,
           height: 32,
-          borderRadius: 1,
+          borderRadius: '6px',
           bgcolor: colorCode,
           border: '1px solid',
           borderColor: 'divider',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
         }}
       />
     </Box>
@@ -157,18 +153,36 @@ export function WarehouseStorageListView() {
         align: 'right',
         getValue: () => '',
         renderCell: ({ row }) => (
-          <Box sx={{ display: 'flex', gap: 0.5 }}>
+          <Box sx={{ 
+            display: 'flex', 
+            gap: 0.5, 
+            alignItems: 'center', 
+            py: 1.5, 
+            px: 1
+          }}>
             <IconButton
               size="small"
               onClick={() => handleEdit(row.id)}
-              sx={{ color: 'text.secondary' }}
+              sx={{ 
+                color: 'text.secondary',
+                '&:hover': {
+                  backgroundColor: 'action.hover',
+                  color: 'primary.main'
+                }
+              }}
             >
               <Iconify icon="solar:pen-bold" width={18} />
             </IconButton>
             <IconButton
               size="small"
               onClick={() => handleDeleteStorage(row.id)}
-              sx={{ color: 'error.main' }}
+              sx={{ 
+                color: 'error.main',
+                '&:hover': {
+                  backgroundColor: 'error.lighter',
+                  color: 'error.dark'
+                }
+              }}
             >
               <Iconify icon="solar:trash-bin-trash-bold" width={18} />
             </IconButton>

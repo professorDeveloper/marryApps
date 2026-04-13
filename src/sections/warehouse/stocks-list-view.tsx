@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { Button } from '@mui/material';
+import { Button, Box } from '@mui/material';
 
 import { paths } from 'src/routes/paths';
 
@@ -24,6 +24,19 @@ export function StocksListView() {
                 width: '1fr',
                 align: 'left' as const,
                 getValue: (row: any) => row?.sku ?? '',
+                renderCell: ({ row }: { row: any }) => (
+                    <Box sx={{ 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        py: 1.5, 
+                        px: 1,
+                        color: 'text.primary',
+                        fontSize: '0.875rem',
+                        fontWeight: 400
+                    }}>
+                        {row?.sku ?? '-'}
+                    </Box>
+                ),
             },
             {
                 key: 'name',
@@ -32,6 +45,19 @@ export function StocksListView() {
                 width: '2fr',
                 align: 'left' as const,
                 getValue: (row: any) => row?.name ?? '',
+                renderCell: ({ row }: { row: any }) => (
+                    <Box sx={{ 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        py: 1.5, 
+                        px: 1,
+                        color: 'text.primary',
+                        fontSize: '0.875rem',
+                        fontWeight: 400
+                    }}>
+                        {row?.name ?? '-'}
+                    </Box>
+                ),
             },
             {
                 key: 'quantity',
@@ -40,6 +66,19 @@ export function StocksListView() {
                 width: '1fr',
                 align: 'left' as const,
                 getValue: (row: any) => row?.quantity ?? '',
+                renderCell: ({ row }: { row: any }) => (
+                    <Box sx={{ 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        py: 1.5, 
+                        px: 1,
+                        color: 'text.primary',
+                        fontSize: '0.875rem',
+                        fontWeight: 400
+                    }}>
+                        {row?.quantity ?? '-'}
+                    </Box>
+                ),
             },
             {
                 key: 'location',
@@ -48,6 +87,19 @@ export function StocksListView() {
                 width: '1fr',
                 align: 'left' as const,
                 getValue: (row: any) => row?.location ?? '',
+                renderCell: ({ row }: { row: any }) => (
+                    <Box sx={{ 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        py: 1.5, 
+                        px: 1,
+                        color: 'text.primary',
+                        fontSize: '0.875rem',
+                        fontWeight: 400
+                    }}>
+                        {row?.location ?? '-'}
+                    </Box>
+                ),
             },
         ],
         [t]

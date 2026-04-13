@@ -7,9 +7,10 @@ import type {
 } from 'src/types/ingredient-stock';
 
 import useSWR, { mutate } from 'swr';
-import { useMemo, useCallback } from 'react';
+import { useMemo, useCallback, useState, useEffect } from 'react';
 
 import { putter, fetcher, deleter, endpoints } from 'src/lib/axios';
+import { useStorageAPI } from 'src/hooks/use-storage-api';
 
 import { toast } from 'src/components/snackbar';
 
@@ -19,26 +20,44 @@ const swrOptions: SWRConfiguration = {
     revalidateOnReconnect: false,
 };
 
+// Storage interface
+interface Storage {
+    id: string;
+    name: string;
+    location?: string;
+    created_at?: string;
+    updated_at?: string;
+}
+
 /**
  * Enrich ingredient stock with ingredient and storage names
  */
 function enrichIngredientStocks(
     stocks: IIngredientStock[],
-    ingredients: IIngredientItem[]
+    ingredients: IIngredientItem[],
+    storages: Storage[]
 ): IIngredientStock[] {
     const ingredientMap = new Map(
         ingredients?.map((ing: IIngredientItem) => [
             ing.id,
-            { name: ing.name, measurement: ing.measurement },
+            { name: ing.name, measurement: ing.measurement, price_per_unit: ing.price_per_unit },
         ]) || []
+    );
+
+    const storageMap = new Map(
+        storages?.map((storage: Storage) => [storage.id, storage.name]) || []
     );
 
     return stocks.map((stock) => {
         const ingredientInfo = ingredientMap.get(stock.ingredient_id);
+        const storageInfo = storageMap.get(stock.storage_id);
+        
         return {
             ...stock,
             ingredient_name: ingredientInfo?.name || stock.ingredient_id,
             measurement: ingredientInfo?.measurement || '-',
+            price_per_unit: ingredientInfo?.price_per_unit ?? (stock as any).price_per_unit ?? '-',
+            storage_name: storageInfo || stock.storage_id,
         };
     });
 }
@@ -59,7 +78,7 @@ export function useGetIngredientStocks(options?: { includeIngredientMeta?: boole
 
     const enrichedStocks = useMemo(() => {
         const stocks = Array.isArray(data?.data) ? data?.data : [];
-        return enrichIngredientStocks(stocks, ingredients);
+        return enrichIngredientStocks(stocks, ingredients, []);
     }, [data?.data, ingredients]);
 
     const memoizedValue = useMemo(
@@ -105,18 +124,24 @@ export function useGetIngredientStocksPage(params?: {
         { ...swrOptions }
     );
 
-    const stocks = useMemo(() => (Array.isArray(data?.data) ? data?.data : []), [data?.data]);
+    const { ingredients } = useGetIngredientsForStock(true);
+    const { storages, storagesLoading } = useGetStoragesForStock(true);
+
+    const enrichedStocks = useMemo(() => {
+        const stocks = Array.isArray(data?.data) ? data?.data : [];
+        return enrichIngredientStocks(stocks, ingredients, storages);
+    }, [data?.data, ingredients, storages]);
 
     const memoizedValue = useMemo(
         () => ({
-            stocks,
-            stocksLoading: isLoading,
+            stocks: enrichedStocks,
+            stocksLoading: isLoading || storagesLoading,
             stocksError: error,
             stocksValidating: isValidating,
-            stocksEmpty: !isLoading && !isValidating && !stocks.length,
+            stocksEmpty: !isLoading && !storagesLoading && !isValidating && !enrichedStocks.length,
             pagination: data?.pagination,
         }),
-        [stocks, data?.pagination, error, isLoading, isValidating]
+        [enrichedStocks, data?.pagination, error, isLoading, isValidating, storagesLoading]
     );
 
     return memoizedValue;
@@ -139,7 +164,7 @@ export function useGetIngredientStock(stockId: string) {
         if (!data?.data) return null;
         const stock = Array.isArray(data.data) ? data.data[0] : data.data;
         if (!stock) return null;
-        return enrichIngredientStocks([stock], ingredients)[0];
+        return enrichIngredientStocks([stock], ingredients, [])[0];
     }, [data?.data, ingredients]);
 
     const memoizedValue = useMemo(
@@ -170,6 +195,29 @@ function useGetIngredientsForStock(enabled: boolean) {
     const ingredients = useMemo(() => data?.data || [], [data?.data]);
 
     return { ingredients };
+}
+
+/**
+ * Helper hook to get storages for enrichment
+ */
+function useGetStoragesForStock(enabled: boolean) {
+    const { getStorages } = useStorageAPI();
+    const [storages, setStorages] = useState<Storage[]>([]);
+    const [loading, setLoading] = useState(false);
+
+    useEffect(() => {
+        if (enabled) {
+            setLoading(true);
+            getStorages().then((data) => {
+                setStorages(data);
+                setLoading(false);
+            });
+        } else {
+            setStorages([]);
+        }
+    }, [enabled, getStorages]);
+
+    return { storages, storagesLoading: loading };
 }
 
 /**

@@ -11,6 +11,7 @@ import { paths } from 'src/routes/paths';
 import { RouterLink } from 'src/routes/components';
 
 import { Iconify } from 'src/components/iconify';
+import { CELL_SX } from 'src/sections/warehouse/deduction/components/utility-data-table/utils/constants';
 
 import { DataTable } from 'src/sections/warehouse/deduction/components/utility-data-table/components/DataTable';
 
@@ -75,6 +76,11 @@ export function TransactionsDataTable({
         width: 150,
         sortable: true,
         getValue: (row) => row.type,
+        renderCell: ({ row }) => (
+          <Box sx={CELL_SX}>
+            {row.type || '-'}
+          </Box>
+        ),
       },
       {
         key: 'amount',
@@ -84,7 +90,22 @@ export function TransactionsDataTable({
         align: 'right',
         mono: true,
         getValue: (row) => Number(row.amount || 0),
-        renderCell: ({ value }) => Number(value as number).toLocaleString(),
+        renderCell: ({ value }) => {
+          const amountValue = Number(value as number).toLocaleString();
+          return (
+            <Box sx={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              py: 1.5, 
+              px: 1,
+              color: 'text.primary',
+              fontSize: '0.875rem',
+              fontWeight: 400
+            }}>
+              {amountValue}
+            </Box>
+          );
+        },
         total: { aggregation: 'sum' as const },
       },
       {
@@ -101,6 +122,29 @@ export function TransactionsDataTable({
           }
           return cashRegisterMap[row.cash_register_id || ''] || row.cash_register_id || '-';
         },
+        renderCell: ({ row }) => {
+          let registerValue;
+          if (row.type === 'transfer') {
+            const fromName = cashRegisterMap[row.from_cash_register_id || ''] || row.from_cash_register_id || '-';
+            const toName = cashRegisterMap[row.to_cash_register_id || ''] || row.to_cash_register_id || '-';
+            registerValue = `${fromName} -> ${toName}`;
+          } else {
+            registerValue = cashRegisterMap[row.cash_register_id || ''] || row.cash_register_id || '-';
+          }
+          return (
+            <Box sx={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              py: 1.5, 
+              px: 1,
+              color: 'text.primary',
+              fontSize: '0.875rem',
+              fontWeight: 400
+            }}>
+              {registerValue}
+            </Box>
+          );
+        },
       },
       {
         key: 'group_transaction_id',
@@ -109,6 +153,11 @@ export function TransactionsDataTable({
         minWidth: 150,
         sortable: true,
         getValue: (row) => groupsMap[row.group_transaction_id] || row.group_transaction_id || '-',
+        renderCell: ({ row }) => (
+          <Box sx={CELL_SX}>
+            {groupsMap[row.group_transaction_id] || row.group_transaction_id || '-'}
+          </Box>
+        ),
       },
       {
         key: 'user_id',
@@ -117,6 +166,11 @@ export function TransactionsDataTable({
         minWidth: 180,
         sortable: true,
         getValue: (row) => usersMap[row.user_id || ''] || row.user_id || '-',
+        renderCell: ({ row }) => (
+          <Box sx={CELL_SX}>
+            {usersMap[row.user_id || ''] || row.user_id || '-'}
+          </Box>
+        ),
       },
       {
         key: 'pay_type',
@@ -124,6 +178,11 @@ export function TransactionsDataTable({
         width: 120,
         sortable: true,
         getValue: (row) => row.pay_type,
+        renderCell: ({ row }) => (
+          <Box sx={CELL_SX}>
+            {row.pay_type || '-'}
+          </Box>
+        ),
       },
       {
         key: 'customer_paid_amount',
@@ -133,7 +192,22 @@ export function TransactionsDataTable({
         align: 'right',
         mono: true,
         getValue: (row) => row.customer_paid_amount ? Number(row.customer_paid_amount) : 0,
-        renderCell: ({ value }) => (value ? Number(value).toLocaleString() : '-'),
+        renderCell: ({ value }) => {
+          const paidValue = value ? Number(value).toLocaleString() : '-';
+          return (
+            <Box sx={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              py: 1.5, 
+              px: 1,
+              color: 'text.primary',
+              fontSize: '0.875rem',
+              fontWeight: 400
+            }}>
+              {paidValue}
+            </Box>
+          );
+        },
       },
       {
         key: 'change_amount',
@@ -143,7 +217,22 @@ export function TransactionsDataTable({
         align: 'right',
         mono: true,
         getValue: (row) => row.change_amount ? Number(row.change_amount) : 0,
-        renderCell: ({ value }) => (value ? Number(value).toLocaleString() : '-'),
+        renderCell: ({ value }) => {
+          const changeValue = value ? Number(value).toLocaleString() : '-';
+          return (
+            <Box sx={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              py: 1.5, 
+              px: 1,
+              color: 'text.primary',
+              fontSize: '0.875rem',
+              fontWeight: 400
+            }}>
+              {changeValue}
+            </Box>
+          );
+        },
       },
       {
         key: 'date',
@@ -151,6 +240,22 @@ export function TransactionsDataTable({
         width: 140,
         sortable: true,
         getValue: (row) => (row.date ? new Date(row.date).toLocaleDateString() : ''),
+        renderCell: ({ row }) => {
+          const dateValue = row.date ? new Date(row.date).toLocaleDateString() : '-';
+          return (
+            <Box sx={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              py: 1.5, 
+              px: 1,
+              color: 'text.primary',
+              fontSize: '0.875rem',
+              fontWeight: 400
+            }}>
+              {dateValue}
+            </Box>
+          );
+        },
       },
       {
         key: 'description',
@@ -159,6 +264,11 @@ export function TransactionsDataTable({
         minWidth: 220,
         sortable: true,
         getValue: (row) => row.description,
+        renderCell: ({ row }) => (
+          <Box sx={CELL_SX}>
+            {row.description || '-'}
+          </Box>
+        ),
       },
       {
         key: 'actions',
@@ -168,19 +278,37 @@ export function TransactionsDataTable({
         filterable: false,
         align: 'center',
         renderCell: ({ row }) => (
-          <Box sx={{ display: 'flex', gap: 0.5 }}>
+          <Box sx={{ 
+            display: 'flex', 
+            gap: 0.5, 
+            alignItems: 'center', 
+            py: 1.5, 
+            px: 1
+          }}>
             <IconButton
               size="small"
               component={RouterLink}
               href={paths.cashbox.transactionsEdit(row.id)}
-              sx={{ color: 'text.secondary' }}
+              sx={{ 
+                color: 'text.secondary',
+                '&:hover': {
+                  backgroundColor: 'action.hover',
+                  color: 'primary.main'
+                }
+              }}
             >
               <Iconify icon="solar:pen-bold" width={18} />
             </IconButton>
             <IconButton
               size="small"
               onClick={() => onDeleteClick(row.id)}
-              sx={{ color: 'error.main' }}
+              sx={{ 
+                color: 'error.main',
+                '&:hover': {
+                  backgroundColor: 'error.lighter',
+                  color: 'error.dark'
+                }
+              }}
             >
               <Iconify icon="solar:trash-bin-trash-bold" width={18} />
             </IconButton>

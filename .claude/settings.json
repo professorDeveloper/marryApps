@@ -33,7 +33,8 @@
       "Bash(grep -n \"export.*ProductEditView\\\\|export.*ProductListView\" /home/spike/Documents/work/MARY_AI/mary_front/frontv2/src/sections/products/*.tsx)",
       "Bash(wc -l /home/spike/Documents/work/MARY_AI/mary_front/frontv2/src/sections/menu/*.tsx /home/spike/Documents/work/MARY_AI/mary_front/frontv2/src/sections/menu/**/*.tsx /home/spike/Documents/work/MARY_AI/mary_front/frontv2/src/sections/menu/*.ts /home/spike/Documents/work/MARY_AI/mary_front/frontv2/src/sections/menu/**/*.ts)",
       "Bash(wc -l /home/spike/Documents/work/MARY_AI/mary_front/frontv2/src/sections/products/departments-*.tsx)",
-      "Bash(wc -l /home/spike/Documents/work/MARY_AI/mary_front/frontv2/src/sections/cashbox/*.tsx)"
+      "Bash(wc -l /home/spike/Documents/work/MARY_AI/mary_front/frontv2/src/sections/cashbox/*.tsx)",
+      "Bash(awk -F: '{print $1}')"
     ]
   }
 }

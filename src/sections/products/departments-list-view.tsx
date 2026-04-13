@@ -1,5 +1,6 @@
 import type { IDepartmentItem } from 'src/types/departments.tsx';
 import type { DataTableColumn, DataTableDefaultConfig } from 'src/sections/warehouse/deduction/components/utility-data-table/types/types';
+import { CELL_SX } from 'src/sections/warehouse/deduction/components/utility-data-table/utils/constants';
 
 import { useTranslation } from 'react-i18next';
 import { useMemo, useState, useEffect, useCallback } from 'react';
@@ -31,15 +32,8 @@ function RenderCellDepartmentName({ row }: CellRenderParams) {
   const name = row.name || '-';
 
   return (
-    <Box
-      sx={{
-        py: 2,
-        width: 1,
-        display: 'flex',
-        alignItems: 'center',
-      }}
-    >
-      <ListItemText primary={<span>{name}</span>} />
+    <Box sx={CELL_SX}>
+      {name}
     </Box>
   );
 }
@@ -48,7 +42,7 @@ function RenderCellStorageId({ row }: CellRenderParams) {
   const storageName = row.storage_name || '-';
 
   return (
-    <Box sx={{ fontSize: '0.875rem', opacity: 0.8 }}>
+    <Box sx={CELL_SX}>
       {storageName}
     </Box>
   );
@@ -58,27 +52,30 @@ function RenderCellColor({ row }: CellRenderParams) {
   const colorCode = row.color_code;
 
   if (!colorCode) {
-    return <Box sx={{ fontSize: '0.875rem', opacity: 0.8 }}>-</Box>;
+    return (
+      <Box sx={CELL_SX}>
+        -
+      </Box>
+    );
   }
 
   return (
-    <Box
-      sx={{
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-        width: '100%',
-        height: '100%',
-      }}
-    >
+    <Box sx={{ 
+      display: 'flex', 
+      justifyContent: 'center', 
+      alignItems: 'center', 
+      py: 1.5, 
+      px: 1
+    }}>
       <Box
         sx={{
-          width: 36,
-          height: 36,
-          borderRadius: 1,
+          width: 40,
+          height: 32,
+          borderRadius: '6px',
           bgcolor: colorCode,
           border: '1px solid',
           borderColor: 'divider',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
         }}
       />
     </Box>
@@ -246,7 +243,7 @@ function CategoriesTable({ departmentId }: { departmentId: string }) {
   );
 }
 
-export function DepartmentListView() {
+export function DepartmentsListView() {
   const { t } = useTranslation('menu');
   const router = useRouter();
   const { deleteDepartment } = useDeleteDepartment();
@@ -326,24 +323,43 @@ export function DepartmentListView() {
         filterable: false,
         getValue: () => '',
         renderCell: ({ row }) => (
-          <Box sx={{ display: 'flex', gap: 0.5 }}>
+          <Box sx={{ 
+            display: 'flex', 
+            gap: 0.5, 
+            alignItems: 'center', 
+            py: 1.5, 
+            px: 1
+          }}>
             <IconButton
               size="small"
               onClick={() => handleEditDepartment(row.id)}
               title={t('departments.edit')}
+              sx={{ 
+                color: 'text.secondary',
+                '&:hover': {
+                  backgroundColor: 'action.hover',
+                  color: 'primary.main'
+                }
+              }}
             >
-              <Iconify icon="solar:pen-bold" />
+              <Iconify icon="solar:pen-bold" width={18} />
             </IconButton>
             <IconButton
               size="small"
-              color="error"
               onClick={() => {
                 setDepartmentToDelete(row.id);
                 setDeleteDialogOpen(true);
               }}
               title={t('departments.delete')}
+              sx={{ 
+                color: 'error.main',
+                '&:hover': {
+                  backgroundColor: 'error.lighter',
+                  color: 'error.dark'
+                }
+              }}
             >
-              <Iconify icon="solar:trash-bin-trash-bold" />
+              <Iconify icon="solar:trash-bin-trash-bold" width={18} />
             </IconButton>
           </Box>
         ),

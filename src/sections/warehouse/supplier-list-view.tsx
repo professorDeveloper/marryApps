@@ -92,6 +92,19 @@ export function InvoicesListView() {
                 width: '2fr',
                 align: 'left' as const,
                 getValue: (row: any) => row?.name ?? '',
+                renderCell: ({ row }: { row: any }) => (
+                    <Box sx={{ 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        py: 1.5, 
+                        px: 1,
+                        color: 'text.primary',
+                        fontSize: '0.875rem',
+                        fontWeight: 400
+                    }}>
+                        {row?.name || '-'}
+                    </Box>
+                ),
             },
             {
                 key: 'phone_number',
@@ -100,6 +113,19 @@ export function InvoicesListView() {
                 width: '1fr',
                 align: 'left' as const,
                 getValue: (row: any) => row?.phone_number ?? '',
+                renderCell: ({ row }: { row: any }) => (
+                    <Box sx={{ 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        py: 1.5, 
+                        px: 1,
+                        color: 'text.primary',
+                        fontSize: '0.875rem',
+                        fontWeight: 400
+                    }}>
+                        {row?.phone_number || '-'}
+                    </Box>
+                ),
             },
             {
                 key: 'actions',
@@ -109,11 +135,23 @@ export function InvoicesListView() {
                 width: '0.5fr',
                 align: 'center' as const,
                 renderCell: ({ row }: { row: any }) => (
-                    <Box sx={{ display: 'flex', gap: 0.5 }}>
+                    <Box sx={{ 
+                        display: 'flex', 
+                        gap: 0.5, 
+                        alignItems: 'center', 
+                        py: 1.5, 
+                        px: 1
+                    }}>
                         <IconButton
                             size="small"
                             onClick={() => window.location.href = paths.warehouse.suppliers.edit(row.id)}
-                            sx={{ color: 'text.secondary' }}
+                            sx={{ 
+                                color: 'text.secondary',
+                                '&:hover': {
+                                    backgroundColor: 'action.hover',
+                                    color: 'primary.main'
+                                }
+                            }}
                         >
                             <Iconify icon="solar:pen-bold" width={18} />
                         </IconButton>
@@ -123,7 +161,13 @@ export function InvoicesListView() {
                                 setSupplierToDelete(row.id);
                                 setDeleteDialogOpen(true);
                             }}
-                            sx={{ color: 'error.main' }}
+                            sx={{ 
+                                color: 'error.main',
+                                '&:hover': {
+                                    backgroundColor: 'error.lighter',
+                                    color: 'error.dark'
+                                }
+                            }}
                         >
                             <Iconify icon="solar:trash-bin-trash-bold" width={18} />
                         </IconButton>

@@ -3,7 +3,7 @@ import type { ColumnDef, PickerItem, SummaryEntry } from 'src/sections/warehouse
 
 import React, { useRef, useMemo, useEffect, useCallback, startTransition } from 'react';
 
-import { useGetIngredientReports } from 'src/actions/ingredient-reports';
+import { useGetIngredientStocksByStorage } from 'src/hooks/use-ingredient-stock-api';
 
 import { useIngredients } from 'src/sections/warehouse/invoice';
 import {
@@ -39,31 +39,24 @@ export const InventoryItemsSection = React.memo(function InventoryItemsSection({
         getBatchData,
     } = useInventoryItems();
 
-    // Fetch ingredient reports for system quantities and prices
-    const reportParams = useMemo(() => {
-        if (!storageId || !date) return undefined;
-        return {
-            storage_id: storageId,
-            start: date,
-            end: date,
-            limit: 500,
-            offset: 0,
-        };
-    }, [storageId, date]);
-
-    const { reports } = useGetIngredientReports(reportParams);
+    // Fetch ingredient stocks for current quantities and prices
+    const { stocks } = useGetIngredientStocksByStorage(storageId, {
+        limit: 1000,
+        sort_by: 'ingredient_name',
+        sort_order: 'asc',
+    });
 
     const reportLookup = useMemo<IngredientReportLookup>(() => {
-        if (!reports || reports.length === 0) return EMPTY_LOOKUP;
+        if (!stocks || stocks.length === 0) return EMPTY_LOOKUP;
         const map: IngredientReportLookup = {};
-        reports.forEach((r) => {
-            map[r.ingredient_id] = {
-                systemQuantity: parseFloat(r.end_qty) || 0,
-                pricePerUnit: parseFloat(r.cost_end) || 0,
+        stocks.forEach((stock: any) => {
+            map[stock.ingredient_id] = {
+                systemQuantity: parseFloat(stock.quantity) || 0,
+                pricePerUnit: parseFloat(stock.price_per_unit) || 0,
             };
         });
         return map;
-    }, [reports]);
+    }, [stocks]);
 
     // Ref for stable handleQuickAdd
     const transferredIdsRef = useRef(transferredIds);

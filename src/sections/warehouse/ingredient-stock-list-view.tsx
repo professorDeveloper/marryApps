@@ -115,18 +115,8 @@ function IngredientStockListView() {
         setPaginationModel((prev) => ({ ...prev, page: 0 }));
     };
 
-    const enrichedStocks = useMemo(() => (Array.isArray(stocks) ? stocks : []).map((stock: any) => {
-        const expandedIngredient = stock?._expand?.ingredient_id;
-        const expandedStorage = stock?._expand?.storage_id;
-        return {
-            ...stock,
-            ingredient_name: expandedIngredient?.name || stock.ingredient_name || stock.ingredient_id,
-            measurement: expandedIngredient?.measurement || stock.measurement || '-',
-            price_per_unit: expandedIngredient?.price_per_unit ?? stock.price_per_unit ?? '-',
-            storage_name: expandedStorage?.name || stock.storage_name || stock.storage_id,
-            storage_id: stock.storage_id,
-        };
-    }), [stocks]);
+    // The stocks are now enriched by the hook with ingredient and storage names
+    const enrichedStocks = useMemo(() => Array.isArray(stocks) ? stocks : [], [stocks]);
 
     // TODO: Once the backend supports storage_id param in the ingredient-stocks endpoint,
     // move this filtering to the server-side by adding storage_id to the API query params

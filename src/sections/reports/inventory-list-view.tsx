@@ -25,6 +25,7 @@ import { Iconify } from 'src/components/iconify';
 
 import { useInventory } from 'src/sections/warehouse/inventory/hooks/use-inventory';
 import { DataTable } from 'src/sections/warehouse/deduction/components/utility-data-table';
+import { CELL_SX } from 'src/sections/warehouse/deduction/components/utility-data-table/utils/constants';
 
 const getTodayUtcBoundary = (endOfDay = false): string => {
   const now = dayjs();
@@ -306,6 +307,11 @@ export function InventoryReportsListView() {
         width: '0.8fr',
         align: 'left' as const,
         getValue: (row: any) => row?.number ?? '',
+        renderCell: ({ row }: { row: any }) => (
+          <Box sx={CELL_SX}>
+            {row?.number || '-'}
+          </Box>
+        ),
       },
       {
         key: 'storage_name',
@@ -315,6 +321,11 @@ export function InventoryReportsListView() {
         width: '1.2fr',
         align: 'left' as const,
         getValue: (row: any) => row?.storage_name ?? '',
+        renderCell: ({ row }: { row: any }) => (
+          <Box sx={CELL_SX}>
+            {row?.storage_name || '-'}
+          </Box>
+        ),
       },
       {
         key: 'description',
@@ -323,6 +334,11 @@ export function InventoryReportsListView() {
         width: '1.5fr',
         align: 'left' as const,
         getValue: (row: any) => row?.description ?? '',
+        renderCell: ({ row }: { row: any }) => (
+          <Box sx={CELL_SX}>
+            {row?.description || '-'}
+          </Box>
+        ),
       },
       {
         key: 'status',
@@ -341,18 +357,25 @@ export function InventoryReportsListView() {
           if (status === 'draft') { bgColor = '#FFF3CD'; textColor = '#856404'; }
           if (status === 'cancelled') { bgColor = '#F8D7DA'; textColor = '#721C24'; }
           return (
-            <span
-              style={{
-                padding: '4px 12px',
-                borderRadius: '4px',
-                fontSize: '14px',
-                fontWeight: 700,
-                backgroundColor: bgColor,
-                color: textColor,
-              }}
-            >
-              {status}
-            </span>
+            <Box sx={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              py: 1.5, 
+              px: 1
+            }}>
+              <Box
+                sx={{
+                  padding: '4px 12px',
+                  borderRadius: '4px',
+                  fontSize: '0.875rem',
+                  fontWeight: 600,
+                  backgroundColor: bgColor,
+                  color: textColor,
+                }}
+              >
+                {status}
+              </Box>
+            </Box>
           );
         },
       },
@@ -366,7 +389,11 @@ export function InventoryReportsListView() {
         getValue: (row: any) => Number(row?.surplus_amount || 0),
         renderCell: ({ value }: { value: unknown }) => {
           const amount = Number(value ?? 0);
-          return `${amount.toLocaleString()} UZS`;
+          return (
+            <Box sx={CELL_SX}>
+              {amount.toLocaleString()} UZS
+            </Box>
+          );
         },
         total: { aggregation: 'sum' as const },
       },
@@ -380,7 +407,11 @@ export function InventoryReportsListView() {
         getValue: (row: any) => Number(row?.shortage_amount || 0),
         renderCell: ({ value }: { value: unknown }) => {
           const amount = Number(value ?? 0);
-          return `${amount.toLocaleString()} UZS`;
+          return (
+            <Box sx={CELL_SX}>
+              {amount.toLocaleString()} UZS
+            </Box>
+          );
         },
         total: { aggregation: 'sum' as const },
       },
@@ -392,6 +423,14 @@ export function InventoryReportsListView() {
         align: 'left' as const,
         getValue: (row: any) =>
           row?.date ? new Date(row.date).toLocaleDateString() : '',
+        renderCell: ({ row }: { row: any }) => {
+          const dateValue = row?.date ? new Date(row.date).toLocaleDateString() : '-';
+          return (
+            <Box sx={CELL_SX}>
+              {dateValue}
+            </Box>
+          );
+        },
       },
       {
         key: 'actions',

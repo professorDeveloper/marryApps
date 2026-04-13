@@ -1,5 +1,6 @@
 import type { ICategory } from 'src/types/category';
 import type { DataTableColumn } from 'src/sections/warehouse/deduction/components/utility-data-table/types/types';
+import { CELL_SX } from 'src/sections/warehouse/deduction/components/utility-data-table/utils/constants';
 
 import { useTranslation } from 'react-i18next';
 import { useMemo, useState, useCallback } from 'react';
@@ -37,7 +38,6 @@ export function CategoryListView() {
     // Use custom hook for category data management
     const {
         categories,
-        loading,
         totalCount,
         storages,
         departments,
@@ -46,7 +46,6 @@ export function CategoryListView() {
         searchQuery,
         handleSearch,
         handlePageChange,
-        handleFilterChange,
         handleDelete,
         handleViewGoods,
         handleCloseGoodsModal,
@@ -64,7 +63,7 @@ export function CategoryListView() {
                 filterable: true,
                 getValue: (row: ICategory) => row.name || '-',
                 renderCell: ({ row }: { row: ICategory }) => (
-                    <Box sx={{ display: 'flex', alignItems: 'center', py: 1 }}>
+                    <Box sx={CELL_SX}>
                         {row.name || '-'}
                     </Box>
                 ),
@@ -81,7 +80,9 @@ export function CategoryListView() {
                 },
                 getValue: (row: ICategory) => row,
                 renderCell: ({ row }: { row: ICategory }) => (
-                    <StorageNameCell category={row} />
+                    <Box sx={CELL_SX}>
+                        <StorageNameCell category={row} />
+                    </Box>
                 ),
             },
             {
@@ -95,6 +96,11 @@ export function CategoryListView() {
                     options: departments.map((d) => d.name),
                 },
                 getValue: (row) => row.department_name || '-',
+                renderCell: ({ row }: { row: ICategory }) => (
+                    <Box sx={CELL_SX}>
+                        {row.department_name || '-'}
+                    </Box>
+                ),
             },
             {
                 key: 'color_code',
@@ -104,17 +110,30 @@ export function CategoryListView() {
                 getValue: (row) => row.color_code || '-',
                 renderCell: ({ row, value }: { row: ICategory; value: unknown }) => {
                     const colorValue = value as string;
-                    if (!colorValue) return '-';
+                    if (!colorValue) {
+                        return (
+                            <Box sx={CELL_SX}>
+                                -
+                            </Box>
+                        );
+                    }
                     return (
-                        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', py: 1 }}>
+                        <Box sx={{ 
+                            display: 'flex', 
+                            justifyContent: 'center', 
+                            alignItems: 'center', 
+                            py: 1.5, 
+                            px: 1
+                        }}>
                             <Box
                                 sx={{
                                     width: 40,
                                     height: 32,
-                                    borderRadius: '4px',
+                                    borderRadius: '6px',
                                     bgcolor: colorValue,
                                     border: '1px solid',
                                     borderColor: 'divider',
+                                    boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
                                 }}
                             />
                         </Box>
@@ -130,11 +149,15 @@ export function CategoryListView() {
                 renderCell: ({ row, value }: { row: ICategory; value: unknown }) => {
                     const dateValue = value as string | Date;
                     const parsedDate = typeof dateValue === 'string' ? new Date(dateValue) : dateValue;
-                    return parsedDate.toLocaleDateString(undefined, {
-                        year: 'numeric',
-                        month: 'short',
-                        day: 'numeric',
-                    });
+                    return (
+                        <Box sx={CELL_SX}>
+                            {parsedDate.toLocaleDateString(undefined, {
+                                year: 'numeric',
+                                month: 'short',
+                                day: 'numeric',
+                            })}
+                        </Box>
+                    );
                 },
             },
             {
@@ -145,14 +168,26 @@ export function CategoryListView() {
                 filterable: false,
                 getValue: (row) => row,
                 renderCell: ({ row }: { row: ICategory }) => (
-                    <Box sx={{ display: 'flex', gap: 0.5 }}>
+                    <Box sx={{ 
+                        display: 'flex', 
+                        gap: 0.5, 
+                        alignItems: 'center', 
+                        py: 1.5, 
+                        px: 1
+                    }}>
                         <IconButton
                             size="small"
                             onClick={(e) => {
                                 e.stopPropagation();
                                 handleEdit(row);
                             }}
-                            sx={{ color: 'text.secondary' }}
+                            sx={{ 
+                                color: 'text.secondary',
+                                '&:hover': {
+                                    backgroundColor: 'action.hover',
+                                    color: 'primary.main'
+                                }
+                            }}
                         >
                             <Iconify icon="solar:pen-bold" width={18} />
                         </IconButton>
@@ -162,7 +197,13 @@ export function CategoryListView() {
                                 e.stopPropagation();
                                 handleDeleteClick(row.id);
                             }}
-                            sx={{ color: 'error.main' }}
+                            sx={{ 
+                                color: 'error.main',
+                                '&:hover': {
+                                    backgroundColor: 'error.lighter',
+                                    color: 'error.dark'
+                                }
+                            }}
                         >
                             <Iconify icon="solar:trash-bin-trash-bold" width={18} />
                         </IconButton>

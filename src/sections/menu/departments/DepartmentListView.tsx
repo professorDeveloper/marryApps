@@ -111,24 +111,43 @@ export function DepartmentListView() {
         filterable: false,
         getValue: () => '',
         renderCell: ({ row }) => (
-          <Box sx={{ display: 'flex', gap: 0.5 }}>
+          <Box sx={{ 
+            display: 'flex', 
+            gap: 0.5, 
+            alignItems: 'center', 
+            py: 1.5, 
+            px: 1
+          }}>
             <IconButton
               size="small"
               onClick={() => handleEditDepartment(row.id)}
               title={t('departments.edit')}
+              sx={{ 
+                color: 'text.secondary',
+                '&:hover': {
+                  backgroundColor: 'action.hover',
+                  color: 'primary.main'
+                }
+              }}
             >
-              <Iconify icon="solar:pen-bold" />
+              <Iconify icon="solar:pen-bold" width={18} />
             </IconButton>
             <IconButton
               size="small"
-              color="error"
               onClick={() => {
                 setDepartmentToDelete(row.id);
                 setDeleteDialogOpen(true);
               }}
               title={t('departments.delete')}
+              sx={{ 
+                color: 'error.main',
+                '&:hover': {
+                  backgroundColor: 'error.lighter',
+                  color: 'error.dark'
+                }
+              }}
             >
-              <Iconify icon="solar:trash-bin-trash-bold" />
+              <Iconify icon="solar:trash-bin-trash-bold" width={18} />
             </IconButton>
           </Box>
         ),

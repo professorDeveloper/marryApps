@@ -33,15 +33,19 @@ export function useCategoryData() {
 
     // Enrich categories with storage and department names
     const enrichedCategories = useMemo(() => {
-        const storageMap = new Map(storages?.map((storage: any) => [storage.id, storage.name]) || []);
-        const departmentMap = new Map(departments?.map((dept: any) => [dept.id, dept.name]) || []);
+        const departmentMap = new Map(departments?.map((dept: any) => [dept.id, 
+            { "deparment_id": dept.id, "department_name": dept.name,
+                "storage_id":dept._expand.storage_id.id, "storage_name":dept._expand.storage_id.name
+            
+             }
+        ]) || []);
 
         return categories.map((category: ICategory) => ({
             ...category,
-            storage_name: storageMap.get(category.storage_id || '') || category.storage_name || '-',
-            department_name: departmentMap.get(category.department_id || '') || category.department_name || '-',
+            storage_name: departmentMap.get(category.department_id || '')?.storage_name || category.storage_name || '-',
+            department_name: departmentMap.get(category.department_id || '')?.department_name || category.department_name || '-',
         }));
-    }, [categories, storages, departments]);
+    }, [categories, departments]);
 
     // Handle search
     const handleSearch = useCallback((query: string) => {

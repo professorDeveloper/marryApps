@@ -29,6 +29,7 @@ import { Iconify } from 'src/components/iconify';
 import { GenericViewModal } from 'src/components/generic-view-view';
 
 import { DataTable } from 'src/sections/warehouse/deduction/components/utility-data-table';
+import { CELL_SX } from 'src/sections/warehouse/deduction/components/utility-data-table/utils/constants';
 
 type DataTableFilterState = Record<string, { type: 'text' | 'multi'; value: string | string[] }>;
 
@@ -413,7 +414,11 @@ export function InvoiceDetailsStandaloneListView() {
                 width: '1.5fr',
                 align: 'left' as const,
                 getValue: (row: any) => row?.supplier_id ?? '',
-                renderCell: ({ row }: { row: any }) => row?.supplier_name ?? '',
+                renderCell: ({ row }: { row: any }) => (
+                    <Box sx={CELL_SX}>
+                        {row?.supplier_name || '-'}
+                    </Box>
+                ),
             },
             {
                 key: 'supplier_phone',
@@ -422,6 +427,11 @@ export function InvoiceDetailsStandaloneListView() {
                 width: '1fr',
                 align: 'left' as const,
                 getValue: (row: any) => row?.supplier_phone ?? '',
+                renderCell: ({ row }: { row: any }) => (
+                    <Box sx={CELL_SX}>
+                        {row?.supplier_phone || '-'}
+                    </Box>
+                ),
             },
             {
                 key: 'storage_id',
@@ -438,7 +448,11 @@ export function InvoiceDetailsStandaloneListView() {
                 width: '1.2fr',
                 align: 'left' as const,
                 getValue: (row: any) => row?.storage_id ?? '',
-                renderCell: ({ row }: { row: any }) => row?.storage_name ?? '',
+                renderCell: ({ row }: { row: any }) => (
+                    <Box sx={CELL_SX}>
+                        {row?.storage_name || '-'}
+                    </Box>
+                ),
             },
             {
                 key: 'total_amount',
@@ -450,7 +464,11 @@ export function InvoiceDetailsStandaloneListView() {
                 getValue: (row: any) => Number(row?.total_amount || 0),
                 renderCell: ({ value }: { value: unknown }) => {
                     const amount = Number(value ?? 0);
-                    return `${amount.toLocaleString()} UZS`;
+                    return (
+                        <Box sx={CELL_SX}>
+                            {amount.toLocaleString()} UZS
+                        </Box>
+                    );
                 },
                 total: { aggregation: 'sum' as const },
             },
@@ -469,18 +487,25 @@ export function InvoiceDetailsStandaloneListView() {
                     if (status === 'pending') { bgColor = '#FFF3CD'; textColor = '#856404'; }
                     if (status === 'deleted') { bgColor = '#F8D7DA'; textColor = '#721C24'; }
                     return (
-                        <span
-                            style={{
-                                padding: '4px 12px',
-                                borderRadius: '4px',
-                                fontSize: '14px',
-                                fontWeight: 700,
-                                backgroundColor: bgColor,
-                                color: textColor,
-                            }}
-                        >
-                            {status}
-                        </span>
+                        <Box sx={{ 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            py: 1.5, 
+                            px: 1
+                        }}>
+                            <Box
+                                sx={{
+                                    padding: '4px 12px',
+                                    borderRadius: '4px',
+                                    fontSize: '0.875rem',
+                                    fontWeight: 600,
+                                    backgroundColor: bgColor,
+                                    color: textColor,
+                                }}
+                            >
+                                {status}
+                            </Box>
+                        </Box>
                     );
                 },
             },
@@ -492,6 +517,14 @@ export function InvoiceDetailsStandaloneListView() {
                 align: 'left' as const,
                 getValue: (row: any) =>
                     row?.date ? new Date(row.date).toLocaleDateString() : '',
+                renderCell: ({ row }: { row: any }) => {
+                    const dateValue = row?.date ? new Date(row.date).toLocaleDateString() : '-';
+                    return (
+                        <Box sx={CELL_SX}>
+                            {dateValue}
+                        </Box>
+                    );
+                },
             },
             {
                 key: 'actions',

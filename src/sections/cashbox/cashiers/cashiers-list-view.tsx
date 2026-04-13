@@ -1,5 +1,6 @@
 import type { ICashier } from 'src/types/cashbox';
 import type { DataTableColumn } from 'src/sections/warehouse/deduction/components/utility-data-table/types/types';
+import { CELL_SX } from 'src/sections/warehouse/deduction/components/utility-data-table/utils/constants';
 
 import dayjs from 'dayjs';
 import { useTranslation } from 'react-i18next';
@@ -130,6 +131,11 @@ export function CashiersListView() {
                 width: '1.5fr',
                 align: 'left',
                 getValue: (row: ICashier) => row?.name || '',
+                renderCell: ({ row }: { row: ICashier }) => (
+                    <Box sx={CELL_SX}>
+                        {row?.name || '-'}
+                    </Box>
+                ),
             },
             {
                 key: 'created_at',
@@ -140,6 +146,14 @@ export function CashiersListView() {
                 align: 'left',
                 getValue: (row: ICashier) =>
                     row?.created_at ? new Date(row.created_at).toLocaleDateString() : '',
+                renderCell: ({ row }: { row: ICashier }) => {
+                    const dateValue = row?.created_at ? new Date(row.created_at).toLocaleDateString() : '-';
+                    return (
+                        <Box sx={CELL_SX}>
+                            {dateValue}
+                        </Box>
+                    );
+                },
             },
             {
                 key: 'actions',
@@ -149,11 +163,23 @@ export function CashiersListView() {
                 width: '0.7fr',
                 align: 'center',
                 renderCell: ({ row }: { row: ICashier }) => (
-                    <Box sx={{ display: 'flex', gap: 0.5 }}>
+                    <Box sx={{ 
+                        display: 'flex', 
+                        gap: 0.5, 
+                        alignItems: 'center', 
+                        py: 1.5, 
+                        px: 1
+                    }}>
                         <IconButton
                             size="small"
                             onClick={() => router.push(`${paths.cashbox.cashiers}/${row.id}/edit`)}
-                            sx={{ color: 'text.secondary' }}
+                            sx={{ 
+                                color: 'text.secondary',
+                                '&:hover': {
+                                    backgroundColor: 'action.hover',
+                                    color: 'primary.main'
+                                }
+                            }}
                         >
                             <Iconify icon="solar:pen-bold" width={18} />
                         </IconButton>
@@ -163,7 +189,13 @@ export function CashiersListView() {
                                 setDeleteId(row.id);
                                 setOpenDeleteDialog(true);
                             }}
-                            sx={{ color: 'error.main' }}
+                            sx={{ 
+                                color: 'error.main',
+                                '&:hover': {
+                                    backgroundColor: 'error.lighter',
+                                    color: 'error.dark'
+                                }
+                            }}
                         >
                             <Iconify icon="solar:trash-bin-trash-bold" width={18} />
                         </IconButton>

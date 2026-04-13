@@ -32,15 +32,16 @@ function RenderCellIngredientName({ row }: { row: any }) {
     const name = row.name || '-';
 
     return (
-        <Box
-            sx={{
-                py: 2,
-                width: 1,
-                display: 'flex',
-                alignItems: 'center',
-            }}
-        >
-            <ListItemText primary={<span>{name}</span>} />
+        <Box sx={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            py: 1.5, 
+            px: 1,
+            color: 'text.primary',
+            fontSize: '0.875rem',
+            fontWeight: 400
+        }}>
+            {name}
         </Box>
     );
 }
@@ -143,6 +144,19 @@ export function IngredientListView() {
                 width: '1.2fr',
                 align: 'left' as const,
                 getValue: (row: IIngredientItem) => row?.group_name || '-',
+                renderCell: ({ row }: { row: IIngredientItem }) => (
+                    <Box sx={{ 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        py: 1.5, 
+                        px: 1,
+                        color: 'text.primary',
+                        fontSize: '0.875rem',
+                        fontWeight: 400
+                    }}>
+                        {row?.group_name || '-'}
+                    </Box>
+                ),
             },
             {
                 key: 'measurement',
@@ -153,9 +167,17 @@ export function IngredientListView() {
                 align: 'left' as const,
                 getValue: (row: IIngredientItem) => row?.measurement || '-',
                 renderCell: ({ value }: { value: unknown }) => (
-                    <div style={{ fontSize: '0.875rem', opacity: 0.8 }}>
+                    <Box sx={{ 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        py: 1.5, 
+                        px: 1,
+                        color: 'text.primary',
+                        fontSize: '0.875rem',
+                        fontWeight: 400
+                    }}>
                         {getMeasurementLabel(String(value ?? '-'), t)}
-                    </div>
+                    </Box>
                 ),
             },
             {
@@ -168,27 +190,37 @@ export function IngredientListView() {
                 renderCell: ({ value }: { value: unknown }) => {
                     const colorCode = value as string;
                     if (!colorCode) {
-                        return <div style={{ fontSize: '0.875rem', opacity: 0.8 }}>-</div>;
+                        return (
+                            <Box sx={{ 
+                                display: 'flex', 
+                                alignItems: 'center', 
+                                py: 1.5, 
+                                px: 1,
+                                color: 'text.primary',
+                                fontSize: '0.875rem',
+                                fontWeight: 400
+                            }}>
+                                -
+                            </Box>
+                        );
                     }
                     return (
-                        <Box
-                            sx={{
-                                display: 'flex',
-                                justifyContent: 'center',
-                                alignItems: 'center',
-                                width: '100%',
-                                height: '100%',
-                                py: 1,
-                            }}
-                        >
+                        <Box sx={{ 
+                            display: 'flex', 
+                            justifyContent: 'center', 
+                            alignItems: 'center', 
+                            py: 1.5, 
+                            px: 1
+                        }}>
                             <Box
                                 sx={{
                                     width: 40,
                                     height: 32,
-                                    borderRadius: 1,
+                                    borderRadius: '6px',
                                     bgcolor: colorCode,
                                     border: '1px solid',
                                     borderColor: 'divider',
+                                    boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
                                 }}
                             />
                         </Box>
@@ -202,6 +234,19 @@ export function IngredientListView() {
                 width: '1fr',
                 align: 'left' as const,
                 getValue: (row: IIngredientItem) => row?.price_per_unit || '-',
+                renderCell: ({ row }: { row: IIngredientItem }) => (
+                    <Box sx={{ 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        py: 1.5, 
+                        px: 1,
+                        color: 'text.primary',
+                        fontSize: '0.875rem',
+                        fontWeight: 400
+                    }}>
+                        {row?.price_per_unit || '-'}
+                    </Box>
+                ),
             },
             {
                 key: 'actions',
@@ -211,14 +256,26 @@ export function IngredientListView() {
                 width: '0.7fr',
                 align: 'center' as const,
                 renderCell: ({ row }: { row: IIngredientItem }) => (
-                    <Box sx={{ display: 'flex', gap: 0.5 }}>
+                    <Box sx={{ 
+                        display: 'flex', 
+                        gap: 0.5, 
+                        alignItems: 'center', 
+                        py: 1.5, 
+                        px: 1
+                    }}>
                         <IconButton
                             size="small"
                             onClick={(e) => {
                                 e.stopPropagation();
                                 handleEditIngredient(row.id);
                             }}
-                            sx={{ color: 'text.secondary' }}
+                            sx={{ 
+                                color: 'text.secondary',
+                                '&:hover': {
+                                    backgroundColor: 'action.hover',
+                                    color: 'primary.main'
+                                }
+                            }}
                         >
                             <Iconify icon="solar:pen-bold" width={18} />
                         </IconButton>
@@ -229,7 +286,13 @@ export function IngredientListView() {
                                 setIngredientToDelete(row.id);
                                 setDeleteDialogOpen(true);
                             }}
-                            sx={{ color: 'error.main' }}
+                            sx={{ 
+                                color: 'error.main',
+                                '&:hover': {
+                                    backgroundColor: 'error.lighter',
+                                    color: 'error.dark'
+                                }
+                            }}
                         >
                             <Iconify icon="solar:trash-bin-trash-bold" width={18} />
                         </IconButton>

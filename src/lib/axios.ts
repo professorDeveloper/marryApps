@@ -413,6 +413,13 @@ export const endpoints = {
     confirm: (id: string) => `/api/v1/separation-acts/${id}/confirm`,
     cancel: (id: string) => `/api/v1/separation-acts/${id}/cancel`,
   },
+  stocks: {
+    list: '/api/v1/stocks',
+    details: (id: string) => `/api/v1/stocks/${id}`,
+    create: '/api/v1/stocks',
+    update: (id: string) => `/api/v1/stocks/${id}`,
+    delete: (id: string) => `/api/v1/stocks/${id}`,
+  },
   ingredientStock: {
     list: '/api/v1/ingredient-stock',
     details: (id: string) => `/api/v1/ingredient-stock/${id}`,
