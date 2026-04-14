@@ -494,9 +494,8 @@ func (h *Handler) Register(router *echo.Echo) {
 
 		modifiers := api.Group("/modifiers", mw.CheckAuth(h.cfg), mw.TenantMiddleware(h.repo))
 		{
-			modifiers.POST("", h.CreateModifier, mw.CheckLanguage())
+			modifiers.POST("/with-calculations", h.CreateModifierWithCalculations, mw.CheckLanguage())
 			modifiers.GET("", h.GetAllModifiers, mw.CheckLanguage())
-			modifiers.GET("/search", h.SearchModifiers, mw.CheckLanguage())
 			modifiers.GET("/:id", h.GetModifierByID, mw.CheckLanguage())
 			modifiers.PUT("/:id", h.UpdateModifier, mw.CheckLanguage())
 			modifiers.DELETE("/:id", h.DeleteModifier, mw.CheckLanguage())

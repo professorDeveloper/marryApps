@@ -33,14 +33,20 @@ func (q *Queries) CountActiveOrderItemModifiersByModifierID(ctx context.Context,
 	return count, err
 }
 
-const countModifiers = `-- name: CountModifiers :one
+const countModifiersFiltered = `-- name: CountModifiersFiltered :one
 SELECT COUNT(*)
 FROM modifiers
 WHERE deleted_at = 0
+  AND (
+      $1::text = ''
+      OR name ILIKE '%' || $1 || '%'
+      OR COALESCE(description, '') ILIKE '%' || $1 || '%'
+      OR COALESCE(code, '') ILIKE '%' || $1 || '%'
+  )
 `
 
-func (q *Queries) CountModifiers(ctx context.Context) (int64, error) {
-	row := q.db.QueryRow(ctx, countModifiers)
+func (q *Queries) CountModifiersFiltered(ctx context.Context, dollar_1 string) (int64, error) {
+	row := q.db.QueryRow(ctx, countModifiersFiltered, dollar_1)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -120,60 +126,6 @@ func (q *Queries) DeleteModifier(ctx context.Context, id uuid.UUID) error {
 	return err
 }
 
-const getAllModifiers = `-- name: GetAllModifiers :many
-SELECT
-    id,
-    name,
-    name_i18n,
-    description,
-    code,
-    is_active,
-    picture_url,
-    created_at,
-    updated_at,
-    deleted_at
-FROM modifiers
-WHERE deleted_at = 0
-ORDER BY created_at DESC
-LIMIT $1 OFFSET $2
-`
-
-type GetAllModifiersParams struct {
-	Limit  int32 `json:"limit"`
-	Offset int32 `json:"offset"`
-}
-
-func (q *Queries) GetAllModifiers(ctx context.Context, arg GetAllModifiersParams) ([]Modifier, error) {
-	rows, err := q.db.Query(ctx, getAllModifiers, arg.Limit, arg.Offset)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []Modifier
-	for rows.Next() {
-		var i Modifier
-		if err := rows.Scan(
-			&i.ID,
-			&i.Name,
-			&i.NameI18n,
-			&i.Description,
-			&i.Code,
-			&i.IsActive,
-			&i.PictureUrl,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-			&i.DeletedAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
 const getModifierByCode = `-- name: GetModifierByCode :one
 SELECT
     id,
@@ -244,19 +196,7 @@ func (q *Queries) GetModifierByID(ctx context.Context, id uuid.UUID) (Modifier, 
 	return i, err
 }
 
-const restoreModifier = `-- name: RestoreModifier :exec
-UPDATE modifiers
-SET deleted_at = 0
-WHERE id = $1
-  AND deleted_at <> 0
-`
-
-func (q *Queries) RestoreModifier(ctx context.Context, id uuid.UUID) error {
-	_, err := q.db.Exec(ctx, restoreModifier, id)
-	return err
-}
-
-const searchModifiers = `-- name: SearchModifiers :many
+const getModifiers = `-- name: GetModifiers :many
 SELECT
     id,
     name,
@@ -271,7 +211,8 @@ SELECT
 FROM modifiers
 WHERE deleted_at = 0
   AND (
-      name ILIKE '%' || $1 || '%'
+      $1::text = ''
+      OR name ILIKE '%' || $1 || '%'
       OR COALESCE(description, '') ILIKE '%' || $1 || '%'
       OR COALESCE(code, '') ILIKE '%' || $1 || '%'
   )
@@ -279,14 +220,14 @@ ORDER BY created_at DESC
 LIMIT $2 OFFSET $3
 `
 
-type SearchModifiersParams struct {
-	Column1 *string `json:"column_1"`
-	Limit   int32   `json:"limit"`
-	Offset  int32   `json:"offset"`
+type GetModifiersParams struct {
+	Column1 string `json:"column_1"`
+	Limit   int32  `json:"limit"`
+	Offset  int32  `json:"offset"`
 }
 
-func (q *Queries) SearchModifiers(ctx context.Context, arg SearchModifiersParams) ([]Modifier, error) {
-	rows, err := q.db.Query(ctx, searchModifiers, arg.Column1, arg.Limit, arg.Offset)
+func (q *Queries) GetModifiers(ctx context.Context, arg GetModifiersParams) ([]Modifier, error) {
+	rows, err := q.db.Query(ctx, getModifiers, arg.Column1, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
@@ -314,6 +255,18 @@ func (q *Queries) SearchModifiers(ctx context.Context, arg SearchModifiersParams
 		return nil, err
 	}
 	return items, nil
+}
+
+const restoreModifier = `-- name: RestoreModifier :exec
+UPDATE modifiers
+SET deleted_at = 0
+WHERE id = $1
+  AND deleted_at <> 0
+`
+
+func (q *Queries) RestoreModifier(ctx context.Context, id uuid.UUID) error {
+	_, err := q.db.Exec(ctx, restoreModifier, id)
+	return err
 }
 
 const updateModifier = `-- name: UpdateModifier :one

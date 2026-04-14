@@ -1288,6 +1288,21 @@ definitions:
         example: https://example.com/image.jpg
         type: string
     type: object
+  model.CreateModifierWithCalculationsRequest:
+    properties:
+      compound_calculations:
+        items:
+          $ref: '#/definitions/model.CompoundCalculationItem'
+        type: array
+      ingredient_calculations:
+        items:
+          $ref: '#/definitions/model.IngredientCalculationItem'
+        type: array
+      modifier:
+        $ref: '#/definitions/model.CreateModifierRequest'
+    required:
+    - modifier
+    type: object
   model.CreateOrderItemEntry:
     properties:
       comment:
@@ -2866,6 +2881,17 @@ definitions:
         example: https://example.com/image.jpg
         type: string
     type: object
+  model.ModifierWithCalculationsResponse:
+    properties:
+      calculations:
+        items:
+          $ref: '#/definitions/model.ModifierCalculationResponse'
+        type: array
+      modifier:
+        $ref: '#/definitions/model.ModifierResponse'
+      total_cost:
+        type: string
+    type: object
   model.OpenCashRegisterShiftRequest:
     properties:
       cash_register_id:
@@ -3182,6 +3208,24 @@ definitions:
         type: array
       pagination:
         $ref: '#/definitions/model.PaginationMeta'
+    type: object
+  model.PaginatedModifiersResponse:
+    properties:
+      code:
+        example: 200
+        type: integer
+      data:
+        items:
+          $ref: '#/definitions/model.ModifierResponse'
+        type: array
+      message:
+        example: Modifiers retrieved successfully
+        type: string
+      pagination:
+        $ref: '#/definitions/model.PaginationMeta'
+      status:
+        example: success
+        type: string
     type: object
   model.PaginatedTransfersResponse:
     properties:
@@ -15606,8 +15650,13 @@ paths:
     get:
       consumes:
       - application/json
-      description: Retrieve all modifiers with pagination
+      description: Retrieve modifiers with optional search by name, description, or
+        code
       parameters:
+      - description: Search query
+        in: query
+        name: q
+        type: string
       - description: 'Limit (default: 20)'
         in: query
         name: limit
@@ -15626,47 +15675,14 @@ paths:
         "200":
           description: OK
           schema:
-            items:
-              $ref: '#/definitions/model.ModifierResponse'
-            type: array
+            $ref: '#/definitions/model.PaginatedModifiersResponse'
         "500":
           description: Internal Server Error
           schema:
             $ref: '#/definitions/model.ErrorResponse'
       security:
       - BearerAuth: []
-      summary: Get all modifiers
-      tags:
-      - modifiers
-    post:
-      consumes:
-      - application/json
-      description: Create a new modifier
-      parameters:
-      - description: Modifier creation request
-        in: body
-        name: request
-        required: true
-        schema:
-          $ref: '#/definitions/model.CreateModifierRequest'
-      produces:
-      - application/json
-      responses:
-        "201":
-          description: Created
-          schema:
-            $ref: '#/definitions/model.ModifierResponse'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/model.ErrorResponse'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/model.ErrorResponse'
-      security:
-      - BearerAuth: []
-      summary: Create modifier
+      summary: Get modifiers
       tags:
       - modifiers
   /api/v1/modifiers/{id}:
@@ -16062,34 +16078,31 @@ paths:
       summary: Update modifier calculation
       tags:
       - Modifier Calculations
-  /api/v1/modifiers/search:
-    get:
+  /api/v1/modifiers/with-calculations:
+    post:
       consumes:
       - application/json
-      description: Search modifiers by name, description, or code
+      description: Create a new modifier and its ingredient/compound calculations
+        in one atomic transaction.
       parameters:
-      - description: Search query
-        in: query
-        name: q
+      - description: Modifier + calculations
+        in: body
+        name: request
         required: true
-        type: string
-      - description: 'Limit (default: 20)'
-        in: query
-        name: limit
-        type: integer
-      - description: 'Offset (default: 0)'
-        in: query
-        name: offset
-        type: integer
+        schema:
+          $ref: '#/definitions/model.CreateModifierWithCalculationsRequest'
       produces:
       - application/json
       responses:
-        "200":
-          description: OK
+        "201":
+          description: Created
           schema:
-            items:
-              $ref: '#/definitions/model.ModifierResponse'
-            type: array
+            allOf:
+            - $ref: '#/definitions/model.SuccessResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/model.ModifierWithCalculationsResponse'
+              type: object
         "400":
           description: Bad Request
           schema:
@@ -16100,7 +16113,7 @@ paths:
             $ref: '#/definitions/model.ErrorResponse'
       security:
       - BearerAuth: []
-      summary: Search modifiers
+      summary: Create modifier with calculations
       tags:
       - modifiers
   /api/v1/order-items:

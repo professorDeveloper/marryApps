@@ -39,7 +39,7 @@ FROM modifiers
 WHERE id = $1
   AND deleted_at = 0;
 
--- name: GetAllModifiers :many
+-- name: GetModifiers :many
 SELECT
     id,
     name,
@@ -53,8 +53,25 @@ SELECT
     deleted_at
 FROM modifiers
 WHERE deleted_at = 0
+  AND (
+      $1::text = ''
+      OR name ILIKE '%' || $1 || '%'
+      OR COALESCE(description, '') ILIKE '%' || $1 || '%'
+      OR COALESCE(code, '') ILIKE '%' || $1 || '%'
+  )
 ORDER BY created_at DESC
-LIMIT $1 OFFSET $2;
+LIMIT $2 OFFSET $3;
+
+-- name: CountModifiersFiltered :one
+SELECT COUNT(*)
+FROM modifiers
+WHERE deleted_at = 0
+  AND (
+      $1::text = ''
+      OR name ILIKE '%' || $1 || '%'
+      OR COALESCE(description, '') ILIKE '%' || $1 || '%'
+      OR COALESCE(code, '') ILIKE '%' || $1 || '%'
+  );
 
 -- name: UpdateModifier :one
 UPDATE modifiers
@@ -107,32 +124,6 @@ FROM modifiers
 WHERE code = $1
   AND deleted_at = 0;
 
--- name: SearchModifiers :many
-SELECT
-    id,
-    name,
-    name_i18n,
-    description,
-    code,
-    is_active,
-    picture_url,
-    created_at,
-    updated_at,
-    deleted_at
-FROM modifiers
-WHERE deleted_at = 0
-  AND (
-      name ILIKE '%' || $1 || '%'
-      OR COALESCE(description, '') ILIKE '%' || $1 || '%'
-      OR COALESCE(code, '') ILIKE '%' || $1 || '%'
-  )
-ORDER BY created_at DESC
-LIMIT $2 OFFSET $3;
-
--- name: CountModifiers :one
-SELECT COUNT(*)
-FROM modifiers
-WHERE deleted_at = 0;
 
 -- name: CountActiveOrderItemModifiersByModifierID :one
 SELECT COUNT(*)
