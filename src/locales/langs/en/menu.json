@@ -349,6 +349,31 @@
     "som": "sum",
     "min": "min"
   },
+  "modifiers": {
+    "title": "Modifiers",
+    "list": "List",
+    "add": "Add modifier",
+    "edit": "Edit",
+    "new": "New",
+    "view": "View",
+    "delete": "Delete",
+    "name": "Name",
+    "code": "Code",
+    "description": "Description",
+    "isActive": "Is active",
+    "createdAt": "Created",
+    "basicInfo": "Basic information",
+    "imageTitle": "Modifier image",
+    "imageUrl": "Image URL",
+    "nameRequired": "Modifier name is required",
+    "codeRequired": "Modifier code is required",
+    "deleteConfirm": "Are you sure you want to delete this modifier?",
+    "deleteMessage": "This action cannot be undone and cannot be reversed.",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "noData": "No modifiers found",
+    "noDataSubtitle": "Try adjusting your search or filters"
+  },
   "overview": {
     "subheader": "Overview",
     "menu": {
@@ -357,7 +382,8 @@
       "departments": "Departments",
       "categories": "Categories",
       "semifinished": "Semifinished",
-      "meals": "Meals"
+      "meals": "Meals",
+      "modifiers": "Modifiers"
     },
     "warehouse": {
       "title": "Warehouse",

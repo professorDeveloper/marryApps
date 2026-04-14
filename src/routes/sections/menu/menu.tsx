@@ -72,6 +72,18 @@ const IngredientGroupEditViewWrapper = lazy(() =>
   }))
 );
 
+// Modifiers components
+const ModifierListView = lazy(() =>
+  import('src/sections/menu/modifiers').then((m) => ({
+    default: m.ModifierListView,
+  }))
+);
+const ModifierEditView = lazy(() =>
+  import('src/sections/menu/modifiers').then((m) => ({
+    default: m.ModifierEditView,
+  }))
+);
+
 export const menuRoutes: RouteObject[] = [
   // Products/Departments
   { path: 'menu/departments', element: <ProductListView /> },
@@ -90,7 +102,12 @@ export const menuRoutes: RouteObject[] = [
   { path: 'menu/meals', element: <Meals /> },
   { path: 'menu/meals/new', element: <MealEditView isNew /> },
   { path: 'menu/meals/:id/edit', element: <MealEditView /> },
-  
+
+  // Modifiers
+  { path: 'menu/modifiers', element: <ModifierListView /> },
+  { path: 'menu/modifiers/new', element: <ModifierEditView isNew /> },
+  { path: 'menu/modifiers/:id/edit', element: <ModifierEditView /> },
+
   // Ingredients
   { path: 'menu/ingredient-group', element: <IngredientGroupListView /> },
   {

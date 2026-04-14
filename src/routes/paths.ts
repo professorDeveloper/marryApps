@@ -114,6 +114,13 @@ export const paths = {
       edit: (id: string) => `${ROOTS.MENU}/meals/${id}/edit`,
     },
 
+    modifiers: {
+      root: `${ROOTS.MENU}/modifiers`,
+      new: `${ROOTS.MENU}/modifiers/new`,
+      details: (id: string) => `${ROOTS.MENU}/modifiers/${id}`,
+      edit: (id: string) => `${ROOTS.MENU}/modifiers/${id}/edit`,
+    },
+
     reports: {
       root: `${ROOTS.REPORTS}`,
       new: `${ROOTS.REPORTS}/new`,

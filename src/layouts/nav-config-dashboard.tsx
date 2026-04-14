@@ -70,6 +70,7 @@ export const getNavData = (t: TFunction): NavSectionProps['data'] => [
           { title: t('overview.menu.ingredients', 'Ingredients'), path: '/menu/ingredients' },
           { title: t('overview.menu.semifinished', 'Semifinished'), path: '/menu/semifinished' },
           { title: t('overview.menu.meals', 'Meals'), path: '/menu/meals' },
+          { title: t('overview.menu.modifiers', 'Modifiers'), path: '/menu/modifiers' },
         ],
       },
       {
@@ -172,6 +173,7 @@ export const navData: NavSectionProps['data'] = [
           { title: 'Categories', path: paths.menu.category.root },
           { title: 'Semifinished', path: paths.menu.semifinished.root },
           { title: 'Meals', path: paths.menu.meals.root },
+          { title: 'Modifiers', path: paths.menu.modifiers.root },
         ],
       },
       {

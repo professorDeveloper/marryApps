@@ -60,7 +60,7 @@ export function CategoryListView() {
                 label: t('categories.name', 'Category'),
                 width: '2fr',
                 sortable: true,
-                filterable: true,
+                filterable: false,
                 getValue: (row: ICategory) => row.name || '-',
                 renderCell: ({ row }: { row: ICategory }) => (
                     <Box sx={CELL_SX}>
@@ -106,7 +106,7 @@ export function CategoryListView() {
                 key: 'color_code',
                 label: t('categories.color', 'Color'),
                 width: '0.8fr',
-                sortable: true,
+                sortable: false,
                 getValue: (row) => row.color_code || '-',
                 renderCell: ({ row, value }: { row: ICategory; value: unknown }) => {
                     const colorValue = value as string;

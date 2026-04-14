@@ -335,6 +335,31 @@
     "som": "so'm",
     "min": "daqiqa"
   },
+  "modifiers": {
+    "title": "Modifikatorlar",
+    "list": "Ro'yxat",
+    "add": "Modifikator qo'shish",
+    "edit": "Tahrirlash",
+    "new": "Yangi",
+    "view": "Ko'rish",
+    "delete": "O'chirish",
+    "name": "Nomi",
+    "code": "Kod",
+    "description": "Tavsif",
+    "isActive": "Faol",
+    "createdAt": "Yaratildi",
+    "basicInfo": "Asosiy ma'lumotlar",
+    "imageTitle": "Modifikator rasmi",
+    "imageUrl": "Rasm URL'si",
+    "nameRequired": "Modifikator nomi talab qilinadi",
+    "codeRequired": "Modifikator kodi talab qilinadi",
+    "deleteConfirm": "Ushbu modifikatorni o'chirishni tasdiqlaysizmi?",
+    "deleteMessage": "Bu amalni bekor qilish yoki fayllarni tiklash mumkin emas.",
+    "cancel": "Bekor qilish",
+    "confirm": "Tasdiqlash",
+    "noData": "Modifikatorlar topilmadi",
+    "noDataSubtitle": "Qidirish yoki filtrlarni o'zgartirishga urinib ko'ring"
+  },
   "overview": {
     "subheader": "Umumiy",
     "menu": {
@@ -343,7 +368,8 @@
       "departments": "Bo'limlar",
       "categories": "Kategoriyalar",
       "semifinished": "Yarim tayyor mahsulotlar",
-      "meals": "Taomlar"
+      "meals": "Taomlar",
+      "modifiers": "Modifikatorlar"
     },
     "warehouse": {
       "title": "Ombor",

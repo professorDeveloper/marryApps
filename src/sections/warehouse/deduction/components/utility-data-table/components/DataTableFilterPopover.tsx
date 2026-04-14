@@ -122,8 +122,8 @@ export function DataTableFilterPopover<T>({
                       onClick={() => {
                         let next: string[];
                         if (isSingleSelect) {
-                          // Single select: always replace with this option, close after
-                          next = [opt];
+                          // Single select: toggle selection like multi-select
+                          next = checked ? [] : [opt];
                           if (filterKey) onSetMultiFilter(filterKey, next);
                           onClose();
                         } else {

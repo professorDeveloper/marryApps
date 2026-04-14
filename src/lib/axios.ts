@@ -72,6 +72,7 @@ axiosInstance.interceptors.request.use((config) => {
     '/api/v1/deductions',
     '/api/v1/deductions/group',
     '/api/v1/orders',
+    '/api/v1/modifiers',
   ]);
 
   const method = (config.method || 'get').toLowerCase();
@@ -462,5 +463,13 @@ export const endpoints = {
     create: '/api/v1/settings/printer-settings',
     update: (id: string | number) => `/api/v1/settings/printer-settings/${id}`,
     delete: (id: string | number) => `/api/v1/settings/printer-settings/${id}`,
+  },
+  modifier: {
+    list: '/api/v1/modifiers',
+    search: '/api/v1/modifiers/search',
+    details: (id: string) => `/api/v1/modifiers/${id}`,
+    create: '/api/v1/modifiers',
+    update: (id: string) => `/api/v1/modifiers/${id}`,
+    delete: (id: string) => `/api/v1/modifiers/${id}`,
   },
 } as const;
