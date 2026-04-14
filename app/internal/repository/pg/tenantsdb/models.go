@@ -946,6 +946,20 @@ type Modifier struct {
 	DeletedAt   *int64             `json:"deleted_at"`
 }
 
+type ModifierCalculation struct {
+	ID                  uuid.UUID          `json:"id"`
+	ModifierID          uuid.UUID          `json:"modifier_id"`
+	IngredientID        pgtype.UUID        `json:"ingredient_id"`
+	ComponentCompoundID pgtype.UUID        `json:"component_compound_id"`
+	Quantity            pgtype.Numeric     `json:"quantity"`
+	MeasurementUnit     string             `json:"measurement_unit"`
+	PricePerUnit        pgtype.Numeric     `json:"price_per_unit"`
+	TotalCost           pgtype.Numeric     `json:"total_cost"`
+	CreatedAt           pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt           pgtype.Timestamptz `json:"updated_at"`
+	DeletedAt           *int64             `json:"deleted_at"`
+}
+
 type Order struct {
 	ID                 uuid.UUID          `json:"id"`
 	TableID            pgtype.UUID        `json:"table_id"`
@@ -997,6 +1011,16 @@ type OrderItem struct {
 	UpdatedAt pgtype.Timestamptz   `json:"updated_at"`
 	DeletedAt *int64               `json:"deleted_at"`
 	CostPrice pgtype.Numeric       `json:"cost_price"`
+}
+
+type OrderItemModifier struct {
+	ID          uuid.UUID          `json:"id"`
+	OrderItemID uuid.UUID          `json:"order_item_id"`
+	ModifierID  uuid.UUID          `json:"modifier_id"`
+	Units       int32              `json:"units"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
+	DeletedAt   *int64             `json:"deleted_at"`
 }
 
 type OutgoingInvoice struct {

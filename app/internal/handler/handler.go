@@ -454,6 +454,15 @@ func (h *Handler) Register(router *echo.Echo) {
 			compoundCalcs.DELETE("/:id", h.DeleteCalculation, mw.CheckLanguage())   // Delete by calculation ID
 		}
 
+		modifierCalcs := api.Group("/modifiers/calculations", mw.CheckAuth(h.cfg), mw.TenantMiddleware(h.repo))
+		{
+			modifierCalcs.POST("", h.CreateModifierCalculation, mw.CheckLanguage())
+			modifierCalcs.GET("", h.GetModifierCalculations, mw.CheckLanguage())
+			modifierCalcs.GET("/:id", h.GetModifierCalculationByID, mw.CheckLanguage())
+			modifierCalcs.PUT("/:id", h.UpdateModifierCalculation, mw.CheckLanguage())
+			modifierCalcs.DELETE("/:id", h.DeleteModifierCalculation, mw.CheckLanguage())
+		}
+
 		calculations := api.Group("/calculations", mw.CheckAuth(h.cfg), mw.TenantMiddleware(h.repo))
 		{
 			calculations.POST("/preview", h.PreviewCalculations, mw.CheckLanguage())

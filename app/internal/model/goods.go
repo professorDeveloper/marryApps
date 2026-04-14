@@ -108,6 +108,31 @@ type CreateCompoundCalculationRequest struct {
 	Quantity        string  `json:"quantity" binding:"required" example:"900"`
 }
 
+// CreateModifierCalculationRequest — tex-karta: ingredient yoki child compound
+type CreateModifierCalculationRequest struct {
+	ModifierID      string  `json:"modifier_id" binding:"required" example:"123e4567-e89b-12d3-a456-426614174000"`
+	IngredientID    *string `json:"ingredient_id,omitempty" example:"123e4567-e89b-12d3-a456-426614174000"`
+	CompoundToAddID *string `json:"compound_to_add_id,omitempty" example:"123e4567-e89b-12d3-a456-426614174000"`
+	Quantity        string  `json:"quantity" binding:"required" example:"0.05"`
+}
+
+type ModifierCalculationResponse struct {
+	ID                  string     `json:"id" example:"123e4567-e89b-12d3-a456-426614174000"`
+	ModifierID          string     `json:"modifier_id" example:"123e4567-e89b-12d3-a456-426614174000"`
+	IngredientID        *string    `json:"ingredient_id,omitempty" example:"123e4567-e89b-12d3-a456-426614174000"`
+	ComponentCompoundID *string  `json:"component_compound_id,omitempty" example:"123e4567-e89b-12d3-a456-426614174000"`
+	Quantity            string     `json:"quantity" example:"0.2"`
+	MeasurementUnit     string     `json:"measurement_unit" example:"kg"`
+	PricePerUnit        string     `json:"price_per_unit" example:"20000"`
+	TotalCost           string     `json:"total_cost" example:"4000"`
+	CreatedAt           *time.Time `json:"created_at,omitempty" example:"2022-01-01T00:00:00Z"`
+	UpdatedAt           *time.Time `json:"updated_at,omitempty" example:"2022-01-01T00:00:00Z"`
+}
+
+type UpdateModifierCalculationRequest struct {
+	Quantity *string `json:"quantity,omitempty" binding:"required" example:"2.5"`
+}
+
 type GetCalculationsRequest struct {
 	GoodID     string `json:"good_id,omitempty" example:"123e4567-e89b-12d3-a456-426614174000"`
 	CompoundID string `json:"compound_id,omitempty" example:"123e4567-e89b-12d3-a456-426614174000"`

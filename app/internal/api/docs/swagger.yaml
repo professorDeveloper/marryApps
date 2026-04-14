@@ -1277,6 +1277,10 @@ definitions:
       good_id:
         example: d4e5f6a7-b8c9-4a5b-8c9d-e0f1a2b3c4d5
         type: string
+      modifiers:
+        items:
+          $ref: '#/definitions/model.OrderItemModifierInput'
+        type: array
       price:
         example: "50000"
         type: string
@@ -1298,6 +1302,12 @@ definitions:
       good_id:
         example: d4e5f6a7-b8c9-4a5b-8c9d-e0f1a2b3c4d5
         type: string
+      modifiers:
+        description: Modifiers — tanlangan modifierlar (faqat shu good uchun ruxsat
+          etilganlar)
+        items:
+          $ref: '#/definitions/model.OrderItemModifierInput'
+        type: array
       quantity:
         example: 2
         minimum: 1
@@ -2856,6 +2866,27 @@ definitions:
       updated_at:
         type: string
     type: object
+  model.OrderItemModifierInput:
+    properties:
+      modifier_id:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+      units:
+        example: 1
+        type: integer
+    type: object
+  model.OrderItemModifierResponse:
+    properties:
+      id:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+      modifier_id:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+      units:
+        example: 1
+        type: integer
+    type: object
   model.OrderItemResponse:
     properties:
       comment:
@@ -2868,6 +2899,10 @@ definitions:
       id:
         example: c0f18a64-7f5c-4425-9414-1b01cddee9d9
         type: string
+      modifiers:
+        items:
+          $ref: '#/definitions/model.OrderItemModifierResponse'
+        type: array
       order_id:
         example: a1b2c3d4-e5f6-4a5b-8c9d-e0f1a2b3c4d5
         type: string

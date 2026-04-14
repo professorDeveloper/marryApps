@@ -44,11 +44,7 @@ func (h *Handler) CreateModifier(c echo.Context) error {
 	resp, err := h.service.Modifier().CreateModifier(c.Request().Context(), req)
 	if err != nil {
 		log.Printf("CreateModifier failed: %v", err)
-		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse(
-			"Failed to create modifier",
-			err.Error(),
-			http.StatusInternalServerError,
-		))
+		return respondDomainError(c, "Failed to create modifier", err)
 	}
 
 	return c.JSON(http.StatusCreated, model.NewSuccessResponse(
@@ -84,11 +80,7 @@ func (h *Handler) GetModifierByID(c echo.Context) error {
 	resp, err := h.service.Modifier().GetModifierByID(c.Request().Context(), modifierID)
 	if err != nil {
 		log.Printf("GetModifierByID failed for ID %s: %v", modifierID, err)
-		return c.JSON(http.StatusNotFound, model.NewErrorResponse(
-			"Modifier not found",
-			err.Error(),
-			http.StatusNotFound,
-		))
+		return respondDomainError(c, "Failed to retrieve modifier", err)
 	}
 
 	return c.JSON(http.StatusOK, model.NewSuccessResponse(
@@ -127,17 +119,13 @@ func (h *Handler) GetAllModifiers(c echo.Context) error {
 		}
 	}
 
-	resp, err := h.service.Modifier().GetAllModifiers(c.Request().Context(), limit, offset)
+	resp, total64, err := h.service.Modifier().GetAllModifiers(c.Request().Context(), limit, offset)
 	if err != nil {
 		log.Printf("GetAllModifiers failed: %v", err)
-		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse(
-			"Failed to retrieve modifiers",
-			err.Error(),
-			http.StatusInternalServerError,
-		))
+		return respondDomainError(c, "Failed to retrieve modifiers", err)
 	}
 
-	total := int32(len(resp))
+	total := int32(total64)
 
 	if maps, expanded, err := h.expandListResponse(c, resp, "modifiers"); expanded {
 		if err != nil {
@@ -212,11 +200,7 @@ func (h *Handler) UpdateModifier(c echo.Context) error {
 	resp, err := h.service.Modifier().UpdateModifier(c.Request().Context(), modifierID, req)
 	if err != nil {
 		log.Printf("UpdateModifier failed for ID %s: %v", modifierID, err)
-		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse(
-			"Failed to update modifier",
-			err.Error(),
-			http.StatusInternalServerError,
-		))
+		return respondDomainError(c, "Failed to update modifier", err)
 	}
 
 	return c.JSON(http.StatusOK, model.NewSuccessResponse(
@@ -250,11 +234,7 @@ func (h *Handler) DeleteModifier(c echo.Context) error {
 
 	if err := h.service.Modifier().DeleteModifier(c.Request().Context(), modifierID); err != nil {
 		log.Printf("DeleteModifier failed for ID %s: %v", modifierID, err)
-		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse(
-			"Failed to delete modifier",
-			err.Error(),
-			http.StatusInternalServerError,
-		))
+		return respondDomainError(c, "Failed to delete modifier", err)
 	}
 
 	return c.JSON(http.StatusOK, model.NewSuccessResponse(
@@ -288,11 +268,7 @@ func (h *Handler) RestoreModifier(c echo.Context) error {
 
 	if err := h.service.Modifier().RestoreModifier(c.Request().Context(), modifierID); err != nil {
 		log.Printf("RestoreModifier failed for ID %s: %v", modifierID, err)
-		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse(
-			"Failed to restore modifier",
-			err.Error(),
-			http.StatusInternalServerError,
-		))
+		return respondDomainError(c, "Failed to restore modifier", err)
 	}
 
 	return c.JSON(http.StatusOK, model.NewSuccessResponse(
@@ -344,11 +320,7 @@ func (h *Handler) SearchModifiers(c echo.Context) error {
 	resp, err := h.service.Modifier().SearchModifiers(c.Request().Context(), query, limit, offset)
 	if err != nil {
 		log.Printf("SearchModifiers failed for query %q: %v", query, err)
-		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse(
-			"Failed to search modifiers",
-			err.Error(),
-			http.StatusInternalServerError,
-		))
+		return respondDomainError(c, "Failed to search modifiers", err)
 	}
 
 	total := int32(len(resp))

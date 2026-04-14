@@ -40,6 +40,7 @@ sql:
       - "../../app/migrations/tenants/35_modifier.up.sql"
       - "../../app/migrations/tenants/38_recreate_printer_settings.up.sql"
       - "../../app/migrations/tenants/40_printer_settings_add_connection_type.up.sql"
+      - "../../app/migrations/tenants/41_modifier_calculation.up.sql"
 
 
     gen:

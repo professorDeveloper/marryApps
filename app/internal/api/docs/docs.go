@@ -26978,6 +26978,12 @@ const docTemplate = `{
                     "type": "string",
                     "example": "d4e5f6a7-b8c9-4a5b-8c9d-e0f1a2b3c4d5"
                 },
+                "modifiers": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.OrderItemModifierInput"
+                    }
+                },
                 "price": {
                     "type": "string",
                     "example": "50000"
@@ -27006,6 +27012,13 @@ const docTemplate = `{
                 "good_id": {
                     "type": "string",
                     "example": "d4e5f6a7-b8c9-4a5b-8c9d-e0f1a2b3c4d5"
+                },
+                "modifiers": {
+                    "description": "Modifiers — tanlangan modifierlar (faqat shu good uchun ruxsat etilganlar)",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.OrderItemModifierInput"
+                    }
                 },
                 "quantity": {
                     "type": "integer",
@@ -29222,6 +29235,36 @@ const docTemplate = `{
                 }
             }
         },
+        "model.OrderItemModifierInput": {
+            "type": "object",
+            "properties": {
+                "modifier_id": {
+                    "type": "string",
+                    "example": "123e4567-e89b-12d3-a456-426614174000"
+                },
+                "units": {
+                    "type": "integer",
+                    "example": 1
+                }
+            }
+        },
+        "model.OrderItemModifierResponse": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string",
+                    "example": "123e4567-e89b-12d3-a456-426614174000"
+                },
+                "modifier_id": {
+                    "type": "string",
+                    "example": "123e4567-e89b-12d3-a456-426614174000"
+                },
+                "units": {
+                    "type": "integer",
+                    "example": 1
+                }
+            }
+        },
         "model.OrderItemResponse": {
             "type": "object",
             "properties": {
@@ -29238,6 +29281,12 @@ const docTemplate = `{
                 "id": {
                     "type": "string",
                     "example": "c0f18a64-7f5c-4425-9414-1b01cddee9d9"
+                },
+                "modifiers": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.OrderItemModifierResponse"
+                    }
                 },
                 "order_id": {
                     "type": "string",
