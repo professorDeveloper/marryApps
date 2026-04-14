@@ -108,14 +108,20 @@ func (s *ModifierS) GetModifierByID(ctx context.Context, modifierID string) (*mo
 	return mapModifierToResponse(row), nil
 }
 
-func (s *ModifierS) GetAllModifiers(ctx context.Context, limit, offset int32) ([]*model.ModifierResponse, error) {
+func (s *ModifierS) GetAllModifiers(ctx context.Context, limit, offset int32) ([]*model.ModifierResponse, int64, error) {
 	rows, err := s.repo.Tenant(ctx).GetAllModifiers(ctx, pg.GetAllModifiersParams{
 		Limit:  limit,
 		Offset: offset,
 	})
 	if err != nil {
 		log.Printf("GetAllModifiers failed: %v", err)
-		return nil, fmt.Errorf("failed to retrieve modifiers: %w", err)
+		return nil, 0, fmt.Errorf("failed to retrieve modifiers: %w", err)
+	}
+
+	total, err := s.repo.Tenant(ctx).CountModifiers(ctx)
+	if err != nil {
+		log.Printf("CountModifiers failed: %v", err)
+		return nil, 0, fmt.Errorf("failed to count modifiers: %w", err)
 	}
 
 	responses := make([]*model.ModifierResponse, 0, len(rows))
@@ -123,7 +129,7 @@ func (s *ModifierS) GetAllModifiers(ctx context.Context, limit, offset int32) ([
 		responses = append(responses, mapModifierToResponse(row))
 	}
 
-	return responses, nil
+	return responses, total, nil
 }
 
 func (s *ModifierS) UpdateModifier(ctx context.Context, modifierID string, req model.UpdateModifierRequest) (*model.ModifierResponse, error) {
@@ -218,6 +224,24 @@ func (s *ModifierS) DeleteModifier(ctx context.Context, modifierID string) error
 	id, err := uuid.Parse(modifierID)
 	if err != nil {
 		return fmt.Errorf("invalid modifier ID: %w", err)
+	}
+
+	_, err = s.repo.Tenant(ctx).GetModifierByID(ctx, id)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return fmt.Errorf("modifier not found")
+		}
+		log.Printf("GetModifierByID failed before delete: %v", err)
+		return fmt.Errorf("failed to validate modifier: %w", err)
+	}
+
+	activeCount, err := s.repo.Tenant(ctx).CountActiveOrderItemModifiersByModifierID(ctx, id)
+	if err != nil {
+		log.Printf("CountActiveOrderItemModifiersByModifierID failed: %v", err)
+		return fmt.Errorf("failed to validate modifier usage: %w", err)
+	}
+	if activeCount > 0 {
+		return fmt.Errorf("modifier cannot be deleted: it is used by active order items")
 	}
 
 	if err := s.repo.Tenant(ctx).DeleteModifier(ctx, id); err != nil {

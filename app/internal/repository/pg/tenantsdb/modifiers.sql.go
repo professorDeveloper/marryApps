@@ -12,6 +12,40 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const countActiveOrderItemModifiersByModifierID = `-- name: CountActiveOrderItemModifiersByModifierID :one
+SELECT COUNT(*)
+FROM order_item_modifiers oim
+JOIN order_items oi ON oi.id = oim.order_item_id
+WHERE oim.modifier_id = $1
+  AND oim.deleted_at = 0
+  AND oi.deleted_at = 0
+  AND oi.status IN (
+    'pending'::order_items_status,
+    'cooking'::order_items_status,
+    'ready'::order_items_status
+  )
+`
+
+func (q *Queries) CountActiveOrderItemModifiersByModifierID(ctx context.Context, modifierID uuid.UUID) (int64, error) {
+	row := q.db.QueryRow(ctx, countActiveOrderItemModifiersByModifierID, modifierID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
+const countModifiers = `-- name: CountModifiers :one
+SELECT COUNT(*)
+FROM modifiers
+WHERE deleted_at = 0
+`
+
+func (q *Queries) CountModifiers(ctx context.Context) (int64, error) {
+	row := q.db.QueryRow(ctx, countModifiers)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const createModifier = `-- name: CreateModifier :one
 INSERT INTO modifiers (
     id,

@@ -128,3 +128,21 @@ WHERE deleted_at = 0
   )
 ORDER BY created_at DESC
 LIMIT $2 OFFSET $3;
+
+-- name: CountModifiers :one
+SELECT COUNT(*)
+FROM modifiers
+WHERE deleted_at = 0;
+
+-- name: CountActiveOrderItemModifiersByModifierID :one
+SELECT COUNT(*)
+FROM order_item_modifiers oim
+JOIN order_items oi ON oi.id = oim.order_item_id
+WHERE oim.modifier_id = $1
+  AND oim.deleted_at = 0
+  AND oi.deleted_at = 0
+  AND oi.status IN (
+    'pending'::order_items_status,
+    'cooking'::order_items_status,
+    'ready'::order_items_status
+  );
