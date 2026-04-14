@@ -108,19 +108,22 @@ func (s *ModifierS) GetModifierByID(ctx context.Context, modifierID string) (*mo
 	return mapModifierToResponse(row), nil
 }
 
-func (s *ModifierS) GetAllModifiers(ctx context.Context, limit, offset int32) ([]*model.ModifierResponse, int64, error) {
-	rows, err := s.repo.Tenant(ctx).GetAllModifiers(ctx, pg.GetAllModifiersParams{
-		Limit:  limit,
-		Offset: offset,
+func (s *ModifierS) GetModifiers(ctx context.Context, query string, limit, offset int32) ([]*model.ModifierResponse, int64, error) {
+	q := strings.TrimSpace(query)
+
+	rows, err := s.repo.Tenant(ctx).GetModifiers(ctx, pg.GetModifiersParams{
+		Column1: q,
+		Limit:   limit,
+		Offset:  offset,
 	})
 	if err != nil {
-		log.Printf("GetAllModifiers failed: %v", err)
+		log.Printf("GetModifiers failed: %v", err)
 		return nil, 0, fmt.Errorf("failed to retrieve modifiers: %w", err)
 	}
 
-	total, err := s.repo.Tenant(ctx).CountModifiers(ctx)
+	total, err := s.repo.Tenant(ctx).CountModifiersFiltered(ctx, q)
 	if err != nil {
-		log.Printf("CountModifiers failed: %v", err)
+		log.Printf("CountModifiersFiltered failed: %v", err)
 		return nil, 0, fmt.Errorf("failed to count modifiers: %w", err)
 	}
 
@@ -264,25 +267,4 @@ func (s *ModifierS) RestoreModifier(ctx context.Context, modifierID string) erro
 	}
 
 	return nil
-}
-
-func (s *ModifierS) SearchModifiers(ctx context.Context, query string, limit, offset int32) ([]*model.ModifierResponse, error) {
-	q := strings.TrimSpace(query)
-
-	rows, err := s.repo.Tenant(ctx).SearchModifiers(ctx, pg.SearchModifiersParams{
-		Column1: &q,
-		Limit:   limit,
-		Offset:  offset,
-	})
-	if err != nil {
-		log.Printf("SearchModifiers failed: %v", err)
-		return nil, fmt.Errorf("failed to search modifiers: %w", err)
-	}
-
-	responses := make([]*model.ModifierResponse, 0, len(rows))
-	for _, row := range rows {
-		responses = append(responses, mapModifierToResponse(row))
-	}
-
-	return responses, nil
 }

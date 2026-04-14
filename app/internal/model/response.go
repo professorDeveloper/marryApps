@@ -23,10 +23,10 @@ type ErrorData struct {
 
 // PaginatedWithTotalsResponse combines paginated data with a totals object.
 type PaginatedWithTotalsResponse[T any, U any] struct {
-	Status  string `json:"status" example:"success"`
-	Message string `json:"message"`
-	Data    T      `json:"data"`
-	Totals  U      `json:"totals"`
+	Status     string `json:"status" example:"success"`
+	Message    string `json:"message"`
+	Data       T      `json:"data"`
+	Totals     U      `json:"totals"`
 	Pagination struct {
 		Total      int32 `json:"total"`
 		Limit      int32 `json:"limit"`
@@ -65,7 +65,6 @@ type PaginatedResponse[T any] struct {
 	} `json:"pagination"`
 	Code int `json:"code" example:"200"`
 }
-
 
 func NewSuccessResponse[T any](message string, data T, code int) StandardResponse[T] {
 	return StandardResponse[T]{

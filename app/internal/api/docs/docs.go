@@ -16338,7 +16338,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Retrieve all modifiers with pagination",
+                "description": "Retrieve modifiers with optional search by name, description, or code",
                 "consumes": [
                     "application/json"
                 ],
@@ -16348,8 +16348,14 @@ const docTemplate = `{
                 "tags": [
                     "modifiers"
                 ],
-                "summary": "Get all modifiers",
+                "summary": "Get modifiers",
                 "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Search query",
+                        "name": "q",
+                        "in": "query"
+                    },
                     {
                         "type": "integer",
                         "description": "Limit (default: 20)",
@@ -16373,59 +16379,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/model.ModifierResponse"
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
-                        }
-                    }
-                }
-            },
-            "post": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Create a new modifier",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "modifiers"
-                ],
-                "summary": "Create modifier",
-                "parameters": [
-                    {
-                        "description": "Modifier creation request",
-                        "name": "request",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/model.CreateModifierRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "201": {
-                        "description": "Created",
-                        "schema": {
-                            "$ref": "#/definitions/model.ModifierResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
+                            "$ref": "#/definitions/model.PaginatedModifiersResponse"
                         }
                     },
                     "500": {
@@ -16833,14 +16787,14 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/v1/modifiers/search": {
-            "get": {
+        "/api/v1/modifiers/with-calculations": {
+            "post": {
                 "security": [
                     {
                         "BearerAuth": []
                     }
                 ],
-                "description": "Search modifiers by name, description, or code",
+                "description": "Create a new modifier and its ingredient/compound calculations in one atomic transaction.",
                 "consumes": [
                     "application/json"
                 ],
@@ -16850,36 +16804,35 @@ const docTemplate = `{
                 "tags": [
                     "modifiers"
                 ],
-                "summary": "Search modifiers",
+                "summary": "Create modifier with calculations",
                 "parameters": [
                     {
-                        "type": "string",
-                        "description": "Search query",
-                        "name": "q",
-                        "in": "query",
-                        "required": true
-                    },
-                    {
-                        "type": "integer",
-                        "description": "Limit (default: 20)",
-                        "name": "limit",
-                        "in": "query"
-                    },
-                    {
-                        "type": "integer",
-                        "description": "Offset (default: 0)",
-                        "name": "offset",
-                        "in": "query"
+                        "description": "Modifier + calculations",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.CreateModifierWithCalculationsRequest"
+                        }
                     }
                 ],
                 "responses": {
-                    "200": {
-                        "description": "OK",
+                    "201": {
+                        "description": "Created",
                         "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/model.ModifierResponse"
-                            }
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/model.SuccessResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/model.ModifierWithCalculationsResponse"
+                                        }
+                                    }
+                                }
+                            ]
                         }
                     },
                     "400": {
@@ -27385,6 +27338,29 @@ const docTemplate = `{
                 }
             }
         },
+        "model.CreateModifierWithCalculationsRequest": {
+            "type": "object",
+            "required": [
+                "modifier"
+            ],
+            "properties": {
+                "compound_calculations": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.CompoundCalculationItem"
+                    }
+                },
+                "ingredient_calculations": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.IngredientCalculationItem"
+                    }
+                },
+                "modifier": {
+                    "$ref": "#/definitions/model.CreateModifierRequest"
+                }
+            }
+        },
         "model.CreateOrderItemEntry": {
             "type": "object",
             "required": [
@@ -29628,6 +29604,23 @@ const docTemplate = `{
                 }
             }
         },
+        "model.ModifierWithCalculationsResponse": {
+            "type": "object",
+            "properties": {
+                "calculations": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.ModifierCalculationResponse"
+                    }
+                },
+                "modifier": {
+                    "$ref": "#/definitions/model.ModifierResponse"
+                },
+                "total_cost": {
+                    "type": "string"
+                }
+            }
+        },
         "model.OpenCashRegisterShiftRequest": {
             "type": "object",
             "required": [
@@ -30081,6 +30074,32 @@ const docTemplate = `{
                 },
                 "pagination": {
                     "$ref": "#/definitions/model.PaginationMeta"
+                }
+            }
+        },
+        "model.PaginatedModifiersResponse": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "integer",
+                    "example": 200
+                },
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.ModifierResponse"
+                    }
+                },
+                "message": {
+                    "type": "string",
+                    "example": "Modifiers retrieved successfully"
+                },
+                "pagination": {
+                    "$ref": "#/definitions/model.PaginationMeta"
+                },
+                "status": {
+                    "type": "string",
+                    "example": "success"
                 }
             }
         },

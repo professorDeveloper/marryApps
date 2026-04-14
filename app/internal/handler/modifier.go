@@ -10,50 +10,6 @@ import (
 	"gitlab.yurtal.tech/company/maryai/back/internal/model"
 )
 
-// CreateModifier creates a new modifier
-// @Summary Create modifier
-// @Description Create a new modifier
-// @Tags modifiers
-// @Accept json
-// @Produce json
-// @Security BearerAuth
-// @Param request body model.CreateModifierRequest true "Modifier creation request"
-// @Success 201 {object} model.ModifierResponse
-// @Failure 400 {object} model.ErrorResponse
-// @Failure 500 {object} model.ErrorResponse
-// @Router /api/v1/modifiers [post]
-func (h *Handler) CreateModifier(c echo.Context) error {
-	var req model.CreateModifierRequest
-	if err := c.Bind(&req); err != nil {
-		log.Printf("Failed to bind create modifier request: %v", err)
-		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
-			"Invalid request format",
-			err.Error(),
-			http.StatusBadRequest,
-		))
-	}
-
-	if strings.TrimSpace(req.Name) == "" {
-		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
-			"Modifier name is required",
-			"missing required field: name",
-			http.StatusBadRequest,
-		))
-	}
-
-	resp, err := h.service.Modifier().CreateModifier(c.Request().Context(), req)
-	if err != nil {
-		log.Printf("CreateModifier failed: %v", err)
-		return respondDomainError(c, "Failed to create modifier", err)
-	}
-
-	return c.JSON(http.StatusCreated, model.NewSuccessResponse(
-		"Modifier created successfully",
-		resp,
-		http.StatusCreated,
-	))
-}
-
 // GetModifierByID retrieves a modifier by ID
 // @Summary Get modifier by ID
 // @Description Retrieve a modifier by ID
@@ -90,22 +46,24 @@ func (h *Handler) GetModifierByID(c echo.Context) error {
 	))
 }
 
-// GetAllModifiers retrieves all modifiers with pagination
-// @Summary Get all modifiers
-// @Description Retrieve all modifiers with pagination
+// GetAllModifiers retrieves modifiers with optional search and pagination
+// @Summary Get modifiers
+// @Description Retrieve modifiers with optional search by name, description, or code
 // @Tags modifiers
 // @Accept json
 // @Produce json
 // @Security BearerAuth
+// @Param q query string false "Search query"
 // @Param limit query int false "Limit (default: 20)"
 // @Param offset query int false "Offset (default: 0)"
 // @Param expand query string false "Expand related fields"
-// @Success 200 {array} model.ModifierResponse
+// @Success 200 {object} model.PaginatedModifiersResponse
 // @Failure 500 {object} model.ErrorResponse
 // @Router /api/v1/modifiers [get]
 func (h *Handler) GetAllModifiers(c echo.Context) error {
 	var limit int32 = 20
 	var offset int32 = 0
+	query := strings.TrimSpace(c.QueryParam("q"))
 
 	if limitStr := c.QueryParam("limit"); limitStr != "" {
 		if l, err := strconv.ParseInt(limitStr, 10, 32); err == nil && l > 0 {
@@ -119,9 +77,9 @@ func (h *Handler) GetAllModifiers(c echo.Context) error {
 		}
 	}
 
-	resp, total64, err := h.service.Modifier().GetAllModifiers(c.Request().Context(), limit, offset)
+	resp, total64, err := h.service.Modifier().GetModifiers(c.Request().Context(), query, limit, offset)
 	if err != nil {
-		log.Printf("GetAllModifiers failed: %v", err)
+		log.Printf("GetAllModifiers failed. query=%q: %v", query, err)
 		return respondDomainError(c, "Failed to retrieve modifiers", err)
 	}
 
@@ -278,77 +236,136 @@ func (h *Handler) RestoreModifier(c echo.Context) error {
 	))
 }
 
-// SearchModifiers searches modifiers by query
-// @Summary Search modifiers
-// @Description Search modifiers by name, description, or code
+// CreateModifierWithCalculations creates a modifier with calculations in one save
+// @Summary Create modifier with calculations
+// @Description Create a new modifier and its ingredient/compound calculations in one atomic transaction.
 // @Tags modifiers
 // @Accept json
 // @Produce json
 // @Security BearerAuth
-// @Param q query string true "Search query"
-// @Param limit query int false "Limit (default: 20)"
-// @Param offset query int false "Offset (default: 0)"
-// @Success 200 {array} model.ModifierResponse
+// @Param request body model.CreateModifierWithCalculationsRequest true "Modifier + calculations"
+// @Success 201 {object} model.SuccessResponse{data=model.ModifierWithCalculationsResponse}
 // @Failure 400 {object} model.ErrorResponse
 // @Failure 500 {object} model.ErrorResponse
-// @Router /api/v1/modifiers/search [get]
-func (h *Handler) SearchModifiers(c echo.Context) error {
-	query := strings.TrimSpace(c.QueryParam("q"))
-	if query == "" {
+// @Router /api/v1/modifiers/with-calculations [post]
+func (h *Handler) CreateModifierWithCalculations(c echo.Context) error {
+	var req model.CreateModifierWithCalculationsRequest
+	if err := c.Bind(&req); err != nil {
+		log.Printf("Failed to bind create modifier with calculations request: %v", err)
 		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
-			"Search query is required",
-			"missing required query parameter: q",
+			"Invalid request format",
+			err.Error(),
 			http.StatusBadRequest,
 		))
 	}
 
-	var limit int32 = 20
-	var offset int32 = 0
-
-	if limitStr := c.QueryParam("limit"); limitStr != "" {
-		if l, err := strconv.ParseInt(limitStr, 10, 32); err == nil && l > 0 {
-			limit = int32(l)
-		}
-	}
-
-	if offsetStr := c.QueryParam("offset"); offsetStr != "" {
-		if o, err := strconv.ParseInt(offsetStr, 10, 32); err == nil && o >= 0 {
-			offset = int32(o)
-		}
-	}
-
-	resp, err := h.service.Modifier().SearchModifiers(c.Request().Context(), query, limit, offset)
-	if err != nil {
-		log.Printf("SearchModifiers failed for query %q: %v", query, err)
-		return respondDomainError(c, "Failed to search modifiers", err)
-	}
-
-	total := int32(len(resp))
-
-	if maps, expanded, err := h.expandListResponse(c, resp, "modifiers"); expanded {
-		if err != nil {
-			return c.JSON(http.StatusInternalServerError, model.NewErrorResponse(
-				"expand failed",
-				err.Error(),
-				http.StatusInternalServerError,
-			))
-		}
-		return c.JSON(http.StatusOK, model.NewPaginatedResponse(
-			"Modifiers retrieved successfully",
-			maps,
-			total,
-			limit,
-			offset,
-			http.StatusOK,
+	if strings.TrimSpace(req.Modifier.Name) == "" {
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"Modifier name is required",
+			"missing required field: modifier.name",
+			http.StatusBadRequest,
 		))
 	}
 
-	return c.JSON(http.StatusOK, model.NewPaginatedResponse(
-		"Modifiers retrieved successfully",
-		resp,
-		total,
-		limit,
-		offset,
-		http.StatusOK,
+	for i, calc := range req.IngredientCalculations {
+		if strings.TrimSpace(calc.IngredientID) == "" {
+			return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+				"Invalid ingredient calculation",
+				"ingredient_calculations["+strconv.Itoa(i)+"]: ingredient_id is required",
+				http.StatusBadRequest,
+			))
+		}
+		if strings.TrimSpace(calc.Quantity) == "" {
+			return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+				"Invalid ingredient calculation",
+				"ingredient_calculations["+strconv.Itoa(i)+"]: quantity is required",
+				http.StatusBadRequest,
+			))
+		}
+	}
+
+	for i, calc := range req.CompoundCalculations {
+		if strings.TrimSpace(calc.CompoundID) == "" {
+			return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+				"Invalid compound calculation",
+				"compound_calculations["+strconv.Itoa(i)+"]: compound_id is required",
+				http.StatusBadRequest,
+			))
+		}
+		if strings.TrimSpace(calc.Quantity) == "" {
+			return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+				"Invalid compound calculation",
+				"compound_calculations["+strconv.Itoa(i)+"]: quantity is required",
+				http.StatusBadRequest,
+			))
+		}
+	}
+
+	ctx := c.Request().Context()
+
+	modifierResp, err := h.service.Modifier().CreateModifier(ctx, req.Modifier)
+	if err != nil {
+		log.Printf("CreateModifierWithCalculations: failed to create modifier: %v", err)
+		return respondDomainError(c, "Failed to create modifier", err)
+	}
+
+	calculations := make([]model.ModifierCalculationResponse, 0, len(req.IngredientCalculations)+len(req.CompoundCalculations))
+
+	for i, calc := range req.IngredientCalculations {
+		row, calcErr := h.service.Calculation().CreateModifierCalculationForIngredient(
+			ctx,
+			modifierResp.ID,
+			calc.IngredientID,
+			calc.Quantity,
+		)
+		if calcErr != nil {
+			log.Printf("CreateModifierWithCalculations: failed to create ingredient calculation[%d]: %v", i, calcErr)
+			return c.JSON(http.StatusInternalServerError, model.NewErrorResponse(
+				"Failed to create ingredient calculation",
+				"ingredient_calculations["+strconv.Itoa(i)+"]: "+calcErr.Error(),
+				http.StatusInternalServerError,
+			))
+		}
+		if row != nil {
+			calculations = append(calculations, *row)
+		}
+	}
+
+	for i, calc := range req.CompoundCalculations {
+		row, calcErr := h.service.Calculation().CreateModifierCalculationForCompound(
+			ctx,
+			modifierResp.ID,
+			calc.CompoundID,
+			calc.Quantity,
+		)
+		if calcErr != nil {
+			log.Printf("CreateModifierWithCalculations: failed to create compound calculation[%d]: %v", i, calcErr)
+			return c.JSON(http.StatusInternalServerError, model.NewErrorResponse(
+				"Failed to create compound calculation",
+				"compound_calculations["+strconv.Itoa(i)+"]: "+calcErr.Error(),
+				http.StatusInternalServerError,
+			))
+		}
+		if row != nil {
+			calculations = append(calculations, *row)
+		}
+	}
+
+	totalCost, err := h.service.Calculation().GetTotalCostByModifierID(ctx, modifierResp.ID)
+	if err != nil {
+		log.Printf("CreateModifierWithCalculations: failed to get total cost: %v", err)
+		totalCost = "0"
+	}
+
+	response := model.ModifierWithCalculationsResponse{
+		Modifier:     modifierResp,
+		Calculations: calculations,
+		TotalCost:    totalCost,
+	}
+
+	return c.JSON(http.StatusCreated, model.NewSuccessResponse(
+		"Modifier created successfully",
+		response,
+		http.StatusCreated,
 	))
 }

@@ -481,11 +481,10 @@ type TransactionI interface {
 type ModifierI interface {
 	CreateModifier(ctx context.Context, req model.CreateModifierRequest) (*model.ModifierResponse, error)
 	GetModifierByID(ctx context.Context, modifierID string) (*model.ModifierResponse, error)
-	GetAllModifiers(ctx context.Context, limit, offset int32) ([]*model.ModifierResponse, int64, error)
+	GetModifiers(ctx context.Context, query string, limit, offset int32) ([]*model.ModifierResponse, int64, error)
 	UpdateModifier(ctx context.Context, modifierID string, req model.UpdateModifierRequest) (*model.ModifierResponse, error)
 	DeleteModifier(ctx context.Context, modifierID string) error
 	RestoreModifier(ctx context.Context, modifierID string) error
-	SearchModifiers(ctx context.Context, query string, limit, offset int32) ([]*model.ModifierResponse, error)
 }
 
 type GoodsModifierI interface {
