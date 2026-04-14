@@ -899,6 +899,31 @@ func (h *Handler) PreviewCalculations(c echo.Context) error {
 }
 
 // CreateModifierCalculation adds an ingredient or child-compound line to a modifier tech card.
+// @Summary Create modifier calculation
+// @Description Add an ingredient or child compound to a modifier tech-card.
+// @Description
+// @Description **Use this API when a modifier itself consumes stock.**
+// @Description
+// @Description Examples:
+// @Description - Extra cheese -> ingredient cheese, quantity 0.05
+// @Description - Salad set -> child compound salad-base, quantity 1
+// @Description
+// @Description Provide exactly one of:
+// @Description - ingredient_id
+// @Description - compound_to_add_id
+// @Tags Modifier Calculations
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param lang query string false "Language (uz, ru, en)" default(uz)
+// @Param request body model.CreateModifierCalculationRequest true "Modifier calculation request"
+// @Success 201 {object} model.SuccessResponse{data=model.ModifierCalculationResponse} "Modifier calculation created successfully"
+// @Failure 400 {object} model.ErrorResponse "Invalid request"
+// @Failure 401 {object} model.ErrorResponse "Unauthorized"
+// @Failure 404 {object} model.ErrorResponse "Modifier / ingredient / compound not found"
+// @Failure 409 {object} model.ErrorResponse "Conflict"
+// @Failure 500 {object} model.ErrorResponse "Internal server error"
+// @Router /api/v1/modifiers/calculations [post]
 func (h *Handler) CreateModifierCalculation(c echo.Context) error {
 	req := model.CreateModifierCalculationRequest{}
 	if err := c.Bind(&req); err != nil {
@@ -954,6 +979,20 @@ func (h *Handler) CreateModifierCalculation(c echo.Context) error {
 }
 
 // GetModifierCalculations lists tech-card rows for a modifier (query: modifier_id).
+// @Summary List modifier calculations
+// @Description Returns all ingredient/child-compound calculation rows for a modifier.
+// @Tags Modifier Calculations
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param modifier_id query string true "Modifier ID"
+// @Param lang query string false "Language (uz, ru, en)" default(uz)
+// @Success 200 {object} model.SuccessResponse{data=[]model.ModifierCalculationResponse} "Modifier calculations retrieved successfully"
+// @Failure 400 {object} model.ErrorResponse "modifier_id is required / invalid"
+// @Failure 401 {object} model.ErrorResponse "Unauthorized"
+// @Failure 404 {object} model.ErrorResponse "Modifier not found"
+// @Failure 500 {object} model.ErrorResponse "Internal server error"
+// @Router /api/v1/modifiers/calculations [get]
 func (h *Handler) GetModifierCalculations(c echo.Context) error {
 	modifierID := c.QueryParam("modifier_id")
 	if modifierID == "" {
@@ -979,6 +1018,19 @@ func (h *Handler) GetModifierCalculations(c echo.Context) error {
 }
 
 // GetModifierCalculationByID returns a single modifier calculation row.
+// @Summary Get modifier calculation by ID
+// @Description Returns a single modifier calculation row.
+// @Tags Modifier Calculations
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path string true "Modifier Calculation ID"
+// @Param lang query string false "Language (uz, ru, en)" default(uz)
+// @Success 200 {object} model.SuccessResponse{data=model.ModifierCalculationResponse} "Modifier calculation retrieved successfully"
+// @Failure 400 {object} model.ErrorResponse "Invalid id"
+// @Failure 401 {object} model.ErrorResponse "Unauthorized"
+// @Failure 404 {object} model.ErrorResponse "Modifier calculation not found"
+// @Router /api/v1/modifiers/calculations/{id} [get]
 func (h *Handler) GetModifierCalculationByID(c echo.Context) error {
 	id := c.Param("id")
 	if id == "" {
@@ -1004,6 +1056,21 @@ func (h *Handler) GetModifierCalculationByID(c echo.Context) error {
 }
 
 // UpdateModifierCalculation updates quantity on a modifier calculation row.
+// @Summary Update modifier calculation
+// @Description Update quantity for a modifier calculation row.
+// @Tags Modifier Calculations
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path string true "Modifier Calculation ID"
+// @Param lang query string false "Language (uz, ru, en)" default(uz)
+// @Param request body model.UpdateModifierCalculationRequest true "Update modifier calculation request"
+// @Success 200 {object} model.SuccessResponse{data=model.ModifierCalculationResponse} "Modifier calculation updated successfully"
+// @Failure 400 {object} model.ErrorResponse "Invalid request"
+// @Failure 401 {object} model.ErrorResponse "Unauthorized"
+// @Failure 404 {object} model.ErrorResponse "Modifier calculation not found"
+// @Failure 500 {object} model.ErrorResponse "Internal server error"
+// @Router /api/v1/modifiers/calculations/{id} [put]
 func (h *Handler) UpdateModifierCalculation(c echo.Context) error {
 	id := c.Param("id")
 	if id == "" {
@@ -1038,6 +1105,20 @@ func (h *Handler) UpdateModifierCalculation(c echo.Context) error {
 }
 
 // DeleteModifierCalculation soft-deletes a modifier calculation row.
+// @Summary Delete modifier calculation
+// @Description Soft-delete a modifier calculation row.
+// @Tags Modifier Calculations
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path string true "Modifier Calculation ID"
+// @Param lang query string false "Language (uz, ru, en)" default(uz)
+// @Success 200 {object} model.SuccessResponse "Modifier calculation deleted successfully"
+// @Failure 400 {object} model.ErrorResponse "Invalid id"
+// @Failure 401 {object} model.ErrorResponse "Unauthorized"
+// @Failure 404 {object} model.ErrorResponse "Modifier calculation not found"
+// @Failure 500 {object} model.ErrorResponse "Internal server error"
+// @Router /api/v1/modifiers/calculations/{id} [delete]
 func (h *Handler) DeleteModifierCalculation(c echo.Context) error {
 	id := c.Param("id")
 	if id == "" {
