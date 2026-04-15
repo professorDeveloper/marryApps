@@ -413,6 +413,14 @@ type CalculationI interface {
 	DeleteCalculationsByCompoundID(ctx context.Context, compoundID string) error
 	GetGoodWithCalculations(ctx context.Context, goodID string) (*model.GoodCalculationResponse, error)
 	GetCompoundWithCalculations(ctx context.Context, compoundID string) (*model.CompoundCalculationResponse, error)
+
+	CreateModifierCalculationForIngredient(ctx context.Context, modifierID, ingredientID, quantity string) (*model.ModifierCalculationResponse, error)
+	CreateModifierCalculationForCompound(ctx context.Context, modifierID, childCompoundID, quantity string) (*model.ModifierCalculationResponse, error)
+	GetModifierCalculationByID(ctx context.Context, calculationID string) (*model.ModifierCalculationResponse, error)
+	GetModifierCalculationsByModifierID(ctx context.Context, modifierID string) ([]*model.ModifierCalculationResponse, error)
+	GetTotalCostByModifierID(ctx context.Context, modifierID string) (string, error)
+	UpdateModifierCalculation(ctx context.Context, calculationID string, quantity *string) (*model.ModifierCalculationResponse, error)
+	DeleteModifierCalculation(ctx context.Context, calculationID string) error
 }
 
 type TransferI interface {
@@ -473,11 +481,10 @@ type TransactionI interface {
 type ModifierI interface {
 	CreateModifier(ctx context.Context, req model.CreateModifierRequest) (*model.ModifierResponse, error)
 	GetModifierByID(ctx context.Context, modifierID string) (*model.ModifierResponse, error)
-	GetAllModifiers(ctx context.Context, limit, offset int32) ([]*model.ModifierResponse, error)
+	GetModifiers(ctx context.Context, query string, limit, offset int32) ([]*model.ModifierResponse, int64, error)
 	UpdateModifier(ctx context.Context, modifierID string, req model.UpdateModifierRequest) (*model.ModifierResponse, error)
 	DeleteModifier(ctx context.Context, modifierID string) error
 	RestoreModifier(ctx context.Context, modifierID string) error
-	SearchModifiers(ctx context.Context, query string, limit, offset int32) ([]*model.ModifierResponse, error)
 }
 
 type GoodsModifierI interface {

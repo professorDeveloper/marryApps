@@ -52,11 +52,7 @@ func (h *Handler) AttachModifierToGood(c echo.Context) error {
 
 	if err := h.service.GoodsModifier().AttachModifiersToGood(c.Request().Context(), goodID, req); err != nil {
 		log.Printf("AttachModifiersToGood failed for good %s: %v", goodID, err)
-		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse(
-			"Failed to attach modifiers to good",
-			err.Error(),
-			http.StatusInternalServerError,
-		))
+		return respondDomainError(c, "Failed to attach modifiers to good", err)
 	}
 
 	return c.JSON(http.StatusCreated, model.NewSuccessResponse(
@@ -91,11 +87,7 @@ func (h *Handler) GetModifiersByGoodID(c echo.Context) error {
 	resp, err := h.service.GoodsModifier().GetModifiersByGoodID(c.Request().Context(), goodID)
 	if err != nil {
 		log.Printf("GetModifiersByGoodID failed for good %s: %v", goodID, err)
-		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse(
-			"Failed to retrieve good modifiers",
-			err.Error(),
-			http.StatusInternalServerError,
-		))
+		return respondDomainError(c, "Failed to retrieve good modifiers", err)
 	}
 
 	total := int32(len(resp))
@@ -146,11 +138,7 @@ func (h *Handler) DetachModifierFromGood(c echo.Context) error {
 
 	if err := h.service.GoodsModifier().DetachModifierFromGood(c.Request().Context(), goodID, modifierID); err != nil {
 		log.Printf("DetachModifierFromGood failed for good %s modifier %s: %v", goodID, modifierID, err)
-		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse(
-			"Failed to detach modifier from good",
-			err.Error(),
-			http.StatusInternalServerError,
-		))
+		return respondDomainError(c, "Failed to detach modifier from good", err)
 	}
 
 	return c.JSON(http.StatusOK, model.NewSuccessResponse(

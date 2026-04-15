@@ -91,6 +91,10 @@ func (s *OrderS) AddOrderItems(ctx context.Context, orderID string, req model.Ad
 			return nil, fmt.Errorf("items[%d]: failed to create order item: %w", i, err)
 		}
 
+		if err := s.saveOrderItemModifiers(ctx, item.ID, goodUUID, it.Modifiers); err != nil {
+			return nil, fmt.Errorf("items[%d]: %w", i, err)
+		}
+
 		if resp := toOrderItemResponse(item); resp != nil {
 			created = append(created, *resp)
 		}
@@ -288,7 +292,7 @@ func (s *OrderS) CreateOrder(ctx context.Context, req model.CreateOrderRequest) 
 				return nil, fmt.Errorf("failed to fetch good: %w", err)
 			}
 
-			if _, err := s.repo.Tenant(ctx).CreateOrderItem(ctx, pg.CreateOrderItemParams{
+			createdIt, err := s.repo.Tenant(ctx).CreateOrderItem(ctx, pg.CreateOrderItemParams{
 				ID:        uuid.New(),
 				GoodID:    goodUUID,
 				OrderID:   createdOrder.ID,
@@ -300,8 +304,12 @@ func (s *OrderS) CreateOrder(ctx context.Context, req model.CreateOrderRequest) 
 					Valid:            true,
 				},
 				Comment: it.Comment,
-			}); err != nil {
+			})
+			if err != nil {
 				return nil, fmt.Errorf("failed to create order item: %w", err)
+			}
+			if err := s.saveOrderItemModifiers(ctx, createdIt.ID, goodUUID, it.Modifiers); err != nil {
+				return nil, err
 			}
 
 		}
@@ -356,6 +364,25 @@ func (s *OrderS) GetOrderByID(ctx context.Context, orderID string) (*model.Order
 	for _, item := range items {
 		if itemResp := toOrderItemResponse(item); itemResp != nil {
 			resp.Items = append(resp.Items, *itemResp)
+		}
+	}
+
+	modRows, err := s.repo.Tenant(ctx).ListOrderItemModifiersByOrderID(ctx, id)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list order item modifiers: %w", err)
+	}
+	byItem := make(map[string][]model.OrderItemModifierResponse)
+	for _, m := range modRows {
+		oid := m.OrderItemID.String()
+		byItem[oid] = append(byItem[oid], model.OrderItemModifierResponse{
+			ID:         m.ID.String(),
+			ModifierID: m.ModifierID.String(),
+			Units:      m.Units,
+		})
+	}
+	for i := range resp.Items {
+		if mods, ok := byItem[resp.Items[i].ID]; ok {
+			resp.Items[i].Modifiers = mods
 		}
 	}
 
@@ -1529,9 +1556,186 @@ func (s *OrderS) consumeItemStock(ctx context.Context, goodID uuid.UUID, quantit
 			PricePerUnit: price,
 			SourceType:   &sourceType,
 			SourceID:     &srcID,
-			EffectiveAt:  &orderDate,
 		}); err != nil {
 			return fmt.Errorf("failed to insert stock movement: %w", err)
+		}
+	}
+	return nil
+}
+
+// consumeItemStock deducts ingredient stock for the base good and for each selected modifier (tech card).
+func (s *OrderS) consumeItemStockWithModifiers(ctx context.Context, orderItemID uuid.UUID) error {
+	item, err := s.repo.Tenant(ctx).GetOrderItemByID(ctx, orderItemID)
+	if err != nil {
+		return fmt.Errorf("failed to get order item: %w", err)
+	}
+
+	goodID := item.GoodID
+	quantity := item.Quantity
+	orderID := item.OrderID
+
+	storageID, err := s.repo.Tenant(ctx).GetStorageByGoodID(ctx, goodID)
+	if err != nil {
+		return fmt.Errorf("failed to get storage for good: %w", err)
+	}
+	if !storageID.Valid {
+		return nil
+	}
+
+	mult := pgtype.Numeric{}
+	mult.Valid = true
+	if err := mult.Scan(strconv.Itoa(int(quantity))); err != nil {
+		return fmt.Errorf("invalid item quantity: %w", err)
+	}
+
+	usages, err := s.expandGoodToIngredientsByCalculations(ctx, goodID, mult)
+	if err != nil {
+		return err
+	}
+	for _, u := range usages {
+		stockID, err := s.repo.Tenant(ctx).EnsureIngredientStockByStorage(ctx, pg.EnsureIngredientStockByStorageParams{
+			ID:           uuid.New(),
+			IngredientID: u.ingredientID,
+			StorageID:    storageID,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to ensure ingredient stock row: %w", err)
+		}
+
+		locked, err := s.repo.Tenant(ctx).GetStockByIngredientAndStorageForUpdate(ctx, pg.GetStockByIngredientAndStorageForUpdateParams{
+			IngredientID: u.ingredientID,
+			StorageID:    storageID,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to lock ingredient stock row: %w", err)
+		}
+
+		ing, err := s.repo.Tenant(ctx).GetIngredientByID(ctx, u.ingredientID)
+		if err != nil {
+			return fmt.Errorf("failed to get ingredient: %w", err)
+		}
+		price := ing.PricePerUnit
+		if !price.Valid {
+			_ = price.Scan("0")
+		}
+
+		updated, err := s.repo.Tenant(ctx).RemoveFromIngredientStock(ctx, pg.RemoveFromIngredientStockParams{
+			ID:       stockID,
+			Quantity: u.quantity,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to consume ingredient stock: %w", err)
+		}
+
+		zero := pgtype.Numeric{}
+		_ = zero.Scan("0")
+		sourceType := "order"
+		srcID := orderID
+		if err := s.repo.Tenant(ctx).InsertIngredientStockMovement(ctx, pg.InsertIngredientStockMovementParams{
+			ID:           uuid.New(),
+			StorageID:    uuid.UUID(storageID.Bytes),
+			IngredientID: u.ingredientID,
+			EventType:    "order_out",
+			QtyIn:        zero,
+			QtyOut:       u.quantity,
+			StockBefore:  locked.Quantity,
+			StockAfter:   updated.Quantity,
+			PricePerUnit: price,
+			SourceType:   &sourceType,
+			SourceID:     &srcID,
+		}); err != nil {
+			return fmt.Errorf("failed to insert stock movement: %w", err)
+		}
+	}
+
+	modRows, err := s.repo.Tenant(ctx).GetOrderItemModifiersByOrderItemID(ctx, orderItemID)
+	if err != nil {
+		return fmt.Errorf("failed to get order item modifiers: %w", err)
+	}
+
+	for _, om := range modRows {
+		if _, err := s.repo.Tenant(ctx).GetActiveGoodModifierByGoodAndModifierID(ctx, pg.GetActiveGoodModifierByGoodAndModifierIDParams{
+			GoodID:     goodID,
+			ModifierID: om.ModifierID,
+		}); err != nil {
+			if err == pgx.ErrNoRows {
+				return fmt.Errorf("modifier not allowed for this good: %s", om.ModifierID.String())
+			}
+			return fmt.Errorf("failed to validate good modifier: %w", err)
+		}
+		mod, err := s.repo.Tenant(ctx).GetModifierByID(ctx, om.ModifierID)
+		if err != nil {
+			return fmt.Errorf("failed to get modifier: %w", err)
+		}
+		if !mod.IsActive {
+			return fmt.Errorf("modifier is inactive: %s", om.ModifierID.String())
+		}
+
+		comb := int64(quantity) * int64(om.Units)
+		modMult := pgtype.Numeric{}
+		modMult.Valid = true
+		if err := modMult.Scan(fmt.Sprintf("%d", comb)); err != nil {
+			return fmt.Errorf("invalid modifier multiplier: %w", err)
+		}
+
+		modUsages, err := s.expandModifierToIngredientsByCalculations(ctx, om.ModifierID, modMult)
+		if err != nil {
+			return err
+		}
+		for _, u := range modUsages {
+			stockID, err := s.repo.Tenant(ctx).EnsureIngredientStockByStorage(ctx, pg.EnsureIngredientStockByStorageParams{
+				ID:           uuid.New(),
+				IngredientID: u.ingredientID,
+				StorageID:    storageID,
+			})
+			if err != nil {
+				return fmt.Errorf("failed to ensure ingredient stock row: %w", err)
+			}
+
+			locked, err := s.repo.Tenant(ctx).GetStockByIngredientAndStorageForUpdate(ctx, pg.GetStockByIngredientAndStorageForUpdateParams{
+				IngredientID: u.ingredientID,
+				StorageID:    storageID,
+			})
+			if err != nil {
+				return fmt.Errorf("failed to lock ingredient stock row: %w", err)
+			}
+
+			ing, err := s.repo.Tenant(ctx).GetIngredientByID(ctx, u.ingredientID)
+			if err != nil {
+				return fmt.Errorf("failed to get ingredient: %w", err)
+			}
+			price := ing.PricePerUnit
+			if !price.Valid {
+				_ = price.Scan("0")
+			}
+
+			updated, err := s.repo.Tenant(ctx).RemoveFromIngredientStock(ctx, pg.RemoveFromIngredientStockParams{
+				ID:       stockID,
+				Quantity: u.quantity,
+			})
+			if err != nil {
+				return fmt.Errorf("failed to consume ingredient stock: %w", err)
+			}
+
+			zero := pgtype.Numeric{}
+			_ = zero.Scan("0")
+			sourceType := "order"
+			srcID := orderID
+			if err := s.repo.Tenant(ctx).InsertIngredientStockMovement(ctx, pg.InsertIngredientStockMovementParams{
+				ID:           uuid.New(),
+				StorageID:    uuid.UUID(storageID.Bytes),
+				IngredientID: u.ingredientID,
+				EventType:    "order_out",
+				QtyIn:        zero,
+				QtyOut:       u.quantity,
+				StockBefore:  locked.Quantity,
+				StockAfter:   updated.Quantity,
+				PricePerUnit: price,
+				SourceType:   &sourceType,
+				SourceID:     &srcID,
+			}); err != nil {
+				return fmt.Errorf("failed to insert stock movement: %w", err)
+			}
 		}
 	}
 
@@ -1611,6 +1815,99 @@ func (s *OrderS) expandCompoundToIngredientsByCalculations(ctx context.Context, 
 	return out, nil
 }
 
+func (s *OrderS) expandModifierToIngredientsByCalculations(ctx context.Context, modifierID uuid.UUID, multiplier pgtype.Numeric) ([]ingredientUsage, error) {
+	calcs, err := s.repo.Tenant(ctx).GetModifierCalculationsByModifierID(ctx, modifierID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get modifier calculations: %w", err)
+	}
+
+	visited := map[uuid.UUID]bool{}
+	var out []ingredientUsage
+	for _, c := range calcs {
+		if c.ComponentCompoundID.Valid {
+			child := c.ComponentCompoundID.Bytes
+			childMultiplier, err := mulNumeric(multiplier, c.Quantity, 6)
+			if err != nil {
+				return nil, err
+			}
+			sub, err := s.expandCompoundToIngredientsByCalculations(ctx, child, childMultiplier, visited)
+			if err != nil {
+				return nil, err
+			}
+			out = append(out, sub...)
+			continue
+		}
+		if !c.IngredientID.Valid {
+			continue
+		}
+		usedQty, err := mulNumeric(multiplier, c.Quantity, 6)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, ingredientUsage{ingredientID: c.IngredientID.Bytes, quantity: usedQty})
+	}
+	return out, nil
+}
+
+func (s *OrderS) saveOrderItemModifiers(ctx context.Context, orderItemID, goodID uuid.UUID, inputs []model.OrderItemModifierInput) error {
+	if len(inputs) == 0 {
+		return nil
+	}
+	seen := make(map[string]struct{})
+	for i, in := range inputs {
+		mid := strings.TrimSpace(in.ModifierID)
+		if mid == "" {
+			return fmt.Errorf("modifiers[%d]: modifier_id is required", i)
+		}
+		if _, ok := seen[mid]; ok {
+			return fmt.Errorf("duplicate modifier_id: %s", mid)
+		}
+		seen[mid] = struct{}{}
+
+		modUUID, err := uuid.Parse(mid)
+		if err != nil {
+			return fmt.Errorf("modifiers[%d]: invalid modifier_id: %w", i, err)
+		}
+		if _, err := s.repo.Tenant(ctx).GetActiveGoodModifierByGoodAndModifierID(ctx, pg.GetActiveGoodModifierByGoodAndModifierIDParams{
+			GoodID:     goodID,
+			ModifierID: modUUID,
+		}); err != nil {
+			if err == pgx.ErrNoRows {
+				return fmt.Errorf("modifier not attached to this good: %s", mid)
+			}
+			return fmt.Errorf("modifiers[%d]: %w", i, err)
+		}
+		mod, err := s.repo.Tenant(ctx).GetModifierByID(ctx, modUUID)
+		if err != nil {
+			if err == pgx.ErrNoRows {
+				return fmt.Errorf("modifier not found: %s", mid)
+			}
+			return fmt.Errorf("modifiers[%d]: %w", i, err)
+		}
+		if !mod.IsActive {
+			return fmt.Errorf("modifier is inactive: %s", mid)
+		}
+
+		units := int32(1)
+		if in.Units != nil {
+			if *in.Units <= 0 {
+				return fmt.Errorf("modifiers[%d]: units must be greater than 0", i)
+			}
+			units = *in.Units
+		}
+
+		if _, err := s.repo.Tenant(ctx).CreateOrderItemModifier(ctx, pg.CreateOrderItemModifierParams{
+			ID:          uuid.New(),
+			OrderItemID: orderItemID,
+			ModifierID:  modUUID,
+			Units:       units,
+		}); err != nil {
+			return fmt.Errorf("failed to save order item modifier: %w", err)
+		}
+	}
+	return nil
+}
+
 func (s *OrderS) CreateOrderItems(ctx context.Context, req model.CreateOrderItemRequest) ([]model.OrderItemResponse, error) {
 	if req.OrderID == "" {
 		return nil, fmt.Errorf("order_id is required")
@@ -1668,6 +1965,10 @@ func (s *OrderS) CreateOrderItems(ctx context.Context, req model.CreateOrderItem
 		})
 		if err != nil {
 			return nil, fmt.Errorf("items[%d]: failed to create order item: %w", i, err)
+		}
+
+		if err := s.saveOrderItemModifiers(ctx, item.ID, gID, entry.Modifiers); err != nil {
+			return nil, fmt.Errorf("items[%d]: %w", i, err)
 		}
 
 		responses = append(responses, *toOrderItemResponse(item))

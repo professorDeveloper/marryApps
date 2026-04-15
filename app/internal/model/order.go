@@ -74,6 +74,14 @@ type CreateOrderItemInline struct {
 	GoodID   string  `json:"good_id" validate:"required" example:"d4e5f6a7-b8c9-4a5b-8c9d-e0f1a2b3c4d5"`
 	Quantity int32   `json:"quantity" validate:"required,min=1" example:"2"`
 	Comment  *string `json:"comment,omitempty"`
+	// Modifiers — tanlangan modifierlar (faqat shu good uchun ruxsat etilganlar)
+	Modifiers []OrderItemModifierInput `json:"modifiers,omitempty"`
+}
+
+// OrderItemModifierInput — buyurtma qatoridagi bitta modifier (sklad ayirish: units × buyurtma miqdori)
+type OrderItemModifierInput struct {
+	ModifierID string `json:"modifier_id" example:"123e4567-e89b-12d3-a456-426614174000"`
+	Units      *int32 `json:"units,omitempty" example:"1"`
 }
 
 type UpdateOrderRequest struct {
@@ -146,6 +154,7 @@ type CreateOrderItemEntry struct {
 	Price    *string `json:"price,omitempty" example:"50000"`
 	Status   *string `json:"status,omitempty" example:"pending"`
 	Comment  *string `json:"comment,omitempty"`
+	Modifiers []OrderItemModifierInput `json:"modifiers,omitempty"`
 }
 
 type CreateOrderItemRequest struct {
@@ -174,8 +183,16 @@ type OrderItemResponse struct {
 	Price     string          `json:"price" example:"50000"`
 	Status    OrderItemStatus `json:"status" example:"pending"`
 	Comment   *string         `json:"comment,omitempty"`
+	Modifiers []OrderItemModifierResponse `json:"modifiers,omitempty"`
 	CreatedAt *time.Time      `json:"created_at,omitempty"`
 	UpdatedAt *time.Time      `json:"updated_at,omitempty"`
+}
+
+// OrderItemModifierResponse — buyurtma qatoriga biriktirilgan modifier
+type OrderItemModifierResponse struct {
+	ID         string `json:"id" example:"123e4567-e89b-12d3-a456-426614174000"`
+	ModifierID string `json:"modifier_id" example:"123e4567-e89b-12d3-a456-426614174000"`
+	Units      int32  `json:"units" example:"1"`
 }
 
 type OrderItemWithGoodResponse struct {

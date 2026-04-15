@@ -16338,7 +16338,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Retrieve all modifiers with pagination",
+                "description": "Retrieve modifiers with optional search by name, description, or code",
                 "consumes": [
                     "application/json"
                 ],
@@ -16348,8 +16348,14 @@ const docTemplate = `{
                 "tags": [
                     "modifiers"
                 ],
-                "summary": "Get all modifiers",
+                "summary": "Get modifiers",
                 "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Search query",
+                        "name": "q",
+                        "in": "query"
+                    },
                     {
                         "type": "integer",
                         "description": "Limit (default: 20)",
@@ -16373,14 +16379,94 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/model.ModifierResponse"
-                            }
+                            "$ref": "#/definitions/model.PaginatedModifiersResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/modifiers/calculations": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns all ingredient/child-compound calculation rows for a modifier.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Modifier Calculations"
+                ],
+                "summary": "List modifier calculations",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Modifier ID",
+                        "name": "modifier_id",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "default": "uz",
+                        "description": "Language (uz, ru, en)",
+                        "name": "lang",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Modifier calculations retrieved successfully",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/model.SuccessResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/model.ModifierCalculationResponse"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "modifier_id is required / invalid",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Modifier not found",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
                         "schema": {
                             "$ref": "#/definitions/model.ErrorResponse"
                         }
@@ -16393,7 +16479,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Create a new modifier",
+                "description": "Add an ingredient or child compound to a modifier tech-card.\n\n**Use this API when a modifier itself consumes stock.**\n\nExamples:\n- Extra cheese -\u003e ingredient cheese, quantity 0.05\n- Salad set -\u003e child compound salad-base, quantity 1\n\nProvide exactly one of:\n- ingredient_id\n- compound_to_add_id",
                 "consumes": [
                     "application/json"
                 ],
@@ -16401,35 +16487,72 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "modifiers"
+                    "Modifier Calculations"
                 ],
-                "summary": "Create modifier",
+                "summary": "Create modifier calculation",
                 "parameters": [
                     {
-                        "description": "Modifier creation request",
+                        "type": "string",
+                        "default": "uz",
+                        "description": "Language (uz, ru, en)",
+                        "name": "lang",
+                        "in": "query"
+                    },
+                    {
+                        "description": "Modifier calculation request",
                         "name": "request",
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/model.CreateModifierRequest"
+                            "$ref": "#/definitions/model.CreateModifierCalculationRequest"
                         }
                     }
                 ],
                 "responses": {
                     "201": {
-                        "description": "Created",
+                        "description": "Modifier calculation created successfully",
                         "schema": {
-                            "$ref": "#/definitions/model.ModifierResponse"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/model.SuccessResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/model.ModifierCalculationResponse"
+                                        }
+                                    }
+                                }
+                            ]
                         }
                     },
                     "400": {
-                        "description": "Bad Request",
+                        "description": "Invalid request",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Modifier / ingredient / compound not found",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
                         "schema": {
                             "$ref": "#/definitions/model.ErrorResponse"
                         }
                     },
                     "500": {
-                        "description": "Internal Server Error",
+                        "description": "Internal server error",
                         "schema": {
                             "$ref": "#/definitions/model.ErrorResponse"
                         }
@@ -16437,14 +16560,241 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/v1/modifiers/search": {
+        "/api/v1/modifiers/calculations/{id}": {
             "get": {
                 "security": [
                     {
                         "BearerAuth": []
                     }
                 ],
-                "description": "Search modifiers by name, description, or code",
+                "description": "Returns a single modifier calculation row.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Modifier Calculations"
+                ],
+                "summary": "Get modifier calculation by ID",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Modifier Calculation ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "default": "uz",
+                        "description": "Language (uz, ru, en)",
+                        "name": "lang",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Modifier calculation retrieved successfully",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/model.SuccessResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/model.ModifierCalculationResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid id",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Modifier calculation not found",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Update quantity for a modifier calculation row.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Modifier Calculations"
+                ],
+                "summary": "Update modifier calculation",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Modifier Calculation ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "default": "uz",
+                        "description": "Language (uz, ru, en)",
+                        "name": "lang",
+                        "in": "query"
+                    },
+                    {
+                        "description": "Update modifier calculation request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.UpdateModifierCalculationRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Modifier calculation updated successfully",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/model.SuccessResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/model.ModifierCalculationResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Modifier calculation not found",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Soft-delete a modifier calculation row.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Modifier Calculations"
+                ],
+                "summary": "Delete modifier calculation",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Modifier Calculation ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "default": "uz",
+                        "description": "Language (uz, ru, en)",
+                        "name": "lang",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Modifier calculation deleted successfully",
+                        "schema": {
+                            "$ref": "#/definitions/model.SuccessResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid id",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Modifier calculation not found",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/modifiers/with-calculations": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Create a new modifier and its ingredient/compound calculations in one atomic transaction.",
                 "consumes": [
                     "application/json"
                 ],
@@ -16454,36 +16804,35 @@ const docTemplate = `{
                 "tags": [
                     "modifiers"
                 ],
-                "summary": "Search modifiers",
+                "summary": "Create modifier with calculations",
                 "parameters": [
                     {
-                        "type": "string",
-                        "description": "Search query",
-                        "name": "q",
-                        "in": "query",
-                        "required": true
-                    },
-                    {
-                        "type": "integer",
-                        "description": "Limit (default: 20)",
-                        "name": "limit",
-                        "in": "query"
-                    },
-                    {
-                        "type": "integer",
-                        "description": "Offset (default: 0)",
-                        "name": "offset",
-                        "in": "query"
+                        "description": "Modifier + calculations",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.CreateModifierWithCalculationsRequest"
+                        }
                     }
                 ],
                 "responses": {
-                    "200": {
-                        "description": "OK",
+                    "201": {
+                        "description": "Created",
                         "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/model.ModifierResponse"
-                            }
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/model.SuccessResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/model.ModifierWithCalculationsResponse"
+                                        }
+                                    }
+                                }
+                            ]
                         }
                     },
                     "400": {
@@ -26935,6 +27284,31 @@ const docTemplate = `{
                 }
             }
         },
+        "model.CreateModifierCalculationRequest": {
+            "type": "object",
+            "required": [
+                "modifier_id",
+                "quantity"
+            ],
+            "properties": {
+                "compound_to_add_id": {
+                    "type": "string",
+                    "example": "123e4567-e89b-12d3-a456-426614174000"
+                },
+                "ingredient_id": {
+                    "type": "string",
+                    "example": "123e4567-e89b-12d3-a456-426614174000"
+                },
+                "modifier_id": {
+                    "type": "string",
+                    "example": "123e4567-e89b-12d3-a456-426614174000"
+                },
+                "quantity": {
+                    "type": "string",
+                    "example": "0.05"
+                }
+            }
+        },
         "model.CreateModifierRequest": {
             "type": "object",
             "properties": {
@@ -26964,6 +27338,29 @@ const docTemplate = `{
                 }
             }
         },
+        "model.CreateModifierWithCalculationsRequest": {
+            "type": "object",
+            "required": [
+                "modifier"
+            ],
+            "properties": {
+                "compound_calculations": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.CompoundCalculationItem"
+                    }
+                },
+                "ingredient_calculations": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.IngredientCalculationItem"
+                    }
+                },
+                "modifier": {
+                    "$ref": "#/definitions/model.CreateModifierRequest"
+                }
+            }
+        },
         "model.CreateOrderItemEntry": {
             "type": "object",
             "required": [
@@ -26977,6 +27374,12 @@ const docTemplate = `{
                 "good_id": {
                     "type": "string",
                     "example": "d4e5f6a7-b8c9-4a5b-8c9d-e0f1a2b3c4d5"
+                },
+                "modifiers": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.OrderItemModifierInput"
+                    }
                 },
                 "price": {
                     "type": "string",
@@ -27006,6 +27409,13 @@ const docTemplate = `{
                 "good_id": {
                     "type": "string",
                     "example": "d4e5f6a7-b8c9-4a5b-8c9d-e0f1a2b3c4d5"
+                },
+                "modifiers": {
+                    "description": "Modifiers — tanlangan modifierlar (faqat shu good uchun ruxsat etilganlar)",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.OrderItemModifierInput"
+                    }
                 },
                 "quantity": {
                     "type": "integer",
@@ -29075,6 +29485,51 @@ const docTemplate = `{
                 }
             }
         },
+        "model.ModifierCalculationResponse": {
+            "type": "object",
+            "properties": {
+                "component_compound_id": {
+                    "type": "string",
+                    "example": "123e4567-e89b-12d3-a456-426614174000"
+                },
+                "created_at": {
+                    "type": "string",
+                    "example": "2022-01-01T00:00:00Z"
+                },
+                "id": {
+                    "type": "string",
+                    "example": "123e4567-e89b-12d3-a456-426614174000"
+                },
+                "ingredient_id": {
+                    "type": "string",
+                    "example": "123e4567-e89b-12d3-a456-426614174000"
+                },
+                "measurement_unit": {
+                    "type": "string",
+                    "example": "kg"
+                },
+                "modifier_id": {
+                    "type": "string",
+                    "example": "123e4567-e89b-12d3-a456-426614174000"
+                },
+                "price_per_unit": {
+                    "type": "string",
+                    "example": "20000"
+                },
+                "quantity": {
+                    "type": "string",
+                    "example": "0.2"
+                },
+                "total_cost": {
+                    "type": "string",
+                    "example": "4000"
+                },
+                "updated_at": {
+                    "type": "string",
+                    "example": "2022-01-01T00:00:00Z"
+                }
+            }
+        },
         "model.ModifierResponse": {
             "type": "object",
             "properties": {
@@ -29146,6 +29601,23 @@ const docTemplate = `{
                 "picture_url": {
                     "type": "string",
                     "example": "https://example.com/image.jpg"
+                }
+            }
+        },
+        "model.ModifierWithCalculationsResponse": {
+            "type": "object",
+            "properties": {
+                "calculations": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.ModifierCalculationResponse"
+                    }
+                },
+                "modifier": {
+                    "$ref": "#/definitions/model.ModifierResponse"
+                },
+                "total_cost": {
+                    "type": "string"
                 }
             }
         },
@@ -29222,6 +29694,36 @@ const docTemplate = `{
                 }
             }
         },
+        "model.OrderItemModifierInput": {
+            "type": "object",
+            "properties": {
+                "modifier_id": {
+                    "type": "string",
+                    "example": "123e4567-e89b-12d3-a456-426614174000"
+                },
+                "units": {
+                    "type": "integer",
+                    "example": 1
+                }
+            }
+        },
+        "model.OrderItemModifierResponse": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string",
+                    "example": "123e4567-e89b-12d3-a456-426614174000"
+                },
+                "modifier_id": {
+                    "type": "string",
+                    "example": "123e4567-e89b-12d3-a456-426614174000"
+                },
+                "units": {
+                    "type": "integer",
+                    "example": 1
+                }
+            }
+        },
         "model.OrderItemResponse": {
             "type": "object",
             "properties": {
@@ -29238,6 +29740,12 @@ const docTemplate = `{
                 "id": {
                     "type": "string",
                     "example": "c0f18a64-7f5c-4425-9414-1b01cddee9d9"
+                },
+                "modifiers": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.OrderItemModifierResponse"
+                    }
                 },
                 "order_id": {
                     "type": "string",
@@ -29566,6 +30074,32 @@ const docTemplate = `{
                 },
                 "pagination": {
                     "$ref": "#/definitions/model.PaginationMeta"
+                }
+            }
+        },
+        "model.PaginatedModifiersResponse": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "integer",
+                    "example": 200
+                },
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.ModifierResponse"
+                    }
+                },
+                "message": {
+                    "type": "string",
+                    "example": "Modifiers retrieved successfully"
+                },
+                "pagination": {
+                    "$ref": "#/definitions/model.PaginationMeta"
+                },
+                "status": {
+                    "type": "string",
+                    "example": "success"
                 }
             }
         },
@@ -31206,6 +31740,18 @@ const docTemplate = `{
                 "status": {
                     "type": "string",
                     "example": "arrived"
+                }
+            }
+        },
+        "model.UpdateModifierCalculationRequest": {
+            "type": "object",
+            "required": [
+                "quantity"
+            ],
+            "properties": {
+                "quantity": {
+                    "type": "string",
+                    "example": "2.5"
                 }
             }
         },

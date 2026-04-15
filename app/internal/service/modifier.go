@@ -108,14 +108,23 @@ func (s *ModifierS) GetModifierByID(ctx context.Context, modifierID string) (*mo
 	return mapModifierToResponse(row), nil
 }
 
-func (s *ModifierS) GetAllModifiers(ctx context.Context, limit, offset int32) ([]*model.ModifierResponse, error) {
-	rows, err := s.repo.Tenant(ctx).GetAllModifiers(ctx, pg.GetAllModifiersParams{
-		Limit:  limit,
-		Offset: offset,
+func (s *ModifierS) GetModifiers(ctx context.Context, query string, limit, offset int32) ([]*model.ModifierResponse, int64, error) {
+	q := strings.TrimSpace(query)
+
+	rows, err := s.repo.Tenant(ctx).GetModifiers(ctx, pg.GetModifiersParams{
+		Column1: q,
+		Limit:   limit,
+		Offset:  offset,
 	})
 	if err != nil {
-		log.Printf("GetAllModifiers failed: %v", err)
-		return nil, fmt.Errorf("failed to retrieve modifiers: %w", err)
+		log.Printf("GetModifiers failed: %v", err)
+		return nil, 0, fmt.Errorf("failed to retrieve modifiers: %w", err)
+	}
+
+	total, err := s.repo.Tenant(ctx).CountModifiersFiltered(ctx, q)
+	if err != nil {
+		log.Printf("CountModifiersFiltered failed: %v", err)
+		return nil, 0, fmt.Errorf("failed to count modifiers: %w", err)
 	}
 
 	responses := make([]*model.ModifierResponse, 0, len(rows))
@@ -123,7 +132,7 @@ func (s *ModifierS) GetAllModifiers(ctx context.Context, limit, offset int32) ([
 		responses = append(responses, mapModifierToResponse(row))
 	}
 
-	return responses, nil
+	return responses, total, nil
 }
 
 func (s *ModifierS) UpdateModifier(ctx context.Context, modifierID string, req model.UpdateModifierRequest) (*model.ModifierResponse, error) {
@@ -220,6 +229,24 @@ func (s *ModifierS) DeleteModifier(ctx context.Context, modifierID string) error
 		return fmt.Errorf("invalid modifier ID: %w", err)
 	}
 
+	_, err = s.repo.Tenant(ctx).GetModifierByID(ctx, id)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return fmt.Errorf("modifier not found")
+		}
+		log.Printf("GetModifierByID failed before delete: %v", err)
+		return fmt.Errorf("failed to validate modifier: %w", err)
+	}
+
+	activeCount, err := s.repo.Tenant(ctx).CountActiveOrderItemModifiersByModifierID(ctx, id)
+	if err != nil {
+		log.Printf("CountActiveOrderItemModifiersByModifierID failed: %v", err)
+		return fmt.Errorf("failed to validate modifier usage: %w", err)
+	}
+	if activeCount > 0 {
+		return fmt.Errorf("modifier cannot be deleted: it is used by active order items")
+	}
+
 	if err := s.repo.Tenant(ctx).DeleteModifier(ctx, id); err != nil {
 		log.Printf("DeleteModifier failed: %v", err)
 		return fmt.Errorf("failed to delete modifier: %w", err)
@@ -240,25 +267,4 @@ func (s *ModifierS) RestoreModifier(ctx context.Context, modifierID string) erro
 	}
 
 	return nil
-}
-
-func (s *ModifierS) SearchModifiers(ctx context.Context, query string, limit, offset int32) ([]*model.ModifierResponse, error) {
-	q := strings.TrimSpace(query)
-
-	rows, err := s.repo.Tenant(ctx).SearchModifiers(ctx, pg.SearchModifiersParams{
-		Column1: &q,
-		Limit:   limit,
-		Offset:  offset,
-	})
-	if err != nil {
-		log.Printf("SearchModifiers failed: %v", err)
-		return nil, fmt.Errorf("failed to search modifiers: %w", err)
-	}
-
-	responses := make([]*model.ModifierResponse, 0, len(rows))
-	for _, row := range rows {
-		responses = append(responses, mapModifierToResponse(row))
-	}
-
-	return responses, nil
 }

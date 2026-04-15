@@ -897,3 +897,247 @@ func (h *Handler) PreviewCalculations(c echo.Context) error {
 		http.StatusOK,
 	))
 }
+
+// CreateModifierCalculation adds an ingredient or child-compound line to a modifier tech card.
+// @Summary Create modifier calculation
+// @Description Add an ingredient or child compound to a modifier tech-card.
+// @Description
+// @Description **Use this API when a modifier itself consumes stock.**
+// @Description
+// @Description Examples:
+// @Description - Extra cheese -> ingredient cheese, quantity 0.05
+// @Description - Salad set -> child compound salad-base, quantity 1
+// @Description
+// @Description Provide exactly one of:
+// @Description - ingredient_id
+// @Description - compound_to_add_id
+// @Tags Modifier Calculations
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param lang query string false "Language (uz, ru, en)" default(uz)
+// @Param request body model.CreateModifierCalculationRequest true "Modifier calculation request"
+// @Success 201 {object} model.SuccessResponse{data=model.ModifierCalculationResponse} "Modifier calculation created successfully"
+// @Failure 400 {object} model.ErrorResponse "Invalid request"
+// @Failure 401 {object} model.ErrorResponse "Unauthorized"
+// @Failure 404 {object} model.ErrorResponse "Modifier / ingredient / compound not found"
+// @Failure 409 {object} model.ErrorResponse "Conflict"
+// @Failure 500 {object} model.ErrorResponse "Internal server error"
+// @Router /api/v1/modifiers/calculations [post]
+func (h *Handler) CreateModifierCalculation(c echo.Context) error {
+	req := model.CreateModifierCalculationRequest{}
+	if err := c.Bind(&req); err != nil {
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"Invalid request",
+			err.Error(),
+			http.StatusBadRequest,
+		))
+	}
+
+	hasIngredient := req.IngredientID != nil && *req.IngredientID != ""
+	hasCompoundToAdd := req.CompoundToAddID != nil && *req.CompoundToAddID != ""
+	if hasIngredient && hasCompoundToAdd {
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"Invalid request",
+			"provide only one: ingredient_id or compound_to_add_id",
+			http.StatusBadRequest,
+		))
+	}
+	if req.ModifierID == "" {
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"modifier_id is required",
+			"",
+			http.StatusBadRequest,
+		))
+	}
+	if !hasIngredient && !hasCompoundToAdd {
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"Invalid request",
+			"either ingredient_id or compound_to_add_id must be provided",
+			http.StatusBadRequest,
+		))
+	}
+
+	ctx := c.Request().Context()
+	var out *model.ModifierCalculationResponse
+	var err error
+	if hasIngredient {
+		out, err = h.service.Calculation().CreateModifierCalculationForIngredient(ctx, req.ModifierID, *req.IngredientID, req.Quantity)
+	} else {
+		out, err = h.service.Calculation().CreateModifierCalculationForCompound(ctx, req.ModifierID, *req.CompoundToAddID, req.Quantity)
+	}
+	if err != nil {
+		log.Printf("CreateModifierCalculation failed: %v", err)
+		return respondDomainError(c, "Failed to create modifier calculation", err)
+	}
+
+	return c.JSON(http.StatusCreated, model.NewSuccessResponse(
+		"Modifier calculation created successfully",
+		out,
+		http.StatusCreated,
+	))
+}
+
+// GetModifierCalculations lists tech-card rows for a modifier (query: modifier_id).
+// @Summary List modifier calculations
+// @Description Returns all ingredient/child-compound calculation rows for a modifier.
+// @Tags Modifier Calculations
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param modifier_id query string true "Modifier ID"
+// @Param lang query string false "Language (uz, ru, en)" default(uz)
+// @Success 200 {object} model.SuccessResponse{data=[]model.ModifierCalculationResponse} "Modifier calculations retrieved successfully"
+// @Failure 400 {object} model.ErrorResponse "modifier_id is required / invalid"
+// @Failure 401 {object} model.ErrorResponse "Unauthorized"
+// @Failure 404 {object} model.ErrorResponse "Modifier not found"
+// @Failure 500 {object} model.ErrorResponse "Internal server error"
+// @Router /api/v1/modifiers/calculations [get]
+func (h *Handler) GetModifierCalculations(c echo.Context) error {
+	modifierID := c.QueryParam("modifier_id")
+	if modifierID == "" {
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"modifier_id is required",
+			"use query parameter modifier_id",
+			http.StatusBadRequest,
+		))
+	}
+
+	ctx := c.Request().Context()
+	rows, err := h.service.Calculation().GetModifierCalculationsByModifierID(ctx, modifierID)
+	if err != nil {
+		log.Printf("GetModifierCalculations failed for modifier %s: %v", modifierID, err)
+		return respondDomainError(c, "Failed to retrieve modifier calculations", err)
+	}
+
+	return c.JSON(http.StatusOK, model.NewSuccessResponse(
+		"Modifier calculations retrieved successfully",
+		rows,
+		http.StatusOK,
+	))
+}
+
+// GetModifierCalculationByID returns a single modifier calculation row.
+// @Summary Get modifier calculation by ID
+// @Description Returns a single modifier calculation row.
+// @Tags Modifier Calculations
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path string true "Modifier Calculation ID"
+// @Param lang query string false "Language (uz, ru, en)" default(uz)
+// @Success 200 {object} model.SuccessResponse{data=model.ModifierCalculationResponse} "Modifier calculation retrieved successfully"
+// @Failure 400 {object} model.ErrorResponse "Invalid id"
+// @Failure 401 {object} model.ErrorResponse "Unauthorized"
+// @Failure 404 {object} model.ErrorResponse "Modifier calculation not found"
+// @Router /api/v1/modifiers/calculations/{id} [get]
+func (h *Handler) GetModifierCalculationByID(c echo.Context) error {
+	id := c.Param("id")
+	if id == "" {
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"id is required",
+			"",
+			http.StatusBadRequest,
+		))
+	}
+
+	ctx := c.Request().Context()
+	row, err := h.service.Calculation().GetModifierCalculationByID(ctx, id)
+	if err != nil {
+		log.Printf("GetModifierCalculationByID failed for id %s: %v", id, err)
+		return respondDomainError(c, "Failed to retrieve modifier calculation", err)
+	}
+
+	return c.JSON(http.StatusOK, model.NewSuccessResponse(
+		"Modifier calculation retrieved successfully",
+		row,
+		http.StatusOK,
+	))
+}
+
+// UpdateModifierCalculation updates quantity on a modifier calculation row.
+// @Summary Update modifier calculation
+// @Description Update quantity for a modifier calculation row.
+// @Tags Modifier Calculations
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path string true "Modifier Calculation ID"
+// @Param lang query string false "Language (uz, ru, en)" default(uz)
+// @Param request body model.UpdateModifierCalculationRequest true "Update modifier calculation request"
+// @Success 200 {object} model.SuccessResponse{data=model.ModifierCalculationResponse} "Modifier calculation updated successfully"
+// @Failure 400 {object} model.ErrorResponse "Invalid request"
+// @Failure 401 {object} model.ErrorResponse "Unauthorized"
+// @Failure 404 {object} model.ErrorResponse "Modifier calculation not found"
+// @Failure 500 {object} model.ErrorResponse "Internal server error"
+// @Router /api/v1/modifiers/calculations/{id} [put]
+func (h *Handler) UpdateModifierCalculation(c echo.Context) error {
+	id := c.Param("id")
+	if id == "" {
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"id is required",
+			"",
+			http.StatusBadRequest,
+		))
+	}
+
+	var req model.UpdateModifierCalculationRequest
+	if err := c.Bind(&req); err != nil {
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"Invalid request",
+			err.Error(),
+			http.StatusBadRequest,
+		))
+	}
+
+	ctx := c.Request().Context()
+	row, err := h.service.Calculation().UpdateModifierCalculation(ctx, id, req.Quantity)
+	if err != nil {
+		log.Printf("UpdateModifierCalculation failed for id %s: %v", id, err)
+		return respondDomainError(c, "Failed to update modifier calculation", err)
+	}
+
+	return c.JSON(http.StatusOK, model.NewSuccessResponse(
+		"Modifier calculation updated successfully",
+		row,
+		http.StatusOK,
+	))
+}
+
+// DeleteModifierCalculation soft-deletes a modifier calculation row.
+// @Summary Delete modifier calculation
+// @Description Soft-delete a modifier calculation row.
+// @Tags Modifier Calculations
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path string true "Modifier Calculation ID"
+// @Param lang query string false "Language (uz, ru, en)" default(uz)
+// @Success 200 {object} model.SuccessResponse "Modifier calculation deleted successfully"
+// @Failure 400 {object} model.ErrorResponse "Invalid id"
+// @Failure 401 {object} model.ErrorResponse "Unauthorized"
+// @Failure 404 {object} model.ErrorResponse "Modifier calculation not found"
+// @Failure 500 {object} model.ErrorResponse "Internal server error"
+// @Router /api/v1/modifiers/calculations/{id} [delete]
+func (h *Handler) DeleteModifierCalculation(c echo.Context) error {
+	id := c.Param("id")
+	if id == "" {
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"id is required",
+			"",
+			http.StatusBadRequest,
+		))
+	}
+
+	ctx := c.Request().Context()
+	if err := h.service.Calculation().DeleteModifierCalculation(ctx, id); err != nil {
+		log.Printf("DeleteModifierCalculation failed for id %s: %v", id, err)
+		return respondDomainError(c, "Failed to delete modifier calculation", err)
+	}
+
+	return c.JSON(http.StatusOK, model.NewSuccessResponse(
+		"Modifier calculation deleted successfully",
+		map[string]interface{}{},
+		http.StatusOK,
+	))
+}

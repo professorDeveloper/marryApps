@@ -1249,6 +1249,24 @@ definitions:
       summary:
         $ref: '#/definitions/model.InvoiceDetailsBatchSummary'
     type: object
+  model.CreateModifierCalculationRequest:
+    properties:
+      compound_to_add_id:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+      ingredient_id:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+      modifier_id:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+      quantity:
+        example: "0.05"
+        type: string
+    required:
+    - modifier_id
+    - quantity
+    type: object
   model.CreateModifierRequest:
     properties:
       code:
@@ -1270,6 +1288,21 @@ definitions:
         example: https://example.com/image.jpg
         type: string
     type: object
+  model.CreateModifierWithCalculationsRequest:
+    properties:
+      compound_calculations:
+        items:
+          $ref: '#/definitions/model.CompoundCalculationItem'
+        type: array
+      ingredient_calculations:
+        items:
+          $ref: '#/definitions/model.IngredientCalculationItem'
+        type: array
+      modifier:
+        $ref: '#/definitions/model.CreateModifierRequest'
+    required:
+    - modifier
+    type: object
   model.CreateOrderItemEntry:
     properties:
       comment:
@@ -1277,6 +1310,10 @@ definitions:
       good_id:
         example: d4e5f6a7-b8c9-4a5b-8c9d-e0f1a2b3c4d5
         type: string
+      modifiers:
+        items:
+          $ref: '#/definitions/model.OrderItemModifierInput'
+        type: array
       price:
         example: "50000"
         type: string
@@ -1298,6 +1335,12 @@ definitions:
       good_id:
         example: d4e5f6a7-b8c9-4a5b-8c9d-e0f1a2b3c4d5
         type: string
+      modifiers:
+        description: Modifiers — tanlangan modifierlar (faqat shu good uchun ruxsat
+          etilganlar)
+        items:
+          $ref: '#/definitions/model.OrderItemModifierInput'
+        type: array
       quantity:
         example: 2
         minimum: 1
@@ -2751,6 +2794,39 @@ definitions:
     required:
     - customer_paid_amount
     type: object
+  model.ModifierCalculationResponse:
+    properties:
+      component_compound_id:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+      created_at:
+        example: "2022-01-01T00:00:00Z"
+        type: string
+      id:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+      ingredient_id:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+      measurement_unit:
+        example: kg
+        type: string
+      modifier_id:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+      price_per_unit:
+        example: "20000"
+        type: string
+      quantity:
+        example: "0.2"
+        type: string
+      total_cost:
+        example: "4000"
+        type: string
+      updated_at:
+        example: "2022-01-01T00:00:00Z"
+        type: string
+    type: object
   model.ModifierResponse:
     properties:
       code:
@@ -2805,6 +2881,17 @@ definitions:
         example: https://example.com/image.jpg
         type: string
     type: object
+  model.ModifierWithCalculationsResponse:
+    properties:
+      calculations:
+        items:
+          $ref: '#/definitions/model.ModifierCalculationResponse'
+        type: array
+      modifier:
+        $ref: '#/definitions/model.ModifierResponse'
+      total_cost:
+        type: string
+    type: object
   model.OpenCashRegisterShiftRequest:
     properties:
       cash_register_id:
@@ -2856,6 +2943,27 @@ definitions:
       updated_at:
         type: string
     type: object
+  model.OrderItemModifierInput:
+    properties:
+      modifier_id:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+      units:
+        example: 1
+        type: integer
+    type: object
+  model.OrderItemModifierResponse:
+    properties:
+      id:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+      modifier_id:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+      units:
+        example: 1
+        type: integer
+    type: object
   model.OrderItemResponse:
     properties:
       comment:
@@ -2868,6 +2976,10 @@ definitions:
       id:
         example: c0f18a64-7f5c-4425-9414-1b01cddee9d9
         type: string
+      modifiers:
+        items:
+          $ref: '#/definitions/model.OrderItemModifierResponse'
+        type: array
       order_id:
         example: a1b2c3d4-e5f6-4a5b-8c9d-e0f1a2b3c4d5
         type: string
@@ -3096,6 +3208,24 @@ definitions:
         type: array
       pagination:
         $ref: '#/definitions/model.PaginationMeta'
+    type: object
+  model.PaginatedModifiersResponse:
+    properties:
+      code:
+        example: 200
+        type: integer
+      data:
+        items:
+          $ref: '#/definitions/model.ModifierResponse'
+        type: array
+      message:
+        example: Modifiers retrieved successfully
+        type: string
+      pagination:
+        $ref: '#/definitions/model.PaginationMeta'
+      status:
+        example: success
+        type: string
     type: object
   model.PaginatedTransfersResponse:
     properties:
@@ -4225,6 +4355,14 @@ definitions:
         type: string
     required:
     - status
+    type: object
+  model.UpdateModifierCalculationRequest:
+    properties:
+      quantity:
+        example: "2.5"
+        type: string
+    required:
+    - quantity
     type: object
   model.UpdateModifierRequest:
     properties:
@@ -15512,8 +15650,13 @@ paths:
     get:
       consumes:
       - application/json
-      description: Retrieve all modifiers with pagination
+      description: Retrieve modifiers with optional search by name, description, or
+        code
       parameters:
+      - description: Search query
+        in: query
+        name: q
+        type: string
       - description: 'Limit (default: 20)'
         in: query
         name: limit
@@ -15532,47 +15675,14 @@ paths:
         "200":
           description: OK
           schema:
-            items:
-              $ref: '#/definitions/model.ModifierResponse'
-            type: array
+            $ref: '#/definitions/model.PaginatedModifiersResponse'
         "500":
           description: Internal Server Error
           schema:
             $ref: '#/definitions/model.ErrorResponse'
       security:
       - BearerAuth: []
-      summary: Get all modifiers
-      tags:
-      - modifiers
-    post:
-      consumes:
-      - application/json
-      description: Create a new modifier
-      parameters:
-      - description: Modifier creation request
-        in: body
-        name: request
-        required: true
-        schema:
-          $ref: '#/definitions/model.CreateModifierRequest'
-      produces:
-      - application/json
-      responses:
-        "201":
-          description: Created
-          schema:
-            $ref: '#/definitions/model.ModifierResponse'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/model.ErrorResponse'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/model.ErrorResponse'
-      security:
-      - BearerAuth: []
-      summary: Create modifier
+      summary: Get modifiers
       tags:
       - modifiers
   /api/v1/modifiers/{id}:
@@ -15711,34 +15821,288 @@ paths:
       summary: Restore modifier
       tags:
       - modifiers
-  /api/v1/modifiers/search:
+  /api/v1/modifiers/calculations:
     get:
       consumes:
       - application/json
-      description: Search modifiers by name, description, or code
+      description: Returns all ingredient/child-compound calculation rows for a modifier.
       parameters:
-      - description: Search query
+      - description: Modifier ID
         in: query
-        name: q
+        name: modifier_id
         required: true
         type: string
-      - description: 'Limit (default: 20)'
+      - default: uz
+        description: Language (uz, ru, en)
         in: query
-        name: limit
-        type: integer
-      - description: 'Offset (default: 0)'
-        in: query
-        name: offset
-        type: integer
+        name: lang
+        type: string
       produces:
       - application/json
       responses:
         "200":
-          description: OK
+          description: Modifier calculations retrieved successfully
           schema:
-            items:
-              $ref: '#/definitions/model.ModifierResponse'
-            type: array
+            allOf:
+            - $ref: '#/definitions/model.SuccessResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/model.ModifierCalculationResponse'
+                  type: array
+              type: object
+        "400":
+          description: modifier_id is required / invalid
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: Modifier not found
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: List modifier calculations
+      tags:
+      - Modifier Calculations
+    post:
+      consumes:
+      - application/json
+      description: |-
+        Add an ingredient or child compound to a modifier tech-card.
+
+        **Use this API when a modifier itself consumes stock.**
+
+        Examples:
+        - Extra cheese -> ingredient cheese, quantity 0.05
+        - Salad set -> child compound salad-base, quantity 1
+
+        Provide exactly one of:
+        - ingredient_id
+        - compound_to_add_id
+      parameters:
+      - default: uz
+        description: Language (uz, ru, en)
+        in: query
+        name: lang
+        type: string
+      - description: Modifier calculation request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.CreateModifierCalculationRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Modifier calculation created successfully
+          schema:
+            allOf:
+            - $ref: '#/definitions/model.SuccessResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/model.ModifierCalculationResponse'
+              type: object
+        "400":
+          description: Invalid request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: Modifier / ingredient / compound not found
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create modifier calculation
+      tags:
+      - Modifier Calculations
+  /api/v1/modifiers/calculations/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Soft-delete a modifier calculation row.
+      parameters:
+      - description: Modifier Calculation ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - default: uz
+        description: Language (uz, ru, en)
+        in: query
+        name: lang
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Modifier calculation deleted successfully
+          schema:
+            $ref: '#/definitions/model.SuccessResponse'
+        "400":
+          description: Invalid id
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: Modifier calculation not found
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete modifier calculation
+      tags:
+      - Modifier Calculations
+    get:
+      consumes:
+      - application/json
+      description: Returns a single modifier calculation row.
+      parameters:
+      - description: Modifier Calculation ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - default: uz
+        description: Language (uz, ru, en)
+        in: query
+        name: lang
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Modifier calculation retrieved successfully
+          schema:
+            allOf:
+            - $ref: '#/definitions/model.SuccessResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/model.ModifierCalculationResponse'
+              type: object
+        "400":
+          description: Invalid id
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: Modifier calculation not found
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get modifier calculation by ID
+      tags:
+      - Modifier Calculations
+    put:
+      consumes:
+      - application/json
+      description: Update quantity for a modifier calculation row.
+      parameters:
+      - description: Modifier Calculation ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - default: uz
+        description: Language (uz, ru, en)
+        in: query
+        name: lang
+        type: string
+      - description: Update modifier calculation request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.UpdateModifierCalculationRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Modifier calculation updated successfully
+          schema:
+            allOf:
+            - $ref: '#/definitions/model.SuccessResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/model.ModifierCalculationResponse'
+              type: object
+        "400":
+          description: Invalid request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: Modifier calculation not found
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update modifier calculation
+      tags:
+      - Modifier Calculations
+  /api/v1/modifiers/with-calculations:
+    post:
+      consumes:
+      - application/json
+      description: Create a new modifier and its ingredient/compound calculations
+        in one atomic transaction.
+      parameters:
+      - description: Modifier + calculations
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.CreateModifierWithCalculationsRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            allOf:
+            - $ref: '#/definitions/model.SuccessResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/model.ModifierWithCalculationsResponse'
+              type: object
         "400":
           description: Bad Request
           schema:
@@ -15749,7 +16113,7 @@ paths:
             $ref: '#/definitions/model.ErrorResponse'
       security:
       - BearerAuth: []
-      summary: Search modifiers
+      summary: Create modifier with calculations
       tags:
       - modifiers
   /api/v1/order-items:
