@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"fmt"
 	"net/http"
 	"strconv"
 
@@ -35,8 +34,7 @@ func (h *Handler) CreateCafeTable(c echo.Context) error {
 	if status == "" {
 		status = "free"
 	}
-	fmt.Println(&req.PricePerHour)
-	table, err := h.service.CafeTable().CreateCafeTable(c.Request().Context(), req.HallID, req.Number, req.Capacity, &status, req.PosX, req.PosY, req.Width, req.Height, req.Rotation, req.PricePerHour, req.TableType)
+	table, err := h.service.CafeTable().CreateCafeTable(c.Request().Context(), req.HallID, req.Number, req.Capacity, &status, req.PosX, req.PosY, req.Width, req.Height, req.Rotation, req.PricePerHour, req.TableType, req.Shape)
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
 			"Operation failed",
@@ -283,7 +281,7 @@ func (h *Handler) UpdateCafeTable(c echo.Context) error {
 		))
 	}
 
-	table, err := h.service.CafeTable().UpdateCafeTable(c.Request().Context(), tableID, req.HallID, req.Number, req.Capacity, req.Status, req.PosX, req.PosY, req.Width, req.Height, req.Rotation, req.PricePerHour, req.TableType)
+	table, err := h.service.CafeTable().UpdateCafeTable(c.Request().Context(), tableID, req.HallID, req.Number, req.Capacity, req.Status, req.PosX, req.PosY, req.Width, req.Height, req.Rotation, req.PricePerHour, req.TableType, req.Shape)
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
 			"Operation failed",

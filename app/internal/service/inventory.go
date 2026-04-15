@@ -25,6 +25,7 @@ func NewInventoryS(repo *repository.Repository) *InventoryS {
 //  Create
 // ─────────────────────────────────────────────
 
+
 func (s *InventoryS) CreateInventory(ctx context.Context, req *model.CreateInventoryRequest) (*model.InventoryResponse, error) {
 	id := uuid.New()
 

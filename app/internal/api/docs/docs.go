@@ -25791,12 +25791,12 @@ const docTemplate = `{
                     "example": 5
                 },
                 "pos_x": {
-                    "type": "integer",
-                    "example": 0
+                    "type": "number",
+                    "example": 1.2
                 },
                 "pos_y": {
-                    "type": "integer",
-                    "example": 0
+                    "type": "number",
+                    "example": 3.4
                 },
                 "price_per_hour": {
                     "type": "string"
@@ -25804,6 +25804,10 @@ const docTemplate = `{
                 "rotation": {
                     "type": "integer",
                     "example": 0
+                },
+                "shape": {
+                    "type": "string",
+                    "example": "square"
                 },
                 "status": {
                     "allOf": [
@@ -26454,12 +26458,12 @@ const docTemplate = `{
                     "example": 5
                 },
                 "pos_x": {
-                    "type": "integer",
-                    "example": 0
+                    "type": "number",
+                    "example": 1.2
                 },
                 "pos_y": {
-                    "type": "integer",
-                    "example": 0
+                    "type": "number",
+                    "example": 3.4
                 },
                 "price_per_hour": {
                     "type": "integer",
@@ -26468,6 +26472,10 @@ const docTemplate = `{
                 "rotation": {
                     "type": "integer",
                     "example": 0
+                },
+                "shape": {
+                    "type": "string",
+                    "example": "square"
                 },
                 "status": {
                     "type": "string",
@@ -31167,11 +31175,11 @@ const docTemplate = `{
                     "example": 5
                 },
                 "pos_x": {
-                    "type": "integer",
+                    "type": "number",
                     "example": 0
                 },
                 "pos_y": {
-                    "type": "integer",
+                    "type": "number",
                     "example": 0
                 },
                 "price_per_hour": {
@@ -31181,6 +31189,10 @@ const docTemplate = `{
                 "rotation": {
                     "type": "integer",
                     "example": 0
+                },
+                "shape": {
+                    "type": "string",
+                    "example": "square"
                 },
                 "status": {
                     "type": "string",
