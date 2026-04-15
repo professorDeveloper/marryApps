@@ -86,9 +86,9 @@ func (q *Queries) CountCafeTablesByStatus(ctx context.Context, status NullTableS
 }
 
 const createCafeTable = `-- name: CreateCafeTable :one
-INSERT INTO cafe_tables (id, hall_id, number, capacity, status, table_type, pos_x, pos_y, width, height, rotation, price_per_hour)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
-RETURNING id, hall_id, number, capacity, status, table_type, pos_x, pos_y, width, height, rotation, price_per_hour, created_at, updated_at, deleted_at
+INSERT INTO cafe_tables (id, hall_id, number, capacity, status, table_type, pos_x, pos_y, width, height, rotation, price_per_hour, shape)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+RETURNING id, hall_id, number, capacity, status, table_type, pos_x, pos_y, width, height, rotation, price_per_hour, shape, created_at, updated_at, deleted_at
 `
 
 type CreateCafeTableParams struct {
@@ -98,12 +98,13 @@ type CreateCafeTableParams struct {
 	Capacity     int32           `json:"capacity"`
 	Status       NullTableStatus `json:"status"`
 	TableType    string          `json:"table_type"`
-	PosX         int32           `json:"pos_x"`
-	PosY         int32           `json:"pos_y"`
+	PosX         float64         `json:"pos_x"`
+	PosY         float64         `json:"pos_y"`
 	Width        int32           `json:"width"`
 	Height       int32           `json:"height"`
 	Rotation     int32           `json:"rotation"`
 	PricePerHour pgtype.Numeric  `json:"price_per_hour"`
+	Shape        string          `json:"shape"`
 }
 
 type CreateCafeTableRow struct {
@@ -113,12 +114,13 @@ type CreateCafeTableRow struct {
 	Capacity     int32              `json:"capacity"`
 	Status       NullTableStatus    `json:"status"`
 	TableType    string             `json:"table_type"`
-	PosX         int32              `json:"pos_x"`
-	PosY         int32              `json:"pos_y"`
+	PosX         float64            `json:"pos_x"`
+	PosY         float64            `json:"pos_y"`
 	Width        int32              `json:"width"`
 	Height       int32              `json:"height"`
 	Rotation     int32              `json:"rotation"`
 	PricePerHour pgtype.Numeric     `json:"price_per_hour"`
+	Shape        string             `json:"shape"`
 	CreatedAt    pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
 	DeletedAt    *int64             `json:"deleted_at"`
@@ -138,6 +140,7 @@ func (q *Queries) CreateCafeTable(ctx context.Context, arg CreateCafeTableParams
 		arg.Height,
 		arg.Rotation,
 		arg.PricePerHour,
+		arg.Shape,
 	)
 	var i CreateCafeTableRow
 	err := row.Scan(
@@ -153,6 +156,7 @@ func (q *Queries) CreateCafeTable(ctx context.Context, arg CreateCafeTableParams
 		&i.Height,
 		&i.Rotation,
 		&i.PricePerHour,
+		&i.Shape,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
@@ -177,7 +181,7 @@ func (q *Queries) DeleteCafeTable(ctx context.Context, id uuid.UUID) error {
 }
 
 const getAllCafeTables = `-- name: GetAllCafeTables :many
-SELECT id, hall_id, number, capacity, status, table_type, pos_x, pos_y, width, height, rotation, price_per_hour, created_at, updated_at, deleted_at
+SELECT id, hall_id, number, capacity, status, table_type, pos_x, pos_y, width, height, rotation, price_per_hour, shape, created_at, updated_at, deleted_at
 FROM cafe_tables
 WHERE cafe_tables.deleted_at = 0
   AND EXISTS (
@@ -201,12 +205,13 @@ type GetAllCafeTablesRow struct {
 	Capacity     int32              `json:"capacity"`
 	Status       NullTableStatus    `json:"status"`
 	TableType    string             `json:"table_type"`
-	PosX         int32              `json:"pos_x"`
-	PosY         int32              `json:"pos_y"`
+	PosX         float64            `json:"pos_x"`
+	PosY         float64            `json:"pos_y"`
 	Width        int32              `json:"width"`
 	Height       int32              `json:"height"`
 	Rotation     int32              `json:"rotation"`
 	PricePerHour pgtype.Numeric     `json:"price_per_hour"`
+	Shape        string             `json:"shape"`
 	CreatedAt    pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
 	DeletedAt    *int64             `json:"deleted_at"`
@@ -234,6 +239,7 @@ func (q *Queries) GetAllCafeTables(ctx context.Context, arg GetAllCafeTablesPara
 			&i.Height,
 			&i.Rotation,
 			&i.PricePerHour,
+			&i.Shape,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.DeletedAt,
@@ -249,7 +255,7 @@ func (q *Queries) GetAllCafeTables(ctx context.Context, arg GetAllCafeTablesPara
 }
 
 const getAvailableTablesByCapacity = `-- name: GetAvailableTablesByCapacity :many
-SELECT id, hall_id, number, capacity, status, table_type, pos_x, pos_y, width, height, rotation, price_per_hour, created_at, updated_at, deleted_at
+SELECT id, hall_id, number, capacity, status, table_type, pos_x, pos_y, width, height, rotation, price_per_hour, shape, created_at, updated_at, deleted_at
 FROM cafe_tables
 WHERE capacity >= $1 
 AND status = 'free' 
@@ -276,12 +282,13 @@ type GetAvailableTablesByCapacityRow struct {
 	Capacity     int32              `json:"capacity"`
 	Status       NullTableStatus    `json:"status"`
 	TableType    string             `json:"table_type"`
-	PosX         int32              `json:"pos_x"`
-	PosY         int32              `json:"pos_y"`
+	PosX         float64            `json:"pos_x"`
+	PosY         float64            `json:"pos_y"`
 	Width        int32              `json:"width"`
 	Height       int32              `json:"height"`
 	Rotation     int32              `json:"rotation"`
 	PricePerHour pgtype.Numeric     `json:"price_per_hour"`
+	Shape        string             `json:"shape"`
 	CreatedAt    pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
 	DeletedAt    *int64             `json:"deleted_at"`
@@ -309,6 +316,7 @@ func (q *Queries) GetAvailableTablesByCapacity(ctx context.Context, arg GetAvail
 			&i.Height,
 			&i.Rotation,
 			&i.PricePerHour,
+			&i.Shape,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.DeletedAt,
@@ -324,7 +332,7 @@ func (q *Queries) GetAvailableTablesByCapacity(ctx context.Context, arg GetAvail
 }
 
 const getAvailableTablesByHall = `-- name: GetAvailableTablesByHall :many
-SELECT id, hall_id, number, capacity, status, table_type, pos_x, pos_y, width, height, rotation, price_per_hour, created_at, updated_at, deleted_at
+SELECT id, hall_id, number, capacity, status, table_type, pos_x, pos_y, width, height, rotation, price_per_hour, shape, created_at, updated_at, deleted_at
 FROM cafe_tables
 WHERE hall_id = $1
 AND status = 'free'
@@ -344,12 +352,13 @@ type GetAvailableTablesByHallRow struct {
 	Capacity     int32              `json:"capacity"`
 	Status       NullTableStatus    `json:"status"`
 	TableType    string             `json:"table_type"`
-	PosX         int32              `json:"pos_x"`
-	PosY         int32              `json:"pos_y"`
+	PosX         float64            `json:"pos_x"`
+	PosY         float64            `json:"pos_y"`
 	Width        int32              `json:"width"`
 	Height       int32              `json:"height"`
 	Rotation     int32              `json:"rotation"`
 	PricePerHour pgtype.Numeric     `json:"price_per_hour"`
+	Shape        string             `json:"shape"`
 	CreatedAt    pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
 	DeletedAt    *int64             `json:"deleted_at"`
@@ -377,6 +386,7 @@ func (q *Queries) GetAvailableTablesByHall(ctx context.Context, hallID uuid.UUID
 			&i.Height,
 			&i.Rotation,
 			&i.PricePerHour,
+			&i.Shape,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.DeletedAt,
@@ -392,7 +402,7 @@ func (q *Queries) GetAvailableTablesByHall(ctx context.Context, hallID uuid.UUID
 }
 
 const getAvailableTablesByHallAndCapacity = `-- name: GetAvailableTablesByHallAndCapacity :many
-SELECT id, hall_id, number, capacity, status, table_type, pos_x, pos_y, width, height, rotation, price_per_hour, created_at, updated_at, deleted_at
+SELECT id, hall_id, number, capacity, status, table_type, pos_x, pos_y, width, height, rotation, price_per_hour, shape, created_at, updated_at, deleted_at
 FROM cafe_tables
 WHERE hall_id = $1 
 AND capacity >= $2 
@@ -418,12 +428,13 @@ type GetAvailableTablesByHallAndCapacityRow struct {
 	Capacity     int32              `json:"capacity"`
 	Status       NullTableStatus    `json:"status"`
 	TableType    string             `json:"table_type"`
-	PosX         int32              `json:"pos_x"`
-	PosY         int32              `json:"pos_y"`
+	PosX         float64            `json:"pos_x"`
+	PosY         float64            `json:"pos_y"`
 	Width        int32              `json:"width"`
 	Height       int32              `json:"height"`
 	Rotation     int32              `json:"rotation"`
 	PricePerHour pgtype.Numeric     `json:"price_per_hour"`
+	Shape        string             `json:"shape"`
 	CreatedAt    pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
 	DeletedAt    *int64             `json:"deleted_at"`
@@ -451,6 +462,7 @@ func (q *Queries) GetAvailableTablesByHallAndCapacity(ctx context.Context, arg G
 			&i.Height,
 			&i.Rotation,
 			&i.PricePerHour,
+			&i.Shape,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.DeletedAt,
@@ -466,7 +478,7 @@ func (q *Queries) GetAvailableTablesByHallAndCapacity(ctx context.Context, arg G
 }
 
 const getCafeTableByID = `-- name: GetCafeTableByID :one
-SELECT id, hall_id, number, capacity, status, table_type, pos_x, pos_y, width, height, rotation, price_per_hour, created_at, updated_at, deleted_at
+SELECT id, hall_id, number, capacity, status, table_type, pos_x, pos_y, width, height, rotation, price_per_hour, shape, created_at, updated_at, deleted_at
 FROM cafe_tables
 WHERE cafe_tables.id = $1 AND cafe_tables.deleted_at = 0
   AND EXISTS (
@@ -483,12 +495,13 @@ type GetCafeTableByIDRow struct {
 	Capacity     int32              `json:"capacity"`
 	Status       NullTableStatus    `json:"status"`
 	TableType    string             `json:"table_type"`
-	PosX         int32              `json:"pos_x"`
-	PosY         int32              `json:"pos_y"`
+	PosX         float64            `json:"pos_x"`
+	PosY         float64            `json:"pos_y"`
 	Width        int32              `json:"width"`
 	Height       int32              `json:"height"`
 	Rotation     int32              `json:"rotation"`
 	PricePerHour pgtype.Numeric     `json:"price_per_hour"`
+	Shape        string             `json:"shape"`
 	CreatedAt    pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
 	DeletedAt    *int64             `json:"deleted_at"`
@@ -510,6 +523,7 @@ func (q *Queries) GetCafeTableByID(ctx context.Context, id uuid.UUID) (GetCafeTa
 		&i.Height,
 		&i.Rotation,
 		&i.PricePerHour,
+		&i.Shape,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
@@ -518,7 +532,7 @@ func (q *Queries) GetCafeTableByID(ctx context.Context, id uuid.UUID) (GetCafeTa
 }
 
 const getCafeTableByNumber = `-- name: GetCafeTableByNumber :one
-SELECT id, hall_id, number, capacity, status, table_type, pos_x, pos_y, width, height, rotation, price_per_hour, created_at, updated_at, deleted_at
+SELECT id, hall_id, number, capacity, status, table_type, pos_x, pos_y, width, height, rotation, price_per_hour, shape, created_at, updated_at, deleted_at
 FROM cafe_tables
 WHERE cafe_tables.hall_id = $1 AND cafe_tables.number = $2 AND cafe_tables.deleted_at = 0
   AND EXISTS (
@@ -540,12 +554,13 @@ type GetCafeTableByNumberRow struct {
 	Capacity     int32              `json:"capacity"`
 	Status       NullTableStatus    `json:"status"`
 	TableType    string             `json:"table_type"`
-	PosX         int32              `json:"pos_x"`
-	PosY         int32              `json:"pos_y"`
+	PosX         float64            `json:"pos_x"`
+	PosY         float64            `json:"pos_y"`
 	Width        int32              `json:"width"`
 	Height       int32              `json:"height"`
 	Rotation     int32              `json:"rotation"`
 	PricePerHour pgtype.Numeric     `json:"price_per_hour"`
+	Shape        string             `json:"shape"`
 	CreatedAt    pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
 	DeletedAt    *int64             `json:"deleted_at"`
@@ -567,6 +582,7 @@ func (q *Queries) GetCafeTableByNumber(ctx context.Context, arg GetCafeTableByNu
 		&i.Height,
 		&i.Rotation,
 		&i.PricePerHour,
+		&i.Shape,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
@@ -586,6 +602,7 @@ SELECT
     ct.width,
     ct.height,
     ct.rotation,
+    ct.shape,
     ct.created_at,
     ct.updated_at,
     h.name as hall_name,
@@ -604,11 +621,12 @@ type GetCafeTableWithHallRow struct {
 	Number     int32              `json:"number"`
 	Capacity   int32              `json:"capacity"`
 	Status     NullTableStatus    `json:"status"`
-	PosX       int32              `json:"pos_x"`
-	PosY       int32              `json:"pos_y"`
+	PosX       float64            `json:"pos_x"`
+	PosY       float64            `json:"pos_y"`
 	Width      int32              `json:"width"`
 	Height     int32              `json:"height"`
 	Rotation   int32              `json:"rotation"`
+	Shape      string             `json:"shape"`
 	CreatedAt  pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt  pgtype.Timestamptz `json:"updated_at"`
 	HallName   *string            `json:"hall_name"`
@@ -630,6 +648,7 @@ func (q *Queries) GetCafeTableWithHall(ctx context.Context, id uuid.UUID) (GetCa
 		&i.Width,
 		&i.Height,
 		&i.Rotation,
+		&i.Shape,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.HallName,
@@ -640,7 +659,7 @@ func (q *Queries) GetCafeTableWithHall(ctx context.Context, id uuid.UUID) (GetCa
 }
 
 const getCafeTablesByCapacity = `-- name: GetCafeTablesByCapacity :many
-SELECT id, hall_id, number, capacity, status, table_type, pos_x, pos_y, width, height, rotation, price_per_hour, created_at, updated_at, deleted_at
+SELECT id, hall_id, number, capacity, status, table_type, pos_x, pos_y, width, height, rotation, price_per_hour, shape, created_at, updated_at, deleted_at
 FROM cafe_tables
 WHERE cafe_tables.capacity >= $1 AND cafe_tables.deleted_at = 0
   AND EXISTS (
@@ -665,12 +684,13 @@ type GetCafeTablesByCapacityRow struct {
 	Capacity     int32              `json:"capacity"`
 	Status       NullTableStatus    `json:"status"`
 	TableType    string             `json:"table_type"`
-	PosX         int32              `json:"pos_x"`
-	PosY         int32              `json:"pos_y"`
+	PosX         float64            `json:"pos_x"`
+	PosY         float64            `json:"pos_y"`
 	Width        int32              `json:"width"`
 	Height       int32              `json:"height"`
 	Rotation     int32              `json:"rotation"`
 	PricePerHour pgtype.Numeric     `json:"price_per_hour"`
+	Shape        string             `json:"shape"`
 	CreatedAt    pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
 	DeletedAt    *int64             `json:"deleted_at"`
@@ -698,6 +718,7 @@ func (q *Queries) GetCafeTablesByCapacity(ctx context.Context, arg GetCafeTables
 			&i.Height,
 			&i.Rotation,
 			&i.PricePerHour,
+			&i.Shape,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.DeletedAt,
@@ -713,7 +734,7 @@ func (q *Queries) GetCafeTablesByCapacity(ctx context.Context, arg GetCafeTables
 }
 
 const getCafeTablesByHallAndStatus = `-- name: GetCafeTablesByHallAndStatus :many
-SELECT id, hall_id, number, capacity, status, table_type, pos_x, pos_y, width, height, rotation, price_per_hour, created_at, updated_at, deleted_at
+SELECT id, hall_id, number, capacity, status, table_type, pos_x, pos_y, width, height, rotation, price_per_hour, shape, created_at, updated_at, deleted_at
 FROM cafe_tables
 WHERE cafe_tables.hall_id = $1 AND cafe_tables.status = $2 AND cafe_tables.deleted_at = 0
   AND EXISTS (
@@ -736,12 +757,13 @@ type GetCafeTablesByHallAndStatusRow struct {
 	Capacity     int32              `json:"capacity"`
 	Status       NullTableStatus    `json:"status"`
 	TableType    string             `json:"table_type"`
-	PosX         int32              `json:"pos_x"`
-	PosY         int32              `json:"pos_y"`
+	PosX         float64            `json:"pos_x"`
+	PosY         float64            `json:"pos_y"`
 	Width        int32              `json:"width"`
 	Height       int32              `json:"height"`
 	Rotation     int32              `json:"rotation"`
 	PricePerHour pgtype.Numeric     `json:"price_per_hour"`
+	Shape        string             `json:"shape"`
 	CreatedAt    pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
 	DeletedAt    *int64             `json:"deleted_at"`
@@ -769,6 +791,7 @@ func (q *Queries) GetCafeTablesByHallAndStatus(ctx context.Context, arg GetCafeT
 			&i.Height,
 			&i.Rotation,
 			&i.PricePerHour,
+			&i.Shape,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.DeletedAt,
@@ -784,7 +807,7 @@ func (q *Queries) GetCafeTablesByHallAndStatus(ctx context.Context, arg GetCafeT
 }
 
 const getCafeTablesByHallID = `-- name: GetCafeTablesByHallID :many
-SELECT id, hall_id, number, capacity, status, table_type, pos_x, pos_y, width, height, rotation, price_per_hour, created_at, updated_at, deleted_at
+SELECT id, hall_id, number, capacity, status, table_type, pos_x, pos_y, width, height, rotation, price_per_hour, shape, created_at, updated_at, deleted_at
 FROM cafe_tables
 WHERE cafe_tables.hall_id = $1 AND cafe_tables.deleted_at = 0
   AND EXISTS (
@@ -802,12 +825,13 @@ type GetCafeTablesByHallIDRow struct {
 	Capacity     int32              `json:"capacity"`
 	Status       NullTableStatus    `json:"status"`
 	TableType    string             `json:"table_type"`
-	PosX         int32              `json:"pos_x"`
-	PosY         int32              `json:"pos_y"`
+	PosX         float64            `json:"pos_x"`
+	PosY         float64            `json:"pos_y"`
 	Width        int32              `json:"width"`
 	Height       int32              `json:"height"`
 	Rotation     int32              `json:"rotation"`
 	PricePerHour pgtype.Numeric     `json:"price_per_hour"`
+	Shape        string             `json:"shape"`
 	CreatedAt    pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
 	DeletedAt    *int64             `json:"deleted_at"`
@@ -835,6 +859,7 @@ func (q *Queries) GetCafeTablesByHallID(ctx context.Context, hallID uuid.UUID) (
 			&i.Height,
 			&i.Rotation,
 			&i.PricePerHour,
+			&i.Shape,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.DeletedAt,
@@ -850,7 +875,7 @@ func (q *Queries) GetCafeTablesByHallID(ctx context.Context, hallID uuid.UUID) (
 }
 
 const getCafeTablesByStatus = `-- name: GetCafeTablesByStatus :many
-SELECT id, hall_id, number, capacity, status, table_type, pos_x, pos_y, width, height, rotation, price_per_hour, created_at, updated_at, deleted_at
+SELECT id, hall_id, number, capacity, status, table_type, pos_x, pos_y, width, height, rotation, price_per_hour, shape, created_at, updated_at, deleted_at
 FROM cafe_tables
 WHERE cafe_tables.status = $1 AND cafe_tables.deleted_at = 0
   AND EXISTS (
@@ -875,12 +900,13 @@ type GetCafeTablesByStatusRow struct {
 	Capacity     int32              `json:"capacity"`
 	Status       NullTableStatus    `json:"status"`
 	TableType    string             `json:"table_type"`
-	PosX         int32              `json:"pos_x"`
-	PosY         int32              `json:"pos_y"`
+	PosX         float64            `json:"pos_x"`
+	PosY         float64            `json:"pos_y"`
 	Width        int32              `json:"width"`
 	Height       int32              `json:"height"`
 	Rotation     int32              `json:"rotation"`
 	PricePerHour pgtype.Numeric     `json:"price_per_hour"`
+	Shape        string             `json:"shape"`
 	CreatedAt    pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
 	DeletedAt    *int64             `json:"deleted_at"`
@@ -908,6 +934,7 @@ func (q *Queries) GetCafeTablesByStatus(ctx context.Context, arg GetCafeTablesBy
 			&i.Height,
 			&i.Rotation,
 			&i.PricePerHour,
+			&i.Shape,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.DeletedAt,
@@ -991,7 +1018,7 @@ WHERE cafe_tables.id = $1 AND cafe_tables.deleted_at = 0
     WHERE h.id = cafe_tables.hall_id
       AND h.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
   )
-RETURNING id, hall_id, number, capacity, status, table_type, pos_x, pos_y, width, height, rotation, price_per_hour, created_at, updated_at, deleted_at
+RETURNING id, hall_id, number, capacity, status, table_type, pos_x, pos_y, width, height, rotation, price_per_hour, shape, created_at, updated_at, deleted_at
 `
 
 type SetTableBusyRow struct {
@@ -1001,12 +1028,13 @@ type SetTableBusyRow struct {
 	Capacity     int32              `json:"capacity"`
 	Status       NullTableStatus    `json:"status"`
 	TableType    string             `json:"table_type"`
-	PosX         int32              `json:"pos_x"`
-	PosY         int32              `json:"pos_y"`
+	PosX         float64            `json:"pos_x"`
+	PosY         float64            `json:"pos_y"`
 	Width        int32              `json:"width"`
 	Height       int32              `json:"height"`
 	Rotation     int32              `json:"rotation"`
 	PricePerHour pgtype.Numeric     `json:"price_per_hour"`
+	Shape        string             `json:"shape"`
 	CreatedAt    pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
 	DeletedAt    *int64             `json:"deleted_at"`
@@ -1028,6 +1056,7 @@ func (q *Queries) SetTableBusy(ctx context.Context, id uuid.UUID) (SetTableBusyR
 		&i.Height,
 		&i.Rotation,
 		&i.PricePerHour,
+		&i.Shape,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
@@ -1045,7 +1074,7 @@ WHERE cafe_tables.id = $1 AND cafe_tables.deleted_at = 0
     WHERE h.id = cafe_tables.hall_id
       AND h.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
   )
-RETURNING id, hall_id, number, capacity, status, table_type, pos_x, pos_y, width, height, rotation, price_per_hour, created_at, updated_at, deleted_at
+RETURNING id, hall_id, number, capacity, status, table_type, pos_x, pos_y, width, height, rotation, price_per_hour, shape, created_at, updated_at, deleted_at
 `
 
 type SetTableFreeRow struct {
@@ -1055,12 +1084,13 @@ type SetTableFreeRow struct {
 	Capacity     int32              `json:"capacity"`
 	Status       NullTableStatus    `json:"status"`
 	TableType    string             `json:"table_type"`
-	PosX         int32              `json:"pos_x"`
-	PosY         int32              `json:"pos_y"`
+	PosX         float64            `json:"pos_x"`
+	PosY         float64            `json:"pos_y"`
 	Width        int32              `json:"width"`
 	Height       int32              `json:"height"`
 	Rotation     int32              `json:"rotation"`
 	PricePerHour pgtype.Numeric     `json:"price_per_hour"`
+	Shape        string             `json:"shape"`
 	CreatedAt    pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
 	DeletedAt    *int64             `json:"deleted_at"`
@@ -1082,6 +1112,7 @@ func (q *Queries) SetTableFree(ctx context.Context, id uuid.UUID) (SetTableFreeR
 		&i.Height,
 		&i.Rotation,
 		&i.PricePerHour,
+		&i.Shape,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
@@ -1102,6 +1133,7 @@ SET hall_id = COALESCE($2, hall_id),
     height = COALESCE($10, height),
     rotation = COALESCE($11, rotation),
     price_per_hour = COALESCE($12, price_per_hour),
+    shape = COALESCE($13, shape),
     updated_at = NOW()
 WHERE cafe_tables.id = $1 AND cafe_tables.deleted_at = 0
   AND EXISTS (
@@ -1109,7 +1141,7 @@ WHERE cafe_tables.id = $1 AND cafe_tables.deleted_at = 0
     WHERE h.id = cafe_tables.hall_id
       AND h.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
   )
-RETURNING id, hall_id, number, capacity, status, table_type, pos_x, pos_y, width, height, rotation, price_per_hour, created_at, updated_at, deleted_at
+RETURNING id, hall_id, number, capacity, status, table_type, pos_x, pos_y, width, height, rotation, price_per_hour, shape, created_at, updated_at, deleted_at
 `
 
 type UpdateCafeTableParams struct {
@@ -1119,12 +1151,13 @@ type UpdateCafeTableParams struct {
 	Capacity     int32           `json:"capacity"`
 	Status       NullTableStatus `json:"status"`
 	TableType    string          `json:"table_type"`
-	PosX         int32           `json:"pos_x"`
-	PosY         int32           `json:"pos_y"`
+	PosX         float64         `json:"pos_x"`
+	PosY         float64         `json:"pos_y"`
 	Width        int32           `json:"width"`
 	Height       int32           `json:"height"`
 	Rotation     int32           `json:"rotation"`
 	PricePerHour pgtype.Numeric  `json:"price_per_hour"`
+	Shape        string          `json:"shape"`
 }
 
 type UpdateCafeTableRow struct {
@@ -1134,12 +1167,13 @@ type UpdateCafeTableRow struct {
 	Capacity     int32              `json:"capacity"`
 	Status       NullTableStatus    `json:"status"`
 	TableType    string             `json:"table_type"`
-	PosX         int32              `json:"pos_x"`
-	PosY         int32              `json:"pos_y"`
+	PosX         float64            `json:"pos_x"`
+	PosY         float64            `json:"pos_y"`
 	Width        int32              `json:"width"`
 	Height       int32              `json:"height"`
 	Rotation     int32              `json:"rotation"`
 	PricePerHour pgtype.Numeric     `json:"price_per_hour"`
+	Shape        string             `json:"shape"`
 	CreatedAt    pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
 	DeletedAt    *int64             `json:"deleted_at"`
@@ -1159,6 +1193,7 @@ func (q *Queries) UpdateCafeTable(ctx context.Context, arg UpdateCafeTableParams
 		arg.Height,
 		arg.Rotation,
 		arg.PricePerHour,
+		arg.Shape,
 	)
 	var i UpdateCafeTableRow
 	err := row.Scan(
@@ -1174,6 +1209,7 @@ func (q *Queries) UpdateCafeTable(ctx context.Context, arg UpdateCafeTableParams
 		&i.Height,
 		&i.Rotation,
 		&i.PricePerHour,
+		&i.Shape,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
@@ -1191,7 +1227,7 @@ WHERE cafe_tables.id = $1 AND cafe_tables.deleted_at = 0
     WHERE h.id = cafe_tables.hall_id
       AND h.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
   )
-RETURNING id, hall_id, number, capacity, status, table_type, pos_x, pos_y, width, height, rotation, price_per_hour, created_at, updated_at, deleted_at
+RETURNING id, hall_id, number, capacity, status, table_type, pos_x, pos_y, width, height, rotation, price_per_hour, shape, created_at, updated_at, deleted_at
 `
 
 type UpdateCafeTableStatusParams struct {
@@ -1206,12 +1242,13 @@ type UpdateCafeTableStatusRow struct {
 	Capacity     int32              `json:"capacity"`
 	Status       NullTableStatus    `json:"status"`
 	TableType    string             `json:"table_type"`
-	PosX         int32              `json:"pos_x"`
-	PosY         int32              `json:"pos_y"`
+	PosX         float64            `json:"pos_x"`
+	PosY         float64            `json:"pos_y"`
 	Width        int32              `json:"width"`
 	Height       int32              `json:"height"`
 	Rotation     int32              `json:"rotation"`
 	PricePerHour pgtype.Numeric     `json:"price_per_hour"`
+	Shape        string             `json:"shape"`
 	CreatedAt    pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
 	DeletedAt    *int64             `json:"deleted_at"`
@@ -1233,6 +1270,7 @@ func (q *Queries) UpdateCafeTableStatus(ctx context.Context, arg UpdateCafeTable
 		&i.Height,
 		&i.Rotation,
 		&i.PricePerHour,
+		&i.Shape,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,

@@ -577,8 +577,8 @@ type CafeTable struct {
 	Number       int32              `json:"number"`
 	Capacity     int32              `json:"capacity"`
 	Status       NullTableStatus    `json:"status"`
-	PosX         int32              `json:"pos_x"`
-	PosY         int32              `json:"pos_y"`
+	PosX         float64            `json:"pos_x"`
+	PosY         float64            `json:"pos_y"`
 	Width        int32              `json:"width"`
 	Height       int32              `json:"height"`
 	Rotation     int32              `json:"rotation"`
@@ -587,6 +587,7 @@ type CafeTable struct {
 	DeletedAt    *int64             `json:"deleted_at"`
 	PricePerHour pgtype.Numeric     `json:"price_per_hour"`
 	TableType    string             `json:"table_type"`
+	Shape        string             `json:"shape"`
 }
 
 type Calculation struct {

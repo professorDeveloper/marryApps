@@ -198,16 +198,19 @@ definitions:
         example: 5
         type: integer
       pos_x:
-        example: 0
-        type: integer
+        example: 1.2
+        type: number
       pos_y:
-        example: 0
-        type: integer
+        example: 3.4
+        type: number
       price_per_hour:
         type: string
       rotation:
         example: 0
         type: integer
+      shape:
+        example: square
+        type: string
       status:
         allOf:
         - $ref: '#/definitions/model.TableStatus'
@@ -655,17 +658,20 @@ definitions:
         minimum: 1
         type: integer
       pos_x:
-        example: 0
-        type: integer
+        example: 1.2
+        type: number
       pos_y:
-        example: 0
-        type: integer
+        example: 3.4
+        type: number
       price_per_hour:
         example: 50000
         type: integer
       rotation:
         example: 0
         type: integer
+      shape:
+        example: square
+        type: string
       status:
         example: free
         type: string
@@ -3952,16 +3958,19 @@ definitions:
         type: integer
       pos_x:
         example: 0
-        type: integer
+        type: number
       pos_y:
         example: 0
-        type: integer
+        type: number
       price_per_hour:
         example: "50000"
         type: string
       rotation:
         example: 0
         type: integer
+      shape:
+        example: square
+        type: string
       status:
         example: available
         type: string
