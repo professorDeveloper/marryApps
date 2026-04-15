@@ -59,7 +59,7 @@ base_ingredients AS (
 	SELECT DISTINCT m.ingredient_id
 	FROM ingredient_stock_movements m
 	JOIN params p ON p.storage_id = m.storage_id
-	WHERE m.created_at <= p.end_ts
+	WHERE COALESCE(m.effective_at, m.created_at) <= p.end_ts
 		AND (p.ingredient_id IS NULL OR m.ingredient_id = p.ingredient_id)
 ),
 first_in_range AS (
@@ -68,9 +68,9 @@ first_in_range AS (
 		m.stock_before AS begin_qty
 	FROM ingredient_stock_movements m
 	JOIN params p ON p.storage_id = m.storage_id
-	WHERE m.created_at >= p.start_ts AND m.created_at <= p.end_ts
+	WHERE COALESCE(m.effective_at, m.created_at) >= p.start_ts AND COALESCE(m.effective_at, m.created_at) < p.end_ts
 		AND (p.ingredient_id IS NULL OR m.ingredient_id = p.ingredient_id)
-	ORDER BY m.ingredient_id, m.created_at ASC, m.id ASC
+	ORDER BY m.ingredient_id, COALESCE(m.effective_at, m.created_at) ASC, m.id ASC
 ),
 last_before_range AS (
 	SELECT DISTINCT ON (m.ingredient_id)
@@ -78,9 +78,9 @@ last_before_range AS (
 		m.stock_after AS begin_qty
 	FROM ingredient_stock_movements m
 	JOIN params p ON p.storage_id = m.storage_id
-	WHERE m.created_at < p.start_ts
+	WHERE COALESCE(m.effective_at, m.created_at) < p.start_ts
 		AND (p.ingredient_id IS NULL OR m.ingredient_id = p.ingredient_id)
-	ORDER BY m.ingredient_id, m.created_at DESC, m.id DESC
+	ORDER BY m.ingredient_id, COALESCE(m.effective_at, m.created_at) DESC, m.id DESC
 ),
 begin_qty AS (
 	SELECT bi.ingredient_id,
@@ -95,9 +95,9 @@ last_in_range AS (
 		m.stock_after AS end_qty
 	FROM ingredient_stock_movements m
 	JOIN params p ON p.storage_id = m.storage_id
-	WHERE m.created_at >= p.start_ts AND m.created_at <= p.end_ts
+	WHERE COALESCE(m.effective_at, m.created_at) >= p.start_ts AND COALESCE(m.effective_at, m.created_at) < p.end_ts
 		AND (p.ingredient_id IS NULL OR m.ingredient_id = p.ingredient_id)
-	ORDER BY m.ingredient_id, m.created_at DESC, m.id DESC
+	ORDER BY m.ingredient_id, COALESCE(m.effective_at, m.created_at) DESC, m.id DESC
 ),
 end_qty AS (
 	SELECT b.ingredient_id,
@@ -131,7 +131,7 @@ sums AS (
 		COALESCE(SUM(CASE WHEN m.event_type = 'inventory_shortage_out' THEN (m.qty_out * m.price_per_unit) ELSE 0 END), 0)::numeric(18,2) AS shortage_amount
 	FROM ingredient_stock_movements m
 	JOIN params p ON p.storage_id = m.storage_id
-	WHERE m.created_at >= p.start_ts AND m.created_at <= p.end_ts
+	WHERE COALESCE(m.effective_at, m.created_at) >= p.start_ts AND COALESCE(m.effective_at, m.created_at) < p.end_ts
 		AND (p.ingredient_id IS NULL OR m.ingredient_id = p.ingredient_id)
 	GROUP BY m.ingredient_id
 ),
@@ -143,7 +143,7 @@ cost_start AS (
 	JOIN params p ON p.storage_id = m.storage_id
 	WHERE m.created_at <= p.start_ts
 		AND (p.ingredient_id IS NULL OR m.ingredient_id = p.ingredient_id)
-	ORDER BY m.ingredient_id, m.created_at DESC, m.id DESC
+	ORDER BY m.ingredient_id, COALESCE(m.effective_at, m.created_at) DESC, m.id DESC
 ),
 cost_end AS (
 	SELECT DISTINCT ON (m.ingredient_id)
@@ -151,9 +151,9 @@ cost_end AS (
 		m.price_per_unit
 	FROM ingredient_stock_movements m
 	JOIN params p ON p.storage_id = m.storage_id
-	WHERE m.created_at <= p.end_ts
+	WHERE COALESCE(m.effective_at, m.created_at) <= p.end_ts
 		AND (p.ingredient_id IS NULL OR m.ingredient_id = p.ingredient_id)
-	ORDER BY m.ingredient_id, m.created_at DESC, m.id DESC
+	ORDER BY m.ingredient_id, COALESCE(m.effective_at, m.created_at) DESC, m.id DESC
 )
 SELECT
 	i.id AS ingredient_id,
@@ -258,7 +258,7 @@ base_ingredients AS (
 	SELECT DISTINCT m.ingredient_id
 	FROM ingredient_stock_movements m
 	JOIN params p ON p.storage_id = m.storage_id
-	WHERE m.created_at <= p.end_ts
+	WHERE COALESCE(m.effective_at, m.created_at) <= p.end_ts
 		AND (p.ingredient_id IS NULL OR m.ingredient_id = p.ingredient_id)
 ),
 sums AS (
@@ -267,7 +267,7 @@ sums AS (
 		COALESCE(SUM(CASE WHEN m.event_type = 'order_out' THEN (m.qty_out * m.price_per_unit) ELSE 0 END), 0)::numeric(18,2) AS order_out_amount
 	FROM ingredient_stock_movements m
 	JOIN params p ON p.storage_id = m.storage_id
-	WHERE m.created_at >= p.start_ts AND m.created_at <= p.end_ts
+	WHERE COALESCE(m.effective_at, m.created_at) >= p.start_ts AND COALESCE(m.effective_at, m.created_at) < p.end_ts
 		AND (p.ingredient_id IS NULL OR m.ingredient_id = p.ingredient_id)
 	GROUP BY m.ingredient_id
 )

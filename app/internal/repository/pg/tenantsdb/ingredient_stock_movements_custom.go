@@ -20,8 +20,9 @@ type InsertIngredientStockMovementParams struct {
 	StockAfter   pgtype.Numeric
 	PricePerUnit pgtype.Numeric
 
-	SourceType *string
-	SourceID   *uuid.UUID
+	SourceType  *string
+	SourceID    *uuid.UUID
+	EffectiveAt *pgtype.Timestamptz
 }
 
 func (q *Queries) InsertIngredientStockMovement(ctx context.Context, arg InsertIngredientStockMovementParams) error {
@@ -37,9 +38,10 @@ func (q *Queries) InsertIngredientStockMovement(ctx context.Context, arg InsertI
 			stock_after,
 			price_per_unit,
 			source_type,
-			source_id
+			source_id,
+			effective_at
 		)
-		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
+		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
 	`
 
 	_, err := q.db.Exec(ctx, sql,
@@ -54,6 +56,7 @@ func (q *Queries) InsertIngredientStockMovement(ctx context.Context, arg InsertI
 		arg.PricePerUnit,
 		arg.SourceType,
 		arg.SourceID,
+		arg.EffectiveAt,
 	)
 	return err
 }

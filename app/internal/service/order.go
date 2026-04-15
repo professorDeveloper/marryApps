@@ -1457,7 +1457,7 @@ func (s *OrderS) GetBillDetails(ctx context.Context, billID string) (*model.Bill
 	}, nil
 }
 
-func (s *OrderS) consumeItemStock(ctx context.Context, goodID uuid.UUID, quantity int32, orderID uuid.UUID) error {
+func (s *OrderS) consumeItemStock(ctx context.Context, goodID uuid.UUID, quantity int32, orderID uuid.UUID, orderDate pgtype.Timestamptz) error {
 	storageID, err := s.repo.Tenant(ctx).GetStorageByGoodID(ctx, goodID)
 	if err != nil {
 		return fmt.Errorf("failed to get storage for good: %w", err)
@@ -1529,6 +1529,7 @@ func (s *OrderS) consumeItemStock(ctx context.Context, goodID uuid.UUID, quantit
 			PricePerUnit: price,
 			SourceType:   &sourceType,
 			SourceID:     &srcID,
+			EffectiveAt:  &orderDate,
 		}); err != nil {
 			return fmt.Errorf("failed to insert stock movement: %w", err)
 		}
@@ -1882,7 +1883,15 @@ func (s *OrderS) UpdateOrderItemStatus(ctx context.Context, itemID string, statu
 	}
 
 	if currentStatus == string(pg.OrderItemsStatusPending) && status == string(pg.OrderItemsStatusCooking) {
-		if err := s.consumeItemStock(ctx, existing.GoodID, existing.Quantity, existing.OrderID); err != nil {
+		order, err := s.repo.Tenant(ctx).GetOrderByID(ctx, existing.OrderID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get order for stock deduction: %w", err)
+		}
+		orderDate := pgtype.Timestamptz{}
+		if order.CreatedAt.Valid {
+			orderDate = order.CreatedAt
+		}
+		if err := s.consumeItemStock(ctx, existing.GoodID, existing.Quantity, existing.OrderID, orderDate); err != nil {
 			return nil, fmt.Errorf("failed to deduct stock for order item: %w", err)
 		}
 	}
