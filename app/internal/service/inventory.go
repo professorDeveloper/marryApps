@@ -282,12 +282,12 @@ func (s *InventoryS) UpdateInventory(ctx context.Context, id string, req *model.
 	}
 
 	// Lock the inventory row and read current status
-	inv, err := s.repo.Tenant(ctx).GetInventoryForApply(ctx, inventoryID)
+	invForApply, err := s.repo.Tenant(ctx).GetInventoryForApply(ctx, inventoryID)
 	if err != nil {
 		return nil, fmt.Errorf("inventory not found: %w", err)
 	}
 
-	if inv.Status == "deleted" {
+	if invForApply.Status == "deleted" {
 		return nil, fmt.Errorf("cannot update a deleted inventory")
 	}
 
@@ -296,10 +296,16 @@ func (s *InventoryS) UpdateInventory(ctx context.Context, id string, req *model.
 		return nil, fmt.Errorf("cannot set status to 'deleted'; use the DELETE endpoint instead")
 	}
 
+	// Get full inventory record for date information
+	invFull, err := s.repo.Tenant(ctx).GetInventoryByID(ctx, inventoryID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get inventory: %w", err)
+	}
+
 	// Handle status transition with stock effects
-	if req.Status != nil && *req.Status != "" && *req.Status != inv.Status {
+	if req.Status != nil && *req.Status != "" && *req.Status != invForApply.Status {
 		newStatus := *req.Status
-		storagePg := pgtype.UUID{Bytes: inv.StorageID, Valid: true}
+		storagePg := pgtype.UUID{Bytes: invForApply.StorageID, Valid: true}
 
 		items, err := s.repo.Tenant(ctx).GetInventoryItemsByInventoryIDAll(ctx, inventoryID)
 		if err != nil {
@@ -307,16 +313,16 @@ func (s *InventoryS) UpdateInventory(ctx context.Context, id string, req *model.
 		}
 
 		switch {
-		case inv.Status == "draft" && newStatus == "active":
-			if err := s.applyStockForItems(ctx, inventoryID, inv.StorageID, storagePg, items, "draft_to_active"); err != nil {
+		case invForApply.Status == "draft" && newStatus == "active":
+			if err := s.applyStockForItems(ctx, inventoryID, invForApply.StorageID, storagePg, items, "draft_to_active", invFull.Date); err != nil {
 				return nil, err
 			}
-		case inv.Status == "active" && newStatus == "draft":
-			if err := s.reverseStockForItems(ctx, inventoryID, inv.StorageID, storagePg, items, "active_to_draft"); err != nil {
+		case invForApply.Status == "active" && newStatus == "draft":
+			if err := s.reverseStockForItems(ctx, inventoryID, invForApply.StorageID, storagePg, items, "active_to_draft", invFull.Date); err != nil {
 				return nil, err
 			}
 		default:
-			return nil, fmt.Errorf("invalid status transition: %s → %s", inv.Status, newStatus)
+			return nil, fmt.Errorf("invalid status transition: %s → %s", invForApply.Status, newStatus)
 		}
 	}
 
@@ -438,6 +444,12 @@ func (s *InventoryS) ReplaceInventoryItems(ctx context.Context, inventoryID stri
 		return nil, fmt.Errorf("cannot edit a deleted inventory")
 	}
 
+	// Get full inventory record for date information
+	invFull, err := s.repo.Tenant(ctx).GetInventoryByID(ctx, invID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get inventory: %w", err)
+	}
+
 	// Determine old/new status for stock transition
 	oldStatus := inv.Status
 	newStatus := oldStatus
@@ -478,7 +490,7 @@ func (s *InventoryS) ReplaceInventoryItems(ctx context.Context, inventoryID stri
 
 	// If transitioning active→draft, reverse all existing items' stock before processing
 	if oldStatus == "active" && newStatus == "draft" {
-		if err := s.reverseStockForItems(ctx, invID, inv.StorageID, pgtype.UUID{Bytes: inv.StorageID, Valid: true}, existingItems, "active_to_draft"); err != nil {
+		if err := s.reverseStockForItems(ctx, invID, inv.StorageID, pgtype.UUID{Bytes: inv.StorageID, Valid: true}, existingItems, "active_to_draft", invFull.Date); err != nil {
 			return nil, err
 		}
 	}
@@ -737,6 +749,12 @@ func (s *InventoryS) DeleteInventory(ctx context.Context, id string) error {
 		return fmt.Errorf("inventory is already deleted")
 	}
 
+	// Get full inventory record for date information
+	invFull, err := s.repo.Tenant(ctx).GetInventoryByID(ctx, inventoryID)
+	if err != nil {
+		return fmt.Errorf("failed to get inventory: %w", err)
+	}
+
 	// If active, reverse stock before deleting
 	if inv.Status == "active" {
 		storagePg := pgtype.UUID{Bytes: inv.StorageID, Valid: true}
@@ -744,7 +762,7 @@ func (s *InventoryS) DeleteInventory(ctx context.Context, id string) error {
 		if err != nil {
 			return fmt.Errorf("failed to get inventory items: %w", err)
 		}
-		if err := s.reverseStockForItems(ctx, inventoryID, inv.StorageID, storagePg, items, "inventory_deleted"); err != nil {
+		if err := s.reverseStockForItems(ctx, inventoryID, inv.StorageID, storagePg, items, "inventory_deleted", invFull.Date); err != nil {
 			return err
 		}
 	}
@@ -915,14 +933,14 @@ func (s *InventoryS) UpsertInventoryItems(ctx context.Context, inventoryID strin
 
 // applyStockForItems refreshes each item's system_quantity to current stock then sets stock = counted.
 // Used when transitioning draft → active.
-func (s *InventoryS) applyStockForItems(ctx context.Context, invID uuid.UUID, storageID uuid.UUID, storagePg pgtype.UUID, items []pg.InventoryItemForProcess, eventType string) error {
+func (s *InventoryS) applyStockForItems(ctx context.Context, invID uuid.UUID, storageID uuid.UUID, storagePg pgtype.UUID, items []pg.InventoryItemForProcess, eventType string, inventoryDate pgtype.Date) error {
 	zero := pgtype.Numeric{}
 	_ = zero.Scan("0")
 	sourceType := "inventory"
 
 	for _, item := range items {
-		// Refresh system_quantity to current stock
-		refreshed, err := s.repo.Tenant(ctx).UpdateInventoryItemSystemQuantityFromStock(ctx, item.ID)
+		// Refresh system_quantity to point-in-time stock at inventory date
+		refreshed, err := s.repo.Tenant(ctx).UpdateInventoryItemSystemQuantityFromMovements(ctx, item.ID)
 		if err != nil {
 			return fmt.Errorf("failed to refresh system_quantity: %w", err)
 		}
@@ -953,11 +971,17 @@ func (s *InventoryS) applyStockForItems(ctx context.Context, invID uuid.UUID, st
 				ev = "inventory_out"
 			}
 			srcID := invID
+			// Convert inventory date to TIMESTAMPTZ for effective_at
+			var effectiveAt *pgtype.Timestamptz
+			if inventoryDate.Valid {
+				effectiveAt = &pgtype.Timestamptz{Time: inventoryDate.Time.In(time.UTC), Valid: true}
+			}
 			_ = s.repo.Tenant(ctx).InsertIngredientStockMovement(ctx, pg.InsertIngredientStockMovementParams{
 				ID: uuid.New(), StorageID: storageID, IngredientID: item.IngredientID,
 				EventType: ev, QtyIn: zero, QtyOut: zero,
 				StockBefore: locked.Quantity, StockAfter: updated.Quantity,
 				PricePerUnit: zero, SourceType: &sourceType, SourceID: &srcID,
+				EffectiveAt: effectiveAt,
 			})
 		}
 	}
@@ -966,7 +990,7 @@ func (s *InventoryS) applyStockForItems(ctx context.Context, invID uuid.UUID, st
 
 // reverseStockForItems reverses the delta (counted - system_quantity) for each item.
 // Used when transitioning active → draft or deleting an active inventory.
-func (s *InventoryS) reverseStockForItems(ctx context.Context, invID uuid.UUID, storageID uuid.UUID, storagePg pgtype.UUID, items []pg.InventoryItemForProcess, eventType string) error {
+func (s *InventoryS) reverseStockForItems(ctx context.Context, invID uuid.UUID, storageID uuid.UUID, storagePg pgtype.UUID, items []pg.InventoryItemForProcess, eventType string, inventoryDate pgtype.Date) error {
 	zero := pgtype.Numeric{}
 	_ = zero.Scan("0")
 	sourceType := "inventory"
@@ -1003,11 +1027,17 @@ func (s *InventoryS) reverseStockForItems(ctx context.Context, invID uuid.UUID, 
 		}
 
 		srcID := invID
+		// Convert inventory date to TIMESTAMPTZ for effective_at
+		var effectiveAt *pgtype.Timestamptz
+		if inventoryDate.Valid {
+			effectiveAt = &pgtype.Timestamptz{Time: inventoryDate.Time.In(time.UTC), Valid: true}
+		}
 		_ = s.repo.Tenant(ctx).InsertIngredientStockMovement(ctx, pg.InsertIngredientStockMovementParams{
 			ID: uuid.New(), StorageID: storageID, IngredientID: item.IngredientID,
 			EventType: eventType, QtyIn: zero, QtyOut: zero,
 			StockBefore: locked.Quantity, StockAfter: updated.Quantity,
 			PricePerUnit: zero, SourceType: &sourceType, SourceID: &srcID,
+			EffectiveAt: effectiveAt,
 		})
 	}
 	return nil

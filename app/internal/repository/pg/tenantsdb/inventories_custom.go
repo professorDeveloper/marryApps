@@ -104,6 +104,32 @@ func (q *Queries) InsertInventoryItemWithSystemQty(ctx context.Context, id, inve
 	return item, nil
 }
 
+// UpdateInventoryItemSystemQuantityFromMovements refreshes system_quantity by reconstructing balance from movements at the inventory date.
+// This ensures inventory comparisons use point-in-time stock, not current stock.
+func (q *Queries) UpdateInventoryItemSystemQuantityFromMovements(ctx context.Context, itemID uuid.UUID) (InventoryItemForProcess, error) {
+	const sql = `
+		UPDATE inventory_items ii
+		SET system_quantity = COALESCE((
+			SELECT COALESCE(stock_after, 0)
+			FROM ingredient_stock_movements m
+			WHERE m.ingredient_id = ii.ingredient_id
+			  AND m.storage_id = (SELECT storage_id FROM inventories WHERE id = ii.inventory_id)
+			  AND COALESCE(m.effective_at, m.created_at) <= (SELECT date::timestamptz AT TIME ZONE 'UTC' FROM inventories WHERE id = ii.inventory_id)
+			ORDER BY COALESCE(m.effective_at, m.created_at) DESC, m.id DESC
+			LIMIT 1
+		), 0),
+		updated_at = NOW()
+		WHERE ii.id = $1 AND ii.deleted_at = 0
+		RETURNING id, inventory_id, ingredient_id, counted_quantity, system_quantity
+	`
+	row := q.db.QueryRow(ctx, sql, itemID)
+	var item InventoryItemForProcess
+	if err := row.Scan(&item.ID, &item.InventoryID, &item.IngredientID, &item.CountedQuantity, &item.SystemQuantity); err != nil {
+		return InventoryItemForProcess{}, err
+	}
+	return item, nil
+}
+
 // DeleteInventoryItemByID soft-deletes a single inventory item by its ID.
 func (q *Queries) DeleteInventoryItemByID(ctx context.Context, id uuid.UUID) error {
 	const sql = `

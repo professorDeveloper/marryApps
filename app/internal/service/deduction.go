@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math/big"
 	"strconv"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -346,7 +347,7 @@ func (s *DeductionS) expandGoodToDirectCompounds(ctx context.Context, goodID uui
 
 // reverseAllDeductionStock adds back all stock deducted by this deduction (via deduction_item_ingredients).
 // Soft-deletes breakdown records after reversal.
-func (s *DeductionS) reverseAllDeductionStock(ctx context.Context, deductionID uuid.UUID, storageID uuid.UUID, eventType string) error {
+func (s *DeductionS) reverseAllDeductionStock(ctx context.Context, deductionID uuid.UUID, storageID uuid.UUID, eventType string, deductionDate pgtype.Timestamptz) error {
 	storagePg := pgtype.UUID{Bytes: storageID, Valid: true}
 	zero := pgtype.Numeric{}
 	_ = zero.Scan("0")
@@ -390,6 +391,7 @@ func (s *DeductionS) reverseAllDeductionStock(ctx context.Context, deductionID u
 				PricePerUnit: b.PricePerUnit,
 				SourceType:   &et,
 				SourceID:     &deductionID,
+				EffectiveAt:  &deductionDate,
 			})
 		}
 		_ = s.repo.Tenant(ctx).DeleteDeductionItemIngredientsByItemID(ctx, item.ID)
@@ -398,7 +400,7 @@ func (s *DeductionS) reverseAllDeductionStock(ctx context.Context, deductionID u
 }
 
 // reverseDeductionItemStock reverses stock for a single deduction item and soft-deletes its breakdown records.
-func (s *DeductionS) reverseDeductionItemStock(ctx context.Context, deductionID uuid.UUID, itemID uuid.UUID, storageID uuid.UUID, eventType string) error {
+func (s *DeductionS) reverseDeductionItemStock(ctx context.Context, deductionID uuid.UUID, itemID uuid.UUID, storageID uuid.UUID, eventType string, deductionDate pgtype.Timestamptz) error {
 	storagePg := pgtype.UUID{Bytes: storageID, Valid: true}
 	zero := pgtype.Numeric{}
 	_ = zero.Scan("0")
@@ -440,6 +442,7 @@ func (s *DeductionS) reverseDeductionItemStock(ctx context.Context, deductionID 
 			PricePerUnit: b.PricePerUnit,
 			SourceType:   &et,
 			SourceID:     &deductionID,
+			EffectiveAt:  &deductionDate,
 		})
 	}
 	_ = s.repo.Tenant(ctx).DeleteDeductionItemIngredientsByItemID(ctx, itemID)
@@ -1027,7 +1030,11 @@ func (s *DeductionS) UpdateDeduction(ctx context.Context, id string, req *model.
 		storagePg := pgtype.UUID{Bytes: current.StorageID, Valid: true}
 		_ = storagePg
 		if current.Status == "active" && newStatus == "draft" {
-			if err := s.reverseAllDeductionStock(ctx, deductionID, current.StorageID, "deduction_draft_in"); err != nil {
+			deductionDate := pgtype.Timestamptz{}
+			if current.Date.Valid {
+				deductionDate = pgtype.Timestamptz{Time: current.Date.Time.In(time.UTC), Valid: true}
+			}
+			if err := s.reverseAllDeductionStock(ctx, deductionID, current.StorageID, "deduction_draft_in", deductionDate); err != nil {
 				return nil, fmt.Errorf("failed to reverse stock: %w", err)
 			}
 		} else if current.Status == "draft" && newStatus == "active" {
@@ -1077,7 +1084,11 @@ func (s *DeductionS) DeleteDeduction(ctx context.Context, id string) error {
 	}
 
 	if deduction.Status == "active" {
-		if err := s.reverseAllDeductionStock(ctx, deductionID, deduction.StorageID, "deduction_deleted_in"); err != nil {
+		deductionDate := pgtype.Timestamptz{}
+		if deduction.Date.Valid {
+			deductionDate = pgtype.Timestamptz{Time: deduction.Date.Time.In(time.UTC), Valid: true}
+		}
+		if err := s.reverseAllDeductionStock(ctx, deductionID, deduction.StorageID, "deduction_deleted_in", deductionDate); err != nil {
 			return fmt.Errorf("failed to reverse stock: %w", err)
 		}
 	}
@@ -1143,7 +1154,11 @@ func (s *DeductionS) UpsertDeductionItems(ctx context.Context, id string, req *m
 
 	// Step 1: Reverse stock if was active (using OLD storage)
 	if oldStatus == "active" {
-		if err := s.reverseAllDeductionStock(ctx, deductionID, deduction.StorageID, "deduction_updated_in"); err != nil {
+		deductionDate := pgtype.Timestamptz{}
+		if deduction.Date.Valid {
+			deductionDate = pgtype.Timestamptz{Time: deduction.Date.Time.In(time.UTC), Valid: true}
+		}
+		if err := s.reverseAllDeductionStock(ctx, deductionID, deduction.StorageID, "deduction_updated_in", deductionDate); err != nil {
 			return nil, fmt.Errorf("failed to reverse stock: %w", err)
 		}
 	}
@@ -1378,7 +1393,11 @@ func (s *DeductionS) DeleteDeductionItem(ctx context.Context, deductionID, itemI
 
 	// Reverse stock only when deduction is active
 	if deduction.Status == "active" {
-		if err := s.reverseDeductionItemStock(ctx, dedID, itemUUID, deduction.StorageID, "deduction_item_deleted_in"); err != nil {
+		deductionDate := pgtype.Timestamptz{}
+		if deduction.Date.Valid {
+			deductionDate = pgtype.Timestamptz{Time: deduction.Date.Time.In(time.UTC), Valid: true}
+		}
+		if err := s.reverseDeductionItemStock(ctx, dedID, itemUUID, deduction.StorageID, "deduction_item_deleted_in", deductionDate); err != nil {
 			return nil, fmt.Errorf("failed to reverse item stock: %w", err)
 		}
 	}

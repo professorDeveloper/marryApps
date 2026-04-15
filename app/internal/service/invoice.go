@@ -288,7 +288,7 @@ func (s *InvoiceS) UpdateInvoice(ctx context.Context, id string, req *model.Upda
 					return nil, fmt.Errorf("invoice storage_id is required to reverse stock")
 				}
 				for _, d := range details {
-					if err := s.applyInvoiceStockMovement(ctx, currentInvoice.StorageID, d.IngredientID, zeroNumeric(), d.Quantity, "invoice_status_revert_out", d.PricePerUnit, invoiceID); err != nil {
+					if err := s.applyInvoiceStockMovement(ctx, currentInvoice.StorageID, d.IngredientID, zeroNumeric(), d.Quantity, "invoice_status_revert_out", d.PricePerUnit, invoiceID, currentInvoice.Date); err != nil {
 						return nil, err
 					}
 				}
@@ -306,7 +306,7 @@ func (s *InvoiceS) UpdateInvoice(ctx context.Context, id string, req *model.Upda
 					triggerPriceRecalculation(ctx, s.repo, d.IngredientID)
 					_ = s.repo.Tenant(ctx).EnsureIngredientVisibilityForCurrentBranch(ctx, d.IngredientID)
 
-					if err := s.applyInvoiceStockMovement(ctx, effectiveStorage, d.IngredientID, d.Quantity, zeroNumeric(), "invoice_status_received_in", d.PricePerUnit, invoiceID); err != nil {
+					if err := s.applyInvoiceStockMovement(ctx, effectiveStorage, d.IngredientID, d.Quantity, zeroNumeric(), "invoice_status_received_in", d.PricePerUnit, invoiceID, currentInvoice.Date); err != nil {
 						return nil, err
 					}
 				}
@@ -337,10 +337,10 @@ func (s *InvoiceS) UpdateInvoice(ctx context.Context, id string, req *model.Upda
 			}
 
 			for _, d := range details {
-				if err := s.applyInvoiceStockMovement(ctx, currentInvoice.StorageID, d.IngredientID, zeroNumeric(), d.Quantity, "invoice_storage_move_out", d.PricePerUnit, invoiceID); err != nil {
+				if err := s.applyInvoiceStockMovement(ctx, currentInvoice.StorageID, d.IngredientID, zeroNumeric(), d.Quantity, "invoice_storage_move_out", d.PricePerUnit, invoiceID, currentInvoice.Date); err != nil {
 					return nil, err
 				}
-				if err := s.applyInvoiceStockMovement(ctx, storageID, d.IngredientID, d.Quantity, zeroNumeric(), "invoice_storage_move_in", d.PricePerUnit, invoiceID); err != nil {
+				if err := s.applyInvoiceStockMovement(ctx, storageID, d.IngredientID, d.Quantity, zeroNumeric(), "invoice_storage_move_in", d.PricePerUnit, invoiceID, currentInvoice.Date); err != nil {
 					return nil, err
 				}
 			}
@@ -396,6 +396,7 @@ func (s *InvoiceS) DeleteInvoice(ctx context.Context, id string) error {
 			"invoice_deleted_out",
 			d.PricePerUnit,
 			invoiceID,
+			inv.Date,
 		); err != nil {
 			return fmt.Errorf("failed to reverse stock for ingredient %s: %w", d.IngredientID, err)
 		}
@@ -622,6 +623,7 @@ func (s *InvoiceS) CreateInvoiceDetail(ctx context.Context, invoiceID string, re
 			"invoice_in",
 			pricePerUnit,
 			invoiceUUID,
+			invoice.Date,
 		); err != nil {
 			return nil, err
 		}
@@ -736,6 +738,7 @@ func (s *InvoiceS) CreateInvoiceDetailsBatch(ctx context.Context, invoiceID stri
 				"invoice_in",
 				pricePerUnit,
 				invoiceUUID,
+				invoice.Date,
 			); err != nil {
 				return nil, fmt.Errorf("item %d: failed to add stock: %w", i+1, err)
 			}
@@ -951,10 +954,10 @@ func (s *InvoiceS) UpdateInvoiceDetail(ctx context.Context, id string, req *mode
 	if appliesStock {
 		sourceID := currentDetail.InvoiceID
 		if currentDetail.IngredientID != updateIngredientID {
-			if err := s.applyInvoiceStockMovement(ctx, inv.StorageID, currentDetail.IngredientID, zeroNumeric(), currentDetail.Quantity, "invoice_update_out", currentDetail.PricePerUnit, sourceID); err != nil {
+			if err := s.applyInvoiceStockMovement(ctx, inv.StorageID, currentDetail.IngredientID, zeroNumeric(), currentDetail.Quantity, "invoice_update_out", currentDetail.PricePerUnit, sourceID, inv.Date); err != nil {
 				return nil, err
 			}
-			if err := s.applyInvoiceStockMovement(ctx, inv.StorageID, updateIngredientID, updateQuantity, zeroNumeric(), "invoice_update_in", updatePricePerUnit, sourceID); err != nil {
+			if err := s.applyInvoiceStockMovement(ctx, inv.StorageID, updateIngredientID, updateQuantity, zeroNumeric(), "invoice_update_in", updatePricePerUnit, sourceID, inv.Date); err != nil {
 				return nil, err
 			}
 		} else {
@@ -967,7 +970,7 @@ func (s *InvoiceS) UpdateInvoiceDetail(ctx context.Context, id string, req *mode
 				if err != nil {
 					return nil, err
 				}
-				if err := s.applyInvoiceStockMovement(ctx, inv.StorageID, updateIngredientID, diff, zeroNumeric(), "invoice_update_in", updatePricePerUnit, sourceID); err != nil {
+				if err := s.applyInvoiceStockMovement(ctx, inv.StorageID, updateIngredientID, diff, zeroNumeric(), "invoice_update_in", updatePricePerUnit, sourceID, inv.Date); err != nil {
 					return nil, err
 				}
 			} else if cmp < 0 {
@@ -975,12 +978,12 @@ func (s *InvoiceS) UpdateInvoiceDetail(ctx context.Context, id string, req *mode
 				if err != nil {
 					return nil, err
 				}
-				if err := s.applyInvoiceStockMovement(ctx, inv.StorageID, updateIngredientID, zeroNumeric(), diff, "invoice_update_out", currentDetail.PricePerUnit, sourceID); err != nil {
+				if err := s.applyInvoiceStockMovement(ctx, inv.StorageID, updateIngredientID, zeroNumeric(), diff, "invoice_update_out", currentDetail.PricePerUnit, sourceID, inv.Date); err != nil {
 					return nil, err
 				}
 			} else {
 				if numericToString(updatePricePerUnit) != numericToString(currentDetail.PricePerUnit) {
-					if err := s.applyInvoiceStockMovement(ctx, inv.StorageID, updateIngredientID, zeroNumeric(), zeroNumeric(), "invoice_price_update", updatePricePerUnit, sourceID); err != nil {
+					if err := s.applyInvoiceStockMovement(ctx, inv.StorageID, updateIngredientID, zeroNumeric(), zeroNumeric(), "invoice_price_update", updatePricePerUnit, sourceID, inv.Date); err != nil {
 						return nil, err
 					}
 				}
@@ -1034,7 +1037,7 @@ func (s *InvoiceS) UpdateInvoiceDetailQuantity(ctx context.Context, id string, q
 			if err != nil {
 				return nil, err
 			}
-			if err := s.applyInvoiceStockMovement(ctx, inv.StorageID, currentDetail.IngredientID, diff, zeroNumeric(), "invoice_update_in", currentDetail.PricePerUnit, currentDetail.InvoiceID); err != nil {
+			if err := s.applyInvoiceStockMovement(ctx, inv.StorageID, currentDetail.IngredientID, diff, zeroNumeric(), "invoice_update_in", currentDetail.PricePerUnit, currentDetail.InvoiceID, inv.Date); err != nil {
 				return nil, err
 			}
 		} else if cmp < 0 {
@@ -1042,7 +1045,7 @@ func (s *InvoiceS) UpdateInvoiceDetailQuantity(ctx context.Context, id string, q
 			if err != nil {
 				return nil, err
 			}
-			if err := s.applyInvoiceStockMovement(ctx, inv.StorageID, currentDetail.IngredientID, zeroNumeric(), diff, "invoice_update_out", currentDetail.PricePerUnit, currentDetail.InvoiceID); err != nil {
+			if err := s.applyInvoiceStockMovement(ctx, inv.StorageID, currentDetail.IngredientID, zeroNumeric(), diff, "invoice_update_out", currentDetail.PricePerUnit, currentDetail.InvoiceID, inv.Date); err != nil {
 				return nil, err
 			}
 		}
@@ -1076,7 +1079,7 @@ func (s *InvoiceS) DeleteInvoiceDetail(ctx context.Context, id string) error {
 	}
 
 	if appliesStock {
-		if err := s.applyInvoiceStockMovement(ctx, inv.StorageID, currentDetail.IngredientID, zeroNumeric(), currentDetail.Quantity, "invoice_delete_out", currentDetail.PricePerUnit, currentDetail.InvoiceID); err != nil {
+		if err := s.applyInvoiceStockMovement(ctx, inv.StorageID, currentDetail.IngredientID, zeroNumeric(), currentDetail.Quantity, "invoice_delete_out", currentDetail.PricePerUnit, currentDetail.InvoiceID, inv.Date); err != nil {
 			return err
 		}
 	}
@@ -1108,7 +1111,7 @@ func (s *InvoiceS) RestoreInvoiceDetail(ctx context.Context, id string) error {
 		return fmt.Errorf("invoice storage_id is required to update stock")
 	}
 	if appliesStock {
-		if err := s.applyInvoiceStockMovement(ctx, inv.StorageID, detail.IngredientID, detail.Quantity, zeroNumeric(), "invoice_restore_in", detail.PricePerUnit, detail.InvoiceID); err != nil {
+		if err := s.applyInvoiceStockMovement(ctx, inv.StorageID, detail.IngredientID, detail.Quantity, zeroNumeric(), "invoice_restore_in", detail.PricePerUnit, detail.InvoiceID, inv.Date); err != nil {
 			return err
 		}
 	}
@@ -1116,7 +1119,7 @@ func (s *InvoiceS) RestoreInvoiceDetail(ctx context.Context, id string) error {
 	return nil
 }
 
-func (s *InvoiceS) applyInvoiceStockMovement(ctx context.Context, storageID pgtype.UUID, ingredientID uuid.UUID, qtyIn, qtyOut pgtype.Numeric, eventType string, pricePerUnit pgtype.Numeric, invoiceID uuid.UUID) error {
+func (s *InvoiceS) applyInvoiceStockMovement(ctx context.Context, storageID pgtype.UUID, ingredientID uuid.UUID, qtyIn, qtyOut pgtype.Numeric, eventType string, pricePerUnit pgtype.Numeric, invoiceID uuid.UUID, invoiceDate pgtype.Timestamp) error {
 	if !storageID.Valid {
 		return fmt.Errorf("invoice storage_id is required to update stock")
 	}
@@ -1169,6 +1172,13 @@ func (s *InvoiceS) applyInvoiceStockMovement(ctx context.Context, storageID pgty
 	}
 	sourceType := "invoice"
 	invID := invoiceID
+
+	// Convert invoice date to TIMESTAMPTZ for effective_at
+	var effectiveAt *pgtype.Timestamptz
+	if invoiceDate.Valid {
+		effectiveAt = &pgtype.Timestamptz{Time: invoiceDate.Time, Valid: true}
+	}
+
 	if err := s.repo.Tenant(ctx).InsertIngredientStockMovement(ctx, pg.InsertIngredientStockMovementParams{
 		ID:           uuid.New(),
 		StorageID:    uuid.UUID(storageID.Bytes),
@@ -1181,6 +1191,7 @@ func (s *InvoiceS) applyInvoiceStockMovement(ctx context.Context, storageID pgty
 		PricePerUnit: pricePerUnit,
 		SourceType:   &sourceType,
 		SourceID:     &invID,
+		EffectiveAt:  effectiveAt,
 	}); err != nil {
 		return fmt.Errorf("failed to insert stock movement: %w", err)
 	}
@@ -1355,6 +1366,7 @@ func (s *InvoiceS) UpsertInvoiceDetails(ctx context.Context, invoiceID string, r
 				"invoice_batch_update_out",
 				d.PricePerUnit,
 				invoiceUUID,
+				invoice.Date,
 			); err != nil {
 				return nil, fmt.Errorf("failed to reverse stock for ingredient %s: %w", d.IngredientID, err)
 			}
@@ -1483,6 +1495,7 @@ func (s *InvoiceS) UpsertInvoiceDetails(ctx context.Context, invoiceID string, r
 				"invoice_batch_update_in",
 				pricePerUnit,
 				invoiceUUID,
+				invoice.Date,
 			); err != nil {
 				return nil, fmt.Errorf("item %d: failed to add stock: %w", i+1, err)
 			}
@@ -1778,6 +1791,12 @@ func (s *InvoiceS) CreateInvoiceWithDetails(ctx context.Context, req *model.Crea
 		return nil, fmt.Errorf("invalid invoice id in response: %w", err)
 	}
 
+	// Get the full invoice for effective_at timestamp
+	invoice, err := s.repo.Tenant(ctx).GetInvoiceByID(ctx, invoiceID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to retrieve invoice for details: %w", err)
+	}
+
 	withDetailsAppliesStock := invoiceResp.Status == model.InvoiceStatusReceived
 
 	var storagePg pgtype.UUID
@@ -1868,6 +1887,7 @@ func (s *InvoiceS) CreateInvoiceWithDetails(ctx context.Context, req *model.Crea
 				"invoice_in",
 				pricePerUnit,
 				invoiceID,
+				invoice.Date,
 			); err != nil {
 				return nil, fmt.Errorf("item %d: failed to add stock: %w", i+1, err)
 			}

@@ -1484,7 +1484,27 @@ func (s *OrderS) GetBillDetails(ctx context.Context, billID string) (*model.Bill
 	}, nil
 }
 
-func (s *OrderS) applyIngredientUsagesForOrder(ctx context.Context, storageID pgtype.UUID, orderID uuid.UUID, usages []ingredientUsage) error {
+func (s *OrderS) consumeItemStock(ctx context.Context, goodID uuid.UUID, quantity int32, orderID uuid.UUID, orderDate pgtype.Timestamptz) error {
+	storageID, err := s.repo.Tenant(ctx).GetStorageByGoodID(ctx, goodID)
+	if err != nil {
+		return fmt.Errorf("failed to get storage for good: %w", err)
+	}
+	if !storageID.Valid {
+		// No storage configured for this good's department — skip stock deduction
+		return nil
+	}
+
+	mult := pgtype.Numeric{}
+	mult.Valid = true
+	if err := mult.Scan(strconv.Itoa(int(quantity))); err != nil {
+		return fmt.Errorf("invalid item quantity: %w", err)
+	}
+
+	usages, err := s.expandGoodToIngredientsByCalculations(ctx, goodID, mult)
+	if err != nil {
+		return err
+	}
+
 	for _, u := range usages {
 		stockID, err := s.repo.Tenant(ctx).EnsureIngredientStockByStorage(ctx, pg.EnsureIngredientStockByStorageParams{
 			ID:           uuid.New(),
@@ -1544,7 +1564,7 @@ func (s *OrderS) applyIngredientUsagesForOrder(ctx context.Context, storageID pg
 }
 
 // consumeItemStock deducts ingredient stock for the base good and for each selected modifier (tech card).
-func (s *OrderS) consumeItemStock(ctx context.Context, orderItemID uuid.UUID) error {
+func (s *OrderS) consumeItemStockWithModifiers(ctx context.Context, orderItemID uuid.UUID) error {
 	item, err := s.repo.Tenant(ctx).GetOrderItemByID(ctx, orderItemID)
 	if err != nil {
 		return fmt.Errorf("failed to get order item: %w", err)
@@ -1572,8 +1592,60 @@ func (s *OrderS) consumeItemStock(ctx context.Context, orderItemID uuid.UUID) er
 	if err != nil {
 		return err
 	}
-	if err := s.applyIngredientUsagesForOrder(ctx, storageID, orderID, usages); err != nil {
-		return err
+	for _, u := range usages {
+		stockID, err := s.repo.Tenant(ctx).EnsureIngredientStockByStorage(ctx, pg.EnsureIngredientStockByStorageParams{
+			ID:           uuid.New(),
+			IngredientID: u.ingredientID,
+			StorageID:    storageID,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to ensure ingredient stock row: %w", err)
+		}
+
+		locked, err := s.repo.Tenant(ctx).GetStockByIngredientAndStorageForUpdate(ctx, pg.GetStockByIngredientAndStorageForUpdateParams{
+			IngredientID: u.ingredientID,
+			StorageID:    storageID,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to lock ingredient stock row: %w", err)
+		}
+
+		ing, err := s.repo.Tenant(ctx).GetIngredientByID(ctx, u.ingredientID)
+		if err != nil {
+			return fmt.Errorf("failed to get ingredient: %w", err)
+		}
+		price := ing.PricePerUnit
+		if !price.Valid {
+			_ = price.Scan("0")
+		}
+
+		updated, err := s.repo.Tenant(ctx).RemoveFromIngredientStock(ctx, pg.RemoveFromIngredientStockParams{
+			ID:       stockID,
+			Quantity: u.quantity,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to consume ingredient stock: %w", err)
+		}
+
+		zero := pgtype.Numeric{}
+		_ = zero.Scan("0")
+		sourceType := "order"
+		srcID := orderID
+		if err := s.repo.Tenant(ctx).InsertIngredientStockMovement(ctx, pg.InsertIngredientStockMovementParams{
+			ID:           uuid.New(),
+			StorageID:    uuid.UUID(storageID.Bytes),
+			IngredientID: u.ingredientID,
+			EventType:    "order_out",
+			QtyIn:        zero,
+			QtyOut:       u.quantity,
+			StockBefore:  locked.Quantity,
+			StockAfter:   updated.Quantity,
+			PricePerUnit: price,
+			SourceType:   &sourceType,
+			SourceID:     &srcID,
+		}); err != nil {
+			return fmt.Errorf("failed to insert stock movement: %w", err)
+		}
 	}
 
 	modRows, err := s.repo.Tenant(ctx).GetOrderItemModifiersByOrderItemID(ctx, orderItemID)
@@ -1610,8 +1682,60 @@ func (s *OrderS) consumeItemStock(ctx context.Context, orderItemID uuid.UUID) er
 		if err != nil {
 			return err
 		}
-		if err := s.applyIngredientUsagesForOrder(ctx, storageID, orderID, modUsages); err != nil {
-			return err
+		for _, u := range modUsages {
+			stockID, err := s.repo.Tenant(ctx).EnsureIngredientStockByStorage(ctx, pg.EnsureIngredientStockByStorageParams{
+				ID:           uuid.New(),
+				IngredientID: u.ingredientID,
+				StorageID:    storageID,
+			})
+			if err != nil {
+				return fmt.Errorf("failed to ensure ingredient stock row: %w", err)
+			}
+
+			locked, err := s.repo.Tenant(ctx).GetStockByIngredientAndStorageForUpdate(ctx, pg.GetStockByIngredientAndStorageForUpdateParams{
+				IngredientID: u.ingredientID,
+				StorageID:    storageID,
+			})
+			if err != nil {
+				return fmt.Errorf("failed to lock ingredient stock row: %w", err)
+			}
+
+			ing, err := s.repo.Tenant(ctx).GetIngredientByID(ctx, u.ingredientID)
+			if err != nil {
+				return fmt.Errorf("failed to get ingredient: %w", err)
+			}
+			price := ing.PricePerUnit
+			if !price.Valid {
+				_ = price.Scan("0")
+			}
+
+			updated, err := s.repo.Tenant(ctx).RemoveFromIngredientStock(ctx, pg.RemoveFromIngredientStockParams{
+				ID:       stockID,
+				Quantity: u.quantity,
+			})
+			if err != nil {
+				return fmt.Errorf("failed to consume ingredient stock: %w", err)
+			}
+
+			zero := pgtype.Numeric{}
+			_ = zero.Scan("0")
+			sourceType := "order"
+			srcID := orderID
+			if err := s.repo.Tenant(ctx).InsertIngredientStockMovement(ctx, pg.InsertIngredientStockMovementParams{
+				ID:           uuid.New(),
+				StorageID:    uuid.UUID(storageID.Bytes),
+				IngredientID: u.ingredientID,
+				EventType:    "order_out",
+				QtyIn:        zero,
+				QtyOut:       u.quantity,
+				StockBefore:  locked.Quantity,
+				StockAfter:   updated.Quantity,
+				PricePerUnit: price,
+				SourceType:   &sourceType,
+				SourceID:     &srcID,
+			}); err != nil {
+				return fmt.Errorf("failed to insert stock movement: %w", err)
+			}
 		}
 	}
 
@@ -2060,7 +2184,15 @@ func (s *OrderS) UpdateOrderItemStatus(ctx context.Context, itemID string, statu
 	}
 
 	if currentStatus == string(pg.OrderItemsStatusPending) && status == string(pg.OrderItemsStatusCooking) {
-		if err := s.consumeItemStock(ctx, existing.ID); err != nil {
+		order, err := s.repo.Tenant(ctx).GetOrderByID(ctx, existing.OrderID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get order for stock deduction: %w", err)
+		}
+		orderDate := pgtype.Timestamptz{}
+		if order.CreatedAt.Valid {
+			orderDate = order.CreatedAt
+		}
+		if err := s.consumeItemStock(ctx, existing.GoodID, existing.Quantity, existing.OrderID, orderDate); err != nil {
 			return nil, fmt.Errorf("failed to deduct stock for order item: %w", err)
 		}
 	}

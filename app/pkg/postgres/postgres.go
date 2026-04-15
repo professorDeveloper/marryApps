@@ -87,7 +87,7 @@ func openPoolWithOptions(opts ...Option) (*pgxpool.Pool, error) {
 	}
 
 	dsn := fmt.Sprintf(
-		"postgresql://%s:%s@%s:%d/%s",
+		"postgresql://%s:%s@%s:%d/%s?sslmode=require",
 		pg.username, pg.password,
 		pg.host, pg.port, pg.database,
 	)
