@@ -25788,12 +25788,12 @@
                     "example": 5
                 },
                 "pos_x": {
-                    "type": "integer",
-                    "example": 0
+                    "type": "number",
+                    "example": 1.2
                 },
                 "pos_y": {
-                    "type": "integer",
-                    "example": 0
+                    "type": "number",
+                    "example": 3.4
                 },
                 "price_per_hour": {
                     "type": "string"
@@ -25801,6 +25801,10 @@
                 "rotation": {
                     "type": "integer",
                     "example": 0
+                },
+                "shape": {
+                    "type": "string",
+                    "example": "square"
                 },
                 "status": {
                     "allOf": [
@@ -26451,12 +26455,12 @@
                     "example": 5
                 },
                 "pos_x": {
-                    "type": "integer",
-                    "example": 0
+                    "type": "number",
+                    "example": 1.2
                 },
                 "pos_y": {
-                    "type": "integer",
-                    "example": 0
+                    "type": "number",
+                    "example": 3.4
                 },
                 "price_per_hour": {
                     "type": "integer",
@@ -26465,6 +26469,10 @@
                 "rotation": {
                     "type": "integer",
                     "example": 0
+                },
+                "shape": {
+                    "type": "string",
+                    "example": "square"
                 },
                 "status": {
                     "type": "string",
@@ -31164,11 +31172,11 @@
                     "example": 5
                 },
                 "pos_x": {
-                    "type": "integer",
+                    "type": "number",
                     "example": 0
                 },
                 "pos_y": {
-                    "type": "integer",
+                    "type": "number",
                     "example": 0
                 },
                 "price_per_hour": {
@@ -31178,6 +31186,10 @@
                 "rotation": {
                     "type": "integer",
                     "example": 0
+                },
+                "shape": {
+                    "type": "string",
+                    "example": "square"
                 },
                 "status": {
                     "type": "string",

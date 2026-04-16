@@ -239,7 +239,7 @@ type GoodsI interface {
 }
 
 type CafeTableI interface {
-	CreateCafeTable(ctx context.Context, hallID string, number int32, capacity int32, status *string, posX, posY, width, height, rotation *int32, pricePerHour *int64, tableType *string) (*model.CafeTableResponse, error)
+	CreateCafeTable(ctx context.Context, hallID string, number int32, capacity int32, status *string, posX, posY *float64, width, height *int32, rotation *int32, pricePerHour *int64, tableType *string, shape *string) (*model.CafeTableResponse, error)
 	GetCafeTableByID(ctx context.Context, tableID string) (*model.CafeTableResponse, error)
 	GetAllCafeTables(ctx context.Context, limit, offset int32) ([]model.CafeTableResponse, int64, error)
 	GetCafeTablesByHallID(ctx context.Context, hallID string, limit, offset int32) ([]model.CafeTableResponse, int64, error)
@@ -248,7 +248,7 @@ type CafeTableI interface {
 	GetAvailableTablesByHall(ctx context.Context, hallID string) ([]model.CafeTableResponse, error)
 	GetAvailableTablesByCapacity(ctx context.Context, capacity, limit, offset int32) ([]model.CafeTableResponse, error)
 	GetAvailableTablesByHallAndCapacity(ctx context.Context, hallID string, capacity int32) ([]model.CafeTableResponse, error)
-	UpdateCafeTable(ctx context.Context, tableID string, hallID *string, number *int32, capacity *int32, status *string, posX, posY, width, height, rotation *int32, pricePerHour *string, tableType *string) (*model.CafeTableResponse, error)
+	UpdateCafeTable(ctx context.Context, tableID string, hallID *string, number *int32, capacity *int32, status *string, posX, posY *float64, width, height, rotation *int32, pricePerHour *string, tableType *string, shape *string) (*model.CafeTableResponse, error)
 	UpdateCafeTableStatus(ctx context.Context, tableID string, status string) (*model.CafeTableResponse, error)
 	SetTableFree(ctx context.Context, tableID string) (*model.CafeTableResponse, error)
 	SetTableBusy(ctx context.Context, tableID string) (*model.CafeTableResponse, error)
