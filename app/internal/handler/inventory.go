@@ -197,7 +197,7 @@ func (h *Handler) GetAllInventories(c echo.Context) error {
 
 	if maps, expanded, err := h.expandListResponse(c, paginated.Data, "inventories"); expanded {
 		if err != nil {
-			return nil
+			return err
 		}
 		return c.JSON(http.StatusOK, map[string]any{
 			"status":     "success",
@@ -512,7 +512,7 @@ func (h *Handler) GetInventoryItems(c echo.Context) error {
 
 	if maps, expanded, err := h.expandListResponse(c, resp, "inventory_items"); expanded {
 		if err != nil {
-			return nil
+			return err
 		}
 		return c.JSON(http.StatusOK, model.NewSuccessResponse("Inventory items retrieved successfully", maps, http.StatusOK))
 	}
@@ -580,7 +580,7 @@ func (h *Handler) GetInventory(c echo.Context) error {
 
 	if maps, expanded, err := h.expandListResponse(c, []*model.InventoryResponse{resp}, "inventories"); expanded {
 		if err != nil {
-			return nil
+			return err
 		}
 		if len(maps) > 0 {
 			return c.JSON(http.StatusOK, model.NewSuccessResponse("Inventory retrieved successfully", maps[0], http.StatusOK))

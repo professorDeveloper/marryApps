@@ -271,7 +271,7 @@ func (h *Handler) GetStoragesByBranchID(c echo.Context) error {
 
 	if maps, expanded, err := h.expandListResponse(c, storages, "storages"); expanded {
 		if err != nil {
-			return nil
+			return err
 		}
 		return c.JSON(http.StatusOK, model.NewPaginatedResponse("Data retrieved successfully", maps, total, limit, offset, http.StatusOK))
 	}
@@ -482,7 +482,7 @@ func (h *Handler) GetAllStoragesWithLang(c echo.Context) error {
 
 	if maps, expanded, err := h.expandListResponse(c, storages, "storages"); expanded {
 		if err != nil {
-			return nil
+			return err
 		}
 		return c.JSON(http.StatusOK, model.NewPaginatedResponse("Storages retrieved successfully", maps, total, limit, offset, http.StatusOK))
 	}
