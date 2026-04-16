@@ -95,7 +95,7 @@ last_in_range AS (
 		m.stock_after AS end_qty
 	FROM ingredient_stock_movements m
 	JOIN params p ON p.storage_id = m.storage_id
-	WHERE COALESCE(m.effective_at, m.created_at) >= p.start_ts AND COALESCE(m.effective_at, m.created_at) < p.end_ts
+	WHERE COALESCE(m.effective_at, m.created_at) <= p.end_ts
 		AND (p.ingredient_id IS NULL OR m.ingredient_id = p.ingredient_id)
 	ORDER BY m.ingredient_id, COALESCE(m.effective_at, m.created_at) DESC, m.id DESC
 ),

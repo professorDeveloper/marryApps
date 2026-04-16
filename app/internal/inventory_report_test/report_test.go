@@ -252,3 +252,64 @@ func TestReportIncludesOutgoingMovements(t *testing.T) {
 	assertFloat(t, 3, numericToFloat(report.DeductionOutQty), "deduction out should be 3")
 	assertFloat(t, 22, numericToFloat(report.EndQty), "ending quantity should be 22")
 }
+
+// Test 15: End quantity should include all movements up to the end date, not just those within the range
+// This is the fix for the bug where end_qty only looked at movements within [start_ts, end_ts)
+func TestEndQtyIncludesAllMovementsUpToEndDate(t *testing.T) {
+	ctx := context.Background()
+
+	// Setup
+	ingredientID := newIngredient(t, ctx, globalEnv.q, "flour")
+
+	// April 12: invoice adds 20 units
+	insertMovement(t, ctx, globalEnv.q, globalEnv.storageID, ingredientID,
+		"invoice_in", 20, 0, 0, 20, ts(2026, 4, 12, 10, 0))
+
+	// April 15: invoice adds 20 units (stock goes from 20 to 40)
+	insertMovement(t, ctx, globalEnv.q, globalEnv.storageID, ingredientID,
+		"invoice_in", 20, 0, 20, 40, ts(2026, 4, 15, 10, 0))
+
+	// April 18: invoice adds 20 units (stock goes from 40 to 60)
+	insertMovement(t, ctx, globalEnv.q, globalEnv.storageID, ingredientID,
+		"invoice_in", 20, 0, 40, 60, ts(2026, 4, 18, 10, 0))
+
+	// Case 1: Report from April 15-16 (end date April 16)
+	// Should include movements up to April 16 (April 15 invoice only)
+	report1 := getReport(t, ctx, globalEnv.q, globalEnv.storageID, ingredientID,
+		ts(2026, 4, 15, 0, 0), ts(2026, 4, 16, 23, 59))
+	require.NotNil(t, report1, "report1 should return a row")
+	// Expected: begin=20 (from April 12), in=20 (April 15), end=40 (last movement ≤ April 16)
+	assertFloat(t, 20, numericToFloat(report1.BeginQty), "Case 1: beginning quantity should be 20")
+	assertFloat(t, 20, numericToFloat(report1.InvoiceInQty), "Case 1: invoice in should be 20")
+	assertFloat(t, 40, numericToFloat(report1.EndQty), "Case 1: ending quantity should be 40 (last movement ≤ April 16)")
+
+	// Case 2: Report from April 15-20 (end date April 20)
+	// Should include movements up to April 20 (April 15 and April 18 invoices)
+	report2 := getReport(t, ctx, globalEnv.q, globalEnv.storageID, ingredientID,
+		ts(2026, 4, 15, 0, 0), ts(2026, 4, 20, 23, 59))
+	require.NotNil(t, report2, "report2 should return a row")
+	// Expected: begin=20, in=40 (April 15 + April 18), end=60 (last movement ≤ April 20)
+	assertFloat(t, 20, numericToFloat(report2.BeginQty), "Case 2: beginning quantity should be 20")
+	assertFloat(t, 40, numericToFloat(report2.InvoiceInQty), "Case 2: invoice in should be 40")
+	assertFloat(t, 60, numericToFloat(report2.EndQty), "Case 2: ending quantity should be 60 (last movement ≤ April 20)")
+
+	// Case 3: Report from April 13-14 (no in-range movements, only before-range movements exist)
+	// This tests that end_qty correctly uses the last movement up to end date (April 12 movement)
+	report3 := getReport(t, ctx, globalEnv.q, globalEnv.storageID, ingredientID,
+		ts(2026, 4, 13, 0, 0), ts(2026, 4, 14, 23, 59))
+	require.NotNil(t, report3, "report3 should return a row")
+	// Expected: begin=20 (from April 12 movement before range), in=0 (no in-range), end=20 (last movement ≤ April 14 is April 12)
+	assertFloat(t, 20, numericToFloat(report3.BeginQty), "Case 3: beginning quantity should be 20 (from April 12)")
+	assertFloat(t, 0, numericToFloat(report3.InvoiceInQty), "Case 3: invoice in should be 0 (no in-range movements)")
+	assertFloat(t, 20, numericToFloat(report3.EndQty), "Case 3: ending quantity should be 20 (last movement ≤ April 14 is April 12)")
+
+	// Case 4: Report from April 13-17 (end date April 17, no movements on April 16-17)
+	// This tests that end_qty correctly uses April 15 movement even though end date is April 17
+	report4 := getReport(t, ctx, globalEnv.q, globalEnv.storageID, ingredientID,
+		ts(2026, 4, 13, 0, 0), ts(2026, 4, 17, 23, 59))
+	require.NotNil(t, report4, "report4 should return a row")
+	// Expected: begin=20, in=20 (April 15), end=40 (last movement ≤ April 17 is April 15)
+	assertFloat(t, 20, numericToFloat(report4.BeginQty), "Case 4: beginning quantity should be 20")
+	assertFloat(t, 20, numericToFloat(report4.InvoiceInQty), "Case 4: invoice in should be 20 (April 15)")
+	assertFloat(t, 40, numericToFloat(report4.EndQty), "Case 4: ending quantity should be 40 (last movement ≤ April 17)")
+}
