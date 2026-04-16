@@ -72,7 +72,11 @@ func (s *ShipmentS) CreateShipment(ctx context.Context, req *model.CreateShipmen
 
 	// If created as active, immediately deduct stock
 	if row.Status == pg.ShipmentStatusActive && row.StorageID.Valid {
-		if err := s.deductStock(ctx, row.ID, row.StorageID, "shipment_out"); err != nil {
+		shipmentDate := pgtype.Timestamptz{}
+		if row.Date.Valid {
+			shipmentDate = pgtype.Timestamptz{Time: row.Date.Time.In(time.UTC), Valid: true}
+		}
+		if err := s.deductStock(ctx, row.ID, row.StorageID, "shipment_out", shipmentDate); err != nil {
 			return nil, err
 		}
 	}
@@ -267,10 +271,14 @@ func (s *ShipmentS) UpdateShipment(ctx context.Context, id string, req *model.Up
 	if current.Status == pg.ShipmentStatusActive && req.Status == nil && req.StorageID != nil &&
 		current.StorageID.Valid && row.StorageID.Valid &&
 		current.StorageID.Bytes != row.StorageID.Bytes {
-		if err := s.reverseStock(ctx, shipmentID, current.StorageID, "shipment_storage_change"); err != nil {
+		shipmentDate := pgtype.Timestamptz{}
+		if row.Date.Valid {
+			shipmentDate = pgtype.Timestamptz{Time: row.Date.Time.In(time.UTC), Valid: true}
+		}
+		if err := s.reverseStock(ctx, shipmentID, current.StorageID, "shipment_storage_change", shipmentDate); err != nil {
 			return nil, err
 		}
-		if err := s.deductStock(ctx, shipmentID, row.StorageID, "shipment_storage_change_out"); err != nil {
+		if err := s.deductStock(ctx, shipmentID, row.StorageID, "shipment_storage_change_out", shipmentDate); err != nil {
 			return nil, err
 		}
 	}
@@ -287,7 +295,11 @@ func (s *ShipmentS) UpdateShipment(ctx context.Context, id string, req *model.Up
 			if err != nil || len(items) == 0 {
 				return nil, fmt.Errorf("shipment has no items")
 			}
-			if err := s.deductStock(ctx, shipmentID, row.StorageID, "shipment_out"); err != nil {
+			shipmentDate := pgtype.Timestamptz{}
+			if row.Date.Valid {
+				shipmentDate = pgtype.Timestamptz{Time: row.Date.Time.In(time.UTC), Valid: true}
+			}
+			if err := s.deductStock(ctx, shipmentID, row.StorageID, "shipment_out", shipmentDate); err != nil {
 				return nil, err
 			}
 			activated, err := s.repo.Tenant(ctx).ActivateShipment(ctx, shipmentID)
@@ -298,7 +310,11 @@ func (s *ShipmentS) UpdateShipment(ctx context.Context, id string, req *model.Up
 		} else if current.Status == pg.ShipmentStatusActive && newStatus == pg.ShipmentStatusDraft {
 			// active → draft: reverse stock
 			if row.StorageID.Valid {
-				if err := s.reverseStock(ctx, shipmentID, row.StorageID, "shipment_deactivated"); err != nil {
+				shipmentDate := pgtype.Timestamptz{}
+				if row.Date.Valid {
+					shipmentDate = pgtype.Timestamptz{Time: row.Date.Time.In(time.UTC), Valid: true}
+				}
+				if err := s.reverseStock(ctx, shipmentID, row.StorageID, "shipment_deactivated", shipmentDate); err != nil {
 					return nil, err
 				}
 			}
@@ -327,7 +343,11 @@ func (s *ShipmentS) DeleteShipment(ctx context.Context, id string) error {
 
 	// Reverse stock if active
 	if shipment.Status == pg.ShipmentStatusActive && shipment.StorageID.Valid {
-		_ = s.reverseStock(ctx, shipmentID, shipment.StorageID, "shipment_deleted")
+		shipmentDate := pgtype.Timestamptz{}
+		if shipment.Date.Valid {
+			shipmentDate = pgtype.Timestamptz{Time: shipment.Date.Time.In(time.UTC), Valid: true}
+		}
+		_ = s.reverseStock(ctx, shipmentID, shipment.StorageID, "shipment_deleted", shipmentDate)
 	}
 
 	return s.repo.Tenant(ctx).DeleteShipment(ctx, shipmentID)
@@ -369,6 +389,12 @@ func (s *ShipmentS) UpsertShipmentItems(ctx context.Context, shipmentID string, 
 
 // upsertOneItem saves a single item. For active shipments, immediately adjusts stock.
 func (s *ShipmentS) upsertOneItem(ctx context.Context, sID uuid.UUID, shipment pg.Shipment, req *model.UpsertShipmentItemRequest, oldQtyMap map[uuid.UUID]pgtype.Numeric) (*model.ShipmentItemResponse, error) {
+	// Convert shipment date to timestamptz for effective_at
+	var shipmentDate pgtype.Timestamptz
+	if shipment.Date.Valid {
+		shipmentDate = pgtype.Timestamptz{Time: shipment.Date.Time.In(time.UTC), Valid: true}
+	}
+
 	iID, err := uuid.Parse(req.IngredientID)
 	if err != nil {
 		return nil, fmt.Errorf("invalid ingredient id: %w", err)
@@ -431,6 +457,10 @@ func (s *ShipmentS) upsertOneItem(ctx context.Context, sID uuid.UUID, shipment p
 			if err != nil {
 				return nil, fmt.Errorf("failed to restore old stock: %w", err)
 			}
+			var effectiveAt *pgtype.Timestamptz
+			if shipmentDate.Valid && !shipmentDate.Time.After(time.Now()) {
+				effectiveAt = &shipmentDate
+			}
 			_ = s.repo.Tenant(ctx).InsertIngredientStockMovement(ctx, pg.InsertIngredientStockMovementParams{
 				ID:           uuid.New(),
 				StorageID:    uuid.UUID(shipment.StorageID.Bytes),
@@ -443,6 +473,7 @@ func (s *ShipmentS) upsertOneItem(ctx context.Context, sID uuid.UUID, shipment p
 				PricePerUnit: price,
 				SourceType:   &srcType,
 				SourceID:     &srcID,
+				EffectiveAt:  effectiveAt,
 			})
 		}
 
@@ -519,6 +550,12 @@ func (s *ShipmentS) DeleteShipmentItem(ctx context.Context, itemID string) error
 	// If the shipment is active, reverse this item's stock contribution
 	shipment, err := s.repo.Tenant(ctx).GetShipmentByID(ctx, item.ShipmentID)
 	if err == nil && shipment.Status == pg.ShipmentStatusActive && shipment.StorageID.Valid {
+		// Convert shipment date to timestamptz for effective_at
+		var shipmentDate pgtype.Timestamptz
+		if shipment.Date.Valid {
+			shipmentDate = pgtype.Timestamptz{Time: shipment.Date.Time.In(time.UTC), Valid: true}
+		}
+
 		stockID, err := s.repo.Tenant(ctx).EnsureIngredientStockByStorage(ctx, pg.EnsureIngredientStockByStorageParams{
 			ID:           uuid.New(),
 			IngredientID: item.IngredientID,
@@ -539,6 +576,10 @@ func (s *ShipmentS) DeleteShipmentItem(ctx context.Context, itemID string) error
 					_ = zero.Scan("0")
 					srcType := "shipment_item_deleted"
 					srcID := item.ShipmentID
+					var effectiveAt *pgtype.Timestamptz
+					if shipmentDate.Valid && !shipmentDate.Time.After(time.Now()) {
+						effectiveAt = &shipmentDate
+					}
 					_ = s.repo.Tenant(ctx).InsertIngredientStockMovement(ctx, pg.InsertIngredientStockMovementParams{
 						ID:           uuid.New(),
 						StorageID:    uuid.UUID(shipment.StorageID.Bytes),
@@ -551,6 +592,7 @@ func (s *ShipmentS) DeleteShipmentItem(ctx context.Context, itemID string) error
 						PricePerUnit: item.PricePerUnit,
 						SourceType:   &srcType,
 						SourceID:     &srcID,
+						EffectiveAt:  effectiveAt,
 					})
 				}
 			}
@@ -585,7 +627,7 @@ func (s *ShipmentS) recalcShipmentTotal(ctx context.Context, shipmentID uuid.UUI
 }
 
 // deductStock removes ingredient quantities from stock for an active shipment.
-func (s *ShipmentS) deductStock(ctx context.Context, shipmentID uuid.UUID, storageID pgtype.UUID, eventType string) error {
+func (s *ShipmentS) deductStock(ctx context.Context, shipmentID uuid.UUID, storageID pgtype.UUID, eventType string, shipmentDate pgtype.Timestamptz) error {
 	items, err := s.repo.Tenant(ctx).GetShipmentItemsByShipmentID(ctx, shipmentID)
 	if err != nil {
 		return fmt.Errorf("failed to get shipment items: %w", err)
@@ -593,6 +635,11 @@ func (s *ShipmentS) deductStock(ctx context.Context, shipmentID uuid.UUID, stora
 	zero := pgtype.Numeric{}
 	_ = zero.Scan("0")
 	srcType := "shipment"
+
+	var effectiveAt *pgtype.Timestamptz
+	if shipmentDate.Valid && !shipmentDate.Time.After(time.Now()) {
+		effectiveAt = &shipmentDate
+	}
 
 	for _, item := range items {
 		stockID, err := s.repo.Tenant(ctx).EnsureIngredientStockByStorage(ctx, pg.EnsureIngredientStockByStorageParams{
@@ -640,13 +687,14 @@ func (s *ShipmentS) deductStock(ctx context.Context, shipmentID uuid.UUID, stora
 			PricePerUnit: item.PricePerUnit,
 			SourceType:   &srcType,
 			SourceID:     &shipmentID,
+			EffectiveAt:  effectiveAt,
 		})
 	}
 	return nil
 }
 
 // reverseStock adds back ingredient quantities when an active shipment is deactivated or deleted.
-func (s *ShipmentS) reverseStock(ctx context.Context, shipmentID uuid.UUID, storageID pgtype.UUID, eventType string) error {
+func (s *ShipmentS) reverseStock(ctx context.Context, shipmentID uuid.UUID, storageID pgtype.UUID, eventType string, shipmentDate pgtype.Timestamptz) error {
 	items, err := s.repo.Tenant(ctx).GetShipmentItemsByShipmentID(ctx, shipmentID)
 	if err != nil {
 		return fmt.Errorf("failed to get shipment items: %w", err)

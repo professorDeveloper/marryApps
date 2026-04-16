@@ -243,6 +243,12 @@ func (s *OutgoingInvoiceS) ConfirmOutgoingInvoice(ctx context.Context, id string
 
 	storageID := invoice.StorageID
 
+	// Convert invoice date to timestamptz for effective_at
+	var invoiceDate pgtype.Timestamptz
+	if invoice.Date.Valid {
+		invoiceDate = pgtype.Timestamptz{Time: invoice.Date.Time.In(time.UTC), Valid: true}
+	}
+
 	for _, item := range items {
 		stockID, err := s.repo.Tenant(ctx).EnsureIngredientStockByStorage(ctx, pg.EnsureIngredientStockByStorageParams{
 			ID:           uuid.New(),
@@ -282,6 +288,11 @@ func (s *OutgoingInvoiceS) ConfirmOutgoingInvoice(ctx context.Context, id string
 		zero := pgtype.Numeric{}
 		_ = zero.Scan("0")
 
+		var effectiveAt *pgtype.Timestamptz
+		if invoiceDate.Valid && !invoiceDate.Time.After(time.Now()) {
+			effectiveAt = &invoiceDate
+		}
+
 		if err := s.repo.Tenant(ctx).InsertIngredientStockMovement(ctx, pg.InsertIngredientStockMovementParams{
 			ID:           uuid.New(),
 			StorageID:    uuid.UUID(storageID.Bytes),
@@ -294,6 +305,7 @@ func (s *OutgoingInvoiceS) ConfirmOutgoingInvoice(ctx context.Context, id string
 			PricePerUnit: item.PricePerUnit,
 			SourceType:   &srcType,
 			SourceID:     &srcID,
+			EffectiveAt:  effectiveAt,
 		}); err != nil {
 			return nil, fmt.Errorf("failed to log stock movement: %w", err)
 		}
@@ -332,6 +344,12 @@ func (s *OutgoingInvoiceS) DeleteOutgoingInvoice(ctx context.Context, id string)
 		srcType := "outgoing_invoice_deleted"
 		zero := pgtype.Numeric{}
 		_ = zero.Scan("0")
+
+		// Convert invoice date to timestamptz for effective_at
+		var invoiceDate pgtype.Timestamptz
+		if invoice.Date.Valid {
+			invoiceDate = pgtype.Timestamptz{Time: invoice.Date.Time.In(time.UTC), Valid: true}
+		}
 		for _, item := range items {
 			if !item.StockBefore.Valid {
 				continue
@@ -358,6 +376,10 @@ func (s *OutgoingInvoiceS) DeleteOutgoingInvoice(ctx context.Context, id string)
 			if err != nil {
 				continue
 			}
+			var effectiveAt *pgtype.Timestamptz
+			if invoiceDate.Valid && !invoiceDate.Time.After(time.Now()) {
+				effectiveAt = &invoiceDate
+			}
 			_ = s.repo.Tenant(ctx).InsertIngredientStockMovement(ctx, pg.InsertIngredientStockMovementParams{
 				ID:           uuid.New(),
 				StorageID:    uuid.UUID(storageID.Bytes),
@@ -370,6 +392,7 @@ func (s *OutgoingInvoiceS) DeleteOutgoingInvoice(ctx context.Context, id string)
 				PricePerUnit: item.PricePerUnit,
 				SourceType:   &srcType,
 				SourceID:     &invoiceID,
+				EffectiveAt:  effectiveAt,
 			})
 		}
 	}

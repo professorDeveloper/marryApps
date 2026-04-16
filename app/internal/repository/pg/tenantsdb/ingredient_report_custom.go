@@ -141,7 +141,7 @@ cost_start AS (
 		m.price_per_unit
 	FROM ingredient_stock_movements m
 	JOIN params p ON p.storage_id = m.storage_id
-	WHERE m.created_at <= p.start_ts
+	WHERE COALESCE(m.effective_at, m.created_at) <= p.start_ts
 		AND (p.ingredient_id IS NULL OR m.ingredient_id = p.ingredient_id)
 	ORDER BY m.ingredient_id, COALESCE(m.effective_at, m.created_at) DESC, m.id DESC
 ),
@@ -328,9 +328,9 @@ SELECT
 FROM ingredient_stock_movements
 WHERE storage_id = $1
 	AND ingredient_id = $2
-	AND created_at >= $3
-	AND created_at <= $4
-ORDER BY created_at ASC, id ASC
+	AND COALESCE(effective_at, created_at) >= $3
+	AND COALESCE(effective_at, created_at) <= $4
+ORDER BY COALESCE(effective_at, created_at) ASC, id ASC
 LIMIT $5 OFFSET $6
 `
 

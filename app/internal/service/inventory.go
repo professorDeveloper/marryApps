@@ -549,6 +549,12 @@ func (s *InventoryS) ReplaceInventoryItems(ctx context.Context, inventoryID stri
 
 	isActive := newStatus == "active"
 
+	// Convert inventory date to timestamptz for effective_at
+	var invDate pgtype.Timestamptz
+	if invFull.Date.Valid {
+		invDate = pgtype.Timestamptz{Time: invFull.Date.Time.In(time.UTC), Valid: true}
+	}
+
 	// Build set of ingredient IDs present in the request
 	requestSet := make(map[uuid.UUID]bool, len(req.Items))
 	for _, item := range req.Items {
@@ -606,11 +612,16 @@ func (s *InventoryS) ReplaceInventoryItems(ctx context.Context, inventoryID stri
 						eventType = "inventory_out"
 					}
 					srcID := invID
+					var effectiveAt *pgtype.Timestamptz
+					if invDate.Valid && !invDate.Time.After(time.Now()) {
+						effectiveAt = &invDate
+					}
 					_ = s.repo.Tenant(ctx).InsertIngredientStockMovement(ctx, pg.InsertIngredientStockMovementParams{
 						ID: uuid.New(), StorageID: inv.StorageID, IngredientID: ingID,
 						EventType: eventType, QtyIn: zero, QtyOut: zero,
 						StockBefore: locked.Quantity, StockAfter: updated.Quantity,
 						PricePerUnit: zero, SourceType: &sourceType, SourceID: &srcID,
+						EffectiveAt: effectiveAt,
 					})
 				}
 			} else {
@@ -634,11 +645,16 @@ func (s *InventoryS) ReplaceInventoryItems(ctx context.Context, inventoryID stri
 						eventType = "inventory_out"
 					}
 					srcID := invID
+					var effectiveAt *pgtype.Timestamptz
+					if invDate.Valid && !invDate.Time.After(time.Now()) {
+						effectiveAt = &invDate
+					}
 					_ = s.repo.Tenant(ctx).InsertIngredientStockMovement(ctx, pg.InsertIngredientStockMovementParams{
 						ID: uuid.New(), StorageID: inv.StorageID, IngredientID: ingID,
 						EventType: eventType, QtyIn: zero, QtyOut: zero,
 						StockBefore: locked.Quantity, StockAfter: updated.Quantity,
 						PricePerUnit: zero, SourceType: &sourceType, SourceID: &srcID,
+						EffectiveAt: effectiveAt,
 					})
 				}
 				// Update counted_quantity, keep system_quantity
@@ -692,11 +708,16 @@ func (s *InventoryS) ReplaceInventoryItems(ctx context.Context, inventoryID stri
 					return nil, fmt.Errorf("failed to reverse stock: %w", err)
 				}
 				srcID := invID
+				var effectiveAt *pgtype.Timestamptz
+				if invDate.Valid && !invDate.Time.After(time.Now()) {
+					effectiveAt = &invDate
+				}
 				_ = s.repo.Tenant(ctx).InsertIngredientStockMovement(ctx, pg.InsertIngredientStockMovementParams{
 					ID: uuid.New(), StorageID: inv.StorageID, IngredientID: ingID,
 					EventType: "inventory_item_removed", QtyIn: zero, QtyOut: zero,
 					StockBefore: locked.Quantity, StockAfter: updated.Quantity,
 					PricePerUnit: zero, SourceType: &sourceType, SourceID: &srcID,
+					EffectiveAt: effectiveAt,
 				})
 			}
 		}
@@ -821,6 +842,18 @@ func (s *InventoryS) DeleteInventoryItem(ctx context.Context, inventoryItemID st
 		return fmt.Errorf("cannot modify items of a deleted inventory")
 	}
 
+	// Get full inventory record for date information
+	invFull, err := s.repo.Tenant(ctx).GetInventoryByID(ctx, item.InventoryID)
+	if err != nil {
+		return fmt.Errorf("failed to get inventory details: %w", err)
+	}
+
+	// Convert inventory date to timestamptz for effective_at
+	var invDate pgtype.Timestamptz
+	if invFull.Date.Valid {
+		invDate = pgtype.Timestamptz{Time: invFull.Date.Time.In(time.UTC), Valid: true}
+	}
+
 	zero := pgtype.Numeric{}
 	_ = zero.Scan("0")
 	sourceType := "inventory"
@@ -852,11 +885,16 @@ func (s *InventoryS) DeleteInventoryItem(ctx context.Context, inventoryItemID st
 				return fmt.Errorf("failed to restore stock: %w", err)
 			}
 			srcID := inv.ID
+			var effectiveAt *pgtype.Timestamptz
+			if invDate.Valid && !invDate.Time.After(time.Now()) {
+				effectiveAt = &invDate
+			}
 			_ = s.repo.Tenant(ctx).InsertIngredientStockMovement(ctx, pg.InsertIngredientStockMovementParams{
 				ID: uuid.New(), StorageID: inv.StorageID, IngredientID: item.IngredientID,
 				EventType: "inventory_item_deleted", QtyIn: zero, QtyOut: zero,
 				StockBefore: locked.Quantity, StockAfter: restored.Quantity,
 				PricePerUnit: zero, SourceType: &sourceType, SourceID: &srcID,
+				EffectiveAt: effectiveAt,
 			})
 		}
 	}

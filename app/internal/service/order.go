@@ -1544,6 +1544,10 @@ func (s *OrderS) consumeItemStock(ctx context.Context, goodID uuid.UUID, quantit
 		_ = zero.Scan("0")
 		sourceType := "order"
 		srcID := orderID
+		var effectiveAt *pgtype.Timestamptz
+		if orderDate.Valid && !orderDate.Time.After(time.Now()) {
+			effectiveAt = &orderDate
+		}
 		if err := s.repo.Tenant(ctx).InsertIngredientStockMovement(ctx, pg.InsertIngredientStockMovementParams{
 			ID:           uuid.New(),
 			StorageID:    uuid.UUID(storageID.Bytes),
@@ -1556,6 +1560,7 @@ func (s *OrderS) consumeItemStock(ctx context.Context, goodID uuid.UUID, quantit
 			PricePerUnit: price,
 			SourceType:   &sourceType,
 			SourceID:     &srcID,
+			EffectiveAt:  effectiveAt,
 		}); err != nil {
 			return fmt.Errorf("failed to insert stock movement: %w", err)
 		}

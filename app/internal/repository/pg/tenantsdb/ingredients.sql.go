@@ -342,7 +342,7 @@ SELECT
     SELECT stock_after
     FROM ingredient_stock_movements
     WHERE ingredient_id = $2 AND storage_id = $3
-    ORDER BY created_at DESC, id DESC
+    ORDER BY COALESCE(effective_at, created_at) DESC, id DESC
     LIMIT 1
   ), 0),
   0

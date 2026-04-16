@@ -286,6 +286,12 @@ func (s *SeparationActS) ConfirmSeparationAct(ctx context.Context, id string) (*
 	_ = zero.Scan("0")
 	srcType := "separation_act"
 
+	// Convert act date to timestamptz for effective_at
+	var actDate pgtype.Timestamptz
+	if act.Date.Valid {
+		actDate = pgtype.Timestamptz{Time: act.Date.Time.In(time.UTC), Valid: true}
+	}
+
 	// 1. Remove source ingredient from source storage
 	srcStockID, err := s.repo.Tenant(ctx).EnsureIngredientStockByStorage(ctx, pg.EnsureIngredientStockByStorageParams{
 		ID:           uuid.New(),
@@ -309,6 +315,10 @@ func (s *SeparationActS) ConfirmSeparationAct(ctx context.Context, id string) (*
 	if err != nil {
 		return nil, fmt.Errorf("failed to deduct source stock: %w", err)
 	}
+	var effectiveAt *pgtype.Timestamptz
+	if actDate.Valid && !actDate.Time.After(time.Now()) {
+		effectiveAt = &actDate
+	}
 	if err := s.repo.Tenant(ctx).InsertIngredientStockMovement(ctx, pg.InsertIngredientStockMovementParams{
 		ID:           uuid.New(),
 		StorageID:    uuid.UUID(act.StorageID.Bytes),
@@ -321,6 +331,7 @@ func (s *SeparationActS) ConfirmSeparationAct(ctx context.Context, id string) (*
 		PricePerUnit: zero,
 		SourceType:   &srcType,
 		SourceID:     &actID,
+		EffectiveAt:  effectiveAt,
 	}); err != nil {
 		return nil, fmt.Errorf("failed to log source stock movement: %w", err)
 	}
@@ -373,6 +384,7 @@ func (s *SeparationActS) ConfirmSeparationAct(ctx context.Context, id string) (*
 			PricePerUnit: item.PricePerUnit,
 			SourceType:   &srcType,
 			SourceID:     &actID,
+			EffectiveAt:  effectiveAt,
 		}); err != nil {
 			return nil, fmt.Errorf("failed to log item stock movement: %w", err)
 		}
@@ -424,6 +436,17 @@ func (s *SeparationActS) DeleteSeparationAct(ctx context.Context, id string) err
 		_ = zero.Scan("0")
 		srcType := "separation_act"
 
+		// Convert act date to timestamptz for effective_at
+		var actDate pgtype.Timestamptz
+		if act.Date.Valid {
+			actDate = pgtype.Timestamptz{Time: act.Date.Time.In(time.UTC), Valid: true}
+		}
+
+		var effectiveAt *pgtype.Timestamptz
+		if actDate.Valid && !actDate.Time.After(time.Now()) {
+			effectiveAt = &actDate
+		}
+
 		// Reverse output items: remove what was added
 		for _, item := range items {
 			itemStorage := act.StorageID
@@ -467,6 +490,7 @@ func (s *SeparationActS) DeleteSeparationAct(ctx context.Context, id string) err
 				PricePerUnit: zero,
 				SourceType:   &srcType,
 				SourceID:     &actID,
+				EffectiveAt:  effectiveAt,
 			})
 		}
 

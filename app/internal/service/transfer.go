@@ -103,7 +103,7 @@ func (s *TransferS) CreateTransferBatch(ctx context.Context, req model.CreateTra
 	}
 
 	applyStock := status == pg.TransferStatusActive
-	items, err := s.processTransferItems(ctx, q, transfer.ID, fromStorageID, toStorageID, fromBranchID, toBranchID, req.Items, applyStock)
+	items, err := s.processTransferItems(ctx, q, transfer.ID, fromStorageID, toStorageID, fromBranchID, toBranchID, req.Items, applyStock, transfer.Date)
 	if err != nil {
 		return nil, err
 	}
@@ -207,7 +207,7 @@ func (s *TransferS) AddTransferItems(ctx context.Context, req model.CreateTransf
 	}
 
 	applyStock := transfer.Status == pg.TransferStatusActive
-	_, err = s.processTransferItems(ctx, q, transfer.ID, transfer.FromStorageID, transfer.ToStorageID, transfer.FromBranchID, transfer.ToBranchID, req.Items, applyStock)
+	_, err = s.processTransferItems(ctx, q, transfer.ID, transfer.FromStorageID, transfer.ToStorageID, transfer.FromBranchID, transfer.ToBranchID, req.Items, applyStock, transfer.Date)
 	if err != nil {
 		return nil, err
 	}
@@ -531,7 +531,7 @@ func (s *TransferS) UpsertTransferItems(ctx context.Context, transferID string, 
 
 	// Step 5: Create new items; apply stock only if newStatus == active
 	applyStock := newStatus == pg.TransferStatusActive
-	if _, err := s.processTransferItems(ctx, q, id, newFromStorageID, newToStorageID, transfer.FromBranchID, transfer.ToBranchID, req.Items, applyStock); err != nil {
+	if _, err := s.processTransferItems(ctx, q, id, newFromStorageID, newToStorageID, transfer.FromBranchID, transfer.ToBranchID, req.Items, applyStock, transfer.Date); err != nil {
 		return nil, err
 	}
 
@@ -563,7 +563,7 @@ func (s *TransferS) reverseTransferItemsStock(ctx context.Context, q *pg.Queries
 }
 
 // processTransferItems creates item records; applies stock changes only when applyStock == true.
-func (s *TransferS) processTransferItems(ctx context.Context, q *pg.Queries, transferID uuid.UUID, fromStorageID, toStorageID, fromBranchID, toBranchID uuid.UUID, entries []model.CreateTransferItemEntry, applyStock bool) ([]model.TransferItemResponse, error) {
+func (s *TransferS) processTransferItems(ctx context.Context, q *pg.Queries, transferID uuid.UUID, fromStorageID, toStorageID, fromBranchID, toBranchID uuid.UUID, entries []model.CreateTransferItemEntry, applyStock bool, transferDate pgtype.Timestamptz) ([]model.TransferItemResponse, error) {
 	fromStorageUUID := pgtype.UUID{Bytes: fromStorageID, Valid: true}
 	toStorageUUID := pgtype.UUID{Bytes: toStorageID, Valid: true}
 	fromBranchUUID := pgtype.UUID{Bytes: fromBranchID, Valid: true}
@@ -648,6 +648,10 @@ func (s *TransferS) processTransferItems(ctx context.Context, q *pg.Queries, tra
 
 			// Record stock movements
 			sourceType := "transfer"
+			var effectiveAt *pgtype.Timestamptz
+			if transferDate.Valid && !transferDate.Time.After(time.Now()) {
+				effectiveAt = &transferDate
+			}
 			_ = q.InsertIngredientStockMovement(ctx, pg.InsertIngredientStockMovementParams{
 				ID:           uuid.New(),
 				StorageID:    fromStorageID,
@@ -660,6 +664,7 @@ func (s *TransferS) processTransferItems(ctx context.Context, q *pg.Queries, tra
 				PricePerUnit: price,
 				SourceType:   &sourceType,
 				SourceID:     &transferID,
+				EffectiveAt:  effectiveAt,
 			})
 			_ = q.InsertIngredientStockMovement(ctx, pg.InsertIngredientStockMovementParams{
 				ID:           uuid.New(),
@@ -673,6 +678,7 @@ func (s *TransferS) processTransferItems(ctx context.Context, q *pg.Queries, tra
 				PricePerUnit: price,
 				SourceType:   &sourceType,
 				SourceID:     &transferID,
+				EffectiveAt:  effectiveAt,
 			})
 		} else {
 			// Draft: no stock movement; record zeros

@@ -450,7 +450,7 @@ func (s *DeductionS) reverseDeductionItemStock(ctx context.Context, deductionID 
 }
 
 // applyDeductionItemStock expands one deduction item to ingredients, deducts stock, creates breakdowns.
-func (s *DeductionS) applyDeductionItemStock(ctx context.Context, deductionID uuid.UUID, storagePg pgtype.UUID, item pg.DeductionItem) ([]model.DeductionItemIngredientResponse, []string, error) {
+func (s *DeductionS) applyDeductionItemStock(ctx context.Context, deductionID uuid.UUID, storagePg pgtype.UUID, item pg.DeductionItem, deductionDate pgtype.Timestamptz) ([]model.DeductionItemIngredientResponse, []string, error) {
 	zero := pgtype.Numeric{}
 	_ = zero.Scan("0")
 	sourceType := "deduction"
@@ -525,6 +525,10 @@ func (s *DeductionS) applyDeductionItemStock(ctx context.Context, deductionID uu
 		}
 
 		if updatedStock != nil {
+			var effectiveAt *pgtype.Timestamptz
+			if deductionDate.Valid && !deductionDate.Time.After(time.Now()) {
+				effectiveAt = &deductionDate
+			}
 			_ = s.repo.Tenant(ctx).InsertIngredientStockMovement(ctx, pg.InsertIngredientStockMovementParams{
 				ID:           uuid.New(),
 				StorageID:    uuid.UUID(storagePg.Bytes),
@@ -537,6 +541,7 @@ func (s *DeductionS) applyDeductionItemStock(ctx context.Context, deductionID uu
 				PricePerUnit: price,
 				SourceType:   &sourceType,
 				SourceID:     &deductionID,
+				EffectiveAt:  effectiveAt,
 			})
 		}
 
@@ -616,6 +621,11 @@ func (s *DeductionS) CreateDeduction(ctx context.Context, req *model.CreateDeduc
 		return nil, fmt.Errorf("failed to create deduction: %w", err)
 	}
 
+	deductionDate := pgtype.Timestamptz{}
+	if deduction.Date.Valid {
+		deductionDate = pgtype.Timestamptz{Time: deduction.Date.Time.In(time.UTC), Valid: true}
+	}
+
 	warnings := make([]string, 0)
 	for _, it := range req.Items {
 		qtyNum := pgtype.Numeric{}
@@ -674,7 +684,7 @@ func (s *DeductionS) CreateDeduction(ctx context.Context, req *model.CreateDeduc
 
 		// Only apply stock when active
 		if status == "active" {
-			ingBreakdowns, itemWarnings, err := s.applyDeductionItemStock(ctx, deductionID, storagePg, row)
+			ingBreakdowns, itemWarnings, err := s.applyDeductionItemStock(ctx, deductionID, storagePg, row, deductionDate)
 			if err != nil {
 				return nil, err
 			}
@@ -1042,9 +1052,13 @@ func (s *DeductionS) UpdateDeduction(ctx context.Context, id string, req *model.
 			if err != nil {
 				return nil, fmt.Errorf("failed to get deduction items: %w", err)
 			}
+			deductionDate := pgtype.Timestamptz{}
+			if current.Date.Valid {
+				deductionDate = pgtype.Timestamptz{Time: current.Date.Time.In(time.UTC), Valid: true}
+			}
 			sPg := pgtype.UUID{Bytes: current.StorageID, Valid: true}
 			for _, item := range items {
-				if _, _, err := s.applyDeductionItemStock(ctx, deductionID, sPg, item); err != nil {
+				if _, _, err := s.applyDeductionItemStock(ctx, deductionID, sPg, item, deductionDate); err != nil {
 					return nil, fmt.Errorf("failed to apply stock: %w", err)
 				}
 			}
@@ -1219,6 +1233,10 @@ func (s *DeductionS) UpsertDeductionItems(ctx context.Context, id string, req *m
 	_ = s.repo.Tenant(ctx).DeleteDeductionItemsByDeductionID(ctx, deductionID)
 
 	// Step 3: Create new items
+	deductionDate := pgtype.Timestamptz{}
+	if deduction.Date.Valid {
+		deductionDate = pgtype.Timestamptz{Time: deduction.Date.Time.In(time.UTC), Valid: true}
+	}
 	warnings := make([]string, 0)
 	for _, it := range req.Items {
 		qtyNum := pgtype.Numeric{}
@@ -1277,7 +1295,7 @@ func (s *DeductionS) UpsertDeductionItems(ctx context.Context, id string, req *m
 
 		// Step 4: Apply stock if new status is active
 		if newStatus == "active" {
-			_, itemWarnings, err := s.applyDeductionItemStock(ctx, deductionID, storagePg, row)
+			_, itemWarnings, err := s.applyDeductionItemStock(ctx, deductionID, storagePg, row, deductionDate)
 			if err != nil {
 				return nil, err
 			}
