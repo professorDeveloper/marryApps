@@ -92,3 +92,20 @@ type TableOccupancyStats struct {
 	TotalCapacity  int64 `json:"total_capacity" example:"200"`
 	AvailableSeats int64 `json:"available_seats" example:"120"`
 }
+
+type CafeTableListFilter struct {
+	Search    string `json:"search,omitempty"`
+	HallID    string `json:"hall_id,omitempty"`
+	TableType string `json:"table_type,omitempty"`
+	Status    string `json:"status,omitempty"`
+	SortBy    string `json:"sort_by,omitempty"`
+	SortOrder string `json:"sort_order,omitempty"`
+}
+
+type PaginatedCafeTablesResponse struct {
+	Status     string              `json:"status" example:"success"`
+	Message    string              `json:"message" example:"Cafe tables retrieved successfully"`
+	Data       []CafeTableResponse `json:"data"`
+	Pagination PaginationMeta      `json:"pagination"`
+	Code       int                 `json:"code" example:"200"`
+}

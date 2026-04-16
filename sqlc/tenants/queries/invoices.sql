@@ -128,50 +128,84 @@ WHERE branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid;
 -- name: GetFilteredInvoices :many
 SELECT i.id, i.supplier_id, i.storage_id, i.branch_id, i.total_amount, i.status, i.date, i.created_at, i.updated_at, i.deleted_at
 FROM invoices i
+LEFT JOIN suppliers s ON i.supplier_id = s.id AND s.deleted_at = 0
 WHERE i.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
   AND i.deleted_at = 0
-  AND ($1::timestamp IS NULL OR i.date >= $1)
-  AND ($2::timestamp IS NULL OR i.date <= $2)
-  AND (NULLIF($3::text, '')::uuid IS NULL OR i.storage_id = NULLIF($3::text, '')::uuid)
-  AND (NULLIF($4::text, '')::uuid IS NULL OR i.supplier_id = NULLIF($4::text, '')::uuid)
-  AND ($5 = '' OR i.status::text = $5)
-  AND (NULLIF($6::text, '')::uuid IS NULL OR EXISTS (
+  AND (sqlc.narg('date_from')::timestamp IS NULL OR i.date >= sqlc.narg('date_from')::timestamp)
+  AND (sqlc.narg('date_to')::timestamp IS NULL OR i.date <= sqlc.narg('date_to')::timestamp)
+  AND (NULLIF(sqlc.arg('storage_id')::text, '')::uuid IS NULL OR i.storage_id = NULLIF(sqlc.arg('storage_id')::text, '')::uuid)
+  AND (NULLIF(sqlc.arg('supplier_id')::text, '')::uuid IS NULL OR i.supplier_id = NULLIF(sqlc.arg('supplier_id')::text, '')::uuid)
+  AND (sqlc.arg('status')::text = '' OR i.status::text = sqlc.arg('status')::text)
+  AND (NULLIF(sqlc.arg('ingredient_id')::text, '')::uuid IS NULL OR EXISTS (
     SELECT 1 FROM invoice_detailed id_t
-    WHERE id_t.invoice_id = i.id AND id_t.ingredient_id = NULLIF($6::text, '')::uuid AND id_t.deleted_at = 0
+    WHERE id_t.invoice_id = i.id
+      AND id_t.ingredient_id = NULLIF(sqlc.arg('ingredient_id')::text, '')::uuid
+      AND id_t.deleted_at = 0
   ))
-ORDER BY i.date DESC
-LIMIT $7 OFFSET $8;
+  AND (
+        sqlc.arg('search')::text = ''
+        OR COALESCE(s.name, '') ILIKE '%' || sqlc.arg('search')::text || '%'
+        OR COALESCE(s.phone_number, '') ILIKE '%' || sqlc.arg('search')::text || '%'
+        OR COALESCE(i.total_amount::text, '') ILIKE '%' || sqlc.arg('search')::text || '%'
+      )
+ORDER BY
+    CASE
+        WHEN sqlc.arg('sort_by')::text = 'date' AND sqlc.arg('sort_order')::text = 'asc'
+        THEN i.date
+    END ASC,
+    CASE
+        WHEN sqlc.arg('sort_by')::text = 'date' AND sqlc.arg('sort_order')::text = 'desc'
+        THEN i.date
+    END DESC,
+    CASE
+        WHEN sqlc.arg('sort_by')::text = 'created_at' AND sqlc.arg('sort_order')::text = 'asc'
+        THEN i.created_at
+    END ASC,
+    CASE
+        WHEN sqlc.arg('sort_by')::text = 'created_at' AND sqlc.arg('sort_order')::text = 'desc'
+        THEN i.created_at
+    END DESC,
+    CASE
+        WHEN sqlc.arg('sort_by')::text = 'total_amount' AND sqlc.arg('sort_order')::text = 'asc'
+        THEN i.total_amount
+    END ASC,
+    CASE
+        WHEN sqlc.arg('sort_by')::text = 'total_amount' AND sqlc.arg('sort_order')::text = 'desc'
+        THEN i.total_amount
+    END DESC,
+    i.date DESC,
+    i.created_at DESC
+LIMIT sqlc.arg('limit')::int
+OFFSET sqlc.arg('offset')::int;
 
 -- name: CountFilteredInvoices :one
-SELECT COUNT(*) FROM invoices i
+SELECT COUNT(*)
+FROM invoices i
+LEFT JOIN suppliers s ON i.supplier_id = s.id AND s.deleted_at = 0
 WHERE i.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
   AND i.deleted_at = 0
-  AND ($1::timestamp IS NULL OR i.date >= $1)
-  AND ($2::timestamp IS NULL OR i.date <= $2)
-  AND (NULLIF($3::text, '')::uuid IS NULL OR i.storage_id = NULLIF($3::text, '')::uuid)
-  AND (NULLIF($4::text, '')::uuid IS NULL OR i.supplier_id = NULLIF($4::text, '')::uuid)
-  AND ($5 = '' OR i.status::text = $5)
-  AND (NULLIF($6::text, '')::uuid IS NULL OR EXISTS (
+  AND (sqlc.narg('date_from')::timestamp IS NULL OR i.date >= sqlc.narg('date_from')::timestamp)
+  AND (sqlc.narg('date_to')::timestamp IS NULL OR i.date <= sqlc.narg('date_to')::timestamp)
+  AND (NULLIF(sqlc.arg('storage_id')::text, '')::uuid IS NULL OR i.storage_id = NULLIF(sqlc.arg('storage_id')::text, '')::uuid)
+  AND (NULLIF(sqlc.arg('supplier_id')::text, '')::uuid IS NULL OR i.supplier_id = NULLIF(sqlc.arg('supplier_id')::text, '')::uuid)
+  AND (sqlc.arg('status')::text = '' OR i.status::text = sqlc.arg('status')::text)
+  AND (NULLIF(sqlc.arg('ingredient_id')::text, '')::uuid IS NULL OR EXISTS (
     SELECT 1 FROM invoice_detailed id_t
-    WHERE id_t.invoice_id = i.id AND id_t.ingredient_id = NULLIF($6::text, '')::uuid AND id_t.deleted_at = 0
-  ));
+    WHERE id_t.invoice_id = i.id
+      AND id_t.ingredient_id = NULLIF(sqlc.arg('ingredient_id')::text, '')::uuid
+      AND id_t.deleted_at = 0
+  ))
+  AND (
+        sqlc.arg('search')::text = ''
+        OR COALESCE(s.name, '') ILIKE '%' || sqlc.arg('search')::text || '%'
+        OR COALESCE(s.phone_number, '') ILIKE '%' || sqlc.arg('search')::text || '%'
+        OR COALESCE(i.total_amount::text, '') ILIKE '%' || sqlc.arg('search')::text || '%'
+      );
 
 -- name: CountInvoicesByStatus :one
 SELECT COUNT(*) FROM invoices
 WHERE status = $1
   AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid;
-
--- name: SearchInvoices :many
-SELECT i.id, i.supplier_id, i.storage_id, i.branch_id, i.total_amount, i.status, i.date, i.created_at, i.updated_at, i.deleted_at
-FROM invoices i
-JOIN suppliers s ON i.supplier_id = s.id AND s.deleted_at = 0
-WHERE i.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-AND (
-    s.name ILIKE '%' || $1 || '%' OR
-    s.phone_number ILIKE '%' || $1 || '%'
-)
-ORDER BY i.date DESC
-LIMIT $2 OFFSET $3;
 
 
 -- ==================== INVOICE DETAILED QUERIES ====================

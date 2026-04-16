@@ -25,13 +25,6 @@ WHERE category_id = $1 AND deleted_at = 0
 ORDER BY name ASC
 LIMIT $2 OFFSET $3;
 
--- name: GetGoodsByPriceRange :many
-SELECT goods.id, goods.name, goods.description, goods.name_i18n, goods.description_i18n, goods.category_id, goods.branch_id, goods.picture_url, goods.color_code, goods.price, goods.cook_time, goods.cost_price, goods.profit, goods.profit_margin, goods.created_at, goods.updated_at, goods.deleted_at
-FROM goods
-WHERE price >= $1 AND price <= $2 AND deleted_at = 0
-  AND goods.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-ORDER BY price ASC
-LIMIT $3 OFFSET $4;
 
 -- name: UpdateGood :one
 UPDATE goods
@@ -78,15 +71,6 @@ UPDATE goods
 SET deleted_at = 0
 WHERE goods.id = $1 AND deleted_at != 0
   AND goods.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid;
-
--- name: SearchGoods :many
-SELECT goods.id, goods.name, goods.description, goods.name_i18n, goods.description_i18n, goods.category_id, goods.picture_url, goods.price, goods.cook_time, goods.cost_price, goods.profit, goods.profit_margin, goods.created_at, goods.updated_at, goods.deleted_at
-FROM goods
-WHERE deleted_at = 0
-AND (name ILIKE '%' || $1 || '%' OR description ILIKE '%' || $1 || '%')
-  AND goods.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-ORDER BY name ASC
-LIMIT $2 OFFSET $3;
 
 -- name: CountGoods :one
 SELECT COUNT(*) FROM goods
@@ -415,64 +399,195 @@ ORDER BY g.created_at DESC
 LIMIT $2 OFFSET $3;
 
 
--- ==================== FILTERED GOODS ====================
-
--- name: GetGoodsFiltered :many
-SELECT goods.id, goods.name, goods.description, goods.name_i18n, goods.description_i18n, goods.category_id, goods.branch_id, goods.picture_url, goods.color_code, goods.price, goods.cook_time, goods.cost_price, goods.profit, goods.profit_margin, goods.created_at, goods.updated_at, goods.deleted_at
-FROM goods
-WHERE goods.deleted_at = 0
-  AND goods.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-  AND (($1::uuid = '00000000-0000-0000-0000-000000000000') OR goods.category_id = $1)
-  AND ($2 = '' OR goods.name ILIKE '%' || $2 || '%')
-ORDER BY goods.created_at DESC
-LIMIT $3 OFFSET $4;
-
--- name: CountGoodsFiltered :one
-SELECT COUNT(*)
-FROM goods
-WHERE goods.deleted_at = 0
-  AND goods.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-  AND (($1::uuid = '00000000-0000-0000-0000-000000000000') OR goods.category_id = $1)
-  AND ($2 = '' OR goods.name ILIKE '%' || $2 || '%');
-
--- name: GetGoodsFilteredWithLanguage :many
+-- name: GetGoodsList :many
+WITH goods_list AS (
+    SELECT
+        g.id,
+        COALESCE(
+            CASE
+                WHEN sqlc.arg('lang')::text = 'uz' THEN tn.uz
+                WHEN sqlc.arg('lang')::text = 'ru' THEN tn.ru
+                WHEN sqlc.arg('lang')::text = 'en' THEN tn.en
+                ELSE g.name
+            END,
+            g.name
+        ) AS name,
+        COALESCE(
+            CASE
+                WHEN sqlc.arg('lang')::text = 'uz' THEN td.uz
+                WHEN sqlc.arg('lang')::text = 'ru' THEN td.ru
+                WHEN sqlc.arg('lang')::text = 'en' THEN td.en
+                ELSE g.description
+            END,
+            g.description
+        ) AS description,
+        g.name_i18n,
+        g.description_i18n,
+        g.category_id,
+        g.branch_id,
+        g.picture_url,
+        g.color_code,
+        g.price,
+        g.cook_time,
+        g.cost_price,
+        g.profit,
+        g.profit_margin,
+        g.created_at,
+        g.updated_at,
+        g.deleted_at
+    FROM goods g
+    LEFT JOIN categories c
+        ON g.category_id = c.id
+       AND c.deleted_at = 0
+    LEFT JOIN departments d
+        ON c.department_id = d.id
+       AND d.deleted_at = 0
+    LEFT JOIN translations tn
+        ON g.name_i18n = tn.id
+       AND tn.deleted_at = 0
+    LEFT JOIN translations td
+        ON g.description_i18n = td.id
+       AND td.deleted_at = 0
+    WHERE g.deleted_at = 0
+      AND g.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+      AND (
+            sqlc.narg('category_id')::uuid IS NULL
+            OR g.category_id = sqlc.narg('category_id')::uuid
+          )
+      AND (
+            sqlc.narg('department_id')::uuid IS NULL
+            OR c.department_id = sqlc.narg('department_id')::uuid
+          )
+      AND (
+            sqlc.narg('storage_id')::uuid IS NULL
+            OR d.storage_id = sqlc.narg('storage_id')::uuid
+          )
+      AND (
+            sqlc.narg('min_price')::numeric IS NULL
+            OR g.price >= sqlc.narg('min_price')::numeric
+          )
+      AND (
+            sqlc.narg('max_price')::numeric IS NULL
+            OR g.price <= sqlc.narg('max_price')::numeric
+          )
+)
 SELECT
-    g.id,
-    COALESCE(CASE
-        WHEN $1::text = 'uz' THEN tn.uz
-        WHEN $1::text = 'ru' THEN tn.ru
-        WHEN $1::text = 'en' THEN tn.en
-        ELSE g.name
-    END, g.name) as name,
-    COALESCE(CASE
-        WHEN $1::text = 'uz' THEN td.uz
-        WHEN $1::text = 'ru' THEN td.ru
-        WHEN $1::text = 'en' THEN td.en
-        ELSE g.description
-    END, g.description) as description,
-    g.name_i18n,
-    g.description_i18n,
-    g.category_id,
-    g.branch_id,
-    g.picture_url,
-    g.color_code,
-    g.price,
-    g.cook_time,
-    g.cost_price,
-    g.profit,
-    g.profit_margin,
-    g.created_at,
-    g.updated_at,
-    g.deleted_at
-FROM goods g
-LEFT JOIN translations tn ON g.name_i18n = tn.id AND tn.deleted_at = 0
-LEFT JOIN translations td ON g.description_i18n = td.id AND td.deleted_at = 0
-WHERE g.deleted_at = 0
-  AND g.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-  AND (($2::uuid = '00000000-0000-0000-0000-000000000000') OR g.category_id = $2)
-  AND ($3 = '' OR g.name ILIKE '%' || $3 || '%')
-ORDER BY g.created_at DESC
-LIMIT $4 OFFSET $5;
+    id,
+    name,
+    description,
+    name_i18n,
+    description_i18n,
+    category_id,
+    branch_id,
+    picture_url,
+    color_code,
+    price,
+    cook_time,
+    cost_price,
+    profit,
+    profit_margin,
+    created_at,
+    updated_at,
+    deleted_at
+FROM goods_list
+WHERE (
+        sqlc.arg('search')::text = ''
+        OR name ILIKE '%' || sqlc.arg('search')::text || '%'
+        OR COALESCE(description, '') ILIKE '%' || sqlc.arg('search')::text || '%'
+      )
+ORDER BY
+    CASE
+        WHEN sqlc.arg('sort_by')::text = 'name' AND sqlc.arg('sort_order')::text = 'asc'
+        THEN name
+    END ASC,
+    CASE
+        WHEN sqlc.arg('sort_by')::text = 'name' AND sqlc.arg('sort_order')::text = 'desc'
+        THEN name
+    END DESC,
+    CASE
+        WHEN sqlc.arg('sort_by')::text = 'price' AND sqlc.arg('sort_order')::text = 'asc'
+        THEN price
+    END ASC,
+    CASE
+        WHEN sqlc.arg('sort_by')::text = 'price' AND sqlc.arg('sort_order')::text = 'desc'
+        THEN price
+    END DESC,
+    CASE
+        WHEN sqlc.arg('sort_by')::text = 'created_at' AND sqlc.arg('sort_order')::text = 'asc'
+        THEN created_at
+    END ASC,
+    CASE
+        WHEN sqlc.arg('sort_by')::text = 'created_at' AND sqlc.arg('sort_order')::text = 'desc'
+        THEN created_at
+    END DESC,
+    created_at DESC
+LIMIT sqlc.arg('limit')::int
+OFFSET sqlc.arg('offset')::int;
+
+-- name: CountGoodsList :one
+WITH goods_list AS (
+    SELECT
+        COALESCE(
+            CASE
+                WHEN sqlc.arg('lang')::text = 'uz' THEN tn.uz
+                WHEN sqlc.arg('lang')::text = 'ru' THEN tn.ru
+                WHEN sqlc.arg('lang')::text = 'en' THEN tn.en
+                ELSE g.name
+            END,
+            g.name
+        ) AS name,
+        COALESCE(
+            CASE
+                WHEN sqlc.arg('lang')::text = 'uz' THEN td.uz
+                WHEN sqlc.arg('lang')::text = 'ru' THEN td.ru
+                WHEN sqlc.arg('lang')::text = 'en' THEN td.en
+                ELSE g.description
+            END,
+            g.description
+        ) AS description
+    FROM goods g
+    LEFT JOIN categories c
+        ON g.category_id = c.id
+       AND c.deleted_at = 0
+    LEFT JOIN departments d
+        ON c.department_id = d.id
+       AND d.deleted_at = 0
+    LEFT JOIN translations tn
+        ON g.name_i18n = tn.id
+       AND tn.deleted_at = 0
+    LEFT JOIN translations td
+        ON g.description_i18n = td.id
+       AND td.deleted_at = 0
+    WHERE g.deleted_at = 0
+      AND g.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+      AND (
+            sqlc.narg('category_id')::uuid IS NULL
+            OR g.category_id = sqlc.narg('category_id')::uuid
+          )
+      AND (
+            sqlc.narg('department_id')::uuid IS NULL
+            OR c.department_id = sqlc.narg('department_id')::uuid
+          )
+      AND (
+            sqlc.narg('storage_id')::uuid IS NULL
+            OR d.storage_id = sqlc.narg('storage_id')::uuid
+          )
+      AND (
+            sqlc.narg('min_price')::numeric IS NULL
+            OR g.price >= sqlc.narg('min_price')::numeric
+          )
+      AND (
+            sqlc.narg('max_price')::numeric IS NULL
+            OR g.price <= sqlc.narg('max_price')::numeric
+          )
+)
+SELECT COUNT(*)
+FROM goods_list
+WHERE (
+        sqlc.arg('search')::text = ''
+        OR name ILIKE '%' || sqlc.arg('search')::text || '%'
+        OR COALESCE(description, '') ILIKE '%' || sqlc.arg('search')::text || '%'
+      );
 
 -- name: GetStorageIDByGoodID :one
 SELECT d.storage_id

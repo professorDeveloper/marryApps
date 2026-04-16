@@ -14,13 +14,61 @@ import (
 )
 
 const countTransactions = `-- name: CountTransactions :one
-SELECT COUNT(*) FROM transactions
+SELECT COUNT(*)
+FROM transactions
 WHERE branch_id IS NOT DISTINCT FROM NULLIF(current_setting('app.branch_id', true), '')::uuid
   AND deleted_at = 0
+  AND (
+        $1::text = ''
+        OR COALESCE(description, '') ILIKE '%' || $1::text || '%'
+        OR COALESCE(amount::text, '') ILIKE '%' || $1::text || '%'
+      )
+  AND (
+        $2::text = ''
+        OR type::text = $2::text
+      )
+  AND (
+        $3::uuid IS NULL
+        OR cash_register_id = $3::uuid
+      )
+  AND (
+        $4::uuid IS NULL
+        OR group_transaction_id = $4::uuid
+      )
+  AND (
+        $5::timestamptz IS NULL
+        OR date >= $5::timestamptz
+      )
+  AND (
+        $6::timestamptz IS NULL
+        OR date <= $6::timestamptz
+      )
+  AND (
+      $7::text = ''
+      OR pay_type::text = $7::text
+      )
 `
 
-func (q *Queries) CountTransactions(ctx context.Context) (int64, error) {
-	row := q.db.QueryRow(ctx, countTransactions)
+type CountTransactionsParams struct {
+	Search             string             `json:"search"`
+	Type               string             `json:"type"`
+	CashRegisterID     pgtype.UUID        `json:"cash_register_id"`
+	GroupTransactionID pgtype.UUID        `json:"group_transaction_id"`
+	DateFrom           pgtype.Timestamptz `json:"date_from"`
+	DateTo             pgtype.Timestamptz `json:"date_to"`
+	PayType            string             `json:"pay_type"`
+}
+
+func (q *Queries) CountTransactions(ctx context.Context, arg CountTransactionsParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countTransactions,
+		arg.Search,
+		arg.Type,
+		arg.CashRegisterID,
+		arg.GroupTransactionID,
+		arg.DateFrom,
+		arg.DateTo,
+		arg.PayType,
+	)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -133,17 +181,94 @@ SELECT id, type,
 FROM transactions
 WHERE branch_id IS NOT DISTINCT FROM NULLIF(current_setting('app.branch_id', true), '')::uuid
   AND deleted_at = 0
-ORDER BY date DESC
-LIMIT $1 OFFSET $2
+  AND (
+        $1::text = ''
+        OR COALESCE(description, '') ILIKE '%' || $1::text || '%'
+        OR COALESCE(amount::text, '') ILIKE '%' || $1::text || '%'
+      )
+  AND (
+        $2::text = ''
+        OR type::text = $2::text
+      )
+  AND (
+        $3::uuid IS NULL
+        OR cash_register_id = $3::uuid
+      )
+  AND (
+        $4::uuid IS NULL
+        OR group_transaction_id = $4::uuid
+      )
+  AND (
+        $5::timestamptz IS NULL
+        OR date >= $5::timestamptz
+      )
+  AND (
+        $6::timestamptz IS NULL
+        OR date <= $6::timestamptz
+      )
+  AND (
+      $7::text = ''
+      OR pay_type::text = $7::text
+    )
+ORDER BY
+    CASE
+        WHEN $8::text = 'amount' AND $9::text = 'asc'
+        THEN amount
+    END ASC,
+    CASE
+        WHEN $8::text = 'amount' AND $9::text = 'desc'
+        THEN amount
+    END DESC,
+    CASE
+        WHEN $8::text = 'date' AND $9::text = 'asc'
+        THEN date
+    END ASC,
+    CASE
+        WHEN $8::text = 'date' AND $9::text = 'desc'
+        THEN date
+    END DESC,
+    CASE
+        WHEN $8::text = 'created_at' AND $9::text = 'asc'
+        THEN created_at
+    END ASC,
+    CASE
+        WHEN $8::text = 'created_at' AND $9::text = 'desc'
+        THEN created_at
+    END DESC,
+    date DESC,
+    created_at DESC
+LIMIT $11::int
+OFFSET $10::int
 `
 
 type GetAllTransactionsParams struct {
-	Limit  int32 `json:"limit"`
-	Offset int32 `json:"offset"`
+	Search             string             `json:"search"`
+	Type               string             `json:"type"`
+	CashRegisterID     pgtype.UUID        `json:"cash_register_id"`
+	GroupTransactionID pgtype.UUID        `json:"group_transaction_id"`
+	DateFrom           pgtype.Timestamptz `json:"date_from"`
+	DateTo             pgtype.Timestamptz `json:"date_to"`
+	PayType            string             `json:"pay_type"`
+	SortBy             string             `json:"sort_by"`
+	SortOrder          string             `json:"sort_order"`
+	Offset             int32              `json:"offset"`
+	Limit              int32              `json:"limit"`
 }
 
 func (q *Queries) GetAllTransactions(ctx context.Context, arg GetAllTransactionsParams) ([]Transaction, error) {
-	rows, err := q.db.Query(ctx, getAllTransactions, arg.Limit, arg.Offset)
+	rows, err := q.db.Query(ctx, getAllTransactions,
+		arg.Search,
+		arg.Type,
+		arg.CashRegisterID,
+		arg.GroupTransactionID,
+		arg.DateFrom,
+		arg.DateTo,
+		arg.PayType,
+		arg.SortBy,
+		arg.SortOrder,
+		arg.Offset,
+		arg.Limit,
+	)
 	if err != nil {
 		return nil, err
 	}

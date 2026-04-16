@@ -46,54 +46,47 @@ func (q *Queries) CalculateInventoryTotals(ctx context.Context, id uuid.UUID) (C
 	return i, err
 }
 
-const countInventories = `-- name: CountInventories :one
-SELECT COUNT(*) FROM inventories
-WHERE deleted_at = 0
-  AND EXISTS (
-    SELECT 1 FROM storages s
-    WHERE s.id = inventories.storage_id
-      AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-  )
-`
-
-func (q *Queries) CountInventories(ctx context.Context) (int64, error) {
-	row := q.db.QueryRow(ctx, countInventories)
-	var count int64
-	err := row.Scan(&count)
-	return count, err
-}
-
 const countInventoriesFiltered = `-- name: CountInventoriesFiltered :one
 SELECT COUNT(DISTINCT inv.id)
 FROM inventories inv
-LEFT JOIN inventory_items ii ON ii.inventory_id = inv.id AND ii.deleted_at = 0
+LEFT JOIN inventory_items ii
+  ON ii.inventory_id = inv.id
+ AND ii.deleted_at = 0
 WHERE EXISTS (
-    SELECT 1 FROM storages s
+    SELECT 1
+    FROM storages s
     WHERE s.id = inv.storage_id
       AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-  )
-  AND ($1::date IS NULL OR inv.date >= $1)
-  AND ($2::date IS NULL OR inv.date <= $2)
-  AND (NULLIF($3::uuid, '00000000-0000-0000-0000-000000000000') IS NULL OR inv.storage_id = $3)
-  AND (NULLIF($4::text, '') IS NULL OR inv.status = $4)
-  AND (NULLIF($5::uuid, '00000000-0000-0000-0000-000000000000') IS NULL OR ii.ingredient_id = $5)
+)
+  AND ($1::date IS NULL OR inv.date >= $1::date)
+  AND ($2::date IS NULL OR inv.date <= $2::date)
+  AND ($3::uuid IS NULL OR inv.storage_id = $3::uuid)
+  AND ($4::text = '' OR inv.status = $4::text)
+  AND ($5::uuid IS NULL OR ii.ingredient_id = $5::uuid)
+  AND (
+        $6::text = ''
+        OR COALESCE(inv.description, '') ILIKE '%' || $6::text || '%'
+        OR CAST(inv.number AS TEXT) ILIKE '%' || $6::text || '%'
+      )
 `
 
 type CountInventoriesFilteredParams struct {
-	Column1 pgtype.Date `json:"column_1"`
-	Column2 pgtype.Date `json:"column_2"`
-	Column3 uuid.UUID   `json:"column_3"`
-	Column4 string      `json:"column_4"`
-	Column5 uuid.UUID   `json:"column_5"`
+	DateFrom     pgtype.Date `json:"date_from"`
+	DateTo       pgtype.Date `json:"date_to"`
+	StorageID    pgtype.UUID `json:"storage_id"`
+	Status       string      `json:"status"`
+	IngredientID pgtype.UUID `json:"ingredient_id"`
+	Search       string      `json:"search"`
 }
 
 func (q *Queries) CountInventoriesFiltered(ctx context.Context, arg CountInventoriesFilteredParams) (int64, error) {
 	row := q.db.QueryRow(ctx, countInventoriesFiltered,
-		arg.Column1,
-		arg.Column2,
-		arg.Column3,
-		arg.Column4,
-		arg.Column5,
+		arg.DateFrom,
+		arg.DateTo,
+		arg.StorageID,
+		arg.Status,
+		arg.IngredientID,
+		arg.Search,
 	)
 	var count int64
 	err := row.Scan(&count)
@@ -484,35 +477,99 @@ func (q *Queries) GetInventoriesByStorageID(ctx context.Context, arg GetInventor
 }
 
 const getInventoriesFiltered = `-- name: GetInventoriesFiltered :many
-SELECT DISTINCT inv.id, inv.number, inv.date, inv.storage_id, inv.description, inv.description_i18n, inv.status,
-       inv.surplus_amount, inv.shortage_amount, inv.remaining_amount,
-       inv.created_at, inv.updated_at, inv.deleted_at
-FROM inventories inv
-LEFT JOIN inventory_items ii
-  ON ii.inventory_id = inv.id
-  AND ii.deleted_at = 0
-WHERE EXISTS (
-    SELECT 1 FROM storages s
-    WHERE s.id = inv.storage_id
-      AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-  )
-  AND ($1::date IS NULL OR inv.date >= $1)
-  AND ($2::date IS NULL OR inv.date <= $2)
-  AND (NULLIF($3::uuid, '00000000-0000-0000-0000-000000000000') IS NULL OR inv.storage_id = $3)
-  AND (NULLIF($4::text, '') IS NULL OR inv.status = $4)
-  AND (NULLIF($5::uuid, '00000000-0000-0000-0000-000000000000') IS NULL OR ii.ingredient_id = $5)
-ORDER BY inv.date DESC, inv.number DESC
-LIMIT $6 OFFSET $7
+WITH filtered AS (
+    SELECT DISTINCT
+        inv.id,
+        inv.number,
+        inv.date,
+        inv.storage_id,
+        inv.description,
+        inv.description_i18n,
+        inv.status,
+        inv.surplus_amount,
+        inv.shortage_amount,
+        inv.remaining_amount,
+        inv.created_at,
+        inv.updated_at,
+        inv.deleted_at
+    FROM inventories inv
+    LEFT JOIN inventory_items ii
+      ON ii.inventory_id = inv.id
+     AND ii.deleted_at = 0
+    WHERE EXISTS (
+        SELECT 1
+        FROM storages s
+        WHERE s.id = inv.storage_id
+          AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+    )
+      AND ($5::date IS NULL OR inv.date >= $5::date)
+      AND ($6::date IS NULL OR inv.date <= $6::date)
+      AND ($7::uuid IS NULL OR inv.storage_id = $7::uuid)
+      AND ($8::text = '' OR inv.status = $8::text)
+      AND ($9::uuid IS NULL OR ii.ingredient_id = $9::uuid)
+      AND (
+            $10::text = ''
+            OR COALESCE(inv.description, '') ILIKE '%' || $10::text || '%'
+            OR CAST(inv.number AS TEXT) ILIKE '%' || $10::text || '%'
+          )
+)
+SELECT
+    id,
+    number,
+    date,
+    storage_id,
+    description,
+    description_i18n,
+    status,
+    surplus_amount,
+    shortage_amount,
+    remaining_amount,
+    created_at,
+    updated_at,
+    deleted_at
+FROM filtered
+ORDER BY
+    CASE
+        WHEN $1::text = 'date' AND $2::text = 'asc'
+        THEN date
+    END ASC,
+    CASE
+        WHEN $1::text = 'date' AND $2::text = 'desc'
+        THEN date
+    END DESC,
+    CASE
+        WHEN $1::text = 'number' AND $2::text = 'asc'
+        THEN number
+    END ASC,
+    CASE
+        WHEN $1::text = 'number' AND $2::text = 'desc'
+        THEN number
+    END DESC,
+    CASE
+        WHEN $1::text = 'created_at' AND $2::text = 'asc'
+        THEN created_at
+    END ASC,
+    CASE
+        WHEN $1::text = 'created_at' AND $2::text = 'desc'
+        THEN created_at
+    END DESC,
+    date DESC,
+    number DESC
+LIMIT $4::int
+OFFSET $3::int
 `
 
 type GetInventoriesFilteredParams struct {
-	Column1 pgtype.Date `json:"column_1"`
-	Column2 pgtype.Date `json:"column_2"`
-	Column3 uuid.UUID   `json:"column_3"`
-	Column4 string      `json:"column_4"`
-	Column5 uuid.UUID   `json:"column_5"`
-	Limit   int32       `json:"limit"`
-	Offset  int32       `json:"offset"`
+	SortBy       string      `json:"sort_by"`
+	SortOrder    string      `json:"sort_order"`
+	Offset       int32       `json:"offset"`
+	Limit        int32       `json:"limit"`
+	DateFrom     pgtype.Date `json:"date_from"`
+	DateTo       pgtype.Date `json:"date_to"`
+	StorageID    pgtype.UUID `json:"storage_id"`
+	Status       string      `json:"status"`
+	IngredientID pgtype.UUID `json:"ingredient_id"`
+	Search       string      `json:"search"`
 }
 
 type GetInventoriesFilteredRow struct {
@@ -533,13 +590,16 @@ type GetInventoriesFilteredRow struct {
 
 func (q *Queries) GetInventoriesFiltered(ctx context.Context, arg GetInventoriesFilteredParams) ([]GetInventoriesFilteredRow, error) {
 	rows, err := q.db.Query(ctx, getInventoriesFiltered,
-		arg.Column1,
-		arg.Column2,
-		arg.Column3,
-		arg.Column4,
-		arg.Column5,
-		arg.Limit,
+		arg.SortBy,
+		arg.SortOrder,
 		arg.Offset,
+		arg.Limit,
+		arg.DateFrom,
+		arg.DateTo,
+		arg.StorageID,
+		arg.Status,
+		arg.IngredientID,
+		arg.Search,
 	)
 	if err != nil {
 		return nil, err
@@ -856,80 +916,6 @@ func (q *Queries) RestoreInventory(ctx context.Context, id uuid.UUID) (RestoreIn
 		&i.DeletedAt,
 	)
 	return i, err
-}
-
-const searchInventories = `-- name: SearchInventories :many
-SELECT id, number, date, storage_id, description, description_i18n, status,
-       surplus_amount, shortage_amount, remaining_amount,
-       created_at, updated_at, deleted_at
-FROM inventories
-WHERE EXISTS (
-    SELECT 1 FROM storages s
-    WHERE s.id = inventories.storage_id
-      AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-  )
-AND (
-    description ILIKE '%' || $1 || '%'
-    OR CAST(number AS TEXT) ILIKE '%' || $1 || '%'
-)
-ORDER BY date DESC, number DESC
-LIMIT $2 OFFSET $3
-`
-
-type SearchInventoriesParams struct {
-	Column1 *string `json:"column_1"`
-	Limit   int32   `json:"limit"`
-	Offset  int32   `json:"offset"`
-}
-
-type SearchInventoriesRow struct {
-	ID              uuid.UUID          `json:"id"`
-	Number          int64              `json:"number"`
-	Date            pgtype.Date        `json:"date"`
-	StorageID       uuid.UUID          `json:"storage_id"`
-	Description     *string            `json:"description"`
-	DescriptionI18n pgtype.UUID        `json:"description_i18n"`
-	Status          string             `json:"status"`
-	SurplusAmount   pgtype.Numeric     `json:"surplus_amount"`
-	ShortageAmount  pgtype.Numeric     `json:"shortage_amount"`
-	RemainingAmount pgtype.Numeric     `json:"remaining_amount"`
-	CreatedAt       pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
-	DeletedAt       int64              `json:"deleted_at"`
-}
-
-func (q *Queries) SearchInventories(ctx context.Context, arg SearchInventoriesParams) ([]SearchInventoriesRow, error) {
-	rows, err := q.db.Query(ctx, searchInventories, arg.Column1, arg.Limit, arg.Offset)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []SearchInventoriesRow
-	for rows.Next() {
-		var i SearchInventoriesRow
-		if err := rows.Scan(
-			&i.ID,
-			&i.Number,
-			&i.Date,
-			&i.StorageID,
-			&i.Description,
-			&i.DescriptionI18n,
-			&i.Status,
-			&i.SurplusAmount,
-			&i.ShortageAmount,
-			&i.RemainingAmount,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-			&i.DeletedAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
 }
 
 const updateInventory = `-- name: UpdateInventory :one

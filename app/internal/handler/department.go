@@ -4,7 +4,9 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"strings"
 
+	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 	"gitlab.yurtal.tech/company/maryai/back/internal/model"
 )
@@ -100,72 +102,135 @@ func (h *Handler) GetDepartmentByID(c echo.Context) error {
 
 // GetAllDepartments retrieves all departments
 // @Summary Get all departments
-// @Description Retrieve all departments with pagination and optional search
+// @Description Retrieve all departments with pagination, optional search, storage filter and sorting
 // @Tags departments
 // @Accept json
 // @Produce json
 // @Security BearerAuth
+// @Param search query string false "Search by department name"
+// @Param storage_id query string false "Filter by storage ID"
+// @Param sort_by query string false "Sort by field" Enums(name,created_at) default(created_at)
+// @Param sort_order query string false "Sort order" Enums(asc,desc) default(desc)
 // @Param limit query int false "Limit (default: 20)"
 // @Param offset query int false "Offset (default: 0)"
-// @Param search query string false "Search by name"
-// @Param expand query string false "Expand FK relations (comma-separated: storage_id, name_i18n)"
-// @Success 200 {array} model.DepartmentResponse "Departments found"
-// @Failure 401 {object} model.ErrorResponse "Unauthorized"
-// @Failure 500 {object} model.ErrorResponse "Internal server error"
+// @Param expand query string false "Expand related fields"
+// @Success 200 {object} model.PaginatedDepartmentsResponse
+// @Failure 400 {object} model.ErrorResponse
+// @Failure 401 {object} model.ErrorResponse
+// @Failure 500 {object} model.ErrorResponse
 // @Router /api/v1/departments [get]
 func (h *Handler) GetAllDepartments(c echo.Context) error {
 	var limit int32 = 20
 	var offset int32 = 0
-	search := c.QueryParam("search")
 
 	if limitStr := c.QueryParam("limit"); limitStr != "" {
-		if l, err := strconv.ParseInt(limitStr, 10, 32); err == nil && l > 0 {
-			limit = int32(l)
+		l, err := strconv.ParseInt(limitStr, 10, 32)
+		if err != nil || l <= 0 {
+			return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+				"Invalid limit",
+				"limit must be a positive integer",
+				http.StatusBadRequest,
+			))
 		}
+		limit = int32(l)
 	}
 
 	if offsetStr := c.QueryParam("offset"); offsetStr != "" {
-		if o, err := strconv.ParseInt(offsetStr, 10, 32); err == nil && o >= 0 {
-			offset = int32(o)
-		}
-	}
-
-	if search != "" {
-		departments, err := h.service.Department().SearchDepartments(c.Request().Context(), search, limit, offset)
-		if err != nil {
-			log.Printf("SearchDepartments failed: %v", err)
-			return c.JSON(http.StatusInternalServerError, model.NewErrorResponse(
-				"failed to search departments",
-				err.Error(),
-				http.StatusInternalServerError,
+		o, err := strconv.ParseInt(offsetStr, 10, 32)
+		if err != nil || o < 0 {
+			return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+				"Invalid offset",
+				"offset must be a non-negative integer",
+				http.StatusBadRequest,
 			))
 		}
-		if maps, expanded, err := h.expandListResponse(c, departments, "departments"); expanded {
-			if err != nil {
-				return err
-			}
-			return c.JSON(http.StatusOK, model.NewSuccessResponse("Data retrieved successfully", maps, http.StatusOK))
-		}
-		return c.JSON(http.StatusOK, model.NewSuccessResponse("Data retrieved successfully", departments, http.StatusOK))
+		offset = int32(o)
 	}
 
-	departments, total, err := h.service.Department().GetAllDepartments(c.Request().Context(), limit, offset)
+	filter := model.DepartmentListFilter{
+		Search:    strings.TrimSpace(c.QueryParam("search")),
+		StorageID: strings.TrimSpace(c.QueryParam("storage_id")),
+		SortBy:    strings.TrimSpace(c.QueryParam("sort_by")),
+		SortOrder: strings.TrimSpace(c.QueryParam("sort_order")),
+	}
+
+	if filter.SortBy == "" {
+		filter.SortBy = "created_at"
+	}
+	if filter.SortOrder == "" {
+		filter.SortOrder = "desc"
+	}
+
+	allowedSortBy := map[string]bool{
+		"name":       true,
+		"created_at": true,
+	}
+	if !allowedSortBy[filter.SortBy] {
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"Invalid sort_by",
+			"allowed values: name, created_at",
+			http.StatusBadRequest,
+		))
+	}
+
+	allowedSortOrder := map[string]bool{
+		"asc":  true,
+		"desc": true,
+	}
+	if !allowedSortOrder[filter.SortOrder] {
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"Invalid sort_order",
+			"allowed values: asc, desc",
+			http.StatusBadRequest,
+		))
+	}
+
+	if filter.StorageID != "" {
+		if _, err := uuid.Parse(filter.StorageID); err != nil {
+			return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+				"Invalid storage_id",
+				"storage_id must be a valid UUID",
+				http.StatusBadRequest,
+			))
+		}
+	}
+
+	resp, total, err := h.service.Department().GetAllDepartments(c.Request().Context(), filter, limit, offset)
 	if err != nil {
 		log.Printf("GetAllDepartments failed: %v", err)
 		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse(
-			"failed to retrieve departments",
+			"Operation failed",
 			err.Error(),
 			http.StatusInternalServerError,
 		))
 	}
 
-	if maps, expanded, err := h.expandListResponse(c, departments, "departments"); expanded {
+	if maps, expanded, err := h.expandListResponse(c, resp, "departments"); expanded {
 		if err != nil {
-			return err
+			return c.JSON(http.StatusInternalServerError, model.NewErrorResponse(
+				"expand failed",
+				err.Error(),
+				http.StatusInternalServerError,
+			))
 		}
-		return c.JSON(http.StatusOK, model.NewPaginatedResponse("Data retrieved successfully", maps, total, limit, offset, http.StatusOK))
+		return c.JSON(http.StatusOK, model.NewPaginatedResponse(
+			"Departments retrieved successfully",
+			maps,
+			int32(total),
+			limit,
+			offset,
+			http.StatusOK,
+		))
 	}
-	return c.JSON(http.StatusOK, model.NewPaginatedResponse("Data retrieved successfully", departments, total, limit, offset, http.StatusOK))
+
+	return c.JSON(http.StatusOK, model.NewPaginatedResponse(
+		"Departments retrieved successfully",
+		resp,
+		int32(total),
+		limit,
+		offset,
+		http.StatusOK,
+	))
 }
 
 // GetDepartmentsByStorageID retrieves departments by storage ID
@@ -347,59 +412,6 @@ func (h *Handler) RestoreDepartment(c echo.Context) error {
 	}
 
 	return c.JSON(http.StatusOK, model.NewSuccessResponse("Department restored successfully", department, http.StatusOK))
-}
-
-// SearchDepartments searches for departments by name
-// @Summary Search departments
-// @Description Search for departments by name with pagination
-// @Tags departments
-// @Accept json
-// @Produce json
-// @Security BearerAuth
-// @Param q query string true "Search query"
-// @Param limit query int false "Limit (default: 20)"
-// @Param offset query int false "Offset (default: 0)"
-// @Success 200 {array} model.DepartmentResponse "Departments found"
-// @Failure 400 {object} model.ErrorResponse "Invalid request data"
-// @Failure 401 {object} model.ErrorResponse "Unauthorized"
-// @Failure 500 {object} model.ErrorResponse "Internal server error"
-// @Router /api/v1/departments/search [get]
-func (h *Handler) SearchDepartments(c echo.Context) error {
-	query := c.QueryParam("q")
-	if query == "" {
-		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
-			"search query is required",
-			"missing query parameter: q",
-			http.StatusBadRequest,
-		))
-	}
-
-	var limit int32 = 20
-	var offset int32 = 0
-
-	if limitStr := c.QueryParam("limit"); limitStr != "" {
-		if l, err := strconv.ParseInt(limitStr, 10, 32); err == nil && l > 0 {
-			limit = int32(l)
-		}
-	}
-
-	if offsetStr := c.QueryParam("offset"); offsetStr != "" {
-		if o, err := strconv.ParseInt(offsetStr, 10, 32); err == nil && o >= 0 {
-			offset = int32(o)
-		}
-	}
-
-	departments, err := h.service.Department().SearchDepartments(c.Request().Context(), query, limit, offset)
-	if err != nil {
-		log.Printf("SearchDepartments failed for query %s: %v", query, err)
-		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse(
-			"failed to search departments",
-			err.Error(),
-			http.StatusInternalServerError,
-		))
-	}
-
-	return c.JSON(http.StatusOK, model.NewSuccessResponse("Data retrieved successfully", departments, http.StatusOK))
 }
 
 // GetDepartmentByIDWithLang retrieves a department by ID with language support

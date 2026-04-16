@@ -30,6 +30,25 @@ type UpdateGoodPriceRequest struct {
 	Price string `json:"price" binding:"required" example:"15000.00"`
 }
 
+type GoodsListFilter struct {
+	CategoryID   string
+	DepartmentID string
+	StorageID    string
+	Search       string
+	MinPrice     string
+	MaxPrice     string
+	SortBy       string
+	SortOrder    string
+}
+
+type PaginatedGoodsResponse struct {
+	Status     string         `json:"status" example:"success"`
+	Message    string         `json:"message" example:"Goods retrieved successfully"`
+	Data       []GoodResponse `json:"data"`
+	Pagination PaginationMeta `json:"pagination"`
+	Code       int            `json:"code" example:"200"`
+}
+
 type GoodResponse struct {
 	ID              string  `json:"id" example:"123e4567-e89b-12d3-a456-426614174000"`
 	Name            string  `json:"name" example:"Pizza Margherita"`
@@ -120,7 +139,7 @@ type ModifierCalculationResponse struct {
 	ID                  string     `json:"id" example:"123e4567-e89b-12d3-a456-426614174000"`
 	ModifierID          string     `json:"modifier_id" example:"123e4567-e89b-12d3-a456-426614174000"`
 	IngredientID        *string    `json:"ingredient_id,omitempty" example:"123e4567-e89b-12d3-a456-426614174000"`
-	ComponentCompoundID *string  `json:"component_compound_id,omitempty" example:"123e4567-e89b-12d3-a456-426614174000"`
+	ComponentCompoundID *string    `json:"component_compound_id,omitempty" example:"123e4567-e89b-12d3-a456-426614174000"`
 	Quantity            string     `json:"quantity" example:"0.2"`
 	MeasurementUnit     string     `json:"measurement_unit" example:"kg"`
 	PricePerUnit        string     `json:"price_per_unit" example:"20000"`

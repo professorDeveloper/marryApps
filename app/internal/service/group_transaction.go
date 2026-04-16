@@ -41,19 +41,36 @@ func (s *GroupTransactionS) GetGroupTransactionByID(ctx context.Context, id stri
 	return toGroupTransactionResponse(row), nil
 }
 
-func (s *GroupTransactionS) GetAllGroupTransactions(ctx context.Context, limit, offset int32) ([]*model.GroupTransactionResponse, error) {
+func (s *GroupTransactionS) GetAllGroupTransactions(ctx context.Context, filter model.GroupTransactionListFilter, limit, offset int32) ([]*model.GroupTransactionResponse, int64, error) {
+	if filter.SortBy == "" {
+		filter.SortBy = "created_at"
+	}
+	if filter.SortOrder == "" {
+		filter.SortOrder = "desc"
+	}
+
+	total, err := s.repo.Tenant(ctx).CountGroupTransactions(ctx, filter.Search)
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to count group transactions: %w", err)
+	}
+
 	rows, err := s.repo.Tenant(ctx).GetAllGroupTransactions(ctx, pg.GetAllGroupTransactionsParams{
-		Limit:  limit,
-		Offset: offset,
+		Search:    filter.Search,
+		SortBy:    filter.SortBy,
+		SortOrder: filter.SortOrder,
+		Limit:     limit,
+		Offset:    offset,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to get group transactions: %w", err)
+		return nil, 0, fmt.Errorf("failed to get group transactions: %w", err)
 	}
-	var result []*model.GroupTransactionResponse
+
+	result := make([]*model.GroupTransactionResponse, 0, len(rows))
 	for _, r := range rows {
 		result = append(result, toGroupTransactionResponse(r))
 	}
-	return result, nil
+
+	return result, total, nil
 }
 
 func (s *GroupTransactionS) UpdateGroupTransaction(ctx context.Context, id string, req *model.UpdateGroupTransactionRequest) (*model.GroupTransactionResponse, error) {
@@ -96,22 +113,6 @@ func (s *GroupTransactionS) RestoreGroupTransaction(ctx context.Context, id stri
 		return nil, fmt.Errorf("failed to restore group transaction: %w", err)
 	}
 	return toGroupTransactionResponse(row), nil
-}
-
-func (s *GroupTransactionS) SearchGroupTransactions(ctx context.Context, query string, limit, offset int32) ([]*model.GroupTransactionResponse, error) {
-	rows, err := s.repo.Tenant(ctx).SearchGroupTransactions(ctx, pg.SearchGroupTransactionsParams{
-		Column1: &query,
-		Limit:   limit,
-		Offset:  offset,
-	})
-	if err != nil {
-		return nil, fmt.Errorf("failed to search group transactions: %w", err)
-	}
-	var result []*model.GroupTransactionResponse
-	for _, r := range rows {
-		result = append(result, toGroupTransactionResponse(r))
-	}
-	return result, nil
 }
 
 func toGroupTransactionResponse(row pg.GroupTransaction) *model.GroupTransactionResponse {

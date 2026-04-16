@@ -25,7 +25,6 @@ func NewInventoryS(repo *repository.Repository) *InventoryS {
 //  Create
 // ─────────────────────────────────────────────
 
-
 func (s *InventoryS) CreateInventory(ctx context.Context, req *model.CreateInventoryRequest) (*model.InventoryResponse, error) {
 	id := uuid.New()
 
@@ -114,20 +113,13 @@ func (s *InventoryS) GetInventoryByID(ctx context.Context, id string) (*model.In
 	return toInventoryResponse(inv), nil
 }
 
-func (s *InventoryS) GetAllInventories(ctx context.Context, limit, offset int32) ([]*model.InventoryResponse, error) {
-	invs, err := s.repo.Tenant(ctx).GetAllInventories(ctx, pg.GetAllInventoriesParams{Limit: limit, Offset: offset})
-	if err != nil {
-		return nil, fmt.Errorf("failed to get inventories: %w", err)
-	}
-
-	resp := make([]*model.InventoryResponse, 0, len(invs))
-	for _, inv := range invs {
-		resp = append(resp, toInventoryResponse(inv))
-	}
-	return resp, nil
-}
-
-func (s *InventoryS) GetInventoriesFiltered(ctx context.Context, dateFrom, dateTo *time.Time, storageID, ingredientID, status *string, limit, offset int32) (*model.PaginatedInventoriesResponse, error) {
+func (s *InventoryS) GetInventoriesFiltered(
+	ctx context.Context,
+	dateFrom, dateTo *time.Time,
+	storageID, ingredientID, status *string,
+	search, sortBy, sortOrder string,
+	limit, offset int32,
+) (*model.PaginatedInventoriesResponse, error) {
 	var fromDate pgtype.Date
 	if dateFrom != nil {
 		fromDate = pgtype.Date{Time: *dateFrom, Valid: true}
@@ -161,26 +153,36 @@ func (s *InventoryS) GetInventoriesFiltered(ctx context.Context, dateFrom, dateT
 		statusText = strings.TrimSpace(*status)
 	}
 
-	countParams := pg.CountInventoriesFilteredParams{
-		Column1: fromDate,
-		Column2: toDate,
-		Column3: uuid.UUID(storageUUID.Bytes),
-		Column4: statusText,
-		Column5: uuid.UUID(ingredientUUID.Bytes),
+	if sortBy == "" {
+		sortBy = "date"
 	}
-	total, err := s.repo.Tenant(ctx).CountInventoriesFiltered(ctx, countParams)
+	if sortOrder == "" {
+		sortOrder = "desc"
+	}
+
+	total, err := s.repo.Tenant(ctx).CountInventoriesFiltered(ctx, pg.CountInventoriesFilteredParams{
+		DateFrom:     fromDate,
+		DateTo:       toDate,
+		StorageID:    storageUUID,
+		Status:       statusText,
+		IngredientID: ingredientUUID,
+		Search:       search,
+	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to count inventories: %w", err)
 	}
 
 	invs, err := s.repo.Tenant(ctx).GetInventoriesFiltered(ctx, pg.GetInventoriesFilteredParams{
-		Column1: fromDate,
-		Column2: toDate,
-		Column3: storageUUID.Bytes,
-		Column4: statusText,
-		Column5: ingredientUUID.Bytes,
-		Limit:   limit,
-		Offset:  offset,
+		DateFrom:     fromDate,
+		DateTo:       toDate,
+		StorageID:    storageUUID,
+		Status:       statusText,
+		IngredientID: ingredientUUID,
+		Search:       search,
+		SortBy:       sortBy,
+		SortOrder:    sortOrder,
+		Limit:        limit,
+		Offset:       offset,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get inventories: %w", err)
@@ -253,20 +255,6 @@ func (s *InventoryS) GetInventoryItems(ctx context.Context, inventoryID string) 
 	resp := make([]*model.InventoryItemComputedResponse, 0, len(rows))
 	for _, row := range rows {
 		resp = append(resp, toInventoryItemComputedResponse(row))
-	}
-	return resp, nil
-}
-
-func (s *InventoryS) SearchInventories(ctx context.Context, query string, limit, offset int32) ([]*model.InventoryResponse, error) {
-	q := query
-	invs, err := s.repo.Tenant(ctx).SearchInventories(ctx, pg.SearchInventoriesParams{Column1: &q, Limit: limit, Offset: offset})
-	if err != nil {
-		return nil, fmt.Errorf("failed to search inventories: %w", err)
-	}
-
-	resp := make([]*model.InventoryResponse, 0, len(invs))
-	for _, inv := range invs {
-		resp = append(resp, toInventoryResponse(inv))
 	}
 	return resp, nil
 }
@@ -1163,11 +1151,6 @@ func toInventoryResponse(inv any) *model.InventoryResponse {
 		description, descriptionI18n, status = row.Description, row.DescriptionI18n, row.Status
 		surplusAmount, shortageAmount, remainingAmount = row.SurplusAmount, row.ShortageAmount, row.RemainingAmount
 		createdAt, updatedAt = row.CreatedAt, row.UpdatedAt
-	case pg.SearchInventoriesRow:
-		id, number, date, storageID = row.ID, row.Number, row.Date, row.StorageID
-		description, descriptionI18n, status = row.Description, row.DescriptionI18n, row.Status
-		surplusAmount, shortageAmount, remainingAmount = row.SurplusAmount, row.ShortageAmount, row.RemainingAmount
-		createdAt, updatedAt, deletedAt = row.CreatedAt, row.UpdatedAt, row.DeletedAt
 	default:
 		return nil
 	}

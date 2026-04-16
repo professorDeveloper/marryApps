@@ -13,12 +13,41 @@ WHERE id = $1
   AND deleted_at = 0;
 
 -- name: GetAllSuppliers :many
-SELECT id, name, phone_number, location, branch_id, created_at, updated_at, deleted_at
-FROM suppliers
-WHERE branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-  AND deleted_at = 0
-ORDER BY name ASC
-LIMIT $1 OFFSET $2;
+SELECT
+    s.id,
+    s.name,
+    s.phone_number,
+    s.location,
+    s.created_at,
+    s.updated_at,
+    s.deleted_at
+FROM suppliers s
+WHERE s.deleted_at = 0
+  AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  AND (
+        sqlc.arg('search')::text = ''
+        OR COALESCE(s.name, '') ILIKE '%' || sqlc.arg('search')::text || '%'
+      )
+ORDER BY
+    CASE
+        WHEN sqlc.arg('sort_by')::text = 'name' AND sqlc.arg('sort_order')::text = 'asc'
+        THEN s.name
+    END ASC,
+    CASE
+        WHEN sqlc.arg('sort_by')::text = 'name' AND sqlc.arg('sort_order')::text = 'desc'
+        THEN s.name
+    END DESC,
+    CASE
+        WHEN sqlc.arg('sort_by')::text = 'created_at' AND sqlc.arg('sort_order')::text = 'asc'
+        THEN s.created_at
+    END ASC,
+    CASE
+        WHEN sqlc.arg('sort_by')::text = 'created_at' AND sqlc.arg('sort_order')::text = 'desc'
+        THEN s.created_at
+    END DESC,
+    s.created_at DESC
+LIMIT sqlc.arg('limit')::int
+OFFSET sqlc.arg('offset')::int;
 
 -- name: UpdateSupplier :one
 UPDATE suppliers
@@ -44,20 +73,15 @@ WHERE id = $1
   AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 RETURNING id, name, phone_number, location, branch_id, created_at, updated_at, deleted_at;
 
--- name: SearchSuppliers :many
-SELECT id, name, phone_number, location, branch_id, created_at, updated_at, deleted_at
-FROM suppliers
-WHERE name ILIKE $1
-  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-  AND deleted_at = 0
-ORDER BY name ASC
-LIMIT $2 OFFSET $3;
-
 -- name: CountSuppliers :one
 SELECT COUNT(*)
-FROM suppliers
-WHERE branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-  AND deleted_at = 0;
+FROM suppliers s
+WHERE s.deleted_at = 0
+  AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  AND (
+        sqlc.arg('search')::text = ''
+        OR COALESCE(s.name, '') ILIKE '%' || sqlc.arg('search')::text || '%'
+      );
 
 -- name: GetSuppliersByPhoneNumber :many
 SELECT id, name, phone_number, location, branch_id, created_at, updated_at, deleted_at

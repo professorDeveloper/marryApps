@@ -57,7 +57,7 @@ func (s *TransactionS) CreateIncomeExpense(ctx context.Context, userID string, r
 	if req.PayType != nil {
 		params.PayType = pg.NullPaymentType{
 			PaymentType: pg.PaymentType(*req.PayType),
-			Valid:        true,
+			Valid:       true,
 		}
 	}
 
@@ -187,16 +187,87 @@ func (s *TransactionS) GetTransactionByID(ctx context.Context, id uuid.UUID) (*m
 	return toTransactionResponse(tx), nil
 }
 
-// GetAllTransactions returns paginated transactions for the current branch
-func (s *TransactionS) GetAllTransactions(ctx context.Context, limit, offset int32) ([]model.TransactionResponse, error) {
-	rows, err := s.repo.Tenant(ctx).GetAllTransactions(ctx, pg.GetAllTransactionsParams{
-		Limit:  limit,
-		Offset: offset,
+func (s *TransactionS) GetAllTransactions(ctx context.Context, filter model.TransactionListFilter, limit, offset int32) ([]*model.TransactionResponse, int64, error) {
+	if filter.SortBy == "" {
+		filter.SortBy = "date"
+	}
+	if filter.SortOrder == "" {
+		filter.SortOrder = "desc"
+	}
+
+	var cashRegisterUUID pgtype.UUID
+	if filter.CashRegisterID != "" {
+		id, err := uuid.Parse(filter.CashRegisterID)
+		if err != nil {
+			return nil, 0, fmt.Errorf("invalid cash_register_id: %w", err)
+		}
+		cashRegisterUUID = pgtype.UUID{Bytes: id, Valid: true}
+	}
+
+	var groupTransactionUUID pgtype.UUID
+	if filter.GroupTransactionID != "" {
+		id, err := uuid.Parse(filter.GroupTransactionID)
+		if err != nil {
+			return nil, 0, fmt.Errorf("invalid group_transaction_id: %w", err)
+		}
+		groupTransactionUUID = pgtype.UUID{Bytes: id, Valid: true}
+	}
+
+	var dateFrom pgtype.Timestamptz
+	if filter.DateFrom != "" {
+		t, err := time.Parse("2006-01-02", filter.DateFrom)
+		if err != nil {
+			return nil, 0, fmt.Errorf("invalid date_from: %w", err)
+		}
+		dateFrom = pgtype.Timestamptz{Time: t, Valid: true}
+	}
+
+	var dateTo pgtype.Timestamptz
+	if filter.DateTo != "" {
+		t, err := time.Parse("2006-01-02", filter.DateTo)
+		if err != nil {
+			return nil, 0, fmt.Errorf("invalid date_to: %w", err)
+		}
+		t = t.Add(24*time.Hour - time.Second)
+		dateTo = pgtype.Timestamptz{Time: t, Valid: true}
+	}
+
+	total, err := s.repo.Tenant(ctx).CountTransactions(ctx, pg.CountTransactionsParams{
+		Search:             filter.Search,
+		Type:               filter.Type,
+		PayType:            filter.PayType,
+		CashRegisterID:     cashRegisterUUID,
+		GroupTransactionID: groupTransactionUUID,
+		DateFrom:           dateFrom,
+		DateTo:             dateTo,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to get transactions: %w", err)
+		return nil, 0, fmt.Errorf("failed to count transactions: %w", err)
 	}
-	return toTransactionResponses(rows), nil
+
+	rows, err := s.repo.Tenant(ctx).GetAllTransactions(ctx, pg.GetAllTransactionsParams{
+		Search:             filter.Search,
+		Type:               filter.Type,
+		PayType:            filter.PayType,
+		CashRegisterID:     cashRegisterUUID,
+		GroupTransactionID: groupTransactionUUID,
+		DateFrom:           dateFrom,
+		DateTo:             dateTo,
+		SortBy:             filter.SortBy,
+		SortOrder:          filter.SortOrder,
+		Limit:              limit,
+		Offset:             offset,
+	})
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to get transactions: %w", err)
+	}
+
+	resp := make([]*model.TransactionResponse, 0, len(rows))
+	for _, row := range rows {
+		resp = append(resp, toTransactionResponse(row))
+	}
+
+	return resp, total, nil
 }
 
 // GetTransactionsByType returns transactions filtered by type

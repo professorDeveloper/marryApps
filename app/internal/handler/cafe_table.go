@@ -3,7 +3,9 @@ package handler
 import (
 	"net/http"
 	"strconv"
+	"strings"
 
+	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 	"gitlab.yurtal.tech/company/maryai/back/internal/model"
 )
@@ -87,51 +89,121 @@ func (h *Handler) GetCafeTableByID(c echo.Context) error {
 	))
 }
 
-// GetAllCafeTables
+// GetAllCafeTables retrieves all cafe tables
 // @Summary Get all cafe tables
-// @Description Get all cafe tables with pagination
+// @Description Retrieve all cafe tables with pagination, optional search, hall filter, status filter and sorting
 // @Tags cafe-tables
 // @Accept json
 // @Produce json
 // @Security BearerAuth
-// @Param limit query int false "Limit" default(10) example:"10"
-// @Param offset query int false "Offset" default(0) example:"0"
-// @Param expand query string false "Expand related fields"
-// @Success 200 {array} model.CafeTableResponse
+// @Param search query string false "Search by table number"
+// @Param hall_id query string false "Filter by hall ID"
+// @Param status query string false "Filter by table status"
+// @Param table_type query string false "Filter by table type"
+// @Param sort_by query string false "Sort by field" Enums(number,created_at) default(created_at)
+// @Param sort_order query string false "Sort order" Enums(asc,desc) default(desc)
+// @Param limit query int false "Limit (default: 20)"
+// @Param offset query int false "Offset (default: 0)"
+// @Success 200 {object} model.PaginatedCafeTablesResponse
 // @Failure 400 {object} model.ErrorResponse
+// @Failure 401 {object} model.ErrorResponse
+// @Failure 500 {object} model.ErrorResponse
 // @Router /api/v1/cafe-tables [get]
 func (h *Handler) GetAllCafeTables(c echo.Context) error {
-	limit := int32(10)
-	if l := c.QueryParam("limit"); l != "" {
-		if val, err := strconv.Atoi(l); err == nil {
-			limit = int32(val)
+	var limit int32 = 20
+	var offset int32 = 0
+
+	if limitStr := c.QueryParam("limit"); limitStr != "" {
+		l, err := strconv.ParseInt(limitStr, 10, 32)
+		if err != nil || l <= 0 {
+			return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+				"Invalid limit",
+				"limit must be a positive integer",
+				http.StatusBadRequest,
+			))
 		}
+		limit = int32(l)
 	}
 
-	offset := int32(0)
-	if o := c.QueryParam("offset"); o != "" {
-		if val, err := strconv.Atoi(o); err == nil {
-			offset = int32(val)
+	if offsetStr := c.QueryParam("offset"); offsetStr != "" {
+		o, err := strconv.ParseInt(offsetStr, 10, 32)
+		if err != nil || o < 0 {
+			return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+				"Invalid offset",
+				"offset must be a non-negative integer",
+				http.StatusBadRequest,
+			))
 		}
+		offset = int32(o)
 	}
 
-	tables, total, err := h.service.CafeTable().GetAllCafeTables(c.Request().Context(), limit, offset)
-	if err != nil {
+	filter := model.CafeTableListFilter{
+		Search:    strings.TrimSpace(c.QueryParam("search")),
+		HallID:    strings.TrimSpace(c.QueryParam("hall_id")),
+		Status:    strings.TrimSpace(c.QueryParam("status")),
+		SortBy:    strings.TrimSpace(c.QueryParam("sort_by")),
+		SortOrder: strings.TrimSpace(c.QueryParam("sort_order")),
+		TableType: strings.TrimSpace(c.QueryParam("table_type")),
+	}
+
+	if filter.SortBy == "" {
+		filter.SortBy = "created_at"
+	}
+	if filter.SortOrder == "" {
+		filter.SortOrder = "desc"
+	}
+
+	allowedSortBy := map[string]bool{
+		"number":     true,
+		"created_at": true,
+	}
+	if !allowedSortBy[filter.SortBy] {
 		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
-			"Operation failed",
-			err.Error(),
+			"Invalid sort_by",
+			"allowed values: number, created_at",
 			http.StatusBadRequest,
 		))
 	}
 
-	if maps, expanded, err := h.expandListResponse(c, tables, "cafe_tables"); expanded {
-		if err != nil {
-			return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("expand failed", err.Error(), http.StatusInternalServerError))
-		}
-		return c.JSON(http.StatusOK, model.NewPaginatedResponse("Cafe tables retrieved successfully", maps, int32(total), limit, offset, http.StatusOK))
+	allowedSortOrder := map[string]bool{
+		"asc":  true,
+		"desc": true,
+	}
+	if !allowedSortOrder[filter.SortOrder] {
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"Invalid sort_order",
+			"allowed values: asc, desc",
+			http.StatusBadRequest,
+		))
 	}
 
-	return c.JSON(http.StatusOK, model.NewPaginatedResponse("Cafe tables retrieved successfully", tables, int32(total), limit, offset, http.StatusOK))
+	if filter.HallID != "" {
+		if _, err := uuid.Parse(filter.HallID); err != nil {
+			return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+				"Invalid hall_id",
+				"hall_id must be a valid UUID",
+				http.StatusBadRequest,
+			))
+		}
+	}
+
+	resp, total, err := h.service.CafeTable().GetAllCafeTables(c.Request().Context(), filter, limit, offset)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse(
+			"Operation failed",
+			err.Error(),
+			http.StatusInternalServerError,
+		))
+	}
+
+	return c.JSON(http.StatusOK, model.NewPaginatedResponse(
+		"Cafe tables retrieved successfully",
+		resp,
+		int32(total),
+		limit,
+		offset,
+		http.StatusOK,
+	))
 }
 
 // GetCafeTablesByHallID
@@ -411,59 +483,6 @@ func (h *Handler) RestoreCafeTable(c echo.Context) error {
 	}
 
 	return c.NoContent(http.StatusNoContent)
-}
-
-// SearchCafeTables
-// @Summary Search cafe tables
-// @Description Search cafe tables by number or status
-// @Tags cafe-tables
-// @Accept json
-// @Produce json
-// @Security BearerAuth
-// @Param query query string false "Search query" example:"5"
-// @Param limit query int false "Limit" default(10) example:"10"
-// @Param offset query int false "Offset" default(0) example:"0"
-// @Success 200 {array} model.CafeTableResponse
-// @Failure 400 {object} model.ErrorResponse
-// @Router /api/v1/cafe-tables/search [get]
-func (h *Handler) SearchCafeTables(c echo.Context) error {
-	query := c.QueryParam("query")
-	if query == "" {
-		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
-			"Query is required",
-			"missing query parameter: query",
-			http.StatusBadRequest,
-		))
-	}
-
-	limit := int32(10)
-	if l := c.QueryParam("limit"); l != "" {
-		if val, err := strconv.Atoi(l); err == nil {
-			limit = int32(val)
-		}
-	}
-
-	offset := int32(0)
-	if o := c.QueryParam("offset"); o != "" {
-		if val, err := strconv.Atoi(o); err == nil {
-			offset = int32(val)
-		}
-	}
-
-	tables, err := h.service.CafeTable().SearchCafeTables(c.Request().Context(), query, limit, offset)
-	if err != nil {
-		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
-			"Operation failed",
-			err.Error(),
-			http.StatusBadRequest,
-		))
-	}
-
-	return c.JSON(http.StatusOK, model.NewSuccessResponse(
-		"Cafe tables retrieved successfully",
-		tables,
-		http.StatusOK,
-	))
 }
 
 // GetCafeTablesByHallAndStatus

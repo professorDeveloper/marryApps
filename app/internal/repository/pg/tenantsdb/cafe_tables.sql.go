@@ -13,17 +13,47 @@ import (
 )
 
 const countCafeTables = `-- name: CountCafeTables :one
-SELECT COUNT(*) FROM cafe_tables
-WHERE cafe_tables.deleted_at = 0
+SELECT COUNT(*)
+FROM cafe_tables ct
+WHERE ct.deleted_at = 0
   AND EXISTS (
-    SELECT 1 FROM halls h
-    WHERE h.id = cafe_tables.hall_id
-      AND h.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-  )
+        SELECT 1
+        FROM halls h
+        WHERE h.id = ct.hall_id
+          AND h.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+      )
+  AND (
+        $1::text = ''
+        OR CAST(ct.number AS TEXT) ILIKE '%' || $1::text || '%'
+      )
+  AND (
+        $2::uuid IS NULL
+        OR ct.hall_id = $2::uuid
+      )
+  AND (
+        $3::text = ''
+        OR ct.status::text = $3::text
+      )
+  AND (
+      $4::text = ''
+      OR COALESCE(ct.table_type, '') = $4::text
+    )
 `
 
-func (q *Queries) CountCafeTables(ctx context.Context) (int64, error) {
-	row := q.db.QueryRow(ctx, countCafeTables)
+type CountCafeTablesParams struct {
+	Search    string      `json:"search"`
+	HallID    pgtype.UUID `json:"hall_id"`
+	Status    string      `json:"status"`
+	TableType string      `json:"table_type"`
+}
+
+func (q *Queries) CountCafeTables(ctx context.Context, arg CountCafeTablesParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countCafeTables,
+		arg.Search,
+		arg.HallID,
+		arg.Status,
+		arg.TableType,
+	)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -181,21 +211,78 @@ func (q *Queries) DeleteCafeTable(ctx context.Context, id uuid.UUID) error {
 }
 
 const getAllCafeTables = `-- name: GetAllCafeTables :many
-SELECT id, hall_id, number, capacity, status, table_type, pos_x, pos_y, width, height, rotation, price_per_hour, shape, created_at, updated_at, deleted_at
-FROM cafe_tables
-WHERE cafe_tables.deleted_at = 0
+SELECT
+    ct.id,
+    ct.hall_id,
+    ct.number,
+    ct.capacity,
+    ct.status,
+    ct.pos_x,
+    ct.pos_y,
+    ct.width,
+    ct.height,
+    ct.rotation,
+    ct.price_per_hour,
+    ct.table_type,
+    ct.shape,
+    ct.created_at,
+    ct.updated_at,
+    ct.deleted_at
+FROM cafe_tables ct
+WHERE ct.deleted_at = 0
   AND EXISTS (
-    SELECT 1 FROM halls h
-    WHERE h.id = cafe_tables.hall_id
-      AND h.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-  )
-ORDER BY hall_id ASC, number ASC
-LIMIT $1 OFFSET $2
+        SELECT 1
+        FROM halls h
+        WHERE h.id = ct.hall_id
+          AND h.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+      )
+  AND (
+        $1::text = ''
+        OR CAST(ct.number AS TEXT) ILIKE '%' || $1::text || '%'
+      )
+  AND (
+        $2::uuid IS NULL
+        OR ct.hall_id = $2::uuid
+      )
+  AND (
+        $3::text = ''
+        OR ct.status::text = $3::text
+      )
+  AND (
+      $4::text = ''
+      OR COALESCE(ct.table_type, '') = $4::text
+    )
+ORDER BY
+    CASE
+        WHEN $5::text = 'number' AND $6::text = 'asc'
+        THEN ct.number
+    END ASC,
+    CASE
+        WHEN $5::text = 'number' AND $6::text = 'desc'
+        THEN ct.number
+    END DESC,
+    CASE
+        WHEN $5::text = 'created_at' AND $6::text = 'asc'
+        THEN ct.created_at
+    END ASC,
+    CASE
+        WHEN $5::text = 'created_at' AND $6::text = 'desc'
+        THEN ct.created_at
+    END DESC,
+    ct.created_at DESC
+LIMIT $8::int
+OFFSET $7::int
 `
 
 type GetAllCafeTablesParams struct {
-	Limit  int32 `json:"limit"`
-	Offset int32 `json:"offset"`
+	Search    string      `json:"search"`
+	HallID    pgtype.UUID `json:"hall_id"`
+	Status    string      `json:"status"`
+	TableType string      `json:"table_type"`
+	SortBy    string      `json:"sort_by"`
+	SortOrder string      `json:"sort_order"`
+	Offset    int32       `json:"offset"`
+	Limit     int32       `json:"limit"`
 }
 
 type GetAllCafeTablesRow struct {
@@ -204,13 +291,13 @@ type GetAllCafeTablesRow struct {
 	Number       int32              `json:"number"`
 	Capacity     int32              `json:"capacity"`
 	Status       NullTableStatus    `json:"status"`
-	TableType    string             `json:"table_type"`
 	PosX         float64            `json:"pos_x"`
 	PosY         float64            `json:"pos_y"`
 	Width        int32              `json:"width"`
 	Height       int32              `json:"height"`
 	Rotation     int32              `json:"rotation"`
 	PricePerHour pgtype.Numeric     `json:"price_per_hour"`
+	TableType    string             `json:"table_type"`
 	Shape        string             `json:"shape"`
 	CreatedAt    pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
@@ -218,7 +305,16 @@ type GetAllCafeTablesRow struct {
 }
 
 func (q *Queries) GetAllCafeTables(ctx context.Context, arg GetAllCafeTablesParams) ([]GetAllCafeTablesRow, error) {
-	rows, err := q.db.Query(ctx, getAllCafeTables, arg.Limit, arg.Offset)
+	rows, err := q.db.Query(ctx, getAllCafeTables,
+		arg.Search,
+		arg.HallID,
+		arg.Status,
+		arg.TableType,
+		arg.SortBy,
+		arg.SortOrder,
+		arg.Offset,
+		arg.Limit,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -232,13 +328,13 @@ func (q *Queries) GetAllCafeTables(ctx context.Context, arg GetAllCafeTablesPara
 			&i.Number,
 			&i.Capacity,
 			&i.Status,
-			&i.TableType,
 			&i.PosX,
 			&i.PosY,
 			&i.Width,
 			&i.Height,
 			&i.Rotation,
 			&i.PricePerHour,
+			&i.TableType,
 			&i.Shape,
 			&i.CreatedAt,
 			&i.UpdatedAt,

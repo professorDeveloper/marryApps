@@ -24,18 +24,67 @@ WHERE c.id = $1 AND c.deleted_at = 0
   );
 
 -- name: GetAllCategories :many
-SELECT c.id, c.name, c.picture_url, c.color_code, c.name_i18n, c.department_id,
-       d.storage_id, c.parent, c.created_at, c.updated_at, c.deleted_at
+SELECT
+    c.id,
+    c.name,
+    c.picture_url,
+    c.color_code,
+    c.name_i18n,
+    c.department_id,
+    d.storage_id,
+    c.parent,
+    c.created_at,
+    c.updated_at,
+    c.deleted_at
 FROM categories c
-LEFT JOIN departments d ON c.department_id = d.id AND d.deleted_at = 0
+LEFT JOIN departments d
+    ON c.department_id = d.id
+   AND d.deleted_at = 0
+LEFT JOIN translations t
+    ON c.name_i18n = t.id
+   AND t.deleted_at = 0
 WHERE c.deleted_at = 0
+  AND (
+        sqlc.arg('search')::text = ''
+        OR COALESCE(c.name, '') ILIKE '%' || sqlc.arg('search')::text || '%'
+        OR COALESCE(t.uz, '') ILIKE '%' || sqlc.arg('search')::text || '%'
+        OR COALESCE(t.ru, '') ILIKE '%' || sqlc.arg('search')::text || '%'
+        OR COALESCE(t.en, '') ILIKE '%' || sqlc.arg('search')::text || '%'
+      )
+  AND (
+        sqlc.narg('department_id')::uuid IS NULL
+        OR c.department_id = sqlc.narg('department_id')::uuid
+      )
+  AND (
+        sqlc.narg('storage_id')::uuid IS NULL
+        OR d.storage_id = sqlc.narg('storage_id')::uuid
+      )
   AND EXISTS (
-    SELECT 1 FROM storages s
-    WHERE s.id = d.storage_id
-      AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-  )
-ORDER BY c.created_at DESC
-LIMIT $1 OFFSET $2;
+        SELECT 1
+        FROM storages s
+        WHERE s.id = d.storage_id
+          AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+      )
+ORDER BY
+    CASE
+        WHEN sqlc.arg('sort_by')::text = 'name' AND sqlc.arg('sort_order')::text = 'asc'
+        THEN c.name
+    END ASC,
+    CASE
+        WHEN sqlc.arg('sort_by')::text = 'name' AND sqlc.arg('sort_order')::text = 'desc'
+        THEN c.name
+    END DESC,
+    CASE
+        WHEN sqlc.arg('sort_by')::text = 'created_at' AND sqlc.arg('sort_order')::text = 'asc'
+        THEN c.created_at
+    END ASC,
+    CASE
+        WHEN sqlc.arg('sort_by')::text = 'created_at' AND sqlc.arg('sort_order')::text = 'desc'
+        THEN c.created_at
+    END DESC,
+    c.created_at DESC
+LIMIT sqlc.arg('limit')::int
+OFFSET sqlc.arg('offset')::int;
 
 -- name: GetCategoriesByDepartmentID :many
 SELECT c.id, c.name, c.picture_url, c.color_code, c.name_i18n, c.department_id,
@@ -142,66 +191,37 @@ WHERE categories.id = $1 AND deleted_at != 0
       AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
   );
 
--- name: SearchCategories :many
-SELECT
-    c.id,
-    COALESCE(c.name, '') as name,
-    c.picture_url,
-    c.color_code,
-    c.name_i18n,
-    c.department_id,
-    d.storage_id,
-    c.parent,
-    c.created_at,
-    c.updated_at,
-    c.deleted_at
-FROM categories c
-LEFT JOIN departments d ON c.department_id = d.id AND d.deleted_at = 0
-LEFT JOIN translations t ON c.name_i18n = t.id AND t.deleted_at = 0
-WHERE c.deleted_at = 0
-  AND (
-    COALESCE(c.name, '') ILIKE '%' || $1 || '%'
-    OR COALESCE(t.uz, '') ILIKE '%' || $1 || '%'
-    OR COALESCE(t.ru, '') ILIKE '%' || $1 || '%'
-    OR COALESCE(t.en, '') ILIKE '%' || $1 || '%'
-  )
-  AND EXISTS (
-    SELECT 1
-    FROM storages s
-    WHERE s.id = d.storage_id
-      AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-  )
-ORDER BY c.created_at DESC
-LIMIT $2 OFFSET $3;
-
--- name: CountSearchCategories :one
+-- name: CountCategories :one
 SELECT COUNT(*)
 FROM categories c
-LEFT JOIN departments d ON c.department_id = d.id AND d.deleted_at = 0
-LEFT JOIN translations t ON c.name_i18n = t.id AND t.deleted_at = 0
+LEFT JOIN departments d
+    ON c.department_id = d.id
+   AND d.deleted_at = 0
+LEFT JOIN translations t
+    ON c.name_i18n = t.id
+   AND t.deleted_at = 0
 WHERE c.deleted_at = 0
   AND (
-    COALESCE(c.name, '') ILIKE '%' || $1 || '%'
-    OR COALESCE(t.uz, '') ILIKE '%' || $1 || '%'
-    OR COALESCE(t.ru, '') ILIKE '%' || $1 || '%'
-    OR COALESCE(t.en, '') ILIKE '%' || $1 || '%'
-  )
+        sqlc.arg('search')::text = ''
+        OR COALESCE(c.name, '') ILIKE '%' || sqlc.arg('search')::text || '%'
+        OR COALESCE(t.uz, '') ILIKE '%' || sqlc.arg('search')::text || '%'
+        OR COALESCE(t.ru, '') ILIKE '%' || sqlc.arg('search')::text || '%'
+        OR COALESCE(t.en, '') ILIKE '%' || sqlc.arg('search')::text || '%'
+      )
+  AND (
+        sqlc.narg('department_id')::uuid IS NULL
+        OR c.department_id = sqlc.narg('department_id')::uuid
+      )
+  AND (
+        sqlc.narg('storage_id')::uuid IS NULL
+        OR d.storage_id = sqlc.narg('storage_id')::uuid
+      )
   AND EXISTS (
-    SELECT 1
-    FROM storages s
-    WHERE s.id = d.storage_id
-      AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-  );
-
--- name: CountCategories :one
-SELECT COUNT(*) FROM categories c
-LEFT JOIN departments d ON c.department_id = d.id AND d.deleted_at = 0
-WHERE c.deleted_at = 0
-  AND EXISTS (
-    SELECT 1 FROM storages s
-    WHERE s.id = d.storage_id
-      AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-  );
+        SELECT 1
+        FROM storages s
+        WHERE s.id = d.storage_id
+          AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+      );
 
 -- name: CountCategoriesByDepartment :one
 SELECT COUNT(*) FROM categories c
@@ -286,25 +306,121 @@ WHERE c.id = $1 AND c.deleted_at = 0
 -- name: GetAllCategoriesWithLanguage :many
 SELECT
     c.id,
-    COALESCE(CASE
-        WHEN $1::text = 'uz' THEN t.uz
-        WHEN $1::text = 'ru' THEN t.ru
-        WHEN $1::text = 'en' THEN t.en
-        ELSE c.name
-    END, c.name) as name,
-    c.picture_url, c.name_i18n, c.department_id,
-    d.storage_id, c.parent, c.color_code, c.created_at, c.updated_at, c.deleted_at
+    COALESCE(
+        CASE
+            WHEN sqlc.arg('lang')::text = 'uz' THEN t.uz
+            WHEN sqlc.arg('lang')::text = 'ru' THEN t.ru
+            WHEN sqlc.arg('lang')::text = 'en' THEN t.en
+            ELSE c.name
+        END,
+        c.name
+    ) AS name,
+    c.picture_url,
+    c.color_code,
+    c.name_i18n,
+    c.department_id,
+    d.storage_id,
+    c.parent,
+    c.created_at,
+    c.updated_at,
+    c.deleted_at
 FROM categories c
-LEFT JOIN departments d ON c.department_id = d.id AND d.deleted_at = 0
-LEFT JOIN translations t ON c.name_i18n = t.id AND t.deleted_at = 0
+LEFT JOIN departments d
+    ON c.department_id = d.id
+   AND d.deleted_at = 0
+LEFT JOIN translations t
+    ON c.name_i18n = t.id
+   AND t.deleted_at = 0
 WHERE c.deleted_at = 0
+  AND (
+        sqlc.arg('search')::text = ''
+        OR COALESCE(c.name, '') ILIKE '%' || sqlc.arg('search')::text || '%'
+        OR COALESCE(t.uz, '') ILIKE '%' || sqlc.arg('search')::text || '%'
+        OR COALESCE(t.ru, '') ILIKE '%' || sqlc.arg('search')::text || '%'
+        OR COALESCE(t.en, '') ILIKE '%' || sqlc.arg('search')::text || '%'
+      )
+  AND (
+        sqlc.narg('department_id')::uuid IS NULL
+        OR c.department_id = sqlc.narg('department_id')::uuid
+      )
+  AND (
+        sqlc.narg('storage_id')::uuid IS NULL
+        OR d.storage_id = sqlc.narg('storage_id')::uuid
+      )
   AND EXISTS (
-    SELECT 1 FROM storages s
-    WHERE s.id = d.storage_id
-      AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-  )
-ORDER BY c.created_at DESC
-LIMIT $2 OFFSET $3;
+        SELECT 1
+        FROM storages s
+        WHERE s.id = d.storage_id
+          AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+      )
+ORDER BY
+    CASE
+        WHEN sqlc.arg('sort_by')::text = 'name' AND sqlc.arg('sort_order')::text = 'asc'
+        THEN COALESCE(
+            CASE
+                WHEN sqlc.arg('lang')::text = 'uz' THEN t.uz
+                WHEN sqlc.arg('lang')::text = 'ru' THEN t.ru
+                WHEN sqlc.arg('lang')::text = 'en' THEN t.en
+                ELSE c.name
+            END,
+            c.name
+        )
+    END ASC,
+    CASE
+        WHEN sqlc.arg('sort_by')::text = 'name' AND sqlc.arg('sort_order')::text = 'desc'
+        THEN COALESCE(
+            CASE
+                WHEN sqlc.arg('lang')::text = 'uz' THEN t.uz
+                WHEN sqlc.arg('lang')::text = 'ru' THEN t.ru
+                WHEN sqlc.arg('lang')::text = 'en' THEN t.en
+                ELSE c.name
+            END,
+            c.name
+        )
+    END DESC,
+    CASE
+        WHEN sqlc.arg('sort_by')::text = 'created_at' AND sqlc.arg('sort_order')::text = 'asc'
+        THEN c.created_at
+    END ASC,
+    CASE
+        WHEN sqlc.arg('sort_by')::text = 'created_at' AND sqlc.arg('sort_order')::text = 'desc'
+        THEN c.created_at
+    END DESC,
+    c.created_at DESC
+LIMIT sqlc.arg('limit')::int
+OFFSET sqlc.arg('offset')::int;
+
+-- name: CountCategoriesWithLanguage :one
+SELECT COUNT(*)
+FROM categories c
+LEFT JOIN departments d
+    ON c.department_id = d.id
+   AND d.deleted_at = 0
+LEFT JOIN translations t
+    ON c.name_i18n = t.id
+   AND t.deleted_at = 0
+WHERE c.deleted_at = 0
+  AND (
+        sqlc.arg('search')::text = ''
+        OR COALESCE(c.name, '') ILIKE '%' || sqlc.arg('search')::text || '%'
+        OR COALESCE(t.uz, '') ILIKE '%' || sqlc.arg('search')::text || '%'
+        OR COALESCE(t.ru, '') ILIKE '%' || sqlc.arg('search')::text || '%'
+        OR COALESCE(t.en, '') ILIKE '%' || sqlc.arg('search')::text || '%'
+      )
+  AND (
+        sqlc.narg('department_id')::uuid IS NULL
+        OR c.department_id = sqlc.narg('department_id')::uuid
+      )
+  AND (
+        sqlc.narg('storage_id')::uuid IS NULL
+        OR d.storage_id = sqlc.narg('storage_id')::uuid
+      )
+  AND EXISTS (
+        SELECT 1
+        FROM storages s
+        WHERE s.id = d.storage_id
+          AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+      );
 
 -- name: CountCategoriesByIDs :one
 SELECT COUNT(*)::BIGINT

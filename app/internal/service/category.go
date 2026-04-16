@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -29,6 +28,22 @@ func timestampToTime(ts pgtype.Timestamptz) *time.Time {
 		return nil
 	}
 	return &ts.Time
+}
+
+func parseOptionalUUID(value string) (pgtype.UUID, error) {
+	if value == "" {
+		return pgtype.UUID{}, nil
+	}
+
+	id, err := uuid.Parse(value)
+	if err != nil {
+		return pgtype.UUID{}, err
+	}
+
+	return pgtype.UUID{
+		Bytes: id,
+		Valid: true,
+	}, nil
 }
 
 func mapCategoryToResponse(id uuid.UUID, name string, nameI18n, departmentID, storageID, parent pgtype.UUID, pictureUrl, colorCode *string, createdAt, updatedAt pgtype.Timestamptz) *model.CategoryResponse {
@@ -122,16 +137,42 @@ func (c *CategoryS) GetCategoryByID(ctx context.Context, categoryID string) (*mo
 	return mapCategoryToResponse(row.ID, row.Name, row.NameI18n, row.DepartmentID, row.StorageID, row.Parent, row.PictureUrl, row.ColorCode, row.CreatedAt, row.UpdatedAt), nil
 }
 
-func (c *CategoryS) GetAllCategories(ctx context.Context, limit, offset int32) ([]*model.CategoryResponse, int64, error) {
-	total, err := c.repo.Tenant(ctx).CountCategories(ctx)
+func (c *CategoryS) GetAllCategories(ctx context.Context, filter model.CategoryListFilter, limit, offset int32) ([]*model.CategoryResponse, int64, error) {
+	departmentUUID, err := parseOptionalUUID(filter.DepartmentID)
+	if err != nil {
+		return nil, 0, fmt.Errorf("invalid department_id: %w", err)
+	}
+
+	storageUUID, err := parseOptionalUUID(filter.StorageID)
+	if err != nil {
+		return nil, 0, fmt.Errorf("invalid storage_id: %w", err)
+	}
+
+	if filter.SortBy == "" {
+		filter.SortBy = "created_at"
+	}
+	if filter.SortOrder == "" {
+		filter.SortOrder = "desc"
+	}
+
+	total, err := c.repo.Tenant(ctx).CountCategories(ctx, pg.CountCategoriesParams{
+		Search:       filter.Search,
+		DepartmentID: departmentUUID,
+		StorageID:    storageUUID,
+	})
 	if err != nil {
 		log.Printf("CountCategories failed: %v", err)
 		return nil, 0, fmt.Errorf("failed to count categories: %w", err)
 	}
 
 	rows, err := c.repo.Tenant(ctx).GetAllCategories(ctx, pg.GetAllCategoriesParams{
-		Limit:  limit,
-		Offset: offset,
+		Search:       filter.Search,
+		DepartmentID: departmentUUID,
+		StorageID:    storageUUID,
+		SortBy:       filter.SortBy,
+		SortOrder:    filter.SortOrder,
+		Limit:        limit,
+		Offset:       offset,
 	})
 	if err != nil {
 		log.Printf("GetAllCategories failed: %v", err)
@@ -140,8 +181,20 @@ func (c *CategoryS) GetAllCategories(ctx context.Context, limit, offset int32) (
 
 	var responses []*model.CategoryResponse
 	for _, row := range rows {
-		responses = append(responses, mapCategoryToResponse(row.ID, row.Name, row.NameI18n, row.DepartmentID, row.StorageID, row.Parent, row.PictureUrl, row.ColorCode, row.CreatedAt, row.UpdatedAt))
+		responses = append(responses, mapCategoryToResponse(
+			row.ID,
+			row.Name,
+			row.NameI18n,
+			row.DepartmentID,
+			row.StorageID,
+			row.Parent,
+			row.PictureUrl,
+			row.ColorCode,
+			row.CreatedAt,
+			row.UpdatedAt,
+		))
 	}
+
 	return responses, total, nil
 }
 
@@ -359,47 +412,6 @@ func (c *CategoryS) RestoreCategory(ctx context.Context, categoryID string) (*mo
 	return c.GetCategoryByID(ctx, categoryID)
 }
 
-func (c *CategoryS) SearchCategories(ctx context.Context, query string, limit, offset int32) ([]*model.CategoryResponse, int64, error) {
-	query = strings.TrimSpace(query)
-	if query == "" {
-		return nil, 0, fmt.Errorf("search query is required")
-	}
-
-	total, err := c.repo.Tenant(ctx).CountSearchCategories(ctx, &query)
-	if err != nil {
-		log.Printf("CountSearchCategories failed: %v", err)
-		return nil, 0, fmt.Errorf("failed to count searched categories: %w", err)
-	}
-
-	rows, err := c.repo.Tenant(ctx).SearchCategories(ctx, pg.SearchCategoriesParams{
-		Column1: &query,
-		Limit:   limit,
-		Offset:  offset,
-	})
-	if err != nil {
-		log.Printf("SearchCategories failed: %v", err)
-		return nil, 0, fmt.Errorf("failed to search categories: %w", err)
-	}
-
-	var responses []*model.CategoryResponse
-	for _, row := range rows {
-		responses = append(responses, mapCategoryToResponse(
-			row.ID,
-			row.Name,
-			row.NameI18n,
-			row.DepartmentID,
-			row.StorageID,
-			row.Parent,
-			row.PictureUrl,
-			row.ColorCode,
-			row.CreatedAt,
-			row.UpdatedAt,
-		))
-	}
-
-	return responses, total, nil
-}
-
 func (c *CategoryS) GetCategoryByIDWithLang(ctx context.Context, categoryID string, lang string) (*model.CategoryResponse, error) {
 	id, err := uuid.Parse(categoryID)
 	if err != nil {
@@ -418,17 +430,43 @@ func (c *CategoryS) GetCategoryByIDWithLang(ctx context.Context, categoryID stri
 	return mapCategoryToResponse(row.ID, row.Name, row.NameI18n, row.DepartmentID, row.StorageID, row.Parent, row.PictureUrl, row.ColorCode, row.CreatedAt, row.UpdatedAt), nil
 }
 
-func (c *CategoryS) GetAllCategoriesWithLang(ctx context.Context, lang string, limit, offset int32) ([]*model.CategoryResponse, int64, error) {
-	total, err := c.repo.Tenant(ctx).CountCategories(ctx)
+func (c *CategoryS) GetAllCategoriesWithLang(ctx context.Context, lang string, filter model.CategoryListFilter, limit, offset int32) ([]*model.CategoryResponse, int64, error) {
+	departmentUUID, err := parseOptionalUUID(filter.DepartmentID)
 	if err != nil {
-		log.Printf("CountCategories failed: %v", err)
+		return nil, 0, fmt.Errorf("invalid department_id: %w", err)
+	}
+
+	storageUUID, err := parseOptionalUUID(filter.StorageID)
+	if err != nil {
+		return nil, 0, fmt.Errorf("invalid storage_id: %w", err)
+	}
+
+	if filter.SortBy == "" {
+		filter.SortBy = "created_at"
+	}
+	if filter.SortOrder == "" {
+		filter.SortOrder = "desc"
+	}
+
+	total, err := c.repo.Tenant(ctx).CountCategoriesWithLanguage(ctx, pg.CountCategoriesWithLanguageParams{
+		Search:       filter.Search,
+		DepartmentID: departmentUUID,
+		StorageID:    storageUUID,
+	})
+	if err != nil {
+		log.Printf("CountCategoriesWithLanguage failed: %v", err)
 		return nil, 0, fmt.Errorf("failed to count categories: %w", err)
 	}
 
 	rows, err := c.repo.Tenant(ctx).GetAllCategoriesWithLanguage(ctx, pg.GetAllCategoriesWithLanguageParams{
-		Column1: lang,
-		Limit:   limit,
-		Offset:  offset,
+		Lang:         lang,
+		Search:       filter.Search,
+		DepartmentID: departmentUUID,
+		StorageID:    storageUUID,
+		SortBy:       filter.SortBy,
+		SortOrder:    filter.SortOrder,
+		Limit:        limit,
+		Offset:       offset,
 	})
 	if err != nil {
 		log.Printf("GetAllCategoriesWithLang failed: %v", err)
@@ -437,7 +475,19 @@ func (c *CategoryS) GetAllCategoriesWithLang(ctx context.Context, lang string, l
 
 	var responses []*model.CategoryResponse
 	for _, row := range rows {
-		responses = append(responses, mapCategoryToResponse(row.ID, row.Name, row.NameI18n, row.DepartmentID, row.StorageID, row.Parent, row.PictureUrl, row.ColorCode, row.CreatedAt, row.UpdatedAt))
+		responses = append(responses, mapCategoryToResponse(
+			row.ID,
+			row.Name,
+			row.NameI18n,
+			row.DepartmentID,
+			row.StorageID,
+			row.Parent,
+			row.PictureUrl,
+			row.ColorCode,
+			row.CreatedAt,
+			row.UpdatedAt,
+		))
 	}
+
 	return responses, total, nil
 }

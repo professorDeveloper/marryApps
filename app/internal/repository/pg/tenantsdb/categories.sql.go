@@ -13,18 +13,46 @@ import (
 )
 
 const countCategories = `-- name: CountCategories :one
-SELECT COUNT(*) FROM categories c
-LEFT JOIN departments d ON c.department_id = d.id AND d.deleted_at = 0
+SELECT COUNT(*)
+FROM categories c
+LEFT JOIN departments d
+    ON c.department_id = d.id
+   AND d.deleted_at = 0
+LEFT JOIN translations t
+    ON c.name_i18n = t.id
+   AND t.deleted_at = 0
 WHERE c.deleted_at = 0
+  AND (
+        $1::text = ''
+        OR COALESCE(c.name, '') ILIKE '%' || $1::text || '%'
+        OR COALESCE(t.uz, '') ILIKE '%' || $1::text || '%'
+        OR COALESCE(t.ru, '') ILIKE '%' || $1::text || '%'
+        OR COALESCE(t.en, '') ILIKE '%' || $1::text || '%'
+      )
+  AND (
+        $2::uuid IS NULL
+        OR c.department_id = $2::uuid
+      )
+  AND (
+        $3::uuid IS NULL
+        OR d.storage_id = $3::uuid
+      )
   AND EXISTS (
-    SELECT 1 FROM storages s
-    WHERE s.id = d.storage_id
-      AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-  )
+        SELECT 1
+        FROM storages s
+        WHERE s.id = d.storage_id
+          AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+      )
 `
 
-func (q *Queries) CountCategories(ctx context.Context) (int64, error) {
-	row := q.db.QueryRow(ctx, countCategories)
+type CountCategoriesParams struct {
+	Search       string      `json:"search"`
+	DepartmentID pgtype.UUID `json:"department_id"`
+	StorageID    pgtype.UUID `json:"storage_id"`
+}
+
+func (q *Queries) CountCategories(ctx context.Context, arg CountCategoriesParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countCategories, arg.Search, arg.DepartmentID, arg.StorageID)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -102,6 +130,52 @@ func (q *Queries) CountCategoriesByStorage(ctx context.Context, storageID pgtype
 	return count, err
 }
 
+const countCategoriesWithLanguage = `-- name: CountCategoriesWithLanguage :one
+SELECT COUNT(*)
+FROM categories c
+LEFT JOIN departments d
+    ON c.department_id = d.id
+   AND d.deleted_at = 0
+LEFT JOIN translations t
+    ON c.name_i18n = t.id
+   AND t.deleted_at = 0
+WHERE c.deleted_at = 0
+  AND (
+        $1::text = ''
+        OR COALESCE(c.name, '') ILIKE '%' || $1::text || '%'
+        OR COALESCE(t.uz, '') ILIKE '%' || $1::text || '%'
+        OR COALESCE(t.ru, '') ILIKE '%' || $1::text || '%'
+        OR COALESCE(t.en, '') ILIKE '%' || $1::text || '%'
+      )
+  AND (
+        $2::uuid IS NULL
+        OR c.department_id = $2::uuid
+      )
+  AND (
+        $3::uuid IS NULL
+        OR d.storage_id = $3::uuid
+      )
+  AND EXISTS (
+        SELECT 1
+        FROM storages s
+        WHERE s.id = d.storage_id
+          AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+      )
+`
+
+type CountCategoriesWithLanguageParams struct {
+	Search       string      `json:"search"`
+	DepartmentID pgtype.UUID `json:"department_id"`
+	StorageID    pgtype.UUID `json:"storage_id"`
+}
+
+func (q *Queries) CountCategoriesWithLanguage(ctx context.Context, arg CountCategoriesWithLanguageParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countCategoriesWithLanguage, arg.Search, arg.DepartmentID, arg.StorageID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const countRootCategories = `-- name: CountRootCategories :one
 SELECT COUNT(*) FROM categories c
 LEFT JOIN departments d ON c.department_id = d.id AND d.deleted_at = 0
@@ -115,33 +189,6 @@ WHERE c.parent IS NULL AND c.deleted_at = 0
 
 func (q *Queries) CountRootCategories(ctx context.Context) (int64, error) {
 	row := q.db.QueryRow(ctx, countRootCategories)
-	var count int64
-	err := row.Scan(&count)
-	return count, err
-}
-
-const countSearchCategories = `-- name: CountSearchCategories :one
-SELECT COUNT(*)
-FROM categories c
-LEFT JOIN departments d ON c.department_id = d.id AND d.deleted_at = 0
-LEFT JOIN translations t ON c.name_i18n = t.id AND t.deleted_at = 0
-WHERE c.deleted_at = 0
-  AND (
-    COALESCE(c.name, '') ILIKE '%' || $1 || '%'
-    OR COALESCE(t.uz, '') ILIKE '%' || $1 || '%'
-    OR COALESCE(t.ru, '') ILIKE '%' || $1 || '%'
-    OR COALESCE(t.en, '') ILIKE '%' || $1 || '%'
-  )
-  AND EXISTS (
-    SELECT 1
-    FROM storages s
-    WHERE s.id = d.storage_id
-      AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-  )
-`
-
-func (q *Queries) CountSearchCategories(ctx context.Context, dollar_1 *string) (int64, error) {
-	row := q.db.QueryRow(ctx, countSearchCategories, dollar_1)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -230,23 +277,77 @@ func (q *Queries) DeleteCategory(ctx context.Context, id uuid.UUID) error {
 }
 
 const getAllCategories = `-- name: GetAllCategories :many
-SELECT c.id, c.name, c.picture_url, c.color_code, c.name_i18n, c.department_id,
-       d.storage_id, c.parent, c.created_at, c.updated_at, c.deleted_at
+SELECT
+    c.id,
+    c.name,
+    c.picture_url,
+    c.color_code,
+    c.name_i18n,
+    c.department_id,
+    d.storage_id,
+    c.parent,
+    c.created_at,
+    c.updated_at,
+    c.deleted_at
 FROM categories c
-LEFT JOIN departments d ON c.department_id = d.id AND d.deleted_at = 0
+LEFT JOIN departments d
+    ON c.department_id = d.id
+   AND d.deleted_at = 0
+LEFT JOIN translations t
+    ON c.name_i18n = t.id
+   AND t.deleted_at = 0
 WHERE c.deleted_at = 0
+  AND (
+        $1::text = ''
+        OR COALESCE(c.name, '') ILIKE '%' || $1::text || '%'
+        OR COALESCE(t.uz, '') ILIKE '%' || $1::text || '%'
+        OR COALESCE(t.ru, '') ILIKE '%' || $1::text || '%'
+        OR COALESCE(t.en, '') ILIKE '%' || $1::text || '%'
+      )
+  AND (
+        $2::uuid IS NULL
+        OR c.department_id = $2::uuid
+      )
+  AND (
+        $3::uuid IS NULL
+        OR d.storage_id = $3::uuid
+      )
   AND EXISTS (
-    SELECT 1 FROM storages s
-    WHERE s.id = d.storage_id
-      AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-  )
-ORDER BY c.created_at DESC
-LIMIT $1 OFFSET $2
+        SELECT 1
+        FROM storages s
+        WHERE s.id = d.storage_id
+          AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+      )
+ORDER BY
+    CASE
+        WHEN $4::text = 'name' AND $5::text = 'asc'
+        THEN c.name
+    END ASC,
+    CASE
+        WHEN $4::text = 'name' AND $5::text = 'desc'
+        THEN c.name
+    END DESC,
+    CASE
+        WHEN $4::text = 'created_at' AND $5::text = 'asc'
+        THEN c.created_at
+    END ASC,
+    CASE
+        WHEN $4::text = 'created_at' AND $5::text = 'desc'
+        THEN c.created_at
+    END DESC,
+    c.created_at DESC
+LIMIT $7::int
+OFFSET $6::int
 `
 
 type GetAllCategoriesParams struct {
-	Limit  int32 `json:"limit"`
-	Offset int32 `json:"offset"`
+	Search       string      `json:"search"`
+	DepartmentID pgtype.UUID `json:"department_id"`
+	StorageID    pgtype.UUID `json:"storage_id"`
+	SortBy       string      `json:"sort_by"`
+	SortOrder    string      `json:"sort_order"`
+	Offset       int32       `json:"offset"`
+	Limit        int32       `json:"limit"`
 }
 
 type GetAllCategoriesRow struct {
@@ -264,7 +365,15 @@ type GetAllCategoriesRow struct {
 }
 
 func (q *Queries) GetAllCategories(ctx context.Context, arg GetAllCategoriesParams) ([]GetAllCategoriesRow, error) {
-	rows, err := q.db.Query(ctx, getAllCategories, arg.Limit, arg.Offset)
+	rows, err := q.db.Query(ctx, getAllCategories,
+		arg.Search,
+		arg.DepartmentID,
+		arg.StorageID,
+		arg.SortBy,
+		arg.SortOrder,
+		arg.Offset,
+		arg.Limit,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -298,49 +407,127 @@ func (q *Queries) GetAllCategories(ctx context.Context, arg GetAllCategoriesPara
 const getAllCategoriesWithLanguage = `-- name: GetAllCategoriesWithLanguage :many
 SELECT
     c.id,
-    COALESCE(CASE
-        WHEN $1::text = 'uz' THEN t.uz
-        WHEN $1::text = 'ru' THEN t.ru
-        WHEN $1::text = 'en' THEN t.en
-        ELSE c.name
-    END, c.name) as name,
-    c.picture_url, c.name_i18n, c.department_id,
-    d.storage_id, c.parent, c.color_code, c.created_at, c.updated_at, c.deleted_at
+    COALESCE(
+        CASE
+            WHEN $1::text = 'uz' THEN t.uz
+            WHEN $1::text = 'ru' THEN t.ru
+            WHEN $1::text = 'en' THEN t.en
+            ELSE c.name
+        END,
+        c.name
+    ) AS name,
+    c.picture_url,
+    c.color_code,
+    c.name_i18n,
+    c.department_id,
+    d.storage_id,
+    c.parent,
+    c.created_at,
+    c.updated_at,
+    c.deleted_at
 FROM categories c
-LEFT JOIN departments d ON c.department_id = d.id AND d.deleted_at = 0
-LEFT JOIN translations t ON c.name_i18n = t.id AND t.deleted_at = 0
+LEFT JOIN departments d
+    ON c.department_id = d.id
+   AND d.deleted_at = 0
+LEFT JOIN translations t
+    ON c.name_i18n = t.id
+   AND t.deleted_at = 0
 WHERE c.deleted_at = 0
+  AND (
+        $2::text = ''
+        OR COALESCE(c.name, '') ILIKE '%' || $2::text || '%'
+        OR COALESCE(t.uz, '') ILIKE '%' || $2::text || '%'
+        OR COALESCE(t.ru, '') ILIKE '%' || $2::text || '%'
+        OR COALESCE(t.en, '') ILIKE '%' || $2::text || '%'
+      )
+  AND (
+        $3::uuid IS NULL
+        OR c.department_id = $3::uuid
+      )
+  AND (
+        $4::uuid IS NULL
+        OR d.storage_id = $4::uuid
+      )
   AND EXISTS (
-    SELECT 1 FROM storages s
-    WHERE s.id = d.storage_id
-      AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-  )
-ORDER BY c.created_at DESC
-LIMIT $2 OFFSET $3
+        SELECT 1
+        FROM storages s
+        WHERE s.id = d.storage_id
+          AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+      )
+ORDER BY
+    CASE
+        WHEN $5::text = 'name' AND $6::text = 'asc'
+        THEN COALESCE(
+            CASE
+                WHEN $1::text = 'uz' THEN t.uz
+                WHEN $1::text = 'ru' THEN t.ru
+                WHEN $1::text = 'en' THEN t.en
+                ELSE c.name
+            END,
+            c.name
+        )
+    END ASC,
+    CASE
+        WHEN $5::text = 'name' AND $6::text = 'desc'
+        THEN COALESCE(
+            CASE
+                WHEN $1::text = 'uz' THEN t.uz
+                WHEN $1::text = 'ru' THEN t.ru
+                WHEN $1::text = 'en' THEN t.en
+                ELSE c.name
+            END,
+            c.name
+        )
+    END DESC,
+    CASE
+        WHEN $5::text = 'created_at' AND $6::text = 'asc'
+        THEN c.created_at
+    END ASC,
+    CASE
+        WHEN $5::text = 'created_at' AND $6::text = 'desc'
+        THEN c.created_at
+    END DESC,
+    c.created_at DESC
+LIMIT $8::int
+OFFSET $7::int
 `
 
 type GetAllCategoriesWithLanguageParams struct {
-	Column1 string `json:"column_1"`
-	Limit   int32  `json:"limit"`
-	Offset  int32  `json:"offset"`
+	Lang         string      `json:"lang"`
+	Search       string      `json:"search"`
+	DepartmentID pgtype.UUID `json:"department_id"`
+	StorageID    pgtype.UUID `json:"storage_id"`
+	SortBy       string      `json:"sort_by"`
+	SortOrder    string      `json:"sort_order"`
+	Offset       int32       `json:"offset"`
+	Limit        int32       `json:"limit"`
 }
 
 type GetAllCategoriesWithLanguageRow struct {
 	ID           uuid.UUID          `json:"id"`
 	Name         string             `json:"name"`
 	PictureUrl   *string            `json:"picture_url"`
+	ColorCode    *string            `json:"color_code"`
 	NameI18n     pgtype.UUID        `json:"name_i18n"`
 	DepartmentID pgtype.UUID        `json:"department_id"`
 	StorageID    pgtype.UUID        `json:"storage_id"`
 	Parent       pgtype.UUID        `json:"parent"`
-	ColorCode    *string            `json:"color_code"`
 	CreatedAt    pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
 	DeletedAt    *int64             `json:"deleted_at"`
 }
 
 func (q *Queries) GetAllCategoriesWithLanguage(ctx context.Context, arg GetAllCategoriesWithLanguageParams) ([]GetAllCategoriesWithLanguageRow, error) {
-	rows, err := q.db.Query(ctx, getAllCategoriesWithLanguage, arg.Column1, arg.Limit, arg.Offset)
+	rows, err := q.db.Query(ctx, getAllCategoriesWithLanguage,
+		arg.Lang,
+		arg.Search,
+		arg.DepartmentID,
+		arg.StorageID,
+		arg.SortBy,
+		arg.SortOrder,
+		arg.Offset,
+		arg.Limit,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -352,11 +539,11 @@ func (q *Queries) GetAllCategoriesWithLanguage(ctx context.Context, arg GetAllCa
 			&i.ID,
 			&i.Name,
 			&i.PictureUrl,
+			&i.ColorCode,
 			&i.NameI18n,
 			&i.DepartmentID,
 			&i.StorageID,
 			&i.Parent,
-			&i.ColorCode,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.DeletedAt,
@@ -816,91 +1003,6 @@ WHERE categories.id = $1 AND deleted_at != 0
 func (q *Queries) RestoreCategory(ctx context.Context, id uuid.UUID) error {
 	_, err := q.db.Exec(ctx, restoreCategory, id)
 	return err
-}
-
-const searchCategories = `-- name: SearchCategories :many
-SELECT
-    c.id,
-    COALESCE(c.name, '') as name,
-    c.picture_url,
-    c.color_code,
-    c.name_i18n,
-    c.department_id,
-    d.storage_id,
-    c.parent,
-    c.created_at,
-    c.updated_at,
-    c.deleted_at
-FROM categories c
-LEFT JOIN departments d ON c.department_id = d.id AND d.deleted_at = 0
-LEFT JOIN translations t ON c.name_i18n = t.id AND t.deleted_at = 0
-WHERE c.deleted_at = 0
-  AND (
-    COALESCE(c.name, '') ILIKE '%' || $1 || '%'
-    OR COALESCE(t.uz, '') ILIKE '%' || $1 || '%'
-    OR COALESCE(t.ru, '') ILIKE '%' || $1 || '%'
-    OR COALESCE(t.en, '') ILIKE '%' || $1 || '%'
-  )
-  AND EXISTS (
-    SELECT 1
-    FROM storages s
-    WHERE s.id = d.storage_id
-      AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-  )
-ORDER BY c.created_at DESC
-LIMIT $2 OFFSET $3
-`
-
-type SearchCategoriesParams struct {
-	Column1 *string `json:"column_1"`
-	Limit   int32   `json:"limit"`
-	Offset  int32   `json:"offset"`
-}
-
-type SearchCategoriesRow struct {
-	ID           uuid.UUID          `json:"id"`
-	Name         string             `json:"name"`
-	PictureUrl   *string            `json:"picture_url"`
-	ColorCode    *string            `json:"color_code"`
-	NameI18n     pgtype.UUID        `json:"name_i18n"`
-	DepartmentID pgtype.UUID        `json:"department_id"`
-	StorageID    pgtype.UUID        `json:"storage_id"`
-	Parent       pgtype.UUID        `json:"parent"`
-	CreatedAt    pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
-	DeletedAt    *int64             `json:"deleted_at"`
-}
-
-func (q *Queries) SearchCategories(ctx context.Context, arg SearchCategoriesParams) ([]SearchCategoriesRow, error) {
-	rows, err := q.db.Query(ctx, searchCategories, arg.Column1, arg.Limit, arg.Offset)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []SearchCategoriesRow
-	for rows.Next() {
-		var i SearchCategoriesRow
-		if err := rows.Scan(
-			&i.ID,
-			&i.Name,
-			&i.PictureUrl,
-			&i.ColorCode,
-			&i.NameI18n,
-			&i.DepartmentID,
-			&i.StorageID,
-			&i.Parent,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-			&i.DeletedAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
 }
 
 const updateCategory = `-- name: UpdateCategory :one

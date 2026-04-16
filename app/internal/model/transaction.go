@@ -6,35 +6,35 @@ import "time"
 type TransactionType string
 
 const (
-	TransactionTypeIncome         TransactionType = "income"
-	TransactionTypeExpense        TransactionType = "expense"
+	TransactionTypeIncome          TransactionType = "income"
+	TransactionTypeExpense         TransactionType = "expense"
 	TransactionTypeTransferIncome  TransactionType = "transfer_income"
 	TransactionTypeTransferExpense TransactionType = "transfer_expense"
-	TransactionTypeBillPayment    TransactionType = "bill_payment"
+	TransactionTypeBillPayment     TransactionType = "bill_payment"
 )
 
 // CreateIncomeExpenseRequest is used for income and expense transactions
 type CreateIncomeExpenseRequest struct {
-	Type              TransactionType `json:"type" validate:"required,oneof=income expense" example:"income"`
-	CashRegisterID    string          `json:"cash_register_id" validate:"required" example:"uuid"`
-	GroupTransactionID *string        `json:"group_transaction_id,omitempty" example:"uuid"`
-	Amount            string          `json:"amount" validate:"required" example:"150000"`
-	Description       *string         `json:"description,omitempty" example:"Salary payment"`
-	PayType           *string         `json:"pay_type,omitempty" example:"cash"`
-	Date              *time.Time      `json:"date,omitempty" example:"2026-02-20T09:00:00Z"`
+	Type               TransactionType `json:"type" validate:"required,oneof=income expense" example:"income"`
+	CashRegisterID     string          `json:"cash_register_id" validate:"required" example:"uuid"`
+	GroupTransactionID *string         `json:"group_transaction_id,omitempty" example:"uuid"`
+	Amount             string          `json:"amount" validate:"required" example:"150000"`
+	Description        *string         `json:"description,omitempty" example:"Salary payment"`
+	PayType            *string         `json:"pay_type,omitempty" example:"cash"`
+	Date               *time.Time      `json:"date,omitempty" example:"2026-02-20T09:00:00Z"`
 }
 
 // CreateCashTransferRequest is used for transfer between cash registers
 type CreateCashTransferRequest struct {
-	FromCashRegisterID string  `json:"from_cash_register_id" validate:"required" example:"uuid"`
-	ToCashRegisterID   string  `json:"to_cash_register_id" validate:"required" example:"uuid"`
+	FromCashRegisterID string `json:"from_cash_register_id" validate:"required" example:"uuid"`
+	ToCashRegisterID   string `json:"to_cash_register_id" validate:"required" example:"uuid"`
 	// Optional: cross-branch transfer. If omitted, uses current branch for both.
-	FromBranchID       *string `json:"from_branch_id,omitempty" example:"uuid"`
-	ToBranchID         *string `json:"to_branch_id,omitempty" example:"uuid"`
-	GroupTransactionID *string `json:"group_transaction_id,omitempty" example:"uuid"`
-	Amount             string  `json:"amount" validate:"required" example:"50000"`
-	Description        *string `json:"description,omitempty" example:"Branch cash transfer"`
-	PayType            *string `json:"pay_type,omitempty" example:"cash"`
+	FromBranchID       *string    `json:"from_branch_id,omitempty" example:"uuid"`
+	ToBranchID         *string    `json:"to_branch_id,omitempty" example:"uuid"`
+	GroupTransactionID *string    `json:"group_transaction_id,omitempty" example:"uuid"`
+	Amount             string     `json:"amount" validate:"required" example:"50000"`
+	Description        *string    `json:"description,omitempty" example:"Branch cash transfer"`
+	PayType            *string    `json:"pay_type,omitempty" example:"cash"`
 	Date               *time.Time `json:"date,omitempty" example:"2026-02-20T09:00:00Z"`
 }
 
@@ -93,25 +93,45 @@ type CashReportResponse struct {
 
 // TransactionResponse is the API response for a transaction
 type TransactionResponse struct {
-	ID                 string          `json:"id"`
-	Type               TransactionType `json:"type"`
+	ID   string          `json:"id"`
+	Type TransactionType `json:"type"`
 	// income/expense
-	CashRegisterID     *string         `json:"cash_register_id,omitempty"`
+	CashRegisterID *string `json:"cash_register_id,omitempty"`
 	// transfer
-	FromCashRegisterID *string         `json:"from_cash_register_id,omitempty"`
-	ToCashRegisterID   *string         `json:"to_cash_register_id,omitempty"`
-	FromBranchID       *string         `json:"from_branch_id,omitempty"`
-	ToBranchID         *string         `json:"to_branch_id,omitempty"`
+	FromCashRegisterID *string `json:"from_cash_register_id,omitempty"`
+	ToCashRegisterID   *string `json:"to_cash_register_id,omitempty"`
+	FromBranchID       *string `json:"from_branch_id,omitempty"`
+	ToBranchID         *string `json:"to_branch_id,omitempty"`
 	// common
-	GroupTransactionID *string         `json:"group_transaction_id,omitempty"`
-	Amount             string          `json:"amount"`
-	Description        *string         `json:"description,omitempty"`
-	PayType            *string         `json:"pay_type,omitempty"`
-	Date               time.Time       `json:"date"`
-	UserID             *string         `json:"user_id,omitempty"`
-	BranchID           *string         `json:"branch_id,omitempty"`
-	CreatedAt          *time.Time      `json:"created_at,omitempty"`
-	UpdatedAt          *time.Time      `json:"updated_at,omitempty"`
-	CustomerPaidAmount *string         `json:"customer_paid_amount,omitempty"`
-	ChangeAmount       *string         `json:"change_amount,omitempty"`
+	GroupTransactionID *string    `json:"group_transaction_id,omitempty"`
+	Amount             string     `json:"amount"`
+	Description        *string    `json:"description,omitempty"`
+	PayType            *string    `json:"pay_type,omitempty"`
+	Date               time.Time  `json:"date"`
+	UserID             *string    `json:"user_id,omitempty"`
+	BranchID           *string    `json:"branch_id,omitempty"`
+	CreatedAt          *time.Time `json:"created_at,omitempty"`
+	UpdatedAt          *time.Time `json:"updated_at,omitempty"`
+	CustomerPaidAmount *string    `json:"customer_paid_amount,omitempty"`
+	ChangeAmount       *string    `json:"change_amount,omitempty"`
+}
+
+type TransactionListFilter struct {
+	Search             string `json:"search,omitempty"`
+	Type               string `json:"type,omitempty"`
+	PayType            string `json:"pay_type,omitempty"`
+	CashRegisterID     string `json:"cash_register_id,omitempty"`
+	GroupTransactionID string `json:"group_transaction_id,omitempty"`
+	DateFrom           string `json:"date_from,omitempty"`
+	DateTo             string `json:"date_to,omitempty"`
+	SortBy             string `json:"sort_by,omitempty"`
+	SortOrder          string `json:"sort_order,omitempty"`
+}
+
+type PaginatedTransactionsResponse struct {
+	Status     string                `json:"status" example:"success"`
+	Message    string                `json:"message" example:"Transactions retrieved successfully"`
+	Data       []TransactionResponse `json:"data"`
+	Pagination PaginationMeta        `json:"pagination"`
+	Code       int                   `json:"code" example:"200"`
 }

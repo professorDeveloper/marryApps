@@ -9,6 +9,17 @@ type InvoiceFilter struct {
 	SupplierID   string
 	IngredientID string
 	Status       string
+	Search       string
+	SortBy       string
+	SortOrder    string
+}
+
+type PaginatedInvoicesResponse struct {
+	Status     string            `json:"status" example:"success"`
+	Message    string            `json:"message" example:"Invoices retrieved successfully"`
+	Data       []InvoiceResponse `json:"data"`
+	Pagination PaginationMeta    `json:"pagination"`
+	Code       int               `json:"code" example:"200"`
 }
 
 type InvoiceStatus string
@@ -182,11 +193,11 @@ type UpsertInvoiceDetailEntry struct {
 
 type UpsertInvoiceDetailsRequest struct {
 	// Optional invoice-level fields to update alongside details
-	Status      *string `json:"status,omitempty" example:"received"`
-	SupplierID  *string `json:"supplier_id,omitempty" example:"123e4567-e89b-12d3-a456-426614174000"`
-	StorageID   *string `json:"storage_id,omitempty" example:"123e4567-e89b-12d3-a456-426614174000"`
-	TotalAmount *string `json:"total_amount,omitempty" example:"600000"`
-	Date        *string `json:"date,omitempty" example:"2024-01-01T00:00:00Z"`
+	Status      *string                    `json:"status,omitempty" example:"received"`
+	SupplierID  *string                    `json:"supplier_id,omitempty" example:"123e4567-e89b-12d3-a456-426614174000"`
+	StorageID   *string                    `json:"storage_id,omitempty" example:"123e4567-e89b-12d3-a456-426614174000"`
+	TotalAmount *string                    `json:"total_amount,omitempty" example:"600000"`
+	Date        *string                    `json:"date,omitempty" example:"2024-01-01T00:00:00Z"`
 	Details     []UpsertInvoiceDetailEntry `json:"details" validate:"required,min=1,dive"`
 }
 

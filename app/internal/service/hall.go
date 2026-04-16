@@ -81,17 +81,26 @@ func (h *HallS) GetHallByID(ctx context.Context, hallID string) (*model.HallResp
 	return toHallResponse(hall), nil
 }
 
-// GetAllHalls retrieves all halls with pagination
-func (h *HallS) GetAllHalls(ctx context.Context, limit, offset int32) ([]*model.HallResponse, int64, error) {
-	total, err := h.repo.Tenant(ctx).CountHalls(ctx)
+func (h *HallS) GetAllHalls(ctx context.Context, filter model.HallListFilter, limit, offset int32) ([]*model.HallResponse, int64, error) {
+	if filter.SortBy == "" {
+		filter.SortBy = "created_at"
+	}
+	if filter.SortOrder == "" {
+		filter.SortOrder = "desc"
+	}
+
+	total, err := h.repo.Tenant(ctx).CountHalls(ctx, filter.Search)
 	if err != nil {
 		log.Printf("CountHalls failed: %v", err)
 		return nil, 0, fmt.Errorf("failed to count halls: %w", err)
 	}
 
 	halls, err := h.repo.Tenant(ctx).GetAllHalls(ctx, pg.GetAllHallsParams{
-		Limit:  limit,
-		Offset: offset,
+		Search:    filter.Search,
+		SortBy:    filter.SortBy,
+		SortOrder: filter.SortOrder,
+		Limit:     limit,
+		Offset:    offset,
 	})
 	if err != nil {
 		log.Printf("GetAllHalls failed: %v", err)
@@ -135,18 +144,27 @@ func (h *HallS) GetHallsByBranchID(ctx context.Context, branchID string, limit, 
 	return responses, total, nil
 }
 
-// GetAllHallsWithLang retrieves all halls with language support
-func (h *HallS) GetAllHallsWithLang(ctx context.Context, lang string, limit, offset int32) ([]*model.HallResponse, int64, error) {
-	total, err := h.repo.Tenant(ctx).CountHalls(ctx)
+func (h *HallS) GetAllHallsWithLang(ctx context.Context, lang string, filter model.HallListFilter, limit, offset int32) ([]*model.HallResponse, int64, error) {
+	if filter.SortBy == "" {
+		filter.SortBy = "created_at"
+	}
+	if filter.SortOrder == "" {
+		filter.SortOrder = "desc"
+	}
+
+	total, err := h.repo.Tenant(ctx).CountHalls(ctx, filter.Search)
 	if err != nil {
 		log.Printf("CountHalls failed: %v", err)
 		return nil, 0, fmt.Errorf("failed to count halls: %w", err)
 	}
 
 	halls, err := h.repo.Tenant(ctx).GetAllHallsWithLanguage(ctx, pg.GetAllHallsWithLanguageParams{
-		Column1: lang,
-		Limit:   limit,
-		Offset:  offset,
+		Lang:      lang,
+		Search:    filter.Search,
+		SortBy:    filter.SortBy,
+		SortOrder: filter.SortOrder,
+		Limit:     limit,
+		Offset:    offset,
 	})
 	if err != nil {
 		log.Printf("GetAllHallsWithLang failed: %v", err)
@@ -284,30 +302,6 @@ func (h *HallS) RestoreHall(ctx context.Context, hallID string) (*model.HallResp
 		return nil, fmt.Errorf("failed to restore hall: %w", err)
 	}
 	return toHallResponse(pg.Hall{ID: id}), nil
-}
-
-// SearchHalls searches for halls by name
-func (h *HallS) SearchHalls(ctx context.Context, query string, limit, offset int32) ([]*model.HallResponse, error) {
-	if query == "" {
-		return nil, fmt.Errorf("search query is required")
-	}
-
-	q := query
-	halls, err := h.repo.Tenant(ctx).SearchHalls(ctx, pg.SearchHallsParams{
-		Column1: &q,
-		Limit:   limit,
-		Offset:  offset,
-	})
-	if err != nil {
-		log.Printf("SearchHalls failed: %v", err)
-		return nil, fmt.Errorf("failed to search halls: %w", err)
-	}
-
-	var responses []*model.HallResponse
-	for _, hall := range halls {
-		responses = append(responses, toHallResponse(hall))
-	}
-	return responses, nil
 }
 
 // Helper function to convert database hall to response model

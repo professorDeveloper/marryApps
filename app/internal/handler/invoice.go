@@ -47,7 +47,7 @@ func (h *Handler) CreateSupplierInvoice(c echo.Context) error {
 
 // GetAllInvoices retrieves all invoices with optional filters and pagination
 // @Summary Get all invoices
-// @Description Get all invoices with optional filters: date range, storage, supplier, ingredient, status
+// @Description Get all invoices with optional filters: date range, storage, supplier, ingredient, status, search and sorting
 // @Tags Invoices
 // @Produce json
 // @Security BearerAuth
@@ -60,8 +60,11 @@ func (h *Handler) CreateSupplierInvoice(c echo.Context) error {
 // @Param supplier_id query string false "Filter by supplier ID"
 // @Param ingredient_id query string false "Filter by ingredient ID (invoices containing this ingredient)"
 // @Param status query string false "Filter by status (pending, arrived, received, cancelled)"
+// @Param search query string false "Search by supplier name, phone or total amount"
+// @Param sort_by query string false "Sort by field" Enums(date,created_at,total_amount) default(date)
+// @Param sort_order query string false "Sort order" Enums(asc,desc) default(desc)
 // @Param expand query string false "Expand related fields"
-// @Success 200 {array} model.InvoiceResponse
+// @Success 200 {object} model.PaginatedInvoicesResponse
 // @Failure 400 {object} model.ErrorResponse
 // @Failure 401 {object} model.ErrorResponse
 // @Failure 500 {object} model.ErrorResponse
@@ -69,16 +72,28 @@ func (h *Handler) CreateSupplierInvoice(c echo.Context) error {
 func (h *Handler) GetAllInvoices(c echo.Context) error {
 	limit := int32(20)
 	if l := c.QueryParam("limit"); l != "" {
-		if val, err := strconv.Atoi(l); err == nil {
-			limit = int32(val)
+		val, err := strconv.Atoi(l)
+		if err != nil || val <= 0 {
+			return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+				"invalid request",
+				"limit must be a positive integer",
+				http.StatusBadRequest,
+			))
 		}
+		limit = int32(val)
 	}
 
 	offset := int32(0)
 	if o := c.QueryParam("offset"); o != "" {
-		if val, err := strconv.Atoi(o); err == nil {
-			offset = int32(val)
+		val, err := strconv.Atoi(o)
+		if err != nil || val < 0 {
+			return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+				"invalid request",
+				"offset must be a non-negative integer",
+				http.StatusBadRequest,
+			))
 		}
+		offset = int32(val)
 	}
 
 	dateFrom := c.QueryParam("date_from")
@@ -89,12 +104,64 @@ func (h *Handler) GetAllInvoices(c echo.Context) error {
 		SupplierID:   c.QueryParam("supplier_id"),
 		IngredientID: c.QueryParam("ingredient_id"),
 		Status:       c.QueryParam("status"),
+		Search:       c.QueryParam("search"),
+		SortBy:       c.QueryParam("sort_by"),
+		SortOrder:    c.QueryParam("sort_order"),
 	}
 	if dateFrom != "" {
 		filter.DateFrom = &dateFrom
 	}
 	if dateTo != "" {
 		filter.DateTo = &dateTo
+	}
+
+	if filter.SortBy == "" {
+		filter.SortBy = "date"
+	}
+	if filter.SortOrder == "" {
+		filter.SortOrder = "desc"
+	}
+
+	allowedSortBy := map[string]bool{
+		"date":         true,
+		"created_at":   true,
+		"total_amount": true,
+	}
+	if !allowedSortBy[filter.SortBy] {
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"invalid request",
+			"sort_by must be one of: date, created_at, total_amount",
+			http.StatusBadRequest,
+		))
+	}
+
+	allowedSortOrder := map[string]bool{
+		"asc":  true,
+		"desc": true,
+	}
+	if !allowedSortOrder[filter.SortOrder] {
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"invalid request",
+			"sort_order must be one of: asc, desc",
+			http.StatusBadRequest,
+		))
+	}
+
+	for field, value := range map[string]string{
+		"storage_id":    filter.StorageID,
+		"supplier_id":   filter.SupplierID,
+		"ingredient_id": filter.IngredientID,
+	} {
+		if value == "" {
+			continue
+		}
+		if _, err := uuid.Parse(value); err != nil {
+			return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+				"invalid request",
+				field+" must be a valid UUID",
+				http.StatusBadRequest,
+			))
+		}
 	}
 
 	resp, total, err := h.service.Invoice().GetAllInvoices(c.Request().Context(), filter, limit, offset)
@@ -108,6 +175,7 @@ func (h *Handler) GetAllInvoices(c echo.Context) error {
 		}
 		return c.JSON(http.StatusOK, model.NewPaginatedResponse("Invoices retrieved successfully", maps, int32(total), limit, offset, http.StatusOK))
 	}
+
 	return c.JSON(http.StatusOK, model.NewPaginatedResponse("Invoices retrieved successfully", resp, int32(total), limit, offset, http.StatusOK))
 }
 
@@ -146,58 +214,6 @@ func (h *Handler) GetInvoice(c echo.Context) error {
 
 	return c.JSON(http.StatusOK, model.NewSuccessResponse(
 		"Invoice retrieved successfully",
-		resp,
-		http.StatusOK,
-	))
-}
-
-
-// SearchInvoices searches invoices by supplier name
-// @Summary Search invoices
-// @Description Search invoices by supplier name
-// @Tags Invoices
-// @Produce json
-// @Security BearerAuth
-// @Param lang query string false "Language (uz, ru, en)" default(uz)
-// @Param q query string true "Search query (supplier name)"
-// @Param limit query int false "Limit" default(20)
-// @Param offset query int false "Offset" default(0)
-// @Success 200 {object} []model.InvoiceResponse
-// @Failure 400 {object} model.ErrorResponse
-// @Failure 401 {object} model.ErrorResponse
-// @Failure 500 {object} model.ErrorResponse
-// @Router /api/v1/invoices/search [get]
-func (h *Handler) SearchInvoices(c echo.Context) error {
-	query := c.QueryParam("q")
-	if query == "" {
-		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
-			"search query is required",
-			"missing query parameter: q",
-			http.StatusBadRequest,
-		))
-	}
-
-	limit := int32(20)
-	if l := c.QueryParam("limit"); l != "" {
-		if val, err := strconv.Atoi(l); err == nil {
-			limit = int32(val)
-		}
-	}
-
-	offset := int32(0)
-	if o := c.QueryParam("offset"); o != "" {
-		if val, err := strconv.Atoi(o); err == nil {
-			offset = int32(val)
-		}
-	}
-
-	resp, err := h.service.Invoice().SearchInvoices(c.Request().Context(), query, limit, offset)
-	if err != nil {
-		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("Operation failed", err.Error(), http.StatusInternalServerError))
-	}
-
-	return c.JSON(http.StatusOK, model.NewSuccessResponse(
-		"Invoices retrieved successfully",
 		resp,
 		http.StatusOK,
 	))
@@ -296,7 +312,6 @@ func (h *Handler) UpdateInvoiceStatus(c echo.Context) error {
 		http.StatusOK,
 	))
 }
-
 
 // DeleteInvoice deletes an invoice (soft delete)
 // @Summary Delete invoice
@@ -406,7 +421,6 @@ func (h *Handler) GetInvoiceWithDetails(c echo.Context) error {
 	))
 }
 
-
 // CreateInvoiceWithDetails creates a new invoice with all its details in a single atomic transaction
 // @Summary Create invoice with details in batch
 // @Description Create a new invoice and all its line items in one atomic call
@@ -451,7 +465,6 @@ func (h *Handler) CreateInvoiceWithDetails(c echo.Context) error {
 		http.StatusCreated,
 	))
 }
-
 
 // UpsertInvoiceDetails replaces all invoice details and optionally updates invoice fields (status, supplier, etc.)
 // @Summary Batch update invoice details

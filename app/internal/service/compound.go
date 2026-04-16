@@ -95,14 +95,6 @@ func compoundToResponseAny(row any) *model.CompoundResponse {
 			PictureUrl: v.PictureUrl, ColorCode: v.ColorCode,
 			CreatedAt: v.CreatedAt, UpdatedAt: v.UpdatedAt,
 		}
-	case pg.SearchCompoundsRow:
-		f = compoundRowFields{
-			ID: v.ID, Name: v.Name, NameI18n: v.NameI18n, Description: v.Description,
-			DescriptionI18n: v.DescriptionI18n, Quantity: v.Quantity, Measurement: v.Measurement,
-			Price: v.Price, BranchID: v.BranchID, IngredientGroupID: v.IngredientGroupID,
-			PictureUrl: v.PictureUrl, ColorCode: v.ColorCode,
-			CreatedAt: v.CreatedAt, UpdatedAt: v.UpdatedAt,
-		}
 	case pg.GetCompoundByIDWithLanguageRow:
 		f = compoundRowFields{
 			ID: v.ID, Name: v.Name, NameI18n: v.NameI18n, Description: v.Description,
@@ -287,29 +279,39 @@ func (c *CompoundS) GetCompoundByID(ctx context.Context, compoundID string) (*mo
 	return compoundToResponseAny(compound), nil
 }
 
-func (c *CompoundS) GetAllCompounds(ctx context.Context, limit, offset int32) ([]*model.CompoundResponse, int64, error) {
-	total, err := c.repo.Tenant(ctx).CountCompounds(ctx)
-	if err != nil {
-		log.Printf("CountCompounds failed: %v", err)
-		total = 0
+func (s *CompoundS) GetAllCompounds(ctx context.Context, filter model.CompoundListFilter, limit, offset int32) ([]*model.CompoundResponse, int64, error) {
+	if filter.SortBy == "" {
+		filter.SortBy = "created_at"
+	}
+	if filter.SortOrder == "" {
+		filter.SortOrder = "desc"
 	}
 
-	compounds, err := c.repo.Tenant(ctx).GetAllCompounds(ctx, pg.GetAllCompoundsParams{
-		Limit:  limit,
-		Offset: offset,
+	total, err := s.repo.Tenant(ctx).CountCompounds(ctx, filter.Search)
+	if err != nil {
+		log.Printf("CountCompounds failed: %v", err)
+		return nil, 0, fmt.Errorf("failed to count compounds: %w", err)
+	}
+
+	rows, err := s.repo.Tenant(ctx).GetAllCompounds(ctx, pg.GetAllCompoundsParams{
+		Search:    filter.Search,
+		SortBy:    filter.SortBy,
+		SortOrder: filter.SortOrder,
+		Limit:     limit,
+		Offset:    offset,
 	})
 	if err != nil {
 		log.Printf("GetAllCompounds failed: %v", err)
 		return nil, 0, fmt.Errorf("failed to retrieve compounds: %w", err)
 	}
 
-	var responses []*model.CompoundResponse
-	for _, comp := range compounds {
-		responses = append(responses, compoundToResponseAny(comp))
+	responses := make([]*model.CompoundResponse, 0, len(rows))
+	for _, row := range rows {
+		responses = append(responses, compoundToResponseAny(row))
 	}
+
 	return responses, total, nil
 }
-
 
 func (c *CompoundS) UpdateCompound(ctx context.Context, compoundID string, name, nameI18n, description, descriptionI18n, measurement *string, quantity *float64, price *string, pictureUrl *string, colorCode *string, ingredientGroupID *string) (*model.CompoundResponse, error) {
 	id, err := uuid.Parse(compoundID)
@@ -439,31 +441,6 @@ func (c *CompoundS) RestoreCompound(ctx context.Context, compoundID string) (*mo
 
 	return c.GetCompoundByID(ctx, compoundID)
 }
-
-// SearchCompounds searches for compounds by name or description
-func (c *CompoundS) SearchCompounds(ctx context.Context, query string, limit, offset int32) ([]*model.CompoundResponse, error) {
-	if query == "" {
-		return nil, fmt.Errorf("search query is required")
-	}
-
-	compounds, err := c.repo.Tenant(ctx).SearchCompounds(ctx, pg.SearchCompoundsParams{
-		Column1: &query,
-		Limit:   limit,
-		Offset:  offset,
-	})
-	if err != nil {
-		log.Printf("SearchCompounds failed: %v", err)
-		return nil, fmt.Errorf("failed to search compounds: %w", err)
-	}
-
-	var responses []*model.CompoundResponse
-	for _, comp := range compounds {
-		responses = append(responses, compoundToResponseAny(comp))
-	}
-	return responses, nil
-}
-
-// Helper function to convert database compound to response model
 
 func (c *CompoundS) CreateCompoundDetail(ctx context.Context, compoundID, ingredientID string, quantity int64) (*model.CompoundDetailResponse, error) {
 	id := uuid.New()
@@ -973,26 +950,37 @@ func (c *CompoundS) GetCompoundByIDWithLang(ctx context.Context, compoundID stri
 }
 
 // GetAllCompoundsWithLang retrieves all compounds with language support
-func (c *CompoundS) GetAllCompoundsWithLang(ctx context.Context, lang string, limit, offset int32) ([]*model.CompoundResponse, int64, error) {
-	total, err := c.repo.Tenant(ctx).CountCompounds(ctx)
+func (c *CompoundS) GetAllCompoundsWithLang(ctx context.Context, lang string, filter model.CompoundListFilter, limit, offset int32) ([]*model.CompoundResponse, int64, error) {
+	if filter.SortBy == "" {
+		filter.SortBy = "created_at"
+	}
+	if filter.SortOrder == "" {
+		filter.SortOrder = "desc"
+	}
+
+	total, err := c.repo.Tenant(ctx).CountCompounds(ctx, filter.Search)
 	if err != nil {
 		log.Printf("CountCompounds (WithLang) failed: %v", err)
-		total = 0
+		return nil, 0, fmt.Errorf("failed to count compounds: %w", err)
 	}
 
 	compounds, err := c.repo.Tenant(ctx).GetAllCompoundsWithLanguage(ctx, pg.GetAllCompoundsWithLanguageParams{
-		Column1: lang,
-		Limit:   limit,
-		Offset:  offset,
+		Lang:      lang,
+		Search:    filter.Search,
+		SortBy:    filter.SortBy,
+		SortOrder: filter.SortOrder,
+		Limit:     limit,
+		Offset:    offset,
 	})
 	if err != nil {
 		log.Printf("GetAllCompoundsWithLang failed: %v", err)
 		return nil, 0, fmt.Errorf("failed to get compounds: %w", err)
 	}
 
-	var responses []*model.CompoundResponse
+	responses := make([]*model.CompoundResponse, 0, len(compounds))
 	for _, compound := range compounds {
 		responses = append(responses, compoundToResponseAny(compound))
 	}
+
 	return responses, total, nil
 }

@@ -15,15 +15,15 @@ type CreateCompoundRequest struct {
 }
 
 type UpdateCompoundRequest struct {
-	Name              *string `json:"name,omitempty" example:"Pizza Dough"`
-	NameI18n          *string `json:"name_i18n,omitempty" example:"123e4567-e89b-12d3-a456-426614174000"`
-	Description       *string `json:"description,omitempty" example:"Base dough for all pizzas"`
-	DescriptionI18n   *string `json:"description_i18n,omitempty" example:"123e4567-e89b-12d3-a456-426614174000"`
+	Name              *string  `json:"name,omitempty" example:"Pizza Dough"`
+	NameI18n          *string  `json:"name_i18n,omitempty" example:"123e4567-e89b-12d3-a456-426614174000"`
+	Description       *string  `json:"description,omitempty" example:"Base dough for all pizzas"`
+	DescriptionI18n   *string  `json:"description_i18n,omitempty" example:"123e4567-e89b-12d3-a456-426614174000"`
 	Quantity          *float64 `json:"quantity,omitempty" example:"0.7"`
-	Measurement       *string `json:"measurement,omitempty" example:"kg"`
-	PictureUrl        *string `json:"picture_url,omitempty" example:"https://example.com/pizza-dough.jpg"`
-	ColorCode         *string `json:"color_code,omitempty" example:"#FF5733"`
-	IngredientGroupID *string `json:"ingredient_group_id,omitempty" example:"123e4567-e89b-12d3-a456-426614174000"`
+	Measurement       *string  `json:"measurement,omitempty" example:"kg"`
+	PictureUrl        *string  `json:"picture_url,omitempty" example:"https://example.com/pizza-dough.jpg"`
+	ColorCode         *string  `json:"color_code,omitempty" example:"#FF5733"`
+	IngredientGroupID *string  `json:"ingredient_group_id,omitempty" example:"123e4567-e89b-12d3-a456-426614174000"`
 }
 
 type CompoundResponse struct {
@@ -42,6 +42,21 @@ type CompoundResponse struct {
 	IngredientGroupID *string    `json:"ingredient_group_id,omitempty" example:"123e4567-e89b-12d3-a456-426614174000"`
 	CreatedAt         *time.Time `json:"created_at,omitempty" example:"2022-01-01T00:00:00Z"`
 	UpdatedAt         *time.Time `json:"updated_at,omitempty" example:"2022-01-01T00:00:00Z"`
+}
+
+type CompoundListFilter struct {
+	Search       string `json:"search,omitempty"`
+	DepartmentID string `json:"department_id,omitempty"`
+	SortBy       string `json:"sort_by,omitempty"`
+	SortOrder    string `json:"sort_order,omitempty"`
+}
+
+type PaginatedCompoundsResponse struct {
+	Status     string             `json:"status" example:"success"`
+	Message    string             `json:"message" example:"Compounds retrieved successfully"`
+	Data       []CompoundResponse `json:"data"`
+	Pagination PaginationMeta     `json:"pagination"`
+	Code       int                `json:"code" example:"200"`
 }
 
 type CreateCompoundDetailRequest struct {

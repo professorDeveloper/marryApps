@@ -33,25 +33,86 @@ ORDER BY date DESC, number DESC
 LIMIT $1 OFFSET $2;
 
 -- name: GetInventoriesFiltered :many
-SELECT DISTINCT inv.id, inv.number, inv.date, inv.storage_id, inv.description, inv.description_i18n, inv.status,
-       inv.surplus_amount, inv.shortage_amount, inv.remaining_amount,
-       inv.created_at, inv.updated_at, inv.deleted_at
-FROM inventories inv
-LEFT JOIN inventory_items ii
-  ON ii.inventory_id = inv.id
-  AND ii.deleted_at = 0
-WHERE EXISTS (
-    SELECT 1 FROM storages s
-    WHERE s.id = inv.storage_id
-      AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-  )
-  AND ($1::date IS NULL OR inv.date >= $1)
-  AND ($2::date IS NULL OR inv.date <= $2)
-  AND (NULLIF($3::uuid, '00000000-0000-0000-0000-000000000000') IS NULL OR inv.storage_id = $3)
-  AND (NULLIF($4::text, '') IS NULL OR inv.status = $4)
-  AND (NULLIF($5::uuid, '00000000-0000-0000-0000-000000000000') IS NULL OR ii.ingredient_id = $5)
-ORDER BY inv.date DESC, inv.number DESC
-LIMIT $6 OFFSET $7;
+WITH filtered AS (
+    SELECT DISTINCT
+        inv.id,
+        inv.number,
+        inv.date,
+        inv.storage_id,
+        inv.description,
+        inv.description_i18n,
+        inv.status,
+        inv.surplus_amount,
+        inv.shortage_amount,
+        inv.remaining_amount,
+        inv.created_at,
+        inv.updated_at,
+        inv.deleted_at
+    FROM inventories inv
+    LEFT JOIN inventory_items ii
+      ON ii.inventory_id = inv.id
+     AND ii.deleted_at = 0
+    WHERE EXISTS (
+        SELECT 1
+        FROM storages s
+        WHERE s.id = inv.storage_id
+          AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+    )
+      AND (sqlc.narg('date_from')::date IS NULL OR inv.date >= sqlc.narg('date_from')::date)
+      AND (sqlc.narg('date_to')::date IS NULL OR inv.date <= sqlc.narg('date_to')::date)
+      AND (sqlc.narg('storage_id')::uuid IS NULL OR inv.storage_id = sqlc.narg('storage_id')::uuid)
+      AND (sqlc.arg('status')::text = '' OR inv.status = sqlc.arg('status')::text)
+      AND (sqlc.narg('ingredient_id')::uuid IS NULL OR ii.ingredient_id = sqlc.narg('ingredient_id')::uuid)
+      AND (
+            sqlc.arg('search')::text = ''
+            OR COALESCE(inv.description, '') ILIKE '%' || sqlc.arg('search')::text || '%'
+            OR CAST(inv.number AS TEXT) ILIKE '%' || sqlc.arg('search')::text || '%'
+          )
+)
+SELECT
+    id,
+    number,
+    date,
+    storage_id,
+    description,
+    description_i18n,
+    status,
+    surplus_amount,
+    shortage_amount,
+    remaining_amount,
+    created_at,
+    updated_at,
+    deleted_at
+FROM filtered
+ORDER BY
+    CASE
+        WHEN sqlc.arg('sort_by')::text = 'date' AND sqlc.arg('sort_order')::text = 'asc'
+        THEN date
+    END ASC,
+    CASE
+        WHEN sqlc.arg('sort_by')::text = 'date' AND sqlc.arg('sort_order')::text = 'desc'
+        THEN date
+    END DESC,
+    CASE
+        WHEN sqlc.arg('sort_by')::text = 'number' AND sqlc.arg('sort_order')::text = 'asc'
+        THEN number
+    END ASC,
+    CASE
+        WHEN sqlc.arg('sort_by')::text = 'number' AND sqlc.arg('sort_order')::text = 'desc'
+        THEN number
+    END DESC,
+    CASE
+        WHEN sqlc.arg('sort_by')::text = 'created_at' AND sqlc.arg('sort_order')::text = 'asc'
+        THEN created_at
+    END ASC,
+    CASE
+        WHEN sqlc.arg('sort_by')::text = 'created_at' AND sqlc.arg('sort_order')::text = 'desc'
+        THEN created_at
+    END DESC,
+    date DESC,
+    number DESC
+LIMIT sqlc.arg('limit')::int
+OFFSET sqlc.arg('offset')::int;
 
 -- name: GetInventoriesByStorageID :many
 SELECT id, number, date, storage_id, description, description_i18n, status,
@@ -122,32 +183,6 @@ WHERE inventories.id = $1 AND inventories.deleted_at != 0
 RETURNING id, number, date, storage_id, description, description_i18n, status,
           surplus_amount, shortage_amount, remaining_amount,
           created_at, updated_at, deleted_at;
-
--- name: SearchInventories :many
-SELECT id, number, date, storage_id, description, description_i18n, status,
-       surplus_amount, shortage_amount, remaining_amount,
-       created_at, updated_at, deleted_at
-FROM inventories
-WHERE EXISTS (
-    SELECT 1 FROM storages s
-    WHERE s.id = inventories.storage_id
-      AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-  )
-AND (
-    description ILIKE '%' || $1 || '%'
-    OR CAST(number AS TEXT) ILIKE '%' || $1 || '%'
-)
-ORDER BY date DESC, number DESC
-LIMIT $2 OFFSET $3;
-
--- name: CountInventories :one
-SELECT COUNT(*) FROM inventories
-WHERE deleted_at = 0
-  AND EXISTS (
-    SELECT 1 FROM storages s
-    WHERE s.id = inventories.storage_id
-      AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-  );
 
 
 -- ==================== INVENTORY ITEMS ====================
@@ -287,17 +322,25 @@ FROM (
 -- name: CountInventoriesFiltered :one
 SELECT COUNT(DISTINCT inv.id)
 FROM inventories inv
-LEFT JOIN inventory_items ii ON ii.inventory_id = inv.id AND ii.deleted_at = 0
+LEFT JOIN inventory_items ii
+  ON ii.inventory_id = inv.id
+ AND ii.deleted_at = 0
 WHERE EXISTS (
-    SELECT 1 FROM storages s
+    SELECT 1
+    FROM storages s
     WHERE s.id = inv.storage_id
       AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-  )
-  AND ($1::date IS NULL OR inv.date >= $1)
-  AND ($2::date IS NULL OR inv.date <= $2)
-  AND (NULLIF($3::uuid, '00000000-0000-0000-0000-000000000000') IS NULL OR inv.storage_id = $3)
-  AND (NULLIF($4::text, '') IS NULL OR inv.status = $4)
-  AND (NULLIF($5::uuid, '00000000-0000-0000-0000-000000000000') IS NULL OR ii.ingredient_id = $5);
+)
+  AND (sqlc.narg('date_from')::date IS NULL OR inv.date >= sqlc.narg('date_from')::date)
+  AND (sqlc.narg('date_to')::date IS NULL OR inv.date <= sqlc.narg('date_to')::date)
+  AND (sqlc.narg('storage_id')::uuid IS NULL OR inv.storage_id = sqlc.narg('storage_id')::uuid)
+  AND (sqlc.arg('status')::text = '' OR inv.status = sqlc.arg('status')::text)
+  AND (sqlc.narg('ingredient_id')::uuid IS NULL OR ii.ingredient_id = sqlc.narg('ingredient_id')::uuid)
+  AND (
+        sqlc.arg('search')::text = ''
+        OR COALESCE(inv.description, '') ILIKE '%' || sqlc.arg('search')::text || '%'
+        OR CAST(inv.number AS TEXT) ILIKE '%' || sqlc.arg('search')::text || '%'
+      );
 
 -- name: DeleteInventoriesBatch :exec
 UPDATE inventories

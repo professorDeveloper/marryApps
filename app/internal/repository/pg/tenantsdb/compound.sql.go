@@ -112,13 +112,19 @@ func (q *Queries) CountCompoundStockByCompound(ctx context.Context, compoundID u
 }
 
 const countCompounds = `-- name: CountCompounds :one
-SELECT COUNT(*) FROM compounds
-WHERE deleted_at = 0
-  AND compounds.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+SELECT COUNT(*)
+FROM compounds c
+WHERE c.deleted_at = 0
+  AND c.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  AND (
+        $1::text = ''
+        OR COALESCE(c.name, '') ILIKE '%' || $1::text || '%'
+        OR COALESCE(c.description, '') ILIKE '%' || $1::text || '%'
+      )
 `
 
-func (q *Queries) CountCompounds(ctx context.Context) (int64, error) {
-	row := q.db.QueryRow(ctx, countCompounds)
+func (q *Queries) CountCompounds(ctx context.Context, search string) (int64, error) {
+	row := q.db.QueryRow(ctx, countCompounds, search)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -430,17 +436,61 @@ func (q *Queries) GetAllCompoundStock(ctx context.Context, arg GetAllCompoundSto
 }
 
 const getAllCompounds = `-- name: GetAllCompounds :many
-SELECT compounds.id, compounds.name, compounds.name_i18n, compounds.description, compounds.description_i18n, compounds.quantity, compounds.picture_url, compounds.color_code, compounds.measurement, compounds.price, compounds.branch_id, compounds.ingredient_group_id, compounds.cost_price, compounds.profit, compounds.profit_margin, compounds.created_at, compounds.updated_at, compounds.deleted_at
-FROM compounds
-WHERE deleted_at = 0
-  AND compounds.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-ORDER BY created_at DESC
-LIMIT $1 OFFSET $2
+SELECT
+    c.id,
+    c.name,
+    c.name_i18n,
+    c.description,
+    c.description_i18n,
+    c.quantity,
+    c.picture_url,
+    c.color_code,
+    c.measurement,
+    c.price,
+    c.branch_id,
+    c.ingredient_group_id,
+    c.cost_price,
+    c.profit,
+    c.profit_margin,
+    c.created_at,
+    c.updated_at,
+    c.deleted_at
+FROM compounds c
+WHERE c.deleted_at = 0
+  AND c.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  AND (
+        $1::text = ''
+        OR COALESCE(c.name, '') ILIKE '%' || $1::text || '%'
+        OR COALESCE(c.description, '') ILIKE '%' || $1::text || '%'
+      )
+ORDER BY
+    CASE
+        WHEN $2::text = 'name' AND $3::text = 'asc'
+        THEN c.name
+    END ASC,
+    CASE
+        WHEN $2::text = 'name' AND $3::text = 'desc'
+        THEN c.name
+    END DESC,
+    CASE
+        WHEN $2::text = 'created_at' AND $3::text = 'asc'
+        THEN c.created_at
+    END ASC,
+    CASE
+        WHEN $2::text = 'created_at' AND $3::text = 'desc'
+        THEN c.created_at
+    END DESC,
+    c.created_at DESC
+LIMIT $5::int
+OFFSET $4::int
 `
 
 type GetAllCompoundsParams struct {
-	Limit  int32 `json:"limit"`
-	Offset int32 `json:"offset"`
+	Search    string `json:"search"`
+	SortBy    string `json:"sort_by"`
+	SortOrder string `json:"sort_order"`
+	Offset    int32  `json:"offset"`
+	Limit     int32  `json:"limit"`
 }
 
 type GetAllCompoundsRow struct {
@@ -465,7 +515,13 @@ type GetAllCompoundsRow struct {
 }
 
 func (q *Queries) GetAllCompounds(ctx context.Context, arg GetAllCompoundsParams) ([]GetAllCompoundsRow, error) {
-	rows, err := q.db.Query(ctx, getAllCompounds, arg.Limit, arg.Offset)
+	rows, err := q.db.Query(ctx, getAllCompounds,
+		arg.Search,
+		arg.SortBy,
+		arg.SortOrder,
+		arg.Offset,
+		arg.Limit,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -506,19 +562,25 @@ func (q *Queries) GetAllCompounds(ctx context.Context, arg GetAllCompoundsParams
 const getAllCompoundsWithLanguage = `-- name: GetAllCompoundsWithLanguage :many
 SELECT
     c.id,
-    COALESCE(CASE
-        WHEN $1::text = 'uz' THEN tn.uz
-        WHEN $1::text = 'ru' THEN tn.ru
-        WHEN $1::text = 'en' THEN tn.en
-        ELSE c.name
-    END, c.name) as name,
+    COALESCE(
+        CASE
+            WHEN $1::text = 'uz' THEN tn.uz
+            WHEN $1::text = 'ru' THEN tn.ru
+            WHEN $1::text = 'en' THEN tn.en
+            ELSE c.name
+        END,
+        c.name
+    ) AS name,
     c.name_i18n,
-    COALESCE(CASE
-        WHEN $1::text = 'uz' THEN td.uz
-        WHEN $1::text = 'ru' THEN td.ru
-        WHEN $1::text = 'en' THEN td.en
-        ELSE c.description
-    END, c.description) as description,
+    COALESCE(
+        CASE
+            WHEN $1::text = 'uz' THEN td.uz
+            WHEN $1::text = 'ru' THEN td.ru
+            WHEN $1::text = 'en' THEN td.en
+            ELSE c.description
+        END,
+        c.description
+    ) AS description,
     c.description_i18n,
     c.quantity,
     c.picture_url,
@@ -538,14 +600,62 @@ LEFT JOIN translations tn ON c.name_i18n = tn.id AND tn.deleted_at = 0
 LEFT JOIN translations td ON c.description_i18n = td.id AND td.deleted_at = 0
 WHERE c.deleted_at = 0
   AND c.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-ORDER BY c.created_at DESC
-LIMIT $2 OFFSET $3
+  AND (
+        $2::text = ''
+        OR COALESCE(c.name, '') ILIKE '%' || $2::text || '%'
+        OR COALESCE(c.description, '') ILIKE '%' || $2::text || '%'
+        OR COALESCE(tn.uz, '') ILIKE '%' || $2::text || '%'
+        OR COALESCE(tn.ru, '') ILIKE '%' || $2::text || '%'
+        OR COALESCE(tn.en, '') ILIKE '%' || $2::text || '%'
+        OR COALESCE(td.uz, '') ILIKE '%' || $2::text || '%'
+        OR COALESCE(td.ru, '') ILIKE '%' || $2::text || '%'
+        OR COALESCE(td.en, '') ILIKE '%' || $2::text || '%'
+      )
+ORDER BY
+    CASE
+        WHEN $3::text = 'name' AND $4::text = 'asc'
+        THEN COALESCE(
+            CASE
+                WHEN $1::text = 'uz' THEN tn.uz
+                WHEN $1::text = 'ru' THEN tn.ru
+                WHEN $1::text = 'en' THEN tn.en
+                ELSE c.name
+            END,
+            c.name
+        )
+    END ASC,
+    CASE
+        WHEN $3::text = 'name' AND $4::text = 'desc'
+        THEN COALESCE(
+            CASE
+                WHEN $1::text = 'uz' THEN tn.uz
+                WHEN $1::text = 'ru' THEN tn.ru
+                WHEN $1::text = 'en' THEN tn.en
+                ELSE c.name
+            END,
+            c.name
+        )
+    END DESC,
+    CASE
+        WHEN $3::text = 'created_at' AND $4::text = 'asc'
+        THEN c.created_at
+    END ASC,
+    CASE
+        WHEN $3::text = 'created_at' AND $4::text = 'desc'
+        THEN c.created_at
+    END DESC,
+    c.created_at DESC
+LIMIT $6::int
+OFFSET $5::int
 `
 
 type GetAllCompoundsWithLanguageParams struct {
-	Column1 string `json:"column_1"`
-	Limit   int32  `json:"limit"`
-	Offset  int32  `json:"offset"`
+	Lang      string `json:"lang"`
+	Search    string `json:"search"`
+	SortBy    string `json:"sort_by"`
+	SortOrder string `json:"sort_order"`
+	Offset    int32  `json:"offset"`
+	Limit     int32  `json:"limit"`
 }
 
 type GetAllCompoundsWithLanguageRow struct {
@@ -570,7 +680,14 @@ type GetAllCompoundsWithLanguageRow struct {
 }
 
 func (q *Queries) GetAllCompoundsWithLanguage(ctx context.Context, arg GetAllCompoundsWithLanguageParams) ([]GetAllCompoundsWithLanguageRow, error) {
-	rows, err := q.db.Query(ctx, getAllCompoundsWithLanguage, arg.Column1, arg.Limit, arg.Offset)
+	rows, err := q.db.Query(ctx, getAllCompoundsWithLanguage,
+		arg.Lang,
+		arg.Search,
+		arg.SortBy,
+		arg.SortOrder,
+		arg.Offset,
+		arg.Limit,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -1251,82 +1368,6 @@ WHERE id = $1 AND deleted_at != 0
 func (q *Queries) RestoreCompoundStock(ctx context.Context, id uuid.UUID) error {
 	_, err := q.db.Exec(ctx, restoreCompoundStock, id)
 	return err
-}
-
-const searchCompounds = `-- name: SearchCompounds :many
-SELECT compounds.id, compounds.name, compounds.name_i18n, compounds.description, compounds.description_i18n, compounds.quantity, compounds.picture_url, compounds.color_code, compounds.measurement, compounds.price, compounds.branch_id, compounds.ingredient_group_id, compounds.cost_price, compounds.profit, compounds.profit_margin, compounds.created_at, compounds.updated_at, compounds.deleted_at
-FROM compounds
-WHERE deleted_at = 0
-AND (name ILIKE '%' || $1 || '%' OR description ILIKE '%' || $1 || '%')
-  AND compounds.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-ORDER BY created_at DESC
-LIMIT $2 OFFSET $3
-`
-
-type SearchCompoundsParams struct {
-	Column1 *string `json:"column_1"`
-	Limit   int32   `json:"limit"`
-	Offset  int32   `json:"offset"`
-}
-
-type SearchCompoundsRow struct {
-	ID                uuid.UUID           `json:"id"`
-	Name              string              `json:"name"`
-	NameI18n          pgtype.UUID         `json:"name_i18n"`
-	Description       *string             `json:"description"`
-	DescriptionI18n   pgtype.UUID         `json:"description_i18n"`
-	Quantity          pgtype.Numeric      `json:"quantity"`
-	PictureUrl        *string             `json:"picture_url"`
-	ColorCode         *string             `json:"color_code"`
-	Measurement       NullMeasurementType `json:"measurement"`
-	Price             pgtype.Numeric      `json:"price"`
-	BranchID          pgtype.UUID         `json:"branch_id"`
-	IngredientGroupID pgtype.UUID         `json:"ingredient_group_id"`
-	CostPrice         pgtype.Numeric      `json:"cost_price"`
-	Profit            pgtype.Numeric      `json:"profit"`
-	ProfitMargin      pgtype.Numeric      `json:"profit_margin"`
-	CreatedAt         pgtype.Timestamptz  `json:"created_at"`
-	UpdatedAt         pgtype.Timestamptz  `json:"updated_at"`
-	DeletedAt         *int64              `json:"deleted_at"`
-}
-
-func (q *Queries) SearchCompounds(ctx context.Context, arg SearchCompoundsParams) ([]SearchCompoundsRow, error) {
-	rows, err := q.db.Query(ctx, searchCompounds, arg.Column1, arg.Limit, arg.Offset)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []SearchCompoundsRow
-	for rows.Next() {
-		var i SearchCompoundsRow
-		if err := rows.Scan(
-			&i.ID,
-			&i.Name,
-			&i.NameI18n,
-			&i.Description,
-			&i.DescriptionI18n,
-			&i.Quantity,
-			&i.PictureUrl,
-			&i.ColorCode,
-			&i.Measurement,
-			&i.Price,
-			&i.BranchID,
-			&i.IngredientGroupID,
-			&i.CostPrice,
-			&i.Profit,
-			&i.ProfitMargin,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-			&i.DeletedAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
 }
 
 const updateCompound = `-- name: UpdateCompound :one

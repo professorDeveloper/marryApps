@@ -35,6 +35,35 @@ type goodRowFields struct {
 	UpdatedAt       pgtype.Timestamptz
 }
 
+func parseOptionalUUIDFilter(value string) (pgtype.UUID, error) {
+	if value == "" {
+		return pgtype.UUID{}, nil
+	}
+
+	id, err := uuid.Parse(value)
+	if err != nil {
+		return pgtype.UUID{}, err
+	}
+
+	return pgtype.UUID{
+		Bytes: id,
+		Valid: true,
+	}, nil
+}
+
+func parseOptionalNumericFilter(value string) (pgtype.Numeric, error) {
+	if value == "" {
+		return pgtype.Numeric{}, nil
+	}
+
+	var num pgtype.Numeric
+	if err := num.Scan(value); err != nil {
+		return pgtype.Numeric{}, err
+	}
+
+	return num, nil
+}
+
 // Helper function to convert any good row type to response
 func goodToResponseAny(row any) *model.GoodResponse {
 	var f goodRowFields
@@ -80,23 +109,15 @@ func goodToResponseAny(row any) *model.GoodResponse {
 			CostPrice: v.CostPrice, Profit: v.Profit, ProfitMargin: v.ProfitMargin,
 			CreatedAt: v.CreatedAt, UpdatedAt: v.UpdatedAt,
 		}
-	case pg.GetGoodsFilteredRow:
-		f = goodRowFields{
-			ID: v.ID, Name: v.Name, Description: v.Description, NameI18n: v.NameI18n,
-			DescriptionI18n: v.DescriptionI18n, CategoryID: v.CategoryID, BranchID: v.BranchID,
-			Price: v.Price, CookTime: v.CookTime, PictureUrl: v.PictureUrl, ColorCode: v.ColorCode,
-			CostPrice: v.CostPrice, Profit: v.Profit, ProfitMargin: v.ProfitMargin,
-			CreatedAt: v.CreatedAt, UpdatedAt: v.UpdatedAt,
-		}
-	case pg.GetGoodsFilteredWithLanguageRow:
-		f = goodRowFields{
-			ID: v.ID, Name: v.Name, Description: v.Description, NameI18n: v.NameI18n,
-			DescriptionI18n: v.DescriptionI18n, CategoryID: v.CategoryID, BranchID: v.BranchID,
-			Price: v.Price, CookTime: v.CookTime, PictureUrl: v.PictureUrl, ColorCode: v.ColorCode,
-			CostPrice: v.CostPrice, Profit: v.Profit, ProfitMargin: v.ProfitMargin,
-			CreatedAt: v.CreatedAt, UpdatedAt: v.UpdatedAt,
-		}
 	case pg.GetAllGoodsRow:
+		f = goodRowFields{
+			ID: v.ID, Name: v.Name, Description: v.Description, NameI18n: v.NameI18n,
+			DescriptionI18n: v.DescriptionI18n, CategoryID: v.CategoryID, BranchID: v.BranchID,
+			Price: v.Price, CookTime: v.CookTime, PictureUrl: v.PictureUrl, ColorCode: v.ColorCode,
+			CostPrice: v.CostPrice, Profit: v.Profit, ProfitMargin: v.ProfitMargin,
+			CreatedAt: v.CreatedAt, UpdatedAt: v.UpdatedAt,
+		}
+	case pg.GetGoodsListRow:
 		f = goodRowFields{
 			ID: v.ID, Name: v.Name, Description: v.Description, NameI18n: v.NameI18n,
 			DescriptionI18n: v.DescriptionI18n, CategoryID: v.CategoryID, BranchID: v.BranchID,
@@ -120,14 +141,6 @@ func goodToResponseAny(row any) *model.GoodResponse {
 			CostPrice: v.CostPrice, Profit: v.Profit, ProfitMargin: v.ProfitMargin,
 			CreatedAt: v.CreatedAt, UpdatedAt: v.UpdatedAt,
 		}
-	case pg.GetGoodsByPriceRangeRow:
-		f = goodRowFields{
-			ID: v.ID, Name: v.Name, Description: v.Description, NameI18n: v.NameI18n,
-			DescriptionI18n: v.DescriptionI18n, CategoryID: v.CategoryID, BranchID: v.BranchID,
-			Price: v.Price, CookTime: v.CookTime, PictureUrl: v.PictureUrl, ColorCode: v.ColorCode,
-			CostPrice: v.CostPrice, Profit: v.Profit, ProfitMargin: v.ProfitMargin,
-			CreatedAt: v.CreatedAt, UpdatedAt: v.UpdatedAt,
-		}
 	case pg.UpdateGoodCostFieldsRow:
 		f = goodRowFields{
 			ID: v.ID, Name: v.Name, Description: v.Description, NameI18n: v.NameI18n,
@@ -141,14 +154,6 @@ func goodToResponseAny(row any) *model.GoodResponse {
 			ID: v.ID, Name: v.Name, Description: v.Description, NameI18n: v.NameI18n,
 			DescriptionI18n: v.DescriptionI18n, CategoryID: v.CategoryID, BranchID: v.BranchID,
 			Price: v.Price, CookTime: v.CookTime, PictureUrl: v.PictureUrl, ColorCode: v.ColorCode,
-			CostPrice: v.CostPrice, Profit: v.Profit, ProfitMargin: v.ProfitMargin,
-			CreatedAt: v.CreatedAt, UpdatedAt: v.UpdatedAt,
-		}
-	case pg.SearchGoodsRow:
-		f = goodRowFields{
-			ID: v.ID, Name: v.Name, Description: v.Description, NameI18n: v.NameI18n,
-			DescriptionI18n: v.DescriptionI18n, CategoryID: v.CategoryID,
-			Price: v.Price, CookTime: v.CookTime, PictureUrl: v.PictureUrl,
 			CostPrice: v.CostPrice, Profit: v.Profit, ProfitMargin: v.ProfitMargin,
 			CreatedAt: v.CreatedAt, UpdatedAt: v.UpdatedAt,
 		}
@@ -265,6 +270,79 @@ func (g *GoodsS) GetGoodByID(ctx context.Context, goodID string) (*model.GoodRes
 	return goodToResponseAny(good), nil
 }
 
+func (g *GoodsS) GetGoodsList(ctx context.Context, filter model.GoodsListFilter, lang string, limit, offset int32) ([]*model.GoodResponse, int64, error) {
+	categoryUUID, err := parseOptionalUUIDFilter(filter.CategoryID)
+	if err != nil {
+		return nil, 0, fmt.Errorf("invalid category_id: %w", err)
+	}
+
+	departmentUUID, err := parseOptionalUUIDFilter(filter.DepartmentID)
+	if err != nil {
+		return nil, 0, fmt.Errorf("invalid department_id: %w", err)
+	}
+
+	storageUUID, err := parseOptionalUUIDFilter(filter.StorageID)
+	if err != nil {
+		return nil, 0, fmt.Errorf("invalid storage_id: %w", err)
+	}
+
+	minPrice, err := parseOptionalNumericFilter(filter.MinPrice)
+	if err != nil {
+		return nil, 0, fmt.Errorf("invalid min_price: %w", err)
+	}
+
+	maxPrice, err := parseOptionalNumericFilter(filter.MaxPrice)
+	if err != nil {
+		return nil, 0, fmt.Errorf("invalid max_price: %w", err)
+	}
+
+	if filter.SortBy == "" {
+		filter.SortBy = "created_at"
+	}
+	if filter.SortOrder == "" {
+		filter.SortOrder = "desc"
+	}
+
+	total, err := g.repo.Tenant(ctx).CountGoodsList(ctx, pg.CountGoodsListParams{
+		Lang:         lang,
+		CategoryID:   categoryUUID,
+		DepartmentID: departmentUUID,
+		StorageID:    storageUUID,
+		Search:       filter.Search,
+		MinPrice:     minPrice,
+		MaxPrice:     maxPrice,
+	})
+	if err != nil {
+		log.Printf("CountGoodsList failed: %v", err)
+		total = 0
+	}
+
+	rows, err := g.repo.Tenant(ctx).GetGoodsList(ctx, pg.GetGoodsListParams{
+		Lang:         lang,
+		CategoryID:   categoryUUID,
+		DepartmentID: departmentUUID,
+		StorageID:    storageUUID,
+		Search:       filter.Search,
+		MinPrice:     minPrice,
+		MaxPrice:     maxPrice,
+		SortBy:       filter.SortBy,
+		SortOrder:    filter.SortOrder,
+		Limit:        limit,
+		Offset:       offset,
+	})
+	if err != nil {
+		log.Printf("GetGoodsList failed: %v", err)
+		return nil, 0, fmt.Errorf("failed to retrieve goods: %w", err)
+	}
+
+	responses := make([]*model.GoodResponse, 0, len(rows))
+	for _, row := range rows {
+		responses = append(responses, goodToResponseAny(row))
+	}
+
+	return responses, total, nil
+}
+
 // GetAllGoods retrieves all goods with pagination
 func (g *GoodsS) GetAllGoods(ctx context.Context, limit, offset int32) ([]*model.GoodResponse, int64, error) {
 	total, err := g.repo.Tenant(ctx).CountGoods(ctx)
@@ -289,60 +367,6 @@ func (g *GoodsS) GetAllGoods(ctx context.Context, limit, offset int32) ([]*model
 	return responses, total, nil
 }
 
-// GetAllGoodsFiltered retrieves goods with optional filters: categoryID, search, lang
-func (g *GoodsS) GetAllGoodsFiltered(ctx context.Context, categoryID, search, lang string, limit, offset int32) ([]*model.GoodResponse, int64, error) {
-	zeroUUID := uuid.UUID{}
-
-	catUUID := zeroUUID
-	if categoryID != "" {
-		if id, err := uuid.Parse(categoryID); err == nil {
-			catUUID = id
-		}
-	}
-
-	total, err := g.repo.Tenant(ctx).CountGoodsFiltered(ctx, pg.CountGoodsFilteredParams{
-		Column1: catUUID,
-		Column2: search,
-	})
-	if err != nil {
-		log.Printf("CountGoodsFiltered failed: %v", err)
-		total = 0
-	}
-
-	var responses []*model.GoodResponse
-	if lang != "" && lang != "uz" {
-		goods, err := g.repo.Tenant(ctx).GetGoodsFilteredWithLanguage(ctx, pg.GetGoodsFilteredWithLanguageParams{
-			Column1: lang,
-			Column2: catUUID,
-			Column3: search,
-			Limit:   limit,
-			Offset:  offset,
-		})
-		if err != nil {
-			log.Printf("GetGoodsFilteredWithLanguage failed: %v", err)
-			return nil, 0, fmt.Errorf("failed to retrieve goods: %w", err)
-		}
-		for _, good := range goods {
-			responses = append(responses, goodToResponseAny(good))
-		}
-	} else {
-		goods, err := g.repo.Tenant(ctx).GetGoodsFiltered(ctx, pg.GetGoodsFilteredParams{
-			Column1: catUUID,
-			Column2: search,
-			Limit:   limit,
-			Offset:  offset,
-		})
-		if err != nil {
-			log.Printf("GetGoodsFiltered failed: %v", err)
-			return nil, 0, fmt.Errorf("failed to retrieve goods: %w", err)
-		}
-		for _, good := range goods {
-			responses = append(responses, goodToResponseAny(good))
-		}
-	}
-
-	return responses, total, nil
-}
 
 // GetGoodsByCategory retrieves goods by category
 func (g *GoodsS) GetGoodsByCategory(ctx context.Context, categoryID string, limit, offset int32) ([]*model.GoodResponse, error) {
@@ -358,32 +382,6 @@ func (g *GoodsS) GetGoodsByCategory(ctx context.Context, categoryID string, limi
 	})
 	if err != nil {
 		log.Printf("GetGoodsByCategory failed: %v", err)
-		return nil, fmt.Errorf("failed to retrieve goods: %w", err)
-	}
-
-	var responses []*model.GoodResponse
-	for _, good := range goods {
-		responses = append(responses, goodToResponseAny(good))
-	}
-	return responses, nil
-}
-
-
-// GetGoodsByPriceRange retrieves goods within a price range
-func (g *GoodsS) GetGoodsByPriceRange(ctx context.Context, minPrice, maxPrice string, limit, offset int32) ([]*model.GoodResponse, error) {
-	minNum := pgtype.Numeric{}
-	maxNum := pgtype.Numeric{}
-	minNum.Scan(minPrice)
-	maxNum.Scan(maxPrice)
-
-	goods, err := g.repo.Tenant(ctx).GetGoodsByPriceRange(ctx, pg.GetGoodsByPriceRangeParams{
-		Price:   minNum,
-		Price_2: maxNum,
-		Limit:   limit,
-		Offset:  offset,
-	})
-	if err != nil {
-		log.Printf("GetGoodsByPriceRange failed: %v", err)
 		return nil, fmt.Errorf("failed to retrieve goods: %w", err)
 	}
 
@@ -514,28 +512,6 @@ func (g *GoodsS) RestoreGood(ctx context.Context, goodID string) (*model.GoodRes
 	return g.GetGoodByID(ctx, goodID)
 }
 
-// SearchGoods searches for goods by name or description
-func (g *GoodsS) SearchGoods(ctx context.Context, query string, limit, offset int32) ([]*model.GoodResponse, error) {
-	if query == "" {
-		return nil, fmt.Errorf("search query is required")
-	}
-
-	goods, err := g.repo.Tenant(ctx).SearchGoods(ctx, pg.SearchGoodsParams{
-		Column1: &query,
-		Limit:   limit,
-		Offset:  offset,
-	})
-	if err != nil {
-		log.Printf("SearchGoods failed: %v", err)
-		return nil, fmt.Errorf("failed to search goods: %w", err)
-	}
-
-	var responses []*model.GoodResponse
-	for _, good := range goods {
-		responses = append(responses, goodToResponseAny(good))
-	}
-	return responses, nil
-}
 
 // ==================== GOODS DETAILS ====================
 

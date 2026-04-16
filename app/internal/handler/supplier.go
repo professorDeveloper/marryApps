@@ -1,8 +1,10 @@
 package handler
 
 import (
+	"log"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/labstack/echo/v4"
 	"gitlab.yurtal.tech/company/maryai/back/internal/model"
@@ -44,43 +46,123 @@ func (h *Handler) CreateSupplier(c echo.Context) error {
 	))
 }
 
-// GetAllSuppliers retrieves all suppliers with pagination
+// GetAllSuppliers retrieves all suppliers
 // @Summary Get all suppliers
-// @Description Get all suppliers with pagination
+// @Description Retrieve all suppliers with pagination, optional search and sorting
 // @Tags Suppliers
+// @Accept json
 // @Produce json
 // @Security BearerAuth
-// @Param lang query string false "Language (uz, ru, en)" default(uz)
-// @Param limit query int false "Limit" default(20)
-// @Param offset query int false "Offset" default(0)
-// @Success 200 {object} []model.SupplierResponse
+// @Param search query string false "Search by supplier name"
+// @Param sort_by query string false "Sort by field" Enums(name,created_at) default(created_at)
+// @Param sort_order query string false "Sort order" Enums(asc,desc) default(desc)
+// @Param limit query int false "Limit (default: 20)"
+// @Param offset query int false "Offset (default: 0)"
+// @Param expand query string false "Expand related fields"
+// @Success 200 {object} model.PaginatedSuppliersResponse
 // @Failure 400 {object} model.ErrorResponse
 // @Failure 401 {object} model.ErrorResponse
 // @Failure 500 {object} model.ErrorResponse
 // @Router /api/v1/suppliers [get]
 func (h *Handler) GetAllSuppliers(c echo.Context) error {
-	limit := int32(20)
-	if l := c.QueryParam("limit"); l != "" {
-		if val, err := strconv.Atoi(l); err == nil {
-			limit = int32(val)
+	var limit int32 = 20
+	var offset int32 = 0
+
+	if limitStr := c.QueryParam("limit"); limitStr != "" {
+		l, err := strconv.ParseInt(limitStr, 10, 32)
+		if err != nil || l <= 0 {
+			return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+				"Invalid limit",
+				"limit must be a positive integer",
+				http.StatusBadRequest,
+			))
 		}
+		limit = int32(l)
 	}
 
-	offset := int32(0)
-	if o := c.QueryParam("offset"); o != "" {
-		if val, err := strconv.Atoi(o); err == nil {
-			offset = int32(val)
+	if offsetStr := c.QueryParam("offset"); offsetStr != "" {
+		o, err := strconv.ParseInt(offsetStr, 10, 32)
+		if err != nil || o < 0 {
+			return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+				"Invalid offset",
+				"offset must be a non-negative integer",
+				http.StatusBadRequest,
+			))
 		}
+		offset = int32(o)
 	}
 
-	resp, err := h.service.Supplier().GetAllSuppliers(c.Request().Context(), limit, offset)
+	filter := model.SupplierListFilter{
+		Search:    strings.TrimSpace(c.QueryParam("search")),
+		SortBy:    strings.TrimSpace(c.QueryParam("sort_by")),
+		SortOrder: strings.TrimSpace(c.QueryParam("sort_order")),
+	}
+
+	if filter.SortBy == "" {
+		filter.SortBy = "created_at"
+	}
+	if filter.SortOrder == "" {
+		filter.SortOrder = "desc"
+	}
+
+	allowedSortBy := map[string]bool{
+		"name":       true,
+		"created_at": true,
+	}
+	if !allowedSortBy[filter.SortBy] {
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"Invalid sort_by",
+			"allowed values: name, created_at",
+			http.StatusBadRequest,
+		))
+	}
+
+	allowedSortOrder := map[string]bool{
+		"asc":  true,
+		"desc": true,
+	}
+	if !allowedSortOrder[filter.SortOrder] {
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"Invalid sort_order",
+			"allowed values: asc, desc",
+			http.StatusBadRequest,
+		))
+	}
+
+	suppliers, total, err := h.service.Supplier().GetAllSuppliers(c.Request().Context(), filter, limit, offset)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("Operation failed", err.Error(), http.StatusInternalServerError))
+		log.Printf("GetAllSuppliers failed: %v", err)
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse(
+			"Failed to retrieve suppliers",
+			err.Error(),
+			http.StatusInternalServerError,
+		))
 	}
 
-	return c.JSON(http.StatusOK, model.NewSuccessResponse(
+	if maps, expanded, err := h.expandListResponse(c, suppliers, "suppliers"); expanded {
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, model.NewErrorResponse(
+				"expand failed",
+				err.Error(),
+				http.StatusInternalServerError,
+			))
+		}
+		return c.JSON(http.StatusOK, model.NewPaginatedResponse(
+			"Suppliers retrieved successfully",
+			maps,
+			int32(total),
+			limit,
+			offset,
+			http.StatusOK,
+		))
+	}
+
+	return c.JSON(http.StatusOK, model.NewPaginatedResponse(
 		"Suppliers retrieved successfully",
-		resp,
+		suppliers,
+		int32(total),
+		limit,
+		offset,
 		http.StatusOK,
 	))
 }
@@ -203,57 +285,6 @@ func (h *Handler) RestoreSupplier(c echo.Context) error {
 
 	return c.JSON(http.StatusOK, model.NewSuccessResponse(
 		"Supplier restored successfully",
-		resp,
-		http.StatusOK,
-	))
-}
-
-// SearchSuppliers searches suppliers by name
-// @Summary Search suppliers
-// @Description Search suppliers by name
-// @Tags Suppliers
-// @Produce json
-// @Security BearerAuth
-// @Param lang query string false "Language (uz, ru, en)" default(uz)
-// @Param q query string true "Search query"
-// @Param limit query int false "Limit" default(20)
-// @Param offset query int false "Offset" default(0)
-// @Success 200 {object} []model.SupplierResponse
-// @Failure 400 {object} model.ErrorResponse
-// @Failure 401 {object} model.ErrorResponse
-// @Failure 500 {object} model.ErrorResponse
-// @Router /api/v1/suppliers/search [get]
-func (h *Handler) SearchSuppliers(c echo.Context) error {
-	query := c.QueryParam("q")
-	if query == "" {
-		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
-			"invalid request",
-			"search query is required",
-			http.StatusBadRequest,
-		))
-	}
-
-	limit := int32(20)
-	if l := c.QueryParam("limit"); l != "" {
-		if val, err := strconv.Atoi(l); err == nil {
-			limit = int32(val)
-		}
-	}
-
-	offset := int32(0)
-	if o := c.QueryParam("offset"); o != "" {
-		if val, err := strconv.Atoi(o); err == nil {
-			offset = int32(val)
-		}
-	}
-
-	resp, err := h.service.Supplier().SearchSuppliers(c.Request().Context(), query, limit, offset)
-	if err != nil {
-		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("Operation failed", err.Error(), http.StatusInternalServerError))
-	}
-
-	return c.JSON(http.StatusOK, model.NewSuccessResponse(
-		"Suppliers searched successfully",
 		resp,
 		http.StatusOK,
 	))

@@ -13,13 +13,24 @@ import (
 )
 
 const countStorages = `-- name: CountStorages :one
-SELECT COUNT(*) FROM storages
-WHERE deleted_at = 0
-  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+SELECT COUNT(*)
+FROM storages s
+LEFT JOIN translations t
+    ON s.name_i18n = t.id
+   AND t.deleted_at = 0
+WHERE s.deleted_at = 0
+  AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  AND (
+        $1::text = ''
+        OR COALESCE(s.name, '') ILIKE '%' || $1::text || '%'
+        OR COALESCE(t.uz, '') ILIKE '%' || $1::text || '%'
+        OR COALESCE(t.ru, '') ILIKE '%' || $1::text || '%'
+        OR COALESCE(t.en, '') ILIKE '%' || $1::text || '%'
+      )
 `
 
-func (q *Queries) CountStorages(ctx context.Context) (int64, error) {
-	row := q.db.QueryRow(ctx, countStorages)
+func (q *Queries) CountStorages(ctx context.Context, search string) (int64, error) {
+	row := q.db.QueryRow(ctx, countStorages, search)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -90,21 +101,67 @@ func (q *Queries) DeleteStorage(ctx context.Context, id uuid.UUID) error {
 }
 
 const getAllStorages = `-- name: GetAllStorages :many
-SELECT id, name, branch_id, name_i18n, picture_url, color_code, created_at, updated_at, deleted_at
-FROM storages
-WHERE deleted_at = 0
-  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-ORDER BY created_at DESC
-LIMIT $1 OFFSET $2
+SELECT
+    s.id,
+    s.name,
+    s.branch_id,
+    s.name_i18n,
+    s.picture_url,
+    s.color_code,
+    s.created_at,
+    s.updated_at,
+    s.deleted_at
+FROM storages s
+LEFT JOIN translations t
+    ON s.name_i18n = t.id
+   AND t.deleted_at = 0
+WHERE s.deleted_at = 0
+  AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  AND (
+        $1::text = ''
+        OR COALESCE(s.name, '') ILIKE '%' || $1::text || '%'
+        OR COALESCE(t.uz, '') ILIKE '%' || $1::text || '%'
+        OR COALESCE(t.ru, '') ILIKE '%' || $1::text || '%'
+        OR COALESCE(t.en, '') ILIKE '%' || $1::text || '%'
+      )
+ORDER BY
+    CASE
+        WHEN $2::text = 'name' AND $3::text = 'asc'
+        THEN s.name
+    END ASC,
+    CASE
+        WHEN $2::text = 'name' AND $3::text = 'desc'
+        THEN s.name
+    END DESC,
+    CASE
+        WHEN $2::text = 'created_at' AND $3::text = 'asc'
+        THEN s.created_at
+    END ASC,
+    CASE
+        WHEN $2::text = 'created_at' AND $3::text = 'desc'
+        THEN s.created_at
+    END DESC,
+    s.created_at DESC
+LIMIT $5::int
+OFFSET $4::int
 `
 
 type GetAllStoragesParams struct {
-	Limit  int32 `json:"limit"`
-	Offset int32 `json:"offset"`
+	Search    string `json:"search"`
+	SortBy    string `json:"sort_by"`
+	SortOrder string `json:"sort_order"`
+	Offset    int32  `json:"offset"`
+	Limit     int32  `json:"limit"`
 }
 
 func (q *Queries) GetAllStorages(ctx context.Context, arg GetAllStoragesParams) ([]Storage, error) {
-	rows, err := q.db.Query(ctx, getAllStorages, arg.Limit, arg.Offset)
+	rows, err := q.db.Query(ctx, getAllStorages,
+		arg.Search,
+		arg.SortBy,
+		arg.SortOrder,
+		arg.Offset,
+		arg.Limit,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -397,51 +454,6 @@ WHERE id = $1 AND deleted_at != 0
 func (q *Queries) RestoreStorage(ctx context.Context, id uuid.UUID) error {
 	_, err := q.db.Exec(ctx, restoreStorage, id)
 	return err
-}
-
-const searchStorages = `-- name: SearchStorages :many
-SELECT id, name, branch_id, name_i18n, picture_url, color_code, created_at, updated_at, deleted_at
-FROM storages
-WHERE deleted_at = 0 AND name ILIKE '%' || $1 || '%'
-  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-ORDER BY created_at DESC
-LIMIT $2 OFFSET $3
-`
-
-type SearchStoragesParams struct {
-	Column1 *string `json:"column_1"`
-	Limit   int32   `json:"limit"`
-	Offset  int32   `json:"offset"`
-}
-
-func (q *Queries) SearchStorages(ctx context.Context, arg SearchStoragesParams) ([]Storage, error) {
-	rows, err := q.db.Query(ctx, searchStorages, arg.Column1, arg.Limit, arg.Offset)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []Storage
-	for rows.Next() {
-		var i Storage
-		if err := rows.Scan(
-			&i.ID,
-			&i.Name,
-			&i.BranchID,
-			&i.NameI18n,
-			&i.PictureUrl,
-			&i.ColorCode,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-			&i.DeletedAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
 }
 
 const updateStorage = `-- name: UpdateStorage :one

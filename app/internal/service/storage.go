@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"log"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -10,6 +11,16 @@ import (
 	"gitlab.yurtal.tech/company/maryai/back/internal/repository"
 	pg "gitlab.yurtal.tech/company/maryai/back/internal/repository/pg/tenantsdb"
 )
+
+type StorageS struct {
+	repo *repository.Repository
+}
+
+func NewStorageS(repo *repository.Repository) *StorageS {
+	return &StorageS{repo: repo}
+}
+
+// Helper function
 
 // Generic function to map any storage row to response
 func mapStorageToResponse(id uuid.UUID, name string, branchID pgtype.UUID, nameI18n pgtype.UUID, pictureUrl *string, colorCode *string, createdAt, updatedAt pgtype.Timestamptz) *model.StorageResponse {
@@ -23,14 +34,6 @@ func mapStorageToResponse(id uuid.UUID, name string, branchID pgtype.UUID, nameI
 		CreatedAt:  timestampToTime(createdAt),
 		UpdatedAt:  timestampToTime(updatedAt),
 	}
-}
-
-type StorageS struct {
-	repo *repository.Repository
-}
-
-func NewStorageS(repo *repository.Repository) *StorageS {
-	return &StorageS{repo: repo}
 }
 
 // CreateStorage creates a new storage
@@ -78,27 +81,47 @@ func (s *StorageS) GetStorageByID(ctx context.Context, storageID string) (*model
 	return mapStorageToResponse(storage.ID, storage.Name, storage.BranchID, storage.NameI18n, storage.PictureUrl, storage.ColorCode, storage.CreatedAt, storage.UpdatedAt), nil
 }
 
-// GetAllStorages retrieves all storages with pagination
-func (s *StorageS) GetAllStorages(ctx context.Context, limit, offset int32) ([]model.StorageResponse, int32, error) {
-	total, err := s.repo.Tenant(ctx).CountStorages(ctx)
+func (s *StorageS) GetAllStorages(ctx context.Context, filter model.StorageListFilter, limit, offset int32) ([]*model.StorageResponse, int64, error) {
+	if filter.SortBy == "" {
+		filter.SortBy = "created_at"
+	}
+	if filter.SortOrder == "" {
+		filter.SortOrder = "desc"
+	}
+
+	total, err := s.repo.Tenant(ctx).CountStorages(ctx, filter.Search)
 	if err != nil {
+		log.Printf("CountStorages failed: %v", err)
 		return nil, 0, fmt.Errorf("failed to count storages: %w", err)
 	}
 
-	storages, err := s.repo.Tenant(ctx).GetAllStorages(ctx, pg.GetAllStoragesParams{
-		Limit:  limit,
-		Offset: offset,
+	rows, err := s.repo.Tenant(ctx).GetAllStorages(ctx, pg.GetAllStoragesParams{
+		Search:    filter.Search,
+		SortBy:    filter.SortBy,
+		SortOrder: filter.SortOrder,
+		Limit:     limit,
+		Offset:    offset,
 	})
 	if err != nil {
-		return nil, 0, fmt.Errorf("failed to get storages: %w", err)
+		log.Printf("GetAllStorages failed: %v", err)
+		return nil, 0, fmt.Errorf("failed to retrieve storages: %w", err)
 	}
 
-	var responses []model.StorageResponse
-	for _, str := range storages {
-		responses = append(responses, *mapStorageToResponse(str.ID, str.Name, str.BranchID, str.NameI18n, str.PictureUrl, str.ColorCode, str.CreatedAt, str.UpdatedAt))
+	var responses []*model.StorageResponse
+	for _, row := range rows {
+		responses = append(responses, mapStorageToResponse(
+			row.ID,
+			row.Name,
+			row.BranchID,
+			row.NameI18n,
+			row.PictureUrl,
+			row.ColorCode,
+			row.CreatedAt,
+			row.UpdatedAt,
+		))
 	}
 
-	return responses, int32(total), nil
+	return responses, total, nil
 }
 
 // GetStoragesByBranchID retrieves storages by branch ID
@@ -266,25 +289,6 @@ func (s *StorageS) RestoreStorage(ctx context.Context, storageID string) error {
 	return nil
 }
 
-// SearchStorages searches storages by name
-func (s *StorageS) SearchStorages(ctx context.Context, query string, limit, offset int32) ([]model.StorageResponse, error) {
-	storages, err := s.repo.Tenant(ctx).SearchStorages(ctx, pg.SearchStoragesParams{
-		Column1: &query,
-		Limit:   limit,
-		Offset:  offset,
-	})
-	if err != nil {
-		return nil, fmt.Errorf("failed to search storages: %w", err)
-	}
-
-	var responses []model.StorageResponse
-	for _, str := range storages {
-		responses = append(responses, *mapStorageToResponse(str.ID, str.Name, str.BranchID, str.NameI18n, str.PictureUrl, str.ColorCode, str.CreatedAt, str.UpdatedAt))
-	}
-
-	return responses, nil
-}
-
 // GetStorageByIDWithLang retrieves storage by ID with language support
 func (s *StorageS) GetStorageByIDWithLang(ctx context.Context, storageID string, lang string) (*model.StorageResponse, error) {
 	id, err := uuid.Parse(storageID)
@@ -305,7 +309,7 @@ func (s *StorageS) GetStorageByIDWithLang(ctx context.Context, storageID string,
 
 // GetAllStoragesWithLang retrieves all storages with language support
 func (s *StorageS) GetAllStoragesWithLang(ctx context.Context, lang string, limit, offset int32) ([]model.StorageResponse, int32, error) {
-	total, err := s.repo.Tenant(ctx).CountStorages(ctx)
+	total, err := s.repo.Tenant(ctx).CountStorages(ctx, "")
 	if err != nil {
 		return nil, 0, fmt.Errorf("failed to count storages: %w", err)
 	}
@@ -321,10 +325,17 @@ func (s *StorageS) GetAllStoragesWithLang(ctx context.Context, lang string, limi
 
 	var responses []model.StorageResponse
 	for _, str := range storages {
-		responses = append(responses, *mapStorageToResponse(str.ID, str.Name, str.BranchID, str.NameI18n, str.PictureUrl, str.ColorCode, str.CreatedAt, str.UpdatedAt))
+		responses = append(responses, *mapStorageToResponse(
+			str.ID,
+			str.Name,
+			str.BranchID,
+			str.NameI18n,
+			str.PictureUrl,
+			str.ColorCode,
+			str.CreatedAt,
+			str.UpdatedAt,
+		))
 	}
 
 	return responses, int32(total), nil
 }
-
-// Helper function

@@ -19,16 +19,83 @@ WHERE departments.id = $1 AND deleted_at = 0
   );
 
 -- name: GetAllDepartments :many
-SELECT id, name, color_code, picture_url, name_i18n, storage_id, created_at, updated_at, deleted_at
-FROM departments
-WHERE deleted_at = 0
+SELECT
+    d.id,
+    d.name,
+    d.storage_id,
+    d.name_i18n,
+    d.picture_url,
+    d.color_code,
+    d.created_at,
+    d.updated_at,
+    d.deleted_at
+FROM departments d
+LEFT JOIN translations t
+    ON d.name_i18n = t.id
+   AND t.deleted_at = 0
+WHERE d.deleted_at = 0
   AND EXISTS (
-    SELECT 1 FROM storages s
-    WHERE s.id = departments.storage_id
-      AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-  )
-ORDER BY created_at DESC
-LIMIT $1 OFFSET $2;
+        SELECT 1
+        FROM storages s
+        WHERE s.id = d.storage_id
+          AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+      )
+  AND (
+        sqlc.arg('search')::text = ''
+        OR COALESCE(d.name, '') ILIKE '%' || sqlc.arg('search')::text || '%'
+        OR COALESCE(t.uz, '') ILIKE '%' || sqlc.arg('search')::text || '%'
+        OR COALESCE(t.ru, '') ILIKE '%' || sqlc.arg('search')::text || '%'
+        OR COALESCE(t.en, '') ILIKE '%' || sqlc.arg('search')::text || '%'
+      )
+  AND (
+        sqlc.narg('storage_id')::uuid IS NULL
+        OR d.storage_id = sqlc.narg('storage_id')::uuid
+      )
+ORDER BY
+    CASE
+        WHEN sqlc.arg('sort_by')::text = 'name' AND sqlc.arg('sort_order')::text = 'asc'
+        THEN d.name
+    END ASC,
+    CASE
+        WHEN sqlc.arg('sort_by')::text = 'name' AND sqlc.arg('sort_order')::text = 'desc'
+        THEN d.name
+    END DESC,
+    CASE
+        WHEN sqlc.arg('sort_by')::text = 'created_at' AND sqlc.arg('sort_order')::text = 'asc'
+        THEN d.created_at
+    END ASC,
+    CASE
+        WHEN sqlc.arg('sort_by')::text = 'created_at' AND sqlc.arg('sort_order')::text = 'desc'
+        THEN d.created_at
+    END DESC,
+    d.created_at DESC
+LIMIT sqlc.arg('limit')::int
+OFFSET sqlc.arg('offset')::int;
+
+-- name: CountDepartments :one
+SELECT COUNT(*)
+FROM departments d
+LEFT JOIN translations t
+    ON d.name_i18n = t.id
+   AND t.deleted_at = 0
+WHERE d.deleted_at = 0
+  AND EXISTS (
+        SELECT 1
+        FROM storages s
+        WHERE s.id = d.storage_id
+          AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+      )
+  AND (
+        sqlc.arg('search')::text = ''
+        OR COALESCE(d.name, '') ILIKE '%' || sqlc.arg('search')::text || '%'
+        OR COALESCE(t.uz, '') ILIKE '%' || sqlc.arg('search')::text || '%'
+        OR COALESCE(t.ru, '') ILIKE '%' || sqlc.arg('search')::text || '%'
+        OR COALESCE(t.en, '') ILIKE '%' || sqlc.arg('search')::text || '%'
+      )
+  AND (
+        sqlc.narg('storage_id')::uuid IS NULL
+        OR d.storage_id = sqlc.narg('storage_id')::uuid
+      );
 
 -- name: GetDepartmentsByStorageID :many
 SELECT id, name, color_code, picture_url, name_i18n, storage_id, created_at, updated_at, deleted_at
@@ -85,27 +152,6 @@ WHERE departments.id = $1 AND deleted_at != 0
       AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
   );
 
--- name: SearchDepartments :many
-SELECT id, name, color_code, picture_url, name_i18n, storage_id, created_at, updated_at, deleted_at
-FROM departments
-WHERE deleted_at = 0 AND name ILIKE '%' || $1 || '%'
-  AND EXISTS (
-    SELECT 1 FROM storages s
-    WHERE s.id = departments.storage_id
-      AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-  )
-ORDER BY created_at DESC
-LIMIT $2 OFFSET $3;
-
--- name: CountDepartments :one
-SELECT COUNT(*) FROM departments
-WHERE deleted_at = 0
-  AND EXISTS (
-    SELECT 1 FROM storages s
-    WHERE s.id = departments.storage_id
-      AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-  );
-
 -- name: CountDepartmentsByStorage :one
 SELECT COUNT(*) FROM departments
 WHERE storage_id = $1 AND deleted_at = 0
@@ -114,8 +160,6 @@ WHERE storage_id = $1 AND deleted_at = 0
     WHERE s.id = departments.storage_id
       AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
   );
-
-
 
 -- name: GetDepartmentWithStorage :one
 SELECT 
@@ -131,8 +175,6 @@ FROM departments d
 LEFT JOIN storages s ON d.storage_id = s.id AND s.deleted_at = 0
 WHERE d.id = $1 AND d.deleted_at = 0
   AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid;
-
-
 
 -- name: GetDepartmentStats :one
 SELECT 

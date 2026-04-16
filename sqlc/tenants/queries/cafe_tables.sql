@@ -24,16 +24,94 @@ WHERE cafe_tables.hall_id = $1 AND cafe_tables.number = $2 AND cafe_tables.delet
   );
 
 -- name: GetAllCafeTables :many
-SELECT id, hall_id, number, capacity, status, table_type, pos_x, pos_y, width, height, rotation, price_per_hour, shape, created_at, updated_at, deleted_at
-FROM cafe_tables
-WHERE cafe_tables.deleted_at = 0
+SELECT
+    ct.id,
+    ct.hall_id,
+    ct.number,
+    ct.capacity,
+    ct.status,
+    ct.pos_x,
+    ct.pos_y,
+    ct.width,
+    ct.height,
+    ct.rotation,
+    ct.price_per_hour,
+    ct.table_type,
+    ct.shape,
+    ct.created_at,
+    ct.updated_at,
+    ct.deleted_at
+FROM cafe_tables ct
+WHERE ct.deleted_at = 0
   AND EXISTS (
-    SELECT 1 FROM halls h
-    WHERE h.id = cafe_tables.hall_id
-      AND h.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-  )
-ORDER BY hall_id ASC, number ASC
-LIMIT $1 OFFSET $2;
+        SELECT 1
+        FROM halls h
+        WHERE h.id = ct.hall_id
+          AND h.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+      )
+  AND (
+        sqlc.arg('search')::text = ''
+        OR CAST(ct.number AS TEXT) ILIKE '%' || sqlc.arg('search')::text || '%'
+      )
+  AND (
+        sqlc.narg('hall_id')::uuid IS NULL
+        OR ct.hall_id = sqlc.narg('hall_id')::uuid
+      )
+  AND (
+        sqlc.arg('status')::text = ''
+        OR ct.status::text = sqlc.arg('status')::text
+      )
+  AND (
+      sqlc.arg('table_type')::text = ''
+      OR COALESCE(ct.table_type, '') = sqlc.arg('table_type')::text
+    )
+ORDER BY
+    CASE
+        WHEN sqlc.arg('sort_by')::text = 'number' AND sqlc.arg('sort_order')::text = 'asc'
+        THEN ct.number
+    END ASC,
+    CASE
+        WHEN sqlc.arg('sort_by')::text = 'number' AND sqlc.arg('sort_order')::text = 'desc'
+        THEN ct.number
+    END DESC,
+    CASE
+        WHEN sqlc.arg('sort_by')::text = 'created_at' AND sqlc.arg('sort_order')::text = 'asc'
+        THEN ct.created_at
+    END ASC,
+    CASE
+        WHEN sqlc.arg('sort_by')::text = 'created_at' AND sqlc.arg('sort_order')::text = 'desc'
+        THEN ct.created_at
+    END DESC,
+    ct.created_at DESC
+LIMIT sqlc.arg('limit')::int
+OFFSET sqlc.arg('offset')::int;
+
+-- name: CountCafeTables :one
+SELECT COUNT(*)
+FROM cafe_tables ct
+WHERE ct.deleted_at = 0
+  AND EXISTS (
+        SELECT 1
+        FROM halls h
+        WHERE h.id = ct.hall_id
+          AND h.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+      )
+  AND (
+        sqlc.arg('search')::text = ''
+        OR CAST(ct.number AS TEXT) ILIKE '%' || sqlc.arg('search')::text || '%'
+      )
+  AND (
+        sqlc.narg('hall_id')::uuid IS NULL
+        OR ct.hall_id = sqlc.narg('hall_id')::uuid
+      )
+  AND (
+        sqlc.arg('status')::text = ''
+        OR ct.status::text = sqlc.arg('status')::text
+      )
+  AND (
+      sqlc.arg('table_type')::text = ''
+      OR COALESCE(ct.table_type, '') = sqlc.arg('table_type')::text
+    );
 
 -- name: GetCafeTablesByHallID :many
 SELECT id, hall_id, number, capacity, status, table_type, pos_x, pos_y, width, height, rotation, price_per_hour, shape, created_at, updated_at, deleted_at
@@ -154,15 +232,6 @@ WHERE cafe_tables.id = $1 AND cafe_tables.deleted_at = 0
 UPDATE cafe_tables
 SET deleted_at = 0
 WHERE cafe_tables.id = $1 AND cafe_tables.deleted_at != 0
-  AND EXISTS (
-    SELECT 1 FROM halls h
-    WHERE h.id = cafe_tables.hall_id
-      AND h.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-  );
-
--- name: CountCafeTables :one
-SELECT COUNT(*) FROM cafe_tables
-WHERE cafe_tables.deleted_at = 0
   AND EXISTS (
     SELECT 1 FROM halls h
     WHERE h.id = cafe_tables.hall_id

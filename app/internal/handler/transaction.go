@@ -3,11 +3,10 @@ package handler
 import (
 	"net/http"
 	"strconv"
-	"time"
+	"strings"
 
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
-	"gitlab.yurtal.tech/company/maryai/back/internal/middleware"
 	"gitlab.yurtal.tech/company/maryai/back/internal/model"
 	"gitlab.yurtal.tech/company/maryai/back/pkg/validate"
 )
@@ -93,84 +92,132 @@ func (h *Handler) GetTransactionByID(c echo.Context) error {
 	return c.JSON(http.StatusOK, model.NewSuccessResponse("OK", resp, http.StatusOK))
 }
 
-// GetAllTransactions returns paginated transactions with optional filters
+// GetAllTransactions retrieves all transactions
 // @Summary Get all transactions
-// @Description Supports filters: type (income|expense|transfer), cash_register_id, group_id, date_from, date_to
+// @Description Retrieve all transactions with pagination, filters, search and sorting
 // @Tags transactions
+// @Accept json
+// @Produce json
 // @Security BearerAuth
-// @Param type query string false "Filter by type: income, expense, transfer"
-// @Param cash_register_id query string false "Filter by cash register"
-// @Param group_id query string false "Filter by group transaction"
-// @Param date_from query string false "Start date (RFC3339)"
-// @Param date_to query string false "End date (RFC3339)"
-// @Param limit query int false "Limit (default 20)"
-// @Param offset query int false "Offset (default 0)"
-// @Success 200 {array} model.TransactionResponse
+// @Param search query string false "Search by comment or description"
+// @Param type query string false "Filter by transaction type"
+// @Param pay_type query string false "Filter by pay type (cash, card)"
+// @Param cash_register_id query string false "Filter by cash register ID"
+// @Param group_transaction_id query string false "Filter by group transaction ID"
+// @Param date_from query string false "Start date (YYYY-MM-DD)"
+// @Param date_to query string false "End date (YYYY-MM-DD)"
+// @Param sort_by query string false "Sort by field" Enums(created_at,amount) default(created_at)
+// @Param sort_order query string false "Sort order" Enums(asc,desc) default(desc)
+// @Param limit query int false "Limit (default: 20)"
+// @Param offset query int false "Offset (default: 0)"
+// @Success 200 {object} model.PaginatedTransactionsResponse
+// @Failure 400 {object} model.ErrorResponse
+// @Failure 401 {object} model.ErrorResponse
 // @Failure 500 {object} model.ErrorResponse
 // @Router /api/v1/transactions [get]
 func (h *Handler) GetAllTransactions(c echo.Context) error {
-	_ = middleware.GetBranchIDFromContext(c) // branch already set via middleware
+	var limit int32 = 20
+	var offset int32 = 0
 
-	limit := int32(20)
-	offset := int32(0)
-	if l, err := strconv.Atoi(c.QueryParam("limit")); err == nil && l > 0 {
+	if limitStr := c.QueryParam("limit"); limitStr != "" {
+		l, err := strconv.ParseInt(limitStr, 10, 32)
+		if err != nil || l <= 0 {
+			return c.JSON(http.StatusBadRequest, model.NewErrorResponse("Invalid limit", "limit must be a positive integer", http.StatusBadRequest))
+		}
 		limit = int32(l)
 	}
-	if o, err := strconv.Atoi(c.QueryParam("offset")); err == nil && o >= 0 {
+
+	if offsetStr := c.QueryParam("offset"); offsetStr != "" {
+		o, err := strconv.ParseInt(offsetStr, 10, 32)
+		if err != nil || o < 0 {
+			return c.JSON(http.StatusBadRequest, model.NewErrorResponse("Invalid offset", "offset must be a non-negative integer", http.StatusBadRequest))
+		}
 		offset = int32(o)
 	}
 
-	svc := h.service.Transaction()
-	ctx := c.Request().Context()
-
-	// Filter by type
-	if txType := c.QueryParam("type"); txType != "" {
-		rows, err := svc.GetTransactionsByType(ctx, txType, limit, offset)
-		if err != nil {
-			return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("Failed to get transactions", err.Error(), http.StatusInternalServerError))
-		}
-		return c.JSON(http.StatusOK, model.NewSuccessResponse("OK", rows, http.StatusOK))
+	filter := model.TransactionListFilter{
+		Search:             strings.TrimSpace(c.QueryParam("search")),
+		Type:               strings.TrimSpace(c.QueryParam("type")),
+		PayType:            strings.TrimSpace(c.QueryParam("pay_type")),
+		CashRegisterID:     strings.TrimSpace(c.QueryParam("cash_register_id")),
+		GroupTransactionID: strings.TrimSpace(c.QueryParam("group_transaction_id")),
+		DateFrom:           strings.TrimSpace(c.QueryParam("date_from")),
+		DateTo:             strings.TrimSpace(c.QueryParam("date_to")),
+		SortBy:             strings.TrimSpace(c.QueryParam("sort_by")),
+		SortOrder:          strings.TrimSpace(c.QueryParam("sort_order")),
 	}
 
-	// Filter by cash register
-	if crID := c.QueryParam("cash_register_id"); crID != "" {
-		rows, err := svc.GetTransactionsByCashRegister(ctx, crID, limit, offset)
-		if err != nil {
-			return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("Failed to get transactions", err.Error(), http.StatusInternalServerError))
-		}
-		return c.JSON(http.StatusOK, model.NewSuccessResponse("OK", rows, http.StatusOK))
+	if filter.SortBy == "" {
+		filter.SortBy = "date"
+	}
+	if filter.SortOrder == "" {
+		filter.SortOrder = "desc"
 	}
 
-	// Filter by date range
-	dateFrom := c.QueryParam("date_from")
-	dateTo := c.QueryParam("date_to")
-	if dateFrom != "" && dateTo != "" {
-		from, err1 := time.Parse(time.RFC3339, dateFrom)
-		to, err2 := time.Parse(time.RFC3339, dateTo)
-		if err1 == nil && err2 == nil {
-			rows, err := svc.GetTransactionsByDateRange(ctx, from, to, limit, offset)
-			if err != nil {
-				return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("Failed to get transactions", err.Error(), http.StatusInternalServerError))
-			}
-			return c.JSON(http.StatusOK, model.NewSuccessResponse("OK", rows, http.StatusOK))
+	allowedSortBy := map[string]bool{
+		"date":       true,
+		"created_at": true,
+		"amount":     true,
+	}
+	if !allowedSortBy[filter.SortBy] {
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"Invalid sort_by",
+			"allowed values: date, created_at, amount",
+			http.StatusBadRequest,
+		))
+	}
+
+	allowedSortOrder := map[string]bool{"asc": true, "desc": true}
+	if !allowedSortOrder[filter.SortOrder] {
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"Invalid sort_order",
+			"allowed values: asc, desc",
+			http.StatusBadRequest,
+		))
+	}
+
+	for field, value := range map[string]string{
+		"cash_register_id":     filter.CashRegisterID,
+		"group_transaction_id": filter.GroupTransactionID,
+	} {
+		if value == "" {
+			continue
+		}
+		if _, err := uuid.Parse(value); err != nil {
+			return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+				"Invalid request",
+				field+" must be a valid UUID",
+				http.StatusBadRequest,
+			))
+		}
+	}
+	if filter.PayType != "" {
+		allowedPayTypes := map[string]bool{
+			"cash": true,
+			"card": true,
+		}
+		if !allowedPayTypes[filter.PayType] {
+			return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+				"Invalid pay_type",
+				"allowed values: cash, card",
+				http.StatusBadRequest,
+			))
 		}
 	}
 
-	// Filter by group
-	if groupID := c.QueryParam("group_id"); groupID != "" {
-		rows, err := svc.GetTransactionsByGroup(ctx, groupID, limit, offset)
-		if err != nil {
-			return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("Failed to get transactions", err.Error(), http.StatusInternalServerError))
-		}
-		return c.JSON(http.StatusOK, model.NewSuccessResponse("OK", rows, http.StatusOK))
-	}
-
-	// Default: all
-	rows, err := svc.GetAllTransactions(ctx, limit, offset)
+	resp, total, err := h.service.Transaction().GetAllTransactions(c.Request().Context(), filter, limit, offset)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("Failed to get transactions", err.Error(), http.StatusInternalServerError))
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("Operation failed", err.Error(), http.StatusInternalServerError))
 	}
-	return c.JSON(http.StatusOK, model.NewSuccessResponse("OK", rows, http.StatusOK))
+
+	return c.JSON(http.StatusOK, model.NewPaginatedResponse(
+		"Transactions retrieved successfully",
+		resp,
+		int32(total),
+		limit,
+		offset,
+		http.StatusOK,
+	))
 }
 
 // UpdateTransaction updates a transaction
