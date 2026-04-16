@@ -23,6 +23,23 @@ func parseReportTimeParam(v string) (*time.Time, error) {
 	return nil, strconv.ErrSyntax
 }
 
+// parseReportEndTimeParam parses an end date parameter.
+// For date-only inputs (YYYY-MM-DD), it advances to the start of the next day so that
+// the entire end day is included in the report period (SQL uses < end_ts).
+func parseReportEndTimeParam(v string) (*time.Time, error) {
+	if v == "" {
+		return nil, nil
+	}
+	if t, err := time.Parse(time.RFC3339, v); err == nil {
+		return &t, nil
+	}
+	if t, err := time.ParseInLocation("2006-01-02", v, time.Local); err == nil {
+		nextDay := t.AddDate(0, 0, 1)
+		return &nextDay, nil
+	}
+	return nil, strconv.ErrSyntax
+}
+
 // GetIngredientReport retrieves aggregated ingredient stock movements report
 // @Summary Get ingredient report
 // @Description Retrieve ingredient report for a storage within a date range
@@ -67,7 +84,7 @@ func (h *Handler) GetIngredientReport(c echo.Context) error {
 			http.StatusBadRequest,
 		))
 	}
-	end, err := parseReportTimeParam(c.QueryParam("end"))
+	end, err := parseReportEndTimeParam(c.QueryParam("end"))
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
 			"invalid end format",
@@ -182,7 +199,7 @@ func (h *Handler) GetIngredientReportItem(c echo.Context) error {
 			http.StatusBadRequest,
 		))
 	}
-	end, err := parseReportTimeParam(c.QueryParam("end"))
+	end, err := parseReportEndTimeParam(c.QueryParam("end"))
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
 			"invalid end format",
@@ -281,7 +298,7 @@ func (h *Handler) GetIngredientReportMovements(c echo.Context) error {
 			http.StatusBadRequest,
 		))
 	}
-	end, err := parseReportTimeParam(c.QueryParam("end"))
+	end, err := parseReportEndTimeParam(c.QueryParam("end"))
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
 			"invalid end format",
