@@ -169,6 +169,20 @@ func insertMovement(t *testing.T, ctx context.Context, q *pg.Queries,
 	require.NoError(t, err)
 }
 
+// insertMovementWithStockLevels inserts a movement for the global storage, using explicit
+// (possibly inconsistent) stock_before/stock_after to simulate what the invoice service
+// writes when a backdated invoice is entered after other invoices.
+func insertMovementWithStockLevels(t *testing.T, ctx context.Context,
+	ingredientID uuid.UUID,
+	eventType string,
+	qtyIn, qtyOut, stockBefore, stockAfter float64,
+	effectiveAt time.Time,
+) {
+	t.Helper()
+	insertMovement(t, ctx, globalEnv.q, globalEnv.storageID, ingredientID,
+		eventType, qtyIn, qtyOut, stockBefore, stockAfter, effectiveAt)
+}
+
 // setLiveStock updates the ingredient_stock table to the given value.
 // It upserts: creates if not exists, overwrites if exists.
 func setLiveStock(t *testing.T, ctx context.Context, pool *pgxpool.Pool,

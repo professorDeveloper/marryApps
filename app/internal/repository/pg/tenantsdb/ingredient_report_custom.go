@@ -62,48 +62,29 @@ base_ingredients AS (
 	WHERE COALESCE(m.effective_at, m.created_at) <= p.end_ts
 		AND (p.ingredient_id IS NULL OR m.ingredient_id = p.ingredient_id)
 ),
-first_in_range AS (
-	SELECT DISTINCT ON (m.ingredient_id)
-		m.ingredient_id,
-		m.stock_before AS begin_qty
-	FROM ingredient_stock_movements m
-	JOIN params p ON p.storage_id = m.storage_id
-	WHERE COALESCE(m.effective_at, m.created_at) >= p.start_ts AND COALESCE(m.effective_at, m.created_at) < p.end_ts
-		AND (p.ingredient_id IS NULL OR m.ingredient_id = p.ingredient_id)
-	ORDER BY m.ingredient_id, COALESCE(m.effective_at, m.created_at) ASC, m.id ASC
-),
-last_before_range AS (
-	SELECT DISTINCT ON (m.ingredient_id)
-		m.ingredient_id,
-		m.stock_after AS begin_qty
-	FROM ingredient_stock_movements m
-	JOIN params p ON p.storage_id = m.storage_id
-	WHERE COALESCE(m.effective_at, m.created_at) < p.start_ts
-		AND (p.ingredient_id IS NULL OR m.ingredient_id = p.ingredient_id)
-	ORDER BY m.ingredient_id, COALESCE(m.effective_at, m.created_at) DESC, m.id DESC
-),
 begin_qty AS (
-	SELECT bi.ingredient_id,
-		COALESCE(f.begin_qty, l.begin_qty, 0::numeric) AS begin_qty
+	SELECT
+		bi.ingredient_id,
+		COALESCE(SUM(m.qty_in - m.qty_out), 0)::numeric(18,6) AS begin_qty
 	FROM base_ingredients bi
-	LEFT JOIN first_in_range f USING (ingredient_id)
-	LEFT JOIN last_before_range l USING (ingredient_id)
-),
-last_in_range AS (
-	SELECT DISTINCT ON (m.ingredient_id)
-		m.ingredient_id,
-		m.stock_after AS end_qty
-	FROM ingredient_stock_movements m
-	JOIN params p ON p.storage_id = m.storage_id
-	WHERE COALESCE(m.effective_at, m.created_at) >= p.start_ts AND COALESCE(m.effective_at, m.created_at) < p.end_ts
-		AND (p.ingredient_id IS NULL OR m.ingredient_id = p.ingredient_id)
-	ORDER BY m.ingredient_id, COALESCE(m.effective_at, m.created_at) DESC, m.id DESC
+	CROSS JOIN params p
+	LEFT JOIN ingredient_stock_movements m
+		ON m.ingredient_id = bi.ingredient_id
+		AND m.storage_id = p.storage_id
+		AND COALESCE(m.effective_at, m.created_at) < p.start_ts
+	GROUP BY bi.ingredient_id
 ),
 end_qty AS (
-	SELECT b.ingredient_id,
-		COALESCE(l.end_qty, b.begin_qty) AS end_qty
-	FROM begin_qty b
-	LEFT JOIN last_in_range l USING (ingredient_id)
+	SELECT
+		bi.ingredient_id,
+		COALESCE(SUM(m.qty_in - m.qty_out), 0)::numeric(18,6) AS end_qty
+	FROM base_ingredients bi
+	CROSS JOIN params p
+	LEFT JOIN ingredient_stock_movements m
+		ON m.ingredient_id = bi.ingredient_id
+		AND m.storage_id = p.storage_id
+		AND COALESCE(m.effective_at, m.created_at) < p.end_ts
+	GROUP BY bi.ingredient_id
 ),
 sums AS (
 	SELECT
