@@ -5,7 +5,8 @@
       "Bash(go test *)",
       "Bash(go mod *)",
       "Bash(git status *)",
-      "Bash(git add *)"
+      "Bash(git add *)",
+      "Bash(git push *)"
     ]
   }
 }
