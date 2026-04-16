@@ -13,17 +13,38 @@ import (
 )
 
 const countDepartments = `-- name: CountDepartments :one
-SELECT COUNT(*) FROM departments
-WHERE deleted_at = 0
+SELECT COUNT(*)
+FROM departments d
+LEFT JOIN translations t
+    ON d.name_i18n = t.id
+   AND t.deleted_at = 0
+WHERE d.deleted_at = 0
   AND EXISTS (
-    SELECT 1 FROM storages s
-    WHERE s.id = departments.storage_id
-      AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-  )
+        SELECT 1
+        FROM storages s
+        WHERE s.id = d.storage_id
+          AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+      )
+  AND (
+        $1::text = ''
+        OR COALESCE(d.name, '') ILIKE '%' || $1::text || '%'
+        OR COALESCE(t.uz, '') ILIKE '%' || $1::text || '%'
+        OR COALESCE(t.ru, '') ILIKE '%' || $1::text || '%'
+        OR COALESCE(t.en, '') ILIKE '%' || $1::text || '%'
+      )
+  AND (
+        $2::uuid IS NULL
+        OR d.storage_id = $2::uuid
+      )
 `
 
-func (q *Queries) CountDepartments(ctx context.Context) (int64, error) {
-	row := q.db.QueryRow(ctx, countDepartments)
+type CountDepartmentsParams struct {
+	Search    string      `json:"search"`
+	StorageID pgtype.UUID `json:"storage_id"`
+}
+
+func (q *Queries) CountDepartments(ctx context.Context, arg CountDepartmentsParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countDepartments, arg.Search, arg.StorageID)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -107,39 +128,104 @@ func (q *Queries) DeleteDepartment(ctx context.Context, id uuid.UUID) error {
 }
 
 const getAllDepartments = `-- name: GetAllDepartments :many
-SELECT id, name, color_code, picture_url, name_i18n, storage_id, created_at, updated_at, deleted_at
-FROM departments
-WHERE deleted_at = 0
+SELECT
+    d.id,
+    d.name,
+    d.storage_id,
+    d.name_i18n,
+    d.picture_url,
+    d.color_code,
+    d.created_at,
+    d.updated_at,
+    d.deleted_at
+FROM departments d
+LEFT JOIN translations t
+    ON d.name_i18n = t.id
+   AND t.deleted_at = 0
+WHERE d.deleted_at = 0
   AND EXISTS (
-    SELECT 1 FROM storages s
-    WHERE s.id = departments.storage_id
-      AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-  )
-ORDER BY created_at DESC
-LIMIT $1 OFFSET $2
+        SELECT 1
+        FROM storages s
+        WHERE s.id = d.storage_id
+          AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+      )
+  AND (
+        $1::text = ''
+        OR COALESCE(d.name, '') ILIKE '%' || $1::text || '%'
+        OR COALESCE(t.uz, '') ILIKE '%' || $1::text || '%'
+        OR COALESCE(t.ru, '') ILIKE '%' || $1::text || '%'
+        OR COALESCE(t.en, '') ILIKE '%' || $1::text || '%'
+      )
+  AND (
+        $2::uuid IS NULL
+        OR d.storage_id = $2::uuid
+      )
+ORDER BY
+    CASE
+        WHEN $3::text = 'name' AND $4::text = 'asc'
+        THEN d.name
+    END ASC,
+    CASE
+        WHEN $3::text = 'name' AND $4::text = 'desc'
+        THEN d.name
+    END DESC,
+    CASE
+        WHEN $3::text = 'created_at' AND $4::text = 'asc'
+        THEN d.created_at
+    END ASC,
+    CASE
+        WHEN $3::text = 'created_at' AND $4::text = 'desc'
+        THEN d.created_at
+    END DESC,
+    d.created_at DESC
+LIMIT $6::int
+OFFSET $5::int
 `
 
 type GetAllDepartmentsParams struct {
-	Limit  int32 `json:"limit"`
-	Offset int32 `json:"offset"`
+	Search    string      `json:"search"`
+	StorageID pgtype.UUID `json:"storage_id"`
+	SortBy    string      `json:"sort_by"`
+	SortOrder string      `json:"sort_order"`
+	Offset    int32       `json:"offset"`
+	Limit     int32       `json:"limit"`
 }
 
-func (q *Queries) GetAllDepartments(ctx context.Context, arg GetAllDepartmentsParams) ([]Department, error) {
-	rows, err := q.db.Query(ctx, getAllDepartments, arg.Limit, arg.Offset)
+type GetAllDepartmentsRow struct {
+	ID         uuid.UUID          `json:"id"`
+	Name       string             `json:"name"`
+	StorageID  pgtype.UUID        `json:"storage_id"`
+	NameI18n   pgtype.UUID        `json:"name_i18n"`
+	PictureUrl *string            `json:"picture_url"`
+	ColorCode  *string            `json:"color_code"`
+	CreatedAt  pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt  pgtype.Timestamptz `json:"updated_at"`
+	DeletedAt  *int64             `json:"deleted_at"`
+}
+
+func (q *Queries) GetAllDepartments(ctx context.Context, arg GetAllDepartmentsParams) ([]GetAllDepartmentsRow, error) {
+	rows, err := q.db.Query(ctx, getAllDepartments,
+		arg.Search,
+		arg.StorageID,
+		arg.SortBy,
+		arg.SortOrder,
+		arg.Offset,
+		arg.Limit,
+	)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []Department
+	var items []GetAllDepartmentsRow
 	for rows.Next() {
-		var i Department
+		var i GetAllDepartmentsRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.Name,
-			&i.ColorCode,
-			&i.PictureUrl,
-			&i.NameI18n,
 			&i.StorageID,
+			&i.NameI18n,
+			&i.PictureUrl,
+			&i.ColorCode,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.DeletedAt,
@@ -453,55 +539,6 @@ WHERE departments.id = $1 AND deleted_at != 0
 func (q *Queries) RestoreDepartment(ctx context.Context, id uuid.UUID) error {
 	_, err := q.db.Exec(ctx, restoreDepartment, id)
 	return err
-}
-
-const searchDepartments = `-- name: SearchDepartments :many
-SELECT id, name, color_code, picture_url, name_i18n, storage_id, created_at, updated_at, deleted_at
-FROM departments
-WHERE deleted_at = 0 AND name ILIKE '%' || $1 || '%'
-  AND EXISTS (
-    SELECT 1 FROM storages s
-    WHERE s.id = departments.storage_id
-      AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-  )
-ORDER BY created_at DESC
-LIMIT $2 OFFSET $3
-`
-
-type SearchDepartmentsParams struct {
-	Column1 *string `json:"column_1"`
-	Limit   int32   `json:"limit"`
-	Offset  int32   `json:"offset"`
-}
-
-func (q *Queries) SearchDepartments(ctx context.Context, arg SearchDepartmentsParams) ([]Department, error) {
-	rows, err := q.db.Query(ctx, searchDepartments, arg.Column1, arg.Limit, arg.Offset)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []Department
-	for rows.Next() {
-		var i Department
-		if err := rows.Scan(
-			&i.ID,
-			&i.Name,
-			&i.ColorCode,
-			&i.PictureUrl,
-			&i.NameI18n,
-			&i.StorageID,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-			&i.DeletedAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
 }
 
 const updateDepartment = `-- name: UpdateDepartment :one

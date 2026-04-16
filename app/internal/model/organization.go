@@ -104,6 +104,21 @@ type DepartmentResponse struct {
 	UpdatedAt  *time.Time `json:"updated_at"`
 }
 
+type DepartmentListFilter struct {
+	Search    string `json:"search,omitempty"`
+	StorageID string `json:"storage_id,omitempty"`
+	SortBy    string `json:"sort_by,omitempty"`
+	SortOrder string `json:"sort_order,omitempty"`
+}
+
+type PaginatedDepartmentsResponse struct {
+	Status     string               `json:"status" example:"success"`
+	Message    string               `json:"message" example:"Departments retrieved successfully"`
+	Data       []DepartmentResponse `json:"data"`
+	Pagination PaginationMeta       `json:"pagination"`
+	Code       int                  `json:"code" example:"200"`
+}
+
 type CreateHallRequest struct {
 	Name     *string `json:"name"`
 	BranchID string  `json:"branch_id"`

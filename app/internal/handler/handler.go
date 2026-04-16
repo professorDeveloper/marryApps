@@ -156,7 +156,6 @@ func (h *Handler) Register(router *echo.Echo) {
 			departments.PUT("/:id", h.UpdateDepartment, mw.CheckLanguage())
 			departments.DELETE("/:id", h.DeleteDepartment, mw.CheckLanguage())
 			departments.POST("/:id/restore", h.RestoreDepartment, mw.CheckLanguage())
-			departments.GET("/search", h.SearchDepartments, mw.CheckLanguage())
 		}
 
 		// Department endpoints with language support

@@ -3269,6 +3269,24 @@ definitions:
       pagination:
         $ref: '#/definitions/model.PaginationMeta'
     type: object
+  model.PaginatedDepartmentsResponse:
+    properties:
+      code:
+        example: 200
+        type: integer
+      data:
+        items:
+          $ref: '#/definitions/model.DepartmentResponse'
+        type: array
+      message:
+        example: Departments retrieved successfully
+        type: string
+      pagination:
+        $ref: '#/definitions/model.PaginationMeta'
+      status:
+        example: success
+        type: string
+    type: object
   model.PaginatedGoodsResponse:
     properties:
       code:
@@ -10055,8 +10073,33 @@ paths:
     get:
       consumes:
       - application/json
-      description: Retrieve all departments with pagination and optional search
+      description: Retrieve all departments with pagination, optional search, storage
+        filter and sorting
       parameters:
+      - description: Search by department name
+        in: query
+        name: search
+        type: string
+      - description: Filter by storage ID
+        in: query
+        name: storage_id
+        type: string
+      - default: created_at
+        description: Sort by field
+        enum:
+        - name
+        - created_at
+        in: query
+        name: sort_by
+        type: string
+      - default: desc
+        description: Sort order
+        enum:
+        - asc
+        - desc
+        in: query
+        name: sort_order
+        type: string
       - description: 'Limit (default: 20)'
         in: query
         name: limit
@@ -10065,11 +10108,7 @@ paths:
         in: query
         name: offset
         type: integer
-      - description: Search by name
-        in: query
-        name: search
-        type: string
-      - description: 'Expand FK relations (comma-separated: storage_id, name_i18n)'
+      - description: Expand related fields
         in: query
         name: expand
         type: string
@@ -10077,17 +10116,19 @@ paths:
       - application/json
       responses:
         "200":
-          description: Departments found
+          description: OK
           schema:
-            items:
-              $ref: '#/definitions/model.DepartmentResponse'
-            type: array
+            $ref: '#/definitions/model.PaginatedDepartmentsResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
         "401":
           description: Unauthorized
           schema:
             $ref: '#/definitions/model.ErrorResponse'
         "500":
-          description: Internal server error
+          description: Internal Server Error
           schema:
             $ref: '#/definitions/model.ErrorResponse'
       security:
@@ -10437,51 +10478,6 @@ paths:
       security:
       - BearerAuth: []
       summary: Restore a department
-      tags:
-      - departments
-  /api/v1/departments/search:
-    get:
-      consumes:
-      - application/json
-      description: Search for departments by name with pagination
-      parameters:
-      - description: Search query
-        in: query
-        name: q
-        required: true
-        type: string
-      - description: 'Limit (default: 20)'
-        in: query
-        name: limit
-        type: integer
-      - description: 'Offset (default: 0)'
-        in: query
-        name: offset
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Departments found
-          schema:
-            items:
-              $ref: '#/definitions/model.DepartmentResponse'
-            type: array
-        "400":
-          description: Invalid request data
-          schema:
-            $ref: '#/definitions/model.ErrorResponse'
-        "401":
-          description: Unauthorized
-          schema:
-            $ref: '#/definitions/model.ErrorResponse'
-        "500":
-          description: Internal server error
-          schema:
-            $ref: '#/definitions/model.ErrorResponse'
-      security:
-      - BearerAuth: []
-      summary: Search departments
       tags:
       - departments
   /api/v1/departments/storage/{storageId}:

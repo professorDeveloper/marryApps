@@ -7466,7 +7466,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Retrieve all departments with pagination and optional search",
+                "description": "Retrieve all departments with pagination, optional search, storage filter and sorting",
                 "consumes": [
                     "application/json"
                 ],
@@ -7478,6 +7478,40 @@ const docTemplate = `{
                 ],
                 "summary": "Get all departments",
                 "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Search by department name",
+                        "name": "search",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by storage ID",
+                        "name": "storage_id",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "name",
+                            "created_at"
+                        ],
+                        "type": "string",
+                        "default": "created_at",
+                        "description": "Sort by field",
+                        "name": "sort_by",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "asc",
+                            "desc"
+                        ],
+                        "type": "string",
+                        "default": "desc",
+                        "description": "Sort order",
+                        "name": "sort_order",
+                        "in": "query"
+                    },
                     {
                         "type": "integer",
                         "description": "Limit (default: 20)",
@@ -7492,25 +7526,22 @@ const docTemplate = `{
                     },
                     {
                         "type": "string",
-                        "description": "Search by name",
-                        "name": "search",
-                        "in": "query"
-                    },
-                    {
-                        "type": "string",
-                        "description": "Expand FK relations (comma-separated: storage_id, name_i18n)",
+                        "description": "Expand related fields",
                         "name": "expand",
                         "in": "query"
                     }
                 ],
                 "responses": {
                     "200": {
-                        "description": "Departments found",
+                        "description": "OK",
                         "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/model.DepartmentResponse"
-                            }
+                            "$ref": "#/definitions/model.PaginatedDepartmentsResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
                         }
                     },
                     "401": {
@@ -7520,7 +7551,7 @@ const docTemplate = `{
                         }
                     },
                     "500": {
-                        "description": "Internal server error",
+                        "description": "Internal Server Error",
                         "schema": {
                             "$ref": "#/definitions/model.ErrorResponse"
                         }
@@ -7718,76 +7749,6 @@ const docTemplate = `{
                     },
                     "404": {
                         "description": "Department not found",
-                        "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal server error",
-                        "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
-                        }
-                    }
-                }
-            }
-        },
-        "/api/v1/departments/search": {
-            "get": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Search for departments by name with pagination",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "departments"
-                ],
-                "summary": "Search departments",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Search query",
-                        "name": "q",
-                        "in": "query",
-                        "required": true
-                    },
-                    {
-                        "type": "integer",
-                        "description": "Limit (default: 20)",
-                        "name": "limit",
-                        "in": "query"
-                    },
-                    {
-                        "type": "integer",
-                        "description": "Offset (default: 0)",
-                        "name": "offset",
-                        "in": "query"
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Departments found",
-                        "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/model.DepartmentResponse"
-                            }
-                        }
-                    },
-                    "400": {
-                        "description": "Invalid request data",
-                        "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
                         "schema": {
                             "$ref": "#/definitions/model.ErrorResponse"
                         }
@@ -29858,6 +29819,32 @@ const docTemplate = `{
                 },
                 "pagination": {
                     "$ref": "#/definitions/model.PaginationMeta"
+                }
+            }
+        },
+        "model.PaginatedDepartmentsResponse": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "integer",
+                    "example": 200
+                },
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.DepartmentResponse"
+                    }
+                },
+                "message": {
+                    "type": "string",
+                    "example": "Departments retrieved successfully"
+                },
+                "pagination": {
+                    "$ref": "#/definitions/model.PaginationMeta"
+                },
+                "status": {
+                    "type": "string",
+                    "example": "success"
                 }
             }
         },

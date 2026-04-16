@@ -92,27 +92,45 @@ func (d *DepartmentS) GetDepartmentByID(ctx context.Context, departmentID string
 	return mapDepartmentToResponse(department.ID, department.Name, department.NameI18n, department.StorageID, department.ColorCode, department.PictureUrl, department.CreatedAt, department.UpdatedAt), nil
 }
 
-// GetAllDepartments retrieves all departments with pagination
-func (d *DepartmentS) GetAllDepartments(ctx context.Context, limit, offset int32) ([]*model.DepartmentResponse, int32, error) {
-	total, err := d.repo.Tenant(ctx).CountDepartments(ctx)
+func (s *DepartmentS) GetAllDepartments(ctx context.Context, filter model.DepartmentListFilter, limit, offset int32) ([]*model.DepartmentResponse, int64, error) {
+	if filter.SortBy == "" {
+		filter.SortBy = "created_at"
+	}
+	if filter.SortOrder == "" {
+		filter.SortOrder = "desc"
+	}
+
+	storageUUID, err := parseOptionalUUID(filter.StorageID)
+	if err != nil {
+		return nil, 0, fmt.Errorf("invalid storage_id: %w", err)
+	}
+
+	total, err := s.repo.Tenant(ctx).CountDepartments(ctx, pg.CountDepartmentsParams{
+		Search:    filter.Search,
+		StorageID: storageUUID,
+	})
 	if err != nil {
 		return nil, 0, fmt.Errorf("failed to count departments: %w", err)
 	}
 
-	departments, err := d.repo.Tenant(ctx).GetAllDepartments(ctx, pg.GetAllDepartmentsParams{
-		Limit:  limit,
-		Offset: offset,
+	rows, err := s.repo.Tenant(ctx).GetAllDepartments(ctx, pg.GetAllDepartmentsParams{
+		Search:    filter.Search,
+		StorageID: storageUUID,
+		SortBy:    filter.SortBy,
+		SortOrder: filter.SortOrder,
+		Limit:     limit,
+		Offset:    offset,
 	})
 	if err != nil {
-		log.Printf("GetAllDepartments failed: %v", err)
-		return nil, 0, fmt.Errorf("failed to retrieve departments: %w", err)
+		return nil, 0, fmt.Errorf("failed to get departments: %w", err)
 	}
 
-	var responses []*model.DepartmentResponse
-	for _, dept := range departments {
-		responses = append(responses, mapDepartmentToResponse(dept.ID, dept.Name, dept.NameI18n, dept.StorageID, dept.ColorCode, dept.PictureUrl, dept.CreatedAt, dept.UpdatedAt))
+	resp := make([]*model.DepartmentResponse, 0, len(rows))
+	for _, row := range rows {
+		resp = append(resp, mapDepartmentToResponse(row.ID, row.Name, row.NameI18n, row.StorageID, row.ColorCode, row.PictureUrl, row.CreatedAt, row.UpdatedAt))
 	}
-	return responses, int32(total), nil
+
+	return resp, total, nil
 }
 
 // GetDepartmentsByStorageID retrieves departments by storage ID
@@ -282,30 +300,6 @@ func (d *DepartmentS) RestoreDepartment(ctx context.Context, departmentID string
 	return d.GetDepartmentByID(ctx, departmentID)
 }
 
-// SearchDepartments searches for departments by name
-func (d *DepartmentS) SearchDepartments(ctx context.Context, query string, limit, offset int32) ([]*model.DepartmentResponse, error) {
-	if query == "" {
-		return nil, fmt.Errorf("search query is required")
-	}
-
-	q := query
-	departments, err := d.repo.Tenant(ctx).SearchDepartments(ctx, pg.SearchDepartmentsParams{
-		Column1: &q,
-		Limit:   limit,
-		Offset:  offset,
-	})
-	if err != nil {
-		log.Printf("SearchDepartments failed: %v", err)
-		return nil, fmt.Errorf("failed to search departments: %w", err)
-	}
-
-	var responses []*model.DepartmentResponse
-	for _, dept := range departments {
-		responses = append(responses, mapDepartmentToResponse(dept.ID, dept.Name, dept.NameI18n, dept.StorageID, dept.ColorCode, dept.PictureUrl, dept.CreatedAt, dept.UpdatedAt))
-	}
-	return responses, nil
-}
-
 // GetDepartmentByIDWithLang retrieves department by ID with language support
 func (d *DepartmentS) GetDepartmentByIDWithLang(ctx context.Context, departmentID string, lang string) (*model.DepartmentResponse, error) {
 	id, err := uuid.Parse(departmentID)
@@ -326,8 +320,11 @@ func (d *DepartmentS) GetDepartmentByIDWithLang(ctx context.Context, departmentI
 }
 
 // GetAllDepartmentsWithLang retrieves all departments with language support
-func (d *DepartmentS) GetAllDepartmentsWithLang(ctx context.Context, lang string, limit, offset int32) ([]*model.DepartmentResponse, int32, error) {
-	total, err := d.repo.Tenant(ctx).CountDepartments(ctx)
+func (d *DepartmentS) GetAllDepartmentsWithLang(ctx context.Context, lang string, limit, offset int32) ([]model.DepartmentResponse, int32, error) {
+	total, err := d.repo.Tenant(ctx).CountDepartments(ctx, pg.CountDepartmentsParams{
+		Search:    "",
+		StorageID: pgtype.UUID{},
+	})
 	if err != nil {
 		return nil, 0, fmt.Errorf("failed to count departments: %w", err)
 	}
@@ -338,15 +335,22 @@ func (d *DepartmentS) GetAllDepartmentsWithLang(ctx context.Context, lang string
 		Offset:  offset,
 	})
 	if err != nil {
-		log.Printf("GetAllDepartmentsWithLang failed: %v", err)
 		return nil, 0, fmt.Errorf("failed to get departments: %w", err)
 	}
 
-	var responses []*model.DepartmentResponse
+	responses := make([]model.DepartmentResponse, 0, len(departments))
 	for _, dept := range departments {
-		responses = append(responses, mapDepartmentToResponse(dept.ID, dept.Name, dept.NameI18n, dept.StorageID, dept.ColorCode, dept.PictureUrl, dept.CreatedAt, dept.UpdatedAt))
+		responses = append(responses, *mapDepartmentToResponse(
+			dept.ID,
+			dept.Name,
+			dept.NameI18n,
+			dept.StorageID,
+			dept.ColorCode,
+			dept.PictureUrl,
+			dept.CreatedAt,
+			dept.UpdatedAt,
+		))
 	}
+
 	return responses, int32(total), nil
 }
-
-// Helper function to convert database department to response model
