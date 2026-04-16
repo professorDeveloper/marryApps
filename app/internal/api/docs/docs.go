@@ -1503,7 +1503,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Get all cafe tables with pagination",
+                "description": "Retrieve all cafe tables with pagination, optional search, hall filter, status filter and sorting",
                 "consumes": [
                     "application/json"
                 ],
@@ -1516,23 +1516,61 @@ const docTemplate = `{
                 "summary": "Get all cafe tables",
                 "parameters": [
                     {
+                        "type": "string",
+                        "description": "Search by table number",
+                        "name": "search",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by hall ID",
+                        "name": "hall_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by table status",
+                        "name": "status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by table type",
+                        "name": "table_type",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "number",
+                            "created_at"
+                        ],
+                        "type": "string",
+                        "default": "created_at",
+                        "description": "Sort by field",
+                        "name": "sort_by",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "asc",
+                            "desc"
+                        ],
+                        "type": "string",
+                        "default": "desc",
+                        "description": "Sort order",
+                        "name": "sort_order",
+                        "in": "query"
+                    },
+                    {
                         "type": "integer",
-                        "default": 10,
-                        "description": "Limit",
+                        "description": "Limit (default: 20)",
                         "name": "limit",
                         "in": "query"
                     },
                     {
                         "type": "integer",
-                        "default": 0,
-                        "description": "Offset",
+                        "description": "Offset (default: 0)",
                         "name": "offset",
-                        "in": "query"
-                    },
-                    {
-                        "type": "string",
-                        "description": "Expand related fields",
-                        "name": "expand",
                         "in": "query"
                     }
                 ],
@@ -1540,14 +1578,23 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/model.CafeTableResponse"
-                            }
+                            "$ref": "#/definitions/model.PaginatedCafeTablesResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
                         "schema": {
                             "$ref": "#/definitions/model.ErrorResponse"
                         }
@@ -1858,65 +1905,6 @@ const docTemplate = `{
                         "type": "string",
                         "description": "Expand related fields",
                         "name": "expand",
-                        "in": "query"
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/model.CafeTableResponse"
-                            }
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
-                        }
-                    }
-                }
-            }
-        },
-        "/api/v1/cafe-tables/search": {
-            "get": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Search cafe tables by number or status",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "cafe-tables"
-                ],
-                "summary": "Search cafe tables",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Search query",
-                        "name": "query",
-                        "in": "query"
-                    },
-                    {
-                        "type": "integer",
-                        "default": 10,
-                        "description": "Limit",
-                        "name": "limit",
-                        "in": "query"
-                    },
-                    {
-                        "type": "integer",
-                        "default": 0,
-                        "description": "Offset",
-                        "name": "offset",
                         "in": "query"
                     }
                 ],
@@ -3188,7 +3176,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Retrieve all categories with pagination",
+                "description": "Retrieve all categories with pagination, optional search, filters and sorting",
                 "consumes": [
                     "application/json"
                 ],
@@ -3200,6 +3188,46 @@ const docTemplate = `{
                 ],
                 "summary": "Get all categories",
                 "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Search by category name",
+                        "name": "search",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by department ID",
+                        "name": "department_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by storage ID",
+                        "name": "storage_id",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "name",
+                            "created_at"
+                        ],
+                        "type": "string",
+                        "default": "created_at",
+                        "description": "Sort by field",
+                        "name": "sort_by",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "asc",
+                            "desc"
+                        ],
+                        "type": "string",
+                        "default": "desc",
+                        "description": "Sort order",
+                        "name": "sort_order",
+                        "in": "query"
+                    },
                     {
                         "type": "integer",
                         "description": "Limit (default: 20)",
@@ -3221,12 +3249,15 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "Categories found",
+                        "description": "OK",
                         "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/model.CategoryResponse"
-                            }
+                            "$ref": "#/definitions/model.PaginatedCategoriesResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
                         }
                     },
                     "401": {
@@ -3236,7 +3267,7 @@ const docTemplate = `{
                         }
                     },
                     "500": {
-                        "description": "Internal server error",
+                        "description": "Internal Server Error",
                         "schema": {
                             "$ref": "#/definitions/model.ErrorResponse"
                         }
@@ -3320,8 +3351,42 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Language code (uz, ru, en - default: uz)",
-                        "name": "lang",
+                        "description": "Search by category name",
+                        "name": "search",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by department ID",
+                        "name": "department_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by storage ID",
+                        "name": "storage_id",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "name",
+                            "created_at"
+                        ],
+                        "type": "string",
+                        "default": "created_at",
+                        "description": "Sort by field",
+                        "name": "sort_by",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "asc",
+                            "desc"
+                        ],
+                        "type": "string",
+                        "default": "desc",
+                        "description": "Sort order",
+                        "name": "sort_order",
                         "in": "query"
                     },
                     {
@@ -3345,16 +3410,13 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "Categories retrieved successfully",
+                        "description": "OK",
                         "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/model.CategoryResponse"
-                            }
+                            "$ref": "#/definitions/model.PaginatedCategoriesResponse"
                         }
                     },
                     "400": {
-                        "description": "Invalid request parameters",
+                        "description": "Bad Request",
                         "schema": {
                             "$ref": "#/definitions/model.ErrorResponse"
                         }
@@ -3366,7 +3428,7 @@ const docTemplate = `{
                         }
                     },
                     "500": {
-                        "description": "Internal server error",
+                        "description": "Internal Server Error",
                         "schema": {
                             "$ref": "#/definitions/model.ErrorResponse"
                         }
@@ -3639,76 +3701,6 @@ const docTemplate = `{
                             "items": {
                                 "$ref": "#/definitions/model.CategoryResponse"
                             }
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal server error",
-                        "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
-                        }
-                    }
-                }
-            }
-        },
-        "/api/v1/categories/search": {
-            "get": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Search for categories by name with pagination",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "categories"
-                ],
-                "summary": "Search categories",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Search query",
-                        "name": "q",
-                        "in": "query",
-                        "required": true
-                    },
-                    {
-                        "type": "integer",
-                        "description": "Limit (default: 20)",
-                        "name": "limit",
-                        "in": "query"
-                    },
-                    {
-                        "type": "integer",
-                        "description": "Offset (default: 0)",
-                        "name": "offset",
-                        "in": "query"
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Categories found",
-                        "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/model.CategoryResponse"
-                            }
-                        }
-                    },
-                    "400": {
-                        "description": "Invalid request data",
-                        "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
                         }
                     },
                     "401": {
@@ -5076,7 +5068,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Retrieve all compounds with pagination",
+                "description": "Retrieve all compounds with pagination, optional search, department filter and sorting",
                 "consumes": [
                     "application/json"
                 ],
@@ -5088,6 +5080,40 @@ const docTemplate = `{
                 ],
                 "summary": "Get all compounds",
                 "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Search by compound name or description",
+                        "name": "search",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by department ID",
+                        "name": "department_id",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "name",
+                            "created_at"
+                        ],
+                        "type": "string",
+                        "default": "created_at",
+                        "description": "Sort by field",
+                        "name": "sort_by",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "asc",
+                            "desc"
+                        ],
+                        "type": "string",
+                        "default": "desc",
+                        "description": "Sort order",
+                        "name": "sort_order",
+                        "in": "query"
+                    },
                     {
                         "type": "integer",
                         "description": "Limit (default: 20)",
@@ -5109,12 +5135,15 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "Compounds found",
+                        "description": "OK",
                         "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/model.CompoundResponse"
-                            }
+                            "$ref": "#/definitions/model.PaginatedCompoundsResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
                         }
                     },
                     "401": {
@@ -5124,7 +5153,7 @@ const docTemplate = `{
                         }
                     },
                     "500": {
-                        "description": "Internal server error",
+                        "description": "Internal Server Error",
                         "schema": {
                             "$ref": "#/definitions/model.ErrorResponse"
                         }
@@ -5194,7 +5223,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Retrieve all compounds with names and descriptions translated to specified language",
+                "description": "Retrieve all compounds with names and descriptions translated to specified language, with optional search and sorting",
                 "consumes": [
                     "application/json"
                 ],
@@ -5210,6 +5239,34 @@ const docTemplate = `{
                         "type": "string",
                         "description": "Language code (uz, ru, en - default: uz)",
                         "name": "lang",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Search by compound name or description",
+                        "name": "search",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "name",
+                            "created_at"
+                        ],
+                        "type": "string",
+                        "default": "created_at",
+                        "description": "Sort by field",
+                        "name": "sort_by",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "asc",
+                            "desc"
+                        ],
+                        "type": "string",
+                        "default": "desc",
+                        "description": "Sort order",
+                        "name": "sort_order",
                         "in": "query"
                     },
                     {
@@ -5233,16 +5290,13 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "Compounds retrieved successfully",
+                        "description": "OK",
                         "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/model.CompoundResponse"
-                            }
+                            "$ref": "#/definitions/model.PaginatedCompoundsResponse"
                         }
                     },
                     "400": {
-                        "description": "Invalid request parameters",
+                        "description": "Bad Request",
                         "schema": {
                             "$ref": "#/definitions/model.ErrorResponse"
                         }
@@ -5254,7 +5308,7 @@ const docTemplate = `{
                         }
                     },
                     "500": {
-                        "description": "Internal server error",
+                        "description": "Internal Server Error",
                         "schema": {
                             "$ref": "#/definitions/model.ErrorResponse"
                         }
@@ -5676,76 +5730,6 @@ const docTemplate = `{
                     },
                     "400": {
                         "description": "Invalid ID format",
-                        "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal server error",
-                        "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
-                        }
-                    }
-                }
-            }
-        },
-        "/api/v1/compounds/search": {
-            "get": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Search for compounds by name or description with pagination",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "compounds"
-                ],
-                "summary": "Search compounds",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Search query",
-                        "name": "q",
-                        "in": "query",
-                        "required": true
-                    },
-                    {
-                        "type": "integer",
-                        "description": "Limit (default: 20)",
-                        "name": "limit",
-                        "in": "query"
-                    },
-                    {
-                        "type": "integer",
-                        "description": "Offset (default: 0)",
-                        "name": "offset",
-                        "in": "query"
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Compounds found",
-                        "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/model.CompoundResponse"
-                            }
-                        }
-                    },
-                    "400": {
-                        "description": "Invalid request data",
                         "schema": {
                             "$ref": "#/definitions/model.ErrorResponse"
                         }
@@ -8631,7 +8615,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Get all goods with pagination and optional filters",
+                "description": "Get all goods with pagination, search, filters and sorting",
                 "produces": [
                     "application/json"
                 ],
@@ -8642,7 +8626,6 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "default": "uz",
                         "description": "Language (uz, ru, en)",
                         "name": "lang",
                         "in": "query"
@@ -8687,8 +8670,43 @@ const docTemplate = `{
                     },
                     {
                         "type": "string",
-                        "description": "Search by name",
+                        "description": "Search by name or description",
                         "name": "search",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Minimum price",
+                        "name": "min_price",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Maximum price",
+                        "name": "max_price",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "name",
+                            "price",
+                            "created_at"
+                        ],
+                        "type": "string",
+                        "default": "created_at",
+                        "description": "Sort by field",
+                        "name": "sort_by",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "asc",
+                            "desc"
+                        ],
+                        "type": "string",
+                        "default": "desc",
+                        "description": "Sort order",
+                        "name": "sort_order",
                         "in": "query"
                     }
                 ],
@@ -8696,10 +8714,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/model.GoodResponse"
-                            }
+                            "$ref": "#/definitions/model.PaginatedGoodsResponse"
                         }
                     },
                     "400": {
@@ -8792,7 +8807,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Retrieve all goods/menu items with names and descriptions translated to specified language",
+                "description": "Retrieve all goods/menu items with names and descriptions translated to specified language, including search, filters and sorting",
                 "consumes": [
                     "application/json"
                 ],
@@ -8848,23 +8863,55 @@ const docTemplate = `{
                     },
                     {
                         "type": "string",
-                        "description": "Search by name",
+                        "description": "Search by name or description",
                         "name": "search",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Minimum price",
+                        "name": "min_price",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Maximum price",
+                        "name": "max_price",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "name",
+                            "price",
+                            "created_at"
+                        ],
+                        "type": "string",
+                        "default": "created_at",
+                        "description": "Sort by field",
+                        "name": "sort_by",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "asc",
+                            "desc"
+                        ],
+                        "type": "string",
+                        "default": "desc",
+                        "description": "Sort order",
+                        "name": "sort_order",
                         "in": "query"
                     }
                 ],
                 "responses": {
                     "200": {
-                        "description": "Goods retrieved successfully",
+                        "description": "OK",
                         "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/model.GoodResponse"
-                            }
+                            "$ref": "#/definitions/model.PaginatedGoodsResponse"
                         }
                     },
                     "400": {
-                        "description": "Invalid request parameters",
+                        "description": "Bad Request",
                         "schema": {
                             "$ref": "#/definitions/model.ErrorResponse"
                         }
@@ -8876,7 +8923,7 @@ const docTemplate = `{
                         }
                     },
                     "500": {
-                        "description": "Internal server error",
+                        "description": "Internal Server Error",
                         "schema": {
                             "$ref": "#/definitions/model.ErrorResponse"
                         }
@@ -9242,165 +9289,6 @@ const docTemplate = `{
                         "description": "Internal server error",
                         "schema": {
                             "$ref": "#/definitions/model.ErrorData"
-                        }
-                    }
-                }
-            }
-        },
-        "/api/v1/goods/search": {
-            "get": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Search goods by name or description",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Goods"
-                ],
-                "summary": "Search goods",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "default": "uz",
-                        "description": "Language (uz, ru, en)",
-                        "name": "lang",
-                        "in": "query"
-                    },
-                    {
-                        "type": "string",
-                        "description": "Search query",
-                        "name": "query",
-                        "in": "query",
-                        "required": true
-                    },
-                    {
-                        "type": "integer",
-                        "default": 20,
-                        "description": "Limit",
-                        "name": "limit",
-                        "in": "query"
-                    },
-                    {
-                        "type": "integer",
-                        "default": 0,
-                        "description": "Offset",
-                        "name": "offset",
-                        "in": "query"
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/model.GoodResponse"
-                            }
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
-                        }
-                    }
-                }
-            }
-        },
-        "/api/v1/goods/search/by-price": {
-            "get": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Get goods within a price range with pagination",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Goods"
-                ],
-                "summary": "Get goods by price range",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "default": "uz",
-                        "description": "Language (uz, ru, en)",
-                        "name": "lang",
-                        "in": "query"
-                    },
-                    {
-                        "type": "string",
-                        "description": "Minimum price",
-                        "name": "min_price",
-                        "in": "query",
-                        "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "Maximum price",
-                        "name": "max_price",
-                        "in": "query",
-                        "required": true
-                    },
-                    {
-                        "type": "integer",
-                        "default": 20,
-                        "description": "Limit",
-                        "name": "limit",
-                        "in": "query"
-                    },
-                    {
-                        "type": "integer",
-                        "default": 0,
-                        "description": "Offset",
-                        "name": "offset",
-                        "in": "query"
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/model.GoodResponse"
-                            }
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
                         }
                     }
                 }
@@ -10147,7 +10035,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Retrieve all group transactions with pagination",
+                "description": "Retrieve all group transactions with pagination, optional search and sorting",
                 "consumes": [
                     "application/json"
                 ],
@@ -10159,6 +10047,34 @@ const docTemplate = `{
                 ],
                 "summary": "Get all group transactions",
                 "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Search by group transaction name",
+                        "name": "search",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "name",
+                            "created_at"
+                        ],
+                        "type": "string",
+                        "default": "created_at",
+                        "description": "Sort by field",
+                        "name": "sort_by",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "asc",
+                            "desc"
+                        ],
+                        "type": "string",
+                        "default": "desc",
+                        "description": "Sort order",
+                        "name": "sort_order",
+                        "in": "query"
+                    },
                     {
                         "type": "integer",
                         "default": 10,
@@ -10178,10 +10094,13 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/model.GroupTransactionResponse"
-                            }
+                            "$ref": "#/definitions/model.PaginatedGroupTransactionsResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
                         }
                     },
                     "500": {
@@ -10235,72 +10154,6 @@ const docTemplate = `{
                     },
                     "401": {
                         "description": "Unauthorized",
-                        "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
-                        }
-                    }
-                }
-            }
-        },
-        "/api/v1/group-transactions/search": {
-            "get": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Search group transactions by name",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "group-transactions"
-                ],
-                "summary": "Search group transactions",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Search query",
-                        "name": "q",
-                        "in": "query",
-                        "required": true
-                    },
-                    {
-                        "type": "integer",
-                        "default": 10,
-                        "description": "Limit",
-                        "name": "limit",
-                        "in": "query"
-                    },
-                    {
-                        "type": "integer",
-                        "default": 0,
-                        "description": "Offset",
-                        "name": "offset",
-                        "in": "query"
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/model.GroupTransactionResponse"
-                            }
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
                         "schema": {
                             "$ref": "#/definitions/model.ErrorResponse"
                         }
@@ -10522,7 +10375,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Retrieve all halls with pagination",
+                "description": "Retrieve all halls with pagination, optional search and sorting",
                 "consumes": [
                     "application/json"
                 ],
@@ -10534,6 +10387,34 @@ const docTemplate = `{
                 ],
                 "summary": "Get all halls",
                 "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Search by hall name",
+                        "name": "search",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "name",
+                            "created_at"
+                        ],
+                        "type": "string",
+                        "default": "created_at",
+                        "description": "Sort by field",
+                        "name": "sort_by",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "asc",
+                            "desc"
+                        ],
+                        "type": "string",
+                        "default": "desc",
+                        "description": "Sort order",
+                        "name": "sort_order",
+                        "in": "query"
+                    },
                     {
                         "type": "integer",
                         "description": "Limit (default: 20)",
@@ -10555,12 +10436,15 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "Halls found",
+                        "description": "OK",
                         "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/model.HallResponse"
-                            }
+                            "$ref": "#/definitions/model.PaginatedHallsResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
                         }
                     },
                     "401": {
@@ -10570,7 +10454,7 @@ const docTemplate = `{
                         }
                     },
                     "500": {
-                        "description": "Internal server error",
+                        "description": "Internal Server Error",
                         "schema": {
                             "$ref": "#/definitions/model.ErrorResponse"
                         }
@@ -10640,7 +10524,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Retrieve all halls with names translated to specified language (uz, ru, en)",
+                "description": "Retrieve all halls with names translated to specified language, with optional search and sorting",
                 "consumes": [
                     "application/json"
                 ],
@@ -10656,6 +10540,34 @@ const docTemplate = `{
                         "type": "string",
                         "description": "Language code (uz, ru, en - default: uz)",
                         "name": "lang",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Search by hall name",
+                        "name": "search",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "name",
+                            "created_at"
+                        ],
+                        "type": "string",
+                        "default": "created_at",
+                        "description": "Sort by field",
+                        "name": "sort_by",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "asc",
+                            "desc"
+                        ],
+                        "type": "string",
+                        "default": "desc",
+                        "description": "Sort order",
+                        "name": "sort_order",
                         "in": "query"
                     },
                     {
@@ -10679,16 +10591,13 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "Halls retrieved successfully",
+                        "description": "OK",
                         "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/model.HallResponse"
-                            }
+                            "$ref": "#/definitions/model.PaginatedHallsResponse"
                         }
                     },
                     "400": {
-                        "description": "Invalid request parameters",
+                        "description": "Bad Request",
                         "schema": {
                             "$ref": "#/definitions/model.ErrorResponse"
                         }
@@ -10700,7 +10609,7 @@ const docTemplate = `{
                         }
                     },
                     "500": {
-                        "description": "Internal server error",
+                        "description": "Internal Server Error",
                         "schema": {
                             "$ref": "#/definitions/model.ErrorResponse"
                         }
@@ -10835,76 +10744,6 @@ const docTemplate = `{
                     }
                 ],
                 "responses": {
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal server error",
-                        "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
-                        }
-                    }
-                }
-            }
-        },
-        "/api/v1/halls/search": {
-            "get": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Search for halls by name with pagination",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "halls"
-                ],
-                "summary": "Search halls",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Search query",
-                        "name": "q",
-                        "in": "query",
-                        "required": true
-                    },
-                    {
-                        "type": "integer",
-                        "description": "Limit (default: 20)",
-                        "name": "limit",
-                        "in": "query"
-                    },
-                    {
-                        "type": "integer",
-                        "description": "Offset (default: 0)",
-                        "name": "offset",
-                        "in": "query"
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Halls found",
-                        "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/model.HallResponse"
-                            }
-                        }
-                    },
-                    "400": {
-                        "description": "Invalid request data",
-                        "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
-                        }
-                    },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
@@ -13435,7 +13274,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Retrieve inventories with pagination (limit/offset)",
+                "description": "Retrieve inventories with pagination, filters, search and sorting",
                 "consumes": [
                     "application/json"
                 ],
@@ -13478,6 +13317,35 @@ const docTemplate = `{
                         "in": "query"
                     },
                     {
+                        "type": "string",
+                        "description": "Search by description or number",
+                        "name": "search",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "date",
+                            "number",
+                            "created_at"
+                        ],
+                        "type": "string",
+                        "default": "date",
+                        "description": "Sort by field",
+                        "name": "sort_by",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "asc",
+                            "desc"
+                        ],
+                        "type": "string",
+                        "default": "desc",
+                        "description": "Sort order",
+                        "name": "sort_order",
+                        "in": "query"
+                    },
+                    {
                         "type": "integer",
                         "default": 20,
                         "description": "Limit results (default: 20)",
@@ -13500,12 +13368,15 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "Inventories retrieved successfully",
+                        "description": "OK",
                         "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/model.InventoryResponse"
-                            }
+                            "$ref": "#/definitions/model.PaginatedInventoriesResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
                         }
                     },
                     "401": {
@@ -13515,7 +13386,7 @@ const docTemplate = `{
                         }
                     },
                     "500": {
-                        "description": "Internal server error",
+                        "description": "Internal Server Error",
                         "schema": {
                             "$ref": "#/definitions/model.ErrorResponse"
                         }
@@ -13661,78 +13532,6 @@ const docTemplate = `{
                         "description": "Inventories deleted successfully",
                         "schema": {
                             "$ref": "#/definitions/model.SuccessResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "Invalid request",
-                        "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal server error",
-                        "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
-                        }
-                    }
-                }
-            }
-        },
-        "/api/v1/inventories/search": {
-            "get": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Search inventories by description or number",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "inventories"
-                ],
-                "summary": "Search inventories",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Search query",
-                        "name": "q",
-                        "in": "query",
-                        "required": true
-                    },
-                    {
-                        "type": "integer",
-                        "default": 20,
-                        "description": "Limit results (default: 20)",
-                        "name": "limit",
-                        "in": "query"
-                    },
-                    {
-                        "type": "integer",
-                        "default": 0,
-                        "description": "Offset for pagination (default: 0)",
-                        "name": "offset",
-                        "in": "query"
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Inventories retrieved successfully",
-                        "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/model.InventoryResponse"
-                            }
                         }
                     },
                     "400": {
@@ -15276,7 +15075,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Get all invoices with optional filters: date range, storage, supplier, ingredient, status",
+                "description": "Get all invoices with optional filters: date range, storage, supplier, ingredient, status, search and sorting",
                 "produces": [
                     "application/json"
                 ],
@@ -15344,6 +15143,35 @@ const docTemplate = `{
                     },
                     {
                         "type": "string",
+                        "description": "Search by supplier name, phone or total amount",
+                        "name": "search",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "date",
+                            "created_at",
+                            "total_amount"
+                        ],
+                        "type": "string",
+                        "default": "date",
+                        "description": "Sort by field",
+                        "name": "sort_by",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "asc",
+                            "desc"
+                        ],
+                        "type": "string",
+                        "default": "desc",
+                        "description": "Sort order",
+                        "name": "sort_order",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
                         "description": "Expand related fields",
                         "name": "expand",
                         "in": "query"
@@ -15353,10 +15181,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/model.InvoiceResponse"
-                            }
+                            "$ref": "#/definitions/model.PaginatedInvoicesResponse"
                         }
                     },
                     "400": {
@@ -15554,82 +15379,6 @@ const docTemplate = `{
                     },
                     "500": {
                         "description": "Internal server error",
-                        "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
-                        }
-                    }
-                }
-            }
-        },
-        "/api/v1/invoices/search": {
-            "get": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Search invoices by supplier name",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Invoices"
-                ],
-                "summary": "Search invoices",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "default": "uz",
-                        "description": "Language (uz, ru, en)",
-                        "name": "lang",
-                        "in": "query"
-                    },
-                    {
-                        "type": "string",
-                        "description": "Search query (supplier name)",
-                        "name": "q",
-                        "in": "query",
-                        "required": true
-                    },
-                    {
-                        "type": "integer",
-                        "default": 20,
-                        "description": "Limit",
-                        "name": "limit",
-                        "in": "query"
-                    },
-                    {
-                        "type": "integer",
-                        "default": 0,
-                        "description": "Offset",
-                        "name": "offset",
-                        "in": "query"
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/model.InvoiceResponse"
-                            }
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
                         "schema": {
                             "$ref": "#/definitions/model.ErrorResponse"
                         }
@@ -22261,7 +22010,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Retrieve all storages with pagination",
+                "description": "Retrieve all storages with pagination, optional search and sorting",
                 "consumes": [
                     "application/json"
                 ],
@@ -22274,34 +22023,63 @@ const docTemplate = `{
                 "summary": "Get all storages",
                 "parameters": [
                     {
+                        "type": "string",
+                        "description": "Search by storage name",
+                        "name": "search",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "name",
+                            "created_at"
+                        ],
+                        "type": "string",
+                        "default": "created_at",
+                        "description": "Sort by field",
+                        "name": "sort_by",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "asc",
+                            "desc"
+                        ],
+                        "type": "string",
+                        "default": "desc",
+                        "description": "Sort order",
+                        "name": "sort_order",
+                        "in": "query"
+                    },
+                    {
                         "type": "integer",
-                        "default": 20,
-                        "description": "Limit results (default: 20)",
+                        "description": "Limit (default: 20)",
                         "name": "limit",
                         "in": "query"
                     },
                     {
                         "type": "integer",
-                        "default": 0,
-                        "description": "Offset for pagination (default: 0)",
+                        "description": "Offset (default: 0)",
                         "name": "offset",
                         "in": "query"
                     },
                     {
                         "type": "string",
-                        "description": "Comma-separated relations to expand (e.g. name_i18n)",
+                        "description": "Expand related fields",
                         "name": "expand",
                         "in": "query"
                     }
                 ],
                 "responses": {
                     "200": {
-                        "description": "List of all storages",
+                        "description": "OK",
                         "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/model.StorageResponse"
-                            }
+                            "$ref": "#/definitions/model.PaginatedStoragesResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
                         }
                     },
                     "401": {
@@ -22311,7 +22089,7 @@ const docTemplate = `{
                         }
                     },
                     "500": {
-                        "description": "Internal server error",
+                        "description": "Internal Server Error",
                         "schema": {
                             "$ref": "#/definitions/model.ErrorResponse"
                         }
@@ -22600,84 +22378,6 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/v1/storages/search": {
-            "get": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Search for storages by name",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "storages"
-                ],
-                "summary": "Search storages",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Search query",
-                        "name": "q",
-                        "in": "query",
-                        "required": true
-                    },
-                    {
-                        "type": "integer",
-                        "default": 20,
-                        "description": "Limit results (default: 20)",
-                        "name": "limit",
-                        "in": "query"
-                    },
-                    {
-                        "type": "integer",
-                        "default": 0,
-                        "description": "Offset for pagination (default: 0)",
-                        "name": "offset",
-                        "in": "query"
-                    },
-                    {
-                        "type": "string",
-                        "description": "Comma-separated relations to expand (e.g. name_i18n)",
-                        "name": "expand",
-                        "in": "query"
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "List of matching storages",
-                        "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/model.StorageResponse"
-                            }
-                        }
-                    },
-                    "400": {
-                        "description": "Invalid parameters",
-                        "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal server error",
-                        "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
-                        }
-                    }
-                }
-            }
-        },
         "/api/v1/storages/{id}": {
             "get": {
                 "security": [
@@ -22922,7 +22622,10 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Get all suppliers with pagination",
+                "description": "Retrieve all suppliers with pagination, optional search and sorting",
+                "consumes": [
+                    "application/json"
+                ],
                 "produces": [
                     "application/json"
                 ],
@@ -22933,23 +22636,48 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "default": "uz",
-                        "description": "Language (uz, ru, en)",
-                        "name": "lang",
+                        "description": "Search by supplier name",
+                        "name": "search",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "name",
+                            "created_at"
+                        ],
+                        "type": "string",
+                        "default": "created_at",
+                        "description": "Sort by field",
+                        "name": "sort_by",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "asc",
+                            "desc"
+                        ],
+                        "type": "string",
+                        "default": "desc",
+                        "description": "Sort order",
+                        "name": "sort_order",
                         "in": "query"
                     },
                     {
                         "type": "integer",
-                        "default": 20,
-                        "description": "Limit",
+                        "description": "Limit (default: 20)",
                         "name": "limit",
                         "in": "query"
                     },
                     {
                         "type": "integer",
-                        "default": 0,
-                        "description": "Offset",
+                        "description": "Offset (default: 0)",
                         "name": "offset",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Expand related fields",
+                        "name": "expand",
                         "in": "query"
                     }
                 ],
@@ -22957,10 +22685,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/model.SupplierResponse"
-                            }
+                            "$ref": "#/definitions/model.PaginatedSuppliersResponse"
                         }
                     },
                     "400": {
@@ -23023,82 +22748,6 @@ const docTemplate = `{
                         "description": "Created",
                         "schema": {
                             "$ref": "#/definitions/model.SupplierResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
-                        }
-                    }
-                }
-            }
-        },
-        "/api/v1/suppliers/search": {
-            "get": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Search suppliers by name",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Suppliers"
-                ],
-                "summary": "Search suppliers",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "default": "uz",
-                        "description": "Language (uz, ru, en)",
-                        "name": "lang",
-                        "in": "query"
-                    },
-                    {
-                        "type": "string",
-                        "description": "Search query",
-                        "name": "q",
-                        "in": "query",
-                        "required": true
-                    },
-                    {
-                        "type": "integer",
-                        "default": 20,
-                        "description": "Limit",
-                        "name": "limit",
-                        "in": "query"
-                    },
-                    {
-                        "type": "integer",
-                        "default": 0,
-                        "description": "Offset",
-                        "name": "offset",
-                        "in": "query"
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/model.SupplierResponse"
-                            }
                         }
                     },
                     "400": {
@@ -23556,7 +23205,13 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Supports filters: type (income|expense|transfer), cash_register_id, group_id, date_from, date_to",
+                "description": "Retrieve all transactions with pagination, filters, search and sorting",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
                 "tags": [
                     "transactions"
                 ],
@@ -23564,43 +23219,77 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Filter by type: income, expense, transfer",
+                        "description": "Search by comment or description",
+                        "name": "search",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by transaction type",
                         "name": "type",
                         "in": "query"
                     },
                     {
                         "type": "string",
-                        "description": "Filter by cash register",
+                        "description": "Filter by pay type (cash, card)",
+                        "name": "pay_type",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by cash register ID",
                         "name": "cash_register_id",
                         "in": "query"
                     },
                     {
                         "type": "string",
-                        "description": "Filter by group transaction",
-                        "name": "group_id",
+                        "description": "Filter by group transaction ID",
+                        "name": "group_transaction_id",
                         "in": "query"
                     },
                     {
                         "type": "string",
-                        "description": "Start date (RFC3339)",
+                        "description": "Start date (YYYY-MM-DD)",
                         "name": "date_from",
                         "in": "query"
                     },
                     {
                         "type": "string",
-                        "description": "End date (RFC3339)",
+                        "description": "End date (YYYY-MM-DD)",
                         "name": "date_to",
                         "in": "query"
                     },
                     {
+                        "enum": [
+                            "created_at",
+                            "amount"
+                        ],
+                        "type": "string",
+                        "default": "created_at",
+                        "description": "Sort by field",
+                        "name": "sort_by",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "asc",
+                            "desc"
+                        ],
+                        "type": "string",
+                        "default": "desc",
+                        "description": "Sort order",
+                        "name": "sort_order",
+                        "in": "query"
+                    },
+                    {
                         "type": "integer",
-                        "description": "Limit (default 20)",
+                        "description": "Limit (default: 20)",
                         "name": "limit",
                         "in": "query"
                     },
                     {
                         "type": "integer",
-                        "description": "Offset (default 0)",
+                        "description": "Offset (default: 0)",
                         "name": "offset",
                         "in": "query"
                     }
@@ -23609,10 +23298,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/model.TransactionResponse"
-                            }
+                            "$ref": "#/definitions/model.PaginatedTransactionsResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
                         }
                     },
                     "500": {
@@ -30071,6 +29769,84 @@ const docTemplate = `{
                 }
             }
         },
+        "model.PaginatedCafeTablesResponse": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "integer",
+                    "example": 200
+                },
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.CafeTableResponse"
+                    }
+                },
+                "message": {
+                    "type": "string",
+                    "example": "Cafe tables retrieved successfully"
+                },
+                "pagination": {
+                    "$ref": "#/definitions/model.PaginationMeta"
+                },
+                "status": {
+                    "type": "string",
+                    "example": "success"
+                }
+            }
+        },
+        "model.PaginatedCategoriesResponse": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "integer",
+                    "example": 200
+                },
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.CategoryResponse"
+                    }
+                },
+                "message": {
+                    "type": "string",
+                    "example": "Categories retrieved successfully"
+                },
+                "pagination": {
+                    "$ref": "#/definitions/model.PaginationMeta"
+                },
+                "status": {
+                    "type": "string",
+                    "example": "success"
+                }
+            }
+        },
+        "model.PaginatedCompoundsResponse": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "integer",
+                    "example": 200
+                },
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.CompoundResponse"
+                    }
+                },
+                "message": {
+                    "type": "string",
+                    "example": "Compounds retrieved successfully"
+                },
+                "pagination": {
+                    "$ref": "#/definitions/model.PaginationMeta"
+                },
+                "status": {
+                    "type": "string",
+                    "example": "success"
+                }
+            }
+        },
         "model.PaginatedDeductionsResponse": {
             "type": "object",
             "properties": {
@@ -30082,6 +29858,124 @@ const docTemplate = `{
                 },
                 "pagination": {
                     "$ref": "#/definitions/model.PaginationMeta"
+                }
+            }
+        },
+        "model.PaginatedGoodsResponse": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "integer",
+                    "example": 200
+                },
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.GoodResponse"
+                    }
+                },
+                "message": {
+                    "type": "string",
+                    "example": "Goods retrieved successfully"
+                },
+                "pagination": {
+                    "$ref": "#/definitions/model.PaginationMeta"
+                },
+                "status": {
+                    "type": "string",
+                    "example": "success"
+                }
+            }
+        },
+        "model.PaginatedGroupTransactionsResponse": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "integer",
+                    "example": 200
+                },
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.GroupTransactionResponse"
+                    }
+                },
+                "message": {
+                    "type": "string",
+                    "example": "Group transactions retrieved successfully"
+                },
+                "pagination": {
+                    "$ref": "#/definitions/model.PaginationMeta"
+                },
+                "status": {
+                    "type": "string",
+                    "example": "success"
+                }
+            }
+        },
+        "model.PaginatedHallsResponse": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "integer",
+                    "example": 200
+                },
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.HallResponse"
+                    }
+                },
+                "message": {
+                    "type": "string",
+                    "example": "Halls retrieved successfully"
+                },
+                "pagination": {
+                    "$ref": "#/definitions/model.PaginationMeta"
+                },
+                "status": {
+                    "type": "string",
+                    "example": "success"
+                }
+            }
+        },
+        "model.PaginatedInventoriesResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.InventoryResponse"
+                    }
+                },
+                "pagination": {
+                    "$ref": "#/definitions/model.PaginationMeta"
+                }
+            }
+        },
+        "model.PaginatedInvoicesResponse": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "integer",
+                    "example": 200
+                },
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.InvoiceResponse"
+                    }
+                },
+                "message": {
+                    "type": "string",
+                    "example": "Invoices retrieved successfully"
+                },
+                "pagination": {
+                    "$ref": "#/definitions/model.PaginationMeta"
+                },
+                "status": {
+                    "type": "string",
+                    "example": "success"
                 }
             }
         },
@@ -30101,6 +29995,84 @@ const docTemplate = `{
                 "message": {
                     "type": "string",
                     "example": "Modifiers retrieved successfully"
+                },
+                "pagination": {
+                    "$ref": "#/definitions/model.PaginationMeta"
+                },
+                "status": {
+                    "type": "string",
+                    "example": "success"
+                }
+            }
+        },
+        "model.PaginatedStoragesResponse": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "integer",
+                    "example": 200
+                },
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.StorageResponse"
+                    }
+                },
+                "message": {
+                    "type": "string",
+                    "example": "Storages retrieved successfully"
+                },
+                "pagination": {
+                    "$ref": "#/definitions/model.PaginationMeta"
+                },
+                "status": {
+                    "type": "string",
+                    "example": "success"
+                }
+            }
+        },
+        "model.PaginatedSuppliersResponse": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "integer",
+                    "example": 200
+                },
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.SupplierResponse"
+                    }
+                },
+                "message": {
+                    "type": "string",
+                    "example": "Suppliers retrieved successfully"
+                },
+                "pagination": {
+                    "$ref": "#/definitions/model.PaginationMeta"
+                },
+                "status": {
+                    "type": "string",
+                    "example": "success"
+                }
+            }
+        },
+        "model.PaginatedTransactionsResponse": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "integer",
+                    "example": 200
+                },
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.TransactionResponse"
+                    }
+                },
+                "message": {
+                    "type": "string",
+                    "example": "Transactions retrieved successfully"
                 },
                 "pagination": {
                     "$ref": "#/definitions/model.PaginationMeta"

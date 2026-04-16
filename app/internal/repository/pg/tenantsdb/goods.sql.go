@@ -74,22 +74,92 @@ func (q *Queries) CountGoodsByCategory(ctx context.Context, categoryID pgtype.UU
 	return count, err
 }
 
-const countGoodsFiltered = `-- name: CountGoodsFiltered :one
+const countGoodsList = `-- name: CountGoodsList :one
+WITH goods_list AS (
+    SELECT
+        COALESCE(
+            CASE
+                WHEN $2::text = 'uz' THEN tn.uz
+                WHEN $2::text = 'ru' THEN tn.ru
+                WHEN $2::text = 'en' THEN tn.en
+                ELSE g.name
+            END,
+            g.name
+        ) AS name,
+        COALESCE(
+            CASE
+                WHEN $2::text = 'uz' THEN td.uz
+                WHEN $2::text = 'ru' THEN td.ru
+                WHEN $2::text = 'en' THEN td.en
+                ELSE g.description
+            END,
+            g.description
+        ) AS description
+    FROM goods g
+    LEFT JOIN categories c
+        ON g.category_id = c.id
+       AND c.deleted_at = 0
+    LEFT JOIN departments d
+        ON c.department_id = d.id
+       AND d.deleted_at = 0
+    LEFT JOIN translations tn
+        ON g.name_i18n = tn.id
+       AND tn.deleted_at = 0
+    LEFT JOIN translations td
+        ON g.description_i18n = td.id
+       AND td.deleted_at = 0
+    WHERE g.deleted_at = 0
+      AND g.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+      AND (
+            $3::uuid IS NULL
+            OR g.category_id = $3::uuid
+          )
+      AND (
+            $4::uuid IS NULL
+            OR c.department_id = $4::uuid
+          )
+      AND (
+            $5::uuid IS NULL
+            OR d.storage_id = $5::uuid
+          )
+      AND (
+            $6::numeric IS NULL
+            OR g.price >= $6::numeric
+          )
+      AND (
+            $7::numeric IS NULL
+            OR g.price <= $7::numeric
+          )
+)
 SELECT COUNT(*)
-FROM goods
-WHERE goods.deleted_at = 0
-  AND goods.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-  AND (($1::uuid = '00000000-0000-0000-0000-000000000000') OR goods.category_id = $1)
-  AND ($2 = '' OR goods.name ILIKE '%' || $2 || '%')
+FROM goods_list
+WHERE (
+        $1::text = ''
+        OR name ILIKE '%' || $1::text || '%'
+        OR COALESCE(description, '') ILIKE '%' || $1::text || '%'
+      )
 `
 
-type CountGoodsFilteredParams struct {
-	Column1 uuid.UUID   `json:"column_1"`
-	Column2 interface{} `json:"column_2"`
+type CountGoodsListParams struct {
+	Search       string         `json:"search"`
+	Lang         string         `json:"lang"`
+	CategoryID   pgtype.UUID    `json:"category_id"`
+	DepartmentID pgtype.UUID    `json:"department_id"`
+	StorageID    pgtype.UUID    `json:"storage_id"`
+	MinPrice     pgtype.Numeric `json:"min_price"`
+	MaxPrice     pgtype.Numeric `json:"max_price"`
 }
 
-func (q *Queries) CountGoodsFiltered(ctx context.Context, arg CountGoodsFilteredParams) (int64, error) {
-	row := q.db.QueryRow(ctx, countGoodsFiltered, arg.Column1, arg.Column2)
+func (q *Queries) CountGoodsList(ctx context.Context, arg CountGoodsListParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countGoodsList,
+		arg.Search,
+		arg.Lang,
+		arg.CategoryID,
+		arg.DepartmentID,
+		arg.StorageID,
+		arg.MinPrice,
+		arg.MaxPrice,
+	)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -954,217 +1024,147 @@ func (q *Queries) GetGoodsByCategoryID(ctx context.Context, arg GetGoodsByCatego
 	return items, nil
 }
 
-const getGoodsByPriceRange = `-- name: GetGoodsByPriceRange :many
-SELECT goods.id, goods.name, goods.description, goods.name_i18n, goods.description_i18n, goods.category_id, goods.branch_id, goods.picture_url, goods.color_code, goods.price, goods.cook_time, goods.cost_price, goods.profit, goods.profit_margin, goods.created_at, goods.updated_at, goods.deleted_at
-FROM goods
-WHERE price >= $1 AND price <= $2 AND deleted_at = 0
-  AND goods.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-ORDER BY price ASC
-LIMIT $3 OFFSET $4
-`
-
-type GetGoodsByPriceRangeParams struct {
-	Price   pgtype.Numeric `json:"price"`
-	Price_2 pgtype.Numeric `json:"price_2"`
-	Limit   int32          `json:"limit"`
-	Offset  int32          `json:"offset"`
-}
-
-type GetGoodsByPriceRangeRow struct {
-	ID              uuid.UUID          `json:"id"`
-	Name            string             `json:"name"`
-	Description     *string            `json:"description"`
-	NameI18n        pgtype.UUID        `json:"name_i18n"`
-	DescriptionI18n pgtype.UUID        `json:"description_i18n"`
-	CategoryID      pgtype.UUID        `json:"category_id"`
-	BranchID        pgtype.UUID        `json:"branch_id"`
-	PictureUrl      *string            `json:"picture_url"`
-	ColorCode       *string            `json:"color_code"`
-	Price           pgtype.Numeric     `json:"price"`
-	CookTime        *int32             `json:"cook_time"`
-	CostPrice       pgtype.Numeric     `json:"cost_price"`
-	Profit          pgtype.Numeric     `json:"profit"`
-	ProfitMargin    pgtype.Numeric     `json:"profit_margin"`
-	CreatedAt       pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
-	DeletedAt       *int64             `json:"deleted_at"`
-}
-
-func (q *Queries) GetGoodsByPriceRange(ctx context.Context, arg GetGoodsByPriceRangeParams) ([]GetGoodsByPriceRangeRow, error) {
-	rows, err := q.db.Query(ctx, getGoodsByPriceRange,
-		arg.Price,
-		arg.Price_2,
-		arg.Limit,
-		arg.Offset,
-	)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []GetGoodsByPriceRangeRow
-	for rows.Next() {
-		var i GetGoodsByPriceRangeRow
-		if err := rows.Scan(
-			&i.ID,
-			&i.Name,
-			&i.Description,
-			&i.NameI18n,
-			&i.DescriptionI18n,
-			&i.CategoryID,
-			&i.BranchID,
-			&i.PictureUrl,
-			&i.ColorCode,
-			&i.Price,
-			&i.CookTime,
-			&i.CostPrice,
-			&i.Profit,
-			&i.ProfitMargin,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-			&i.DeletedAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const getGoodsFiltered = `-- name: GetGoodsFiltered :many
-
-SELECT goods.id, goods.name, goods.description, goods.name_i18n, goods.description_i18n, goods.category_id, goods.branch_id, goods.picture_url, goods.color_code, goods.price, goods.cook_time, goods.cost_price, goods.profit, goods.profit_margin, goods.created_at, goods.updated_at, goods.deleted_at
-FROM goods
-WHERE goods.deleted_at = 0
-  AND goods.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-  AND (($1::uuid = '00000000-0000-0000-0000-000000000000') OR goods.category_id = $1)
-  AND ($2 = '' OR goods.name ILIKE '%' || $2 || '%')
-ORDER BY goods.created_at DESC
-LIMIT $3 OFFSET $4
-`
-
-type GetGoodsFilteredParams struct {
-	Column1 uuid.UUID   `json:"column_1"`
-	Column2 interface{} `json:"column_2"`
-	Limit   int32       `json:"limit"`
-	Offset  int32       `json:"offset"`
-}
-
-type GetGoodsFilteredRow struct {
-	ID              uuid.UUID          `json:"id"`
-	Name            string             `json:"name"`
-	Description     *string            `json:"description"`
-	NameI18n        pgtype.UUID        `json:"name_i18n"`
-	DescriptionI18n pgtype.UUID        `json:"description_i18n"`
-	CategoryID      pgtype.UUID        `json:"category_id"`
-	BranchID        pgtype.UUID        `json:"branch_id"`
-	PictureUrl      *string            `json:"picture_url"`
-	ColorCode       *string            `json:"color_code"`
-	Price           pgtype.Numeric     `json:"price"`
-	CookTime        *int32             `json:"cook_time"`
-	CostPrice       pgtype.Numeric     `json:"cost_price"`
-	Profit          pgtype.Numeric     `json:"profit"`
-	ProfitMargin    pgtype.Numeric     `json:"profit_margin"`
-	CreatedAt       pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
-	DeletedAt       *int64             `json:"deleted_at"`
-}
-
-// ==================== FILTERED GOODS ====================
-func (q *Queries) GetGoodsFiltered(ctx context.Context, arg GetGoodsFilteredParams) ([]GetGoodsFilteredRow, error) {
-	rows, err := q.db.Query(ctx, getGoodsFiltered,
-		arg.Column1,
-		arg.Column2,
-		arg.Limit,
-		arg.Offset,
-	)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []GetGoodsFilteredRow
-	for rows.Next() {
-		var i GetGoodsFilteredRow
-		if err := rows.Scan(
-			&i.ID,
-			&i.Name,
-			&i.Description,
-			&i.NameI18n,
-			&i.DescriptionI18n,
-			&i.CategoryID,
-			&i.BranchID,
-			&i.PictureUrl,
-			&i.ColorCode,
-			&i.Price,
-			&i.CookTime,
-			&i.CostPrice,
-			&i.Profit,
-			&i.ProfitMargin,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-			&i.DeletedAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const getGoodsFilteredWithLanguage = `-- name: GetGoodsFilteredWithLanguage :many
+const getGoodsList = `-- name: GetGoodsList :many
+WITH goods_list AS (
+    SELECT
+        g.id,
+        COALESCE(
+            CASE
+                WHEN $6::text = 'uz' THEN tn.uz
+                WHEN $6::text = 'ru' THEN tn.ru
+                WHEN $6::text = 'en' THEN tn.en
+                ELSE g.name
+            END,
+            g.name
+        ) AS name,
+        COALESCE(
+            CASE
+                WHEN $6::text = 'uz' THEN td.uz
+                WHEN $6::text = 'ru' THEN td.ru
+                WHEN $6::text = 'en' THEN td.en
+                ELSE g.description
+            END,
+            g.description
+        ) AS description,
+        g.name_i18n,
+        g.description_i18n,
+        g.category_id,
+        g.branch_id,
+        g.picture_url,
+        g.color_code,
+        g.price,
+        g.cook_time,
+        g.cost_price,
+        g.profit,
+        g.profit_margin,
+        g.created_at,
+        g.updated_at,
+        g.deleted_at
+    FROM goods g
+    LEFT JOIN categories c
+        ON g.category_id = c.id
+       AND c.deleted_at = 0
+    LEFT JOIN departments d
+        ON c.department_id = d.id
+       AND d.deleted_at = 0
+    LEFT JOIN translations tn
+        ON g.name_i18n = tn.id
+       AND tn.deleted_at = 0
+    LEFT JOIN translations td
+        ON g.description_i18n = td.id
+       AND td.deleted_at = 0
+    WHERE g.deleted_at = 0
+      AND g.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+      AND (
+            $7::uuid IS NULL
+            OR g.category_id = $7::uuid
+          )
+      AND (
+            $8::uuid IS NULL
+            OR c.department_id = $8::uuid
+          )
+      AND (
+            $9::uuid IS NULL
+            OR d.storage_id = $9::uuid
+          )
+      AND (
+            $10::numeric IS NULL
+            OR g.price >= $10::numeric
+          )
+      AND (
+            $11::numeric IS NULL
+            OR g.price <= $11::numeric
+          )
+)
 SELECT
-    g.id,
-    COALESCE(CASE
-        WHEN $1::text = 'uz' THEN tn.uz
-        WHEN $1::text = 'ru' THEN tn.ru
-        WHEN $1::text = 'en' THEN tn.en
-        ELSE g.name
-    END, g.name) as name,
-    COALESCE(CASE
-        WHEN $1::text = 'uz' THEN td.uz
-        WHEN $1::text = 'ru' THEN td.ru
-        WHEN $1::text = 'en' THEN td.en
-        ELSE g.description
-    END, g.description) as description,
-    g.name_i18n,
-    g.description_i18n,
-    g.category_id,
-    g.branch_id,
-    g.picture_url,
-    g.color_code,
-    g.price,
-    g.cook_time,
-    g.cost_price,
-    g.profit,
-    g.profit_margin,
-    g.created_at,
-    g.updated_at,
-    g.deleted_at
-FROM goods g
-LEFT JOIN translations tn ON g.name_i18n = tn.id AND tn.deleted_at = 0
-LEFT JOIN translations td ON g.description_i18n = td.id AND td.deleted_at = 0
-WHERE g.deleted_at = 0
-  AND g.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-  AND (($2::uuid = '00000000-0000-0000-0000-000000000000') OR g.category_id = $2)
-  AND ($3 = '' OR g.name ILIKE '%' || $3 || '%')
-ORDER BY g.created_at DESC
-LIMIT $4 OFFSET $5
+    id,
+    name,
+    description,
+    name_i18n,
+    description_i18n,
+    category_id,
+    branch_id,
+    picture_url,
+    color_code,
+    price,
+    cook_time,
+    cost_price,
+    profit,
+    profit_margin,
+    created_at,
+    updated_at,
+    deleted_at
+FROM goods_list
+WHERE (
+        $1::text = ''
+        OR name ILIKE '%' || $1::text || '%'
+        OR COALESCE(description, '') ILIKE '%' || $1::text || '%'
+      )
+ORDER BY
+    CASE
+        WHEN $2::text = 'name' AND $3::text = 'asc'
+        THEN name
+    END ASC,
+    CASE
+        WHEN $2::text = 'name' AND $3::text = 'desc'
+        THEN name
+    END DESC,
+    CASE
+        WHEN $2::text = 'price' AND $3::text = 'asc'
+        THEN price
+    END ASC,
+    CASE
+        WHEN $2::text = 'price' AND $3::text = 'desc'
+        THEN price
+    END DESC,
+    CASE
+        WHEN $2::text = 'created_at' AND $3::text = 'asc'
+        THEN created_at
+    END ASC,
+    CASE
+        WHEN $2::text = 'created_at' AND $3::text = 'desc'
+        THEN created_at
+    END DESC,
+    created_at DESC
+LIMIT $5::int
+OFFSET $4::int
 `
 
-type GetGoodsFilteredWithLanguageParams struct {
-	Column1 string      `json:"column_1"`
-	Column2 uuid.UUID   `json:"column_2"`
-	Column3 interface{} `json:"column_3"`
-	Limit   int32       `json:"limit"`
-	Offset  int32       `json:"offset"`
+type GetGoodsListParams struct {
+	Search       string         `json:"search"`
+	SortBy       string         `json:"sort_by"`
+	SortOrder    string         `json:"sort_order"`
+	Offset       int32          `json:"offset"`
+	Limit        int32          `json:"limit"`
+	Lang         string         `json:"lang"`
+	CategoryID   pgtype.UUID    `json:"category_id"`
+	DepartmentID pgtype.UUID    `json:"department_id"`
+	StorageID    pgtype.UUID    `json:"storage_id"`
+	MinPrice     pgtype.Numeric `json:"min_price"`
+	MaxPrice     pgtype.Numeric `json:"max_price"`
 }
 
-type GetGoodsFilteredWithLanguageRow struct {
+type GetGoodsListRow struct {
 	ID              uuid.UUID          `json:"id"`
 	Name            string             `json:"name"`
 	Description     *string            `json:"description"`
@@ -1184,21 +1184,27 @@ type GetGoodsFilteredWithLanguageRow struct {
 	DeletedAt       *int64             `json:"deleted_at"`
 }
 
-func (q *Queries) GetGoodsFilteredWithLanguage(ctx context.Context, arg GetGoodsFilteredWithLanguageParams) ([]GetGoodsFilteredWithLanguageRow, error) {
-	rows, err := q.db.Query(ctx, getGoodsFilteredWithLanguage,
-		arg.Column1,
-		arg.Column2,
-		arg.Column3,
-		arg.Limit,
+func (q *Queries) GetGoodsList(ctx context.Context, arg GetGoodsListParams) ([]GetGoodsListRow, error) {
+	rows, err := q.db.Query(ctx, getGoodsList,
+		arg.Search,
+		arg.SortBy,
+		arg.SortOrder,
 		arg.Offset,
+		arg.Limit,
+		arg.Lang,
+		arg.CategoryID,
+		arg.DepartmentID,
+		arg.StorageID,
+		arg.MinPrice,
+		arg.MaxPrice,
 	)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []GetGoodsFilteredWithLanguageRow
+	var items []GetGoodsListRow
 	for rows.Next() {
-		var i GetGoodsFilteredWithLanguageRow
+		var i GetGoodsListRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.Name,
@@ -1332,76 +1338,6 @@ WHERE goods_details.id = $1 AND deleted_at != 0
 func (q *Queries) RestoreGoodDetail(ctx context.Context, id uuid.UUID) error {
 	_, err := q.db.Exec(ctx, restoreGoodDetail, id)
 	return err
-}
-
-const searchGoods = `-- name: SearchGoods :many
-SELECT goods.id, goods.name, goods.description, goods.name_i18n, goods.description_i18n, goods.category_id, goods.picture_url, goods.price, goods.cook_time, goods.cost_price, goods.profit, goods.profit_margin, goods.created_at, goods.updated_at, goods.deleted_at
-FROM goods
-WHERE deleted_at = 0
-AND (name ILIKE '%' || $1 || '%' OR description ILIKE '%' || $1 || '%')
-  AND goods.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-ORDER BY name ASC
-LIMIT $2 OFFSET $3
-`
-
-type SearchGoodsParams struct {
-	Column1 *string `json:"column_1"`
-	Limit   int32   `json:"limit"`
-	Offset  int32   `json:"offset"`
-}
-
-type SearchGoodsRow struct {
-	ID              uuid.UUID          `json:"id"`
-	Name            string             `json:"name"`
-	Description     *string            `json:"description"`
-	NameI18n        pgtype.UUID        `json:"name_i18n"`
-	DescriptionI18n pgtype.UUID        `json:"description_i18n"`
-	CategoryID      pgtype.UUID        `json:"category_id"`
-	PictureUrl      *string            `json:"picture_url"`
-	Price           pgtype.Numeric     `json:"price"`
-	CookTime        *int32             `json:"cook_time"`
-	CostPrice       pgtype.Numeric     `json:"cost_price"`
-	Profit          pgtype.Numeric     `json:"profit"`
-	ProfitMargin    pgtype.Numeric     `json:"profit_margin"`
-	CreatedAt       pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
-	DeletedAt       *int64             `json:"deleted_at"`
-}
-
-func (q *Queries) SearchGoods(ctx context.Context, arg SearchGoodsParams) ([]SearchGoodsRow, error) {
-	rows, err := q.db.Query(ctx, searchGoods, arg.Column1, arg.Limit, arg.Offset)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []SearchGoodsRow
-	for rows.Next() {
-		var i SearchGoodsRow
-		if err := rows.Scan(
-			&i.ID,
-			&i.Name,
-			&i.Description,
-			&i.NameI18n,
-			&i.DescriptionI18n,
-			&i.CategoryID,
-			&i.PictureUrl,
-			&i.Price,
-			&i.CookTime,
-			&i.CostPrice,
-			&i.Profit,
-			&i.ProfitMargin,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-			&i.DeletedAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
 }
 
 const updateGood = `-- name: UpdateGood :one

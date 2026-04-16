@@ -32,3 +32,19 @@ type CategoryResponse struct {
 	CreatedAt    *time.Time `json:"created_at,omitempty" example:"2022-01-01T00:00:00Z"`
 	UpdatedAt    *time.Time `json:"updated_at,omitempty" example:"2022-01-01T00:00:00Z"`
 }
+
+type CategoryListFilter struct {
+	Search       string
+	DepartmentID string
+	StorageID    string
+	SortBy       string
+	SortOrder    string
+}
+
+type PaginatedCategoriesResponse struct {
+	Status     string             `json:"status" example:"success"`
+	Message    string             `json:"message" example:"Categories retrieved successfully"`
+	Data       []CategoryResponse `json:"data"`
+	Pagination PaginationMeta     `json:"pagination"`
+	Code       int                `json:"code" example:"200"`
+}

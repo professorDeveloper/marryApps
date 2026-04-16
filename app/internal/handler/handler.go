@@ -137,7 +137,6 @@ func (h *Handler) Register(router *echo.Echo) {
 			storages.PUT("/:id", h.UpdateStorage, mw.CheckLanguage())
 			storages.DELETE("/:id", h.DeleteStorage, mw.CheckLanguage())
 			storages.POST("/:id/restore", h.RestoreStorage, mw.CheckLanguage())
-			storages.GET("/search", h.SearchStorages, mw.CheckLanguage())
 		}
 
 		// Storage endpoints with language support
@@ -171,7 +170,6 @@ func (h *Handler) Register(router *echo.Echo) {
 		halls := api.Group("/halls", mw.CheckAuth(h.cfg), mw.TenantMiddleware(h.repo))
 		{
 			halls.POST("", h.CreateHall, mw.CheckLanguage())
-			halls.GET("/search", h.SearchHalls, mw.CheckLanguage()) // Must come before /:id
 			halls.GET("/branch/:branchId", h.GetHallsByBranchID, mw.CheckLanguage())
 			halls.GET("/:id", h.GetHallByID, mw.CheckLanguage())
 			halls.GET("", h.GetAllHalls, mw.CheckLanguage())
@@ -318,7 +316,6 @@ func (h *Handler) Register(router *echo.Echo) {
 		{
 			categories.POST("", h.CreateCategory, mw.CheckLanguage())
 			categories.GET("", h.GetAllCategories, mw.CheckLanguage())
-			categories.GET("/search", h.SearchCategories, mw.CheckLanguage())
 			categories.GET("/:id", h.GetCategoryByID, mw.CheckLanguage())
 			categories.GET("/department/:departmentId", h.GetCategoriesByDepartmentID, mw.CheckLanguage())
 			categories.GET("/storage/:storageId", h.GetCategoriesByStorageID, mw.CheckLanguage())
@@ -349,7 +346,6 @@ func (h *Handler) Register(router *echo.Echo) {
 			compounds.PUT("/:id", h.UpdateCompound, mw.CheckLanguage())
 			compounds.DELETE("/:id", h.DeleteCompound, mw.CheckLanguage())
 			compounds.POST("/:id/restore", h.RestoreCompound, mw.CheckLanguage())
-			compounds.GET("/search", h.SearchCompounds, mw.CheckLanguage())
 			compounds.GET("/:compound_id/details", h.GetCompoundDetailsByCompound, mw.CheckLanguage())
 			compounds.GET("/:compound_id/stock", h.GetCompoundStockByCompound, mw.CheckLanguage())
 		}
@@ -402,8 +398,6 @@ func (h *Handler) Register(router *echo.Echo) {
 			goods.GET("/:id/with-calculations", h.GetGoodWithCalculations, mw.CheckLanguage())
 			goods.PUT("/:id/with-calculations", h.UpdateGoodWithCalculations, mw.CheckLanguage())
 			goods.GET("/:id", h.GetGood, mw.CheckLanguage())
-			goods.GET("/search/by-price", h.GetGoodsByPriceRange, mw.CheckLanguage())
-			goods.GET("/search", h.SearchGoods, mw.CheckLanguage())
 			goods.PUT("/:id", h.UpdateGood, mw.CheckLanguage())
 			goods.PUT("/:id/price", h.UpdateGoodPrice, mw.CheckLanguage())
 			goods.DELETE("/:id", h.DeleteGood, mw.CheckLanguage())
@@ -521,7 +515,6 @@ func (h *Handler) Register(router *echo.Echo) {
 			cafeTables.GET("/available/capacity", h.GetAvailableTablesByCapacity, mw.CheckLanguage())
 			cafeTables.GET("/available/hall/:hall_id/capacity", h.GetAvailableTablesByHallAndCapacity, mw.CheckLanguage())
 			cafeTables.GET("/stats/occupancy", h.GetTableOccupancyStats, mw.CheckLanguage())
-			cafeTables.GET("/search", h.SearchCafeTables, mw.CheckLanguage())
 		}
 
 		// Supplier management endpoints
@@ -530,7 +523,6 @@ func (h *Handler) Register(router *echo.Echo) {
 			suppliers.POST("", h.CreateSupplier, mw.CheckLanguage())
 			suppliers.GET("", h.GetAllSuppliers, mw.CheckLanguage())
 			suppliers.GET("/:id", h.GetSupplier, mw.CheckLanguage())
-			suppliers.GET("/search", h.SearchSuppliers, mw.CheckLanguage())
 			suppliers.PUT("/:id", h.UpdateSupplier, mw.CheckLanguage())
 			suppliers.DELETE("/:id", h.DeleteSupplier, mw.CheckLanguage())
 			suppliers.POST("/:id/restore", h.RestoreSupplier, mw.CheckLanguage())
@@ -543,7 +535,6 @@ func (h *Handler) Register(router *echo.Echo) {
 			inventories.POST("/batch", h.CreateInventoryBatch, mw.CheckLanguage())
 			inventories.DELETE("/batch", h.DeleteInventoriesBatch, mw.CheckLanguage())
 			inventories.GET("", h.GetAllInventories, mw.CheckLanguage())
-			inventories.GET("/search", h.SearchInventories, mw.CheckLanguage())
 			inventories.GET("/:id", h.GetInventory, mw.CheckLanguage())
 			inventories.POST("/:id/items", h.UpsertInventoryItems, mw.CheckLanguage())
 			inventories.PUT("/:id/items/batch", h.UpdateInventoryItemsBatch, mw.CheckLanguage())
@@ -592,7 +583,6 @@ func (h *Handler) Register(router *echo.Echo) {
 			invoices.POST("", h.CreateSupplierInvoice, mw.CheckLanguage())
 			invoices.POST("/batch", h.CreateInvoiceWithDetails, mw.CheckLanguage())
 			invoices.GET("", h.GetAllInvoices, mw.CheckLanguage())
-			invoices.GET("/search", h.SearchInvoices, mw.CheckLanguage())
 			invoices.GET("/:id", h.GetInvoice, mw.CheckLanguage())
 			invoices.PUT("/:id", h.UpdateInvoice, mw.CheckLanguage())
 			invoices.PATCH("/:id/status", h.UpdateInvoiceStatus, mw.CheckLanguage())
@@ -648,7 +638,6 @@ func (h *Handler) Register(router *echo.Echo) {
 		{
 			groupTransactions.POST("", h.CreateGroupTransaction, mw.CheckLanguage())
 			groupTransactions.GET("", h.GetAllGroupTransactions, mw.CheckLanguage())
-			groupTransactions.GET("/search", h.SearchGroupTransactions, mw.CheckLanguage())
 			groupTransactions.GET("/:id", h.GetGroupTransactionByID, mw.CheckLanguage())
 			groupTransactions.PUT("/:id", h.UpdateGroupTransaction, mw.CheckLanguage())
 			groupTransactions.DELETE("/:id", h.DeleteGroupTransaction, mw.CheckLanguage())

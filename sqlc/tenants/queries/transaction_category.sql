@@ -40,8 +40,64 @@ SELECT id, type,
 FROM transactions
 WHERE branch_id IS NOT DISTINCT FROM NULLIF(current_setting('app.branch_id', true), '')::uuid
   AND deleted_at = 0
-ORDER BY date DESC
-LIMIT $1 OFFSET $2;
+  AND (
+        sqlc.arg('search')::text = ''
+        OR COALESCE(description, '') ILIKE '%' || sqlc.arg('search')::text || '%'
+        OR COALESCE(amount::text, '') ILIKE '%' || sqlc.arg('search')::text || '%'
+      )
+  AND (
+        sqlc.arg('type')::text = ''
+        OR type::text = sqlc.arg('type')::text
+      )
+  AND (
+        sqlc.narg('cash_register_id')::uuid IS NULL
+        OR cash_register_id = sqlc.narg('cash_register_id')::uuid
+      )
+  AND (
+        sqlc.narg('group_transaction_id')::uuid IS NULL
+        OR group_transaction_id = sqlc.narg('group_transaction_id')::uuid
+      )
+  AND (
+        sqlc.narg('date_from')::timestamptz IS NULL
+        OR date >= sqlc.narg('date_from')::timestamptz
+      )
+  AND (
+        sqlc.narg('date_to')::timestamptz IS NULL
+        OR date <= sqlc.narg('date_to')::timestamptz
+      )
+  AND (
+      sqlc.arg('pay_type')::text = ''
+      OR pay_type::text = sqlc.arg('pay_type')::text
+    )
+ORDER BY
+    CASE
+        WHEN sqlc.arg('sort_by')::text = 'amount' AND sqlc.arg('sort_order')::text = 'asc'
+        THEN amount
+    END ASC,
+    CASE
+        WHEN sqlc.arg('sort_by')::text = 'amount' AND sqlc.arg('sort_order')::text = 'desc'
+        THEN amount
+    END DESC,
+    CASE
+        WHEN sqlc.arg('sort_by')::text = 'date' AND sqlc.arg('sort_order')::text = 'asc'
+        THEN date
+    END ASC,
+    CASE
+        WHEN sqlc.arg('sort_by')::text = 'date' AND sqlc.arg('sort_order')::text = 'desc'
+        THEN date
+    END DESC,
+    CASE
+        WHEN sqlc.arg('sort_by')::text = 'created_at' AND sqlc.arg('sort_order')::text = 'asc'
+        THEN created_at
+    END ASC,
+    CASE
+        WHEN sqlc.arg('sort_by')::text = 'created_at' AND sqlc.arg('sort_order')::text = 'desc'
+        THEN created_at
+    END DESC,
+    date DESC,
+    created_at DESC
+LIMIT sqlc.arg('limit')::int
+OFFSET sqlc.arg('offset')::int;
 
 -- name: GetTransactionsByType :many
 SELECT id, type,
@@ -125,9 +181,39 @@ WHERE id = $1
   AND deleted_at = 0;
 
 -- name: CountTransactions :one
-SELECT COUNT(*) FROM transactions
+SELECT COUNT(*)
+FROM transactions
 WHERE branch_id IS NOT DISTINCT FROM NULLIF(current_setting('app.branch_id', true), '')::uuid
-  AND deleted_at = 0;
+  AND deleted_at = 0
+  AND (
+        sqlc.arg('search')::text = ''
+        OR COALESCE(description, '') ILIKE '%' || sqlc.arg('search')::text || '%'
+        OR COALESCE(amount::text, '') ILIKE '%' || sqlc.arg('search')::text || '%'
+      )
+  AND (
+        sqlc.arg('type')::text = ''
+        OR type::text = sqlc.arg('type')::text
+      )
+  AND (
+        sqlc.narg('cash_register_id')::uuid IS NULL
+        OR cash_register_id = sqlc.narg('cash_register_id')::uuid
+      )
+  AND (
+        sqlc.narg('group_transaction_id')::uuid IS NULL
+        OR group_transaction_id = sqlc.narg('group_transaction_id')::uuid
+      )
+  AND (
+        sqlc.narg('date_from')::timestamptz IS NULL
+        OR date >= sqlc.narg('date_from')::timestamptz
+      )
+  AND (
+        sqlc.narg('date_to')::timestamptz IS NULL
+        OR date <= sqlc.narg('date_to')::timestamptz
+      )
+  AND (
+      sqlc.arg('pay_type')::text = ''
+      OR pay_type::text = sqlc.arg('pay_type')::text
+      );
 
 -- ==================== CASH REPORT QUERIES ====================
 

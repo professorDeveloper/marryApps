@@ -5,7 +5,9 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"strings"
 
+	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 	"gitlab.yurtal.tech/company/maryai/back/internal/model"
 )
@@ -95,53 +97,171 @@ func (h *Handler) GetGood(c echo.Context) error {
 
 // GetAllGoods retrieves all goods with pagination and optional filters
 // @Summary Get all goods
-// @Description Get all goods with pagination and optional filters
+// @Description Get all goods with pagination, search, filters and sorting
 // @Tags Goods
 // @Produce json
 // @Security BearerAuth
-// @Param lang query string false "Language (uz, ru, en)" default(uz)
+// @Param lang query string false "Language (uz, ru, en)"
 // @Param limit query int false "Limit" default(20)
 // @Param offset query int false "Offset" default(0)
 // @Param expand query string false "Expand related fields"
 // @Param category_id query string false "Filter by category ID"
 // @Param department_id query string false "Filter by department ID"
 // @Param storage_id query string false "Filter by storage ID"
-// @Param search query string false "Search by name"
-// @Success 200 {object} []model.GoodResponse
+// @Param search query string false "Search by name or description"
+// @Param min_price query string false "Minimum price"
+// @Param max_price query string false "Maximum price"
+// @Param sort_by query string false "Sort by field" Enums(name,price,created_at) default(created_at)
+// @Param sort_order query string false "Sort order" Enums(asc,desc) default(desc)
+// @Success 200 {object} model.PaginatedGoodsResponse
 // @Failure 400 {object} model.ErrorResponse
 // @Failure 401 {object} model.ErrorResponse
 // @Failure 500 {object} model.ErrorResponse
 // @Router /api/v1/goods [get]
 func (h *Handler) GetAllGoods(c echo.Context) error {
+	return h.getGoodsList(c, "")
+}
+
+func (h *Handler) getGoodsList(c echo.Context, defaultLang string) error {
 	limit := int32(20)
-	if l := c.QueryParam("limit"); l != "" {
-		if val, err := strconv.Atoi(l); err == nil {
-			limit = int32(val)
+	if l := strings.TrimSpace(c.QueryParam("limit")); l != "" {
+		val, err := strconv.Atoi(l)
+		if err != nil || val <= 0 {
+			return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+				"Invalid limit",
+				"limit must be a positive integer",
+				http.StatusBadRequest,
+			))
 		}
+		limit = int32(val)
 	}
 
 	offset := int32(0)
-	if o := c.QueryParam("offset"); o != "" {
-		if val, err := strconv.Atoi(o); err == nil {
-			offset = int32(val)
+	if o := strings.TrimSpace(c.QueryParam("offset")); o != "" {
+		val, err := strconv.Atoi(o)
+		if err != nil || val < 0 {
+			return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+				"Invalid offset",
+				"offset must be a non-negative integer",
+				http.StatusBadRequest,
+			))
+		}
+		offset = int32(val)
+	}
+
+	lang := strings.TrimSpace(c.QueryParam("lang"))
+	if lang == "" {
+		lang = defaultLang
+	}
+
+	if lang != "" {
+		validLangs := map[string]bool{"uz": true, "ru": true, "en": true}
+		if !validLangs[lang] {
+			return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+				"Invalid language code",
+				"valid values: uz, ru, en",
+				http.StatusBadRequest,
+			))
 		}
 	}
 
-	categoryID := c.QueryParam("category_id")
-	search := c.QueryParam("search")
-	lang := c.QueryParam("lang")
+	filter := model.GoodsListFilter{
+		CategoryID:   strings.TrimSpace(c.QueryParam("category_id")),
+		DepartmentID: strings.TrimSpace(c.QueryParam("department_id")),
+		StorageID:    strings.TrimSpace(c.QueryParam("storage_id")),
+		Search:       strings.TrimSpace(c.QueryParam("search")),
+		MinPrice:     strings.TrimSpace(c.QueryParam("min_price")),
+		MaxPrice:     strings.TrimSpace(c.QueryParam("max_price")),
+		SortBy:       strings.TrimSpace(c.QueryParam("sort_by")),
+		SortOrder:    strings.TrimSpace(c.QueryParam("sort_order")),
+	}
 
-	var goods []*model.GoodResponse
-	var total int64
+	if filter.SortBy == "" {
+		filter.SortBy = "created_at"
+	}
+	if filter.SortOrder == "" {
+		filter.SortOrder = "desc"
+	}
+
+	allowedSortBy := map[string]bool{
+		"name":       true,
+		"price":      true,
+		"created_at": true,
+	}
+	if !allowedSortBy[filter.SortBy] {
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"Invalid sort_by",
+			"allowed values: name, price, created_at",
+			http.StatusBadRequest,
+		))
+	}
+
+	allowedSortOrder := map[string]bool{
+		"asc":  true,
+		"desc": true,
+	}
+	if !allowedSortOrder[filter.SortOrder] {
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"Invalid sort_order",
+			"allowed values: asc, desc",
+			http.StatusBadRequest,
+		))
+	}
+
+	for field, value := range map[string]string{
+		"category_id":   filter.CategoryID,
+		"department_id": filter.DepartmentID,
+		"storage_id":    filter.StorageID,
+	} {
+		if value == "" {
+			continue
+		}
+		if _, err := uuid.Parse(value); err != nil {
+			return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+				"Invalid query parameter",
+				field+" must be a valid UUID",
+				http.StatusBadRequest,
+			))
+		}
+	}
+
+	var minPriceFloat float64
+	var maxPriceFloat float64
 	var err error
 
-	if categoryID != "" || search != "" {
-		goods, total, err = h.service.Goods().GetAllGoodsFiltered(c.Request().Context(), categoryID, search, lang, limit, offset)
-	} else {
-		goods, total, err = h.service.Goods().GetAllGoods(c.Request().Context(), limit, offset)
+	if filter.MinPrice != "" {
+		minPriceFloat, err = strconv.ParseFloat(filter.MinPrice, 64)
+		if err != nil {
+			return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+				"Invalid min_price",
+				"min_price must be a valid number",
+				http.StatusBadRequest,
+			))
+		}
 	}
+
+	if filter.MaxPrice != "" {
+		maxPriceFloat, err = strconv.ParseFloat(filter.MaxPrice, 64)
+		if err != nil {
+			return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+				"Invalid max_price",
+				"max_price must be a valid number",
+				http.StatusBadRequest,
+			))
+		}
+	}
+
+	if filter.MinPrice != "" && filter.MaxPrice != "" && minPriceFloat > maxPriceFloat {
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"Invalid price range",
+			"min_price cannot be greater than max_price",
+			http.StatusBadRequest,
+		))
+	}
+
+	goods, total, err := h.service.Goods().GetGoodsList(c.Request().Context(), filter, lang, limit, offset)
 	if err != nil {
-		log.Printf("GetAllGoods failed: %v", err)
+		log.Printf("GetGoodsList failed: %v", err)
 		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse(
 			"Failed to retrieve goods",
 			err.Error(),
@@ -151,12 +271,30 @@ func (h *Handler) GetAllGoods(c echo.Context) error {
 
 	if maps, expanded, err := h.expandListResponse(c, goods, "goods"); expanded {
 		if err != nil {
-			return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("expand failed", err.Error(), http.StatusInternalServerError))
+			return c.JSON(http.StatusInternalServerError, model.NewErrorResponse(
+				"expand failed",
+				err.Error(),
+				http.StatusInternalServerError,
+			))
 		}
-		return c.JSON(http.StatusOK, model.NewPaginatedResponse("Goods retrieved successfully", maps, int32(total), limit, offset, http.StatusOK))
+		return c.JSON(http.StatusOK, model.NewPaginatedResponse(
+			"Goods retrieved successfully",
+			maps,
+			int32(total),
+			limit,
+			offset,
+			http.StatusOK,
+		))
 	}
 
-	return c.JSON(http.StatusOK, model.NewPaginatedResponse("Goods retrieved successfully", goods, int32(total), limit, offset, http.StatusOK))
+	return c.JSON(http.StatusOK, model.NewPaginatedResponse(
+		"Goods retrieved successfully",
+		goods,
+		int32(total),
+		limit,
+		offset,
+		http.StatusOK,
+	))
 }
 
 // GetGoodsByCategory retrieves goods by category
@@ -219,52 +357,6 @@ func (h *Handler) GetGoodsByCategory(c echo.Context) error {
 // @Router /api/v1/departments/{department_id}/goods [get]
 func (h *Handler) GetGoodsByDepartment(c echo.Context) error {
 	return c.JSON(http.StatusGone, model.NewErrorResponse("Endpoint deprecated", "Use GET /api/v1/goods with category_id filter instead", http.StatusGone))
-}
-
-// GetGoodsByPriceRange retrieves goods within a price range
-// @Summary Get goods by price range
-// @Description Get goods within a price range with pagination
-// @Tags Goods
-// @Produce json
-// @Security BearerAuth
-// @Param lang query string false "Language (uz, ru, en)" default(uz)
-// @Param min_price query string true "Minimum price"
-// @Param max_price query string true "Maximum price"
-// @Param limit query int false "Limit" default(20)
-// @Param offset query int false "Offset" default(0)
-// @Success 200 {object} []model.GoodResponse
-// @Failure 400 {object} model.ErrorResponse
-// @Failure 401 {object} model.ErrorResponse
-// @Failure 500 {object} model.ErrorResponse
-// @Router /api/v1/goods/search/by-price [get]
-func (h *Handler) GetGoodsByPriceRange(c echo.Context) error {
-	minPrice := c.QueryParam("min_price")
-	maxPrice := c.QueryParam("max_price")
-
-	if minPrice == "" || maxPrice == "" {
-		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("min_price and max_price are required", "see logs for details", http.StatusInternalServerError))
-	}
-
-	limit := int32(20)
-	if l := c.QueryParam("limit"); l != "" {
-		if val, err := strconv.Atoi(l); err == nil {
-			limit = int32(val)
-		}
-	}
-
-	offset := int32(0)
-	if o := c.QueryParam("offset"); o != "" {
-		if val, err := strconv.Atoi(o); err == nil {
-			offset = int32(val)
-		}
-	}
-
-	resp, err := h.service.Goods().GetGoodsByPriceRange(c.Request().Context(), minPrice, maxPrice, limit, offset)
-	if err != nil {
-		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("Operation failed", err.Error(), http.StatusInternalServerError))
-	}
-
-	return c.JSON(http.StatusOK, resp)
 }
 
 // UpdateGood updates a good
@@ -391,48 +483,6 @@ func (h *Handler) RestoreGood(c echo.Context) error {
 	return c.JSON(http.StatusOK, resp)
 }
 
-// SearchGoods searches for goods
-// @Summary Search goods
-// @Description Search goods by name or description
-// @Tags Goods
-// @Produce json
-// @Security BearerAuth
-// @Param lang query string false "Language (uz, ru, en)" default(uz)
-// @Param query query string true "Search query"
-// @Param limit query int false "Limit" default(20)
-// @Param offset query int false "Offset" default(0)
-// @Success 200 {object} []model.GoodResponse
-// @Failure 400 {object} model.ErrorResponse
-// @Failure 401 {object} model.ErrorResponse
-// @Failure 500 {object} model.ErrorResponse
-// @Router /api/v1/goods/search [get]
-func (h *Handler) SearchGoods(c echo.Context) error {
-	query := c.QueryParam("query")
-	if query == "" {
-		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("query is required", "see logs for details", http.StatusInternalServerError))
-	}
-
-	limit := int32(20)
-	if l := c.QueryParam("limit"); l != "" {
-		if val, err := strconv.Atoi(l); err == nil {
-			limit = int32(val)
-		}
-	}
-
-	offset := int32(0)
-	if o := c.QueryParam("offset"); o != "" {
-		if val, err := strconv.Atoi(o); err == nil {
-			offset = int32(val)
-		}
-	}
-
-	resp, err := h.service.Goods().SearchGoods(c.Request().Context(), query, limit, offset)
-	if err != nil {
-		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("Operation failed", err.Error(), http.StatusInternalServerError))
-	}
-
-	return c.JSON(http.StatusOK, resp)
-}
 
 func validateModifierItems(items []model.AttachModifierItem) error {
 	for i, item := range items {
@@ -883,7 +933,7 @@ func (h *Handler) GetGoodByIDWithLang(c echo.Context) error {
 
 // GetAllGoodsWithLang retrieves all goods/menu items with language support and optional filters
 // @Summary Get all goods with language support
-// @Description Retrieve all goods/menu items with names and descriptions translated to specified language
+// @Description Retrieve all goods/menu items with names and descriptions translated to specified language, including search, filters and sorting
 // @Tags Goods
 // @Accept json
 // @Produce json
@@ -895,61 +945,16 @@ func (h *Handler) GetGoodByIDWithLang(c echo.Context) error {
 // @Param category_id query string false "Filter by category ID"
 // @Param department_id query string false "Filter by department ID"
 // @Param storage_id query string false "Filter by storage ID"
-// @Param search query string false "Search by name"
-// @Success 200 {array} model.GoodResponse "Goods retrieved successfully"
-// @Failure 400 {object} model.ErrorResponse "Invalid request parameters"
-// @Failure 401 {object} model.ErrorResponse "Unauthorized"
-// @Failure 500 {object} model.ErrorResponse "Internal server error"
+// @Param search query string false "Search by name or description"
+// @Param min_price query string false "Minimum price"
+// @Param max_price query string false "Maximum price"
+// @Param sort_by query string false "Sort by field" Enums(name,price,created_at) default(created_at)
+// @Param sort_order query string false "Sort order" Enums(asc,desc) default(desc)
+// @Success 200 {object} model.PaginatedGoodsResponse
+// @Failure 400 {object} model.ErrorResponse
+// @Failure 401 {object} model.ErrorResponse
+// @Failure 500 {object} model.ErrorResponse
 // @Router /api/v1/goods-lang [get]
 func (h *Handler) GetAllGoodsWithLang(c echo.Context) error {
-	var limit int32 = 20
-	var offset int32 = 0
-
-	if limitStr := c.QueryParam("limit"); limitStr != "" {
-		if l, err := strconv.ParseInt(limitStr, 10, 32); err == nil && l > 0 {
-			limit = int32(l)
-		}
-	}
-
-	if offsetStr := c.QueryParam("offset"); offsetStr != "" {
-		if o, err := strconv.ParseInt(offsetStr, 10, 32); err == nil && o >= 0 {
-			offset = int32(o)
-		}
-	}
-
-	lang := c.QueryParam("lang")
-	if lang == "" {
-		lang = "uz"
-	}
-
-	validLangs := map[string]bool{"uz": true, "ru": true, "en": true}
-	if !validLangs[lang] {
-		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("invalid language code", "valid values: uz, ru, en", http.StatusBadRequest))
-	}
-
-	categoryID := c.QueryParam("category_id")
-	search := c.QueryParam("search")
-
-	var goods []*model.GoodResponse
-	var total int64
-	var err error
-
-	if categoryID != "" || search != "" {
-		goods, total, err = h.service.Goods().GetAllGoodsFiltered(c.Request().Context(), categoryID, search, lang, limit, offset)
-	} else {
-		goods, total, err = h.service.Goods().GetAllGoodsWithLang(c.Request().Context(), lang, limit, offset)
-	}
-	if err != nil {
-		log.Printf("GetAllGoodsWithLang failed: %v", err)
-		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("failed to get goods", "see logs for details", http.StatusInternalServerError))
-	}
-
-	if maps, expanded, err := h.expandListResponse(c, goods, "goods"); expanded {
-		if err != nil {
-			return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("expand failed", err.Error(), http.StatusInternalServerError))
-		}
-		return c.JSON(http.StatusOK, model.NewPaginatedResponse("Goods retrieved successfully", maps, int32(total), limit, offset, http.StatusOK))
-	}
-
-	return c.JSON(http.StatusOK, model.NewPaginatedResponse("Goods retrieved successfully", goods, int32(total), limit, offset, http.StatusOK))
+	return h.getGoodsList(c, "uz")
 }

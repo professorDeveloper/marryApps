@@ -10,12 +10,53 @@ WHERE compounds.id = $1 AND deleted_at = 0
   AND compounds.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid;
 
 -- name: GetAllCompounds :many
-SELECT compounds.id, compounds.name, compounds.name_i18n, compounds.description, compounds.description_i18n, compounds.quantity, compounds.picture_url, compounds.color_code, compounds.measurement, compounds.price, compounds.branch_id, compounds.ingredient_group_id, compounds.cost_price, compounds.profit, compounds.profit_margin, compounds.created_at, compounds.updated_at, compounds.deleted_at
-FROM compounds
-WHERE deleted_at = 0
-  AND compounds.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-ORDER BY created_at DESC
-LIMIT $1 OFFSET $2;
+SELECT
+    c.id,
+    c.name,
+    c.name_i18n,
+    c.description,
+    c.description_i18n,
+    c.quantity,
+    c.picture_url,
+    c.color_code,
+    c.measurement,
+    c.price,
+    c.branch_id,
+    c.ingredient_group_id,
+    c.cost_price,
+    c.profit,
+    c.profit_margin,
+    c.created_at,
+    c.updated_at,
+    c.deleted_at
+FROM compounds c
+WHERE c.deleted_at = 0
+  AND c.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  AND (
+        sqlc.arg('search')::text = ''
+        OR COALESCE(c.name, '') ILIKE '%' || sqlc.arg('search')::text || '%'
+        OR COALESCE(c.description, '') ILIKE '%' || sqlc.arg('search')::text || '%'
+      )
+ORDER BY
+    CASE
+        WHEN sqlc.arg('sort_by')::text = 'name' AND sqlc.arg('sort_order')::text = 'asc'
+        THEN c.name
+    END ASC,
+    CASE
+        WHEN sqlc.arg('sort_by')::text = 'name' AND sqlc.arg('sort_order')::text = 'desc'
+        THEN c.name
+    END DESC,
+    CASE
+        WHEN sqlc.arg('sort_by')::text = 'created_at' AND sqlc.arg('sort_order')::text = 'asc'
+        THEN c.created_at
+    END ASC,
+    CASE
+        WHEN sqlc.arg('sort_by')::text = 'created_at' AND sqlc.arg('sort_order')::text = 'desc'
+        THEN c.created_at
+    END DESC,
+    c.created_at DESC
+LIMIT sqlc.arg('limit')::int
+OFFSET sqlc.arg('offset')::int;
 
 -- name: UpdateCompound :one
 UPDATE compounds
@@ -64,19 +105,17 @@ SET deleted_at = 0
 WHERE compounds.id = $1 AND deleted_at != 0
   AND compounds.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid;
 
--- name: SearchCompounds :many
-SELECT compounds.id, compounds.name, compounds.name_i18n, compounds.description, compounds.description_i18n, compounds.quantity, compounds.picture_url, compounds.color_code, compounds.measurement, compounds.price, compounds.branch_id, compounds.ingredient_group_id, compounds.cost_price, compounds.profit, compounds.profit_margin, compounds.created_at, compounds.updated_at, compounds.deleted_at
-FROM compounds
-WHERE deleted_at = 0
-AND (name ILIKE '%' || $1 || '%' OR description ILIKE '%' || $1 || '%')
-  AND compounds.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-ORDER BY created_at DESC
-LIMIT $2 OFFSET $3;
 
 -- name: CountCompounds :one
-SELECT COUNT(*) FROM compounds
-WHERE deleted_at = 0
-  AND compounds.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid;
+SELECT COUNT(*)
+FROM compounds c
+WHERE c.deleted_at = 0
+  AND c.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  AND (
+        sqlc.arg('search')::text = ''
+        OR COALESCE(c.name, '') ILIKE '%' || sqlc.arg('search')::text || '%'
+        OR COALESCE(c.description, '') ILIKE '%' || sqlc.arg('search')::text || '%'
+      );
 
 -- name: GetCompoundWithDepartment :one
 SELECT
@@ -142,19 +181,25 @@ WHERE c.id = $1 AND c.deleted_at = 0
 -- name: GetAllCompoundsWithLanguage :many
 SELECT
     c.id,
-    COALESCE(CASE
-        WHEN $1::text = 'uz' THEN tn.uz
-        WHEN $1::text = 'ru' THEN tn.ru
-        WHEN $1::text = 'en' THEN tn.en
-        ELSE c.name
-    END, c.name) as name,
+    COALESCE(
+        CASE
+            WHEN sqlc.arg('lang')::text = 'uz' THEN tn.uz
+            WHEN sqlc.arg('lang')::text = 'ru' THEN tn.ru
+            WHEN sqlc.arg('lang')::text = 'en' THEN tn.en
+            ELSE c.name
+        END,
+        c.name
+    ) AS name,
     c.name_i18n,
-    COALESCE(CASE
-        WHEN $1::text = 'uz' THEN td.uz
-        WHEN $1::text = 'ru' THEN td.ru
-        WHEN $1::text = 'en' THEN td.en
-        ELSE c.description
-    END, c.description) as description,
+    COALESCE(
+        CASE
+            WHEN sqlc.arg('lang')::text = 'uz' THEN td.uz
+            WHEN sqlc.arg('lang')::text = 'ru' THEN td.ru
+            WHEN sqlc.arg('lang')::text = 'en' THEN td.en
+            ELSE c.description
+        END,
+        c.description
+    ) AS description,
     c.description_i18n,
     c.quantity,
     c.picture_url,
@@ -174,8 +219,53 @@ LEFT JOIN translations tn ON c.name_i18n = tn.id AND tn.deleted_at = 0
 LEFT JOIN translations td ON c.description_i18n = td.id AND td.deleted_at = 0
 WHERE c.deleted_at = 0
   AND c.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-ORDER BY c.created_at DESC
-LIMIT $2 OFFSET $3;
+  AND (
+        sqlc.arg('search')::text = ''
+        OR COALESCE(c.name, '') ILIKE '%' || sqlc.arg('search')::text || '%'
+        OR COALESCE(c.description, '') ILIKE '%' || sqlc.arg('search')::text || '%'
+        OR COALESCE(tn.uz, '') ILIKE '%' || sqlc.arg('search')::text || '%'
+        OR COALESCE(tn.ru, '') ILIKE '%' || sqlc.arg('search')::text || '%'
+        OR COALESCE(tn.en, '') ILIKE '%' || sqlc.arg('search')::text || '%'
+        OR COALESCE(td.uz, '') ILIKE '%' || sqlc.arg('search')::text || '%'
+        OR COALESCE(td.ru, '') ILIKE '%' || sqlc.arg('search')::text || '%'
+        OR COALESCE(td.en, '') ILIKE '%' || sqlc.arg('search')::text || '%'
+      )
+ORDER BY
+    CASE
+        WHEN sqlc.arg('sort_by')::text = 'name' AND sqlc.arg('sort_order')::text = 'asc'
+        THEN COALESCE(
+            CASE
+                WHEN sqlc.arg('lang')::text = 'uz' THEN tn.uz
+                WHEN sqlc.arg('lang')::text = 'ru' THEN tn.ru
+                WHEN sqlc.arg('lang')::text = 'en' THEN tn.en
+                ELSE c.name
+            END,
+            c.name
+        )
+    END ASC,
+    CASE
+        WHEN sqlc.arg('sort_by')::text = 'name' AND sqlc.arg('sort_order')::text = 'desc'
+        THEN COALESCE(
+            CASE
+                WHEN sqlc.arg('lang')::text = 'uz' THEN tn.uz
+                WHEN sqlc.arg('lang')::text = 'ru' THEN tn.ru
+                WHEN sqlc.arg('lang')::text = 'en' THEN tn.en
+                ELSE c.name
+            END,
+            c.name
+        )
+    END DESC,
+    CASE
+        WHEN sqlc.arg('sort_by')::text = 'created_at' AND sqlc.arg('sort_order')::text = 'asc'
+        THEN c.created_at
+    END ASC,
+    CASE
+        WHEN sqlc.arg('sort_by')::text = 'created_at' AND sqlc.arg('sort_order')::text = 'desc'
+        THEN c.created_at
+    END DESC,
+    c.created_at DESC
+LIMIT sqlc.arg('limit')::int
+OFFSET sqlc.arg('offset')::int;
 
 -- Compound details queries -----------------------------------------------------------
 

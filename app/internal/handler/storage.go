@@ -4,6 +4,7 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
@@ -99,51 +100,123 @@ func (h *Handler) GetStorageByID(c echo.Context) error {
 
 // GetAllStorages retrieves all storages
 // @Summary Get all storages
-// @Description Retrieve all storages with pagination
+// @Description Retrieve all storages with pagination, optional search and sorting
 // @Tags storages
 // @Accept json
 // @Produce json
 // @Security BearerAuth
-// @Param limit query int false "Limit results (default: 20)" default(20)
-// @Param offset query int false "Offset for pagination (default: 0)" default(0)
-// @Param expand query string false "Comma-separated relations to expand (e.g. name_i18n)"
-// @Success 200 {array} model.StorageResponse "List of all storages"
-// @Failure 401 {object} model.ErrorResponse "Unauthorized"
-// @Failure 500 {object} model.ErrorResponse "Internal server error"
+// @Param search query string false "Search by storage name"
+// @Param sort_by query string false "Sort by field" Enums(name,created_at) default(created_at)
+// @Param sort_order query string false "Sort order" Enums(asc,desc) default(desc)
+// @Param limit query int false "Limit (default: 20)"
+// @Param offset query int false "Offset (default: 0)"
+// @Param expand query string false "Expand related fields"
+// @Success 200 {object} model.PaginatedStoragesResponse
+// @Failure 400 {object} model.ErrorResponse
+// @Failure 401 {object} model.ErrorResponse
+// @Failure 500 {object} model.ErrorResponse
 // @Router /api/v1/storages [get]
 func (h *Handler) GetAllStorages(c echo.Context) error {
-	limitStr := c.QueryParam("limit")
-	offsetStr := c.QueryParam("offset")
+	var limit int32 = 20
+	var offset int32 = 0
 
-	limit := int32(20)
-	offset := int32(0)
-
-	if limitStr != "" {
-		if l, err := strconv.ParseInt(limitStr, 10, 32); err == nil && l > 0 {
-			limit = int32(l)
+	if limitStr := c.QueryParam("limit"); limitStr != "" {
+		l, err := strconv.ParseInt(limitStr, 10, 32)
+		if err != nil || l <= 0 {
+			return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+				"Invalid limit",
+				"limit must be a positive integer",
+				http.StatusBadRequest,
+			))
 		}
+		limit = int32(l)
 	}
 
-	if offsetStr != "" {
-		if o, err := strconv.ParseInt(offsetStr, 10, 32); err == nil && o >= 0 {
-			offset = int32(o)
+	if offsetStr := c.QueryParam("offset"); offsetStr != "" {
+		o, err := strconv.ParseInt(offsetStr, 10, 32)
+		if err != nil || o < 0 {
+			return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+				"Invalid offset",
+				"offset must be a non-negative integer",
+				http.StatusBadRequest,
+			))
 		}
+		offset = int32(o)
 	}
 
-	storages, total, err := h.service.Storage().GetAllStorages(c.Request().Context(), limit, offset)
+	filter := model.StorageListFilter{
+		Search:    strings.TrimSpace(c.QueryParam("search")),
+		SortBy:    strings.TrimSpace(c.QueryParam("sort_by")),
+		SortOrder: strings.TrimSpace(c.QueryParam("sort_order")),
+	}
+
+	if filter.SortBy == "" {
+		filter.SortBy = "created_at"
+	}
+	if filter.SortOrder == "" {
+		filter.SortOrder = "desc"
+	}
+
+	allowedSortBy := map[string]bool{
+		"name":       true,
+		"created_at": true,
+	}
+	if !allowedSortBy[filter.SortBy] {
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"Invalid sort_by",
+			"allowed values: name, created_at",
+			http.StatusBadRequest,
+		))
+	}
+
+	allowedSortOrder := map[string]bool{
+		"asc":  true,
+		"desc": true,
+	}
+	if !allowedSortOrder[filter.SortOrder] {
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"Invalid sort_order",
+			"allowed values: asc, desc",
+			http.StatusBadRequest,
+		))
+	}
+
+	storages, total, err := h.service.Storage().GetAllStorages(c.Request().Context(), filter, limit, offset)
 	if err != nil {
 		log.Printf("GetAllStorages failed: %v", err)
-		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("failed to fetch storages", "see logs for details", http.StatusInternalServerError))
+		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse(
+			"Failed to retrieve storages",
+			err.Error(),
+			http.StatusInternalServerError,
+		))
 	}
 
 	if maps, expanded, err := h.expandListResponse(c, storages, "storages"); expanded {
 		if err != nil {
-			return nil
+			return c.JSON(http.StatusInternalServerError, model.NewErrorResponse(
+				"expand failed",
+				err.Error(),
+				http.StatusInternalServerError,
+			))
 		}
-		return c.JSON(http.StatusOK, model.NewPaginatedResponse("Data retrieved successfully", maps, total, limit, offset, http.StatusOK))
+		return c.JSON(http.StatusOK, model.NewPaginatedResponse(
+			"Storages retrieved successfully",
+			maps,
+			int32(total),
+			limit,
+			offset,
+			http.StatusOK,
+		))
 	}
 
-	return c.JSON(http.StatusOK, model.NewPaginatedResponse("Data retrieved successfully", storages, total, limit, offset, http.StatusOK))
+	return c.JSON(http.StatusOK, model.NewPaginatedResponse(
+		"Storages retrieved successfully",
+		storages,
+		int32(total),
+		limit,
+		offset,
+		http.StatusOK,
+	))
 }
 
 // GetStoragesByBranchID retrieves storages by branch ID
@@ -305,62 +378,6 @@ func (h *Handler) RestoreStorage(c echo.Context) error {
 	}
 
 	return c.JSON(http.StatusOK, model.NewSuccessResponse("Storage restored successfully", map[string]interface{}{}, http.StatusOK))
-}
-
-// SearchStorages searches storages by name
-// @Summary Search storages
-// @Description Search for storages by name
-// @Tags storages
-// @Accept json
-// @Produce json
-// @Security BearerAuth
-// @Param q query string true "Search query"
-// @Param limit query int false "Limit results (default: 20)" default(20)
-// @Param offset query int false "Offset for pagination (default: 0)" default(0)
-// @Param expand query string false "Comma-separated relations to expand (e.g. name_i18n)"
-// @Success 200 {array} model.StorageResponse "List of matching storages"
-// @Failure 400 {object} model.ErrorResponse "Invalid parameters"
-// @Failure 401 {object} model.ErrorResponse "Unauthorized"
-// @Failure 500 {object} model.ErrorResponse "Internal server error"
-// @Router /api/v1/storages/search [get]
-func (h *Handler) SearchStorages(c echo.Context) error {
-	query := c.QueryParam("q")
-	if query == "" {
-		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("search query is required", "see logs for details", http.StatusBadRequest))
-	}
-
-	limitStr := c.QueryParam("limit")
-	offsetStr := c.QueryParam("offset")
-
-	limit := int32(20)
-	offset := int32(0)
-
-	if limitStr != "" {
-		if l, err := strconv.ParseInt(limitStr, 10, 32); err == nil && l > 0 {
-			limit = int32(l)
-		}
-	}
-
-	if offsetStr != "" {
-		if o, err := strconv.ParseInt(offsetStr, 10, 32); err == nil && o >= 0 {
-			offset = int32(o)
-		}
-	}
-
-	storages, err := h.service.Storage().SearchStorages(c.Request().Context(), query, limit, offset)
-	if err != nil {
-		log.Printf("SearchStorages failed for query %s: %v", query, err)
-		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("failed to search storages", "see logs for details", http.StatusInternalServerError))
-	}
-
-	if maps, expanded, err := h.expandListResponse(c, storages, "storages"); expanded {
-		if err != nil {
-			return nil
-		}
-		return c.JSON(http.StatusOK, model.NewSuccessResponse("Data retrieved successfully", maps, http.StatusOK))
-	}
-
-	return c.JSON(http.StatusOK, model.NewSuccessResponse("Data retrieved successfully", storages, http.StatusOK))
 }
 
 // GetStorageByIDWithLang retrieves a storage by ID with language support

@@ -13,13 +13,18 @@ import (
 )
 
 const countHalls = `-- name: CountHalls :one
-SELECT COUNT(*) FROM halls
+SELECT COUNT(*)
+FROM halls
 WHERE deleted_at = 0
   AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  AND (
+        $1::text = ''
+        OR COALESCE(name, '') ILIKE '%' || $1::text || '%'
+      )
 `
 
-func (q *Queries) CountHalls(ctx context.Context) (int64, error) {
-	row := q.db.QueryRow(ctx, countHalls)
+func (q *Queries) CountHalls(ctx context.Context, search string) (int64, error) {
+	row := q.db.QueryRow(ctx, countHalls, search)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -90,21 +95,61 @@ func (q *Queries) DeleteHall(ctx context.Context, id uuid.UUID) error {
 }
 
 const getAllHalls = `-- name: GetAllHalls :many
-SELECT id, branch_id, name, name_i18n, width, height, created_at, updated_at, deleted_at
+SELECT
+    id,
+    branch_id,
+    name,
+    name_i18n,
+    width,
+    height,
+    created_at,
+    updated_at,
+    deleted_at
 FROM halls
 WHERE deleted_at = 0
   AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-ORDER BY created_at DESC
-LIMIT $1 OFFSET $2
+  AND (
+        $1::text = ''
+        OR COALESCE(name, '') ILIKE '%' || $1::text || '%'
+      )
+ORDER BY
+    CASE
+        WHEN $2::text = 'name' AND $3::text = 'asc'
+        THEN name
+    END ASC,
+    CASE
+        WHEN $2::text = 'name' AND $3::text = 'desc'
+        THEN name
+    END DESC,
+    CASE
+        WHEN $2::text = 'created_at' AND $3::text = 'asc'
+        THEN created_at
+    END ASC,
+    CASE
+        WHEN $2::text = 'created_at' AND $3::text = 'desc'
+        THEN created_at
+    END DESC,
+    created_at DESC
+LIMIT $5::int
+OFFSET $4::int
 `
 
 type GetAllHallsParams struct {
-	Limit  int32 `json:"limit"`
-	Offset int32 `json:"offset"`
+	Search    string `json:"search"`
+	SortBy    string `json:"sort_by"`
+	SortOrder string `json:"sort_order"`
+	Offset    int32  `json:"offset"`
+	Limit     int32  `json:"limit"`
 }
 
 func (q *Queries) GetAllHalls(ctx context.Context, arg GetAllHallsParams) ([]Hall, error) {
-	rows, err := q.db.Query(ctx, getAllHalls, arg.Limit, arg.Offset)
+	rows, err := q.db.Query(ctx, getAllHalls,
+		arg.Search,
+		arg.SortBy,
+		arg.SortOrder,
+		arg.Offset,
+		arg.Limit,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -134,15 +179,18 @@ func (q *Queries) GetAllHalls(ctx context.Context, arg GetAllHallsParams) ([]Hal
 }
 
 const getAllHallsWithLanguage = `-- name: GetAllHallsWithLanguage :many
-SELECT 
+SELECT
     h.id,
     h.branch_id,
-    COALESCE(CASE 
-        WHEN $1::text = 'uz' THEN t.uz
-        WHEN $1::text = 'ru' THEN t.ru
-        WHEN $1::text = 'en' THEN t.en
-        ELSE h.name
-    END, h.name) as name,
+    COALESCE(
+        CASE
+            WHEN $1::text = 'uz' THEN t.uz
+            WHEN $1::text = 'ru' THEN t.ru
+            WHEN $1::text = 'en' THEN t.en
+            ELSE h.name
+        END,
+        h.name
+    ) AS name,
     h.name_i18n,
     h.width,
     h.height,
@@ -150,21 +198,74 @@ SELECT
     h.updated_at,
     h.deleted_at
 FROM halls h
-LEFT JOIN translations t ON h.name_i18n = t.id AND t.deleted_at = 0
+LEFT JOIN translations t
+    ON h.name_i18n = t.id
+   AND t.deleted_at = 0
 WHERE h.deleted_at = 0
   AND h.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-ORDER BY h.created_at DESC
-LIMIT $2 OFFSET $3
+  AND (
+        $2::text = ''
+        OR COALESCE(h.name, '') ILIKE '%' || $2::text || '%'
+        OR COALESCE(t.uz, '') ILIKE '%' || $2::text || '%'
+        OR COALESCE(t.ru, '') ILIKE '%' || $2::text || '%'
+        OR COALESCE(t.en, '') ILIKE '%' || $2::text || '%'
+      )
+ORDER BY
+    CASE
+        WHEN $3::text = 'name' AND $4::text = 'asc'
+        THEN COALESCE(
+            CASE
+                WHEN $1::text = 'uz' THEN t.uz
+                WHEN $1::text = 'ru' THEN t.ru
+                WHEN $1::text = 'en' THEN t.en
+                ELSE h.name
+            END,
+            h.name
+        )
+    END ASC,
+    CASE
+        WHEN $3::text = 'name' AND $4::text = 'desc'
+        THEN COALESCE(
+            CASE
+                WHEN $1::text = 'uz' THEN t.uz
+                WHEN $1::text = 'ru' THEN t.ru
+                WHEN $1::text = 'en' THEN t.en
+                ELSE h.name
+            END,
+            h.name
+        )
+    END DESC,
+    CASE
+        WHEN $3::text = 'created_at' AND $4::text = 'asc'
+        THEN h.created_at
+    END ASC,
+    CASE
+        WHEN $3::text = 'created_at' AND $4::text = 'desc'
+        THEN h.created_at
+    END DESC,
+    h.created_at DESC
+LIMIT $6::int
+OFFSET $5::int
 `
 
 type GetAllHallsWithLanguageParams struct {
-	Column1 string `json:"column_1"`
-	Limit   int32  `json:"limit"`
-	Offset  int32  `json:"offset"`
+	Lang      string `json:"lang"`
+	Search    string `json:"search"`
+	SortBy    string `json:"sort_by"`
+	SortOrder string `json:"sort_order"`
+	Offset    int32  `json:"offset"`
+	Limit     int32  `json:"limit"`
 }
 
 func (q *Queries) GetAllHallsWithLanguage(ctx context.Context, arg GetAllHallsWithLanguageParams) ([]Hall, error) {
-	rows, err := q.db.Query(ctx, getAllHallsWithLanguage, arg.Column1, arg.Limit, arg.Offset)
+	rows, err := q.db.Query(ctx, getAllHallsWithLanguage,
+		arg.Lang,
+		arg.Search,
+		arg.SortBy,
+		arg.SortOrder,
+		arg.Offset,
+		arg.Limit,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -387,51 +488,6 @@ WHERE id = $1 AND deleted_at != 0
 func (q *Queries) RestoreHall(ctx context.Context, id uuid.UUID) error {
 	_, err := q.db.Exec(ctx, restoreHall, id)
 	return err
-}
-
-const searchHalls = `-- name: SearchHalls :many
-SELECT id, branch_id, name, name_i18n, width, height, created_at, updated_at, deleted_at
-FROM halls
-WHERE deleted_at = 0 AND name ILIKE '%' || $1 || '%'
-  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-ORDER BY created_at DESC
-LIMIT $2 OFFSET $3
-`
-
-type SearchHallsParams struct {
-	Column1 *string `json:"column_1"`
-	Limit   int32   `json:"limit"`
-	Offset  int32   `json:"offset"`
-}
-
-func (q *Queries) SearchHalls(ctx context.Context, arg SearchHallsParams) ([]Hall, error) {
-	rows, err := q.db.Query(ctx, searchHalls, arg.Column1, arg.Limit, arg.Offset)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []Hall
-	for rows.Next() {
-		var i Hall
-		if err := rows.Scan(
-			&i.ID,
-			&i.BranchID,
-			&i.Name,
-			&i.NameI18n,
-			&i.Width,
-			&i.Height,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-			&i.DeletedAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
 }
 
 const updateHall = `-- name: UpdateHall :one

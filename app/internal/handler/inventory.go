@@ -72,7 +72,7 @@ func (h *Handler) CreateInventoryBatch(c echo.Context) error {
 
 // GetAllInventories retrieves inventories with pagination
 // @Summary Get inventories
-// @Description Retrieve inventories with pagination (limit/offset)
+// @Description Retrieve inventories with pagination, filters, search and sorting
 // @Tags inventories
 // @Accept json
 // @Produce json
@@ -82,26 +82,42 @@ func (h *Handler) CreateInventoryBatch(c echo.Context) error {
 // @Param storage_id query string false "Storage ID"
 // @Param ingredient_id query string false "Ingredient ID"
 // @Param status query string false "Inventory status (draft, active, deleted)"
+// @Param search query string false "Search by description or number"
+// @Param sort_by query string false "Sort by field" Enums(date,number,created_at) default(date)
+// @Param sort_order query string false "Sort order" Enums(asc,desc) default(desc)
 // @Param limit query int false "Limit results (default: 20)" default(20)
 // @Param offset query int false "Offset for pagination (default: 0)" default(0)
 // @Param expand query string false "Comma-separated relations to expand (e.g. storage_id)"
-// @Success 200 {array} model.InventoryResponse "Inventories retrieved successfully"
-// @Failure 401 {object} model.ErrorResponse "Unauthorized"
-// @Failure 500 {object} model.ErrorResponse "Internal server error"
+// @Success 200 {object} model.PaginatedInventoriesResponse
+// @Failure 400 {object} model.ErrorResponse
+// @Failure 401 {object} model.ErrorResponse
+// @Failure 500 {object} model.ErrorResponse
 // @Router /api/v1/inventories [get]
 func (h *Handler) GetAllInventories(c echo.Context) error {
 	limit := int32(20)
 	if l := c.QueryParam("limit"); l != "" {
-		if val, err := strconv.Atoi(l); err == nil {
-			limit = int32(val)
+		val, err := strconv.Atoi(l)
+		if err != nil || val <= 0 {
+			return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+				"invalid request",
+				"limit must be a positive integer",
+				http.StatusBadRequest,
+			))
 		}
+		limit = int32(val)
 	}
 
 	offset := int32(0)
 	if o := c.QueryParam("offset"); o != "" {
-		if val, err := strconv.Atoi(o); err == nil {
-			offset = int32(val)
+		val, err := strconv.Atoi(o)
+		if err != nil || val < 0 {
+			return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+				"invalid request",
+				"offset must be a non-negative integer",
+				http.StatusBadRequest,
+			))
 		}
+		offset = int32(val)
 	}
 
 	dateFrom, err := parseDateParam(c.QueryParam("date_from"))
@@ -126,7 +142,55 @@ func (h *Handler) GetAllInventories(c echo.Context) error {
 		status = &v
 	}
 
-	paginated, err := h.service.Inventory().GetInventoriesFiltered(c.Request().Context(), dateFrom, dateTo, storageID, ingredientID, status, limit, offset)
+	search := strings.TrimSpace(c.QueryParam("search"))
+	sortBy := strings.TrimSpace(c.QueryParam("sort_by"))
+	sortOrder := strings.TrimSpace(c.QueryParam("sort_order"))
+
+	if sortBy == "" {
+		sortBy = "date"
+	}
+	if sortOrder == "" {
+		sortOrder = "desc"
+	}
+
+	allowedSortBy := map[string]bool{
+		"date":       true,
+		"number":     true,
+		"created_at": true,
+	}
+	if !allowedSortBy[sortBy] {
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"invalid request",
+			"sort_by must be one of: date, number, created_at",
+			http.StatusBadRequest,
+		))
+	}
+
+	allowedSortOrder := map[string]bool{
+		"asc":  true,
+		"desc": true,
+	}
+	if !allowedSortOrder[sortOrder] {
+		return c.JSON(http.StatusBadRequest, model.NewErrorResponse(
+			"invalid request",
+			"sort_order must be one of: asc, desc",
+			http.StatusBadRequest,
+		))
+	}
+
+	paginated, err := h.service.Inventory().GetInventoriesFiltered(
+		c.Request().Context(),
+		dateFrom,
+		dateTo,
+		storageID,
+		ingredientID,
+		status,
+		search,
+		sortBy,
+		sortOrder,
+		limit,
+		offset,
+	)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("Operation failed", err.Error(), http.StatusInternalServerError))
 	}
@@ -614,53 +678,6 @@ func (h *Handler) RestoreInventory(c echo.Context) error {
 
 	return c.JSON(http.StatusOK, model.NewSuccessResponse(
 		"Inventory restored successfully",
-		resp,
-		http.StatusOK,
-	))
-}
-
-// SearchInventories searches inventories
-// @Summary Search inventories
-// @Description Search inventories by description or number
-// @Tags inventories
-// @Accept json
-// @Produce json
-// @Security BearerAuth
-// @Param q query string true "Search query"
-// @Param limit query int false "Limit results (default: 20)" default(20)
-// @Param offset query int false "Offset for pagination (default: 0)" default(0)
-// @Success 200 {array} model.InventoryResponse "Inventories retrieved successfully"
-// @Failure 400 {object} model.ErrorResponse "Invalid request"
-// @Failure 401 {object} model.ErrorResponse "Unauthorized"
-// @Failure 500 {object} model.ErrorResponse "Internal server error"
-// @Router /api/v1/inventories/search [get]
-func (h *Handler) SearchInventories(c echo.Context) error {
-	q := c.QueryParam("q")
-	if q == "" {
-		return c.JSON(http.StatusBadRequest, model.NewErrorResponse("invalid request", "q is required", http.StatusBadRequest))
-	}
-
-	limit := int32(20)
-	if l := c.QueryParam("limit"); l != "" {
-		if val, err := strconv.Atoi(l); err == nil {
-			limit = int32(val)
-		}
-	}
-
-	offset := int32(0)
-	if o := c.QueryParam("offset"); o != "" {
-		if val, err := strconv.Atoi(o); err == nil {
-			offset = int32(val)
-		}
-	}
-
-	resp, err := h.service.Inventory().SearchInventories(c.Request().Context(), q, limit, offset)
-	if err != nil {
-		return c.JSON(http.StatusInternalServerError, model.NewErrorResponse("Operation failed", err.Error(), http.StatusInternalServerError))
-	}
-
-	return c.JSON(http.StatusOK, model.NewSuccessResponse(
-		"Inventories retrieved successfully",
 		resp,
 		http.StatusOK,
 	))

@@ -161,27 +161,49 @@ func (s *CafeTableS) GetCafeTableByID(ctx context.Context, tableID string) (*mod
 	return toCafeTableResponse(table), nil
 }
 
-// GetAllCafeTables retrieves all cafe tables with pagination
-func (s *CafeTableS) GetAllCafeTables(ctx context.Context, limit, offset int32) ([]model.CafeTableResponse, int64, error) {
-	total, err := s.repo.Tenant(ctx).CountCafeTables(ctx)
+func (s *CafeTableS) GetAllCafeTables(ctx context.Context, filter model.CafeTableListFilter, limit, offset int32) ([]*model.CafeTableResponse, int64, error) {
+	if filter.SortBy == "" {
+		filter.SortBy = "created_at"
+	}
+	if filter.SortOrder == "" {
+		filter.SortOrder = "desc"
+	}
+
+	hallUUID, err := parseOptionalUUID(filter.HallID)
+	if err != nil {
+		return nil, 0, fmt.Errorf("invalid hall_id: %w", err)
+	}
+
+	total, err := s.repo.Tenant(ctx).CountCafeTables(ctx, pg.CountCafeTablesParams{
+		Search:    filter.Search,
+		HallID:    hallUUID,
+		Status:    filter.Status,
+		TableType: filter.TableType,
+	})
 	if err != nil {
 		return nil, 0, fmt.Errorf("failed to count cafe tables: %w", err)
 	}
 
-	tables, err := s.repo.Tenant(ctx).GetAllCafeTables(ctx, pg.GetAllCafeTablesParams{
-		Limit:  limit,
-		Offset: offset,
+	rows, err := s.repo.Tenant(ctx).GetAllCafeTables(ctx, pg.GetAllCafeTablesParams{
+		Search:    filter.Search,
+		HallID:    hallUUID,
+		Status:    filter.Status,
+		TableType: filter.TableType,
+		SortBy:    filter.SortBy,
+		SortOrder: filter.SortOrder,
+		Limit:     limit,
+		Offset:    offset,
 	})
 	if err != nil {
-		return nil, 0, fmt.Errorf("failed to get cafe tables: %w", err)
+		return nil, 0, fmt.Errorf("failed to retrieve cafe tables: %w", err)
 	}
 
-	var responses []model.CafeTableResponse
-	for _, t := range tables {
-		responses = append(responses, *toCafeTableResponse(t))
+	resp := make([]*model.CafeTableResponse, 0, len(rows))
+	for _, row := range rows {
+		resp = append(resp, toCafeTableResponse(row))
 	}
 
-	return responses, total, nil
+	return resp, total, nil
 }
 
 func (s *CafeTableS) GetCafeTablesByHallID(ctx context.Context, hallID string, limit, offset int32) ([]model.CafeTableResponse, int64, error) {
@@ -574,44 +596,6 @@ func (s *CafeTableS) GetTableOccupancyStats(ctx context.Context) (*model.TableOc
 		TotalCapacity:  stats.TotalCapacity,
 		AvailableSeats: stats.AvailableSeats,
 	}, nil
-}
-
-// SearchCafeTables searches for cafe tables by query
-func (s *CafeTableS) SearchCafeTables(ctx context.Context, query string, limit, offset int32) ([]model.CafeTableResponse, error) {
-	// Get all tables and filter by number/hall
-	tables, err := s.repo.Tenant(ctx).GetAllCafeTables(ctx, pg.GetAllCafeTablesParams{
-		Limit:  9999, // Get all tables
-		Offset: 0,
-	})
-	if err != nil {
-		return nil, fmt.Errorf("failed to search cafe tables: %w", err)
-	}
-
-	// Filter tables based on query (table number or other criteria)
-	var filtered []pg.GetAllCafeTablesRow
-	for _, t := range tables {
-		// Simple search by table number
-		if fmt.Sprintf("%d", t.Number) == query || query == "" {
-			filtered = append(filtered, t)
-		}
-	}
-
-	// Apply pagination
-	start := offset
-	end := offset + limit
-	if int32(len(filtered)) < start {
-		return []model.CafeTableResponse{}, nil
-	}
-	if int32(len(filtered)) < end {
-		end = int32(len(filtered))
-	}
-
-	var responses []model.CafeTableResponse
-	for _, t := range filtered[start:end] {
-		responses = append(responses, *toCafeTableResponse(t))
-	}
-
-	return responses, nil
 }
 
 // Helper function to convert database model to response model

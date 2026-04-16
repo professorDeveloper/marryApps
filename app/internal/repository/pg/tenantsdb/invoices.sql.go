@@ -42,37 +42,49 @@ func (q *Queries) CancelInvoice(ctx context.Context, id uuid.UUID) (Invoice, err
 }
 
 const countFilteredInvoices = `-- name: CountFilteredInvoices :one
-SELECT COUNT(*) FROM invoices i
+SELECT COUNT(*)
+FROM invoices i
+LEFT JOIN suppliers s ON i.supplier_id = s.id AND s.deleted_at = 0
 WHERE i.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
   AND i.deleted_at = 0
-  AND ($1::timestamp IS NULL OR i.date >= $1)
-  AND ($2::timestamp IS NULL OR i.date <= $2)
+  AND ($1::timestamp IS NULL OR i.date >= $1::timestamp)
+  AND ($2::timestamp IS NULL OR i.date <= $2::timestamp)
   AND (NULLIF($3::text, '')::uuid IS NULL OR i.storage_id = NULLIF($3::text, '')::uuid)
   AND (NULLIF($4::text, '')::uuid IS NULL OR i.supplier_id = NULLIF($4::text, '')::uuid)
-  AND ($5 = '' OR i.status::text = $5)
+  AND ($5::text = '' OR i.status::text = $5::text)
   AND (NULLIF($6::text, '')::uuid IS NULL OR EXISTS (
     SELECT 1 FROM invoice_detailed id_t
-    WHERE id_t.invoice_id = i.id AND id_t.ingredient_id = NULLIF($6::text, '')::uuid AND id_t.deleted_at = 0
+    WHERE id_t.invoice_id = i.id
+      AND id_t.ingredient_id = NULLIF($6::text, '')::uuid
+      AND id_t.deleted_at = 0
   ))
+  AND (
+        $7::text = ''
+        OR COALESCE(s.name, '') ILIKE '%' || $7::text || '%'
+        OR COALESCE(s.phone_number, '') ILIKE '%' || $7::text || '%'
+        OR COALESCE(i.total_amount::text, '') ILIKE '%' || $7::text || '%'
+      )
 `
 
 type CountFilteredInvoicesParams struct {
-	Column1 pgtype.Timestamp `json:"column_1"`
-	Column2 pgtype.Timestamp `json:"column_2"`
-	Column3 string           `json:"column_3"`
-	Column4 string           `json:"column_4"`
-	Column5 interface{}      `json:"column_5"`
-	Column6 string           `json:"column_6"`
+	DateFrom     pgtype.Timestamp `json:"date_from"`
+	DateTo       pgtype.Timestamp `json:"date_to"`
+	StorageID    string           `json:"storage_id"`
+	SupplierID   string           `json:"supplier_id"`
+	Status       string           `json:"status"`
+	IngredientID string           `json:"ingredient_id"`
+	Search       string           `json:"search"`
 }
 
 func (q *Queries) CountFilteredInvoices(ctx context.Context, arg CountFilteredInvoicesParams) (int64, error) {
 	row := q.db.QueryRow(ctx, countFilteredInvoices,
-		arg.Column1,
-		arg.Column2,
-		arg.Column3,
-		arg.Column4,
-		arg.Column5,
-		arg.Column6,
+		arg.DateFrom,
+		arg.DateTo,
+		arg.StorageID,
+		arg.SupplierID,
+		arg.Status,
+		arg.IngredientID,
+		arg.Search,
 	)
 	var count int64
 	err := row.Scan(&count)
@@ -378,42 +390,84 @@ func (q *Queries) GetAllInvoices(ctx context.Context, arg GetAllInvoicesParams) 
 const getFilteredInvoices = `-- name: GetFilteredInvoices :many
 SELECT i.id, i.supplier_id, i.storage_id, i.branch_id, i.total_amount, i.status, i.date, i.created_at, i.updated_at, i.deleted_at
 FROM invoices i
+LEFT JOIN suppliers s ON i.supplier_id = s.id AND s.deleted_at = 0
 WHERE i.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
   AND i.deleted_at = 0
-  AND ($1::timestamp IS NULL OR i.date >= $1)
-  AND ($2::timestamp IS NULL OR i.date <= $2)
+  AND ($1::timestamp IS NULL OR i.date >= $1::timestamp)
+  AND ($2::timestamp IS NULL OR i.date <= $2::timestamp)
   AND (NULLIF($3::text, '')::uuid IS NULL OR i.storage_id = NULLIF($3::text, '')::uuid)
   AND (NULLIF($4::text, '')::uuid IS NULL OR i.supplier_id = NULLIF($4::text, '')::uuid)
-  AND ($5 = '' OR i.status::text = $5)
+  AND ($5::text = '' OR i.status::text = $5::text)
   AND (NULLIF($6::text, '')::uuid IS NULL OR EXISTS (
     SELECT 1 FROM invoice_detailed id_t
-    WHERE id_t.invoice_id = i.id AND id_t.ingredient_id = NULLIF($6::text, '')::uuid AND id_t.deleted_at = 0
+    WHERE id_t.invoice_id = i.id
+      AND id_t.ingredient_id = NULLIF($6::text, '')::uuid
+      AND id_t.deleted_at = 0
   ))
-ORDER BY i.date DESC
-LIMIT $7 OFFSET $8
+  AND (
+        $7::text = ''
+        OR COALESCE(s.name, '') ILIKE '%' || $7::text || '%'
+        OR COALESCE(s.phone_number, '') ILIKE '%' || $7::text || '%'
+        OR COALESCE(i.total_amount::text, '') ILIKE '%' || $7::text || '%'
+      )
+ORDER BY
+    CASE
+        WHEN $8::text = 'date' AND $9::text = 'asc'
+        THEN i.date
+    END ASC,
+    CASE
+        WHEN $8::text = 'date' AND $9::text = 'desc'
+        THEN i.date
+    END DESC,
+    CASE
+        WHEN $8::text = 'created_at' AND $9::text = 'asc'
+        THEN i.created_at
+    END ASC,
+    CASE
+        WHEN $8::text = 'created_at' AND $9::text = 'desc'
+        THEN i.created_at
+    END DESC,
+    CASE
+        WHEN $8::text = 'total_amount' AND $9::text = 'asc'
+        THEN i.total_amount
+    END ASC,
+    CASE
+        WHEN $8::text = 'total_amount' AND $9::text = 'desc'
+        THEN i.total_amount
+    END DESC,
+    i.date DESC,
+    i.created_at DESC
+LIMIT $11::int
+OFFSET $10::int
 `
 
 type GetFilteredInvoicesParams struct {
-	Column1 pgtype.Timestamp `json:"column_1"`
-	Column2 pgtype.Timestamp `json:"column_2"`
-	Column3 string           `json:"column_3"`
-	Column4 string           `json:"column_4"`
-	Column5 interface{}      `json:"column_5"`
-	Column6 string           `json:"column_6"`
-	Limit   int32            `json:"limit"`
-	Offset  int32            `json:"offset"`
+	DateFrom     pgtype.Timestamp `json:"date_from"`
+	DateTo       pgtype.Timestamp `json:"date_to"`
+	StorageID    string           `json:"storage_id"`
+	SupplierID   string           `json:"supplier_id"`
+	Status       string           `json:"status"`
+	IngredientID string           `json:"ingredient_id"`
+	Search       string           `json:"search"`
+	SortBy       string           `json:"sort_by"`
+	SortOrder    string           `json:"sort_order"`
+	Offset       int32            `json:"offset"`
+	Limit        int32            `json:"limit"`
 }
 
 func (q *Queries) GetFilteredInvoices(ctx context.Context, arg GetFilteredInvoicesParams) ([]Invoice, error) {
 	rows, err := q.db.Query(ctx, getFilteredInvoices,
-		arg.Column1,
-		arg.Column2,
-		arg.Column3,
-		arg.Column4,
-		arg.Column5,
-		arg.Column6,
-		arg.Limit,
+		arg.DateFrom,
+		arg.DateTo,
+		arg.StorageID,
+		arg.SupplierID,
+		arg.Status,
+		arg.IngredientID,
+		arg.Search,
+		arg.SortBy,
+		arg.SortOrder,
 		arg.Offset,
+		arg.Limit,
 	)
 	if err != nil {
 		return nil, err
@@ -1093,56 +1147,6 @@ WHERE invoice_detailed.id = $1 AND invoice_detailed.deleted_at != 0
 func (q *Queries) RestoreInvoiceDetail(ctx context.Context, id uuid.UUID) error {
 	_, err := q.db.Exec(ctx, restoreInvoiceDetail, id)
 	return err
-}
-
-const searchInvoices = `-- name: SearchInvoices :many
-SELECT i.id, i.supplier_id, i.storage_id, i.branch_id, i.total_amount, i.status, i.date, i.created_at, i.updated_at, i.deleted_at
-FROM invoices i
-JOIN suppliers s ON i.supplier_id = s.id AND s.deleted_at = 0
-WHERE i.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-AND (
-    s.name ILIKE '%' || $1 || '%' OR
-    s.phone_number ILIKE '%' || $1 || '%'
-)
-ORDER BY i.date DESC
-LIMIT $2 OFFSET $3
-`
-
-type SearchInvoicesParams struct {
-	Column1 *string `json:"column_1"`
-	Limit   int32   `json:"limit"`
-	Offset  int32   `json:"offset"`
-}
-
-func (q *Queries) SearchInvoices(ctx context.Context, arg SearchInvoicesParams) ([]Invoice, error) {
-	rows, err := q.db.Query(ctx, searchInvoices, arg.Column1, arg.Limit, arg.Offset)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []Invoice
-	for rows.Next() {
-		var i Invoice
-		if err := rows.Scan(
-			&i.ID,
-			&i.SupplierID,
-			&i.StorageID,
-			&i.BranchID,
-			&i.TotalAmount,
-			&i.Status,
-			&i.Date,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-			&i.DeletedAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
 }
 
 const updateInvoice = `-- name: UpdateInvoice :one

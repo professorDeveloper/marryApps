@@ -11,6 +11,24 @@ import (
 	"github.com/google/uuid"
 )
 
+const countGroupTransactions = `-- name: CountGroupTransactions :one
+SELECT COUNT(*)
+FROM group_transactions
+WHERE branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  AND deleted_at = 0
+  AND (
+        $1::text = ''
+        OR LOWER(name) LIKE LOWER('%' || $1::text || '%')
+      )
+`
+
+func (q *Queries) CountGroupTransactions(ctx context.Context, search string) (int64, error) {
+	row := q.db.QueryRow(ctx, countGroupTransactions, search)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const createGroupTransaction = `-- name: CreateGroupTransaction :one
 INSERT INTO group_transactions (id, name, branch_id)
 VALUES ($1, $2, NULLIF(current_setting('app.branch_id', true), '')::uuid)
@@ -53,17 +71,49 @@ const getAllGroupTransactions = `-- name: GetAllGroupTransactions :many
 SELECT id, name, branch_id, created_at, updated_at, deleted_at
 FROM group_transactions
 WHERE branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-ORDER BY created_at DESC
-LIMIT $1 OFFSET $2
+  AND deleted_at = 0
+  AND (
+        $1::text = ''
+        OR LOWER(name) LIKE LOWER('%' || $1::text || '%')
+      )
+ORDER BY
+    CASE
+        WHEN $2::text = 'name' AND $3::text = 'asc'
+        THEN name
+    END ASC,
+    CASE
+        WHEN $2::text = 'name' AND $3::text = 'desc'
+        THEN name
+    END DESC,
+    CASE
+        WHEN $2::text = 'created_at' AND $3::text = 'asc'
+        THEN created_at
+    END ASC,
+    CASE
+        WHEN $2::text = 'created_at' AND $3::text = 'desc'
+        THEN created_at
+    END DESC,
+    created_at DESC
+LIMIT $5::int
+OFFSET $4::int
 `
 
 type GetAllGroupTransactionsParams struct {
-	Limit  int32 `json:"limit"`
-	Offset int32 `json:"offset"`
+	Search    string `json:"search"`
+	SortBy    string `json:"sort_by"`
+	SortOrder string `json:"sort_order"`
+	Offset    int32  `json:"offset"`
+	Limit     int32  `json:"limit"`
 }
 
 func (q *Queries) GetAllGroupTransactions(ctx context.Context, arg GetAllGroupTransactionsParams) ([]GroupTransaction, error) {
-	rows, err := q.db.Query(ctx, getAllGroupTransactions, arg.Limit, arg.Offset)
+	rows, err := q.db.Query(ctx, getAllGroupTransactions,
+		arg.Search,
+		arg.SortBy,
+		arg.SortOrder,
+		arg.Offset,
+		arg.Limit,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -131,48 +181,6 @@ func (q *Queries) RestoreGroupTransaction(ctx context.Context, id uuid.UUID) (Gr
 		&i.DeletedAt,
 	)
 	return i, err
-}
-
-const searchGroupTransactions = `-- name: SearchGroupTransactions :many
-SELECT id, name, branch_id, created_at, updated_at, deleted_at
-FROM group_transactions
-WHERE branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-  AND (LOWER(name) LIKE LOWER('%' || $1 || '%'))
-ORDER BY created_at DESC
-LIMIT $2 OFFSET $3
-`
-
-type SearchGroupTransactionsParams struct {
-	Column1 *string `json:"column_1"`
-	Limit   int32   `json:"limit"`
-	Offset  int32   `json:"offset"`
-}
-
-func (q *Queries) SearchGroupTransactions(ctx context.Context, arg SearchGroupTransactionsParams) ([]GroupTransaction, error) {
-	rows, err := q.db.Query(ctx, searchGroupTransactions, arg.Column1, arg.Limit, arg.Offset)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []GroupTransaction
-	for rows.Next() {
-		var i GroupTransaction
-		if err := rows.Scan(
-			&i.ID,
-			&i.Name,
-			&i.BranchID,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-			&i.DeletedAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
 }
 
 const updateGroupTransaction = `-- name: UpdateGroupTransaction :one

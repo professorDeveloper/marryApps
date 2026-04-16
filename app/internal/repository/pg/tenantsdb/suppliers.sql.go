@@ -9,17 +9,22 @@ import (
 	"context"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const countSuppliers = `-- name: CountSuppliers :one
 SELECT COUNT(*)
-FROM suppliers
-WHERE branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-  AND deleted_at = 0
+FROM suppliers s
+WHERE s.deleted_at = 0
+  AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  AND (
+        $1::text = ''
+        OR COALESCE(s.name, '') ILIKE '%' || $1::text || '%'
+      )
 `
 
-func (q *Queries) CountSuppliers(ctx context.Context) (int64, error) {
-	row := q.db.QueryRow(ctx, countSuppliers)
+func (q *Queries) CountSuppliers(ctx context.Context, search string) (int64, error) {
+	row := q.db.QueryRow(ctx, countSuppliers, search)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -74,34 +79,81 @@ func (q *Queries) DeleteSupplier(ctx context.Context, id uuid.UUID) error {
 }
 
 const getAllSuppliers = `-- name: GetAllSuppliers :many
-SELECT id, name, phone_number, location, branch_id, created_at, updated_at, deleted_at
-FROM suppliers
-WHERE branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-  AND deleted_at = 0
-ORDER BY name ASC
-LIMIT $1 OFFSET $2
+SELECT
+    s.id,
+    s.name,
+    s.phone_number,
+    s.location,
+    s.created_at,
+    s.updated_at,
+    s.deleted_at
+FROM suppliers s
+WHERE s.deleted_at = 0
+  AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  AND (
+        $1::text = ''
+        OR COALESCE(s.name, '') ILIKE '%' || $1::text || '%'
+      )
+ORDER BY
+    CASE
+        WHEN $2::text = 'name' AND $3::text = 'asc'
+        THEN s.name
+    END ASC,
+    CASE
+        WHEN $2::text = 'name' AND $3::text = 'desc'
+        THEN s.name
+    END DESC,
+    CASE
+        WHEN $2::text = 'created_at' AND $3::text = 'asc'
+        THEN s.created_at
+    END ASC,
+    CASE
+        WHEN $2::text = 'created_at' AND $3::text = 'desc'
+        THEN s.created_at
+    END DESC,
+    s.created_at DESC
+LIMIT $5::int
+OFFSET $4::int
 `
 
 type GetAllSuppliersParams struct {
-	Limit  int32 `json:"limit"`
-	Offset int32 `json:"offset"`
+	Search    string `json:"search"`
+	SortBy    string `json:"sort_by"`
+	SortOrder string `json:"sort_order"`
+	Offset    int32  `json:"offset"`
+	Limit     int32  `json:"limit"`
 }
 
-func (q *Queries) GetAllSuppliers(ctx context.Context, arg GetAllSuppliersParams) ([]Supplier, error) {
-	rows, err := q.db.Query(ctx, getAllSuppliers, arg.Limit, arg.Offset)
+type GetAllSuppliersRow struct {
+	ID          uuid.UUID          `json:"id"`
+	Name        string             `json:"name"`
+	PhoneNumber *string            `json:"phone_number"`
+	Location    *string            `json:"location"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
+	DeletedAt   *int64             `json:"deleted_at"`
+}
+
+func (q *Queries) GetAllSuppliers(ctx context.Context, arg GetAllSuppliersParams) ([]GetAllSuppliersRow, error) {
+	rows, err := q.db.Query(ctx, getAllSuppliers,
+		arg.Search,
+		arg.SortBy,
+		arg.SortOrder,
+		arg.Offset,
+		arg.Limit,
+	)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []Supplier
+	var items []GetAllSuppliersRow
 	for rows.Next() {
-		var i Supplier
+		var i GetAllSuppliersRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.Name,
 			&i.PhoneNumber,
 			&i.Location,
-			&i.BranchID,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.DeletedAt,
@@ -200,51 +252,6 @@ func (q *Queries) RestoreSupplier(ctx context.Context, id uuid.UUID) (Supplier, 
 		&i.DeletedAt,
 	)
 	return i, err
-}
-
-const searchSuppliers = `-- name: SearchSuppliers :many
-SELECT id, name, phone_number, location, branch_id, created_at, updated_at, deleted_at
-FROM suppliers
-WHERE name ILIKE $1
-  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-  AND deleted_at = 0
-ORDER BY name ASC
-LIMIT $2 OFFSET $3
-`
-
-type SearchSuppliersParams struct {
-	Name   string `json:"name"`
-	Limit  int32  `json:"limit"`
-	Offset int32  `json:"offset"`
-}
-
-func (q *Queries) SearchSuppliers(ctx context.Context, arg SearchSuppliersParams) ([]Supplier, error) {
-	rows, err := q.db.Query(ctx, searchSuppliers, arg.Name, arg.Limit, arg.Offset)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []Supplier
-	for rows.Next() {
-		var i Supplier
-		if err := rows.Scan(
-			&i.ID,
-			&i.Name,
-			&i.PhoneNumber,
-			&i.Location,
-			&i.BranchID,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-			&i.DeletedAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
 }
 
 const updateSupplier = `-- name: UpdateSupplier :one

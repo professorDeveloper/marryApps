@@ -101,15 +101,24 @@ func (s *InvoiceS) GetInvoiceByID(ctx context.Context, id string) (*model.Invoic
 	return toInvoiceResponse(invoice), nil
 }
 
-// GetAllInvoices retrieves all invoices with pagination
 func (s *InvoiceS) GetAllInvoices(ctx context.Context, filter model.InvoiceFilter, limit, offset int32) ([]*model.InvoiceResponse, int64, error) {
+	if filter.SortBy == "" {
+		filter.SortBy = "date"
+	}
+	if filter.SortOrder == "" {
+		filter.SortOrder = "desc"
+	}
+
 	params := pg.GetFilteredInvoicesParams{
-		Limit:   limit,
-		Offset:  offset,
-		Column3: filter.StorageID,
-		Column4: filter.SupplierID,
-		Column5: filter.Status,
-		Column6: filter.IngredientID,
+		Limit:        limit,
+		Offset:       offset,
+		StorageID:    filter.StorageID,
+		SupplierID:   filter.SupplierID,
+		Status:       filter.Status,
+		IngredientID: filter.IngredientID,
+		Search:       filter.Search,
+		SortBy:       filter.SortBy,
+		SortOrder:    filter.SortOrder,
 	}
 
 	if filter.DateFrom != nil && *filter.DateFrom != "" {
@@ -120,7 +129,7 @@ func (s *InvoiceS) GetAllInvoices(ctx context.Context, filter model.InvoiceFilte
 				return nil, 0, fmt.Errorf("invalid date_from: %w", err)
 			}
 		}
-		params.Column1 = pgtype.Timestamp{Time: t, Valid: true}
+		params.DateFrom = pgtype.Timestamp{Time: t, Valid: true}
 	}
 
 	if filter.DateTo != nil && *filter.DateTo != "" {
@@ -131,18 +140,18 @@ func (s *InvoiceS) GetAllInvoices(ctx context.Context, filter model.InvoiceFilte
 				return nil, 0, fmt.Errorf("invalid date_to: %w", err)
 			}
 		}
-		// include the full end day
 		t = t.Add(24*time.Hour - time.Second)
-		params.Column2 = pgtype.Timestamp{Time: t, Valid: true}
+		params.DateTo = pgtype.Timestamp{Time: t, Valid: true}
 	}
 
 	countParams := pg.CountFilteredInvoicesParams{
-		Column1: params.Column1,
-		Column2: params.Column2,
-		Column3: params.Column3,
-		Column4: params.Column4,
-		Column5: params.Column5,
-		Column6: params.Column6,
+		DateFrom:     params.DateFrom,
+		DateTo:       params.DateTo,
+		StorageID:    params.StorageID,
+		SupplierID:   params.SupplierID,
+		Status:       params.Status,
+		IngredientID: params.IngredientID,
+		Search:       params.Search,
 	}
 
 	total, err := s.repo.Tenant(ctx).CountFilteredInvoices(ctx, countParams)
@@ -155,7 +164,7 @@ func (s *InvoiceS) GetAllInvoices(ctx context.Context, filter model.InvoiceFilte
 		return nil, 0, fmt.Errorf("failed to get invoices: %w", err)
 	}
 
-	var responses []*model.InvoiceResponse
+	responses := make([]*model.InvoiceResponse, 0, len(invoices))
 	for _, invoice := range invoices {
 		responses = append(responses, toInvoiceResponse(invoice))
 	}
@@ -512,25 +521,6 @@ func (s *InvoiceS) RestoreInvoice(ctx context.Context, id string) error {
 	}
 
 	return nil
-}
-
-// SearchInvoices searches invoices
-func (s *InvoiceS) SearchInvoices(ctx context.Context, query string, limit, offset int32) ([]*model.InvoiceResponse, error) {
-	invoices, err := s.repo.Tenant(ctx).SearchInvoices(ctx, pg.SearchInvoicesParams{
-		Column1: &query,
-		Limit:   limit,
-		Offset:  offset,
-	})
-	if err != nil {
-		return nil, fmt.Errorf("failed to search invoices: %w", err)
-	}
-
-	var responses []*model.InvoiceResponse
-	for _, invoice := range invoices {
-		responses = append(responses, toInvoiceResponse(invoice))
-	}
-
-	return responses, nil
 }
 
 // GetInvoiceWithDetails retrieves an invoice with details count

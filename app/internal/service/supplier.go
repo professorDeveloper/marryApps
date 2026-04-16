@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"log"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -55,22 +56,38 @@ func (s *SupplierS) GetSupplierByID(ctx context.Context, id string) (*model.Supp
 	return toSupplierResponse(supplier), nil
 }
 
-// GetAllSuppliers retrieves all suppliers with pagination
-func (s *SupplierS) GetAllSuppliers(ctx context.Context, limit, offset int32) ([]*model.SupplierResponse, error) {
-	suppliers, err := s.repo.Tenant(ctx).GetAllSuppliers(ctx, pg.GetAllSuppliersParams{
-		Limit:  limit,
-		Offset: offset,
+func (s *SupplierS) GetAllSuppliers(ctx context.Context, filter model.SupplierListFilter, limit, offset int32) ([]*model.SupplierResponse, int64, error) {
+	if filter.SortBy == "" {
+		filter.SortBy = "created_at"
+	}
+	if filter.SortOrder == "" {
+		filter.SortOrder = "desc"
+	}
+
+	total, err := s.repo.Tenant(ctx).CountSuppliers(ctx, filter.Search)
+	if err != nil {
+		log.Printf("CountSuppliers failed: %v", err)
+		return nil, 0, fmt.Errorf("failed to count suppliers: %w", err)
+	}
+
+	rows, err := s.repo.Tenant(ctx).GetAllSuppliers(ctx, pg.GetAllSuppliersParams{
+		Search:    filter.Search,
+		SortBy:    filter.SortBy,
+		SortOrder: filter.SortOrder,
+		Limit:     limit,
+		Offset:    offset,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to get suppliers: %w", err)
+		log.Printf("GetAllSuppliers failed: %v", err)
+		return nil, 0, fmt.Errorf("failed to retrieve suppliers: %w", err)
 	}
 
 	var responses []*model.SupplierResponse
-	for _, supplier := range suppliers {
-		responses = append(responses, toSupplierResponse(supplier))
+	for _, row := range rows {
+		responses = append(responses, toSupplierResponse(row))
 	}
 
-	return responses, nil
+	return responses, total, nil
 }
 
 // UpdateSupplier updates a supplier
@@ -147,25 +164,6 @@ func (s *SupplierS) RestoreSupplier(ctx context.Context, id string) (*model.Supp
 	return toSupplierResponse(supplier), nil
 }
 
-// SearchSuppliers searches suppliers by name
-func (s *SupplierS) SearchSuppliers(ctx context.Context, query string, limit, offset int32) ([]*model.SupplierResponse, error) {
-	suppliers, err := s.repo.Tenant(ctx).SearchSuppliers(ctx, pg.SearchSuppliersParams{
-		Name:   "%" + query + "%",
-		Limit:  limit,
-		Offset: offset,
-	})
-	if err != nil {
-		return nil, fmt.Errorf("failed to search suppliers: %w", err)
-	}
-
-	var responses []*model.SupplierResponse
-	for _, supplier := range suppliers {
-		responses = append(responses, toSupplierResponse(supplier))
-	}
-
-	return responses, nil
-}
-
 // Helper function to convert pg.Supplier to model.SupplierResponse
 func toSupplierResponse(supplier any) *model.SupplierResponse {
 	var (
@@ -185,11 +183,20 @@ func toSupplierResponse(supplier any) *model.SupplierResponse {
 		location = row.Location
 		createdAt = row.CreatedAt
 		updatedAt = row.UpdatedAt
+
+	case pg.GetAllSuppliersRow:
+		id = row.ID
+		name = row.Name
+		phone = row.PhoneNumber
+		location = row.Location
+		createdAt = row.CreatedAt
+		updatedAt = row.UpdatedAt
+
 	default:
 		return nil
 	}
 
-	response := &model.SupplierResponse{
+	resp := &model.SupplierResponse{
 		ID:          id.String(),
 		Name:        name,
 		PhoneNumber: phone,
@@ -197,12 +204,11 @@ func toSupplierResponse(supplier any) *model.SupplierResponse {
 	}
 
 	if createdAt.Valid {
-		response.CreatedAt = &createdAt.Time
+		resp.CreatedAt = &createdAt.Time
 	}
-
 	if updatedAt.Valid {
-		response.UpdatedAt = &updatedAt.Time
+		resp.UpdatedAt = &updatedAt.Time
 	}
 
-	return response
+	return resp
 }

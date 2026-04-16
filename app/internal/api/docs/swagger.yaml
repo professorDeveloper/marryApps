@@ -3206,6 +3206,60 @@ definitions:
         example: success
         type: string
     type: object
+  model.PaginatedCafeTablesResponse:
+    properties:
+      code:
+        example: 200
+        type: integer
+      data:
+        items:
+          $ref: '#/definitions/model.CafeTableResponse'
+        type: array
+      message:
+        example: Cafe tables retrieved successfully
+        type: string
+      pagination:
+        $ref: '#/definitions/model.PaginationMeta'
+      status:
+        example: success
+        type: string
+    type: object
+  model.PaginatedCategoriesResponse:
+    properties:
+      code:
+        example: 200
+        type: integer
+      data:
+        items:
+          $ref: '#/definitions/model.CategoryResponse'
+        type: array
+      message:
+        example: Categories retrieved successfully
+        type: string
+      pagination:
+        $ref: '#/definitions/model.PaginationMeta'
+      status:
+        example: success
+        type: string
+    type: object
+  model.PaginatedCompoundsResponse:
+    properties:
+      code:
+        example: 200
+        type: integer
+      data:
+        items:
+          $ref: '#/definitions/model.CompoundResponse'
+        type: array
+      message:
+        example: Compounds retrieved successfully
+        type: string
+      pagination:
+        $ref: '#/definitions/model.PaginationMeta'
+      status:
+        example: success
+        type: string
+    type: object
   model.PaginatedDeductionsResponse:
     properties:
       data:
@@ -3214,6 +3268,87 @@ definitions:
         type: array
       pagination:
         $ref: '#/definitions/model.PaginationMeta'
+    type: object
+  model.PaginatedGoodsResponse:
+    properties:
+      code:
+        example: 200
+        type: integer
+      data:
+        items:
+          $ref: '#/definitions/model.GoodResponse'
+        type: array
+      message:
+        example: Goods retrieved successfully
+        type: string
+      pagination:
+        $ref: '#/definitions/model.PaginationMeta'
+      status:
+        example: success
+        type: string
+    type: object
+  model.PaginatedGroupTransactionsResponse:
+    properties:
+      code:
+        example: 200
+        type: integer
+      data:
+        items:
+          $ref: '#/definitions/model.GroupTransactionResponse'
+        type: array
+      message:
+        example: Group transactions retrieved successfully
+        type: string
+      pagination:
+        $ref: '#/definitions/model.PaginationMeta'
+      status:
+        example: success
+        type: string
+    type: object
+  model.PaginatedHallsResponse:
+    properties:
+      code:
+        example: 200
+        type: integer
+      data:
+        items:
+          $ref: '#/definitions/model.HallResponse'
+        type: array
+      message:
+        example: Halls retrieved successfully
+        type: string
+      pagination:
+        $ref: '#/definitions/model.PaginationMeta'
+      status:
+        example: success
+        type: string
+    type: object
+  model.PaginatedInventoriesResponse:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/model.InventoryResponse'
+        type: array
+      pagination:
+        $ref: '#/definitions/model.PaginationMeta'
+    type: object
+  model.PaginatedInvoicesResponse:
+    properties:
+      code:
+        example: 200
+        type: integer
+      data:
+        items:
+          $ref: '#/definitions/model.InvoiceResponse'
+        type: array
+      message:
+        example: Invoices retrieved successfully
+        type: string
+      pagination:
+        $ref: '#/definitions/model.PaginationMeta'
+      status:
+        example: success
+        type: string
     type: object
   model.PaginatedModifiersResponse:
     properties:
@@ -3226,6 +3361,60 @@ definitions:
         type: array
       message:
         example: Modifiers retrieved successfully
+        type: string
+      pagination:
+        $ref: '#/definitions/model.PaginationMeta'
+      status:
+        example: success
+        type: string
+    type: object
+  model.PaginatedStoragesResponse:
+    properties:
+      code:
+        example: 200
+        type: integer
+      data:
+        items:
+          $ref: '#/definitions/model.StorageResponse'
+        type: array
+      message:
+        example: Storages retrieved successfully
+        type: string
+      pagination:
+        $ref: '#/definitions/model.PaginationMeta'
+      status:
+        example: success
+        type: string
+    type: object
+  model.PaginatedSuppliersResponse:
+    properties:
+      code:
+        example: 200
+        type: integer
+      data:
+        items:
+          $ref: '#/definitions/model.SupplierResponse'
+        type: array
+      message:
+        example: Suppliers retrieved successfully
+        type: string
+      pagination:
+        $ref: '#/definitions/model.PaginationMeta'
+      status:
+        example: success
+        type: string
+    type: object
+  model.PaginatedTransactionsResponse:
+    properties:
+      code:
+        example: 200
+        type: integer
+      data:
+        items:
+          $ref: '#/definitions/model.TransactionResponse'
+        type: array
+      message:
+        example: Transactions retrieved successfully
         type: string
       pagination:
         $ref: '#/definitions/model.PaginationMeta'
@@ -5968,33 +6157,66 @@ paths:
     get:
       consumes:
       - application/json
-      description: Get all cafe tables with pagination
+      description: Retrieve all cafe tables with pagination, optional search, hall
+        filter, status filter and sorting
       parameters:
-      - default: 10
-        description: Limit
+      - description: Search by table number
+        in: query
+        name: search
+        type: string
+      - description: Filter by hall ID
+        in: query
+        name: hall_id
+        type: string
+      - description: Filter by table status
+        in: query
+        name: status
+        type: string
+      - description: Filter by table type
+        in: query
+        name: table_type
+        type: string
+      - default: created_at
+        description: Sort by field
+        enum:
+        - number
+        - created_at
+        in: query
+        name: sort_by
+        type: string
+      - default: desc
+        description: Sort order
+        enum:
+        - asc
+        - desc
+        in: query
+        name: sort_order
+        type: string
+      - description: 'Limit (default: 20)'
         in: query
         name: limit
         type: integer
-      - default: 0
-        description: Offset
+      - description: 'Offset (default: 0)'
         in: query
         name: offset
         type: integer
-      - description: Expand related fields
-        in: query
-        name: expand
-        type: string
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            items:
-              $ref: '#/definitions/model.CafeTableResponse'
-            type: array
+            $ref: '#/definitions/model.PaginatedCafeTablesResponse'
         "400":
           description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
           schema:
             $ref: '#/definitions/model.ErrorResponse'
       security:
@@ -6431,44 +6653,6 @@ paths:
       security:
       - BearerAuth: []
       summary: Get cafe tables by hall ID
-      tags:
-      - cafe-tables
-  /api/v1/cafe-tables/search:
-    get:
-      consumes:
-      - application/json
-      description: Search cafe tables by number or status
-      parameters:
-      - description: Search query
-        in: query
-        name: query
-        type: string
-      - default: 10
-        description: Limit
-        in: query
-        name: limit
-        type: integer
-      - default: 0
-        description: Offset
-        in: query
-        name: offset
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            items:
-              $ref: '#/definitions/model.CafeTableResponse'
-            type: array
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/model.ErrorResponse'
-      security:
-      - BearerAuth: []
-      summary: Search cafe tables
       tags:
       - cafe-tables
   /api/v1/cafe-tables/stats/occupancy:
@@ -7047,8 +7231,37 @@ paths:
     get:
       consumes:
       - application/json
-      description: Retrieve all categories with pagination
+      description: Retrieve all categories with pagination, optional search, filters
+        and sorting
       parameters:
+      - description: Search by category name
+        in: query
+        name: search
+        type: string
+      - description: Filter by department ID
+        in: query
+        name: department_id
+        type: string
+      - description: Filter by storage ID
+        in: query
+        name: storage_id
+        type: string
+      - default: created_at
+        description: Sort by field
+        enum:
+        - name
+        - created_at
+        in: query
+        name: sort_by
+        type: string
+      - default: desc
+        description: Sort order
+        enum:
+        - asc
+        - desc
+        in: query
+        name: sort_order
+        type: string
       - description: 'Limit (default: 20)'
         in: query
         name: limit
@@ -7065,17 +7278,19 @@ paths:
       - application/json
       responses:
         "200":
-          description: Categories found
+          description: OK
           schema:
-            items:
-              $ref: '#/definitions/model.CategoryResponse'
-            type: array
+            $ref: '#/definitions/model.PaginatedCategoriesResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
         "401":
           description: Unauthorized
           schema:
             $ref: '#/definitions/model.ErrorResponse'
         "500":
-          description: Internal server error
+          description: Internal Server Error
           schema:
             $ref: '#/definitions/model.ErrorResponse'
       security:
@@ -7125,9 +7340,33 @@ paths:
       - application/json
       description: Retrieve all categories with names translated to specified language
       parameters:
-      - description: 'Language code (uz, ru, en - default: uz)'
+      - description: Search by category name
         in: query
-        name: lang
+        name: search
+        type: string
+      - description: Filter by department ID
+        in: query
+        name: department_id
+        type: string
+      - description: Filter by storage ID
+        in: query
+        name: storage_id
+        type: string
+      - default: created_at
+        description: Sort by field
+        enum:
+        - name
+        - created_at
+        in: query
+        name: sort_by
+        type: string
+      - default: desc
+        description: Sort order
+        enum:
+        - asc
+        - desc
+        in: query
+        name: sort_order
         type: string
       - description: 'Limit (default: 20)'
         in: query
@@ -7145,13 +7384,11 @@ paths:
       - application/json
       responses:
         "200":
-          description: Categories retrieved successfully
+          description: OK
           schema:
-            items:
-              $ref: '#/definitions/model.CategoryResponse'
-            type: array
+            $ref: '#/definitions/model.PaginatedCategoriesResponse'
         "400":
-          description: Invalid request parameters
+          description: Bad Request
           schema:
             $ref: '#/definitions/model.ErrorResponse'
         "401":
@@ -7159,7 +7396,7 @@ paths:
           schema:
             $ref: '#/definitions/model.ErrorResponse'
         "500":
-          description: Internal server error
+          description: Internal Server Error
           schema:
             $ref: '#/definitions/model.ErrorResponse'
       security:
@@ -7555,51 +7792,6 @@ paths:
       security:
       - BearerAuth: []
       summary: Get root categories
-      tags:
-      - categories
-  /api/v1/categories/search:
-    get:
-      consumes:
-      - application/json
-      description: Search for categories by name with pagination
-      parameters:
-      - description: Search query
-        in: query
-        name: q
-        required: true
-        type: string
-      - description: 'Limit (default: 20)'
-        in: query
-        name: limit
-        type: integer
-      - description: 'Offset (default: 0)'
-        in: query
-        name: offset
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Categories found
-          schema:
-            items:
-              $ref: '#/definitions/model.CategoryResponse'
-            type: array
-        "400":
-          description: Invalid request data
-          schema:
-            $ref: '#/definitions/model.ErrorResponse'
-        "401":
-          description: Unauthorized
-          schema:
-            $ref: '#/definitions/model.ErrorResponse'
-        "500":
-          description: Internal server error
-          schema:
-            $ref: '#/definitions/model.ErrorResponse'
-      security:
-      - BearerAuth: []
-      summary: Search categories
       tags:
       - categories
   /api/v1/categories/storage/{storageId}:
@@ -8268,8 +8460,33 @@ paths:
     get:
       consumes:
       - application/json
-      description: Retrieve all compounds with pagination
+      description: Retrieve all compounds with pagination, optional search, department
+        filter and sorting
       parameters:
+      - description: Search by compound name or description
+        in: query
+        name: search
+        type: string
+      - description: Filter by department ID
+        in: query
+        name: department_id
+        type: string
+      - default: created_at
+        description: Sort by field
+        enum:
+        - name
+        - created_at
+        in: query
+        name: sort_by
+        type: string
+      - default: desc
+        description: Sort order
+        enum:
+        - asc
+        - desc
+        in: query
+        name: sort_order
+        type: string
       - description: 'Limit (default: 20)'
         in: query
         name: limit
@@ -8286,17 +8503,19 @@ paths:
       - application/json
       responses:
         "200":
-          description: Compounds found
+          description: OK
           schema:
-            items:
-              $ref: '#/definitions/model.CompoundResponse'
-            type: array
+            $ref: '#/definitions/model.PaginatedCompoundsResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
         "401":
           description: Unauthorized
           schema:
             $ref: '#/definitions/model.ErrorResponse'
         "500":
-          description: Internal server error
+          description: Internal Server Error
           schema:
             $ref: '#/definitions/model.ErrorResponse'
       security:
@@ -8344,11 +8563,31 @@ paths:
       consumes:
       - application/json
       description: Retrieve all compounds with names and descriptions translated to
-        specified language
+        specified language, with optional search and sorting
       parameters:
       - description: 'Language code (uz, ru, en - default: uz)'
         in: query
         name: lang
+        type: string
+      - description: Search by compound name or description
+        in: query
+        name: search
+        type: string
+      - default: created_at
+        description: Sort by field
+        enum:
+        - name
+        - created_at
+        in: query
+        name: sort_by
+        type: string
+      - default: desc
+        description: Sort order
+        enum:
+        - asc
+        - desc
+        in: query
+        name: sort_order
         type: string
       - description: 'Limit (default: 20)'
         in: query
@@ -8366,13 +8605,11 @@ paths:
       - application/json
       responses:
         "200":
-          description: Compounds retrieved successfully
+          description: OK
           schema:
-            items:
-              $ref: '#/definitions/model.CompoundResponse'
-            type: array
+            $ref: '#/definitions/model.PaginatedCompoundsResponse'
         "400":
-          description: Invalid request parameters
+          description: Bad Request
           schema:
             $ref: '#/definitions/model.ErrorResponse'
         "401":
@@ -8380,7 +8617,7 @@ paths:
           schema:
             $ref: '#/definitions/model.ErrorResponse'
         "500":
-          description: Internal server error
+          description: Internal Server Error
           schema:
             $ref: '#/definitions/model.ErrorResponse'
       security:
@@ -9104,51 +9341,6 @@ paths:
       security:
       - BearerAuth: []
       summary: Get compounds by department
-      tags:
-      - compounds
-  /api/v1/compounds/search:
-    get:
-      consumes:
-      - application/json
-      description: Search for compounds by name or description with pagination
-      parameters:
-      - description: Search query
-        in: query
-        name: q
-        required: true
-        type: string
-      - description: 'Limit (default: 20)'
-        in: query
-        name: limit
-        type: integer
-      - description: 'Offset (default: 0)'
-        in: query
-        name: offset
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Compounds found
-          schema:
-            items:
-              $ref: '#/definitions/model.CompoundResponse'
-            type: array
-        "400":
-          description: Invalid request data
-          schema:
-            $ref: '#/definitions/model.ErrorResponse'
-        "401":
-          description: Unauthorized
-          schema:
-            $ref: '#/definitions/model.ErrorResponse'
-        "500":
-          description: Internal server error
-          schema:
-            $ref: '#/definitions/model.ErrorResponse'
-      security:
-      - BearerAuth: []
-      summary: Search compounds
       tags:
       - compounds
   /api/v1/compounds/with-calculations:
@@ -10604,10 +10796,9 @@ paths:
       - Good Details
   /api/v1/goods:
     get:
-      description: Get all goods with pagination and optional filters
+      description: Get all goods with pagination, search, filters and sorting
       parameters:
-      - default: uz
-        description: Language (uz, ru, en)
+      - description: Language (uz, ru, en)
         in: query
         name: lang
         type: string
@@ -10637,9 +10828,34 @@ paths:
         in: query
         name: storage_id
         type: string
-      - description: Search by name
+      - description: Search by name or description
         in: query
         name: search
+        type: string
+      - description: Minimum price
+        in: query
+        name: min_price
+        type: string
+      - description: Maximum price
+        in: query
+        name: max_price
+        type: string
+      - default: created_at
+        description: Sort by field
+        enum:
+        - name
+        - price
+        - created_at
+        in: query
+        name: sort_by
+        type: string
+      - default: desc
+        description: Sort order
+        enum:
+        - asc
+        - desc
+        in: query
+        name: sort_order
         type: string
       produces:
       - application/json
@@ -10647,9 +10863,7 @@ paths:
         "200":
           description: OK
           schema:
-            items:
-              $ref: '#/definitions/model.GoodResponse'
-            type: array
+            $ref: '#/definitions/model.PaginatedGoodsResponse'
         "400":
           description: Bad Request
           schema:
@@ -10712,7 +10926,7 @@ paths:
       consumes:
       - application/json
       description: Retrieve all goods/menu items with names and descriptions translated
-        to specified language
+        to specified language, including search, filters and sorting
       parameters:
       - description: 'Language code (uz, ru, en - default: uz)'
         in: query
@@ -10742,21 +10956,44 @@ paths:
         in: query
         name: storage_id
         type: string
-      - description: Search by name
+      - description: Search by name or description
         in: query
         name: search
+        type: string
+      - description: Minimum price
+        in: query
+        name: min_price
+        type: string
+      - description: Maximum price
+        in: query
+        name: max_price
+        type: string
+      - default: created_at
+        description: Sort by field
+        enum:
+        - name
+        - price
+        - created_at
+        in: query
+        name: sort_by
+        type: string
+      - default: desc
+        description: Sort order
+        enum:
+        - asc
+        - desc
+        in: query
+        name: sort_order
         type: string
       produces:
       - application/json
       responses:
         "200":
-          description: Goods retrieved successfully
+          description: OK
           schema:
-            items:
-              $ref: '#/definitions/model.GoodResponse'
-            type: array
+            $ref: '#/definitions/model.PaginatedGoodsResponse'
         "400":
-          description: Invalid request parameters
+          description: Bad Request
           schema:
             $ref: '#/definitions/model.ErrorResponse'
         "401":
@@ -10764,7 +11001,7 @@ paths:
           schema:
             $ref: '#/definitions/model.ErrorResponse'
         "500":
-          description: Internal server error
+          description: Internal Server Error
           schema:
             $ref: '#/definitions/model.ErrorResponse'
       security:
@@ -11457,111 +11694,6 @@ paths:
       summary: Update calculation quantity (auto-recalculates total_cost)
       tags:
       - Calculations
-  /api/v1/goods/search:
-    get:
-      description: Search goods by name or description
-      parameters:
-      - default: uz
-        description: Language (uz, ru, en)
-        in: query
-        name: lang
-        type: string
-      - description: Search query
-        in: query
-        name: query
-        required: true
-        type: string
-      - default: 20
-        description: Limit
-        in: query
-        name: limit
-        type: integer
-      - default: 0
-        description: Offset
-        in: query
-        name: offset
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            items:
-              $ref: '#/definitions/model.GoodResponse'
-            type: array
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/model.ErrorResponse'
-        "401":
-          description: Unauthorized
-          schema:
-            $ref: '#/definitions/model.ErrorResponse'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/model.ErrorResponse'
-      security:
-      - BearerAuth: []
-      summary: Search goods
-      tags:
-      - Goods
-  /api/v1/goods/search/by-price:
-    get:
-      description: Get goods within a price range with pagination
-      parameters:
-      - default: uz
-        description: Language (uz, ru, en)
-        in: query
-        name: lang
-        type: string
-      - description: Minimum price
-        in: query
-        name: min_price
-        required: true
-        type: string
-      - description: Maximum price
-        in: query
-        name: max_price
-        required: true
-        type: string
-      - default: 20
-        description: Limit
-        in: query
-        name: limit
-        type: integer
-      - default: 0
-        description: Offset
-        in: query
-        name: offset
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            items:
-              $ref: '#/definitions/model.GoodResponse'
-            type: array
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/model.ErrorResponse'
-        "401":
-          description: Unauthorized
-          schema:
-            $ref: '#/definitions/model.ErrorResponse'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/model.ErrorResponse'
-      security:
-      - BearerAuth: []
-      summary: Get goods by price range
-      tags:
-      - Goods
   /api/v1/goods/with-calculations:
     post:
       consumes:
@@ -11634,8 +11766,29 @@ paths:
     get:
       consumes:
       - application/json
-      description: Retrieve all group transactions with pagination
+      description: Retrieve all group transactions with pagination, optional search
+        and sorting
       parameters:
+      - description: Search by group transaction name
+        in: query
+        name: search
+        type: string
+      - default: created_at
+        description: Sort by field
+        enum:
+        - name
+        - created_at
+        in: query
+        name: sort_by
+        type: string
+      - default: desc
+        description: Sort order
+        enum:
+        - asc
+        - desc
+        in: query
+        name: sort_order
+        type: string
       - default: 10
         description: Limit
         in: query
@@ -11652,9 +11805,11 @@ paths:
         "200":
           description: OK
           schema:
-            items:
-              $ref: '#/definitions/model.GroupTransactionResponse'
-            type: array
+            $ref: '#/definitions/model.PaginatedGroupTransactionsResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
@@ -11827,55 +11982,32 @@ paths:
       summary: Restore group transaction
       tags:
       - group-transactions
-  /api/v1/group-transactions/search:
-    get:
-      consumes:
-      - application/json
-      description: Search group transactions by name
-      parameters:
-      - description: Search query
-        in: query
-        name: q
-        required: true
-        type: string
-      - default: 10
-        description: Limit
-        in: query
-        name: limit
-        type: integer
-      - default: 0
-        description: Offset
-        in: query
-        name: offset
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            items:
-              $ref: '#/definitions/model.GroupTransactionResponse'
-            type: array
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/model.ErrorResponse'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/model.ErrorResponse'
-      security:
-      - BearerAuth: []
-      summary: Search group transactions
-      tags:
-      - group-transactions
   /api/v1/halls:
     get:
       consumes:
       - application/json
-      description: Retrieve all halls with pagination
+      description: Retrieve all halls with pagination, optional search and sorting
       parameters:
+      - description: Search by hall name
+        in: query
+        name: search
+        type: string
+      - default: created_at
+        description: Sort by field
+        enum:
+        - name
+        - created_at
+        in: query
+        name: sort_by
+        type: string
+      - default: desc
+        description: Sort order
+        enum:
+        - asc
+        - desc
+        in: query
+        name: sort_order
+        type: string
       - description: 'Limit (default: 20)'
         in: query
         name: limit
@@ -11892,17 +12024,19 @@ paths:
       - application/json
       responses:
         "200":
-          description: Halls found
+          description: OK
           schema:
-            items:
-              $ref: '#/definitions/model.HallResponse'
-            type: array
+            $ref: '#/definitions/model.PaginatedHallsResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
         "401":
           description: Unauthorized
           schema:
             $ref: '#/definitions/model.ErrorResponse'
         "500":
-          description: Internal server error
+          description: Internal Server Error
           schema:
             $ref: '#/definitions/model.ErrorResponse'
       security:
@@ -11950,12 +12084,32 @@ paths:
     get:
       consumes:
       - application/json
-      description: Retrieve all halls with names translated to specified language
-        (uz, ru, en)
+      description: Retrieve all halls with names translated to specified language,
+        with optional search and sorting
       parameters:
       - description: 'Language code (uz, ru, en - default: uz)'
         in: query
         name: lang
+        type: string
+      - description: Search by hall name
+        in: query
+        name: search
+        type: string
+      - default: created_at
+        description: Sort by field
+        enum:
+        - name
+        - created_at
+        in: query
+        name: sort_by
+        type: string
+      - default: desc
+        description: Sort order
+        enum:
+        - asc
+        - desc
+        in: query
+        name: sort_order
         type: string
       - description: 'Limit (default: 20)'
         in: query
@@ -11973,13 +12127,11 @@ paths:
       - application/json
       responses:
         "200":
-          description: Halls retrieved successfully
+          description: OK
           schema:
-            items:
-              $ref: '#/definitions/model.HallResponse'
-            type: array
+            $ref: '#/definitions/model.PaginatedHallsResponse'
         "400":
-          description: Invalid request parameters
+          description: Bad Request
           schema:
             $ref: '#/definitions/model.ErrorResponse'
         "401":
@@ -11987,7 +12139,7 @@ paths:
           schema:
             $ref: '#/definitions/model.ErrorResponse'
         "500":
-          description: Internal server error
+          description: Internal Server Error
           schema:
             $ref: '#/definitions/model.ErrorResponse'
       security:
@@ -12244,51 +12396,6 @@ paths:
       security:
       - BearerAuth: []
       summary: Get all halls with branch  ID -  language support
-      tags:
-      - halls
-  /api/v1/halls/search:
-    get:
-      consumes:
-      - application/json
-      description: Search for halls by name with pagination
-      parameters:
-      - description: Search query
-        in: query
-        name: q
-        required: true
-        type: string
-      - description: 'Limit (default: 20)'
-        in: query
-        name: limit
-        type: integer
-      - description: 'Offset (default: 0)'
-        in: query
-        name: offset
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Halls found
-          schema:
-            items:
-              $ref: '#/definitions/model.HallResponse'
-            type: array
-        "400":
-          description: Invalid request data
-          schema:
-            $ref: '#/definitions/model.ErrorResponse'
-        "401":
-          description: Unauthorized
-          schema:
-            $ref: '#/definitions/model.ErrorResponse'
-        "500":
-          description: Internal server error
-          schema:
-            $ref: '#/definitions/model.ErrorResponse'
-      security:
-      - BearerAuth: []
-      summary: Search halls
       tags:
       - halls
   /api/v1/ingredient-groups:
@@ -13769,7 +13876,7 @@ paths:
     get:
       consumes:
       - application/json
-      description: Retrieve inventories with pagination (limit/offset)
+      description: Retrieve inventories with pagination, filters, search and sorting
       parameters:
       - description: Start date (YYYY-MM-DD)
         in: query
@@ -13791,6 +13898,27 @@ paths:
         in: query
         name: status
         type: string
+      - description: Search by description or number
+        in: query
+        name: search
+        type: string
+      - default: date
+        description: Sort by field
+        enum:
+        - date
+        - number
+        - created_at
+        in: query
+        name: sort_by
+        type: string
+      - default: desc
+        description: Sort order
+        enum:
+        - asc
+        - desc
+        in: query
+        name: sort_order
+        type: string
       - default: 20
         description: 'Limit results (default: 20)'
         in: query
@@ -13809,17 +13937,19 @@ paths:
       - application/json
       responses:
         "200":
-          description: Inventories retrieved successfully
+          description: OK
           schema:
-            items:
-              $ref: '#/definitions/model.InventoryResponse'
-            type: array
+            $ref: '#/definitions/model.PaginatedInventoriesResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
         "401":
           description: Unauthorized
           schema:
             $ref: '#/definitions/model.ErrorResponse'
         "500":
-          description: Internal server error
+          description: Internal Server Error
           schema:
             $ref: '#/definitions/model.ErrorResponse'
       security:
@@ -14289,53 +14419,6 @@ paths:
       security:
       - BearerAuth: []
       summary: Create inventory with items
-      tags:
-      - inventories
-  /api/v1/inventories/search:
-    get:
-      consumes:
-      - application/json
-      description: Search inventories by description or number
-      parameters:
-      - description: Search query
-        in: query
-        name: q
-        required: true
-        type: string
-      - default: 20
-        description: 'Limit results (default: 20)'
-        in: query
-        name: limit
-        type: integer
-      - default: 0
-        description: 'Offset for pagination (default: 0)'
-        in: query
-        name: offset
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Inventories retrieved successfully
-          schema:
-            items:
-              $ref: '#/definitions/model.InventoryResponse'
-            type: array
-        "400":
-          description: Invalid request
-          schema:
-            $ref: '#/definitions/model.ErrorResponse'
-        "401":
-          description: Unauthorized
-          schema:
-            $ref: '#/definitions/model.ErrorResponse'
-        "500":
-          description: Internal server error
-          schema:
-            $ref: '#/definitions/model.ErrorResponse'
-      security:
-      - BearerAuth: []
-      summary: Search inventories
       tags:
       - inventories
   /api/v1/inventory-items:
@@ -14967,7 +15050,7 @@ paths:
   /api/v1/invoices:
     get:
       description: 'Get all invoices with optional filters: date range, storage, supplier,
-        ingredient, status'
+        ingredient, status, search and sorting'
       parameters:
       - default: uz
         description: Language (uz, ru, en)
@@ -15008,6 +15091,27 @@ paths:
         in: query
         name: status
         type: string
+      - description: Search by supplier name, phone or total amount
+        in: query
+        name: search
+        type: string
+      - default: date
+        description: Sort by field
+        enum:
+        - date
+        - created_at
+        - total_amount
+        in: query
+        name: sort_by
+        type: string
+      - default: desc
+        description: Sort order
+        enum:
+        - asc
+        - desc
+        in: query
+        name: sort_order
+        type: string
       - description: Expand related fields
         in: query
         name: expand
@@ -15018,9 +15122,7 @@ paths:
         "200":
           description: OK
           schema:
-            items:
-              $ref: '#/definitions/model.InvoiceResponse'
-            type: array
+            $ref: '#/definitions/model.PaginatedInvoicesResponse'
         "400":
           description: Bad Request
           schema:
@@ -15509,56 +15611,6 @@ paths:
       security:
       - BearerAuth: []
       summary: Create invoice with details in batch
-      tags:
-      - Invoices
-  /api/v1/invoices/search:
-    get:
-      description: Search invoices by supplier name
-      parameters:
-      - default: uz
-        description: Language (uz, ru, en)
-        in: query
-        name: lang
-        type: string
-      - description: Search query (supplier name)
-        in: query
-        name: q
-        required: true
-        type: string
-      - default: 20
-        description: Limit
-        in: query
-        name: limit
-        type: integer
-      - default: 0
-        description: Offset
-        in: query
-        name: offset
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            items:
-              $ref: '#/definitions/model.InvoiceResponse'
-            type: array
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/model.ErrorResponse'
-        "401":
-          description: Unauthorized
-          schema:
-            $ref: '#/definitions/model.ErrorResponse'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/model.ErrorResponse'
-      security:
-      - BearerAuth: []
-      summary: Search invoices
       tags:
       - Invoices
   /api/v1/media/image:
@@ -19508,19 +19560,37 @@ paths:
     get:
       consumes:
       - application/json
-      description: Retrieve all storages with pagination
+      description: Retrieve all storages with pagination, optional search and sorting
       parameters:
-      - default: 20
-        description: 'Limit results (default: 20)'
+      - description: Search by storage name
+        in: query
+        name: search
+        type: string
+      - default: created_at
+        description: Sort by field
+        enum:
+        - name
+        - created_at
+        in: query
+        name: sort_by
+        type: string
+      - default: desc
+        description: Sort order
+        enum:
+        - asc
+        - desc
+        in: query
+        name: sort_order
+        type: string
+      - description: 'Limit (default: 20)'
         in: query
         name: limit
         type: integer
-      - default: 0
-        description: 'Offset for pagination (default: 0)'
+      - description: 'Offset (default: 0)'
         in: query
         name: offset
         type: integer
-      - description: Comma-separated relations to expand (e.g. name_i18n)
+      - description: Expand related fields
         in: query
         name: expand
         type: string
@@ -19528,17 +19598,19 @@ paths:
       - application/json
       responses:
         "200":
-          description: List of all storages
+          description: OK
           schema:
-            items:
-              $ref: '#/definitions/model.StorageResponse'
-            type: array
+            $ref: '#/definitions/model.PaginatedStoragesResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
         "401":
           description: Unauthorized
           schema:
             $ref: '#/definitions/model.ErrorResponse'
         "500":
-          description: Internal server error
+          description: Internal Server Error
           schema:
             $ref: '#/definitions/model.ErrorResponse'
       security:
@@ -19881,28 +19953,41 @@ paths:
       summary: Get storages by branch ID
       tags:
       - storages
-  /api/v1/storages/search:
+  /api/v1/suppliers:
     get:
       consumes:
       - application/json
-      description: Search for storages by name
+      description: Retrieve all suppliers with pagination, optional search and sorting
       parameters:
-      - description: Search query
+      - description: Search by supplier name
         in: query
-        name: q
-        required: true
+        name: search
         type: string
-      - default: 20
-        description: 'Limit results (default: 20)'
+      - default: created_at
+        description: Sort by field
+        enum:
+        - name
+        - created_at
+        in: query
+        name: sort_by
+        type: string
+      - default: desc
+        description: Sort order
+        enum:
+        - asc
+        - desc
+        in: query
+        name: sort_order
+        type: string
+      - description: 'Limit (default: 20)'
         in: query
         name: limit
         type: integer
-      - default: 0
-        description: 'Offset for pagination (default: 0)'
+      - description: 'Offset (default: 0)'
         in: query
         name: offset
         type: integer
-      - description: Comma-separated relations to expand (e.g. name_i18n)
+      - description: Expand related fields
         in: query
         name: expand
         type: string
@@ -19910,56 +19995,9 @@ paths:
       - application/json
       responses:
         "200":
-          description: List of matching storages
-          schema:
-            items:
-              $ref: '#/definitions/model.StorageResponse'
-            type: array
-        "400":
-          description: Invalid parameters
-          schema:
-            $ref: '#/definitions/model.ErrorResponse'
-        "401":
-          description: Unauthorized
-          schema:
-            $ref: '#/definitions/model.ErrorResponse'
-        "500":
-          description: Internal server error
-          schema:
-            $ref: '#/definitions/model.ErrorResponse'
-      security:
-      - BearerAuth: []
-      summary: Search storages
-      tags:
-      - storages
-  /api/v1/suppliers:
-    get:
-      description: Get all suppliers with pagination
-      parameters:
-      - default: uz
-        description: Language (uz, ru, en)
-        in: query
-        name: lang
-        type: string
-      - default: 20
-        description: Limit
-        in: query
-        name: limit
-        type: integer
-      - default: 0
-        description: Offset
-        in: query
-        name: offset
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
           description: OK
           schema:
-            items:
-              $ref: '#/definitions/model.SupplierResponse'
-            type: array
+            $ref: '#/definitions/model.PaginatedSuppliersResponse'
         "400":
           description: Bad Request
           schema:
@@ -20189,56 +20227,6 @@ paths:
       summary: Restore supplier
       tags:
       - Suppliers
-  /api/v1/suppliers/search:
-    get:
-      description: Search suppliers by name
-      parameters:
-      - default: uz
-        description: Language (uz, ru, en)
-        in: query
-        name: lang
-        type: string
-      - description: Search query
-        in: query
-        name: q
-        required: true
-        type: string
-      - default: 20
-        description: Limit
-        in: query
-        name: limit
-        type: integer
-      - default: 0
-        description: Offset
-        in: query
-        name: offset
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            items:
-              $ref: '#/definitions/model.SupplierResponse'
-            type: array
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/model.ErrorResponse'
-        "401":
-          description: Unauthorized
-          schema:
-            $ref: '#/definitions/model.ErrorResponse'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/model.ErrorResponse'
-      security:
-      - BearerAuth: []
-      summary: Search suppliers
-      tags:
-      - Suppliers
   /api/v1/sync/change-logs:
     get:
       consumes:
@@ -20343,44 +20331,78 @@ paths:
       - Sync
   /api/v1/transactions:
     get:
-      description: 'Supports filters: type (income|expense|transfer), cash_register_id,
-        group_id, date_from, date_to'
+      consumes:
+      - application/json
+      description: Retrieve all transactions with pagination, filters, search and
+        sorting
       parameters:
-      - description: 'Filter by type: income, expense, transfer'
+      - description: Search by comment or description
+        in: query
+        name: search
+        type: string
+      - description: Filter by transaction type
         in: query
         name: type
         type: string
-      - description: Filter by cash register
+      - description: Filter by pay type (cash, card)
+        in: query
+        name: pay_type
+        type: string
+      - description: Filter by cash register ID
         in: query
         name: cash_register_id
         type: string
-      - description: Filter by group transaction
+      - description: Filter by group transaction ID
         in: query
-        name: group_id
+        name: group_transaction_id
         type: string
-      - description: Start date (RFC3339)
+      - description: Start date (YYYY-MM-DD)
         in: query
         name: date_from
         type: string
-      - description: End date (RFC3339)
+      - description: End date (YYYY-MM-DD)
         in: query
         name: date_to
         type: string
-      - description: Limit (default 20)
+      - default: created_at
+        description: Sort by field
+        enum:
+        - created_at
+        - amount
+        in: query
+        name: sort_by
+        type: string
+      - default: desc
+        description: Sort order
+        enum:
+        - asc
+        - desc
+        in: query
+        name: sort_order
+        type: string
+      - description: 'Limit (default: 20)'
         in: query
         name: limit
         type: integer
-      - description: Offset (default 0)
+      - description: 'Offset (default: 0)'
         in: query
         name: offset
         type: integer
+      produces:
+      - application/json
       responses:
         "200":
           description: OK
           schema:
-            items:
-              $ref: '#/definitions/model.TransactionResponse'
-            type: array
+            $ref: '#/definitions/model.PaginatedTransactionsResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:

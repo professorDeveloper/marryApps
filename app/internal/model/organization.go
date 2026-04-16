@@ -76,6 +76,20 @@ type UpdateDepartmentRequest struct {
 	En         *string `json:"en,omitempty"`
 }
 
+type StorageListFilter struct {
+	Search    string
+	SortBy    string
+	SortOrder string
+}
+
+type PaginatedStoragesResponse struct {
+	Status     string            `json:"status" example:"success"`
+	Message    string            `json:"message" example:"Storages retrieved successfully"`
+	Data       []StorageResponse `json:"data"`
+	Pagination PaginationMeta    `json:"pagination"`
+	Code       int               `json:"code" example:"200"`
+}
+
 type DepartmentResponse struct {
 	ID         string     `json:"id"`
 	Name       *string    `json:"name"`
@@ -115,6 +129,20 @@ type HallResponse struct {
 	Height    int32      `json:"height"`
 	CreatedAt *time.Time `json:"created_at"`
 	UpdatedAt *time.Time `json:"updated_at"`
+}
+
+type HallListFilter struct {
+	Search    string `json:"search,omitempty"`
+	SortBy    string `json:"sort_by,omitempty"`
+	SortOrder string `json:"sort_order,omitempty"`
+}
+
+type PaginatedHallsResponse struct {
+	Status     string         `json:"status" example:"success"`
+	Message    string         `json:"message" example:"Halls retrieved successfully"`
+	Data       []HallResponse `json:"data"`
+	Pagination PaginationMeta `json:"pagination"`
+	Code       int            `json:"code" example:"200"`
 }
 
 type CreateTranslationRequest struct {

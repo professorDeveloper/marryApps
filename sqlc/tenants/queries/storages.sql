@@ -10,12 +10,49 @@ WHERE id = $1 AND deleted_at = 0
   AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid;
 
 -- name: GetAllStorages :many
-SELECT id, name, branch_id, name_i18n, picture_url, color_code, created_at, updated_at, deleted_at
-FROM storages
-WHERE deleted_at = 0
-  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-ORDER BY created_at DESC
-LIMIT $1 OFFSET $2;
+SELECT
+    s.id,
+    s.name,
+    s.branch_id,
+    s.name_i18n,
+    s.picture_url,
+    s.color_code,
+    s.created_at,
+    s.updated_at,
+    s.deleted_at
+FROM storages s
+LEFT JOIN translations t
+    ON s.name_i18n = t.id
+   AND t.deleted_at = 0
+WHERE s.deleted_at = 0
+  AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  AND (
+        sqlc.arg('search')::text = ''
+        OR COALESCE(s.name, '') ILIKE '%' || sqlc.arg('search')::text || '%'
+        OR COALESCE(t.uz, '') ILIKE '%' || sqlc.arg('search')::text || '%'
+        OR COALESCE(t.ru, '') ILIKE '%' || sqlc.arg('search')::text || '%'
+        OR COALESCE(t.en, '') ILIKE '%' || sqlc.arg('search')::text || '%'
+      )
+ORDER BY
+    CASE
+        WHEN sqlc.arg('sort_by')::text = 'name' AND sqlc.arg('sort_order')::text = 'asc'
+        THEN s.name
+    END ASC,
+    CASE
+        WHEN sqlc.arg('sort_by')::text = 'name' AND sqlc.arg('sort_order')::text = 'desc'
+        THEN s.name
+    END DESC,
+    CASE
+        WHEN sqlc.arg('sort_by')::text = 'created_at' AND sqlc.arg('sort_order')::text = 'asc'
+        THEN s.created_at
+    END ASC,
+    CASE
+        WHEN sqlc.arg('sort_by')::text = 'created_at' AND sqlc.arg('sort_order')::text = 'desc'
+        THEN s.created_at
+    END DESC,
+    s.created_at DESC
+LIMIT sqlc.arg('limit')::int
+OFFSET sqlc.arg('offset')::int;
 
 -- name: GetStoragesByBranchID :many
 SELECT id, name, branch_id, name_i18n, picture_url, color_code, created_at, updated_at, deleted_at
@@ -48,18 +85,22 @@ SET deleted_at = 0
 WHERE id = $1 AND deleted_at != 0
   AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid;
 
--- name: SearchStorages :many
-SELECT id, name, branch_id, name_i18n, picture_url, color_code, created_at, updated_at, deleted_at
-FROM storages
-WHERE deleted_at = 0 AND name ILIKE '%' || $1 || '%'
-  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-ORDER BY created_at DESC
-LIMIT $2 OFFSET $3;
 
 -- name: CountStorages :one
-SELECT COUNT(*) FROM storages
-WHERE deleted_at = 0
-  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid;
+SELECT COUNT(*)
+FROM storages s
+LEFT JOIN translations t
+    ON s.name_i18n = t.id
+   AND t.deleted_at = 0
+WHERE s.deleted_at = 0
+  AND s.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  AND (
+        sqlc.arg('search')::text = ''
+        OR COALESCE(s.name, '') ILIKE '%' || sqlc.arg('search')::text || '%'
+        OR COALESCE(t.uz, '') ILIKE '%' || sqlc.arg('search')::text || '%'
+        OR COALESCE(t.ru, '') ILIKE '%' || sqlc.arg('search')::text || '%'
+        OR COALESCE(t.en, '') ILIKE '%' || sqlc.arg('search')::text || '%'
+      );
 
 -- name: CountStoragesByBranch :one
 SELECT COUNT(*) FROM storages

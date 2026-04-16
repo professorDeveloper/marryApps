@@ -10,12 +10,43 @@ WHERE id = $1 AND deleted_at = 0
   AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid;
 
 -- name: GetAllHalls :many
-SELECT id, branch_id, name, name_i18n, width, height, created_at, updated_at, deleted_at
+SELECT
+    id,
+    branch_id,
+    name,
+    name_i18n,
+    width,
+    height,
+    created_at,
+    updated_at,
+    deleted_at
 FROM halls
 WHERE deleted_at = 0
   AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-ORDER BY created_at DESC
-LIMIT $1 OFFSET $2;
+  AND (
+        sqlc.arg('search')::text = ''
+        OR COALESCE(name, '') ILIKE '%' || sqlc.arg('search')::text || '%'
+      )
+ORDER BY
+    CASE
+        WHEN sqlc.arg('sort_by')::text = 'name' AND sqlc.arg('sort_order')::text = 'asc'
+        THEN name
+    END ASC,
+    CASE
+        WHEN sqlc.arg('sort_by')::text = 'name' AND sqlc.arg('sort_order')::text = 'desc'
+        THEN name
+    END DESC,
+    CASE
+        WHEN sqlc.arg('sort_by')::text = 'created_at' AND sqlc.arg('sort_order')::text = 'asc'
+        THEN created_at
+    END ASC,
+    CASE
+        WHEN sqlc.arg('sort_by')::text = 'created_at' AND sqlc.arg('sort_order')::text = 'desc'
+        THEN created_at
+    END DESC,
+    created_at DESC
+LIMIT sqlc.arg('limit')::int
+OFFSET sqlc.arg('offset')::int;
 
 -- name: GetHallsByBranchID :many
 SELECT id, branch_id, name, name_i18n, width, height, created_at, updated_at, deleted_at
@@ -49,18 +80,15 @@ SET deleted_at = 0
 WHERE id = $1 AND deleted_at != 0
   AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid;
 
--- name: SearchHalls :many
-SELECT id, branch_id, name, name_i18n, width, height, created_at, updated_at, deleted_at
-FROM halls
-WHERE deleted_at = 0 AND name ILIKE '%' || $1 || '%'
-  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-ORDER BY created_at DESC
-LIMIT $2 OFFSET $3;
-
 -- name: CountHalls :one
-SELECT COUNT(*) FROM halls
+SELECT COUNT(*)
+FROM halls
 WHERE deleted_at = 0
-  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid;
+  AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
+  AND (
+        sqlc.arg('search')::text = ''
+        OR COALESCE(name, '') ILIKE '%' || sqlc.arg('search')::text || '%'
+      );
 
 -- name: CountHallsByBranch :one
 SELECT COUNT(*) FROM halls
@@ -86,15 +114,18 @@ WHERE h.id = $1 AND h.deleted_at = 0
   AND h.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid;
 
 -- name: GetAllHallsWithLanguage :many
-SELECT 
+SELECT
     h.id,
     h.branch_id,
-    COALESCE(CASE 
-        WHEN $1::text = 'uz' THEN t.uz
-        WHEN $1::text = 'ru' THEN t.ru
-        WHEN $1::text = 'en' THEN t.en
-        ELSE h.name
-    END, h.name) as name,
+    COALESCE(
+        CASE
+            WHEN sqlc.arg('lang')::text = 'uz' THEN t.uz
+            WHEN sqlc.arg('lang')::text = 'ru' THEN t.ru
+            WHEN sqlc.arg('lang')::text = 'en' THEN t.en
+            ELSE h.name
+        END,
+        h.name
+    ) AS name,
     h.name_i18n,
     h.width,
     h.height,
@@ -102,11 +133,54 @@ SELECT
     h.updated_at,
     h.deleted_at
 FROM halls h
-LEFT JOIN translations t ON h.name_i18n = t.id AND t.deleted_at = 0
+LEFT JOIN translations t
+    ON h.name_i18n = t.id
+   AND t.deleted_at = 0
 WHERE h.deleted_at = 0
   AND h.branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
-ORDER BY h.created_at DESC
-LIMIT $2 OFFSET $3;
+  AND (
+        sqlc.arg('search')::text = ''
+        OR COALESCE(h.name, '') ILIKE '%' || sqlc.arg('search')::text || '%'
+        OR COALESCE(t.uz, '') ILIKE '%' || sqlc.arg('search')::text || '%'
+        OR COALESCE(t.ru, '') ILIKE '%' || sqlc.arg('search')::text || '%'
+        OR COALESCE(t.en, '') ILIKE '%' || sqlc.arg('search')::text || '%'
+      )
+ORDER BY
+    CASE
+        WHEN sqlc.arg('sort_by')::text = 'name' AND sqlc.arg('sort_order')::text = 'asc'
+        THEN COALESCE(
+            CASE
+                WHEN sqlc.arg('lang')::text = 'uz' THEN t.uz
+                WHEN sqlc.arg('lang')::text = 'ru' THEN t.ru
+                WHEN sqlc.arg('lang')::text = 'en' THEN t.en
+                ELSE h.name
+            END,
+            h.name
+        )
+    END ASC,
+    CASE
+        WHEN sqlc.arg('sort_by')::text = 'name' AND sqlc.arg('sort_order')::text = 'desc'
+        THEN COALESCE(
+            CASE
+                WHEN sqlc.arg('lang')::text = 'uz' THEN t.uz
+                WHEN sqlc.arg('lang')::text = 'ru' THEN t.ru
+                WHEN sqlc.arg('lang')::text = 'en' THEN t.en
+                ELSE h.name
+            END,
+            h.name
+        )
+    END DESC,
+    CASE
+        WHEN sqlc.arg('sort_by')::text = 'created_at' AND sqlc.arg('sort_order')::text = 'asc'
+        THEN h.created_at
+    END ASC,
+    CASE
+        WHEN sqlc.arg('sort_by')::text = 'created_at' AND sqlc.arg('sort_order')::text = 'desc'
+        THEN h.created_at
+    END DESC,
+    h.created_at DESC
+LIMIT sqlc.arg('limit')::int
+OFFSET sqlc.arg('offset')::int;
 
 -- name: GetHallsByBranchIDWithLanguage :many
 SELECT
