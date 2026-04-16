@@ -1,7 +1,11 @@
 {
   "permissions": {
     "allow": [
-      "Bash(grep -E \"\\\\.\\(go\\)$\")"
+      "Bash(grep -E \"\\\\.\\(go\\)$\")",
+      "Bash(go test *)",
+      "Bash(go mod *)",
+      "Bash(git status *)",
+      "Bash(git add *)"
     ]
   }
 }
