@@ -595,9 +595,9 @@ func (s *InventoryS) ReplaceInventoryItems(ctx context.Context, inventoryID stri
 					if err != nil {
 						return nil, fmt.Errorf("failed to update stock: %w", err)
 					}
-					eventType := "inventory_in"
+					eventType := string(pg.InventoryIn)
 					if numericToFloat(newQty) < numericToFloat(locked.Quantity) {
-						eventType = "inventory_out"
+						eventType = string(pg.InventoryOut)
 					}
 					srcID := invID
 					var effectiveAt *pgtype.Timestamptz
@@ -628,9 +628,9 @@ func (s *InventoryS) ReplaceInventoryItems(ctx context.Context, inventoryID stri
 					if err != nil {
 						return nil, fmt.Errorf("failed to update stock: %w", err)
 					}
-					eventType := "inventory_in"
+					eventType := string(pg.InventoryIn)
 					if adjustment < 0 {
-						eventType = "inventory_out"
+						eventType = string(pg.InventoryOut)
 					}
 					srcID := invID
 					var effectiveAt *pgtype.Timestamptz
@@ -702,7 +702,7 @@ func (s *InventoryS) ReplaceInventoryItems(ctx context.Context, inventoryID stri
 				}
 				_ = s.repo.Tenant(ctx).InsertIngredientStockMovement(ctx, pg.InsertIngredientStockMovementParams{
 					ID: uuid.New(), StorageID: inv.StorageID, IngredientID: ingID,
-					EventType: "inventory_item_removed", QtyIn: zero, QtyOut: zero,
+					EventType: string(pg.InventoryItemRemoved), QtyIn: zero, QtyOut: zero,
 					StockBefore: locked.Quantity, StockAfter: updated.Quantity,
 					PricePerUnit: zero, SourceType: &sourceType, SourceID: &srcID,
 					EffectiveAt: effectiveAt,
@@ -879,7 +879,7 @@ func (s *InventoryS) DeleteInventoryItem(ctx context.Context, inventoryItemID st
 			}
 			_ = s.repo.Tenant(ctx).InsertIngredientStockMovement(ctx, pg.InsertIngredientStockMovementParams{
 				ID: uuid.New(), StorageID: inv.StorageID, IngredientID: item.IngredientID,
-				EventType: "inventory_item_deleted", QtyIn: zero, QtyOut: zero,
+				EventType: string(pg.InventoryItemDeleted), QtyIn: zero, QtyOut: zero,
 				StockBefore: locked.Quantity, StockAfter: restored.Quantity,
 				PricePerUnit: zero, SourceType: &sourceType, SourceID: &srcID,
 				EffectiveAt: effectiveAt,
@@ -992,9 +992,9 @@ func (s *InventoryS) applyStockForItems(ctx context.Context, invID uuid.UUID, st
 			if err != nil {
 				return fmt.Errorf("failed to apply stock: %w", err)
 			}
-			ev := "inventory_in"
+			ev := string(pg.InventoryIn)
 			if numericToFloat(refreshed.CountedQuantity) < numericToFloat(locked.Quantity) {
-				ev = "inventory_out"
+				ev = string(pg.InventoryOut)
 			}
 			srcID := invID
 			// Convert inventory date to TIMESTAMPTZ for effective_at

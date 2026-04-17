@@ -17,23 +17,57 @@ type IngredientReportRow struct {
 	BeginQty pgtype.Numeric `json:"begin_qty"`
 	EndQty   pgtype.Numeric `json:"end_qty"`
 
-	InvoiceInQty    pgtype.Numeric `json:"invoice_in_qty"`
-	OrderOutQty     pgtype.Numeric `json:"order_out_qty"`
-	DeductionOutQty pgtype.Numeric `json:"deduction_out_qty"`
-	SurplusQty      pgtype.Numeric `json:"surplus_qty"`
-	ShortageQty     pgtype.Numeric `json:"shortage_qty"`
-
 	CostStart pgtype.Numeric `json:"cost_start"`
 	CostEnd   pgtype.Numeric `json:"cost_end"`
 
 	BeginAmount pgtype.Numeric `json:"begin_amount"`
 	EndAmount   pgtype.Numeric `json:"end_amount"`
 
-	InvoiceInAmount    pgtype.Numeric `json:"invoice_in_amount"`
-	OrderOutAmount     pgtype.Numeric `json:"order_out_amount"`
+	AddedQty       pgtype.Numeric `json:"added_qty"`
+	RemovedQty     pgtype.Numeric `json:"removed_qty"`
+	AddedAmount    pgtype.Numeric `json:"added_amount"`
+	RemovedAmount  pgtype.Numeric `json:"removed_amount"`
+
+	InvoiceInQty    pgtype.Numeric `json:"invoice_in_qty"`
+	InvoiceInAmount pgtype.Numeric `json:"invoice_in_amount"`
+	InvoiceOutQty   pgtype.Numeric `json:"invoice_out_qty"`
+	InvoiceOutAmount pgtype.Numeric `json:"invoice_out_amount"`
+
+	OrderOutQty    pgtype.Numeric `json:"order_out_qty"`
+	OrderOutAmount pgtype.Numeric `json:"order_out_amount"`
+
+	DeductionOutQty    pgtype.Numeric `json:"deduction_out_qty"`
 	DeductionOutAmount pgtype.Numeric `json:"deduction_out_amount"`
-	SurplusAmount      pgtype.Numeric `json:"surplus_amount"`
-	ShortageAmount     pgtype.Numeric `json:"shortage_amount"`
+
+	TransferInQty    pgtype.Numeric `json:"transfer_in_qty"`
+	TransferInAmount pgtype.Numeric `json:"transfer_in_amount"`
+	TransferOutQty   pgtype.Numeric `json:"transfer_out_qty"`
+	TransferOutAmount pgtype.Numeric `json:"transfer_out_amount"`
+
+	OutgoingInvoiceInQty    pgtype.Numeric `json:"outgoing_invoice_in_qty"`
+	OutgoingInvoiceInAmount pgtype.Numeric `json:"outgoing_invoice_in_amount"`
+	OutgoingInvoiceOutQty   pgtype.Numeric `json:"outgoing_invoice_out_qty"`
+	OutgoingInvoiceOutAmount pgtype.Numeric `json:"outgoing_invoice_out_amount"`
+
+	SeparationActInQty    pgtype.Numeric `json:"separation_act_in_qty"`
+	SeparationActInAmount pgtype.Numeric `json:"separation_act_in_amount"`
+	SeparationActOutQty   pgtype.Numeric `json:"separation_act_out_qty"`
+	SeparationActOutAmount pgtype.Numeric `json:"separation_act_out_amount"`
+
+	ShipmentInQty    pgtype.Numeric `json:"shipment_in_qty"`
+	ShipmentInAmount pgtype.Numeric `json:"shipment_in_amount"`
+	ShipmentOutQty   pgtype.Numeric `json:"shipment_out_qty"`
+	ShipmentOutAmount pgtype.Numeric `json:"shipment_out_amount"`
+
+	ManualInQty    pgtype.Numeric `json:"manual_in_qty"`
+	ManualInAmount pgtype.Numeric `json:"manual_in_amount"`
+	ManualOutQty   pgtype.Numeric `json:"manual_out_qty"`
+	ManualOutAmount pgtype.Numeric `json:"manual_out_amount"`
+
+	InventoryInQty    pgtype.Numeric `json:"inventory_in_qty"`
+	InventoryInAmount pgtype.Numeric `json:"inventory_in_amount"`
+	InventoryOutQty   pgtype.Numeric `json:"inventory_out_qty"`
+	InventoryOutAmount pgtype.Numeric `json:"inventory_out_amount"`
 }
 
 type GetIngredientReportParams struct {
@@ -46,8 +80,9 @@ type GetIngredientReportParams struct {
 }
 
 type IngredientReportTotalsRow struct {
-	TotalCount          int64          `json:"total_count"`
-	TotalOrderOutAmount pgtype.Numeric `json:"total_order_out_amount"`
+	TotalCount       int64          `json:"total_count"`
+	TotalAddedAmount pgtype.Numeric `json:"total_added_amount"`
+	TotalRemovedAmount pgtype.Numeric `json:"total_removed_amount"`
 }
 
 func (q *Queries) GetIngredientReport(ctx context.Context, arg GetIngredientReportParams) ([]IngredientReportRow, error) {
@@ -95,10 +130,36 @@ sums AS (
 			'invoice_restore_in',
 			'invoice_storage_move_in'
 		) THEN m.qty_in ELSE 0 END), 0)::numeric(18,6) AS invoice_in_qty,
+		COALESCE(SUM(CASE WHEN m.event_type IN (
+			'invoice_update_out',
+			'invoice_storage_move_out'
+		) THEN m.qty_out ELSE 0 END), 0)::numeric(18,6) AS invoice_out_qty,
 		COALESCE(SUM(CASE WHEN m.event_type = 'order_out' THEN m.qty_out ELSE 0 END), 0)::numeric(18,6) AS order_out_qty,
 		COALESCE(SUM(CASE WHEN m.event_type = 'deduction_out' THEN m.qty_out ELSE 0 END), 0)::numeric(18,6) AS deduction_out_qty,
-		COALESCE(SUM(CASE WHEN m.event_type = 'inventory_surplus_in' THEN m.qty_in ELSE 0 END), 0)::numeric(18,6) AS surplus_qty,
-		COALESCE(SUM(CASE WHEN m.event_type = 'inventory_shortage_out' THEN m.qty_out ELSE 0 END), 0)::numeric(18,6) AS shortage_qty,
+		COALESCE(SUM(CASE WHEN m.event_type = 'transfer_in' THEN m.qty_in ELSE 0 END), 0)::numeric(18,6) AS transfer_in_qty,
+		COALESCE(SUM(CASE WHEN m.event_type = 'transfer_out' THEN m.qty_out ELSE 0 END), 0)::numeric(18,6) AS transfer_out_qty,
+		COALESCE(SUM(CASE WHEN m.event_type = 'outgoing_invoice_deleted_in' THEN m.qty_in ELSE 0 END), 0)::numeric(18,6) AS outgoing_invoice_in_qty,
+		COALESCE(SUM(CASE WHEN m.event_type = 'outgoing_invoice_out' THEN m.qty_out ELSE 0 END), 0)::numeric(18,6) AS outgoing_invoice_out_qty,
+		COALESCE(SUM(CASE WHEN m.event_type IN (
+			'separation_act_in',
+			'separation_act_out_reversed'
+		) THEN m.qty_in ELSE 0 END), 0)::numeric(18,6) AS separation_act_in_qty,
+		COALESCE(SUM(CASE WHEN m.event_type IN (
+			'separation_act_out',
+			'separation_act_in_reversed'
+		) THEN m.qty_out ELSE 0 END), 0)::numeric(18,6) AS separation_act_out_qty,
+		COALESCE(SUM(CASE WHEN m.event_type IN (
+			'shipment_item_update_reverse',
+			'shipment_item_deleted_in',
+			'shipment_storage_change_in',
+			'shipment_deactivated_in',
+			'shipment_deleted_in'
+		) THEN m.qty_in ELSE 0 END), 0)::numeric(18,6) AS shipment_in_qty,
+		COALESCE(SUM(CASE WHEN m.event_type = 'shipment_out' THEN m.qty_out ELSE 0 END), 0)::numeric(18,6) AS shipment_out_qty,
+		COALESCE(SUM(CASE WHEN m.event_type = 'manual_in' THEN m.qty_in ELSE 0 END), 0)::numeric(18,6) AS manual_in_qty,
+		COALESCE(SUM(CASE WHEN m.event_type = 'manual_out' THEN m.qty_out ELSE 0 END), 0)::numeric(18,6) AS manual_out_qty,
+		COALESCE(SUM(CASE WHEN m.event_type IN ('inventory_in', 'inventory_item_removed', 'inventory_item_deleted', 'manual_adjustment') THEN m.qty_in ELSE 0 END), 0)::numeric(18,6) AS inventory_in_qty,
+		COALESCE(SUM(CASE WHEN m.event_type IN ('inventory_out', 'inventory_surplus_in', 'inventory_shortage_out') THEN m.qty_out ELSE 0 END), 0)::numeric(18,6) AS inventory_out_qty,
 
 		COALESCE(SUM(CASE WHEN m.event_type IN (
 			'invoice_in',
@@ -106,10 +167,36 @@ sums AS (
 			'invoice_restore_in',
 			'invoice_storage_move_in'
 		) THEN (m.qty_in * m.price_per_unit) ELSE 0 END), 0)::numeric(18,2) AS invoice_in_amount,
+		COALESCE(SUM(CASE WHEN m.event_type IN (
+			'invoice_update_out',
+			'invoice_storage_move_out'
+		) THEN (m.qty_out * m.price_per_unit) ELSE 0 END), 0)::numeric(18,2) AS invoice_out_amount,
 		COALESCE(SUM(CASE WHEN m.event_type = 'order_out' THEN (m.qty_out * m.price_per_unit) ELSE 0 END), 0)::numeric(18,2) AS order_out_amount,
 		COALESCE(SUM(CASE WHEN m.event_type = 'deduction_out' THEN (m.qty_out * m.price_per_unit) ELSE 0 END), 0)::numeric(18,2) AS deduction_out_amount,
-		COALESCE(SUM(CASE WHEN m.event_type = 'inventory_surplus_in' THEN (m.qty_in * m.price_per_unit) ELSE 0 END), 0)::numeric(18,2) AS surplus_amount,
-		COALESCE(SUM(CASE WHEN m.event_type = 'inventory_shortage_out' THEN (m.qty_out * m.price_per_unit) ELSE 0 END), 0)::numeric(18,2) AS shortage_amount
+		COALESCE(SUM(CASE WHEN m.event_type = 'transfer_in' THEN (m.qty_in * m.price_per_unit) ELSE 0 END), 0)::numeric(18,2) AS transfer_in_amount,
+		COALESCE(SUM(CASE WHEN m.event_type = 'transfer_out' THEN (m.qty_out * m.price_per_unit) ELSE 0 END), 0)::numeric(18,2) AS transfer_out_amount,
+		COALESCE(SUM(CASE WHEN m.event_type = 'outgoing_invoice_deleted_in' THEN (m.qty_in * m.price_per_unit) ELSE 0 END), 0)::numeric(18,2) AS outgoing_invoice_in_amount,
+		COALESCE(SUM(CASE WHEN m.event_type = 'outgoing_invoice_out' THEN (m.qty_out * m.price_per_unit) ELSE 0 END), 0)::numeric(18,2) AS outgoing_invoice_out_amount,
+		COALESCE(SUM(CASE WHEN m.event_type IN (
+			'separation_act_in',
+			'separation_act_out_reversed'
+		) THEN (m.qty_in * m.price_per_unit) ELSE 0 END), 0)::numeric(18,2) AS separation_act_in_amount,
+		COALESCE(SUM(CASE WHEN m.event_type IN (
+			'separation_act_out',
+			'separation_act_in_reversed'
+		) THEN (m.qty_out * m.price_per_unit) ELSE 0 END), 0)::numeric(18,2) AS separation_act_out_amount,
+		COALESCE(SUM(CASE WHEN m.event_type IN (
+			'shipment_item_update_reverse',
+			'shipment_item_deleted_in',
+			'shipment_storage_change_in',
+			'shipment_deactivated_in',
+			'shipment_deleted_in'
+		) THEN (m.qty_in * m.price_per_unit) ELSE 0 END), 0)::numeric(18,2) AS shipment_in_amount,
+		COALESCE(SUM(CASE WHEN m.event_type = 'shipment_out' THEN (m.qty_out * m.price_per_unit) ELSE 0 END), 0)::numeric(18,2) AS shipment_out_amount,
+		COALESCE(SUM(CASE WHEN m.event_type = 'manual_in' THEN (m.qty_in * m.price_per_unit) ELSE 0 END), 0)::numeric(18,2) AS manual_in_amount,
+		COALESCE(SUM(CASE WHEN m.event_type = 'manual_out' THEN (m.qty_out * m.price_per_unit) ELSE 0 END), 0)::numeric(18,2) AS manual_out_amount,
+		COALESCE(SUM(CASE WHEN m.event_type IN ('inventory_in', 'inventory_item_removed', 'inventory_item_deleted', 'manual_adjustment') THEN (m.qty_in * m.price_per_unit) ELSE 0 END), 0)::numeric(18,2) AS inventory_in_amount,
+		COALESCE(SUM(CASE WHEN m.event_type IN ('inventory_out', 'inventory_surplus_in', 'inventory_shortage_out') THEN (m.qty_out * m.price_per_unit) ELSE 0 END), 0)::numeric(18,2) AS inventory_out_amount
 	FROM ingredient_stock_movements m
 	JOIN params p ON p.storage_id = m.storage_id
 	WHERE COALESCE(m.effective_at, m.created_at) >= p.start_ts AND COALESCE(m.effective_at, m.created_at) < p.end_ts
@@ -146,23 +233,57 @@ SELECT
 	b.begin_qty,
 	e.end_qty,
 
-	COALESCE(s.invoice_in_qty, 0)::numeric(18,6) AS invoice_in_qty,
-	COALESCE(s.order_out_qty, 0)::numeric(18,6) AS order_out_qty,
-	COALESCE(s.deduction_out_qty, 0)::numeric(18,6) AS deduction_out_qty,
-	COALESCE(s.surplus_qty, 0)::numeric(18,6) AS surplus_qty,
-	COALESCE(s.shortage_qty, 0)::numeric(18,6) AS shortage_qty,
-
 	COALESCE(cs.price_per_unit, 0)::numeric(18,2) AS cost_start,
 	COALESCE(ce.price_per_unit, COALESCE(cs.price_per_unit, 0))::numeric(18,2) AS cost_end,
 
 	(b.begin_qty * COALESCE(cs.price_per_unit, 0))::numeric(18,2) AS begin_amount,
 	(e.end_qty * COALESCE(ce.price_per_unit, COALESCE(cs.price_per_unit, 0)))::numeric(18,2) AS end_amount,
 
+	(COALESCE(s.invoice_in_qty, 0) + COALESCE(s.transfer_in_qty, 0) + COALESCE(s.outgoing_invoice_in_qty, 0) + COALESCE(s.separation_act_in_qty, 0) + COALESCE(s.shipment_in_qty, 0) + COALESCE(s.manual_in_qty, 0) + COALESCE(s.inventory_in_qty, 0))::numeric(18,6) AS added_qty,
+	(COALESCE(s.invoice_out_qty, 0) + COALESCE(s.order_out_qty, 0) + COALESCE(s.deduction_out_qty, 0) + COALESCE(s.transfer_out_qty, 0) + COALESCE(s.outgoing_invoice_out_qty, 0) + COALESCE(s.separation_act_out_qty, 0) + COALESCE(s.shipment_out_qty, 0) + COALESCE(s.manual_out_qty, 0) + COALESCE(s.inventory_out_qty, 0))::numeric(18,6) AS removed_qty,
+	(COALESCE(s.invoice_in_amount, 0) + COALESCE(s.transfer_in_amount, 0) + COALESCE(s.outgoing_invoice_in_amount, 0) + COALESCE(s.separation_act_in_amount, 0) + COALESCE(s.shipment_in_amount, 0) + COALESCE(s.manual_in_amount, 0) + COALESCE(s.inventory_in_amount, 0))::numeric(18,2) AS added_amount,
+	(COALESCE(s.invoice_out_amount, 0) + COALESCE(s.order_out_amount, 0) + COALESCE(s.deduction_out_amount, 0) + COALESCE(s.transfer_out_amount, 0) + COALESCE(s.outgoing_invoice_out_amount, 0) + COALESCE(s.separation_act_out_amount, 0) + COALESCE(s.shipment_out_amount, 0) + COALESCE(s.manual_out_amount, 0) + COALESCE(s.inventory_out_amount, 0))::numeric(18,2) AS removed_amount,
+
+	COALESCE(s.invoice_in_qty, 0)::numeric(18,6) AS invoice_in_qty,
 	COALESCE(s.invoice_in_amount, 0)::numeric(18,2) AS invoice_in_amount,
+	COALESCE(s.invoice_out_qty, 0)::numeric(18,6) AS invoice_out_qty,
+	COALESCE(s.invoice_out_amount, 0)::numeric(18,2) AS invoice_out_amount,
+
+	COALESCE(s.order_out_qty, 0)::numeric(18,6) AS order_out_qty,
 	COALESCE(s.order_out_amount, 0)::numeric(18,2) AS order_out_amount,
+
+	COALESCE(s.deduction_out_qty, 0)::numeric(18,6) AS deduction_out_qty,
 	COALESCE(s.deduction_out_amount, 0)::numeric(18,2) AS deduction_out_amount,
-	COALESCE(s.surplus_amount, 0)::numeric(18,2) AS surplus_amount,
-	COALESCE(s.shortage_amount, 0)::numeric(18,2) AS shortage_amount
+
+	COALESCE(s.transfer_in_qty, 0)::numeric(18,6) AS transfer_in_qty,
+	COALESCE(s.transfer_in_amount, 0)::numeric(18,2) AS transfer_in_amount,
+	COALESCE(s.transfer_out_qty, 0)::numeric(18,6) AS transfer_out_qty,
+	COALESCE(s.transfer_out_amount, 0)::numeric(18,2) AS transfer_out_amount,
+
+	COALESCE(s.outgoing_invoice_in_qty, 0)::numeric(18,6) AS outgoing_invoice_in_qty,
+	COALESCE(s.outgoing_invoice_in_amount, 0)::numeric(18,2) AS outgoing_invoice_in_amount,
+	COALESCE(s.outgoing_invoice_out_qty, 0)::numeric(18,6) AS outgoing_invoice_out_qty,
+	COALESCE(s.outgoing_invoice_out_amount, 0)::numeric(18,2) AS outgoing_invoice_out_amount,
+
+	COALESCE(s.separation_act_in_qty, 0)::numeric(18,6) AS separation_act_in_qty,
+	COALESCE(s.separation_act_in_amount, 0)::numeric(18,2) AS separation_act_in_amount,
+	COALESCE(s.separation_act_out_qty, 0)::numeric(18,6) AS separation_act_out_qty,
+	COALESCE(s.separation_act_out_amount, 0)::numeric(18,2) AS separation_act_out_amount,
+
+	COALESCE(s.shipment_in_qty, 0)::numeric(18,6) AS shipment_in_qty,
+	COALESCE(s.shipment_in_amount, 0)::numeric(18,2) AS shipment_in_amount,
+	COALESCE(s.shipment_out_qty, 0)::numeric(18,6) AS shipment_out_qty,
+	COALESCE(s.shipment_out_amount, 0)::numeric(18,2) AS shipment_out_amount,
+
+	COALESCE(s.manual_in_qty, 0)::numeric(18,6) AS manual_in_qty,
+	COALESCE(s.manual_in_amount, 0)::numeric(18,2) AS manual_in_amount,
+	COALESCE(s.manual_out_qty, 0)::numeric(18,6) AS manual_out_qty,
+	COALESCE(s.manual_out_amount, 0)::numeric(18,2) AS manual_out_amount,
+
+	COALESCE(s.inventory_in_qty, 0)::numeric(18,6) AS inventory_in_qty,
+	COALESCE(s.inventory_in_amount, 0)::numeric(18,2) AS inventory_in_amount,
+	COALESCE(s.inventory_out_qty, 0)::numeric(18,6) AS inventory_out_qty,
+	COALESCE(s.inventory_out_amount, 0)::numeric(18,2) AS inventory_out_amount
 FROM base_ingredients bi
 JOIN ingredients i ON i.id = bi.ingredient_id AND i.deleted_at = 0
 JOIN begin_qty b ON b.ingredient_id = bi.ingredient_id
@@ -202,23 +323,57 @@ LIMIT $5 OFFSET $6
 			&r.BeginQty,
 			&r.EndQty,
 
-			&r.InvoiceInQty,
-			&r.OrderOutQty,
-			&r.DeductionOutQty,
-			&r.SurplusQty,
-			&r.ShortageQty,
-
 			&r.CostStart,
 			&r.CostEnd,
 
 			&r.BeginAmount,
 			&r.EndAmount,
 
+			&r.AddedQty,
+			&r.RemovedQty,
+			&r.AddedAmount,
+			&r.RemovedAmount,
+
+			&r.InvoiceInQty,
 			&r.InvoiceInAmount,
+			&r.InvoiceOutQty,
+			&r.InvoiceOutAmount,
+
+			&r.OrderOutQty,
 			&r.OrderOutAmount,
+
+			&r.DeductionOutQty,
 			&r.DeductionOutAmount,
-			&r.SurplusAmount,
-			&r.ShortageAmount,
+
+			&r.TransferInQty,
+			&r.TransferInAmount,
+			&r.TransferOutQty,
+			&r.TransferOutAmount,
+
+			&r.OutgoingInvoiceInQty,
+			&r.OutgoingInvoiceInAmount,
+			&r.OutgoingInvoiceOutQty,
+			&r.OutgoingInvoiceOutAmount,
+
+			&r.SeparationActInQty,
+			&r.SeparationActInAmount,
+			&r.SeparationActOutQty,
+			&r.SeparationActOutAmount,
+
+			&r.ShipmentInQty,
+			&r.ShipmentInAmount,
+			&r.ShipmentOutQty,
+			&r.ShipmentOutAmount,
+
+			&r.ManualInQty,
+			&r.ManualInAmount,
+			&r.ManualOutQty,
+			&r.ManualOutAmount,
+
+			&r.InventoryInQty,
+			&r.InventoryInAmount,
+			&r.InventoryOutQty,
+			&r.InventoryOutAmount,
 		); err != nil {
 			return nil, err
 		}
@@ -245,7 +400,42 @@ base_ingredients AS (
 sums AS (
 	SELECT
 		m.ingredient_id,
-		COALESCE(SUM(CASE WHEN m.event_type = 'order_out' THEN (m.qty_out * m.price_per_unit) ELSE 0 END), 0)::numeric(18,2) AS order_out_amount
+		COALESCE(SUM(CASE WHEN m.event_type IN (
+			'invoice_in',
+			'invoice_update_in',
+			'invoice_restore_in',
+			'invoice_storage_move_in'
+		) THEN (m.qty_in * m.price_per_unit) ELSE 0 END), 0)::numeric(18,2) AS invoice_in_amount,
+		COALESCE(SUM(CASE WHEN m.event_type IN (
+			'invoice_update_out',
+			'invoice_storage_move_out'
+		) THEN (m.qty_out * m.price_per_unit) ELSE 0 END), 0)::numeric(18,2) AS invoice_out_amount,
+		COALESCE(SUM(CASE WHEN m.event_type = 'order_out' THEN (m.qty_out * m.price_per_unit) ELSE 0 END), 0)::numeric(18,2) AS order_out_amount,
+		COALESCE(SUM(CASE WHEN m.event_type = 'deduction_out' THEN (m.qty_out * m.price_per_unit) ELSE 0 END), 0)::numeric(18,2) AS deduction_out_amount,
+		COALESCE(SUM(CASE WHEN m.event_type = 'transfer_in' THEN (m.qty_in * m.price_per_unit) ELSE 0 END), 0)::numeric(18,2) AS transfer_in_amount,
+		COALESCE(SUM(CASE WHEN m.event_type = 'transfer_out' THEN (m.qty_out * m.price_per_unit) ELSE 0 END), 0)::numeric(18,2) AS transfer_out_amount,
+		COALESCE(SUM(CASE WHEN m.event_type = 'outgoing_invoice_deleted_in' THEN (m.qty_in * m.price_per_unit) ELSE 0 END), 0)::numeric(18,2) AS outgoing_invoice_in_amount,
+		COALESCE(SUM(CASE WHEN m.event_type = 'outgoing_invoice_out' THEN (m.qty_out * m.price_per_unit) ELSE 0 END), 0)::numeric(18,2) AS outgoing_invoice_out_amount,
+		COALESCE(SUM(CASE WHEN m.event_type IN (
+			'separation_act_in',
+			'separation_act_out_reversed'
+		) THEN (m.qty_in * m.price_per_unit) ELSE 0 END), 0)::numeric(18,2) AS separation_act_in_amount,
+		COALESCE(SUM(CASE WHEN m.event_type IN (
+			'separation_act_out',
+			'separation_act_in_reversed'
+		) THEN (m.qty_out * m.price_per_unit) ELSE 0 END), 0)::numeric(18,2) AS separation_act_out_amount,
+		COALESCE(SUM(CASE WHEN m.event_type IN (
+			'shipment_item_update_reverse',
+			'shipment_item_deleted_in',
+			'shipment_storage_change_in',
+			'shipment_deactivated_in',
+			'shipment_deleted_in'
+		) THEN (m.qty_in * m.price_per_unit) ELSE 0 END), 0)::numeric(18,2) AS shipment_in_amount,
+		COALESCE(SUM(CASE WHEN m.event_type = 'shipment_out' THEN (m.qty_out * m.price_per_unit) ELSE 0 END), 0)::numeric(18,2) AS shipment_out_amount,
+		COALESCE(SUM(CASE WHEN m.event_type = 'manual_in' THEN (m.qty_in * m.price_per_unit) ELSE 0 END), 0)::numeric(18,2) AS manual_in_amount,
+		COALESCE(SUM(CASE WHEN m.event_type = 'manual_out' THEN (m.qty_out * m.price_per_unit) ELSE 0 END), 0)::numeric(18,2) AS manual_out_amount,
+		COALESCE(SUM(CASE WHEN m.event_type IN ('inventory_in', 'inventory_item_removed', 'inventory_item_deleted', 'manual_adjustment') THEN (m.qty_in * m.price_per_unit) ELSE 0 END), 0)::numeric(18,2) AS inventory_in_amount,
+		COALESCE(SUM(CASE WHEN m.event_type IN ('inventory_out', 'inventory_surplus_in', 'inventory_shortage_out') THEN (m.qty_out * m.price_per_unit) ELSE 0 END), 0)::numeric(18,2) AS inventory_out_amount
 	FROM ingredient_stock_movements m
 	JOIN params p ON p.storage_id = m.storage_id
 	WHERE COALESCE(m.effective_at, m.created_at) >= p.start_ts AND COALESCE(m.effective_at, m.created_at) < p.end_ts
@@ -254,7 +444,8 @@ sums AS (
 )
 SELECT
 	COUNT(DISTINCT bi.ingredient_id)::bigint AS total_count,
-	COALESCE(SUM(s.order_out_amount), 0)::numeric(18,2) AS total_order_out_amount
+	COALESCE(SUM(s.invoice_in_amount + s.transfer_in_amount + s.outgoing_invoice_in_amount + s.separation_act_in_amount + s.shipment_in_amount + s.manual_in_amount + s.inventory_in_amount), 0)::numeric(18,2) AS total_added_amount,
+	COALESCE(SUM(s.invoice_out_amount + s.order_out_amount + s.deduction_out_amount + s.transfer_out_amount + s.outgoing_invoice_out_amount + s.separation_act_out_amount + s.shipment_out_amount + s.manual_out_amount + s.inventory_out_amount), 0)::numeric(18,2) AS total_removed_amount
 FROM base_ingredients bi
 JOIN ingredients i ON i.id = bi.ingredient_id AND i.deleted_at = 0
 LEFT JOIN sums s ON s.ingredient_id = bi.ingredient_id
@@ -265,7 +456,7 @@ LEFT JOIN sums s ON s.ingredient_id = bi.ingredient_id
 	}
 	row := q.db.QueryRow(ctx, sql, arg.StorageID, arg.Start, arg.End, ingredientID)
 	var out IngredientReportTotalsRow
-	if err := row.Scan(&out.TotalCount, &out.TotalOrderOutAmount); err != nil {
+	if err := row.Scan(&out.TotalCount, &out.TotalAddedAmount, &out.TotalRemovedAmount); err != nil {
 		return IngredientReportTotalsRow{}, err
 	}
 	return out, nil

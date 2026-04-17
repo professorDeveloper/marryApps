@@ -533,7 +533,7 @@ func (s *DeductionS) applyDeductionItemStock(ctx context.Context, deductionID uu
 				ID:           uuid.New(),
 				StorageID:    uuid.UUID(storagePg.Bytes),
 				IngredientID: u.ingredientID,
-				EventType:    "deduction_out",
+				EventType:    string(pg.DeductionOut),
 				QtyIn:        zero,
 				QtyOut:       requestedQty,
 				StockBefore:  stockBefore,

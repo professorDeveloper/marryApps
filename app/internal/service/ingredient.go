@@ -269,31 +269,66 @@ func (i *IngredientS) GetIngredientReport(ctx context.Context, req model.GetIngr
 			BeginQty: numericToStr(r.BeginQty),
 			EndQty:   numericToStr(r.EndQty),
 
-			InvoiceInQty:    numericToStr(r.InvoiceInQty),
-			OrderOutQty:     numericToStr(r.OrderOutQty),
-			DeductionOutQty: numericToStr(r.DeductionOutQty),
-			SurplusQty:      numericToStr(r.SurplusQty),
-			ShortageQty:     numericToStr(r.ShortageQty),
-
 			CostStart: numericToStr(r.CostStart),
 			CostEnd:   numericToStr(r.CostEnd),
 
 			BeginAmount: numericToStr(r.BeginAmount),
 			EndAmount:   numericToStr(r.EndAmount),
 
-			InvoiceInAmount:    numericToStr(r.InvoiceInAmount),
-			OrderOutAmount:     numericToStr(r.OrderOutAmount),
+			AddedQty:       numericToStr(r.AddedQty),
+			RemovedQty:     numericToStr(r.RemovedQty),
+			AddedAmount:    numericToStr(r.AddedAmount),
+			RemovedAmount:  numericToStr(r.RemovedAmount),
+
+			InvoiceInQty:     numericToStr(r.InvoiceInQty),
+			InvoiceInAmount:  numericToStr(r.InvoiceInAmount),
+			InvoiceOutQty:    numericToStr(r.InvoiceOutQty),
+			InvoiceOutAmount: numericToStr(r.InvoiceOutAmount),
+
+			OrderOutQty:    numericToStr(r.OrderOutQty),
+			OrderOutAmount: numericToStr(r.OrderOutAmount),
+
+			DeductionOutQty:    numericToStr(r.DeductionOutQty),
 			DeductionOutAmount: numericToStr(r.DeductionOutAmount),
-			SurplusAmount:      numericToStr(r.SurplusAmount),
-			ShortageAmount:     numericToStr(r.ShortageAmount),
+
+			TransferInQty:     numericToStr(r.TransferInQty),
+			TransferInAmount:  numericToStr(r.TransferInAmount),
+			TransferOutQty:    numericToStr(r.TransferOutQty),
+			TransferOutAmount: numericToStr(r.TransferOutAmount),
+
+			OutgoingInvoiceInQty:     numericToStr(r.OutgoingInvoiceInQty),
+			OutgoingInvoiceInAmount:  numericToStr(r.OutgoingInvoiceInAmount),
+			OutgoingInvoiceOutQty:    numericToStr(r.OutgoingInvoiceOutQty),
+			OutgoingInvoiceOutAmount: numericToStr(r.OutgoingInvoiceOutAmount),
+
+			SeparationActInQty:     numericToStr(r.SeparationActInQty),
+			SeparationActInAmount:  numericToStr(r.SeparationActInAmount),
+			SeparationActOutQty:    numericToStr(r.SeparationActOutQty),
+			SeparationActOutAmount: numericToStr(r.SeparationActOutAmount),
+
+			ShipmentInQty:     numericToStr(r.ShipmentInQty),
+			ShipmentInAmount:  numericToStr(r.ShipmentInAmount),
+			ShipmentOutQty:    numericToStr(r.ShipmentOutQty),
+			ShipmentOutAmount: numericToStr(r.ShipmentOutAmount),
+
+			ManualInQty:     numericToStr(r.ManualInQty),
+			ManualInAmount:  numericToStr(r.ManualInAmount),
+			ManualOutQty:    numericToStr(r.ManualOutQty),
+			ManualOutAmount: numericToStr(r.ManualOutAmount),
+
+			InventoryInQty:     numericToStr(r.InventoryInQty),
+			InventoryInAmount:  numericToStr(r.InventoryInAmount),
+			InventoryOutQty:    numericToStr(r.InventoryOutQty),
+			InventoryOutAmount: numericToStr(r.InventoryOutAmount),
 		})
 	}
 
 	return &model.IngredientReportResponse{
 		Items: items,
 		Totals: model.IngredientReportTotals{
-			TotalCount:          totalsRow.TotalCount,
-			TotalOrderOutAmount: numericToStr(totalsRow.TotalOrderOutAmount),
+			TotalCount:        totalsRow.TotalCount,
+			TotalAddedAmount:   numericToStr(totalsRow.TotalAddedAmount),
+			TotalRemovedAmount: numericToStr(totalsRow.TotalRemovedAmount),
 		},
 	}, nil
 }
@@ -900,7 +935,7 @@ func (i *IngredientS) UpdateIngredientStock(ctx context.Context, stockID string,
 		qtyOut = diff2
 	}
 
-	eventType := "manual_adjustment"
+	eventType := string(pg.ManualAdjustment)
 	if err := i.repo.Tenant(ctx).InsertIngredientStockMovement(ctx, pg.InsertIngredientStockMovementParams{
 		ID:           uuid.New(),
 		StorageID:    uuid.UUID(locked.StorageID.Bytes),
@@ -957,7 +992,7 @@ func (i *IngredientS) AddToIngredientStock(ctx context.Context, stockID string, 
 
 	zero := pgtype.Numeric{}
 	_ = zero.Scan("0")
-	eventType := "manual_in"
+	eventType := string(pg.ManualIn)
 	if err := i.repo.Tenant(ctx).InsertIngredientStockMovement(ctx, pg.InsertIngredientStockMovementParams{
 		ID:           uuid.New(),
 		StorageID:    uuid.UUID(locked.StorageID.Bytes),
@@ -1014,7 +1049,7 @@ func (i *IngredientS) RemoveFromIngredientStock(ctx context.Context, stockID str
 
 	zero := pgtype.Numeric{}
 	_ = zero.Scan("0")
-	eventType := "manual_out"
+	eventType := string(pg.ManualOut)
 	if err := i.repo.Tenant(ctx).InsertIngredientStockMovement(ctx, pg.InsertIngredientStockMovementParams{
 		ID:           uuid.New(),
 		StorageID:    uuid.UUID(locked.StorageID.Bytes),

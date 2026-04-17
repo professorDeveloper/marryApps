@@ -76,7 +76,7 @@ func (s *ShipmentS) CreateShipment(ctx context.Context, req *model.CreateShipmen
 		if row.Date.Valid {
 			shipmentDate = pgtype.Timestamptz{Time: row.Date.Time.In(time.UTC), Valid: true}
 		}
-		if err := s.deductStock(ctx, row.ID, row.StorageID, "shipment_out", shipmentDate); err != nil {
+		if err := s.deductStock(ctx, row.ID, row.StorageID, string(pg.ShipmentOut), shipmentDate); err != nil {
 			return nil, err
 		}
 	}
@@ -275,7 +275,7 @@ func (s *ShipmentS) UpdateShipment(ctx context.Context, id string, req *model.Up
 		if row.Date.Valid {
 			shipmentDate = pgtype.Timestamptz{Time: row.Date.Time.In(time.UTC), Valid: true}
 		}
-		if err := s.reverseStock(ctx, shipmentID, current.StorageID, "shipment_storage_change", shipmentDate); err != nil {
+		if err := s.reverseStock(ctx, shipmentID, current.StorageID, string(pg.ShipmentStorageChangeOut), shipmentDate); err != nil {
 			return nil, err
 		}
 		if err := s.deductStock(ctx, shipmentID, row.StorageID, "shipment_storage_change_out", shipmentDate); err != nil {
@@ -314,7 +314,7 @@ func (s *ShipmentS) UpdateShipment(ctx context.Context, id string, req *model.Up
 				if row.Date.Valid {
 					shipmentDate = pgtype.Timestamptz{Time: row.Date.Time.In(time.UTC), Valid: true}
 				}
-				if err := s.reverseStock(ctx, shipmentID, row.StorageID, "shipment_deactivated", shipmentDate); err != nil {
+				if err := s.reverseStock(ctx, shipmentID, row.StorageID, string(pg.ShipmentDeactivatedIn), shipmentDate); err != nil {
 					return nil, err
 				}
 			}
@@ -347,7 +347,7 @@ func (s *ShipmentS) DeleteShipment(ctx context.Context, id string) error {
 		if shipment.Date.Valid {
 			shipmentDate = pgtype.Timestamptz{Time: shipment.Date.Time.In(time.UTC), Valid: true}
 		}
-		_ = s.reverseStock(ctx, shipmentID, shipment.StorageID, "shipment_deleted", shipmentDate)
+		_ = s.reverseStock(ctx, shipmentID, shipment.StorageID, string(pg.ShipmentDeletedIn), shipmentDate)
 	}
 
 	return s.repo.Tenant(ctx).DeleteShipment(ctx, shipmentID)
@@ -465,7 +465,7 @@ func (s *ShipmentS) upsertOneItem(ctx context.Context, sID uuid.UUID, shipment p
 				ID:           uuid.New(),
 				StorageID:    uuid.UUID(shipment.StorageID.Bytes),
 				IngredientID: iID,
-				EventType:    "shipment_item_update_reverse",
+				EventType:    string(pg.ShipmentItemUpdateReverse),
 				QtyIn:        oldQty,
 				QtyOut:       zero,
 				StockBefore:  locked.Quantity,
@@ -503,7 +503,7 @@ func (s *ShipmentS) upsertOneItem(ctx context.Context, sID uuid.UUID, shipment p
 			ID:           uuid.New(),
 			StorageID:    uuid.UUID(shipment.StorageID.Bytes),
 			IngredientID: iID,
-			EventType:    "shipment_out",
+			EventType:    string(pg.ShipmentOut),
 			QtyIn:        zero,
 			QtyOut:       qty,
 			StockBefore:  locked.Quantity,
@@ -584,7 +584,7 @@ func (s *ShipmentS) DeleteShipmentItem(ctx context.Context, itemID string) error
 						ID:           uuid.New(),
 						StorageID:    uuid.UUID(shipment.StorageID.Bytes),
 						IngredientID: item.IngredientID,
-						EventType:    "shipment_item_deleted_in",
+						EventType:    string(pg.ShipmentItemDeletedIn),
 						QtyIn:        item.Quantity,
 						QtyOut:       zero,
 						StockBefore:  locked.Quantity,
@@ -634,7 +634,7 @@ func (s *ShipmentS) deductStock(ctx context.Context, shipmentID uuid.UUID, stora
 	}
 	zero := pgtype.Numeric{}
 	_ = zero.Scan("0")
-	srcType := "shipment"
+	srcType := string(pg.ShipmentOut)
 
 	var effectiveAt *pgtype.Timestamptz
 	if shipmentDate.Valid && !shipmentDate.Time.After(time.Now()) {
@@ -730,7 +730,7 @@ func (s *ShipmentS) reverseStock(ctx context.Context, shipmentID uuid.UUID, stor
 			ID:           uuid.New(),
 			StorageID:    uuid.UUID(storageID.Bytes),
 			IngredientID: item.IngredientID,
-			EventType:    eventType + "_in",
+			EventType:    eventType,
 			QtyIn:        item.Quantity,
 			QtyOut:       zero,
 			StockBefore:  locked.Quantity,
