@@ -3,6 +3,7 @@ package pg
 import (
 	"context"
 	"fmt"
+	"log"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -779,7 +780,9 @@ func (q *Queries) GetStorageByGoodID(ctx context.Context, goodID uuid.UUID) (pgt
 	row := q.db.QueryRow(ctx, sql, goodID)
 	var storageID pgtype.UUID
 	if err := row.Scan(&storageID); err != nil {
+		log.Printf("GetStorageByGoodID: Failed for goodID %s: %v", goodID, err)
 		return pgtype.UUID{}, err
 	}
+	log.Printf("GetStorageByGoodID: Success for goodID %s, storageID=%s, valid=%v", goodID, storageID.Bytes, storageID.Valid)
 	return storageID, nil
 }

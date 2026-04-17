@@ -122,6 +122,21 @@ func (s *OrderS) AddOrderItems(ctx context.Context, orderID string, req model.Ad
 			return nil, fmt.Errorf("items[%d]: %w", i, err)
 		}
 
+		log.Printf("🔄 [ADD ITEM %d] Consuming stock for good %s (qty: %d) in order %s...", i, goodUUID.String()[:8], it.Quantity, oID.String()[:8])
+		order, err := s.repo.Tenant(ctx).GetOrderByID(ctx, oID)
+		if err != nil {
+			return nil, fmt.Errorf("items[%d]: failed to get order: %w", i, err)
+		}
+		orderDate := order.CreatedAt
+		if !orderDate.Valid {
+			orderDate = pgtype.Timestamptz{Time: time.Now(), Valid: true}
+		}
+		if err := s.consumeItemStock(ctx, goodUUID, it.Quantity, oID, orderDate); err != nil {
+			log.Printf("❌ [ADD ITEM %d] Stock consumption FAILED: %v", i, err)
+			return nil, fmt.Errorf("items[%d]: failed to deduct stock for order item: %w", i, err)
+		}
+		log.Printf("✅ [ADD ITEM %d] Stock consumption SUCCESS\n", i)
+
 		if resp := toOrderItemResponse(item); resp != nil {
 			created = append(created, *resp)
 		}
@@ -371,6 +386,14 @@ func (s *OrderS) CreateOrder(ctx context.Context, req model.CreateOrderRequest) 
 			if err := s.saveOrderItemModifiers(ctx, createdIt.ID, goodUUID, it.Modifiers); err != nil {
 				return nil, err
 			}
+
+			log.Printf("🔄 [ORDER %s] Consuming stock for good %s (qty: %d)...", createdOrder.ID.String()[:8], goodUUID.String()[:8], it.Quantity)
+			orderDate := pgtype.Timestamptz{Time: time.Now(), Valid: true}
+			if err := s.consumeItemStock(ctx, goodUUID, it.Quantity, createdOrder.ID, orderDate); err != nil {
+				log.Printf("❌ [ORDER %s] Stock consumption FAILED: %v", createdOrder.ID.String()[:8], err)
+				return nil, fmt.Errorf("failed to deduct stock for order item: %w", err)
+			}
+			log.Printf("✅ [ORDER %s] Stock consumption SUCCESS for good %s\n", createdOrder.ID.String()[:8], goodUUID.String()[:8])
 
 		}
 
@@ -1603,14 +1626,20 @@ func (s *OrderS) GetBillDetails(ctx context.Context, billID string) (*model.Bill
 }
 
 func (s *OrderS) consumeItemStock(ctx context.Context, goodID uuid.UUID, quantity int32, orderID uuid.UUID, orderDate pgtype.Timestamptz) error {
+	log.Printf("\n=== STOCK CONSUMPTION START ===")
+	log.Printf("Good ID: %s | Order ID: %s | Quantity: %d", goodID.String(), orderID.String(), quantity)
+
 	storageID, err := s.repo.Tenant(ctx).GetStorageByGoodID(ctx, goodID)
 	if err != nil {
+		log.Printf("❌ ERROR: Failed to get storage for good %s: %v", goodID, err)
 		return fmt.Errorf("failed to get storage for good: %w", err)
 	}
 	if !storageID.Valid {
-		// No storage configured for this good's department — skip stock deduction
-		return nil
+		log.Printf("❌ ERROR: No storage configured for good %s", goodID)
+		log.Printf("   ROOT CAUSE: Good's category/department has no storage_id assigned")
+		return fmt.Errorf("no storage configured for good %s: goods must have a category with a department that has a storage_id assigned", goodID)
 	}
+	log.Printf("✓ Storage found: %s", uuid.UUID(storageID.Bytes).String())
 
 	mult := pgtype.Numeric{}
 	mult.Valid = true
@@ -1620,29 +1649,44 @@ func (s *OrderS) consumeItemStock(ctx context.Context, goodID uuid.UUID, quantit
 
 	usages, err := s.expandGoodToIngredientsByCalculations(ctx, goodID, mult)
 	if err != nil {
+		log.Printf("❌ ERROR: Failed to expand good %s to ingredients: %v", goodID, err)
 		return err
 	}
 
+	if len(usages) == 0 {
+		log.Printf("⚠️  WARNING: Good %s has NO ingredient calculations configured", goodID)
+		log.Printf("   ROOT CAUSE: This good has no recipe/BOM (Bill of Materials) setup")
+		log.Printf("   ACTION: Add ingredient calculations in the goods_calculations table")
+		return nil
+	}
+	log.Printf("✓ Ingredient usages expanded: %d ingredients found", len(usages))
+
 	for _, u := range usages {
+		log.Printf("\n  📦 Processing ingredient: %s", u.ingredientID.String())
 		stockID, err := s.repo.Tenant(ctx).EnsureIngredientStockByStorage(ctx, pg.EnsureIngredientStockByStorageParams{
 			ID:           uuid.New(),
 			IngredientID: u.ingredientID,
 			StorageID:    storageID,
 		})
 		if err != nil {
+			log.Printf("  ❌ ERROR: Failed to ensure ingredient stock row: %v", err)
 			return fmt.Errorf("failed to ensure ingredient stock row: %w", err)
 		}
+		log.Printf("  ✓ Stock row ensured: %s", stockID.String())
 
 		locked, err := s.repo.Tenant(ctx).GetStockByIngredientAndStorageForUpdate(ctx, pg.GetStockByIngredientAndStorageForUpdateParams{
 			IngredientID: u.ingredientID,
 			StorageID:    storageID,
 		})
 		if err != nil {
+			log.Printf("  ❌ ERROR: Failed to lock ingredient stock row: %v", err)
 			return fmt.Errorf("failed to lock ingredient stock row: %w", err)
 		}
+		log.Printf("  ✓ Stock locked | Before: %v | To Reduce: %v", locked.Quantity, u.quantity)
 
 		ing, err := s.repo.Tenant(ctx).GetIngredientByID(ctx, u.ingredientID)
 		if err != nil {
+			log.Printf("  ❌ ERROR: Failed to get ingredient: %v", err)
 			return fmt.Errorf("failed to get ingredient: %w", err)
 		}
 		price := ing.PricePerUnit
@@ -1655,8 +1699,10 @@ func (s *OrderS) consumeItemStock(ctx context.Context, goodID uuid.UUID, quantit
 			Quantity: u.quantity,
 		})
 		if err != nil {
+			log.Printf("  ❌ ERROR: Failed to consume ingredient stock: %v", err)
 			return fmt.Errorf("failed to consume ingredient stock: %w", err)
 		}
+		log.Printf("  ✅ REDUCED | Before: %v | After: %v | Reduced By: %v", numericToString(locked.Quantity), numericToString(updated.Quantity), numericToString(u.quantity))
 
 		zero := pgtype.Numeric{}
 		_ = zero.Scan("0")
@@ -1680,9 +1726,12 @@ func (s *OrderS) consumeItemStock(ctx context.Context, goodID uuid.UUID, quantit
 			SourceID:     &srcID,
 			EffectiveAt:  effectiveAt,
 		}); err != nil {
+			log.Printf("  ❌ ERROR: Failed to insert stock movement: %v", err)
 			return fmt.Errorf("failed to insert stock movement: %w", err)
 		}
+		log.Printf("  ✓ Stock movement recorded (order_out event)")
 	}
+	log.Printf("=== STOCK CONSUMPTION SUCCESS ===\n")
 	return nil
 }
 
@@ -2044,6 +2093,20 @@ func (s *OrderS) CreateOrderItems(ctx context.Context, req model.CreateOrderItem
 		return nil, fmt.Errorf("invalid order_id: %w", err)
 	}
 
+	// Fetch order to get creation date for stock movements
+	order, err := s.repo.Tenant(ctx).GetOrderByID(ctx, oID)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return nil, fmt.Errorf("order not found")
+		}
+		return nil, fmt.Errorf("failed to fetch order: %w", err)
+	}
+
+	orderDate := order.CreatedAt
+	if !orderDate.Valid {
+		orderDate = pgtype.Timestamptz{Time: time.Now(), Valid: true}
+	}
+
 	var responses []model.OrderItemResponse
 
 	for i, entry := range req.Items {
@@ -2093,6 +2156,13 @@ func (s *OrderS) CreateOrderItems(ctx context.Context, req model.CreateOrderItem
 		if err := s.saveOrderItemModifiers(ctx, item.ID, gID, entry.Modifiers); err != nil {
 			return nil, fmt.Errorf("items[%d]: %w", i, err)
 		}
+
+		log.Printf("🔄 [CREATE ITEM %d] Consuming stock for good %s (qty: %d) in order %s...", i, gID.String()[:8], entry.Quantity, oID.String()[:8])
+		if err := s.consumeItemStock(ctx, gID, entry.Quantity, oID, orderDate); err != nil {
+			log.Printf("❌ [CREATE ITEM %d] Stock consumption FAILED: %v", i, err)
+			return nil, fmt.Errorf("items[%d]: failed to deduct stock for order item: %w", i, err)
+		}
+		log.Printf("✅ [CREATE ITEM %d] Stock consumption SUCCESS\n", i)
 
 		responses = append(responses, *toOrderItemResponse(item))
 	}
@@ -2304,20 +2374,6 @@ func (s *OrderS) UpdateOrderItemStatus(ctx context.Context, itemID string, statu
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to update order item status: %w", err)
-	}
-
-	if currentStatus == string(pg.OrderItemsStatusPending) && status == string(pg.OrderItemsStatusCooking) {
-		order, err := s.repo.Tenant(ctx).GetOrderByID(ctx, existing.OrderID)
-		if err != nil {
-			return nil, fmt.Errorf("failed to get order for stock deduction: %w", err)
-		}
-		orderDate := pgtype.Timestamptz{}
-		if order.CreatedAt.Valid {
-			orderDate = order.CreatedAt
-		}
-		if err := s.consumeItemStock(ctx, existing.GoodID, existing.Quantity, existing.OrderID, orderDate); err != nil {
-			return nil, fmt.Errorf("failed to deduct stock for order item: %w", err)
-		}
 	}
 
 	return toOrderItemResponse(item), nil
