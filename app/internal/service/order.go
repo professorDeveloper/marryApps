@@ -908,7 +908,7 @@ func (s *OrderS) UpdateOrderStatus(ctx context.Context, orderID string, status s
 	return toOrderResponse(order), nil
 }
 
-func (s *OrderS) MarkOrderPaid(ctx context.Context, orderID string, cashierID string, cashRegisterID *string, paymentType *string, discountPercent *string, discountAmount *string, discountComment *string, customerPaidAmount *string, tableCharge *string, cashAmount *string, cardAmount *string) (*model.OrderResponse, error) {
+func (s *OrderS) MarkOrderPaid(ctx context.Context, orderID string, cashierID string, cashRegisterID *string, paymentType *string, discountPercent *string, discountAmount *string, discountComment *string, customerPaidAmount *string, tableCharge *string, cashAmount *string, cardAmount *string, paidAt *time.Time) (*model.OrderResponse, error) {
 	oID, err := uuid.Parse(orderID)
 	if err != nil {
 		return nil, fmt.Errorf("invalid order id: %w", err)
@@ -999,6 +999,13 @@ func (s *OrderS) MarkOrderPaid(ctx context.Context, orderID string, cashierID st
 			crUUID = pgtype.UUID{Bytes: id, Valid: true}
 		}
 	}
+	paidAtPg := pgtype.Timestamptz{}
+	if paidAt != nil {
+		paidAtPg = pgtype.Timestamptz{
+			Time:  *paidAt,
+			Valid: true,
+		}
+	}
 
 	if err := s.repo.Tenant(ctx).PayOrderBill(ctx, pg.PayOrderBillParams{
 		OrderID:            oID,
@@ -1012,6 +1019,7 @@ func (s *OrderS) MarkOrderPaid(ctx context.Context, orderID string, cashierID st
 		TableCharge:        tableChargeNum,
 		CashAmount:         cashAmountNum,
 		CardAmount:         cardAmountNum,
+		PaidAt:             paidAtPg,
 	}); err != nil {
 		return nil, fmt.Errorf("failed to mark order paid: %w", err)
 	}
@@ -2434,6 +2442,7 @@ func toOrderResponse(o any) *model.OrderResponse {
 		orderType         string
 		scheduledAtTs     pgtype.Timestamptz
 		rescheduleComment *string
+		paidAtPg          pgtype.Timestamptz
 		clientCreatedAtPg pgtype.Timestamptz
 		createdAtPg       pgtype.Timestamptz
 		updatedAtPg       pgtype.Timestamptz
@@ -2454,6 +2463,7 @@ func toOrderResponse(o any) *model.OrderResponse {
 		scheduledAtTs = row.ScheduledAt
 		rescheduleComment = row.RescheduleComment
 		clientCreatedAtPg = row.ClientCreatedAt
+		paidAtPg = row.PaidAt
 		createdAtPg = row.CreatedAt
 		updatedAtPg = row.UpdatedAt
 
@@ -2488,6 +2498,7 @@ func toOrderResponse(o any) *model.OrderResponse {
 		scheduledAtTs = row.ScheduledAt
 		rescheduleComment = row.RescheduleComment
 		clientCreatedAtPg = row.ClientCreatedAt
+		paidAtPg = row.PaidAt
 		createdAtPg = row.CreatedAt
 		updatedAtPg = row.UpdatedAt
 
@@ -2505,6 +2516,7 @@ func toOrderResponse(o any) *model.OrderResponse {
 		scheduledAtTs = row.ScheduledAt
 		rescheduleComment = row.RescheduleComment
 		clientCreatedAtPg = row.ClientCreatedAt
+		paidAtPg = row.PaidAt
 		createdAtPg = row.CreatedAt
 		updatedAtPg = row.UpdatedAt
 
@@ -2522,6 +2534,7 @@ func toOrderResponse(o any) *model.OrderResponse {
 		scheduledAtTs = row.ScheduledAt
 		rescheduleComment = row.RescheduleComment
 		clientCreatedAtPg = row.ClientCreatedAt
+		paidAtPg = row.PaidAt
 		createdAtPg = row.CreatedAt
 		updatedAtPg = row.UpdatedAt
 
@@ -2539,6 +2552,7 @@ func toOrderResponse(o any) *model.OrderResponse {
 		scheduledAtTs = row.ScheduledAt
 		rescheduleComment = row.RescheduleComment
 		clientCreatedAtPg = row.ClientCreatedAt
+		paidAtPg = row.PaidAt
 		createdAtPg = row.CreatedAt
 		updatedAtPg = row.UpdatedAt
 
@@ -2556,6 +2570,7 @@ func toOrderResponse(o any) *model.OrderResponse {
 		scheduledAtTs = row.ScheduledAt
 		rescheduleComment = row.RescheduleComment
 		clientCreatedAtPg = row.ClientCreatedAt
+		paidAtPg = row.PaidAt
 		createdAtPg = row.CreatedAt
 		updatedAtPg = row.UpdatedAt
 
@@ -2572,6 +2587,7 @@ func toOrderResponse(o any) *model.OrderResponse {
 		scheduledAtTs = row.ScheduledAt
 		rescheduleComment = row.RescheduleComment
 		clientCreatedAtPg = row.ClientCreatedAt
+		paidAtPg = row.PaidAt
 		createdAtPg = row.CreatedAt
 		updatedAtPg = row.UpdatedAt
 
@@ -2588,6 +2604,7 @@ func toOrderResponse(o any) *model.OrderResponse {
 		scheduledAtTs = row.ScheduledAt
 		rescheduleComment = row.RescheduleComment
 		clientCreatedAtPg = row.ClientCreatedAt
+		paidAtPg = row.PaidAt
 		createdAtPg = row.CreatedAt
 		updatedAtPg = row.UpdatedAt
 
@@ -2636,6 +2653,7 @@ func toOrderResponse(o any) *model.OrderResponse {
 		scheduledAtTs = row.ScheduledAt
 		rescheduleComment = row.RescheduleComment
 		clientCreatedAtPg = row.ClientCreatedAt
+		paidAtPg = row.PaidAt
 		createdAtPg = row.CreatedAt
 		updatedAtPg = row.UpdatedAt
 
@@ -2700,6 +2718,7 @@ func toOrderResponse(o any) *model.OrderResponse {
 		scheduledAtTs = row.ScheduledAt
 		rescheduleComment = row.RescheduleComment
 		clientCreatedAtPg = row.ClientCreatedAt
+		paidAtPg = row.PaidAt
 		createdAtPg = row.CreatedAt
 		updatedAtPg = row.UpdatedAt
 
@@ -2716,6 +2735,7 @@ func toOrderResponse(o any) *model.OrderResponse {
 		scheduledAtTs = row.ScheduledAt
 		rescheduleComment = row.RescheduleComment
 		clientCreatedAtPg = row.ClientCreatedAt
+		paidAtPg = row.PaidAt
 		createdAtPg = row.CreatedAt
 		updatedAtPg = row.UpdatedAt
 
@@ -2732,6 +2752,7 @@ func toOrderResponse(o any) *model.OrderResponse {
 		scheduledAtTs = row.ScheduledAt
 		rescheduleComment = row.RescheduleComment
 		clientCreatedAtPg = row.ClientCreatedAt
+		paidAtPg = row.PaidAt
 		createdAtPg = row.CreatedAt
 		updatedAtPg = row.UpdatedAt
 
@@ -2765,6 +2786,11 @@ func toOrderResponse(o any) *model.OrderResponse {
 	if clientCreatedAtPg.Valid {
 		t := clientCreatedAtPg.Time
 		clientCreatedAt = &t
+	}
+	var paidAt *time.Time
+	if paidAtPg.Valid {
+		t := paidAtPg.Time
+		paidAt = &t
 	}
 
 	var createdAt *time.Time
@@ -2804,6 +2830,7 @@ func toOrderResponse(o any) *model.OrderResponse {
 		ScheduledAt:       scheduledAt,
 		RescheduleComment: rescheduleComment,
 		ClientCreatedAt:   clientCreatedAt,
+		PaidAt:            paidAt,
 		CreatedAt:         createdAt,
 		UpdatedAt:         updatedAt,
 	}

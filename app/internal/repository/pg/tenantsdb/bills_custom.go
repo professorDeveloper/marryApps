@@ -186,13 +186,14 @@ type PayOrderBillParams struct {
 	CashierID          uuid.UUID
 	CashRegisterID     pgtype.UUID
 	PaymentType        *string
-	DiscountPercent    *pgtype.Numeric // percent wins over amount
+	DiscountPercent    *pgtype.Numeric
 	DiscountAmount     *pgtype.Numeric
 	DiscountComment    *string
-	CustomerPaidAmount *pgtype.Numeric // total handed by customer (for display/receipt)
-	TableCharge        *pgtype.Numeric // optional confirmed table fee
-	CashAmount         *pgtype.Numeric // cash portion (split or full cash payment)
-	CardAmount         *pgtype.Numeric // card portion (split or full card payment)
+	CustomerPaidAmount *pgtype.Numeric
+	TableCharge        *pgtype.Numeric
+	CashAmount         *pgtype.Numeric
+	CardAmount         *pgtype.Numeric
+	PaidAt             pgtype.Timestamptz
 }
 
 func (q *Queries) PayOrderBill(ctx context.Context, arg PayOrderBillParams) error {
@@ -294,7 +295,7 @@ func (q *Queries) PayOrderBill(ctx context.Context, arg PayOrderBillParams) erro
 			change_amount        = GREATEST(p.total_paid - p.settled_grand_total, 0),
 			bill_status          = 'paid',
 			bill_closed_at       = COALESCE(o.bill_closed_at, NOW()),
-			paid_at              = NOW(),
+			paid_at              = COALESCE($12::timestamptz, NOW()),
 			cashier_id           = $2,
 			cash_register_id     = COALESCE($3::uuid, o.cash_register_id),
 			status               = 'paid'
@@ -308,9 +309,18 @@ func (q *Queries) PayOrderBill(ctx context.Context, arg PayOrderBillParams) erro
 		cashRegisterID = &id
 	}
 	tag, err := q.db.Exec(ctx, sql,
-		arg.OrderID, arg.CashierID, cashRegisterID, arg.PaymentType,
-		arg.DiscountPercent, arg.DiscountAmount, arg.DiscountComment,
-		arg.CustomerPaidAmount, arg.TableCharge, arg.CashAmount, arg.CardAmount,
+		arg.OrderID,
+		arg.CashierID,
+		cashRegisterID,
+		arg.PaymentType,
+		arg.DiscountPercent,
+		arg.DiscountAmount,
+		arg.DiscountComment,
+		arg.CustomerPaidAmount,
+		arg.TableCharge,
+		arg.CashAmount,
+		arg.CardAmount,
+		arg.PaidAt,
 	)
 	if err != nil {
 		return err

@@ -347,7 +347,7 @@ type OrderI interface {
 	GetMyOrders(ctx context.Context, waiterID string, req model.GetMyOrdersRequest) ([]model.WaiterOrderListItem, error)
 	UpdateOrder(ctx context.Context, orderID string, req model.UpdateOrderRequest) (*model.OrderResponse, error)
 	UpdateOrderStatus(ctx context.Context, orderID string, status string) (*model.OrderResponse, error)
-	MarkOrderPaid(ctx context.Context, orderID string, cashierID string, cashRegisterID *string, paymentType *string, discountPercent *string, discountAmount *string, discountComment *string, customerPaidAmount *string, tableCharge *string, cashAmount *string, cardAmount *string) (*model.OrderResponse, error)
+	MarkOrderPaid(ctx context.Context,orderID string,cashierID string,cashRegisterID *string,paymentType *string,discountPercent *string,discountAmount *string,discountComment *string,customerPaidAmount *string,tableCharge *string,cashAmount *string,cardAmount *string,paidAt *time.Time) (*model.OrderResponse, error)
 	AssignWaiterToOrder(ctx context.Context, orderID string, waiterID string) (*model.OrderResponse, error)
 	AssignCashierToOrder(ctx context.Context, orderID string, cashierID string) (*model.OrderResponse, error)
 	CancelOrder(ctx context.Context, orderID string) (*model.OrderResponse, error)

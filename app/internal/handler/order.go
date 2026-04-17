@@ -1108,6 +1108,7 @@ func (h *Handler) MarkOrderPaid(c echo.Context) error {
 		effectiveTableCharge,
 		req.CashAmount,
 		req.CardAmount,
+		req.PaidAt,
 	)
 	if err != nil {
 		log.Printf("MarkOrderPaid failed for order %s: %v", orderID, err)
