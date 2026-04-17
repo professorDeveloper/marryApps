@@ -17817,6 +17817,70 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/orders/batch": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Create multiple orders in one request. Useful for offline sync.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Orders"
+                ],
+                "summary": "Create orders batch",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "default": "uz",
+                        "description": "Language (uz, ru, en)",
+                        "name": "lang",
+                        "in": "query"
+                    },
+                    {
+                        "description": "Create orders batch request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.CreateOrderBatchRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/model.SuccessResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/orders/my": {
             "get": {
                 "security": [
@@ -27028,6 +27092,20 @@ const docTemplate = `{
                 }
             }
         },
+        "model.CreateOrderBatchRequest": {
+            "type": "object",
+            "properties": {
+                "continue_on_error": {
+                    "type": "boolean"
+                },
+                "orders": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.CreateOrderRequest"
+                    }
+                }
+            }
+        },
         "model.CreateOrderItemEntry": {
             "type": "object",
             "required": [
@@ -27122,12 +27200,20 @@ const docTemplate = `{
                     "type": "string",
                     "example": "a1b2c3d4-e5f6-4a5b-8c9d-e0f1a2b3c4d5"
                 },
+                "client_created_at": {
+                    "type": "string",
+                    "example": "2026-04-17T09:10:00+05:00"
+                },
                 "comment": {
                     "type": "string"
                 },
                 "guest_count": {
                     "type": "integer",
                     "example": 2
+                },
+                "id": {
+                    "type": "string",
+                    "example": "11111111-1111-1111-1111-111111111111"
                 },
                 "items": {
                     "type": "array",
@@ -29464,6 +29550,9 @@ const docTemplate = `{
                 "cashier_id": {
                     "type": "string",
                     "example": "a1b2c3d4-e5f6-4a5b-8c9d-e0f1a2b3c4d5"
+                },
+                "client_created_at": {
+                    "type": "string"
                 },
                 "comment": {
                     "type": "string"

@@ -336,6 +336,8 @@ type InvoiceI interface {
 
 type OrderI interface {
 	CreateOrder(ctx context.Context, req model.CreateOrderRequest) (*model.OrderResponse, error)
+	CreateOrdersBatch(ctx context.Context, req model.CreateOrderBatchRequest) (*model.CreateOrderBatchResponse, error)
+
 	AddOrderItems(ctx context.Context, orderID string, req model.AddOrderItemsRequest) (*model.AddOrderItemsResponse, error)
 	GetOrderByID(ctx context.Context, orderID string) (*model.OrderResponse, error)
 	GetAllOrders(ctx context.Context, req model.GetOrdersRequest) ([]model.OrderResponse, error)

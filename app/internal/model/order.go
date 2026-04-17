@@ -58,16 +58,38 @@ type Order struct {
 }
 
 type CreateOrderRequest struct {
-	TableID        string                  `json:"table_id,omitempty"        example:"a1b2c3d4-e5f6-4a5b-8c9d-e0f1a2b3c4d5"`
-	WaiterID       *string                 `json:"waiter_id,omitempty"       example:"a1b2c3d4-e5f6-4a5b-8c9d-e0f1a2b3c4d5"`
-	CashierID      *string                 `json:"cashier_id,omitempty"      example:"a1b2c3d4-e5f6-4a5b-8c9d-e0f1a2b3c4d5"`
-	CashRegisterID *string                 `json:"cash_register_id,omitempty" example:"uuid-of-cash-register"`
-	Status         *string                 `json:"status,omitempty"     example:"open"`
-	GuestCount     *int32                  `json:"guest_count,omitempty" example:"2"`
-	Comment        *string                 `json:"comment,omitempty"`
-	Items          []CreateOrderItemInline `json:"items,omitempty"`
-	OrderType      *string                 `json:"order_type,omitempty"   example:"dine_in"`
-	ScheduledAt    *string                 `json:"scheduled_at,omitempty" example:"2024-01-01T15:00:00Z"`
+	ID              *string                 `json:"id,omitempty" example:"11111111-1111-1111-1111-111111111111"`
+	TableID         string                  `json:"table_id,omitempty"        example:"a1b2c3d4-e5f6-4a5b-8c9d-e0f1a2b3c4d5"`
+	WaiterID        *string                 `json:"waiter_id,omitempty"       example:"a1b2c3d4-e5f6-4a5b-8c9d-e0f1a2b3c4d5"`
+	CashierID       *string                 `json:"cashier_id,omitempty"      example:"a1b2c3d4-e5f6-4a5b-8c9d-e0f1a2b3c4d5"`
+	CashRegisterID  *string                 `json:"cash_register_id,omitempty" example:"uuid-of-cash-register"`
+	Status          *string                 `json:"status,omitempty"     example:"open"`
+	GuestCount      *int32                  `json:"guest_count,omitempty" example:"2"`
+	Comment         *string                 `json:"comment,omitempty"`
+	Items           []CreateOrderItemInline `json:"items,omitempty"`
+	OrderType       *string                 `json:"order_type,omitempty"   example:"dine_in"`
+	ScheduledAt     *string                 `json:"scheduled_at,omitempty" example:"2024-01-01T15:00:00Z"`
+	ClientCreatedAt *string                 `json:"client_created_at,omitempty" example:"2026-04-17T09:10:00+05:00"`
+}
+
+type CreateOrderBatchRequest struct {
+	ContinueOnError bool                 `json:"continue_on_error"`
+	Orders          []CreateOrderRequest `json:"orders"`
+}
+
+type CreateOrderBatchItemResult struct {
+	Index        int            `json:"index"`
+	InputOrderID *string        `json:"input_order_id,omitempty"`
+	Status       string         `json:"status" example:"created"`
+	Order        *OrderResponse `json:"order,omitempty"`
+	Error        *string        `json:"error,omitempty"`
+}
+
+type CreateOrderBatchResponse struct {
+	Total        int                          `json:"total"`
+	SuccessCount int                          `json:"success_count"`
+	FailedCount  int                          `json:"failed_count"`
+	Results      []CreateOrderBatchItemResult `json:"results"`
 }
 
 type CreateOrderItemInline struct {
@@ -127,6 +149,7 @@ type OrderResponse struct {
 	ServicePercent    *string             `json:"service_percent,omitempty" example:"20"`
 	ServiceAmount     *string             `json:"service_amount,omitempty" example:"10000"`
 	Items             []OrderItemResponse `json:"items"`
+	ClientCreatedAt   *time.Time          `json:"client_created_at,omitempty"`
 	CreatedAt         *time.Time          `json:"created_at,omitempty"`
 	UpdatedAt         *time.Time          `json:"updated_at,omitempty"`
 }
@@ -149,11 +172,11 @@ type OrderItem struct {
 }
 
 type CreateOrderItemEntry struct {
-	GoodID   string  `json:"good_id" validate:"required" example:"d4e5f6a7-b8c9-4a5b-8c9d-e0f1a2b3c4d5"`
-	Quantity int32   `json:"quantity" validate:"required,min=1" example:"2"`
-	Price    *string `json:"price,omitempty" example:"50000"`
-	Status   *string `json:"status,omitempty" example:"pending"`
-	Comment  *string `json:"comment,omitempty"`
+	GoodID    string                   `json:"good_id" validate:"required" example:"d4e5f6a7-b8c9-4a5b-8c9d-e0f1a2b3c4d5"`
+	Quantity  int32                    `json:"quantity" validate:"required,min=1" example:"2"`
+	Price     *string                  `json:"price,omitempty" example:"50000"`
+	Status    *string                  `json:"status,omitempty" example:"pending"`
+	Comment   *string                  `json:"comment,omitempty"`
 	Modifiers []OrderItemModifierInput `json:"modifiers,omitempty"`
 }
 
@@ -176,16 +199,16 @@ type UpdateOrderItemStatusRequest struct {
 }
 
 type OrderItemResponse struct {
-	ID        string          `json:"id" example:"c0f18a64-7f5c-4425-9414-1b01cddee9d9"`
-	OrderID   string          `json:"order_id" example:"a1b2c3d4-e5f6-4a5b-8c9d-e0f1a2b3c4d5"`
-	GoodID    string          `json:"good_id" example:"d4e5f6a7-b8c9-4a5b-8c9d-e0f1a2b3c4d5"`
-	Quantity  int32           `json:"quantity" example:"2"`
-	Price     string          `json:"price" example:"50000"`
-	Status    OrderItemStatus `json:"status" example:"pending"`
-	Comment   *string         `json:"comment,omitempty"`
+	ID        string                      `json:"id" example:"c0f18a64-7f5c-4425-9414-1b01cddee9d9"`
+	OrderID   string                      `json:"order_id" example:"a1b2c3d4-e5f6-4a5b-8c9d-e0f1a2b3c4d5"`
+	GoodID    string                      `json:"good_id" example:"d4e5f6a7-b8c9-4a5b-8c9d-e0f1a2b3c4d5"`
+	Quantity  int32                       `json:"quantity" example:"2"`
+	Price     string                      `json:"price" example:"50000"`
+	Status    OrderItemStatus             `json:"status" example:"pending"`
+	Comment   *string                     `json:"comment,omitempty"`
 	Modifiers []OrderItemModifierResponse `json:"modifiers,omitempty"`
-	CreatedAt *time.Time      `json:"created_at,omitempty"`
-	UpdatedAt *time.Time      `json:"updated_at,omitempty"`
+	CreatedAt *time.Time                  `json:"created_at,omitempty"`
+	UpdatedAt *time.Time                  `json:"updated_at,omitempty"`
 }
 
 // OrderItemModifierResponse — buyurtma qatoriga biriktirilgan modifier
