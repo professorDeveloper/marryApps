@@ -29226,6 +29226,9 @@ const docTemplate = `{
                     "type": "string",
                     "example": "10"
                 },
+                "paid_at": {
+                    "type": "string"
+                },
                 "payment_type": {
                     "description": "payment_type: cash, card, or split",
                     "type": "string",
@@ -29581,6 +29584,9 @@ const docTemplate = `{
                 "order_type": {
                     "type": "string",
                     "example": "dine_in"
+                },
+                "paid_at": {
+                    "type": "string"
                 },
                 "price_per_hour": {
                     "type": "string",

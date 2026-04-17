@@ -150,6 +150,7 @@ type OrderResponse struct {
 	ServiceAmount     *string             `json:"service_amount,omitempty" example:"10000"`
 	Items             []OrderItemResponse `json:"items"`
 	ClientCreatedAt   *time.Time          `json:"client_created_at,omitempty"`
+	PaidAt            *time.Time          `json:"paid_at,omitempty"`
 	CreatedAt         *time.Time          `json:"created_at,omitempty"`
 	UpdatedAt         *time.Time          `json:"updated_at,omitempty"`
 }
@@ -262,7 +263,8 @@ type MarkOrderPaidRequest struct {
 	// cash_amount: cash portion paid (required for split; equals customer_paid_amount for cash-only)
 	CashAmount *string `json:"cash_amount,omitempty" example:"80000"`
 	// card_amount: card portion paid (required for split; equals customer_paid_amount for card-only)
-	CardAmount *string `json:"card_amount,omitempty" example:"20000"`
+	CardAmount *string    `json:"card_amount,omitempty" example:"20000"`
+	PaidAt     *time.Time `json:"paid_at,omitempty"`
 }
 
 type UpdateOrderItemQuantityRequest struct {

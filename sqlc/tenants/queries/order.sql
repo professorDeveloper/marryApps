@@ -28,7 +28,7 @@ RETURNING id, table_id, waiter_id, cashier_id, cash_register_id, branch_id, stat
 
 -- name: GetOrderByID :one
 SELECT id, table_id, waiter_id, cashier_id, cash_register_id, branch_id, status, guest_count, total_amount, comment,
-       order_type, scheduled_at, reschedule_comment, client_created_at, created_at, updated_at, deleted_at
+       order_type, scheduled_at, reschedule_comment, client_created_at, paid_at, created_at, updated_at, deleted_at
 FROM orders
 WHERE orders.id = $1
   AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
@@ -50,6 +50,7 @@ SELECT
     scheduled_at,
     reschedule_comment,
     client_created_at,
+    paid_at,
     created_at,
     updated_at,
     deleted_at
@@ -99,7 +100,7 @@ OFFSET sqlc.arg('page_offset')::int;
 
 -- name: GetOrdersByStatus :many
 SELECT id, table_id, waiter_id, cashier_id, cash_register_id, branch_id, status, guest_count, total_amount, comment,
-       order_type, scheduled_at, reschedule_comment, client_created_at, created_at, updated_at, deleted_at
+       order_type, scheduled_at, reschedule_comment, client_created_at, paid_at, created_at, updated_at, deleted_at
 FROM orders
 WHERE status = $1
   AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
@@ -109,7 +110,7 @@ LIMIT $2 OFFSET $3;
 
 -- name: GetOrdersByTableID :many
 SELECT id, table_id, waiter_id, cashier_id, cash_register_id, branch_id, status, guest_count, total_amount, comment,
-       order_type, scheduled_at, reschedule_comment, client_created_at, created_at, updated_at, deleted_at
+       order_type, scheduled_at, reschedule_comment, client_created_at, paid_at, created_at, updated_at, deleted_at
 FROM orders
 WHERE table_id = $1
   AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
@@ -118,7 +119,7 @@ ORDER BY created_at DESC;
 
 -- name: GetOrdersByWaiterID :many
 SELECT id, table_id, waiter_id, cashier_id, cash_register_id, branch_id, status, guest_count, total_amount, comment,
-       order_type, scheduled_at, reschedule_comment, client_created_at, created_at, updated_at, deleted_at
+       order_type, scheduled_at, reschedule_comment, client_created_at, paid_at, created_at, updated_at, deleted_at
 FROM orders
 WHERE waiter_id = $1
   AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
@@ -128,7 +129,7 @@ LIMIT $2 OFFSET $3;
 
 -- name: GetOrdersByDateRange :many
 SELECT id, table_id, waiter_id, cashier_id, cash_register_id, branch_id, status, guest_count, total_amount, comment,
-       order_type, scheduled_at, reschedule_comment, client_created_at, created_at, updated_at, deleted_at
+       order_type, scheduled_at, reschedule_comment, client_created_at, paid_at, created_at, updated_at, deleted_at
 FROM orders
 WHERE created_at >= $1
   AND created_at <= $2
@@ -157,7 +158,7 @@ WHERE orders.id = $1
   AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
   AND deleted_at = 0
 RETURNING id, table_id, waiter_id, cashier_id, branch_id, status, guest_count, total_amount, comment,
-          order_type, scheduled_at, reschedule_comment, client_created_at, created_at, updated_at, deleted_at;
+          order_type, scheduled_at, reschedule_comment, client_created_at, paid_at, created_at, updated_at, deleted_at;
 
 -- name: UpdateOrderStatus :one
 UPDATE orders
@@ -167,7 +168,7 @@ WHERE orders.id = $1
   AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
   AND deleted_at = 0
 RETURNING id, table_id, waiter_id, cashier_id, branch_id, status, guest_count, total_amount, comment,
-          order_type, scheduled_at, reschedule_comment, client_created_at, created_at, updated_at, deleted_at;
+          order_type, scheduled_at, reschedule_comment, client_created_at, paid_at, created_at, updated_at, deleted_at;
 
 -- name: AssignWaiterToOrder :one
 UPDATE orders
@@ -177,7 +178,7 @@ WHERE orders.id = $1
   AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
   AND deleted_at = 0
 RETURNING id, table_id, waiter_id, cashier_id, branch_id, status, guest_count, total_amount, comment,
-          order_type, scheduled_at, reschedule_comment, client_created_at, created_at, updated_at, deleted_at;
+          order_type, scheduled_at, reschedule_comment, client_created_at, paid_at, created_at, updated_at, deleted_at;
 
 -- name: AssignCashierToOrder :one
 UPDATE orders
@@ -197,7 +198,7 @@ WHERE orders.id = $1
   AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
   AND deleted_at = 0
 RETURNING id, table_id, waiter_id, cashier_id, branch_id, status, guest_count, total_amount, comment,
-          order_type, scheduled_at, reschedule_comment, client_created_at, created_at, updated_at, deleted_at;
+          order_type, scheduled_at, reschedule_comment, client_created_at, paid_at, created_at, updated_at, deleted_at;
 
 -- name: MarkOrderReady :one
 UPDATE orders
@@ -207,7 +208,7 @@ WHERE orders.id = $1
   AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
   AND deleted_at = 0
 RETURNING id, table_id, waiter_id, cashier_id, branch_id, status, guest_count, total_amount, comment,
-          order_type, scheduled_at, reschedule_comment, client_created_at, created_at, updated_at, deleted_at;
+          order_type, scheduled_at, reschedule_comment, client_created_at, paid_at, created_at, updated_at, deleted_at;
 
 -- name: MarkOrderServed :one
 UPDATE orders
@@ -216,7 +217,7 @@ SET status = 'served',
 WHERE id = $1 AND deleted_at = 0
   AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 RETURNING id, table_id, waiter_id, cashier_id, branch_id, status, guest_count, total_amount, comment,
-          order_type, scheduled_at, reschedule_comment, client_created_at, created_at, updated_at, deleted_at;
+          order_type, scheduled_at, reschedule_comment, client_created_at, paid_at, created_at, updated_at, deleted_at;
 
 -- name: MarkOrderPaid :one
 UPDATE orders
@@ -226,7 +227,7 @@ SET status = 'paid',
 WHERE id = $1 AND deleted_at = 0
   AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 RETURNING id, table_id, waiter_id, cashier_id, branch_id, status, guest_count, total_amount, comment,
-          order_type, scheduled_at, reschedule_comment, client_created_at, created_at, updated_at, deleted_at;
+          order_type, scheduled_at, reschedule_comment, client_created_at, paid_at, created_at, updated_at, deleted_at;
 
 -- name: CancelOrder :one
 UPDATE orders
@@ -235,7 +236,7 @@ SET status = 'cancelled',
 WHERE id = $1 AND deleted_at = 0
   AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 RETURNING id, table_id, waiter_id, cashier_id, branch_id, status, guest_count, total_amount, comment,
-          order_type, scheduled_at, reschedule_comment, client_created_at, created_at, updated_at, deleted_at;
+          order_type, scheduled_at, reschedule_comment, client_created_at, paid_at, created_at, updated_at, deleted_at;
 
 -- name: ActivateOrder :one
 UPDATE orders
@@ -246,7 +247,7 @@ WHERE id = $1
   AND deleted_at = 0
   AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 RETURNING id, table_id, waiter_id, cashier_id, branch_id, status, guest_count, total_amount, comment,
-          order_type, scheduled_at, reschedule_comment, client_created_at, created_at, updated_at, deleted_at;
+          order_type, scheduled_at, reschedule_comment, client_created_at, paid_at, created_at, updated_at, deleted_at;
 
 -- name: DeleteOrder :exec
 UPDATE orders
@@ -300,7 +301,7 @@ WHERE id = $1
   AND deleted_at = 0
   AND branch_id = NULLIF(current_setting('app.branch_id', true), '')::uuid
 RETURNING id, table_id, waiter_id, cashier_id, branch_id, status, guest_count, total_amount, comment,
-          order_type, scheduled_at, reschedule_comment, client_created_at, created_at, updated_at, deleted_at;
+          order_type, scheduled_at, reschedule_comment, client_created_at, paid_at, created_at, updated_at, deleted_at;
 
 -- name: CreateOrderItem :one
 INSERT INTO order_items (id, good_id, order_id, quantity, price, cost_price, status, comment)
@@ -585,6 +586,7 @@ SELECT
     o.scheduled_at,
     o.reschedule_comment,
     o.client_created_at,
+    o.paid_at,
     o.created_at,
     o.updated_at,
     ct.number AS table_number,
@@ -651,6 +653,7 @@ GROUP BY
     o.scheduled_at,
     o.reschedule_comment,
     o.client_created_at,
+    o.paid_at,
     o.created_at,
     o.updated_at,
     ct.number,
